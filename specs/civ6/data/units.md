@@ -130,6 +130,7 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Anti-Air Gun | Support | Land | Advanced Ballistics | 455 |  | 2 |  |  |  | 1 | 90 | 2 | 2 |  |  | Mobile SAM |  |  | Gold |  | Anti Air Cover |  |  |
 | Mobile SAM | Support | Land | Guidance Systems | 590 |  | 4 |  |  |  | 1 | 100 | 3 | 2 |  |  |  |  |  | Gold |  | Anti Air Cover |  |  |
 | Great Admiral | civilian | Sea |  | 1 |  | 0 |  |  |  |  |  | 4 | 2 |  |  |  |  |  |  |  |  |  |  |
+| Aircraft Carrier | Naval Carrier | Sea | Combined Arms | 540 |  | 7 | 65 |  |  |  |  | 3 | 2 |  |  |  |  |  | Gold |  |  |  |  |
 | Galley | Naval Melee | Sea | Sailing | 65 |  | 1 | 30 |  |  |  |  | 3 | 2 |  |  | Caravel |  | Steam Power | Gold |  |  |  |  |
 | Viking Longship | Naval Melee | Sea | Sailing | 65 |  | 1 | 35 |  |  |  |  | 3 | 2 |  |  | Caravel |  | Electricity | Gold |  | Ignore ZOC, Longship Movement | Galley | Harald Hardrada (Konge) |
 | Bireme | Naval Melee | Sea | Sailing | 65 |  | 1 | 35 |  |  |  |  | 4 | 2 |  |  | Caravel |  | Steam Power | Gold |  | Bireme Trade Protection | Galley | Phoenicia |
@@ -140,8 +141,9 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Barbary Corsair | Naval Raider | Sea | Medieval Faires | 240 |  | 3 | 40 | 50 |  | 2 |  | 4 | 2 |  |  | Submarine |  | Lasers | Gold |  | Coastal Raid, Corsair, Ignore ZOC, Reveal Stealth, Stealth | Privateer | Ottomans |
 | Privateer | Naval Raider | Sea | Mercantilism | 280 |  | 4 | 40 | 50 |  | 2 |  | 4 | 2 |  |  | Submarine |  | Lasers | Gold |  | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth |  |  |
 | Sea Dog | Naval Raider | Sea | Mercantilism | 280 |  | 4 | 40 | 55 |  | 2 |  | 4 | 2 |  |  | Submarine |  | Telecommunications | Gold |  | Coastal Raid, Ignore ZOC, Prize Ships, Reveal Stealth, Stealth | Privateer | England |
-| U-Boat | Naval Raider | Sea | Electricity | 430 |  | 6 | 65 | 75 |  | 2 |  | 3 | 3 |  |  |  |  |  | Gold | no ZOC | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth, Wolfsrudel | Submarine | Germany |
-| Submarine | Naval Raider | Sea | Electricity | 480 |  | 6 | 65 | 75 |  | 2 |  | 3 | 2 | Oil 1 | 1 Oil/turn |  |  |  | Gold | no ZOC | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth |  |  |
+| U-Boat | Naval Raider | Sea | Electricity | 430 |  | 6 | 65 | 75 |  | 2 |  | 3 | 3 |  |  | Nuclear Submarine |  |  | Gold | no ZOC | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth, Wolfsrudel | Submarine | Germany |
+| Submarine | Naval Raider | Sea | Electricity | 480 |  | 6 | 65 | 75 |  | 2 |  | 3 | 2 | Oil 1 | 1 Oil/turn | Nuclear Submarine |  |  | Gold | no ZOC | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth |  |  |
+| Nuclear Submarine | Naval Raider | Sea | Telecommunications | 680 |  | 8 | 80 | 85 |  | 2 |  | 4 | 2 |  |  |  |  |  | Gold | no ZOC | Coastal Raid, Ignore ZOC, Reveal Stealth, Stealth |  |  |
 | Quadrireme | Naval Ranged | Sea | Shipbuilding | 120 |  | 2 | 20 | 25 |  | 1 |  | 3 | 2 |  |  | Frigate |  | Steel | Gold |  |  |  |  |
 | Dromon | Naval Ranged | Sea | Shipbuilding | 120 |  | 2 | 20 | 25 |  | 2 |  | 3 | 2 |  |  | Frigate |  | Steel | Gold |  | Greek Fire | Quadrireme | Byzantium |
 | Frigate | Naval Ranged | Sea | Square Rigging | 280 |  | 5 | 45 | 55 |  | 2 |  | 4 | 2 | Niter 20 |  | Battleship |  | Lasers | Gold |  |  |  |  |

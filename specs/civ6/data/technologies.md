@@ -93,7 +93,7 @@ Costs are Standard speed (multiply by game-speed CostMultiplier). Unlock lists e
 | Advanced Flight | 1480 | Radio | 40 | own 2 Biplanes | Fighter, Bomber, Airport |  |
 | Rocketry | 1480 | Radio, Chemistry | 40 | none (only via Great Scientist / spy / effects) | Spaceport, Missile Silo, Launch Earth Satellite |  |
 | Advanced Ballistics | 1480 | Replaceable Parts, Steel | 40 | build an Oil Power Plant | Anti-Air Gun, Machine Gun |  |
-| Combined Arms | 1480 | Steel, Combustion | 40 | have 3 armies | Destroyer, Uranium (revealed) |  |
+| Combined Arms | 1480 | Steel, Combustion | 40 | have 3 armies | Aircraft Carrier, Destroyer, Uranium (revealed) |  |
 | Plastics | 1480 | Combustion | 40 | improve Oil | Spec Ops, Offshore Oil Rig |  |
 | Computers | 1660 | Electricity, Radio | 40 | adopt a Tier3 government | Drone, Flood Barrier | grants 1 Spy; +25% Tourism |
 | Nuclear Fission | 1660 | Advanced Ballistics, Combined Arms | 40 | none (only via Great Scientist / spy / effects) | Nuclear Power Plant, Manhattan Project, Build Nuclear Device, Convert to Nuclear Power, Recommission Nuclear Reactor |  |
@@ -103,7 +103,7 @@ Costs are Standard speed (multiply by game-speed CostMultiplier). Unlock lists e
 
 | Technology | Cost | Prerequisites | Boost % | Boost condition | Unlocks | Other effects |
 |---|---|---|---|---|---|---|
-| Telecommunications | 1850 | Computers | 40 | none (only via Great Scientist / spy / effects) |  |  |
+| Telecommunications | 1850 | Computers | 40 | none (only via Great Scientist / spy / effects) | Nuclear Submarine |  |
 | Satellites | 1850 | Advanced Flight, Rocketry | 40 | build 2 Broadcast Centers | Mechanized Infantry, Solar Farm, Launch Moon Landing |  |
 | Guidance Systems | 1850 | Rocketry, Advanced Ballistics | 40 | kill a Fighter | Rocket Artillery, Mobile SAM |  |
 | Lasers | 1850 | Nuclear Fission | 40 | own 2 Drones | Jet Fighter, Missile Cruiser |  |
