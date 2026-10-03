@@ -207,7 +207,7 @@ Promotion XP thresholds and healing on promotion are engine/GlobalParameters val
 | Reggae Rock | 1 | 0 |  | +2 Rock Band level when performing at Water Park; +2 Rock Band level when performing at Copacabana |
 | Religious Rock | 1 | 0 |  | adjust unit tourism bomb convert city (Convert=yes) |
 | Roadies | 1 | 0 |  | +4 Movement |
-| Space Rock | 1 | 0 |  | +500 Tourism burst at Spaceport; +1 Rock Band level when performing at Spaceport; +1 Rock Band level when performing at Campus; +500 Tourism burst at Campus; +1 Rock Band level when performing at Observatory; +500 Tourism burst at Observatory |
+| Space Rock | 1 | 0 |  | +500 Tourism burst at Spaceport; +1 Rock Band level when performing at Spaceport; +1 Rock Band level when performing at Campus; +500 Tourism burst at Campus; +1 Rock Band level when performing at Seowon; +500 Tourism burst at Seowon; +1 Rock Band level when performing at Observatory; +500 Tourism burst at Observatory |
 | Surf Band | 1 | 0 |  | +500 Tourism burst at Seaside Resort; +1 Rock Band level at Seaside Resort; +1 Rock Band level when performing at Harbor; +500 Tourism burst at Harbor; +1 Rock Band level when performing at Royal Navy Dockyard; +500 Tourism burst at Royal Navy Dockyard; +1 Rock Band level when performing at Cothon; +500 Tourism burst at Cothon |
 
 ## Siege

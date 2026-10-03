@@ -156,6 +156,11 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 | Basil II | Eastern Orthodoxy |
 | Catherine de Medici (Magnificence) | Catholicism |
 | Menelik II | Eastern Orthodoxy |
+| Chandragupta | Hinduism |
+| Robert the Bruce | Catholicism |
+| Seondeok | Buddhism |
+| Tamar | Eastern Orthodoxy |
+| Wilhelmina | Protestantism |
 | Simón Bolívar | Catholicism |
 | Ludwig II | Catholicism |
 | Theodora | Eastern Orthodoxy |

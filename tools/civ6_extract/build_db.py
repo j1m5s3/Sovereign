@@ -24,7 +24,6 @@ DEFAULT_GAME_DIR = r"C:\Program Files (x86)\Steam\steamapps\common\Sid Meier's C
 # DLC folders that are scenarios or optional game modes; their data is not part
 # of the standard Gathering Storm ruleset.
 EXCLUDED_DLC = {
-    "Expansion1",  # Gathering Storm ships its own copy of the Rise and Fall data
     "CivRoyaleScenario",
     "PiratesScenario",
     "BarbarianClansMode",

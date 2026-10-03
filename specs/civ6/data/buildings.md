@@ -24,6 +24,7 @@ Yields are flat per-building changes; percentage effects and conditional yields 
 | Palgum | City Center | Irrigation | 80 | 0 | +2 Production |  | 1 |  |  |  |  |  |  |  |  |  | Gold | river |  | Water Mill | Babylon | +1 Food on this city's tiles where has fresh water |
 | Sewer | City Center | Sanitation | 200 | 2 |  |  | 2 |  |  |  |  |  |  |  |  |  | Gold |  |  |  |  |  |
 | Medieval Walls | City Center | Castles | 220 | 0 |  |  |  |  |  |  |  |  | Ancient Walls |  |  | 100 HP / +3 |  |  |  |  |  | melee attacks cannot damage the walls |
+| Tsikhe | City Center | Siege Tactics | 260 | 0 | +4 Faith |  |  |  |  |  |  |  | Medieval Walls |  |  | 200 HP / +3 |  |  |  | Renaissance Walls | Georgia | melee attacks cannot damage the walls; walls cannot be bypassed; +4 Faith from Tsikhe where player has golden age |
 | Renaissance Walls | City Center | Siege Tactics | 300 | 0 |  |  |  |  |  |  |  |  | Medieval Walls |  |  | 100 HP / +3 |  |  |  |  |  | melee attacks cannot damage the walls; walls cannot be bypassed |
 | Market | Commercial Hub | Currency | 120 | 0 | +2 Gold |  |  |  | 1 |  | +1 Great Merchant |  |  |  |  |  | Gold |  |  |  |  | +1 Trade Route capacity |
 | Sukiennice | Commercial Hub | Currency | 120 | 0 | +2 Gold |  |  |  | 1 |  | +1 Great Merchant |  |  |  |  |  | Gold |  |  | Market | Poland | domestic routes from the city +4 Gold; international routes from the city +2 Production; +1 Trade Route capacity |
@@ -36,6 +37,7 @@ Yields are flat per-building changes; percentage effects and conditional yields 
 | Barracks | Encampment | Bronze Working | 90 | 1 | +1 Production |  | 1 |  | 1 |  | +1 Great General |  |  | Stable |  |  | Gold |  |  |  |  | ability Barracks Trained Unit Xp [+25% combat XP] for units trained in this city; +10 strategic resource stockpile cap; ability Nihang Barracks Strength [+15 Combat Strength] for your units |
 | Basilikoi Paides | Encampment | Bronze Working | 90 | 1 | +1 Production |  | 1 |  | 1 |  | +1 Great General |  |  | Stable |  |  | Gold |  |  | Barracks | Macedon | ability Nihang Barracks Strength [+15 Combat Strength] for your units; ability Basilikoi Trained Unit Xp [+25% combat XP] for units trained in this city; on training a unit, Science = 25% of its cost (one-time); +10 strategic resource stockpile cap |
 | Stable | Encampment | Horseback Riding | 120 | 1 | +1 Production |  | 1 |  | 1 |  | +1 Great General |  |  | Barracks |  |  | Gold |  |  |  |  | ability Stable Trained Unit Xp [+25% combat XP] for units trained in this city; +10 strategic resource stockpile cap |
+| Ordu | Encampment | Horseback Riding | 120 | 1 | +1 Production |  | 1 |  | 1 |  | +1 Great General |  |  | Barracks |  |  | Gold |  |  | Stable | Mongolia | ability Ordu Trained Unit Xp [+25% combat XP] for units trained in this city; ability Mongol Steppe [+1 Movement] for units trained in this city; +10 strategic resource stockpile cap |
 | Armory | Encampment | Military Engineering | 195 | 2 | +3 Production |  |  |  | 1 |  | +1 Great General |  | Barracks, Stable |  |  |  | Gold |  |  |  |  | ability Armory Trained Unit Xp [+25% combat XP] for units trained in this city; +10 strategic resource stockpile cap; ability Nihang Armory Strength [+15 Combat Strength] for your units |
 | Military Academy | Encampment | Military Science | 330 | 2 | +4 Production |  | 1 |  | 1 | +1 Production | +1 Great General |  | Armory |  |  |  | Gold |  |  |  |  | ability Military Academy Trained Unit Xp [+25% combat XP] for units trained in this city; +25% Production toward corps/armies; +10 strategic resource stockpile cap; ability Nihang Academy Strength [+15 Combat Strength] for your units |
 | Tlachtli | Entertainment Complex | Games and Recreation | 135 | 1 | +2 Faith, +2 Culture |  |  | 2 |  |  | +1 Great General |  |  |  |  |  | Gold |  |  | Arena | Aztec |  |
@@ -118,6 +120,7 @@ Yields are flat per-building changes; percentage effects and conditional yields 
 | Queen's Bibliotheque | Writing | 2 | /// | 0/0 |
 | Queen's Bibliotheque | Art | 2 | /// | 0/0 |
 | Queen's Bibliotheque | Music | 2 | /// | 0/0 |
+| St. Basil's Cathedral | Relic | 3 | /// | 0/0 |
 | Prasat | Relic | 1 | /// | 0/0 |
 | Apadana | Palace | 2 | /// | 0/0 |
 

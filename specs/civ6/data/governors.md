@@ -122,4 +122,5 @@
 | Future Civic | Civic | 1 |
 | Near Future Governance | Civic | 1 |
 | Grand Vizier | Trait | 1 |
+| Casa de Contratación | Building | 3 |
 

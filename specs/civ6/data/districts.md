@@ -40,6 +40,8 @@ Cost progression: `COST_PROGRESSION_GAME_PROGRESS` with param P means cost = bas
 | Suguba | Currency | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 0 |  |  |  | 0 |  | +4 Gold | +1 Great Merchant |  | Plunder Gold 50 | one per city | Commercial Hub | Mali |
 | Hippodrome | Games and Recreation | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 1 |  |  | 3 | 1 |  |  |  |  | Plunder Heal 50 | one per city; exclusive with Water Park | Entertainment Complex | Byzantium |
 | Oppidum | Iron Working | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 1 | 100 |  |  | -1 |  | +2 Production | +1 Great Engineer |  |  | one per city; attack range 2 | Industrial Zone | Gaul |
+| Ikanda | Bronze Working | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 1 | 100 | 1 |  | -1 |  | +2 Gold, +1 Production | +1 Great General |  |  | one per city; not adjacent to City Center; attack range 2 | Encampment | Zulu |
+| Seowon | Writing | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 1 |  |  |  | 0 |  | +2 Science | +1 Great Scientist |  | Plunder Science 25 | one per city | Campus | Korea |
 | Observatory | Writing | 27 | NUM_UNDER_AVG_PLUS_TECH 40 | yes | 1 |  |  |  | 0 |  | +2 Science | +1 Great Scientist |  | Plunder Science 25 | one per city | Campus | Maya |
 | Thành | Bronze Working | 27 | NUM_UNDER_AVG_PLUS_TECH 40 |  | 1 | 100 |  |  | -1 |  | +2 Gold, +1 Production |  |  |  | one per city; not adjacent to City Center; attack range 2 | Encampment | Vietnam |
 
@@ -79,6 +81,8 @@ Cost progression: `COST_PROGRESSION_GAME_PROGRESS` with param P means cost = bas
 | Suguba | +2 Gold per Pamukkale; +2 Gold per river; +2 Gold per Holy Site; +2 Gold per Lavra; +1 Gold per 2 district; +1 Gold per Government Plaza |  | Production 0/1/0; Gold 0/0/3 |  | 20% cheaper to purchase buildings; 20% cheaper to purchase districts; 20% cheaper to purchase units |
 | Hippodrome |  |  | Food 0/1/1 |  |  |
 | Oppidum | +2 Production per Quarry; +2 Production per Strategic resource; +1 Production per Government Plaza |  | Production 0/1/1 |  | grants the technology Apprenticeship (one-time) |
+| Ikanda |  |  | Production 0/1/1 |  | +25% Production toward corps/armies |
+| Seowon | +4 Science per self (own tile); -1 Science per district; +1 Science per Government Plaza | Grassland (Hills), Plains (Hills), Tundra (Hills), Snow (Hills), Desert (Hills) | Food 0/1/0; Science 0/0/1 |  |  |
 | Observatory | +1 Science per 2 district; +2 Science per Plantation; +1 Science per 2 Farm; +2 Science per Great Barrier Reef; +1 Science per Government Plaza; +2 Science per Pamukkale |  | Food 0/1/0; Science 0/0/1 |  |  |
 | Thành | +2 Culture per district |  | Production 0/1/1 |  | Tourism equal to 100% of the district's Culture adjacency where has Flight |
 

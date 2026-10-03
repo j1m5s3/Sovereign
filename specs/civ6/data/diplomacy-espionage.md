@@ -133,6 +133,7 @@
 | Source Spy |  | Spy FromCitizen |
 | Source Highlevel Spy | 3 | Spy FromCitizen |
 | Source Great Person Journalism |  | FromCitizen |
+| Source Trading Post Trait |  |  |
 
 ## Spy operations
 

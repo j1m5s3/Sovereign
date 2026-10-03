@@ -32,8 +32,9 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Archaeologist | civilian | Land | Natural History | 400 |  | 0 |  |  |  |  |  | 4 | 2 |  |  |  |  |  | Gold | needs Archaeological Museum |  |  |  |
 | Spearman | Anti Cavalry | Land | Bronze Working | 65 |  | 1 | 25 |  |  |  |  | 2 | 2 |  |  | Pikeman |  | Metal Casting | Gold |  | Anti-Cavalry |  |  |
 | Hoplite | Anti Cavalry | Land | Bronze Working | 65 |  | 1 | 28 |  |  |  |  | 2 | 2 |  |  | Pikeman |  | Metal Casting | Gold |  | Anti-Cavalry, Phalanx | Spearman | Greece |
+| Impi | Anti Cavalry | Land | Military Tactics | 125 |  | 1 | 45 |  |  |  |  | 2 | 2 |  |  | Pike and Shot |  | Composites | Gold |  | Anti-Cavalry, Zulu Impi | Pikeman | Zulu |
 | Pikeman | Anti Cavalry | Land | Military Tactics | 180 |  | 2 | 45 |  |  |  |  | 2 | 2 |  |  | Pike and Shot |  | Composites | Gold |  | Anti-Cavalry |  |  |
-| Pike and Shot | Anti Cavalry | Land | Metal Casting | 250 |  | 4 | 55 |  |  |  |  | 2 | 2 |  |  | AT Crew |  | Combined Arms | Gold |  | Anti-Cavalry |  |  |
+| Pike and Shot | Anti Cavalry | Land | Metal Casting | 250 |  | 3 | 55 |  |  |  |  | 2 | 2 |  |  | AT Crew |  | Combined Arms | Gold |  | Anti-Cavalry |  |  |
 | Carolean | Anti Cavalry | Land | Metal Casting | 250 |  | 3 | 55 |  |  |  |  | 3 | 2 |  |  | AT Crew |  | Combined Arms | Gold |  | Anti-Cavalry, Gå På | Pike and Shot | Sweden |
 | AT Crew | Anti Cavalry | Land | Chemistry | 400 |  | 4 | 75 |  |  |  |  | 2 | 2 |  |  | Modern AT |  |  | Gold |  | Anti-Cavalry |  |  |
 | Modern AT | Anti Cavalry | Land | Composites | 580 |  | 8 | 85 |  |  |  |  | 3 | 2 |  |  |  |  |  | Gold |  | Anti-Cavalry |  |  |
@@ -58,6 +59,7 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Courser | Light Cavalry | Land | Castles | 200 |  | 3 | 46 |  |  |  |  | 5 | 2 | Horses 20 |  | Cavalry |  | Synthetic Materials | Gold |  | Ignore ZOC |  |  |
 | Oromo Cavalry | Light Cavalry | Land | Castles | 200 |  | 3 | 48 |  |  |  |  | 5 | 3 | Horses 10 |  | Cavalry |  | Synthetic Materials | Gold |  | Ignore ZOC, Oromo Cavalry | Courser | Ethiopia |
 | Black Army | Light Cavalry | Land | Castles | 205 |  | 3 | 49 |  |  |  |  | 5 | 2 | Horses 10 |  | Cavalry |  | Synthetic Materials | Gold |  | Fekete Sereg, Ignore ZOC | Courser | Matthias Corvinus |
+| Malón Raider | Light Cavalry | Land | Gunpowder | 230 |  | 4 | 55 |  |  |  |  | 4 | 2 |  |  | Cavalry |  |  | Gold |  | Ignore ZOC, Mapuche Malon Raider |  | Mapuche |
 | Mountie | Light Cavalry | Land | Conservation | 290 |  | 3 | 62 |  |  |  |  | 5 | 4 |  |  |  |  |  | Gold | park 2 | Ignore ZOC, Park Protector |  | Canada |
 | Cavalry | Light Cavalry | Land | Military Science | 330 |  | 5 | 62 |  |  |  |  | 5 | 2 | Horses 20 |  | Helicopter |  |  | Gold |  | Ignore ZOC |  |  |
 | Llanero | Light Cavalry | Land | Military Science | 330 |  | 2 | 62 |  |  |  |  | 5 | 2 | Horses 20 |  | Helicopter |  |  | Gold |  | Ignore ZOC, Llanero Adjacency Strength | Cavalry | Gran Colombia |
@@ -78,6 +80,7 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Samurai | Melee | Land | Feudalism | 160 |  | 3 | 48 |  |  |  |  | 2 | 2 | Iron 10 |  | Musketman |  | Replaceable Parts | Gold |  | Anti-Spear, Samurai | Man-At-Arms | Japan |
 | Berserker | Melee | Land | Military Tactics | 160 |  | 3 | 48 |  |  |  |  | 2 | 2 | Iron 10 |  | Musketman |  | Replaceable Parts | Gold |  | Anti-Spear, Berserker Movement, Berserker Rage | Man-At-Arms | Norway |
 | Man-At-Arms | Melee | Land | Apprenticeship | 160 |  | 3 | 45 |  |  |  |  | 2 | 2 | Iron 20 |  | Musketman |  | Replaceable Parts | Gold |  | Anti-Spear |  |  |
+| Khevsur | Melee | Land | Military Tactics | 160 |  | 3 | 48 |  |  |  |  | 2 | 2 | Iron 10 |  | Musketman |  | Replaceable Parts | Gold |  | Anti-Spear, Georgian Khevsureti | Man-At-Arms | Georgia |
 | Musketman | Melee | Land | Gunpowder | 240 |  | 4 | 55 |  |  |  |  | 2 | 2 | Niter 20 |  | Line Infantry |  | Advanced Ballistics | Gold |  | Anti-Spear |  |  |
 | Conquistador | Melee | Land | Gunpowder | 250 |  | 4 | 58 |  |  |  |  | 2 | 2 | Niter 10 |  | Line Infantry |  | Advanced Ballistics | Gold |  | Anti-Spear, Forced Conversion | Musketman | Spain |
 | Redcoat | Melee | Land | Military Science | 360 |  | 5 | 70 |  |  |  |  | 2 | 2 | Niter 10 |  | Infantry |  |  | Gold |  | Anti-Spear, Global Army | Line Infantry | Victoria (Age of Empire) |
@@ -96,14 +99,18 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Maryannu Chariot Archer | Ranged | Land | Wheel | 90 |  | 1 | 25 | 35 |  | 2 |  | 2 | 2 |  |  | Crossbowman |  | Ballistics | Gold | no ZOC | Ignore ZOC, Light Chariot |  | Egypt |
 | Saka Horse Archer | Ranged | Land | Horseback Riding | 100 |  | 2 | 20 | 25 |  | 1 |  | 4 | 2 |  |  | Crossbowman |  | Ballistics | Gold | no ZOC | Ignore ZOC |  | Scythia |
 | Crouching Tiger | Ranged | Land | Machinery | 140 |  | 3 | 30 | 50 |  | 1 |  | 2 | 2 |  |  | Field Cannon |  | Advanced Ballistics | Gold | no ZOC | Ranged Attack District Debuff |  | China |
+| Keshig | Ranged | Land | Stirrups | 160 |  | 3 | 35 | 45 |  | 2 |  | 4 | 2 | Horses 10 |  | Field Cannon |  | Advanced Ballistics | Gold | no ZOC | Ignore ZOC, Mongolian Keshig |  | Mongolia |
 | Crossbowman | Ranged | Land | Machinery | 180 |  | 3 | 30 | 40 |  | 2 |  | 2 | 2 |  |  | Field Cannon |  | Advanced Ballistics | Gold | no ZOC | Ranged Attack District Debuff |  |  |
 | Voi Chiến | Ranged | Land | Machinery | 200 |  | 3 | 35 | 40 |  | 2 |  | 3 | 3 |  |  | Field Cannon |  | Advanced Ballistics | Gold | no ZOC | Ranged Attack District Debuff, Voi Chiến | Crossbowman | Vietnam |
+| Hwacha | Ranged | Land | Gunpowder | 250 |  | 3 | 45 | 60 |  | 2 |  | 2 | 2 |  |  | Machine Gun |  | Advanced Ballistics | Gold | no ZOC | No Move and Shoot, Ranged Attack District Debuff | Field Cannon | Korea |
 | Field Cannon | Ranged | Land | Ballistics | 330 |  | 5 | 50 | 60 |  | 2 |  | 2 | 2 |  |  | Machine Gun |  | Telecommunications | Gold | no ZOC | Ranged Attack District Debuff |  |  |
 | Machine Gun | Ranged | Land | Advanced Ballistics | 540 |  | 6 | 70 | 85 |  | 2 |  | 2 | 2 |  |  |  |  |  | Gold | no ZOC | Ranged Attack District Debuff |  |  |
 | Scout | Recon | Land |  | 30 |  | 0 | 10 |  |  |  |  | 3 | 2 |  |  | Skirmisher |  |  | Gold |  | Reveal Stealth |  |  |
+| Okihtcitaw | Recon | Land |  | 40 |  | 0 | 20 |  |  |  |  | 3 | 2 |  |  | Skirmisher |  |  | Gold |  | Cree Okihtcitaw | Scout | Cree |
 | Skirmisher | Recon | Land | Machinery | 150 |  | 2 | 20 | 30 |  | 1 |  | 3 | 2 |  |  | Ranger |  |  | Gold | no ZOC |  |  |  |
 | Warak’aq | Recon | Land | Machinery | 165 |  | 2 | 20 | 40 |  | 1 |  | 3 | 2 |  |  | Ranger |  |  | Gold | no ZOC | Expert Marksman, Ranged Attack District Debuff | Skirmisher | Inca |
 | Ranger | Recon | Land | Rifling | 380 |  | 5 | 45 | 60 |  | 1 |  | 3 | 2 |  |  | Spec Ops |  |  | Gold | no ZOC | Ranged Attack District Debuff |  |  |
+| Highlander | Recon | Land | Rifling | 380 |  | 5 | 50 | 65 |  | 1 |  | 3 | 2 |  |  | Spec Ops |  |  | Gold |  | Scottish Highlander | Ranger | Scotland |
 | Spec Ops | Recon | Land | Plastics | 520 |  | 7 | 60 | 65 |  | 2 |  | 3 | 2 |  |  |  |  |  | Gold | no ZOC | Directed Attack, Paradrop |  |  |
 | Rock Band | Rock Band | Land | Cold War | 300 | PREVIOUS_COPIES 50 | 0 |  |  |  |  |  | 4 | 2 |  |  |  |  |  | Faith | must purchase | Enter Foreign Lands |  |  |
 | Catapult | Siege | Land | Engineering | 120 |  | 2 | 25 |  | 35 | 2 |  | 2 | 2 |  |  | Trebuchet |  | Steel | Gold | no ZOC | Bombard Attack Unit Debuff, No Move and Shoot, Receive Range Bonus |  |  |
@@ -138,6 +145,7 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Quadrireme | Naval Ranged | Sea | Shipbuilding | 120 |  | 2 | 20 | 25 |  | 1 |  | 3 | 2 |  |  | Frigate |  | Steel | Gold |  |  |  |  |
 | Dromon | Naval Ranged | Sea | Shipbuilding | 120 |  | 2 | 20 | 25 |  | 2 |  | 3 | 2 |  |  | Frigate |  | Steel | Gold |  | Greek Fire | Quadrireme | Byzantium |
 | Frigate | Naval Ranged | Sea | Square Rigging | 280 |  | 5 | 45 | 55 |  | 2 |  | 4 | 2 | Niter 20 |  | Battleship |  | Lasers | Gold |  |  |  |  |
+| De Zeven Provinciën | Naval Ranged | Sea | Square Rigging | 280 |  | 5 | 50 | 60 |  | 2 |  | 4 | 2 | Niter 10 |  | Battleship |  | Lasers | Gold |  | Dutch Zeven Provincien | Frigate | Netherlands |
 | Jong | Naval Ranged | Sea | Mercenaries | 300 |  | 5 | 45 | 55 |  | 2 |  | 5 | 2 |  |  | Battleship |  | Lasers | Gold |  | Jong | Frigate | Indonesia |
 | Battleship | Naval Ranged | Sea | Refining | 430 |  | 6 | 60 | 70 |  | 3 | 90 | 5 | 2 | Coal 1 | 1 Coal/turn | Missile Cruiser |  |  | Gold |  | Anti Air Cover |  |  |
 | Minas Geraes | Naval Ranged | Sea | Nationalism | 430 |  | 6 | 70 | 80 |  | 3 | 95 | 5 | 2 | Coal 1 | 1 Coal/turn | Missile Cruiser |  |  | Gold |  | Anti Air Cover | Battleship | Brazil |

@@ -32,8 +32,9 @@ installed). Both are build artefacts and are git-ignored; do not commit them.
    actions whose criteria hold for a Gathering Storm game (`RULESET_EXPANSION_2`
    / `GameCoreInUse Expansion2` / `Expansion2_Players` leaders / installed
    mods), and skips optional game modes (`ConfigurationValueMatches`) and
-   scenarios. Gathering Storm's own copy of the Rise and Fall data is used; the
-   standalone `DLC/Expansion1` folder is not loaded.
+   scenarios. Gathering Storm ships its own copy of the Rise and Fall core data;
+   from `DLC/Expansion1` only the actions whose criteria also match Gathering
+   Storm (the R&F civs and leaders) are applied.
 3. Applies XML `<Row>`, `<Replace>`, `<Update>` and `<Delete>` operations and
    SQL files in load order (Gathering Storm before other packs, then each
    action's `LoadOrder` and file `Priority`), so later layers override earlier

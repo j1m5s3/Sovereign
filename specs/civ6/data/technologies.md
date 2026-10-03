@@ -15,7 +15,7 @@ Costs are Standard speed (multiply by game-speed CostMultiplier). Unlock lists e
 | Astrology | 50 |  | 40 | discover a natural wonder | Shrine, Stonehenge, Holy Site |  |
 | Irrigation | 50 | Pottery | 40 | build a Farm on a resource | Hanging Gardens, Plantation |  |
 | Writing | 50 | Pottery | 40 | meet another civilization | Library, Etemenanki, Campus |  |
-| Archery | 50 | Animal Husbandry | 40 | kill a unit with a Slinger | Archer |  |
+| Archery | 50 | Animal Husbandry | 40 | kill a unit with a Slinger | Archer, Temple of Artemis |  |
 | Masonry | 80 | Mining | 40 | build a Quarry on a resource | Battering Ram, Ancient Walls, Pyramids |  |
 | Bronze Working | 80 | Mining | 40 | kill 3 barbarians | Spearman, Barracks, Encampment, Iron (revealed) |  |
 | Wheel | 80 | Mining | 40 | build a Mine on a resource | Heavy Chariot, Water Mill |  |
@@ -40,7 +40,7 @@ Costs are Standard speed (multiply by game-speed CostMultiplier). Unlock lists e
 | Buttress | 300 | Shipbuilding, Mathematics | 40 | build a wonder of a later era | Hagia Sophia, Dam |  |
 | Military Tactics | 300 | Mathematics | 40 | kill a unit with a Spearman | Pikeman, Huey Teocalli |  |
 | Apprenticeship | 300 | Currency, Horseback Riding | 40 | build 3 Mines | Man-At-Arms, Workshop, Industrial Zone |  |
-| Machinery | 300 | Iron Working, Engineering | 40 | own 3 Archers | Siege Tower, Crossbowman, Skirmisher |  |
+| Machinery | 300 | Iron Working, Engineering | 40 | own 3 Archers | Siege Tower, Crossbowman, Skirmisher, Kilwa Kisiwani |  |
 | Education | 390 | Mathematics, Apprenticeship | 40 | train a Great Scientist | University, University of Sankore |  |
 | Stirrups | 390 | Horseback Riding, Apprenticeship | 40 | complete the civic Feudalism | Knight |  |
 | Military Engineering | 390 | Construction | 40 | build an Aqueduct | Military Engineer, Trebuchet, Armory, Niter (revealed) |  |
@@ -50,7 +50,7 @@ Costs are Standard speed (multiply by game-speed CostMultiplier). Unlock lists e
 
 | Technology | Cost | Prerequisites | Boost % | Boost condition | Unlocks | Other effects |
 |---|---|---|---|---|---|---|
-| Cartography | 600 | Buttress | 40 | build 2 Harbors | Caravel | can enter Ocean for your units |
+| Cartography | 600 | Buttress | 40 | build 2 Harbors | Caravel, Casa de Contratación | can enter Ocean for your units |
 | Mass Production | 600 | Education, Buttress, Military Tactics | 40 | build a Lumber Mill | Shipyard, Venetian Arsenal |  |
 | Banking | 600 | Education, Stirrups | 40 | complete the civic Guilds | Bank, Great Zimbabwe |  |
 | Gunpowder | 600 | Apprenticeship, Stirrups, Military Engineering | 40 | build a Armory | Musketman |  |

@@ -36,7 +36,7 @@ Costs are Standard speed. Unlock lists exclude civ-unique items.
 | Feudalism | 300 | Defensive Tactics | 40 | build 6 Farms | Feudal Contract (policy), Serfdom (policy) |  |
 | Civil Service | 300 | Defensive Tactics, Recorded History | 40 | grow a city to 10 population | Meenakshi Temple, Retainers (policy), Civil Prestige (policy) |  |
 | Mercenaries | 340 | Military Training, Feudalism | 40 | have 8 land combat units | Professional Army (policy), Trade Confederation (policy), Retinues (policy) | grants 1 Envoy(s) |
-| Divine Right | 340 | Civil Service, Theology | 40 | build 2 Temples | Mont St. Michel, Chivalry (policy), Gothic Architecture (policy), Monarchy |  |
+| Divine Right | 340 | Civil Service, Theology | 40 | build 2 Temples | Mont St. Michel, Kotoku-in, Chivalry (policy), Gothic Architecture (policy), Monarchy |  |
 | Medieval Faires | 420 | Feudalism | 40 | have 4 trade routes | Angkor Wat, Merchant Confederation (policy), Aesthetics (policy), Medina Quarter (policy) | +1 Governor Title(s) |
 | Guilds | 420 | Feudalism, Civil Service | 40 | build 2 Markets | Chichen Itza, Craftsmen (policy), Town Charters (policy), Traveling Merchants (policy) | +1 Governor Title(s) |
 
@@ -45,8 +45,8 @@ Costs are Standard speed. Unlock lists exclude civ-unique items.
 | Civic | Cost | Prerequisites | Boost % | Boost condition | Unlocks | Other effects (envoys, governor titles, slots...) |
 |---|---|---|---|---|---|---|
 | Exploration | 440 | Mercenaries, Medieval Faires | 40 | own 2 Caravels | Press Gangs (policy), Colonial Offices (policy), Merchant Republic |  |
-| Reformed Church | 440 | Guilds, Divine Right | 40 | have 6 cities following your religion | Wars of Religion (policy), Religious Orders (policy), Simultaneum (policy), Theocracy |  |
-| Humanism | 600 | Medieval Faires, Guilds | 40 | train a Great Artist | Art Museum, Archaeological Museum, Invention (policy), Frescoes (policy) |  |
+| Reformed Church | 440 | Guilds, Divine Right | 40 | have 6 cities following your religion | St. Basil's Cathedral, Wars of Religion (policy), Religious Orders (policy), Simultaneum (policy), Theocracy |  |
+| Humanism | 600 | Medieval Faires, Guilds | 40 | train a Great Artist | Art Museum, Archaeological Museum, Taj Mahal, Invention (policy), Frescoes (policy) |  |
 | Diplomatic Service | 600 | Guilds | 40 | have an alliance | Chancery, Machiavellianism (policy), Wisselbanken (policy) | grants 1 Spy |
 | Mercantilism | 720 | Humanism | 40 | train a Great Merchant | Privateer, Torre de Belém, Logistics (policy), Triangular Trade (policy), Drill Manuals (policy) |  |
 | The Enlightenment | 720 | Humanism, Diplomatic Service | 40 | earn 3 Great People | Rationalism (policy), Free Market (policy), Liberalism (policy) | adjust player religious tourism reduction (Modifier=50) |
@@ -57,7 +57,7 @@ Costs are Standard speed. Unlock lists exclude civ-unique items.
 |---|---|---|---|---|---|---|
 | Colonialism | 800 | Mercantilism | 40 | research Astronomy | Native Conquest (policy), Colonial Taxes (policy), Raj (policy) | grants 2 Envoy(s) |
 | Opera and Ballet | 800 | The Enlightenment | 40 | build an Art Museum | Bolshoi Theatre, Grand Opera (policy), Symphonies (policy) | grants 2 Envoy(s) |
-| Civil Engineering | 1010 | Mercantilism | 40 | have 7 different specialty districts | Public Works (policy), Skyscrapers (policy) | +1 Governor Title(s) |
+| Civil Engineering | 1010 | Mercantilism | 40 | have 7 different specialty districts | Statue of Liberty, Public Works (policy), Skyscrapers (policy) | +1 Governor Title(s) |
 | Nationalism | 1010 | The Enlightenment | 40 | declare war using a casus belli | Grande Armée (policy), National Identity (policy) | grants 1 Spy; +1 Governor Title(s) |
 | Natural History | 1050 | Colonialism | 40 | build an Archaeological Museum | Archaeologist, Zoo, Hermitage, Ferris Wheel, Aquarium, Water Park, Antiquity Site (revealed) | grants 2 Envoy(s); triggers GenerateLandAntiquities |
 | Urbanization | 1210 | Civil Engineering, Nationalism | 40 | grow a city to 15 population | Neighborhood, Public Transport (policy), Military Research (policy), Force Modernization (policy) |  |
@@ -67,7 +67,7 @@ Costs are Standard speed. Unlock lists exclude civ-unique items.
 
 | Civic | Cost | Prerequisites | Boost % | Boost condition | Unlocks | Other effects (envoys, governor titles, slots...) |
 |---|---|---|---|---|---|---|
-| Conservation | 1540 | Natural History | 40 | have a Neighborhood with appeal 4+ | Naturalist, Sanctuary, Resource Management (policy) | grants 3 Envoy(s); +1 Tourism from the district for your districts where district is City Center and city has Ancient Walls; +2 Tourism from the district for your districts where district is City Center and city has Medieval Walls; +3 Tourism from the district for your districts where district is City Center and city has Renaissance Walls; +1 Tourism from the district for your districts where district is Entertainment Complex and city has Arena |
+| Conservation | 1540 | Natural History | 40 | have a Neighborhood with appeal 4+ | Naturalist, Sanctuary, Resource Management (policy) | grants 3 Envoy(s); +1 Tourism from the district for your districts where district is City Center and city has Ancient Walls; +2 Tourism from the district for your districts where district is City Center and city has Medieval Walls; +3 Tourism from the district for your districts where district is City Center and city has Renaissance Walls; +1 Tourism from the district for your districts where district is Entertainment Complex and city has Arena; +3 Tourism from the district for your districts where district is City Center and city has Tsikhe and player has golden age |
 | Mass Media | 1540 | Natural History, Urbanization | 40 | research Radio | Broadway, Cristo Redentor, Propaganda (policy) | +1 Governor Title(s) |
 | Mobilization | 1540 | Urbanization, Scorched Earth | 40 | have 3 corps | Levée en Masse (policy) | +1 Governor Title(s) |
 | Capitalism | 1580 | Mass Media | 40 | build 2 Stock Exchanges | Shopping Mall, Laissez-Faire (policy), Market Economy (policy) |  |
@@ -82,7 +82,7 @@ Costs are Standard speed. Unlock lists exclude civ-unique items.
 | Civic | Cost | Prerequisites | Boost % | Boost condition | Unlocks | Other effects (envoys, governor titles, slots...) |
 |---|---|---|---|---|---|---|
 | Cultural Heritage | 1955 | Conservation | 40 | have a themed building | Sydney Opera House, Heritage Tourism (policy), Shipwreck (revealed) | grants 3 Envoy(s); triggers GenerateSeaAntiquities; adjust unit extract sea artifacts (Extract=yes) for your units |
-| Cold War | 2185 | Ideology | 40 | research Nuclear Fission | Rock Band, Cryptography (policy), International Waters (policy), Containment (policy), Second Strike Capability (policy) | grants 1 Spy |
+| Cold War | 2185 | Ideology | 40 | research Nuclear Fission | Rock Band, Amundsen-Scott Research Station, Cryptography (policy), International Waters (policy), Containment (policy), Second Strike Capability (policy) | grants 1 Spy |
 | Professional Sports | 2185 | Ideology | 40 | build 2 Entertainment Complexs | Stadium, Estádio do Maracanã, Aquatics Center, Ski Resort, Sports Media (policy) |  |
 | Rapid Deployment | 2415 | Cold War | 40 | build an aerodrome/airstrip on a foreign continent | Military First (policy), After Action Reports (policy) |  |
 | Space Race | 2415 | Cold War | 40 | build a Spaceport | Satellite Broadcasts (policy), Integrated Space Cell (policy), Music Censorship (policy) |  |

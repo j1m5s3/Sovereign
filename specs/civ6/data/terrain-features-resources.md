@@ -69,6 +69,13 @@
 | Mount Vesuvius | 1 |  | +1 Production | yes | 2 |  |  | Mountain, Mountain |  |
 | Sahara el Beyda | 4 | +1 Culture, +4 Gold, +1 Science |  |  | 2 |  |  | Desert, Desert (Hills), Mountain |  |
 | Uluru | 1 |  | +2 Faith, +2 Culture | yes | 4 |  |  | Desert, Desert (Hills) |  |
+| Delicate Arch | 1 |  | +2 Faith, +1 Gold | yes | 2 |  |  | Desert, Desert (Hills) |  |
+| Eye of the Sahara | 3 | +2 Production, +1 Science |  |  | 2 |  |  | Desert, Desert (Hills) |  |
+| Lake Retba | 2 | +2 Culture, +2 Gold, +1 Production |  |  | 2 |  |  | Grassland, Plains |  |
+| Matterhorn | 1 |  | +1 Culture | yes | 2 |  |  | Mountain, Mountain |  |
+| Mount Roraima | 4 |  | +1 Faith, +1 Science | yes | 2 |  |  | Mountain, Grassland (Hills), Grassland, Mountain, Plains (Hills), Plains |  |
+| Ubsunur Hollow | 4 | +2 Faith, +1 Food, +1 Production |  |  | 2 |  |  | Tundra, Tundra (Hills) |  |
+| Zhangye Danxia | 3 |  |  | yes | 2 |  |  | Mountain, Mountain, Mountain, Mountain, Mountain |  |
 | Bermuda Triangle | 3 |  | +5 Science |  | 2 |  |  | Ocean |  |
 | Fountain of Youth | 1 | +4 Science, +4 Faith |  |  | 2 |  | yes | Grassland, Plains, Desert, Grassland (Hills), Plains (Hills), Desert (Hills) |  |
 | Païtiti | 3 |  | +3 Gold, +2 Culture | yes | 2 |  |  | Grassland, Plains, Desert, Grassland (Hills), Plains (Hills), Desert (Hills) |  |
