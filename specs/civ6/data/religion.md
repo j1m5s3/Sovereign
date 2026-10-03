@@ -18,7 +18,7 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 
 | Belief | Effects |
 |---|---|
-| City Patron Goddess | adjust all district production modifier (Amount=25) where NOT city has 1+ specialty districts in all cities where city follows your pantheon |
+| City Patron Goddess | +25% Production toward districts where NOT city has 1+ specialty districts in all cities where city follows your pantheon |
 | Dance of the Aurora | Holy Site gets +1 Faith per adjacent Tundra in all cities where city follows your pantheon; Holy Site gets +1 Faith per adjacent Tundra (Hills) in all cities where city follows your pantheon |
 | Desert Folklore | Holy Site gets +1 Faith per adjacent Desert in all cities where city follows your pantheon; Holy Site gets +1 Faith per adjacent Desert (Hills) in all cities where city follows your pantheon |
 | Divine Spark | +1 Great Prophet points from the district for this city's districts where district is Holy Site in all cities where city follows your pantheon; +1 Great Scientist points per turn where city has Library in all cities where city follows your pantheon; +1 Great Writer points per turn where city has Amphitheater in all cities where city follows your pantheon |
@@ -37,7 +37,7 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 | Lady of the Reeds and Marshes | +2 Production on this city's tiles where tile is Marsh or tile is Oasis or tile is Desert Floodplains in all cities where city follows your pantheon |
 | Monument to the Gods | +15% Production toward wonders (Ancient Era to Classical Era) in all your cities for all players where player has pantheon |
 | Religious Idols | +2 Faith on this city's tiles where tile has a Resourceclass Bonus resource and tile has Mine in all cities where city follows your pantheon; +2 Faith on this city's tiles where tile has a Resourceclass Luxury resource and tile has Mine in all cities where city follows your pantheon |
-| Religious Settlements | adjust city culture border expansion (Amount=15) in all cities where city follows your pantheon; grants 1 Settler in your capital where has at least 1 cities (one-time) for all players where player has pantheon |
+| Religious Settlements | +15% border expansion rate in all cities where city follows your pantheon; grants 1 Settler in your capital where has at least 1 cities (one-time) for all players where player has pantheon |
 | River Goddess | +2 Amenity for this city's districts where tile is Holy Site and adjacent to a river in all cities where city follows your pantheon; +2 Housing for this city's districts where tile is Holy Site and adjacent to a river in all cities where city follows your pantheon |
 | Sacred Path | Holy Site gets +1 Faith per adjacent Rainforest in all cities where city follows your pantheon |
 | Stone Circles | +2 Faith on this city's tiles where tile has Quarry in all cities where city follows your pantheon |
@@ -52,7 +52,7 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 | Jesuit Education | can buy buildings in Campus with Faith in all cities where city follows your religion; can buy buildings in Theater Square with Faith in all cities where city follows your religion |
 | Religious Community | international routes from the city +2 Gold where city has Holy Site in all cities where city follows your religion; international routes from the city +2 Gold where city has Shrine in all cities where city follows your religion; international routes from the city +2 Gold where city has Temple in all cities where city follows your religion; international routes from the city +2 Gold where city has Cathedral or city has Dar-e Mehr or city has Gurdwara or city has Meeting House or city has Mosque or city has Pagoda or city has Stupa or city has Synagogue or city has Wat in all cities where city follows your religion |
 | Reliquaries | Great Works of type Relic give Faith (scaling 300%) in all cities where city follows your religion; Tourism from Relic scaled 300% in all cities where city follows your religion |
-| Warrior Monks | add religious unit (UnitType=Warrior Monk); culture bomb when Holy Site is built for all players where player is religion founder |
+| Warrior Monks | can buy Warrior Monk with Faith; culture bomb when Holy Site is built for all players where player is religion founder |
 | Work Ethic | Production equal to the district's Faith adjacency for all districts where city follows your religion and tile is Holy Site |
 | Zen Meditation | adjust city amenities from religion (Amount=1) in all cities where city follows your religion and city has 2+ specialty districts |
 
@@ -78,7 +78,7 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 | Lay Ministry | +1 Culture per 1 district (Theater Square) for all players where player is religion founder; +1 Faith per 1 district (Holy Site) for all players where player is religion founder |
 | Papal Primacy | enable religion awards envoy religious pressure (Amount=200) |
 | Pilgrimage | +2 Faith per 1 city for all players where player is religion founder |
-| Religious Unity | enable religion awards envoy (Enable=yes) |
+| Religious Unity | converting a city-state awards an Envoy |
 | Sacred Places | +2 Faith per 1 city with wonder for all players where player is religion founder; +2 Culture per 1 city with wonder for all players where player is religion founder; +2 Science per 1 city with wonder for all players where player is religion founder; +2 Gold per 1 city with wonder for all players where player is religion founder |
 | Stewardship | +1 Science per 1 district (Campus) for all players where player is religion founder; +1 Gold per 1 district (Commercial Hub) for all players where player is religion founder |
 | Tithe | +3 Gold per 1 city for all players where player is religion founder |
@@ -91,11 +91,11 @@ Pressure, conversion and theological combat constants are in global-parameters.m
 | Defender of the Faith | +5 Combat Strength in combat for all units where player is religion founder and near religious city (FriendlyCity=yes) and NOT unit has tag Religious and NOT unit has tag Support |
 | Holy Order | 30% cheaper to purchase Missionary in all your cities for all players where player is religion founder; 30% cheaper to purchase Apostle in all your cities for all players where player is religion founder |
 | Holy Waters | +10 healing (All) for all units where within tiles for all districts where city follows your religion and district is Holy Site |
-| Itinerant Preachers | adjust religious spread distance (DistanceChange=3) |
+| Itinerant Preachers | +3 tiles religious pressure range |
 | Crusade | +10 Combat Strength in combat for all units where player is religion founder and near religious city (FriendlyCity=no) and NOT unit has tag Religious and NOT unit has tag Support |
 | Missionary Zeal | ability Walk on Air [ignores All movement costs; no river crossing penalty] for your units for all players where player is religion founder |
-| Monastic Isolation | adjust religious combat loss (ReductionPercent=100) |
-| Religious Colonization | enable religion auto spread (Enable=yes) |
+| Monastic Isolation | 100% less pressure lost when religious units die |
+| Religious Colonization | religion spreads automatically |
 | Scripture | religious spread x25 |
 
 ## Religions

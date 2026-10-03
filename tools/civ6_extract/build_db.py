@@ -67,7 +67,7 @@ def elem_values(el: ET.Element, raw: bool = False) -> dict:
     vals = {k: conv(v) for k, v in el.attrib.items()}
     for child in el:
         if isinstance(child.tag, str):
-            vals[child.tag] = conv(child.text if child.text is not None else "")
+            vals[child.tag] = conv(child.text.strip() if child.text is not None else "")
     return vals
 
 

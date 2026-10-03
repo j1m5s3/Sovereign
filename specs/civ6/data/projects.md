@@ -21,7 +21,7 @@
 | Commercial Hub Investment | Commercial Hub |  | 25 | GAME_PROGRESS 1500 |  |  |  | 30% of production -> Gold | +10 Great Merchant |  |  |  |  |
 | Move Capital | Cothon |  | 100 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  |  |
 | Encampment Training | Encampment |  | 25 | GAME_PROGRESS 1500 |  |  |  | 15% of production -> Gold | +10 Great General |  |  |  |  |
-| Bread and Circuses | Entertainment Complex |  | 25 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  | grant city loyalty (Amount=20) (one-time) |
+| Bread and Circuses | Entertainment Complex |  | 25 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  | +20 Loyalty (one-time) |
 | Harbor Shipping | Harbor |  | 25 | GAME_PROGRESS 1500 |  |  |  | 15% of production -> Gold | +10 Great Admiral |  |  |  |  |
 | Holy Site Prayers | Holy Site |  | 25 | GAME_PROGRESS 1500 |  |  |  | 15% of production -> Faith | +10 Great Prophet |  |  |  |  |
 | Industrial Zone Logistics | Industrial Zone |  | 25 | GAME_PROGRESS 1500 |  |  |  |  | +10 Great Engineer |  |  |  |  |
@@ -42,6 +42,6 @@
 | Carnival | Street Carnival |  | 25 | GAME_PROGRESS 1500 |  |  |  |  | +5 Great Engineer, +5 Great Merchant, +5 Great Writer, +5 Great Artist, +5 Great Musician | 1 |  |  |  |
 | Theater Square Festival | Theater Square |  | 25 | GAME_PROGRESS 1500 |  |  |  | 15% of production -> Culture | +5 Great Writer, +5 Great Artist, +5 Great Musician |  |  |  |  |
 | Court Festival | Theater Square |  | 65 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  | +50 Culture per surplus luxury (one-time); grant tourism per excess luxuries (Amount=50) (one-time) |
-| Bread and Circuses | Water Park |  | 25 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  | grant city loyalty (Amount=20) (one-time) |
+| Bread and Circuses | Water Park |  | 25 | GAME_PROGRESS 1500 |  |  |  |  |  |  |  |  | +20 Loyalty (one-time) |
 | Carnival | Copacabana |  | 25 | GAME_PROGRESS 1500 |  |  |  |  | +5 Great Engineer, +5 Great Merchant, +5 Great Writer, +5 Great Artist, +5 Great Musician | 1 |  |  |  |
 

@@ -51,7 +51,7 @@ Promotion XP thresholds and healing on promotion are engine/GlobalParameters val
 | Indulgence Vendor | 1 | 0 |  | +100 Gold when a unit is trained/bought |
 | Heathen Conversion | 1 | 0 |  | converts defeated barbarians |
 | Debater | 1 | 0 |  | +20 Combat Strength in combat |
-| Martyr | 1 | 0 |  | adjust unit relic upon death (RelicSource=Relic Source Religious Unit) |
+| Martyr | 1 | 0 |  | creates a Relic when killed in theological combat |
 | Chaplain | 1 | 0 |  | +20 HP healing (All) for your units where within tiles |
 
 ## GDR
@@ -85,7 +85,7 @@ Promotion XP thresholds and healing on promotion are engine/GlobalParameters val
 | Double Envelopment | 2 | 3 | Coursers | 100% flanking bonus |
 | Spiking the Guns | 3 | 1 | Depredation, Double Envelopment | +7 Combat Strength in combat where when attacking and vs Siege |
 | Pursuit | 3 | 3 | Depredation, Double Envelopment | +1 Movement |
-| Escort Mobility | 4 | 2 | Spiking the Guns, Pursuit | adjust unit escort mobility (EscortMobility=yes) |
+| Escort Mobility | 4 | 2 | Spiking the Guns, Pursuit | escorted/escorting units move at the faster unit's speed |
 
 ## Melee
 

@@ -19,7 +19,7 @@
 
 | Promotion | Tier | Column | Base ability | Requires | Effects |
 |---|---|---|---|---|---|
-| Redoubt | 0 | 1 | yes |  | adjust city inner defense (Amount=5) |
+| Redoubt | 0 | 1 | yes |  | +5 city (inner) defense |
 | Garrison Commander | 1 | 0 |  | Redoubt | adjust city combat bonus (Amount=5); +4 Loyalty pressure |
 | Defense Logistics | 1 | 2 |  | Redoubt | adjust city siege protection (Protected=yes); +1 strategic accumulation per source |
 | Embrasure | 2 | 1 |  | Defense Logistics, Garrison Commander | adjust city attacks per turn (Amount=1); grants enough XP for a promotion for units trained in this city |
@@ -33,7 +33,7 @@
 | Messenger | 0 | 1 | yes |  | governor adjust city tokens granted (Amount=2) |
 | Emissary | 1 | 0 |  | Messenger | +2 Loyalty pressure |
 | Affluence | 1 | 2 |  | Messenger | governor adjust city copy luxuries for import |
-| Local Informants | 2 | 0 |  | Emissary | adjust city spy bonus (Amount=3) |
+| Local Informants | 2 | 0 |  | Emissary | +3 spy level when defending this city |
 | Foreign Investor | 2 | 2 |  | Affluence | governor adjust city copy strategics for import |
 | Puppeteer | 3 | 1 |  | Local Informants, Foreign Investor | governor adjust city tokens granted modifier (Percent=100) |
 
@@ -65,10 +65,10 @@
 |---|---|---|---|---|---|
 | Guildmaster | 0 | 1 | yes |  | +1 build charge(s) for units trained in this city where unit is Builder |
 | Zoning Commissioner | 1 | 0 |  | Guildmaster | +20% Production toward districts |
-| Aquaculture | 1 | 2 |  | Guildmaster | adjust city allowed improvement (ImprovementType=Fishery) |
+| Aquaculture | 1 | 2 |  | Guildmaster | may build Fishery |
 | Reinforced Materials | 2 | 0 |  | Zoning Commissioner | adjust prevent structural damage (Prevent=yes) |
 | Water Works | 2 | 2 |  | Aquaculture | +2 Housing for this city's districts where district is Neighborhood; +2 Housing for this city's districts where district is Aqueduct; +1 Amenity for this city's districts where district is Canal; +1 Amenity for this city's districts where district is Dam |
-| Parks and Recreation | 3 | 1 |  | Water Works, Reinforced Materials | adjust city allowed improvement (ImprovementType=City Park) |
+| Parks and Recreation | 3 | 1 |  | Water Works, Reinforced Materials | may build City Park |
 
 ## Pingala
 
@@ -77,7 +77,7 @@
 | Librarian | 0 | 1 | yes |  | +15% Science; +15% Culture |
 | Connoisseur | 1 | 0 |  | Librarian | +1 Culture per Citizen |
 | Researcher | 1 | 2 |  | Librarian | +1 Science per Citizen |
-| Grants | 2 | 1 |  | Connoisseur, Researcher | adjust city great person points modifier (Amount=100) |
+| Grants | 2 | 1 |  | Connoisseur, Researcher | +100% Great Person points |
 | Curator | 3 | 0 |  | Grants | Tourism from Sculpture scaled 200%; Tourism from Portrait scaled 200%; Tourism from Landscape scaled 200%; Tourism from Religious scaled 200%; Tourism from Writing scaled 200%; Tourism from Music scaled 200% |
 | Space Initiative | 3 | 2 |  | Grants | +30% Production toward space race projects |
 
@@ -85,7 +85,7 @@
 
 | Promotion | Tier | Column | Base ability | Requires | Effects |
 |---|---|---|---|---|---|
-| Land Acquisition | 0 | 1 | yes |  | adjust city culture border expansion (Amount=20); adjust city yield from foreign trade routes passing through (YieldType=Gold, Amount=3) |
+| Land Acquisition | 0 | 1 | yes |  | +20% border expansion rate; adjust city yield from foreign trade routes passing through (YieldType=Gold, Amount=3) |
 | Harbormaster | 1 | 0 |  | Land Acquisition | +100% to the district's Gold (adjacency) yield for this city's districts where district is Commercial Hub; +100% to the district's Gold (adjacency) yield for this city's districts where district is Harbor |
 | Forestry Management | 1 | 2 |  | Land Acquisition | adjust feature no improvement appeal governor (Amount=1); +2 Gold on this city's tiles where NOT plot has any improvement and plot has any feature |
 | Tax Collector | 2 | 1 |  | Harbormaster, Forestry Management | adjust city gold from citizens (Amount=2) |

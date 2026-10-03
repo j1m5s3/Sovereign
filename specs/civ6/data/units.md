@@ -249,7 +249,7 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Ignore ZOC | heavy_cavalry, naval_raider, longship, war_cart, ranged_cavalry, light_cavalry |  | adjust unit ignore zoc (Ignore=yes) |
 | Inquisition Friendly Territory Bonus | religious_all | yes | +15 Combat Strength in friendly territory |
 | John Monash Bonus Experience | recon, melee, ranged, anti_cavalry, light_cavalry, heavy_cavalry, siege | yes | +75% combat XP |
-| Jong | jong |  | +5 Combat Strength in combat where unit in formation; adjust unit escort mobility (EscortMobility=yes) |
+| Jong | jong |  | +5 Combat Strength in combat where unit in formation; escorted/escorting units move at the faster unit's speed |
 | Knarr Ignore Embark Disembark Cost | all_combat_units, landcivilian, support | yes | no movement cost to embark/disembark |
 | Laskarina Bouboulina Bonus Experience | naval_melee, naval_ranged, naval_raider, naval_carrier | yes | +50% combat XP |
 | Varangian Guard | all_combat_units | yes | after killing a unit gain Faith = 50% of its Combat Strength in combat; after killing a unit gain Science = 50% of its Combat Strength in combat; after killing a unit gain Culture = 50% of its Combat Strength in combat |
@@ -262,14 +262,14 @@ CS = melee combat strength, RS = ranged strength. Costs are Standard speed.
 | Mana | landcivilian, recon, melee, ranged, siege, heavy_cavalry, light_cavalry, ranged_cavalry, anti_cavalry, heavy_chariot, light_chariot, support | yes | +2 Movement (while unit embarked) |
 | Gold Giver | mandekalu |  | after killing a unit gain Gold = 100% of its Combat Strength in combat; ability Trader Mandekalu Protection [trade routes immune to plunder (Land)] for your units where within 4 tiles of a Trader unit |
 | Mapuche Malon Raider | mapuche_malon_raider |  | +5 Combat Strength in combat where in or next to friendly territory; pillaging costs only 1 movement |
-| Martyr | missionary | yes | adjust unit relic upon death (RelicSource=Relic Source Religious Unit) |
+| Martyr | missionary | yes | creates a Relic when killed in theological combat |
 | Medic Healing | medic |  | +20 HP healing (All) for your units where within tiles |
 | Mediterranean Colonies | settler | yes | no movement cost to embark/disembark; +2 Movement where unit embarked; +2 sight where unit embarked |
 | Thunderbolt Coastal Raid | naval_melee | yes | can coastal raid |
 | Ethiopian Highlands | all_combat_units | yes | +4 Combat Strength in combat where tile is Hills |
 | Military Organization | landcivilian | yes | +2 Movement |
 | Military Academy Trained Unit Xp | melee, ranged, anti_cavalry, light_cavalry, heavy_cavalry, siege | yes | +25% combat XP |
-| Mongolian Keshig | mongolian_keshig |  | adjust unit escort mobility (EscortMobility=yes) |
+| Mongolian Keshig | mongolian_keshig |  | escorted/escorting units move at the faster unit's speed |
 | Montezuma Combat Bonus Per Luxury | recon, melee, ranged, anti_cavalry, light_cavalry, heavy_cavalry, siege, naval_melee, naval_ranged, naval_raider, naval_carrier, aircraft | yes | adjust unit per luxury attack modifier (Amount=1) |
 | Park Protector | mountie |  | +5 Combat Strength in combat where near a National Park |
 | Mustang | mustang |  | +50% combat XP; +5 Combat Strength in combat where vs Air Fighter |

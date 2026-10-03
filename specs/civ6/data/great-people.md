@@ -108,22 +108,22 @@ Activation requirement column names come from the GreatPersonIndividuals schema 
 
 | Individual | Era | Charges | Activation requirements | Activation effects | Passive/on-recruit effects | Great Works |
 |---|---|---|---|---|---|---|
-| Bi Sheng | Medieval Era | 1 | OwnedTile, CompletedDistrictType=City Center | adjust city extra districts (Amount=1) (one-time); Eureka for Printing (one-time) |  |  |
+| Bi Sheng | Medieval Era | 1 | OwnedTile, CompletedDistrictType=City Center | +1 district capacity (one-time); Eureka for Printing (one-time) |  |  |
 | Isidore of Miletus | Medieval Era | 2 | OwnedTile, IncompleteWonder | one-time 215 (x game speed) Production (one-time) |  |  |
 | James of St. George | Medieval Era | 3 | OwnedTile, CompletedDistrictType=City Center, MissingBuildingType=Medieval Walls | grants Medieval Walls (one-time); grants Ancient Walls (one-time) |  |  |
 | Imhotep | Medieval Era | 2 | OwnedTile, IncompleteWonder | one-time 350 (x game speed) Production where plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time); one-time 175 (x game speed) Production where NOT plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time) |  |  |
 | Filippo Brunelleschi | Renaissance Era | 2 | OwnedTile, IncompleteWonder | one-time 315 (x game speed) Production (one-time) |  |  |
 | Leonardo da Vinci | Renaissance Era | 1 | OwnedTile, CompletedDistrictType=Industrial Zone | grants 1 random Eureka(s) (Modern Era to Modern Era) (one-time); +3 Culture from Workshop in all your cities |  |  |
 | Mimar Sinan | Renaissance Era | 1 | OwnedTile, CompletedDistrictType=City Center | culture bomb when Industrial Zone is built (one-time) |  |  |
-| Ada Lovelace | Industrial Era | 1 | OwnedTile, CompletedDistrictType=City Center | Eureka for Computers (one-time); adjust city extra districts (Amount=1) (one-time) |  |  |
+| Ada Lovelace | Industrial Era | 1 | OwnedTile, CompletedDistrictType=City Center | Eureka for Computers (one-time); +1 district capacity (one-time) |  |  |
 | Gustave Eiffel | Industrial Era | 2 | OwnedTile, IncompleteWonder | one-time 480 (x game speed) Production (one-time) |  |  |
 | James Watt | Industrial Era | 1 | OwnedTile, CompletedDistrictType=Industrial Zone | +2 Production from Factory in all your cities; grants Factory (one-time); grants Workshop (one-time) |  |  |
 | Alvar Aalto | Modern Era | 1 | OwnedTile, CompletedDistrictType=City Center | +1 Appeal (one-time) |  |  |
 | Nikola Tesla | Modern Era | 1 | OwnedTile, CompletedDistrictType=Industrial Zone | adjust district extra regional yield (Amount=2, YieldType=Production) (one-time); +3 regional range (one-time) |  |  |
 | Robert Goddard | Modern Era | 1 | OwnedTile, CompletedDistrictType=Industrial Zone | Eureka for Rocketry (one-time); +20% Production toward space race projects in all your cities |  |  |
 | Shah Jahān | Modern Era | 1 | OwnedTile, IncompleteWonder | purchase production in city (one-time) |  |  |
-| John Roebling | Atomic Era | 2 | OwnedTile, CompletedDistrictType=City Center | adjust city amenities from great people (Amount=1) (one-time); +2 Housing per Great Person (one-time) |  |  |
-| Jane Drew | Atomic Era | 1 | OwnedTile, CompletedDistrictType=City Center | adjust city amenities from great people (Amount=3) (one-time); +4 Housing per Great Person (one-time) |  |  |
+| John Roebling | Atomic Era | 2 | OwnedTile, CompletedDistrictType=City Center | +1 Amenity per Great Person (one-time); +2 Housing per Great Person (one-time) |  |  |
+| Jane Drew | Atomic Era | 1 | OwnedTile, CompletedDistrictType=City Center | +3 Amenity per Great Person (one-time); +4 Housing per Great Person (one-time) |  |  |
 | Sergei Korolev | Atomic Era | 1 | OwnedTile, IncompleteSpaceRaceProject, CompletedDistrictType=Spaceport | one-time 1500 (x game speed) Production (one-time) |  |  |
 | Charles Correa | Information Era | 1 | OwnedTile, CompletedDistrictType=City Center | +2 Appeal (one-time) |  |  |
 | Joseph Paxton | Information Era | 1 | OwnedTile, CompletedDistrictType=Entertainment Complex | adjust district extra regional entertainment (Amount=1) (one-time); +3 regional range (one-time) |  |  |
