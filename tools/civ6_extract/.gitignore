@@ -1,0 +1,4 @@
+# Local Civ VI database builds (never commit game data)
+*.sqlite
+*.sqlite.log
+__pycache__/
