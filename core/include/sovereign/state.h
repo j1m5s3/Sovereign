@@ -2,6 +2,8 @@
 // nothing outside it may influence a rules decision.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -82,7 +84,7 @@ struct CityDistrict {
     bool complete = false;
 };
 
-struct City {
+struct SOV_API City {
     CityId id = kNoCity;
     PlayerId owner = kNoPlayer;
     std::string name;
@@ -196,7 +198,7 @@ struct Camp {
     TypeIndex tribe = kNone;  // Rules::barbarianTribes
 };
 
-struct GameState {
+struct SOV_API GameState {
     GameSetup setup;
     int turn = 1;
     PlayerId currentPlayer = 0;

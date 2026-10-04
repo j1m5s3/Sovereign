@@ -3,6 +3,8 @@
 // (specs/civ6/01-map-and-terrain.md, Grid).
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -27,11 +29,11 @@ struct Hex {
     bool operator!=(const Hex& o) const { return !(*this == o); }
 };
 
-Axial toAxial(Hex h);
-Hex toOffset(Axial a);
-int axialDistance(Axial a, Axial b);
+SOV_API Axial toAxial(Hex h);
+SOV_API Hex toOffset(Axial a);
+SOV_API int axialDistance(Axial a, Axial b);
 
-class HexGrid {
+class SOV_API HexGrid {
 public:
     HexGrid() = default;
     HexGrid(int32_t width, int32_t height, bool wrapX) : w_(width), h_(height), wrap_(wrapX) {}

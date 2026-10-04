@@ -4,6 +4,8 @@
 // is how mods change rules.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <array>
 #include <climits>
 #include <cstdint>
@@ -19,8 +21,8 @@ enum class YieldType : uint8_t { Food = 0, Production, Gold, Science, Culture, F
 constexpr size_t kNumYields = static_cast<size_t>(YieldType::Count);
 using Yields = std::array<Fixed, kNumYields>;
 
-const char* yieldName(YieldType y);
-bool parseYieldName(const std::string& s, YieldType& out);
+SOV_API const char* yieldName(YieldType y);
+SOV_API bool parseYieldName(const std::string& s, YieldType& out);
 
 enum class Relief : uint8_t { Flat = 0, Hills, Mountain };
 enum class Domain : uint8_t { Land = 0, Sea, Air };
@@ -424,7 +426,7 @@ struct GameSpeedType {
     int turns = 500;
 };
 
-class Rules {
+class SOV_API Rules {
 public:
     // Loads every rules file from each directory in order; rows in later
     // directories replace rows with the same id. Returns false with a message.
@@ -493,6 +495,6 @@ private:
     uint64_t checksum_ = 0;
 };
 
-uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);
+SOV_API uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);
 
 }  // namespace sov

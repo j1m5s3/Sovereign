@@ -18,6 +18,13 @@ public class SovereignCore : ModuleRules
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "core", "include"));
 		PrivateIncludePaths.Add(RepoRoot);
 
+		// Modular (editor) builds load the core as a DLL: export its API (sovereign/api.h).
+		if (Target.LinkType != TargetLinkType.Monolithic)
+		{
+			PublicDefinitions.Add("SOV_SHARED=1");
+		}
+		PrivateDefinitions.Add("SOV_BUILDING_CORE=1");
+
 		PublicDependencyModuleNames.Add("Core");
 	}
 }

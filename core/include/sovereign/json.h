@@ -3,6 +3,8 @@
 // their key order so loading is deterministic.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -14,7 +16,7 @@
 
 namespace sov {
 
-class Json {
+class SOV_API Json {
 public:
     enum class Type { Null, Bool, Number, String, Array, Object };
 

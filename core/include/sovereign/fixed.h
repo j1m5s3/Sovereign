@@ -3,6 +3,8 @@
 // bit-identical on every compiler and CPU for lockstep multiplayer.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -13,7 +15,7 @@
 
 namespace sov {
 
-class Fixed {
+class SOV_API Fixed {
 public:
     // Four decimal places: exact for the data's percentages and route costs
     // (0.75, 0.5, 0.25) and parseable from decimal text without floats.
