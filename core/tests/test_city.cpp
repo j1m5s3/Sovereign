@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/mapgen.h"
 
