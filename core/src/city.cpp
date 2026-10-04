@@ -226,8 +226,11 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->units.size()) return fail(CommandError::CannotBuild);
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
         // Naval units need coastal cities (later).
-        if (u.domain != Domain::Land || u.mustPurchase || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
+        if (u.domain != Domain::Land || u.mustPurchase || !u.trainable || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
             unitObsolete(c.owner, item.type))
+            return fail(CommandError::CannotBuild);
+        if (!u.needsBuilding.empty() &&
+            std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return c.has(b); }))
             return fail(CommandError::CannotBuild);
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
