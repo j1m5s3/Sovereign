@@ -11,6 +11,9 @@ Status: art style, roster and leader abilities decided by James (2026-10-04); ab
 
 ## Art toolchain (recommended)
 
+**Who makes the art **[decided, James 2026-10-04]**:** Claude makes the art (models, kit pieces, textures) through scripted tools such as Blender's Python API, modelling from reference images gathered online. References are used only to study shapes, proportions and period detail; no downloaded image, texture or model ships in the game unless its license allows it.
+
+
 | Tool | Use |
 |---|---|
 | Blender (free) | Modeling, kit pieces, hero models, rigging, animation. Geometry Nodes for kit-piece variants. |
@@ -26,7 +29,7 @@ Skip Houdini (its procedural tools run in the editor, not in the shipped game, a
 
 Civ comes first: each civ keeps its own civ ability and unique units/buildings (to design separately). The leader adds:
 
-1. **Leader ability:** an empire-wide bonus in Civ terms (yields, production, combat strength, loyalty). Lost if the leader dies and a successor takes over (see open question 1).
+1. **Leader ability:** an empire-wide bonus in Civ terms (yields, production, combat strength, loyalty). Belongs to the throne: every successor keeps it and adds a small personal trait (**[decided, James 2026-10-04, gap review]**).
 2. **Promotion leaning:** the leader starts with the first promotion of one `SOVEREIGN` branch (Warlord, Statesman or Builder-King, see leader doc section 3). The player can still finish any one branch.
 3. **AI agenda:** what the AI version of this leader likes and dislikes, feeding diplomacy and the nemesis memory (player-retention doc).
 
@@ -103,8 +106,44 @@ Leanings: 5 Warlord, 4 Statesman, 3 Builder-King.
 - Ability: roads on hills and next to mountains +1 Movement; +1 Housing in cities next to a mountain; Farms on hills +1 Food.
 - Agenda, *Sapa Inca:* dislikes civs that settle or build in mountain ranges near him.
 
+## Civ abilities, uniques and dynasties
+
+Status: proposed by Claude from each civ's historical specialty, at James's request (2026-10-04); numbers are starting points for playtesting. Each civ gets one civ ability, one unique unit and one unique building or improvement. Civ abilities are written to sit beside the leader ability, not repeat it. Names are historical; wording and numbers are Sovereign's own.
+
+| Civ | Specialty | Civ ability | Unique unit (replaces) | Unique building or improvement (replaces) |
+|---|---|---|---|---|
+| England | Industry, sea trade | **Mills and Mines:** Iron and Coal mines +1 Production; Industrial Zones +1 Production adjacency from a Harbor | **Longbowman** (Crossbowman): +5 Ranged Strength when attacking from hills or woods, 10% cheaper | **Mill Town** (Factory): +1 Housing, +1 Production to adjacent mines |
+| France (Franks) | Religion, scholarship, cavalry | **Cathedral Builders:** +15% Production toward Medieval and Renaissance wonders; each wonder +1 Amenity in its city | **Scara** (Knight): +1 Movement; heals 10 HP when it kills a unit | **Royal Abbey** (Temple): +1 Science and +1 Culture |
+| Rome | Expansion, roads, legions | **Colonia:** new cities start with +1 Population and a free Monument | **Legionary** (Swordsman): +4 Combat Strength; one Builder charge for roads and forts | **Forum** (Market): +1 Amenity and +1 Gold per trade route from this city |
+| Greece (Sparta) | City-states, culture, phalanx | **Polis:** +2 Culture per city-state you are suzerain of; Theater Squares +1 adjacency from an Encampment | **Hoplite** (Spearman): +10 Combat Strength next to another Hoplite | **Odeon** (Amphitheater): +1 Great Work of Writing slot, +1 Envoy when built |
+| Persia | Satrapies, governance, roads | **Satrapies:** cities with an established governor +2 Loyalty and +2 Gold; +1 Governor title at Political Philosophy | **Immortal** (Swordsman): can make a ranged attack (strength 25) as well as melee | **Paradise Garden** (improvement): +2 Culture, +1 Amenity to the city; +Appeal to adjacent tiles |
+| Arabia (Ayyubids) | Desert trade, scholarship | **Caravan Cities:** trade routes through desert +2 Gold; Campuses +1 adjacency from a Commercial Hub | **Mamluk** (Knight): heals at the end of every turn, even after moving or attacking | **Madrasa** (University): +2 Faith, +1 Great Scientist point |
+| China | Bureaucracy, examinations | **Imperial Examinations:** each Governor title gives +1 Science and +1 Culture in the capital | **Repeating Crossbow** (Crossbowman): can attack after moving | **Beacon Tower** (improvement, own border tiles): +1 Culture, +2 vision, +4 Combat Strength to units defending on it |
+| Japan | Crafts, compact districts | **Craft Guilds:** Industrial Zones and Theater Squares +1 adjacency from each other | **Samurai** (Man-At-Arms): no Combat Strength loss when damaged | **Castle Town** (Medieval Walls): +2 Housing, +1 Culture |
+| Egypt | Rivers, floodplains | **Gift of the Nile:** districts and wonders can be built on floodplains with no penalty; river tiles +1 Food | **War Chariot** (Heavy Chariot): +1 Movement on flat land; no movement penalty for attacking | **Nilometer** (improvement, river tiles): +1 Food to adjacent Farms; flood damage to adjacent tiles halved |
+| Mali | Desert gold, Saharan trade | **Saharan Riches:** Mines on desert and desert hills +2 Gold; Commercial Hubs +1 adjacency per 2 adjacent desert tiles | **Mandinka Lancer** (Knight): +1 Movement in desert, +5 Combat Strength vs. units in desert | **Sahel Mosque** (Temple): +2 Gold, +1 Housing |
+| Aztec | Lake farming, tribute | **Chinampas:** Farms next to a lake or river +1 Food and +0.5 Housing | **Jaguar Warrior** (Warrior): +4 Combat Strength in woods and rainforest; captures defeated units as Builders | **Calmecac** (Library): +1 Faith; +25% XP for units trained in the city |
+| Inca | Mountains, terraces, relay roads | **Mit'a Labor:** +20% Production toward districts in cities next to a mountain; mountain tiles can be worked for +2 Production | **Chasqui** (Scout): +1 Movement, +1 extra Movement on roads | **Qullqa** (Granary): +2 Housing, +1 Food per adjacent mountain (max +2) |
+
+**Dynasties (heirs).** Two hand-made successors per launch leader, in historical order; after them, successors come from the pool. Each heir brings a small personal trait (to design with the art pass).
+
+| Civ | Starting leader | Heir 1 | Heir 2 |
+|---|---|---|---|
+| England | Elizabeth I | James I | Charles I |
+| France | Charlemagne | Louis the Pious | Charles the Bald |
+| Rome | Augustus | Tiberius | Claudius |
+| Greece | Leonidas I | Pleistarchus | Pleistoanax |
+| Persia | Cyrus the Great | Cambyses II | Darius I |
+| Arabia | Saladin | al-Adil I | al-Kamil |
+| China | Qin Shi Huang | Qin Er Shi | Ziying |
+| Japan | Tokugawa Ieyasu | Tokugawa Hidetada | Tokugawa Iemitsu |
+| Egypt | Ramesses II | Merneptah | Seti II |
+| Mali | Mansa Musa | Maghan I | Suleyman |
+| Aztec | Moctezuma I | Axayacatl | Ahuitzotl |
+| Inca | Pachacuti | Topa Inca Yupanqui | Huayna Capac |
+
 ## Open questions
 
-1. **Heirs without a character generator.** Succession puts new people on the throne (heir, governor, Great General/Admiral, level 4+ unit), and each needs a model. Proposal: each civ ships a short historical dynasty (starting leader plus 2 successors, e.g. Augustus → Tiberius → Claudius) as hand-made heirs, each with a small personal trait instead of a full ability. Great Generals and Admirals reuse their Great Person models. Governors and units become leader using the matching unit or governor model.
-2. **Civ abilities and uniques** for the 12 civs are still to design.
+1. **Heirs without a character generator** **[decided, James 2026-10-04, gap review]**. Succession puts new people on the throne (heir, governor, Great General/Admiral, level 4+ unit), and each needs a model. Decided: each civ ships a short historical dynasty (starting leader plus 2 successors, e.g. Augustus → Tiberius → Claudius) as hand-made heirs, each with a small personal trait instead of a full ability. Great Generals and Admirals reuse their Great Person models. Governors and units become leader using the matching unit or governor model. Once the dynasty runs out, successors come from the pool only. Each civ's dynasty still needs choosing.
+2. ~~**Civ abilities and uniques** for the 12 civs are still to design.~~ Drafted above (James 2026-10-04: Claude designs them from each civ's specialty). Pattern **[decided, James 2026-10-04, gap review]**: as in Civ VI, one civ ability, one unique unit and one unique building, district or improvement per civ.
 3. **Roster alternates** if one of the above is swapped out: Alfred the Great (England), Alexander the Great (Greece/Macedon), Genghis Khan (Mongolia, needs a steppe style), Shaka (Zulu), Ewuare (Benin).

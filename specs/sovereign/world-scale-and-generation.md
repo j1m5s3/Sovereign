@@ -6,6 +6,9 @@ Status: brainstorm, not spec (2026-10-04). Companion to [leader-character-brains
 
 - **[decided, James 2026-10-04]** Everything inside a hex is generated and not player-editable: street layout, house and landmark placement are fixed by the generator. Players build only at hex level, as in Civ (districts, improvements, wonders, buildings). Resources stay per hex; map generation stays random per game as in Civ VI.
 
+- **[decided, James 2026-10-04, gap review]** **The generator builds what the viewing player knows, not the true state.** Visible hexes use live state, revealed hexes use their last-seen state, and unrevealed hexes are not built at all. This keeps fog of war intact when walking or zooming into foreign land. Lockstep still gives every machine the full state, so map hacks stay possible, as in Civ.
+- **[decided, James 2026-10-04, gap review]** **Walking is for inside a hex.** Moving between hexes uses the map (normal unit moves), with an instant camera jump down into any hex the leader is in. A mount speeds up walking inside a hex but does not change map moves.
+
 ## The idea in one paragraph
 
 The hex map stays the game. The walkable 3D world is a **rendering of the hex map**, built automatically by a generator from each hex's game data, out of reusable model sets. Nobody hand-builds the world; artists build the pieces and rules, and the generator assembles every hex. Zoomed out you see the Civ map; zoomed in you are on the street of that same place, with no loading screens.

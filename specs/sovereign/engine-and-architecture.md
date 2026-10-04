@@ -8,6 +8,7 @@ Status: decided by James (2026-10-04). Companion to [world-scale-and-generation.
 - **[decided, James 2026-10-04] Hybrid architecture: a separate rules core.** All Civ-style game rules live in a plain C++ library that never includes Unreal headers. Unreal renders and plays the world from the core's state and sends player actions back to it.
 
 - **[decided, James 2026-10-04] Combat destruction: Chaos, scoped and cosmetic.** See [Destruction](#destruction).
+- **[decided, James 2026-10-04] Core foundations and build plan** from the gap review. See [Core foundations](#core-foundations-decided-james-2026-10-04-gap-review) and [Build plan](#build-plan-decided-james-2026-10-04-gap-review).
 
 ## Layers
 
@@ -25,6 +26,33 @@ Status: decided by James (2026-10-04). Companion to [world-scale-and-generation.
 - **Rules are data.** Units, buildings, techs, etc. load from data files (shaped like the tables in `specs/civ6/data/`), so mods change data rather than Unreal assets.
 - **Live scenes report back.** Real-time battles, assassination encounters and street interactions run in Unreal and hand a result (casualties, leader wounds, happiness/fear change) back to the core, which applies it. The core can also auto-resolve the same scene when no one is controlling it.
 - **Third-party runtimes** (llama.cpp for diplomacy, ONNX Runtime for battle AI) sit behind small interfaces so they can be swapped or stubbed in tests.
+
+## Core foundations **[decided, James 2026-10-04, gap review]**
+
+Pinned before the first line of the core is written (see [open-gaps-review.md](open-gaps-review.md), gaps 1, 3, 9, 10 and 18).
+
+- **Numbers:** fixed-point or integer math for every rules value. No floats in the core.
+- **Modifiers:** Civ VI's modifier system (collection, effect, owner and subject requirement sets, arguments; `specs/civ6/00-overview.md`, "Architecture recommendations for a clone") is the one way to express abilities, policies, beliefs, gear, promotions, reputation and difficulty.
+- **Commands:** every change to game state is a command, whoever issues it (player, AI, network, live-scene result, language-model output), and every command goes into one log. That log serves multiplayer, replays, tests and the weekly challenge.
+- **Non-deterministic parts are inputs, never computation.** The language model, the ONNX battle AI, Chaos physics and live scenes run on one machine and enter the core as recorded commands. Replays replay the commands; nothing re-runs them.
+- **Live scenes online:** one machine hosts each live battle or assassin fight with Unreal's networking for that scene only, then sends one result command into the lockstep stream. The core checks it against the battle result band (leader doc section 9) before applying it.
+- **RNG:** separate seeded streams for map generation, combat, AI and world visuals, so a cosmetic draw never shifts a combat roll.
+- **Saves:** versioned format from day one, with golden-file round-trip tests (`specs/civ6/10-ai-ui-implementation.md`, "Testing strategy"). The game autosaves when a live scene starts; there is no saving inside one.
+- **Online services **[decided, James 2026-10-04]**:** Steamworks first (Steam is the main store), with Epic Online Services added for cross-store play.
+- **Platforms:** Windows PC first, mouse and keyboard plus controller for direct control, Steam Deck as the low-end test device. Consoles later.
+
+## Build plan **[decided, James 2026-10-04, gap review]**
+
+Written up as the first `.jit/JIT_PLAN.md` when coding starts:
+
+1. Headless Civ core through MVP-7 (`specs/civ6/10-ai-ui-implementation.md`, "Recommended build order"), with tests.
+2. Unreal bridge showing a plain hex map.
+3. The leader in classic control, with auto-resolved assassins.
+4. One street scene: one style, the City Center.
+5. One medieval live battle.
+6. Everything else.
+
+Art **[decided, James 2026-10-04]**: Claude makes the art, modelling from reference images found online (see [leaders-and-art-style.md](leaders-and-art-style.md), Art toolchain).
 
 ## Destruction
 

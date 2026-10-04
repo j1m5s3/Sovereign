@@ -28,6 +28,7 @@ Builds on the AI player-modeling layer (leader doc, section 10).
 - Every week, everyone gets the same map seed, civ, leader and rule set.
 - Leaderboards for score, turns to victory, and challenge-specific goals (e.g. "win without your leader leaving the capital").
 - Cheap to run: the map and world are fully generated from the seed. Needs a light anti-cheat (submit the game's event log, validate it on the server by replay).
+- **[decided, James 2026-10-04, gap review]** A server cannot re-run a live battle, so live-battle results in a submitted log are accepted only when they fall inside the battle result band (leader doc section 9); anything outside it fails validation.
 
 ## 4. A short-term goal for the leader every turn
 
@@ -48,12 +49,17 @@ The UI should surface the next one or two of these at turn end, next to Civ's us
 
 - The game's rules already live in data tables (the specs/civ6/data model), so expose them to modders: civs, leaders, units, gear, buildings, model sets, AI personalities.
 - Workshop-style sharing from day one.
+- **[decided, James 2026-10-04, gap review]** **Launch scope:** data and modifier mods (new rules, balance, civs that reuse existing art). Asset mods (new models) come later through Unreal's plugin packaging. A scripting language (Lua is the common choice) is added only if scenarios need it.
 - Mods respect multiplayer by matching mod lists on join.
 
 ## 7. Cosmetic unlocks through achievements
 
 - Achievements unlock skins for weapons, armor, mounts and leaders (loadout skins, leader doc section 2), plus banners and city styles.
 - Unlocks are cosmetic only.
+
+## 8. Online services **[decided, James 2026-10-04, gap review]**
+
+Accounts, leaderboards, the workshop, matchmaking and optional cloud sync use **Steamworks first**, as Steam is the main store; **Epic Online Services** is added for cross-store play (**[decided, James 2026-10-04]**). Nemesis memory and the Hall of Sovereigns are stored locally, with optional cloud sync.
 
 ## What we will not do
 
