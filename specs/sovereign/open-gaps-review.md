@@ -1,6 +1,12 @@
 # Sovereign: open gaps review
 
-Status: review (2026-10-04). Lists what the design docs do not yet answer, by priority, with a recommendation for each. Nothing here is decided; James picks which to pursue. Reviewed: everything in `specs/sovereign/` plus the architecture, multiplayer and persistence parts of `specs/civ6/00-overview.md` and `specs/civ6/10-ai-ui-implementation.md`.
+Status: decided (James, 2026-10-04). Lists what the design docs did not yet answer, by priority, with a recommendation for each. Reviewed: everything in `specs/sovereign/` plus the architecture, multiplayer and persistence parts of `specs/civ6/00-overview.md` and `specs/civ6/10-ai-ui-implementation.md`.
+
+## Decisions (James, 2026-10-04)
+
+- **All recommendations adopted except gap 5.** They are now written into the docs they affect: [leader-character-brainstorm.md](leader-character-brainstorm.md) (sections 1, 5, 9, 10, 12), [engine-and-architecture.md](engine-and-architecture.md) (Core foundations, Build plan), [world-scale-and-generation.md](world-scale-and-generation.md) (Decisions), [leaders-and-art-style.md](leaders-and-art-style.md) (leader ability, open questions) and [player-retention.md](player-retention.md) (sections 3, 6, 8). Those docs are the source of truth from here; the text below is kept as the reasoning.
+- **Gap 5 changed:** the leader keeps fighting personally in every era, not only as a commander. It already commands the battle, so the personal fight is what Sovereign adds. Battles from the gunpowder eras on still need their own design (leader doc section 9).
+- **Still open after this review:** who makes the art (gap 10), Steamworks vs. Epic Online Services (gap 19), the dynasty for each civ and the 12 civ abilities (gap 11), and the items in gap 20.
 
 Priorities:
 - **P1:** decide before the rules core is coded, because it shapes the core's interfaces or contradicts something already decided.

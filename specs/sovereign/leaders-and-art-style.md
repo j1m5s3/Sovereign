@@ -26,7 +26,7 @@ Skip Houdini (its procedural tools run in the editor, not in the shipped game, a
 
 Civ comes first: each civ keeps its own civ ability and unique units/buildings (to design separately). The leader adds:
 
-1. **Leader ability:** an empire-wide bonus in Civ terms (yields, production, combat strength, loyalty). Lost if the leader dies and a successor takes over (see open question 1).
+1. **Leader ability:** an empire-wide bonus in Civ terms (yields, production, combat strength, loyalty). Belongs to the throne: every successor keeps it and adds a small personal trait (**[decided, James 2026-10-04, gap review]**).
 2. **Promotion leaning:** the leader starts with the first promotion of one `SOVEREIGN` branch (Warlord, Statesman or Builder-King, see leader doc section 3). The player can still finish any one branch.
 3. **AI agenda:** what the AI version of this leader likes and dislikes, feeding diplomacy and the nemesis memory (player-retention doc).
 
@@ -105,6 +105,6 @@ Leanings: 5 Warlord, 4 Statesman, 3 Builder-King.
 
 ## Open questions
 
-1. **Heirs without a character generator.** Succession puts new people on the throne (heir, governor, Great General/Admiral, level 4+ unit), and each needs a model. Proposal: each civ ships a short historical dynasty (starting leader plus 2 successors, e.g. Augustus → Tiberius → Claudius) as hand-made heirs, each with a small personal trait instead of a full ability. Great Generals and Admirals reuse their Great Person models. Governors and units become leader using the matching unit or governor model.
-2. **Civ abilities and uniques** for the 12 civs are still to design.
+1. **Heirs without a character generator** **[decided, James 2026-10-04, gap review]**. Succession puts new people on the throne (heir, governor, Great General/Admiral, level 4+ unit), and each needs a model. Decided: each civ ships a short historical dynasty (starting leader plus 2 successors, e.g. Augustus → Tiberius → Claudius) as hand-made heirs, each with a small personal trait instead of a full ability. Great Generals and Admirals reuse their Great Person models. Governors and units become leader using the matching unit or governor model. Once the dynasty runs out, successors come from the pool only. Each civ's dynasty still needs choosing.
+2. **Civ abilities and uniques** for the 12 civs are still to design. Pattern **[decided, James 2026-10-04, gap review]**: as in Civ VI, one civ ability, one unique unit and one unique building, district or improvement per civ.
 3. **Roster alternates** if one of the above is swapped out: Alfred the Great (England), Alexander the Great (Greece/Macedon), Genghis Khan (Mongolia, needs a steppe style), Shaka (Zulu), Ewuare (Benin).

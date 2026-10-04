@@ -27,7 +27,7 @@ Living map of the repo for AI agents. Read this instead of the full specs (~830 
 | Civs and leaders | 09: Civilization and leader structure | civilizations-leaders (grep the civ name) | leaders-and-art-style (Sovereign's own roster) |
 | Eras, ages, victory, climate, power | 09-civs-eras-victory-climate | eras-moments-loyalty, climate-disasters, game-setup (Victories) | |
 | AI | 10: AI architecture · 08: Agendas | civilizations-leaders (Agendas) | leader-character-brainstorm §10 |
-| UI, saves, multiplayer, build order, testing | 10-ai-ui-implementation | | engine-and-architecture |
+| UI, saves, multiplayer, build order, testing | 10-ai-ui-implementation | | engine-and-architecture (Core foundations, Build plan) |
 | Any tunable constant | | global-parameters (sections are name prefixes, e.g. `## COMBAT`) | |
 
 Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sovereign docs are `specs/sovereign/<file>.md`.
@@ -40,7 +40,7 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - [specs/sovereign/leaders-and-art-style.md] — stylized realism; 12 launch civs of historical leaders.
 - [specs/sovereign/world-scale-and-generation.md] — map scale and procedural city/district model generation.
 - [specs/sovereign/player-retention.md] — nemesis rivals, reign story, challenges, shorter modes, mods.
-- [specs/sovereign/open-gaps-review.md] — prioritized list of undecided mechanics and architecture questions, with recommendations (review, not decisions).
+- [specs/sovereign/open-gaps-review.md] — gap review; James adopted all recommendations except gap 5 (2026-10-04). Decisions now live in the docs they affect; this file keeps the reasoning.
 
 ## Subsystems
 - [tools/civ6_extract/] — rebuilds the rules DB from a local Civ VI install and regenerates `specs/civ6/data/` (README.md there for usage; rerun after game patches).
@@ -50,3 +50,7 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - Engine: UE5 front end, separate C++ rules core with no Unreal dependency.
 - Rules are data: load values from data files, never hard-code.
 - Leader roster: historical figures only, nobody living or recently dead.
+- Core foundations (engine doc): fixed-point math, Civ's modifier system, one command log, non-deterministic parts enter only as recorded commands, versioned saves.
+- Live battles (leader doc §9): only melee involving the leader's stack goes live; core computes the Civ result and the scene shifts it within a band; one machine hosts each scene; the leader fights personally in every era.
+- Leader ability belongs to the throne; every successor keeps it (leader doc §5).
+- The 3D world is generated from what the viewing player knows, not the true state (world doc).

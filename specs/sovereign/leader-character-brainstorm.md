@@ -2,7 +2,7 @@
 
 Status: brainstorm, not spec. Nothing here changes `specs/civ6/`. Section refs like "05" point at the Civ VI spec files in `specs/civ6/`.
 
-Revision 2 (2026-10-04): folds in James's answers to the four open questions and his assassin design. Items marked **[decided]** are James's calls; everything else is a proposal to react to.
+Revision 2 (2026-10-04): folds in James's answers to the four open questions and his assassin design. Revision 3 (2026-10-04): adds James's decisions from the gap review ([open-gaps-review.md](open-gaps-review.md)): sections 1, 5, 9, 10 and new section 12. Items marked **[decided]** are James's calls; everything else is a proposal to react to.
 
 ## The pitch
 
@@ -29,6 +29,8 @@ This fits Civ VI's Great General model (05: a person on the map with a 2-tile au
 - **No cost:** the leader cannot be built and has no maintenance.
 - **Presence aura (2 tiles, grows with level):** +combat strength to nearby friendly units (does not stack with a Great General: the higher one applies), and loyalty per turn to a city whose tiles it stands on.
 - **Leader abilities stay empire-wide (09):** each Civ VI leader's ability is unchanged. The unit adds a separate layer on top.
+- **Game start and early safety [decided, James 2026-10-04, gap review]:** the leader starts on the Settler's tile in addition to Civ's normal starting units. Barbarians can wound the leader but never kill or capture it; at low HP it retreats to the capital. Assassins unlock in the Classical era (section 6). If the capital falls while the leader is elsewhere, the leader stays free and the Palace moves as in Civ.
+- **At sea and in the air [decided, James 2026-10-04, gap review]:** the leader embarks like a land unit and is vulnerable while embarked, as land units are in Civ, so naval escorts matter. Naval and air fights involving the leader auto-resolve with Civ math. A transport sunk with the leader aboard means the leader dies.
 
 ## 2. Loadout: armor and weapons gated by tech [decided]
 
@@ -90,8 +92,9 @@ Other interior actions (front door to existing systems): appoint or move a gover
 Three outcomes, plus an optional game mode:
 
 - **Assassinated or killed in battle → succession.** The empire takes a hit: an interregnum where policy slots are empty for a few turns (like Civ VI's government-change anarchy), a loyalty drop in every city (02), and lost era score that can tip you toward a Dark Age (09). The killer's civ takes grievances (08) if it's identified.
+- **The leader ability belongs to the throne [decided, James 2026-10-04, gap review]:** every successor keeps the civ's leader ability. The heir or pool successor adds a small personal trait on top. The cost of losing a leader is the interregnum, loyalty loss, era score and lost levels, not the ability.
 - **Choosing the successor [decided]:** the player picks either
-  - **the heir:** starts at level 1, keeps one promotion of the dead leader's choice, inherits the loadout; or
+  - **the heir [decided, James 2026-10-04, gap review]:** each civ ships a short historical dynasty (starting leader plus 2 successors) as hand-made heirs (see leaders-and-art-style.md). The heir starts at level 1, keeps one promotion of the dead leader's choice, inherits the loadout; or
   - **another person from the empire.** Proposed pool:
     - **a governor (08):** becomes leader with a promotion branch seeded by their governor specialty (Victor → Warlord, Amani → Statesman, Magnus/Liang/Reyna → Builder-King, Pingala and Moksha → Statesman). The governor leaves their post, so you lose them as a governor.
     - **a Great General or Admiral you hold (05/07):** starts at a higher level and with its aura, but you lose the Great Person.
@@ -163,6 +166,9 @@ Guiding principle **[decided]:** stay grounded in core Civ mechanics, and the ci
 
 Proposed rules:
 
+- **Which fights go live [decided, James 2026-10-04, gap review]:** only when the leader's own stack attacks or is attacked in melee, or a city holding the leader is assaulted (not bombarded). Ranged, air and naval strikes resolve with Civ math. The player can always choose auto-resolve before a fight, as in Total War; the fairness rule (section 6) keeps that safe. An AI attack on the player's leader pauses the AI's turn and offers the fight.
+- **Battle result contract [decided, James 2026-10-04, gap review]:** before a live battle starts, the core computes the normal Civ outcome (05 combat formula) as the expected result. Each unit's soldier count in the scene follows its HP, and the scene tracks each side's share of losses. At the end, the core shifts the expected result toward the field result, capped at the skill band below. The same function auto-resolves when nobody plays, and a tampered result cannot exceed the band.
+- **Who runs a live scene online [decided, James 2026-10-04, gap review]:** one machine hosts each live battle or assassin fight (the attacker's, or a dedicated host if one exists) using Unreal's networking for that scene only. When it ends, the host sends one result command into the lockstep stream and every machine's core applies it, after checking it against the band.
 - **What goes live:** a fight that involves a leader becomes a real-time battle on the actual terrain of the continuous world. You fight as the leader (Mount & Blade) and command the other units in the battle (Total War). Fights without a leader, and AI vs AI, resolve with Civ's formula (05). Classic control auto-resolves everything.
 - **Who joins:** all units of both sides within about 1 tile of the clash. Civ's Corps/Army formations map to larger regiments.
 - **Civ math as backbone:** each unit's battle stats come from its Civ strength, promotions, HP, terrain and modifiers (Great General aura, support, flanking). Expected outcome follows the formula; player skill shifts it within a bounded band (proposal: about ±25%), so numbers and quality decide most battles. Results return to the map as HP lost, units destroyed or captured, and XP.
@@ -172,7 +178,8 @@ Proposed rules:
 - **Real-time cap:** after a set time (proposal: one turn timer) the battle auto-resolves from its current state, so a stalemate can't freeze a region.
 - **Multiplayer:** a human vs human battle is live for both if both are online; otherwise the absent side's units are commanded by the battle AI.
 - **Cities:** a leader in a city adds to its defense like a garrison. If the city is captured, the leader is captured unless it leaves before the city falls.
-- **Eras:** Mount & Blade-style combat fits up to about the Renaissance. Rifles, armor and air power need a second battle design. Prototype a medieval battle first.
+- **Eras [decided, James 2026-10-04, gap review]:** the leader keeps fighting personally in every era, not only commanding. It already commands the battle, so the personal fight is what Sovereign adds. Mount & Blade-style melee fits up to about the Renaissance; from the gunpowder eras on, the leader fights with that era's firearms from its loadout (section 2) while commanding, which needs a second battle design (firearms, cover, vehicles, artillery and air support called in from outside the battle area). Prototype a medieval battle first; the modern design is still to do.
+- **Saving [decided, James 2026-10-04, gap review]:** the game autosaves when a live battle, assassin fight or street scene starts. Saving is disabled inside a scene, and loading that save restarts the scene from the beginning.
 
 ## 10. AI opponents (layers decided by James 2026-10-04)
 
@@ -187,6 +194,9 @@ James's goal: AI as smart as possible that learns what the player does. All four
    - **Personality and memory:** prompt built from the leader's agendas, relationship state and a short summary of past conversations.
    - **Performance:** runs only on the diplomacy screen; a 1–2 second response is acceptable; never during live battles.
    - **Fallback:** scripted lines on weak hardware; optional cloud model for players who opt in.
+   - **Safety [decided, James 2026-10-04, gap review]:** filter player input and model output, give each leader a fixed persona prompt that refuses out-of-game topics, cap response length, and keep the scripted fallback. Plan the age rating (ESRB/PEGI) assuming user-generated chat.
+   - **Sync [decided, James 2026-10-04, gap review]:** the model runs once, on the speaking player's machine. Its deal proposal and the conversation summary enter the game as recorded commands, so other machines never re-run it.
+5. **Difficulty [decided, James 2026-10-04, gap review]:** levels scale the AI's skill first (planning depth, how much of the player profile it uses, battle AI quality). Small Civ-style bonuses (yields, starting units) apply only at the top two levels. Low levels ignore most of the player profile.
 
 Avoid: AI that retrains itself mid-game (hard to test, learns exploits). An LLM controlling troops or every turn of every AI civ (too slow, unreliable at precise tactics, costly).
 
@@ -198,9 +208,14 @@ No dependency on Intel or Nvidia hardware.
 - **Engine:** Unreal 5 (decided; see [engine-and-architecture.md](engine-and-architecture.md)) supports AMD, Intel and Apple GPUs; current consoles are AMD-based.
 - **Rule:** no vendor-only features. No CUDA-only code in the game; if upscaling is added, offer FSR and XeSS alongside DLSS.
 
+## 12. Victory and onboarding **[decided, James 2026-10-04, gap review]**
+
+- **Victory:** none of Civ's victory conditions change, except that losing the leader eliminates you in the optional Regicide mode.
+- **Tutorial:** a classic-control tutorial first; direct control (street scenes, live battles, assassin fights) is introduced afterwards.
+
 ## Still open
 
 1. ~~Who counts as "a leader existing in the empire" for succession?~~ Confirmed by James 2026-10-04: heir, governors, Great Generals/Admirals, level 4+ units.
-2. Does a successor from the pool keep the civ's leader ability, or bring a different one?
+2. ~~Does a successor from the pool keep the civ's leader ability, or bring a different one?~~ Decided by James 2026-10-04: every successor keeps it (section 5).
 3. Are assassins their own unit with their own capacity, or a new mission for ordinary spies?
 4. Can the leader be the target of other spy missions (wound, frame, kidnap), or only assassination?
