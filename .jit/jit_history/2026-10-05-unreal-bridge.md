@@ -60,14 +60,13 @@ Build-plan step 2 of `specs/sovereign/engine-and-architecture.md`: an Unreal Eng
 
 ## Follow-ups
 - Draw east-west wrap; rivers, resources, improvements, borders, yields; promotions, diplomacy and save/load UI; path preview; packaging that stages `data/rules`.
-- Rules gap found in play: Great People trainable at cost 1 (separate core task).
+- Rules gap found in play: Great People trainable at cost 1; fixed in the core by PR #19.
 
 ## Open questions & risks
 - UE 5.8 compiles with C++20 and its own warning set; core code written for C++17 /W4 may trip new warnings (fix in plain C++, or relax warnings for the wrapper module only).
 - Engine macros (`check`, `verify`, `TEXT`...) could collide with core identifiers in bridge files that include both; keep core includes before Unreal ones or isolate them.
 - Rules are read from `../data/rules` beside the project; packaging will need to stage that folder (later step).
 
-- Great People appear in `Game::buildableItems` at cost 1 (rules-gen gap); fix belongs in `tools/rules_gen` and the core, offered as a separate task.
 
 ## Changelog
 - 2026-10-05 CREATED — 4 steps from build-plan step 2; step 1 started in the same session.
