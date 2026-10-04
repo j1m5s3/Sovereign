@@ -6,7 +6,8 @@ Status: decided (James, 2026-10-04). Lists what the design docs did not yet answ
 
 - **All recommendations adopted except gap 5.** They are now written into the docs they affect: [leader-character-brainstorm.md](leader-character-brainstorm.md) (sections 1, 5, 9, 10, 12), [engine-and-architecture.md](engine-and-architecture.md) (Core foundations, Build plan), [world-scale-and-generation.md](world-scale-and-generation.md) (Decisions), [leaders-and-art-style.md](leaders-and-art-style.md) (leader ability, open questions) and [player-retention.md](player-retention.md) (sections 3, 6, 8). Those docs are the source of truth from here; the text below is kept as the reasoning.
 - **Gap 5 changed:** the leader keeps fighting personally in every era, not only as a commander. It already commands the battle, so the personal fight is what Sovereign adds. Battles from the gunpowder eras on still need their own design (leader doc section 9).
-- **Still open after this review:** who makes the art (gap 10), Steamworks vs. Epic Online Services (gap 19), the dynasty for each civ and the 12 civ abilities (gap 11), and the items in gap 20.
+- **Follow-ups decided the same day:** Claude makes the art, modelling from reference images found online (gap 10). Steamworks first, Epic Online Services as well (gap 19). Claude designed the 12 civ abilities, uniques and dynasties from each civ's specialty (gap 11; leaders-and-art-style.md). Later-era battles use the same design as other eras with that era's technology, and air attacks stay Civ math (gap 5).
+- **Still open:** the items in gap 20.
 
 Priorities:
 - **P1:** decide before the rules core is coded, because it shapes the core's interfaces or contradicts something already decided.

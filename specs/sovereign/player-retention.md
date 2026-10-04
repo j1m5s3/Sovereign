@@ -59,7 +59,7 @@ The UI should surface the next one or two of these at turn end, next to Civ's us
 
 ## 8. Online services **[decided, James 2026-10-04, gap review]**
 
-One service layer for accounts, leaderboards, the workshop, matchmaking and optional cloud sync: Steamworks if Steam is the only store, or Epic Online Services (free, cross-store, works with Steam). Which one is still to pick. Nemesis memory and the Hall of Sovereigns are stored locally, with optional cloud sync.
+Accounts, leaderboards, the workshop, matchmaking and optional cloud sync use **Steamworks first**, as Steam is the main store; **Epic Online Services** is added for cross-store play (**[decided, James 2026-10-04]**). Nemesis memory and the Hall of Sovereigns are stored locally, with optional cloud sync.
 
 ## What we will not do
 

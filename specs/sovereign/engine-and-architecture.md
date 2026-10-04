@@ -38,6 +38,7 @@ Pinned before the first line of the core is written (see [open-gaps-review.md](o
 - **Live scenes online:** one machine hosts each live battle or assassin fight with Unreal's networking for that scene only, then sends one result command into the lockstep stream. The core checks it against the battle result band (leader doc section 9) before applying it.
 - **RNG:** separate seeded streams for map generation, combat, AI and world visuals, so a cosmetic draw never shifts a combat roll.
 - **Saves:** versioned format from day one, with golden-file round-trip tests (`specs/civ6/10-ai-ui-implementation.md`, "Testing strategy"). The game autosaves when a live scene starts; there is no saving inside one.
+- **Online services **[decided, James 2026-10-04]**:** Steamworks first (Steam is the main store), with Epic Online Services added for cross-store play.
 - **Platforms:** Windows PC first, mouse and keyboard plus controller for direct control, Steam Deck as the low-end test device. Consoles later.
 
 ## Build plan **[decided, James 2026-10-04, gap review]**
@@ -51,7 +52,7 @@ Written up as the first `.jit/JIT_PLAN.md` when coding starts:
 5. One medieval live battle.
 6. Everything else.
 
-Still open: who makes the art (hired artists, asset store, or AI-assisted tools). Decide early, because the art (~30 kits, hero models, battle animation) is far larger than the code and sets the pace.
+Art **[decided, James 2026-10-04]**: Claude makes the art, modelling from reference images found online (see [leaders-and-art-style.md](leaders-and-art-style.md), Art toolchain).
 
 ## Destruction
 
