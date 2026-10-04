@@ -85,6 +85,25 @@ struct City {
     bool has(TypeIndex building) const;
 };
 
+// A player's progress through one research tree (techs or civics). Progress
+// is kept per node, so switching away loses nothing (04-tech-civics-government.md).
+struct TreeProgress {
+    std::vector<uint8_t> done;      // per node
+    std::vector<uint8_t> boosted;   // per node: boost already earned
+    std::vector<Fixed> progress;    // per node
+    TypeIndex current = kNone;      // node being researched
+    Fixed overflow;                 // carried into the next node
+
+    bool has(TypeIndex node) const {
+        return node >= 0 && static_cast<size_t>(node) < done.size() && done[static_cast<size_t>(node)] != 0;
+    }
+    void resize(size_t n) {
+        done.resize(n, 0);
+        boosted.resize(n, 0);
+        progress.resize(n);
+    }
+};
+
 // Per-player knowledge of each plot (01-map-and-terrain.md, Visibility).
 enum class Visibility : uint8_t { Unrevealed = 0, Revealed = 1, Visible = 2 };
 
@@ -95,7 +114,13 @@ struct Player {
     bool alive = true;
     int citiesFounded = 0;  // drives city naming
     Fixed gold;
-    Fixed science, culture, faith;  // lifetime totals until research arrives (MVP-3)
+    Fixed faith;  // lifetime total until religion arrives
+    TreeProgress techs, civics;
+    TypeIndex government = kNone;
+    std::vector<TypeIndex> policies;   // one entry per slot of the government (kNone: empty)
+    std::vector<int> governmentUses;   // per government: times adopted
+    int anarchyTurns = 0;
+    bool freeChanges = false;          // government and policies may change this turn
     std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;

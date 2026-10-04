@@ -34,7 +34,9 @@ TEST(rules_load_known_values) {
     CHECK_EQ(r.civs.size(), 12u);
     CHECK_EQ(r.civs[static_cast<size_t>(r.civ("CIVILIZATION_INCA"))].leader, std::string("LEADER_PACHACUTI"));
     REQUIRE(r.resource("RESOURCE_IRON") != kNone);
-    CHECK_EQ(r.resources[static_cast<size_t>(r.resource("RESOURCE_IRON"))].revealTech, std::string("TECH_BRONZE_WORKING"));
+    const Unlock ironReveal = r.resources[static_cast<size_t>(r.resource("RESOURCE_IRON"))].reveal;
+    CHECK(!ironReveal.civic);
+    CHECK_EQ(ironReveal.index, r.tech("TECH_BRONZE_WORKING"));
     CHECK_EQ(r.startingUnits.size(), 2u);
 }
 
@@ -49,6 +51,9 @@ TEST(rules_mod_layers_override_by_id) {
         {"terrain.json", R"({"terrains": [{"id": "TERRAIN_GRASS", "base": "GRASSLAND"}], "features": []})"},
         {"units.json", R"({"units": [{"id": "UNIT_WARRIOR", "combat": 20}, {"id": "UNIT_SCOUT", "combat": 10}]})"},
         {"civilizations.json", R"({"civilizations": [{"id": "CIV_A"}]})"},
+        {"techs.json", R"({"eras": [{"id": "ERA_A"}], "techs": [{"id": "TECH_A", "era": "ERA_A", "cost": 10}]})"},
+        {"civics.json", R"({"civics": [{"id": "CIVIC_A", "era": "ERA_A", "cost": 10}]})"},
+        {"governments.json", R"({"governments": [{"id": "GOVERNMENT_A", "slots": {"WILDCARD": 1}}]})"},
         {"setup.json", R"({"mapSizes": [{"id": "M", "width": 10, "height": 10}],
             "gameSpeeds": [{"id": "S"}], "startingUnits": []})"},
     };

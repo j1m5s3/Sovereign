@@ -3,6 +3,7 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--map] [--cities]
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -85,8 +86,16 @@ int main(int argc, char** argv) {
     if (showMap) printMap(*game);
     if (showCities) {
         for (const Player& p : game->state().players) {
-            std::printf("player %d (%s): gold %s, science %s, culture %s\n", p.id, rules.civs[static_cast<size_t>(p.civ)].name.c_str(),
-                        p.gold.toString().c_str(), p.science.toString().c_str(), p.culture.toString().c_str());
+            auto count = [](const std::vector<uint8_t>& v) { return std::count(v.begin(), v.end(), 1); };
+            std::printf("player %d (%s): gold %s, science %s/turn, culture %s/turn, techs %ld, civics %ld, government %s, policies",
+                        p.id, rules.civs[static_cast<size_t>(p.civ)].name.c_str(), p.gold.toString().c_str(),
+                        game->sciencePerTurn(p.id).toString().c_str(), game->culturePerTurn(p.id).toString().c_str(),
+                        static_cast<long>(count(p.techs.done)), static_cast<long>(count(p.civics.done)),
+                        p.government == kNone ? "none" : rules.governments[static_cast<size_t>(p.government)].name.c_str());
+            for (TypeIndex pol : p.policies) {
+                std::printf(" %s", pol == kNone ? "-" : rules.policies[static_cast<size_t>(pol)].name.c_str());
+            }
+            std::printf("\n");
         }
         for (const City& c : game->state().cities) {
             CityReport r = game->cityReport(c.id);

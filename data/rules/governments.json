@@ -1,0 +1,160 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "governments": [
+  {
+   "id": "GOVERNMENT_CHIEFDOM",
+   "name": "Chiefdom",
+   "tier": 0,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 0,
+    "WILDCARD": 0
+   }
+  },
+  {
+   "id": "GOVERNMENT_AUTOCRACY",
+   "name": "Autocracy",
+   "tier": 1,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+  },
+  {
+   "id": "GOVERNMENT_OLIGARCHY",
+   "name": "Oligarchy",
+   "tier": 1,
+   "slots": {
+    "MILITARY": 2,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 0,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+  },
+  {
+   "id": "GOVERNMENT_CLASSICAL_REPUBLIC",
+   "name": "Classical Republic",
+   "tier": 1,
+   "slots": {
+    "MILITARY": 0,
+    "ECONOMIC": 2,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+  },
+  {
+   "id": "GOVERNMENT_MONARCHY",
+   "name": "Monarchy",
+   "tier": 2,
+   "slots": {
+    "MILITARY": 2,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 2
+   },
+   "unlock": "CIVIC_DIVINE_RIGHT"
+  },
+  {
+   "id": "GOVERNMENT_THEOCRACY",
+   "name": "Theocracy",
+   "tier": 2,
+   "slots": {
+    "MILITARY": 2,
+    "ECONOMIC": 2,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_REFORMED_CHURCH"
+  },
+  {
+   "id": "GOVERNMENT_MERCHANT_REPUBLIC",
+   "name": "Merchant Republic",
+   "tier": 2,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 2,
+    "DIPLOMATIC": 2,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_EXPLORATION"
+  },
+  {
+   "id": "GOVERNMENT_FASCISM",
+   "name": "Fascism",
+   "tier": 3,
+   "slots": {
+    "MILITARY": 4,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 2
+   },
+   "unlock": "CIVIC_TOTALITARIANISM"
+  },
+  {
+   "id": "GOVERNMENT_COMMUNISM",
+   "name": "Communism",
+   "tier": 3,
+   "slots": {
+    "MILITARY": 3,
+    "ECONOMIC": 3,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 1
+   },
+   "unlock": "CIVIC_CLASS_STRUGGLE"
+  },
+  {
+   "id": "GOVERNMENT_DEMOCRACY",
+   "name": "Democracy",
+   "tier": 3,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 3,
+    "DIPLOMATIC": 2,
+    "WILDCARD": 2
+   },
+   "unlock": "CIVIC_SUFFRAGE"
+  },
+  {
+   "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
+   "name": "Corporate Libertarianism",
+   "tier": 4,
+   "slots": {
+    "MILITARY": 3,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 5
+   },
+   "unlock": "CIVIC_VENTURE_POLITICS"
+  },
+  {
+   "id": "GOVERNMENT_DIGITAL_DEMOCRACY",
+   "name": "Digital Democracy",
+   "tier": 4,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 1,
+    "DIPLOMATIC": 3,
+    "WILDCARD": 5
+   },
+   "unlock": "CIVIC_DISTRIBUTED_SOVEREIGNTY"
+  },
+  {
+   "id": "GOVERNMENT_SYNTHETIC_TECHNOCRACY",
+   "name": "Synthetic Technocracy",
+   "tier": 4,
+   "slots": {
+    "MILITARY": 1,
+    "ECONOMIC": 3,
+    "DIPLOMATIC": 1,
+    "WILDCARD": 5
+   },
+   "unlock": "CIVIC_OPTIMIZATION_IMPERATIVE"
+  }
+ ]
+}

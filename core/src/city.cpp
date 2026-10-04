@@ -51,8 +51,8 @@ Yields Game::plotYields(Hex at, const City& city) const {
     }
     if (p.resource != kNone) {
         const ResourceType& res = rules_->resources[static_cast<size_t>(p.resource)];
-        // Resources revealed by a tech stay hidden until research exists (MVP-3).
-        if (res.revealTech.empty()) {
+        // A resource yields nothing until the owner has the tech that reveals it.
+        if (hasUnlocked(city.owner, res.reveal)) {
             for (size_t i = 0; i < kNumYields; ++i) y[i] += res.yields[i];
         }
     }
@@ -190,7 +190,9 @@ int Game::plotPurchaseCost(CityId id, Hex at) const {
     // 50 gold two plots out, 75 three out (02-cities.md, Tile purchase); rises
     // with research share once research exists.
     int cost = rules_->globalInt("PLOT_BUY_BASE_COST") * std::max(2, dist) / 2;
-    return cost * speedPercent(state_, *rules_) / 100;
+    cost = cost * speedPercent(state_, *rules_) / 100;
+    const int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::PlotPurchaseCostPercent).toInt());
+    return cost * std::max(0, pct) / 100;
 }
 
 bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) const {
@@ -201,13 +203,13 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
     if (item.kind == ProductionKind::Unit) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->units.size()) return fail(CommandError::CannotBuild);
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
-        // Naval units need coastal cities (later); research gates unlocks (MVP-3).
-        if (u.domain != Domain::Land || u.mustPurchase || u.cost <= 0 || !u.unlock.empty())
+        // Naval units need coastal cities (later).
+        if (u.domain != Domain::Land || u.mustPurchase || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock))
             return fail(CommandError::CannotBuild);
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
-        if (b.granted || c.has(item.type) || !b.unlock.empty() || b.district != "DISTRICT_CITY_CENTER")
+        if (b.granted || c.has(item.type) || !hasUnlocked(c.owner, b.unlock) || b.district != "DISTRICT_CITY_CENTER")
             return fail(CommandError::CannotBuild);
         for (TypeIndex req : b.prereqs) {
             if (!c.has(req)) return fail(CommandError::CannotBuild);
@@ -244,14 +246,18 @@ std::vector<CityId> Game::citiesNeedingProduction(PlayerId player) const {
 }
 
 Fixed Game::goldPerTurn(PlayerId player) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed net;
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
-        net += cityReport(c.id).yields[idx(YieldType::Gold)];
+        if (p.anarchyTurns == 0) net += cityReport(c.id).yields[idx(YieldType::Gold)];  // anarchy: no gold
         for (TypeIndex b : c.buildings) net -= Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].maintenance);
     }
+    const Fixed discount = sumPlayerModifiers(state_, *rules_, p, ModEffect::UnitMaintenanceDiscount);
     for (const Unit& u : state_.units) {
-        if (u.owner == player) net -= Fixed::fromInt(rules_->units[static_cast<size_t>(u.type)].maintenance);
+        if (u.owner != player) continue;
+        const Fixed m = Fixed::fromInt(rules_->units[static_cast<size_t>(u.type)].maintenance) - discount;
+        if (m > Fixed()) net -= m;
     }
     return net;
 }
@@ -463,15 +469,19 @@ void Game::processCities(PlayerId pid) {
     }
     if (ids.empty()) return;
 
-    // Steps 2-5 of the turn order: yields, gold and maintenance, research totals.
+    // Steps 2-5 of the turn order: yields, gold and maintenance, research.
     std::vector<CityReport> reports;
     for (CityId id : ids) reports.push_back(cityReport(id));
     player.gold += goldPerTurn(pid);
-    for (const CityReport& r : reports) {
-        player.science += r.yields[idx(YieldType::Science)];
-        player.culture += r.yields[idx(YieldType::Culture)];
-        player.faith += r.yields[idx(YieldType::Faith)];
+    Fixed science, culture;
+    if (player.anarchyTurns == 0) {  // anarchy: no gold, science, culture or faith
+        for (const CityReport& r : reports) {
+            science += r.yields[idx(YieldType::Science)];
+            culture += r.yields[idx(YieldType::Culture)];
+            player.faith += r.yields[idx(YieldType::Faith)];
+        }
     }
+    processResearch(pid, science, culture);
     if (player.gold <= rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE")) {
         // Disband the costliest unit (ties: newest) while the treasury is underwater.
         const Unit* worst = nullptr;
@@ -526,13 +536,19 @@ void Game::processCities(PlayerId pid) {
         }
 
         // Production (02-cities.md, Production).
-        Fixed prod = rep.yields[idx(YieldType::Production)] + city.overflow;
-        city.overflow = Fixed();
+        Fixed prod = rep.yields[idx(YieldType::Production)];
         while (!city.queue.empty() && !canProduce(city, city.queue.front())) city.queue.erase(city.queue.begin());
         if (city.queue.empty()) {
-            city.overflow = prod;
+            city.overflow += prod;
         } else {
             const ProductionItem item = city.queue.front();
+            if (item.kind == ProductionKind::Unit) {
+                // Policies such as Agoge speed production toward some units.
+                const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
+                prod = prod * std::max(0, pct) / 100;
+            }
+            prod += city.overflow;
+            city.overflow = Fixed();
             auto it = std::find_if(city.progress.begin(), city.progress.end(),
                                    [&](const ProductionProgress& pp) { return pp.item == item; });
             if (it == city.progress.end()) {

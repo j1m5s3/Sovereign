@@ -1,6 +1,6 @@
 // Evaluating Civ VI-style modifiers against game state. A modifier applies
-// when its source is present (a building in the city, the player's civ, or
-// everyone), its collection covers the subject, and both requirement sets
+// when its source is present (a building in the city, the player's civ, a
+// slotted policy, the current government, or everyone), its collection covers the subject, and both requirement sets
 // hold (00-overview.md, "Modifier system sketch").
 #pragma once
 
@@ -28,5 +28,11 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
 
 // Total flat plot-yield modifiers for a plot worked by this city.
 Fixed sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, YieldType yield);
+
+// Percentage bonus to production toward this unit type in the city.
+Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& city, TypeIndex unitType);
+
+// Total of a player-wide modifier effect (collection PLAYER).
+Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect);
 
 }  // namespace sov

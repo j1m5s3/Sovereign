@@ -22,6 +22,10 @@ enum class CommandType : uint8_t {
     Purchase = 7,         // id = city, arg = ProductionKind, arg2 = type index: buy with gold now
     BuyPlot = 8,          // id = city, target = plot to buy with gold
     LockPlot = 9,         // id = city, target = plot, arg = 1 lock a citizen on it / 0 unlock
+    ChooseResearch = 10,  // id = tech
+    ChooseCivic = 11,     // id = civic
+    ChangeGovernment = 12,  // id = government
+    SetPolicy = 13,       // id = slot of the current government, arg = policy (-1 empties the slot)
 };
 
 struct Command {
@@ -51,6 +55,14 @@ struct Command {
     static Command lockPlot(PlayerId p, CityId c, Hex plot, bool lock) {
         return {CommandType::LockPlot, p, c, plot, lock ? 1 : 0, 0};
     }
+    static Command chooseResearch(PlayerId p, TypeIndex tech) { return {CommandType::ChooseResearch, p, tech, {}, 0, 0}; }
+    static Command chooseCivic(PlayerId p, TypeIndex civic) { return {CommandType::ChooseCivic, p, civic, {}, 0, 0}; }
+    static Command changeGovernment(PlayerId p, TypeIndex gov) {
+        return {CommandType::ChangeGovernment, p, gov, {}, 0, 0};
+    }
+    static Command setPolicy(PlayerId p, int slot, TypeIndex policy) {
+        return {CommandType::SetPolicy, p, slot, {}, policy, 0};
+    }
 };
 
 enum class CommandError : uint8_t {
@@ -75,6 +87,12 @@ enum class CommandError : uint8_t {
     CannotBuyPlot,
     CannotWorkPlot,
     ProductionNeeded,
+    CannotResearch,
+    ResearchNeeded,
+    CivicNeeded,
+    CannotAdoptGovernment,
+    CannotSetPolicy,
+    ChangesLocked,
 };
 
 const char* commandErrorName(CommandError e);

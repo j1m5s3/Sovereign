@@ -1,5 +1,5 @@
 {
- "_comment": "Hand-written modifiers (Civ VI modifier model: source, collection, effect, requirements, arguments). Building effects come from specs/civ6/data/buildings.md 'Modifiers' column; later milestones add policies, beliefs, civ and leader abilities.",
+ "_comment": "Hand-written modifiers (Civ VI modifier model: source, collection, effect, requirements, arguments). Building effects come from specs/civ6/data/buildings.md 'Modifiers' column; policy and government modifiers cover the Ancient and Classical cards whose effects the core models (combat, influence, loyalty and wonder effects arrive with those systems); later milestones add beliefs, civ and leader abilities.",
  "modifiers": [
   {"id": "PALACE_CITY_DEFENSE", "source": "BUILDING_PALACE", "collection": "OWNER_CITY",
    "effect": "ADJUST_CITY_DEFENSE", "arguments": {"amount": 3}},
@@ -11,6 +11,27 @@
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_WHEAT"}]}},
   {"id": "WATER_MILL_MAIZE_FOOD", "source": "BUILDING_WATER_MILL", "collection": "OWNER_CITY_PLOTS",
    "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
-   "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_MAIZE"}]}}
+   "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_MAIZE"}]}},
+  {"id": "GOD_KING_GOLD", "source": "POLICY_GOD_KING", "collection": "PLAYER_CAPITAL", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "GOLD", "amount": 1}},
+  {"id": "GOD_KING_FAITH", "source": "POLICY_GOD_KING", "collection": "PLAYER_CAPITAL", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "FAITH", "amount": 1}},
+  {"id": "URBAN_PLANNING_PRODUCTION", "source": "POLICY_URBAN_PLANNING", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "PRODUCTION", "amount": 1}},
+  {"id": "ILKUM_BUILDER", "source": "POLICY_ILKUM", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unit": "UNIT_BUILDER", "amount": 30}},
+  {"id": "COLONIZATION_SETTLER", "source": "POLICY_COLONIZATION", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unit": "UNIT_SETTLER", "amount": 50}},
+  {"id": "AGOGE_MELEE", "source": "POLICY_AGOGE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "MELEE", "maxEra": "ERA_CLASSICAL", "amount": 50}},
+  {"id": "AGOGE_ANTI_CAVALRY", "source": "POLICY_AGOGE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "ANTI_CAVALRY", "maxEra": "ERA_CLASSICAL", "amount": 50}},
+  {"id": "AGOGE_RANGED", "source": "POLICY_AGOGE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "RANGED", "maxEra": "ERA_CLASSICAL", "amount": 50}},
+  {"id": "MANEUVER_HEAVY_CAVALRY", "source": "POLICY_MANEUVER", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "HEAVY_CAVALRY", "maxEra": "ERA_CLASSICAL", "amount": 50}},
+  {"id": "MANEUVER_LIGHT_CAVALRY", "source": "POLICY_MANEUVER", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "LIGHT_CAVALRY", "maxEra": "ERA_CLASSICAL", "amount": 50}},
+  {"id": "MARITIME_INDUSTRIES_NAVAL_MELEE", "source": "POLICY_MARITIME_INDUSTRIES", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "NAVAL_MELEE", "maxEra": "ERA_CLASSICAL", "amount": 100}},
+  {"id": "MARITIME_INDUSTRIES_NAVAL_RANGED", "source": "POLICY_MARITIME_INDUSTRIES", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "NAVAL_RANGED", "maxEra": "ERA_CLASSICAL", "amount": 100}},
+  {"id": "MARITIME_INDUSTRIES_NAVAL_RAIDER", "source": "POLICY_MARITIME_INDUSTRIES", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "NAVAL_RAIDER", "maxEra": "ERA_CLASSICAL", "amount": 100}},
+  {"id": "LAND_SURVEYORS_PLOT_COST", "source": "POLICY_LAND_SURVEYORS", "collection": "PLAYER_CITIES", "effect": "ADJUST_PLOT_PURCHASE_COST_PERCENT", "arguments": {"amount": -20}},
+  {"id": "CONSCRIPTION_MAINTENANCE", "source": "POLICY_CONSCRIPTION", "collection": "PLAYER", "effect": "ADJUST_UNIT_MAINTENANCE_DISCOUNT", "arguments": {"amount": 1}},
+  {"id": "AUTOCRACY_PALACE_FOOD", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "FOOD", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
+  {"id": "AUTOCRACY_PALACE_PRODUCTION", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "PRODUCTION", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
+  {"id": "AUTOCRACY_PALACE_GOLD", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "GOLD", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
+  {"id": "AUTOCRACY_PALACE_SCIENCE", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "SCIENCE", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
+  {"id": "AUTOCRACY_PALACE_CULTURE", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "CULTURE", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
+  {"id": "AUTOCRACY_PALACE_FAITH", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "FAITH", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}}
  ]
 }

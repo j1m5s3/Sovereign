@@ -1,0 +1,928 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "civics": [
+  {
+   "id": "CIVIC_CODE_OF_LAWS",
+   "name": "Code of Laws",
+   "era": "ERA_ANCIENT",
+   "cost": 20
+  },
+  {
+   "id": "CIVIC_CRAFTSMANSHIP",
+   "name": "Craftsmanship",
+   "era": "ERA_ANCIENT",
+   "cost": 40,
+   "prereqs": [
+    "CIVIC_CODE_OF_LAWS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve 3 tiles",
+    "type": "IMPROVED_TILES",
+    "count": 3
+   }
+  },
+  {
+   "id": "CIVIC_FOREIGN_TRADE",
+   "name": "Foreign Trade",
+   "era": "ERA_ANCIENT",
+   "cost": 40,
+   "prereqs": [
+    "CIVIC_CODE_OF_LAWS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "discover a second continent",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_MILITARY_TRADITION",
+   "name": "Military Tradition",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "prereqs": [
+    "CIVIC_CRAFTSMANSHIP"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "clear a barbarian camp",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_MYSTICISM",
+   "name": "Mysticism",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "prereqs": [
+    "CIVIC_FOREIGN_TRADE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "found a pantheon",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_STATE_WORKFORCE",
+   "name": "State Workforce",
+   "era": "ERA_ANCIENT",
+   "cost": 70,
+   "prereqs": [
+    "CIVIC_CRAFTSMANSHIP"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 1 different specialty districts",
+    "type": "SPECIALTY_DISTRICTS",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_EARLY_EMPIRE",
+   "name": "Early Empire",
+   "era": "ERA_ANCIENT",
+   "cost": 70,
+   "prereqs": [
+    "CIVIC_FOREIGN_TRADE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "reach 6 total population",
+    "type": "TOTAL_POPULATION",
+    "count": 6
+   }
+  },
+  {
+   "id": "CIVIC_GAMES_AND_RECREATION",
+   "name": "Games and Recreation",
+   "era": "ERA_CLASSICAL",
+   "cost": 110,
+   "prereqs": [
+    "CIVIC_STATE_WORKFORCE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Construction",
+    "type": "TECH",
+    "ref": "TECH_CONSTRUCTION"
+   }
+  },
+  {
+   "id": "CIVIC_POLITICAL_PHILOSOPHY",
+   "name": "Political Philosophy",
+   "era": "ERA_CLASSICAL",
+   "cost": 110,
+   "prereqs": [
+    "CIVIC_STATE_WORKFORCE",
+    "CIVIC_EARLY_EMPIRE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "meet 3 city-states",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_DRAMA_AND_POETRY",
+   "name": "Drama and Poetry",
+   "era": "ERA_CLASSICAL",
+   "cost": 110,
+   "prereqs": [
+    "CIVIC_EARLY_EMPIRE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a wonder",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_MILITARY_TRAINING",
+   "name": "Military Training",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "CIVIC_MILITARY_TRADITION",
+    "CIVIC_GAMES_AND_RECREATION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an Encampment",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_ENCAMPMENT",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_THEOLOGY",
+   "name": "Theology",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "CIVIC_DRAMA_AND_POETRY",
+    "CIVIC_MYSTICISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "found a religion",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_DEFENSIVE_TACTICS",
+   "name": "Defensive Tactics",
+   "era": "ERA_CLASSICAL",
+   "cost": 175,
+   "prereqs": [
+    "CIVIC_GAMES_AND_RECREATION",
+    "CIVIC_POLITICAL_PHILOSOPHY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "be the target of a war declaration",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_RECORDED_HISTORY",
+   "name": "Recorded History",
+   "era": "ERA_CLASSICAL",
+   "cost": 175,
+   "prereqs": [
+    "CIVIC_POLITICAL_PHILOSOPHY",
+    "CIVIC_DRAMA_AND_POETRY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Campuss",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_CAMPUS",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_NAVAL_TRADITION",
+   "name": "Naval Tradition",
+   "era": "ERA_MEDIEVAL",
+   "cost": 220,
+   "prereqs": [
+    "CIVIC_DEFENSIVE_TACTICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a unit with a Quadrireme",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_FEUDALISM",
+   "name": "Feudalism",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "CIVIC_DEFENSIVE_TACTICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 6 Farms",
+    "type": "IMPROVEMENT",
+    "ref": "IMPROVEMENT_FARM",
+    "count": 6
+   }
+  },
+  {
+   "id": "CIVIC_CIVIL_SERVICE",
+   "name": "Civil Service",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "CIVIC_DEFENSIVE_TACTICS",
+    "CIVIC_RECORDED_HISTORY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "grow a city to 10 population",
+    "type": "CITY_POPULATION",
+    "count": 10
+   }
+  },
+  {
+   "id": "CIVIC_MERCENARIES",
+   "name": "Mercenaries",
+   "era": "ERA_MEDIEVAL",
+   "cost": 340,
+   "prereqs": [
+    "CIVIC_MILITARY_TRAINING",
+    "CIVIC_FEUDALISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 8 land combat units",
+    "type": "LAND_COMBAT_UNITS",
+    "count": 8
+   }
+  },
+  {
+   "id": "CIVIC_DIVINE_RIGHT",
+   "name": "Divine Right",
+   "era": "ERA_MEDIEVAL",
+   "cost": 340,
+   "prereqs": [
+    "CIVIC_CIVIL_SERVICE",
+    "CIVIC_THEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Temples",
+    "type": "BUILDING",
+    "ref": "BUILDING_TEMPLE",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_MEDIEVAL_FAIRES",
+   "name": "Medieval Faires",
+   "era": "ERA_MEDIEVAL",
+   "cost": 420,
+   "prereqs": [
+    "CIVIC_FEUDALISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 4 trade routes",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_GUILDS",
+   "name": "Guilds",
+   "era": "ERA_MEDIEVAL",
+   "cost": 420,
+   "prereqs": [
+    "CIVIC_FEUDALISM",
+    "CIVIC_CIVIL_SERVICE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Markets",
+    "type": "BUILDING",
+    "ref": "BUILDING_MARKET",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_EXPLORATION",
+   "name": "Exploration",
+   "era": "ERA_RENAISSANCE",
+   "cost": 440,
+   "prereqs": [
+    "CIVIC_MERCENARIES",
+    "CIVIC_MEDIEVAL_FAIRES"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Caravels",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_CARAVEL",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_REFORMED_CHURCH",
+   "name": "Reformed Church",
+   "era": "ERA_RENAISSANCE",
+   "cost": 440,
+   "prereqs": [
+    "CIVIC_GUILDS",
+    "CIVIC_DIVINE_RIGHT"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 6 cities following your religion",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_HUMANISM",
+   "name": "Humanism",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "CIVIC_MEDIEVAL_FAIRES",
+    "CIVIC_GUILDS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "train a Great Artist",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_GREAT_ARTIST",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_DIPLOMATIC_SERVICE",
+   "name": "Diplomatic Service",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "CIVIC_GUILDS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have an alliance",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_MERCANTILISM",
+   "name": "Mercantilism",
+   "era": "ERA_RENAISSANCE",
+   "cost": 720,
+   "prereqs": [
+    "CIVIC_HUMANISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "train a Great Merchant",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_GREAT_MERCHANT",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_THE_ENLIGHTENMENT",
+   "name": "The Enlightenment",
+   "era": "ERA_RENAISSANCE",
+   "cost": 720,
+   "prereqs": [
+    "CIVIC_HUMANISM",
+    "CIVIC_DIPLOMATIC_SERVICE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "earn 3 Great People",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_COLONIALISM",
+   "name": "Colonialism",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 800,
+   "prereqs": [
+    "CIVIC_MERCANTILISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Astronomy",
+    "type": "TECH",
+    "ref": "TECH_ASTRONOMY"
+   }
+  },
+  {
+   "id": "CIVIC_OPERA_AND_BALLET",
+   "name": "Opera and Ballet",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 800,
+   "prereqs": [
+    "CIVIC_THE_ENLIGHTENMENT"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an Art Museum",
+    "type": "BUILDING",
+    "ref": "BUILDING_ART_MUSEUM",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_CIVIL_ENGINEERING",
+   "name": "Civil Engineering",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1010,
+   "prereqs": [
+    "CIVIC_MERCANTILISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 7 different specialty districts",
+    "type": "SPECIALTY_DISTRICTS",
+    "count": 7
+   }
+  },
+  {
+   "id": "CIVIC_NATIONALISM",
+   "name": "Nationalism",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1010,
+   "prereqs": [
+    "CIVIC_THE_ENLIGHTENMENT"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "declare war using a casus belli",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_NATURAL_HISTORY",
+   "name": "Natural History",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1050,
+   "prereqs": [
+    "CIVIC_COLONIALISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an Archaeological Museum",
+    "type": "BUILDING",
+    "ref": "BUILDING_ARCHAEOLOGICAL_MUSEUM",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_URBANIZATION",
+   "name": "Urbanization",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1210,
+   "prereqs": [
+    "CIVIC_CIVIL_ENGINEERING",
+    "CIVIC_NATIONALISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "grow a city to 15 population",
+    "type": "CITY_POPULATION",
+    "count": 15
+   }
+  },
+  {
+   "id": "CIVIC_SCORCHED_EARTH",
+   "name": "Scorched Earth",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1210,
+   "prereqs": [
+    "CIVIC_NATIONALISM"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Field Cannons",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_FIELD_CANNON",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_CONSERVATION",
+   "name": "Conservation",
+   "era": "ERA_MODERN",
+   "cost": 1540,
+   "prereqs": [
+    "CIVIC_NATURAL_HISTORY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have a Neighborhood with appeal 4+",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_MASS_MEDIA",
+   "name": "Mass Media",
+   "era": "ERA_MODERN",
+   "cost": 1540,
+   "prereqs": [
+    "CIVIC_NATURAL_HISTORY",
+    "CIVIC_URBANIZATION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Radio",
+    "type": "TECH",
+    "ref": "TECH_RADIO"
+   }
+  },
+  {
+   "id": "CIVIC_MOBILIZATION",
+   "name": "Mobilization",
+   "era": "ERA_MODERN",
+   "cost": 1540,
+   "prereqs": [
+    "CIVIC_URBANIZATION",
+    "CIVIC_SCORCHED_EARTH"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 3 corps",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_CAPITALISM",
+   "name": "Capitalism",
+   "era": "ERA_MODERN",
+   "cost": 1580,
+   "prereqs": [
+    "CIVIC_MASS_MEDIA"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Stock Exchanges",
+    "type": "BUILDING",
+    "ref": "BUILDING_STOCK_EXCHANGE",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_IDEOLOGY",
+   "name": "Ideology",
+   "era": "ERA_MODERN",
+   "cost": 1640,
+   "prereqs": [
+    "CIVIC_MASS_MEDIA",
+    "CIVIC_MOBILIZATION"
+   ]
+  },
+  {
+   "id": "CIVIC_SUFFRAGE",
+   "name": "Suffrage",
+   "era": "ERA_MODERN",
+   "cost": 1640,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 4 Sewers",
+    "type": "BUILDING",
+    "ref": "BUILDING_SEWER",
+    "count": 4
+   }
+  },
+  {
+   "id": "CIVIC_TOTALITARIANISM",
+   "name": "Totalitarianism",
+   "era": "ERA_MODERN",
+   "cost": 1640,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 3 Military Academies",
+    "type": "BUILDING",
+    "ref": "BUILDING_MILITARY_ACADEMY",
+    "count": 3
+   }
+  },
+  {
+   "id": "CIVIC_CLASS_STRUGGLE",
+   "name": "Class Struggle",
+   "era": "ERA_MODERN",
+   "cost": 1640,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 3 Factories",
+    "type": "BUILDING",
+    "ref": "BUILDING_FACTORY",
+    "count": 3
+   }
+  },
+  {
+   "id": "CIVIC_NUCLEAR_PROGRAM",
+   "name": "Nuclear Program",
+   "era": "ERA_MODERN",
+   "cost": 1715,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Research Lab",
+    "type": "BUILDING",
+    "ref": "BUILDING_RESEARCH_LAB",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_CULTURAL_HERITAGE",
+   "name": "Cultural Heritage",
+   "era": "ERA_ATOMIC",
+   "cost": 1955,
+   "prereqs": [
+    "CIVIC_CONSERVATION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have a themed building",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_COLD_WAR",
+   "name": "Cold War",
+   "era": "ERA_ATOMIC",
+   "cost": 2185,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Nuclear Fission",
+    "type": "TECH",
+    "ref": "TECH_NUCLEAR_FISSION"
+   }
+  },
+  {
+   "id": "CIVIC_PROFESSIONAL_SPORTS",
+   "name": "Professional Sports",
+   "era": "ERA_ATOMIC",
+   "cost": 2185,
+   "prereqs": [
+    "CIVIC_IDEOLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Entertainment Complexs",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_RAPID_DEPLOYMENT",
+   "name": "Rapid Deployment",
+   "era": "ERA_ATOMIC",
+   "cost": 2415,
+   "prereqs": [
+    "CIVIC_COLD_WAR"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an aerodrome/airstrip on a foreign continent",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "CIVIC_SPACE_RACE",
+   "name": "Space Race",
+   "era": "ERA_ATOMIC",
+   "cost": 2415,
+   "prereqs": [
+    "CIVIC_COLD_WAR"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Spaceport",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_SPACEPORT",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_ENVIRONMENTALISM",
+   "name": "Environmentalism",
+   "era": "ERA_INFORMATION",
+   "cost": 2880,
+   "prereqs": [
+    "CIVIC_CULTURAL_HERITAGE",
+    "CIVIC_RAPID_DEPLOYMENT"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Solar Farms",
+    "type": "IMPROVEMENT",
+    "ref": "IMPROVEMENT_SOLAR_FARM",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_GLOBALIZATION",
+   "name": "Globalization",
+   "era": "ERA_INFORMATION",
+   "cost": 2880,
+   "prereqs": [
+    "CIVIC_RAPID_DEPLOYMENT",
+    "CIVIC_SPACE_RACE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Airports",
+    "type": "BUILDING",
+    "ref": "BUILDING_AIRPORT",
+    "count": 2
+   }
+  },
+  {
+   "id": "CIVIC_SOCIAL_MEDIA",
+   "name": "Social Media",
+   "era": "ERA_INFORMATION",
+   "cost": 2880,
+   "prereqs": [
+    "CIVIC_SPACE_RACE",
+    "CIVIC_PROFESSIONAL_SPORTS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Telecommunications",
+    "type": "TECH",
+    "ref": "TECH_TELECOMMUNICATIONS"
+   }
+  },
+  {
+   "id": "CIVIC_VENTURE_POLITICS",
+   "name": "Venture Politics",
+   "era": "ERA_INFORMATION",
+   "cost": 3000,
+   "prereqs": [
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve Uranium",
+    "type": "IMPROVE_RESOURCE",
+    "ref": "RESOURCE_URANIUM"
+   }
+  },
+  {
+   "id": "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+   "name": "Distributed Sovereignty",
+   "era": "ERA_INFORMATION",
+   "cost": 3000,
+   "prereqs": [
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "train a Rock Band",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_ROCK_BAND",
+    "count": 1
+   }
+  },
+  {
+   "id": "CIVIC_OPTIMIZATION_IMPERATIVE",
+   "name": "Optimization Imperative",
+   "era": "ERA_INFORMATION",
+   "cost": 3000,
+   "prereqs": [
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "research Robotics",
+    "type": "TECH",
+    "ref": "TECH_ROBOTICS"
+   }
+  },
+  {
+   "id": "CIVIC_NEAR_FUTURE_GOVERNANCE",
+   "name": "Near Future Governance",
+   "era": "ERA_INFORMATION",
+   "cost": 3100,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION"
+   ],
+   "boost": {
+    "percent": 90,
+    "text": "adopt a Tier4 government",
+    "type": "GOVERNMENT_TIER",
+    "count": 4
+   }
+  },
+  {
+   "id": "CIVIC_GLOBAL_WARMING_MITIGATION",
+   "name": "Global Warming Mitigation",
+   "era": "ERA_FUTURE",
+   "cost": 3200,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA",
+    "CIVIC_VENTURE_POLITICS",
+    "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+    "CIVIC_OPTIMIZATION_IMPERATIVE",
+    "CIVIC_NEAR_FUTURE_GOVERNANCE"
+   ]
+  },
+  {
+   "id": "CIVIC_SMART_POWER_DOCTRINE",
+   "name": "Smart Power Doctrine",
+   "era": "ERA_FUTURE",
+   "cost": 3200,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA",
+    "CIVIC_VENTURE_POLITICS",
+    "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+    "CIVIC_OPTIMIZATION_IMPERATIVE",
+    "CIVIC_NEAR_FUTURE_GOVERNANCE"
+   ]
+  },
+  {
+   "id": "CIVIC_INFORMATION_WARFARE",
+   "name": "Information Warfare",
+   "era": "ERA_FUTURE",
+   "cost": 3200,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA",
+    "CIVIC_VENTURE_POLITICS",
+    "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+    "CIVIC_OPTIMIZATION_IMPERATIVE",
+    "CIVIC_NEAR_FUTURE_GOVERNANCE"
+   ]
+  },
+  {
+   "id": "CIVIC_EXODUS_IMPERATIVE",
+   "name": "Exodus Imperative",
+   "era": "ERA_FUTURE",
+   "cost": 3200,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA",
+    "CIVIC_VENTURE_POLITICS",
+    "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+    "CIVIC_OPTIMIZATION_IMPERATIVE",
+    "CIVIC_NEAR_FUTURE_GOVERNANCE"
+   ]
+  },
+  {
+   "id": "CIVIC_CULTURAL_HEGEMONY",
+   "name": "Cultural Hegemony",
+   "era": "ERA_FUTURE",
+   "cost": 3200,
+   "prereqs": [
+    "CIVIC_ENVIRONMENTALISM",
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA",
+    "CIVIC_VENTURE_POLITICS",
+    "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+    "CIVIC_OPTIMIZATION_IMPERATIVE",
+    "CIVIC_NEAR_FUTURE_GOVERNANCE"
+   ]
+  },
+  {
+   "id": "CIVIC_FUTURE_CIVIC",
+   "name": "Future Civic",
+   "era": "ERA_FUTURE",
+   "cost": 3500,
+   "prereqs": [
+    "CIVIC_GLOBALIZATION",
+    "CIVIC_SOCIAL_MEDIA"
+   ]
+  }
+ ]
+}

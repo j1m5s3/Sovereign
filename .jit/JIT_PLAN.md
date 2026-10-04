@@ -1,6 +1,6 @@
 # Headless rules core, build-plan step 1 (Civ core through MVP-7)
 
-status: IN_PROGRESS · slice: rules-core · base: ba79f37 · created: 2026-10-04 · updated: 2026-10-04 19:10
+status: IN_PROGRESS · slice: rules-core · base: ba79f37 · created: 2026-10-04 · updated: 2026-10-04 20:30
 
 Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/civ6/10-ai-ui-implementation.md` ("Recommended build order"), with tests, as build-plan step 1 of `specs/sovereign/engine-and-architecture.md`. Each milestone is one PR, merged to `main` once CI is green. Out of scope for this slice: the Unreal bridge (step 2, needs James's PC), the leader character (step 3), live scenes, art.
 
@@ -10,13 +10,17 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - RNG: xoshiro256** per stream (MapGen, Gameplay, Combat, AI, Visual), seeded from the game seed via splitmix64; own `below()` with rejection sampling.
 - Hex grid: pointy-top, odd-row offset storage (odd rows shifted east), axial math, east-west wrap; direction order NE, E, SE, SW, W, NW. River flags live on each plot's E/SE/SW edges.
 - Every state change is a `sov::Command` (flat POD) through `Game::submit`; rejected commands are not logged. `Game::replay(setup, log)` must reproduce the state hash exactly.
-- Rules data: JSON in `data/rules/`. `globals.json`, `terrain.json`, `resources.json`, `units.json` are generated from `specs/civ6/data` by `tools/rules_gen/gen_rules.py` (CTest checks they are current); `civilizations.json` (Sovereign's 12 civs) and `setup.json` are hand-written. Extra rules directories layer on top by row id (mods); `"delete": true` removes a row. The rules checksum is stored in saves.
+- Rules data: JSON in `data/rules/`. `globals`, `terrain`, `resources`, `units`, `buildings`, `techs`, `civics`, `governments` and `policies.json` are generated from `specs/civ6/data` by `tools/rules_gen/gen_rules.py` (CTest checks they are current); `civilizations.json` (Sovereign's 12 civs), `setup.json` and `modifiers.json` are hand-written. Extra rules directories layer on top by row id (mods); `"delete": true` removes a row. The rules checksum is stored in saves.
 - Saves: magic `SOVS`, `kSaveVersion` (2 since MVP-2), rules checksum, state, command log; little-endian explicit widths. Golden hash `core/tests/golden/duel_seed2026_30turns.hash` must match on GCC, Clang and MSVC; regenerate with `SOVEREIGN_UPDATE_GOLDEN=1` only for intended rules/format changes (bump `kSaveVersion` when the format changes).
 - Single player turn order is sequential; EndTurn is refused while units need orders (awake, moves left, no move order).
 - Map generation is Sovereign's own (fractal noise + latitude climate); its knobs are `MAPGEN_*` globals in `setup.json`. `CITY_SIGHT_RANGE` = 2 is a Sovereign choice (Civ value unverified).
 - `Command` fields: type, player, id (unit or city), target, arg, arg2. Production items are (kind, type index); indices are safe because the rules checksum must match.
 - Modifiers are hand-written in `data/rules/modifiers.json` with a `source` id (building, civ, or EVERYONE); the generated building table carries only flat values.
 - `Game::fromScenario` does not run start-of-turn city processing (scenario states count as already processed).
+- Research (MVP-3): tech/civic/government/policy data is generated (`techs.json` also holds `eras`); unit and building unlocks are tech/civic ids. Progress is per node; overflow carries into the next choice; one completion per tree per turn. EndTurn is refused (ResearchNeeded/CivicNeeded) only once the player owns a city.
+- Boost conditions are generated into typed triggers and checked against state after every command and at turn start; `UNTRACKED` and district/improvement/combat triggers stay inert until those systems exist. Future-era nodes without prerequisites need the whole Information era (Civ randomises them).
+- Government and policy changes are free only on a turn a civic completes, on first adoption, and when anarchy ends; paid changes wait until the gold formula is verified. Changing government empties all slots. Returning to a used government costs `GOVERNMENT_BASE_ANARCHY_TURNS` + times used turns of anarchy (no gold, science, culture, faith, government or policy effects).
+- A policy card retires once any card in its `obsoletedBy` list (replacement cards) is unlocked.
 - Units can only path through plots their owner has revealed (Civ lets units path into the unknown; revisit if it feels bad in play).
 
 ## Pointers
@@ -34,22 +38,22 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 <!-- [ ] pending · [>] active · [x] done · [-] dropped (reason) · [!] blocked -->
 1. [x] **Build** core foundations + MVP-1 (map, terrain/features/resources, fog of war, settler founds city, movement with A*, end-turn loop, commands, replay, saves, CI on Linux GCC/Clang and Windows MSVC) — done 2026-10-04: 30 tests pass on GCC and Clang, same state hash on both; PR "Rules core milestone 1"
 2. [x] **Build** MVP-2 cities — done 2026-10-04: modifier system (`core/src/modifiers.cpp`; sources: building, civ, EVERYONE; collections OWNER_CITY(_PLOTS), PLAYER_CITIES, PLAYER_CAPITAL, PLAYER_CITY_PLOTS; effects city/plot yield, yield %, housing, amenities, growth %, defense), buildings generated from `buildings.md`, `Fixed::pow` (log2/exp2), city yields/citizens/growth/housing/amenities/mood, border growth, production queue with per-item progress and overflow, gold purchase, plot purchase, locked citizens, gold upkeep and bankruptcy disbanding; save v2; 44 tests on GCC and Clang
-3. [>] **Build** MVP-3 research: Ancient and Classical techs and civics, boosts, Chiefdom/Autocracy/Oligarchy/Classical Republic, policy cards — spec below
-4. [ ] **Build** Builders, improvements (farm, mine, quarry, pasture, plantation, camp, fishing boats) and roads; luxury amenities; strategic resources revealed by tech
+3. [x] **Build** MVP-3 research — done 2026-10-04: generated techs (77), civics (61), eras, governments (13), policies (140); `src/research.cpp` (choices, overflow, boosts, governments, anarchy, free change windows, policy slots and obsolescence); unlock gating for units, buildings and resource yields; new modifier sources (policy, government), collection PLAYER and effects unit production %, plot purchase cost %, unit maintenance discount; Ancient/Classical policy and Autocracy modifiers; save v3; 51 tests on GCC and Clang
+4. [>] **Build** Builders, improvements (farm, mine, quarry, pasture, plantation, camp, fishing boats) and roads; luxury amenities; strategic resources revealed by tech
 5. [ ] **Build** MVP-4 combat: combat formula and damage table, ZOC, ranged, city walls and city combat, capture/raze, barbarians, XP and promotions, war/peace state
 6. [ ] **Build** MVP-5 districts: Campus, Holy Site, Commercial Hub, Encampment, Theater Square, Industrial Zone, adjacency, district limit, their buildings
 7. [ ] **Build** MVP-6 AI: basic economic and military AI as command-issuing players, war/peace diplomacy; all-AI soak test to a winner
 8. [ ] **Build** MVP-7 victory: Domination and Score, then Science (space projects); turn limit
 9. [ ] **Close** slice: review against Acceptance, archive this plan, start build-plan step 2 (Unreal bridge, on James's PC)
 
-### Step 3 spec — MVP-3 research
-- Goal: players research techs and civics, earn boosts, adopt a government and slot policy cards; unlocks gate units, buildings and resources.
-- Read first: `specs/civ6/04-tech-civics-government.md`; grep `technologies.md`, `civics.md`, `governments-policies.md` for Ancient and Classical rows; `global-parameters.md` `## TECH`, `## CIVIC`, `## POLICY`, `## GOVERNMENT`.
-- Change: (a) generate `techs.json`, `civics.json`, `governments.json`, `policies.json` (all eras, so later milestones only add behaviour); map the display-name `unlock` strings on units/buildings/resources to tech/civic ids in the generator. (b) Player state: researched sets, current research/civic with progress per item, boosts earned, government, slotted policies. (c) Commands: ChooseResearch, ChooseCivic, ChangeGovernment, SetPolicies. (d) Turn processing step 4: science/culture into current items with overflow; end-turn blockers "Choose research/civic". (e) Boost triggers for the Ancient/Classical boosts that MVP-2 state can detect (found city, train unit X, build building Y, own N cities); others stay inert with a data flag. (f) Policies and governments apply through the modifier system (add effects as needed: unit production %, building production %, combat strength later). (g) Remove the Player science/culture lifetime totals added in MVP-2 (replaced by research). (h) Bump `kSaveVersion`, update golden.
-- Verify: `ctest --test-dir core/build --output-on-failure`; `sovsim --turns 150 --cities` shows techs researched and governments adopted.
-- Done when: data tests assert tech costs and the 40% (Ancient) boost; scenario tests for research overflow, boost, policy effect; CI green on all three compilers.
-- Risk: med — wide data mapping; keep effects data-driven.
-- Out of scope: Great People, religion, later-era policies' special effects.
+### Step 4 spec — builders, improvements, roads
+- Goal: builders improve tiles with charges, improvements change yields and unlock luxury amenities and strategic stockpiles, roads speed movement; the inert improvement boosts start firing.
+- Read first: `specs/civ6/02-cities.md` (tiles, amenities from luxuries), `specs/civ6/05-units-and-combat.md` (builders), grep `improvements.md` for farm, mine, quarry, pasture, plantation, camp, fishing boats, lumber mill; `terrain-features-resources.md` Luxury and Strategic sections; `global-parameters.md` `## STRATEGIC`, `## LUXURY`.
+- Change: (a) generate `improvements.json` (unlock tech/civic, valid terrain/features/resources, yields, adjacency for farms, housing). (b) Plot state: improvement, pillaged flag, road level. (c) Commands: BuildImprovement (builder spends a charge and its moves), RemoveFeature (Mining/Bronze Working/Irrigation unlocks), BuildRoad is automatic for traders later; Ancient road from city connection is out of scope. (d) Plot yields add improvement yields and resource improvement bonuses; luxury resources give amenities to cities (`LUXURY_*` globals); strategic resources accumulate per turn and units with a strategic cost need them. (e) Wire boost triggers IMPROVEMENT, IMPROVEMENT_ON_RESOURCE, IMPROVE_RESOURCE, IMPROVED_TILES. (f) Obsolete units stop being buildable. (g) Bump `kSaveVersion`, update golden.
+- Verify: `ctest --test-dir core/build --output-on-failure`; `sovsim --turns 150 --cities` shows improved tiles and higher yields than milestone 3.
+- Done when: scenario tests for farm yields and adjacency, mine on a resource firing the Wheel boost, luxury amenity, strategic cost blocking a Swordsman without Iron; CI green on all three compilers.
+- Risk: med — new state on plots and a new unit action; keep yields data-driven.
+- Out of scope: districts, trade routes and roads from traders, pillaging (combat), national parks.
 
 ## Acceptance
 - `core/` builds with no Unreal dependency on GCC, Clang and MSVC with warnings as errors; CTest green.
@@ -59,7 +63,8 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 
 ## Stage 4 review log
 - Step 1 (2026-10-04): self-reviewed; GCC and Clang builds warning-free, 30/30 tests, `sovsim` 60-turn replay hashes equal on both compilers. MSVC CI caught CRLF changing the rules checksum; fixed (checksum skips CR, `.gitattributes`). PR #8 merged.
-- Step 2 (2026-10-04): self-reviewed; 44/44 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both.
+- Step 2 (2026-10-04): self-reviewed; 44/44 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both. CI caught a missing `<algorithm>` include (libc++ and MSVC); fixed.
+- Step 3 (2026-10-04): self-reviewed; 51/51 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both (02d7599831f383ca); bots research, adopt governments and slot policies.
 
 ## Open questions & risks
 - MSVC warning level /W4 /WX may flag narrowing conversions the GCC build accepts; fix as CI reports.
@@ -67,9 +72,14 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - Lakes are not generated yet (inland water is coast); floodplains need rivers, which exist.
 - `Fixed::pow` snaps results within ~2e-9 relative of an integer so floors stay exact; non-integer results carry ~1e-4 absolute error at most for rules-sized inputs.
 - Unassigned citizens (more pop than workable plots) yield nothing until specialists arrive with districts.
+- Paid government and policy changes (POLICY_COST_*) are not implemented: the formula is unverified. Anarchy length is a Sovereign reading of GOVERNMENT_BASE_ANARCHY_TURNS.
+- Combat, influence, loyalty, great person, wonder and specialty-district policy effects (Discipline, Oligarchy, Charismatic Leader, Classical Republic...) have no modifiers yet; they arrive with those systems.
+- Units needing strategic resources (Swordsman, Horseman) are buildable without them until step 4; obsolete units stay buildable until step 4.
+- The GS world-era tech/civic cost adjustment (±20%) waits for world eras.
 - Gold purchase price uses GOLD_PURCHASE_MULTIPLIER (2) x GOLD_PURCHASE_ENGINE_FACTOR (2, Sovereign global) to match the spec's 4x; verify in game if possible.
 
 ## Changelog
 - 2026-10-04 18:05 CREATED — 8 steps from the build plan; step 1 implemented in the same session.
 - 2026-10-04 18:05 STEP 1 DONE — milestone 1 PR opened; step 2 (MVP-2 cities) specced.
 - 2026-10-04 19:10 STEP 2 DONE — added step 4 (builders, improvements, roads) since MVP-2 cities need improvements before luxuries and strategics matter; step 3 (research) specced.
+- 2026-10-04 20:30 STEP 3 DONE — step 4 (builders, improvements, roads) specced; it also takes strategic resource costs and obsolete units, found missing while wiring unlocks.

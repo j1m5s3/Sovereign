@@ -57,6 +57,39 @@ inline sov::UnitId addUnit(sov::GameState& s, const char* type, sov::PlayerId ow
     return u.id;
 }
 
+// One player on flat grassland with a capital founded at (6,6).
+struct CityScenario {
+    std::unique_ptr<sov::Game> game;
+    sov::CityId city = sov::kNoCity;
+};
+
+inline CityScenario capitalScenario(sov::GameState s = flatState(20, 14, 1)) {
+    using namespace sov;
+    UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {6, 6});
+    CityScenario sc;
+    sc.game = Game::fromScenario(rules(), std::move(s));
+    if (sc.game->submit(Command::foundCity(0, settler)) == CommandError::Ok) sc.city = sc.game->state().cities[0].id;
+    return sc;
+}
+
+// Ends `n` turns, keeping research going with the first available choice.
+inline void endTurns(sov::Game& g, int n) {
+    using namespace sov;
+    for (int i = 0; i < n; ++i) {
+        const PlayerId me = g.state().currentPlayer;
+        CommandError e = g.submit(Command::endTurn(me));
+        for (int k = 0; k < 2 && (e == CommandError::ResearchNeeded || e == CommandError::CivicNeeded); ++k) {
+            if (e == CommandError::ResearchNeeded) g.submit(Command::chooseResearch(me, g.availableTechs(me).front()));
+            else g.submit(Command::chooseCivic(me, g.availableCivics(me).front()));
+            e = g.submit(Command::endTurn(me));
+        }
+        if (e != CommandError::Ok) {
+            std::printf("  endTurn failed: %s\n", commandErrorName(e));
+            return;
+        }
+    }
+}
+
 inline sov::GameSetup duelSetup(uint64_t seed) {
     sov::GameSetup g;
     g.seed = seed;

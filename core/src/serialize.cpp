@@ -122,6 +122,17 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     for (const Player& p : s.players) {
         if (p.unitsTrained.size() > rules.units.size()) return false;
+        if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
+        if (!inRange(p.techs.current, rules.techs.size(), true) || !inRange(p.civics.current, rules.civics.size(), true))
+            return false;
+        if (p.governmentUses.size() != rules.governments.size()) return false;
+        if (!inRange(p.government, rules.governments.size(), true)) return false;
+        const size_t slots = p.government == kNone
+                                 ? 0
+                                 : static_cast<size_t>(rules.governments[static_cast<size_t>(p.government)].totalSlots());
+        if (p.policies.size() != slots) return false;
+        for (TypeIndex pol : p.policies) if (!inRange(pol, rules.policies.size(), true)) return false;
+        if (p.anarchyTurns < 0) return false;
     }
     return true;
 }
@@ -153,10 +164,21 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.alive);
         w.i32(p.citiesFounded);
         writeFixed(w, p.gold);
-        writeFixed(w, p.science);
-        writeFixed(w, p.culture);
         writeFixed(w, p.faith);
         writeI32s(w, std::vector<int32_t>(p.unitsTrained.begin(), p.unitsTrained.end()));
+        for (const TreeProgress* t : {&p.techs, &p.civics}) {
+            w.bytes(t->done);
+            w.bytes(t->boosted);
+            w.u32(static_cast<uint32_t>(t->progress.size()));
+            for (Fixed f : t->progress) writeFixed(w, f);
+            w.i16(t->current);
+            writeFixed(w, t->overflow);
+        }
+        w.i16(p.government);
+        writeI32s(w, std::vector<int32_t>(p.policies.begin(), p.policies.end()));
+        writeI32s(w, std::vector<int32_t>(p.governmentUses.begin(), p.governmentUses.end()));
+        w.i32(p.anarchyTurns);
+        w.boolean(p.freeChanges);
         writeHex(w, p.startPos);
         w.bytes(p.visibility);
     }
@@ -235,12 +257,29 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.alive = r.boolean();
         p.citiesFounded = r.i32();
         p.gold = readFixed(r);
-        p.science = readFixed(r);
-        p.culture = readFixed(r);
         p.faith = readFixed(r);
         std::vector<int32_t> trained;
         if (!readI32s(r, trained)) return false;
         p.unitsTrained.assign(trained.begin(), trained.end());
+        for (TreeProgress* t : {&p.techs, &p.civics}) {
+            t->done = r.bytes();
+            t->boosted = r.bytes();
+            uint32_t n = r.u32();
+            if (!r.checkCount(n, 8) || n != t->done.size() || n != t->boosted.size()) return false;
+            t->progress.resize(n);
+            for (Fixed& f : t->progress) f = readFixed(r);
+            t->current = r.i16();
+            t->overflow = readFixed(r);
+        }
+        p.government = r.i16();
+        std::vector<int32_t> ints;
+        if (!readI32s(r, ints)) return false;
+        p.policies.clear();
+        for (int32_t v : ints) p.policies.push_back(static_cast<TypeIndex>(v));
+        if (!readI32s(r, ints)) return false;
+        p.governmentUses.assign(ints.begin(), ints.end());
+        p.anarchyTurns = r.i32();
+        p.freeChanges = r.boolean();
         p.startPos = readHex(r);
         p.visibility = r.bytes();
         if (p.visibility.size() != s.plots.size()) return false;

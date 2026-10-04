@@ -5,6 +5,9 @@
 
 using namespace sov;
 using sovtest::addUnit;
+using sovtest::capitalScenario;
+using sovtest::CityScenario;
+using sovtest::endTurns;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -17,29 +20,6 @@ constexpr size_t C = static_cast<size_t>(YieldType::Culture);
 ProductionItem unitItem(const char* id) { return {ProductionKind::Unit, rules().unit(id)}; }
 ProductionItem buildingItem(const char* id) { return {ProductionKind::Building, rules().building(id)}; }
 
-// One player on flat grassland with a capital founded at (6,6).
-struct CityScenario {
-    std::unique_ptr<Game> game;
-    CityId city = kNoCity;
-};
-
-CityScenario capitalScenario(GameState s = flatState(20, 14, 1)) {
-    UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {6, 6});
-    CityScenario sc;
-    sc.game = Game::fromScenario(rules(), std::move(s));
-    if (sc.game->submit(Command::foundCity(0, settler)) == CommandError::Ok) sc.city = sc.game->state().cities[0].id;
-    return sc;
-}
-
-void endTurns(Game& g, int n) {
-    for (int i = 0; i < n; ++i) {
-        CommandError e = g.submit(Command::endTurn(g.state().currentPlayer));
-        if (e != CommandError::Ok) {
-            std::printf("  endTurn failed: %s\n", commandErrorName(e));
-            return;
-        }
-    }
-}
 }  // namespace
 
 TEST(fixed_pow_matches_civ_curves) {

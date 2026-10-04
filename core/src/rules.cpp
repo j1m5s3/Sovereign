@@ -138,13 +138,16 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     static const std::pair<const char*, ModCollection> collections[] = {
         {"OWNER_CITY", ModCollection::OwnerCity},         {"OWNER_CITY_PLOTS", ModCollection::OwnerCityPlots},
         {"PLAYER_CITIES", ModCollection::PlayerCities},   {"PLAYER_CAPITAL", ModCollection::PlayerCapital},
-        {"PLAYER_CITY_PLOTS", ModCollection::PlayerCityPlots},
+        {"PLAYER_CITY_PLOTS", ModCollection::PlayerCityPlots}, {"PLAYER", ModCollection::Player},
     };
     static const std::pair<const char*, ModEffect> effects[] = {
         {"ADJUST_CITY_YIELD", ModEffect::CityYield},           {"ADJUST_CITY_YIELD_PERCENT", ModEffect::CityYieldPercent},
         {"ADJUST_PLOT_YIELD", ModEffect::PlotYield},           {"ADJUST_CITY_HOUSING", ModEffect::CityHousing},
         {"ADJUST_CITY_AMENITIES", ModEffect::CityAmenities},   {"ADJUST_CITY_GROWTH_PERCENT", ModEffect::CityGrowthPercent},
         {"ADJUST_CITY_DEFENSE", ModEffect::CityDefense},
+        {"ADJUST_UNIT_PRODUCTION_PERCENT", ModEffect::UnitProductionPercent},
+        {"ADJUST_PLOT_PURCHASE_COST_PERCENT", ModEffect::PlotPurchaseCostPercent},
+        {"ADJUST_UNIT_MAINTENANCE_DISCOUNT", ModEffect::UnitMaintenanceDiscount},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -160,6 +163,21 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         return false;
     }
     mod.amount = args["amount"].fixed();
+    mod.unitClass = args["unitClass"].str();
+    if (args.has("unit") && (mod.unit = rules.unit(args["unit"].str())) == kNone) {
+        *error = "unknown unit " + args["unit"].str();
+        return false;
+    }
+    if (args.has("maxEra") && (mod.maxEra = rules.era(args["maxEra"].str())) == kNone) {
+        *error = "unknown era " + args["maxEra"].str();
+        return false;
+    }
+    // Player-wide effects and the player collection go together.
+    const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount;
+    if (playerEffect != (mod.collection == ModCollection::Player)) {
+        *error = "effect " + e + " does not fit collection " + c;
+        return false;
+    }
     return parseRequirements(j["ownerRequirements"], mod.ownerReqs, rules, error) &&
            parseRequirements(j["subjectRequirements"], mod.subjectReqs, rules, error);
 }
@@ -188,8 +206,9 @@ uint64_t fnv1a(const void* data, size_t size, uint64_t h) {
 
 const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
-        "globals.json",   "terrain.json",       "resources.json", "units.json",
-        "buildings.json", "civilizations.json", "setup.json",     "modifiers.json",
+        "globals.json",     "terrain.json",  "resources.json",     "units.json",
+        "buildings.json",   "techs.json",    "civics.json",        "governments.json",
+        "policies.json",    "civilizations.json", "setup.json",    "modifiers.json",
     };
     return names;
 }
@@ -236,6 +255,54 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     checksum_ = sum;
     globals_ = m.globals;
 
+    // Eras and research trees first: everything else may be unlocked by them.
+    for (const auto& [id, j] : m.tables["eras"]) {
+        EraType e;
+        e.id = id;
+        e.name = j["name"].str(id);
+        eras.push_back(std::move(e));
+    }
+    auto readNodes = [&](const char* name, std::vector<TreeNode>& out) {
+        for (const auto& [id, j] : m.tables[name]) {
+            TreeNode n;
+            n.id = id;
+            n.name = j["name"].str(id);
+            n.era = era(j["era"].str());
+            n.cost = static_cast<int>(j["cost"].integer(0));
+            if (n.era == kNone || n.cost <= 0) {
+                *error = std::string(name) + " " + id + ": bad era or cost";
+                return false;
+            }
+            out.push_back(std::move(n));
+        }
+        return true;
+    };
+    if (!readNodes("techs", techs) || !readNodes("civics", civics)) return false;
+    auto findTech = [this](const std::string& id) { return tech(id); };
+    auto findCivic = [this](const std::string& id) { return civic(id); };
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["techs"]) {
+            if (!resolveList(j["prereqs"], findTech, techs[i++].prereqs, "tech " + id, error)) return false;
+        }
+        i = 0;
+        for (const auto& [id, j] : m.tables["civics"]) {
+            if (!resolveList(j["prereqs"], findCivic, civics[i++].prereqs, "civic " + id, error)) return false;
+        }
+    }
+    auto readUnlock = [&](const Json& j, Unlock& u, const std::string& where) {
+        const std::string& id = j.str();
+        u = Unlock{};
+        if (id.empty()) return true;
+        if ((u.index = tech(id)) != kNone) return true;
+        if ((u.index = civic(id)) != kNone) {
+            u.civic = true;
+            return true;
+        }
+        *error = where + ": unknown tech or civic " + id;
+        return false;
+    };
+
     for (const auto& [id, j] : m.tables["terrains"]) {
         TerrainType t;
         t.id = id;
@@ -278,7 +345,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         const std::string& cls = j["class"].str("BONUS");
         r.cls = cls == "LUXURY" ? ResourceClass::Luxury : cls == "STRATEGIC" ? ResourceClass::Strategic : ResourceClass::Bonus;
         r.yields = readYields(j["yields"]);
-        r.revealTech = j["revealTech"].str();
+        if (!readUnlock(j["revealTech"], r.reveal, "resource " + id)) return false;
         r.frequency = static_cast<int>(j["frequency"].integer(0));
         r.seaFrequency = static_cast<int>(j["seaFrequency"].integer(0));
         if (!resolveList(j["validTerrains"], findTerrain, r.validTerrains, "resource " + id, error)) return false;
@@ -309,7 +376,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
         u.mustPurchase = j["mustPurchase"].boolean(false);
         u.purchaseYield = j["purchaseYield"].str();
-        u.unlock = j["unlock"].str();
+        if (!readUnlock(j["unlock"], u.unlock, "unit " + id)) return false;
+        if (!u.unlock.none()) u.era = (u.unlock.civic ? civics : techs)[static_cast<size_t>(u.unlock.index)].era;
         units.push_back(std::move(u));
     }
     {
@@ -319,7 +387,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.id = id;
             b.name = j["name"].str(id);
             b.district = j["district"].str("DISTRICT_CITY_CENTER");
-            b.unlock = j["unlock"].str();
+            if (!readUnlock(j["unlock"], b.unlock, "building " + id)) return false;
             b.cost = static_cast<int>(j["cost"].integer(0));
             b.maintenance = static_cast<int>(j["maintenance"].integer(0));
             b.yields = readYields(j["yields"]);
@@ -345,6 +413,96 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
         buildings[static_cast<size_t>(b)].granted = true;
+    }
+    // Boost conditions refer to units, buildings and the trees themselves.
+    auto readBoosts = [&](const char* name, std::vector<TreeNode>& nodes) {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables[name]) {
+            Boost& b = nodes[i++].boost;
+            const Json& bj = j["boost"];
+            if (bj.isNull()) continue;
+            b.percent = static_cast<int>(bj["percent"].integer(0));
+            b.type = bj["type"].str("NONE");
+            b.text = bj["text"].str();
+            b.count = static_cast<int>(bj["count"].integer(1));
+            const std::string& ref = bj["ref"].str();
+            static const std::pair<const char*, BoostKind> kinds[] = {
+                {"NONE", BoostKind::None},
+                {"COASTAL_CITY", BoostKind::CoastalCity},
+                {"BUILDING", BoostKind::Building},
+                {"OWN_UNITS", BoostKind::OwnUnits},
+                {"TECH", BoostKind::Tech},
+                {"CIVIC", BoostKind::Civic},
+                {"GOVERNMENT_TIER", BoostKind::GovernmentTier},
+                {"TOTAL_POPULATION", BoostKind::TotalPopulation},
+                {"CITY_POPULATION", BoostKind::CityPopulation},
+                {"LAND_COMBAT_UNITS", BoostKind::LandCombatUnits},
+            };
+            b.kind = BoostKind::NotTracked;
+            for (const auto& [k, v] : kinds) if (b.type == k) b.kind = v;
+            switch (b.kind) {
+                case BoostKind::Building: b.ref = building(ref); break;
+                case BoostKind::OwnUnits: b.ref = unit(ref); break;
+                case BoostKind::Tech: b.ref = tech(ref); break;
+                case BoostKind::Civic: b.ref = civic(ref); break;
+                default: break;
+            }
+            const bool needsRef = b.kind == BoostKind::Building || b.kind == BoostKind::OwnUnits ||
+                                  b.kind == BoostKind::Tech || b.kind == BoostKind::Civic;
+            if (needsRef && b.ref == kNone) {
+                // A reference the rules do not define (e.g. a Great Person unit) cannot fire yet.
+                b.kind = BoostKind::NotTracked;
+            }
+        }
+    };
+    readBoosts("techs", techs);
+    readBoosts("civics", civics);
+    for (const auto& [id, j] : m.tables["governments"]) {
+        GovernmentType g;
+        g.id = id;
+        g.name = j["name"].str(id);
+        g.tier = static_cast<int>(j["tier"].integer(0));
+        if (!readUnlock(j["unlock"], g.unlock, "government " + id)) return false;
+        static const char* slotNames[kNumGovernmentSlotTypes] = {"MILITARY", "ECONOMIC", "DIPLOMATIC", "WILDCARD"};
+        for (size_t k = 0; k < kNumGovernmentSlotTypes; ++k) {
+            g.slots[k] = static_cast<int>(j["slots"][slotNames[k]].integer(0));
+            if (g.slots[k] < 0 || g.slots[k] > 16) {
+                *error = "government " + id + ": bad slot count";
+                return false;
+            }
+        }
+        governments.push_back(std::move(g));
+    }
+    for (const auto& [id, j] : m.tables["policies"]) {
+        PolicyType p;
+        p.id = id;
+        p.name = j["name"].str(id);
+        static const std::pair<const char*, PolicySlot> slots[] = {
+            {"MILITARY", PolicySlot::Military},     {"ECONOMIC", PolicySlot::Economic},
+            {"DIPLOMATIC", PolicySlot::Diplomatic}, {"WILDCARD", PolicySlot::Wildcard},
+            {"GREAT_PERSON", PolicySlot::GreatPerson},
+        };
+        const std::string& slot = j["slot"].str();
+        bool found = false;
+        for (const auto& [k, v] : slots) if (slot == k) { p.slot = v; found = true; }
+        if (!found) {
+            *error = "policy " + id + ": unknown slot " + slot;
+            return false;
+        }
+        if (!readUnlock(j["unlock"], p.unlock, "policy " + id)) return false;
+        const std::string& gov = j["government"].str();
+        if (!gov.empty() && (p.government = government(gov)) == kNone) {
+            *error = "policy " + id + ": unknown government " + gov;
+            return false;
+        }
+        policies.push_back(std::move(p));
+    }
+    {
+        auto findPolicy = [this](const std::string& pid) { return policy(pid); };
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["policies"]) {
+            if (!resolveList(j["obsoletedBy"], findPolicy, policies[i++].obsoletedBy, "policy " + id, error)) return false;
+        }
     }
     for (const auto& [id, j] : m.tables["happinessLevels"]) {
         HappinessLevel h;
@@ -378,6 +536,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             mod.sourceKind = ModSource::Building;
         } else if ((mod.sourceIndex = civ(mod.source)) != kNone) {
             mod.sourceKind = ModSource::Civ;
+        } else if ((mod.sourceIndex = policy(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Policy;
+        } else if ((mod.sourceIndex = government(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Government;
         } else {
             *error = "modifier " + id + ": unknown source " + mod.source;
             return false;
@@ -424,7 +586,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
     }
-    if (terrains.empty() || units.empty() || civs.empty() || mapSizes.empty() || speeds.empty()) {
+    if (terrains.empty() || units.empty() || civs.empty() || mapSizes.empty() || speeds.empty() || techs.empty() ||
+        civics.empty() || governments.empty()) {
         *error = "rules are missing a required table";
         return false;
     }
@@ -436,6 +599,11 @@ TypeIndex Rules::feature(const std::string& id) const { return findIn(features, 
 TypeIndex Rules::resource(const std::string& id) const { return findIn(resources, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
 TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
+TypeIndex Rules::era(const std::string& id) const { return findIn(eras, id); }
+TypeIndex Rules::tech(const std::string& id) const { return findIn(techs, id); }
+TypeIndex Rules::civic(const std::string& id) const { return findIn(civics, id); }
+TypeIndex Rules::government(const std::string& id) const { return findIn(governments, id); }
+TypeIndex Rules::policy(const std::string& id) const { return findIn(policies, id); }
 
 std::vector<const Modifier*> Rules::modifiersFrom(const std::string& source) const {
     std::vector<const Modifier*> out;
