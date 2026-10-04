@@ -56,6 +56,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.dominationVictory);
     w.boolean(s.scoreVictory);
     w.i32(s.turnLimit);
+    w.boolean(s.regicide);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -73,6 +74,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.dominationVictory = r.boolean();
     s.scoreVictory = r.boolean();
     s.turnLimit = r.i32();
+    s.regicide = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -161,6 +163,9 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (p.policies.size() != slots) return false;
         for (TypeIndex pol : p.policies) if (!inRange(pol, rules.policies.size(), true)) return false;
         if (p.anarchyTurns < 0) return false;
+        if (p.dynastyNext < 0 || p.interregnumTurns < 0) return false;
+        if (p.captor != kNoPlayer && (p.captor < 0 || static_cast<size_t>(p.captor) >= s.players.size())) return false;
+        for (TypeIndex g : p.savedGear) if (!inRange(g, rules.gear.size(), true)) return false;
     }
     return true;
 }
@@ -220,6 +225,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.freeChanges);
         writeHex(w, p.startPos);
         w.bytes(p.visibility);
+        w.str(p.leaderName);
+        w.i32(p.dynastyNext);
+        w.boolean(p.successionPending);
+        w.i32(p.interregnumTurns);
+        w.i8(p.captor);
+        for (TypeIndex g : p.savedGear) w.i32(g);
     }
     w.u32(static_cast<uint32_t>(s.units.size()));
     for (const Unit& u : s.units) {
@@ -369,6 +380,12 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.startPos = readHex(r);
         p.visibility = r.bytes();
         if (p.visibility.size() != s.plots.size()) return false;
+        p.leaderName = r.str();
+        p.dynastyNext = r.i32();
+        p.successionPending = r.boolean();
+        p.interregnumTurns = r.i32();
+        p.captor = r.i8();
+        for (TypeIndex& g : p.savedGear) g = static_cast<TypeIndex>(r.i32());
     }
     uint32_t nu = r.u32();
     if (!r.checkCount(nu, 30)) return false;

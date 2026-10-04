@@ -40,7 +40,13 @@ enum class CommandType : uint8_t {
     RazeCity = 22,        // id = city captured this turn (not an original capital): burn it down
     EquipGear = 23,       // id = leader, arg = gear (or -1 with arg2 = slot to take that item off)
     LinkEscort = 24,      // id = military unit, arg = leader on its plot to escort (-1 ends the link)
+    ChooseSuccessor = 25, // arg = Succession kind; id = the unit for Succession::Unit
+    AbandonLeader = 26,   // give up the captured leader and crown a successor
 };
+
+// Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
+// or a regent when neither exists (a stand-in until governors and Great Generals exist).
+enum class Succession : int32_t { Heir = 0, Unit = 1, Regent = 2 };
 
 struct Command {
     CommandType type = CommandType::EndTurn;
@@ -99,6 +105,10 @@ struct Command {
     static Command linkEscort(PlayerId p, UnitId escort, UnitId leader) {
         return {CommandType::LinkEscort, p, escort, {}, leader, 0};
     }
+    static Command chooseSuccessor(PlayerId p, Succession kind, UnitId unit = kNoUnit) {
+        return {CommandType::ChooseSuccessor, p, unit, {}, static_cast<int32_t>(kind), 0};
+    }
+    static Command abandonLeader(PlayerId p) { return {CommandType::AbandonLeader, p, -1, {}, 0, 0}; }
 };
 
 enum class CommandError : uint8_t {
@@ -140,6 +150,8 @@ enum class CommandError : uint8_t {
     CannotRaze,
     CannotEquip,
     CannotEscort,
+    LeaderNeeded,
+    CannotSucceed,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

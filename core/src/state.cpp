@@ -94,6 +94,8 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotRaze: return "CannotRaze";
         case CommandError::CannotEquip: return "CannotEquip";
         case CommandError::CannotEscort: return "CannotEscort";
+        case CommandError::LeaderNeeded: return "LeaderNeeded";
+        case CommandError::CannotSucceed: return "CannotSucceed";
     }
     return "Unknown";
 }
@@ -138,6 +140,8 @@ std::string describe(const Command& c) {
         case CommandType::EquipGear:
             return s + "EquipGear u" + std::to_string(c.id) + " gear" + std::to_string(c.arg) + " slot" + std::to_string(c.arg2);
         case CommandType::LinkEscort: return s + "LinkEscort u" + std::to_string(c.id) + " leader" + std::to_string(c.arg);
+        case CommandType::ChooseSuccessor: return s + "ChooseSuccessor kind" + std::to_string(c.arg) + " u" + std::to_string(c.id);
+        case CommandType::AbandonLeader: return s + "AbandonLeader";
     }
     return s + "?";
 }

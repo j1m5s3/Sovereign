@@ -828,8 +828,28 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
     return std::max(0, score);
 }
 
+// Crowns a successor (leader doc §5): the dynasty's heir, else the most seasoned unit,
+// else a regent. A captured leader is given up at once (no ransom until deals exist).
+void succession(Game& game, PlayerId me) {
+    if (game.state().players[at(me)].captor != kNoPlayer) game.submit(Command::abandonLeader(me));
+    if (!game.state().players[at(me)].successionPending) return;
+    if (game.submit(Command::chooseSuccessor(me, Succession::Heir)) == CommandError::Ok) return;
+    UnitId best = kNoUnit;
+    int bestLevel = 0;
+    for (UnitId id : game.successorUnits(me)) {
+        const Unit* u = game.state().unit(id);
+        if (u->level() > bestLevel) {
+            bestLevel = u->level();
+            best = id;
+        }
+    }
+    if (best != kNoUnit && game.submit(Command::chooseSuccessor(me, Succession::Unit, best)) == CommandError::Ok) return;
+    game.submit(Command::chooseSuccessor(me, Succession::Regent));
+}
+
 void playTurn(Game& game) {
     if (game.gameOver()) return;
+    succession(game, game.state().currentPlayer);
     View v(game, game.state().currentPlayer);
     survey(v);
     diplomacy(v);

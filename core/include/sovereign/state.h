@@ -170,6 +170,14 @@ struct Player {
     std::vector<Relation> relations;  // per player
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;
+    // The throne (leader doc §5). An interregnum empties policy slots for a few turns after
+    // the leader falls; it counts down only while someone sits on the throne.
+    std::string leaderName;
+    int dynastyNext = 1;            // next heir in the civ's dynasty (0 is the starting leader)
+    bool successionPending = false; // the leader died or was abandoned: a successor must be chosen
+    int interregnumTurns = 0;
+    PlayerId captor = kNoPlayer;    // holds this player's captured leader
+    std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
 };
 
 struct PlayerSetup {
@@ -189,6 +197,7 @@ struct GameSetup {
     bool dominationVictory = true;
     bool scoreVictory = true;
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
+    bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding };

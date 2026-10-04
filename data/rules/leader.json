@@ -1,5 +1,5 @@
 {
- "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls); both are Sovereign tuning.",
+ "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls; Sovereign tuning) and LEADER_SUCCESSOR_MIN_LEVEL (a military unit of this level may take the throne; doc section 5).",
  "units": [
   {"id": "UNIT_SOVEREIGN", "name": "Sovereign", "class": "LEADER", "domain": "LAND", "layer": "LEADER",
    "cost": 0, "trainable": false, "maintenance": 0, "combat": 0, "moves": 2, "sight": 2}
@@ -56,6 +56,7 @@
  ],
  "globals": {
   "LEADER_RETREAT_HP": 30,
-  "LEADER_INTERREGNUM_TURNS": 3
+  "LEADER_INTERREGNUM_TURNS": 3,
+  "LEADER_SUCCESSOR_MIN_LEVEL": 4
  }
 }

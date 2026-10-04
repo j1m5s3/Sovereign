@@ -20,6 +20,13 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
     if (game.gameOver()) return;
     const GameState& s = game.state();
     const PlayerId me = s.currentPlayer;
+    // A fallen or captured leader is replaced by the first successor allowed.
+    if (s.players[static_cast<size_t>(me)].captor != kNoPlayer) game.submit(Command::abandonLeader(me));
+    for (Succession k : {Succession::Heir, Succession::Unit, Succession::Regent}) {
+        if (!s.players[static_cast<size_t>(me)].successionPending) break;
+        const std::vector<UnitId> units = game.successorUnits(me);
+        game.submit(Command::chooseSuccessor(me, k, units.empty() ? kNoUnit : units.front()));
+    }
     // War: now and then pick a fight with another player; offer peace once allowed.
     if (s.turn > 20 && rng.chance(3)) {
         PlayerId target = static_cast<PlayerId>(rng.below(static_cast<uint32_t>(s.players.size())));
