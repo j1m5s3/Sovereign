@@ -55,6 +55,7 @@ struct Unit {
     int attacks = 0;       // attacks made this turn
     bool moved = false;    // moved this turn (no healing; siege cannot fire)
     bool attacked = false; // attacked this turn (no healing)
+    int32_t camp = 0;      // barbarian camp id that spawned it (0: none)
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
@@ -90,6 +91,13 @@ struct City {
     std::vector<ProductionProgress> progress;
     std::vector<int32_t> worked;  // plot indices worked by citizens (center excluded), sorted
     std::vector<int32_t> locked;  // plot indices the player pinned a citizen to, sorted
+    int hp = 0;              // city center hit points (0: not yet set; full on founding)
+    int wallHp = 0;          // outer defence hit points left
+    int lastAttackedTurn = -100;
+    bool struck = false;     // made its ranged strike this turn
+    PlayerId originalOwner = kNoPlayer;
+    bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
+    int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
 
     bool has(TypeIndex building) const;
 };
@@ -128,6 +136,8 @@ struct Player {
     TypeIndex civ = kNone;
     bool human = false;
     bool alive = true;
+    bool barbarian = false;   // the barbarian player: at war with all, plays in the world turn
+    int strongestUnit = 0;    // highest melee strength of any unit it has had (city defence)
     int citiesFounded = 0;  // drives city naming
     Fixed gold;
     Fixed faith;  // lifetime total until religion arrives
@@ -156,6 +166,16 @@ struct GameSetup {
     std::string speed = "GAMESPEED_STANDARD";
     bool wrapX = true;
     std::vector<PlayerSetup> players;
+    bool barbarians = true;
+};
+
+// A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).
+struct Camp {
+    int32_t id = 0;
+    Hex pos;
+    int boldness = 0;
+    int spawnTimer = 0;  // turns until it releases its next unit
+    TypeIndex tribe = kNone;  // Rules::barbarianTribes
 };
 
 struct GameState {
@@ -167,7 +187,9 @@ struct GameState {
     std::vector<Player> players;
     std::vector<Unit> units;    // sorted by id
     std::vector<City> cities;   // sorted by id
+    std::vector<Camp> camps;    // sorted by id
     UnitId nextUnitId = 1;
+    int32_t nextCampId = 1;
     CityId nextCityId = 1;
     RngSet rng;
 

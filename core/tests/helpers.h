@@ -58,6 +58,30 @@ inline sov::UnitId addUnit(sov::GameState& s, const char* type, sov::PlayerId ow
     return u.id;
 }
 
+// A hand-made city owning the plots around it; capitals get the granted Palace.
+inline sov::CityId addCity(sov::GameState& s, sov::PlayerId owner, sov::Hex pos, bool capital, int population = 1) {
+    using namespace sov;
+    City c;
+    c.id = s.nextCityId++;
+    c.owner = owner;
+    c.pos = pos;
+    c.capital = capital;
+    c.population = population;
+    c.name = "City " + std::to_string(c.id);
+    c.queue.push_back({ProductionKind::Building, rules().building("BUILDING_MONUMENT")});
+    for (size_t b = 0; b < rules().buildings.size(); ++b) {
+        if (capital && rules().buildings[b].granted) c.buildings.push_back(static_cast<TypeIndex>(b));
+    }
+    for (const Hex& h : s.grid.within(pos, 1)) {
+        Plot& p = s.plot(h);
+        p.owner = owner;
+        p.city = c.id;
+    }
+    ++s.players[static_cast<size_t>(owner)].citiesFounded;
+    s.cities.push_back(c);
+    return c.id;
+}
+
 // One player on flat grassland with a capital founded at (6,6).
 struct CityScenario {
     std::unique_ptr<sov::Game> game;

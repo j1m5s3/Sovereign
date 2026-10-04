@@ -63,7 +63,9 @@ TEST(map_start_positions_are_spaced_and_valid) {
     std::string err;
     auto g = Game::create(r, setup, &err);
     REQUIRE(g);
-    const auto& ps = g->state().players;
+    auto ps = g->state().players;
+    CHECK(ps.back().barbarian);  // the barbarians have no start position
+    ps.pop_back();
     for (size_t i = 0; i < ps.size(); ++i) {
         CHECK(isLandPassable(g->state(), r, ps[i].startPos));
         for (size_t j = i + 1; j < ps.size(); ++j)

@@ -1,0 +1,32 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "barbarianTribes": [
+  {
+   "id": "TRIBE_NAVAL",
+   "rangedPercent": 25,
+   "spawnTurns": 10,
+   "raidBoldness": 10,
+   "attackBoldness": 25,
+   "unitClass": "NAVAL_MELEE",
+   "coastal": true
+  },
+  {
+   "id": "TRIBE_CAVALRY",
+   "rangedPercent": 25,
+   "spawnTurns": 25,
+   "raidBoldness": 10,
+   "attackBoldness": 25,
+   "unitClass": "LIGHT_CAVALRY",
+   "resource": "RESOURCE_HORSES",
+   "resourceRange": 3
+  },
+  {
+   "id": "TRIBE_MELEE",
+   "rangedPercent": 25,
+   "spawnTurns": 15,
+   "raidBoldness": 10,
+   "attackBoldness": 25,
+   "unitClass": "MELEE"
+  }
+ ]
+}

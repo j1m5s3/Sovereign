@@ -150,6 +150,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_MAINTENANCE_DISCOUNT", ModEffect::UnitMaintenanceDiscount},
         {"GRANT_ABILITY", ModEffect::GrantAbility},
         {"ADJUST_UNIT_XP_PERCENT", ModEffect::UnitXpPercent},
+        {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -184,7 +185,9 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     }
     // Player-wide effects and the player collection go together.
     const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
-                              mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent;
+                              mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
+                              mod.effect == ModEffect::UnitStrength;
+    mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     if (playerEffect != (mod.collection == ModCollection::Player)) {
         *error = "effect " + e + " does not fit collection " + c;
         return false;
@@ -218,7 +221,7 @@ uint64_t fnv1a(const void* data, size_t size, uint64_t h) {
 const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
-        "buildings.json",   "techs.json",    "civics.json",        "governments.json",
+        "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
         "policies.json",    "improvements.json", "civilizations.json", "setup.json", "modifiers.json",
     };
     return names;
@@ -390,6 +393,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"HEAL_AFTER_ACTION", UnitEffectKind::HealAfterAction}, {"IGNORE_BORDERS", UnitEffectKind::IgnoreBorders},
             {"RANGED_VS_DISTRICT", UnitEffectKind::RangedVsDistrict},
             {"BOMBARD_VS_UNIT", UnitEffectKind::BombardVsUnit},
+            {"WALL_FULL_DAMAGE", UnitEffectKind::WallFullDamage}, {"BYPASS_WALLS", UnitEffectKind::BypassWalls},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -599,6 +603,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
+            b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
+            b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
             buildings.push_back(std::move(b));
         }
         // Second pass: building references may point forward.
@@ -607,6 +613,30 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             if (!resolveList(rows[i].second["requires"], findBuilding, buildings[i].prereqs, "building " + rows[i].first, error))
                 return false;
         }
+    }
+    for (const auto& [id, j] : m.tables["districts"]) {
+        DistrictType d;
+        d.id = id;
+        d.name = j["name"].str(id);
+        d.hp = static_cast<int>(j["hp"].integer(0));
+        d.attackRange = static_cast<int>(j["attackRange"].integer(0));
+        districts.push_back(std::move(d));
+    }
+    for (const auto& [id, j] : m.tables["barbarianTribes"]) {
+        BarbarianTribe t;
+        t.id = id;
+        t.coastal = j["coastal"].boolean(false);
+        if (j.has("resource") && (t.resource = resource(j["resource"].str())) == kNone) {
+            *error = "barbarian tribe " + id + ": unknown resource";
+            return false;
+        }
+        t.resourceRange = static_cast<int>(j["resourceRange"].integer(0));
+        t.rangedPercent = static_cast<int>(j["rangedPercent"].integer(0));
+        t.spawnTurns = static_cast<int>(j["spawnTurns"].integer(10));
+        t.raidBoldness = static_cast<int>(j["raidBoldness"].integer(0));
+        t.attackBoldness = static_cast<int>(j["attackBoldness"].integer(0));
+        t.unitClass = j["unitClass"].str();
+        barbarianTribes.push_back(std::move(t));
     }
     for (const auto& [id, j] : m.tables["grantedBuildings"]) {
         TypeIndex b = building(j["building"].str());
@@ -797,6 +827,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
     }
+    if (district("DISTRICT_CITY_CENTER") == kNone) {
+        *error = "rules have no DISTRICT_CITY_CENTER";
+        return false;
+    }
     if (terrains.empty() || units.empty() || civs.empty() || mapSizes.empty() || speeds.empty() || techs.empty() ||
         civics.empty() || governments.empty()) {
         *error = "rules are missing a required table";
@@ -812,6 +846,7 @@ TypeIndex Rules::ability(const std::string& id) const { return findIn(abilities,
 TypeIndex Rules::promotion(const std::string& id) const { return findIn(promotions, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
 TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
+TypeIndex Rules::district(const std::string& id) const { return findIn(districts, id); }
 TypeIndex Rules::improvement(const std::string& id) const { return findIn(improvements, id); }
 TypeIndex Rules::era(const std::string& id) const { return findIn(eras, id); }
 TypeIndex Rules::tech(const std::string& id) const { return findIn(techs, id); }

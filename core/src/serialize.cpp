@@ -52,6 +52,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
         w.str(p.civ);
         w.boolean(p.human);
     }
+    w.boolean(s.barbarians);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -65,6 +66,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
         p.civ = r.str();
         p.human = r.boolean();
     }
+    s.barbarians = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -98,7 +100,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
     for (const Player& p : s.players) {
-        if (!inRange(p.civ, rules.civs.size(), false)) return false;
+        if (!inRange(p.civ, rules.civs.size(), p.barbarian)) return false;
     }
     for (size_t i = 0; i < s.units.size(); ++i) {
         const Unit& u = s.units[i];
@@ -111,6 +113,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         const City& c = s.cities[i];
         if (c.owner < 0 || static_cast<size_t>(c.owner) >= s.players.size() || !s.grid.valid(c.pos)) return false;
         if (i > 0 && s.cities[i - 1].id >= c.id) return false;
+        if (c.originalOwner < 0 || static_cast<size_t>(c.originalOwner) >= s.players.size()) return false;
         for (TypeIndex b : c.buildings) if (!inRange(b, rules.buildings.size(), false)) return false;
         auto itemOk = [&](const ProductionItem& it) {
             return it.kind == ProductionKind::Unit ? inRange(it.type, rules.units.size(), false)
@@ -120,6 +123,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (const ProductionProgress& pp : c.progress) if (!itemOk(pp.item)) return false;
         for (int32_t pi : c.worked) if (pi < 0 || pi >= s.grid.size()) return false;
         for (int32_t pi : c.locked) if (pi < 0 || pi >= s.grid.size()) return false;
+    }
+    for (size_t i = 0; i < s.camps.size(); ++i) {
+        if (!s.grid.valid(s.camps[i].pos) || (i > 0 && s.camps[i - 1].id >= s.camps[i].id)) return false;
+        if (!inRange(s.camps[i].tribe, rules.barbarianTribes.size(), false)) return false;
     }
     for (const Player& p : s.players) {
         if (p.unitsTrained.size() > rules.units.size()) return false;
@@ -167,6 +174,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i16(p.civ);
         w.boolean(p.human);
         w.boolean(p.alive);
+        w.boolean(p.barbarian);
+        w.i32(p.strongestUnit);
         w.i32(p.citiesFounded);
         writeFixed(w, p.gold);
         writeFixed(w, p.faith);
@@ -213,6 +222,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(u.attacks);
         w.boolean(u.moved);
         w.boolean(u.attacked);
+        w.i32(u.camp);
     }
     w.u32(static_cast<uint32_t>(s.cities.size()));
     for (const City& c : s.cities) {
@@ -238,7 +248,23 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         }
         writeI32s(w, c.worked);
         writeI32s(w, c.locked);
+        w.i32(c.hp);
+        w.i32(c.wallHp);
+        w.i32(c.lastAttackedTurn);
+        w.boolean(c.struck);
+        w.i8(c.originalOwner);
+        w.boolean(c.originalCapital);
+        w.i32(c.capturedTurn);
     }
+    w.u32(static_cast<uint32_t>(s.camps.size()));
+    for (const Camp& k : s.camps) {
+        w.i32(k.id);
+        writeHex(w, k.pos);
+        w.i32(k.boldness);
+        w.i32(k.spawnTimer);
+        w.i16(k.tribe);
+    }
+    w.i32(s.nextCampId);
     w.i32(s.nextUnitId);
     w.i32(s.nextCityId);
     for (size_t i = 0; i < static_cast<size_t>(RngStream::Count); ++i) {
@@ -275,6 +301,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.civ = r.i16();
         p.human = r.boolean();
         p.alive = r.boolean();
+        p.barbarian = r.boolean();
+        p.strongestUnit = r.i32();
         p.citiesFounded = r.i32();
         p.gold = readFixed(r);
         p.faith = readFixed(r);
@@ -339,6 +367,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.attacks = r.i32();
         u.moved = r.boolean();
         u.attacked = r.boolean();
+        u.camp = r.i32();
     }
     uint32_t nc = r.u32();
     if (!r.checkCount(nc, 20)) return false;
@@ -371,7 +400,25 @@ bool deserializeState(ByteReader& r, GameState& s) {
             pp.amount = readFixed(r);
         }
         if (!readI32s(r, c.worked) || !readI32s(r, c.locked)) return false;
+        c.hp = r.i32();
+        c.wallHp = r.i32();
+        c.lastAttackedTurn = r.i32();
+        c.struck = r.boolean();
+        c.originalOwner = r.i8();
+        c.originalCapital = r.boolean();
+        c.capturedTurn = r.i32();
     }
+    uint32_t nk = r.u32();
+    if (!r.checkCount(nk, 16)) return false;
+    s.camps.resize(nk);
+    for (Camp& k : s.camps) {
+        k.id = r.i32();
+        k.pos = readHex(r);
+        k.boldness = r.i32();
+        k.spawnTimer = r.i32();
+        k.tribe = r.i16();
+    }
+    s.nextCampId = r.i32();
     s.nextUnitId = r.i32();
     s.nextCityId = r.i32();
     for (size_t i = 0; i < static_cast<size_t>(RngStream::Count); ++i) {

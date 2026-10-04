@@ -21,7 +21,7 @@ struct CityReport {
     int amenities = 0;
     int amenitiesNeeded = 0;
     int happiness = 0;        // index into Rules::happiness
-    int defense = 0;          // bonus defense from modifiers (combat arrives in MVP-4)
+    int defense = 0;          // bonus defense from modifiers (part of the city's combat strength)
 };
 
 // What an attack would do, before the dice (05-units-and-combat.md, Combat resolution).
@@ -30,6 +30,9 @@ struct CombatPreview {
     bool ranged = false;
     bool capture = false;          // melee into civilians only: they are captured or destroyed
     UnitId defender = kNoUnit;
+    CityId city = kNoCity;         // the target is this city (damage figures are to its walls or HP)
+    bool hitsWalls = false;        // the damage lands on the city's walls
+    bool captureCity = false;      // a melee move into a city at 0 HP: taken without a fight
     int attackerStrength = 0, defenderStrength = 0;
     int damageToDefenderMin = 0, damageToDefenderMax = 0;
     int damageToAttackerMin = 0, damageToAttackerMax = 0;  // melee only
@@ -151,6 +154,18 @@ public:
     // Damage dealt for a strength difference and a roll in 0..COMBAT_MAX_EXTRA_DAMAGE.
     int combatDamage(int strengthDifference, int roll) const;
     CombatPreview previewAttack(UnitId attacker, Hex target, bool ranged) const;
+    // Strength of `unit` attacking (or, for a city strike, defending against) a city.
+    int combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const;
+    // City defence and strike strength (02-cities.md, City combat).
+    int cityStrength(const City& city) const;
+    int cityMaxHp() const;
+    int cityMaxWallHp(const City& city) const;
+    // All six neighbours hold enemy units or lie in enemy ZOC: the city cannot heal.
+    bool cityUnderSiege(const City& city) const;
+    bool canCityStrike(CityId city, Hex target) const;
+    bool canRazeCity(PlayerId player, CityId city) const;
+    PlayerId barbarianPlayer() const;  // kNoPlayer when the game has no barbarians
+    const Camp* campAt(Hex h) const;
     int xpForNextLevel(const Unit& unit) const;
     bool canPromote(UnitId unit, TypeIndex promotion) const;
     std::vector<TypeIndex> availablePromotions(UnitId unit) const;
@@ -175,8 +190,28 @@ private:
     void applyCombat(const Command& c);
     std::optional<Fixed> terrainCost(const Unit& unit, Hex from, Hex to) const;
     bool lineOfSight(Hex from, Hex to) const;
-    void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed);
+    void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
+    void awardXp(Unit& unit, int xp, bool vsBarbarian);
+    int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;
+    // Percent of a hit on this city that lands on its walls; -1 when it lands on the city.
+    int wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const;
+    void attackCity(const Command& c, City& city);
+    void captureCity(City& city, UnitId attacker);
+    void razeCity(CityId city);
+    void checkElimination(PlayerId p);
+    void healCities(PlayerId p);
+    // Barbarian bookkeeping before a unit dies in combat: camp boldness.
+    void noteKill(const Unit& victim, const Unit* killer);
+    // A military unit entered this plot: clears a barbarian camp there.
+    void enterPlot(Unit& unit);
+    void linkBarbarians();
+    void processBarbarians();
+    void placeCamps(PlayerId barbarian);
+    void releaseUnit(Camp& camp, PlayerId barbarian);
+    void barbarianAct(UnitId id);
     void afterAttack(Unit& unit);
+    // A captured civilian changes hands as its capture type, or is destroyed.
+    void seizeCivilian(UnitId id, PlayerId captor);
     void removeUnit(UnitId id);
     bool exertsZoc(const Unit& unit) const;
     // Plots in enemy ZOC for this mover (empty: none, or it ignores ZOC).

@@ -438,7 +438,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         refreshVisibility(city.owner);
     } else {
         auto it = std::lower_bound(city.buildings.begin(), city.buildings.end(), item.type);
-        if (it == city.buildings.end() || *it != item.type) city.buildings.insert(it, item.type);
+        if (it == city.buildings.end() || *it != item.type) {
+            city.buildings.insert(it, item.type);
+            city.wallHp += rules_->buildings[static_cast<size_t>(item.type)].outerDefenseHp;  // new walls stand at full HP
+        }
     }
     return true;
 }

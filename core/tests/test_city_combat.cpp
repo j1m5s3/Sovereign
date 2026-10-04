@@ -1,0 +1,412 @@
+// City combat (02-cities.md, City combat; 05-units-and-combat.md, Walls) and
+// barbarians (01-map-and-terrain.md, Barbarians).
+#include <algorithm>
+
+#include "helpers.h"
+
+using namespace sov;
+using sovtest::addCity;
+using sovtest::addUnit;
+using sovtest::endTurns;
+using sovtest::flatState;
+using sovtest::rules;
+
+namespace {
+size_t at(TypeIndex i) { return static_cast<size_t>(i); }
+const Hex kCity{8, 5};
+
+void addBuilding(GameState& s, CityId id, const char* building) {
+    City& c = *s.city(id);
+    c.buildings.push_back(rules().building(building));
+    std::sort(c.buildings.begin(), c.buildings.end());
+    c.wallHp += rules().buildings[at(rules().building(building))].outerDefenseHp;
+}
+
+// Player 1 holds a capital at (8,5); player 0 attacks it. `edit` sets the scene.
+template <typename Edit>
+std::unique_ptr<Game> siege(Edit edit, bool war = true) {
+    GameState s = flatState(16, 12, 2);
+    addCity(s, 1, kCity, true, 4);
+    edit(s);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    if (war) g->submit(Command::declareWar(0, 1));
+    return g;
+}
+
+// Like siege, with player 2 as the barbarians.
+template <typename Edit>
+std::unique_ptr<Game> withBarbarians(Edit edit) {
+    GameState s = flatState(16, 12, 3);
+    s.players[2].barbarian = true;
+    s.players[2].civ = kNone;
+    edit(s);
+    return Game::fromScenario(rules(), std::move(s));
+}
+
+const City& cityAt(const Game& g, Hex h) { return *g.state().cityAt(h); }
+const Unit& unit(const Game& g, UnitId id) { return *g.state().unit(id); }
+
+// A neighbour of the city other than `not`.
+Hex besideCity(const GameState& s, Hex notHere) {
+    for (const Hex& h : s.grid.within(kCity, 1)) {
+        if (h != kCity && h != notHere) return h;
+    }
+    return kCity;
+}
+}  // namespace
+
+TEST(city_strength_hp_and_walls) {
+    UnitId warrior = kNoUnit;
+    auto g = siege([&](GameState& s) { warrior = addUnit(s, "UNIT_WARRIOR", 1, {12, 10}); }, false);
+    const City& c = cityAt(*g, kCity);
+    CHECK_EQ(c.hp, 200);  // DISTRICT_CITY_CENTER
+    CHECK_EQ(c.originalOwner, 1);
+    CHECK(c.originalCapital);
+    CHECK_EQ(g->cityMaxWallHp(c), 0);
+    // Strongest unit (Warrior 20) - 10, + 3 Palace.
+    CHECK_EQ(g->cityStrength(c), 13);
+
+    auto walled = siege([&](GameState& s) {
+        addUnit(s, "UNIT_WARRIOR", 1, {12, 10});
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+    }, false);
+    CHECK_EQ(walled->cityStrength(cityAt(*walled, kCity)), 16);  // + 3 per wall level
+    CHECK_EQ(walled->cityMaxWallHp(cityAt(*walled, kCity)), 100);
+
+    // A garrison stronger than the derived value sets the base.
+    auto garrisoned = siege([&](GameState& s) { addUnit(s, "UNIT_SWORDSMAN", 1, kCity); }, false);
+    CHECK_EQ(garrisoned->cityStrength(cityAt(*garrisoned, kCity)), 38);
+
+    // Damage: -1 per 10% of HP lost.
+    auto hurt = siege([&](GameState& s) {
+        addUnit(s, "UNIT_WARRIOR", 1, {12, 10});
+        s.city(1)->hp = 100;
+    }, false);
+    CHECK_EQ(hurt->cityStrength(cityAt(*hurt, kCity)), 8);
+}
+
+TEST(walls_take_hits_first_by_attack_type) {
+    UnitId warrior = kNoUnit, archer = kNoUnit, catapult = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        archer = addUnit(s, "UNIT_ARCHER", 0, {6, 5});
+        catapult = addUnit(s, "UNIT_CATAPULT", 0, {10, 5});
+    });
+    CombatPreview melee = g->previewAttack(warrior, kCity, false);
+    REQUIRE(melee.valid);
+    CHECK(melee.hitsWalls && melee.city == 1);
+    const int diff = melee.attackerStrength - melee.defenderStrength;
+    CHECK_EQ(melee.damageToDefenderMax, (g->combatDamage(diff, 12) * 15 + 50) / 100);  // melee 15%
+    CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
+    const City& c = cityAt(*g, kCity);
+    CHECK_EQ(c.hp, 200);
+    CHECK(100 - c.wallHp >= melee.damageToDefenderMin && 100 - c.wallHp <= melee.damageToDefenderMax);
+    CHECK(unit(*g, warrior).hp < 100);  // the city hits back
+    CHECK_EQ(unit(*g, warrior).pos, (Hex{7, 5}));
+    CHECK_EQ(unit(*g, warrior).xp, rules().globalInt("EXPERIENCE_UNIT_VS_DISTRICT_NOT_CITY_CAPTURED"));
+    CHECK_EQ(c.lastAttackedTurn, g->state().turn);
+
+    CombatPreview ranged = g->previewAttack(archer, kCity, true);
+    REQUIRE(ranged.valid);
+    const int rdiff = ranged.attackerStrength - ranged.defenderStrength;
+    CHECK_EQ(ranged.damageToDefenderMin, (g->combatDamage(rdiff, 0) * 50 + 50) / 100);  // ranged 50%
+    CHECK_EQ(ranged.damageToAttackerMax, 0);
+    // Ranged units fight districts at -17.
+    CHECK_EQ(ranged.attackerStrength, 25 - 17);
+
+    CombatPreview bombard = g->previewAttack(catapult, kCity, true);
+    REQUIRE(bombard.valid);
+    CHECK_EQ(bombard.damageToDefenderMin, g->combatDamage(bombard.attackerStrength - bombard.defenderStrength, 0));
+    CHECK_EQ(bombard.attackerStrength, 35);  // siege keeps full strength against cities
+}
+
+TEST(medieval_walls_rams_and_siege_towers) {
+    UnitId warrior = kNoUnit;
+    auto stone = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        addBuilding(s, 1, "BUILDING_MEDIEVAL_WALLS");
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+    });
+    CombatPreview pv = stone->previewAttack(warrior, kCity, false);
+    CHECK(pv.hitsWalls);
+    CHECK_EQ(pv.damageToDefenderMax, 0);  // melee cannot damage Medieval Walls
+
+    auto rammed = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        addUnit(s, "UNIT_BATTERING_RAM", 0, besideCity(s, {7, 5}));
+    });
+    pv = rammed->previewAttack(warrior, kCity, false);
+    CHECK(pv.hitsWalls);
+    CHECK_EQ(pv.damageToDefenderMin, rammed->combatDamage(pv.attackerStrength - pv.defenderStrength, 0));
+
+    auto towered = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        addBuilding(s, 1, "BUILDING_MEDIEVAL_WALLS");
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        addUnit(s, "UNIT_SIEGE_TOWER", 0, besideCity(s, {7, 5}));
+    });
+    pv = towered->previewAttack(warrior, kCity, false);
+    CHECK(!pv.hitsWalls);  // straight at the city
+    CHECK_EQ(towered->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
+    CHECK(cityAt(*towered, kCity).hp < 200);
+    CHECK_EQ(cityAt(*towered, kCity).wallHp, 200);
+}
+
+TEST(melee_takes_a_beaten_city) {
+    UnitId warrior = kNoUnit;
+    CityId second = kNoCity;
+    auto g = siege([&](GameState& s) {
+        s.city(1)->hp = 1;
+        second = addCity(s, 1, {8, 10}, false, 2);
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+    });
+    CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
+    const City& c = cityAt(*g, kCity);
+    CHECK_EQ(c.owner, 0);
+    CHECK_EQ(c.population, 3);  // 25% lost
+    CHECK_EQ(c.hp, 100);        // CITY_CAPTURED_DAMAGE_PERCENTAGE
+    CHECK_EQ(c.wallHp, 0);
+    CHECK(!c.capital && !c.has(rules().building("BUILDING_PALACE")));
+    CHECK_EQ(c.capturedTurn, g->state().turn);
+    CHECK(unit(*g, warrior).pos == kCity);
+    CHECK_EQ(unit(*g, warrior).xp, rules().globalInt("EXPERIENCE_CITY_CAPTURED"));
+    for (const Hex& h : g->state().grid.within(kCity, 1)) CHECK_EQ(g->state().plot(h).owner, 0);
+    // The Palace moves to the loser's remaining city; the original capital cannot be razed.
+    const City& rest = *g->state().city(second);
+    CHECK(rest.capital && rest.has(rules().building("BUILDING_PALACE")));
+    CHECK(g->state().players[1].alive);
+    CHECK_EQ(g->submit(Command::razeCity(0, 1)), CommandError::CannotRaze);
+}
+
+TEST(ranged_units_cannot_take_a_city) {
+    UnitId archer = kNoUnit, warrior = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        s.city(1)->hp = 1;
+        archer = addUnit(s, "UNIT_ARCHER", 0, {6, 5});
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {9, 5});
+    });
+    CHECK_EQ(g->submit(Command::rangedAttack(0, archer, kCity)), CommandError::Ok);
+    CHECK_EQ(cityAt(*g, kCity).hp, 0);
+    CHECK_EQ(cityAt(*g, kCity).owner, 1);
+    // A city at 0 HP falls to the next melee unit without a fight.
+    CombatPreview pv = g->previewAttack(warrior, kCity, false);
+    CHECK(pv.valid && pv.captureCity);
+    CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
+    CHECK_EQ(cityAt(*g, kCity).owner, 0);
+    CHECK_EQ(unit(*g, warrior).hp, 100);
+}
+
+TEST(captured_city_can_be_razed_that_turn) {
+    UnitId warrior = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        addCity(s, 1, {3, 10}, false);  // a later city, not the capital
+        s.city(2)->hp = 1;
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {2, 10});
+    });
+    CHECK_EQ(g->submit(Command::razeCity(0, 2)), CommandError::NotYourCity);
+    CHECK_EQ(g->submit(Command::attack(0, warrior, {3, 10})), CommandError::Ok);
+    CHECK_EQ(g->state().city(2)->owner, 0);
+    CHECK(g->canRazeCity(0, 2));
+    CHECK_EQ(g->submit(Command::razeCity(0, 2)), CommandError::Ok);
+    CHECK(g->state().city(2) == nullptr);
+    for (const Hex& h : g->state().grid.within({3, 10}, 1)) {
+        CHECK_EQ(g->state().plot(h).owner, kNoPlayer);
+        CHECK_EQ(g->state().plot(h).city, kNoCity);
+    }
+}
+
+TEST(losing_the_last_city_eliminates_a_player) {
+    UnitId warrior = kNoUnit, theirs = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        s.city(1)->hp = 1;
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        theirs = addUnit(s, "UNIT_WARRIOR", 1, {14, 10});
+    });
+    CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
+    CHECK(!g->state().players[1].alive);
+    CHECK(g->state().unit(theirs) == nullptr);
+    g->submit(Command::setProduction(0, 1, {ProductionKind::Building, rules().building("BUILDING_MONUMENT")}));
+    // Turns now skip the eliminated player.
+    endTurns(*g, 1);
+    CHECK_EQ(g->state().currentPlayer, 0);
+    CHECK_EQ(g->state().turn, 2);
+}
+
+TEST(walled_city_strikes_once_per_turn) {
+    UnitId enemy = kNoUnit;
+    GameState s = flatState(16, 12, 2);
+    const CityId mine = addCity(s, 0, {4, 5}, true);
+    const CityId bare = addCity(s, 0, {4, 9}, false);
+    addBuilding(s, mine, "BUILDING_ANCIENT_WALLS");
+    enemy = addUnit(s, "UNIT_WARRIOR", 1, {6, 5});
+    s.units.back().activity = Activity::Sleep;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::CannotStrike);  // not at war
+    g->submit(Command::declareWar(0, 1));
+    CHECK_EQ(g->submit(Command::cityStrike(0, bare, {6, 5})), CommandError::CannotStrike);  // no walls
+    CHECK_EQ(g->submit(Command::cityStrike(0, mine, {7, 5})), CommandError::CannotStrike);  // nothing there
+    CHECK_EQ(g->submit(Command::cityStrike(1, mine, {6, 5})), CommandError::NotYourTurn);
+    CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::Ok);
+    const int hp = unit(*g, enemy).hp;
+    CHECK(hp < 100);
+    CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::CannotStrike);
+    endTurns(*g, 2);
+    CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::Ok);
+}
+
+TEST(cities_heal_and_walls_repair_after_a_quiet_spell) {
+    GameState s = flatState(16, 12, 2);
+    const CityId id = addCity(s, 0, {4, 5}, true);
+    addBuilding(s, id, "BUILDING_ANCIENT_WALLS");
+    s.city(id)->hp = 150;
+    s.city(id)->wallHp = 50;
+    s.city(id)->lastAttackedTurn = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    endTurns(*g, 2);  // turn 2
+    CHECK_EQ(g->state().city(id)->hp, 170);
+    CHECK_EQ(g->state().city(id)->wallHp, 50);
+    endTurns(*g, 6);  // turn 5: more than COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN turns since the attack
+    CHECK_EQ(g->state().city(id)->hp, 200);
+    CHECK_EQ(g->state().city(id)->wallHp, 60);
+
+    // Surrounded by enemies: no healing.
+    GameState s2 = flatState(16, 12, 2);
+    const CityId besieged = addCity(s2, 0, {4, 5}, true);
+    s2.city(besieged)->hp = 150;
+    for (const Hex& h : s2.grid.within({4, 5}, 1)) {
+        if (h == Hex{4, 5}) continue;
+        addUnit(s2, "UNIT_WARRIOR", 1, h);
+        s2.units.back().activity = Activity::Sleep;
+    }
+    auto g2 = Game::fromScenario(rules(), std::move(s2));
+    g2->submit(Command::declareWar(0, 1));
+    CHECK(g2->cityUnderSiege(*g2->state().city(besieged)));
+    endTurns(*g2, 2);
+    CHECK_EQ(g2->state().city(besieged)->hp, 150);
+}
+
+TEST(discipline_and_the_barbarian_xp_cap) {
+    UnitId mine = kNoUnit, veteran = kNoUnit, barb = kNoUnit, barb2 = kNoUnit, rival = kNoUnit;
+    auto g = withBarbarians([&](GameState& s) {
+        mine = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+        barb = addUnit(s, "UNIT_WARRIOR", 2, {6, 5});
+        rival = addUnit(s, "UNIT_WARRIOR", 1, {5, 8});
+        veteran = addUnit(s, "UNIT_WARRIOR", 0, {10, 5});
+        s.units.back().promotions.push_back(rules().promotion("PROMOTION_BATTLECRY"));
+        barb2 = addUnit(s, "UNIT_WARRIOR", 2, {11, 5});
+        Player& p = s.players[0];
+        p.government = rules().government("GOVERNMENT_CHIEFDOM");
+        p.policies = {rules().policy("POLICY_DISCIPLINE"), kNone};
+    });
+    CHECK(g->atWar(0, 2) && g->atWar(2, 1));
+    CHECK_EQ(g->submit(Command::declareWar(0, 2)), CommandError::CannotDeclareWar);
+    CHECK_EQ(g->submit(Command::makePeace(0, 2)), CommandError::CannotMakePeace);
+    // Discipline: +5 against barbarians only.
+    CHECK_EQ(g->combatStrength(unit(*g, mine), unit(*g, barb), true, false), 25);
+    CHECK_EQ(g->combatStrength(unit(*g, mine), unit(*g, rival), true, false), 20);
+    CHECK_EQ(g->submit(Command::attack(0, mine, {6, 5})), CommandError::Ok);
+    CHECK(unit(*g, mine).xp > 0);
+    if (g->state().unit(barb)) CHECK_EQ(unit(*g, barb).xp, 0);  // barbarians never gain XP
+    // A level-2 unit learns nothing more from barbarians (EXPERIENCE_MAX_BARB_LEVEL).
+    CHECK_EQ(g->submit(Command::attack(0, veteran, {11, 5})), CommandError::Ok);
+    if (g->state().unit(veteran)) CHECK_EQ(unit(*g, veteran).xp, 0);
+    (void)barb2;
+}
+
+TEST(entering_a_camp_clears_it_for_gold) {
+    UnitId warrior = kNoUnit;
+    auto g = withBarbarians([&](GameState& s) {
+        warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        Camp c;
+        c.id = s.nextCampId++;
+        c.pos = {8, 5};
+        c.tribe = static_cast<TypeIndex>(rules().barbarianTribes.size() - 1);
+        c.spawnTimer = 99;
+        s.camps.push_back(c);
+    });
+    CHECK(!g->canFoundCityAt(0, {8, 5}));
+    const Fixed gold = g->state().players[0].gold;
+    CHECK_EQ(g->submit(Command::move(0, warrior, {8, 5})), CommandError::Ok);
+    CHECK(g->state().camps.empty());
+    CHECK_EQ(g->state().players[0].gold, gold + Fixed::fromInt(rules().globalInt("BARBARIAN_CAMP_CLEAR_GOLD")));
+}
+
+TEST(barbarians_attack_but_never_take_cities) {
+    UnitId barb = kNoUnit;
+    CityId city = kNoCity;
+    auto g = withBarbarians([&](GameState& s) {
+        city = addCity(s, 0, {4, 5}, true);
+        s.city(city)->hp = 1;
+        barb = addUnit(s, "UNIT_WARRIOR", 2, {5, 5});  // no camp: roams at full boldness
+    });
+    endTurns(*g, 2);  // the world turn: the barbarian strikes the city
+    const City& c = *g->state().city(city);
+    CHECK_EQ(c.owner, 0);
+    CHECK_EQ(c.lastAttackedTurn, 2);
+    CHECK_EQ(c.hp, rules().globalInt("COMBAT_HEAL_CITY_GARRISON"));  // fell to 0, then healed
+    REQUIRE(g->state().unit(barb));
+    CHECK_EQ(unit(*g, barb).pos, (Hex{5, 5}));
+    CHECK(unit(*g, barb).hp < 100);
+}
+
+TEST(barbarians_capture_settlers_as_builders) {
+    UnitId settler = kNoUnit, barb = kNoUnit;
+    auto g = withBarbarians([&](GameState& s) {
+        settler = addUnit(s, "UNIT_SETTLER", 0, {5, 5});
+        s.units.back().activity = Activity::Sleep;
+        barb = addUnit(s, "UNIT_WARRIOR", 2, {6, 5});
+    });
+    endTurns(*g, 2);
+    REQUIRE(g->state().unit(settler));
+    CHECK_EQ(unit(*g, settler).owner, 2);
+    CHECK_EQ(unit(*g, settler).type, rules().unit("UNIT_BUILDER"));
+    CHECK_EQ(unit(*g, barb).pos, (Hex{5, 5}));
+    CHECK(!g->state().players[0].alive);  // no city and no units left
+}
+
+TEST(barbarian_camps_appear_out_of_sight_and_release_units) {
+    std::string err;
+    GameSetup setup = sovtest::duelSetup(11);
+    setup.mapSize = "MAPSIZE_SMALL";
+    setup.players = {{"CIVILIZATION_ROME", true}, {"CIVILIZATION_EGYPT", false}, {"CIVILIZATION_CHINA", false},
+                     {"CIVILIZATION_INCA", false}};
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    const PlayerId bp = g->barbarianPlayer();
+    CHECK_EQ(bp, 4);
+    CHECK(g->state().camps.empty());
+    auto play = [&](int turns) {
+        for (int i = 0; i < turns; ++i) {
+            const PlayerId me = g->state().currentPlayer;
+            for (UnitId id : g->unitsNeedingOrders(me)) g->submit(Command::setActivity(me, id, Activity::Sleep));
+            endTurns(*g, 1);
+        }
+    };
+    play(4);  // the first world turn adds a third of the target (3 per major)
+    const auto& camps = g->state().camps;
+    CHECK_EQ(camps.size(), 3u);  // 12 x 33%
+    for (const Camp& c : camps) {
+        CHECK(g->state().plot(c.pos).owner == kNoPlayer);
+        for (PlayerId p = 0; p < 4; ++p) CHECK(g->visibility(p, c.pos) != Visibility::Visible);
+        int released = 0;
+        for (const Unit& u : g->state().units) {
+            if (u.camp != c.id) continue;
+            ++released;
+            CHECK_EQ(u.owner, bp);
+            CHECK(g->state().grid.distance(u.pos, c.pos) <= 1);
+        }
+        CHECK_EQ(released, 1);
+    }
+    for (size_t i = 0; i < camps.size(); ++i) {
+        for (size_t j = i + 1; j < camps.size(); ++j)
+            CHECK(g->state().grid.distance(camps[i].pos, camps[j].pos) >=
+                  rules().globalInt("BARBARIAN_CAMP_MINIMUM_DISTANCE_ANOTHER_CAMP"));
+    }
+    // Barbarians play inside the world turn, so the command log still replays exactly.
+    play(80);
+    auto again = Game::replay(rules(), setup, g->log(), &err);
+    REQUIRE(again);
+    CHECK_EQ(again->stateHash(), g->stateHash());
+}

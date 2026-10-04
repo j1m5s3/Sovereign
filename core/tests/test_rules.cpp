@@ -54,6 +54,7 @@ TEST(rules_mod_layers_override_by_id) {
         {"techs.json", R"({"eras": [{"id": "ERA_A"}], "techs": [{"id": "TECH_A", "era": "ERA_A", "cost": 10}]})"},
         {"civics.json", R"({"civics": [{"id": "CIVIC_A", "era": "ERA_A", "cost": 10}]})"},
         {"governments.json", R"({"governments": [{"id": "GOVERNMENT_A", "slots": {"WILDCARD": 1}}]})"},
+        {"districts.json", R"({"districts": [{"id": "DISTRICT_CITY_CENTER", "hp": 200}]})"},
         {"setup.json", R"({"mapSizes": [{"id": "M", "width": 10, "height": 10}],
             "gameSpeeds": [{"id": "S"}], "startingUnits": []})"},
     };

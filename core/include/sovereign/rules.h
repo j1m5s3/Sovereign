@@ -108,6 +108,8 @@ enum class UnitEffectKind : uint8_t {
     IgnoreBorders,
     RangedVsDistrict,   // COMBAT_RANGED_VS_DISTRICT_STRENGTH_MODIFIER applies
     BombardVsUnit,      // COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER applies
+    WallFullDamage,     // support: adjacent friendly melee deal full damage to walls (Battering Ram)
+    BypassWalls,        // support: adjacent friendly melee hit the city past its walls (Siege Tower)
 };
 
 enum class CombatAtom : uint8_t {
@@ -228,6 +230,28 @@ struct BuildingType {
     bool needsRiver = false;
     bool purchasable = false;
     bool granted = false;  // given by the rules (Palace), never built
+    bool meleeCannotDamageWalls = false;
+    bool wallsCannotBeBypassed = false;
+};
+
+// Barbarian tribes (barbarians-goody-huts.md): which units a camp releases and how bold it is.
+struct BarbarianTribe {
+    std::string id;
+    bool coastal = false;
+    TypeIndex resource = kNone;  // tribe chosen when this resource is within resourceRange
+    int resourceRange = 0;
+    int rangedPercent = 0;
+    int spawnTurns = 0;
+    int raidBoldness = 0;
+    int attackBoldness = 0;
+    std::string unitClass;  // class of the melee units its camps release
+};
+
+// Districts (districts.md). Only hit points and strike range so far.
+struct DistrictType {
+    std::string id, name;
+    int hp = 0;
+    int attackRange = 0;
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).
@@ -314,6 +338,7 @@ enum class ModEffect : uint8_t {
     UnitMaintenanceDiscount,  // player: gold off each unit's maintenance
     GrantAbility,             // player: matching units gain `ability`
     UnitXpPercent,            // player: combat XP bonus for units of `unitClass` (empty: all)
+    UnitStrength,             // player: +amount combat strength for units of `unitClass` (`vsBarbarians`: only against them)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -356,6 +381,7 @@ struct Modifier {
     TypeIndex unit = kNone;
     int maxEra = -1;
     TypeIndex ability = kNone;  // GrantAbility
+    bool vsBarbarians = false;  // UnitStrength
 };
 
 struct CivType {
@@ -390,6 +416,8 @@ public:
     std::vector<PromotionType> promotions;
     std::vector<UnitType> units;
     std::vector<BuildingType> buildings;
+    std::vector<DistrictType> districts;
+    std::vector<BarbarianTribe> barbarianTribes;
     std::vector<ImprovementType> improvements;
     std::vector<EraType> eras;
     std::vector<TreeNode> techs;
@@ -410,6 +438,7 @@ public:
     TypeIndex promotion(const std::string& id) const;
     TypeIndex unit(const std::string& id) const;
     TypeIndex building(const std::string& id) const;
+    TypeIndex district(const std::string& id) const;
     TypeIndex improvement(const std::string& id) const;
     TypeIndex era(const std::string& id) const;
     TypeIndex tech(const std::string& id) const;

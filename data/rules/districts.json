@@ -1,0 +1,17 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "districts": [
+  {
+   "id": "DISTRICT_CITY_CENTER",
+   "name": "City Center",
+   "hp": 200,
+   "attackRange": 2
+  },
+  {
+   "id": "DISTRICT_ENCAMPMENT",
+   "name": "Encampment",
+   "hp": 100,
+   "attackRange": 2
+  }
+ ]
+}

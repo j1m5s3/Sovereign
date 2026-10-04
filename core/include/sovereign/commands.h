@@ -33,6 +33,8 @@ enum class CommandType : uint8_t {
     Attack = 18,          // id = unit, target = adjacent plot: melee attack (or capture a civilian)
     RangedAttack = 19,    // id = unit, target = plot in range and sight
     Promote = 20,         // id = unit, arg = promotion
+    CityStrike = 21,      // id = city with walls, target = enemy unit in range: the city's ranged strike
+    RazeCity = 22,        // id = city captured this turn (not an original capital): burn it down
 };
 
 struct Command {
@@ -81,6 +83,8 @@ struct Command {
     static Command promote(PlayerId p, UnitId u, TypeIndex promotion) {
         return {CommandType::Promote, p, u, {}, promotion, 0};
     }
+    static Command cityStrike(PlayerId p, CityId c, Hex at) { return {CommandType::CityStrike, p, c, at, 0, 0}; }
+    static Command razeCity(PlayerId p, CityId c) { return {CommandType::RazeCity, p, c, {}, 0, 0}; }
 };
 
 enum class CommandError : uint8_t {
@@ -118,6 +122,8 @@ enum class CommandError : uint8_t {
     CannotMakePeace,
     CannotAttack,
     CannotPromote,
+    CannotStrike,
+    CannotRaze,
 };
 
 const char* commandErrorName(CommandError e);

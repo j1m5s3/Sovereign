@@ -15,6 +15,7 @@ add_library(sovereign_core
   src/research.cpp
   src/improvements.cpp
   src/combat.cpp
+  src/barbarians.cpp
   src/fixed.cpp
   src/game.cpp
   src/hex.cpp
@@ -58,6 +59,7 @@ add_executable(sovereign_tests
   tests/test_research.cpp
   tests/test_improvements.cpp
   tests/test_combat.cpp
+  tests/test_city_combat.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE
