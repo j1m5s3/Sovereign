@@ -6,6 +6,7 @@
 #include "SovMirror.h"
 #include "SovSession.h"
 
+#include "sovereign/commands.h"
 #include "sovereign/game.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -113,6 +114,89 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 	for (const FSovUnitMarker& U : M.Units)
 	{
 		TestTrue(TEXT("no marker on unrevealed plots"), G.visibility(Me, sov::Hex{U.X, U.Y}) != sov::Visibility::Unrevealed);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovHumanSeatTest, "Sovereign.Bridge.HumanSeatPlaysThroughCommands", kSovTestFlags)
+bool FSovHumanSeatTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;  // seat 0 human, AI elsewhere
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::PlayerId Me = 0;
+	TestTrue(TEXT("seat 0 starts"), Session.IsHumanTurn() && Session.GetGame().state().currentPlayer == Me);
+
+	// Found the capital where the settler stands, as the F key does.
+	sov::UnitId Settler = sov::kNoUnit;
+	for (const sov::Unit& U : Session.GetGame().state().units)
+	{
+		if (U.owner == Me && Session.GetRules().units[static_cast<size_t>(U.type)].foundCity)
+		{
+			Settler = U.id;
+			break;
+		}
+	}
+	TestEqual(TEXT("found city"), Session.Submit(sov::Command::foundCity(Me, Settler)), sov::CommandError::Ok);
+
+	// Ten turns: end the turn, answering each refusal the way the controller's choosers do
+	// (first option), then let the AI seats play until it is seat 0's turn again.
+	const int32 StartTurn = Session.GetGame().state().turn;
+	int32 Guard = 2000;
+	while (Session.GetGame().state().turn < StartTurn + 10 && !Session.IsGameOver() && Guard-- > 0)
+	{
+		if (!Session.IsHumanTurn())
+		{
+			if (!Session.StepAI() && !Session.IsGameOver())
+			{
+				AddError(TEXT("an AI seat stalled"));
+				return false;
+			}
+			continue;
+		}
+		const sov::Game& G = Session.GetGame();
+		const sov::CommandError Result = Session.Submit(sov::Command::endTurn(Me));
+		switch (Result)
+		{
+			case sov::CommandError::Ok: break;
+			case sov::CommandError::UnitsNeedOrders:
+				for (sov::UnitId Id : G.unitsNeedingOrders(Me))
+				{
+					TestEqual(TEXT("skip"), Session.Submit(sov::Command::setActivity(Me, Id, sov::Activity::Skip)), sov::CommandError::Ok);
+				}
+				break;
+			case sov::CommandError::ProductionNeeded:
+				for (sov::CityId Id : G.citiesNeedingProduction(Me))
+				{
+					TestEqual(TEXT("production"), Session.Submit(sov::Command::setProduction(Me, Id, G.buildableItems(Id).front())), sov::CommandError::Ok);
+				}
+				break;
+			case sov::CommandError::ResearchNeeded:
+				TestEqual(TEXT("research"), Session.Submit(sov::Command::chooseResearch(Me, G.availableTechs(Me).front())), sov::CommandError::Ok);
+				break;
+			case sov::CommandError::CivicNeeded:
+				TestEqual(TEXT("civic"), Session.Submit(sov::Command::chooseCivic(Me, G.availableCivics(Me).front())), sov::CommandError::Ok);
+				break;
+			default:
+				AddError(FString::Printf(TEXT("end turn refused: %s"), UTF8_TO_TCHAR(sov::commandErrorName(Result))));
+				return false;
+		}
+	}
+	TestTrue(TEXT("ten turns played"), Session.GetGame().state().turn >= StartTurn + 10);
+	const sov::Player& P = Session.GetGame().state().players[0];
+	TestTrue(TEXT("research chosen"), P.techs.current != sov::kNone || P.techs.has(0));
+
+	std::string ReplayError;
+	const std::unique_ptr<sov::Game> Replayed = sov::Game::replay(Session.GetRules(), Session.GetCoreSetup(), Session.GetGame().log(), &ReplayError);
+	TestTrue(FString::Printf(TEXT("log replays (%s)"), UTF8_TO_TCHAR(ReplayError.c_str())), Replayed != nullptr);
+	if (Replayed)
+	{
+		TestEqual(TEXT("replayed state hash"), Replayed->stateHash(), Session.GetGame().stateHash());
 	}
 	return true;
 }

@@ -43,8 +43,8 @@ Build-plan step 2 of `specs/sovereign/engine-and-architecture.md`: an Unreal Eng
 <!-- [ ] pending · [>] active · [x] done · [-] dropped (reason) · [!] blocked -->
 1. [x] **Build** UE project and `SovereignCore` module — `unreal/Sovereign.uproject`, `Config/`, `Source/Sovereign*.Target.cs`, `SovereignCore` wrappers, empty `SovereignBridge` primary module, `.gitignore`, `tools/check_unreal_core_module.py` in CTest; any core source tweaks the Unreal compiler demands stay plain C++. Done when `SovereignEditor Win64 Development` builds with UBT and CTest is green. PR "Unreal bridge milestone 1". — done 2026-10-05: all 18 core sources compile unchanged in `SovereignCore` (no warnings), `SovereignEditor` builds in ~50 s.
 2. [x] **Build** the mirror — subsystem owning the game, game mode on `/Engine/Maps/Entry`, terrain mesh with fog, unit and city markers, camera pawn, HUD basics; all seats AI-played ("spectate seat 0") to prove the mirror follows the core. Unreal automation test `Sovereign.Bridge.*` (headless, `-nullrhi`): the mirror's tile count equals seat 0's revealed plots, and marker counts equal visible units and revealed cities after 20 AI turns. Done with a screenshot of a running map. PR "Unreal bridge milestone 2". — done 2026-10-05: `HexLayoutRoundTrip` and `MirrorFollowsCore` pass headless; spectate run shows terrain, fog, cities, units; core headers gained `SOV_API` (see Decisions).
-3. [>] **Build** input and AI seats — selection, right-click move/attack/strike, found city, end turn, choosers, refusal handling, AI seats 1..N. Automation test: scripted commands through the subsystem found a city, set production and research and end 10 turns with the AI playing the rest; replaying the log gives the same state hash. Done with a screenshot of a played turn. PR "Unreal bridge milestone 3".
-4. [ ] **Close** slice — `unreal/README.md` (build, run, controls), JIT index and engine-doc build-plan status updated, review against Acceptance, plan archived.
+3. [x] **Build** input and AI seats — selection, right-click move/attack/strike, found city, end turn, choosers, refusal handling, AI seats 1..N. Automation test: scripted commands through the subsystem found a city, set production and research and end 10 turns with the AI playing the rest; replaying the log gives the same state hash. Done with a screenshot of a played turn. PR "Unreal bridge milestone 3". — done 2026-10-05: 3/3 automation tests pass; a live run founded London, picked production, research and civics through the choosers, ended turns against 3 AI seats, and a right-click moved the settler one hex east. Also `B` builder chooser and auto-selection of the first waiting unit each turn.
+4. [>] **Close** slice — `unreal/README.md` (build, run, controls), JIT index and engine-doc build-plan status updated, review against Acceptance, plan archived.
 
 ## Acceptance
 - `core/` still contains no Unreal header or macro and still builds standalone in CI (GCC, Clang, MSVC); CTest green, including the module-list check.
@@ -57,7 +57,10 @@ Build-plan step 2 of `specs/sovereign/engine-and-architecture.md`: an Unreal Eng
 - Engine macros (`check`, `verify`, `TEXT`...) could collide with core identifiers in bridge files that include both; keep core includes before Unreal ones or isolate them.
 - Rules are read from `../data/rules` beside the project; packaging will need to stage that folder (later step).
 
+- Great People appear in `Game::buildableItems` at cost 1 (rules-gen gap); fix belongs in `tools/rules_gen` and the core, offered as a separate task.
+
 ## Changelog
 - 2026-10-05 CREATED — 4 steps from build-plan step 2; step 1 started in the same session.
+- 2026-10-05 STEP 3 DONE — found a core rules gap while testing: Great People are trainable for 1 production (generated cost 1, no exclusion); left to a separate core task, not patched in the bridge.
 - 2026-10-05 STEP 2 DONE — modular editor builds needed exported core symbols (`SOV_API`); merging moved to James.
 - 2026-10-05 STEP 1 DONE — core compiled as a module with no source changes; `check_core_rules.py` now also bans Unreal macros and more Unreal include roots; step 2 (mirror) started.
