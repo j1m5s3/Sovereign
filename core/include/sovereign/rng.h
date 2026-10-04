@@ -4,6 +4,8 @@
 // output is implementation-defined and differs between MSVC and GCC.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -20,7 +22,7 @@ enum class RngStream : uint8_t {
 };
 
 // xoshiro256** seeded through splitmix64.
-class Rng {
+class SOV_API Rng {
 public:
     Rng() { seed(0); }
     explicit Rng(uint64_t s) { seed(s); }
@@ -41,7 +43,7 @@ private:
     std::array<uint64_t, 4> s_{};
 };
 
-class RngSet {
+class SOV_API RngSet {
 public:
     void seed(uint64_t gameSeed);
     Rng& get(RngStream stream) { return streams_[static_cast<size_t>(stream)]; }
@@ -51,6 +53,6 @@ private:
     std::array<Rng, static_cast<size_t>(RngStream::Count)> streams_;
 };
 
-uint64_t splitmix64(uint64_t& x);
+SOV_API uint64_t splitmix64(uint64_t& x);
 
 }  // namespace sov

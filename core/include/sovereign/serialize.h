@@ -2,6 +2,8 @@
 // explicit field widths, no padding: identical bytes on every platform.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -15,7 +17,7 @@ namespace sov {
 
 constexpr uint32_t kSaveVersion = 8;  // 2: cities (MVP-2), commands carry arg2; 3: research (MVP-3); 4: improvements; 5: combat; 6: city combat, barbarians; 7: districts; 8: victory
 
-class ByteWriter {
+class SOV_API ByteWriter {
 public:
     void u8(uint8_t v) { buf_.push_back(v); }
     void u16(uint16_t v) { for (int i = 0; i < 2; ++i) u8(static_cast<uint8_t>(v >> (8 * i))); }
@@ -41,7 +43,7 @@ private:
     std::vector<uint8_t> buf_;
 };
 
-class ByteReader {
+class SOV_API ByteReader {
 public:
     explicit ByteReader(const std::vector<uint8_t>& b) : b_(b) {}
     bool ok() const { return ok_; }
@@ -84,11 +86,11 @@ private:
     bool ok_ = true;
 };
 
-std::vector<uint8_t> serializeState(const GameState& s);
-bool deserializeState(ByteReader& r, GameState& s);
+SOV_API std::vector<uint8_t> serializeState(const GameState& s);
+SOV_API bool deserializeState(ByteReader& r, GameState& s);
 
 // Full save: header, rules checksum, state and command log.
-std::vector<uint8_t> saveGame(const Game& game);
-std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& bytes, std::string* error);
+SOV_API std::vector<uint8_t> saveGame(const Game& game);
+SOV_API std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& bytes, std::string* error);
 
 }  // namespace sov

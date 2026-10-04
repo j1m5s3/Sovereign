@@ -53,6 +53,7 @@ same command must print the same hash.
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
+| `SOV_API` export marker (empty here; dllexport when Unreal loads the core as a DLL) | `include/sovereign/api.h` |
 
 Rules data: `data/rules/{globals,terrain,resources,promotions,units,buildings,districts,barbarians,techs,civics,governments,policies,improvements}.json` are generated
 from `specs/civ6/data` by `python3 tools/rules_gen/gen_rules.py`; never edit

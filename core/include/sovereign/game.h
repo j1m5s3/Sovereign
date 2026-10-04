@@ -2,6 +2,8 @@
 // the same way: submit(Command). Queries never change state.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -44,7 +46,7 @@ struct PathStep {
     Fixed movesLeft;    // after entering this plot
 };
 
-class Game {
+class SOV_API Game {
 public:
     // Builds a new game: map, start positions, starting units, first turn.
     static std::unique_ptr<Game> create(const Rules& rules, const GameSetup& setup, std::string* error);

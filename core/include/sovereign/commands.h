@@ -4,6 +4,8 @@
 // values so they serialize and travel over the network trivially.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include <cstdint>
 #include <string>
 
@@ -127,7 +129,7 @@ enum class CommandError : uint8_t {
     CannotRaze,
 };
 
-const char* commandErrorName(CommandError e);
-std::string describe(const Command& c);
+SOV_API const char* commandErrorName(CommandError e);
+SOV_API std::string describe(const Command& c);
 
 }  // namespace sov

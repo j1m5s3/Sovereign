@@ -13,18 +13,20 @@
 // It is deterministic: the same state always gives the same commands.
 #pragma once
 
+#include "sovereign/api.h"
+
 #include "sovereign/game.h"
 
 namespace sov::ai {
 
 // Plays the current player's whole turn and ends it (does nothing once the game is won).
-void playTurn(Game& game);
+SOV_API void playTurn(Game& game);
 
 // Value of founding a city on this plot for the player (higher is better);
 // negative when a city cannot be founded there.
-int settleScore(const Game& game, PlayerId player, Hex plot);
+SOV_API int settleScore(const Game& game, PlayerId player, Hex plot);
 
 // Sum of combat strength (scaled by health) of the player's land military units.
-int militaryStrength(const Game& game, PlayerId player);
+SOV_API int militaryStrength(const Game& game, PlayerId player);
 
 }  // namespace sov::ai
