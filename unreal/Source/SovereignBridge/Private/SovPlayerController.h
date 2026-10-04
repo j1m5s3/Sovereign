@@ -38,7 +38,9 @@ protected:
 		Production,
 		Research,
 		Civic,
-		Improvement
+		Improvement,
+		Gear,
+		Throne
 	};
 
 	struct FChoice

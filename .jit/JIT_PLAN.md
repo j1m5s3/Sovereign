@@ -34,7 +34,7 @@ Build-plan step 3 of `specs/sovereign/engine-and-architecture.md`: each player's
 1. [x] **Build** leader unit, gear and escort combat (core): `leader.json`, `UnitLayer::Leader`, start spawn, gear and `EquipGear`, mount upkeep, leader strength, escort-first defence, capture/kill/barbarian rules, city capture, `LinkEscort` movement, AI/bot handling, save v9, tests. PR "Leader milestone 1". — done 2026-10-05: 11 new tests (113 total, local MSVC build); AI equips Spear/Bronze scale/Plate in a 150-turn all-AI game; bot and AI games replay to the same hash; Unreal still links.
 2. [x] **Build** succession, captivity and regicide (core): interregnum, `ChooseSuccessor`, `AbandonLeader`, `LeaderNeeded`, dynasties, regicide elimination, AI/bot, tests. PR "Leader milestone 2". — done 2026-10-05: 6 new tests (119 total); 6-player 250-turn bot and AI games replay; save v10. A unit successor is named "<Civ> Warlord", a regent "<Civ> Regent".
 3. [!] **Build** assassins (core): blocked on James's answers to Open questions 1-2. PR "Leader milestone 3".
-4. [ ] **Build** leader UI (bridge): marker, gear and succession choosers, escort link, HUD, automation test. PR "Leader milestone 4".
+4. [x] **Build** leader UI (bridge): marker, gear and succession choosers, escort link, HUD, automation test. PR "Leader milestone 4". — done 2026-10-05: 4/4 Unreal tests pass; live run shows the crowned leader marker, ruler label and HUD line.
 5. [ ] **Close** slice: docs (`core/README.md`, `unreal/README.md`, JIT index, leader doc status), review against Acceptance, archive plan.
 
 ## Acceptance
@@ -52,6 +52,7 @@ Build-plan step 3 of `specs/sovereign/engine-and-architecture.md`: each player's
 - Duels between leaders give no special war score yet (no war score system).
 
 ## Changelog
+- 2026-10-05 STEP 4 DONE — leader UI built ahead of step 3 (assassins wait on James); `H` opens the throne chooser.
 - 2026-10-05 STEP 2 DONE — succession, captivity (abandon only) and regicide; the interregnum counts down only while someone sits on the throne; Regicide razes the loser's cities when nobody (barbarians, own failed attack) took the leader. `LEADER_SUCCESSOR_MIN_LEVEL` added.
 - 2026-10-05 STEP 1 DONE — leader unit, gear, escorts and capture in the core; `sovsim --cities` prints each leader's gear. Until step 2 lands, a lost leader is simply gone (no successor yet).
 - 2026-10-05 CREATED — 5 steps from build-plan step 3; four open questions sent to James; step 1 started.
