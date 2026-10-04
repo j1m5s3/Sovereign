@@ -13,7 +13,7 @@
 
 namespace sov {
 
-constexpr uint32_t kSaveVersion = 4;  // 2: cities (MVP-2), commands carry arg2; 3: research (MVP-3); 4: improvements
+constexpr uint32_t kSaveVersion = 5;  // 2: cities (MVP-2), commands carry arg2; 3: research (MVP-3); 4: improvements; 5: combat
 
 class ByteWriter {
 public:

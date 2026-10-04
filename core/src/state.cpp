@@ -77,6 +77,10 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotImprove: return "CannotImprove";
         case CommandError::CannotHarvest: return "CannotHarvest";
         case CommandError::NotEnoughResources: return "NotEnoughResources";
+        case CommandError::CannotDeclareWar: return "CannotDeclareWar";
+        case CommandError::CannotMakePeace: return "CannotMakePeace";
+        case CommandError::CannotAttack: return "CannotAttack";
+        case CommandError::CannotPromote: return "CannotPromote";
     }
     return "Unknown";
 }
@@ -108,6 +112,13 @@ std::string describe(const Command& c) {
         case CommandType::BuildImprovement:
             return s + "BuildImprovement u" + std::to_string(c.id) + " improvement" + std::to_string(c.arg);
         case CommandType::Harvest: return s + "Harvest u" + std::to_string(c.id);
+        case CommandType::DeclareWar: return s + "DeclareWar p" + std::to_string(c.arg);
+        case CommandType::MakePeace: return s + "MakePeace p" + std::to_string(c.arg);
+        case CommandType::Attack:
+            return s + "Attack u" + std::to_string(c.id) + " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ")";
+        case CommandType::RangedAttack:
+            return s + "RangedAttack u" + std::to_string(c.id) + " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ")";
+        case CommandType::Promote: return s + "Promote u" + std::to_string(c.id) + " promotion" + std::to_string(c.arg);
     }
     return s + "?";
 }

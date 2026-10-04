@@ -1,5 +1,5 @@
 {
- "_comment": "Hand-written game setup tables. Map sizes and speeds from specs/civ6/data/game-setup.md; starting units from its 'Starting units (major civs)' Ancient row. Globals here are Sovereign-only tuning: CITY_SIGHT_RANGE (Civ VI value unverified, 01-map-and-terrain.md Visibility) the MAPGEN_* map generator knobs, CITY_PRODUCTION_QUEUE_MAX (Civ value unverified) and GOLD_PURCHASE_ENGINE_FACTOR (gold price = production cost x GOLD_PURCHASE_MULTIPLIER x this, giving the 4x of 02-cities.md, Production).",
+ "_comment": "Hand-written game setup tables. Map sizes and speeds from specs/civ6/data/game-setup.md; starting units from its 'Starting units (major civs)' Ancient row. Globals here are Sovereign-only tuning: CITY_SIGHT_RANGE (Civ VI value unverified, 01-map-and-terrain.md Visibility) the MAPGEN_* map generator knobs, CITY_PRODUCTION_QUEUE_MAX (Civ value unverified), GOLD_PURCHASE_ENGINE_FACTOR (gold price = production cost x GOLD_PURCHASE_MULTIPLIER x this, giving the 4x of 02-cities.md, Production) and EXPERIENCE_PER_LEVEL (XP for the next promotion = this x current level; engine value per 05-units-and-combat.md, XP and promotions).",
  "mapSizes": [
   {"id": "MAPSIZE_DUEL", "width": 44, "height": 26, "defaultPlayers": 2},
   {"id": "MAPSIZE_TINY", "width": 60, "height": 38, "defaultPlayers": 4},
@@ -25,6 +25,7 @@
  "globals": {
   "CITY_PRODUCTION_QUEUE_MAX": 8,
   "GOLD_PURCHASE_ENGINE_FACTOR": 2,
+  "EXPERIENCE_PER_LEVEL": 15,
   "CITY_SIGHT_RANGE": 2,
   "MAPGEN_LAND_PERCENT": 36,
   "MAPGEN_MOUNTAIN_PERCENT": 7,

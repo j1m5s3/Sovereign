@@ -117,8 +117,10 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
     return total;
 }
 
-Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect) {
-    Fixed total;
+namespace {
+// Calls fn for every player-collection modifier with this effect that applies to the player.
+template <typename Fn>
+void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Fn&& fn) {
     for (const Modifier& m : r.modifiers) {
         if (m.collection != ModCollection::Player || m.effect != effect) continue;
         const City* holder = nullptr;
@@ -142,8 +144,28 @@ Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& playe
         ReqContext ownerCtx{&s, &r, &player, holder, nullptr};
         ReqContext subjectCtx{&s, &r, &player, nullptr, nullptr};
         if (!testRequirements(m.ownerReqs, ownerCtx) || !testRequirements(m.subjectReqs, subjectCtx)) continue;
-        total += m.amount;
+        fn(m);
     }
+}
+}  // namespace
+
+Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, effect, [&](const Modifier& m) { total += m.amount; });
+    return total;
+}
+
+std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player) {
+    std::vector<TypeIndex> out;
+    forEachPlayerModifier(s, r, player, ModEffect::GrantAbility, [&](const Modifier& m) { out.push_back(m.ability); });
+    return out;
+}
+
+Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) {
+        if (m.unitClass.empty() || m.unitClass == unitClass) total += m.amount;
+    });
     return total;
 }
 

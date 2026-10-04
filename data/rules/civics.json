@@ -44,6 +44,9 @@
    "prereqs": [
     "CIVIC_CRAFTSMANSHIP"
    ],
+   "effects": [
+    "COMBAT_ADJACENCY"
+   ],
    "boost": {
     "percent": 40,
     "text": "clear a barbarian camp",
@@ -86,6 +89,9 @@
    "cost": 70,
    "prereqs": [
     "CIVIC_FOREIGN_TRADE"
+   ],
+   "effects": [
+    "ENFORCE_BORDERS"
    ],
    "boost": {
     "percent": 40,

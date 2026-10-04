@@ -50,6 +50,13 @@ struct Unit {
     std::optional<Hex> moveTarget;  // multi-turn move order
     int xp = 0;
     int charges = 0;  // build charges left (Builders)
+    std::vector<TypeIndex> promotions;  // in the order taken; level = 1 + count
+    int fortifyTurns = 0;  // turns spent fortified (05: +3 per turn, max 2)
+    int attacks = 0;       // attacks made this turn
+    bool moved = false;    // moved this turn (no healing; siege cannot fire)
+    bool attacked = false; // attacked this turn (no healing)
+
+    int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
 
 enum class ProductionKind : uint8_t { Unit = 0, Building = 1 };
@@ -109,6 +116,13 @@ struct TreeProgress {
 // Per-player knowledge of each plot (01-map-and-terrain.md, Visibility).
 enum class Visibility : uint8_t { Unrevealed = 0, Revealed = 1, Visible = 2 };
 
+// One player's standing towards another (diplomacy-espionage.md; war and peace only for now).
+struct Relation {
+    bool war = false;
+    int32_t since = 0;          // turn the current war or peace began (0: never at war)
+    bool peaceOffered = false;  // this player offers peace; peace comes when both sides offer
+};
+
 struct Player {
     PlayerId id = kNoPlayer;
     TypeIndex civ = kNone;
@@ -125,6 +139,8 @@ struct Player {
     bool freeChanges = false;          // government and policies may change this turn
     std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
     std::vector<int> stockpile;     // per resource: strategic stockpile [GS]
+    std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
+    std::vector<Relation> relations;  // per player
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;
 };

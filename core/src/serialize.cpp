@@ -105,6 +105,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (!inRange(u.type, rules.units.size(), false)) return false;
         if (u.owner < 0 || static_cast<size_t>(u.owner) >= s.players.size() || !s.grid.valid(u.pos)) return false;
         if (i > 0 && s.units[i - 1].id >= u.id) return false;
+        for (TypeIndex pr : u.promotions) if (!inRange(pr, rules.promotions.size(), false)) return false;
     }
     for (size_t i = 0; i < s.cities.size(); ++i) {
         const City& c = s.cities[i];
@@ -123,6 +124,8 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     for (const Player& p : s.players) {
         if (p.unitsTrained.size() > rules.units.size()) return false;
         if (p.stockpile.size() != rules.resources.size()) return false;
+        if (p.fuelShort.size() != rules.resources.size()) return false;
+        if (p.relations.size() != s.players.size()) return false;
         if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
         if (!inRange(p.techs.current, rules.techs.size(), true) || !inRange(p.civics.current, rules.civics.size(), true))
             return false;
@@ -169,6 +172,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeFixed(w, p.faith);
         writeI32s(w, std::vector<int32_t>(p.unitsTrained.begin(), p.unitsTrained.end()));
         writeI32s(w, std::vector<int32_t>(p.stockpile.begin(), p.stockpile.end()));
+        w.bytes(p.fuelShort);
+        w.u32(static_cast<uint32_t>(p.relations.size()));
+        for (const Relation& rel : p.relations) {
+            w.boolean(rel.war);
+            w.i32(rel.since);
+            w.boolean(rel.peaceOffered);
+        }
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
             w.bytes(t->boosted);
@@ -198,6 +208,11 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeHex(w, u.moveTarget.value_or(Hex{}));
         w.i32(u.xp);
         w.i32(u.charges);
+        writeI32s(w, std::vector<int32_t>(u.promotions.begin(), u.promotions.end()));
+        w.i32(u.fortifyTurns);
+        w.i32(u.attacks);
+        w.boolean(u.moved);
+        w.boolean(u.attacked);
     }
     w.u32(static_cast<uint32_t>(s.cities.size()));
     for (const City& c : s.cities) {
@@ -268,6 +283,15 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.unitsTrained.assign(trained.begin(), trained.end());
         if (!readI32s(r, trained)) return false;
         p.stockpile.assign(trained.begin(), trained.end());
+        p.fuelShort = r.bytes();
+        uint32_t nrel = r.u32();
+        if (!r.checkCount(nrel, 6)) return false;
+        p.relations.resize(nrel);
+        for (Relation& rel : p.relations) {
+            rel.war = r.boolean();
+            rel.since = r.i32();
+            rel.peaceOffered = r.boolean();
+        }
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();
             t->boosted = r.bytes();
@@ -307,6 +331,14 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.moveTarget = hasTarget ? std::optional<Hex>(t) : std::nullopt;
         u.xp = r.i32();
         u.charges = r.i32();
+        std::vector<int32_t> promos;
+        if (!readI32s(r, promos)) return false;
+        u.promotions.clear();
+        for (int32_t v : promos) u.promotions.push_back(static_cast<TypeIndex>(v));
+        u.fortifyTurns = r.i32();
+        u.attacks = r.i32();
+        u.moved = r.boolean();
+        u.attacked = r.boolean();
     }
     uint32_t nc = r.u32();
     if (!r.checkCount(nc, 20)) return false;

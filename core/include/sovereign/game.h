@@ -24,6 +24,17 @@ struct CityReport {
     int defense = 0;          // bonus defense from modifiers (combat arrives in MVP-4)
 };
 
+// What an attack would do, before the dice (05-units-and-combat.md, Combat resolution).
+struct CombatPreview {
+    bool valid = false;
+    bool ranged = false;
+    bool capture = false;          // melee into civilians only: they are captured or destroyed
+    UnitId defender = kNoUnit;
+    int attackerStrength = 0, defenderStrength = 0;
+    int damageToDefenderMin = 0, damageToDefenderMax = 0;
+    int damageToAttackerMin = 0, damageToAttackerMax = 0;  // melee only
+};
+
 struct PathStep {
     Hex pos;
     int turn = 0;       // 0 = reached this turn
@@ -119,6 +130,31 @@ public:
     // Plots the player owns with this improvement (kNone: any), optionally only on a resource it works.
     int countImprovedPlots(PlayerId player, TypeIndex improvement, bool onResourceOnly) const;
 
+    // ---- war and combat (05-units-and-combat.md)
+    bool atWar(PlayerId a, PlayerId b) const;
+    bool canDeclareWar(PlayerId player, PlayerId target) const;
+    bool canMakePeace(PlayerId player, PlayerId target) const;
+    // Abilities in force on a unit: innate ones plus those its owner's modifiers grant.
+    std::vector<TypeIndex> unitAbilities(const Unit& unit) const;
+    // Sum of `amount` over the unit's promotion and ability effects of this kind
+    // (conditions ignored); an effect without an amount counts 1.
+    int unitEffectTotal(const Unit& unit, UnitEffectKind kind) const;
+    bool unitHas(const Unit& unit, UnitEffectKind kind) const { return unitEffectTotal(unit, kind) > 0; }
+    int maxMoves(const Unit& unit) const;
+    int unitRange(const Unit& unit) const;
+    int unitSight(const Unit& unit) const;
+    int maxAttacks(const Unit& unit) const;
+    // A unit entering this plot loses its remaining moves (enemy unit or city next to it).
+    bool inEnemyZoc(const Unit& mover, Hex plot) const;
+    // Combat strength of `unit` fighting `opponent` (05: Strength calculation).
+    int combatStrength(const Unit& unit, const Unit& opponent, bool attacking, bool ranged) const;
+    // Damage dealt for a strength difference and a roll in 0..COMBAT_MAX_EXTRA_DAMAGE.
+    int combatDamage(int strengthDifference, int roll) const;
+    CombatPreview previewAttack(UnitId attacker, Hex target, bool ranged) const;
+    int xpForNextLevel(const Unit& unit) const;
+    bool canPromote(UnitId unit, TypeIndex promotion) const;
+    std::vector<TypeIndex> availablePromotions(UnitId unit) const;
+
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
 
@@ -135,6 +171,18 @@ private:
     CommandError validateBuilder(const Command& c) const;
     void applyBuilder(const Command& c);
     void accumulateStrategics(PlayerId p);
+    CommandError validateCombat(const Command& c) const;
+    void applyCombat(const Command& c);
+    std::optional<Fixed> terrainCost(const Unit& unit, Hex from, Hex to) const;
+    bool lineOfSight(Hex from, Hex to) const;
+    void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed);
+    void afterAttack(Unit& unit);
+    void removeUnit(UnitId id);
+    bool exertsZoc(const Unit& unit) const;
+    // Plots in enemy ZOC for this mover (empty: none, or it ignores ZOC).
+    std::vector<uint8_t> zocMap(const Unit& mover) const;
+    void payUnitFuel(PlayerId p);
+    void healAndFortify(PlayerId p);
     void assignCitizens(City& city);
     bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available

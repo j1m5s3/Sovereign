@@ -20,7 +20,18 @@
     "resource": "RESOURCE_ALUMINUM",
     "amount": 1
    },
-   "upgradesTo": "UNIT_JET_BOMBER"
+   "upgradesTo": "UNIT_JET_BOMBER",
+   "bombard": 110,
+   "resourceMaintenance": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_AIR_BOMBER",
+   "abilities": [
+    "ABILITY_AIR_BOMBER_ATTACK_UNIT_DEBUFF",
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_JET_BOMBER",
@@ -40,7 +51,18 @@
    "strategicCost": {
     "resource": "RESOURCE_ALUMINUM",
     "amount": 1
-   }
+   },
+   "bombard": 120,
+   "resourceMaintenance": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_AIR_BOMBER",
+   "abilities": [
+    "ABILITY_AIR_BOMBER_ATTACK_UNIT_DEBUFF",
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_BIPLANE",
@@ -61,7 +83,17 @@
     "resource": "RESOURCE_OIL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_FIGHTER"
+   "upgradesTo": "UNIT_FIGHTER",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_AIR_FIGHTER",
+   "abilities": [
+    "ABILITY_AIR_FIGHTER_ATTACK_DISTRICT_DEBUFF",
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_FIGHTER",
@@ -82,7 +114,17 @@
     "resource": "RESOURCE_ALUMINUM",
     "amount": 1
    },
-   "upgradesTo": "UNIT_JET_FIGHTER"
+   "upgradesTo": "UNIT_JET_FIGHTER",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_AIR_FIGHTER",
+   "abilities": [
+    "ABILITY_AIR_FIGHTER_ATTACK_DISTRICT_DEBUFF",
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_JET_FIGHTER",
@@ -102,7 +144,17 @@
    "strategicCost": {
     "resource": "RESOURCE_ALUMINUM",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_AIR_FIGHTER",
+   "abilities": [
+    "ABILITY_AIR_FIGHTER_ATTACK_DISTRICT_DEBUFF",
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_GREAT_GENERAL",
@@ -247,7 +299,8 @@
    "sight": 2,
    "buildCharges": 3,
    "costProgression": 4,
-   "purchaseYield": "GOLD"
+   "purchaseYield": "GOLD",
+   "capturedAs": "UNIT_BUILDER"
   },
   {
    "id": "UNIT_MISSIONARY",
@@ -264,7 +317,11 @@
    "sight": 2,
    "costProgression": 6,
    "mustPurchase": true,
-   "purchaseYield": "FAITH"
+   "purchaseYield": "FAITH",
+   "abilities": [
+    "ABILITY_IGNORES_BORDERS",
+    "ABILITY_PEACEKEEPER"
+   ]
   },
   {
    "id": "UNIT_SETTLER",
@@ -283,7 +340,8 @@
    "costProgression": 30,
    "popCost": 1,
    "minPopulation": 2,
-   "purchaseYield": "GOLD"
+   "purchaseYield": "GOLD",
+   "capturedAs": "UNIT_SETTLER"
   },
   {
    "id": "UNIT_GURU",
@@ -300,7 +358,11 @@
    "sight": 2,
    "costProgression": 12,
    "mustPurchase": true,
-   "purchaseYield": "FAITH"
+   "purchaseYield": "FAITH",
+   "abilities": [
+    "ABILITY_IGNORES_BORDERS",
+    "ABILITY_PEACEKEEPER"
+   ]
   },
   {
    "id": "UNIT_NATURALIST",
@@ -353,7 +415,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_BRONZE_WORKING",
    "upgradesTo": "UNIT_PIKEMAN",
-   "obsoleteWith": "TECH_METAL_CASTING"
+   "obsoleteWith": "TECH_METAL_CASTING",
+   "promotionClass": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "abilities": [
+    "ABILITY_ANTI_CAVALRY"
+   ]
   },
   {
    "id": "UNIT_PIKEMAN",
@@ -372,7 +438,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_MILITARY_TACTICS",
    "upgradesTo": "UNIT_PIKE_AND_SHOT",
-   "obsoleteWith": "TECH_COMPOSITES"
+   "obsoleteWith": "TECH_COMPOSITES",
+   "promotionClass": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "abilities": [
+    "ABILITY_ANTI_CAVALRY"
+   ]
   },
   {
    "id": "UNIT_PIKE_AND_SHOT",
@@ -391,7 +461,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_METAL_CASTING",
    "upgradesTo": "UNIT_AT_CREW",
-   "obsoleteWith": "TECH_COMBINED_ARMS"
+   "obsoleteWith": "TECH_COMBINED_ARMS",
+   "promotionClass": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "abilities": [
+    "ABILITY_ANTI_CAVALRY"
+   ]
   },
   {
    "id": "UNIT_AT_CREW",
@@ -409,7 +483,11 @@
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
    "unlock": "TECH_CHEMISTRY",
-   "upgradesTo": "UNIT_MODERN_AT"
+   "upgradesTo": "UNIT_MODERN_AT",
+   "promotionClass": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "abilities": [
+    "ABILITY_ANTI_CAVALRY"
+   ]
   },
   {
    "id": "UNIT_MODERN_AT",
@@ -426,7 +504,11 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMPOSITES"
+   "unlock": "TECH_COMPOSITES",
+   "promotionClass": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "abilities": [
+    "ABILITY_ANTI_CAVALRY"
+   ]
   },
   {
    "id": "UNIT_APOSTLE",
@@ -443,7 +525,11 @@
    "sight": 2,
    "costProgression": 15,
    "mustPurchase": true,
-   "purchaseYield": "FAITH"
+   "purchaseYield": "FAITH",
+   "promotionClass": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "abilities": [
+    "ABILITY_IGNORES_BORDERS"
+   ]
   },
   {
    "id": "UNIT_GIANT_DEATH_ROBOT",
@@ -464,7 +550,17 @@
    "strategicCost": {
     "resource": "RESOURCE_URANIUM",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_URANIUM",
+    "amount": 3
+   },
+   "promotionClass": "PROMOTION_CLASS_GDR",
+   "abilities": [
+    "ABILITY_UNIT_AUTO_VETERANCY",
+    "ABILITY_UNIT_FIGHT_WHILE_EMBARKED",
+    "ABILITY_UNIT_WMD_RESISTANCE"
+   ]
   },
   {
    "id": "UNIT_HEAVY_CHARIOT",
@@ -483,7 +579,12 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_WHEEL",
    "upgradesTo": "UNIT_KNIGHT",
-   "obsoleteWith": "TECH_COMBUSTION"
+   "obsoleteWith": "TECH_COMBUSTION",
+   "promotionClass": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "abilities": [
+    "ABILITY_HEAVY_CHARIOT",
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_KNIGHT",
@@ -506,7 +607,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_CUIRASSIER",
-   "obsoleteWith": "TECH_COMPOSITES"
+   "obsoleteWith": "TECH_COMPOSITES",
+   "promotionClass": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_CUIRASSIER",
@@ -529,7 +634,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_TANK",
-   "obsoleteWith": "TECH_COMBUSTION"
+   "obsoleteWith": "TECH_COMBUSTION",
+   "promotionClass": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_TANK",
@@ -551,7 +660,16 @@
     "resource": "RESOURCE_OIL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_MODERN_ARMOR"
+   "upgradesTo": "UNIT_MODERN_ARMOR",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "abilities": [
+    "ABILITY_HEAVY_CHARIOT",
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_MODERN_ARMOR",
@@ -572,7 +690,16 @@
    "strategicCost": {
     "resource": "RESOURCE_OIL",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "abilities": [
+    "ABILITY_HEAVY_CHARIOT",
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_INQUISITOR",
@@ -589,7 +716,11 @@
    "sight": 2,
    "costProgression": 6,
    "mustPurchase": true,
-   "purchaseYield": "FAITH"
+   "purchaseYield": "FAITH",
+   "abilities": [
+    "ABILITY_DOMESTIC_SPREAD",
+    "ABILITY_FRIENDLY_TERRITORY_ADVANTAGE"
+   ]
   },
   {
    "id": "UNIT_HORSEMAN",
@@ -612,7 +743,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_COURSER",
-   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS"
+   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS",
+   "promotionClass": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_COURSER",
@@ -635,7 +770,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_CAVALRY",
-   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS"
+   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS",
+   "promotionClass": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_CAVALRY",
@@ -657,7 +796,11 @@
     "resource": "RESOURCE_HORSES",
     "amount": 20
    },
-   "upgradesTo": "UNIT_HELICOPTER"
+   "upgradesTo": "UNIT_HELICOPTER",
+   "promotionClass": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_HELICOPTER",
@@ -678,7 +821,17 @@
    "strategicCost": {
     "resource": "RESOURCE_ALUMINUM",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "abilities": [
+    "ABILITY_IGNORE_CROSSING_RIVERS_COST",
+    "ABILITY_IGNORE_TERRAIN_COST",
+    "ABILITY_IGNORE_ZOC"
+   ]
   },
   {
    "id": "UNIT_WARRIOR",
@@ -696,7 +849,11 @@
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
    "upgradesTo": "UNIT_SWORDSMAN",
-   "obsoleteWith": "TECH_GUNPOWDER"
+   "obsoleteWith": "TECH_GUNPOWDER",
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_SWORDSMAN",
@@ -719,7 +876,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_MAN_AT_ARMS",
-   "obsoleteWith": "TECH_REPLACEABLE_PARTS"
+   "obsoleteWith": "TECH_REPLACEABLE_PARTS",
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_MAN_AT_ARMS",
@@ -742,7 +903,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_MUSKETMAN",
-   "obsoleteWith": "TECH_REPLACEABLE_PARTS"
+   "obsoleteWith": "TECH_REPLACEABLE_PARTS",
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_MUSKETMAN",
@@ -765,7 +930,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_LINE_INFANTRY",
-   "obsoleteWith": "TECH_ADVANCED_BALLISTICS"
+   "obsoleteWith": "TECH_ADVANCED_BALLISTICS",
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_LINE_INFANTRY",
@@ -788,7 +957,11 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_INFANTRY",
-   "obsoleteWith": "TECH_SATELLITES"
+   "obsoleteWith": "TECH_SATELLITES",
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_INFANTRY",
@@ -810,7 +983,15 @@
     "resource": "RESOURCE_OIL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_MECHANIZED_INFANTRY"
+   "upgradesTo": "UNIT_MECHANIZED_INFANTRY",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_MECHANIZED_INFANTRY",
@@ -831,7 +1012,15 @@
    "strategicCost": {
     "resource": "RESOURCE_OIL",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ]
   },
   {
    "id": "UNIT_WARRIOR_MONK",
@@ -848,7 +1037,8 @@
    "sight": 2,
    "zoneOfControl": true,
    "mustPurchase": true,
-   "purchaseYield": "FAITH"
+   "purchaseYield": "FAITH",
+   "promotionClass": "PROMOTION_CLASS_WARRIOR_MONK"
   },
   {
    "id": "UNIT_SLINGER",
@@ -865,7 +1055,11 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "upgradesTo": "UNIT_ARCHER",
-   "obsoleteWith": "TECH_MACHINERY"
+   "obsoleteWith": "TECH_MACHINERY",
+   "promotionClass": "PROMOTION_CLASS_RANGED",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_ARCHER",
@@ -883,7 +1077,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_ARCHERY",
    "upgradesTo": "UNIT_CROSSBOWMAN",
-   "obsoleteWith": "TECH_BALLISTICS"
+   "obsoleteWith": "TECH_BALLISTICS",
+   "promotionClass": "PROMOTION_CLASS_RANGED",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_CROSSBOWMAN",
@@ -901,7 +1099,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_MACHINERY",
    "upgradesTo": "UNIT_FIELD_CANNON",
-   "obsoleteWith": "TECH_ADVANCED_BALLISTICS"
+   "obsoleteWith": "TECH_ADVANCED_BALLISTICS",
+   "promotionClass": "PROMOTION_CLASS_RANGED",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_FIELD_CANNON",
@@ -919,7 +1121,11 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_BALLISTICS",
    "upgradesTo": "UNIT_MACHINE_GUN",
-   "obsoleteWith": "TECH_TELECOMMUNICATIONS"
+   "obsoleteWith": "TECH_TELECOMMUNICATIONS",
+   "promotionClass": "PROMOTION_CLASS_RANGED",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_MACHINE_GUN",
@@ -935,7 +1141,11 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ADVANCED_BALLISTICS"
+   "unlock": "TECH_ADVANCED_BALLISTICS",
+   "promotionClass": "PROMOTION_CLASS_RANGED",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_SCOUT",
@@ -952,7 +1162,11 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "upgradesTo": "UNIT_SKIRMISHER"
+   "upgradesTo": "UNIT_SKIRMISHER",
+   "promotionClass": "PROMOTION_CLASS_RECON",
+   "abilities": [
+    "ABILITY_REVEAL_STEALTH"
+   ]
   },
   {
    "id": "UNIT_SKIRMISHER",
@@ -969,7 +1183,8 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_MACHINERY",
-   "upgradesTo": "UNIT_RANGER"
+   "upgradesTo": "UNIT_RANGER",
+   "promotionClass": "PROMOTION_CLASS_RECON"
   },
   {
    "id": "UNIT_RANGER",
@@ -986,7 +1201,11 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_RIFLING",
-   "upgradesTo": "UNIT_SPEC_OPS"
+   "upgradesTo": "UNIT_SPEC_OPS",
+   "promotionClass": "PROMOTION_CLASS_RECON",
+   "abilities": [
+    "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF"
+   ]
   },
   {
    "id": "UNIT_SPEC_OPS",
@@ -1002,7 +1221,12 @@
    "moves": 3,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_PLASTICS"
+   "unlock": "TECH_PLASTICS",
+   "promotionClass": "PROMOTION_CLASS_RECON",
+   "abilities": [
+    "ABILITY_DIRECTED_ATTACK",
+    "ABILITY_PARADROP"
+   ]
   },
   {
    "id": "UNIT_ROCK_BAND",
@@ -1020,7 +1244,11 @@
    "costProgression": 50,
    "mustPurchase": true,
    "purchaseYield": "FAITH",
-   "unlock": "CIVIC_COLD_WAR"
+   "unlock": "CIVIC_COLD_WAR",
+   "promotionClass": "PROMOTION_CLASS_ROCK_BAND",
+   "abilities": [
+    "ABILITY_ENTER_FOREIGN_LANDS"
+   ]
   },
   {
    "id": "UNIT_CATAPULT",
@@ -1038,7 +1266,14 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_ENGINEERING",
    "upgradesTo": "UNIT_TREBUCHET",
-   "obsoleteWith": "TECH_STEEL"
+   "obsoleteWith": "TECH_STEEL",
+   "bombard": 35,
+   "promotionClass": "PROMOTION_CLASS_SIEGE",
+   "abilities": [
+    "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+    "ABILITY_NO_MOVE_AND_SHOOT",
+    "ABILITY_RECEIVE_RANGE_BONUS"
+   ]
   },
   {
    "id": "UNIT_TREBUCHET",
@@ -1056,7 +1291,14 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_MILITARY_ENGINEERING",
    "upgradesTo": "UNIT_BOMBARD",
-   "obsoleteWith": "TECH_STEEL"
+   "obsoleteWith": "TECH_STEEL",
+   "bombard": 45,
+   "promotionClass": "PROMOTION_CLASS_SIEGE",
+   "abilities": [
+    "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+    "ABILITY_NO_MOVE_AND_SHOOT",
+    "ABILITY_RECEIVE_RANGE_BONUS"
+   ]
   },
   {
    "id": "UNIT_BOMBARD",
@@ -1078,7 +1320,14 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_ARTILLERY",
-   "obsoleteWith": "TECH_GUIDANCE_SYSTEMS"
+   "obsoleteWith": "TECH_GUIDANCE_SYSTEMS",
+   "bombard": 55,
+   "promotionClass": "PROMOTION_CLASS_SIEGE",
+   "abilities": [
+    "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+    "ABILITY_NO_MOVE_AND_SHOOT",
+    "ABILITY_RECEIVE_RANGE_BONUS"
+   ]
   },
   {
    "id": "UNIT_ARTILLERY",
@@ -1099,7 +1348,19 @@
     "resource": "RESOURCE_OIL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_ROCKET_ARTILLERY"
+   "upgradesTo": "UNIT_ROCKET_ARTILLERY",
+   "bombard": 80,
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_SIEGE",
+   "abilities": [
+    "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+    "ABILITY_NO_MOVE_AND_SHOOT",
+    "ABILITY_RECEIVE_BOMBARD_STRENGTH_BUFF",
+    "ABILITY_RECEIVE_RANGE_BONUS"
+   ]
   },
   {
    "id": "UNIT_ROCKET_ARTILLERY",
@@ -1119,7 +1380,19 @@
    "strategicCost": {
     "resource": "RESOURCE_OIL",
     "amount": 1
-   }
+   },
+   "bombard": 100,
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_SIEGE",
+   "abilities": [
+    "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+    "ABILITY_NO_MOVE_AND_SHOOT",
+    "ABILITY_RECEIVE_BOMBARD_STRENGTH_BUFF",
+    "ABILITY_RECEIVE_RANGE_BONUS"
+   ]
   },
   {
    "id": "UNIT_SPY",
@@ -1134,7 +1407,8 @@
    "range": 0,
    "moves": 1,
    "sight": 3,
-   "costProgression": 75
+   "costProgression": 75,
+   "promotionClass": "PROMOTION_CLASS_ESPIONAGE"
   },
   {
    "id": "UNIT_BATTERING_RAM",
@@ -1151,7 +1425,10 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_MASONRY",
-   "upgradesTo": "UNIT_SIEGE_TOWER"
+   "upgradesTo": "UNIT_SIEGE_TOWER",
+   "abilities": [
+    "ABILITY_ENABLES_WALL_ATTACK"
+   ]
   },
   {
    "id": "UNIT_SIEGE_TOWER",
@@ -1168,7 +1445,10 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_MACHINERY",
-   "upgradesTo": "UNIT_MEDIC"
+   "upgradesTo": "UNIT_MEDIC",
+   "abilities": [
+    "ABILITY_BYPASS_WALLS"
+   ]
   },
   {
    "id": "UNIT_MILITARY_ENGINEER",
@@ -1202,7 +1482,11 @@
    "sight": 3,
    "purchaseYield": "GOLD",
    "unlock": "TECH_FLIGHT",
-   "upgradesTo": "UNIT_DRONE"
+   "upgradesTo": "UNIT_DRONE",
+   "abilities": [
+    "ABILITY_OBSERVATION_STRENGTH_BONUS",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_MEDIC",
@@ -1219,7 +1503,10 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_SANITATION",
-   "upgradesTo": "UNIT_SUPPLY_CONVOY"
+   "upgradesTo": "UNIT_SUPPLY_CONVOY",
+   "abilities": [
+    "ABILITY_MEDIC_HEALING"
+   ]
   },
   {
    "id": "UNIT_DRONE",
@@ -1235,7 +1522,12 @@
    "moves": 3,
    "sight": 5,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMPUTERS"
+   "unlock": "TECH_COMPUTERS",
+   "abilities": [
+    "ABILITY_DRONE_GRANT_SIEGE_BONUS",
+    "ABILITY_OBSERVATION_STRENGTH_BONUS",
+    "ABILITY_UNOBSTRUCTED_VIEW"
+   ]
   },
   {
    "id": "UNIT_SUPPLY_CONVOY",
@@ -1251,7 +1543,11 @@
    "moves": 4,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMBUSTION"
+   "unlock": "TECH_COMBUSTION",
+   "abilities": [
+    "ABILITY_GRANT_MOVEMENT_BONUS",
+    "ABILITY_MEDIC_HEALING"
+   ]
   },
   {
    "id": "UNIT_ANTI_AIR_GUN",
@@ -1268,7 +1564,10 @@
    "sight": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_ADVANCED_BALLISTICS",
-   "upgradesTo": "UNIT_MOBILE_SAM"
+   "upgradesTo": "UNIT_MOBILE_SAM",
+   "abilities": [
+    "ABILITY_ANTI_AIR_COVER"
+   ]
   },
   {
    "id": "UNIT_MOBILE_SAM",
@@ -1284,7 +1583,10 @@
    "moves": 3,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_GUIDANCE_SYSTEMS"
+   "unlock": "TECH_GUIDANCE_SYSTEMS",
+   "abilities": [
+    "ABILITY_ANTI_AIR_COVER"
+   ]
   },
   {
    "id": "UNIT_GREAT_ADMIRAL",
@@ -1315,7 +1617,8 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMBINED_ARMS"
+   "unlock": "TECH_COMBINED_ARMS",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_CARRIER"
   },
   {
    "id": "UNIT_GALLEY",
@@ -1334,7 +1637,8 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_SAILING",
    "upgradesTo": "UNIT_CARAVEL",
-   "obsoleteWith": "TECH_STEAM_POWER"
+   "obsoleteWith": "TECH_STEAM_POWER",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_MELEE"
   },
   {
    "id": "UNIT_CARAVEL",
@@ -1353,7 +1657,8 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_CARTOGRAPHY",
    "upgradesTo": "UNIT_IRONCLAD",
-   "obsoleteWith": "TECH_COMBINED_ARMS"
+   "obsoleteWith": "TECH_COMBINED_ARMS",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_MELEE"
   },
   {
    "id": "UNIT_IRONCLAD",
@@ -1375,7 +1680,12 @@
     "resource": "RESOURCE_COAL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_DESTROYER"
+   "upgradesTo": "UNIT_DESTROYER",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_COAL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_NAVAL_MELEE"
   },
   {
    "id": "UNIT_DESTROYER",
@@ -1396,7 +1706,16 @@
    "strategicCost": {
     "resource": "RESOURCE_OIL",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_NAVAL_MELEE",
+   "abilities": [
+    "ABILITY_ANTI_AIR_COVER",
+    "ABILITY_REVEAL_STEALTH"
+   ]
   },
   {
    "id": "UNIT_PRIVATEER",
@@ -1415,7 +1734,14 @@
    "purchaseYield": "GOLD",
    "unlock": "CIVIC_MERCANTILISM",
    "upgradesTo": "UNIT_SUBMARINE",
-   "obsoleteWith": "TECH_LASERS"
+   "obsoleteWith": "TECH_LASERS",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "abilities": [
+    "ABILITY_COASTAL_RAID",
+    "ABILITY_IGNORE_ZOC",
+    "ABILITY_REVEAL_STEALTH",
+    "ABILITY_STEALTH"
+   ]
   },
   {
    "id": "UNIT_SUBMARINE",
@@ -1436,7 +1762,18 @@
     "resource": "RESOURCE_OIL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_NUCLEAR_SUBMARINE"
+   "upgradesTo": "UNIT_NUCLEAR_SUBMARINE",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "abilities": [
+    "ABILITY_COASTAL_RAID",
+    "ABILITY_IGNORE_ZOC",
+    "ABILITY_REVEAL_STEALTH",
+    "ABILITY_STEALTH"
+   ]
   },
   {
    "id": "UNIT_NUCLEAR_SUBMARINE",
@@ -1452,7 +1789,14 @@
    "moves": 4,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_TELECOMMUNICATIONS"
+   "unlock": "TECH_TELECOMMUNICATIONS",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "abilities": [
+    "ABILITY_COASTAL_RAID",
+    "ABILITY_IGNORE_ZOC",
+    "ABILITY_REVEAL_STEALTH",
+    "ABILITY_STEALTH"
+   ]
   },
   {
    "id": "UNIT_QUADRIREME",
@@ -1471,7 +1815,8 @@
    "purchaseYield": "GOLD",
    "unlock": "TECH_SHIPBUILDING",
    "upgradesTo": "UNIT_FRIGATE",
-   "obsoleteWith": "TECH_STEEL"
+   "obsoleteWith": "TECH_STEEL",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RANGED"
   },
   {
    "id": "UNIT_FRIGATE",
@@ -1494,7 +1839,8 @@
     "amount": 20
    },
    "upgradesTo": "UNIT_BATTLESHIP",
-   "obsoleteWith": "TECH_LASERS"
+   "obsoleteWith": "TECH_LASERS",
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RANGED"
   },
   {
    "id": "UNIT_BATTLESHIP",
@@ -1516,7 +1862,15 @@
     "resource": "RESOURCE_COAL",
     "amount": 1
    },
-   "upgradesTo": "UNIT_MISSILE_CRUISER"
+   "upgradesTo": "UNIT_MISSILE_CRUISER",
+   "resourceMaintenance": {
+    "resource": "RESOURCE_COAL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RANGED",
+   "abilities": [
+    "ABILITY_ANTI_AIR_COVER"
+   ]
   },
   {
    "id": "UNIT_MISSILE_CRUISER",
@@ -1537,7 +1891,15 @@
    "strategicCost": {
     "resource": "RESOURCE_OIL",
     "amount": 1
-   }
+   },
+   "resourceMaintenance": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "promotionClass": "PROMOTION_CLASS_NAVAL_RANGED",
+   "abilities": [
+    "ABILITY_ANTI_AIR_COVER"
+   ]
   }
  ]
 }

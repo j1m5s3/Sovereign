@@ -5,6 +5,8 @@
 #pragma once
 
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "sovereign/rules.h"
 #include "sovereign/state.h"
@@ -34,5 +36,11 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
 
 // Total of a player-wide modifier effect (collection PLAYER).
 Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect);
+
+// Abilities the player's modifiers grant (each still filtered by the ability's unit classes).
+std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player);
+
+// Combat XP bonus percent for the player's units of this class.
+Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 
 }  // namespace sov

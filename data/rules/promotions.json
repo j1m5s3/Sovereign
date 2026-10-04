@@ -1,0 +1,6738 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "promotions": [
+  {
+   "id": "PROMOTION_BOX_FORMATION",
+   "name": "Box Formation",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "AIR_FIGHTER"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EVASIVE_MANEUVERS",
+   "name": "Evasive Maneuvers",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_AIR"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TORPEDO_BOMBER",
+   "name": "Torpedo Bomber",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_BOX_FORMATION",
+    "PROMOTION_EVASIVE_MANEUVERS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 17,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CLOSE_AIR_SUPPORT",
+   "name": "Close Air Support",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_EVASIVE_MANEUVERS",
+    "PROMOTION_BOX_FORMATION"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 12,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "LAND"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TACTICAL_MAINTENANCE",
+   "name": "Tactical Maintenance",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_TORPEDO_BOMBER"
+   ],
+   "effects": [
+    {
+     "kind": "HEAL_AFTER_ACTION"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_LONG_RANGE",
+   "name": "Long Range",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_CLOSE_AIR_SUPPORT"
+   ],
+   "effects": [
+    {
+     "kind": "RANGE",
+     "amount": 2
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SUPERFORTRESS",
+   "name": "Superfortress",
+   "class": "PROMOTION_CLASS_AIR_BOMBER",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_TACTICAL_MAINTENANCE",
+    "PROMOTION_LONG_RANGE"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "pillaging costs only 1 movement"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DOGFIGHTING",
+   "name": "Dogfighting",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "AIR_FIGHTER"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COCKPIT_ARMOR",
+   "name": "Cockpit Armor",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_AIR"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_INTERCEPTOR",
+   "name": "Interceptor",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_DOGFIGHTING"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "AIR_BOMBER"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_STRAFE",
+   "name": "Strafe",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_COCKPIT_ARMOR"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 17,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "VS_DOMAIN",
+        "value": "AIR"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GROUND_CREWS",
+   "name": "Ground Crews",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_INTERCEPTOR"
+   ],
+   "effects": [
+    {
+     "kind": "HEAL_AFTER_ACTION"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TANK_BUSTER",
+   "name": "Tank Buster",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_STRAFE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 17,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DROP_TANKS",
+   "name": "Drop Tanks",
+   "class": "PROMOTION_CLASS_AIR_FIGHTER",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_GROUND_CREWS",
+    "PROMOTION_TANK_BUSTER"
+   ],
+   "effects": [
+    {
+     "kind": "RANGE",
+     "amount": 2
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ECHELON",
+   "name": "Echelon",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_THRUST",
+   "name": "Thrust",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "MELEE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SQUARE",
+   "name": "Square",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_ECHELON"
+   ],
+   "effects": [
+    {
+     "kind": "SUPPORT_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SCHILTRON",
+   "name": "Schiltron",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_THRUST"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "MELEE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_REDEPLOY",
+   "name": "Redeploy",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SQUARE",
+    "PROMOTION_SCHILTRON"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CHOKE_POINTS",
+   "name": "Choke Points",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SQUARE",
+    "PROMOTION_SCHILTRON"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_FOREST"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_JUNGLE"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_MARSH"
+       },
+       {
+        "atom": "TILE_HILLS"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_HOLD_THE_LINE",
+   "name": "Hold the Line",
+   "class": "PROMOTION_CLASS_ANTI_CAVALRY",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_REDEPLOY",
+    "PROMOTION_CHOKE_POINTS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "RANGED_CAVALRY_UNITS_FOR_YOUR_UNITS_WHERE_WITHIN_TILES"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "unit is Anti Cavalry"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ORATOR",
+   "name": "Orator",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spread charge(s)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PROSELYTIZER",
+   "name": "Proselytizer",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "removes 50% of other religions"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TRANSLATOR",
+   "name": "Translator",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit foreign spread modifier (Amount=200)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PILGRIM",
+   "name": "Pilgrim",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit natural wonder deferred charges (Amount=3)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_INDULGENCE_VENDOR",
+   "name": "Indulgence Vendor",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+100 Gold when a unit is trained/bought"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_HEATHEN_CONVERSION",
+   "name": "Heathen Conversion",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "converts defeated barbarians"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DEBATER",
+   "name": "Debater",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 20
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_MARTYR",
+   "name": "Martyr",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "creates a Relic when killed in theological combat"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CHAPLAIN",
+   "name": "Chaplain",
+   "class": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+20 HP healing (All) for your units where within tiles"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DRONE_AIR_DEFENSE",
+   "name": "Drone Air Defense",
+   "class": "PROMOTION_CLASS_GDR",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit anti air strength (Amount=40)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PARTICLE_BEAM_SIEGE_CANNON",
+   "name": "Particle Beam Siege Cannon",
+   "class": "PROMOTION_CLASS_GDR",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit ignore ranged vs district penalty (Ignore=yes)"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 30,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ENHANCED_MOBILITY",
+   "name": "Enhanced Mobility",
+   "class": "PROMOTION_CLASS_GDR",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 3
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit jump ability (Range=5)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_REINFORCED_ARMOR_PLATING",
+   "name": "Reinforced Armor Plating",
+   "class": "PROMOTION_CLASS_GDR",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "VS_DOMAIN",
+        "value": "AIR"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CHARGE",
+   "name": "Charge",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "OPPONENT_FORTIFIED"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_BARDING",
+   "name": "Barding",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "RANGED"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_MARAUDING",
+   "name": "Marauding",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_CHARGE",
+    "PROMOTION_ROUT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "DISTRICT_TILE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ROUT",
+   "name": "Rout",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_BARDING",
+    "PROMOTION_MARAUDING"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "unit damage minimum (MinimumAmount=1)"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ARMOR_PIERCING",
+   "name": "Armor Piercing",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_MARAUDING"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_REACTIVE_ARMOR",
+   "name": "Reactive Armor",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_ROUT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_BREAKTHROUGH",
+   "name": "Breakthrough",
+   "class": "PROMOTION_CLASS_HEAVY_CAVALRY",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_ARMOR_PIERCING",
+    "PROMOTION_REACTIVE_ARMOR"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    },
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CAPARISON",
+   "name": "Caparison",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COURSERS",
+   "name": "Coursers",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "RANGED"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "SIEGE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DEPREDATION",
+   "name": "Depredation",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_CAPARISON"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "pillaging costs only 1 movement"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DOUBLE_ENVELOPMENT",
+   "name": "Double Envelopment",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_COURSERS"
+   ],
+   "effects": [
+    {
+     "kind": "FLANKING_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SPIKING_THE_GUNS",
+   "name": "Spiking the Guns",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_DEPREDATION",
+    "PROMOTION_DOUBLE_ENVELOPMENT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "SIEGE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PURSUIT",
+   "name": "Pursuit",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_DEPREDATION",
+    "PROMOTION_DOUBLE_ENVELOPMENT"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ESCORT_MOBILITY",
+   "name": "Escort Mobility",
+   "class": "PROMOTION_CLASS_LIGHT_CAVALRY",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_SPIKING_THE_GUNS",
+    "PROMOTION_PURSUIT"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "escorted/escorting units move at the faster unit's speed"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_BATTLECRY",
+   "name": "Battlecry",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "MELEE"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "RANGED"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TORTOISE",
+   "name": "Tortoise",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "RANGED"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COMMANDO",
+   "name": "Commando",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_BATTLECRY",
+    "PROMOTION_AMPHIBIOUS"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit ignore cliff walls (Ignore=yes)"
+    },
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_AMPHIBIOUS",
+   "name": "Amphibious",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_TORTOISE",
+    "PROMOTION_COMMANDO"
+   ],
+   "effects": [
+    {
+     "kind": "NO_RIVER_PENALTY"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "no movement cost to embark/disembark"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ZWEIHANDER",
+   "name": "Zweihander",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_COMMANDO",
+    "PROMOTION_AMPHIBIOUS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_URBAN_WARFARE",
+   "name": "Urban Warfare",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_COMMANDO",
+    "PROMOTION_AMPHIBIOUS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "MELEE"
+       }
+      ],
+      [
+       {
+        "atom": "DISTRICT_TILE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ELITE_GUARD",
+   "name": "Elite Guard",
+   "class": "PROMOTION_CLASS_MELEE",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_ZWEIHANDER",
+    "PROMOTION_URBAN_WARFARE"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    },
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SHADOW_STRIKE",
+   "name": "Shadow Strike",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "FLANKING_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TWILIGHT_VEIL",
+   "name": "Twilight Veil",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "hidden (only visible when adjacent)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EXPLODING_PALMS",
+   "name": "Exploding Palms",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_SHADOW_STRIKE",
+    "PROMOTION_TWILIGHT_VEIL"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DISCIPLES",
+   "name": "Disciples",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_SHADOW_STRIKE",
+    "PROMOTION_TWILIGHT_VEIL"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "kills spread religion"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SWEEPING_WIND",
+   "name": "Sweeping Wind",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_EXPLODING_PALMS",
+    "PROMOTION_DISCIPLES"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    },
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DANCING_CRANE",
+   "name": "Dancing Crane",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_EXPLODING_PALMS",
+    "PROMOTION_DISCIPLES"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COBRA_STRIKE",
+   "name": "Cobra Strike",
+   "class": "PROMOTION_CLASS_WARRIOR_MONK",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_SWEEPING_WIND",
+    "PROMOTION_DANCING_CRANE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 15
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_FLIGHT_DECK",
+   "name": "Flight Deck",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 air slots"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SCOUT_PLANES",
+   "name": "Scout Planes",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_HANGAR_DECK",
+   "name": "Hangar Deck",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_FLIGHT_DECK"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 air slots"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ADVANCED_ENGINES",
+   "name": "Advanced Engines",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_SCOUT_PLANES",
+    "PROMOTION_HANGAR_DECK"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_FOLDING_WINGS",
+   "name": "Folding Wings",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_HANGAR_DECK"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 air slots"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DECK_CREWS",
+   "name": "Deck Crews",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_ADVANCED_ENGINES",
+    "PROMOTION_FOLDING_WINGS"
+   ],
+   "effects": [
+    {
+     "kind": "HEAL_AFTER_ACTION"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SUPERCARRIER",
+   "name": "Supercarrier",
+   "class": "PROMOTION_CLASS_NAVAL_CARRIER",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_FOLDING_WINGS",
+    "PROMOTION_DECK_CREWS"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 HP healing (Neutral)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+5 HP healing (Enemy)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EMBOLON",
+   "name": "Embolon",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_HELMSMAN",
+   "name": "Helmsman",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_REINFORCED_HULL",
+   "name": "Reinforced Hull",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_EMBOLON"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "RANGED"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_RUTTER",
+   "name": "Rutter",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_HELMSMAN"
+   ],
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_AUXILIARY_SHIPS",
+   "name": "Auxiliary Ships",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_REINFORCED_HULL",
+    "PROMOTION_RUTTER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 HP healing (Neutral)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+5 HP healing (Enemy)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CONVOY",
+   "name": "Convoy",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_REINFORCED_HULL",
+    "PROMOTION_RUTTER"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "unit in formation"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CREEPING_ATTACK",
+   "name": "Creeping Attack",
+   "class": "PROMOTION_CLASS_NAVAL_MELEE",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_AUXILIARY_SHIPS",
+    "PROMOTION_CONVOY"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 14,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "NAVAL_RAIDER"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_LOOT",
+   "name": "Loot",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "can coastal raid"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_BOARDING",
+   "name": "Boarding",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Gold = 100% of its Combat Strength in combat where vs Sea units"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SWIFT_KEEL",
+   "name": "Swift Keel",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_LOOT",
+    "PROMOTION_HOMING_TORPEDOES"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_HOMING_TORPEDOES",
+   "name": "Homing Torpedoes",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_BOARDING",
+    "PROMOTION_SWIFT_KEEL"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_OBSERVATION",
+   "name": "Observation",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SWIFT_KEEL"
+   ],
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SILENT_RUNNING",
+   "name": "Silent Running",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_HOMING_TORPEDOES"
+   ],
+   "effects": [
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_WOLFPACK",
+   "name": "Wolfpack",
+   "class": "PROMOTION_CLASS_NAVAL_RAIDER",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_OBSERVATION",
+    "PROMOTION_SILENT_RUNNING"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_LINE_OF_BATTLE",
+   "name": "Line of Battle",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_BOMBARDMENT",
+   "name": "Bombardment",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "plot district is defended"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PREPARATORY_FIRE",
+   "name": "Preparatory Fire",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_LINE_OF_BATTLE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "LAND"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ROLLING_BARRAGE",
+   "name": "Rolling Barrage",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_BOMBARDMENT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "plot district is defended"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SUPPLY_FLEET",
+   "name": "Supply Fleet",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_PREPARATORY_FIRE",
+    "PROMOTION_ROLLING_BARRAGE"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 HP healing (Neutral)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+5 HP healing (Enemy)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_PROXIMITY_FUSES",
+   "name": "Proximity Fuses",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_PREPARATORY_FIRE",
+    "PROMOTION_ROLLING_BARRAGE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "AIR"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COINCIDENCE_RANGEFINDING",
+   "name": "Coincidence Rangefinding",
+   "class": "PROMOTION_CLASS_NAVAL_RANGED",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_SUPPLY_FLEET",
+    "PROMOTION_PROXIMITY_FUSES"
+   ],
+   "effects": [
+    {
+     "kind": "RANGE",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TEGH",
+   "name": "Tegh",
+   "class": "PROMOTION_CLASS_NIHANG",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "plot unit flanked"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TREHSOOL_MUKH",
+   "name": "Trehsool Mukh",
+   "class": "PROMOTION_CLASS_NIHANG",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Faith = 50% of its Combat Strength in combat"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_JANGI_MOJEH",
+   "name": "Jangi Mojeh",
+   "class": "PROMOTION_CLASS_NIHANG",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_TEGH",
+    "PROMOTION_SANJO"
+   ],
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SANJO",
+   "name": "Sanjo",
+   "class": "PROMOTION_CLASS_NIHANG",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_TREHSOOL_MUKH",
+    "PROMOTION_JANGI_MOJEH"
+   ],
+   "effects": [
+    {
+     "kind": "NO_WOUNDED_PENALTY"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_JANGI_KARA",
+   "name": "Jangi Kara",
+   "class": "PROMOTION_CLASS_NIHANG",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_JANGI_MOJEH",
+    "PROMOTION_SANJO"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "player is suzerain of x (LeaderType=Lahore)"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_VOLLEY",
+   "name": "Volley",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "LAND"
+       }
+      ],
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GARRISON",
+   "name": "Garrison",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "attacker plot improvement defense strength (Amount=1)"
+       },
+       {
+        "atom": "UNTRACKED",
+        "value": "plot unit city has any district"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ARROW_STORM",
+   "name": "Arrow Storm",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_VOLLEY"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "VS_DOMAIN",
+        "value": "AIR"
+       }
+      ],
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_INCENDIARIES",
+   "name": "Incendiaries",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_GARRISON"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "plot district is defended"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SUPPRESSION",
+   "name": "Suppression",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_INCENDIARIES",
+    "PROMOTION_ARROW_STORM"
+   ],
+   "effects": [
+    {
+     "kind": "EXERT_ZOC"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EMPLACEMENT",
+   "name": "Emplacement",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_INCENDIARIES",
+    "PROMOTION_ARROW_STORM"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ],
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "district is City Center"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EXPERT_MARKSMAN",
+   "name": "Expert Marksman",
+   "class": "PROMOTION_CLASS_RANGED",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_SUPPRESSION",
+    "PROMOTION_EMPLACEMENT"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_RANGER",
+   "name": "Ranger",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Forest movement costs"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ALPINE",
+   "name": "Alpine",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Hills movement costs"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SENTRY",
+   "name": "Sentry",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_RANGER",
+    "PROMOTION_ALPINE"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "sees through features"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GUERRILLA",
+   "name": "Guerrilla",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_RANGER",
+    "PROMOTION_ALPINE"
+   ],
+   "effects": [
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SPYGLASS",
+   "name": "Spyglass",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SENTRY"
+   ],
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_AMBUSH",
+   "name": "Ambush",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_GUERRILLA"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 20
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CAMOUFLAGE",
+   "name": "Camouflage",
+   "class": "PROMOTION_CLASS_RECON",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_SPYGLASS",
+    "PROMOTION_AMBUSH"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "hidden (only visible when adjacent)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ALBUM_COVER_ART",
+   "name": "Album Cover Art",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Wonder"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ARENA_ROCK",
+   "name": "Arena Rock",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Entertainment Complex"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Street Carnival"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Hippodrome"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GLAM_ROCK",
+   "name": "Glam Rock",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Theater Square"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Acropolis"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GOES_TO_11",
+   "name": "Goes to 11",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "concert range 10"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_INDIE",
+   "name": "Indie",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit post tourism bomb loyalty (Amount=-40)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_MUSIC_FESTIVAL",
+   "name": "Music Festival",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit tourism bomb national park (Amount=1000)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit rock band level national park (Amount=1)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit tourism bomb natural wonder (Amount=1000)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit rock band level natural wonder (Amount=1)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_POP_STAR",
+   "name": "Pop Star",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "-75 Gold per concert"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_REGGAE_ROCK",
+   "name": "Reggae Rock",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Water Park"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Rock Band level when performing at Copacabana"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_RELIGIOUS_ROCK",
+   "name": "Religious Rock",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit tourism bomb convert city (Convert=yes)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ROADIES",
+   "name": "Roadies",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SPACE_ROCK",
+   "name": "Space Rock",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Spaceport"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Spaceport"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Campus"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Campus"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Seowon"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Seowon"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Observatory"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Observatory"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SURF_BAND",
+   "name": "Surf Band",
+   "class": "PROMOTION_CLASS_ROCK_BAND",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Seaside Resort"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level at Seaside Resort"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Harbor"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Harbor"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Royal Navy Dockyard"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Royal Navy Dockyard"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Rock Band level when performing at Cothon"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+500 Tourism burst at Cothon"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GRAPE_SHOT",
+   "name": "Grape Shot",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "LAND"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CREW_WEAPONS",
+   "name": "Crew Weapons",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SHRAPNEL",
+   "name": "Shrapnel",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_GRAPE_SHOT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "LAND"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SHELLS",
+   "name": "Shells",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 2,
+   "requires": [
+    "PROMOTION_CREW_WEAPONS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ADVANCED_RANGEFINDING",
+   "name": "Advanced Rangefinding",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SHRAPNEL",
+    "PROMOTION_SHELLS"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_EXPERT_CREW",
+   "name": "Expert Crew",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 3,
+   "requires": [
+    "PROMOTION_SHRAPNEL",
+    "PROMOTION_SHELLS"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACK_AFTER_MOVE"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_FORWARD_OBSERVERS",
+   "name": "Forward Observers",
+   "class": "PROMOTION_CLASS_SIEGE",
+   "tier": 4,
+   "requires": [
+    "PROMOTION_ADVANCED_RANGEFINDING",
+    "PROMOTION_EXPERT_CREW"
+   ],
+   "effects": [
+    {
+     "kind": "RANGE",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_TECHNOLOGIST",
+   "name": "Technologist",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Steal Tech Boost"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CAT_BURGLAR",
+   "name": "Cat Burglar",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Great Work Heist"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DEMOLITIONS",
+   "name": "Demolitions",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Sabotage Production"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_CON_ARTIST",
+   "name": "Con Artist",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Siphon Funds"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_GUERRILLA_LEADER",
+   "name": "Guerrilla Leader",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Recruit Partisans"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ROCKET_SCIENTIST",
+   "name": "Rocket Scientist",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Disrupt Rocketry"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SEDUCTION",
+   "name": "Seduction",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Disrupt Rocketry"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Great Work Heist"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Recruit Partisans"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Sabotage Production"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Siphon Funds"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Steal Tech Boost"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_DISGUISE",
+   "name": "Disguise",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "spies establish 100% faster"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_LINGUIST",
+   "name": "Linguist",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Disrupt Rocketry 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Gain Sources 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Great Work Heist 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Recruit Partisans 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Sabotage Production 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Siphon Funds 25% faster"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Spy Steal Tech Boost 25% faster"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_QUARTERMASTER",
+   "name": "Quartermaster",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 level to all spies"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_ACE_DRIVER",
+   "name": "Ace Driver",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit escape boost (Amount=4)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SMEAR_CAMPAIGN",
+   "name": "Smear Campaign",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Fabricate Scandal"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_COVERT_ACTION",
+   "name": "Covert Action",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Foment Unrest"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_LICENSE_TO_KILL",
+   "name": "License to Kill",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Neutralize Governor"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SATCHEL_CHARGES",
+   "name": "Satchel Charges",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 spy levels for Spy Breach Dam"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_SURVEILLANCE",
+   "name": "Surveillance",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit spy counterspy entire city (EntireCity=yes)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit spy counterspy adjacent level boost (Amount=1)"
+    }
+   ]
+  },
+  {
+   "id": "PROMOTION_POLYGRAPH",
+   "name": "Polygraph",
+   "class": "PROMOTION_CLASS_ESPIONAGE",
+   "tier": 1,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 level to all spies"
+    }
+   ]
+  }
+ ],
+ "abilities": [
+  {
+   "id": "ABILITY_AIRPORT_TRAINED_AIRCRAFT_XP",
+   "name": "Airport Trained Aircraft Xp",
+   "classes": [
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 50
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_AIR_BOMBER_ATTACK_UNIT_DEBUFF",
+   "name": "Air Bomber Attack Unit Debuff",
+   "classes": [
+    "AIR_BOMBER"
+   ],
+   "effects": [
+    {
+     "kind": "BOMBARD_VS_UNIT"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_AIR_FIGHTER_ATTACK_DISTRICT_DEBUFF",
+   "name": "Air Fighter Attack District Debuff",
+   "classes": [
+    "AIR_FIGHTER"
+   ],
+   "effects": [
+    {
+     "kind": "RANGED_VS_DISTRICT"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ALPINE_TRAINING",
+   "name": "Alpine Training",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Hills movement costs"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 3,
+     "when": [
+      [
+       {
+        "atom": "TILE_HILLS"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ALTITUDE_TRAINING",
+   "name": "Altitude Training",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Hills movement costs"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_AMBIORIX",
+   "name": "Ambiorix",
+   "classes": [
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit neighbor combat modifier (Amount=2)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ANTI_AIR_COVER",
+   "name": "Anti Air Cover",
+   "classes": [
+    "ANTI_AIR"
+   ],
+   "effects": []
+  },
+  {
+   "id": "ABILITY_ANTI_CAVALRY",
+   "name": "Anti-Cavalry",
+   "classes": [
+    "ANTI_CAVALRY"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "RANGED_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ANTI_SPEAR",
+   "name": "Anti-Spear",
+   "classes": [
+    "MELEE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "ANTI_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ENTER_FOREIGN_LANDS",
+   "name": "Enter Foreign Lands",
+   "classes": [
+    "ARCHAEOLOGIST"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "IGNORE_BORDERS"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ARMORY_TRAINED_UNIT_XP",
+   "name": "Armory Trained Unit Xp",
+   "classes": [
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BALKAN_CAVALRY",
+   "name": "Balkan Cavalry",
+   "classes": [
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "TILE_HILLS"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BARBAROSSA_COMBAT_BONUS_VS_CITY_STATES",
+   "name": "Barbarossa Combat Bonus Vs City States",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent is minor civ"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BARRACKS_TRAINED_UNIT_XP",
+   "name": "Barracks Trained Unit Xp",
+   "classes": [
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BASILIKOI_TRAINED_UNIT_XP",
+   "name": "Basilikoi Trained Unit Xp",
+   "classes": [
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "SIEGE",
+    "HETAIROI"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BERSERKER_MOVEMENT",
+   "name": "Berserker Movement",
+   "classes": [
+    "MELEE_BERSERKER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Movement where unit in enemy territory"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BERSERKER_RAGE",
+   "name": "Berserker Rage",
+   "classes": [
+    "MELEE_BERSERKER"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": -5,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "MELEE"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BIREME_TRADE_PROTECTION",
+   "name": "Bireme Trade Protection",
+   "classes": [
+    "BIREME"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Trader Bireme Protection [trade routes immune to plunder (Sea)] for your units where within 4 tiles of a Trader unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FEKETE_SEREG",
+   "name": "Fekete Sereg",
+   "classes": [
+    "BLACK_ARMY"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust adjacent levied unit combat bonus (Amount=3)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BOMBARD_ATTACK_UNIT_DEBUFF",
+   "name": "Bombard Attack Unit Debuff",
+   "classes": [
+    "SIEGE"
+   ],
+   "effects": [
+    {
+     "kind": "BOMBARD_VS_UNIT"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DIRECTED_ATTACK",
+   "name": "Directed Attack",
+   "classes": [
+    "AIR_FIGHTER",
+    "AIR_BOMBER",
+    "SNIPER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit bypass combat unit (Bypass=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BYPASS_WALLS",
+   "name": "Bypass Walls",
+   "classes": [],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit bypass walls (Enable=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_BYPASS_WALLS",
+   "name": "Bypass Walls",
+   "classes": [
+    "SIEGE_TOWER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "Melee units bypass walls"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Anti Cavalry units bypass walls"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HOLY_CITY_COMBAT",
+   "name": "Holy City Combat",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_MELEE",
+    "WARRIOR_MONK",
+    "GDR"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+3 strength per converted Holy City"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "kills spread religion"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HOLY_CITY_RELIGIOUS_STRENGTH",
+   "name": "Holy City Religious Strength",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+3 strength per converted Holy City"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CAPTIVE_WORKERS",
+   "name": "Captive Workers",
+   "classes": [
+    "CAPTURE_WORKER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "can capture defeated units in combat"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_G_P",
+   "name": "Gå På",
+   "classes": [
+    "CAROLEAN"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit per unused movement combat bonus (Amount=3)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CHING_SHIH_PLUNDER_BONUS",
+   "name": "Ching Shih Plunder Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+60% pillage/plunder yields"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RAJENDRA_CHOLA",
+   "name": "Rajendra Chola",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 3
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CLANCY_FERNANDO_BONUS_EXPERIENCE",
+   "name": "Clancy Fernando Bonus Experience",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 200
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COASTAL_RAID",
+   "name": "Coastal Raid",
+   "classes": [
+    "NAVAL_RAIDER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "can coastal raid"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMANDANTE_GENERAL_LOGISTICS",
+   "name": "Comandante General Logistics",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMANDANTE_GENERAL_LEADERSHIP",
+   "name": "Comandante General Leadership",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMMANDANTE_CAVALRY_BUFF",
+   "name": "Commandante Cavalry Buff",
+   "classes": [
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "RANGED_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMMANDANTE_MELEE_ANTICAV_BUFF",
+   "name": "Commandante Melee Anticav Buff",
+   "classes": [
+    "MELEE",
+    "ANTI_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMMANDANTE_UNIT_STRENGTH_BUFF",
+   "name": "Commandante Unit Strength Buff",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMMANDANTE_UNIT_STR_VS_DISTRICTS",
+   "name": "Commandante Unit Str Vs Districts",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_COMMUNISM_DEFENSE_BUFF",
+   "name": "Communism Defense Buff",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 6,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FORCED_CONVERSION",
+   "name": "Forced Conversion",
+   "classes": [
+    "CONQUISTADOR"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Religious All unit"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust city religion on capture (Enable=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ORBACI",
+   "name": "Çorbaci",
+   "classes": [
+    "JANISSARY"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "grants enough XP for a promotion"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CORSAIR",
+   "name": "Corsair",
+   "classes": [
+    "CORSAIR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit advanced coastal raid (UseAdvancedCoastalRaid=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_AND_QUIET_FLOWS_THE_DON",
+   "name": "And Quiet Flows the Don",
+   "classes": [
+    "COSSACK"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "unit adjacent to owner territory"
+       },
+       {
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CREE_OKIHTCITAW",
+   "name": "Cree Okihtcitaw",
+   "classes": [
+    "CREE_OKIHTCITAW"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "grants enough XP for a promotion"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_CYBER_WARFARE_COMBAT_BONUS",
+   "name": "Cyber Warfare Combat Bonus",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "SUPPORT"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent era at least (MinimumEraType=Information Era)"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DIGGER",
+   "name": "Digger",
+   "classes": [
+    "DIGGER"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "on a coastal tile"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DIGITAL_DEMOCRACY_DEBUFF",
+   "name": "Digital Democracy Debuff",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": -3
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREEK_FIRE",
+   "name": "Greek Fire",
+   "classes": [
+    "DROMON"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DRONE_GRANT_SIEGE_BONUS",
+   "name": "Drone Grant Siege Bonus",
+   "classes": [
+    "DRONE"
+   ],
+   "effects": []
+  },
+  {
+   "id": "ABILITY_DUTCH_ZEVEN_PROVINCIEN",
+   "name": "Dutch Zeven Provincien",
+   "classes": [
+    "DUTCH_ZEVEN_PROVINCIEN"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ECONOMIC_GOLDEN_AGE_PLUNDER_IMMUNITY",
+   "name": "Economic Golden Age Plunder Immunity",
+   "classes": [
+    "TRADER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "trade routes immune to plunder (Land)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "trade routes immune to plunder (Sea)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_EJ_RCITO_PATRIOTA",
+   "name": "Ejército Patriota",
+   "classes": [
+    "ALL_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DRAKE_S_LEGACY",
+   "name": "Drake's Legacy",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+100% pillage/plunder yields"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ENABLES_WALL_ATTACK",
+   "name": "Enables Wall Attack",
+   "classes": [],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit enable wall attack (Enable=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ENABLES_WALL_ATTACK",
+   "name": "Enables Wall Attack",
+   "classes": [
+    "BATTERING_RAM"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "Melee units deal full damage to walls"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "Anti Cavalry units deal full damage to walls"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PORPHYROG_NN_TOS",
+   "name": "Porphyrogénnētos",
+   "classes": [
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": []
+  },
+  {
+   "id": "ABILITY_LEIF_ERIKSON",
+   "name": "Leif Erikson",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_OROMO_CAVALRY",
+   "name": "Oromo Cavalry",
+   "classes": [
+    "ETHIOPIAN_OROMO_CAVALRY"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Hills movement costs"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_EXPERT_MARKSMAN",
+   "name": "Expert Marksman",
+   "classes": [
+    "WARAKAQ"
+   ],
+   "effects": [
+    {
+     "kind": "ATTACKS",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FASCISM_ATTACK_BUFF",
+   "name": "Fascism Attack Buff",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FASCISM_LEGACY_ATTACK_BUFF",
+   "name": "Fascism Legacy Attack Buff",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FINEST_HOUR_FRIENDLY_TERRITORY",
+   "name": "Finest Hour Friendly Territory",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "unit adjacent to owner territory"
+       },
+       {
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FRANCIS_DRAKE_PLUNDER_BONUS",
+   "name": "Francis Drake Plunder Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+50% pillage/plunder yields"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HIPPODROME",
+   "name": "Hippodrome",
+   "classes": [
+    "HEAVY_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "no strategic resource maintenance"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FRIENDLY_TERRITORY_ADVANTAGE",
+   "name": "Friendly Territory Advantage",
+   "classes": [
+    "INQUISITOR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+35 Combat Strength in friendly territory"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GAESATAE",
+   "name": "Gaesatae",
+   "classes": [
+    "GAESATAE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent is stronger"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NAPOLEON_S_ELITE",
+   "name": "Napoleon's Elite",
+   "classes": [
+    "GARDE"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 Great General points per kill"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "on home continent"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GENGHIS_KHAN_CAVALRY_BONUS",
+   "name": "Genghis Khan Cavalry Bonus",
+   "classes": [
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "RANGED_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 3
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GENGHIS_KHAN_CAVALRY_CAPTURE_CAVALRY",
+   "name": "Genghis Khan Cavalry Capture Cavalry",
+   "classes": [
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": []
+  },
+  {
+   "id": "ABILITY_GEORGIAN_KHEVSURETI",
+   "name": "Georgian Khevsureti",
+   "classes": [
+    "GEORGIAN_KHEVSURETI"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "TILE_HILLS"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Hills movement costs"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GEORGY_ZHUKOV_FLANKING_BONUS",
+   "name": "Georgy Zhukov Flanking Bonus",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "50% flanking bonus where Land unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GITARJA_RELIGIOUS_NO_EMBARK_DISEMBARK_COST",
+   "name": "Gitarja Religious No Embark Disembark Cost",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "no movement cost to embark/disembark for your units"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GLOBAL_COALITION_FRIENDLY_TERRITORY",
+   "name": "Global Coalition Friendly Territory",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "SUPPORT"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 7,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "in"
+       },
+       {
+        "atom": "UNTRACKED",
+        "value": "next to friendly territory"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GORGO_POLICY_SLOT_COMBAT_BONUS",
+   "name": "Gorgo Policy Slot Combat Bonus",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER",
+    "RANGED_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit military policies combat modifier (Amount=1)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GRANT_MOVEMENT_BONUS",
+   "name": "Grant Movement Bonus",
+   "classes": [
+    "LOGISTIC_MOVEMENT"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement for your units where within tiles and Land unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TARGET_SPOTTING",
+   "name": "Target Spotting",
+   "classes": [],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 range for your units"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_ADMIRAL_MOVEMENT",
+   "name": "Great Admiral Movement",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_ADMIRAL",
+   "name": "Great Admiral",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_GENERAL_MOVEMENT",
+   "name": "Great General Movement",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_GENERAL",
+   "name": "Great General",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_LIGHTHOUSE_EMBARKED_MOVEMENT",
+   "name": "Great Lighthouse Embarked Movement",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "LANDCIVILIAN",
+    "RELIGIOUS"
+   ],
+   "inactive": true,
+   "effects": []
+  },
+  {
+   "id": "ABILITY_GREAT_LIGHTHOUSE_MOVEMENT",
+   "name": "Great Lighthouse Movement",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement for naval units"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_TURKISH_BOMBARD",
+   "name": "Great Turkish Bombard",
+   "classes": [
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GUIDE",
+   "name": "Guide",
+   "classes": [
+    "GURU"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Guru Movement Area of Effect [+1 Movement where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GURU_MOVEMENT_AREA_OF_EFFECT",
+   "name": "Guru Movement Area of Effect",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement where adjacent to a friendly Guru unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GURU_SAGE_AREA_OF_EFFECT",
+   "name": "Guru Sage Area of Effect",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Guru unit"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HANGAR_TRAINED_AIRCRAFT_XP",
+   "name": "Hangar Trained Aircraft Xp",
+   "classes": [
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HEAL_NEUTRAL_TERRITORY",
+   "name": "Heal Neutral Territory",
+   "classes": [
+    "NAVAL_MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 HP healing (Neutral)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HEAVY_CHARIOT",
+   "name": "Heavy Chariot",
+   "classes": [
+    "HEAVY_CHARIOT"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement when starting on open terrain"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HETAIROI",
+   "name": "Hetairoi",
+   "classes": [
+    "HETAIROI"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "grants enough XP for a promotion"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Great General"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+5 Great General points per kill"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HIMERIOS_BONUS_EXPERIENCE",
+   "name": "Himerios Bonus Experience",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HOJO_TOKIMUNE_COASTAL_COMBAT_BONUS",
+   "name": "Hojo Tokimune Coastal Combat Bonus",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "on a coastal tile"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HOJO_TOKIMUNE_SHALLOW_WATER_COMBAT_BONUS",
+   "name": "Hojo Tokimune Shallow Water Combat Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "on a coastal tile"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PHALANX",
+   "name": "Phalanx",
+   "classes": [
+    "HOPLITE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Hoplite"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HORATIO_NELSON_FLANKING_BONUS",
+   "name": "Horatio Nelson Flanking Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "FLANKING_PERCENT",
+     "amount": 50
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HULCHE",
+   "name": "Hulche",
+   "classes": [
+    "MAYAN_HULCHE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "OPPONENT_WOUNDED"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_KURUC",
+   "name": "Kuruc",
+   "classes": [
+    "HUSZAR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust number allies unit combat bonus (Amount=3)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_HYPASPIST",
+   "name": "Hypaspist",
+   "classes": [
+    "HYPASPIST"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "SUPPORT_PERCENT",
+     "amount": 50
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_IGNORE_CROSSING_RIVERS_COST",
+   "name": "Ignore Crossing Rivers Cost",
+   "classes": [
+    "HELICOPTER"
+   ],
+   "effects": [
+    {
+     "kind": "NO_RIVER_PENALTY"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_IGNORE_TERRAIN_COST",
+   "name": "Ignore Terrain Cost",
+   "classes": [
+    "HELICOPTER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores All movement costs"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_IGNORE_ZOC",
+   "name": "Ignore ZOC",
+   "classes": [
+    "HEAVY_CAVALRY",
+    "NAVAL_RAIDER",
+    "LONGSHIP",
+    "WAR_CART",
+    "RANGED_CAVALRY",
+    "LIGHT_CAVALRY"
+   ],
+   "effects": [
+    {
+     "kind": "IGNORE_ZOC"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_INQUISITION_FRIENDLY_TERRITORY_BONUS",
+   "name": "Inquisition Friendly Territory Bonus",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+15 Combat Strength in friendly territory"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_JOHN_MONASH_BONUS_EXPERIENCE",
+   "name": "John Monash Bonus Experience",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 75
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_JONG",
+   "name": "Jong",
+   "classes": [
+    "JONG"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "unit in formation"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "escorted/escorting units move at the faster unit's speed"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_KNARR_IGNORE_EMBARK_DISEMBARK_COST",
+   "name": "Knarr Ignore Embark Disembark Cost",
+   "classes": [
+    "ALL_COMBAT_UNITS",
+    "LANDCIVILIAN",
+    "SUPPORT"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "no movement cost to embark/disembark"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_LASKARINA_BOUBOULINA_BONUS_EXPERIENCE",
+   "name": "Laskarina Bouboulina Bonus Experience",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 50
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_VARANGIAN_GUARD",
+   "name": "Varangian Guard",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Faith = 50% of its Combat Strength in combat"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Science = 50% of its Combat Strength in combat"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Culture = 50% of its Combat Strength in combat"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_LIGHTHOUSE_TRAINED_UNIT_XP",
+   "name": "Lighthouse Trained Unit Xp",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_LIGHT_CHARIOT",
+   "name": "Light Chariot",
+   "classes": [
+    "LIGHT_CHARIOT"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Movement when starting on open terrain"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_EMANCIPATION_PROCLAMATION",
+   "name": "Emancipation Proclamation",
+   "classes": [
+    "MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "no strategic resource maintenance"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_LLANERO_ADJACENCY_STRENGTH",
+   "name": "Llanero Adjacency Strength",
+   "classes": [
+    "COLOMBIAN_LLANERO"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Combat Strength per adjacent Llanero in combat (while adjacent to a friendly Llanero)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_LONGSHIP_MOVEMENT",
+   "name": "Longship Movement",
+   "classes": [
+    "LONGSHIP"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement for naval units where tile is Coast and Lake"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FURUSIYYA",
+   "name": "Furusiyya",
+   "classes": [
+    "MAMLUK"
+   ],
+   "effects": [
+    {
+     "kind": "HEAL_AFTER_ACTION"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MANA",
+   "name": "Mana",
+   "classes": [
+    "LANDCIVILIAN",
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "SUPPORT"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Movement (while unit embarked)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GOLD_GIVER",
+   "name": "Gold Giver",
+   "classes": [
+    "MANDEKALU"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Gold = 100% of its Combat Strength in combat"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Trader Mandekalu Protection [trade routes immune to plunder (Land)] for your units where within 4 tiles of a Trader unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MAPUCHE_MALON_RAIDER",
+   "name": "Mapuche Malon Raider",
+   "classes": [
+    "MAPUCHE_MALON_RAIDER"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "in"
+       },
+       {
+        "atom": "UNTRACKED",
+        "value": "next to friendly territory"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "pillaging costs only 1 movement"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MARTYR",
+   "name": "Martyr",
+   "classes": [
+    "MISSIONARY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "creates a Relic when killed in theological combat"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MEDIC_HEALING",
+   "name": "Medic Healing",
+   "classes": [
+    "MEDIC"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+20 HP healing (All) for your units where within tiles"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MEDITERRANEAN_COLONIES",
+   "name": "Mediterranean Colonies",
+   "classes": [
+    "SETTLER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "no movement cost to embark/disembark"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Movement where unit embarked"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 sight where unit embarked"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THUNDERBOLT_COASTAL_RAID",
+   "name": "Thunderbolt Coastal Raid",
+   "classes": [
+    "NAVAL_MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "can coastal raid"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ETHIOPIAN_HIGHLANDS",
+   "name": "Ethiopian Highlands",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4,
+     "when": [
+      [
+       {
+        "atom": "TILE_HILLS"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MILITARY_ORGANIZATION",
+   "name": "Military Organization",
+   "classes": [
+    "LANDCIVILIAN"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 2
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MILITARY_ACADEMY_TRAINED_UNIT_XP",
+   "name": "Military Academy Trained Unit Xp",
+   "classes": [
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MONGOLIAN_KESHIG",
+   "name": "Mongolian Keshig",
+   "classes": [
+    "MONGOLIAN_KESHIG"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "escorted/escorting units move at the faster unit's speed"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MONTEZUMA_COMBAT_BONUS_PER_LUXURY",
+   "name": "Montezuma Combat Bonus Per Luxury",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit per luxury attack modifier (Amount=1)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PARK_PROTECTOR",
+   "name": "Park Protector",
+   "classes": [
+    "MOUNTIE"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "near a National Park"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MUSTANG",
+   "name": "Mustang",
+   "classes": [
+    "MUSTANG"
+   ],
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 50
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "AIR_FIGHTER"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MUTAL",
+   "name": "Mutal",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER",
+    "GDR"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MYSTERIOUS_CURRENTS",
+   "name": "Mysterious Currents",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SWORD_OF_PERSIA",
+   "name": "Sword of Persia",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "OPPONENT_WOUNDED"
+       }
+      ],
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "VS_DISTRICT"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FOREST_FIGHTER",
+   "name": "Forest Fighter",
+   "classes": [
+    "NAGAO"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "sees through features"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores Forest movement costs"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "COMBAT_TYPE",
+        "value": "RANGED"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NAU",
+   "name": "Nau",
+   "classes": [
+    "NAU"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "grants enough XP for a promotion"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NIHANG_ACADEMY_STRENGTH",
+   "name": "Nihang Academy Strength",
+   "classes": [
+    "LAHORE_NIHANG"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+15 Combat Strength"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NIHANG_ARMORY_STRENGTH",
+   "name": "Nihang Armory Strength",
+   "classes": [
+    "LAHORE_NIHANG"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+15 Combat Strength"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NIHANG_BARRACKS_STRENGTH",
+   "name": "Nihang Barracks Strength",
+   "classes": [
+    "LAHORE_NIHANG"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+15 Combat Strength"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DOMESTIC_SPREAD",
+   "name": "Domestic Spread",
+   "classes": [
+    "INQUISITOR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit no foreign spread (NoSpread=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NO_MOVE_AND_SHOOT",
+   "name": "No Move and Shoot",
+   "classes": [
+    "SIEGE_SETUP",
+    "FIELD_SETUP"
+   ],
+   "effects": [
+    {
+     "kind": "NO_ATTACK_AFTER_MOVE"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_NUBIA_RANGED_EXPERIENCE_MODIFIER",
+   "name": "Nubia Ranged Experience Modifier",
+   "classes": [
+    "RANGED"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 50
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_OBSERVATION_STRENGTH_BONUS",
+   "name": "Observation Strength Bonus",
+   "classes": [
+    "OBSERVATION"
+   ],
+   "effects": []
+  },
+  {
+   "id": "ABILITY_OLIGARCHY_LEGACY_MELEE_BUFF",
+   "name": "Oligarchy Legacy Melee Buff",
+   "classes": [
+    "MELEE",
+    "NAVAL_MELEE",
+    "ANTI_CAVALRY",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_OLIGARCHY_MELEE_BUFF",
+   "name": "Oligarchy Melee Buff",
+   "classes": [
+    "MELEE",
+    "ANTI_CAVALRY",
+    "WARRIOR_MONK",
+    "NAVAL_MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_MONGOL_STEPPE",
+   "name": "Mongol Steppe",
+   "classes": [
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "MONGOLIAN_KESHIG"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ORDU_TRAINED_UNIT_XP",
+   "name": "Ordu Trained Unit Xp",
+   "classes": [
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "SIEGE",
+    "MONGOLIAN_KESHIG"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PARADROP",
+   "name": "Paradrop",
+   "classes": [
+    "PARADROP"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit paradrop ability (CanDrop=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PHILIP_II_COMBAT_BONUS_OTHER_RELIGION",
+   "name": "Philip Ii Combat Bonus Other Religion",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "RELIGIOUS_ALL",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent is other religion"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PORTA_DO_CERCO",
+   "name": "Porta do Cerco",
+   "classes": [
+    "ALL_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "SIGHT",
+     "amount": 1
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PRIZE_SHIPS",
+   "name": "Prize Ships",
+   "classes": [
+    "CAPTURE_SHIPS"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "can capture defeated units in combat"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PUSHBACK",
+   "name": "Pushback",
+   "classes": [
+    "PUSHBACK"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit force retreat (ForceRetreat=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THIRTY_SIX_STRATAGEMS",
+   "name": "Thirty-Six Stratagems",
+   "classes": [
+    "MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "religious units bought here +1 spread charge(s)"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "converts defeated barbarians"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RAJENDRA_CHOLA_PLUNDER_BONUS",
+   "name": "Rajendra Chola Plunder Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+40% pillage/plunder yields"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF",
+   "name": "Ranged Attack District Debuff",
+   "classes": [
+    "RANGED"
+   ],
+   "effects": [
+    {
+     "kind": "RANGED_VS_DISTRICT"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RECEIVE_BOMBARD_STRENGTH_BUFF",
+   "name": "Receive Bombard Strength Buff",
+   "classes": [
+    "TARGETTING_ASSIST"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Drone unit"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RECEIVE_RANGE_BONUS",
+   "name": "Receive Range Bonus",
+   "classes": [
+    "FORWARD_OBSERVER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 range where adjacent to a friendly Observation unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GLOBAL_ARMY",
+   "name": "Global Army",
+   "classes": [
+    "REDCOAT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "on home continent"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "no movement cost to embark/disembark"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PEACEKEEPER",
+   "name": "Peacekeeper",
+   "classes": [
+    "MISSIONARY"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit cannot attack (Disable=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_IGNORES_BORDERS",
+   "name": "Ignores Borders",
+   "classes": [
+    "RELIGIOUS"
+   ],
+   "effects": [
+    {
+     "kind": "IGNORE_BORDERS"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_WALK_ON_AIR",
+   "name": "Walk on Air",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ignores All movement costs"
+    },
+    {
+     "kind": "NO_RIVER_PENALTY"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RELIGIOUS_ORDERS_BUFF",
+   "name": "Religious Orders Buff",
+   "classes": [
+    "RELIGIOUS",
+    "INQUISITOR"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ENTER_FOREIGN_LANDS",
+   "name": "Enter Foreign Lands",
+   "classes": [
+    "ROCK_BAND"
+   ],
+   "effects": [
+    {
+     "kind": "IGNORE_BORDERS"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ROMAN_LEGION_BUILD",
+   "name": "Roman Legion Build",
+   "classes": [
+    "LEGION"
+   ],
+   "effects": []
+  },
+  {
+   "id": "ABILITY_ROOSEVELT_COMBAT_BONUS_HOME_CONTINENT",
+   "name": "Roosevelt Combat Bonus Home Continent",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "on home continent"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TEDDY_S_ROUGH_RIDER",
+   "name": "Teddy's Rough Rider",
+   "classes": [
+    "ROUGH_RIDER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "after killing a unit gain Culture = 50% of its Combat Strength in combat where on home continent"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_GRASS_HILLS"
+       },
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_PLAINS_HILLS"
+       },
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_TUNDRA_HILLS"
+       },
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_DESERT_HILLS"
+       },
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_SNOW_HILLS"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ROYAL_NAVY_DOCKYARD_MOVEMENT_BONUS",
+   "name": "Royal Navy Dockyard Movement Bonus",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement for naval units"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SABUM_KIBITTUM",
+   "name": "Sabum Kibittum",
+   "classes": [
+    "SABUM_KIBITTUM_ANTI_CAVALRY"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 17,
+     "when": [
+      [
+       {
+        "atom": "VS_CLASS",
+        "value": "LIGHT_CAVALRY"
+       },
+       {
+        "atom": "VS_CLASS",
+        "value": "HEAVY_CAVALRY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SAGE",
+   "name": "Sage",
+   "classes": [
+    "GURU"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Guru Sage Area of Effect [+5 Combat Strength in combat where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THE_VICTORIOUS",
+   "name": "The Victorious",
+   "classes": [
+    "ALL_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "FLANKING_PERCENT",
+     "amount": 100
+    },
+    {
+     "kind": "SUPPORT_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SAMURAI",
+   "name": "Samurai",
+   "classes": [
+    "SAMURAI"
+   ],
+   "effects": [
+    {
+     "kind": "NO_WOUNDED_PENALTY"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SCOTTISH_HIGHLANDER",
+   "name": "Scottish Highlander",
+   "classes": [
+    "SCOTTISH_HIGHLANDER"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "TILE_HILLS"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_FOREST"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SEAPORT_TRAINED_UNIT_XP",
+   "name": "Seaport Trained Unit Xp",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_REVEAL_STEALTH",
+   "name": "Reveal Stealth",
+   "classes": [
+    "REVEAL_STEALTH"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit see hidden (SeeHidden=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SERGEY_GORSHKOV_BONUS_EXPERIENCE",
+   "name": "Sergey Gorshkov Bonus Experience",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SHIPYARD_TRAINED_UNIT_XP",
+   "name": "Shipyard Trained Unit Xp",
+   "classes": [
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_SPEAR_OF_FIONN",
+   "name": "Spear of Fionn",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "ANTI_CAVALRY",
+    "RANGED_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_STABLE_TRAINED_UNIT_XP",
+   "name": "Stable Trained Unit Xp",
+   "classes": [
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_STEALTH",
+   "name": "Stealth",
+   "classes": [
+    "STEALTH"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "hidden (only visible when adjacent)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THE_MAGNIFICENT",
+   "name": "The Magnificent",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4,
+     "when": [
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "opponent era age matches (Type=Golden)"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "opponent is minor civ"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "opponent is free city"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "UNTRACKED",
+        "value": "opponent is barbarian"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TAGMA",
+   "name": "Tagma",
+   "classes": [
+    "TAGMA"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Tagma Religious Strength [+4 Combat Strength in combat where adjacent to a friendly Tagma unit] for your units where adjacent to a friendly Religious All unit"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "ability Tagma Combat Strength [+4 Combat Strength in combat where adjacent to a friendly Tagma unit] for your units where Land unit and within 2 tiles"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TAGMA_COMBAT_STRENGTH",
+   "name": "Tagma Combat Strength",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Tagma unit"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TAGMA_RELIGIOUS_STRENGTH",
+   "name": "Tagma Religious Strength",
+   "classes": [
+    "RELIGIOUS_ALL"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 4,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "adjacent to a friendly Tagma unit"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THEOCRACY_LEGACY_RELIGIOUS_BUFF",
+   "name": "Theocracy Legacy Religious Buff",
+   "classes": [
+    "RELIGIOUS",
+    "INQUISITOR"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_THEOCRACY_RELIGIOUS_BUFF",
+   "name": "Theocracy Religious Buff",
+   "classes": [
+    "RELIGIOUS",
+    "INQUISITOR"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_RAVEN_KING",
+   "name": "Raven King",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "MOVES",
+     "amount": 2
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TIMUR_BONUS_EXPERIENCE",
+   "name": "Timur Bonus Experience",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOA",
+   "name": "Toa",
+   "classes": [
+    "TOA"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "-5 Combat Strength in combat for all units where plot adjacent to owner at war (MinDistance=1, MaxDistance=1)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOMYRIS_BONUS_VS_WOUNDED_UNITS",
+   "name": "Tomyris Bonus Vs Wounded Units",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER",
+    "RANGED_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "OPPONENT_WOUNDED"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOMYRIS_HEAL_AFTER_DEFEATING_UNIT",
+   "name": "Tomyris Heal After Defeating Unit",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_CARRIER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER",
+    "RANGED_CAVALRY"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "heals 30 HP after killing a unit"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOQUI_COMBAT_BUFF_VS_GOLDEN_AGE",
+   "name": "Toqui Combat Buff Vs Golden Age",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent era age matches (Type=Golden)"
+       },
+       {
+        "atom": "UNTRACKED",
+        "value": "opponent is free city"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOQUI_XP_FROM_GOVERNOR",
+   "name": "Toqui Xp From Governor",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 10
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TOQUI_XP_FROM_GOVERNOR_NOT_FOUNDED",
+   "name": "Toqui Xp From Governor Not Founded",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "NAVAL_MELEE",
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 30
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TRADER_BIREME_PROTECTION",
+   "name": "Trader Bireme Protection",
+   "classes": [
+    "TRADER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "trade routes immune to plunder (Sea)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TRADER_MANDEKALU_PROTECTION",
+   "name": "Trader Mandekalu Protection",
+   "classes": [
+    "TRADER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "trade routes immune to plunder (Land)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_PLUNDER_IMMUNITY_AT_SEA",
+   "name": "Plunder Immunity at Sea",
+   "classes": [
+    "TRADER"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "trade routes immune to plunder (Sea)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_DRIVE_OUT_THE_AGGRESSORS",
+   "name": "Drive Out The Aggressors",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK",
+    "SUPPORT",
+    "LANDCIVILIAN"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+2 Movement where tile is Marsh or tile is Woods or tile is Rainforest and in own territory"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_MARSH"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_FOREST"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_JUNGLE"
+       }
+      ],
+      [
+       {
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "+1 Movement where tile is Marsh or tile is Woods or tile is Rainforest and NOT in own territory"
+    },
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_MARSH"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_FOREST"
+       },
+       {
+        "atom": "TILE_FEATURE",
+        "value": "FEATURE_JUNGLE"
+       }
+      ],
+      [
+       {
+        "not": true,
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_TWILIGHT_VALOR_ATTACK_BONUS",
+   "name": "Twilight Valor Attack Bonus",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "ANTI_CAVALRY",
+    "NAVAL_MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 5,
+     "when": [
+      [
+       {
+        "atom": "ATTACKING"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_WOLFSRUDEL",
+   "name": "Wolfsrudel",
+   "classes": [
+    "UBOAT"
+   ],
+   "effects": [
+    {
+     "kind": "STRENGTH",
+     "amount": 10,
+     "when": [
+      [
+       {
+        "atom": "TILE_TERRAIN",
+        "value": "TERRAIN_OCEAN"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_UNIT_AUTO_VETERANCY",
+   "name": "Unit Auto Veterancy",
+   "classes": [
+    "GDR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit experience level (Amount=2)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_UNIT_FIGHT_WHILE_EMBARKED",
+   "name": "Unit Fight While Embarked",
+   "classes": [
+    "GDR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit fight while embarked (CanFight=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_UNIT_WMD_RESISTANCE",
+   "name": "Unit Wmd Resistance",
+   "classes": [
+    "GDR"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "protected from nuclear blast/fallout"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_UNOBSTRUCTED_VIEW",
+   "name": "Unobstructed View",
+   "classes": [
+    "OBSERVATION",
+    "AIR_FIGHTER",
+    "AIR_BOMBER"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "sees through features"
+    },
+    {
+     "kind": "UNTRACKED",
+     "text": "adjust unit see through terrain (CanSee=yes)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_FEAR",
+   "name": "Fear",
+   "classes": [
+    "VARU"
+   ],
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "-5 Combat Strength in combat for all units where plot adjacent to owner at war (MinDistance=1, MaxDistance=1)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_VIJAYA_WIMALARATNE_BONUS_EXPERIENCE",
+   "name": "Vijaya Wimalaratne Bonus Experience",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "ANTI_CAVALRY",
+    "LIGHT_CAVALRY",
+    "HEAVY_CAVALRY",
+    "SIEGE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_VOI_CHI_N",
+   "name": "Voi Chiến",
+   "classes": [
+    "VOI_CHIEN"
+   ],
+   "effects": [
+    {
+     "kind": "MOVE_AFTER_ATTACK"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_WATER_OF_LIFE",
+   "name": "Water of Life",
+   "classes": [
+    "ALL_COMBAT_UNITS"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "+10 HP healing (All)"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_GREAT_GENERAL_POINTS",
+   "name": "Great General Points",
+   "classes": [
+    "RECON",
+    "MELEE",
+    "RANGED",
+    "SIEGE",
+    "HEAVY_CAVALRY",
+    "LIGHT_CAVALRY",
+    "RANGED_CAVALRY",
+    "ANTI_CAVALRY",
+    "HEAVY_CHARIOT",
+    "LIGHT_CHARIOT",
+    "WARRIOR_MONK"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "Great General points per kill = 25% of victim strength"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_WOLIN_NAVAL_UNITS",
+   "name": "Wolin Naval Units",
+   "classes": [
+    "NAVAL_RANGED",
+    "NAVAL_RAIDER",
+    "NAVAL_MELEE"
+   ],
+   "inactive": true,
+   "effects": [
+    {
+     "kind": "UNTRACKED",
+     "text": "Great Admiral points per kill = 25% of victim strength"
+    }
+   ]
+  },
+  {
+   "id": "ABILITY_ZULU_IMPI",
+   "name": "Zulu Impi",
+   "classes": [
+    "ZULU_IMPI"
+   ],
+   "effects": [
+    {
+     "kind": "XP_PERCENT",
+     "amount": 25
+    },
+    {
+     "kind": "FLANKING_PERCENT",
+     "amount": 100
+    }
+   ]
+  }
+ ]
+}
