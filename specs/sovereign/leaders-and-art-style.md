@@ -1,12 +1,13 @@
 # Sovereign: art style and leader roster
 
-Status: art style and roster rules decided; the roster below is a proposal (2026-10-04). Companion to [leader-character-brainstorm.md](leader-character-brainstorm.md) and [world-scale-and-generation.md](world-scale-and-generation.md). All numbers are starting points for playtesting.
+Status: art style, roster and leader abilities decided by James (2026-10-04); ability numbers to be tuned in playtesting. Companion to [leader-character-brainstorm.md](leader-character-brainstorm.md) and [world-scale-and-generation.md](world-scale-and-generation.md). All numbers are starting points for playtesting.
 
 ## Decisions
 
 - **[decided, James 2026-10-04] Art style: stylized realism.** Realistic proportions, hand-painted and simplified textures (references: Dishonored, Arcane, Humankind's units). Not Civ VI's caricature look, which clashes with assassinations, live battles and street-level walking; not photorealism, which ages fast and multiplies the cost of the ~30 building kits. At the furthest zoom the map keeps a Civ-style parchment layer for fog of war and the strategic view.
 - **[decided, James 2026-10-04] Historical leaders only.** No custom or generated leaders and no character creator: they risk balance problems and the creator would cost more than it adds.
 - **[decided, James 2026-10-04] Launch roster: 12 civs**, two per architectural style, so every building kit is used.
+- **[decided, James 2026-10-04] Roster and leader abilities as listed below.** Leaders who died recently or are living are out (likeness rights, assassination mechanics, politics); 19th/20th-century figures dead 50+ years remain possible for later civs, with no dictators.
 
 ## Art toolchain (recommended)
 
@@ -33,7 +34,7 @@ Abilities are Sovereign's own designs. Real historical people are free to use; C
 
 Excluded on principle: 20th-century dictators and religious founders.
 
-## Proposed launch roster
+## Launch roster [decided, James 2026-10-04]
 
 | Style | Civ | Leader | Reign | Leaning | Plays toward |
 |---|---|---|---|---|---|
