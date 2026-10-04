@@ -24,8 +24,8 @@ void addBuilding(GameState& s, CityId id, const char* building) {
 
 // Player 1 holds a capital at (8,5); player 0 attacks it. `edit` sets the scene.
 template <typename Edit>
-std::unique_ptr<Game> siege(Edit edit, bool war = true) {
-    GameState s = flatState(16, 12, 2);
+std::unique_ptr<Game> siege(Edit edit, bool war = true, int players = 2) {
+    GameState s = flatState(16, 12, players);
     addCity(s, 1, kCity, true, 4);
     edit(s);
     auto g = Game::fromScenario(rules(), std::move(s));
@@ -161,7 +161,8 @@ TEST(melee_takes_a_beaten_city) {
         s.city(1)->hp = 1;
         second = addCity(s, 1, {8, 10}, false, 2);
         warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
-    });
+        addCity(s, 2, {14, 2}, true);  // a third civ, so taking one capital is not Domination
+    }, true, 3);
     CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
     const City& c = cityAt(*g, kCity);
     CHECK_EQ(c.owner, 0);
@@ -223,13 +224,14 @@ TEST(losing_the_last_city_eliminates_a_player) {
         s.city(1)->hp = 1;
         warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
         theirs = addUnit(s, "UNIT_WARRIOR", 1, {14, 10});
-    });
+        addCity(s, 2, {14, 2}, true);  // a third civ keeps the game going (no Domination yet)
+    }, true, 3);
     CHECK_EQ(g->submit(Command::attack(0, warrior, kCity)), CommandError::Ok);
     CHECK(!g->state().players[1].alive);
     CHECK(g->state().unit(theirs) == nullptr);
     g->submit(Command::setProduction(0, 1, {ProductionKind::Building, rules().building("BUILDING_MONUMENT")}));
     // Turns now skip the eliminated player.
-    endTurns(*g, 1);
+    endTurns(*g, 2);
     CHECK_EQ(g->state().currentPlayer, 0);
     CHECK_EQ(g->state().turn, 2);
 }

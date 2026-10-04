@@ -148,6 +148,7 @@ CommandError Game::validate(const Command& c) const {
     if (c.player < 0 || static_cast<size_t>(c.player) >= state_.players.size()) return CommandError::BadPlayer;
     if (!state_.players[static_cast<size_t>(c.player)].alive) return CommandError::BadPlayer;
     if (c.player != state_.currentPlayer) return CommandError::NotYourTurn;
+    if (state_.winner != kNoPlayer) return CommandError::GameOver;
 
     if (c.type == CommandType::EndTurn) {
         if (!unitsNeedingOrders(c.player).empty()) return CommandError::UnitsNeedOrders;
@@ -426,6 +427,7 @@ CommandError Game::submit(const Command& c) {
     log_.push_back(c);
     apply(c);
     updateBoosts(c.player);
+    checkVictory();
     return CommandError::Ok;
 }
 

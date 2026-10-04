@@ -18,6 +18,7 @@ add_library(sovereign_core
   src/combat.cpp
   src/barbarians.cpp
   src/districts.cpp
+  src/victory.cpp
   src/fixed.cpp
   src/game.cpp
   src/hex.cpp
@@ -64,6 +65,7 @@ add_executable(sovereign_tests
   tests/test_city_combat.cpp
   tests/test_districts.cpp
   tests/test_ai.cpp
+  tests/test_victory.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

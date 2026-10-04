@@ -3,7 +3,8 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest)
+//          [--ai] [--ai-seats N] [--turn-limit N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          --turn-limit: Score victory after this turn instead of the speed's calendar). Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -61,6 +62,7 @@ int main(int argc, char** argv) {
         else if (a == "--cities") showCities = true;
         else if (a == "--ai") aiSeats = 1 << 20;
         else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
+        else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
             return 2;
@@ -84,7 +86,7 @@ int main(int argc, char** argv) {
     {
         Rng botRng(setup.seed ^ 0x5EEDull);
         const int stopAt = game->state().turn + turns;
-        while (game->state().turn < stopAt) {
+        while (game->state().turn < stopAt && !game->gameOver()) {
             if (game->state().currentPlayer < aiSeats) ai::playTurn(*game);
             else sovbot::playTurn(*game, botRng);
         }
@@ -166,6 +168,13 @@ int main(int argc, char** argv) {
         std::vector<uint8_t> bytes = saveGame(*game);
         std::ofstream(savePath, std::ios::binary).write(reinterpret_cast<const char*>(bytes.data()),
                                                         static_cast<std::streamsize>(bytes.size()));
+    }
+    if (game->gameOver()) {
+        static const char* names[] = {"none", "Domination", "Score", "last civ standing"};
+        const PlayerId w = game->state().winner;
+        std::printf("winner: player %d (%s), %s victory on turn %d, score %d\n", w,
+                    rules.civs[static_cast<size_t>(game->state().players[static_cast<size_t>(w)].civ)].name.c_str(),
+                    names[static_cast<size_t>(game->state().victory)], game->state().turn, game->score(w));
     }
     std::printf("turn %d, %zu cities, %zu units, %zu commands, rules %016llx, state %016llx\n", game->state().turn,
                 game->state().cities.size(), game->state().units.size(), game->log().size(),

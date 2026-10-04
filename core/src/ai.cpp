@@ -140,7 +140,8 @@ void diplomacy(View& v) {
         const Relation& rel = s.players[at(v.me)].relations[at(e)];
         const bool theyOffer = s.players[at(e)].relations[at(v.me)].peaceOffered;
         const bool losing = mine * 100 < theirs * kPeaceRatioPercent;
-        const bool tired = s.turn - rel.since >= kWarWeariness;
+        // Weariness only ends a war that is not clearly being won.
+        const bool tired = s.turn - rel.since >= kWarWeariness && mine * 100 < theirs * kWarRatioPercent * 2;
         const bool accept = theyOffer && mine * 100 < theirs * kWarRatioPercent;
         if ((losing || tired || accept) && v.game.canMakePeace(v.me, e)) v.game.submit(Command::makePeace(v.me, e));
     }
@@ -783,6 +784,7 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
 }
 
 void playTurn(Game& game) {
+    if (game.gameOver()) return;
     View v(game, game.state().currentPlayer);
     survey(v);
     diplomacy(v);

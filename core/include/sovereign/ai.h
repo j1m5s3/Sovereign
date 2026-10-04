@@ -17,7 +17,7 @@
 
 namespace sov::ai {
 
-// Plays the current player's whole turn and ends it.
+// Plays the current player's whole turn and ends it (does nothing once the game is won).
 void playTurn(Game& game);
 
 // Value of founding a city on this plot for the player (higher is better);
