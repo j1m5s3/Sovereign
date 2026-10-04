@@ -77,6 +77,8 @@ find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
   add_test(NAME no_floats_in_core
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/check_core_rules.py)
+  add_test(NAME unreal_core_module_current
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/check_unreal_core_module.py)
   add_test(NAME generated_rules_current
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/rules_gen/gen_rules.py --check)
 endif()

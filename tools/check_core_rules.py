@@ -15,7 +15,8 @@ BANNED = [
     (r"\bunordered_(map|set|multimap|multiset)\b", "unordered containers (iteration order varies by platform)"),
     (r"<chrono>|\btime\s*\(|<ctime>|\bclock\s*\(", "wall-clock time in rules"),
     (r"<cmath>|<math\.h>", "floating-point math library"),
-    (r'#include\s*["<](CoreMinimal|Engine/|UObject/|GameFramework/)', "Unreal headers (the core must stay engine-independent)"),
+    (r'#include\s*["<](CoreMinimal|Engine/|UObject/|GameFramework/|Modules/|HAL/|Misc/|Containers/|Math/)|\.generated\.h', "Unreal headers (the core must stay engine-independent)"),
+    (r"\b(UCLASS|USTRUCT|UENUM|UPROPERTY|UFUNCTION|GENERATED_BODY|IMPLEMENT_MODULE|IMPLEMENT_PRIMARY_GAME_MODULE|UE_LOG|TEXT)\s*\(", "Unreal macros (the core must stay engine-independent)"),
 ]
 
 
