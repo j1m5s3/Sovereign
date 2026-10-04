@@ -81,6 +81,8 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             }
             game->spawnUnit(t, p.id, *spot);
         }
+        // The leader starts on the Settler's tile with the normal starting units (leader doc §1).
+        if (rules.leaderUnit != kNone) game->spawnLeader(p.id, p.startPos);
     }
     for (const Player& p : st.players) game->refreshVisibility(p.id);
     game->beginPlayerTurn(0);
@@ -181,6 +183,9 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::CityStrike:
         case CommandType::RazeCity:
             return validateCombat(c);
+        case CommandType::EquipGear:
+        case CommandType::LinkEscort:
+            return validateLeader(c);
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -189,12 +194,17 @@ CommandError Game::validate(const Command& c) const {
 
     switch (c.type) {
         case CommandType::MoveUnit: {
+            // A linked escort's order moves the pair: plan it for the leader.
+            if (u->escorting != kNoUnit) {
+                const Unit* l = state_.unit(u->escorting);
+                if (l && l->pos == u->pos && l->owner == u->owner) u = l;
+            }
             auto t = state_.grid.normalize(c.target);
             if (!t || *t != c.target || *t == u->pos) return CommandError::BadTarget;
             if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
-            return findPath(c.id, *t) ? CommandError::Ok : CommandError::NoPath;
+            return findPath(u->id, *t) ? CommandError::Ok : CommandError::NoPath;
         }
         case CommandType::FoundCity: {
             if (!typeOf(*rules_, *u).foundCity) return CommandError::NotASettler;
@@ -236,8 +246,11 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
 std::vector<UnitId> Game::unitsNeedingOrders(PlayerId player) const {
     std::vector<UnitId> out;
     for (const Unit& u : state_.units) {
-        if (u.owner == player && u.activity == Activity::Awake && !u.moveTarget && u.movesLeft > Fixed())
-            out.push_back(u.id);
+        if (u.owner != player || u.activity != Activity::Awake || u.moveTarget || u.movesLeft <= Fixed()) continue;
+        // A linked escort follows its leader and needs no orders of its own.
+        const Unit* l = u.escorting != kNoUnit ? state_.unit(u.escorting) : nullptr;
+        if (l && l->pos == u.pos && l->owner == u.owner) continue;
+        out.push_back(u.id);
     }
     return out;
 }
@@ -369,6 +382,30 @@ void Game::advanceUnit(UnitId id) {
             }
             if (after <= Fixed()) return;
         }
+        // A linked escort steps with its leader, at the slower unit's pace.
+        Unit* escort = isLeader(*u) ? escortMut(*u) : nullptr;
+        Fixed escortAfter;
+        if (escort) {
+            const auto ecost = moveCost(*escort, escort->pos, next);
+            const Fixed efull = Fixed::fromInt(maxMoves(*escort));
+            if (!ecost || escort->movesLeft <= Fixed() || (escort->movesLeft < *ecost && escort->movesLeft != efull)) return;
+            const Unit* blocker = state_.unitAt(next, UnitLayer::Military, *rules_);
+            if (blocker && blocker->id != escort->id) {
+                u->moveTarget.reset();  // the pair cannot share a plot with another military unit
+                return;
+            }
+            escortAfter = escort->movesLeft >= *ecost ? escort->movesLeft - *ecost : Fixed();
+        }
+        if (escort) {
+            escort->pos = next;
+            escort->movesLeft = inEnemyZoc(*escort, next) ? Fixed() : escortAfter;
+            escort->activity = Activity::Awake;
+            escort->moved = true;
+            escort->fortifyTurns = 0;
+            escort->moveTarget.reset();
+            enterPlot(*escort);
+            u = state_.unit(id);  // enterPlot may change the unit list
+        }
         u->pos = next;
         u->movesLeft = inEnemyZoc(*u, next) ? Fixed() : after;
         u->activity = Activity::Awake;
@@ -461,14 +498,20 @@ void Game::apply(const Command& c) {
         case CommandType::Promote:
         case CommandType::CityStrike:
         case CommandType::RazeCity: applyCombat(c); break;
+        case CommandType::EquipGear:
+        case CommandType::LinkEscort: applyLeader(c); break;
     }
 }
 
 void Game::applyMove(const Command& c) {
     Unit* u = state_.unit(c.id);
+    if (u->escorting != kNoUnit) {
+        Unit* l = state_.unit(u->escorting);
+        if (l && l->pos == u->pos && l->owner == u->owner) u = l;  // the escort's order moves the pair
+    }
     u->moveTarget = c.target;
     u->activity = Activity::Awake;
-    advanceUnit(c.id);
+    advanceUnit(u->id);
 }
 
 void Game::applyFoundCity(const Command& c) {

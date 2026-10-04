@@ -92,6 +92,8 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotPromote: return "CannotPromote";
         case CommandError::CannotStrike: return "CannotStrike";
         case CommandError::CannotRaze: return "CannotRaze";
+        case CommandError::CannotEquip: return "CannotEquip";
+        case CommandError::CannotEscort: return "CannotEscort";
     }
     return "Unknown";
 }
@@ -133,6 +135,9 @@ std::string describe(const Command& c) {
         case CommandType::CityStrike:
             return s + "CityStrike c" + std::to_string(c.id) + " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ")";
         case CommandType::RazeCity: return s + "RazeCity c" + std::to_string(c.id);
+        case CommandType::EquipGear:
+            return s + "EquipGear u" + std::to_string(c.id) + " gear" + std::to_string(c.arg) + " slot" + std::to_string(c.arg2);
+        case CommandType::LinkEscort: return s + "LinkEscort u" + std::to_string(c.id) + " leader" + std::to_string(c.arg);
     }
     return s + "?";
 }

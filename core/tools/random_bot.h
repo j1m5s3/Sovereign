@@ -57,6 +57,19 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
             game.submit(Command::promote(me, id, promos[rng.below(static_cast<uint32_t>(promos.size()))]));
             continue;
         }
+        // The leader now and then re-equips in a city or takes the escort on its plot.
+        if (game.isLeader(*u)) {
+            bool equipped = false;
+            for (size_t g = 0; g < game.rules().gear.size() && !equipped; ++g) {
+                if (rng.chance(4) && game.canEquip(id, static_cast<TypeIndex>(g)))
+                    equipped = game.submit(Command::equipGear(me, id, static_cast<TypeIndex>(g))) == CommandError::Ok;
+            }
+            if (equipped) continue;
+            const Unit* guard = game.state().unitAt(u->pos, UnitLayer::Military, game.rules());
+            if (guard && guard->owner == me && guard->escorting != id && rng.chance(30))
+                game.submit(Command::linkEscort(me, guard->id, id));
+            u = game.state().unit(id);
+        }
         // Attack an enemy in reach when the odds look even or better.
         bool fought = false;
         for (const Hex& h : game.state().grid.within(u->pos, std::max(1, game.unitRange(*u)))) {

@@ -580,6 +580,51 @@ void military(View& v) {
     }
 }
 
+// --- the leader ------------------------------------------------------------------------
+// Value of a piece of gear for the leader (its strength in that slot).
+int gearValue(const GearType& g) { return g.slot == GearSlot::Armor ? g.defense : g.combat; }
+
+// Keeps the leader home: in the capital, asleep behind the garrison, re-equipped with the
+// best affordable melee weapon and armor while there (leader doc §7: never leave it exposed).
+void leader(View& v) {
+    const Unit* l = v.game.leaderOf(v.me);
+    if (!l || v.cities.empty()) {
+        if (l && !l->moveTarget) v.game.submit(Command::setActivity(v.me, l->id, Activity::Skip));
+        return;
+    }
+    const GameState& s = v.s();
+    const City* capital = nullptr;
+    for (CityId id : v.cities) {
+        if (s.city(id)->capital) capital = s.city(id);
+    }
+    if (!capital) capital = s.city(v.cities.front());
+    if (l->pos != capital->pos) {
+        if (!l->moveTarget || *l->moveTarget != capital->pos) v.game.submit(Command::move(v.me, l->id, capital->pos));
+        l = v.game.leaderOf(v.me);
+        if (l && l->pos != capital->pos && !l->moveTarget) v.game.submit(Command::setActivity(v.me, l->id, Activity::Skip));
+        return;
+    }
+    const UnitId id = l->id;
+    for (GearSlot slot : {GearSlot::Weapon, GearSlot::Armor}) {
+        const Unit* cur = s.unit(id);
+        const TypeIndex worn = cur->gear[at(static_cast<TypeIndex>(slot))];
+        int bestValue = worn == kNone ? -1 : gearValue(v.r.gear[at(worn)]);
+        TypeIndex best = kNone;
+        for (size_t g = 0; g < v.r.gear.size(); ++g) {
+            const GearType& gt = v.r.gear[g];
+            if (gt.slot != slot || gt.ranged > 0 || gearValue(gt) <= bestValue) continue;
+            // Keep a reserve for emergencies (purchases, upkeep).
+            const Fixed reserve = Fixed::fromInt(v.game.gearCost(static_cast<TypeIndex>(g)) + 60);
+            if (s.players[at(v.me)].gold < reserve || !v.game.canEquip(id, static_cast<TypeIndex>(g))) continue;
+            bestValue = gearValue(gt);
+            best = static_cast<TypeIndex>(g);
+        }
+        if (best != kNone && v.game.submit(Command::equipGear(v.me, id, best)) == CommandError::Ok) return;  // that took its turn
+    }
+    const Unit* now = s.unit(id);
+    if (now->activity != Activity::Sleep && now->movesLeft > Fixed()) v.game.submit(Command::setActivity(v.me, id, Activity::Sleep));
+}
+
 // --- production --------------------------------------------------------------------
 int desiredArmy(const View& v) {
     const int n = static_cast<int>(v.cities.size());
@@ -799,7 +844,8 @@ void playTurn(Game& game) {
     attacks(v);
     std::vector<UnitId> civilians;
     for (const Unit& u : game.state().units) {
-        if (u.owner == v.me && v.r.units[at(u.type)].layer != UnitLayer::Military) civilians.push_back(u.id);
+        const UnitLayer layer = v.r.units[at(u.type)].layer;
+        if (u.owner == v.me && layer != UnitLayer::Military && layer != UnitLayer::Leader) civilians.push_back(u.id);
     }
     for (UnitId id : civilians) {
         const Unit* u = game.state().unit(id);
@@ -812,6 +858,7 @@ void playTurn(Game& game) {
     survey(v);
     military(v);
     attacks(v);  // units that moved into reach
+    leader(v);
     production(v);
     purchases(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));

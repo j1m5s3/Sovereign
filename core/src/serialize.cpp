@@ -117,6 +117,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (u.owner < 0 || static_cast<size_t>(u.owner) >= s.players.size() || !s.grid.valid(u.pos)) return false;
         if (i > 0 && s.units[i - 1].id >= u.id) return false;
         for (TypeIndex pr : u.promotions) if (!inRange(pr, rules.promotions.size(), false)) return false;
+        for (size_t slot = 0; slot < u.gear.size(); ++slot) {
+            if (!inRange(u.gear[slot], rules.gear.size(), true)) return false;
+            if (u.gear[slot] != kNone && static_cast<size_t>(rules.gear[static_cast<size_t>(u.gear[slot])].slot) != slot) return false;
+        }
     }
     for (size_t i = 0; i < s.cities.size(); ++i) {
         const City& c = s.cities[i];
@@ -236,6 +240,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(u.moved);
         w.boolean(u.attacked);
         w.i32(u.camp);
+        for (TypeIndex g : u.gear) w.i32(g);
+        w.i32(u.escorting);
     }
     w.u32(static_cast<uint32_t>(s.cities.size()));
     for (const City& c : s.cities) {
@@ -389,6 +395,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.moved = r.boolean();
         u.attacked = r.boolean();
         u.camp = r.i32();
+        for (TypeIndex& g : u.gear) g = static_cast<TypeIndex>(r.i32());
+        u.escorting = r.i32();
     }
     uint32_t nc = r.u32();
     if (!r.checkCount(nc, 20)) return false;

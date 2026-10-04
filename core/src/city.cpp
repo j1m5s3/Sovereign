@@ -308,6 +308,7 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         const Fixed m = Fixed::fromInt(rules_->units[static_cast<size_t>(u.type)].maintenance) - discount;
         if (m > Fixed()) net -= m;
     }
+    net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
     return net;
 }
 

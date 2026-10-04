@@ -38,6 +38,8 @@ enum class CommandType : uint8_t {
     Promote = 20,         // id = unit, arg = promotion
     CityStrike = 21,      // id = city with walls, target = enemy unit in range: the city's ranged strike
     RazeCity = 22,        // id = city captured this turn (not an original capital): burn it down
+    EquipGear = 23,       // id = leader, arg = gear (or -1 with arg2 = slot to take that item off)
+    LinkEscort = 24,      // id = military unit, arg = leader on its plot to escort (-1 ends the link)
 };
 
 struct Command {
@@ -88,6 +90,15 @@ struct Command {
     }
     static Command cityStrike(PlayerId p, CityId c, Hex at) { return {CommandType::CityStrike, p, c, at, 0, 0}; }
     static Command razeCity(PlayerId p, CityId c) { return {CommandType::RazeCity, p, c, {}, 0, 0}; }
+    static Command equipGear(PlayerId p, UnitId leader, TypeIndex gear) {
+        return {CommandType::EquipGear, p, leader, {}, gear, 0};
+    }
+    static Command removeGear(PlayerId p, UnitId leader, GearSlot slot) {
+        return {CommandType::EquipGear, p, leader, {}, -1, static_cast<int32_t>(slot)};
+    }
+    static Command linkEscort(PlayerId p, UnitId escort, UnitId leader) {
+        return {CommandType::LinkEscort, p, escort, {}, leader, 0};
+    }
 };
 
 enum class CommandError : uint8_t {
@@ -127,6 +138,8 @@ enum class CommandError : uint8_t {
     CannotPromote,
     CannotStrike,
     CannotRaze,
+    CannotEquip,
+    CannotEscort,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

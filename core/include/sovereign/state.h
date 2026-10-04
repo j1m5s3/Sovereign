@@ -4,6 +4,7 @@
 
 #include "sovereign/api.h"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -58,6 +59,9 @@ struct Unit {
     bool moved = false;    // moved this turn (no healing; siege cannot fire)
     bool attacked = false; // attacked this turn (no healing)
     int32_t camp = 0;      // barbarian camp id that spawned it (0: none)
+    // The leader's loadout per GearSlot (kNone: empty); unused by other units.
+    std::array<TypeIndex, kNumGearSlots> gear{{kNone, kNone, kNone}};
+    UnitId escorting = kNoUnit;  // military unit linked to this leader; moves with it while they share a plot
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
