@@ -31,6 +31,10 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.governmentUses.resize(rules.governments.size(), 0);
     p.stockpile.resize(rules.resources.size(), 0);
     p.fuelShort.resize(rules.resources.size(), 0);
+    if (p.leaderName.empty() && !p.barbarian && p.civ >= 0 && static_cast<size_t>(p.civ) < rules.civs.size()) {
+        const Dynasty* d = rules.dynastyOf(p.civ);
+        p.leaderName = d ? d->names.front() : rules.civs[static_cast<size_t>(p.civ)].name;
+    }
 }
 
 // ------------------------------------------------------------------ queries
@@ -210,6 +214,7 @@ bool Game::canSetPolicy(PlayerId player, int slot, TypeIndex policy, CommandErro
     };
     const Player& p = state_.players[static_cast<size_t>(player)];
     if (p.government == kNone || p.anarchyTurns > 0) return fail(CommandError::CannotSetPolicy);
+    if (p.interregnumTurns > 0) return fail(CommandError::ChangesLocked);  // leader doc §5
     if (!p.freeChanges) return fail(CommandError::ChangesLocked);
     if (!inRange(slot, p.policies.size())) return fail(CommandError::CannotSetPolicy);
     if (policy == kNone) {

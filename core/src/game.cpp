@@ -154,6 +154,7 @@ CommandError Game::validate(const Command& c) const {
 
     if (c.type == CommandType::EndTurn) {
         if (!unitsNeedingOrders(c.player).empty()) return CommandError::UnitsNeedOrders;
+        if (state_.players[static_cast<size_t>(c.player)].successionPending) return CommandError::LeaderNeeded;
         if (!citiesNeedingProduction(c.player).empty()) return CommandError::ProductionNeeded;
         // A player with a city must keep a tech and a civic in progress while any is left.
         const Player& p = state_.players[static_cast<size_t>(c.player)];
@@ -185,6 +186,8 @@ CommandError Game::validate(const Command& c) const {
             return validateCombat(c);
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
+        case CommandType::ChooseSuccessor:
+        case CommandType::AbandonLeader:
             return validateLeader(c);
         default: break;
     }
@@ -499,7 +502,9 @@ void Game::apply(const Command& c) {
         case CommandType::CityStrike:
         case CommandType::RazeCity: applyCombat(c); break;
         case CommandType::EquipGear:
-        case CommandType::LinkEscort: applyLeader(c); break;
+        case CommandType::LinkEscort:
+        case CommandType::ChooseSuccessor:
+        case CommandType::AbandonLeader: applyLeader(c); break;
     }
 }
 
@@ -589,6 +594,9 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processCities(pid);
         Player& p = state_.players[static_cast<size_t>(pid)];
         if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
+        // The interregnum runs out only while someone sits on the throne.
+        if (p.interregnumTurns > 0 && !p.successionPending && p.captor == kNoPlayer && --p.interregnumTurns == 0)
+            p.freeChanges = true;
         payUnitFuel(pid);
         healAndFortify(pid);
         healCities(pid);

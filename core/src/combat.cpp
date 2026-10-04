@@ -774,6 +774,7 @@ void Game::captureCity(City& city, UnitId attackerId) {
     std::vector<UnitId> there;
     for (const Unit& o : state_.units) if (o.pos == at && o.owner != me) there.push_back(o.id);
     for (UnitId id : there) {
+        if (!state_.unit(id)) continue;  // gone with a regicide earlier in this loop
         const UnitLayer layer = typeOf(*rules_, *state_.unit(id)).layer;
         if (layer == UnitLayer::Leader) leaderLost(id, me, true);  // taken with the city
         else if (layer == UnitLayer::Military) removeUnit(id);

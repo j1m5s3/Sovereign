@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/ai.h"
 
 using namespace sov;
 using sovtest::addCity;
@@ -274,4 +275,142 @@ TEST(leader_games_replay_and_save) {
     auto replayed = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(replayed);
     CHECK_EQ(replayed->stateHash(), g->stateHash());
+}
+
+// ---- succession, captivity and regicide (leader doc §5)
+
+namespace {
+// Player 0 (England) with a capital, a government with a slotted card, and its leader alone
+// at (8,5) at 1 HP; player 1 has an Archer and a Swordsman next to it.
+struct Fall {
+    std::unique_ptr<Game> game;
+    UnitId leader = 0, archer = 0, sword = 0;
+    CityId capital = kNoCity;
+};
+
+Fall fallScenario(bool regicide = false, int dynastyNext = 1) {
+    Fall f;
+    f.game = duel([&](GameState& s) {
+        s.setup.regicide = regicide;
+        f.capital = addCity(s, 0, {2, 2}, true);
+        addCity(s, 1, {13, 9}, true);
+        f.leader = addLeader(s, 0, {8, 5});
+        s.units.back().hp = 1;
+        s.units.back().gear[0] = gear("GEAR_SPEAR");
+        f.archer = addUnit(s, "UNIT_ARCHER", 1, {10, 5});
+        f.sword = addUnit(s, "UNIT_SWORDSMAN", 1, {9, 5});
+        Player& p = s.players[0];
+        Game::fitPlayerToRules(p, rules());
+        p.dynastyNext = dynastyNext;
+        p.government = rules().government("GOVERNMENT_CHIEFDOM");
+        p.policies.assign(static_cast<size_t>(rules().governments[at(p.government)].totalSlots()), kNone);
+        p.policies[0] = rules().policy("POLICY_DISCIPLINE");
+    });
+    pass(*f.game, 1);  // player 1's turn
+    return f;
+}
+}  // namespace
+
+TEST(fallen_leader_starts_an_interregnum_and_a_succession) {
+    Fall f = fallScenario();
+    Game& g = *f.game;
+    CHECK_EQ(g.state().players[0].leaderName, std::string("Elizabeth I"));
+    REQUIRE(g.submit(Command::rangedAttack(1, f.archer, {8, 5})) == CommandError::Ok);  // killed, not captured
+    const Player& p = g.state().players[0];
+    CHECK(!g.leaderOf(0));
+    CHECK(p.successionPending);
+    CHECK_EQ(p.interregnumTurns, rules().globalInt("LEADER_INTERREGNUM_TURNS"));
+    CHECK(std::all_of(p.policies.begin(), p.policies.end(), [](TypeIndex x) { return x == kNone; }));
+    pass(g, 1);
+    REQUIRE(g.state().currentPlayer == 0);
+    for (UnitId id : g.unitsNeedingOrders(0)) g.submit(Command::setActivity(0, id, Activity::Skip));
+    CHECK_EQ(g.submit(Command::endTurn(0)), CommandError::LeaderNeeded);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Regent)), CommandError::CannotSucceed);  // an heir exists
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::Ok);
+    const Unit* heir = g.leaderOf(0);
+    REQUIRE(heir);
+    CHECK(heir->pos == g.state().city(f.capital)->pos);
+    CHECK_EQ(heir->gear[0], gear("GEAR_SPEAR"));  // the loadout passes on
+    CHECK_EQ(g.state().players[0].leaderName, std::string("James I"));
+    CHECK_EQ(g.state().players[0].dynastyNext, 2);
+    // Policies stay locked until the interregnum runs out, then a free change opens.
+    CHECK_EQ(g.submit(Command::setPolicy(0, 0, rules().policy("POLICY_DISCIPLINE"))), CommandError::ChangesLocked);
+    for (int i = 0; i < rules().globalInt("LEADER_INTERREGNUM_TURNS"); ++i) pass(g, 2);
+    CHECK_EQ(g.state().players[0].interregnumTurns, 0);
+    CHECK(g.state().players[0].freeChanges);
+}
+
+TEST(successors_after_the_dynasty_runs_out) {
+    Fall f = fallScenario(false, 3);  // England's two heirs are spent
+    Game& g = *f.game;
+    REQUIRE(g.submit(Command::rangedAttack(1, f.archer, {8, 5})) == CommandError::Ok);
+    pass(g, 1);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::CannotSucceed);
+    CHECK(g.successorUnits(0).empty());
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Regent)), CommandError::Ok);
+    CHECK_EQ(g.state().players[0].leaderName, std::string("England Regent"));
+}
+
+TEST(a_veteran_unit_can_take_the_throne) {
+    UnitId veteran = 0, leader = 0, archer = 0;
+    auto g = duel([&](GameState& s) {
+        addCity(s, 0, {2, 2}, true);
+        leader = addLeader(s, 0, {8, 5});
+        s.units.back().hp = 1;
+        veteran = addUnit(s, "UNIT_WARRIOR", 0, {3, 3});
+        s.units.back().promotions = {rules().promotion("PROMOTION_BATTLECRY"), rules().promotion("PROMOTION_TORTOISE"),
+                                     rules().promotion("PROMOTION_COMMANDO")};
+        archer = addUnit(s, "UNIT_ARCHER", 1, {10, 5});
+        Game::fitPlayerToRules(s.players[0], rules());
+        s.players[0].dynastyNext = 3;
+    });
+    pass(*g, 1);
+    REQUIRE(g->submit(Command::rangedAttack(1, archer, {8, 5})) == CommandError::Ok);
+    pass(*g, 1);
+    REQUIRE(g->successorUnits(0).size() == 1u);
+    CHECK_EQ(g->submit(Command::chooseSuccessor(0, Succession::Regent)), CommandError::CannotSucceed);
+    CHECK_EQ(g->submit(Command::chooseSuccessor(0, Succession::Unit, veteran)), CommandError::Ok);
+    CHECK(!g->state().unit(veteran));
+    REQUIRE(g->leaderOf(0));
+    CHECK_EQ(g->state().players[0].leaderName, std::string("England Warlord"));
+    (void)leader;
+}
+
+TEST(a_captured_leader_holds_the_throne_until_abandoned) {
+    Fall f = fallScenario();
+    Game& g = *f.game;
+    REQUIRE(g.submit(Command::attack(1, f.sword, {8, 5})) == CommandError::Ok);
+    const Player& p = g.state().players[0];
+    CHECK_EQ(p.captor, 1);
+    CHECK(!p.successionPending);
+    pass(g, 1);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::CannotSucceed);
+    pass(g, 6);
+    CHECK_EQ(g.state().players[0].interregnumTurns, rules().globalInt("LEADER_INTERREGNUM_TURNS"));  // frozen while held
+    CHECK_EQ(g.submit(Command::abandonLeader(0)), CommandError::Ok);
+    CHECK(g.state().players[0].captor == kNoPlayer && g.state().players[0].successionPending);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::Ok);
+    CHECK(g.leaderOf(0));
+}
+
+TEST(regicide_eliminates_the_player) {
+    Fall f = fallScenario(true);
+    Game& g = *f.game;
+    REQUIRE(g.submit(Command::attack(1, f.sword, {8, 5})) == CommandError::Ok);
+    CHECK(!g.state().players[0].alive);
+    CHECK_EQ(g.state().city(f.capital)->owner, 1);  // the captor takes the cities
+    for (const Unit& u : g.state().units) CHECK(u.owner != 0);
+    CHECK(g.gameOver());  // the last major standing wins (Domination: it holds every capital)
+}
+
+TEST(ai_crowns_a_successor) {
+    Fall f = fallScenario();
+    Game& g = *f.game;
+    REQUIRE(g.submit(Command::rangedAttack(1, f.archer, {8, 5})) == CommandError::Ok);
+    pass(g, 1);
+    REQUIRE(g.state().currentPlayer == 0);
+    ai::playTurn(g);
+    CHECK(g.leaderOf(0));
+    CHECK(!g.state().players[0].successionPending);
+    CHECK(g.state().currentPlayer != 0);  // and the turn ended
 }

@@ -202,6 +202,10 @@ public:
     bool canEquip(UnitId leader, TypeIndex gear, CommandError* why = nullptr) const;
     // Gold per turn the leader's mount costs: twice its upkeep unit's maintenance.
     int leaderUpkeep(PlayerId player) const;
+    // Succession (§5): the dynasty still has an heir; units that may take the throne (level 4+).
+    bool hasHeir(PlayerId player) const;
+    std::vector<UnitId> successorUnits(PlayerId player) const;
+    bool canSucceed(PlayerId player, Succession kind, UnitId unit, CommandError* why = nullptr) const;
 
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
@@ -264,6 +268,9 @@ private:
     void leaderLost(UnitId leader, PlayerId by, bool captured);
     // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
     void barbarianWound(Unit& leader);
+    void startInterregnum(Player& p);
+    // Regicide: the player is out and its cities pass to whoever took the leader.
+    void regicide(PlayerId loser, PlayerId by);
     Unit* escortMut(const Unit& leader);
     void applyMove(const Command& c);
     void applyFoundCity(const Command& c);
