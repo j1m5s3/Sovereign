@@ -8,10 +8,174 @@
    "attackRange": 2
   },
   {
+   "id": "DISTRICT_CAMPUS",
+   "name": "Campus",
+   "unlock": "TECH_WRITING",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 1,
+   "adjacency": [
+    {
+     "yield": "SCIENCE",
+     "amount": 1,
+     "kind": "MOUNTAIN"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_JUNGLE"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_GEOTHERMAL_FISSURE"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_REEF"
+    }
+   ]
+  },
+  {
+   "id": "DISTRICT_HOLY_SITE",
+   "name": "Holy Site",
+   "unlock": "TECH_ASTROLOGY",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 1,
+   "adjacency": [
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "kind": "MOUNTAIN"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_FOREST"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    }
+   ]
+  },
+  {
+   "id": "DISTRICT_COMMERCIAL_HUB",
+   "name": "Commercial Hub",
+   "unlock": "TECH_CURRENCY",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 0,
+   "adjacency": [
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "kind": "RIVER"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    }
+   ]
+  },
+  {
    "id": "DISTRICT_ENCAMPMENT",
    "name": "Encampment",
    "hp": 100,
-   "attackRange": 2
+   "attackRange": 2,
+   "unlock": "TECH_BRONZE_WORKING",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 1,
+   "notAdjacentToCityCenter": true,
+   "adjacency": []
+  },
+  {
+   "id": "DISTRICT_THEATER_SQUARE",
+   "name": "Theater Square",
+   "unlock": "CIVIC_DRAMA_AND_POETRY",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 1,
+   "adjacency": [
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    }
+   ]
+  },
+  {
+   "id": "DISTRICT_INDUSTRIAL_ZONE",
+   "name": "Industrial Zone",
+   "unlock": "TECH_APPRENTICESHIP",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 1,
+   "adjacency": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "kind": "IMPROVEMENT",
+     "ref": "IMPROVEMENT_QUARRY"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "IMPROVEMENT",
+     "ref": "IMPROVEMENT_MINE"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "IMPROVEMENT",
+     "ref": "IMPROVEMENT_LUMBER_MILL"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "kind": "STRATEGIC_RESOURCE"
+    }
+   ]
   }
  ]
 }

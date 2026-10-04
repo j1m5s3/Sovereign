@@ -35,7 +35,8 @@ bool Game::resourceImproved(Hex at) const {
 bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
     if (improvement < 0 || static_cast<size_t>(improvement) >= rules_->improvements.size()) return false;
     const Plot& p = state_.plot(at);
-    if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || p.improvement == improvement) return false;
+    if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || state_.districtAt(at) || p.improvement == improvement)
+        return false;
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(improvement)];
     if (!hasUnlocked(player, im.unlock)) return false;
     // A visible resource only takes the improvements that work it.

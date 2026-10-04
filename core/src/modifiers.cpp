@@ -170,6 +170,14 @@ int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, co
     return static_cast<int>(total.toInt());
 }
 
+int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player& player, TypeIndex district) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, ModEffect::DistrictAdjacencyPercent, [&](const Modifier& m) {
+        if (m.district == district) total += m.amount;
+    });
+    return static_cast<int>(total.toInt());
+}
+
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
     Fixed total;
     forEachPlayerModifier(s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) {

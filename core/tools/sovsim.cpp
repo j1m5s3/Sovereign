@@ -129,6 +129,12 @@ int main(int argc, char** argv) {
         long captured = 0, eliminated = 0;
         for (const City& c : game->state().cities) captured += c.owner != c.originalOwner;
         for (const Player& p : game->state().players) eliminated += !p.alive;
+        long districts = 0, districtsDone = 0;
+        for (const City& c : game->state().cities) {
+            districts += static_cast<long>(c.districts.size());
+            for (const CityDistrict& d : c.districts) districtsDone += d.complete;
+        }
+        std::printf("districts placed %ld, finished %ld\n", districts, districtsDone);
         const long camps = static_cast<long>(game->state().camps.size());
         std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld, "
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",

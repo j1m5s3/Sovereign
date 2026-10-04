@@ -1,0 +1,156 @@
+// Specialty districts: placement, population limit, cost, adjacency
+// (03-districts-buildings-wonders.md, Districts: general rules; data: districts.md).
+// Encampment combat, citizen slots, great person points and pillaging arrive
+// with their systems.
+#include <algorithm>
+
+#include "sovereign/game.h"
+#include "sovereign/mapgen.h"
+#include "sovereign/modifiers.h"
+
+namespace sov {
+
+namespace {
+int speedPercent(const GameState& s, const Rules& r) {
+    return r.speeds[static_cast<size_t>(r.speed(s.setup.speed))].costPercent;
+}
+
+bool onRiver(const GameState& s, Hex h) {
+    for (int d = 0; d < kNumDirs; ++d) {
+        if (hasRiver(s, h, static_cast<Dir>(d))) return true;
+    }
+    return false;
+}
+}  // namespace
+
+int Game::districtLimit(const City& city) const {
+    const int per = std::max(1, rules_->globalInt("DISTRICT_POPULATION_REQUIRED_PER"));
+    return 1 + std::max(0, city.population - 1) / per;
+}
+
+int Game::districtCost(PlayerId player, TypeIndex type) const {
+    const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    Fixed cost = Fixed::fromInt(d.cost * speedPercent(state_, *rules_)) / 100;
+    if (d.costProgression != DistrictCostProgression::None) {
+        // x (1 + 9 x the larger share of the tech or civic tree completed).
+        auto share = [](const TreeProgress& t) {
+            const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
+            return t.done.empty() ? Fixed() : Fixed::ratio(done, static_cast<int64_t>(t.done.size()));
+        };
+        const Fixed progress = std::max(share(p.techs), share(p.civics));
+        cost = cost * (Fixed::fromInt(1) + progress * 9);
+    }
+    if (d.costProgression == DistrictCostProgression::NumUnderAvgPlusTech && d.costDiscountPercent > 0) {
+        // Discount for a type built less than the player's own average: A types unlocked,
+        // B districts completed, discounted while B >= A and B / A > this type's count.
+        int unlocked = 0, completed = 0, ofType = 0;
+        for (size_t i = 0; i < rules_->districts.size(); ++i) {
+            const DistrictType& o = rules_->districts[i];
+            if (o.needsPopulation && o.costProgression == DistrictCostProgression::NumUnderAvgPlusTech &&
+                hasUnlocked(player, o.unlock))
+                ++unlocked;
+        }
+        for (const City& c : state_.cities) {
+            if (c.owner != player) continue;
+            for (const CityDistrict& cd : c.districts) {
+                if (!cd.complete || !rules_->districts[static_cast<size_t>(cd.type)].needsPopulation) continue;
+                ++completed;
+                ofType += cd.type == type ? 1 : 0;
+            }
+        }
+        if (unlocked > 0 && completed >= unlocked && completed > ofType * unlocked)
+            cost = cost * (100 - d.costDiscountPercent) / 100;
+    }
+    return std::max(1, static_cast<int>(cost.toInt()));
+}
+
+bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why) const {
+    auto fail = [&](CommandError e) {
+        if (why) *why = e;
+        return false;
+    };
+    if (type < 0 || static_cast<size_t>(type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);
+    const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    if (d.cost <= 0 || !hasUnlocked(city.owner, d.unlock) || city.district(type, false)) return fail(CommandError::CannotBuild);
+    if (d.needsPopulation) {
+        int used = 0;
+        for (const CityDistrict& cd : city.districts) used += rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
+        if (used >= districtLimit(city)) return fail(CommandError::CannotBuild);
+    }
+    auto h = state_.grid.normalize(plot);
+    if (!h || *h != plot) return fail(CommandError::BadTarget);
+    // Owned by this city, within 3, open land, no visible luxury or strategic resource.
+    const Plot& p = state_.plot(plot);
+    if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return fail(CommandError::BadTarget);
+    if (!isLandPassable(state_, *rules_, plot) || state_.cityAt(plot) || state_.districtAt(plot) || campAt(plot))
+        return fail(CommandError::BadTarget);
+    if (resourceVisible(city.owner, plot) &&
+        rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Bonus)
+        return fail(CommandError::BadTarget);
+    if (d.notAdjacentToCityCenter && state_.grid.distance(city.pos, plot) == 1) return fail(CommandError::BadTarget);
+    if (why) *why = CommandError::Ok;
+    return true;
+}
+
+std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
+    std::vector<Hex> out;
+    const City* c = state_.city(id);
+    if (!c) return out;
+    for (const Hex& h : state_.grid.within(c->pos, 3)) {
+        if (canPlaceDistrict(*c, type, h)) out.push_back(h);
+    }
+    return out;
+}
+
+Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const {
+    Yields out{};
+    const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    for (const DistrictAdjacency& a : d.adjacency) {
+        int matches = 0;
+        if (a.kind == DistrictAdjacencyKind::River) {
+            matches = onRiver(state_, plot) ? 1 : 0;
+        } else {
+            for (const Hex& n : state_.grid.within(plot, 1)) {
+                if (n == plot) continue;
+                const Plot& np = state_.plot(n);
+                const CityDistrict* nd = state_.districtAt(n);
+                bool hit = false;
+                switch (a.kind) {
+                    case DistrictAdjacencyKind::Mountain:
+                        hit = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain;
+                        break;
+                    case DistrictAdjacencyKind::AnyDistrict: hit = nd || state_.cityAt(n); break;  // city centers count
+                    case DistrictAdjacencyKind::District: hit = nd && nd->type == a.ref; break;
+                    case DistrictAdjacencyKind::Feature: hit = np.feature == a.ref; break;
+                    case DistrictAdjacencyKind::Improvement: hit = np.improvement == a.ref; break;
+                    case DistrictAdjacencyKind::StrategicResource:
+                        hit = resourceVisible(player, n) &&
+                              rules_->resources[static_cast<size_t>(np.resource)].cls == ResourceClass::Strategic;
+                        break;
+                    case DistrictAdjacencyKind::River: break;
+                }
+                matches += hit ? 1 : 0;
+            }
+        }
+        out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.tilesRequired));  // each "per 2" row floored
+    }
+    const int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
+    for (Fixed& y : out) y = y * std::max(0, pct) / 100;
+    return out;
+}
+
+void Game::placeDistrict(City& city, TypeIndex type, Hex plot) {
+    // Placing clears removable features, any improvement and a bonus resource.
+    Plot& p = state_.plot(plot);
+    if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].removable) p.feature = kNone;
+    p.improvement = kNone;
+    if (p.resource != kNone && rules_->resources[static_cast<size_t>(p.resource)].cls == ResourceClass::Bonus) {
+        p.resource = kNone;
+        p.resourceAmount = 0;
+    }
+    city.districts.push_back({type, plot, false});
+    assignCitizens(city);  // the plot can no longer be worked
+}
+
+}  // namespace sov

@@ -230,6 +230,7 @@ struct BuildingType {
     bool needsRiver = false;
     bool purchasable = false;
     bool granted = false;  // given by the rules (Palace), never built
+    TypeIndex districtType = kNone;  // Rules::districts; kNone while its district is not modelled
     bool meleeCannotDamageWalls = false;
     bool wallsCannotBeBypassed = false;
 };
@@ -247,11 +248,31 @@ struct BarbarianTribe {
     std::string unitClass;  // class of the melee units its camps release
 };
 
-// Districts (districts.md). Only hit points and strike range so far.
+// One adjacency row of a district (03-districts-buildings-wonders.md, Adjacency bonuses).
+enum class DistrictAdjacencyKind : uint8_t { Mountain = 0, River, AnyDistrict, District, Feature, Improvement, StrategicResource };
+struct DistrictAdjacency {
+    YieldType yield = YieldType::Food;
+    int amount = 0;
+    int tilesRequired = 1;  // "per 2" rows: amount per this many matching neighbours, floored
+    DistrictAdjacencyKind kind = DistrictAdjacencyKind::Mountain;
+    TypeIndex ref = kNone;  // district, feature or improvement
+};
+
+enum class DistrictCostProgression : uint8_t { None = 0, NumUnderAvgPlusTech, GameProgress };
+
+// Districts (districts.md). The City Center is the city itself; the others are placed.
 struct DistrictType {
     std::string id, name;
     int hp = 0;
     int attackRange = 0;
+    Unlock unlock;
+    int cost = 0;  // base production cost at Standard speed
+    DistrictCostProgression costProgression = DistrictCostProgression::None;
+    int costDiscountPercent = 0;
+    bool needsPopulation = false;  // counts toward the population limit
+    int maintenance = 0;
+    bool notAdjacentToCityCenter = false;
+    std::vector<DistrictAdjacency> adjacency;
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).
@@ -339,6 +360,7 @@ enum class ModEffect : uint8_t {
     GrantAbility,             // player: matching units gain `ability`
     UnitXpPercent,            // player: combat XP bonus for units of `unitClass` (empty: all)
     UnitStrength,             // player: +amount combat strength for units of `unitClass` (`vsBarbarians`: only against them)
+    DistrictAdjacencyPercent, // player: +amount % adjacency yield for `district`
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -382,6 +404,7 @@ struct Modifier {
     int maxEra = -1;
     TypeIndex ability = kNone;  // GrantAbility
     bool vsBarbarians = false;  // UnitStrength
+    TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
 struct CivType {

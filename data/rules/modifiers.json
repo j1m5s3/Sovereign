@@ -1,5 +1,5 @@
 {
- "_comment": "Hand-written modifiers (Civ VI modifier model: source, collection, effect, requirements, arguments). Building effects come from specs/civ6/data/buildings.md 'Modifiers' column; policy and government modifiers cover the Ancient and Classical cards whose effects the core models (barbarian, influence, loyalty and wonder effects arrive with those systems); later milestones add beliefs, civ and leader abilities.",
+ "_comment": "Hand-written modifiers (Civ VI modifier model: source, collection, effect, requirements, arguments). Building effects come from specs/civ6/data/buildings.md 'Modifiers' column; policy and government modifiers cover the Ancient and Classical cards whose effects the core models (barbarian, influence, loyalty and wonder effects arrive with those systems); district adjacency cards (+100%) arrive with districts; later milestones add beliefs, civ and leader abilities.",
  "modifiers": [
   {"id": "PALACE_CITY_DEFENSE", "source": "BUILDING_PALACE", "collection": "OWNER_CITY",
    "effect": "ADJUST_CITY_DEFENSE", "arguments": {"amount": 3}},
@@ -36,6 +36,11 @@
   {"id": "OLIGARCHY_MELEE_BUFF", "source": "GOVERNMENT_OLIGARCHY", "collection": "PLAYER", "effect": "GRANT_ABILITY", "arguments": {"ability": "ABILITY_OLIGARCHY_MELEE_BUFF"}},
   {"id": "OLIGARCHY_COMBAT_XP", "source": "GOVERNMENT_OLIGARCHY", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"amount": 20}},
   {"id": "DISCIPLINE_VS_BARBARIANS", "source": "POLICY_DISCIPLINE", "collection": "PLAYER", "effect": "ADJUST_UNIT_STRENGTH", "arguments": {"amount": 5, "vsBarbarians": true}},
-  {"id": "SURVEY_RECON_XP", "source": "POLICY_SURVEY", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"unitClass": "RECON", "amount": 100}}
+  {"id": "SURVEY_RECON_XP", "source": "POLICY_SURVEY", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"unitClass": "RECON", "amount": 100}},
+  {"id": "NATURAL_PHILOSOPHY_ADJACENCY", "source": "POLICY_NATURAL_PHILOSOPHY", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_CAMPUS", "amount": 100}},
+  {"id": "SCRIPTURE_ADJACENCY", "source": "POLICY_SCRIPTURE", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_HOLY_SITE", "amount": 100}},
+  {"id": "AESTHETICS_ADJACENCY", "source": "POLICY_AESTHETICS", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_THEATER_SQUARE", "amount": 100}},
+  {"id": "TOWN_CHARTERS_ADJACENCY", "source": "POLICY_TOWN_CHARTERS", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_COMMERCIAL_HUB", "amount": 100}},
+  {"id": "CRAFTSMEN_ADJACENCY", "source": "POLICY_CRAFTSMEN", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_INDUSTRIAL_ZONE", "amount": 100}}
  ]
 }

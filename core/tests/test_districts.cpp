@@ -1,0 +1,189 @@
+// Specialty districts (03-districts-buildings-wonders.md, Districts: general rules).
+#include <algorithm>
+
+#include "helpers.h"
+#include "sovereign/mapgen.h"
+#include "sovereign/serialize.h"
+
+using namespace sov;
+using sovtest::addCity;
+using sovtest::endTurns;
+using sovtest::flatState;
+using sovtest::rules;
+
+namespace {
+size_t at(TypeIndex i) { return static_cast<size_t>(i); }
+TypeIndex district(const char* id) { return rules().district(id); }
+ProductionItem item(const char* id) { return {ProductionKind::District, district(id)}; }
+const Hex kCenter{6, 6};
+
+void learn(GameState& s, PlayerId p, std::initializer_list<const char*> techs) {
+    Player& pl = s.players[static_cast<size_t>(p)];
+    pl.techs.resize(rules().techs.size());
+    for (const char* t : techs) pl.techs.done[at(rules().tech(t))] = 1;
+}
+
+// One city at (6,6) owning every plot within 3, with Writing, Astrology, Bronze
+// Working, Currency and Apprenticeship known. `edit` sets the scene.
+template <typename Edit>
+std::unique_ptr<Game> town(int population, Edit edit) {
+    GameState s = flatState(20, 14, 1);
+    const CityId id = addCity(s, 0, kCenter, true, population);
+    for (const Hex& h : s.grid.within(kCenter, 3)) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = id;
+    }
+    learn(s, 0, {"TECH_WRITING", "TECH_ASTROLOGY", "TECH_BRONZE_WORKING", "TECH_CURRENCY", "TECH_APPRENTICESHIP"});
+    edit(s);
+    return Game::fromScenario(rules(), std::move(s));
+}
+}  // namespace
+
+TEST(district_data_from_civ_tables) {
+    const Rules& r = rules();
+    const DistrictType& campus = r.districts[at(district("DISTRICT_CAMPUS"))];
+    CHECK_EQ(campus.cost, 54);
+    CHECK(!campus.unlock.civic && campus.unlock.index == r.tech("TECH_WRITING"));
+    CHECK(campus.needsPopulation);
+    CHECK_EQ(campus.costDiscountPercent, 40);
+    CHECK_EQ(campus.adjacency.size(), 5u);
+    CHECK(r.districts[at(district("DISTRICT_THEATER_SQUARE"))].unlock.civic);
+    CHECK(r.districts[at(district("DISTRICT_ENCAMPMENT"))].notAdjacentToCityCenter);
+    CHECK_EQ(r.buildings[at(r.building("BUILDING_LIBRARY"))].districtType, district("DISTRICT_CAMPUS"));
+    CHECK_EQ(r.buildings[at(r.building("BUILDING_MONUMENT"))].districtType, district("DISTRICT_CITY_CENTER"));
+}
+
+TEST(district_limit_follows_population) {
+    auto g = town(1, [](GameState&) {});
+    City c = *g->state().city(1);
+    CHECK_EQ(g->districtLimit(c), 1);
+    c.population = 4;
+    CHECK_EQ(g->districtLimit(c), 2);
+    c.population = 7;
+    CHECK_EQ(g->districtLimit(c), 3);
+}
+
+TEST(district_placement_rules) {
+    const Hex woods{8, 6};
+    auto g = town(1, [&](GameState& s) { s.plot(woods).feature = rules().feature("FEATURE_FOREST"); });
+    const City& c = *g->state().city(1);
+    CHECK(!g->canPlaceDistrict(c, district("DISTRICT_CAMPUS"), kCenter));      // the city center
+    CHECK(!g->canPlaceDistrict(c, district("DISTRICT_CAMPUS"), {10, 6}));      // four plots out
+    CHECK(!g->canPlaceDistrict(c, district("DISTRICT_ENCAMPMENT"), {7, 6}));   // next to the center
+    CHECK(g->canPlaceDistrict(c, district("DISTRICT_ENCAMPMENT"), woods));
+    CHECK(!g->canPlaceDistrict(c, district("DISTRICT_THEATER_SQUARE"), woods));  // Drama and Poetry unknown
+    CHECK_EQ(g->submit(Command::setProduction(0, 1, item("DISTRICT_CAMPUS"))), CommandError::BadTarget);
+    CHECK_EQ(g->submit(Command::setProduction(0, 1, item("DISTRICT_CAMPUS"), woods)), CommandError::Ok);
+    const City& placed = *g->state().city(1);
+    REQUIRE(placed.districts.size() == 1u);
+    CHECK_EQ(placed.districts[0].pos, woods);
+    CHECK(!placed.districts[0].complete);
+    CHECK_EQ(g->state().plot(woods).feature, kNone);  // placing clears woods
+    // The plot is reserved: no citizen, no improvement, no second district.
+    std::vector<Hex> workable = g->workablePlots(placed);
+    CHECK(std::find(workable.begin(), workable.end(), woods) == workable.end());
+    CHECK(!g->canImproveAt(0, woods, rules().improvement("IMPROVEMENT_FARM")));
+    // Population 1 allows one district; re-selecting the placed one needs no plot.
+    CHECK_EQ(g->submit(Command::queueProduction(0, 1, item("DISTRICT_HOLY_SITE"), {5, 4})), CommandError::CannotBuild);
+    CHECK_EQ(g->submit(Command::setProduction(0, 1, {ProductionKind::Unit, rules().unit("UNIT_WARRIOR")})), CommandError::Ok);
+    CHECK_EQ(g->submit(Command::setProduction(0, 1, item("DISTRICT_CAMPUS"))), CommandError::Ok);
+    CHECK_EQ(g->state().city(1)->districts.size(), 1u);
+    // Districts are never bought.
+    CHECK_EQ(g->purchaseCost(0, item("DISTRICT_CAMPUS")), -1);
+}
+
+TEST(district_adjacency_yields) {
+    const Hex spot{8, 6};
+    // Neighbours of (8,6): (7,5) (8,5) (7,6) (9,6) (7,7) (8,7); the center (6,6) is two away.
+    auto g = town(4, [&](GameState& s) {
+        for (Hex h : {Hex{8, 5}, Hex{9, 6}}) s.plot(h).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        for (Hex h : {Hex{7, 7}, Hex{8, 7}}) s.plot(h).feature = rules().feature("FEATURE_JUNGLE");
+    });
+    // 2 mountains (+1 each), 2 rainforest (+1 per 2).
+    Yields y = g->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot);
+    CHECK_EQ(y[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(3));
+    CHECK_EQ(g->districtAdjacency(0, district("DISTRICT_HOLY_SITE"), spot)[static_cast<size_t>(YieldType::Faith)],
+             Fixed::fromInt(2));
+    // One neighbouring district gives nothing, two give +1 (placed districts count before they finish).
+    CHECK_EQ(g->submit(Command::setProduction(0, 1, item("DISTRICT_HOLY_SITE"), {7, 6})), CommandError::Ok);
+    CHECK_EQ(g->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot)[static_cast<size_t>(YieldType::Science)],
+             Fixed::fromInt(3));
+    CHECK_EQ(g->submit(Command::queueProduction(0, 1, item("DISTRICT_COMMERCIAL_HUB"), {7, 5})), CommandError::Ok);
+    y = g->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot);
+    CHECK_EQ(y[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(4));
+
+    // Commercial Hub on a river: +2 gold; Industrial Zone: quarry +1, two mines +1.
+    auto river = town(1, [&](GameState& s) {
+        s.plot(spot).riverEdges = kRiverE;
+        s.plot({8, 5}).improvement = rules().improvement("IMPROVEMENT_QUARRY");
+        s.plot({7, 7}).improvement = rules().improvement("IMPROVEMENT_MINE");
+        s.plot({8, 7}).improvement = rules().improvement("IMPROVEMENT_MINE");
+    });
+    CHECK_EQ(river->districtAdjacency(0, district("DISTRICT_COMMERCIAL_HUB"), spot)[static_cast<size_t>(YieldType::Gold)],
+             Fixed::fromInt(2));
+    CHECK_EQ(river->districtAdjacency(0, district("DISTRICT_INDUSTRIAL_ZONE"), spot)[static_cast<size_t>(YieldType::Production)],
+             Fixed::fromInt(2));
+
+    // Natural Philosophy doubles Campus adjacency.
+    auto wise = town(1, [&](GameState& s) {
+        s.plot({8, 5}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        s.players[0].government = rules().government("GOVERNMENT_CHIEFDOM");
+        s.players[0].policies = {kNone, rules().policy("POLICY_NATURAL_PHILOSOPHY")};
+    });
+    CHECK_EQ(wise->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot)[static_cast<size_t>(YieldType::Science)],
+             Fixed::fromInt(2));
+}
+
+TEST(district_cost_grows_with_progress_and_discounts) {
+    auto fresh = town(1, [](GameState& s) { s.players[0].techs.done.assign(rules().techs.size(), 0); });
+    CHECK_EQ(fresh->districtCost(0, district("DISTRICT_CAMPUS")), 54);
+    // x (1 + 9 x share of the tech tree known): 5 techs known here.
+    auto g = town(1, [](GameState&) {});
+    const int n = static_cast<int>(rules().techs.size());
+    const int expect = 54 * (n + 9 * 5) / n;
+    const int campus = g->districtCost(0, district("DISTRICT_CAMPUS"));
+    CHECK(campus >= expect - 1 && campus <= expect);
+    // With only Writing and Astrology known (A = 2) and two Campuses done (B = 2),
+    // a Holy Site (none yet) costs 40% less; a third Campus does not.
+    GameState s = flatState(20, 14, 1);
+    addCity(s, 0, kCenter, true, 4);
+    addCity(s, 0, {14, 6}, false, 4);
+    learn(s, 0, {"TECH_WRITING", "TECH_ASTROLOGY"});
+    s.city(1)->districts.push_back({district("DISTRICT_CAMPUS"), {8, 6}, true});
+    s.city(2)->districts.push_back({district("DISTRICT_CAMPUS"), {16, 6}, true});
+    auto d = Game::fromScenario(rules(), std::move(s));
+    const int full = d->districtCost(0, district("DISTRICT_CAMPUS"));
+    const int holy = d->districtCost(0, district("DISTRICT_HOLY_SITE"));
+    CHECK(holy >= full * 60 / 100 - 1 && holy <= full * 60 / 100 + 1);
+}
+
+TEST(finished_district_yields_and_unlocks_buildings) {
+    const Hex spot{8, 6};
+    auto g = town(1, [&](GameState& s) {
+        s.plot({8, 5}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        City& c = *s.city(1);
+        c.districts.push_back({district("DISTRICT_CAMPUS"), spot, false});
+        c.queue = {item("DISTRICT_CAMPUS")};
+        c.progress.push_back({item("DISTRICT_CAMPUS"), Fixed::fromInt(5000)});
+    });
+    const ProductionItem library{ProductionKind::Building, rules().building("BUILDING_LIBRARY")};
+    CHECK(!g->canProduce(*g->state().city(1), library));
+    const Fixed science = g->cityReport(1).yields[static_cast<size_t>(YieldType::Science)];
+    const Fixed gold = g->goldPerTurn(0);
+    endTurns(*g, 1);
+    const City& c = *g->state().city(1);
+    REQUIRE(c.districts.size() == 1u);
+    CHECK(c.districts[0].complete);
+    CHECK(g->canProduce(c, library));
+    // +1 science from the mountain, and 1 gold of district maintenance.
+    CHECK_EQ(g->cityReport(1).yields[static_cast<size_t>(YieldType::Science)], science + Fixed::fromInt(1));
+    CHECK_EQ(g->goldPerTurn(0), gold - Fixed::fromInt(1));
+    CHECK(!g->canProduce(c, item("DISTRICT_CAMPUS")));  // one per city
+
+    // Districts survive a save round trip.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->stateHash(), g->stateHash());
+    CHECK(loaded->state().city(1)->districts[0].complete);
+}

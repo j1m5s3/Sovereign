@@ -151,6 +151,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"GRANT_ABILITY", ModEffect::GrantAbility},
         {"ADJUST_UNIT_XP_PERCENT", ModEffect::UnitXpPercent},
         {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
+        {"ADJUST_DISTRICT_ADJACENCY_PERCENT", ModEffect::DistrictAdjacencyPercent},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -179,6 +180,14 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         *error = "unknown ability " + args["ability"].str();
         return false;
     }
+    if (args.has("district") && (mod.district = rules.district(args["district"].str())) == kNone) {
+        *error = "unknown district " + args["district"].str();
+        return false;
+    }
+    if (mod.effect == ModEffect::DistrictAdjacencyPercent && mod.district == kNone) {
+        *error = "ADJUST_DISTRICT_ADJACENCY_PERCENT needs a district";
+        return false;
+    }
     if (mod.effect == ModEffect::GrantAbility && mod.ability == kNone) {
         *error = "GRANT_ABILITY needs an ability";
         return false;
@@ -186,7 +195,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     // Player-wide effects and the player collection go together.
     const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
                               mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
-                              mod.effect == ModEffect::UnitStrength;
+                              mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent;
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     if (playerEffect != (mod.collection == ModCollection::Player)) {
         *error = "effect " + e + " does not fit collection " + c;
@@ -620,7 +629,62 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.name = j["name"].str(id);
         d.hp = static_cast<int>(j["hp"].integer(0));
         d.attackRange = static_cast<int>(j["attackRange"].integer(0));
+        const std::string where = "district " + id;
+        if (!readUnlock(j["unlock"], d.unlock, where)) return false;
+        d.cost = static_cast<int>(j["cost"].integer(0));
+        const std::string& progression = j["costProgression"].str("NO_COST_PROGRESSION");
+        d.costProgression = progression == "NUM_UNDER_AVG_PLUS_TECH" ? DistrictCostProgression::NumUnderAvgPlusTech
+                            : progression == "GAME_PROGRESS"         ? DistrictCostProgression::GameProgress
+                                                                     : DistrictCostProgression::None;
+        d.costDiscountPercent = static_cast<int>(j["costDiscountPercent"].integer(0));
+        d.needsPopulation = j["needsPopulation"].boolean(false);
+        d.maintenance = static_cast<int>(j["maintenance"].integer(0));
+        d.notAdjacentToCityCenter = j["notAdjacentToCityCenter"].boolean(false);
         districts.push_back(std::move(d));
+    }
+    for (BuildingType& b : buildings) b.districtType = district(b.district);
+    // Second pass: adjacency rows may name districts later in the table.
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["districts"]) {
+            const std::string where = "district " + id;
+            for (const Json& a : j["adjacency"].items()) {
+                DistrictAdjacency adj;
+                if (!parseYieldName(a["yield"].str(), adj.yield)) {
+                    *error = where + ": bad adjacency yield";
+                    return false;
+                }
+                adj.amount = static_cast<int>(a["amount"].integer(0));
+                adj.tilesRequired = std::max(1, static_cast<int>(a["tilesRequired"].integer(1)));
+                const std::string& kind = a["kind"].str();
+                const std::string& ref = a["ref"].str();
+                if (kind == "MOUNTAIN") adj.kind = DistrictAdjacencyKind::Mountain;
+                else if (kind == "RIVER") adj.kind = DistrictAdjacencyKind::River;
+                else if (kind == "ANY_DISTRICT") adj.kind = DistrictAdjacencyKind::AnyDistrict;
+                else if (kind == "STRATEGIC_RESOURCE") adj.kind = DistrictAdjacencyKind::StrategicResource;
+                else if (kind == "DISTRICT") {
+                    adj.kind = DistrictAdjacencyKind::District;
+                    adj.ref = district(ref);
+                } else if (kind == "FEATURE") {
+                    adj.kind = DistrictAdjacencyKind::Feature;
+                    adj.ref = feature(ref);
+                } else if (kind == "IMPROVEMENT") {
+                    adj.kind = DistrictAdjacencyKind::Improvement;
+                    adj.ref = improvement(ref);
+                } else {
+                    *error = where + ": unknown adjacency kind " + kind;
+                    return false;
+                }
+                const bool needsRef = adj.kind == DistrictAdjacencyKind::District || adj.kind == DistrictAdjacencyKind::Feature ||
+                                      adj.kind == DistrictAdjacencyKind::Improvement;
+                if (needsRef && adj.ref == kNone) {
+                    *error = where + ": unknown adjacency reference " + ref;
+                    return false;
+                }
+                districts[i].adjacency.push_back(adj);
+            }
+            ++i;
+        }
     }
     for (const auto& [id, j] : m.tables["barbarianTribes"]) {
         BarbarianTribe t;

@@ -1,7 +1,7 @@
 // A deliberately dumb player for soak tests and the headless simulator: founds
 // a city with each settler where it stands when allowed, declares random wars,
 // attacks at even odds (cities too), strikes with walled cities, sometimes
-// razes what it captures, goes for nearby enemies and barbarian camps, wanders
+// razes what it captures, places districts where adjacency is best, goes for nearby enemies and barbarian camps, wanders
 // other units to random known plots, then ends the turn. Not the game AI (that is MVP-6).
 // It only talks to the core through commands, like any real player.
 #pragma once
@@ -109,7 +109,22 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
     }
     for (CityId cid : game.citiesNeedingProduction(me)) {
         std::vector<ProductionItem> items = game.buildableItems(cid);
-        if (!items.empty()) game.submit(Command::setProduction(me, cid, items[rng.below(static_cast<uint32_t>(items.size()))]));
+        if (items.empty()) continue;
+        const ProductionItem pick = items[rng.below(static_cast<uint32_t>(items.size()))];
+        Hex at{};
+        if (pick.kind == ProductionKind::District && !game.state().city(cid)->district(pick.type, false)) {
+            // New districts go where their adjacency is best (ties: first plot).
+            Fixed best = Fixed::fromInt(-1);
+            for (const Hex& h : game.districtPlots(cid, pick.type)) {
+                Fixed total;
+                for (const Fixed& y : game.districtAdjacency(me, pick.type, h)) total += y;
+                if (total > best) {
+                    best = total;
+                    at = h;
+                }
+            }
+        }
+        game.submit(Command::setProduction(me, cid, pick, at));
     }
     // Research: a random available tech and civic; adopt the newest-unlocked
     // government when changes are free, then fill empty policy slots.
