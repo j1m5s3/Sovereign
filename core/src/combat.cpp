@@ -313,17 +313,24 @@ void Game::gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool atta
 // ------------------------------------------------------------------ commands
 
 CommandError Game::validateCombat(const Command& c) const {
+    // Range-check arg before narrowing it to a player or promotion index.
+    const bool playerArg = c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size();
     switch (c.type) {
         case CommandType::DeclareWar:
-            return canDeclareWar(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeclareWar;
+            return playerArg && canDeclareWar(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
+                                                                                     : CommandError::CannotDeclareWar;
         case CommandType::MakePeace:
-            return canMakePeace(c.player, c.arg) ? CommandError::Ok : CommandError::CannotMakePeace;
+            return playerArg && canMakePeace(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
+                                                                                    : CommandError::CannotMakePeace;
         default: break;
     }
     const Unit* u = state_.unit(c.id);
     if (!u) return CommandError::BadUnit;
     if (u->owner != c.player) return CommandError::NotYourUnit;
-    if (c.type == CommandType::Promote) return canPromote(c.id, c.arg) ? CommandError::Ok : CommandError::CannotPromote;
+    if (c.type == CommandType::Promote) {
+        const bool known = c.arg >= 0 && static_cast<size_t>(c.arg) < rules_->promotions.size();
+        return known && canPromote(c.id, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotPromote;
+    }
 
     const UnitType& ut = typeOf(*rules_, *u);
     auto t = state_.grid.normalize(c.target);
@@ -392,7 +399,7 @@ void Game::applyCombat(const Command& c) {
         }
         case CommandType::Promote: {
             Unit* u = state_.unit(c.id);
-            u->promotions.push_back(c.arg);
+            u->promotions.push_back(static_cast<TypeIndex>(c.arg));
             u->xp = 0;  // excess XP is lost on promotion
             u->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), u->hp + rules_->globalInt("EXPERIENCE_PROMOTE_HEALED"));
             u->movesLeft = Fixed();  // promoting ends the unit's turn

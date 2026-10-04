@@ -67,6 +67,9 @@ TEST(war_and_peace_need_minimum_turns) {
     auto g = duel([](GameState&) {}, false);
     CHECK(!g->atWar(0, 1));
     CHECK_EQ(g->submit(Command::declareWar(0, 0)), CommandError::CannotDeclareWar);
+    Command far = Command::declareWar(0, 1);
+    far.arg = 257;  // must not wrap to player 1
+    CHECK_EQ(g->submit(far), CommandError::CannotDeclareWar);
     CHECK_EQ(g->submit(Command::declareWar(0, 1)), CommandError::Ok);
     CHECK(g->atWar(0, 1) && g->atWar(1, 0));
     CHECK_EQ(g->submit(Command::declareWar(0, 1)), CommandError::CannotDeclareWar);
