@@ -477,5 +477,48 @@
   "YIELD_FOOD_CITY_TERRAIN_REPLACE": 2,
   "YIELD_MODIFIER_PER_EARNED_GREAT_PERSON_MAXIMUM": 30,
   "YIELD_PRODUCTION_CITY_TERRAIN_REPLACE": 1
- }
+ },
+ "happinessLevels": [
+  {
+   "id": "HAPPINESS_REVOLT",
+   "growthPercent": -100,
+   "yieldPercent": -40
+  },
+  {
+   "id": "HAPPINESS_UNREST",
+   "growthPercent": -100,
+   "yieldPercent": -30,
+   "minBalance": -6
+  },
+  {
+   "id": "HAPPINESS_UNHAPPY",
+   "growthPercent": -30,
+   "yieldPercent": -20,
+   "minBalance": -4
+  },
+  {
+   "id": "HAPPINESS_DISPLEASED",
+   "growthPercent": -15,
+   "yieldPercent": -10,
+   "minBalance": -2
+  },
+  {
+   "id": "HAPPINESS_CONTENT",
+   "growthPercent": 0,
+   "yieldPercent": 0,
+   "minBalance": 0
+  },
+  {
+   "id": "HAPPINESS_HAPPY",
+   "growthPercent": 10,
+   "yieldPercent": 10,
+   "minBalance": 3
+  },
+  {
+   "id": "HAPPINESS_ECSTATIC",
+   "growthPercent": 20,
+   "yieldPercent": 20,
+   "minBalance": 5
+  }
+ ]
 }

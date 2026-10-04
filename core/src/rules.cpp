@@ -1,5 +1,7 @@
 #include "sovereign/rules.h"
 
+#include <algorithm>
+#include <climits>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -100,6 +102,67 @@ bool resolveList(const Json& list, const std::function<TypeIndex(const std::stri
     }
     return true;
 }
+bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, std::string* error) {
+    if (j.isNull()) return true;
+    set.any = j.has("any");
+    const Json& list = set.any ? j["any"] : j["all"];
+    for (const Json& r : list.items()) {
+        Requirement q;
+        const std::string& type = r["type"].str();
+        q.negate = r["negate"].boolean(false);
+        q.value = static_cast<int>(r["value"].integer(0));
+        const std::string& ref = r["ref"].str();
+        if (type == "PLOT_HAS_RESOURCE") { q.type = ReqType::PlotHasResource; q.ref = rules.resource(ref); }
+        else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = rules.feature(ref); }
+        else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
+        else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
+        else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
+        else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
+        else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
+        else {
+            *error = "unknown requirement type " + type;
+            return false;
+        }
+        bool needsRef = q.type == ReqType::PlotHasResource || q.type == ReqType::PlotHasFeature ||
+                        q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding;
+        if (needsRef && q.ref == kNone) {
+            *error = "requirement " + type + " refers to unknown " + ref;
+            return false;
+        }
+        set.reqs.push_back(q);
+    }
+    return true;
+}
+
+bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string* error) {
+    static const std::pair<const char*, ModCollection> collections[] = {
+        {"OWNER_CITY", ModCollection::OwnerCity},         {"OWNER_CITY_PLOTS", ModCollection::OwnerCityPlots},
+        {"PLAYER_CITIES", ModCollection::PlayerCities},   {"PLAYER_CAPITAL", ModCollection::PlayerCapital},
+        {"PLAYER_CITY_PLOTS", ModCollection::PlayerCityPlots},
+    };
+    static const std::pair<const char*, ModEffect> effects[] = {
+        {"ADJUST_CITY_YIELD", ModEffect::CityYield},           {"ADJUST_CITY_YIELD_PERCENT", ModEffect::CityYieldPercent},
+        {"ADJUST_PLOT_YIELD", ModEffect::PlotYield},           {"ADJUST_CITY_HOUSING", ModEffect::CityHousing},
+        {"ADJUST_CITY_AMENITIES", ModEffect::CityAmenities},   {"ADJUST_CITY_GROWTH_PERCENT", ModEffect::CityGrowthPercent},
+        {"ADJUST_CITY_DEFENSE", ModEffect::CityDefense},
+    };
+    const std::string& c = j["collection"].str();
+    const std::string& e = j["effect"].str();
+    bool foundC = false, foundE = false;
+    for (const auto& [name, v] : collections) if (c == name) { mod.collection = v; foundC = true; }
+    for (const auto& [name, v] : effects) if (e == name) { mod.effect = v; foundE = true; }
+    if (!foundC) { *error = "unknown collection " + c; return false; }
+    if (!foundE) { *error = "unknown effect " + e; return false; }
+    if (mod.source.empty()) { *error = "no source"; return false; }
+    const Json& args = j["arguments"];
+    if (args.has("yield") && !parseYieldName(args["yield"].str(), mod.yield)) {
+        *error = "unknown yield " + args["yield"].str();
+        return false;
+    }
+    mod.amount = args["amount"].fixed();
+    return parseRequirements(j["ownerRequirements"], mod.ownerReqs, rules, error) &&
+           parseRequirements(j["subjectRequirements"], mod.subjectReqs, rules, error);
+}
 }  // namespace
 
 const char* yieldName(YieldType y) { return kYieldNames[static_cast<size_t>(y)]; }
@@ -125,7 +188,8 @@ uint64_t fnv1a(const void* data, size_t size, uint64_t h) {
 
 const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
-        "globals.json", "terrain.json", "resources.json", "units.json", "civilizations.json", "setup.json",
+        "globals.json",   "terrain.json",       "resources.json", "units.json",
+        "buildings.json", "civilizations.json", "setup.json",     "modifiers.json",
     };
     return names;
 }
@@ -240,8 +304,58 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.zoneOfControl = j["zoneOfControl"].boolean(false);
         u.foundCity = j["foundCity"].boolean(false);
         u.buildCharges = static_cast<int>(j["buildCharges"].integer(0));
+        u.costProgression = static_cast<int>(j["costProgression"].integer(0));
+        u.popCost = static_cast<int>(j["popCost"].integer(0));
+        u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
+        u.mustPurchase = j["mustPurchase"].boolean(false);
+        u.purchaseYield = j["purchaseYield"].str();
+        u.unlock = j["unlock"].str();
         units.push_back(std::move(u));
     }
+    {
+        const Table& rows = m.tables["buildings"];
+        for (const auto& [id, j] : rows) {
+            BuildingType b;
+            b.id = id;
+            b.name = j["name"].str(id);
+            b.district = j["district"].str("DISTRICT_CITY_CENTER");
+            b.unlock = j["unlock"].str();
+            b.cost = static_cast<int>(j["cost"].integer(0));
+            b.maintenance = static_cast<int>(j["maintenance"].integer(0));
+            b.yields = readYields(j["yields"]);
+            b.housing = j["housing"].fixed();
+            b.amenities = static_cast<int>(j["amenities"].integer(0));
+            b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
+            b.defense = static_cast<int>(j["defense"].integer(0));
+            b.needsRiver = j["needsRiver"].boolean(false);
+            b.purchasable = j["purchasable"].boolean(false);
+            buildings.push_back(std::move(b));
+        }
+        // Second pass: building references may point forward.
+        auto findBuilding = [this](const std::string& bid) { return building(bid); };
+        for (size_t i = 0; i < rows.size(); ++i) {
+            if (!resolveList(rows[i].second["requires"], findBuilding, buildings[i].prereqs, "building " + rows[i].first, error))
+                return false;
+        }
+    }
+    for (const auto& [id, j] : m.tables["grantedBuildings"]) {
+        TypeIndex b = building(j["building"].str());
+        if (b == kNone) {
+            *error = "granted building " + id + ": unknown building";
+            return false;
+        }
+        buildings[static_cast<size_t>(b)].granted = true;
+    }
+    for (const auto& [id, j] : m.tables["happinessLevels"]) {
+        HappinessLevel h;
+        h.id = id;
+        h.minBalance = j.has("minBalance") ? static_cast<int>(j["minBalance"].integer(0)) : INT_MIN;
+        h.growthPercent = static_cast<int>(j["growthPercent"].integer(0));
+        h.yieldPercent = static_cast<int>(j["yieldPercent"].integer(0));
+        happiness.push_back(std::move(h));
+    }
+    std::sort(happiness.begin(), happiness.end(),
+              [](const HappinessLevel& a, const HappinessLevel& b) { return a.minBalance < b.minBalance; });
     for (const auto& [id, j] : m.tables["civilizations"]) {
         CivType c;
         c.id = id;
@@ -249,6 +363,26 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.leader = j["leader"].str();
         for (const Json& n : j["cityNames"].items()) c.cityNames.push_back(n.str());
         civs.push_back(std::move(c));
+    }
+    for (const auto& [id, j] : m.tables["modifiers"]) {
+        Modifier mod;
+        mod.id = id;
+        mod.source = j["source"].str();
+        if (!parseModifier(j, mod, *this, error)) {
+            *error = "modifier " + id + ": " + *error;
+            return false;
+        }
+        if (mod.source == "EVERYONE") {
+            mod.sourceKind = ModSource::Everyone;
+        } else if ((mod.sourceIndex = building(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Building;
+        } else if ((mod.sourceIndex = civ(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Civ;
+        } else {
+            *error = "modifier " + id + ": unknown source " + mod.source;
+            return false;
+        }
+        modifiers.push_back(std::move(mod));
     }
     for (const auto& [id, j] : m.tables["mapSizes"]) {
         MapSizeType s;
@@ -279,7 +413,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     }
 
     static const char* required[] = {"CITY_MIN_RANGE", "START_DISTANCE_MAJOR_CIVILIZATION", "MOVEMENT_RIVER_COST",
-                                     "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS"};
+                                     "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS",
+                                     "CITY_FOOD_CONSUMPTION_PER_POPULATION", "CITY_GROWTH_THRESHOLD",
+                                     "CITY_GROWTH_MULTIPLIER", "CITY_GROWTH_EXPONENT", "CULTURE_COST_FIRST_PLOT",
+                                     "CULTURE_COST_LATER_PLOT_MULTIPLIER", "CULTURE_COST_LATER_PLOT_EXPONENT",
+                                     "CITY_POP_PER_AMENITY", "PLOT_BUY_BASE_COST", "GOLD_PURCHASE_MULTIPLIER"};
     for (const char* name : required) {
         if (!hasGlobal(name)) {
             *error = std::string("missing required global ") + name;
@@ -297,6 +435,15 @@ TypeIndex Rules::terrain(const std::string& id) const { return findIn(terrains, 
 TypeIndex Rules::feature(const std::string& id) const { return findIn(features, id); }
 TypeIndex Rules::resource(const std::string& id) const { return findIn(resources, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
+TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
+
+std::vector<const Modifier*> Rules::modifiersFrom(const std::string& source) const {
+    std::vector<const Modifier*> out;
+    for (const Modifier& m : modifiers) {
+        if (m.source == source) out.push_back(&m);
+    }
+    return out;
+}
 TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
 TypeIndex Rules::mapSize(const std::string& id) const { return findIn(mapSizes, id); }
 TypeIndex Rules::speed(const std::string& id) const { return findIn(speeds, id); }

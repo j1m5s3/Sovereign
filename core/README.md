@@ -42,12 +42,14 @@ same command must print the same hash.
 | Commands (the only way state changes) | `include/sovereign/commands.h` |
 | Game: submit, replay, paths, visibility, turns | `include/sovereign/game.h` |
 | Map generator and start positions | `include/sovereign/mapgen.h` |
+| Cities: yields, growth, borders, production | `src/city.cpp` (queries on `Game`) |
+| Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 
-Rules data: `data/rules/{globals,terrain,resources,units}.json` are generated
+Rules data: `data/rules/{globals,terrain,resources,units,buildings}.json` are generated
 from `specs/civ6/data` by `python3 tools/rules_gen/gen_rules.py`; never edit
-them by hand. `civilizations.json` and `setup.json` are Sovereign's own and
-hand-written. Pass more `--rules` directories to layer mods on top (rows
+them by hand (`buildings.json` too). `civilizations.json`, `setup.json` and
+`modifiers.json` are Sovereign's own and hand-written. Pass more `--rules` directories to layer mods on top (rows
 replace by `id`; `"delete": true` removes one).
 
 If you change rules or the save format on purpose, the golden test fails;

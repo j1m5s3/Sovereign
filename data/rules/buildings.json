@@ -1,0 +1,896 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "buildings": [
+  {
+   "id": "BUILDING_HANGAR",
+   "name": "Hangar",
+   "district": "DISTRICT_AERODROME",
+   "cost": 380,
+   "maintenance": 1,
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "unlock": "Flight",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_AIRPORT",
+   "name": "Airport",
+   "district": "DISTRICT_AERODROME",
+   "cost": 480,
+   "maintenance": 2,
+   "yields": {
+    "PRODUCTION": 4
+   },
+   "unlock": "Advanced Flight",
+   "requires": [
+    "BUILDING_HANGAR"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_LIBRARY",
+   "name": "Library",
+   "district": "DISTRICT_CAMPUS",
+   "cost": 90,
+   "maintenance": 1,
+   "yields": {
+    "SCIENCE": 2
+   },
+   "unlock": "Writing",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_UNIVERSITY",
+   "name": "University",
+   "district": "DISTRICT_CAMPUS",
+   "cost": 250,
+   "maintenance": 2,
+   "yields": {
+    "SCIENCE": 4
+   },
+   "unlock": "Education",
+   "housing": 1,
+   "requires": [
+    "BUILDING_LIBRARY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_RESEARCH_LAB",
+   "name": "Research Lab",
+   "district": "DISTRICT_CAMPUS",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": {
+    "SCIENCE": 3
+   },
+   "unlock": "Chemistry",
+   "requires": [
+    "BUILDING_UNIVERSITY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_PALACE",
+   "name": "Palace",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 1,
+   "maintenance": 0,
+   "yields": {
+    "CULTURE": 1,
+    "GOLD": 5,
+    "PRODUCTION": 2,
+    "SCIENCE": 2
+   },
+   "housing": 1,
+   "amenities": 2
+  },
+  {
+   "id": "BUILDING_MONUMENT",
+   "name": "Monument",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 60,
+   "maintenance": 0,
+   "yields": {
+    "CULTURE": 1
+   },
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_GRANARY",
+   "name": "Granary",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 65,
+   "maintenance": 0,
+   "yields": {
+    "FOOD": 1
+   },
+   "unlock": "Pottery",
+   "housing": 2,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ANCIENT_WALLS",
+   "name": "Ancient Walls",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 80,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Masonry",
+   "outerDefenseHp": 100,
+   "defense": 3
+  },
+  {
+   "id": "BUILDING_WATER_MILL",
+   "name": "Water Mill",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 80,
+   "maintenance": 0,
+   "yields": {
+    "FOOD": 1,
+    "PRODUCTION": 1
+   },
+   "unlock": "Wheel",
+   "needsRiver": true,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_FLOOD_BARRIER",
+   "name": "Flood Barrier",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 80,
+   "maintenance": 1,
+   "yields": {},
+   "unlock": "Computers"
+  },
+  {
+   "id": "BUILDING_SEWER",
+   "name": "Sewer",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 200,
+   "maintenance": 2,
+   "yields": {},
+   "unlock": "Sanitation",
+   "housing": 2,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_MEDIEVAL_WALLS",
+   "name": "Medieval Walls",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 220,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Castles",
+   "outerDefenseHp": 100,
+   "defense": 3,
+   "requires": [
+    "BUILDING_ANCIENT_WALLS"
+   ]
+  },
+  {
+   "id": "BUILDING_RENAISSANCE_WALLS",
+   "name": "Renaissance Walls",
+   "district": "DISTRICT_CITY_CENTER",
+   "cost": 300,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Siege Tactics",
+   "outerDefenseHp": 100,
+   "defense": 3,
+   "requires": [
+    "BUILDING_MEDIEVAL_WALLS"
+   ]
+  },
+  {
+   "id": "BUILDING_MARKET",
+   "name": "Market",
+   "district": "DISTRICT_COMMERCIAL_HUB",
+   "cost": 120,
+   "maintenance": 0,
+   "yields": {
+    "GOLD": 2
+   },
+   "unlock": "Currency",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_BANK",
+   "name": "Bank",
+   "district": "DISTRICT_COMMERCIAL_HUB",
+   "cost": 290,
+   "maintenance": 0,
+   "yields": {
+    "GOLD": 5
+   },
+   "unlock": "Banking",
+   "requires": [
+    "BUILDING_MARKET"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_STOCK_EXCHANGE",
+   "name": "Stock Exchange",
+   "district": "DISTRICT_COMMERCIAL_HUB",
+   "cost": 330,
+   "maintenance": 0,
+   "yields": {
+    "GOLD": 4
+   },
+   "unlock": "Economics",
+   "requires": [
+    "BUILDING_BANK"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_HYDROELECTRIC_DAM",
+   "name": "Hydroelectric Dam",
+   "district": "DISTRICT_DAM",
+   "cost": 440,
+   "maintenance": 1,
+   "yields": {},
+   "unlock": "Electricity",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_CONSULATE",
+   "name": "Consulate",
+   "district": "DISTRICT_DIPLOMATIC_QUARTER",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {},
+   "unlock": "Mathematics",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_CHANCERY",
+   "name": "Chancery",
+   "district": "DISTRICT_DIPLOMATIC_QUARTER",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {},
+   "unlock": "Diplomatic Service",
+   "requires": [
+    "BUILDING_CONSULATE"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_BARRACKS",
+   "name": "Barracks",
+   "district": "DISTRICT_ENCAMPMENT",
+   "cost": 90,
+   "maintenance": 1,
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "Bronze Working",
+   "housing": 1,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_STABLE",
+   "name": "Stable",
+   "district": "DISTRICT_ENCAMPMENT",
+   "cost": 120,
+   "maintenance": 1,
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "Horseback Riding",
+   "housing": 1,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ARMORY",
+   "name": "Armory",
+   "district": "DISTRICT_ENCAMPMENT",
+   "cost": 195,
+   "maintenance": 2,
+   "yields": {
+    "PRODUCTION": 3
+   },
+   "unlock": "Military Engineering",
+   "requires": [
+    "BUILDING_BARRACKS",
+    "BUILDING_STABLE"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_MILITARY_ACADEMY",
+   "name": "Military Academy",
+   "district": "DISTRICT_ENCAMPMENT",
+   "cost": 330,
+   "maintenance": 2,
+   "yields": {
+    "PRODUCTION": 4
+   },
+   "unlock": "Military Science",
+   "housing": 1,
+   "requires": [
+    "BUILDING_ARMORY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ARENA",
+   "name": "Arena",
+   "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {
+    "CULTURE": 1
+   },
+   "unlock": "Games and Recreation",
+   "amenities": 2,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ZOO",
+   "name": "Zoo",
+   "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "cost": 360,
+   "maintenance": 2,
+   "yields": {},
+   "unlock": "Natural History",
+   "amenities": 1,
+   "requires": [
+    "BUILDING_ARENA"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_STADIUM",
+   "name": "Stadium",
+   "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "cost": 480,
+   "maintenance": 3,
+   "yields": {},
+   "unlock": "Professional Sports",
+   "amenities": 1,
+   "requires": [
+    "BUILDING_ZOO"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_AUDIENCE_CHAMBER",
+   "name": "Audience Chamber",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_ANCESTRAL_HALL",
+   "name": "Ancestral Hall",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_WARLORD_S_THRONE",
+   "name": "Warlord's Throne",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_FOREIGN_MINISTRY",
+   "name": "Foreign Ministry",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {},
+   "requires": [
+    "BUILDING_AUDIENCE_CHAMBER",
+    "BUILDING_ANCESTRAL_HALL",
+    "BUILDING_WARLORD_S_THRONE"
+   ]
+  },
+  {
+   "id": "BUILDING_INTELLIGENCE_AGENCY",
+   "name": "Intelligence Agency",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {},
+   "requires": [
+    "BUILDING_AUDIENCE_CHAMBER",
+    "BUILDING_ANCESTRAL_HALL",
+    "BUILDING_WARLORD_S_THRONE"
+   ]
+  },
+  {
+   "id": "BUILDING_GRAND_MASTER_S_CHAPEL",
+   "name": "Grand Master's Chapel",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {
+    "FAITH": 5
+   },
+   "requires": [
+    "BUILDING_AUDIENCE_CHAMBER",
+    "BUILDING_ANCESTRAL_HALL",
+    "BUILDING_WARLORD_S_THRONE"
+   ]
+  },
+  {
+   "id": "BUILDING_WAR_DEPARTMENT",
+   "name": "War Department",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": {},
+   "requires": [
+    "BUILDING_FOREIGN_MINISTRY",
+    "BUILDING_INTELLIGENCE_AGENCY",
+    "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ]
+  },
+  {
+   "id": "BUILDING_NATIONAL_HISTORY_MUSEUM",
+   "name": "National History Museum",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": {},
+   "requires": [
+    "BUILDING_FOREIGN_MINISTRY",
+    "BUILDING_INTELLIGENCE_AGENCY",
+    "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ]
+  },
+  {
+   "id": "BUILDING_ROYAL_SOCIETY",
+   "name": "Royal Society",
+   "district": "DISTRICT_GOVERNMENT_PLAZA",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": {},
+   "requires": [
+    "BUILDING_FOREIGN_MINISTRY",
+    "BUILDING_INTELLIGENCE_AGENCY",
+    "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ]
+  },
+  {
+   "id": "BUILDING_LIGHTHOUSE",
+   "name": "Lighthouse",
+   "district": "DISTRICT_HARBOR",
+   "cost": 120,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Celestial Navigation",
+   "housing": 1,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SHIPYARD",
+   "name": "Shipyard",
+   "district": "DISTRICT_HARBOR",
+   "cost": 290,
+   "maintenance": 1,
+   "yields": {
+    "FOOD": 1
+   },
+   "unlock": "Mass Production",
+   "requires": [
+    "BUILDING_LIGHTHOUSE"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SEAPORT",
+   "name": "Seaport",
+   "district": "DISTRICT_HARBOR",
+   "cost": 440,
+   "maintenance": 0,
+   "yields": {
+    "GOLD": 2,
+    "FOOD": 2
+   },
+   "unlock": "Electricity",
+   "housing": 1,
+   "requires": [
+    "BUILDING_SHIPYARD"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SHRINE",
+   "name": "Shrine",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 70,
+   "maintenance": 1,
+   "yields": {
+    "FAITH": 2
+   },
+   "unlock": "Astrology",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_TEMPLE",
+   "name": "Temple",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 120,
+   "maintenance": 2,
+   "yields": {
+    "FAITH": 4
+   },
+   "unlock": "Theology",
+   "requires": [
+    "BUILDING_SHRINE"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_CATHEDRAL",
+   "name": "Cathedral",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_GURDWARA",
+   "name": "Gurdwara",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3,
+    "FOOD": 2
+   },
+   "housing": 1,
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_MEETING_HOUSE",
+   "name": "Meeting House",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3,
+    "PRODUCTION": 2
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_MOSQUE",
+   "name": "Mosque",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_PAGODA",
+   "name": "Pagoda",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_SYNAGOGUE",
+   "name": "Synagogue",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 5
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_WAT",
+   "name": "Wat",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3,
+    "SCIENCE": 2
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_STUPA",
+   "name": "Stupa",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3
+   },
+   "amenities": 1,
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_DAR_E_MEHR",
+   "name": "Dar-e Mehr",
+   "district": "DISTRICT_HOLY_SITE",
+   "cost": 190,
+   "maintenance": 0,
+   "yields": {
+    "FAITH": 3
+   },
+   "requires": [
+    "BUILDING_TEMPLE"
+   ]
+  },
+  {
+   "id": "BUILDING_WORKSHOP",
+   "name": "Workshop",
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "cost": 195,
+   "maintenance": 1,
+   "yields": {
+    "PRODUCTION": 3
+   },
+   "unlock": "Apprenticeship",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_COAL_POWER_PLANT",
+   "name": "Coal Power Plant",
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "cost": 300,
+   "maintenance": 3,
+   "yields": {},
+   "unlock": "Industrialization",
+   "requires": [
+    "BUILDING_FACTORY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_FACTORY",
+   "name": "Factory",
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "cost": 330,
+   "maintenance": 2,
+   "yields": {
+    "PRODUCTION": 3
+   },
+   "unlock": "Industrialization",
+   "requires": [
+    "BUILDING_WORKSHOP"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_OIL_POWER_PLANT",
+   "name": "Oil Power Plant",
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "cost": 360,
+   "maintenance": 3,
+   "yields": {
+    "PRODUCTION": 3
+   },
+   "unlock": "Electricity",
+   "requires": [
+    "BUILDING_FACTORY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_NUCLEAR_POWER_PLANT",
+   "name": "Nuclear Power Plant",
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "cost": 480,
+   "maintenance": 3,
+   "yields": {
+    "PRODUCTION": 4,
+    "SCIENCE": 3
+   },
+   "unlock": "Nuclear Fission",
+   "requires": [
+    "BUILDING_FACTORY"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_FOOD_MARKET",
+   "name": "Food Market",
+   "district": "DISTRICT_NEIGHBORHOOD",
+   "cost": 380,
+   "maintenance": 1,
+   "yields": {
+    "FOOD": 4
+   },
+   "unlock": "Replaceable Parts",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SHOPPING_MALL",
+   "name": "Shopping Mall",
+   "district": "DISTRICT_NEIGHBORHOOD",
+   "cost": 440,
+   "maintenance": 1,
+   "yields": {
+    "GOLD": 2
+   },
+   "unlock": "Capitalism",
+   "amenities": 1,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_GROVE",
+   "name": "Grove",
+   "district": "DISTRICT_PRESERVE",
+   "cost": 150,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Mysticism",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SANCTUARY",
+   "name": "Sanctuary",
+   "district": "DISTRICT_PRESERVE",
+   "cost": 440,
+   "maintenance": 0,
+   "yields": {},
+   "unlock": "Conservation",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_SMALL_ROCKET",
+   "name": "Small Rocket",
+   "district": "DISTRICT_SPACEPORT",
+   "cost": 1,
+   "maintenance": 0,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_MEDIUM_ROCKET",
+   "name": "Medium Rocket",
+   "district": "DISTRICT_SPACEPORT",
+   "cost": 1,
+   "maintenance": 0,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_LARGE_ROCKET",
+   "name": "Large Rocket",
+   "district": "DISTRICT_SPACEPORT",
+   "cost": 1,
+   "maintenance": 0,
+   "yields": {}
+  },
+  {
+   "id": "BUILDING_AMPHITHEATER",
+   "name": "Amphitheater",
+   "district": "DISTRICT_THEATER_SQUARE",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": {
+    "CULTURE": 2
+   },
+   "unlock": "Drama and Poetry",
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ART_MUSEUM",
+   "name": "Art Museum",
+   "district": "DISTRICT_THEATER_SQUARE",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {
+    "CULTURE": 2
+   },
+   "unlock": "Humanism",
+   "requires": [
+    "BUILDING_AMPHITHEATER"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_ARCHAEOLOGICAL_MUSEUM",
+   "name": "Archaeological Museum",
+   "district": "DISTRICT_THEATER_SQUARE",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": {
+    "CULTURE": 2
+   },
+   "unlock": "Humanism",
+   "requires": [
+    "BUILDING_AMPHITHEATER"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_BROADCAST_CENTER",
+   "name": "Broadcast Center",
+   "district": "DISTRICT_THEATER_SQUARE",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": {
+    "CULTURE": 2
+   },
+   "unlock": "Radio",
+   "requires": [
+    "BUILDING_ART_MUSEUM",
+    "BUILDING_ARCHAEOLOGICAL_MUSEUM"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_FERRIS_WHEEL",
+   "name": "Ferris Wheel",
+   "district": "DISTRICT_WATER_PARK",
+   "cost": 290,
+   "maintenance": 1,
+   "yields": {
+    "CULTURE": 3
+   },
+   "unlock": "Natural History",
+   "amenities": 2,
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_AQUARIUM",
+   "name": "Aquarium",
+   "district": "DISTRICT_WATER_PARK",
+   "cost": 360,
+   "maintenance": 2,
+   "yields": {},
+   "unlock": "Natural History",
+   "amenities": 1,
+   "requires": [
+    "BUILDING_FERRIS_WHEEL"
+   ],
+   "purchasable": true
+  },
+  {
+   "id": "BUILDING_AQUATICS_CENTER",
+   "name": "Aquatics Center",
+   "district": "DISTRICT_WATER_PARK",
+   "cost": 480,
+   "maintenance": 3,
+   "yields": {},
+   "unlock": "Professional Sports",
+   "amenities": 1,
+   "requires": [
+    "BUILDING_AQUARIUM"
+   ],
+   "purchasable": true
+  }
+ ]
+}

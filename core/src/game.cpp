@@ -43,6 +43,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             return nullptr;
         }
         p.human = setup.players[i].human;
+        p.unitsTrained.assign(rules.units.size(), 0);
         p.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
         s.players.push_back(std::move(p));
     }
@@ -90,12 +91,13 @@ std::unique_ptr<Game> Game::replay(const Rules& rules, const GameSetup& setup, c
 std::unique_ptr<Game> Game::fromScenario(const Rules& rules, GameState state) {
     auto game = std::make_unique<Game>(rules, std::move(state), std::vector<Command>{});
     for (Player& p : game->state_.players) {
+        p.unitsTrained.resize(rules.units.size(), 0);
         if (p.visibility.size() != static_cast<size_t>(game->state_.grid.size()))
             p.visibility.assign(static_cast<size_t>(game->state_.grid.size()), 0);
     }
     for (const Player& p : game->state_.players) game->refreshVisibility(p.id);
     game->state_.currentPlayer = 0;
-    game->beginPlayerTurn(0);
+    game->beginPlayerTurn(0, false);
     return game;
 }
 
@@ -120,9 +122,20 @@ CommandError Game::validate(const Command& c) const {
     if (c.player != state_.currentPlayer) return CommandError::NotYourTurn;
 
     if (c.type == CommandType::EndTurn) {
-        return unitsNeedingOrders(c.player).empty() ? CommandError::Ok : CommandError::UnitsNeedOrders;
+        if (!unitsNeedingOrders(c.player).empty()) return CommandError::UnitsNeedOrders;
+        if (!citiesNeedingProduction(c.player).empty()) return CommandError::ProductionNeeded;
+        return CommandError::Ok;
     }
-    const Unit* u = state_.unit(c.unit);
+    switch (c.type) {
+        case CommandType::SetProduction:
+        case CommandType::QueueProduction:
+        case CommandType::Purchase:
+        case CommandType::BuyPlot:
+        case CommandType::LockPlot:
+            return validateCity(c);
+        default: break;
+    }
+    const Unit* u = state_.unit(c.id);
     if (!u) return CommandError::BadUnit;
     if (u->owner != c.player) return CommandError::NotYourUnit;
 
@@ -132,7 +145,7 @@ CommandError Game::validate(const Command& c) const {
             if (!t || *t != c.target || *t == u->pos) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
-            return findPath(c.unit, *t) ? CommandError::Ok : CommandError::NoPath;
+            return findPath(c.id, *t) ? CommandError::Ok : CommandError::NoPath;
         }
         case CommandType::FoundCity: {
             if (!typeOf(*rules_, *u).foundCity) return CommandError::NotASettler;
@@ -147,7 +160,7 @@ CommandError Game::validate(const Command& c) const {
             if (a == Activity::Fortify && typeOf(*rules_, *u).layer != UnitLayer::Military) return CommandError::BadActivity;
             return CommandError::Ok;
         }
-        case CommandType::EndTurn: break;
+        default: break;
     }
     return CommandError::BadTarget;
 }
@@ -340,24 +353,29 @@ void Game::apply(const Command& c) {
         case CommandType::MoveUnit: applyMove(c); break;
         case CommandType::FoundCity: applyFoundCity(c); break;
         case CommandType::SetActivity: {
-            Unit* u = state_.unit(c.unit);
+            Unit* u = state_.unit(c.id);
             u->activity = static_cast<Activity>(c.arg);
             u->moveTarget.reset();
             break;
         }
         case CommandType::EndTurn: applyEndTurn(c); break;
+        case CommandType::SetProduction:
+        case CommandType::QueueProduction:
+        case CommandType::Purchase:
+        case CommandType::BuyPlot:
+        case CommandType::LockPlot: applyCity(c); break;
     }
 }
 
 void Game::applyMove(const Command& c) {
-    Unit* u = state_.unit(c.unit);
+    Unit* u = state_.unit(c.id);
     u->moveTarget = c.target;
     u->activity = Activity::Awake;
-    advanceUnit(c.unit);
+    advanceUnit(c.id);
 }
 
 void Game::applyFoundCity(const Command& c) {
-    const Unit* u = state_.unit(c.unit);
+    const Unit* u = state_.unit(c.id);
     const Hex at = u->pos;
     const PlayerId owner = u->owner;
     Player& p = state_.players[static_cast<size_t>(owner)];
@@ -380,10 +398,20 @@ void Game::applyFoundCity(const Command& c) {
             plot.city = city.id;
         }
     }
+    // Founding clears removable features (woods, rainforest, marsh) from the center.
+    Plot& center = state_.plot(at);
+    if (center.feature != kNone && rules_->features[static_cast<size_t>(center.feature)].removable) center.feature = kNone;
+    if (city.capital) {
+        for (size_t b = 0; b < rules_->buildings.size(); ++b) {
+            if (rules_->buildings[b].granted) city.buildings.push_back(static_cast<TypeIndex>(b));
+        }
+    }
+    const CityId newId = city.id;
     state_.cities.push_back(std::move(city));
+    assignCitizens(*state_.city(newId));
 
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
-                                      [&](const Unit& x) { return x.id == c.unit; }),
+                                      [&](const Unit& x) { return x.id == c.id; }),
                        state_.units.end());
     refreshVisibility(owner);
 }
@@ -410,7 +438,8 @@ void Game::beginGlobalTurn() {
     ++state_.turn;
 }
 
-void Game::beginPlayerTurn(PlayerId pid) {
+void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
+    if (runCities) processCities(pid);
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         u.movesLeft = Fixed::fromInt(typeOf(*rules_, u).moves);

@@ -18,6 +18,30 @@ Hex readHex(ByteReader& r) {
     return h;
 }
 
+void writeI32s(ByteWriter& w, const std::vector<int32_t>& v) {
+    w.u32(static_cast<uint32_t>(v.size()));
+    for (int32_t x : v) w.i32(x);
+}
+bool readI32s(ByteReader& r, std::vector<int32_t>& v) {
+    uint32_t n = r.u32();
+    if (!r.checkCount(n, 4)) return false;
+    v.resize(n);
+    for (int32_t& x : v) x = r.i32();
+    return true;
+}
+void writeFixed(ByteWriter& w, Fixed f) { w.i64(f.raw()); }
+Fixed readFixed(ByteReader& r) { return Fixed::fromRaw(r.i64()); }
+void writeItem(ByteWriter& w, ProductionItem it) {
+    w.u8(static_cast<uint8_t>(it.kind));
+    w.i16(it.type);
+}
+ProductionItem readItem(ByteReader& r) {
+    ProductionItem it;
+    it.kind = static_cast<ProductionKind>(r.u8());
+    it.type = r.i16();
+    return it;
+}
+
 void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.u64(s.seed);
     w.str(s.mapSize);
@@ -46,17 +70,19 @@ void readSetup(ByteReader& r, GameSetup& s) {
 void writeCommand(ByteWriter& w, const Command& c) {
     w.u8(static_cast<uint8_t>(c.type));
     w.i8(c.player);
-    w.i32(c.unit);
+    w.i32(c.id);
     writeHex(w, c.target);
     w.i32(c.arg);
+    w.i32(c.arg2);
 }
 Command readCommand(ByteReader& r) {
     Command c;
     c.type = static_cast<CommandType>(r.u8());
     c.player = r.i8();
-    c.unit = r.i32();
+    c.id = r.i32();
     c.target = readHex(r);
     c.arg = r.i32();
+    c.arg2 = r.i32();
     return c;
 }
 // Guards against out-of-range type indices before any rules code runs.
@@ -84,6 +110,18 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         const City& c = s.cities[i];
         if (c.owner < 0 || static_cast<size_t>(c.owner) >= s.players.size() || !s.grid.valid(c.pos)) return false;
         if (i > 0 && s.cities[i - 1].id >= c.id) return false;
+        for (TypeIndex b : c.buildings) if (!inRange(b, rules.buildings.size(), false)) return false;
+        auto itemOk = [&](const ProductionItem& it) {
+            return it.kind == ProductionKind::Unit ? inRange(it.type, rules.units.size(), false)
+                 : it.kind == ProductionKind::Building ? inRange(it.type, rules.buildings.size(), false) : false;
+        };
+        for (const ProductionItem& it : c.queue) if (!itemOk(it)) return false;
+        for (const ProductionProgress& pp : c.progress) if (!itemOk(pp.item)) return false;
+        for (int32_t pi : c.worked) if (pi < 0 || pi >= s.grid.size()) return false;
+        for (int32_t pi : c.locked) if (pi < 0 || pi >= s.grid.size()) return false;
+    }
+    for (const Player& p : s.players) {
+        if (p.unitsTrained.size() > rules.units.size()) return false;
     }
     return true;
 }
@@ -114,6 +152,11 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.human);
         w.boolean(p.alive);
         w.i32(p.citiesFounded);
+        writeFixed(w, p.gold);
+        writeFixed(w, p.science);
+        writeFixed(w, p.culture);
+        writeFixed(w, p.faith);
+        writeI32s(w, std::vector<int32_t>(p.unitsTrained.begin(), p.unitsTrained.end()));
         writeHex(w, p.startPos);
         w.bytes(p.visibility);
     }
@@ -139,6 +182,21 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.population);
         w.i32(c.foundedTurn);
         w.boolean(c.capital);
+        writeFixed(w, c.food);
+        writeFixed(w, c.borderCulture);
+        w.i32(c.plotsByCulture);
+        writeFixed(w, c.overflow);
+        w.u32(static_cast<uint32_t>(c.buildings.size()));
+        for (TypeIndex b : c.buildings) w.i16(b);
+        w.u32(static_cast<uint32_t>(c.queue.size()));
+        for (const ProductionItem& it : c.queue) writeItem(w, it);
+        w.u32(static_cast<uint32_t>(c.progress.size()));
+        for (const ProductionProgress& pp : c.progress) {
+            writeItem(w, pp.item);
+            writeFixed(w, pp.amount);
+        }
+        writeI32s(w, c.worked);
+        writeI32s(w, c.locked);
     }
     w.i32(s.nextUnitId);
     w.i32(s.nextCityId);
@@ -176,6 +234,13 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.human = r.boolean();
         p.alive = r.boolean();
         p.citiesFounded = r.i32();
+        p.gold = readFixed(r);
+        p.science = readFixed(r);
+        p.culture = readFixed(r);
+        p.faith = readFixed(r);
+        std::vector<int32_t> trained;
+        if (!readI32s(r, trained)) return false;
+        p.unitsTrained.assign(trained.begin(), trained.end());
         p.startPos = readHex(r);
         p.visibility = r.bytes();
         if (p.visibility.size() != s.plots.size()) return false;
@@ -207,6 +272,26 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.population = r.i32();
         c.foundedTurn = r.i32();
         c.capital = r.boolean();
+        c.food = readFixed(r);
+        c.borderCulture = readFixed(r);
+        c.plotsByCulture = r.i32();
+        c.overflow = readFixed(r);
+        uint32_t nb = r.u32();
+        if (!r.checkCount(nb, 2)) return false;
+        c.buildings.resize(nb);
+        for (TypeIndex& b : c.buildings) b = r.i16();
+        uint32_t nq = r.u32();
+        if (!r.checkCount(nq, 3)) return false;
+        c.queue.resize(nq);
+        for (ProductionItem& it : c.queue) it = readItem(r);
+        uint32_t npg = r.u32();
+        if (!r.checkCount(npg, 11)) return false;
+        c.progress.resize(npg);
+        for (ProductionProgress& pp : c.progress) {
+            pp.item = readItem(r);
+            pp.amount = readFixed(r);
+        }
+        if (!readI32s(r, c.worked) || !readI32s(r, c.locked)) return false;
     }
     s.nextUnitId = r.i32();
     s.nextCityId = r.i32();
@@ -261,7 +346,7 @@ std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& b
         return nullptr;
     }
     uint32_t n = r.u32();
-    if (!r.checkCount(n, 18)) {
+    if (!r.checkCount(n, 22)) {
         *error = "corrupt command log";
         return nullptr;
     }

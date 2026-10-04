@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <climits>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -84,6 +85,85 @@ struct UnitType {
     bool zoneOfControl = false;
     bool foundCity = false;
     int buildCharges = 0;
+    int costProgression = 0;  // PREVIOUS_COPIES: extra cost per copy already trained
+    int popCost = 0;          // population removed when trained (Settler)
+    int minPopulation = 0;    // city population needed to train
+    bool mustPurchase = false;
+    std::string purchaseYield;  // "GOLD", "FAITH" or empty
+    std::string unlock;         // tech or civic id; empty = available from the start
+};
+
+struct BuildingType {
+    std::string id, name;
+    std::string district;   // e.g. "DISTRICT_CITY_CENTER"
+    std::string unlock;     // tech or civic id; empty = available from the start
+    int cost = 0;
+    int maintenance = 0;
+    Yields yields{};
+    Fixed housing;
+    int amenities = 0;
+    int outerDefenseHp = 0;
+    int defense = 0;
+    std::vector<TypeIndex> prereqs;  // buildings needed first
+    bool needsRiver = false;
+    bool purchasable = false;
+    bool granted = false;  // given by the rules (Palace), never built
+};
+
+// Amenity balance bands (eras-moments-loyalty.md, Amenities).
+struct HappinessLevel {
+    std::string id;
+    int minBalance = 0;  // INT32_MIN for the lowest band
+    int growthPercent = 0;
+    int yieldPercent = 0;  // non-food yields
+};
+
+enum class ModCollection : uint8_t { OwnerCity = 0, OwnerCityPlots, PlayerCities, PlayerCapital, PlayerCityPlots };
+enum class ModEffect : uint8_t {
+    CityYield = 0,      // flat yield on a city
+    CityYieldPercent,   // percentage on a city's yield
+    PlotYield,          // flat yield on a worked plot
+    CityHousing,
+    CityAmenities,
+    CityGrowthPercent,
+    CityDefense,
+};
+enum class ReqType : uint8_t {
+    PlotHasResource = 0,
+    PlotHasFeature,
+    PlotHasTerrain,
+    CityHasBuilding,
+    CityIsCapital,
+    CityMinPopulation,
+    PlayerIsHuman,
+};
+
+struct Requirement {
+    ReqType type = ReqType::PlayerIsHuman;
+    TypeIndex ref = kNone;  // resource/feature/terrain/building index
+    int value = 0;
+    bool negate = false;
+};
+
+struct RequirementSet {
+    bool any = false;  // false: all must hold
+    std::vector<Requirement> reqs;
+};
+
+// Civ VI's modifier model (00-overview.md, Architecture recommendations):
+// who it affects (collection), what it does (effect), when (requirements).
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone };
+
+struct Modifier {
+    std::string id;
+    std::string source;  // id of the building, civ, policy... that carries it ("EVERYONE": all players)
+    ModSource sourceKind = ModSource::Everyone;
+    TypeIndex sourceIndex = kNone;
+    ModCollection collection = ModCollection::OwnerCity;
+    ModEffect effect = ModEffect::CityYield;
+    RequirementSet ownerReqs, subjectReqs;
+    YieldType yield = YieldType::Food;
+    Fixed amount;
 };
 
 struct CivType {
@@ -115,6 +195,9 @@ public:
     std::vector<FeatureType> features;
     std::vector<ResourceType> resources;
     std::vector<UnitType> units;
+    std::vector<BuildingType> buildings;
+    std::vector<HappinessLevel> happiness;  // ascending by minBalance
+    std::vector<Modifier> modifiers;
     std::vector<CivType> civs;
     std::vector<MapSizeType> mapSizes;
     std::vector<GameSpeedType> speeds;
@@ -124,6 +207,9 @@ public:
     TypeIndex feature(const std::string& id) const;
     TypeIndex resource(const std::string& id) const;
     TypeIndex unit(const std::string& id) const;
+    TypeIndex building(const std::string& id) const;
+    // Modifiers whose source is this id, in load order.
+    std::vector<const Modifier*> modifiersFrom(const std::string& source) const;
     TypeIndex civ(const std::string& id) const;
     TypeIndex mapSize(const std::string& id) const;
     TypeIndex speed(const std::string& id) const;

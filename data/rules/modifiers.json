@@ -1,0 +1,16 @@
+{
+ "_comment": "Hand-written modifiers (Civ VI modifier model: source, collection, effect, requirements, arguments). Building effects come from specs/civ6/data/buildings.md 'Modifiers' column; later milestones add policies, beliefs, civ and leader abilities.",
+ "modifiers": [
+  {"id": "PALACE_CITY_DEFENSE", "source": "BUILDING_PALACE", "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_DEFENSE", "arguments": {"amount": 3}},
+  {"id": "WATER_MILL_RICE_FOOD", "source": "BUILDING_WATER_MILL", "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
+   "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_RICE"}]}},
+  {"id": "WATER_MILL_WHEAT_FOOD", "source": "BUILDING_WATER_MILL", "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
+   "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_WHEAT"}]}},
+  {"id": "WATER_MILL_MAIZE_FOOD", "source": "BUILDING_WATER_MILL", "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
+   "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_MAIZE"}]}}
+ ]
+}

@@ -50,6 +50,20 @@ struct Unit {
     int xp = 0;
 };
 
+enum class ProductionKind : uint8_t { Unit = 0, Building = 1 };
+
+struct ProductionItem {
+    ProductionKind kind = ProductionKind::Unit;
+    TypeIndex type = kNone;
+    bool operator==(const ProductionItem& o) const { return kind == o.kind && type == o.type; }
+};
+
+// Production already put into an item; kept when the player switches away.
+struct ProductionProgress {
+    ProductionItem item;
+    Fixed amount;
+};
+
 struct City {
     CityId id = kNoCity;
     PlayerId owner = kNoPlayer;
@@ -58,6 +72,17 @@ struct City {
     int population = 1;
     int foundedTurn = 0;
     bool capital = false;
+    Fixed food;            // growth bucket
+    Fixed borderCulture;   // border growth bucket
+    int plotsByCulture = 0;  // plots acquired by border growth so far
+    Fixed overflow;        // production carried into the next item
+    std::vector<TypeIndex> buildings;  // sorted
+    std::vector<ProductionItem> queue;
+    std::vector<ProductionProgress> progress;
+    std::vector<int32_t> worked;  // plot indices worked by citizens (center excluded), sorted
+    std::vector<int32_t> locked;  // plot indices the player pinned a citizen to, sorted
+
+    bool has(TypeIndex building) const;
 };
 
 // Per-player knowledge of each plot (01-map-and-terrain.md, Visibility).
@@ -69,6 +94,9 @@ struct Player {
     bool human = false;
     bool alive = true;
     int citiesFounded = 0;  // drives city naming
+    Fixed gold;
+    Fixed science, culture, faith;  // lifetime totals until research arrives (MVP-3)
+    std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;
 };

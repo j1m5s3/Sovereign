@@ -13,6 +13,17 @@
 
 namespace sov {
 
+// A city's derived numbers this turn (02-cities.md). Computed, never stored.
+struct CityReport {
+    Yields yields{};          // after percentage modifiers
+    Fixed foodConsumption;
+    Fixed housing;
+    int amenities = 0;
+    int amenitiesNeeded = 0;
+    int happiness = 0;        // index into Rules::happiness
+    int defense = 0;          // bonus defense from modifiers (combat arrives in MVP-4)
+};
+
 struct PathStep {
     Hex pos;
     int turn = 0;       // 0 = reached this turn
@@ -27,7 +38,8 @@ public:
     static std::unique_ptr<Game> replay(const Rules& rules, const GameSetup& setup,
                                         const std::vector<Command>& log, std::string* error);
     // Starts play from a hand-made state (scenario maps and tests): computes
-    // every player's visibility and begins player 0's turn.
+    // every player's visibility and begins player 0's turn without running
+    // start-of-turn city processing (the state is taken as already processed).
     static std::unique_ptr<Game> fromScenario(const Rules& rules, GameState state);
     // Wraps an already-loaded state (see serialize.h).
     Game(const Rules& rules, GameState state, std::vector<Command> log);
@@ -52,14 +64,40 @@ public:
     bool canFoundCityAt(PlayerId player, Hex at, CommandError* why = nullptr) const;
     Visibility visibility(PlayerId player, Hex h) const;
 
+    // ---- cities (02-cities.md)
+    CityReport cityReport(CityId city) const;
+    // Yields of a plot as worked by `city` (city center rules when it is the center).
+    Yields plotYields(Hex plot, const City& city) const;
+    // Plots this city's citizens may work: owned by it, within 3, workable terrain.
+    std::vector<Hex> workablePlots(const City& city) const;
+    int growthThreshold(int population) const;
+    int borderGrowthCost(int plotsAcquired) const;
+    int productionCost(PlayerId player, ProductionItem item) const;
+    // Gold price, or -1 when the item cannot be bought with gold.
+    int purchaseCost(PlayerId player, ProductionItem item) const;
+    // Gold price of a plot, or -1 when this city cannot buy it.
+    int plotPurchaseCost(CityId city, Hex plot) const;
+    bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr) const;
+    std::vector<ProductionItem> buildableItems(CityId city) const;
+    std::vector<CityId> citiesNeedingProduction(PlayerId player) const;
+    // Net gold per turn: city gold minus building and unit maintenance.
+    Fixed goldPerTurn(PlayerId player) const;
+
 private:
     void apply(const Command& c);
+    CommandError validateCity(const Command& c) const;
+    void applyCity(const Command& c);
+    void processCities(PlayerId p);
+    void assignCitizens(City& city);
+    bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
+    bool growBorders(City& city);  // false when no plot was available
+    std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
     void applyMove(const Command& c);
     void applyFoundCity(const Command& c);
     void applyEndTurn(const Command& c);
     // Moves the unit along its move order as far as its moves allow.
     void advanceUnit(UnitId id);
-    void beginPlayerTurn(PlayerId p);
+    void beginPlayerTurn(PlayerId p, bool runCities = true);
     void beginGlobalTurn();
     void refreshVisibility(PlayerId p);
     Unit& spawnUnit(TypeIndex type, PlayerId owner, Hex pos);
