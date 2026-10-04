@@ -502,6 +502,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.popCost = static_cast<int>(j["popCost"].integer(0));
         u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
         u.mustPurchase = j["mustPurchase"].boolean(false);
+        u.trainable = j["trainable"].boolean(true);
         u.purchaseYield = j["purchaseYield"].str();
         if (!readUnlock(j["unlock"], u.unlock, "unit " + id)) return false;
         if (!u.unlock.none()) u.era = (u.unlock.civic ? civics : techs)[static_cast<size_t>(u.unlock.index)].era;
@@ -621,6 +622,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         for (size_t i = 0; i < rows.size(); ++i) {
             if (!resolveList(rows[i].second["requires"], findBuilding, buildings[i].prereqs, "building " + rows[i].first, error))
                 return false;
+        }
+        size_t k = 0;
+        for (const auto& [uid, j] : m.tables["units"]) {
+            if (!resolveList(j["needsBuilding"], findBuilding, units[k++].needsBuilding, "unit " + uid, error)) return false;
         }
     }
     for (const auto& [id, j] : m.tables["districts"]) {

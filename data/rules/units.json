@@ -168,7 +168,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_ENGINEER",
@@ -182,7 +183,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_MERCHANT",
@@ -196,7 +198,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_PROPHET",
@@ -210,7 +213,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_SCIENTIST",
@@ -224,7 +228,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_WRITER",
@@ -238,7 +243,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_ARTIST",
@@ -252,7 +258,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_GREAT_MUSICIAN",
@@ -266,7 +273,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_TRADER",
@@ -317,6 +325,9 @@
    "sight": 2,
    "costProgression": 6,
    "mustPurchase": true,
+   "needsBuilding": [
+    "BUILDING_SHRINE"
+   ],
    "purchaseYield": "FAITH",
    "abilities": [
     "ABILITY_IGNORES_BORDERS",
@@ -358,6 +369,9 @@
    "sight": 2,
    "costProgression": 12,
    "mustPurchase": true,
+   "needsBuilding": [
+    "BUILDING_TEMPLE"
+   ],
    "purchaseYield": "FAITH",
    "abilities": [
     "ABILITY_IGNORES_BORDERS",
@@ -395,6 +409,9 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "needsBuilding": [
+    "BUILDING_ARCHAEOLOGICAL_MUSEUM"
+   ],
    "purchaseYield": "GOLD",
    "unlock": "CIVIC_NATURAL_HISTORY"
   },
@@ -525,6 +542,9 @@
    "sight": 2,
    "costProgression": 15,
    "mustPurchase": true,
+   "needsBuilding": [
+    "BUILDING_TEMPLE"
+   ],
    "purchaseYield": "FAITH",
    "promotionClass": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
    "abilities": [
@@ -716,6 +736,9 @@
    "sight": 2,
    "costProgression": 6,
    "mustPurchase": true,
+   "needsBuilding": [
+    "BUILDING_TEMPLE"
+   ],
    "purchaseYield": "FAITH",
    "abilities": [
     "ABILITY_DOMESTIC_SPREAD",
@@ -1037,6 +1060,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "mustPurchase": true,
+   "needsBuilding": [
+    "BUILDING_TEMPLE"
+   ],
    "purchaseYield": "FAITH",
    "promotionClass": "PROMOTION_CLASS_WARRIOR_MONK"
   },
@@ -1408,6 +1434,7 @@
    "moves": 1,
    "sight": 3,
    "costProgression": 75,
+   "trainable": false,
    "promotionClass": "PROMOTION_CLASS_ESPIONAGE"
   },
   {
@@ -1464,6 +1491,9 @@
    "moves": 2,
    "sight": 2,
    "buildCharges": 2,
+   "needsBuilding": [
+    "BUILDING_ARMORY"
+   ],
    "purchaseYield": "GOLD",
    "unlock": "TECH_MILITARY_ENGINEERING"
   },
@@ -1600,7 +1630,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "trainable": false
   },
   {
    "id": "UNIT_AIRCRAFT_CARRIER",

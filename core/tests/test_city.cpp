@@ -146,6 +146,28 @@ TEST(city_settler_costs_and_population) {
     CHECK_EQ(g3->state().players[0].gold, Fixed::fromInt(1000 - 560));  // 140 x 4
 }
 
+TEST(city_never_trains_great_people_or_spies_and_needs_unit_buildings) {
+    auto sc = capitalScenario();
+    GameState s = sc.game->state();
+    Player& p = s.players[0];
+    p.techs.done.assign(rules().techs.size(), 1);  // everything known
+    p.civics.done.assign(rules().civics.size(), 1);
+    auto g = Game::fromScenario(rules(), s);
+    const City& c = *g->state().city(sc.city);
+    for (const char* id : {"UNIT_GREAT_GENERAL", "UNIT_GREAT_SCIENTIST", "UNIT_GREAT_PROPHET", "UNIT_SPY"}) {
+        CHECK(!rules().units[static_cast<size_t>(rules().unit(id))].trainable);
+        CHECK(!g->canProduce(c, unitItem(id)));
+    }
+    // A Military Engineer needs an Armory in the city.
+    CHECK(!g->canProduce(c, unitItem("UNIT_MILITARY_ENGINEER")));
+    GameState armed = g->state();
+    std::vector<TypeIndex>& b = armed.cities[0].buildings;
+    b.push_back(rules().building("BUILDING_ARMORY"));
+    std::sort(b.begin(), b.end());
+    auto g2 = Game::fromScenario(rules(), armed);
+    CHECK(g2->canProduce(*g2->state().city(sc.city), unitItem("UNIT_MILITARY_ENGINEER")));
+}
+
 TEST(city_purchases_with_gold) {
     auto sc = capitalScenario();
     GameState s = sc.game->state();

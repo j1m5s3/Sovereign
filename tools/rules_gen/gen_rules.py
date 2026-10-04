@@ -284,6 +284,18 @@ def gen_units():
             u["minPopulation"] = int(m.group(1))
         if "must purchase" in special:
             u["mustPurchase"] = True
+        # Great People (cost 1, never bought) come from great person points and spies from
+        # espionage; neither is trained in a city queue. Both systems are not modelled yet.
+        if (num(row["Cost"]) <= 1 and not row["Purchase"]) or special == "spy":
+            u["trainable"] = False
+        # "needs Temple" / "needs Prasat/Stave Church/Temple": any one of the buildings in the
+        # city (unique buildings Sovereign does not have are dropped).
+        m = re.search(r"needs (?!pop )(.+?)(?= must purchase|$)", special)
+        if m:
+            known = {r["Building"] for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")}
+            need = ["BUILDING_" + snake(b) for b in m.group(1).split("/") if b in known]
+            if need:
+                u["needsBuilding"] = need
         if row["Purchase"]:
             u["purchaseYield"] = row["Purchase"].upper()
         if row["Unlock"]:

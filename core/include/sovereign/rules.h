@@ -178,6 +178,8 @@ struct UnitType {
     int popCost = 0;          // population removed when trained (Settler)
     int minPopulation = 0;    // city population needed to train
     bool mustPurchase = false;
+    bool trainable = true;  // false: never in a city queue (Great People, spies)
+    std::vector<TypeIndex> needsBuilding;  // the city must have one of these (empty: none)
     std::string purchaseYield;  // "GOLD", "FAITH" or empty
     Unlock unlock;
     int era = 0;  // era index of its unlock (Ancient when it has none)
