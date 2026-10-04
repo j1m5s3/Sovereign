@@ -97,9 +97,9 @@ A building recipe says, for example, "Library: 2-storey footprint 20 × 15 m, co
 3. Add styles and era bands one at a time; each is mostly artist work, not code.
 4. Wonders and unique buildings go in steadily throughout.
 
-## Engine fit (suggestion)
+## Engine fit
 
-Any modern engine can do this, but Unreal Engine 5 ships most of the parts: World Partition (streaming a large world in pieces), Nanite (very detailed geometry with automatic simplification by distance) and its procedural content framework for the scatter and assembly stages. Unity and Godot can do it too, with more of it built in-house.
+**[decided, James 2026-10-04]** Unreal Engine 5, with the game rules in a separate C++ core; see [engine-and-architecture.md](engine-and-architecture.md). UE5 ships most of the parts this generator needs: World Partition (streaming a large world in pieces), Nanite (very detailed geometry with automatic simplification by distance) and its procedural content framework for the scatter and assembly stages.
 
 ## Risks
 
