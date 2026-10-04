@@ -31,6 +31,15 @@ const City* GameState::cityAt(Hex h) const {
     return nullptr;
 }
 
+const CityDistrict* GameState::districtAt(Hex h) const {
+    for (const City& c : cities) {
+        for (const CityDistrict& d : c.districts) {
+            if (d.pos == h) return &d;
+        }
+    }
+    return nullptr;
+}
+
 const Unit* GameState::unitAt(Hex h, UnitLayer layer, const Rules& rules) const {
     for (const Unit& u : units) {
         if (u.pos == h && rules.units[static_cast<size_t>(u.type)].layer == layer) return &u;

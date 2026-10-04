@@ -490,16 +490,72 @@ def gen_barbarians():
     return {"barbarianTribes": out}
 
 
-def gen_districts():
-    """District hit points and strike range (MVP-4b needs the City Center; MVP-5 adds the rest)."""
+# Districts the core places so far (MVP-5); the rest need placement rules not modelled yet
+# (water, flat land, rivers, aqueduct rules) and arrive with their systems.
+PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone"]
+FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
+                 "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
+IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
+
+
+def district_adjacency(text, emitted):
+    """Parse '+1 Science per 2 Rainforest; +2 Gold per river; ...' into typed rows; rows about
+    things the core does not model (wonders, natural wonders, districts not generated) are dropped."""
     out = []
-    for row in table(SPEC / "districts.md", "District stats"):
-        if row["Unique to"] or not row["HP"]:
+    for part in [p.strip() for p in text.split(";") if p.strip()]:
+        m = re.fullmatch(r"\+(\d+) (\w+) per (2 )?(.+)", part)
+        if not m:
+            raise ValueError(f"adjacency: {part!r}")
+        row = {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}
+        if m.group(3):
+            row["tilesRequired"] = 2
+        thing = m.group(4)
+        if thing == "Mountain":
+            row["kind"] = "MOUNTAIN"
+        elif thing == "river":
+            row["kind"] = "RIVER"
+        elif thing == "district":
+            row["kind"] = "ANY_DISTRICT"
+        elif thing == "Strategic resource":
+            row["kind"] = "STRATEGIC_RESOURCE"
+        elif thing in FEATURE_NAMES:
+            row["kind"], row["ref"] = "FEATURE", FEATURE_NAMES[thing]
+        elif thing in IMPROVEMENT_NAMES:
+            row["kind"], row["ref"] = "IMPROVEMENT", IMPROVEMENT_NAMES[thing]
+        elif "DISTRICT_" + snake(thing) in emitted:
+            row["kind"], row["ref"] = "DISTRICT", "DISTRICT_" + snake(thing)
+        else:
             continue
-        d = {"id": "DISTRICT_" + snake(row["District"]), "name": row["District"], "hp": num(row["HP"])}
+        out.append(row)
+    return out
+
+
+def gen_districts():
+    """City Center (hit points, strike range) and the placeable specialty districts."""
+    stats = {row["District"]: row for row in table(SPEC / "districts.md", "District stats") if not row["Unique to"]}
+    extra = {row["District"]: row for row in table(SPEC / "districts.md", "District adjacency, placement, trade-route yields and modifiers")}
+    names = ["City Center"] + PLACEABLE_DISTRICTS
+    emitted = {"DISTRICT_" + snake(n) for n in names}
+    out = []
+    for name in names:
+        row = stats[name]
+        d = {"id": "DISTRICT_" + snake(name), "name": name}
+        if row["HP"]:
+            d["hp"] = num(row["HP"])
         m = re.search(r"attack range (\d+)", row["Placement/flags"])
         if m:
             d["attackRange"] = int(m.group(1))
+        if name != "City Center":
+            d["unlock"] = unlock_id(row["Unlock"])
+            d["cost"] = num(row["Base cost"])
+            model, param = row["Cost progression"].split()
+            d["costProgression"] = model
+            d["costDiscountPercent"] = num(param) if model == "NUM_UNDER_AVG_PLUS_TECH" else 0
+            d["needsPopulation"] = row["Needs pop"] == "yes"
+            d["maintenance"] = num(row["Maintenance"])
+            if "not adjacent to City Center" in row["Placement/flags"]:
+                d["notAdjacentToCityCenter"] = True
+            d["adjacency"] = district_adjacency(extra[name]["Adjacency rules"], emitted)
         out.append(d)
     return {"districts": out}
 

@@ -44,6 +44,9 @@ std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, cons
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,
                     bool vsBarbarian);
 
+// Adjacency bonus percent for the player's districts of this type (Natural Philosophy...).
+int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
+
 // Combat XP bonus percent for the player's units of this class.
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 

@@ -97,6 +97,16 @@ public:
     // Net gold per turn: city gold minus building and unit maintenance.
     Fixed goldPerTurn(PlayerId player) const;
 
+    // ---- districts (03-districts-buildings-wonders.md)
+    // Districts needing population this city may hold: 1 + (pop - 1) / DISTRICT_POPULATION_REQUIRED_PER.
+    int districtLimit(const City& city) const;
+    int districtCost(PlayerId player, TypeIndex district) const;
+    bool canPlaceDistrict(const City& city, TypeIndex district, Hex plot, CommandError* why = nullptr) const;
+    // Plots where this city could place the district now.
+    std::vector<Hex> districtPlots(CityId city, TypeIndex district) const;
+    // Adjacency yields a district of this type would earn on the plot (after policy bonuses).
+    Yields districtAdjacency(PlayerId player, TypeIndex district, Hex plot) const;
+
     // ---- research and government (04-tech-civics-government.md)
     int techCost(TypeIndex tech) const;    // scaled by game speed
     int civicCost(TypeIndex civic) const;  // scaled by game speed
@@ -222,6 +232,7 @@ private:
     bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available
     std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
+    void placeDistrict(City& city, TypeIndex district, Hex plot);
     void applyMove(const Command& c);
     void applyFoundCity(const Command& c);
     void applyEndTurn(const Command& c);

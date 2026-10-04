@@ -47,6 +47,7 @@ same command must print the same hash.
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
+| Districts: placement, population limit, cost, adjacency | `src/districts.cpp` (queries on `Game`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 

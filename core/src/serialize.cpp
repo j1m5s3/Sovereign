@@ -117,12 +117,16 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (TypeIndex b : c.buildings) if (!inRange(b, rules.buildings.size(), false)) return false;
         auto itemOk = [&](const ProductionItem& it) {
             return it.kind == ProductionKind::Unit ? inRange(it.type, rules.units.size(), false)
-                 : it.kind == ProductionKind::Building ? inRange(it.type, rules.buildings.size(), false) : false;
+                 : it.kind == ProductionKind::Building ? inRange(it.type, rules.buildings.size(), false)
+                 : it.kind == ProductionKind::District ? inRange(it.type, rules.districts.size(), false) : false;
         };
         for (const ProductionItem& it : c.queue) if (!itemOk(it)) return false;
         for (const ProductionProgress& pp : c.progress) if (!itemOk(pp.item)) return false;
         for (int32_t pi : c.worked) if (pi < 0 || pi >= s.grid.size()) return false;
         for (int32_t pi : c.locked) if (pi < 0 || pi >= s.grid.size()) return false;
+        for (const CityDistrict& d : c.districts) {
+            if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
+        }
     }
     for (size_t i = 0; i < s.camps.size(); ++i) {
         if (!s.grid.valid(s.camps[i].pos) || (i > 0 && s.camps[i - 1].id >= s.camps[i].id)) return false;
@@ -255,6 +259,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(c.originalOwner);
         w.boolean(c.originalCapital);
         w.i32(c.capturedTurn);
+        w.u32(static_cast<uint32_t>(c.districts.size()));
+        for (const CityDistrict& d : c.districts) {
+            w.i16(d.type);
+            writeHex(w, d.pos);
+            w.boolean(d.complete);
+        }
     }
     w.u32(static_cast<uint32_t>(s.camps.size()));
     for (const Camp& k : s.camps) {
@@ -407,6 +417,14 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.originalOwner = r.i8();
         c.originalCapital = r.boolean();
         c.capturedTurn = r.i32();
+        uint32_t nd = r.u32();
+        if (!r.checkCount(nd, 11)) return false;
+        c.districts.resize(nd);
+        for (CityDistrict& d : c.districts) {
+            d.type = r.i16();
+            d.pos = readHex(r);
+            d.complete = r.boolean();
+        }
     }
     uint32_t nk = r.u32();
     if (!r.checkCount(nk, 16)) return false;

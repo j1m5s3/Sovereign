@@ -36,6 +36,13 @@ int speedPercent(const GameState& s, const Rules& r) {
 }
 }  // namespace
 
+const CityDistrict* City::district(TypeIndex type, bool completeOnly) const {
+    for (const CityDistrict& d : districts) {
+        if (d.type == type && (d.complete || !completeOnly)) return &d;
+    }
+    return nullptr;
+}
+
 bool City::has(TypeIndex building) const {
     return std::binary_search(buildings.begin(), buildings.end(), building);
 }
@@ -76,7 +83,7 @@ std::vector<Hex> Game::workablePlots(const City& city) const {
     for (const Hex& h : state_.grid.within(city.pos, 3)) {
         if (h == city.pos) continue;
         const Plot& p = state_.plot(h);
-        if (p.city != city.id) continue;
+        if (p.city != city.id || state_.districtAt(h)) continue;  // district plots are not worked
         if (rules_->terrains[static_cast<size_t>(p.terrain)].impassable) continue;
         if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) continue;
         out.push_back(h);
@@ -99,6 +106,12 @@ CityReport Game::cityReport(CityId id) const {
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i];
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
+    }
+    // Finished districts add their adjacency yields to the city.
+    for (const CityDistrict& d : c->districts) {
+        if (!d.complete) continue;
+        Yields adj = districtAdjacency(c->owner, d.type, d.pos);
+        for (size_t i = 0; i < kNumYields; ++i) raw[i] += adj[i];
     }
     // Every citizen adds a little culture and science (CULTURE/SCIENCE_PERCENTAGE_YIELD_PER_POP).
     raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt("CULTURE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
@@ -166,6 +179,8 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
         const Player& p = state_.players[static_cast<size_t>(player)];
         int copies = static_cast<size_t>(item.type) < p.unitsTrained.size() ? p.unitsTrained[static_cast<size_t>(item.type)] : 0;
         base = u.cost + u.costProgression * copies;
+    } else if (item.kind == ProductionKind::District) {
+        return districtCost(player, item.type);  // already scaled by game speed
     } else {
         base = rules_->buildings[static_cast<size_t>(item.type)].cost;
     }
@@ -173,6 +188,7 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
 }
 
 int Game::purchaseCost(PlayerId player, ProductionItem item) const {
+    if (item.kind == ProductionKind::District) return -1;  // districts are built, never bought
     if (item.kind == ProductionKind::Unit) {
         if (rules_->units[static_cast<size_t>(item.type)].purchaseYield != "GOLD") return -1;
     } else if (!rules_->buildings[static_cast<size_t>(item.type)].purchasable) {
@@ -216,12 +232,26 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
-        if (b.granted || c.has(item.type) || !hasUnlocked(c.owner, b.unlock) || b.district != "DISTRICT_CITY_CENTER")
+        if (b.granted || c.has(item.type) || !hasUnlocked(c.owner, b.unlock)) return fail(CommandError::CannotBuild);
+        // Buildings outside the City Center need their finished district.
+        if (b.district != "DISTRICT_CITY_CENTER" && (b.districtType == kNone || !c.district(b.districtType, true)))
             return fail(CommandError::CannotBuild);
         for (TypeIndex req : b.prereqs) {
             if (!c.has(req)) return fail(CommandError::CannotBuild);
         }
         if (b.needsRiver && !isRiverAdjacent(state_, c.pos)) return fail(CommandError::CannotBuild);
+    } else if (item.kind == ProductionKind::District) {
+        if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);
+        const DistrictType& d = rules_->districts[static_cast<size_t>(item.type)];
+        if (d.cost <= 0 || !hasUnlocked(c.owner, d.unlock)) return fail(CommandError::CannotBuild);
+        const CityDistrict* placed = c.district(item.type, false);
+        if (placed && placed->complete) return fail(CommandError::CannotBuild);
+        if (!placed && d.needsPopulation) {
+            // A new district needs room under the population limit.
+            int used = 0;
+            for (const CityDistrict& cd : c.districts) used += rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
+            if (used >= districtLimit(c)) return fail(CommandError::CannotBuild);
+        }
     } else {
         return fail(CommandError::CannotBuild);
     }
@@ -241,6 +271,12 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
         ProductionItem it{ProductionKind::Building, static_cast<TypeIndex>(i)};
         if (canProduce(*c, it) && std::find(c->queue.begin(), c->queue.end(), it) == c->queue.end()) out.push_back(it);
     }
+    // Districts already placed here, or with a plot to go on.
+    for (size_t i = 0; i < rules_->districts.size(); ++i) {
+        ProductionItem it{ProductionKind::District, static_cast<TypeIndex>(i)};
+        if (!canProduce(*c, it) || std::find(c->queue.begin(), c->queue.end(), it) != c->queue.end()) continue;
+        if (c->district(it.type, false) || !districtPlots(id, it.type).empty()) out.push_back(it);
+    }
     return out;
 }
 
@@ -259,6 +295,9 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         if (c.owner != player) continue;
         if (p.anarchyTurns == 0) net += cityReport(c.id).yields[idx(YieldType::Gold)];  // anarchy: no gold
         for (TypeIndex b : c.buildings) net -= Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].maintenance);
+        for (const CityDistrict& d : c.districts) {
+            if (d.complete) net -= Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].maintenance);
+        }
     }
     const Fixed discount = sumPlayerModifiers(state_, *rules_, p, ModEffect::UnitMaintenanceDiscount);
     for (const Unit& u : state_.units) {
@@ -291,22 +330,28 @@ CommandError Game::validateCity(const Command& c) const {
     CommandError why = CommandError::Ok;
     switch (c.type) {
         case CommandType::SetProduction:
-            if (c.arg < 0 || c.arg > 1 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
+            if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
+                !canPlaceDistrict(*city, item.type, c.target, &why))
+                return why;
             if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
             return CommandError::Ok;
         case CommandType::QueueProduction:
-            if (c.arg < 0 || c.arg > 1 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
+            if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
+                !canPlaceDistrict(*city, item.type, c.target, &why))
+                return why;
             if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
-            if (item.kind == ProductionKind::Building &&
+            if (item.kind != ProductionKind::Unit &&
                 std::find(city->queue.begin(), city->queue.end(), item) != city->queue.end())
                 return CommandError::CannotBuild;
             if (static_cast<int>(city->queue.size()) >= rules_->globalInt("CITY_PRODUCTION_QUEUE_MAX"))
                 return CommandError::QueueFull;
             return CommandError::Ok;
         case CommandType::Purchase: {
-            if (c.arg < 0 || c.arg > 1 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
             int cost = purchaseCost(c.player, item);
             if (cost < 0) return CommandError::CannotBuild;
@@ -349,10 +394,11 @@ void Game::applyCity(const Command& c) {
     Player& p = state_.players[static_cast<size_t>(c.player)];
     switch (c.type) {
         case CommandType::SetProduction:
-            city.queue.assign(1, item);
-            break;
         case CommandType::QueueProduction:
-            city.queue.push_back(item);
+            if (item.kind == ProductionKind::District && !city.district(item.type, false))
+                placeDistrict(city, item.type, c.target);
+            if (c.type == CommandType::SetProduction) city.queue.assign(1, item);
+            else city.queue.push_back(item);
             break;
         case CommandType::Purchase:
             p.gold -= Fixed::fromInt(purchaseCost(c.player, item));
@@ -436,6 +482,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         spawnUnit(item.type, city.owner, *spot);
         assignCitizens(city);
         refreshVisibility(city.owner);
+    } else if (item.kind == ProductionKind::District) {
+        for (CityDistrict& d : city.districts) {
+            if (d.type == item.type) d.complete = true;
+        }
     } else {
         auto it = std::lower_bound(city.buildings.begin(), city.buildings.end(), item.type);
         if (it == city.buildings.end() || *it != item.type) {

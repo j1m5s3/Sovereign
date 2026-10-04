@@ -18,7 +18,8 @@ enum class CommandType : uint8_t {
     SetActivity = 3,      // id = unit, arg = Activity
     EndTurn = 4,          // player ends their turn
     SetProduction = 5,    // id = city, arg = ProductionKind, arg2 = type index: replace the queue
-    QueueProduction = 6,  // id = city, arg = ProductionKind, arg2 = type index: append to the queue
+                          // (a district not yet placed goes on target)
+    QueueProduction = 6,  // id = city, arg = ProductionKind, arg2 = type index: append to the queue (target as above)
     Purchase = 7,         // id = city, arg = ProductionKind, arg2 = type index: buy with gold now
     BuyPlot = 8,          // id = city, target = plot to buy with gold
     LockPlot = 9,         // id = city, target = plot, arg = 1 lock a citizen on it / 0 unlock
@@ -51,11 +52,11 @@ struct Command {
         return {CommandType::SetActivity, p, u, {}, static_cast<int32_t>(a), 0};
     }
     static Command endTurn(PlayerId p) { return {CommandType::EndTurn, p, -1, {}, 0, 0}; }
-    static Command setProduction(PlayerId p, CityId c, ProductionItem item) {
-        return {CommandType::SetProduction, p, c, {}, static_cast<int32_t>(item.kind), item.type};
+    static Command setProduction(PlayerId p, CityId c, ProductionItem item, Hex at = {}) {
+        return {CommandType::SetProduction, p, c, at, static_cast<int32_t>(item.kind), item.type};
     }
-    static Command queueProduction(PlayerId p, CityId c, ProductionItem item) {
-        return {CommandType::QueueProduction, p, c, {}, static_cast<int32_t>(item.kind), item.type};
+    static Command queueProduction(PlayerId p, CityId c, ProductionItem item, Hex at = {}) {
+        return {CommandType::QueueProduction, p, c, at, static_cast<int32_t>(item.kind), item.type};
     }
     static Command purchase(PlayerId p, CityId c, ProductionItem item) {
         return {CommandType::Purchase, p, c, {}, static_cast<int32_t>(item.kind), item.type};

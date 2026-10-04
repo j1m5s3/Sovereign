@@ -60,7 +60,7 @@ struct Unit {
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
 
-enum class ProductionKind : uint8_t { Unit = 0, Building = 1 };
+enum class ProductionKind : uint8_t { Unit = 0, Building = 1, District = 2 };
 
 struct ProductionItem {
     ProductionKind kind = ProductionKind::Unit;
@@ -72,6 +72,14 @@ struct ProductionItem {
 struct ProductionProgress {
     ProductionItem item;
     Fixed amount;
+};
+
+// A specialty district placed by a city (03-districts-buildings-wonders.md). Its plot is
+// reserved from placement on; it works once production completes it.
+struct CityDistrict {
+    TypeIndex type = kNone;  // Rules::districts
+    Hex pos;
+    bool complete = false;
 };
 
 struct City {
@@ -98,8 +106,11 @@ struct City {
     PlayerId originalOwner = kNoPlayer;
     bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
+    std::vector<CityDistrict> districts;  // in placement order
 
     bool has(TypeIndex building) const;
+    // The city's district of this type, if placed (and, with completeOnly, finished).
+    const CityDistrict* district(TypeIndex type, bool completeOnly) const;
 };
 
 // A player's progress through one research tree (techs or civics). Progress
@@ -201,6 +212,8 @@ struct GameState {
     City* city(CityId id);
     const City* city(CityId id) const;
     const City* cityAt(Hex h) const;
+    // The district placed on this plot, if any (city centers are not districts here).
+    const CityDistrict* districtAt(Hex h) const;
     // Unit on this plot in the given layer, if any.
     const Unit* unitAt(Hex h, UnitLayer layer, const Rules& rules) const;
     // Any unit on the plot not owned by this player.
