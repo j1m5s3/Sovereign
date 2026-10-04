@@ -60,6 +60,14 @@ const char* commandErrorName(CommandError e) {
         case CommandError::BadActivity: return "BadActivity";
         case CommandError::UnitsNeedOrders: return "UnitsNeedOrders";
         case CommandError::GameOver: return "GameOver";
+        case CommandError::BadCity: return "BadCity";
+        case CommandError::NotYourCity: return "NotYourCity";
+        case CommandError::CannotBuild: return "CannotBuild";
+        case CommandError::QueueFull: return "QueueFull";
+        case CommandError::NotEnoughGold: return "NotEnoughGold";
+        case CommandError::CannotBuyPlot: return "CannotBuyPlot";
+        case CommandError::CannotWorkPlot: return "CannotWorkPlot";
+        case CommandError::ProductionNeeded: return "ProductionNeeded";
     }
     return "Unknown";
 }
@@ -68,12 +76,21 @@ std::string describe(const Command& c) {
     std::string s = "p" + std::to_string(c.player) + " ";
     switch (c.type) {
         case CommandType::MoveUnit:
-            return s + "MoveUnit u" + std::to_string(c.unit) + " -> (" + std::to_string(c.target.x) + "," +
+            return s + "MoveUnit u" + std::to_string(c.id) + " -> (" + std::to_string(c.target.x) + "," +
                    std::to_string(c.target.y) + ")";
-        case CommandType::FoundCity: return s + "FoundCity u" + std::to_string(c.unit);
+        case CommandType::FoundCity: return s + "FoundCity u" + std::to_string(c.id);
         case CommandType::SetActivity:
-            return s + "SetActivity u" + std::to_string(c.unit) + " " + std::to_string(c.arg);
+            return s + "SetActivity u" + std::to_string(c.id) + " " + std::to_string(c.arg);
         case CommandType::EndTurn: return s + "EndTurn";
+        case CommandType::SetProduction:
+        case CommandType::QueueProduction:
+        case CommandType::Purchase:
+            return s + (c.type == CommandType::SetProduction ? "SetProduction" : c.type == CommandType::QueueProduction ? "QueueProduction" : "Purchase") +
+                   " city" + std::to_string(c.id) + " kind" + std::to_string(c.arg) + " type" + std::to_string(c.arg2);
+        case CommandType::BuyPlot:
+        case CommandType::LockPlot:
+            return s + (c.type == CommandType::BuyPlot ? "BuyPlot" : "LockPlot") + " city" + std::to_string(c.id) +
+                   " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ") " + std::to_string(c.arg);
     }
     return s + "?";
 }

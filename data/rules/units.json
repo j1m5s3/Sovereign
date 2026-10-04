@@ -14,6 +14,7 @@
    "range": 10,
    "moves": 10,
    "sight": 4,
+   "purchaseYield": "GOLD",
    "unlock": "Advanced Flight"
   },
   {
@@ -29,6 +30,7 @@
    "range": 15,
    "moves": 15,
    "sight": 5,
+   "purchaseYield": "GOLD",
    "unlock": "Stealth Technology"
   },
   {
@@ -44,6 +46,7 @@
    "range": 4,
    "moves": 6,
    "sight": 4,
+   "purchaseYield": "GOLD",
    "unlock": "Flight"
   },
   {
@@ -59,6 +62,7 @@
    "range": 5,
    "moves": 8,
    "sight": 4,
+   "purchaseYield": "GOLD",
    "unlock": "Advanced Flight"
   },
   {
@@ -74,6 +78,7 @@
    "range": 6,
    "moves": 10,
    "sight": 5,
+   "purchaseYield": "GOLD",
    "unlock": "Lasers"
   },
   {
@@ -201,6 +206,7 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Foreign Trade"
   },
   {
@@ -216,7 +222,9 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
-   "buildCharges": 3
+   "buildCharges": 3,
+   "costProgression": 4,
+   "purchaseYield": "GOLD"
   },
   {
    "id": "UNIT_MISSIONARY",
@@ -230,7 +238,10 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "costProgression": 6,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH"
   },
   {
    "id": "UNIT_SETTLER",
@@ -245,7 +256,11 @@
    "range": 0,
    "moves": 2,
    "sight": 3,
-   "foundCity": true
+   "foundCity": true,
+   "costProgression": 30,
+   "popCost": 1,
+   "minPopulation": 2,
+   "purchaseYield": "GOLD"
   },
   {
    "id": "UNIT_GURU",
@@ -260,7 +275,9 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
-   "buildCharges": 3
+   "costProgression": 12,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH"
   },
   {
    "id": "UNIT_NATURALIST",
@@ -275,6 +292,9 @@
    "range": 0,
    "moves": 4,
    "sight": 3,
+   "costProgression": 50,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH",
    "unlock": "Conservation"
   },
   {
@@ -290,6 +310,7 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Natural History"
   },
   {
@@ -306,6 +327,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Bronze Working"
   },
   {
@@ -322,6 +344,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Military Tactics"
   },
   {
@@ -338,6 +361,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Metal Casting"
   },
   {
@@ -354,6 +378,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Chemistry"
   },
   {
@@ -370,6 +395,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Composites"
   },
   {
@@ -384,7 +410,10 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "costProgression": 15,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH"
   },
   {
    "id": "UNIT_GIANT_DEATH_ROBOT",
@@ -400,6 +429,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Robotics"
   },
   {
@@ -416,6 +446,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Wheel"
   },
   {
@@ -432,6 +463,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Stirrups"
   },
   {
@@ -448,6 +480,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Ballistics"
   },
   {
@@ -464,6 +497,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Combustion"
   },
   {
@@ -480,6 +514,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Composites"
   },
   {
@@ -494,7 +529,10 @@
    "ranged": 0,
    "range": 0,
    "moves": 4,
-   "sight": 2
+   "sight": 2,
+   "costProgression": 6,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH"
   },
   {
    "id": "UNIT_HORSEMAN",
@@ -510,6 +548,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Horseback Riding"
   },
   {
@@ -526,6 +565,7 @@
    "moves": 5,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Castles"
   },
   {
@@ -542,6 +582,7 @@
    "moves": 5,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Military Science"
   },
   {
@@ -558,6 +599,7 @@
    "moves": 4,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Synthetic Materials"
   },
   {
@@ -573,7 +615,8 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
-   "zoneOfControl": true
+   "zoneOfControl": true,
+   "purchaseYield": "GOLD"
   },
   {
    "id": "UNIT_SWORDSMAN",
@@ -589,6 +632,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Iron Working"
   },
   {
@@ -605,6 +649,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Apprenticeship"
   },
   {
@@ -621,6 +666,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Gunpowder"
   },
   {
@@ -637,6 +683,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Military Science"
   },
   {
@@ -653,6 +700,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Replaceable Parts"
   },
   {
@@ -669,6 +717,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Satellites"
   },
   {
@@ -684,7 +733,9 @@
    "range": 0,
    "moves": 3,
    "sight": 2,
-   "zoneOfControl": true
+   "zoneOfControl": true,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH"
   },
   {
    "id": "UNIT_SLINGER",
@@ -698,7 +749,8 @@
    "ranged": 15,
    "range": 1,
    "moves": 2,
-   "sight": 2
+   "sight": 2,
+   "purchaseYield": "GOLD"
   },
   {
    "id": "UNIT_ARCHER",
@@ -713,6 +765,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Archery"
   },
   {
@@ -728,6 +781,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Machinery"
   },
   {
@@ -743,6 +797,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Ballistics"
   },
   {
@@ -758,6 +813,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Advanced Ballistics"
   },
   {
@@ -773,7 +829,8 @@
    "range": 0,
    "moves": 3,
    "sight": 2,
-   "zoneOfControl": true
+   "zoneOfControl": true,
+   "purchaseYield": "GOLD"
   },
   {
    "id": "UNIT_SKIRMISHER",
@@ -788,6 +845,7 @@
    "range": 1,
    "moves": 3,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Machinery"
   },
   {
@@ -803,6 +861,7 @@
    "range": 1,
    "moves": 3,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Rifling"
   },
   {
@@ -818,6 +877,7 @@
    "range": 2,
    "moves": 3,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Plastics"
   },
   {
@@ -833,6 +893,9 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "costProgression": 50,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH",
    "unlock": "Cold War"
   },
   {
@@ -848,6 +911,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Engineering"
   },
   {
@@ -863,6 +927,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Military Engineering"
   },
   {
@@ -878,6 +943,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Metal Casting"
   },
   {
@@ -893,6 +959,7 @@
    "range": 2,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Steel"
   },
   {
@@ -908,6 +975,7 @@
    "range": 3,
    "moves": 3,
    "sight": 3,
+   "purchaseYield": "GOLD",
    "unlock": "Guidance Systems"
   },
   {
@@ -922,7 +990,8 @@
    "ranged": 0,
    "range": 0,
    "moves": 1,
-   "sight": 3
+   "sight": 3,
+   "costProgression": 75
   },
   {
    "id": "UNIT_BATTERING_RAM",
@@ -937,6 +1006,7 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Masonry"
   },
   {
@@ -952,6 +1022,7 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Machinery"
   },
   {
@@ -968,6 +1039,7 @@
    "moves": 2,
    "sight": 2,
    "buildCharges": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Military Engineering"
   },
   {
@@ -983,6 +1055,7 @@
    "range": 0,
    "moves": 2,
    "sight": 3,
+   "purchaseYield": "GOLD",
    "unlock": "Flight"
   },
   {
@@ -998,6 +1071,7 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Sanitation"
   },
   {
@@ -1013,6 +1087,7 @@
    "range": 0,
    "moves": 3,
    "sight": 5,
+   "purchaseYield": "GOLD",
    "unlock": "Computers"
   },
   {
@@ -1028,6 +1103,7 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Combustion"
   },
   {
@@ -1043,6 +1119,7 @@
    "range": 1,
    "moves": 2,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Advanced Ballistics"
   },
   {
@@ -1058,6 +1135,7 @@
    "range": 1,
    "moves": 3,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Guidance Systems"
   },
   {
@@ -1088,6 +1166,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Combined Arms"
   },
   {
@@ -1104,6 +1183,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Sailing"
   },
   {
@@ -1120,6 +1200,7 @@
    "moves": 4,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Cartography"
   },
   {
@@ -1136,6 +1217,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Steam Power"
   },
   {
@@ -1152,6 +1234,7 @@
    "moves": 4,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Combined Arms"
   },
   {
@@ -1168,6 +1251,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Mercantilism"
   },
   {
@@ -1183,6 +1267,7 @@
    "range": 2,
    "moves": 3,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Electricity"
   },
   {
@@ -1198,6 +1283,7 @@
    "range": 2,
    "moves": 4,
    "sight": 2,
+   "purchaseYield": "GOLD",
    "unlock": "Telecommunications"
   },
   {
@@ -1214,6 +1300,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Shipbuilding"
   },
   {
@@ -1230,6 +1317,7 @@
    "moves": 4,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Square Rigging"
   },
   {
@@ -1246,6 +1334,7 @@
    "moves": 5,
    "sight": 2,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Refining"
   },
   {
@@ -1262,6 +1351,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "purchaseYield": "GOLD",
    "unlock": "Lasers"
   }
  ]

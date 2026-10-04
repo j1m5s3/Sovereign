@@ -41,7 +41,11 @@ TEST(rules_load_known_values) {
 TEST(rules_mod_layers_override_by_id) {
     std::map<std::string, std::string> base = {
         {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 3, "START_DISTANCE_MAJOR_CIVILIZATION": 12,
-            "MOVEMENT_RIVER_COST": 2, "CITY_SIGHT_RANGE": 2, "COMBAT_MAX_HIT_POINTS": 100}})"},
+            "MOVEMENT_RIVER_COST": 2, "CITY_SIGHT_RANGE": 2, "COMBAT_MAX_HIT_POINTS": 100,
+            "CITY_FOOD_CONSUMPTION_PER_POPULATION": 2, "CITY_GROWTH_THRESHOLD": 15, "CITY_GROWTH_MULTIPLIER": 8,
+            "CITY_GROWTH_EXPONENT": 1.5, "CULTURE_COST_FIRST_PLOT": 10, "CULTURE_COST_LATER_PLOT_MULTIPLIER": 6,
+            "CULTURE_COST_LATER_PLOT_EXPONENT": 1.3, "CITY_POP_PER_AMENITY": 2, "PLOT_BUY_BASE_COST": 50,
+            "GOLD_PURCHASE_MULTIPLIER": 2}})"},
         {"terrain.json", R"({"terrains": [{"id": "TERRAIN_GRASS", "base": "GRASSLAND"}], "features": []})"},
         {"units.json", R"({"units": [{"id": "UNIT_WARRIOR", "combat": 20}, {"id": "UNIT_SCOUT", "combat": 10}]})"},
         {"civilizations.json", R"({"civilizations": [{"id": "CIV_A"}]})"},

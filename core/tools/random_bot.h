@@ -32,6 +32,10 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
         }
         if (!moved) game.submit(Command::setActivity(me, id, Activity::Skip));
     }
+    for (CityId cid : game.citiesNeedingProduction(me)) {
+        std::vector<ProductionItem> items = game.buildableItems(cid);
+        if (!items.empty()) game.submit(Command::setProduction(me, cid, items[rng.below(static_cast<uint32_t>(items.size()))]));
+    }
     for (UnitId id : game.unitsNeedingOrders(me)) game.submit(Command::setActivity(me, id, Activity::Skip));
     game.submit(Command::endTurn(me));
 }

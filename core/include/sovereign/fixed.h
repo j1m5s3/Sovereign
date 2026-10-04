@@ -58,6 +58,11 @@ public:
     constexpr bool operator>(Fixed o) const { return raw_ > o.raw_; }
     constexpr bool operator>=(Fixed o) const { return raw_ >= o.raw_; }
 
+    // base ^ exponent for base >= 0, through fixed-point log2/exp2 (bit-exact on
+    // every platform), rounded to the nearest representable value. Used for
+    // Civ's growth and border cost curves (n^1.5, (6n)^1.3).
+    static Fixed pow(Fixed base, Fixed exponent);
+
     // a * b / d with a 128-bit intermediate, truncated toward zero.
     static int64_t mulDiv(int64_t a, int64_t b, int64_t d);
 
