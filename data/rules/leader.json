@@ -1,0 +1,61 @@
+{
+ "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls); both are Sovereign tuning.",
+ "units": [
+  {"id": "UNIT_SOVEREIGN", "name": "Sovereign", "class": "LEADER", "domain": "LAND", "layer": "LEADER",
+   "cost": 0, "trainable": false, "maintenance": 0, "combat": 0, "moves": 2, "sight": 2}
+ ],
+ "gear": [
+  {"id": "GEAR_CLUB", "name": "Club", "slot": "WEAPON", "combat": 16},
+  {"id": "GEAR_SPEAR", "name": "Spear", "slot": "WEAPON", "unlock": "TECH_BRONZE_WORKING", "combat": 22, "goldCost": 40},
+  {"id": "GEAR_BOW", "name": "Bow", "slot": "WEAPON", "unlock": "TECH_ARCHERY", "combat": 12, "ranged": 22, "range": 2, "goldCost": 40},
+  {"id": "GEAR_SWORD", "name": "Sword", "slot": "WEAPON", "unlock": "TECH_IRON_WORKING", "combat": 30, "goldCost": 80,
+   "strategicCost": {"resource": "RESOURCE_IRON", "amount": 10}},
+  {"id": "GEAR_CROSSBOW", "name": "Crossbow", "slot": "WEAPON", "unlock": "TECH_MACHINERY", "combat": 26, "ranged": 36, "range": 2, "goldCost": 120},
+  {"id": "GEAR_MUSKET", "name": "Musket and pistol", "slot": "WEAPON", "unlock": "TECH_GUNPOWDER", "combat": 49, "goldCost": 200,
+   "strategicCost": {"resource": "RESOURCE_NITER", "amount": 10}},
+  {"id": "GEAR_RIFLE", "name": "Rifle", "slot": "WEAPON", "unlock": "TECH_RIFLING", "combat": 59, "goldCost": 260,
+   "strategicCost": {"resource": "RESOURCE_NITER", "amount": 10}},
+  {"id": "GEAR_MACHINE_PISTOL", "name": "Machine pistol", "slot": "WEAPON", "unlock": "TECH_REPLACEABLE_PARTS", "combat": 67, "goldCost": 340,
+   "strategicCost": {"resource": "RESOURCE_OIL", "amount": 1}},
+  {"id": "GEAR_MODERN_RIFLE", "name": "Modern rifle", "slot": "WEAPON", "unlock": "TECH_COMPOSITES", "combat": 75, "goldCost": 440,
+   "strategicCost": {"resource": "RESOURCE_ALUMINUM", "amount": 1}},
+
+  {"id": "GEAR_HIDE", "name": "Hide", "slot": "ARMOR", "defense": 3},
+  {"id": "GEAR_BRONZE_SCALE", "name": "Bronze scale", "slot": "ARMOR", "unlock": "TECH_BRONZE_WORKING", "defense": 4, "goldCost": 40},
+  {"id": "GEAR_IRON_MAIL", "name": "Iron mail", "slot": "ARMOR", "unlock": "TECH_IRON_WORKING", "defense": 5, "goldCost": 80,
+   "strategicCost": {"resource": "RESOURCE_IRON", "amount": 10}},
+  {"id": "GEAR_PLATE", "name": "Plate", "slot": "ARMOR", "unlock": "TECH_APPRENTICESHIP", "defense": 10, "moves": -1, "goldCost": 140,
+   "strategicCost": {"resource": "RESOURCE_IRON", "amount": 10}},
+  {"id": "GEAR_CUIRASS", "name": "Cuirass", "slot": "ARMOR", "unlock": "TECH_GUNPOWDER", "defense": 6, "goldCost": 160,
+   "strategicCost": {"resource": "RESOURCE_IRON", "amount": 10}},
+  {"id": "GEAR_LIGHT_BODY_ARMOR", "name": "Light body armor", "slot": "ARMOR", "unlock": "TECH_REPLACEABLE_PARTS", "defense": 8, "goldCost": 300,
+   "strategicCost": {"resource": "RESOURCE_OIL", "amount": 1}},
+  {"id": "GEAR_CERAMIC_ARMOR", "name": "Ceramic armor", "slot": "ARMOR", "unlock": "TECH_COMPOSITES", "defense": 10, "goldCost": 420,
+   "strategicCost": {"resource": "RESOURCE_ALUMINUM", "amount": 1}},
+
+  {"id": "GEAR_HORSE", "name": "Horse", "slot": "MOUNT", "unlock": "TECH_HORSEBACK_RIDING", "moves": 2, "goldCost": 60,
+   "strategicCost": {"resource": "RESOURCE_HORSES", "amount": 10}, "upkeepAs": "UNIT_HORSEMAN"},
+  {"id": "GEAR_WARHORSE", "name": "Warhorse", "slot": "MOUNT", "unlock": "TECH_STIRRUPS", "moves": 2, "goldCost": 160,
+   "strategicCost": {"resource": "RESOURCE_HORSES", "amount": 10}, "upkeepAs": "UNIT_KNIGHT"},
+  {"id": "GEAR_STAFF_CAR", "name": "Staff car", "slot": "MOUNT", "unlock": "TECH_COMBUSTION", "moves": 2, "goldCost": 300,
+   "strategicCost": {"resource": "RESOURCE_OIL", "amount": 1}, "upkeepAs": "UNIT_TANK"}
+ ],
+ "dynasties": [
+  {"id": "DYNASTY_ENGLAND", "civ": "CIVILIZATION_ENGLAND", "names": ["Elizabeth I", "James I", "Charles I"]},
+  {"id": "DYNASTY_FRANCE", "civ": "CIVILIZATION_FRANCE", "names": ["Charlemagne", "Louis the Pious", "Charles the Bald"]},
+  {"id": "DYNASTY_ROME", "civ": "CIVILIZATION_ROME", "names": ["Augustus", "Tiberius", "Claudius"]},
+  {"id": "DYNASTY_GREECE", "civ": "CIVILIZATION_GREECE", "names": ["Leonidas I", "Pleistarchus", "Pleistoanax"]},
+  {"id": "DYNASTY_PERSIA", "civ": "CIVILIZATION_PERSIA", "names": ["Cyrus the Great", "Cambyses II", "Darius I"]},
+  {"id": "DYNASTY_ARABIA", "civ": "CIVILIZATION_ARABIA", "names": ["Saladin", "al-Adil I", "al-Kamil"]},
+  {"id": "DYNASTY_CHINA", "civ": "CIVILIZATION_CHINA", "names": ["Qin Shi Huang", "Qin Er Shi", "Ziying"]},
+  {"id": "DYNASTY_JAPAN", "civ": "CIVILIZATION_JAPAN", "names": ["Tokugawa Ieyasu", "Tokugawa Hidetada", "Tokugawa Iemitsu"]},
+  {"id": "DYNASTY_EGYPT", "civ": "CIVILIZATION_EGYPT", "names": ["Ramesses II", "Merneptah", "Seti II"]},
+  {"id": "DYNASTY_MALI", "civ": "CIVILIZATION_MALI", "names": ["Mansa Musa", "Maghan I", "Suleyman"]},
+  {"id": "DYNASTY_AZTEC", "civ": "CIVILIZATION_AZTEC", "names": ["Moctezuma I", "Axayacatl", "Ahuitzotl"]},
+  {"id": "DYNASTY_INCA", "civ": "CIVILIZATION_INCA", "names": ["Pachacuti", "Topa Inca Yupanqui", "Huayna Capac"]}
+ ],
+ "globals": {
+  "LEADER_RETREAT_HP": 30,
+  "LEADER_INTERREGNUM_TURNS": 3
+ }
+}

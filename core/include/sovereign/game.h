@@ -187,6 +187,22 @@ public:
     bool canPromote(UnitId unit, TypeIndex promotion) const;
     std::vector<TypeIndex> availablePromotions(UnitId unit) const;
 
+    // ---- the leader (leader doc §1, §2, §5; data in leader.json)
+    bool isLeader(const Unit& unit) const;
+    const Unit* leaderOf(PlayerId player) const;
+    // The military unit linked to escort this leader, while they share a plot.
+    const Unit* escortOf(const Unit& leader) const;
+    // The unit that fights for a plot: its military unit, else a leader standing there.
+    const Unit* defenderAt(Hex plot) const;
+    // Melee and ranged base strength (a leader's come from its weapon).
+    int meleeStrength(const Unit& unit) const;
+    int rangedStrength(const Unit& unit) const;
+    int gearCost(TypeIndex gear) const;  // gold, scaled by game speed
+    bool gearUnlocked(PlayerId player, TypeIndex gear) const;
+    bool canEquip(UnitId leader, TypeIndex gear, CommandError* why = nullptr) const;
+    // Gold per turn the leader's mount costs: twice its upkeep unit's maintenance.
+    int leaderUpkeep(PlayerId player) const;
+
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
 
@@ -241,6 +257,14 @@ private:
     bool growBorders(City& city);  // false when no plot was available
     std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
     void placeDistrict(City& city, TypeIndex district, Hex plot);
+    CommandError validateLeader(const Command& c) const;
+    void applyLeader(const Command& c);
+    void spawnLeader(PlayerId p, Hex at);
+    // The leader was beaten: captured (melee, city capture) or killed (ranged, its own failed attack).
+    void leaderLost(UnitId leader, PlayerId by, bool captured);
+    // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
+    void barbarianWound(Unit& leader);
+    Unit* escortMut(const Unit& leader);
     void applyMove(const Command& c);
     void applyFoundCity(const Command& c);
     void applyEndTurn(const Command& c);

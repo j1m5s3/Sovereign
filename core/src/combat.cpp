@@ -143,11 +143,18 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
 }
 
 int Game::maxMoves(const Unit& unit) const {
-    return typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves);
+    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves);
+    if (!isLeader(unit)) return moves;
+    for (TypeIndex g : unit.gear) {
+        if (g != kNone) moves += rules_->gear[static_cast<size_t>(g)].moves;  // mounts add, heavy armor subtracts
+    }
+    return std::max(1, moves);
 }
 
 int Game::unitRange(const Unit& unit) const {
-    const int base = typeOf(*rules_, unit).range;
+    const TypeIndex weapon = unit.gear[static_cast<size_t>(GearSlot::Weapon)];
+    const int base = !isLeader(unit) ? typeOf(*rules_, unit).range
+                     : weapon == kNone ? 0 : rules_->gear[static_cast<size_t>(weapon)].range;
     return base > 0 ? base + unitEffectTotal(unit, UnitEffectKind::Range) : 0;
 }
 
@@ -207,7 +214,11 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     const Hex oppPos = oppUnit ? oppUnit->pos : oppCity->pos;
     const PlayerId oppOwner = oppUnit ? oppUnit->owner : oppCity->owner;
     const bool bombard = attacking && ranged && ut.ranged == 0 && ut.bombard > 0;
-    int s = !(attacking && ranged) ? ut.combat : bombard ? ut.bombard : ut.ranged;
+    int s = !(attacking && ranged) ? meleeStrength(unit) : bombard ? ut.bombard : rangedStrength(unit);
+    if (!attacking && isLeader(unit)) {
+        const TypeIndex armor = unit.gear[static_cast<size_t>(GearSlot::Armor)];
+        if (armor != kNone) s += rules_->gear[static_cast<size_t>(armor)].defense;  // armor counts when defending
+    }
 
     // Promotions and abilities.
     const ConditionContext ctx{&state_, rules_, &unit, oppUnit, oppCity, attacking, ranged, cityMaxHp()};
@@ -321,7 +332,7 @@ bool Game::canCityStrike(CityId id, Hex target) const {
     if (!c || c->struck || cityMaxWallHp(*c) <= 0) return false;  // strikes need walls
     auto t = state_.grid.normalize(target);
     if (!t || *t != target) return false;
-    const Unit* u = state_.unitAt(*t, UnitLayer::Military, *rules_);
+    const Unit* u = defenderAt(*t);
     if (!u || !atWar(c->owner, u->owner)) return false;
     const TypeIndex center = rules_->district("DISTRICT_CITY_CENTER");
     const int dist = state_.grid.distance(c->pos, *t);
@@ -392,7 +403,7 @@ CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) co
         }
         return out;
     }
-    const Unit* d = state_.unitAt(target, UnitLayer::Military, *rules_);
+    const Unit* d = defenderAt(target);
     if (!d) {
         out.capture = true;
         return out;
@@ -497,16 +508,18 @@ CommandError Game::validateCombat(const Command& c) const {
     const UnitType& ut = typeOf(*rules_, *u);
     auto t = state_.grid.normalize(c.target);
     if (!t || *t != c.target) return CommandError::BadTarget;
-    if (ut.layer != UnitLayer::Military || u->movesLeft <= Fixed() || u->attacks >= maxAttacks(*u))
+    if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader) || u->movesLeft <= Fixed() ||
+        u->attacks >= maxAttacks(*u))
         return CommandError::CannotAttack;
-    // Attacks on a city hit the city, whoever garrisons it.
+    // Attacks on a city hit the city, whoever garrisons it; elsewhere the military unit,
+    // then a leader, defends the plot (leader doc §1: escorts first).
     const City* city = state_.cityAt(*t);
-    const Unit* defender = city ? nullptr : state_.unitAt(*t, UnitLayer::Military, *rules_);
+    const Unit* defender = city ? nullptr : defenderAt(*t);
     if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
 
     if (c.type == CommandType::RangedAttack) {
-        if ((ut.ranged <= 0 && ut.bombard <= 0) || (!defender && !city)) return CommandError::CannotAttack;
+        if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city)) return CommandError::CannotAttack;
         if (u->moved && unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove))
             return CommandError::CannotAttack;
         const int dist = state_.grid.distance(u->pos, *t);
@@ -515,7 +528,7 @@ CommandError Game::validateCombat(const Command& c) const {
         return CommandError::Ok;
     }
     // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
-    if (ut.combat <= 0 || ut.ranged > 0 || ut.bombard > 0) return CommandError::CannotAttack;
+    if (meleeStrength(*u) <= 0 || rangedStrength(*u) > 0 || ut.bombard > 0) return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
     if (city) {
         // A city at 0 HP is only entered by a unit that can take it; barbarians never take cities.
@@ -596,14 +609,16 @@ void Game::applyCombat(const Command& c) {
         case CommandType::CityStrike: {
             // The city fires at a unit: ranged combat, only the unit takes damage.
             City& city = *state_.city(c.id);
-            Unit* target = state_.unit(state_.unitAt(c.target, UnitLayer::Military, *rules_)->id);
+            Unit* target = state_.unit(defenderAt(c.target)->id);
             const PlayerId them = target->owner;
             const int sa = std::max(rules_->globalInt("COMBAT_MINIMUM_CITY_STRIKE_STRENGTH"), cityStrength(city));
             const int sd = combatStrengthVsCity(*target, city, false, true);
             const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
             target->hp -= combatDamage(sa - sd, roll);
             city.struck = true;
-            if (target->hp <= 0) {
+            if (target->hp <= 0 && isLeader(*target)) {
+                leaderLost(target->id, city.owner, false);  // a ranged kill
+            } else if (target->hp <= 0) {
                 noteKill(*target, nullptr);
                 removeUnit(target->id);
             }
@@ -621,7 +636,7 @@ void Game::applyCombat(const Command& c) {
     const UnitId attackerId = c.id;
     const PlayerId me = c.player;
     const Hex target = c.target;
-    const Unit* d = state_.unitAt(target, UnitLayer::Military, *rules_);
+    const Unit* d = defenderAt(target);
     const bool ranged = c.type == CommandType::RangedAttack;
     Rng& rng = state_.rng.get(RngStream::Combat);
     const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
@@ -658,26 +673,40 @@ void Game::applyCombat(const Command& c) {
     const int sd = combatStrength(*def, *a, false, ranged);
     const UnitType& at = typeOf(*rules_, *a);
     const UnitType& dt = typeOf(*rules_, *def);
-    const int baseA = !ranged ? at.combat : at.ranged > 0 ? at.ranged : at.bombard;
-    const int baseD = dt.combat;
+    const int baseA = !ranged ? meleeStrength(*a) : rangedStrength(*a) > 0 ? rangedStrength(*a) : at.bombard;
+    const int baseD = meleeStrength(*def);
+    (void)dt;
 
     const int toDefender = combatDamage(sa - sd, rng.range(0, extra));
     const int toAttacker = ranged ? 0 : combatDamage(sd - sa, rng.range(0, extra));
     def->hp -= toDefender;
     a->hp -= toAttacker;
-    const bool defenderDied = def->hp <= 0;
-    const bool attackerDied = a->hp <= 0;
     const bool barbA = state_.players[static_cast<size_t>(me)].barbarian;
     const bool barbD = state_.players[static_cast<size_t>(them)].barbarian;
+    // Barbarians wound a leader but never kill or capture it (leader doc §1).
+    const bool leaderD = isLeader(*def), leaderA = isLeader(*a);
+    if (leaderD && barbA) barbarianWound(*def);
+    if (leaderA && barbD) barbarianWound(*a);
+    const bool defenderDied = def->hp <= 0;
+    const bool attackerDied = a->hp <= 0;
     if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
     if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
-    if (defenderDied) noteKill(*def, attackerDied ? nullptr : a);
-    if (attackerDied) noteKill(*a, defenderDied ? nullptr : def);
+    if (defenderDied && !leaderD) noteKill(*def, attackerDied ? nullptr : a);
+    if (attackerDied && !leaderA) noteKill(*a, defenderDied ? nullptr : def);
 
-    if (defenderDied) removeUnit(defenderId);
-    if (attackerDied) removeUnit(attackerId);
-    if (defenderDied && !attackerDied && !ranged) {
+    // A beaten leader is captured by a melee victor and killed otherwise (leader doc §5).
+    if (defenderDied) {
+        if (leaderD) leaderLost(defenderId, me, !ranged && !attackerDied);
+        else removeUnit(defenderId);
+    }
+    if (attackerDied) {
+        if (leaderA) leaderLost(attackerId, them, false);
+        else removeUnit(attackerId);
+    }
+    // The victor does not advance while an enemy leader still stands on the plot.
+    const Unit* leaderLeft = state_.unitAt(target, UnitLayer::Leader, *rules_);
+    if (defenderDied && !attackerDied && !ranged && !leaderLeft) {
         // The melee victor advances, capturing any civilians the defender escorted.
         for (const Unit& o : state_.units) {
             if (o.pos == target && o.owner == them) {
@@ -745,7 +774,9 @@ void Game::captureCity(City& city, UnitId attackerId) {
     std::vector<UnitId> there;
     for (const Unit& o : state_.units) if (o.pos == at && o.owner != me) there.push_back(o.id);
     for (UnitId id : there) {
-        if (typeOf(*rules_, *state_.unit(id)).layer == UnitLayer::Military) removeUnit(id);
+        const UnitLayer layer = typeOf(*rules_, *state_.unit(id)).layer;
+        if (layer == UnitLayer::Leader) leaderLost(id, me, true);  // taken with the city
+        else if (layer == UnitLayer::Military) removeUnit(id);
         else seizeCivilian(id, me);
     }
 
@@ -851,6 +882,14 @@ void Game::payUnitFuel(PlayerId pid) {
         const UnitType& ut = typeOf(*rules_, u);
         if (u.owner == pid && ut.resourceMaintenance > 0 && ut.strategicResource != kNone)
             needed[static_cast<size_t>(ut.strategicResource)] += ut.resourceMaintenance;
+        // A leader's mount costs twice its upkeep unit's resource maintenance (leader doc §8.8).
+        const TypeIndex mount = u.gear[static_cast<size_t>(GearSlot::Mount)];
+        if (u.owner == pid && isLeader(u) && mount != kNone) {
+            const TypeIndex as = rules_->gear[static_cast<size_t>(mount)].upkeepAs;
+            const UnitType* mt = as == kNone ? nullptr : &rules_->units[static_cast<size_t>(as)];
+            if (mt && mt->resourceMaintenance > 0 && mt->strategicResource != kNone)
+                needed[static_cast<size_t>(mt->strategicResource)] += 2 * mt->resourceMaintenance;
+        }
     }
     for (size_t r = 0; r < needed.size(); ++r) {
         if (needed[r] == 0) {

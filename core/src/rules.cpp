@@ -231,7 +231,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "civilizations.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -487,7 +487,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         const std::string& domain = j["domain"].str("LAND");
         u.domain = domain == "SEA" ? Domain::Sea : domain == "AIR" ? Domain::Air : Domain::Land;
         const std::string& layer = j["layer"].str("MILITARY");
-        u.layer = layer == "CIVILIAN" ? UnitLayer::Civilian : layer == "SUPPORT" ? UnitLayer::Support : UnitLayer::Military;
+        u.layer = layer == "CIVILIAN" ? UnitLayer::Civilian
+                  : layer == "SUPPORT" ? UnitLayer::Support
+                  : layer == "LEADER"  ? UnitLayer::Leader
+                                       : UnitLayer::Military;
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));
         u.combat = static_cast<int>(j["combat"].integer(0));
@@ -832,6 +835,60 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         for (const Json& n : j["cityNames"].items()) c.cityNames.push_back(n.str());
         civs.push_back(std::move(c));
     }
+    for (const auto& [id, j] : m.tables["dynasties"]) {
+        Dynasty d;
+        d.id = id;
+        d.civ = civ(j["civ"].str());
+        for (const Json& n : j["names"].items()) d.names.push_back(n.str());
+        if (d.civ == kNone || d.names.empty()) {
+            *error = "dynasty " + id + ": unknown civ or no names";
+            return false;
+        }
+        dynasties.push_back(std::move(d));
+    }
+    for (size_t i = 0; i < units.size(); ++i) {
+        if (units[i].layer != UnitLayer::Leader) continue;
+        if (leaderUnit != kNone) {
+            *error = "more than one leader unit (" + units[i].id + ")";
+            return false;
+        }
+        leaderUnit = static_cast<TypeIndex>(i);
+    }
+    for (const auto& [id, j] : m.tables["gear"]) {
+        GearType g;
+        g.id = id;
+        g.name = j["name"].str(id);
+        const std::string& slot = j["slot"].str();
+        if (slot == "WEAPON") g.slot = GearSlot::Weapon;
+        else if (slot == "ARMOR") g.slot = GearSlot::Armor;
+        else if (slot == "MOUNT") g.slot = GearSlot::Mount;
+        else {
+            *error = "gear " + id + ": unknown slot " + slot;
+            return false;
+        }
+        if (!readUnlock(j["unlock"], g.unlock, "gear " + id)) return false;
+        g.combat = static_cast<int>(j["combat"].integer(0));
+        g.ranged = static_cast<int>(j["ranged"].integer(0));
+        g.range = static_cast<int>(j["range"].integer(0));
+        g.defense = static_cast<int>(j["defense"].integer(0));
+        g.moves = static_cast<int>(j["moves"].integer(0));
+        g.goldCost = static_cast<int>(j["goldCost"].integer(0));
+        const Json& sc = j["strategicCost"];
+        if (!sc.isNull()) {
+            g.strategicResource = resource(sc["resource"].str());
+            g.strategicCost = static_cast<int>(sc["amount"].integer(0));
+            if (g.strategicResource == kNone) {
+                *error = "gear " + id + ": unknown strategic resource " + sc["resource"].str();
+                return false;
+            }
+        }
+        const std::string& upkeep = j["upkeepAs"].str();
+        if (!upkeep.empty() && (g.upkeepAs = unit(upkeep)) == kNone) {
+            *error = "gear " + id + ": unknown unit " + upkeep;
+            return false;
+        }
+        gear.push_back(std::move(g));
+    }
     for (const auto& [id, j] : m.tables["modifiers"]) {
         Modifier mod;
         mod.id = id;
@@ -931,6 +988,14 @@ std::vector<const Modifier*> Rules::modifiersFrom(const std::string& source) con
     return out;
 }
 TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
+TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id); }
+
+const Dynasty* Rules::dynastyOf(TypeIndex c) const {
+    for (const Dynasty& d : dynasties) {
+        if (d.civ == c) return &d;
+    }
+    return nullptr;
+}
 TypeIndex Rules::mapSize(const std::string& id) const { return findIn(mapSizes, id); }
 TypeIndex Rules::speed(const std::string& id) const { return findIn(speeds, id); }
 

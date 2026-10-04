@@ -121,7 +121,13 @@ int main(int argc, char** argv) {
                 ++cities;
                 pop += c.population;
             }
-            std::printf(", units %ld (%ld promoted), cities %ld (pop %ld), at war with", units, promoted, cities, pop);
+            std::printf(", units %ld (%ld promoted), cities %ld (pop %ld), leader", units, promoted, cities, pop);
+            if (const Unit* l = game->leaderOf(p.id)) {
+                for (TypeIndex g : l->gear) std::printf(" %s", g == kNone ? "-" : rules.gear[static_cast<size_t>(g)].name.c_str());
+            } else {
+                std::printf(" none");
+            }
+            std::printf(", at war with");
             for (const Player& o : game->state().players) {
                 if (game->atWar(p.id, o.id)) std::printf(" p%d", o.id);
             }

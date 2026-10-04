@@ -23,6 +23,7 @@ add_library(sovereign_core
   src/game.cpp
   src/hex.cpp
   src/json.cpp
+  src/leader.cpp
   src/mapgen.cpp
   src/modifiers.cpp
   src/rng.cpp
@@ -66,6 +67,7 @@ add_executable(sovereign_tests
   tests/test_districts.cpp
   tests/test_ai.cpp
   tests/test_victory.cpp
+  tests/test_leader.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

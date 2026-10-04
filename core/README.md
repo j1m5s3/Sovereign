@@ -51,13 +51,14 @@ same command must print the same hash.
 | Districts: placement, population limit, cost, adjacency | `src/districts.cpp` (queries on `Game`) |
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
+| The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 | `SOV_API` export marker (empty here; dllexport when Unreal loads the core as a DLL) | `include/sovereign/api.h` |
 
 Rules data: `data/rules/{globals,terrain,resources,promotions,units,buildings,districts,barbarians,techs,civics,governments,policies,improvements}.json` are generated
 from `specs/civ6/data` by `python3 tools/rules_gen/gen_rules.py`; never edit
-them by hand. `civilizations.json`, `setup.json` and
+them by hand. `civilizations.json`, `leader.json`, `setup.json` and
 `modifiers.json` are Sovereign's own and hand-written. Pass more `--rules` directories to layer mods on top (rows
 replace by `id`; `"delete": true` removes one).
 

@@ -26,8 +26,9 @@ SOV_API bool parseYieldName(const std::string& s, YieldType& out);
 
 enum class Relief : uint8_t { Flat = 0, Hills, Mountain };
 enum class Domain : uint8_t { Land = 0, Sea, Air };
-// 1UPT layers (05-units-and-combat.md, Stacking).
-enum class UnitLayer : uint8_t { Military = 0, Civilian, Support };
+// 1UPT layers (05-units-and-combat.md, Stacking). The leader has its own layer so it can
+// share a plot with one military escort and one civilian (leader doc §1).
+enum class UnitLayer : uint8_t { Military = 0, Civilian, Support, Leader };
 enum class ResourceClass : uint8_t { Bonus = 0, Luxury, Strategic };
 
 using TypeIndex = int16_t;
@@ -416,6 +417,34 @@ struct CivType {
     std::vector<std::string> cityNames;
 };
 
+// The leader's loadout (leader doc §2, §8.8; data in leader.json). Weapons set melee
+// strength (and ranged strength and range); armor adds defence when defending; mounts
+// add movement and cost twice the upkeep of the matching mounted unit.
+enum class GearSlot : uint8_t { Weapon = 0, Armor, Mount };
+constexpr int kNumGearSlots = 3;
+
+struct GearType {
+    std::string id, name;
+    GearSlot slot = GearSlot::Weapon;
+    Unlock unlock;            // none: available from the start
+    int combat = 0;           // melee strength (weapons)
+    int ranged = 0, range = 0;  // ranged weapons
+    int defense = 0;          // added when the leader defends (armor)
+    int moves = 0;            // movement change (mounts add, heavy armor may subtract)
+    TypeIndex strategicResource = kNone;
+    int strategicCost = 0;    // spent once when equipped
+    int goldCost = 0;         // at Standard speed
+    TypeIndex upkeepAs = kNone;  // mounts: the unit whose maintenance the leader pays twice
+};
+
+// A civ's hand-made line of rulers (leaders-and-art-style.md, Dynasties): the starting
+// leader, then its heirs in order.
+struct Dynasty {
+    std::string id;
+    TypeIndex civ = kNone;
+    std::vector<std::string> names;
+};
+
 struct MapSizeType {
     std::string id;
     int width = 0, height = 0;
@@ -457,6 +486,9 @@ public:
     std::vector<MapSizeType> mapSizes;
     std::vector<GameSpeedType> speeds;
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
+    std::vector<GearType> gear;
+    std::vector<Dynasty> dynasties;
+    TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
 
     TypeIndex terrain(const std::string& id) const;
     TypeIndex feature(const std::string& id) const;
@@ -475,6 +507,9 @@ public:
     // Modifiers whose source is this id, in load order.
     std::vector<const Modifier*> modifiersFrom(const std::string& source) const;
     TypeIndex civ(const std::string& id) const;
+    TypeIndex gearType(const std::string& id) const;
+    // The civ's dynasty, or null when it has none.
+    const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;
     TypeIndex speed(const std::string& id) const;
     // Terrain with this climate base and relief, or kNone.

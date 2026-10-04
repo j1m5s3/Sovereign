@@ -19,21 +19,23 @@ TEST(game_starts_with_settler_and_warrior) {
     const GameState& s = g->state();
     CHECK_EQ(s.turn, 1);
     CHECK_EQ(s.currentPlayer, 0);
-    CHECK_EQ(s.units.size(), 4u);
+    CHECK_EQ(s.units.size(), 6u);  // Settler, Warrior and the leader each
     REQUIRE(s.players.size() == 3u);
     CHECK(s.players[2].barbarian && g->atWar(0, 2) && g->atWar(2, 1) && !g->atWar(0, 1));
     for (const Player& p : s.players) {
         if (p.barbarian) continue;
-        int settlers = 0, warriors = 0;
+        int settlers = 0, warriors = 0, leaders = 0;
         for (const Unit& u : s.units) {
             if (u.owner != p.id) continue;
             settlers += u.type == rules().unit("UNIT_SETTLER");
             warriors += u.type == rules().unit("UNIT_WARRIOR");
+            leaders += u.type == rules().leaderUnit;
             CHECK(g->state().grid.distance(u.pos, p.startPos) <= 2);
             CHECK(g->visibility(p.id, u.pos) == Visibility::Visible);
         }
         CHECK_EQ(settlers, 1);
         CHECK_EQ(warriors, 1);
+        CHECK_EQ(leaders, 1);
     }
 }
 
