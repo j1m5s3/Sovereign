@@ -26,7 +26,8 @@ check that the generated rules data is current.
 core/build/sovsim --rules data/rules --seed 7 --players 4 --size MAPSIZE_TINY --turns 100 --map
 ```
 
-Plays every player with a dumb bot, replays the command log to prove it
+Plays every player with a dumb bot (`--ai`: with the AI; `--ai-seats N`: the AI
+in the first N seats and the bot in the rest), replays the command log to prove it
 reproduces the same state, and prints the state hash. Two machines running the
 same command must print the same hash.
 
@@ -48,6 +49,7 @@ same command must print the same hash.
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
 | Districts: placement, population limit, cost, adjacency | `src/districts.cpp` (queries on `Game`) |
+| The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 

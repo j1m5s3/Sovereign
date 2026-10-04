@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(SOVEREIGN_WERROR "Treat warnings as errors" ON)
 
 add_library(sovereign_core
+  src/ai.cpp
   src/city.cpp
   src/research.cpp
   src/improvements.cpp
@@ -62,6 +63,7 @@ add_executable(sovereign_tests
   tests/test_combat.cpp
   tests/test_city_combat.cpp
   tests/test_districts.cpp
+  tests/test_ai.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

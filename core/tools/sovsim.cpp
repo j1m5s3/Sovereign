@@ -1,8 +1,9 @@
-// Headless simulator: generates a game, plays it with the random bot, checks
+// Headless simulator: generates a game, plays it with the random bot or the AI, checks
 // that replaying the command log reproduces the same state, and prints the
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--map] [--cities]
+//          [--ai] [--ai-seats N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest)
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,7 @@
 #include <vector>
 
 #include "random_bot.h"
+#include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/serialize.h"
 
@@ -43,7 +45,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> rulesDirs;
     GameSetup setup;
     setup.seed = 1;
-    int turns = 50, players = 2;
+    int turns = 50, players = 2, aiSeats = 0;
     std::string savePath;
     bool showMap = false, showCities = false;
     for (int i = 1; i < argc; ++i) {
@@ -57,6 +59,8 @@ int main(int argc, char** argv) {
         else if (a == "--save") savePath = next();
         else if (a == "--map") showMap = true;
         else if (a == "--cities") showCities = true;
+        else if (a == "--ai") aiSeats = 1 << 20;
+        else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
             return 2;
@@ -77,7 +81,14 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "create: %s\n", err.c_str());
         return 1;
     }
-    sovbot::playTurns(*game, setup.seed ^ 0x5EEDull, turns);
+    {
+        Rng botRng(setup.seed ^ 0x5EEDull);
+        const int stopAt = game->state().turn + turns;
+        while (game->state().turn < stopAt) {
+            if (game->state().currentPlayer < aiSeats) ai::playTurn(*game);
+            else sovbot::playTurn(*game, botRng);
+        }
+    }
     auto replayed = Game::replay(rules, setup, game->log(), &err);
     if (!replayed || replayed->stateHash() != game->stateHash()) {
         std::fprintf(stderr, "REPLAY MISMATCH %s\n", err.c_str());
@@ -102,7 +113,13 @@ int main(int argc, char** argv) {
                 ++units;
                 promoted += u.promotions.empty() ? 0 : 1;
             }
-            std::printf(", units %ld (%ld promoted), at war with", units, promoted);
+            long cities = 0, pop = 0;
+            for (const City& c : game->state().cities) {
+                if (c.owner != p.id) continue;
+                ++cities;
+                pop += c.population;
+            }
+            std::printf(", units %ld (%ld promoted), cities %ld (pop %ld), at war with", units, promoted, cities, pop);
             for (const Player& o : game->state().players) {
                 if (game->atWar(p.id, o.id)) std::printf(" p%d", o.id);
             }
@@ -127,7 +144,11 @@ int main(int argc, char** argv) {
             razed += c.type == CommandType::RazeCity;
         }
         long captured = 0, eliminated = 0;
-        for (const City& c : game->state().cities) captured += c.owner != c.originalOwner;
+        long capitals = 0;
+        for (const City& c : game->state().cities) {
+            captured += c.owner != c.originalOwner;
+            capitals += c.originalCapital && c.owner != c.originalOwner;
+        }
         for (const Player& p : game->state().players) eliminated += !p.alive;
         long districts = 0, districtsDone = 0;
         for (const City& c : game->state().cities) {
@@ -136,9 +157,9 @@ int main(int argc, char** argv) {
         }
         std::printf("districts placed %ld, finished %ld\n", districts, districtsDone);
         const long camps = static_cast<long>(game->state().camps.size());
-        std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld, "
+        std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld (capitals %ld), "
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",
-                    wars, attacks, promotions, strikes, captured, razed, eliminated, camps,
+                    wars, attacks, promotions, strikes, captured, capitals, razed, eliminated, camps,
                     static_cast<long>(game->state().nextCampId - 1) - camps);
     }
     if (!savePath.empty()) {
