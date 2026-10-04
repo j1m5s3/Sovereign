@@ -81,6 +81,8 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotMakePeace: return "CannotMakePeace";
         case CommandError::CannotAttack: return "CannotAttack";
         case CommandError::CannotPromote: return "CannotPromote";
+        case CommandError::CannotStrike: return "CannotStrike";
+        case CommandError::CannotRaze: return "CannotRaze";
     }
     return "Unknown";
 }
@@ -119,6 +121,9 @@ std::string describe(const Command& c) {
         case CommandType::RangedAttack:
             return s + "RangedAttack u" + std::to_string(c.id) + " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ")";
         case CommandType::Promote: return s + "Promote u" + std::to_string(c.id) + " promotion" + std::to_string(c.arg);
+        case CommandType::CityStrike:
+            return s + "CityStrike c" + std::to_string(c.id) + " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ")";
+        case CommandType::RazeCity: return s + "RazeCity c" + std::to_string(c.id);
     }
     return s + "?";
 }

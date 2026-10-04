@@ -1,6 +1,7 @@
 // War and peace, unit combat, zone of control, XP, promotions, healing and
 // strategic fuel (05-units-and-combat.md; constants from global-parameters.md
-// COMBAT, EXPERIENCE and DIPLOMACY). City combat and barbarians arrive in MVP-4b.
+// COMBAT, EXPERIENCE and DIPLOMACY) and city combat: walls, strikes, capture,
+// razing and elimination (02-cities.md, City combat).
 #include <algorithm>
 
 #include "sovereign/game.h"
@@ -24,27 +25,31 @@ struct ConditionContext {
     const GameState* s;
     const Rules* r;
     const Unit* unit;
-    const Unit* opponent;
+    const Unit* opponent;   // null when fighting a city
+    const City* city;       // the opposing city, if any
     bool attacking;
     bool ranged;
+    int cityMaxHp;
 };
 
 bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
-    const UnitType& opp = typeOf(*x.r, *x.opponent);
+    const UnitType* opp = x.opponent ? &typeOf(*x.r, *x.opponent) : nullptr;
     const Plot& plot = x.s->plot(x.unit->pos);
     bool ok = false;
     switch (c.atom) {
         case CombatAtom::Untracked: return false;  // unknown conditions never hold, negated or not
         case CombatAtom::Attacking: ok = x.attacking; break;
-        case CombatAtom::VsClass: ok = opp.unitClass == c.value; break;
-        case CombatAtom::VsDomain: ok = static_cast<int>(opp.domain) == c.arg; break;
-        case CombatAtom::VsDistrict: ok = false; break;  // units only until city combat
+        case CombatAtom::VsClass: ok = opp && opp->unitClass == c.value; break;
+        case CombatAtom::VsDomain: ok = opp ? static_cast<int>(opp->domain) == c.arg : c.arg == 0; break;
+        case CombatAtom::VsDistrict: ok = x.city != nullptr; break;
         case CombatAtom::CombatType: ok = (c.arg == 1) == x.ranged; break;
         case CombatAtom::TileHills: ok = x.r->terrains[static_cast<size_t>(plot.terrain)].relief == Relief::Hills; break;
         case CombatAtom::TileFeature: ok = plot.feature == c.ref; break;
         case CombatAtom::TileTerrain: ok = plot.terrain == c.ref; break;
-        case CombatAtom::OpponentFortified: ok = x.opponent->fortifyTurns > 0; break;
-        case CombatAtom::OpponentWounded: ok = x.opponent->hp < x.r->globalInt("COMBAT_MAX_HIT_POINTS"); break;
+        case CombatAtom::OpponentFortified: ok = x.opponent && x.opponent->fortifyTurns > 0; break;
+        case CombatAtom::OpponentWounded:
+            ok = x.opponent ? x.opponent->hp < x.r->globalInt("COMBAT_MAX_HIT_POINTS") : x.city && x.city->hp < x.cityMaxHp;
+            break;
         case CombatAtom::DistrictTile: ok = x.s->cityAt(x.unit->pos) != nullptr; break;
         case CombatAtom::OwnTerritory: ok = plot.owner == x.unit->owner; break;
     }
@@ -62,10 +67,23 @@ bool conditionsHold(const UnitEffect& e, const ConditionContext& x) {
 
 // round(a / b) for a >= 0, b > 0, halves up.
 int roundDiv(int64_t a, int64_t b) { return static_cast<int>((2 * a + b) / (2 * b)); }
+
+// Only these classes take a city (02-cities.md, City combat: Capture).
+bool capturesCities(const UnitType& ut) {
+    return ut.unitClass == "MELEE" || ut.unitClass == "ANTI_CAVALRY" || ut.unitClass == "LIGHT_CAVALRY" ||
+           ut.unitClass == "HEAVY_CAVALRY";
+}
+
+bool anyBuilding(const Rules& r, const City& c, bool BuildingType::*flag) {
+    for (TypeIndex b : c.buildings) if (r.buildings[static_cast<size_t>(b)].*flag) return true;
+    return false;
+}
 }  // namespace
 
 // ------------------------------------------------------------------ war and peace
 
+// The barbarian player is at war with everyone from the start (linkBarbarians);
+// war and peace with it cannot be declared or made.
 bool Game::atWar(PlayerId a, PlayerId b) const {
     if (a == b || a < 0 || b < 0) return false;
     const Player& p = state_.players[static_cast<size_t>(a)];
@@ -74,7 +92,8 @@ bool Game::atWar(PlayerId a, PlayerId b) const {
 
 bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
     if (target < 0 || static_cast<size_t>(target) >= state_.players.size() || target == player) return false;
-    if (!state_.players[static_cast<size_t>(target)].alive) return false;
+    const Player& t = state_.players[static_cast<size_t>(target)];
+    if (!t.alive || t.barbarian || state_.players[static_cast<size_t>(player)].barbarian) return false;
     const Relation& rel = state_.players[static_cast<size_t>(player)].relations[static_cast<size_t>(target)];
     if (rel.war || state_.turn < rules_->globalInt("DIPLOMACY_EARLIEST_MAJOR_DOW_TURN")) return false;
     // After a peace treaty, war may not resume for DIPLOMACY_PEACE_MIN_TURNS.
@@ -83,6 +102,8 @@ bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
 
 bool Game::canMakePeace(PlayerId player, PlayerId target) const {
     if (!atWar(player, target)) return false;
+    if (state_.players[static_cast<size_t>(player)].barbarian || state_.players[static_cast<size_t>(target)].barbarian)
+        return false;
     const Relation& rel = state_.players[static_cast<size_t>(player)].relations[static_cast<size_t>(target)];
     return !rel.peaceOffered && state_.turn - rel.since >= rules_->globalInt("DIPLOMACY_WAR_MIN_TURNS");
 }
@@ -173,15 +194,25 @@ std::vector<uint8_t> Game::zocMap(const Unit& mover) const {
 // ------------------------------------------------------------------ strength and damage
 
 int Game::combatStrength(const Unit& unit, const Unit& opponent, bool attacking, bool ranged) const {
+    return unitStrength(unit, &opponent, nullptr, attacking, ranged);
+}
+
+int Game::combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const {
+    return unitStrength(unit, nullptr, &city, attacking, ranged);
+}
+
+int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const {
     const UnitType& ut = typeOf(*rules_, unit);
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    const Hex oppPos = oppUnit ? oppUnit->pos : oppCity->pos;
+    const PlayerId oppOwner = oppUnit ? oppUnit->owner : oppCity->owner;
     const bool bombard = attacking && ranged && ut.ranged == 0 && ut.bombard > 0;
     int s = !(attacking && ranged) ? ut.combat : bombard ? ut.bombard : ut.ranged;
 
     // Promotions and abilities.
-    const ConditionContext ctx{&state_, rules_, &unit, &opponent, attacking, ranged};
+    const ConditionContext ctx{&state_, rules_, &unit, oppUnit, oppCity, attacking, ranged, cityMaxHp()};
     int flankPercent = 100, supportPercent = 100;
-    bool noRiver = false, noWounded = false, bombardPenalty = false;
+    bool noRiver = false, noWounded = false, bombardPenalty = false, districtPenalty = false;
     forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
         switch (e.kind) {
             case UnitEffectKind::Strength: if (conditionsHold(e, ctx)) s += e.amount; break;
@@ -190,10 +221,15 @@ int Game::combatStrength(const Unit& unit, const Unit& opponent, bool attacking,
             case UnitEffectKind::NoRiverPenalty: noRiver = true; break;
             case UnitEffectKind::NoWoundedPenalty: noWounded = true; break;
             case UnitEffectKind::BombardVsUnit: bombardPenalty = true; break;
+            case UnitEffectKind::RangedVsDistrict: districtPenalty = true; break;
             default: break;
         }
     });
-    if (bombard && bombardPenalty) s -= rules_->globalInt("COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER");
+    if (bombard && bombardPenalty && oppUnit) s -= rules_->globalInt("COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER");
+    if (attacking && ranged && districtPenalty && oppCity) s -= rules_->globalInt("COMBAT_RANGED_VS_DISTRICT_STRENGTH_MODIFIER");
+    // Policies such as Discipline (+5 against barbarians).
+    s += sumUnitStrength(state_, *rules_, owner, ut.unitClass,
+                         oppOwner >= 0 && state_.players[static_cast<size_t>(oppOwner)].barbarian);
 
     if (!attacking) {
         // Terrain defence (hills, woods, marsh...) and fortification.
@@ -203,13 +239,13 @@ int Game::combatStrength(const Unit& unit, const Unit& opponent, bool attacking,
         s += std::min(unit.fortifyTurns, rules_->globalInt("FORTIFY_TURN_MAX")) * rules_->globalInt("FORTIFY_BONUS_PER_TURN");
     } else if (!ranged) {
         // Attacking across a river (05: COMBAT_RIVER_DEFENSE).
-        auto d = state_.grid.directionTo(unit.pos, opponent.pos);
+        auto d = state_.grid.directionTo(unit.pos, oppPos);
         if (d && !noRiver && hasRiver(state_, unit.pos, *d)) s -= rules_->globalInt("COMBAT_RIVER_DEFENSE");
     }
 
     // Flanking (melee attacker) and support (defender), once Military Tradition is known.
     if (hasCivicFlag(*rules_, owner, &TreeNode::combatAdjacency) && (!attacking || !ranged)) {
-        const Hex around = attacking ? opponent.pos : unit.pos;
+        const Hex around = attacking ? oppPos : unit.pos;
         int friends = 0;
         for (const Unit& u : state_.units) {
             if (u.id == unit.id || u.owner != unit.owner || typeOf(*rules_, u).layer != UnitLayer::Military) continue;
@@ -231,11 +267,99 @@ int Game::combatStrength(const Unit& unit, const Unit& opponent, bool attacking,
     return s;
 }
 
+// ------------------------------------------------------------------ cities
+
+int Game::cityMaxHp() const {
+    const TypeIndex center = rules_->district("DISTRICT_CITY_CENTER");  // the loader guarantees it
+    return rules_->districts[static_cast<size_t>(center)].hp;
+}
+
+int Game::cityMaxWallHp(const City& city) const {
+    int hp = 0;
+    for (TypeIndex b : city.buildings) hp += rules_->buildings[static_cast<size_t>(b)].outerDefenseHp;
+    return hp;
+}
+
+int Game::cityStrength(const City& city) const {
+    // max(strongest unit built - 10, garrison) + walls + modifiers (Palace) + center terrain
+    // - 1 per 10% of city HP lost (02-cities.md, City combat).
+    const Player& owner = state_.players[static_cast<size_t>(city.owner)];
+    int s = std::max(0, owner.strongestUnit - rules_->globalInt("CITY_STRENGTH_BELOW_STRONGEST_UNIT"));
+    const Unit* garrison = state_.unitAt(city.pos, UnitLayer::Military, *rules_);
+    if (garrison && garrison->owner == city.owner) s = std::max(s, typeOf(*rules_, *garrison).combat);
+    for (TypeIndex b : city.buildings) s += rules_->buildings[static_cast<size_t>(b)].defense;
+    s += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDefense).toInt());
+    const Plot& p = state_.plot(city.pos);
+    s += rules_->terrains[static_cast<size_t>(p.terrain)].defense;
+    if (p.feature != kNone) s += rules_->features[static_cast<size_t>(p.feature)].defense;
+    const int maxHp = cityMaxHp();
+    if (city.hp < maxHp)
+        s -= roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DISTRICT_DAMAGE_MULTIPLIER")) *
+                          (maxHp - std::max(0, city.hp)), maxHp);
+    return s;
+}
+
+bool Game::cityUnderSiege(const City& city) const {
+    for (const Hex& n : state_.grid.within(city.pos, 1)) {
+        if (n == city.pos) continue;
+        bool held = false;
+        for (const Unit& u : state_.units) {
+            if (!atWar(city.owner, u.owner)) continue;
+            const int d = state_.grid.distance(u.pos, n);
+            if (d == 0 || (d == 1 && exertsZoc(u))) {
+                held = true;
+                break;
+            }
+        }
+        if (!held) return false;
+    }
+    return true;
+}
+
+bool Game::canCityStrike(CityId id, Hex target) const {
+    const City* c = state_.city(id);
+    if (!c || c->struck || cityMaxWallHp(*c) <= 0) return false;  // strikes need walls
+    auto t = state_.grid.normalize(target);
+    if (!t || *t != target) return false;
+    const Unit* u = state_.unitAt(*t, UnitLayer::Military, *rules_);
+    if (!u || !atWar(c->owner, u->owner)) return false;
+    const TypeIndex center = rules_->district("DISTRICT_CITY_CENTER");
+    const int dist = state_.grid.distance(c->pos, *t);
+    if (dist < 1 || dist > rules_->districts[static_cast<size_t>(center)].attackRange) return false;
+    return visibility(c->owner, *t) == Visibility::Visible && lineOfSight(c->pos, *t);
+}
+
+bool Game::canRazeCity(PlayerId player, CityId id) const {
+    const City* c = state_.city(id);
+    if (!c || c->owner != player || c->capturedTurn != state_.turn) return false;
+    return !c->originalCapital || rules_->globalInt("COMBAT_RAZE_ANY_CITY") != 0;
+}
+
 int Game::combatDamage(int strengthDifference, int roll) const {
     // (COMBAT_BASE_DAMAGE + roll) * e^(COMBAT_POWER_SCALING * difference), at least COMBAT_MINIMUM_DAMAGE.
     const Fixed scale = Fixed::exp(rules_->global("COMBAT_POWER_SCALING") * static_cast<int64_t>(strengthDifference));
     const Fixed dmg = Fixed::fromInt(rules_->globalInt("COMBAT_BASE_DAMAGE") + roll) * scale;
     return std::max(rules_->globalInt("COMBAT_MINIMUM_DAMAGE"), static_cast<int>(dmg.round()));
+}
+
+int Game::wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const {
+    // Walls take hits first, scaled by attack type (05: Walls; 02-cities.md, City combat).
+    if (city.wallHp <= 0) return -1;
+    const UnitType& ut = typeOf(*rules_, attacker);
+    if (ranged) {
+        const bool bombard = ut.ranged == 0 && ut.bombard > 0;
+        return rules_->globalInt(bombard ? "COMBAT_DEFENSE_DAMAGE_PERCENT_BOMBARD" : "COMBAT_DEFENSE_DAMAGE_PERCENT_RANGED");
+    }
+    // Support units next to the city: Siege Tower lets melee past the walls, Battering Ram gives full damage.
+    bool bypass = false, ram = false;
+    for (const Unit& s : state_.units) {
+        if (s.owner != attacker.owner || state_.grid.distance(s.pos, city.pos) != 1) continue;
+        bypass = bypass || unitHas(s, UnitEffectKind::BypassWalls);
+        ram = ram || unitHas(s, UnitEffectKind::WallFullDamage);
+    }
+    if (bypass && !anyBuilding(*rules_, city, &BuildingType::wallsCannotBeBypassed)) return -1;
+    if (anyBuilding(*rules_, city, &BuildingType::meleeCannotDamageWalls)) return 0;
+    return ram ? 100 : rules_->globalInt("COMBAT_DEFENSE_DAMAGE_PERCENT_MELEE");
 }
 
 CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) const {
@@ -247,6 +371,27 @@ CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) co
     if (validateCombat(c) != CommandError::Ok) return out;
     out.valid = true;
     out.ranged = ranged;
+    const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
+    if (const City* city = state_.cityAt(target)) {
+        out.city = city->id;
+        if (!ranged && city->hp <= 0) {
+            out.captureCity = true;
+            return out;
+        }
+        out.attackerStrength = combatStrengthVsCity(*a, *city, true, ranged);
+        out.defenderStrength = cityStrength(*city);
+        const int diff = out.attackerStrength - out.defenderStrength;
+        const int wallPercent = wallDamagePercent(*a, *city, ranged);
+        out.hitsWalls = wallPercent >= 0;
+        const int percent = out.hitsWalls ? wallPercent : 100;
+        out.damageToDefenderMin = roundDiv(static_cast<int64_t>(combatDamage(diff, 0)) * percent, 100);
+        out.damageToDefenderMax = roundDiv(static_cast<int64_t>(combatDamage(diff, extra)) * percent, 100);
+        if (!ranged) {
+            out.damageToAttackerMin = combatDamage(-diff, 0);
+            out.damageToAttackerMax = combatDamage(-diff, extra);
+        }
+        return out;
+    }
     const Unit* d = state_.unitAt(target, UnitLayer::Military, *rules_);
     if (!d) {
         out.capture = true;
@@ -256,7 +401,6 @@ CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) co
     out.attackerStrength = combatStrength(*a, *d, true, ranged);
     out.defenderStrength = combatStrength(*d, *a, false, ranged);
     const int diff = out.attackerStrength - out.defenderStrength;
-    const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
     out.damageToDefenderMin = combatDamage(diff, 0);
     out.damageToDefenderMax = combatDamage(diff, extra);
     if (!ranged) {
@@ -294,15 +438,21 @@ std::vector<TypeIndex> Game::availablePromotions(UnitId id) const {
     return out;
 }
 
-void Game::gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed) {
-    const UnitType& ut = typeOf(*rules_, unit);
-    if (ut.promotionClass.empty() || ownBase <= 0) return;
+void Game::gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian) {
+    if (ownBase <= 0) return;
     // 05: enemy base / own base (x2 for a kill), +2 melee or +1 ranged, +1 attacker; at most 8.
     int xp = enemyBase * (killed ? rules_->globalInt("EXPERIENCE_KILL_BONUS") : 1) / ownBase;
     xp += rules_->globalInt(ranged ? "EXPERIENCE_COMBAT_RANGED" : "EXPERIENCE_NOT_COMBAT_RANGED");
     if (attacker) xp += rules_->globalInt("EXPERIENCE_COMBAT_ATTACKER_BONUS");
-    xp = std::min(xp, rules_->globalInt("EXPERIENCE_MAXIMUM_ONE_COMBAT"));
+    awardXp(unit, std::min(xp, rules_->globalInt("EXPERIENCE_MAXIMUM_ONE_COMBAT")), vsBarbarian);
+}
+
+void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
+    const UnitType& ut = typeOf(*rules_, unit);
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    if (ut.promotionClass.empty() || owner.barbarian) return;  // barbarians never promote
+    // Fights with barbarians cannot take a unit past level 2 (EXPERIENCE_MAX_BARB_LEVEL).
+    if (vsBarbarian && unit.level() >= rules_->globalInt("EXPERIENCE_MAX_BARB_LEVEL")) return;
     const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
                         unitEffectTotal(unit, UnitEffectKind::XpPercent);
     xp = xp * percent / 100;
@@ -322,6 +472,18 @@ CommandError Game::validateCombat(const Command& c) const {
         case CommandType::MakePeace:
             return playerArg && canMakePeace(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
                                                                                     : CommandError::CannotMakePeace;
+        case CommandType::CityStrike: {
+            const City* city = state_.city(c.id);
+            if (!city) return CommandError::BadCity;
+            if (city->owner != c.player) return CommandError::NotYourCity;
+            return canCityStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
+        }
+        case CommandType::RazeCity: {
+            const City* city = state_.city(c.id);
+            if (!city) return CommandError::BadCity;
+            if (city->owner != c.player) return CommandError::NotYourCity;
+            return canRazeCity(c.player, c.id) ? CommandError::Ok : CommandError::CannotRaze;
+        }
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -337,12 +499,14 @@ CommandError Game::validateCombat(const Command& c) const {
     if (!t || *t != c.target) return CommandError::BadTarget;
     if (ut.layer != UnitLayer::Military || u->movesLeft <= Fixed() || u->attacks >= maxAttacks(*u))
         return CommandError::CannotAttack;
-    if (state_.cityAt(*t)) return CommandError::CannotAttack;  // city combat: MVP-4b
-    const Unit* defender = state_.unitAt(*t, UnitLayer::Military, *rules_);
+    // Attacks on a city hit the city, whoever garrisons it.
+    const City* city = state_.cityAt(*t);
+    const Unit* defender = city ? nullptr : state_.unitAt(*t, UnitLayer::Military, *rules_);
+    if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
 
     if (c.type == CommandType::RangedAttack) {
-        if ((ut.ranged <= 0 && ut.bombard <= 0) || !defender) return CommandError::CannotAttack;
+        if ((ut.ranged <= 0 && ut.bombard <= 0) || (!defender && !city)) return CommandError::CannotAttack;
         if (u->moved && unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove))
             return CommandError::CannotAttack;
         const int dist = state_.grid.distance(u->pos, *t);
@@ -353,6 +517,11 @@ CommandError Game::validateCombat(const Command& c) const {
     // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
     if (ut.combat <= 0 || ut.ranged > 0 || ut.bombard > 0) return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
+    if (city) {
+        // A city at 0 HP is only entered by a unit that can take it; barbarians never take cities.
+        const bool takes = capturesCities(ut) && !state_.players[static_cast<size_t>(c.player)].barbarian;
+        return city->hp > 0 || takes ? CommandError::Ok : CommandError::CannotAttack;
+    }
     if (defender) return CommandError::Ok;
     // No military unit: capture the civilians there if they belong to an enemy.
     bool any = false;
@@ -367,6 +536,25 @@ CommandError Game::validateCombat(const Command& c) const {
 void Game::removeUnit(UnitId id) {
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(), [&](const Unit& x) { return x.id == id; }),
                        state_.units.end());
+}
+
+void Game::seizeCivilian(UnitId id, PlayerId captor) {
+    Unit* o = state_.unit(id);
+    TypeIndex becomes = typeOf(*rules_, *o).capturedAs;
+    // Barbarians cannot found cities: a Settler they take becomes a Builder (01: Barbarians).
+    if (becomes != kNone && state_.players[static_cast<size_t>(captor)].barbarian &&
+        rules_->units[static_cast<size_t>(becomes)].foundCity)
+        becomes = rules_->unit("UNIT_BUILDER");
+    if (becomes == kNone) {
+        removeUnit(id);
+        return;
+    }
+    o->owner = captor;
+    o->type = becomes;
+    if (o->charges == 0) o->charges = rules_->units[static_cast<size_t>(becomes)].buildCharges;
+    o->movesLeft = Fixed();
+    o->activity = Activity::Awake;
+    o->moveTarget.reset();
 }
 
 void Game::afterAttack(Unit& u) {
@@ -405,7 +593,29 @@ void Game::applyCombat(const Command& c) {
             u->movesLeft = Fixed();  // promoting ends the unit's turn
             return;
         }
+        case CommandType::CityStrike: {
+            // The city fires at a unit: ranged combat, only the unit takes damage.
+            City& city = *state_.city(c.id);
+            Unit* target = state_.unit(state_.unitAt(c.target, UnitLayer::Military, *rules_)->id);
+            const PlayerId them = target->owner;
+            const int sa = std::max(rules_->globalInt("COMBAT_MINIMUM_CITY_STRIKE_STRENGTH"), cityStrength(city));
+            const int sd = combatStrengthVsCity(*target, city, false, true);
+            const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
+            target->hp -= combatDamage(sa - sd, roll);
+            city.struck = true;
+            if (target->hp <= 0) {
+                noteKill(*target, nullptr);
+                removeUnit(target->id);
+            }
+            refreshVisibility(them);
+            return;
+        }
+        case CommandType::RazeCity: razeCity(c.id); return;
         default: break;
+    }
+    if (const City* city = state_.cityAt(c.target)) {
+        attackCity(c, *state_.city(city->id));
+        return;
     }
 
     const UnitId attackerId = c.id;
@@ -421,18 +631,8 @@ void Game::applyCombat(const Command& c) {
         std::vector<UnitId> there;
         for (const Unit& o : state_.units) if (o.pos == target) there.push_back(o.id);
         for (UnitId id : there) {
-            Unit* o = state_.unit(id);
-            const TypeIndex becomes = typeOf(*rules_, *o).capturedAs;
-            if (becomes == kNone) {
-                removeUnit(id);
-                continue;
-            }
-            const PlayerId lost = o->owner;
-            o->owner = me;
-            o->type = becomes;
-            o->movesLeft = Fixed();
-            o->activity = Activity::Awake;
-            o->moveTarget.reset();
+            const PlayerId lost = state_.unit(id)->owner;
+            seizeCivilian(id, me);
             refreshVisibility(lost);
         }
         Unit* a = state_.unit(attackerId);
@@ -444,7 +644,9 @@ void Game::applyCombat(const Command& c) {
         a->moveTarget.reset();
         a->movesLeft = a->movesLeft >= cost ? a->movesLeft - cost : Fixed();
         if (inEnemyZoc(*a, target)) a->movesLeft = Fixed();
+        enterPlot(*a);
         refreshVisibility(me);
+        for (const Player& p : state_.players) if (p.id != me) checkElimination(p.id);
         return;
     }
 
@@ -465,34 +667,179 @@ void Game::applyCombat(const Command& c) {
     a->hp -= toAttacker;
     const bool defenderDied = def->hp <= 0;
     const bool attackerDied = a->hp <= 0;
-    if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied);
-    if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied);
+    const bool barbA = state_.players[static_cast<size_t>(me)].barbarian;
+    const bool barbD = state_.players[static_cast<size_t>(them)].barbarian;
+    if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
+    if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
+    if (defenderDied) noteKill(*def, attackerDied ? nullptr : a);
+    if (attackerDied) noteKill(*a, defenderDied ? nullptr : def);
 
     if (defenderDied) removeUnit(defenderId);
     if (attackerDied) removeUnit(attackerId);
     if (defenderDied && !attackerDied && !ranged) {
         // The melee victor advances, capturing any civilians the defender escorted.
-        Unit* civ = nullptr;
-        for (Unit& o : state_.units) if (o.pos == target && o.owner == them) civ = &o;
-        if (civ) {
-            const TypeIndex becomes = typeOf(*rules_, *civ).capturedAs;
-            if (becomes == kNone) {
-                removeUnit(civ->id);
-            } else {
-                civ->owner = me;
-                civ->type = becomes;
-                civ->movesLeft = Fixed();
-                civ->activity = Activity::Awake;
-                civ->moveTarget.reset();
+        for (const Unit& o : state_.units) {
+            if (o.pos == target && o.owner == them) {
+                seizeCivilian(o.id, me);
+                break;
             }
         }
         Unit* winner = state_.unit(attackerId);
         winner->pos = target;
         winner->moved = true;
+        enterPlot(*winner);
     }
     refreshVisibility(me);
     refreshVisibility(them);
+    checkElimination(them);
+}
+
+void Game::attackCity(const Command& c, City& city) {
+    const bool ranged = c.type == CommandType::RangedAttack;
+    const PlayerId them = city.owner;
+    Unit* a = state_.unit(c.id);
+    if (!ranged && city.hp <= 0) {
+        captureCity(city, c.id);  // a city at 0 HP falls to the first melee unit to enter
+        return;
+    }
+    const int sa = combatStrengthVsCity(*a, city, true, ranged);
+    const int sd = cityStrength(city);
+    Rng& rng = state_.rng.get(RngStream::Combat);
+    const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
+    const int dealt = combatDamage(sa - sd, rng.range(0, extra));
+    const int toAttacker = ranged ? 0 : combatDamage(sd - sa, rng.range(0, extra));
+    const int wallPercent = wallDamagePercent(*a, city, ranged);
+    if (wallPercent >= 0) {
+        city.wallHp = std::max(0, city.wallHp - roundDiv(static_cast<int64_t>(dealt) * wallPercent, 100));
+    } else {
+        city.hp = std::max(0, city.hp - dealt);
+    }
+    city.lastAttackedTurn = state_.turn;
+    a->hp -= toAttacker;
+    if (a->hp <= 0) {
+        noteKill(*a, nullptr);
+        removeUnit(c.id);
+        refreshVisibility(c.player);
+        return;
+    }
+    afterAttack(*a);
+    const bool takes = !ranged && city.hp <= 0 && capturesCities(typeOf(*rules_, *a)) &&
+                       !state_.players[static_cast<size_t>(c.player)].barbarian;
+    if (takes) {
+        captureCity(city, c.id);
+        return;
+    }
+    awardXp(*a, rules_->globalInt("EXPERIENCE_UNIT_VS_DISTRICT_NOT_CITY_CAPTURED"), false);
+    refreshVisibility(c.player);
+    refreshVisibility(them);
+}
+
+void Game::captureCity(City& city, UnitId attackerId) {
+    Unit* a = state_.unit(attackerId);
+    const PlayerId me = a->owner;
+    const PlayerId lost = city.owner;
+    const CityId cid = city.id;
+    const Hex at = city.pos;
+    // The garrison dies; civilians on the center are captured or destroyed.
+    std::vector<UnitId> there;
+    for (const Unit& o : state_.units) if (o.pos == at && o.owner != me) there.push_back(o.id);
+    for (UnitId id : there) {
+        if (typeOf(*rules_, *state_.unit(id)).layer == UnitLayer::Military) removeUnit(id);
+        else seizeCivilian(id, me);
+    }
+
+    City& c = *state_.city(cid);
+    c.owner = me;
+    // 25% of the population is lost and the city is left at half HP with no walls.
+    const int64_t lossRaw = rules_->global("CITY_POPULATION_LOSS_TO_CONQUEST_PERCENTAGE").raw() * c.population;
+    c.population = std::max(1, c.population - static_cast<int>(Fixed::fromRaw(lossRaw).toInt()));
+    const int maxHp = cityMaxHp();
+    c.hp = maxHp - maxHp * rules_->globalInt("CITY_CAPTURED_DAMAGE_PERCENTAGE") / 100;
+    c.wallHp = 0;
+    c.queue.clear();
+    c.progress.clear();
+    c.overflow = Fixed();
+    c.locked.clear();
+    c.capturedTurn = state_.turn;
+    c.lastAttackedTurn = state_.turn;
+    c.struck = true;
+    const bool wasCapital = c.capital;
+    if (wasCapital) {
+        // The Palace stays with its owner, who moves it to their oldest remaining city.
+        c.capital = false;
+        c.buildings.erase(std::remove_if(c.buildings.begin(), c.buildings.end(),
+                                         [&](TypeIndex b) { return rules_->buildings[static_cast<size_t>(b)].granted; }),
+                          c.buildings.end());
+    }
+    for (Plot& p : state_.plots) {
+        if (p.city == cid) p.owner = me;
+    }
+    assignCitizens(c);
+
+    Unit* winner = state_.unit(attackerId);
+    winner->pos = at;
+    winner->moved = true;
+    winner->movesLeft = Fixed();
+    awardXp(*winner, rules_->globalInt("EXPERIENCE_CITY_CAPTURED"), false);
+
+    if (wasCapital) {
+        City* next = nullptr;
+        for (City& o : state_.cities) {
+            if (o.owner == lost && (!next || o.foundedTurn < next->foundedTurn)) next = &o;
+        }
+        if (next) {
+            next->capital = true;
+            for (size_t b = 0; b < rules_->buildings.size(); ++b) {
+                if (!rules_->buildings[b].granted) continue;
+                auto it = std::lower_bound(next->buildings.begin(), next->buildings.end(), static_cast<TypeIndex>(b));
+                if (it == next->buildings.end() || *it != static_cast<TypeIndex>(b))
+                    next->buildings.insert(it, static_cast<TypeIndex>(b));
+            }
+            assignCitizens(*next);
+        }
+    }
+    refreshVisibility(me);
+    refreshVisibility(lost);
+    checkElimination(lost);
+}
+
+void Game::razeCity(CityId id) {
+    const PlayerId owner = state_.city(id)->owner;
+    for (Plot& p : state_.plots) {
+        if (p.city != id) continue;
+        p.city = kNoCity;
+        p.owner = kNoPlayer;
+    }
+    state_.cities.erase(std::remove_if(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.id == id; }),
+                        state_.cities.end());
+    refreshVisibility(owner);
+}
+
+void Game::checkElimination(PlayerId pid) {
+    Player& p = state_.players[static_cast<size_t>(pid)];
+    if (!p.alive || p.barbarian) return;
+    for (const City& c : state_.cities) if (c.owner == pid) return;
+    // No cities: out once it has lost a city, or before its first city once it has no units left.
+    bool units = false;
+    for (const Unit& u : state_.units) units = units || u.owner == pid;
+    if (p.citiesFounded == 0 && units) return;
+    p.alive = false;
+    state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(), [&](const Unit& u) { return u.owner == pid; }),
+                       state_.units.end());
+}
+
+void Game::healCities(PlayerId pid) {
+    // City HP heals unless besieged; walls repair after a quiet spell (02-cities.md, City combat).
+    const int maxHp = cityMaxHp();
+    for (City& c : state_.cities) {
+        if (c.owner != pid) continue;
+        if (c.hp < maxHp && !cityUnderSiege(c)) c.hp = std::min(maxHp, c.hp + rules_->globalInt("COMBAT_HEAL_CITY_GARRISON"));
+        const int maxWalls = cityMaxWallHp(c);
+        if (c.wallHp < maxWalls && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
+            c.wallHp = std::min(maxWalls, c.wallHp + rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES"));
+        c.struck = false;
+    }
 }
 
 // ------------------------------------------------------------------ turn upkeep

@@ -161,6 +161,15 @@ std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, cons
     return out;
 }
 
+int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,
+                    bool vsBarbarian) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, ModEffect::UnitStrength, [&](const Modifier& m) {
+        if ((m.unitClass.empty() || m.unitClass == unitClass) && (!m.vsBarbarians || vsBarbarian)) total += m.amount;
+    });
+    return static_cast<int>(total.toInt());
+}
+
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
     Fixed total;
     forEachPlayerModifier(s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) {

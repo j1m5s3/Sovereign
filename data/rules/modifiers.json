@@ -35,6 +35,7 @@
   {"id": "AUTOCRACY_PALACE_FAITH", "source": "GOVERNMENT_AUTOCRACY", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD", "arguments": {"yield": "FAITH", "amount": 1}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_PALACE"}]}},
   {"id": "OLIGARCHY_MELEE_BUFF", "source": "GOVERNMENT_OLIGARCHY", "collection": "PLAYER", "effect": "GRANT_ABILITY", "arguments": {"ability": "ABILITY_OLIGARCHY_MELEE_BUFF"}},
   {"id": "OLIGARCHY_COMBAT_XP", "source": "GOVERNMENT_OLIGARCHY", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"amount": 20}},
+  {"id": "DISCIPLINE_VS_BARBARIANS", "source": "POLICY_DISCIPLINE", "collection": "PLAYER", "effect": "ADJUST_UNIT_STRENGTH", "arguments": {"amount": 5, "vsBarbarians": true}},
   {"id": "SURVEY_RECON_XP", "source": "POLICY_SURVEY", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"unitClass": "RECON", "amount": 100}}
  ]
 }

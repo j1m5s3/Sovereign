@@ -1676,8 +1676,7 @@
       ],
       [
        {
-        "atom": "UNTRACKED",
-        "value": "plot district is defended"
+        "atom": "VS_DISTRICT"
        }
       ]
      ]
@@ -1732,8 +1731,7 @@
       ],
       [
        {
-        "atom": "UNTRACKED",
-        "value": "plot district is defended"
+        "atom": "VS_DISTRICT"
        }
       ]
      ]
@@ -1991,8 +1989,7 @@
       ],
       [
        {
-        "atom": "UNTRACKED",
-        "value": "plot district is defended"
+        "atom": "VS_DISTRICT"
        }
       ]
      ]
@@ -3197,8 +3194,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "Melee units bypass walls"
+     "kind": "BYPASS_WALLS"
     },
     {
      "kind": "UNTRACKED",
@@ -3791,8 +3787,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "Melee units deal full damage to walls"
+     "kind": "WALL_FULL_DAMAGE"
     },
     {
      "kind": "UNTRACKED",

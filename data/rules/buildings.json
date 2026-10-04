@@ -167,7 +167,8 @@
    "defense": 3,
    "requires": [
     "BUILDING_ANCIENT_WALLS"
-   ]
+   ],
+   "meleeCannotDamageWalls": true
   },
   {
    "id": "BUILDING_RENAISSANCE_WALLS",
@@ -181,7 +182,9 @@
    "defense": 3,
    "requires": [
     "BUILDING_MEDIEVAL_WALLS"
-   ]
+   ],
+   "meleeCannotDamageWalls": true,
+   "wallsCannotBeBypassed": true
   },
   {
    "id": "BUILDING_MARKET",

@@ -40,6 +40,10 @@ Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& playe
 // Abilities the player's modifiers grant (each still filtered by the ability's unit classes).
 std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player);
 
+// Flat combat strength from the player's modifiers for a unit of this class.
+int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,
+                    bool vsBarbarian);
+
 // Combat XP bonus percent for the player's units of this class.
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 

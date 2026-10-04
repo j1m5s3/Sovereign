@@ -88,7 +88,8 @@ int main(int argc, char** argv) {
         for (const Player& p : game->state().players) {
             auto count = [](const std::vector<uint8_t>& v) { return std::count(v.begin(), v.end(), 1); };
             std::printf("player %d (%s): gold %s, science %s/turn, culture %s/turn, techs %ld, civics %ld, government %s, policies",
-                        p.id, rules.civs[static_cast<size_t>(p.civ)].name.c_str(), p.gold.toString().c_str(),
+                        p.id, p.barbarian ? "Barbarians" : rules.civs[static_cast<size_t>(p.civ)].name.c_str(),
+                        p.gold.toString().c_str(),
                         game->sciencePerTurn(p.id).toString().c_str(), game->culturePerTurn(p.id).toString().c_str(),
                         static_cast<long>(count(p.techs.done)), static_cast<long>(count(p.civics.done)),
                         p.government == kNone ? "none" : rules.governments[static_cast<size_t>(p.government)].name.c_str());
@@ -117,13 +118,22 @@ int main(int argc, char** argv) {
         }
     }
     if (showCities) {
-        long wars = 0, attacks = 0, promotions = 0;
+        long wars = 0, attacks = 0, promotions = 0, strikes = 0, razed = 0;
         for (const Command& c : game->log()) {
             wars += c.type == CommandType::DeclareWar;
             attacks += c.type == CommandType::Attack || c.type == CommandType::RangedAttack;
             promotions += c.type == CommandType::Promote;
+            strikes += c.type == CommandType::CityStrike;
+            razed += c.type == CommandType::RazeCity;
         }
-        std::printf("wars declared %ld, attacks %ld, promotions %ld\n", wars, attacks, promotions);
+        long captured = 0, eliminated = 0;
+        for (const City& c : game->state().cities) captured += c.owner != c.originalOwner;
+        for (const Player& p : game->state().players) eliminated += !p.alive;
+        const long camps = static_cast<long>(game->state().camps.size());
+        std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld, "
+                    "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",
+                    wars, attacks, promotions, strikes, captured, razed, eliminated, camps,
+                    static_cast<long>(game->state().nextCampId - 1) - camps);
     }
     if (!savePath.empty()) {
         std::vector<uint8_t> bytes = saveGame(*game);

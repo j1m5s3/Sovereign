@@ -45,11 +45,12 @@ same command must print the same hash.
 | Cities: yields, growth, borders, production | `src/city.cpp` (queries on `Game`) |
 | Research trees, boosts, governments, anarchy, policy cards | `src/research.cpp` (queries on `Game`) |
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
-| War and peace, combat strength and damage, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
+| War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
+| Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 
-Rules data: `data/rules/{globals,terrain,resources,promotions,units,buildings,techs,civics,governments,policies,improvements}.json` are generated
+Rules data: `data/rules/{globals,terrain,resources,promotions,units,buildings,districts,barbarians,techs,civics,governments,policies,improvements}.json` are generated
 from `specs/civ6/data` by `python3 tools/rules_gen/gen_rules.py`; never edit
 them by hand. `civilizations.json`, `setup.json` and
 `modifiers.json` are Sovereign's own and hand-written. Pass more `--rules` directories to layer mods on top (rows

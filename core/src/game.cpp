@@ -50,10 +50,22 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     for (Player& p : s.players) p.relations.resize(s.players.size());
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
+    if (setup.barbarians) {
+        // The barbarians: one extra player, at war with all, who moves in the world turn.
+        Player b;
+        b.id = static_cast<PlayerId>(s.players.size());
+        b.barbarian = true;
+        fitPlayerToRules(b, rules);
+        b.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
+        s.players.push_back(std::move(b));
+        for (Player& p : s.players) p.relations.resize(s.players.size());
+    }
 
     auto game = std::make_unique<Game>(rules, std::move(s), std::vector<Command>{});
     GameState& st = game->state_;
+    game->linkBarbarians();
     for (Player& p : st.players) {
+        if (p.barbarian) continue;
         for (const std::string& unitId : rules.startingUnits) {
             TypeIndex t = rules.unit(unitId);
             UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
@@ -96,7 +108,21 @@ std::unique_ptr<Game> Game::fromScenario(const Rules& rules, GameState state) {
         p.relations.resize(game->state_.players.size());
         if (p.visibility.size() != static_cast<size_t>(game->state_.grid.size()))
             p.visibility.assign(static_cast<size_t>(game->state_.grid.size()), 0);
+        // Hand-made units count toward the strongest unit a player has had (city strength).
+        for (const Unit& u : game->state_.units) {
+            const UnitType& ut = rules.units[static_cast<size_t>(u.type)];
+            if (u.owner == p.id && ut.layer == UnitLayer::Military) p.strongestUnit = std::max(p.strongestUnit, ut.combat);
+        }
     }
+    // Hand-made cities start at full HP, as founded, unless the scenario set their HP.
+    for (City& c : game->state_.cities) {
+        if (c.hp <= 0) c.hp = game->cityMaxHp();
+        if (c.originalOwner == kNoPlayer) {
+            c.originalOwner = c.owner;
+            c.originalCapital = c.capital;
+        }
+    }
+    game->linkBarbarians();
     for (const Player& p : game->state_.players) game->refreshVisibility(p.id);
     game->state_.currentPlayer = 0;
     game->beginPlayerTurn(0, false);
@@ -151,6 +177,8 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Attack:
         case CommandType::RangedAttack:
         case CommandType::Promote:
+        case CommandType::CityStrike:
+        case CommandType::RazeCity:
             return validateCombat(c);
         default: break;
     }
@@ -200,6 +228,7 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     for (const City& c : state_.cities) {
         if (state_.grid.distance(c.pos, at) <= minRange) return set(CommandError::TooCloseToCity);
     }
+    if (campAt(at)) return set(CommandError::CannotFoundHere);
     return set(CommandError::Ok);
 }
 
@@ -344,6 +373,7 @@ void Game::advanceUnit(UnitId id) {
         u->activity = Activity::Awake;
         u->moved = true;
         u->fortifyTurns = 0;
+        enterPlot(*u);
         refreshVisibility(u->owner);
     }
 }
@@ -352,6 +382,11 @@ void Game::advanceUnit(UnitId id) {
 
 void Game::refreshVisibility(PlayerId pid) {
     Player& p = state_.players[static_cast<size_t>(pid)];
+    if (p.barbarian) {
+        // Barbarians see the whole map (they only need it to pick targets).
+        std::fill(p.visibility.begin(), p.visibility.end(), static_cast<uint8_t>(Visibility::Visible));
+        return;
+    }
     for (uint8_t& v : p.visibility) {
         if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
     }
@@ -421,7 +456,9 @@ void Game::apply(const Command& c) {
         case CommandType::MakePeace:
         case CommandType::Attack:
         case CommandType::RangedAttack:
-        case CommandType::Promote: applyCombat(c); break;
+        case CommandType::Promote:
+        case CommandType::CityStrike:
+        case CommandType::RazeCity: applyCombat(c); break;
     }
 }
 
@@ -445,6 +482,9 @@ void Game::applyFoundCity(const Command& c) {
     city.pos = at;
     city.foundedTurn = state_.turn;
     city.capital = p.citiesFounded == 0;
+    city.hp = cityMaxHp();
+    city.originalOwner = owner;
+    city.originalCapital = city.capital;
     city.name = static_cast<size_t>(p.citiesFounded) < civ.cityNames.size()
                     ? civ.cityNames[static_cast<size_t>(p.citiesFounded)]
                     : civ.name + " " + std::to_string(p.citiesFounded + 1);
@@ -486,7 +526,7 @@ void Game::applyEndTurn(const Command& c) {
             // Wrapped past the last player: the world takes its turn.
             beginGlobalTurn();
         }
-        if (state_.players[next].alive) {
+        if (state_.players[next].alive && !state_.players[next].barbarian) {
             state_.currentPlayer = static_cast<PlayerId>(next);
             beginPlayerTurn(state_.currentPlayer);
             return;
@@ -496,6 +536,7 @@ void Game::applyEndTurn(const Command& c) {
 
 void Game::beginGlobalTurn() {
     ++state_.turn;
+    processBarbarians();
 }
 
 void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
@@ -505,6 +546,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
         payUnitFuel(pid);
         healAndFortify(pid);
+        healCities(pid);
     }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
@@ -528,7 +570,10 @@ Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {
     u.pos = pos;
     u.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     u.movesLeft = Fixed::fromInt(rules_->units[static_cast<size_t>(type)].moves);
-    u.charges = rules_->units[static_cast<size_t>(type)].buildCharges;
+    const UnitType& ut = rules_->units[static_cast<size_t>(type)];
+    u.charges = ut.buildCharges;
+    Player& p = state_.players[static_cast<size_t>(owner)];
+    if (ut.layer == UnitLayer::Military) p.strongestUnit = std::max(p.strongestUnit, ut.combat);
     state_.units.push_back(u);  // ids only grow, so the vector stays sorted
     return state_.units.back();
 }

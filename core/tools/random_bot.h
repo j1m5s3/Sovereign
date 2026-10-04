@@ -1,11 +1,13 @@
 // A deliberately dumb player for soak tests and the headless simulator: founds
 // a city with each settler where it stands when allowed, declares random wars,
-// attacks at even odds, wanders other units to random known plots, then ends
-// the turn. Not the game AI (that is MVP-6).
+// attacks at even odds (cities too), strikes with walled cities, sometimes
+// razes what it captures, goes for nearby enemies and barbarian camps, wanders
+// other units to random known plots, then ends the turn. Not the game AI (that is MVP-6).
 // It only talks to the core through commands, like any real player.
 #pragma once
 
 #include <algorithm>
+#include <optional>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -24,6 +26,21 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
     }
     for (const Player& other : s.players) {
         if (game.canMakePeace(me, other.id) && rng.chance(10)) game.submit(Command::makePeace(me, other.id));
+    }
+    // Walled cities shoot at the first enemy in reach; fresh conquests are sometimes burned.
+    std::vector<CityId> cities;
+    for (const City& c : s.cities) {
+        if (c.owner == me) cities.push_back(c.id);
+    }
+    for (CityId cid : cities) {
+        if (game.canRazeCity(me, cid) && rng.chance(25)) {
+            game.submit(Command::razeCity(me, cid));
+            continue;
+        }
+        const City* c = game.state().city(cid);
+        for (const Hex& h : game.state().grid.within(c->pos, 2)) {
+            if (game.canCityStrike(cid, h) && game.submit(Command::cityStrike(me, cid, h)) == CommandError::Ok) break;
+        }
     }
     std::vector<UnitId> mine;
     for (const Unit& u : s.units) {
@@ -45,7 +62,7 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
             const bool ranged = game.unitRange(*u) > 0;
             CombatPreview pv = game.previewAttack(id, h, ranged);
             if (!pv.valid) continue;
-            if (!pv.capture && pv.damageToAttackerMax > pv.damageToDefenderMax) continue;
+            if (!pv.capture && !pv.captureCity && pv.damageToAttackerMax > pv.damageToDefenderMax) continue;
             fought = game.submit(ranged ? Command::rangedAttack(me, id, h) : Command::attack(me, id, h)) == CommandError::Ok;
             if (fought) break;
         }
@@ -58,17 +75,27 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
             if (!options.empty() && game.submit(Command::buildImprovement(me, id, options.front())) == CommandError::Ok) continue;
         }
         bool moved = false;
-        // At war, military units head for the nearest enemy unit they know of.
+        // Military units head for the nearest enemy unit or city they see, or a camp they know of.
         if (t.layer == UnitLayer::Military && rng.chance(50)) {
-            const Unit* best = nullptr;
+            std::optional<Hex> best;
+            auto consider = [&](Hex h) {
+                if (!best || game.state().grid.distance(u->pos, h) < game.state().grid.distance(u->pos, *best)) best = h;
+            };
             for (const Unit& e : game.state().units) {
-                if (!game.atWar(me, e.owner) || game.visibility(me, e.pos) != Visibility::Visible) continue;
-                if (!best || game.state().grid.distance(u->pos, e.pos) < game.state().grid.distance(u->pos, best->pos)) best = &e;
+                if (game.atWar(me, e.owner) && game.visibility(me, e.pos) == Visibility::Visible) consider(e.pos);
+            }
+            for (const City& c : game.state().cities) {
+                if (game.atWar(me, c.owner) && game.visibility(me, c.pos) == Visibility::Visible) consider(c.pos);
+            }
+            for (const Camp& c : game.state().camps) {
+                if (game.visibility(me, c.pos) != Visibility::Unrevealed) consider(c.pos);
             }
             if (best) {
-                for (const Hex& n : game.state().grid.within(best->pos, 1)) {
+                // A free camp is entered (clearing it); anything else is approached.
+                if (game.campAt(*best) && game.submit(Command::move(me, id, *best)) == CommandError::Ok) moved = true;
+                for (const Hex& n : game.state().grid.within(*best, 1)) {
                     if (moved) break;
-                    if (n != best->pos) moved = game.submit(Command::move(me, id, n)) == CommandError::Ok;
+                    if (n != *best) moved = game.submit(Command::move(me, id, n)) == CommandError::Ok;
                 }
             }
         }

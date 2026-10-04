@@ -20,7 +20,10 @@ TEST(game_starts_with_settler_and_warrior) {
     CHECK_EQ(s.turn, 1);
     CHECK_EQ(s.currentPlayer, 0);
     CHECK_EQ(s.units.size(), 4u);
+    REQUIRE(s.players.size() == 3u);
+    CHECK(s.players[2].barbarian && g->atWar(0, 2) && g->atWar(2, 1) && !g->atWar(0, 1));
     for (const Player& p : s.players) {
+        if (p.barbarian) continue;
         int settlers = 0, warriors = 0;
         for (const Unit& u : s.units) {
             if (u.owner != p.id) continue;
