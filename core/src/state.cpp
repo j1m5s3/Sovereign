@@ -68,6 +68,12 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotBuyPlot: return "CannotBuyPlot";
         case CommandError::CannotWorkPlot: return "CannotWorkPlot";
         case CommandError::ProductionNeeded: return "ProductionNeeded";
+        case CommandError::CannotResearch: return "CannotResearch";
+        case CommandError::ResearchNeeded: return "ResearchNeeded";
+        case CommandError::CivicNeeded: return "CivicNeeded";
+        case CommandError::CannotAdoptGovernment: return "CannotAdoptGovernment";
+        case CommandError::CannotSetPolicy: return "CannotSetPolicy";
+        case CommandError::ChangesLocked: return "ChangesLocked";
     }
     return "Unknown";
 }
@@ -91,6 +97,11 @@ std::string describe(const Command& c) {
         case CommandType::LockPlot:
             return s + (c.type == CommandType::BuyPlot ? "BuyPlot" : "LockPlot") + " city" + std::to_string(c.id) +
                    " (" + std::to_string(c.target.x) + "," + std::to_string(c.target.y) + ") " + std::to_string(c.arg);
+        case CommandType::ChooseResearch: return s + "ChooseResearch tech" + std::to_string(c.id);
+        case CommandType::ChooseCivic: return s + "ChooseCivic civic" + std::to_string(c.id);
+        case CommandType::ChangeGovernment: return s + "ChangeGovernment gov" + std::to_string(c.id);
+        case CommandType::SetPolicy:
+            return s + "SetPolicy slot" + std::to_string(c.id) + " policy" + std::to_string(c.arg);
     }
     return s + "?";
 }

@@ -1,0 +1,1258 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "techs": [
+  {
+   "id": "TECH_POTTERY",
+   "name": "Pottery",
+   "era": "ERA_ANCIENT",
+   "cost": 25
+  },
+  {
+   "id": "TECH_ANIMAL_HUSBANDRY",
+   "name": "Animal Husbandry",
+   "era": "ERA_ANCIENT",
+   "cost": 25
+  },
+  {
+   "id": "TECH_MINING",
+   "name": "Mining",
+   "era": "ERA_ANCIENT",
+   "cost": 25
+  },
+  {
+   "id": "TECH_SAILING",
+   "name": "Sailing",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "boost": {
+    "percent": 40,
+    "text": "found a coastal city",
+    "type": "COASTAL_CITY"
+   }
+  },
+  {
+   "id": "TECH_ASTROLOGY",
+   "name": "Astrology",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "boost": {
+    "percent": 40,
+    "text": "discover a natural wonder",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_IRRIGATION",
+   "name": "Irrigation",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "prereqs": [
+    "TECH_POTTERY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Farm on a resource",
+    "type": "IMPROVEMENT_ON_RESOURCE",
+    "ref": "IMPROVEMENT_FARM",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_WRITING",
+   "name": "Writing",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "prereqs": [
+    "TECH_POTTERY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "meet another civilization",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_ARCHERY",
+   "name": "Archery",
+   "era": "ERA_ANCIENT",
+   "cost": 50,
+   "prereqs": [
+    "TECH_ANIMAL_HUSBANDRY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a unit with a Slinger",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_MASONRY",
+   "name": "Masonry",
+   "era": "ERA_ANCIENT",
+   "cost": 80,
+   "prereqs": [
+    "TECH_MINING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Quarry on a resource",
+    "type": "IMPROVEMENT_ON_RESOURCE",
+    "ref": "IMPROVEMENT_QUARRY",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_BRONZE_WORKING",
+   "name": "Bronze Working",
+   "era": "ERA_ANCIENT",
+   "cost": 80,
+   "prereqs": [
+    "TECH_MINING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill 3 barbarians",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_WHEEL",
+   "name": "Wheel",
+   "era": "ERA_ANCIENT",
+   "cost": 80,
+   "prereqs": [
+    "TECH_MINING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Mine on a resource",
+    "type": "IMPROVEMENT_ON_RESOURCE",
+    "ref": "IMPROVEMENT_MINE",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_CELESTIAL_NAVIGATION",
+   "name": "Celestial Navigation",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "TECH_SAILING",
+    "TECH_ASTROLOGY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Fishing Boatss on a resource",
+    "type": "IMPROVEMENT_ON_RESOURCE",
+    "ref": "IMPROVEMENT_FISHING_BOATS",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_CURRENCY",
+   "name": "Currency",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "TECH_WRITING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have a trade route",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_HORSEBACK_RIDING",
+   "name": "Horseback Riding",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "TECH_ARCHERY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Pasture on a resource",
+    "type": "IMPROVEMENT_ON_RESOURCE",
+    "ref": "IMPROVEMENT_PASTURE",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_IRON_WORKING",
+   "name": "Iron Working",
+   "era": "ERA_CLASSICAL",
+   "cost": 120,
+   "prereqs": [
+    "TECH_BRONZE_WORKING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve Iron",
+    "type": "IMPROVE_RESOURCE",
+    "ref": "RESOURCE_IRON"
+   }
+  },
+  {
+   "id": "TECH_SHIPBUILDING",
+   "name": "Shipbuilding",
+   "era": "ERA_CLASSICAL",
+   "cost": 200,
+   "prereqs": [
+    "TECH_SAILING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Galleys",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_GALLEY",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_MATHEMATICS",
+   "name": "Mathematics",
+   "era": "ERA_CLASSICAL",
+   "cost": 200,
+   "prereqs": [
+    "TECH_CURRENCY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 3 different specialty districts",
+    "type": "SPECIALTY_DISTRICTS",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_CONSTRUCTION",
+   "name": "Construction",
+   "era": "ERA_CLASSICAL",
+   "cost": 200,
+   "prereqs": [
+    "TECH_MASONRY",
+    "TECH_HORSEBACK_RIDING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Water Mill",
+    "type": "BUILDING",
+    "ref": "BUILDING_WATER_MILL",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_ENGINEERING",
+   "name": "Engineering",
+   "era": "ERA_CLASSICAL",
+   "cost": 200,
+   "prereqs": [
+    "TECH_WHEEL"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Ancient Walls",
+    "type": "BUILDING",
+    "ref": "BUILDING_ANCIENT_WALLS",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_BUTTRESS",
+   "name": "Buttress",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "TECH_SHIPBUILDING",
+    "TECH_MATHEMATICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a wonder of a later era",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_MILITARY_TACTICS",
+   "name": "Military Tactics",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "TECH_MATHEMATICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a unit with a Spearman",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_APPRENTICESHIP",
+   "name": "Apprenticeship",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "TECH_CURRENCY",
+    "TECH_HORSEBACK_RIDING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 3 Mines",
+    "type": "IMPROVEMENT",
+    "ref": "IMPROVEMENT_MINE",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_MACHINERY",
+   "name": "Machinery",
+   "era": "ERA_MEDIEVAL",
+   "cost": 300,
+   "prereqs": [
+    "TECH_IRON_WORKING",
+    "TECH_ENGINEERING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 3 Archers",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_ARCHER",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_EDUCATION",
+   "name": "Education",
+   "era": "ERA_MEDIEVAL",
+   "cost": 390,
+   "prereqs": [
+    "TECH_MATHEMATICS",
+    "TECH_APPRENTICESHIP"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "train a Great Scientist",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_GREAT_SCIENTIST",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_STIRRUPS",
+   "name": "Stirrups",
+   "era": "ERA_MEDIEVAL",
+   "cost": 390,
+   "prereqs": [
+    "TECH_HORSEBACK_RIDING",
+    "TECH_APPRENTICESHIP"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "complete the civic Feudalism",
+    "type": "CIVIC",
+    "ref": "CIVIC_FEUDALISM"
+   }
+  },
+  {
+   "id": "TECH_MILITARY_ENGINEERING",
+   "name": "Military Engineering",
+   "era": "ERA_MEDIEVAL",
+   "cost": 390,
+   "prereqs": [
+    "TECH_CONSTRUCTION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an Aqueduct",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_AQUEDUCT",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_CASTLES",
+   "name": "Castles",
+   "era": "ERA_MEDIEVAL",
+   "cost": 390,
+   "prereqs": [
+    "TECH_CONSTRUCTION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "adopt a Tier2 government",
+    "type": "GOVERNMENT_TIER",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_CARTOGRAPHY",
+   "name": "Cartography",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "TECH_BUTTRESS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Harbors",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_HARBOR",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_MASS_PRODUCTION",
+   "name": "Mass Production",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "TECH_EDUCATION",
+    "TECH_BUTTRESS",
+    "TECH_MILITARY_TACTICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Lumber Mill",
+    "type": "IMPROVEMENT",
+    "ref": "IMPROVEMENT_LUMBER_MILL",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_BANKING",
+   "name": "Banking",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "TECH_EDUCATION",
+    "TECH_STIRRUPS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "complete the civic Guilds",
+    "type": "CIVIC",
+    "ref": "CIVIC_GUILDS"
+   }
+  },
+  {
+   "id": "TECH_GUNPOWDER",
+   "name": "Gunpowder",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "TECH_APPRENTICESHIP",
+    "TECH_STIRRUPS",
+    "TECH_MILITARY_ENGINEERING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Armory",
+    "type": "BUILDING",
+    "ref": "BUILDING_ARMORY",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_PRINTING",
+   "name": "Printing",
+   "era": "ERA_RENAISSANCE",
+   "cost": 600,
+   "prereqs": [
+    "TECH_MACHINERY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Universities",
+    "type": "BUILDING",
+    "ref": "BUILDING_UNIVERSITY",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_SQUARE_RIGGING",
+   "name": "Square Rigging",
+   "era": "ERA_RENAISSANCE",
+   "cost": 730,
+   "prereqs": [
+    "TECH_CARTOGRAPHY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a unit with a Musketman",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_ASTRONOMY",
+   "name": "Astronomy",
+   "era": "ERA_RENAISSANCE",
+   "cost": 730,
+   "prereqs": [
+    "TECH_EDUCATION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a University next to a mountain",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_METAL_CASTING",
+   "name": "Metal Casting",
+   "era": "ERA_RENAISSANCE",
+   "cost": 730,
+   "prereqs": [
+    "TECH_GUNPOWDER"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Crossbowmans",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_CROSSBOWMAN",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_SIEGE_TACTICS",
+   "name": "Siege Tactics",
+   "era": "ERA_RENAISSANCE",
+   "cost": 730,
+   "prereqs": [
+    "TECH_CASTLES"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Trebuchets",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_TREBUCHET",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_INDUSTRIALIZATION",
+   "name": "Industrialization",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 930,
+   "prereqs": [
+    "TECH_SQUARE_RIGGING",
+    "TECH_MASS_PRODUCTION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Workshops",
+    "type": "BUILDING",
+    "ref": "BUILDING_WORKSHOP",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_SCIENTIFIC_THEORY",
+   "name": "Scientific Theory",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 930,
+   "prereqs": [
+    "TECH_ASTRONOMY",
+    "TECH_BANKING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "complete the civic The Enlightenment",
+    "type": "CIVIC",
+    "ref": "CIVIC_THE_ENLIGHTENMENT"
+   }
+  },
+  {
+   "id": "TECH_BALLISTICS",
+   "name": "Ballistics",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 930,
+   "prereqs": [
+    "TECH_METAL_CASTING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Forts",
+    "type": "IMPROVEMENT",
+    "ref": "IMPROVEMENT_FORT",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_MILITARY_SCIENCE",
+   "name": "Military Science",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 930,
+   "prereqs": [
+    "TECH_SIEGE_TACTICS",
+    "TECH_PRINTING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a unit with a Knight",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_STEAM_POWER",
+   "name": "Steam Power",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1070,
+   "prereqs": [
+    "TECH_INDUSTRIALIZATION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Shipyards",
+    "type": "BUILDING",
+    "ref": "BUILDING_SHIPYARD",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_SANITATION",
+   "name": "Sanitation",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1070,
+   "prereqs": [
+    "TECH_SCIENTIFIC_THEORY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Neighborhoods",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_NEIGHBORHOOD",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_ECONOMICS",
+   "name": "Economics",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1070,
+   "prereqs": [
+    "TECH_SCIENTIFIC_THEORY",
+    "TECH_METAL_CASTING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Banks",
+    "type": "BUILDING",
+    "ref": "BUILDING_BANK",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_RIFLING",
+   "name": "Rifling",
+   "era": "ERA_INDUSTRIAL",
+   "cost": 1070,
+   "prereqs": [
+    "TECH_BALLISTICS",
+    "TECH_MILITARY_SCIENCE"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve Niter",
+    "type": "IMPROVE_RESOURCE",
+    "ref": "RESOURCE_NITER"
+   }
+  },
+  {
+   "id": "TECH_FLIGHT",
+   "name": "Flight",
+   "era": "ERA_MODERN",
+   "cost": 1250,
+   "prereqs": [
+    "TECH_INDUSTRIALIZATION",
+    "TECH_SCIENTIFIC_THEORY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a wonder of a later era",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_REPLACEABLE_PARTS",
+   "name": "Replaceable Parts",
+   "era": "ERA_MODERN",
+   "cost": 1250,
+   "prereqs": [
+    "TECH_ECONOMICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 3 Line Infantries",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_LINE_INFANTRY",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_STEEL",
+   "name": "Steel",
+   "era": "ERA_MODERN",
+   "cost": 1250,
+   "prereqs": [
+    "TECH_RIFLING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have a Ironclad and a Mine",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_REFINING",
+   "name": "Refining",
+   "era": "ERA_MODERN",
+   "cost": 1250,
+   "prereqs": [
+    "TECH_RIFLING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Coal Power Plant",
+    "type": "BUILDING",
+    "ref": "BUILDING_COAL_POWER_PLANT",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_ELECTRICITY",
+   "name": "Electricity",
+   "era": "ERA_MODERN",
+   "cost": 1370,
+   "prereqs": [
+    "TECH_STEAM_POWER"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Privateers",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_PRIVATEER",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_RADIO",
+   "name": "Radio",
+   "era": "ERA_MODERN",
+   "cost": 1370,
+   "prereqs": [
+    "TECH_STEAM_POWER",
+    "TECH_FLIGHT"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "create a National Park",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_CHEMISTRY",
+   "name": "Chemistry",
+   "era": "ERA_MODERN",
+   "cost": 1370,
+   "prereqs": [
+    "TECH_SANITATION",
+    "TECH_REPLACEABLE_PARTS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have a level 2 alliance",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_COMBUSTION",
+   "name": "Combustion",
+   "era": "ERA_MODERN",
+   "cost": 1370,
+   "prereqs": [
+    "TECH_STEEL",
+    "TECH_REFINING"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "extract an artifact",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_ADVANCED_FLIGHT",
+   "name": "Advanced Flight",
+   "era": "ERA_ATOMIC",
+   "cost": 1480,
+   "prereqs": [
+    "TECH_RADIO"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Biplanes",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_BIPLANE",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_ROCKETRY",
+   "name": "Rocketry",
+   "era": "ERA_ATOMIC",
+   "cost": 1480,
+   "prereqs": [
+    "TECH_RADIO",
+    "TECH_CHEMISTRY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   }
+  },
+  {
+   "id": "TECH_ADVANCED_BALLISTICS",
+   "name": "Advanced Ballistics",
+   "era": "ERA_ATOMIC",
+   "cost": 1480,
+   "prereqs": [
+    "TECH_REPLACEABLE_PARTS",
+    "TECH_STEEL"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build an Oil Power Plant",
+    "type": "BUILDING",
+    "ref": "BUILDING_OIL_POWER_PLANT",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_COMBINED_ARMS",
+   "name": "Combined Arms",
+   "era": "ERA_ATOMIC",
+   "cost": 1480,
+   "prereqs": [
+    "TECH_STEEL",
+    "TECH_COMBUSTION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "have 3 armies",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_PLASTICS",
+   "name": "Plastics",
+   "era": "ERA_ATOMIC",
+   "cost": 1480,
+   "prereqs": [
+    "TECH_COMBUSTION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve Oil",
+    "type": "IMPROVE_RESOURCE",
+    "ref": "RESOURCE_OIL"
+   }
+  },
+  {
+   "id": "TECH_COMPUTERS",
+   "name": "Computers",
+   "era": "ERA_ATOMIC",
+   "cost": 1660,
+   "prereqs": [
+    "TECH_ELECTRICITY",
+    "TECH_RADIO"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "adopt a Tier3 government",
+    "type": "GOVERNMENT_TIER",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_NUCLEAR_FISSION",
+   "name": "Nuclear Fission",
+   "era": "ERA_ATOMIC",
+   "cost": 1660,
+   "prereqs": [
+    "TECH_ADVANCED_BALLISTICS",
+    "TECH_COMBINED_ARMS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   }
+  },
+  {
+   "id": "TECH_SYNTHETIC_MATERIALS",
+   "name": "Synthetic Materials",
+   "era": "ERA_ATOMIC",
+   "cost": 1660,
+   "prereqs": [
+    "TECH_PLASTICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Aerodromes",
+    "type": "DISTRICT",
+    "ref": "DISTRICT_AERODROME",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_TELECOMMUNICATIONS",
+   "name": "Telecommunications",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_COMPUTERS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   }
+  },
+  {
+   "id": "TECH_SATELLITES",
+   "name": "Satellites",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_ADVANCED_FLIGHT",
+    "TECH_ROCKETRY"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build 2 Broadcast Centers",
+    "type": "BUILDING",
+    "ref": "BUILDING_BROADCAST_CENTER",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_GUIDANCE_SYSTEMS",
+   "name": "Guidance Systems",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_ROCKETRY",
+    "TECH_ADVANCED_BALLISTICS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "kill a Fighter",
+    "type": "UNTRACKED"
+   }
+  },
+  {
+   "id": "TECH_LASERS",
+   "name": "Lasers",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_NUCLEAR_FISSION"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 2 Drones",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_DRONE",
+    "count": 2
+   }
+  },
+  {
+   "id": "TECH_COMPOSITES",
+   "name": "Composites",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_SYNTHETIC_MATERIALS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "own 3 Tanks",
+    "type": "OWN_UNITS",
+    "ref": "UNIT_TANK",
+    "count": 3
+   }
+  },
+  {
+   "id": "TECH_STEALTH_TECHNOLOGY",
+   "name": "Stealth Technology",
+   "era": "ERA_INFORMATION",
+   "cost": 1850,
+   "prereqs": [
+    "TECH_SYNTHETIC_MATERIALS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   }
+  },
+  {
+   "id": "TECH_ROBOTICS",
+   "name": "Robotics",
+   "era": "ERA_INFORMATION",
+   "cost": 2155,
+   "prereqs": [
+    "TECH_COMPUTERS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "complete the civic Globalization",
+    "type": "CIVIC",
+    "ref": "CIVIC_GLOBALIZATION"
+   }
+  },
+  {
+   "id": "TECH_NUCLEAR_FUSION",
+   "name": "Nuclear Fusion",
+   "era": "ERA_INFORMATION",
+   "cost": 2155,
+   "prereqs": [
+    "TECH_LASERS"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "build a Nuclear Power Plant",
+    "type": "BUILDING",
+    "ref": "BUILDING_NUCLEAR_POWER_PLANT",
+    "count": 1
+   }
+  },
+  {
+   "id": "TECH_NANOTECHNOLOGY",
+   "name": "Nanotechnology",
+   "era": "ERA_INFORMATION",
+   "cost": 2155,
+   "prereqs": [
+    "TECH_COMPOSITES"
+   ],
+   "boost": {
+    "percent": 40,
+    "text": "improve Aluminum",
+    "type": "IMPROVE_RESOURCE",
+    "ref": "RESOURCE_ALUMINUM"
+   }
+  },
+  {
+   "id": "TECH_SEASTEADS",
+   "name": "Seasteads",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_ADVANCED_AI",
+   "name": "Advanced AI",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_ADVANCED_POWER_CELLS",
+   "name": "Advanced Power Cells",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_CYBERNETICS",
+   "name": "Cybernetics",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_SMART_MATERIALS",
+   "name": "Smart Materials",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_PREDICTIVE_SYSTEMS",
+   "name": "Predictive Systems",
+   "era": "ERA_FUTURE",
+   "cost": 2200,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_OFFWORLD_MISSION",
+   "name": "Offworld Mission",
+   "era": "ERA_FUTURE",
+   "cost": 2500,
+   "boost": {
+    "percent": 40,
+    "text": "none (only via Great Scientist / spy / effects)",
+    "type": "NONE"
+   },
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  },
+  {
+   "id": "TECH_FUTURE_TECH",
+   "name": "Future Tech",
+   "era": "ERA_FUTURE",
+   "cost": 2600,
+   "prereqs": [
+    "TECH_TELECOMMUNICATIONS",
+    "TECH_SATELLITES",
+    "TECH_GUIDANCE_SYSTEMS",
+    "TECH_LASERS",
+    "TECH_COMPOSITES",
+    "TECH_STEALTH_TECHNOLOGY",
+    "TECH_ROBOTICS",
+    "TECH_NUCLEAR_FUSION",
+    "TECH_NANOTECHNOLOGY"
+   ]
+  }
+ ],
+ "eras": [
+  {
+   "id": "ERA_ANCIENT",
+   "name": "Ancient"
+  },
+  {
+   "id": "ERA_CLASSICAL",
+   "name": "Classical"
+  },
+  {
+   "id": "ERA_MEDIEVAL",
+   "name": "Medieval"
+  },
+  {
+   "id": "ERA_RENAISSANCE",
+   "name": "Renaissance"
+  },
+  {
+   "id": "ERA_INDUSTRIAL",
+   "name": "Industrial"
+  },
+  {
+   "id": "ERA_MODERN",
+   "name": "Modern"
+  },
+  {
+   "id": "ERA_ATOMIC",
+   "name": "Atomic"
+  },
+  {
+   "id": "ERA_INFORMATION",
+   "name": "Information"
+  },
+  {
+   "id": "ERA_FUTURE",
+   "name": "Future"
+  }
+ ]
+}

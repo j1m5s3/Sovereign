@@ -1,0 +1,977 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "policies": [
+  {
+   "id": "POLICY_AFTER_ACTION_REPORTS",
+   "name": "After Action Reports",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_RAPID_DEPLOYMENT"
+  },
+  {
+   "id": "POLICY_AGOGE",
+   "name": "Agoge",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_CRAFTSMANSHIP",
+   "obsoletedBy": [
+    "POLICY_FEUDAL_CONTRACT"
+   ]
+  },
+  {
+   "id": "POLICY_BASTIONS",
+   "name": "Bastions",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_DEFENSIVE_TACTICS",
+   "obsoletedBy": [
+    "POLICY_PUBLIC_WORKS"
+   ]
+  },
+  {
+   "id": "POLICY_CHIVALRY",
+   "name": "Chivalry",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_DIVINE_RIGHT",
+   "obsoletedBy": [
+    "POLICY_LIGHTNING_WARFARE"
+   ]
+  },
+  {
+   "id": "POLICY_CONSCRIPTION",
+   "name": "Conscription",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_STATE_WORKFORCE",
+   "obsoletedBy": [
+    "POLICY_LEV_E_EN_MASSE"
+   ]
+  },
+  {
+   "id": "POLICY_CRAFTSMEN",
+   "name": "Craftsmen",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_GUILDS",
+   "obsoletedBy": [
+    "POLICY_FIVE_YEAR_PLAN"
+   ]
+  },
+  {
+   "id": "POLICY_DISCIPLINE",
+   "name": "Discipline",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_CODE_OF_LAWS",
+   "obsoletedBy": [
+    "POLICY_NATIVE_CONQUEST"
+   ]
+  },
+  {
+   "id": "POLICY_DRILL_MANUALS",
+   "name": "Drill Manuals",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MERCANTILISM"
+  },
+  {
+   "id": "POLICY_EQUESTRIAN_ORDERS",
+   "name": "Equestrian Orders",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MILITARY_TRAINING"
+  },
+  {
+   "id": "POLICY_FEUDAL_CONTRACT",
+   "name": "Feudal Contract",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_FEUDALISM",
+   "obsoletedBy": [
+    "POLICY_GRANDE_ARM_E"
+   ]
+  },
+  {
+   "id": "POLICY_FORCE_MODERNIZATION",
+   "name": "Force Modernization",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_URBANIZATION"
+  },
+  {
+   "id": "POLICY_GRANDE_ARM_E",
+   "name": "Grande Armée",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_NATIONALISM",
+   "obsoletedBy": [
+    "POLICY_MILITARY_FIRST"
+   ]
+  },
+  {
+   "id": "POLICY_INTEGRATED_SPACE_CELL",
+   "name": "Integrated Space Cell",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_SPACE_RACE"
+  },
+  {
+   "id": "POLICY_INTERNATIONAL_WATERS",
+   "name": "International Waters",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_COLD_WAR"
+  },
+  {
+   "id": "POLICY_LEV_E_EN_MASSE",
+   "name": "Levée en Masse",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MOBILIZATION"
+  },
+  {
+   "id": "POLICY_LIGHTNING_WARFARE",
+   "name": "Lightning Warfare",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_IDEOLOGY"
+  },
+  {
+   "id": "POLICY_LIMES",
+   "name": "Limes",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_DEFENSIVE_TACTICS",
+   "obsoletedBy": [
+    "POLICY_LIGHTNING_WARFARE"
+   ]
+  },
+  {
+   "id": "POLICY_LIMITANEI",
+   "name": "Limitanei",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_EARLY_EMPIRE"
+  },
+  {
+   "id": "POLICY_LOGISTICS",
+   "name": "Logistics",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MERCANTILISM"
+  },
+  {
+   "id": "POLICY_MANEUVER",
+   "name": "Maneuver",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MILITARY_TRADITION",
+   "obsoletedBy": [
+    "POLICY_CHIVALRY",
+    "POLICY_LIGHTNING_WARFARE"
+   ]
+  },
+  {
+   "id": "POLICY_MARITIME_INDUSTRIES",
+   "name": "Maritime Industries",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_FOREIGN_TRADE",
+   "obsoletedBy": [
+    "POLICY_INTERNATIONAL_WATERS",
+    "POLICY_PRESS_GANGS"
+   ]
+  },
+  {
+   "id": "POLICY_MILITARY_FIRST",
+   "name": "Military First",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_RAPID_DEPLOYMENT"
+  },
+  {
+   "id": "POLICY_MILITARY_RESEARCH",
+   "name": "Military Research",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_URBANIZATION",
+   "obsoletedBy": [
+    "POLICY_INTEGRATED_SPACE_CELL"
+   ]
+  },
+  {
+   "id": "POLICY_NATIONAL_IDENTITY",
+   "name": "National Identity",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_NATIONALISM"
+  },
+  {
+   "id": "POLICY_NATIVE_CONQUEST",
+   "name": "Native Conquest",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_COLONIALISM"
+  },
+  {
+   "id": "POLICY_PRESS_GANGS",
+   "name": "Press Gangs",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_EXPLORATION",
+   "obsoletedBy": [
+    "POLICY_INTERNATIONAL_WATERS"
+   ]
+  },
+  {
+   "id": "POLICY_PROFESSIONAL_ARMY",
+   "name": "Professional Army",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MERCENARIES",
+   "obsoletedBy": [
+    "POLICY_FORCE_MODERNIZATION"
+   ]
+  },
+  {
+   "id": "POLICY_PROPAGANDA",
+   "name": "Propaganda",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MASS_MEDIA"
+  },
+  {
+   "id": "POLICY_RAID",
+   "name": "Raid",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MILITARY_TRAINING",
+   "obsoletedBy": [
+    "POLICY_TOTAL_WAR"
+   ]
+  },
+  {
+   "id": "POLICY_RESOURCE_MANAGEMENT",
+   "name": "Resource Management",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_CONSERVATION"
+  },
+  {
+   "id": "POLICY_RETAINERS",
+   "name": "Retainers",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_CIVIL_SERVICE",
+   "obsoletedBy": [
+    "POLICY_PROPAGANDA"
+   ]
+  },
+  {
+   "id": "POLICY_RETINUES",
+   "name": "Retinues",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MERCENARIES",
+   "obsoletedBy": [
+    "POLICY_FORCE_MODERNIZATION"
+   ]
+  },
+  {
+   "id": "POLICY_SECOND_STRIKE_CAPABILITY",
+   "name": "Second Strike Capability",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_COLD_WAR"
+  },
+  {
+   "id": "POLICY_STRATEGIC_AIR_FORCE",
+   "name": "Strategic Air Force",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_GLOBALIZATION"
+  },
+  {
+   "id": "POLICY_SURVEY",
+   "name": "Survey",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_CODE_OF_LAWS",
+   "obsoletedBy": [
+    "POLICY_NATIVE_CONQUEST"
+   ]
+  },
+  {
+   "id": "POLICY_THIRD_ALTERNATIVE",
+   "name": "Third Alternative",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_TOTALITARIANISM",
+   "government": "GOVERNMENT_FASCISM"
+  },
+  {
+   "id": "POLICY_TOTAL_WAR",
+   "name": "Total War",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_SCORCHED_EARTH"
+  },
+  {
+   "id": "POLICY_VETERANCY",
+   "name": "Veterancy",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_MILITARY_TRAINING"
+  },
+  {
+   "id": "POLICY_WARS_OF_RELIGION",
+   "name": "Wars of Religion",
+   "slot": "MILITARY",
+   "unlock": "CIVIC_REFORMED_CHURCH"
+  },
+  {
+   "id": "POLICY_AESTHETICS",
+   "name": "Aesthetics",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_MEDIEVAL_FAIRES",
+   "obsoletedBy": [
+    "POLICY_SPORTS_MEDIA"
+   ]
+  },
+  {
+   "id": "POLICY_CARAVANSARIES",
+   "name": "Caravansaries",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_FOREIGN_TRADE",
+   "obsoletedBy": [
+    "POLICY_TRIANGULAR_TRADE"
+   ]
+  },
+  {
+   "id": "POLICY_CIVIL_PRESTIGE",
+   "name": "Civil Prestige",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CIVIL_SERVICE"
+  },
+  {
+   "id": "POLICY_COLLECTIVIZATION",
+   "name": "Collectivization",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CLASS_STRUGGLE",
+   "government": "GOVERNMENT_COMMUNISM"
+  },
+  {
+   "id": "POLICY_COLONIZATION",
+   "name": "Colonization",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_EARLY_EMPIRE",
+   "obsoletedBy": [
+    "POLICY_EXPROPRIATION"
+   ]
+  },
+  {
+   "id": "POLICY_CORV_E",
+   "name": "Corvée",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_STATE_WORKFORCE",
+   "obsoletedBy": [
+    "POLICY_GOTHIC_ARCHITECTURE",
+    "POLICY_SKYSCRAPERS"
+   ]
+  },
+  {
+   "id": "POLICY_ECOMMERCE",
+   "name": "Ecommerce",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_GLOBALIZATION"
+  },
+  {
+   "id": "POLICY_ECONOMIC_UNION",
+   "name": "Economic Union",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_IDEOLOGY"
+  },
+  {
+   "id": "POLICY_EXPROPRIATION",
+   "name": "Expropriation",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_SCORCHED_EARTH"
+  },
+  {
+   "id": "POLICY_FIVE_YEAR_PLAN",
+   "name": "Five-Year Plan",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_IDEOLOGY"
+  },
+  {
+   "id": "POLICY_FREE_MARKET",
+   "name": "Free Market",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+  },
+  {
+   "id": "POLICY_GOD_KING",
+   "name": "God King",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CODE_OF_LAWS",
+   "obsoletedBy": [
+    "POLICY_SCRIPTURE"
+   ]
+  },
+  {
+   "id": "POLICY_GOTHIC_ARCHITECTURE",
+   "name": "Gothic Architecture",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_DIVINE_RIGHT",
+   "obsoletedBy": [
+    "POLICY_SKYSCRAPERS"
+   ]
+  },
+  {
+   "id": "POLICY_GRAND_OPERA",
+   "name": "Grand Opera",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_OPERA_AND_BALLET"
+  },
+  {
+   "id": "POLICY_HERITAGE_TOURISM",
+   "name": "Heritage Tourism",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CULTURAL_HERITAGE"
+  },
+  {
+   "id": "POLICY_ILKUM",
+   "name": "Ilkum",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CRAFTSMANSHIP",
+   "obsoletedBy": [
+    "POLICY_SERFDOM"
+   ]
+  },
+  {
+   "id": "POLICY_INSULAE",
+   "name": "Insulae",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_GAMES_AND_RECREATION",
+   "obsoletedBy": [
+    "POLICY_MEDINA_QUARTER"
+   ]
+  },
+  {
+   "id": "POLICY_LAND_SURVEYORS",
+   "name": "Land Surveyors",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_EARLY_EMPIRE",
+   "obsoletedBy": [
+    "POLICY_EXPROPRIATION"
+   ]
+  },
+  {
+   "id": "POLICY_LIBERALISM",
+   "name": "Liberalism",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+  },
+  {
+   "id": "POLICY_MARKET_ECONOMY",
+   "name": "Market Economy",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CAPITALISM"
+  },
+  {
+   "id": "POLICY_MEDINA_QUARTER",
+   "name": "Medina Quarter",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_MEDIEVAL_FAIRES",
+   "obsoletedBy": [
+    "POLICY_NEW_DEAL"
+   ]
+  },
+  {
+   "id": "POLICY_NATURAL_PHILOSOPHY",
+   "name": "Natural Philosophy",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_RECORDED_HISTORY",
+   "obsoletedBy": [
+    "POLICY_FIVE_YEAR_PLAN"
+   ]
+  },
+  {
+   "id": "POLICY_NAVAL_INFRASTRUCTURE",
+   "name": "Naval Infrastructure",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_NAVAL_TRADITION",
+   "obsoletedBy": [
+    "POLICY_ECONOMIC_UNION"
+   ]
+  },
+  {
+   "id": "POLICY_NEW_DEAL",
+   "name": "New Deal",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_SUFFRAGE",
+   "government": "GOVERNMENT_DEMOCRACY"
+  },
+  {
+   "id": "POLICY_ONLINE_COMMUNITIES",
+   "name": "Online Communities",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_SOCIAL_MEDIA"
+  },
+  {
+   "id": "POLICY_PUBLIC_TRANSPORT",
+   "name": "Public Transport",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_URBANIZATION"
+  },
+  {
+   "id": "POLICY_PUBLIC_WORKS",
+   "name": "Public Works",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CIVIL_ENGINEERING"
+  },
+  {
+   "id": "POLICY_RATIONALISM",
+   "name": "Rationalism",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+  },
+  {
+   "id": "POLICY_RELIGIOUS_ORDERS",
+   "name": "Religious Orders",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_REFORMED_CHURCH"
+  },
+  {
+   "id": "POLICY_SATELLITE_BROADCASTS",
+   "name": "Satellite Broadcasts",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_SPACE_RACE"
+  },
+  {
+   "id": "POLICY_SCRIPTURE",
+   "name": "Scripture",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_THEOLOGY"
+  },
+  {
+   "id": "POLICY_SERFDOM",
+   "name": "Serfdom",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_FEUDALISM",
+   "obsoletedBy": [
+    "POLICY_PUBLIC_WORKS"
+   ]
+  },
+  {
+   "id": "POLICY_SIMULTANEUM",
+   "name": "Simultaneum",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_REFORMED_CHURCH"
+  },
+  {
+   "id": "POLICY_SKYSCRAPERS",
+   "name": "Skyscrapers",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CIVIL_ENGINEERING"
+  },
+  {
+   "id": "POLICY_SPORTS_MEDIA",
+   "name": "Sports Media",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_PROFESSIONAL_SPORTS"
+  },
+  {
+   "id": "POLICY_TOWN_CHARTERS",
+   "name": "Town Charters",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_GUILDS",
+   "obsoletedBy": [
+    "POLICY_ECONOMIC_UNION"
+   ]
+  },
+  {
+   "id": "POLICY_TRADE_CONFEDERATION",
+   "name": "Trade Confederation",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_MERCENARIES",
+   "obsoletedBy": [
+    "POLICY_MARKET_ECONOMY"
+   ]
+  },
+  {
+   "id": "POLICY_TRIANGULAR_TRADE",
+   "name": "Triangular Trade",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_MERCANTILISM",
+   "obsoletedBy": [
+    "POLICY_ECOMMERCE"
+   ]
+  },
+  {
+   "id": "POLICY_URBAN_PLANNING",
+   "name": "Urban Planning",
+   "slot": "ECONOMIC",
+   "unlock": "CIVIC_CODE_OF_LAWS",
+   "obsoletedBy": [
+    "POLICY_RATIONALISM"
+   ]
+  },
+  {
+   "id": "POLICY_CHARISMATIC_LEADER",
+   "name": "Charismatic Leader",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "obsoletedBy": [
+    "POLICY_GUNBOAT_DIPLOMACY"
+   ]
+  },
+  {
+   "id": "POLICY_COLLECTIVE_ACTIVISM",
+   "name": "Collective Activism",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_SOCIAL_MEDIA"
+  },
+  {
+   "id": "POLICY_COLONIAL_OFFICES",
+   "name": "Colonial Offices",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_EXPLORATION"
+  },
+  {
+   "id": "POLICY_COLONIAL_TAXES",
+   "name": "Colonial Taxes",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_COLONIALISM"
+  },
+  {
+   "id": "POLICY_COMMUNICATIONS_OFFICE",
+   "name": "Communications Office",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_SOCIAL_MEDIA"
+  },
+  {
+   "id": "POLICY_CONTAINMENT",
+   "name": "Containment",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_COLD_WAR"
+  },
+  {
+   "id": "POLICY_CRYPTOGRAPHY",
+   "name": "Cryptography",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_COLD_WAR"
+  },
+  {
+   "id": "POLICY_DIPLOMATIC_LEAGUE",
+   "name": "Diplomatic League",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+  },
+  {
+   "id": "POLICY_GUNBOAT_DIPLOMACY",
+   "name": "Gunboat Diplomacy",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_IDEOLOGY"
+  },
+  {
+   "id": "POLICY_INTERNATIONAL_SPACE_AGENCY",
+   "name": "International Space Agency",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_GLOBALIZATION"
+  },
+  {
+   "id": "POLICY_MACHIAVELLIANISM",
+   "name": "Machiavellianism",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE"
+  },
+  {
+   "id": "POLICY_MERCHANT_CONFEDERATION",
+   "name": "Merchant Confederation",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_MEDIEVAL_FAIRES"
+  },
+  {
+   "id": "POLICY_MUSIC_CENSORSHIP",
+   "name": "Music Censorship",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_SPACE_RACE"
+  },
+  {
+   "id": "POLICY_NUCLEAR_ESPIONAGE",
+   "name": "Nuclear Espionage",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_NUCLEAR_PROGRAM"
+  },
+  {
+   "id": "POLICY_PRAETORIUM",
+   "name": "Praetorium",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_RECORDED_HISTORY",
+   "obsoletedBy": [
+    "POLICY_COMMUNICATIONS_OFFICE"
+   ]
+  },
+  {
+   "id": "POLICY_RAJ",
+   "name": "Raj",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_COLONIALISM"
+  },
+  {
+   "id": "POLICY_WISSELBANKEN",
+   "name": "Wisselbanken",
+   "slot": "DIPLOMATIC",
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE"
+  },
+  {
+   "id": "POLICY_AUTOMATED_WORKFORCE",
+   "name": "Automated Workforce",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Information Era-Future Era"
+  },
+  {
+   "id": "POLICY_COLLECTIVISM",
+   "name": "Collectivism",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Modern Era-Atomic Era"
+  },
+  {
+   "id": "POLICY_CYBER_WARFARE",
+   "name": "Cyber Warfare",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Information Era-Future Era"
+  },
+  {
+   "id": "POLICY_DEFENSE_OF_THE_MOTHERLAND",
+   "name": "Defense of the Motherland",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_CLASS_STRUGGLE",
+   "government": "GOVERNMENT_COMMUNISM"
+  },
+  {
+   "id": "POLICY_DISINFORMATION_CAMPAIGN",
+   "name": "Disinformation Campaign",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Information Era-Future Era"
+  },
+  {
+   "id": "POLICY_ELITE_FORCES",
+   "name": "Elite Forces",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Industrial Era-Future Era"
+  },
+  {
+   "id": "POLICY_THEIR_FINEST_HOUR",
+   "name": "Their Finest Hour",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_SUFFRAGE",
+   "government": "GOVERNMENT_DEMOCRACY"
+  },
+  {
+   "id": "POLICY_FLOWER_POWER",
+   "name": "Flower Power",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Atomic Era-Future Era"
+  },
+  {
+   "id": "POLICY_SPACE_TOURISM",
+   "name": "Space Tourism",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_EXODUS_IMPERATIVE"
+  },
+  {
+   "id": "POLICY_RABBLEROUSING",
+   "name": "Rabblerousing",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_INFORMATION_WARFARE"
+  },
+  {
+   "id": "POLICY_GLOBAL_COALITION",
+   "name": "Global Coalition",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_SMART_POWER_DOCTRINE"
+  },
+  {
+   "id": "POLICY_NON_STATE_ACTORS",
+   "name": "Non-State Actors",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_CULTURAL_HEGEMONY"
+  },
+  {
+   "id": "POLICY_HALLYU",
+   "name": "Hallyu",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_CULTURAL_HEGEMONY"
+  },
+  {
+   "id": "POLICY_DIPLOMATIC_CAPITAL",
+   "name": "Diplomatic Capital",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_SMART_POWER_DOCTRINE"
+  },
+  {
+   "id": "POLICY_INTEGRATED_ATTACK_LOGISTICS",
+   "name": "Integrated Attack Logistics",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_INFORMATION_WARFARE"
+  },
+  {
+   "id": "POLICY_AEROSPACE_CONTRACTORS",
+   "name": "Aerospace Contractors",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_EXODUS_IMPERATIVE"
+  },
+  {
+   "id": "POLICY_AUTOCRATIC_LEGACY",
+   "name": "Autocratic Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_REPUBLICAN_LEGACY",
+   "name": "Republican Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_COMMUNIST_LEGACY",
+   "name": "Communist Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_DEMOCRATIC_LEGACY",
+   "name": "Democratic Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_FASCIST_LEGACY",
+   "name": "Fascist Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_MERCANTILE_LEGACY",
+   "name": "Mercantile Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_MONARCHIC_LEGACY",
+   "name": "Monarchic Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_OLIGARCHIC_LEGACY",
+   "name": "Oligarchic Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_THEOCRATIC_LEGACY",
+   "name": "Theocratic Legacy",
+   "slot": "WILDCARD",
+   "legacy": true
+  },
+  {
+   "id": "POLICY_INQUISITION",
+   "name": "Inquisition",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Classical Era-Renaissance Era"
+  },
+  {
+   "id": "POLICY_ISOLATIONISM",
+   "name": "Isolationism",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Classical Era-Industrial Era"
+  },
+  {
+   "id": "POLICY_LETTERS_OF_MARQUE",
+   "name": "Letters of Marque",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Renaissance Era-Modern Era"
+  },
+  {
+   "id": "POLICY_MARTIAL_LAW",
+   "name": "Martial Law",
+   "slot": "WILDCARD",
+   "unlock": "CIVIC_TOTALITARIANISM",
+   "government": "GOVERNMENT_FASCISM"
+  },
+  {
+   "id": "POLICY_MONASTICISM",
+   "name": "Monasticism",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Classical Era-Medieval Era"
+  },
+  {
+   "id": "POLICY_ROBBER_BARONS",
+   "name": "Robber Barons",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Industrial Era-Atomic Era"
+  },
+  {
+   "id": "POLICY_ROGUE_STATE",
+   "name": "Rogue State",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Atomic Era-Future Era"
+  },
+  {
+   "id": "POLICY_TWILIGHT_VALOR",
+   "name": "Twilight Valor",
+   "slot": "WILDCARD",
+   "ageRequirement": "Dark Age Classical Era-Renaissance Era"
+  },
+  {
+   "id": "POLICY_FRESCOES",
+   "name": "Frescoes",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_HUMANISM"
+  },
+  {
+   "id": "POLICY_INSPIRATION",
+   "name": "Inspiration",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_MYSTICISM",
+   "obsoletedBy": [
+    "POLICY_SCIENCE_FOUNDATIONS"
+   ]
+  },
+  {
+   "id": "POLICY_INVENTION",
+   "name": "Invention",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_HUMANISM"
+  },
+  {
+   "id": "POLICY_LAISSEZ_FAIRE",
+   "name": "Laissez-Faire",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_CAPITALISM"
+  },
+  {
+   "id": "POLICY_LITERARY_TRADITION",
+   "name": "Literary Tradition",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_DRAMA_AND_POETRY"
+  },
+  {
+   "id": "POLICY_MILITARY_ORGANIZATION",
+   "name": "Military Organization",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_SCORCHED_EARTH"
+  },
+  {
+   "id": "POLICY_NAVIGATION",
+   "name": "Navigation",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_NAVAL_TRADITION"
+  },
+  {
+   "id": "POLICY_SCIENCE_FOUNDATIONS",
+   "name": "Science Foundations",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_NUCLEAR_PROGRAM"
+  },
+  {
+   "id": "POLICY_REVELATION",
+   "name": "Revelation",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_MYSTICISM",
+   "obsoletedBy": [
+    "POLICY_INVENTION"
+   ]
+  },
+  {
+   "id": "POLICY_STRATEGOS",
+   "name": "Strategos",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_MILITARY_TRADITION",
+   "obsoletedBy": [
+    "POLICY_MILITARY_ORGANIZATION"
+   ]
+  },
+  {
+   "id": "POLICY_SYMPHONIES",
+   "name": "Symphonies",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_OPERA_AND_BALLET"
+  },
+  {
+   "id": "POLICY_TRAVELING_MERCHANTS",
+   "name": "Traveling Merchants",
+   "slot": "GREAT_PERSON",
+   "unlock": "CIVIC_GUILDS",
+   "obsoletedBy": [
+    "POLICY_LAISSEZ_FAIRE"
+   ]
+  }
+ ]
+}

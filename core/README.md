@@ -43,12 +43,13 @@ same command must print the same hash.
 | Game: submit, replay, paths, visibility, turns | `include/sovereign/game.h` |
 | Map generator and start positions | `include/sovereign/mapgen.h` |
 | Cities: yields, growth, borders, production | `src/city.cpp` (queries on `Game`) |
+| Research trees, boosts, governments, anarchy, policy cards | `src/research.cpp` (queries on `Game`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 
-Rules data: `data/rules/{globals,terrain,resources,units,buildings}.json` are generated
+Rules data: `data/rules/{globals,terrain,resources,units,buildings,techs,civics,governments,policies}.json` are generated
 from `specs/civ6/data` by `python3 tools/rules_gen/gen_rules.py`; never edit
-them by hand (`buildings.json` too). `civilizations.json`, `setup.json` and
+them by hand. `civilizations.json`, `setup.json` and
 `modifiers.json` are Sovereign's own and hand-written. Pass more `--rules` directories to layer mods on top (rows
 replace by `id`; `"delete": true` removes one).
 

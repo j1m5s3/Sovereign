@@ -36,6 +36,30 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
         std::vector<ProductionItem> items = game.buildableItems(cid);
         if (!items.empty()) game.submit(Command::setProduction(me, cid, items[rng.below(static_cast<uint32_t>(items.size()))]));
     }
+    // Research: a random available tech and civic; adopt the newest-unlocked
+    // government when changes are free, then fill empty policy slots.
+    const Player& pl = game.state().players[static_cast<size_t>(me)];
+    if (pl.techs.current == kNone) {
+        std::vector<TypeIndex> techs = game.availableTechs(me);
+        if (!techs.empty()) game.submit(Command::chooseResearch(me, techs[rng.below(static_cast<uint32_t>(techs.size()))]));
+    }
+    if (pl.civics.current == kNone) {
+        std::vector<TypeIndex> civics = game.availableCivics(me);
+        if (!civics.empty()) game.submit(Command::chooseCivic(me, civics[rng.below(static_cast<uint32_t>(civics.size()))]));
+    }
+    for (size_t g = game.rules().governments.size(); g-- > 0;) {
+        const GovernmentType& gt = game.rules().governments[g];
+        const int current = pl.government == kNone ? -1 : game.rules().governments[static_cast<size_t>(pl.government)].tier;
+        if (gt.tier > current && game.submit(Command::changeGovernment(me, static_cast<TypeIndex>(g))) == CommandError::Ok) break;
+    }
+    for (size_t slot = 0; slot < pl.policies.size(); ++slot) {
+        if (pl.policies[slot] != kNone) continue;
+        std::vector<TypeIndex> fits;
+        for (size_t k = 0; k < game.rules().policies.size(); ++k) {
+            if (game.canSetPolicy(me, static_cast<int>(slot), static_cast<TypeIndex>(k))) fits.push_back(static_cast<TypeIndex>(k));
+        }
+        if (!fits.empty()) game.submit(Command::setPolicy(me, static_cast<int>(slot), fits[rng.below(static_cast<uint32_t>(fits.size()))]));
+    }
     for (UnitId id : game.unitsNeedingOrders(me)) game.submit(Command::setActivity(me, id, Activity::Skip));
     game.submit(Command::endTurn(me));
 }

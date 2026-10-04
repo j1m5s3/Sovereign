@@ -83,11 +83,39 @@ public:
     // Net gold per turn: city gold minus building and unit maintenance.
     Fixed goldPerTurn(PlayerId player) const;
 
+    // ---- research and government (04-tech-civics-government.md)
+    int techCost(TypeIndex tech) const;    // scaled by game speed
+    int civicCost(TypeIndex civic) const;  // scaled by game speed
+    bool hasUnlocked(PlayerId player, Unlock u) const;
+    bool canResearch(PlayerId player, TypeIndex tech) const;
+    bool canStudyCivic(PlayerId player, TypeIndex civic) const;
+    std::vector<TypeIndex> availableTechs(PlayerId player) const;
+    std::vector<TypeIndex> availableCivics(PlayerId player) const;
+    // Science and culture the player earns this turn (zero in anarchy).
+    Fixed sciencePerTurn(PlayerId player) const;
+    Fixed culturePerTurn(PlayerId player) const;
+    // Whether the player meets a boost's condition right now.
+    bool boostMet(PlayerId player, const Boost& boost) const;
+    bool canAdoptGovernment(PlayerId player, TypeIndex government, CommandError* why = nullptr) const;
+    // Policy may be slotted under the player's government (unlocked, not obsolete, allowed).
+    bool policyAvailable(PlayerId player, TypeIndex policy) const;
+    bool canSetPolicy(PlayerId player, int slot, TypeIndex policy, CommandError* why = nullptr) const;
+    // Slot type of slot `slot` of a government: Military slots first, then
+    // Economic, Diplomatic and Wildcard.
+    static PolicySlot slotType(const GovernmentType& government, int slot);
+    // Sizes a player's per-rules vectors (trees, government uses, units trained).
+    static void fitPlayerToRules(Player& p, const Rules& rules);
+
 private:
     void apply(const Command& c);
     CommandError validateCity(const Command& c) const;
     void applyCity(const Command& c);
     void processCities(PlayerId p);
+    CommandError validateResearch(const Command& c) const;
+    void applyResearch(const Command& c);
+    void processResearch(PlayerId p, Fixed science, Fixed culture);
+    void completeNode(PlayerId p, bool civic, TypeIndex node);
+    void updateBoosts(PlayerId p);
     void assignCitizens(City& city);
     bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available

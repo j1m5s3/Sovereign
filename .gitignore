@@ -1,3 +1,4 @@
 # Rules core build trees
 core/build*/
 /build*/
+__pycache__/

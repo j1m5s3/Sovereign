@@ -31,6 +31,14 @@ enum class ResourceClass : uint8_t { Bonus = 0, Luxury, Strategic };
 using TypeIndex = int16_t;
 constexpr TypeIndex kNone = -1;
 
+// What unlocks a unit, building, resource, government or policy: a tech or a
+// civic (04-tech-civics-government.md). An empty unlock is available from the start.
+struct Unlock {
+    bool civic = false;
+    TypeIndex index = kNone;
+    bool none() const { return index == kNone; }
+};
+
 struct TerrainType {
     std::string id, name;
     std::string base;  // climate family, e.g. "GRASSLAND"; map gen picks by (base, relief)
@@ -63,7 +71,7 @@ struct ResourceType {
     std::string id, name;
     ResourceClass cls = ResourceClass::Bonus;
     Yields yields{};
-    std::string revealTech;  // empty: always visible
+    Unlock reveal;  // tech that reveals it; none: always visible
     int frequency = 0;       // land placement weight
     int seaFrequency = 0;    // water placement weight
     std::vector<TypeIndex> validTerrains;
@@ -90,13 +98,14 @@ struct UnitType {
     int minPopulation = 0;    // city population needed to train
     bool mustPurchase = false;
     std::string purchaseYield;  // "GOLD", "FAITH" or empty
-    std::string unlock;         // tech or civic id; empty = available from the start
+    Unlock unlock;
+    int era = 0;  // era index of its unlock (Ancient when it has none)
 };
 
 struct BuildingType {
     std::string id, name;
     std::string district;   // e.g. "DISTRICT_CITY_CENTER"
-    std::string unlock;     // tech or civic id; empty = available from the start
+    Unlock unlock;
     int cost = 0;
     int maintenance = 0;
     Yields yields{};
@@ -118,7 +127,63 @@ struct HappinessLevel {
     int yieldPercent = 0;  // non-food yields
 };
 
-enum class ModCollection : uint8_t { OwnerCity = 0, OwnerCityPlots, PlayerCities, PlayerCapital, PlayerCityPlots };
+// Research trees (04-tech-civics-government.md).
+struct EraType {
+    std::string id, name;
+};
+
+// What earns a boost. Conditions the core cannot track yet load as NotTracked
+// and never fire until the system they need exists.
+enum class BoostKind : uint8_t {
+    None = 0,
+    CoastalCity,      // own a city next to coast or lake
+    Building,         // `count` of your cities have building `ref`
+    OwnUnits,         // own `count` units of type `ref`
+    Tech,             // tech `ref` researched
+    Civic,            // civic `ref` completed
+    GovernmentTier,   // a government of tier `count` or higher
+    TotalPopulation,  // `count` citizens across your cities
+    CityPopulation,   // one city of `count` population
+    LandCombatUnits,  // `count` land military units
+    NotTracked,       // districts, improvements, combat, religion... (later milestones)
+};
+
+struct Boost {
+    int percent = 0;  // 0: the node has no boost
+    BoostKind kind = BoostKind::None;
+    TypeIndex ref = kNone;
+    int count = 1;
+    std::string type, text;  // as in the data
+};
+
+struct TreeNode {
+    std::string id, name;
+    int era = 0;
+    int cost = 0;  // Standard speed
+    std::vector<TypeIndex> prereqs;
+    Boost boost;
+};
+
+enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
+constexpr size_t kNumGovernmentSlotTypes = 4;  // Military, Economic, Diplomatic, Wildcard
+
+struct GovernmentType {
+    std::string id, name;
+    int tier = 0;
+    Unlock unlock;
+    std::array<int, kNumGovernmentSlotTypes> slots{};
+    int totalSlots() const { return slots[0] + slots[1] + slots[2] + slots[3]; }
+};
+
+struct PolicyType {
+    std::string id, name;
+    PolicySlot slot = PolicySlot::Military;
+    Unlock unlock;                        // none: not adoptable yet (legacy and Dark Age cards)
+    std::vector<TypeIndex> obsoletedBy;   // replacement cards: once one is unlocked this card retires
+    TypeIndex government = kNone;         // only under this government
+};
+
+enum class ModCollection : uint8_t { OwnerCity = 0, OwnerCityPlots, PlayerCities, PlayerCapital, PlayerCityPlots, Player };
 enum class ModEffect : uint8_t {
     CityYield = 0,      // flat yield on a city
     CityYieldPercent,   // percentage on a city's yield
@@ -127,6 +192,9 @@ enum class ModEffect : uint8_t {
     CityAmenities,
     CityGrowthPercent,
     CityDefense,
+    UnitProductionPercent,    // production toward matching units in a city
+    PlotPurchaseCostPercent,  // gold cost of buying plots for a city
+    UnitMaintenanceDiscount,  // player: gold off each unit's maintenance
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -152,7 +220,7 @@ struct RequirementSet {
 
 // Civ VI's modifier model (00-overview.md, Architecture recommendations):
 // who it affects (collection), what it does (effect), when (requirements).
-enum class ModSource : uint8_t { Building = 0, Civ, Everyone };
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government };
 
 struct Modifier {
     std::string id;
@@ -164,6 +232,10 @@ struct Modifier {
     RequirementSet ownerReqs, subjectReqs;
     YieldType yield = YieldType::Food;
     Fixed amount;
+    // UnitProductionPercent filters (empty/none/-1: any).
+    std::string unitClass;
+    TypeIndex unit = kNone;
+    int maxEra = -1;
 };
 
 struct CivType {
@@ -196,6 +268,11 @@ public:
     std::vector<ResourceType> resources;
     std::vector<UnitType> units;
     std::vector<BuildingType> buildings;
+    std::vector<EraType> eras;
+    std::vector<TreeNode> techs;
+    std::vector<TreeNode> civics;
+    std::vector<GovernmentType> governments;
+    std::vector<PolicyType> policies;
     std::vector<HappinessLevel> happiness;  // ascending by minBalance
     std::vector<Modifier> modifiers;
     std::vector<CivType> civs;
@@ -208,6 +285,11 @@ public:
     TypeIndex resource(const std::string& id) const;
     TypeIndex unit(const std::string& id) const;
     TypeIndex building(const std::string& id) const;
+    TypeIndex era(const std::string& id) const;
+    TypeIndex tech(const std::string& id) const;
+    TypeIndex civic(const std::string& id) const;
+    TypeIndex government(const std::string& id) const;
+    TypeIndex policy(const std::string& id) const;
     // Modifiers whose source is this id, in load order.
     std::vector<const Modifier*> modifiersFrom(const std::string& source) const;
     TypeIndex civ(const std::string& id) const;

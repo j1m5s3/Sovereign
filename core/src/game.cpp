@@ -43,7 +43,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             return nullptr;
         }
         p.human = setup.players[i].human;
-        p.unitsTrained.assign(rules.units.size(), 0);
+        fitPlayerToRules(p, rules);
         p.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
         s.players.push_back(std::move(p));
     }
@@ -91,7 +91,7 @@ std::unique_ptr<Game> Game::replay(const Rules& rules, const GameSetup& setup, c
 std::unique_ptr<Game> Game::fromScenario(const Rules& rules, GameState state) {
     auto game = std::make_unique<Game>(rules, std::move(state), std::vector<Command>{});
     for (Player& p : game->state_.players) {
-        p.unitsTrained.resize(rules.units.size(), 0);
+        fitPlayerToRules(p, rules);
         if (p.visibility.size() != static_cast<size_t>(game->state_.grid.size()))
             p.visibility.assign(static_cast<size_t>(game->state_.grid.size()), 0);
     }
@@ -124,6 +124,12 @@ CommandError Game::validate(const Command& c) const {
     if (c.type == CommandType::EndTurn) {
         if (!unitsNeedingOrders(c.player).empty()) return CommandError::UnitsNeedOrders;
         if (!citiesNeedingProduction(c.player).empty()) return CommandError::ProductionNeeded;
+        // A player with a city must keep a tech and a civic in progress while any is left.
+        const Player& p = state_.players[static_cast<size_t>(c.player)];
+        const bool hasCity = std::any_of(state_.cities.begin(), state_.cities.end(),
+                                         [&](const City& city) { return city.owner == c.player; });
+        if (hasCity && p.techs.current == kNone && !availableTechs(c.player).empty()) return CommandError::ResearchNeeded;
+        if (hasCity && p.civics.current == kNone && !availableCivics(c.player).empty()) return CommandError::CivicNeeded;
         return CommandError::Ok;
     }
     switch (c.type) {
@@ -133,6 +139,11 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::BuyPlot:
         case CommandType::LockPlot:
             return validateCity(c);
+        case CommandType::ChooseResearch:
+        case CommandType::ChooseCivic:
+        case CommandType::ChangeGovernment:
+        case CommandType::SetPolicy:
+            return validateResearch(c);
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -345,6 +356,7 @@ CommandError Game::submit(const Command& c) {
     if (e != CommandError::Ok) return e;
     log_.push_back(c);
     apply(c);
+    updateBoosts(c.player);
     return CommandError::Ok;
 }
 
@@ -364,6 +376,10 @@ void Game::apply(const Command& c) {
         case CommandType::Purchase:
         case CommandType::BuyPlot:
         case CommandType::LockPlot: applyCity(c); break;
+        case CommandType::ChooseResearch:
+        case CommandType::ChooseCivic:
+        case CommandType::ChangeGovernment:
+        case CommandType::SetPolicy: applyResearch(c); break;
     }
 }
 
@@ -417,6 +433,7 @@ void Game::applyFoundCity(const Command& c) {
 }
 
 void Game::applyEndTurn(const Command& c) {
+    state_.players[static_cast<size_t>(c.player)].freeChanges = false;
     const size_t n = state_.players.size();
     bool wrapped = false;
     for (size_t step = 1; step <= n; ++step) {
@@ -439,7 +456,11 @@ void Game::beginGlobalTurn() {
 }
 
 void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
-    if (runCities) processCities(pid);
+    if (runCities) {
+        processCities(pid);
+        Player& p = state_.players[static_cast<size_t>(pid)];
+        if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
+    }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         u.movesLeft = Fixed::fromInt(typeOf(*rules_, u).moves);
@@ -451,6 +472,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     }
     for (UnitId id : moving) advanceUnit(id);
     refreshVisibility(pid);
+    updateBoosts(pid);
 }
 
 Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {

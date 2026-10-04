@@ -12,6 +12,7 @@ option(SOVEREIGN_WERROR "Treat warnings as errors" ON)
 
 add_library(sovereign_core
   src/city.cpp
+  src/research.cpp
   src/fixed.cpp
   src/game.cpp
   src/hex.cpp
@@ -52,6 +53,7 @@ add_executable(sovereign_tests
   tests/test_game.cpp
   tests/test_save.cpp
   tests/test_city.cpp
+  tests/test_research.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

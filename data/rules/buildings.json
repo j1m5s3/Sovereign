@@ -10,7 +10,7 @@
    "yields": {
     "PRODUCTION": 2
    },
-   "unlock": "Flight",
+   "unlock": "TECH_FLIGHT",
    "purchasable": true
   },
   {
@@ -22,7 +22,7 @@
    "yields": {
     "PRODUCTION": 4
    },
-   "unlock": "Advanced Flight",
+   "unlock": "TECH_ADVANCED_FLIGHT",
    "requires": [
     "BUILDING_HANGAR"
    ],
@@ -37,7 +37,7 @@
    "yields": {
     "SCIENCE": 2
    },
-   "unlock": "Writing",
+   "unlock": "TECH_WRITING",
    "purchasable": true
   },
   {
@@ -49,7 +49,7 @@
    "yields": {
     "SCIENCE": 4
    },
-   "unlock": "Education",
+   "unlock": "TECH_EDUCATION",
    "housing": 1,
    "requires": [
     "BUILDING_LIBRARY"
@@ -65,7 +65,7 @@
    "yields": {
     "SCIENCE": 3
    },
-   "unlock": "Chemistry",
+   "unlock": "TECH_CHEMISTRY",
    "requires": [
     "BUILDING_UNIVERSITY"
    ],
@@ -106,7 +106,7 @@
    "yields": {
     "FOOD": 1
    },
-   "unlock": "Pottery",
+   "unlock": "TECH_POTTERY",
    "housing": 2,
    "purchasable": true
   },
@@ -117,7 +117,7 @@
    "cost": 80,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Masonry",
+   "unlock": "TECH_MASONRY",
    "outerDefenseHp": 100,
    "defense": 3
   },
@@ -131,7 +131,7 @@
     "FOOD": 1,
     "PRODUCTION": 1
    },
-   "unlock": "Wheel",
+   "unlock": "TECH_WHEEL",
    "needsRiver": true,
    "purchasable": true
   },
@@ -142,7 +142,7 @@
    "cost": 80,
    "maintenance": 1,
    "yields": {},
-   "unlock": "Computers"
+   "unlock": "TECH_COMPUTERS"
   },
   {
    "id": "BUILDING_SEWER",
@@ -151,7 +151,7 @@
    "cost": 200,
    "maintenance": 2,
    "yields": {},
-   "unlock": "Sanitation",
+   "unlock": "TECH_SANITATION",
    "housing": 2,
    "purchasable": true
   },
@@ -162,7 +162,7 @@
    "cost": 220,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Castles",
+   "unlock": "TECH_CASTLES",
    "outerDefenseHp": 100,
    "defense": 3,
    "requires": [
@@ -176,7 +176,7 @@
    "cost": 300,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Siege Tactics",
+   "unlock": "TECH_SIEGE_TACTICS",
    "outerDefenseHp": 100,
    "defense": 3,
    "requires": [
@@ -192,7 +192,7 @@
    "yields": {
     "GOLD": 2
    },
-   "unlock": "Currency",
+   "unlock": "TECH_CURRENCY",
    "purchasable": true
   },
   {
@@ -204,7 +204,7 @@
    "yields": {
     "GOLD": 5
    },
-   "unlock": "Banking",
+   "unlock": "TECH_BANKING",
    "requires": [
     "BUILDING_MARKET"
    ],
@@ -219,7 +219,7 @@
    "yields": {
     "GOLD": 4
    },
-   "unlock": "Economics",
+   "unlock": "TECH_ECONOMICS",
    "requires": [
     "BUILDING_BANK"
    ],
@@ -232,7 +232,7 @@
    "cost": 440,
    "maintenance": 1,
    "yields": {},
-   "unlock": "Electricity",
+   "unlock": "TECH_ELECTRICITY",
    "purchasable": true
   },
   {
@@ -242,7 +242,7 @@
    "cost": 150,
    "maintenance": 1,
    "yields": {},
-   "unlock": "Mathematics",
+   "unlock": "TECH_MATHEMATICS",
    "purchasable": true
   },
   {
@@ -252,7 +252,7 @@
    "cost": 290,
    "maintenance": 2,
    "yields": {},
-   "unlock": "Diplomatic Service",
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE",
    "requires": [
     "BUILDING_CONSULATE"
    ],
@@ -267,7 +267,7 @@
    "yields": {
     "PRODUCTION": 1
    },
-   "unlock": "Bronze Working",
+   "unlock": "TECH_BRONZE_WORKING",
    "housing": 1,
    "purchasable": true
   },
@@ -280,7 +280,7 @@
    "yields": {
     "PRODUCTION": 1
    },
-   "unlock": "Horseback Riding",
+   "unlock": "TECH_HORSEBACK_RIDING",
    "housing": 1,
    "purchasable": true
   },
@@ -293,7 +293,7 @@
    "yields": {
     "PRODUCTION": 3
    },
-   "unlock": "Military Engineering",
+   "unlock": "TECH_MILITARY_ENGINEERING",
    "requires": [
     "BUILDING_BARRACKS",
     "BUILDING_STABLE"
@@ -309,7 +309,7 @@
    "yields": {
     "PRODUCTION": 4
    },
-   "unlock": "Military Science",
+   "unlock": "TECH_MILITARY_SCIENCE",
    "housing": 1,
    "requires": [
     "BUILDING_ARMORY"
@@ -325,7 +325,7 @@
    "yields": {
     "CULTURE": 1
    },
-   "unlock": "Games and Recreation",
+   "unlock": "CIVIC_GAMES_AND_RECREATION",
    "amenities": 2,
    "purchasable": true
   },
@@ -336,7 +336,7 @@
    "cost": 360,
    "maintenance": 2,
    "yields": {},
-   "unlock": "Natural History",
+   "unlock": "CIVIC_NATURAL_HISTORY",
    "amenities": 1,
    "requires": [
     "BUILDING_ARENA"
@@ -350,7 +350,7 @@
    "cost": 480,
    "maintenance": 3,
    "yields": {},
-   "unlock": "Professional Sports",
+   "unlock": "CIVIC_PROFESSIONAL_SPORTS",
    "amenities": 1,
    "requires": [
     "BUILDING_ZOO"
@@ -468,7 +468,7 @@
    "cost": 120,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Celestial Navigation",
+   "unlock": "TECH_CELESTIAL_NAVIGATION",
    "housing": 1,
    "purchasable": true
   },
@@ -481,7 +481,7 @@
    "yields": {
     "FOOD": 1
    },
-   "unlock": "Mass Production",
+   "unlock": "TECH_MASS_PRODUCTION",
    "requires": [
     "BUILDING_LIGHTHOUSE"
    ],
@@ -497,7 +497,7 @@
     "GOLD": 2,
     "FOOD": 2
    },
-   "unlock": "Electricity",
+   "unlock": "TECH_ELECTRICITY",
    "housing": 1,
    "requires": [
     "BUILDING_SHIPYARD"
@@ -513,7 +513,7 @@
    "yields": {
     "FAITH": 2
    },
-   "unlock": "Astrology",
+   "unlock": "TECH_ASTROLOGY",
    "purchasable": true
   },
   {
@@ -525,7 +525,7 @@
    "yields": {
     "FAITH": 4
    },
-   "unlock": "Theology",
+   "unlock": "CIVIC_THEOLOGY",
    "requires": [
     "BUILDING_SHRINE"
    ],
@@ -662,7 +662,7 @@
    "yields": {
     "PRODUCTION": 3
    },
-   "unlock": "Apprenticeship",
+   "unlock": "TECH_APPRENTICESHIP",
    "purchasable": true
   },
   {
@@ -672,7 +672,7 @@
    "cost": 300,
    "maintenance": 3,
    "yields": {},
-   "unlock": "Industrialization",
+   "unlock": "TECH_INDUSTRIALIZATION",
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -687,7 +687,7 @@
    "yields": {
     "PRODUCTION": 3
    },
-   "unlock": "Industrialization",
+   "unlock": "TECH_INDUSTRIALIZATION",
    "requires": [
     "BUILDING_WORKSHOP"
    ],
@@ -702,7 +702,7 @@
    "yields": {
     "PRODUCTION": 3
    },
-   "unlock": "Electricity",
+   "unlock": "TECH_ELECTRICITY",
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -718,7 +718,7 @@
     "PRODUCTION": 4,
     "SCIENCE": 3
    },
-   "unlock": "Nuclear Fission",
+   "unlock": "TECH_NUCLEAR_FISSION",
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -733,7 +733,7 @@
    "yields": {
     "FOOD": 4
    },
-   "unlock": "Replaceable Parts",
+   "unlock": "TECH_REPLACEABLE_PARTS",
    "purchasable": true
   },
   {
@@ -745,7 +745,7 @@
    "yields": {
     "GOLD": 2
    },
-   "unlock": "Capitalism",
+   "unlock": "CIVIC_CAPITALISM",
    "amenities": 1,
    "purchasable": true
   },
@@ -756,7 +756,7 @@
    "cost": 150,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Mysticism",
+   "unlock": "CIVIC_MYSTICISM",
    "purchasable": true
   },
   {
@@ -766,7 +766,7 @@
    "cost": 440,
    "maintenance": 0,
    "yields": {},
-   "unlock": "Conservation",
+   "unlock": "CIVIC_CONSERVATION",
    "purchasable": true
   },
   {
@@ -802,7 +802,7 @@
    "yields": {
     "CULTURE": 2
    },
-   "unlock": "Drama and Poetry",
+   "unlock": "CIVIC_DRAMA_AND_POETRY",
    "purchasable": true
   },
   {
@@ -814,7 +814,7 @@
    "yields": {
     "CULTURE": 2
    },
-   "unlock": "Humanism",
+   "unlock": "CIVIC_HUMANISM",
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
@@ -829,7 +829,7 @@
    "yields": {
     "CULTURE": 2
    },
-   "unlock": "Humanism",
+   "unlock": "CIVIC_HUMANISM",
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
@@ -844,7 +844,7 @@
    "yields": {
     "CULTURE": 2
    },
-   "unlock": "Radio",
+   "unlock": "TECH_RADIO",
    "requires": [
     "BUILDING_ART_MUSEUM",
     "BUILDING_ARCHAEOLOGICAL_MUSEUM"
@@ -860,7 +860,7 @@
    "yields": {
     "CULTURE": 3
    },
-   "unlock": "Natural History",
+   "unlock": "CIVIC_NATURAL_HISTORY",
    "amenities": 2,
    "purchasable": true
   },
@@ -871,7 +871,7 @@
    "cost": 360,
    "maintenance": 2,
    "yields": {},
-   "unlock": "Natural History",
+   "unlock": "CIVIC_NATURAL_HISTORY",
    "amenities": 1,
    "requires": [
     "BUILDING_FERRIS_WHEEL"
@@ -885,7 +885,7 @@
    "cost": 480,
    "maintenance": 3,
    "yields": {},
-   "unlock": "Professional Sports",
+   "unlock": "CIVIC_PROFESSIONAL_SPORTS",
    "amenities": 1,
    "requires": [
     "BUILDING_AQUARIUM"
