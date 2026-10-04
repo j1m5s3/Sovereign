@@ -13,7 +13,11 @@
    "validTerrains": [],
    "validFeatures": [
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_IRRIGATION"
   },
   {
    "id": "RESOURCE_CATTLE",
@@ -27,7 +31,11 @@
    "validTerrains": [
     "TERRAIN_GRASS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_ANIMAL_HUSBANDRY"
   },
   {
    "id": "RESOURCE_COPPER",
@@ -45,7 +53,11 @@
     "TERRAIN_SNOW_HILLS",
     "TERRAIN_TUNDRA_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "harvestYields": {
+    "GOLD": 40
+   },
+   "harvestTech": "TECH_MINING"
   },
   {
    "id": "RESOURCE_CRABS",
@@ -59,7 +71,11 @@
    "validTerrains": [
     "TERRAIN_COAST"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "harvestYields": {
+    "GOLD": 40
+   },
+   "harvestTech": "TECH_CELESTIAL_NAVIGATION"
   },
   {
    "id": "RESOURCE_DEER",
@@ -76,7 +92,11 @@
    ],
    "validFeatures": [
     "FEATURE_FOREST"
-   ]
+   ],
+   "harvestYields": {
+    "PRODUCTION": 20
+   },
+   "harvestTech": "TECH_ANIMAL_HUSBANDRY"
   },
   {
    "id": "RESOURCE_FISH",
@@ -92,7 +112,11 @@
    ],
    "validFeatures": [
     "FEATURE_REEF"
-   ]
+   ],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_CELESTIAL_NAVIGATION"
   },
   {
    "id": "RESOURCE_MAIZE",
@@ -110,7 +134,11 @@
    "validFeatures": [
     "FEATURE_FLOODPLAINS_GRASSLAND",
     "FEATURE_FLOODPLAINS_PLAINS"
-   ]
+   ],
+   "harvestYields": {
+    "GOLD": 40
+   },
+   "harvestTech": "TECH_POTTERY"
   },
   {
    "id": "RESOURCE_RICE",
@@ -127,7 +155,11 @@
    "validFeatures": [
     "FEATURE_MARSH",
     "FEATURE_FLOODPLAINS_GRASSLAND"
-   ]
+   ],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_POTTERY"
   },
   {
    "id": "RESOURCE_SHEEP",
@@ -144,7 +176,11 @@
     "TERRAIN_PLAINS_HILLS",
     "TERRAIN_TUNDRA_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_ANIMAL_HUSBANDRY"
   },
   {
    "id": "RESOURCE_STONE",
@@ -159,7 +195,11 @@
     "TERRAIN_GRASS",
     "TERRAIN_GRASS_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "harvestYields": {
+    "PRODUCTION": 20
+   },
+   "harvestTech": "TECH_MASONRY"
   },
   {
    "id": "RESOURCE_WHEAT",
@@ -176,7 +216,11 @@
    "validFeatures": [
     "FEATURE_FLOODPLAINS",
     "FEATURE_FLOODPLAINS_PLAINS"
-   ]
+   ],
+   "harvestYields": {
+    "FOOD": 20
+   },
+   "harvestTech": "TECH_POTTERY"
   },
   {
    "id": "RESOURCE_AMBER",
@@ -193,7 +237,8 @@
    "validFeatures": [
     "FEATURE_JUNGLE",
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_CINNAMON",
@@ -203,7 +248,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 6
   },
   {
    "id": "RESOURCE_CITRUS",
@@ -218,7 +264,8 @@
     "TERRAIN_GRASS",
     "TERRAIN_PLAINS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_CLOVES",
@@ -228,7 +275,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 6
   },
   {
    "id": "RESOURCE_COCOA",
@@ -242,7 +290,8 @@
    "validTerrains": [],
    "validFeatures": [
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_COFFEE",
@@ -258,7 +307,8 @@
    ],
    "validFeatures": [
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_COSMETICS",
@@ -268,7 +318,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_COTTON",
@@ -287,7 +338,8 @@
     "FEATURE_FLOODPLAINS",
     "FEATURE_FLOODPLAINS_GRASSLAND",
     "FEATURE_FLOODPLAINS_PLAINS"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_DIAMONDS",
@@ -306,7 +358,8 @@
    ],
    "validFeatures": [
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_DYES",
@@ -321,7 +374,8 @@
    "validFeatures": [
     "FEATURE_JUNGLE",
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_FURS",
@@ -338,7 +392,8 @@
    ],
    "validFeatures": [
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_GYPSUM",
@@ -356,7 +411,8 @@
     "TERRAIN_PLAINS",
     "TERRAIN_TUNDRA_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_HONEY",
@@ -371,7 +427,8 @@
     "TERRAIN_GRASS",
     "TERRAIN_PLAINS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_INCENSE",
@@ -386,7 +443,8 @@
     "TERRAIN_DESERT",
     "TERRAIN_PLAINS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_IVORY",
@@ -406,7 +464,8 @@
    "validFeatures": [
     "FEATURE_JUNGLE",
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_JADE",
@@ -422,7 +481,8 @@
     "TERRAIN_PLAINS",
     "TERRAIN_TUNDRA"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_JEANS",
@@ -432,7 +492,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_MARBLE",
@@ -448,7 +509,8 @@
     "TERRAIN_GRASS_HILLS",
     "TERRAIN_PLAINS_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_MERCURY",
@@ -462,7 +524,8 @@
    "validTerrains": [
     "TERRAIN_PLAINS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_OLIVES",
@@ -477,7 +540,8 @@
    "validTerrains": [
     "TERRAIN_GRASS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_PEARLS",
@@ -491,7 +555,8 @@
    "validTerrains": [
     "TERRAIN_COAST"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_PERFUME",
@@ -501,7 +566,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 6
   },
   {
    "id": "RESOURCE_SALT",
@@ -518,7 +584,8 @@
     "TERRAIN_PLAINS",
     "TERRAIN_TUNDRA"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_SILK",
@@ -532,7 +599,8 @@
    "validTerrains": [],
    "validFeatures": [
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_SILVER",
@@ -549,7 +617,8 @@
     "TERRAIN_TUNDRA",
     "TERRAIN_TUNDRA_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_SPICES",
@@ -564,7 +633,8 @@
    "validFeatures": [
     "FEATURE_FOREST",
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_SUGAR",
@@ -581,7 +651,8 @@
     "FEATURE_MARSH",
     "FEATURE_FLOODPLAINS_GRASSLAND",
     "FEATURE_FLOODPLAINS_PLAINS"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_TEA",
@@ -596,7 +667,8 @@
     "TERRAIN_GRASS",
     "TERRAIN_GRASS_HILLS"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_TOBACCO",
@@ -614,7 +686,8 @@
    "validFeatures": [
     "FEATURE_FOREST",
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_TOYS",
@@ -624,7 +697,8 @@
    "frequency": 0,
    "seaFrequency": 0,
    "validTerrains": [],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_TRUFFLES",
@@ -640,7 +714,8 @@
     "FEATURE_MARSH",
     "FEATURE_FOREST",
     "FEATURE_JUNGLE"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_TURTLES",
@@ -654,7 +729,8 @@
    "validTerrains": [],
    "validFeatures": [
     "FEATURE_REEF"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_WHALES",
@@ -669,7 +745,8 @@
    "validTerrains": [
     "TERRAIN_COAST"
    ],
-   "validFeatures": []
+   "validFeatures": [],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_WINE",
@@ -687,7 +764,8 @@
    ],
    "validFeatures": [
     "FEATURE_FOREST"
-   ]
+   ],
+   "amenityCities": 4
   },
   {
    "id": "RESOURCE_ALUMINUM",
@@ -706,7 +784,9 @@
    "validFeatures": [
     "FEATURE_JUNGLE"
    ],
-   "revealTech": "TECH_RADIO"
+   "revealTech": "TECH_RADIO",
+   "accumulation": 2,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_COAL",
@@ -724,7 +804,9 @@
    "validFeatures": [
     "FEATURE_FOREST"
    ],
-   "revealTech": "TECH_INDUSTRIALIZATION"
+   "revealTech": "TECH_INDUSTRIALIZATION",
+   "accumulation": 3,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_HORSES",
@@ -741,7 +823,9 @@
     "TERRAIN_PLAINS"
    ],
    "validFeatures": [],
-   "revealTech": "TECH_ANIMAL_HUSBANDRY"
+   "revealTech": "TECH_ANIMAL_HUSBANDRY",
+   "accumulation": 2,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_IRON",
@@ -759,7 +843,9 @@
     "TERRAIN_TUNDRA_HILLS"
    ],
    "validFeatures": [],
-   "revealTech": "TECH_BRONZE_WORKING"
+   "revealTech": "TECH_BRONZE_WORKING",
+   "accumulation": 2,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_NITER",
@@ -781,7 +867,9 @@
     "FEATURE_FLOODPLAINS_GRASSLAND",
     "FEATURE_FLOODPLAINS_PLAINS"
    ],
-   "revealTech": "TECH_MILITARY_ENGINEERING"
+   "revealTech": "TECH_MILITARY_ENGINEERING",
+   "accumulation": 2,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_OIL",
@@ -802,7 +890,9 @@
     "FEATURE_MARSH",
     "FEATURE_FLOODPLAINS"
    ],
-   "revealTech": "TECH_REFINING"
+   "revealTech": "TECH_REFINING",
+   "accumulation": 3,
+   "stockpileCap": 50
   },
   {
    "id": "RESOURCE_URANIUM",
@@ -829,7 +919,9 @@
     "FEATURE_JUNGLE",
     "FEATURE_FOREST"
    ],
-   "revealTech": "TECH_COMBINED_ARMS"
+   "revealTech": "TECH_COMBINED_ARMS",
+   "accumulation": 3,
+   "stockpileCap": 50
   }
  ]
 }

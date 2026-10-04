@@ -64,6 +64,8 @@ struct FeatureType {
     bool impassable = false;
     bool freshWater = false;
     bool removable = false;
+    Unlock removeTech;  // tech a Builder needs to harvest it
+    Yields harvest{};   // one-time yields from harvesting (base, Standard speed)
     std::vector<TypeIndex> validTerrains;
 };
 
@@ -76,6 +78,11 @@ struct ResourceType {
     int seaFrequency = 0;    // water placement weight
     std::vector<TypeIndex> validTerrains;
     std::vector<TypeIndex> validFeatures;
+    int amenityCities = 0;   // luxury: +1 amenity to this many cities
+    Yields harvest{};        // bonus: one-time yields from harvesting it
+    Unlock harvestTech;      // none with empty harvest: cannot be harvested
+    int accumulation = 0;    // strategic: added to the stockpile per improved source per turn
+    int stockpileCap = 0;    // strategic: stockpile cap
 };
 
 struct UnitType {
@@ -100,6 +107,35 @@ struct UnitType {
     std::string purchaseYield;  // "GOLD", "FAITH" or empty
     Unlock unlock;
     int era = 0;  // era index of its unlock (Ancient when it has none)
+    TypeIndex strategicResource = kNone;  // resource spent to train it
+    int strategicCost = 0;
+    TypeIndex upgradesTo = kNone;  // can no longer be trained once this one can
+    Unlock obsoleteWith;           // can no longer be trained once this is known
+};
+
+// Tile improvements built by Builders (02-cities.md, 01-map-and-terrain.md; data: improvements.md).
+struct ImprovementBonus {
+    YieldType yield = YieldType::Food;
+    Fixed amount;
+    Unlock unlock;
+};
+
+struct ImprovementAdjacency {
+    YieldType yield = YieldType::Food;
+    Fixed amount;
+    int per = 1;                     // amount per this many adjacent improvements
+    TypeIndex improvement = kNone;
+    Unlock needs, obsoleteWith;
+};
+
+struct ImprovementType {
+    std::string id, name;
+    Unlock unlock;
+    Yields yields{};
+    std::vector<TypeIndex> validTerrains, validFeatures, validResources;
+    std::vector<ImprovementBonus> bonuses;
+    std::vector<ImprovementAdjacency> adjacency;
+    Fixed housing;  // per improved plot the city owns
 };
 
 struct BuildingType {
@@ -145,6 +181,10 @@ enum class BoostKind : uint8_t {
     TotalPopulation,  // `count` citizens across your cities
     CityPopulation,   // one city of `count` population
     LandCombatUnits,  // `count` land military units
+    Improvement,             // `count` plots with improvement `ref`
+    ImprovementOnResource,   // `count` plots with improvement `ref` on a resource it improves
+    ImproveResource,         // a plot with resource `ref` improved
+    ImprovedTiles,           // `count` improved plots
     NotTracked,       // districts, improvements, combat, religion... (later milestones)
 };
 
@@ -268,6 +308,7 @@ public:
     std::vector<ResourceType> resources;
     std::vector<UnitType> units;
     std::vector<BuildingType> buildings;
+    std::vector<ImprovementType> improvements;
     std::vector<EraType> eras;
     std::vector<TreeNode> techs;
     std::vector<TreeNode> civics;
@@ -285,6 +326,7 @@ public:
     TypeIndex resource(const std::string& id) const;
     TypeIndex unit(const std::string& id) const;
     TypeIndex building(const std::string& id) const;
+    TypeIndex improvement(const std::string& id) const;
     TypeIndex era(const std::string& id) const;
     TypeIndex tech(const std::string& id) const;
     TypeIndex civic(const std::string& id) const;

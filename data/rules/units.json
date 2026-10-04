@@ -15,7 +15,12 @@
    "moves": 10,
    "sight": 4,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ADVANCED_FLIGHT"
+   "unlock": "TECH_ADVANCED_FLIGHT",
+   "strategicCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_JET_BOMBER"
   },
   {
    "id": "UNIT_JET_BOMBER",
@@ -31,7 +36,11 @@
    "moves": 15,
    "sight": 5,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_STEALTH_TECHNOLOGY"
+   "unlock": "TECH_STEALTH_TECHNOLOGY",
+   "strategicCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_BIPLANE",
@@ -47,7 +56,12 @@
    "moves": 6,
    "sight": 4,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_FLIGHT"
+   "unlock": "TECH_FLIGHT",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_FIGHTER"
   },
   {
    "id": "UNIT_FIGHTER",
@@ -63,7 +77,12 @@
    "moves": 8,
    "sight": 4,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ADVANCED_FLIGHT"
+   "unlock": "TECH_ADVANCED_FLIGHT",
+   "strategicCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_JET_FIGHTER"
   },
   {
    "id": "UNIT_JET_FIGHTER",
@@ -79,7 +98,11 @@
    "moves": 10,
    "sight": 5,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_LASERS"
+   "unlock": "TECH_LASERS",
+   "strategicCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_GREAT_GENERAL",
@@ -328,7 +351,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_BRONZE_WORKING"
+   "unlock": "TECH_BRONZE_WORKING",
+   "upgradesTo": "UNIT_PIKEMAN",
+   "obsoleteWith": "TECH_METAL_CASTING"
   },
   {
    "id": "UNIT_PIKEMAN",
@@ -345,7 +370,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MILITARY_TACTICS"
+   "unlock": "TECH_MILITARY_TACTICS",
+   "upgradesTo": "UNIT_PIKE_AND_SHOT",
+   "obsoleteWith": "TECH_COMPOSITES"
   },
   {
    "id": "UNIT_PIKE_AND_SHOT",
@@ -362,7 +389,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_METAL_CASTING"
+   "unlock": "TECH_METAL_CASTING",
+   "upgradesTo": "UNIT_AT_CREW",
+   "obsoleteWith": "TECH_COMBINED_ARMS"
   },
   {
    "id": "UNIT_AT_CREW",
@@ -379,7 +408,8 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_CHEMISTRY"
+   "unlock": "TECH_CHEMISTRY",
+   "upgradesTo": "UNIT_MODERN_AT"
   },
   {
    "id": "UNIT_MODERN_AT",
@@ -430,7 +460,11 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ROBOTICS"
+   "unlock": "TECH_ROBOTICS",
+   "strategicCost": {
+    "resource": "RESOURCE_URANIUM",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_HEAVY_CHARIOT",
@@ -447,7 +481,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_WHEEL"
+   "unlock": "TECH_WHEEL",
+   "upgradesTo": "UNIT_KNIGHT",
+   "obsoleteWith": "TECH_COMBUSTION"
   },
   {
    "id": "UNIT_KNIGHT",
@@ -464,7 +500,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_STIRRUPS"
+   "unlock": "TECH_STIRRUPS",
+   "strategicCost": {
+    "resource": "RESOURCE_IRON",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_CUIRASSIER",
+   "obsoleteWith": "TECH_COMPOSITES"
   },
   {
    "id": "UNIT_CUIRASSIER",
@@ -481,7 +523,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_BALLISTICS"
+   "unlock": "TECH_BALLISTICS",
+   "strategicCost": {
+    "resource": "RESOURCE_IRON",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_TANK",
+   "obsoleteWith": "TECH_COMBUSTION"
   },
   {
    "id": "UNIT_TANK",
@@ -498,7 +546,12 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMBUSTION"
+   "unlock": "TECH_COMBUSTION",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_MODERN_ARMOR"
   },
   {
    "id": "UNIT_MODERN_ARMOR",
@@ -515,7 +568,11 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMPOSITES"
+   "unlock": "TECH_COMPOSITES",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_INQUISITOR",
@@ -549,7 +606,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_HORSEBACK_RIDING"
+   "unlock": "TECH_HORSEBACK_RIDING",
+   "strategicCost": {
+    "resource": "RESOURCE_HORSES",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_COURSER",
+   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS"
   },
   {
    "id": "UNIT_COURSER",
@@ -566,7 +629,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_CASTLES"
+   "unlock": "TECH_CASTLES",
+   "strategicCost": {
+    "resource": "RESOURCE_HORSES",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_CAVALRY",
+   "obsoleteWith": "TECH_SYNTHETIC_MATERIALS"
   },
   {
    "id": "UNIT_CAVALRY",
@@ -583,7 +652,12 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MILITARY_SCIENCE"
+   "unlock": "TECH_MILITARY_SCIENCE",
+   "strategicCost": {
+    "resource": "RESOURCE_HORSES",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_HELICOPTER"
   },
   {
    "id": "UNIT_HELICOPTER",
@@ -600,7 +674,11 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SYNTHETIC_MATERIALS"
+   "unlock": "TECH_SYNTHETIC_MATERIALS",
+   "strategicCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_WARRIOR",
@@ -616,7 +694,9 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
-   "purchaseYield": "GOLD"
+   "purchaseYield": "GOLD",
+   "upgradesTo": "UNIT_SWORDSMAN",
+   "obsoleteWith": "TECH_GUNPOWDER"
   },
   {
    "id": "UNIT_SWORDSMAN",
@@ -633,7 +713,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_IRON_WORKING"
+   "unlock": "TECH_IRON_WORKING",
+   "strategicCost": {
+    "resource": "RESOURCE_IRON",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_MAN_AT_ARMS",
+   "obsoleteWith": "TECH_REPLACEABLE_PARTS"
   },
   {
    "id": "UNIT_MAN_AT_ARMS",
@@ -650,7 +736,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_APPRENTICESHIP"
+   "unlock": "TECH_APPRENTICESHIP",
+   "strategicCost": {
+    "resource": "RESOURCE_IRON",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_MUSKETMAN",
+   "obsoleteWith": "TECH_REPLACEABLE_PARTS"
   },
   {
    "id": "UNIT_MUSKETMAN",
@@ -667,7 +759,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_GUNPOWDER"
+   "unlock": "TECH_GUNPOWDER",
+   "strategicCost": {
+    "resource": "RESOURCE_NITER",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_LINE_INFANTRY",
+   "obsoleteWith": "TECH_ADVANCED_BALLISTICS"
   },
   {
    "id": "UNIT_LINE_INFANTRY",
@@ -684,7 +782,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MILITARY_SCIENCE"
+   "unlock": "TECH_MILITARY_SCIENCE",
+   "strategicCost": {
+    "resource": "RESOURCE_NITER",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_INFANTRY",
+   "obsoleteWith": "TECH_SATELLITES"
   },
   {
    "id": "UNIT_INFANTRY",
@@ -701,7 +805,12 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_REPLACEABLE_PARTS"
+   "unlock": "TECH_REPLACEABLE_PARTS",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_MECHANIZED_INFANTRY"
   },
   {
    "id": "UNIT_MECHANIZED_INFANTRY",
@@ -718,7 +827,11 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SATELLITES"
+   "unlock": "TECH_SATELLITES",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_WARRIOR_MONK",
@@ -750,7 +863,9 @@
    "range": 1,
    "moves": 2,
    "sight": 2,
-   "purchaseYield": "GOLD"
+   "purchaseYield": "GOLD",
+   "upgradesTo": "UNIT_ARCHER",
+   "obsoleteWith": "TECH_MACHINERY"
   },
   {
    "id": "UNIT_ARCHER",
@@ -766,7 +881,9 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ARCHERY"
+   "unlock": "TECH_ARCHERY",
+   "upgradesTo": "UNIT_CROSSBOWMAN",
+   "obsoleteWith": "TECH_BALLISTICS"
   },
   {
    "id": "UNIT_CROSSBOWMAN",
@@ -782,7 +899,9 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MACHINERY"
+   "unlock": "TECH_MACHINERY",
+   "upgradesTo": "UNIT_FIELD_CANNON",
+   "obsoleteWith": "TECH_ADVANCED_BALLISTICS"
   },
   {
    "id": "UNIT_FIELD_CANNON",
@@ -798,7 +917,9 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_BALLISTICS"
+   "unlock": "TECH_BALLISTICS",
+   "upgradesTo": "UNIT_MACHINE_GUN",
+   "obsoleteWith": "TECH_TELECOMMUNICATIONS"
   },
   {
    "id": "UNIT_MACHINE_GUN",
@@ -830,7 +951,8 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
-   "purchaseYield": "GOLD"
+   "purchaseYield": "GOLD",
+   "upgradesTo": "UNIT_SKIRMISHER"
   },
   {
    "id": "UNIT_SKIRMISHER",
@@ -846,7 +968,8 @@
    "moves": 3,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MACHINERY"
+   "unlock": "TECH_MACHINERY",
+   "upgradesTo": "UNIT_RANGER"
   },
   {
    "id": "UNIT_RANGER",
@@ -862,7 +985,8 @@
    "moves": 3,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_RIFLING"
+   "unlock": "TECH_RIFLING",
+   "upgradesTo": "UNIT_SPEC_OPS"
   },
   {
    "id": "UNIT_SPEC_OPS",
@@ -912,7 +1036,9 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ENGINEERING"
+   "unlock": "TECH_ENGINEERING",
+   "upgradesTo": "UNIT_TREBUCHET",
+   "obsoleteWith": "TECH_STEEL"
   },
   {
    "id": "UNIT_TREBUCHET",
@@ -928,7 +1054,9 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MILITARY_ENGINEERING"
+   "unlock": "TECH_MILITARY_ENGINEERING",
+   "upgradesTo": "UNIT_BOMBARD",
+   "obsoleteWith": "TECH_STEEL"
   },
   {
    "id": "UNIT_BOMBARD",
@@ -944,7 +1072,13 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_METAL_CASTING"
+   "unlock": "TECH_METAL_CASTING",
+   "strategicCost": {
+    "resource": "RESOURCE_NITER",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_ARTILLERY",
+   "obsoleteWith": "TECH_GUIDANCE_SYSTEMS"
   },
   {
    "id": "UNIT_ARTILLERY",
@@ -960,7 +1094,12 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_STEEL"
+   "unlock": "TECH_STEEL",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_ROCKET_ARTILLERY"
   },
   {
    "id": "UNIT_ROCKET_ARTILLERY",
@@ -976,7 +1115,11 @@
    "moves": 3,
    "sight": 3,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_GUIDANCE_SYSTEMS"
+   "unlock": "TECH_GUIDANCE_SYSTEMS",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_SPY",
@@ -1007,7 +1150,8 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MASONRY"
+   "unlock": "TECH_MASONRY",
+   "upgradesTo": "UNIT_SIEGE_TOWER"
   },
   {
    "id": "UNIT_SIEGE_TOWER",
@@ -1023,7 +1167,8 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_MACHINERY"
+   "unlock": "TECH_MACHINERY",
+   "upgradesTo": "UNIT_MEDIC"
   },
   {
    "id": "UNIT_MILITARY_ENGINEER",
@@ -1056,7 +1201,8 @@
    "moves": 2,
    "sight": 3,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_FLIGHT"
+   "unlock": "TECH_FLIGHT",
+   "upgradesTo": "UNIT_DRONE"
   },
   {
    "id": "UNIT_MEDIC",
@@ -1072,7 +1218,8 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SANITATION"
+   "unlock": "TECH_SANITATION",
+   "upgradesTo": "UNIT_SUPPLY_CONVOY"
   },
   {
    "id": "UNIT_DRONE",
@@ -1120,7 +1267,8 @@
    "moves": 2,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ADVANCED_BALLISTICS"
+   "unlock": "TECH_ADVANCED_BALLISTICS",
+   "upgradesTo": "UNIT_MOBILE_SAM"
   },
   {
    "id": "UNIT_MOBILE_SAM",
@@ -1184,7 +1332,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SAILING"
+   "unlock": "TECH_SAILING",
+   "upgradesTo": "UNIT_CARAVEL",
+   "obsoleteWith": "TECH_STEAM_POWER"
   },
   {
    "id": "UNIT_CARAVEL",
@@ -1201,7 +1351,9 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_CARTOGRAPHY"
+   "unlock": "TECH_CARTOGRAPHY",
+   "upgradesTo": "UNIT_IRONCLAD",
+   "obsoleteWith": "TECH_COMBINED_ARMS"
   },
   {
    "id": "UNIT_IRONCLAD",
@@ -1218,7 +1370,12 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_STEAM_POWER"
+   "unlock": "TECH_STEAM_POWER",
+   "strategicCost": {
+    "resource": "RESOURCE_COAL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_DESTROYER"
   },
   {
    "id": "UNIT_DESTROYER",
@@ -1235,7 +1392,11 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_COMBINED_ARMS"
+   "unlock": "TECH_COMBINED_ARMS",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   }
   },
   {
    "id": "UNIT_PRIVATEER",
@@ -1252,7 +1413,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "CIVIC_MERCANTILISM"
+   "unlock": "CIVIC_MERCANTILISM",
+   "upgradesTo": "UNIT_SUBMARINE",
+   "obsoleteWith": "TECH_LASERS"
   },
   {
    "id": "UNIT_SUBMARINE",
@@ -1268,7 +1431,12 @@
    "moves": 3,
    "sight": 2,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_ELECTRICITY"
+   "unlock": "TECH_ELECTRICITY",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_NUCLEAR_SUBMARINE"
   },
   {
    "id": "UNIT_NUCLEAR_SUBMARINE",
@@ -1301,7 +1469,9 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SHIPBUILDING"
+   "unlock": "TECH_SHIPBUILDING",
+   "upgradesTo": "UNIT_FRIGATE",
+   "obsoleteWith": "TECH_STEEL"
   },
   {
    "id": "UNIT_FRIGATE",
@@ -1318,7 +1488,13 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_SQUARE_RIGGING"
+   "unlock": "TECH_SQUARE_RIGGING",
+   "strategicCost": {
+    "resource": "RESOURCE_NITER",
+    "amount": 20
+   },
+   "upgradesTo": "UNIT_BATTLESHIP",
+   "obsoleteWith": "TECH_LASERS"
   },
   {
    "id": "UNIT_BATTLESHIP",
@@ -1335,7 +1511,12 @@
    "sight": 2,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_REFINING"
+   "unlock": "TECH_REFINING",
+   "strategicCost": {
+    "resource": "RESOURCE_COAL",
+    "amount": 1
+   },
+   "upgradesTo": "UNIT_MISSILE_CRUISER"
   },
   {
    "id": "UNIT_MISSILE_CRUISER",
@@ -1352,7 +1533,11 @@
    "sight": 3,
    "zoneOfControl": true,
    "purchaseYield": "GOLD",
-   "unlock": "TECH_LASERS"
+   "unlock": "TECH_LASERS",
+   "strategicCost": {
+    "resource": "RESOURCE_OIL",
+    "amount": 1
+   }
   }
  ]
 }

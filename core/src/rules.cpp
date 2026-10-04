@@ -208,7 +208,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "units.json",
         "buildings.json",   "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "civilizations.json", "setup.json",    "modifiers.json",
+        "policies.json",    "improvements.json", "civilizations.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -334,6 +334,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         f.impassable = j["impassable"].boolean(false);
         f.freshWater = j["freshWater"].boolean(false);
         f.removable = j["removable"].boolean(false);
+        if (!readUnlock(j["removeTech"], f.removeTech, "feature " + id)) return false;
+        f.harvest = readYields(j["harvestYields"]);
         if (!resolveList(j["validTerrains"], findTerrain, f.validTerrains, "feature " + id, error)) return false;
         features.push_back(std::move(f));
     }
@@ -350,6 +352,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         r.seaFrequency = static_cast<int>(j["seaFrequency"].integer(0));
         if (!resolveList(j["validTerrains"], findTerrain, r.validTerrains, "resource " + id, error)) return false;
         if (!resolveList(j["validFeatures"], findFeature, r.validFeatures, "resource " + id, error)) return false;
+        r.amenityCities = static_cast<int>(j["amenityCities"].integer(0));
+        r.harvest = readYields(j["harvestYields"]);
+        if (!readUnlock(j["harvestTech"], r.harvestTech, "resource " + id)) return false;
+        r.accumulation = static_cast<int>(j["accumulation"].integer(0));
+        r.stockpileCap = static_cast<int>(j["stockpileCap"].integer(0));
         resources.push_back(std::move(r));
     }
     for (const auto& [id, j] : m.tables["units"]) {
@@ -378,7 +385,77 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.purchaseYield = j["purchaseYield"].str();
         if (!readUnlock(j["unlock"], u.unlock, "unit " + id)) return false;
         if (!u.unlock.none()) u.era = (u.unlock.civic ? civics : techs)[static_cast<size_t>(u.unlock.index)].era;
+        const Json& sc = j["strategicCost"];
+        if (!sc.isNull()) {
+            u.strategicResource = resource(sc["resource"].str());
+            u.strategicCost = static_cast<int>(sc["amount"].integer(0));
+            if (u.strategicResource == kNone) {
+                *error = "unit " + id + ": unknown strategic resource " + sc["resource"].str();
+                return false;
+            }
+        }
+        if (!readUnlock(j["obsoleteWith"], u.obsoleteWith, "unit " + id)) return false;
         units.push_back(std::move(u));
+    }
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["units"]) {
+            const std::string& up = j["upgradesTo"].str();
+            if (!up.empty() && (units[i].upgradesTo = unit(up)) == kNone) {
+                *error = "unit " + id + ": unknown upgrade " + up;
+                return false;
+            }
+            ++i;
+        }
+    }
+    {
+        const Table& rows = m.tables["improvements"];
+        for (const auto& [id, j] : rows) {
+            ImprovementType im;
+            im.id = id;
+            im.name = j["name"].str(id);
+            if (!readUnlock(j["unlock"], im.unlock, "improvement " + id)) return false;
+            im.yields = readYields(j["yields"]);
+            const std::string where = "improvement " + id;
+            if (!resolveList(j["validTerrains"], findTerrain, im.validTerrains, where, error) ||
+                !resolveList(j["validFeatures"], findFeature, im.validFeatures, where, error) ||
+                !resolveList(j["validResources"], [this](const std::string& r) { return resource(r); },
+                             im.validResources, where, error))
+                return false;
+            for (const Json& b : j["bonusYields"].items()) {
+                ImprovementBonus bonus;
+                if (!parseYieldName(b["yield"].str(), bonus.yield)) {
+                    *error = where + ": bad bonus yield";
+                    return false;
+                }
+                bonus.amount = b["amount"].fixed();
+                if (!readUnlock(b["unlock"], bonus.unlock, where)) return false;
+                im.bonuses.push_back(bonus);
+            }
+            im.housing = j["housing"].fixed();
+            improvements.push_back(std::move(im));
+        }
+        // Second pass: adjacency refers to other improvements.
+        for (size_t i = 0; i < rows.size(); ++i) {
+            const std::string where = "improvement " + rows[i].first;
+            for (const Json& a : rows[i].second["adjacency"].items()) {
+                ImprovementAdjacency adj;
+                if (!parseYieldName(a["yield"].str(), adj.yield)) {
+                    *error = where + ": bad adjacency yield";
+                    return false;
+                }
+                adj.amount = a["amount"].fixed();
+                adj.per = std::max(1, static_cast<int>(a["per"].integer(1)));
+                adj.improvement = improvement(a["improvement"].str());
+                if (adj.improvement == kNone) {
+                    *error = where + ": unknown adjacent improvement " + a["improvement"].str();
+                    return false;
+                }
+                if (!readUnlock(a["needs"], adj.needs, where) || !readUnlock(a["obsoleteWith"], adj.obsoleteWith, where))
+                    return false;
+                improvements[i].adjacency.push_back(adj);
+            }
+        }
     }
     {
         const Table& rows = m.tables["buildings"];
@@ -437,6 +514,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"TOTAL_POPULATION", BoostKind::TotalPopulation},
                 {"CITY_POPULATION", BoostKind::CityPopulation},
                 {"LAND_COMBAT_UNITS", BoostKind::LandCombatUnits},
+                {"IMPROVEMENT", BoostKind::Improvement},
+                {"IMPROVEMENT_ON_RESOURCE", BoostKind::ImprovementOnResource},
+                {"IMPROVE_RESOURCE", BoostKind::ImproveResource},
+                {"IMPROVED_TILES", BoostKind::ImprovedTiles},
             };
             b.kind = BoostKind::NotTracked;
             for (const auto& [k, v] : kinds) if (b.type == k) b.kind = v;
@@ -445,10 +526,15 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 case BoostKind::OwnUnits: b.ref = unit(ref); break;
                 case BoostKind::Tech: b.ref = tech(ref); break;
                 case BoostKind::Civic: b.ref = civic(ref); break;
+                case BoostKind::Improvement:
+                case BoostKind::ImprovementOnResource: b.ref = improvement(ref); break;
+                case BoostKind::ImproveResource: b.ref = resource(ref); break;
                 default: break;
             }
             const bool needsRef = b.kind == BoostKind::Building || b.kind == BoostKind::OwnUnits ||
-                                  b.kind == BoostKind::Tech || b.kind == BoostKind::Civic;
+                                  b.kind == BoostKind::Tech || b.kind == BoostKind::Civic ||
+                                  b.kind == BoostKind::Improvement || b.kind == BoostKind::ImprovementOnResource ||
+                                  b.kind == BoostKind::ImproveResource;
             if (needsRef && b.ref == kNone) {
                 // A reference the rules do not define (e.g. a Great Person unit) cannot fire yet.
                 b.kind = BoostKind::NotTracked;
@@ -599,6 +685,7 @@ TypeIndex Rules::feature(const std::string& id) const { return findIn(features, 
 TypeIndex Rules::resource(const std::string& id) const { return findIn(resources, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
 TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
+TypeIndex Rules::improvement(const std::string& id) const { return findIn(improvements, id); }
 TypeIndex Rules::era(const std::string& id) const { return findIn(eras, id); }
 TypeIndex Rules::tech(const std::string& id) const { return findIn(techs, id); }
 TypeIndex Rules::civic(const std::string& id) const { return findIn(civics, id); }

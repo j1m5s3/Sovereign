@@ -284,7 +284,12 @@
     "TERRAIN_PLAINS",
     "TERRAIN_PLAINS_HILLS"
    ],
-   "removable": true
+   "removable": true,
+   "removeTech": "TECH_BRONZE_WORKING",
+   "harvestYields": {
+    "PRODUCTION": 10,
+    "FOOD": 10
+   }
   },
   {
    "id": "FEATURE_FOREST",
@@ -304,7 +309,11 @@
     "TERRAIN_PLAINS_HILLS",
     "TERRAIN_TUNDRA_HILLS"
    ],
-   "removable": true
+   "removable": true,
+   "removeTech": "TECH_MINING",
+   "harvestYields": {
+    "PRODUCTION": 20
+   }
   },
   {
    "id": "FEATURE_OASIS",
@@ -335,7 +344,11 @@
    "validTerrains": [
     "TERRAIN_GRASS"
    ],
-   "removable": true
+   "removable": true,
+   "removeTech": "TECH_IRRIGATION",
+   "harvestYields": {
+    "FOOD": 20
+   }
   },
   {
    "id": "FEATURE_REEF",

@@ -61,6 +61,10 @@ Yields Game::plotYields(Hex at, const City& city) const {
         y[idx(YieldType::Production)] =
             std::max(y[idx(YieldType::Production)], rules_->global("YIELD_PRODUCTION_CITY_TERRAIN_REPLACE"));
     }
+    if (p.improvement != kNone && at != city.pos) {
+        const Yields imp = improvementYields(at, city.owner);
+        for (size_t i = 0; i < kNumYields; ++i) y[i] += imp[i];
+    }
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
@@ -112,10 +116,12 @@ CityReport Game::cityReport(CityId id) const {
     }
     const char* water = fresh ? "CITY_POPULATION_RIVER_LAKE" : coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER";
     rep.housing += rules_->global(water);
+    rep.housing += improvementHousing(*c);
     rep.housing += sumCityModifiers(state_, *rules_, *c, ModEffect::CityHousing);
 
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
+    rep.amenities += luxuryAmenities(*c);
     if (owner.gold < Fixed()) rep.amenities -= static_cast<int>((-owner.gold).ceil() + 9) / 10;
     const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
     rep.amenitiesNeeded = std::max(0, (c->population + perAmenity - 1) / perAmenity - 1);
@@ -204,7 +210,8 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->units.size()) return fail(CommandError::CannotBuild);
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
         // Naval units need coastal cities (later).
-        if (u.domain != Domain::Land || u.mustPurchase || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock))
+        if (u.domain != Domain::Land || u.mustPurchase || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
+            unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
@@ -228,7 +235,7 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
     if (!c) return out;
     for (size_t i = 0; i < rules_->units.size(); ++i) {
         ProductionItem it{ProductionKind::Unit, static_cast<TypeIndex>(i)};
-        if (canProduce(*c, it)) out.push_back(it);
+        if (canProduce(*c, it) && hasStrategicFor(c->owner, it.type)) out.push_back(it);
     }
     for (size_t i = 0; i < rules_->buildings.size(); ++i) {
         ProductionItem it{ProductionKind::Building, static_cast<TypeIndex>(i)};
@@ -285,11 +292,13 @@ CommandError Game::validateCity(const Command& c) const {
     switch (c.type) {
         case CommandType::SetProduction:
             if (c.arg < 0 || c.arg > 1 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
-            canProduce(*city, item, &why);
-            return why;
+            if (!canProduce(*city, item, &why)) return why;
+            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
+            return CommandError::Ok;
         case CommandType::QueueProduction:
             if (c.arg < 0 || c.arg > 1 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
+            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
             if (item.kind == ProductionKind::Building &&
                 std::find(city->queue.begin(), city->queue.end(), item) != city->queue.end())
                 return CommandError::CannotBuild;
@@ -304,6 +313,7 @@ CommandError Game::validateCity(const Command& c) const {
             if (item.kind == ProductionKind::Unit) {
                 const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
                 if (city->population < u.minPopulation || !unitSpawnPlot(*city, item.type)) return CommandError::CannotBuild;
+                if (!hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
             }
             if (state_.players[static_cast<size_t>(c.player)].gold < Fixed::fromInt(cost)) return CommandError::NotEnoughGold;
             return CommandError::Ok;
@@ -414,9 +424,12 @@ bool Game::completeItem(City& city, ProductionItem item) {
     if (item.kind == ProductionKind::Unit) {
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
         if (city.population < u.minPopulation) return false;
+        // Training waits while the strategic resource is short.
+        if (!hasStrategicFor(city.owner, item.type)) return false;
         auto spot = unitSpawnPlot(city, item.type);
         if (!spot) return false;
         Player& p = state_.players[static_cast<size_t>(city.owner)];
+        if (u.strategicResource != kNone) p.stockpile[static_cast<size_t>(u.strategicResource)] -= u.strategicCost;
         if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
         ++p.unitsTrained[static_cast<size_t>(item.type)];
         city.population -= u.popCost;
@@ -482,6 +495,7 @@ void Game::processCities(PlayerId pid) {
         }
     }
     processResearch(pid, science, culture);
+    accumulateStrategics(pid);
     if (player.gold <= rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE")) {
         // Disband the costliest unit (ties: newest) while the treasury is underwater.
         const Unit* worst = nullptr;

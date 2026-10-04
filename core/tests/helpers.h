@@ -53,6 +53,7 @@ inline sov::UnitId addUnit(sov::GameState& s, const char* type, sov::PlayerId ow
     u.owner = owner;
     u.pos = pos;
     u.movesLeft = sov::Fixed::fromInt(rules().units[static_cast<size_t>(u.type)].moves);
+    u.charges = rules().units[static_cast<size_t>(u.type)].buildCharges;
     s.units.push_back(u);
     return u.id;
 }

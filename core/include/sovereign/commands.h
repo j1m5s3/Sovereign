@@ -26,6 +26,8 @@ enum class CommandType : uint8_t {
     ChooseCivic = 11,     // id = civic
     ChangeGovernment = 12,  // id = government
     SetPolicy = 13,       // id = slot of the current government, arg = policy (-1 empties the slot)
+    BuildImprovement = 14,  // id = builder, arg = improvement: build it where the builder stands
+    Harvest = 15,         // id = builder: harvest the feature or bonus resource where it stands
 };
 
 struct Command {
@@ -63,6 +65,10 @@ struct Command {
     static Command setPolicy(PlayerId p, int slot, TypeIndex policy) {
         return {CommandType::SetPolicy, p, slot, {}, policy, 0};
     }
+    static Command buildImprovement(PlayerId p, UnitId u, TypeIndex improvement) {
+        return {CommandType::BuildImprovement, p, u, {}, improvement, 0};
+    }
+    static Command harvest(PlayerId p, UnitId u) { return {CommandType::Harvest, p, u, {}, 0, 0}; }
 };
 
 enum class CommandError : uint8_t {
@@ -93,6 +99,9 @@ enum class CommandError : uint8_t {
     CannotAdoptGovernment,
     CannotSetPolicy,
     ChangesLocked,
+    CannotImprove,
+    CannotHarvest,
+    NotEnoughResources,
 };
 
 const char* commandErrorName(CommandError e);

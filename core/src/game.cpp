@@ -165,6 +165,9 @@ CommandError Game::validate(const Command& c) const {
             canFoundCityAt(c.player, u->pos, &why);
             return why;
         }
+        case CommandType::BuildImprovement:
+        case CommandType::Harvest:
+            return validateBuilder(c);
         case CommandType::SetActivity: {
             if (c.arg < 0 || c.arg > static_cast<int32_t>(Activity::Skip)) return CommandError::BadActivity;
             auto a = static_cast<Activity>(c.arg);
@@ -380,6 +383,8 @@ void Game::apply(const Command& c) {
         case CommandType::ChooseCivic:
         case CommandType::ChangeGovernment:
         case CommandType::SetPolicy: applyResearch(c); break;
+        case CommandType::BuildImprovement:
+        case CommandType::Harvest: applyBuilder(c); break;
     }
 }
 
@@ -417,6 +422,7 @@ void Game::applyFoundCity(const Command& c) {
     // Founding clears removable features (woods, rainforest, marsh) from the center.
     Plot& center = state_.plot(at);
     if (center.feature != kNone && rules_->features[static_cast<size_t>(center.feature)].removable) center.feature = kNone;
+    center.improvement = kNone;
     if (city.capital) {
         for (size_t b = 0; b < rules_->buildings.size(); ++b) {
             if (rules_->buildings[b].granted) city.buildings.push_back(static_cast<TypeIndex>(b));
@@ -483,6 +489,7 @@ Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {
     u.pos = pos;
     u.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     u.movesLeft = Fixed::fromInt(rules_->units[static_cast<size_t>(type)].moves);
+    u.charges = rules_->units[static_cast<size_t>(type)].buildCharges;
     state_.units.push_back(u);  // ids only grow, so the vector stays sorted
     return state_.units.back();
 }

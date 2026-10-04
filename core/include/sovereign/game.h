@@ -103,6 +103,22 @@ public:
     // Slot type of slot `slot` of a government: Military slots first, then
     // Economic, Diplomatic and Wildcard.
     static PolicySlot slotType(const GovernmentType& government, int slot);
+    // ---- improvements and resources (01-map-and-terrain.md, 02-cities.md)
+    bool resourceVisible(PlayerId player, Hex plot) const;
+    // The plot's resource is worked by a matching improvement or a city center.
+    bool resourceImproved(Hex plot) const;
+    bool canImproveAt(PlayerId player, Hex plot, TypeIndex improvement) const;
+    std::vector<TypeIndex> improvementsAt(PlayerId player, Hex plot) const;
+    bool canHarvestAt(PlayerId player, Hex plot) const;
+    // Yields the plot's improvement adds for its owner (base, tech bonuses, adjacency).
+    Yields improvementYields(Hex plot, PlayerId owner) const;
+    Fixed improvementHousing(const City& city) const;
+    int luxuryAmenities(const City& city) const;
+    bool hasStrategicFor(PlayerId player, TypeIndex unitType) const;
+    bool unitObsolete(PlayerId player, TypeIndex unitType) const;
+    // Plots the player owns with this improvement (kNone: any), optionally only on a resource it works.
+    int countImprovedPlots(PlayerId player, TypeIndex improvement, bool onResourceOnly) const;
+
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
 
@@ -116,6 +132,9 @@ private:
     void processResearch(PlayerId p, Fixed science, Fixed culture);
     void completeNode(PlayerId p, bool civic, TypeIndex node);
     void updateBoosts(PlayerId p);
+    CommandError validateBuilder(const Command& c) const;
+    void applyBuilder(const Command& c);
+    void accumulateStrategics(PlayerId p);
     void assignCitizens(City& city);
     bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available

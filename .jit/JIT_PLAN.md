@@ -1,6 +1,6 @@
 # Headless rules core, build-plan step 1 (Civ core through MVP-7)
 
-status: IN_PROGRESS · slice: rules-core · base: ba79f37 · created: 2026-10-04 · updated: 2026-10-04 20:30
+status: IN_PROGRESS · slice: rules-core · base: ba79f37 · created: 2026-10-04 · updated: 2026-10-04 21:30
 
 Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/civ6/10-ai-ui-implementation.md` ("Recommended build order"), with tests, as build-plan step 1 of `specs/sovereign/engine-and-architecture.md`. Each milestone is one PR, merged to `main` once CI is green. Out of scope for this slice: the Unreal bridge (step 2, needs James's PC), the leader character (step 3), live scenes, art.
 
@@ -21,6 +21,10 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - Boost conditions are generated into typed triggers and checked against state after every command and at turn start; `UNTRACKED` and district/improvement/combat triggers stay inert until those systems exist. Future-era nodes without prerequisites need the whole Information era (Civ randomises them).
 - Government and policy changes are free only on a turn a civic completes, on first adoption, and when anarchy ends; paid changes wait until the gold formula is verified. Changing government empties all slots. Returning to a used government costs `GOVERNMENT_BASE_ANARCHY_TURNS` + times used turns of anarchy (no gold, science, culture, faith, government or policy effects).
 - A policy card retires once any card in its `obsoletedBy` list (replacement cards) is unlocked.
+- Improvements (step 4): generated `improvements.json` holds the Builder-built, non-unique rows. A plot with a visible resource takes only improvements listed for that resource; otherwise a feature must be in `validFeatures`, else the terrain in `validTerrains`. Improving and harvesting need the plot in the player's territory, use a charge and end the builder's moves. Harvest yields are base × game speed (Civ's scaling with tree progress is unverified) and need an unimproved plot.
+- Luxuries: each improved luxury type gives +1 amenity to `amenityCities` cities, largest first (ties: oldest) — a Sovereign stand-in for Civ's "neediest first". City centers count as improving their resource.
+- Strategics follow the GS stockpile model: improved sources add `accumulation` per turn up to `stockpileCap`; training or buying a unit needs and spends `strategicCost`, and production waits while short. A unit cannot be trained once its upgrade can be (unlocked and resource on hand) or its `obsoleteWith` is known.
+- Roads are deferred to trade routes (traders build them); Builders do not build roads in Civ VI.
 - Units can only path through plots their owner has revealed (Civ lets units path into the unknown; revisit if it feels bad in play).
 
 ## Pointers
@@ -39,21 +43,21 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 1. [x] **Build** core foundations + MVP-1 (map, terrain/features/resources, fog of war, settler founds city, movement with A*, end-turn loop, commands, replay, saves, CI on Linux GCC/Clang and Windows MSVC) — done 2026-10-04: 30 tests pass on GCC and Clang, same state hash on both; PR "Rules core milestone 1"
 2. [x] **Build** MVP-2 cities — done 2026-10-04: modifier system (`core/src/modifiers.cpp`; sources: building, civ, EVERYONE; collections OWNER_CITY(_PLOTS), PLAYER_CITIES, PLAYER_CAPITAL, PLAYER_CITY_PLOTS; effects city/plot yield, yield %, housing, amenities, growth %, defense), buildings generated from `buildings.md`, `Fixed::pow` (log2/exp2), city yields/citizens/growth/housing/amenities/mood, border growth, production queue with per-item progress and overflow, gold purchase, plot purchase, locked citizens, gold upkeep and bankruptcy disbanding; save v2; 44 tests on GCC and Clang
 3. [x] **Build** MVP-3 research — done 2026-10-04: generated techs (77), civics (61), eras, governments (13), policies (140); `src/research.cpp` (choices, overflow, boosts, governments, anarchy, free change windows, policy slots and obsolescence); unlock gating for units, buildings and resource yields; new modifier sources (policy, government), collection PLAYER and effects unit production %, plot purchase cost %, unit maintenance discount; Ancient/Classical policy and Autocracy modifiers; save v3; 51 tests on GCC and Clang
-4. [>] **Build** Builders, improvements (farm, mine, quarry, pasture, plantation, camp, fishing boats) and roads; luxury amenities; strategic resources revealed by tech
-5. [ ] **Build** MVP-4 combat: combat formula and damage table, ZOC, ranged, city walls and city combat, capture/raze, barbarians, XP and promotions, war/peace state
+4. [x] **Build** Builders and improvements — done 2026-10-04: generated `improvements.json` (17 rows), feature/resource harvest data, strategic costs, upgrades and forced obsolescence; `src/improvements.cpp` (placement, BuildImprovement and Harvest commands, improvement yields with tech bonuses and farm adjacency, improvement housing, luxury amenities, strategic stockpiles); improvement boosts now fire; save v4; 58 tests on GCC and Clang
+5. [>] **Build** MVP-4 combat: combat formula and damage table, ZOC, ranged, city walls and city combat, capture/raze, barbarians, XP and promotions, war/peace state
 6. [ ] **Build** MVP-5 districts: Campus, Holy Site, Commercial Hub, Encampment, Theater Square, Industrial Zone, adjacency, district limit, their buildings
 7. [ ] **Build** MVP-6 AI: basic economic and military AI as command-issuing players, war/peace diplomacy; all-AI soak test to a winner
 8. [ ] **Build** MVP-7 victory: Domination and Score, then Science (space projects); turn limit
 9. [ ] **Close** slice: review against Acceptance, archive this plan, start build-plan step 2 (Unreal bridge, on James's PC)
 
-### Step 4 spec — builders, improvements, roads
-- Goal: builders improve tiles with charges, improvements change yields and unlock luxury amenities and strategic stockpiles, roads speed movement; the inert improvement boosts start firing.
-- Read first: `specs/civ6/02-cities.md` (tiles, amenities from luxuries), `specs/civ6/05-units-and-combat.md` (builders), grep `improvements.md` for farm, mine, quarry, pasture, plantation, camp, fishing boats, lumber mill; `terrain-features-resources.md` Luxury and Strategic sections; `global-parameters.md` `## STRATEGIC`, `## LUXURY`.
-- Change: (a) generate `improvements.json` (unlock tech/civic, valid terrain/features/resources, yields, adjacency for farms, housing). (b) Plot state: improvement, pillaged flag, road level. (c) Commands: BuildImprovement (builder spends a charge and its moves), RemoveFeature (Mining/Bronze Working/Irrigation unlocks), BuildRoad is automatic for traders later; Ancient road from city connection is out of scope. (d) Plot yields add improvement yields and resource improvement bonuses; luxury resources give amenities to cities (`LUXURY_*` globals); strategic resources accumulate per turn and units with a strategic cost need them. (e) Wire boost triggers IMPROVEMENT, IMPROVEMENT_ON_RESOURCE, IMPROVE_RESOURCE, IMPROVED_TILES. (f) Obsolete units stop being buildable. (g) Bump `kSaveVersion`, update golden.
-- Verify: `ctest --test-dir core/build --output-on-failure`; `sovsim --turns 150 --cities` shows improved tiles and higher yields than milestone 3.
-- Done when: scenario tests for farm yields and adjacency, mine on a resource firing the Wheel boost, luxury amenity, strategic cost blocking a Swordsman without Iron; CI green on all three compilers.
-- Risk: med — new state on plots and a new unit action; keep yields data-driven.
-- Out of scope: districts, trade routes and roads from traders, pillaging (combat), national parks.
+### Step 5 spec — MVP-4 combat
+- Goal: units fight. Melee, ranged and city combat with Civ's damage formula; zone of control; capture and raze; war and peace between players; barbarians; XP and promotions.
+- Read first: `specs/civ6/05-units-and-combat.md` (Combat resolution, Strength calculation, Damage formula, XP and promotions, Healing, Barbarian AI combat), `specs/civ6/02-cities.md` (City combat), grep `global-parameters.md` `## COMBAT`, `## EXPERIENCE`, `## BARBARIAN`; `promotions.md` and `barbarians-goody-huts.md` for rows.
+- Change: (a) diplomacy state: war/peace per player pair, DeclareWar and MakePeace commands (peace only after a minimum war length from data, if any). (b) Combat: strength with terrain, river, flanking/support (after Military Tradition), fortify, damage-reduced strength; damage = 30·e^(diff/25)·random(0.8–1.2) done in fixed point with the Combat RNG stream; Attack command for melee (move in when the defender dies) and RangedAttack. (c) ZOC stops movement next to enemy combat units. (d) Cities: HP, walls (outer defense pool), city ranged strike once walls exist, capture by melee into a 0-HP city and raze (choose on capture), healing. (e) XP gain and promotion choice per class from `promotions.md`; healing rules. (f) Barbarians: outposts placed by map gen, spawn scouts and units, attack. (g) Combat modifiers through the modifier system (Discipline, Oligarchy, Survey XP...). (h) Unit strategic maintenance shortfall −20 strength (data). (i) Bump `kSaveVersion`, golden.
+- Verify: `ctest --test-dir core/build --output-on-failure`; a scripted duel scenario and `sovsim --turns 200` with bots declaring war produce kills and captures; replay matches.
+- Done when: tests reproduce damage values for known strength differences, ZOC, city capture with walls, promotion; CI green on all three compilers.
+- Risk: high — the core loop's biggest rule set; split into two PRs (units combat + war/peace + ZOC + XP, then cities + barbarians) if it runs long.
+- Out of scope: air, nuclear, religion combat, Great Generals, corps/armies, live battle scenes (build-plan step 5).
 
 ## Acceptance
 - `core/` builds with no Unreal dependency on GCC, Clang and MSVC with warnings as errors; CTest green.
@@ -64,7 +68,9 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 ## Stage 4 review log
 - Step 1 (2026-10-04): self-reviewed; GCC and Clang builds warning-free, 30/30 tests, `sovsim` 60-turn replay hashes equal on both compilers. MSVC CI caught CRLF changing the rules checksum; fixed (checksum skips CR, `.gitattributes`). PR #8 merged.
 - Step 2 (2026-10-04): self-reviewed; 44/44 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both. CI caught a missing `<algorithm>` include (libc++ and MSVC); fixed.
-- Step 3 (2026-10-04): self-reviewed; 51/51 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both (02d7599831f383ca); bots research, adopt governments and slot policies.
+- Step 3 (2026-10-04): self-reviewed; CI green on all three compilers; PR #10 merged; 51/51 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both (02d7599831f383ca); bots research, adopt governments and slot policies.
+
+- Step 4 (2026-10-04): self-reviewed; 58/58 tests on GCC and Clang, 150-turn 4-player `sovsim` hash equal on both (60ad1eb6d65f6049); bots build improvements.
 
 ## Open questions & risks
 - MSVC warning level /W4 /WX may flag narrowing conversions the GCC build accepts; fix as CI reports.
@@ -74,7 +80,7 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - Unassigned citizens (more pop than workable plots) yield nothing until specialists arrive with districts.
 - Paid government and policy changes (POLICY_COST_*) are not implemented: the formula is unverified. Anarchy length is a Sovereign reading of GOVERNMENT_BASE_ANARCHY_TURNS.
 - Combat, influence, loyalty, great person, wonder and specialty-district policy effects (Discipline, Oligarchy, Charismatic Leader, Classical Republic...) have no modifiers yet; they arrive with those systems.
-- Units needing strategic resources (Swordsman, Horseman) are buildable without them until step 4; obsolete units stay buildable until step 4.
+- Strategic unit maintenance per turn, stockpile cap bonuses from Barracks/Stable/Armory/Military Academy, and harvest scaling with tree progress are not modelled yet.
 - The GS world-era tech/civic cost adjustment (±20%) waits for world eras.
 - Gold purchase price uses GOLD_PURCHASE_MULTIPLIER (2) x GOLD_PURCHASE_ENGINE_FACTOR (2, Sovereign global) to match the spec's 4x; verify in game if possible.
 
@@ -83,3 +89,4 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - 2026-10-04 18:05 STEP 1 DONE — milestone 1 PR opened; step 2 (MVP-2 cities) specced.
 - 2026-10-04 19:10 STEP 2 DONE — added step 4 (builders, improvements, roads) since MVP-2 cities need improvements before luxuries and strategics matter; step 3 (research) specced.
 - 2026-10-04 20:30 STEP 3 DONE — step 4 (builders, improvements, roads) specced; it also takes strategic resource costs and obsolete units, found missing while wiring unlocks.
+- 2026-10-04 21:30 STEP 4 DONE — roads dropped from the step (traders build them with trade routes); step 5 (MVP-4 combat) specced, rated high risk and may split into two PRs.

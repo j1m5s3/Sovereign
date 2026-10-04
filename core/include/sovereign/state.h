@@ -29,6 +29,7 @@ struct Plot {
     TypeIndex terrain = 0;
     TypeIndex feature = kNone;
     TypeIndex resource = kNone;
+    TypeIndex improvement = kNone;
     uint8_t resourceAmount = 0;
     uint8_t riverEdges = 0;
     PlayerId owner = kNoPlayer;
@@ -48,6 +49,7 @@ struct Unit {
     Activity activity = Activity::Awake;
     std::optional<Hex> moveTarget;  // multi-turn move order
     int xp = 0;
+    int charges = 0;  // build charges left (Builders)
 };
 
 enum class ProductionKind : uint8_t { Unit = 0, Building = 1 };
@@ -122,6 +124,7 @@ struct Player {
     int anarchyTurns = 0;
     bool freeChanges = false;          // government and policies may change this turn
     std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
+    std::vector<int> stockpile;     // per resource: strategic stockpile [GS]
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;
 };

@@ -23,6 +23,11 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
         if (!u || u->moveTarget) continue;
         const UnitType& t = game.rules().units[static_cast<size_t>(u->type)];
         if (t.foundCity && game.submit(Command::foundCity(me, id)) == CommandError::Ok) continue;
+        if (u->charges > 0) {
+            // Builders improve where they stand, preferring the resource's own improvement.
+            std::vector<TypeIndex> options = game.improvementsAt(me, u->pos);
+            if (!options.empty() && game.submit(Command::buildImprovement(me, id, options.front())) == CommandError::Ok) continue;
+        }
         bool moved = false;
         for (int attempt = 0; attempt < 8 && !moved; ++attempt) {
             Hex to{u->pos.x + rng.range(-5, 5), u->pos.y + rng.range(-5, 5)};
