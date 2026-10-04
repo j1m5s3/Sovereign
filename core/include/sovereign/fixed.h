@@ -62,6 +62,8 @@ public:
     // every platform), rounded to the nearest representable value. Used for
     // Civ's growth and border cost curves (n^1.5, (6n)^1.3).
     static Fixed pow(Fixed base, Fixed exponent);
+    // e ^ x, through the same fixed-point exp2 (combat damage, 05-units-and-combat.md).
+    static Fixed exp(Fixed x);
 
     // a * b / d with a 128-bit intermediate, truncated toward zero.
     static int64_t mulDiv(int64_t a, int64_t b, int64_t d);

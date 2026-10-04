@@ -148,6 +148,8 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_PRODUCTION_PERCENT", ModEffect::UnitProductionPercent},
         {"ADJUST_PLOT_PURCHASE_COST_PERCENT", ModEffect::PlotPurchaseCostPercent},
         {"ADJUST_UNIT_MAINTENANCE_DISCOUNT", ModEffect::UnitMaintenanceDiscount},
+        {"GRANT_ABILITY", ModEffect::GrantAbility},
+        {"ADJUST_UNIT_XP_PERCENT", ModEffect::UnitXpPercent},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -172,8 +174,17 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         *error = "unknown era " + args["maxEra"].str();
         return false;
     }
+    if (args.has("ability") && (mod.ability = rules.ability(args["ability"].str())) == kNone) {
+        *error = "unknown ability " + args["ability"].str();
+        return false;
+    }
+    if (mod.effect == ModEffect::GrantAbility && mod.ability == kNone) {
+        *error = "GRANT_ABILITY needs an ability";
+        return false;
+    }
     // Player-wide effects and the player collection go together.
-    const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount;
+    const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
+                              mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent;
     if (playerEffect != (mod.collection == ModCollection::Player)) {
         *error = "effect " + e + " does not fit collection " + c;
         return false;
@@ -206,7 +217,7 @@ uint64_t fnv1a(const void* data, size_t size, uint64_t h) {
 
 const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
-        "globals.json",     "terrain.json",  "resources.json",     "units.json",
+        "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "techs.json",    "civics.json",        "governments.json",
         "policies.json",    "improvements.json", "civilizations.json", "setup.json", "modifiers.json",
     };
@@ -269,6 +280,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.name = j["name"].str(id);
             n.era = era(j["era"].str());
             n.cost = static_cast<int>(j["cost"].integer(0));
+            for (const Json& e : j["effects"].items()) {
+                if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
+                if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
+            }
             if (n.era == kNone || n.cost <= 0) {
                 *error = std::string(name) + " " + id + ": bad era or cost";
                 return false;
@@ -359,6 +374,98 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         r.stockpileCap = static_cast<int>(j["stockpileCap"].integer(0));
         resources.push_back(std::move(r));
     }
+    // Promotions and abilities: effects with data-driven combat conditions.
+    auto readEffects = [&](const Json& list, std::vector<UnitEffect>& out, const std::string& where) {
+        static const std::pair<const char*, UnitEffectKind> kinds[] = {
+            {"UNTRACKED", UnitEffectKind::Untracked},           {"STRENGTH", UnitEffectKind::Strength},
+            {"MOVES", UnitEffectKind::Moves},                   {"RANGE", UnitEffectKind::Range},
+            {"SIGHT", UnitEffectKind::Sight},                   {"ATTACKS", UnitEffectKind::Attacks},
+            {"XP_PERCENT", UnitEffectKind::XpPercent},          {"FLANKING_PERCENT", UnitEffectKind::FlankingPercent},
+            {"SUPPORT_PERCENT", UnitEffectKind::SupportPercent}, {"MOVE_AFTER_ATTACK", UnitEffectKind::MoveAfterAttack},
+            {"ATTACK_AFTER_MOVE", UnitEffectKind::AttackAfterMove},
+            {"NO_ATTACK_AFTER_MOVE", UnitEffectKind::NoAttackAfterMove},
+            {"IGNORE_ZOC", UnitEffectKind::IgnoreZoc},          {"EXERT_ZOC", UnitEffectKind::ExertZoc},
+            {"NO_RIVER_PENALTY", UnitEffectKind::NoRiverPenalty},
+            {"NO_WOUNDED_PENALTY", UnitEffectKind::NoWoundedPenalty},
+            {"HEAL_AFTER_ACTION", UnitEffectKind::HealAfterAction}, {"IGNORE_BORDERS", UnitEffectKind::IgnoreBorders},
+            {"RANGED_VS_DISTRICT", UnitEffectKind::RangedVsDistrict},
+            {"BOMBARD_VS_UNIT", UnitEffectKind::BombardVsUnit},
+        };
+        static const std::pair<const char*, CombatAtom> atoms[] = {
+            {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
+            {"VS_CLASS", CombatAtom::VsClass},          {"VS_DOMAIN", CombatAtom::VsDomain},
+            {"VS_DISTRICT", CombatAtom::VsDistrict},    {"COMBAT_TYPE", CombatAtom::CombatType},
+            {"TILE_HILLS", CombatAtom::TileHills},      {"TILE_FEATURE", CombatAtom::TileFeature},
+            {"TILE_TERRAIN", CombatAtom::TileTerrain},  {"OPPONENT_FORTIFIED", CombatAtom::OpponentFortified},
+            {"OPPONENT_WOUNDED", CombatAtom::OpponentWounded}, {"DISTRICT_TILE", CombatAtom::DistrictTile},
+            {"OWN_TERRITORY", CombatAtom::OwnTerritory},
+        };
+        for (const Json& e : list.items()) {
+            UnitEffect fx;
+            bool found = false;
+            for (const auto& [name, k] : kinds) {
+                if (e["kind"].str() == name) { fx.kind = k; found = true; }
+            }
+            if (!found) {
+                *error = where + ": unknown effect kind " + e["kind"].str();
+                return false;
+            }
+            fx.amount = static_cast<int>(e["amount"].integer(0));
+            for (const Json& group : e["when"].items()) {
+                std::vector<CombatCondition> any;
+                for (const Json& a : group.items()) {
+                    CombatCondition c;
+                    found = false;
+                    for (const auto& [name, k] : atoms) {
+                        if (a["atom"].str() == name) { c.atom = k; found = true; }
+                    }
+                    if (!found) {
+                        *error = where + ": unknown condition " + a["atom"].str();
+                        return false;
+                    }
+                    c.negate = a["not"].boolean(false);
+                    c.value = a["value"].str();
+                    if (c.atom == CombatAtom::VsDomain) c.arg = c.value == "SEA" ? 1 : c.value == "AIR" ? 2 : 0;
+                    if (c.atom == CombatAtom::CombatType) c.arg = c.value == "RANGED" ? 1 : 0;
+                    if (c.atom == CombatAtom::TileFeature) c.ref = feature(c.value);
+                    if (c.atom == CombatAtom::TileTerrain) c.ref = terrain(c.value);
+                    if ((c.atom == CombatAtom::TileFeature || c.atom == CombatAtom::TileTerrain) && c.ref == kNone) {
+                        *error = where + ": unknown plot type " + c.value;
+                        return false;
+                    }
+                    any.push_back(std::move(c));
+                }
+                fx.when.push_back(std::move(any));
+            }
+            out.push_back(std::move(fx));
+        }
+        return true;
+    };
+    for (const auto& [id, j] : m.tables["abilities"]) {
+        AbilityType a;
+        a.id = id;
+        a.name = j["name"].str(id);
+        for (const Json& c : j["classes"].items()) a.classes.push_back(c.str());
+        a.inactive = j["inactive"].boolean(false);
+        if (!readEffects(j["effects"], a.effects, "ability " + id)) return false;
+        abilities.push_back(std::move(a));
+    }
+    for (const auto& [id, j] : m.tables["promotions"]) {
+        PromotionType pr;
+        pr.id = id;
+        pr.name = j["name"].str(id);
+        pr.promotionClass = j["class"].str();
+        pr.tier = static_cast<int>(j["tier"].integer(1));
+        if (!readEffects(j["effects"], pr.effects, "promotion " + id)) return false;
+        promotions.push_back(std::move(pr));
+    }
+    {
+        size_t i = 0;
+        auto findPromotion = [this](const std::string& pid) { return promotion(pid); };
+        for (const auto& [id, j] : m.tables["promotions"]) {
+            if (!resolveList(j["requires"], findPromotion, promotions[i++].prereqs, "promotion " + id, error)) return false;
+        }
+    }
     for (const auto& [id, j] : m.tables["units"]) {
         UnitType u;
         u.id = id;
@@ -395,6 +502,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
         }
         if (!readUnlock(j["obsoleteWith"], u.obsoleteWith, "unit " + id)) return false;
+        u.bombard = static_cast<int>(j["bombard"].integer(0));
+        const Json& rm = j["resourceMaintenance"];
+        if (!rm.isNull()) {
+            u.resourceMaintenance = static_cast<int>(rm["amount"].integer(0));
+            if (u.strategicResource == kNone) u.strategicResource = resource(rm["resource"].str());
+            if (u.strategicResource != resource(rm["resource"].str())) {
+                *error = "unit " + id + ": maintenance resource differs from its strategic cost";
+                return false;
+            }
+        }
+        u.promotionClass = j["promotionClass"].str();
+        auto findAbility = [this](const std::string& aid) { return ability(aid); };
+        if (!resolveList(j["abilities"], findAbility, u.abilities, "unit " + id, error)) return false;
         units.push_back(std::move(u));
     }
     {
@@ -403,6 +523,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             const std::string& up = j["upgradesTo"].str();
             if (!up.empty() && (units[i].upgradesTo = unit(up)) == kNone) {
                 *error = "unit " + id + ": unknown upgrade " + up;
+                return false;
+            }
+            const std::string& cap = j["capturedAs"].str();
+            if (!cap.empty() && (units[i].capturedAs = unit(cap)) == kNone) {
+                *error = "unit " + id + ": unknown capture result " + cap;
                 return false;
             }
             ++i;
@@ -683,6 +808,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
 TypeIndex Rules::terrain(const std::string& id) const { return findIn(terrains, id); }
 TypeIndex Rules::feature(const std::string& id) const { return findIn(features, id); }
 TypeIndex Rules::resource(const std::string& id) const { return findIn(resources, id); }
+TypeIndex Rules::ability(const std::string& id) const { return findIn(abilities, id); }
+TypeIndex Rules::promotion(const std::string& id) const { return findIn(promotions, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
 TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
 TypeIndex Rules::improvement(const std::string& id) const { return findIn(improvements, id); }

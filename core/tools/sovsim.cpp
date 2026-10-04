@@ -95,6 +95,16 @@ int main(int argc, char** argv) {
             for (TypeIndex pol : p.policies) {
                 std::printf(" %s", pol == kNone ? "-" : rules.policies[static_cast<size_t>(pol)].name.c_str());
             }
+            long units = 0, promoted = 0;
+            for (const Unit& u : game->state().units) {
+                if (u.owner != p.id) continue;
+                ++units;
+                promoted += u.promotions.empty() ? 0 : 1;
+            }
+            std::printf(", units %ld (%ld promoted), at war with", units, promoted);
+            for (const Player& o : game->state().players) {
+                if (game->atWar(p.id, o.id)) std::printf(" p%d", o.id);
+            }
             std::printf("\n");
         }
         for (const City& c : game->state().cities) {
@@ -105,6 +115,15 @@ int main(int argc, char** argv) {
                         r.yields[0].toString().c_str(), r.yields[1].toString().c_str(), r.yields[2].toString().c_str(),
                         r.yields[3].toString().c_str(), r.yields[4].toString().c_str());
         }
+    }
+    if (showCities) {
+        long wars = 0, attacks = 0, promotions = 0;
+        for (const Command& c : game->log()) {
+            wars += c.type == CommandType::DeclareWar;
+            attacks += c.type == CommandType::Attack || c.type == CommandType::RangedAttack;
+            promotions += c.type == CommandType::Promote;
+        }
+        std::printf("wars declared %ld, attacks %ld, promotions %ld\n", wars, attacks, promotions);
     }
     if (!savePath.empty()) {
         std::vector<uint8_t> bytes = saveGame(*game);

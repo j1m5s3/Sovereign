@@ -101,6 +101,13 @@ Fixed Fixed::pow(Fixed base, Fixed exponent) {
     return fromRaw(raw);
 }
 
+Fixed Fixed::exp(Fixed x) {
+    constexpr int64_t kLog2E = 0x171547653LL;  // log2(e) in Q32.32, rounded
+    const int64_t xq = mulDiv(x.raw_, kOne, kScale);
+    const int64_t rq = exp2Q(mulQ(xq, kLog2E));
+    return fromRaw(mulDiv(rq, kScale, kOne) + (mulDiv(rq, kScale * 2, kOne) & 1));  // round to nearest
+}
+
 std::string Fixed::toString() const {
     int64_t r = raw_;
     std::string s;

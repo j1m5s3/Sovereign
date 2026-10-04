@@ -28,6 +28,11 @@ enum class CommandType : uint8_t {
     SetPolicy = 13,       // id = slot of the current government, arg = policy (-1 empties the slot)
     BuildImprovement = 14,  // id = builder, arg = improvement: build it where the builder stands
     Harvest = 15,         // id = builder: harvest the feature or bonus resource where it stands
+    DeclareWar = 16,      // arg = the player to declare war on
+    MakePeace = 17,       // arg = the player to offer peace; peace comes once both have offered
+    Attack = 18,          // id = unit, target = adjacent plot: melee attack (or capture a civilian)
+    RangedAttack = 19,    // id = unit, target = plot in range and sight
+    Promote = 20,         // id = unit, arg = promotion
 };
 
 struct Command {
@@ -69,6 +74,13 @@ struct Command {
         return {CommandType::BuildImprovement, p, u, {}, improvement, 0};
     }
     static Command harvest(PlayerId p, UnitId u) { return {CommandType::Harvest, p, u, {}, 0, 0}; }
+    static Command declareWar(PlayerId p, PlayerId target) { return {CommandType::DeclareWar, p, -1, {}, target, 0}; }
+    static Command makePeace(PlayerId p, PlayerId target) { return {CommandType::MakePeace, p, -1, {}, target, 0}; }
+    static Command attack(PlayerId p, UnitId u, Hex at) { return {CommandType::Attack, p, u, at, 0, 0}; }
+    static Command rangedAttack(PlayerId p, UnitId u, Hex at) { return {CommandType::RangedAttack, p, u, at, 0, 0}; }
+    static Command promote(PlayerId p, UnitId u, TypeIndex promotion) {
+        return {CommandType::Promote, p, u, {}, promotion, 0};
+    }
 };
 
 enum class CommandError : uint8_t {
@@ -102,6 +114,10 @@ enum class CommandError : uint8_t {
     CannotImprove,
     CannotHarvest,
     NotEnoughResources,
+    CannotDeclareWar,
+    CannotMakePeace,
+    CannotAttack,
+    CannotPromote,
 };
 
 const char* commandErrorName(CommandError e);

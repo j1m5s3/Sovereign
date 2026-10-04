@@ -47,6 +47,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
         p.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
         s.players.push_back(std::move(p));
     }
+    for (Player& p : s.players) p.relations.resize(s.players.size());
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
 
@@ -92,6 +93,7 @@ std::unique_ptr<Game> Game::fromScenario(const Rules& rules, GameState state) {
     auto game = std::make_unique<Game>(rules, std::move(state), std::vector<Command>{});
     for (Player& p : game->state_.players) {
         fitPlayerToRules(p, rules);
+        p.relations.resize(game->state_.players.size());
         if (p.visibility.size() != static_cast<size_t>(game->state_.grid.size()))
             p.visibility.assign(static_cast<size_t>(game->state_.grid.size()), 0);
     }
@@ -144,6 +146,12 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::ChangeGovernment:
         case CommandType::SetPolicy:
             return validateResearch(c);
+        case CommandType::DeclareWar:
+        case CommandType::MakePeace:
+        case CommandType::Attack:
+        case CommandType::RangedAttack:
+        case CommandType::Promote:
+            return validateCombat(c);
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -154,6 +162,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::MoveUnit: {
             auto t = state_.grid.normalize(c.target);
             if (!t || *t != c.target || *t == u->pos) return CommandError::BadTarget;
+            if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
             return findPath(c.id, *t) ? CommandError::Ok : CommandError::NoPath;
@@ -206,12 +215,26 @@ std::vector<UnitId> Game::unitsNeedingOrders(PlayerId player) const {
 // ------------------------------------------------------------------ movement
 
 std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
+    if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // attacks and captures are their own commands
+    const City* c = state_.cityAt(to);
+    if (c && c->owner != unit.owner) return std::nullopt;
+    // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
+    const PlayerId owner = state_.plot(to).owner;
+    if (owner != kNoPlayer && owner != unit.owner && state_.plot(from).owner != owner && !atWar(unit.owner, owner)) {
+        const Player& op = state_.players[static_cast<size_t>(owner)];
+        for (size_t i = 0; i < rules_->civics.size(); ++i) {
+            if (rules_->civics[i].enforceBorders && op.civics.has(static_cast<TypeIndex>(i)) &&
+                !unitHas(unit, UnitEffectKind::IgnoreBorders))
+                return std::nullopt;
+        }
+    }
+    return terrainCost(unit, from, to);
+}
+
+std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const {
     const UnitType& ut = typeOf(*rules_, unit);
     if (ut.domain != Domain::Land) return std::nullopt;  // naval and air movement arrive later
     if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
-    if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // no war yet: foreign units block
-    const City* c = state_.cityAt(to);
-    if (c && c->owner != unit.owner) return std::nullopt;
     const Plot& p = state_.plot(to);
     int cost = terrainOf(*rules_, p).moveCost;
     if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
@@ -231,7 +254,8 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const
         return owner.visibility[static_cast<size_t>(state_.grid.index(h))] != static_cast<uint8_t>(Visibility::Unrevealed);
     };
     if (!known(*t)) return std::nullopt;
-    const Fixed maxMoves = Fixed::fromInt(typeOf(*rules_, *u).moves);
+    const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
+    const std::vector<uint8_t> zoc = zocMap(*u);
 
     struct Node { int turn = INT32_MAX; Fixed moves; int prev = -1; };
     std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
@@ -263,13 +287,14 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const
             Fixed mp = cur.moves;
             if (mp <= Fixed()) {
                 ++turn;
-                mp = maxMoves;
+                mp = fullMoves;
             }
-            if (mp < *cost && mp != maxMoves) {
+            if (mp < *cost && mp != fullMoves) {
                 ++turn;
-                mp = maxMoves;
+                mp = fullMoves;
             }
             mp = mp >= *cost ? mp - *cost : Fixed();
+            if (!zoc.empty() && zoc[static_cast<size_t>(state_.grid.index(*n))]) mp = Fixed();  // entering enemy ZOC ends the move
             Node& nb = best[static_cast<size_t>(state_.grid.index(*n))];
             if (better(turn, mp, nb.turn, nb.moves)) {
                 nb = {turn, mp, q.index};
@@ -301,9 +326,9 @@ void Game::advanceUnit(UnitId id) {
         }
         const Hex next = (*path)[1].pos;
         const Fixed cost = *moveCost(*u, u->pos, next);
-        const Fixed maxMoves = Fixed::fromInt(typeOf(*rules_, *u).moves);
+        const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
         if (u->movesLeft <= Fixed()) return;
-        if (u->movesLeft < cost && u->movesLeft != maxMoves) return;  // continue next turn
+        if (u->movesLeft < cost && u->movesLeft != fullMoves) return;  // continue next turn
         const Fixed after = u->movesLeft >= cost ? u->movesLeft - cost : Fixed();
         const Unit* own = state_.unitAt(next, typeOf(*rules_, *u).layer, *rules_);
         if (own && own->id != u->id) {
@@ -315,8 +340,10 @@ void Game::advanceUnit(UnitId id) {
             if (after <= Fixed()) return;
         }
         u->pos = next;
-        u->movesLeft = after;
+        u->movesLeft = inEnemyZoc(*u, next) ? Fixed() : after;
         u->activity = Activity::Awake;
+        u->moved = true;
+        u->fortifyTurns = 0;
         refreshVisibility(u->owner);
     }
 }
@@ -329,27 +356,31 @@ void Game::refreshVisibility(PlayerId pid) {
         if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
     }
     auto see = [&](Hex from, int range) {
-        const Plot& vp = state_.plot(from);
-        const int viewerHeight = terrainOf(*rules_, vp).sightThrough;
-        range += terrainOf(*rules_, vp).sightModifier;
+        range += terrainOf(*rules_, state_.plot(from)).sightModifier;
         for (const Hex& target : state_.grid.within(from, range)) {
-            bool blocked = false;
-            std::vector<Hex> line = state_.grid.line(from, target);
-            for (size_t i = 1; i + 1 < line.size() && !blocked; ++i) {
-                const Plot& op = state_.plot(line[i]);
-                int obstacle = terrainOf(*rules_, op).sightThrough;
-                if (op.feature != kNone) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
-                blocked = obstacle > viewerHeight;
-            }
-            if (!blocked) p.visibility[static_cast<size_t>(state_.grid.index(target))] = static_cast<uint8_t>(Visibility::Visible);
+            if (lineOfSight(from, target))
+                p.visibility[static_cast<size_t>(state_.grid.index(target))] = static_cast<uint8_t>(Visibility::Visible);
         }
     };
     for (const Unit& u : state_.units) {
-        if (u.owner == pid) see(u.pos, typeOf(*rules_, u).sight);
+        if (u.owner == pid) see(u.pos, unitSight(u));
     }
     for (const City& c : state_.cities) {
         if (c.owner == pid) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
     }
+}
+
+// Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
+bool Game::lineOfSight(Hex from, Hex to) const {
+    const int viewerHeight = terrainOf(*rules_, state_.plot(from)).sightThrough;
+    std::vector<Hex> line = state_.grid.line(from, to);
+    for (size_t i = 1; i + 1 < line.size(); ++i) {
+        const Plot& op = state_.plot(line[i]);
+        int obstacle = terrainOf(*rules_, op).sightThrough;
+        if (op.feature != kNone) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
+        if (obstacle > viewerHeight) return false;
+    }
+    return true;
 }
 
 // ------------------------------------------------------------------ applying
@@ -371,6 +402,7 @@ void Game::apply(const Command& c) {
             Unit* u = state_.unit(c.id);
             u->activity = static_cast<Activity>(c.arg);
             u->moveTarget.reset();
+            if (u->activity != Activity::Fortify) u->fortifyTurns = 0;
             break;
         }
         case CommandType::EndTurn: applyEndTurn(c); break;
@@ -385,6 +417,11 @@ void Game::apply(const Command& c) {
         case CommandType::SetPolicy: applyResearch(c); break;
         case CommandType::BuildImprovement:
         case CommandType::Harvest: applyBuilder(c); break;
+        case CommandType::DeclareWar:
+        case CommandType::MakePeace:
+        case CommandType::Attack:
+        case CommandType::RangedAttack:
+        case CommandType::Promote: applyCombat(c); break;
     }
 }
 
@@ -466,10 +503,12 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processCities(pid);
         Player& p = state_.players[static_cast<size_t>(pid)];
         if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
+        payUnitFuel(pid);
+        healAndFortify(pid);
     }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
-        u.movesLeft = Fixed::fromInt(typeOf(*rules_, u).moves);
+        u.movesLeft = Fixed::fromInt(maxMoves(u));
         if (u.activity == Activity::Skip) u.activity = Activity::Awake;
     }
     std::vector<UnitId> moving;

@@ -30,6 +30,7 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.civics.resize(rules.civics.size());
     p.governmentUses.resize(rules.governments.size(), 0);
     p.stockpile.resize(rules.resources.size(), 0);
+    p.fuelShort.resize(rules.resources.size(), 0);
 }
 
 // ------------------------------------------------------------------ queries

@@ -85,6 +85,76 @@ struct ResourceType {
     int stockpileCap = 0;    // strategic: stockpile cap
 };
 
+// Unit promotions and abilities (05-units-and-combat.md; data: promotions.md,
+// units.md "Unit abilities"). Effects carry their conditions as data.
+enum class UnitEffectKind : uint8_t {
+    Untracked = 0,      // not modelled yet
+    Strength,           // +amount combat strength when `when` holds
+    Moves,
+    Range,
+    Sight,
+    Attacks,            // extra attacks per turn
+    XpPercent,
+    FlankingPercent,    // extra percent of the flanking bonus
+    SupportPercent,
+    MoveAfterAttack,
+    AttackAfterMove,    // cancels NoAttackAfterMove
+    NoAttackAfterMove,  // siege: cannot attack once it has moved this turn
+    IgnoreZoc,
+    ExertZoc,
+    NoRiverPenalty,
+    NoWoundedPenalty,
+    HealAfterAction,
+    IgnoreBorders,
+    RangedVsDistrict,   // COMBAT_RANGED_VS_DISTRICT_STRENGTH_MODIFIER applies
+    BombardVsUnit,      // COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER applies
+};
+
+enum class CombatAtom : uint8_t {
+    Untracked = 0,  // never holds
+    Attacking,
+    VsClass,        // opponent unit class
+    VsDomain,
+    VsDistrict,     // opponent is a city or district
+    CombatType,     // melee or ranged
+    TileHills,      // this unit's plot
+    TileFeature,
+    TileTerrain,
+    OpponentFortified,
+    OpponentWounded,
+    DistrictTile,
+    OwnTerritory,
+};
+
+struct CombatCondition {
+    CombatAtom atom = CombatAtom::Untracked;
+    bool negate = false;
+    std::string value;      // class id for VsClass
+    TypeIndex ref = kNone;  // feature or terrain
+    int arg = 0;            // Domain for VsDomain; 0 melee / 1 ranged for CombatType
+};
+
+struct UnitEffect {
+    UnitEffectKind kind = UnitEffectKind::Untracked;
+    int amount = 0;
+    std::vector<std::vector<CombatCondition>> when;  // every group needs any one condition
+};
+
+struct AbilityType {
+    std::string id, name;
+    std::vector<std::string> classes;  // unit classes it applies to when granted
+    bool inactive = false;             // needs a grant (policy, government, building...)
+    std::vector<UnitEffect> effects;
+};
+
+struct PromotionType {
+    std::string id, name;
+    std::string promotionClass;
+    int tier = 1;
+    std::vector<TypeIndex> prereqs;  // any one
+    std::vector<UnitEffect> effects;
+};
+
 struct UnitType {
     std::string id, name;
     std::string unitClass;  // e.g. "MELEE", "RECON", "CIVILIAN"
@@ -111,6 +181,11 @@ struct UnitType {
     int strategicCost = 0;
     TypeIndex upgradesTo = kNone;  // can no longer be trained once this one can
     Unlock obsoleteWith;           // can no longer be trained once this is known
+    int bombard = 0;
+    int resourceMaintenance = 0;   // strategicResource spent per turn [GS]
+    std::string promotionClass;    // empty: no promotions
+    std::vector<TypeIndex> abilities;  // innate
+    TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
 };
 
 // Tile improvements built by Builders (02-cities.md, 01-map-and-terrain.md; data: improvements.md).
@@ -202,6 +277,8 @@ struct TreeNode {
     int cost = 0;  // Standard speed
     std::vector<TypeIndex> prereqs;
     Boost boost;
+    bool combatAdjacency = false;  // enables flanking and support bonuses
+    bool enforceBorders = false;   // closes the player's borders to units not at war
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -235,6 +312,8 @@ enum class ModEffect : uint8_t {
     UnitProductionPercent,    // production toward matching units in a city
     PlotPurchaseCostPercent,  // gold cost of buying plots for a city
     UnitMaintenanceDiscount,  // player: gold off each unit's maintenance
+    GrantAbility,             // player: matching units gain `ability`
+    UnitXpPercent,            // player: combat XP bonus for units of `unitClass` (empty: all)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -276,6 +355,7 @@ struct Modifier {
     std::string unitClass;
     TypeIndex unit = kNone;
     int maxEra = -1;
+    TypeIndex ability = kNone;  // GrantAbility
 };
 
 struct CivType {
@@ -306,6 +386,8 @@ public:
     std::vector<TerrainType> terrains;
     std::vector<FeatureType> features;
     std::vector<ResourceType> resources;
+    std::vector<AbilityType> abilities;
+    std::vector<PromotionType> promotions;
     std::vector<UnitType> units;
     std::vector<BuildingType> buildings;
     std::vector<ImprovementType> improvements;
@@ -324,6 +406,8 @@ public:
     TypeIndex terrain(const std::string& id) const;
     TypeIndex feature(const std::string& id) const;
     TypeIndex resource(const std::string& id) const;
+    TypeIndex ability(const std::string& id) const;
+    TypeIndex promotion(const std::string& id) const;
     TypeIndex unit(const std::string& id) const;
     TypeIndex building(const std::string& id) const;
     TypeIndex improvement(const std::string& id) const;
