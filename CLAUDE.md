@@ -1,6 +1,6 @@
 # Sovereign
 
-A Civilization VI-style 4X game (UE5 front end, separate C++ rules core). Development has not started; the repo holds the design specs.
+A Civilization VI-style 4X game (UE5 front end, separate C++ rules core). The repo holds the design specs (`specs/`) and the C++ rules core (`core/`, see `core/README.md`); development follows `.jit/JIT_PLAN.md`.
 
 ## Required before reading any spec
 

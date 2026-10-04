@@ -1,0 +1,29 @@
+{
+ "_comment": "Sovereign's launch roster (specs/sovereign/leaders-and-art-style.md, Launch roster). Hand-written. Civ abilities, uniques and dynasties arrive with later milestones.",
+ "civilizations": [
+  {"id": "CIVILIZATION_ENGLAND", "name": "England", "leader": "LEADER_ELIZABETH_I",
+   "cityNames": ["London", "York", "Nottingham", "Canterbury", "Bristol", "Norwich", "Winchester", "Exeter", "Lincoln", "Oxford", "Coventry", "Durham"]},
+  {"id": "CIVILIZATION_FRANCE", "name": "France", "leader": "LEADER_CHARLEMAGNE",
+   "cityNames": ["Aachen", "Paris", "Reims", "Orleans", "Tours", "Lyon", "Metz", "Rouen", "Soissons", "Poitiers", "Toulouse", "Laon"]},
+  {"id": "CIVILIZATION_ROME", "name": "Rome", "leader": "LEADER_AUGUSTUS",
+   "cityNames": ["Roma", "Ostia", "Antium", "Capua", "Neapolis", "Ravenna", "Mediolanum", "Arretium", "Brundisium", "Aquileia", "Verona", "Pompeii"]},
+  {"id": "CIVILIZATION_GREECE", "name": "Greece", "leader": "LEADER_LEONIDAS_I",
+   "cityNames": ["Sparta", "Gytheio", "Amyclae", "Pellana", "Sellasia", "Messene", "Pylos", "Tegea", "Argos", "Corinth", "Megalopolis", "Kythira"]},
+  {"id": "CIVILIZATION_PERSIA", "name": "Persia", "leader": "LEADER_CYRUS",
+   "cityNames": ["Pasargadae", "Persepolis", "Susa", "Ecbatana", "Babylon", "Sardis", "Bactra", "Anshan", "Gordion", "Rhagae", "Arbela", "Tarsus"]},
+  {"id": "CIVILIZATION_ARABIA", "name": "Arabia", "leader": "LEADER_SALADIN",
+   "cityNames": ["Cairo", "Damascus", "Aleppo", "Jerusalem", "Mosul", "Alexandria", "Homs", "Hama", "Baalbek", "Karak", "Aswan", "Edessa"]},
+  {"id": "CIVILIZATION_CHINA", "name": "China", "leader": "LEADER_QIN_SHI_HUANG",
+   "cityNames": ["Xianyang", "Handan", "Linzi", "Ying", "Daliang", "Ji", "Xinzheng", "Luoyang", "Chengdu", "Wu", "Panyu", "Yongcheng"]},
+  {"id": "CIVILIZATION_JAPAN", "name": "Japan", "leader": "LEADER_TOKUGAWA_IEYASU",
+   "cityNames": ["Edo", "Kyoto", "Osaka", "Sunpu", "Nagoya", "Sendai", "Kanazawa", "Hiroshima", "Nagasaki", "Okayama", "Kagoshima", "Hamamatsu"]},
+  {"id": "CIVILIZATION_EGYPT", "name": "Egypt", "leader": "LEADER_RAMESSES_II",
+   "cityNames": ["Pi-Ramesses", "Thebes", "Memphis", "Abydos", "Heliopolis", "Elephantine", "Bubastis", "Hermopolis", "Edfu", "Tanis", "Sais", "Akhetaten"]},
+  {"id": "CIVILIZATION_MALI", "name": "Mali", "leader": "LEADER_MANSA_MUSA",
+   "cityNames": ["Niani", "Timbuktu", "Gao", "Djenne", "Walata", "Kangaba", "Taghaza", "Tadmekka", "Koumbi Saleh", "Kukiya", "Mema", "Takedda"]},
+  {"id": "CIVILIZATION_AZTEC", "name": "Aztec", "leader": "LEADER_MOCTEZUMA_I",
+   "cityNames": ["Tenochtitlan", "Texcoco", "Tlacopan", "Tlatelolco", "Xochimilco", "Coyoacan", "Chalco", "Iztapalapa", "Azcapotzalco", "Tula", "Cuauhnahuac", "Tepeyac"]},
+  {"id": "CIVILIZATION_INCA", "name": "Inca", "leader": "LEADER_PACHACUTI",
+   "cityNames": ["Cusco", "Machu Picchu", "Ollantaytambo", "Vilcabamba", "Quito", "Cajamarca", "Huanuco Pampa", "Tumebamba", "Pisac", "Vitcos", "Jauja", "Pachacamac"]}
+ ]
+}

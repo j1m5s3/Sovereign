@@ -1,0 +1,835 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "resources": [
+  {
+   "id": "RESOURCE_BANANAS",
+   "name": "Bananas",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 4,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_CATTLE",
+   "name": "Cattle",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 6,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_COPPER",
+   "name": "Copper",
+   "class": "BONUS",
+   "yields": {
+    "GOLD": 2
+   },
+   "frequency": 4,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_CRABS",
+   "name": "Crabs",
+   "class": "BONUS",
+   "yields": {
+    "GOLD": 2
+   },
+   "frequency": 0,
+   "seaFrequency": 17,
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_DEER",
+   "name": "Deer",
+   "class": "BONUS",
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "frequency": 4,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_FISH",
+   "name": "Fish",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 0,
+   "seaFrequency": 23,
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": [
+    "FEATURE_REEF"
+   ]
+  },
+  {
+   "id": "RESOURCE_MAIZE",
+   "name": "Maize",
+   "class": "BONUS",
+   "yields": {
+    "GOLD": 2
+   },
+   "frequency": 6,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ]
+  },
+  {
+   "id": "RESOURCE_RICE",
+   "name": "Rice",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 6,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS"
+   ],
+   "validFeatures": [
+    "FEATURE_MARSH",
+    "FEATURE_FLOODPLAINS_GRASSLAND"
+   ]
+  },
+  {
+   "id": "RESOURCE_SHEEP",
+   "name": "Sheep",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 4,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_STONE",
+   "name": "Stone",
+   "class": "BONUS",
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "frequency": 10,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_WHEAT",
+   "name": "Wheat",
+   "class": "BONUS",
+   "yields": {
+    "FOOD": 1
+   },
+   "frequency": 10,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ]
+  },
+  {
+   "id": "RESOURCE_AMBER",
+   "name": "Amber",
+   "class": "LUXURY",
+   "yields": {
+    "CULTURE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 1,
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE",
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_CINNAMON",
+   "name": "Cinnamon",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_CITRUS",
+   "name": "Citrus",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 2
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_CLOVES",
+   "name": "Cloves",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_COCOA",
+   "name": "Cocoa",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 3
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_COFFEE",
+   "name": "Coffee",
+   "class": "LUXURY",
+   "yields": {
+    "CULTURE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_COSMETICS",
+   "name": "Cosmetics",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_COTTON",
+   "name": "Cotton",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 3
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS",
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ]
+  },
+  {
+   "id": "RESOURCE_DIAMONDS",
+   "name": "Diamonds",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 3
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_DYES",
+   "name": "Dyes",
+   "class": "LUXURY",
+   "yields": {
+    "FAITH": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_JUNGLE",
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_FURS",
+   "name": "Furs",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 1,
+    "GOLD": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_GYPSUM",
+   "name": "Gypsum",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 1,
+    "PRODUCTION": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_HONEY",
+   "name": "Honey",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 2
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_INCENSE",
+   "name": "Incense",
+   "class": "LUXURY",
+   "yields": {
+    "FAITH": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_IVORY",
+   "name": "Ivory",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 1,
+    "PRODUCTION": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE",
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_JADE",
+   "name": "Jade",
+   "class": "LUXURY",
+   "yields": {
+    "CULTURE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_JEANS",
+   "name": "Jeans",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_MARBLE",
+   "name": "Marble",
+   "class": "LUXURY",
+   "yields": {
+    "CULTURE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_MERCURY",
+   "name": "Mercury",
+   "class": "LUXURY",
+   "yields": {
+    "SCIENCE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_OLIVES",
+   "name": "Olives",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 1,
+    "PRODUCTION": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_PEARLS",
+   "name": "Pearls",
+   "class": "LUXURY",
+   "yields": {
+    "FAITH": 1
+   },
+   "frequency": 0,
+   "seaFrequency": 1,
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_PERFUME",
+   "name": "Perfume",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_SALT",
+   "name": "Salt",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 1,
+    "GOLD": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_PLAINS",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_SILK",
+   "name": "Silk",
+   "class": "LUXURY",
+   "yields": {
+    "CULTURE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_SILVER",
+   "name": "Silver",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 3
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_SPICES",
+   "name": "Spices",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 2
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_FOREST",
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_SUGAR",
+   "name": "Sugar",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 2
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS",
+    "FEATURE_MARSH",
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ]
+  },
+  {
+   "id": "RESOURCE_TEA",
+   "name": "Tea",
+   "class": "LUXURY",
+   "yields": {
+    "SCIENCE": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_TOBACCO",
+   "name": "Tobacco",
+   "class": "LUXURY",
+   "yields": {
+    "FAITH": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_FOREST",
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_TOYS",
+   "name": "Toys",
+   "class": "LUXURY",
+   "yields": {},
+   "frequency": 0,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_TRUFFLES",
+   "name": "Truffles",
+   "class": "LUXURY",
+   "yields": {
+    "GOLD": 3
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_MARSH",
+    "FEATURE_FOREST",
+    "FEATURE_JUNGLE"
+   ]
+  },
+  {
+   "id": "RESOURCE_TURTLES",
+   "name": "Turtles",
+   "class": "LUXURY",
+   "yields": {
+    "SCIENCE": 1
+   },
+   "frequency": 0,
+   "seaFrequency": 5,
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_REEF"
+   ]
+  },
+  {
+   "id": "RESOURCE_WHALES",
+   "name": "Whales",
+   "class": "LUXURY",
+   "yields": {
+    "PRODUCTION": 1,
+    "GOLD": 1
+   },
+   "frequency": 0,
+   "seaFrequency": 1,
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": []
+  },
+  {
+   "id": "RESOURCE_WINE",
+   "name": "Wine",
+   "class": "LUXURY",
+   "yields": {
+    "FOOD": 1,
+    "GOLD": 1
+   },
+   "frequency": 2,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_FOREST"
+   ]
+  },
+  {
+   "id": "RESOURCE_ALUMINUM",
+   "name": "Aluminum",
+   "class": "STRATEGIC",
+   "yields": {
+    "SCIENCE": 1
+   },
+   "frequency": 7,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE"
+   ],
+   "revealTech": "TECH_RADIO"
+  },
+  {
+   "id": "RESOURCE_COAL",
+   "name": "Coal",
+   "class": "STRATEGIC",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "frequency": 10,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_FOREST"
+   ],
+   "revealTech": "TECH_INDUSTRIALIZATION"
+  },
+  {
+   "id": "RESOURCE_HORSES",
+   "name": "Horses",
+   "class": "STRATEGIC",
+   "yields": {
+    "FOOD": 1,
+    "PRODUCTION": 1
+   },
+   "frequency": 11,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [],
+   "revealTech": "TECH_ANIMAL_HUSBANDRY"
+  },
+  {
+   "id": "RESOURCE_IRON",
+   "name": "Iron",
+   "class": "STRATEGIC",
+   "yields": {
+    "SCIENCE": 1
+   },
+   "frequency": 10,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "revealTech": "TECH_BRONZE_WORKING"
+  },
+  {
+   "id": "RESOURCE_NITER",
+   "name": "Niter",
+   "class": "STRATEGIC",
+   "yields": {
+    "FOOD": 1,
+    "PRODUCTION": 1
+   },
+   "frequency": 10,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_DESERT",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ],
+   "revealTech": "TECH_MILITARY_ENGINEERING"
+  },
+  {
+   "id": "RESOURCE_OIL",
+   "name": "Oil",
+   "class": "STRATEGIC",
+   "yields": {
+    "PRODUCTION": 3
+   },
+   "frequency": 10,
+   "seaFrequency": 8,
+   "validTerrains": [
+    "TERRAIN_COAST",
+    "TERRAIN_DESERT",
+    "TERRAIN_SNOW",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_MARSH",
+    "FEATURE_FLOODPLAINS"
+   ],
+   "revealTech": "TECH_REFINING"
+  },
+  {
+   "id": "RESOURCE_URANIUM",
+   "name": "Uranium",
+   "class": "STRATEGIC",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "frequency": 5,
+   "seaFrequency": 0,
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_JUNGLE",
+    "FEATURE_FOREST"
+   ],
+   "revealTech": "TECH_COMBINED_ARMS"
+  }
+ ]
+}
