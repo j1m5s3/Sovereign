@@ -1,3 +1,6 @@
+#include <fstream>
+#include <sstream>
+
 #include "helpers.h"
 
 using namespace sov;
@@ -71,4 +74,25 @@ TEST(rules_reject_bad_data) {
     CHECK(!r.loadFromText({{{"resources.json", R"({"resources": [{"id": "R", "validTerrains": ["NOPE"]}]})"}}}, &err));
     // Missing required globals.
     CHECK(!r.loadFromText({{{"terrain.json", R"({"terrains": [{"id": "T"}]})"}}}, &err));
+}
+
+TEST(rules_checksum_ignores_line_endings) {
+    std::map<std::string, std::string> lf, crlf;
+    for (const std::string& name : Rules::fileNames()) {
+        std::ifstream in(std::string(SOVEREIGN_RULES_DIR) + "/" + name, std::ios::binary);
+        std::stringstream ss;
+        ss << in.rdbuf();
+        lf[name] = ss.str();
+        std::string withCr;
+        for (char ch : lf[name]) {
+            if (ch == '\n') withCr += '\r';
+            withCr += ch;
+        }
+        crlf[name] = withCr;
+    }
+    Rules a, b;
+    std::string err;
+    REQUIRE(a.loadFromText({lf}, &err));
+    REQUIRE(b.loadFromText({crlf}, &err));
+    CHECK_EQ(a.checksum(), b.checksum());
 }

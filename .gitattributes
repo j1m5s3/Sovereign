@@ -1,0 +1,3 @@
+# Rules data and golden files must have identical bytes on every platform.
+data/rules/** text eol=lf
+core/tests/golden/** text eol=lf

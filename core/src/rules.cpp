@@ -155,7 +155,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             auto it = files.find(name);
             if (it == files.end()) continue;
             sum = fnv1a(name.data(), name.size(), sum);
-            sum = fnv1a(it->second.data(), it->second.size(), sum);
+            // Hash with line endings normalised so a Windows checkout (CRLF)
+            // and a Linux one agree on the checksum.
+            for (char ch : it->second) {
+                if (ch != '\r') sum = fnv1a(&ch, 1, sum);
+            }
             std::string perr;
             Json doc = Json::parse(it->second, &perr);
             if (!perr.empty()) {
