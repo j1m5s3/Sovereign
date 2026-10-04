@@ -1,0 +1,3 @@
+# Rules core build trees
+core/build*/
+/build*/

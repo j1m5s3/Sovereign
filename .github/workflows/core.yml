@@ -1,0 +1,43 @@
+name: Rules core
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC
+            os: ubuntu-latest
+            cxx: g++
+          - name: Linux Clang
+            os: ubuntu-latest
+            cxx: clang++
+          - name: Windows MSVC
+            os: windows-latest
+            cxx: ""
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Configure
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.cxx }}" ]; then export CXX=${{ matrix.cxx }}; fi
+          cmake -S core -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Simulate 100 turns and check replay
+        shell: bash
+        run: |
+          SIM=build/sovsim; [ -f build/Release/sovsim.exe ] && SIM=build/Release/sovsim.exe
+          $SIM --rules data/rules --seed 2026 --players 4 --size MAPSIZE_TINY --turns 100

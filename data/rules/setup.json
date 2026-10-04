@@ -1,0 +1,30 @@
+{
+ "_comment": "Hand-written game setup tables. Map sizes and speeds from specs/civ6/data/game-setup.md; starting units from its 'Starting units (major civs)' Ancient row. Globals here are Sovereign-only tuning: CITY_SIGHT_RANGE (Civ VI value unverified, 01-map-and-terrain.md Visibility) and the MAPGEN_* map generator knobs.",
+ "mapSizes": [
+  {"id": "MAPSIZE_DUEL", "width": 44, "height": 26, "defaultPlayers": 2},
+  {"id": "MAPSIZE_TINY", "width": 60, "height": 38, "defaultPlayers": 4},
+  {"id": "MAPSIZE_SMALL", "width": 74, "height": 46, "defaultPlayers": 6},
+  {"id": "MAPSIZE_STANDARD", "width": 84, "height": 54, "defaultPlayers": 8},
+  {"id": "MAPSIZE_LARGE", "width": 96, "height": 60, "defaultPlayers": 10},
+  {"id": "MAPSIZE_HUGE", "width": 106, "height": 66, "defaultPlayers": 12}
+ ],
+ "gameSpeeds": [
+  {"id": "GAMESPEED_ONLINE", "costPercent": 50, "turns": 250},
+  {"id": "GAMESPEED_QUICK", "costPercent": 67, "turns": 330},
+  {"id": "GAMESPEED_STANDARD", "costPercent": 100, "turns": 500},
+  {"id": "GAMESPEED_EPIC", "costPercent": 150, "turns": 750},
+  {"id": "GAMESPEED_MARATHON", "costPercent": 300, "turns": 1500}
+ ],
+ "startingUnits": [
+  {"id": "START_SETTLER", "unit": "UNIT_SETTLER"},
+  {"id": "START_WARRIOR", "unit": "UNIT_WARRIOR"}
+ ],
+ "globals": {
+  "CITY_SIGHT_RANGE": 2,
+  "MAPGEN_LAND_PERCENT": 36,
+  "MAPGEN_MOUNTAIN_PERCENT": 7,
+  "MAPGEN_HILLS_PERCENT": 18,
+  "MAPGEN_LAND_PER_RIVER": 45,
+  "MAPGEN_RESOURCE_DENSITY": 6
+ }
+}
