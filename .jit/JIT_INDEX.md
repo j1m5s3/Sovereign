@@ -40,6 +40,7 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - [specs/sovereign/leaders-and-art-style.md] — stylized realism; 12 launch civs of historical leaders.
 - [specs/sovereign/world-scale-and-generation.md] — map scale and procedural city/district model generation.
 - [specs/sovereign/player-retention.md] — nemesis rivals, reign story, challenges, shorter modes, mods.
+- [specs/sovereign/open-gaps-review.md] — prioritized list of undecided mechanics and architecture questions, with recommendations (review, not decisions).
 
 ## Subsystems
 - [tools/civ6_extract/] — rebuilds the rules DB from a local Civ VI install and regenerates `specs/civ6/data/` (README.md there for usage; rerun after game patches).
