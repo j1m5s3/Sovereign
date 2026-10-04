@@ -74,6 +74,9 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotAdoptGovernment: return "CannotAdoptGovernment";
         case CommandError::CannotSetPolicy: return "CannotSetPolicy";
         case CommandError::ChangesLocked: return "ChangesLocked";
+        case CommandError::CannotImprove: return "CannotImprove";
+        case CommandError::CannotHarvest: return "CannotHarvest";
+        case CommandError::NotEnoughResources: return "NotEnoughResources";
     }
     return "Unknown";
 }
@@ -102,6 +105,9 @@ std::string describe(const Command& c) {
         case CommandType::ChangeGovernment: return s + "ChangeGovernment gov" + std::to_string(c.id);
         case CommandType::SetPolicy:
             return s + "SetPolicy slot" + std::to_string(c.id) + " policy" + std::to_string(c.arg);
+        case CommandType::BuildImprovement:
+            return s + "BuildImprovement u" + std::to_string(c.id) + " improvement" + std::to_string(c.arg);
+        case CommandType::Harvest: return s + "Harvest u" + std::to_string(c.id);
     }
     return s + "?";
 }

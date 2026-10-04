@@ -1,0 +1,479 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "improvements": [
+  {
+   "id": "IMPROVEMENT_SEASIDE_RESORT",
+   "name": "Seaside Resort",
+   "yields": {},
+   "unlock": "TECH_RADIO",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": []
+  },
+  {
+   "id": "IMPROVEMENT_CAMP",
+   "name": "Camp",
+   "yields": {
+    "GOLD": 2
+   },
+   "unlock": "TECH_ANIMAL_HUSBANDRY",
+   "validTerrains": [],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_DEER",
+    "RESOURCE_FURS",
+    "RESOURCE_HONEY",
+    "RESOURCE_IVORY",
+    "RESOURCE_TRUFFLES"
+   ],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "CIVIC_MERCANTILISM"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "CIVIC_MERCANTILISM"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "unlock": "TECH_SYNTHETIC_MATERIALS"
+    }
+   ],
+   "housing": 0.5
+  },
+  {
+   "id": "IMPROVEMENT_FARM",
+   "name": "Farm",
+   "yields": {
+    "FOOD": 1
+   },
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS",
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS",
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [
+    "RESOURCE_MAIZE",
+    "RESOURCE_RICE",
+    "RESOURCE_WHEAT"
+   ],
+   "adjacency": [
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "per": 2,
+     "improvement": "IMPROVEMENT_FARM",
+     "needs": "CIVIC_FEUDALISM",
+     "obsoleteWith": "TECH_REPLACEABLE_PARTS"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "per": 1,
+     "improvement": "IMPROVEMENT_FARM",
+     "needs": "TECH_REPLACEABLE_PARTS"
+    }
+   ],
+   "housing": 0.5
+  },
+  {
+   "id": "IMPROVEMENT_FISHING_BOATS",
+   "name": "Fishing Boats",
+   "yields": {
+    "FOOD": 1
+   },
+   "unlock": "TECH_SAILING",
+   "validTerrains": [],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_AMBER",
+    "RESOURCE_CRABS",
+    "RESOURCE_FISH",
+    "RESOURCE_PEARLS",
+    "RESOURCE_TURTLES",
+    "RESOURCE_WHALES"
+   ],
+   "bonusYields": [
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "unlock": "TECH_CARTOGRAPHY"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "TECH_PLASTICS"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "CIVIC_COLONIALISM"
+    }
+   ],
+   "adjacency": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "per": 1,
+     "improvement": "IMPROVEMENT_SEASTEAD"
+    }
+   ],
+   "housing": 0.5
+  },
+  {
+   "id": "IMPROVEMENT_GEOTHERMAL_PLANT",
+   "name": "Geothermal Plant",
+   "yields": {
+    "PRODUCTION": 2,
+    "SCIENCE": 1
+   },
+   "unlock": "TECH_SYNTHETIC_MATERIALS",
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_GEOTHERMAL_FISSURE"
+   ],
+   "validResources": []
+  },
+  {
+   "id": "IMPROVEMENT_LUMBER_MILL",
+   "name": "Lumber Mill",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "unlock": "TECH_CONSTRUCTION",
+   "validTerrains": [],
+   "validFeatures": [
+    "FEATURE_FOREST",
+    "FEATURE_JUNGLE"
+   ],
+   "validResources": [],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_STEEL"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_CYBERNETICS"
+    }
+   ]
+  },
+  {
+   "id": "IMPROVEMENT_MINE",
+   "name": "Mine",
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_MINING",
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [
+    "RESOURCE_ALUMINUM",
+    "RESOURCE_AMBER",
+    "RESOURCE_COAL",
+    "RESOURCE_COPPER",
+    "RESOURCE_DIAMONDS",
+    "RESOURCE_IRON",
+    "RESOURCE_JADE",
+    "RESOURCE_MERCURY",
+    "RESOURCE_NITER",
+    "RESOURCE_SALT",
+    "RESOURCE_SILVER",
+    "RESOURCE_URANIUM"
+   ],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_APPRENTICESHIP"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_INDUSTRIALIZATION"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_SMART_MATERIALS"
+    }
+   ]
+  },
+  {
+   "id": "IMPROVEMENT_OFFSHORE_OIL_RIG",
+   "name": "Offshore Oil Rig",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "unlock": "TECH_PLASTICS",
+   "validTerrains": [
+    "TERRAIN_COAST",
+    "TERRAIN_OCEAN"
+   ],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_OIL"
+   ],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_PREDICTIVE_SYSTEMS"
+    }
+   ]
+  },
+  {
+   "id": "IMPROVEMENT_OFFSHORE_WIND_FARM",
+   "name": "Offshore Wind Farm",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "unlock": "TECH_PREDICTIVE_SYSTEMS",
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": [],
+   "validResources": []
+  },
+  {
+   "id": "IMPROVEMENT_OIL_WELL",
+   "name": "Oil Well",
+   "yields": {
+    "PRODUCTION": 2
+   },
+   "unlock": "TECH_REFINING",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_OIL"
+   ],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_PREDICTIVE_SYSTEMS"
+    }
+   ]
+  },
+  {
+   "id": "IMPROVEMENT_PASTURE",
+   "name": "Pasture",
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_ANIMAL_HUSBANDRY",
+   "validTerrains": [],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_CATTLE",
+    "RESOURCE_HORSES",
+    "RESOURCE_SHEEP"
+   ],
+   "bonusYields": [
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "TECH_STIRRUPS"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_REPLACEABLE_PARTS"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "TECH_ROBOTICS"
+    }
+   ],
+   "housing": 0.5
+  },
+  {
+   "id": "IMPROVEMENT_PLANTATION",
+   "name": "Plantation",
+   "yields": {
+    "GOLD": 2
+   },
+   "unlock": "TECH_IRRIGATION",
+   "validTerrains": [],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_BANANAS",
+    "RESOURCE_CITRUS",
+    "RESOURCE_COCOA",
+    "RESOURCE_COFFEE",
+    "RESOURCE_COTTON",
+    "RESOURCE_DYES",
+    "RESOURCE_INCENSE",
+    "RESOURCE_OLIVES",
+    "RESOURCE_SILK",
+    "RESOURCE_SPICES",
+    "RESOURCE_SUGAR",
+    "RESOURCE_TEA",
+    "RESOURCE_TOBACCO",
+    "RESOURCE_WINE"
+   ],
+   "bonusYields": [
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "TECH_SCIENTIFIC_THEORY"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "unlock": "CIVIC_GLOBALIZATION"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "unlock": "CIVIC_FEUDALISM"
+    }
+   ],
+   "housing": 0.5
+  },
+  {
+   "id": "IMPROVEMENT_QUARRY",
+   "name": "Quarry",
+   "yields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_MINING",
+   "validTerrains": [],
+   "validFeatures": [],
+   "validResources": [
+    "RESOURCE_GYPSUM",
+    "RESOURCE_MARBLE",
+    "RESOURCE_STONE"
+   ],
+   "bonusYields": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_ROCKETRY"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_GUNPOWDER"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "unlock": "TECH_PREDICTIVE_SYSTEMS"
+    }
+   ]
+  },
+  {
+   "id": "IMPROVEMENT_SEASTEAD",
+   "name": "Seastead",
+   "yields": {
+    "FOOD": 2
+   },
+   "unlock": "TECH_SEASTEADS",
+   "validTerrains": [
+    "TERRAIN_COAST",
+    "TERRAIN_OCEAN"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "per": 1,
+     "improvement": "IMPROVEMENT_FISHING_BOATS"
+    }
+   ],
+   "housing": 2.0
+  },
+  {
+   "id": "IMPROVEMENT_SKI_RESORT",
+   "name": "Ski Resort",
+   "yields": {},
+   "unlock": "CIVIC_PROFESSIONAL_SPORTS",
+   "validTerrains": [
+    "TERRAIN_GRASS_MOUNTAIN",
+    "TERRAIN_PLAINS_MOUNTAIN",
+    "TERRAIN_DESERT_MOUNTAIN",
+    "TERRAIN_TUNDRA_MOUNTAIN",
+    "TERRAIN_SNOW_MOUNTAIN"
+   ],
+   "validFeatures": [],
+   "validResources": []
+  },
+  {
+   "id": "IMPROVEMENT_SOLAR_FARM",
+   "name": "Solar Farm",
+   "yields": {
+    "GOLD": 1,
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_SATELLITES",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [],
+   "validResources": []
+  },
+  {
+   "id": "IMPROVEMENT_WIND_FARM",
+   "name": "Wind Farm",
+   "yields": {
+    "GOLD": 2,
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_COMPOSITES",
+   "validTerrains": [
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": []
+  }
+ ]
+}

@@ -29,6 +29,7 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.techs.resize(rules.techs.size());
     p.civics.resize(rules.civics.size());
     p.governmentUses.resize(rules.governments.size(), 0);
+    p.stockpile.resize(rules.resources.size(), 0);
 }
 
 // ------------------------------------------------------------------ queries
@@ -145,6 +146,17 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
                        const UnitType& t = rules_->units[static_cast<size_t>(u.type)];
                        return t.domain == Domain::Land && t.layer == UnitLayer::Military && t.combat > 0;
                    }) >= b.count;
+        case BoostKind::Improvement: return countImprovedPlots(player, b.ref, false) >= b.count;
+        case BoostKind::ImprovementOnResource: return countImprovedPlots(player, b.ref, true) >= b.count;
+        case BoostKind::ImprovedTiles: return countImprovedPlots(player, kNone, false) >= b.count;
+        case BoostKind::ImproveResource:
+            for (size_t i = 0; i < state_.plots.size(); ++i) {
+                const Plot& pl = state_.plots[i];
+                if (pl.owner == player && pl.resource == b.ref && pl.improvement != kNone &&
+                    resourceImproved(state_.grid.at(static_cast<int>(i))))
+                    return true;
+            }
+            return false;
     }
     return false;
 }
