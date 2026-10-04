@@ -195,7 +195,7 @@ Avoid: AI that retrains itself mid-game (hard to test, learns exploits). An LLM 
 No dependency on Intel or Nvidia hardware.
 - **Language model:** llama.cpp with its Vulkan backend (AMD, Nvidia and Intel GPUs), Metal on Mac, CPU fallback (x86 and ARM, including Apple Silicon and Snapdragon).
 - **Battle AI:** trained offline on our side; the small trained network runs on any CPU via a cross-vendor runtime such as ONNX Runtime.
-- **Engine:** Unreal 5 supports AMD, Intel and Apple GPUs; current consoles are AMD-based.
+- **Engine:** Unreal 5 (decided; see [engine-and-architecture.md](engine-and-architecture.md)) supports AMD, Intel and Apple GPUs; current consoles are AMD-based.
 - **Rule:** no vendor-only features. No CUDA-only code in the game; if upscaling is added, offer FSR and XeSS alongside DLSS.
 
 ## Still open
