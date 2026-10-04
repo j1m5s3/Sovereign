@@ -53,6 +53,9 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
         w.boolean(p.human);
     }
     w.boolean(s.barbarians);
+    w.boolean(s.dominationVictory);
+    w.boolean(s.scoreVictory);
+    w.i32(s.turnLimit);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -67,6 +70,9 @@ void readSetup(ByteReader& r, GameSetup& s) {
         p.human = r.boolean();
     }
     s.barbarians = r.boolean();
+    s.dominationVictory = r.boolean();
+    s.scoreVictory = r.boolean();
+    s.turnLimit = r.i32();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -99,6 +105,9 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (p.owner != kNoPlayer && (p.owner < 0 || static_cast<size_t>(p.owner) >= s.players.size())) return false;
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
+    if (s.winner != kNoPlayer && (s.winner < 0 || static_cast<size_t>(s.winner) >= s.players.size())) return false;
+    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::LastStanding)) return false;
+    if ((s.winner == kNoPlayer) != (s.victory == Victory::None) || s.setup.turnLimit < 0) return false;
     for (const Player& p : s.players) {
         if (!inRange(p.civ, rules.civs.size(), p.barbarian)) return false;
     }
@@ -277,6 +286,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     w.i32(s.nextCampId);
     w.i32(s.nextUnitId);
     w.i32(s.nextCityId);
+    w.i8(s.winner);
+    w.u8(static_cast<uint8_t>(s.victory));
     for (size_t i = 0; i < static_cast<size_t>(RngStream::Count); ++i) {
         for (uint64_t word : s.rng.get(static_cast<RngStream>(i)).state()) w.u64(word);
     }
@@ -439,6 +450,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
     s.nextCampId = r.i32();
     s.nextUnitId = r.i32();
     s.nextCityId = r.i32();
+    s.winner = r.i8();
+    s.victory = static_cast<Victory>(r.u8());
     for (size_t i = 0; i < static_cast<size_t>(RngStream::Count); ++i) {
         std::array<uint64_t, 4> st{};
         for (uint64_t& word : st) word = r.u64();

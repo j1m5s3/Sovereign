@@ -123,7 +123,7 @@ TEST(ai_beats_the_random_bot) {
     auto g = Game::create(rules(), setup, &err);
     REQUIRE(g);
     Rng botRng(99);
-    while (g->state().turn < 120) {
+    while (g->state().turn < 120 && !g->gameOver()) {
         if (g->state().currentPlayer < 2) ai::playTurn(*g);
         else sovbot::playTurn(*g, botRng);
     }
@@ -141,7 +141,7 @@ TEST(ai_soak_takes_a_capital_and_replays) {
     std::string err;
     auto g = Game::create(rules(), setup, &err);
     REQUIRE(g);
-    while (g->state().turn < 250 && !capitalTaken(*g)) ai::playTurn(*g);
+    while (g->state().turn < 250 && !capitalTaken(*g) && !g->gameOver()) ai::playTurn(*g);
     CHECK(capitalTaken(*g));
     auto again = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(again);

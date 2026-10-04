@@ -50,6 +50,7 @@ same command must print the same hash.
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
 | Districts: placement, population limit, cost, adjacency | `src/districts.cpp` (queries on `Game`) |
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
+| Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 

@@ -178,7 +178,14 @@ struct GameSetup {
     bool wrapX = true;
     std::vector<PlayerSetup> players;
     bool barbarians = true;
+    // Victories (09-civs-eras-victory-climate.md, Victory conditions). With Domination
+    // off, the last major civ standing wins instead (VICTORY_DEFAULT).
+    bool dominationVictory = true;
+    bool scoreVictory = true;
+    int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
 };
+
+enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding };
 
 // A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).
 struct Camp {
@@ -203,6 +210,8 @@ struct GameState {
     int32_t nextCampId = 1;
     CityId nextCityId = 1;
     RngSet rng;
+    PlayerId winner = kNoPlayer;  // set once the game is won; every command is then refused
+    Victory victory = Victory::None;
 
     Plot& plot(Hex h) { return plots[static_cast<size_t>(grid.index(h))]; }
     const Plot& plot(Hex h) const { return plots[static_cast<size_t>(grid.index(h))]; }

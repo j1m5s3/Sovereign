@@ -17,6 +17,7 @@ namespace sovbot {
 
 inline void playTurn(sov::Game& game, sov::Rng& rng) {
     using namespace sov;
+    if (game.gameOver()) return;
     const GameState& s = game.state();
     const PlayerId me = s.currentPlayer;
     // War: now and then pick a fight with another player; offer peace once allowed.
@@ -158,7 +159,7 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
 inline void playTurns(sov::Game& game, uint64_t seed, int turns) {
     sov::Rng rng(seed);
     const int stopAt = game.state().turn + turns;
-    while (game.state().turn < stopAt) playTurn(game, rng);
+    while (game.state().turn < stopAt && !game.gameOver()) playTurn(game, rng);
 }
 
 }  // namespace sovbot

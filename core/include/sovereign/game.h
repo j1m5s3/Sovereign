@@ -174,7 +174,12 @@ public:
     bool cityUnderSiege(const City& city) const;
     bool canCityStrike(CityId city, Hex target) const;
     bool canRazeCity(PlayerId player, CityId city) const;
-    PlayerId barbarianPlayer() const;  // kNoPlayer when the game has no barbarians
+    PlayerId barbarianPlayer() const;
+    // Score line items (09: Score; ScoringLineItems): 3 per civic, 2 per tech, 5 per city,
+    // 2 per finished district, 1 per population. Cost scaling of techs and civics is unverified and not applied.
+    int score(PlayerId player) const;
+    int turnLimit() const;  // last turn played; Score decides after it
+    bool gameOver() const { return state_.winner != kNoPlayer; }  // kNoPlayer when the game has no barbarians
     const Camp* campAt(Hex h) const;
     int xpForNextLevel(const Unit& unit) const;
     bool canPromote(UnitId unit, TypeIndex promotion) const;
@@ -209,6 +214,7 @@ private:
     void captureCity(City& city, UnitId attacker);
     void razeCity(CityId city);
     void checkElimination(PlayerId p);
+    void checkVictory();
     void healCities(PlayerId p);
     // Barbarian bookkeeping before a unit dies in combat: camp boldness.
     void noteKill(const Unit& victim, const Unit* killer);
