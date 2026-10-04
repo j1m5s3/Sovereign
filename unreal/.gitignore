@@ -1,0 +1,10 @@
+# Unreal build and cache output
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+.vs/
+*.sln
+*.slnx
+*.vcxproj*
+*.VC.db
