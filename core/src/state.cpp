@@ -31,6 +31,15 @@ const City* GameState::cityAt(Hex h) const {
     return nullptr;
 }
 
+TypeIndex GameState::wonderAt(Hex h) const {
+    for (const City& c : cities) {
+        for (const CityWonder& w : c.wonders) {
+            if (w.pos == h) return w.building;
+        }
+    }
+    return kNone;
+}
+
 const CityDistrict* GameState::districtAt(Hex h) const {
     for (const City& c : cities) {
         for (const CityDistrict& d : c.districts) {

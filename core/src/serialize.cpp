@@ -149,6 +149,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
             if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
         }
         if (c.pressure.size() > s.religions.size()) return false;
+        for (const CityWonder& cw : c.wonders) if (!inRange(cw.building, rules.buildings.size(), false) || !s.grid.valid(cw.pos)) return false;
         for (const GreatWork& g : c.greatWorks) {
             if (!inRange(g.type, rules.greatWorkTypes.size(), false) || !inRange(g.building, rules.buildings.size(), false) ||
                 !inRange(g.creator, rules.greatPeople.size(), true))
@@ -349,6 +350,11 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(g.creator);
         }
         writeI32s(w, c.pressure);
+        w.u32(static_cast<uint32_t>(c.wonders.size()));
+        for (const CityWonder& cw : c.wonders) {
+            w.i16(cw.building);
+            writeHex(w, cw.pos);
+        }
     }
     w.bytes(s.greatPeopleClaimed);
     w.u32(static_cast<uint32_t>(s.tradeRoutes.size()));
@@ -601,6 +607,13 @@ bool deserializeState(ByteReader& r, GameState& s) {
             g.creator = r.i16();
         }
         if (!readI32s(r, c.pressure)) return false;
+        uint32_t nw = r.u32();
+        if (!r.checkCount(nw, 10)) return false;
+        c.wonders.resize(nw);
+        for (CityWonder& cw : c.wonders) {
+            cw.building = r.i16();
+            cw.pos = readHex(r);
+        }
     }
     s.greatPeopleClaimed = r.bytes();
     uint32_t ntr = r.u32();

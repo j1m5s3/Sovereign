@@ -83,7 +83,7 @@ std::vector<Hex> Game::workablePlots(const City& city) const {
     for (const Hex& h : state_.grid.within(city.pos, 3)) {
         if (h == city.pos) continue;
         const Plot& p = state_.plot(h);
-        if (p.city != city.id || state_.districtAt(h)) continue;  // district plots are not worked
+        if (p.city != city.id || state_.districtAt(h) || state_.wonderAt(h) != kNone) continue;  // district and wonder plots are not worked
         if (rules_->terrains[static_cast<size_t>(p.terrain)].impassable) continue;
         if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) continue;
         out.push_back(h);
@@ -275,6 +275,14 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
         if (b.granted || b.faithOnly || c.has(item.type) || !hasUnlocked(c.owner, b.unlock)) return fail(CommandError::CannotBuild);
+        if (b.wonder) {
+            // Once in the world, on a plot of its own (03: Wonders).
+            if (wonderBuilt(item.type)) return fail(CommandError::CannotBuild);
+            const bool sited = std::any_of(c.wonders.begin(), c.wonders.end(), [&](const CityWonder& w) { return w.building == item.type; });
+            if (!sited && wonderPlots(c.id, item.type).empty()) return fail(CommandError::CannotBuild);
+            if (why) *why = CommandError::Ok;
+            return true;
+        }
         // Buildings outside the City Center need their finished district.
         if (b.district != "DISTRICT_CITY_CENTER" && (b.districtType == kNone || !c.district(b.districtType, true)))
             return fail(CommandError::CannotBuild);
@@ -387,6 +395,10 @@ CommandError Game::validateCity(const Command& c) const {
                 !canPlaceDistrict(*city, item.type, c.target, &why))
                 return why;
             if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
+            if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder &&
+                std::none_of(city->wonders.begin(), city->wonders.end(), [&](const CityWonder& w) { return w.building == item.type; }) &&
+                !canPlaceWonder(*city, item.type, c.target))
+                return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::QueueProduction:
             if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
@@ -400,6 +412,10 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::CannotBuild;
             if (static_cast<int>(city->queue.size()) >= rules_->globalInt("CITY_PRODUCTION_QUEUE_MAX"))
                 return CommandError::QueueFull;
+            if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder &&
+                std::none_of(city->wonders.begin(), city->wonders.end(), [&](const CityWonder& w) { return w.building == item.type; }) &&
+                !canPlaceWonder(*city, item.type, c.target))
+                return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::Purchase: {
             if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
@@ -456,6 +472,15 @@ void Game::applyCity(const Command& c) {
         case CommandType::QueueProduction:
             if (item.kind == ProductionKind::District && !city.district(item.type, false))
                 placeDistrict(city, item.type, c.target);
+            if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder &&
+                std::none_of(city.wonders.begin(), city.wonders.end(), [&](const CityWonder& w) { return w.building == item.type; })) {
+                // The wonder's plot is reserved; its improvement and removable feature go.
+                Plot& wp = state_.plot(c.target);
+                wp.improvement = kNone;
+                if (wp.feature != kNone && rules_->features[static_cast<size_t>(wp.feature)].removable) wp.feature = kNone;
+                city.wonders.push_back({item.type, c.target});
+                assignCitizens(city);
+            }
             if (c.type == CommandType::SetProduction) city.queue.assign(1, item);
             else city.queue.push_back(item);
             break;
@@ -577,6 +602,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (it == city.buildings.end() || *it != item.type) {
             city.buildings.insert(it, item.type);
             city.wallHp += rules_->buildings[static_cast<size_t>(item.type)].outerDefenseHp;  // new walls stand at full HP
+            if (rules_->buildings[static_cast<size_t>(item.type)].wonder) completeWonder(city, item.type);
         }
     }
     return true;

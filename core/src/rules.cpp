@@ -250,7 +250,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -295,6 +295,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     checksum_ = sum;
+    // World wonders load as buildings (flagged by their placement), so their yields, slots and
+    // points use the building paths.
+    for (const auto& row : m.tables["wonders"]) m.tables["buildings"].push_back(row);
     globals_ = m.globals;
 
     // Eras and research trees first: everything else may be unlocked by them.
@@ -668,6 +671,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.tradeCapacity = static_cast<int>(j["tradeCapacity"].integer(0));
             b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
             b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
+            b.wonder = j.has("placement");
+            b.text = j["text"].str();
+            if (b.wonder) b.district = "DISTRICT_WONDER";
             buildings.push_back(std::move(b));
         }
         // Second pass: building references may point forward.
@@ -704,6 +710,82 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         districts.push_back(std::move(d));
     }
     for (BuildingType& b : buildings) b.districtType = district(b.district);
+    // Wonder placement and one-time effects name terrains, features, resources, districts and units.
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["buildings"]) {
+            BuildingType& b = buildings[i++];
+            if (!b.wonder) continue;
+            const std::string where = "wonder " + id;
+            const Json& p = j["placement"];
+            WonderPlacement& w = b.placement;
+            for (const Json& t : p["terrains"].items()) {
+                if (t.str() == "MOUNTAIN") {
+                    w.mountain = true;
+                } else if (TypeIndex ti = terrain(t.str()); ti != kNone) {
+                    w.terrains.push_back(ti);
+                } else {
+                    *error = where + ": unknown terrain " + t.str();
+                    return false;
+                }
+            }
+            auto readFeatures = [&](const Json& list, std::vector<TypeIndex>& out) {
+                for (const Json& f : list.items()) {
+                    const TypeIndex fi = feature(f.str());
+                    if (fi == kNone) {
+                        *error = where + ": unknown feature " + f.str();
+                        return false;
+                    }
+                    out.push_back(fi);
+                }
+                return true;
+            };
+            if (!readFeatures(p["features"], w.features) || !readFeatures(p["needsFeature"], w.needsFeature)) return false;
+            w.river = p["river"].boolean(false);
+            w.coastal = p["coastal"].boolean(false);
+            w.lake = p["lake"].boolean(false);
+            w.notLake = p["notLake"].boolean(false);
+            w.nextToLand = p["nextToLand"].boolean(false);
+            w.nextToCapital = p["nextToCapital"].boolean(false);
+            w.nextToMountain = p["nextToMountain"].boolean(false);
+            w.nextToCityCenter = p["nextToCityCenter"].boolean(false);
+            if (p.has("nextToDistrict") && (w.nextToDistrict = district(p["nextToDistrict"].str())) == kNone) {
+                *error = where + ": unknown district";
+                return false;
+            }
+            if (p.has("nextToResource") && (w.nextToResource = resource(p["nextToResource"].str())) == kNone) {
+                *error = where + ": unknown resource";
+                return false;
+            }
+            if (p.has("nextToImprovement") && (w.nextToImprovement = improvement(p["nextToImprovement"].str())) == kNone) {
+                *error = where + ": unknown improvement";
+                return false;
+            }
+            for (const Json& ej : j["effects"].items()) {
+                GreatPersonEffect fx;
+                const std::string& kind = ej["kind"].str();
+                if (kind == "UNIT") {
+                    fx.kind = GreatPersonEffectKind::Unit;
+                    fx.ref = unit(ej["ref"].str());
+                } else if (kind == "RANDOM_BOOST") {
+                    fx.kind = GreatPersonEffectKind::RandomBoost;
+                    fx.civic = ej["tree"].str() == "CIVIC";
+                    fx.count = static_cast<int>(ej["count"].integer(0));
+                    fx.minEra = era(ej["minEra"].str());
+                    fx.maxEra = era(ej["maxEra"].str());
+                    fx.ref = fx.minEra == kNone || fx.maxEra == kNone ? kNone : 0;
+                } else {
+                    *error = where + ": unknown effect " + kind;
+                    return false;
+                }
+                if (fx.ref == kNone) {
+                    *error = where + ": bad effect";
+                    return false;
+                }
+                b.wonderEffects.push_back(fx);
+            }
+        }
+    }
     // Second pass: adjacency rows may name districts later in the table.
     {
         size_t i = 0;

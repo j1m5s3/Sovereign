@@ -276,10 +276,14 @@ void Game::applyGreatPeople(const Command& c) {
 
 void Game::applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx) {
     const PlayerId pid = unit.owner;
-    Player& p = state_.players[at(pid)];
     const Hex here = unit.pos;
     City* city = state_.plot(here).city != kNoCity ? state_.city(state_.plot(here).city) : nullptr;
     if (city && city->owner != pid) city = nullptr;
+    applyEffectAt(pid, city, here, fx);
+}
+
+void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEffect& fx) {
+    Player& p = state_.players[at(pid)];
     const int speed = speedPercent(state_, *rules_);
     switch (fx.kind) {
         case GreatPersonEffectKind::Yield: {
