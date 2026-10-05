@@ -1,0 +1,1028 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "wonders": [
+  {
+   "id": "BUILDING_STONEHENGE",
+   "name": "Stonehenge",
+   "unlock": "TECH_ASTROLOGY",
+   "cost": 180,
+   "yields": {
+    "FAITH": 2
+   },
+   "placement": {
+    "nextToResource": "RESOURCE_STONE",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "grants 1 Great Prophet where player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time); grants 1 Apostle where NOT player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time)",
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_GREAT_PROPHET"
+    }
+   ]
+  },
+  {
+   "id": "BUILDING_HANGING_GARDENS",
+   "name": "Hanging Gardens",
+   "unlock": "TECH_IRRIGATION",
+   "cost": 180,
+   "yields": {},
+   "placement": {
+    "river": true
+   },
+   "text": "+15% growth in all your cities",
+   "housing": 2
+  },
+  {
+   "id": "BUILDING_GREAT_BATH",
+   "name": "Great Bath",
+   "unlock": "TECH_POTTERY",
+   "cost": 180,
+   "yields": {},
+   "placement": {
+    "needsFeature": [
+     "FEATURE_FLOODPLAINS",
+     "FEATURE_FLOODPLAINS_GRASSLAND",
+     "FEATURE_FLOODPLAINS_PLAINS"
+    ]
+   },
+   "text": "adjust city yield per flood (YieldType=Faith, Amount=1)",
+   "housing": 3,
+   "amenities": 1
+  },
+  {
+   "id": "BUILDING_TEMPLE_OF_ARTEMIS",
+   "name": "Temple of Artemis",
+   "unlock": "TECH_ARCHERY",
+   "cost": 180,
+   "yields": {
+    "FOOD": 4
+   },
+   "placement": {
+    "nextToImprovement": "IMPROVEMENT_CAMP"
+   },
+   "text": "",
+   "housing": 3
+  },
+  {
+   "id": "BUILDING_PYRAMIDS",
+   "name": "Pyramids",
+   "unlock": "TECH_MASONRY",
+   "cost": 220,
+   "yields": {
+    "CULTURE": 2
+   },
+   "placement": {
+    "terrains": [
+     "TERRAIN_DESERT"
+    ],
+    "features": [
+     "FEATURE_FLOODPLAINS"
+    ]
+   },
+   "text": "+1 build charge(s) for your units where unit is Builder; grants 1 Builder (one-time)",
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_BUILDER"
+    }
+   ]
+  },
+  {
+   "id": "BUILDING_ETEMENANKI",
+   "name": "Etemenanki",
+   "unlock": "TECH_WRITING",
+   "cost": 220,
+   "yields": {
+    "SCIENCE": 2
+   },
+   "placement": {
+    "needsFeature": [
+     "FEATURE_FLOODPLAINS",
+     "FEATURE_MARSH",
+     "FEATURE_FLOODPLAINS_GRASSLAND",
+     "FEATURE_FLOODPLAINS_PLAINS"
+    ]
+   },
+   "text": "+2 Science on your tiles where tile is Marsh; +1 Production on your tiles where tile is Marsh; +1 Science on this city's tiles where tile is Desert Floodplains; +1 Production on this city's tiles where tile is Desert Floodplains; +1 Science on this city's tiles where tile is Grassland Floodplains; +1 Production on this city's tiles where tile is Grassland Floodplains; +1 Science on this city's tiles where tile is Plains Floodplains; +1 Production on this city's tiles where tile is Plains Floodplains"
+  },
+  {
+   "id": "BUILDING_ORACLE",
+   "name": "Oracle",
+   "unlock": "CIVIC_MYSTICISM",
+   "cost": 290,
+   "yields": {
+    "CULTURE": 1,
+    "FAITH": 1
+   },
+   "placement": {
+    "terrains": [
+     "TERRAIN_GRASS_HILLS",
+     "TERRAIN_PLAINS_HILLS",
+     "TERRAIN_TUNDRA_HILLS",
+     "TERRAIN_SNOW_HILLS",
+     "TERRAIN_DESERT_HILLS"
+    ]
+   },
+   "text": "+2 Great General points from the district for this city's districts where district is Encampment; +2 Great Admiral points from the district for this city's districts where district is Harbor; +2 Great Engineer points from the district for this city's districts where district is Industrial Zone; +2 Great Merchant points from the district for this city's districts where district is Commercial Hub; +2 Great Prophet points from the district for this city's districts where district is Holy Site; +2 Great Scientist points from the district for this city's districts where district is Campus; +2 Great Writer points from the district for this city's districts where district is Theater Square; 25% cheaper Great Person patronage with Faith"
+  },
+  {
+   "id": "BUILDING_GREAT_LIGHTHOUSE",
+   "name": "Great Lighthouse",
+   "unlock": "TECH_CELESTIAL_NAVIGATION",
+   "cost": 290,
+   "yields": {
+    "GOLD": 3
+   },
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_HARBOR",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "ability Great Lighthouse Movement [+1 Movement for naval units] for your units; +1 Movement while embarked; ability Great Lighthouse Embarked Movement for your units",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
+  },
+  {
+   "id": "BUILDING_COLOSSUS",
+   "name": "Colossus",
+   "unlock": "TECH_SHIPBUILDING",
+   "cost": 400,
+   "yields": {
+    "GOLD": 3
+   },
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_HARBOR",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "+1 Trade Route capacity; grants 1 Trader (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   },
+   "tradeCapacity": 1,
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_TRADER"
+    }
+   ]
+  },
+  {
+   "id": "BUILDING_PETRA",
+   "name": "Petra",
+   "unlock": "TECH_MATHEMATICS",
+   "cost": 400,
+   "yields": {},
+   "placement": {
+    "terrains": [
+     "TERRAIN_DESERT"
+    ],
+    "features": [
+     "FEATURE_FLOODPLAINS"
+    ]
+   },
+   "text": "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains"
+  },
+  {
+   "id": "BUILDING_GREAT_LIBRARY",
+   "name": "Great Library",
+   "unlock": "CIVIC_RECORDED_HISTORY",
+   "cost": 400,
+   "yields": {
+    "SCIENCE": 2
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_CAMPUS",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "grants all Eurekas from Ancient Era to Classical Era (one-time); boost from Great Scientist",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 1,
+    "GREAT_PERSON_CLASS_WRITER": 1
+   },
+   "greatWorkSlots": {
+    "WRITING": 2
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 99,
+     "minEra": "ERA_ANCIENT",
+     "maxEra": "ERA_CLASSICAL"
+    }
+   ]
+  },
+  {
+   "id": "BUILDING_MAHABODHI_TEMPLE",
+   "name": "Mahabodhi Temple",
+   "unlock": "CIVIC_THEOLOGY",
+   "cost": 400,
+   "yields": {
+    "FAITH": 4
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_HOLY_SITE",
+    "needsFeature": [
+     "FEATURE_FOREST"
+    ]
+   },
+   "text": "grants 2 Apostle (one-time); +2 Diplomatic Victory Points (one-time)"
+  },
+  {
+   "id": "BUILDING_TERRACOTTA_ARMY",
+   "name": "Terracotta Army",
+   "unlock": "TECH_CONSTRUCTION",
+   "cost": 400,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_ENCAMPMENT",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS"
+    ]
+   },
+   "text": "ability Enter Foreign Lands [can enter foreign territory] for your units; grants enough XP for a promotion for your units (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
+  },
+  {
+   "id": "BUILDING_MACHU_PICCHU",
+   "name": "Machu Picchu",
+   "unlock": "TECH_ENGINEERING",
+   "cost": 400,
+   "yields": {
+    "GOLD": 4
+   },
+   "placement": {
+    "terrains": [
+     "MOUNTAIN"
+    ]
+   },
+   "text": "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities; Industrial Zone gets +1 Production per adjacent Mountain in all your cities; Theater Square gets +1 Culture per adjacent Mountain in all your cities"
+  },
+  {
+   "id": "BUILDING_STATUE_OF_ZEUS",
+   "name": "Statue of Zeus",
+   "unlock": "CIVIC_MILITARY_TRAINING",
+   "cost": 400,
+   "yields": {
+    "GOLD": 3
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_ENCAMPMENT",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+50% Production toward Anti Cavalry units of any era in all your cities; grants 3 Spearman (one-time); grants 3 Archer (one-time); grants 1 Battering Ram (one-time)",
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_BATTERING_RAM"
+    }
+   ]
+  },
+  {
+   "id": "BUILDING_APADANA",
+   "name": "Apadana",
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "cost": 400,
+   "yields": {},
+   "placement": {
+    "nextToCapital": true
+   },
+   "text": "grant city owner influence token wonder (Amount=2) in all cities where city has Apadana",
+   "greatWorkSlots": {
+    "PALACE": 2
+   }
+  },
+  {
+   "id": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
+   "name": "Mausoleum at Halicarnassus",
+   "unlock": "CIVIC_DEFENSIVE_TACTICS",
+   "cost": 400,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_HARBOR"
+   },
+   "text": "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer); +1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake"
+  },
+  {
+   "id": "BUILDING_JEBEL_BARKAL",
+   "name": "Jebel Barkal",
+   "unlock": "TECH_IRON_WORKING",
+   "cost": 400,
+   "yields": {
+    "FAITH": 4
+   },
+   "placement": {
+    "terrains": [
+     "TERRAIN_DESERT_HILLS"
+    ]
+   },
+   "text": "+6 Iron per turn"
+  },
+  {
+   "id": "BUILDING_HAGIA_SOPHIA",
+   "name": "Hagia Sophia",
+   "unlock": "TECH_BUTTRESS",
+   "cost": 710,
+   "yields": {
+    "FAITH": 4
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_HOLY_SITE",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+1 spread charge(s) for your units"
+  },
+  {
+   "id": "BUILDING_ALHAMBRA",
+   "name": "Alhambra",
+   "unlock": "TECH_CASTLES",
+   "cost": 710,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_ENCAMPMENT",
+    "terrains": [
+     "TERRAIN_GRASS_HILLS",
+     "TERRAIN_PLAINS_HILLS",
+     "TERRAIN_TUNDRA_HILLS",
+     "TERRAIN_SNOW_HILLS",
+     "TERRAIN_DESERT_HILLS"
+    ]
+   },
+   "text": "+1 Military slot",
+   "amenities": 2,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 2
+   }
+  },
+  {
+   "id": "BUILDING_CHICHEN_ITZA",
+   "name": "Chichen Itza",
+   "unlock": "CIVIC_GUILDS",
+   "cost": 710,
+   "yields": {},
+   "placement": {
+    "needsFeature": [
+     "FEATURE_JUNGLE"
+    ]
+   },
+   "text": "+2 Culture on this city's tiles where tile is Rainforest in all cities where city has Chichen Itza; +1 Production on this city's tiles where tile is Rainforest in all cities where city has Chichen Itza"
+  },
+  {
+   "id": "BUILDING_MONT_ST_MICHEL",
+   "name": "Mont St. Michel",
+   "unlock": "CIVIC_DIVINE_RIGHT",
+   "cost": 710,
+   "yields": {
+    "FAITH": 2
+   },
+   "placement": {
+    "needsFeature": [
+     "FEATURE_FLOODPLAINS",
+     "FEATURE_MARSH",
+     "FEATURE_FLOODPLAINS_GRASSLAND",
+     "FEATURE_FLOODPLAINS_PLAINS"
+    ]
+   },
+   "text": "grants promotion Martyr for your units",
+   "greatWorkSlots": {
+    "RELIC": 2
+   }
+  },
+  {
+   "id": "BUILDING_MEENAKSHI_TEMPLE",
+   "name": "Meenakshi Temple",
+   "unlock": "CIVIC_CIVIL_SERVICE",
+   "cost": 710,
+   "yields": {
+    "FAITH": 3
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_HOLY_SITE"
+   },
+   "text": "grants 2 Guru (one-time); ability Guide [ability Guru Movement Area of Effect [+1 Movement where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; ability Sage [ability Guru Sage Area of Effect [+5 Combat Strength in combat where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; 30% cheaper to purchase Guru in all your cities"
+  },
+  {
+   "id": "BUILDING_UNIVERSITY_OF_SANKORE",
+   "name": "University of Sankore",
+   "unlock": "TECH_EDUCATION",
+   "cost": 710,
+   "yields": {
+    "SCIENCE": 3,
+    "FAITH": 1
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_CAMPUS",
+    "terrains": [
+     "TERRAIN_DESERT",
+     "TERRAIN_DESERT_HILLS"
+    ]
+   },
+   "text": "trade routes from other civs give them +1 Science; trade routes from other civs give them +1 Gold; +2 Science for each trade route other civs send here; trade routes from other civs give them +2 Science; trade routes from other civs give them +1 Faith",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 2
+   }
+  },
+  {
+   "id": "BUILDING_HUEY_TEOCALLI",
+   "name": "Huey Teocalli",
+   "unlock": "TECH_MILITARY_TACTICS",
+   "cost": 710,
+   "yields": {},
+   "placement": {
+    "lake": true,
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time); +1 Food on this city's tiles where tile is a lake in all cities where player owns object; +1 Production on this city's tiles where tile is a lake in all cities where player owns object"
+  },
+  {
+   "id": "BUILDING_KILWA_KISIWANI",
+   "name": "Kilwa Kisiwani",
+   "unlock": "TECH_MACHINERY",
+   "cost": 710,
+   "yields": {},
+   "placement": {
+    "coastal": true,
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+15% Science where suzerain of a Minor Civ Scientific city-state (x1); +15% Faith where suzerain of a Minor Civ Religious city-state (x1); +15% Gold where suzerain of a Minor Civ Trade city-state (x1); +15% Culture where suzerain of a Minor Civ Cultural city-state (x1); +15% Production toward all units where suzerain of a Minor Civ Militaristic city-state (x1); adjust all building production modifier (Amount=15) where suzerain of a Minor Civ Industrial city-state (x1); +15% Production toward districts where suzerain of a Minor Civ Industrial city-state (x1); +15% Science in all your cities where suzerain of a Minor Civ Scientific city-state (x2); +15% Faith in all your cities where suzerain of a Minor Civ Religious city-state (x2); +15% Gold in all your cities where suzerain of a Minor Civ Trade city-state (x2); +15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2); +15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2); adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2); +15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2); grants 3 Envoy(s) (one-time)"
+  },
+  {
+   "id": "BUILDING_KOTOKU_IN",
+   "name": "Kotoku-in",
+   "unlock": "CIVIC_DIVINE_RIGHT",
+   "cost": 710,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_HOLY_SITE"
+   },
+   "text": "+20% Faith; grants 4 Warrior Monk (one-time)"
+  },
+  {
+   "id": "BUILDING_VENETIAN_ARSENAL",
+   "name": "Venetian Arsenal",
+   "unlock": "TECH_MASS_PRODUCTION",
+   "cost": 920,
+   "yields": {},
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_INDUSTRIAL_ZONE",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "+1 extra copy of Naval Melee units when trained in all your cities; +1 extra copy of Naval Ranged units when trained in all your cities; +1 extra copy of Naval Carrier units when trained in all your cities",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 2
+   }
+  },
+  {
+   "id": "BUILDING_GREAT_ZIMBABWE",
+   "name": "Great Zimbabwe",
+   "unlock": "TECH_BANKING",
+   "cost": 920,
+   "yields": {
+    "GOLD": 5
+   },
+   "placement": {
+    "nextToDistrict": "DISTRICT_COMMERCIAL_HUB",
+    "nextToResource": "RESOURCE_CATTLE"
+   },
+   "text": "+1 Trade Route capacity; adjust city trade route yield per local bonus resource for domestic (YieldType=Gold, Amount=2); international routes +2 Gold per bonus resource in origin",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 2
+   },
+   "tradeCapacity": 1
+  },
+  {
+   "id": "BUILDING_FORBIDDEN_CITY",
+   "name": "Forbidden City",
+   "unlock": "TECH_PRINTING",
+   "cost": 920,
+   "yields": {
+    "CULTURE": 5
+   },
+   "placement": {
+    "nextToCityCenter": true,
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+1 Wildcard slot"
+  },
+  {
+   "id": "BUILDING_ORSZ_GH_Z",
+   "name": "Országház",
+   "unlock": "TECH_SANITATION",
+   "cost": 920,
+   "yields": {
+    "CULTURE": 4
+   },
+   "placement": {
+    "river": true
+   },
+   "text": "adjust player suzerain favor multiplier (Amount=100)"
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "name": "St. Basil's Cathedral",
+   "unlock": "CIVIC_REFORMED_CHURCH",
+   "cost": 920,
+   "yields": {},
+   "placement": {
+    "nextToCityCenter": true
+   },
+   "text": "+1 Food on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; +1 Production on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; +1 Culture on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; Tourism from scaled 200%",
+   "greatWorkSlots": {
+    "RELIC": 3
+   }
+  },
+  {
+   "id": "BUILDING_TAJ_MAHAL",
+   "name": "Taj Mahal",
+   "unlock": "CIVIC_HUMANISM",
+   "cost": 920,
+   "yields": {},
+   "placement": {
+    "river": true
+   },
+   "text": "adjust player era score per pride moment (Amount=1, MinScore=2)"
+  },
+  {
+   "id": "BUILDING_TORRE_DE_BEL_M",
+   "name": "Torre de Belém",
+   "unlock": "CIVIC_MERCANTILISM",
+   "cost": 920,
+   "yields": {
+    "GOLD": 5
+   },
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_HARBOR",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "international routes +2 Gold per luxury at destination; grants the cheapest building of the district in all your cities where NOT city on capital's continent (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
+  },
+  {
+   "id": "BUILDING_POTALA_PALACE",
+   "name": "Potala Palace",
+   "unlock": "TECH_ASTRONOMY",
+   "cost": 1060,
+   "yields": {
+    "CULTURE": 2,
+    "FAITH": 3
+   },
+   "placement": {
+    "nextToMountain": true,
+    "terrains": [
+     "TERRAIN_GRASS_HILLS",
+     "TERRAIN_PLAINS_HILLS",
+     "TERRAIN_DESERT_HILLS",
+     "TERRAIN_TUNDRA_HILLS",
+     "TERRAIN_SNOW_HILLS"
+    ]
+   },
+   "text": "+1 Diplomatic slot; +1 Diplomatic Victory Points (one-time)"
+  },
+  {
+   "id": "BUILDING_RUHR_VALLEY",
+   "name": "Ruhr Valley",
+   "unlock": "TECH_INDUSTRIALIZATION",
+   "cost": 1240,
+   "yields": {},
+   "placement": {
+    "river": true,
+    "nextToDistrict": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "text": "+20% Production; +1 Production on this city's tiles where tile has Quarry or tile has Mine"
+  },
+  {
+   "id": "BUILDING_BOLSHOI_THEATRE",
+   "name": "Bolshoi Theatre",
+   "unlock": "CIVIC_OPERA_AND_BALLET",
+   "cost": 1240,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_THEATER_SQUARE",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "grants 2 random civic (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 2,
+    "GREAT_PERSON_CLASS_MUSICIAN": 2
+   },
+   "greatWorkSlots": {
+    "WRITING": 1,
+    "MUSIC": 1
+   }
+  },
+  {
+   "id": "BUILDING_OXFORD_UNIVERSITY",
+   "name": "Oxford University",
+   "unlock": "TECH_SCIENTIFIC_THEORY",
+   "cost": 1240,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_CAMPUS",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS"
+    ]
+   },
+   "text": "+20% Science; grants 2 random technology (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 3
+   },
+   "greatWorkSlots": {
+    "WRITING": 2
+   }
+  },
+  {
+   "id": "BUILDING_STATUE_OF_LIBERTY",
+   "name": "Statue of Liberty",
+   "unlock": "CIVIC_CIVIL_ENGINEERING",
+   "cost": 1240,
+   "yields": {},
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_HARBOR",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "city is always loyal in all your cities where within 6 tiles of Statue of Liberty; +4 Diplomatic Victory Points (one-time)"
+  },
+  {
+   "id": "BUILDING_BIG_BEN",
+   "name": "Big Ben",
+   "unlock": "TECH_ECONOMICS",
+   "cost": 1450,
+   "yields": {
+    "GOLD": 6
+   },
+   "placement": {
+    "river": true,
+    "nextToDistrict": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "text": "+1 Economic slot; multiplies treasury by 50 (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 3
+   }
+  },
+  {
+   "id": "BUILDING_HERMITAGE",
+   "name": "Hermitage",
+   "unlock": "CIVIC_NATURAL_HISTORY",
+   "cost": 1450,
+   "yields": {},
+   "placement": {
+    "river": true
+   },
+   "text": "",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ARTIST": 3
+   },
+   "greatWorkSlots": {
+    "ART": 4
+   }
+  },
+  {
+   "id": "BUILDING_EIFFEL_TOWER",
+   "name": "Eiffel Tower",
+   "unlock": "TECH_STEEL",
+   "cost": 1620,
+   "yields": {},
+   "placement": {
+    "nextToCityCenter": true,
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+2 Appeal in all your cities"
+  },
+  {
+   "id": "BUILDING_BROADWAY",
+   "name": "Broadway",
+   "unlock": "CIVIC_MASS_MEDIA",
+   "cost": 1620,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_THEATER_SQUARE",
+    "terrains": [
+     "TERRAIN_GRASS",
+     "TERRAIN_PLAINS",
+     "TERRAIN_TUNDRA",
+     "TERRAIN_SNOW",
+     "TERRAIN_DESERT"
+    ]
+   },
+   "text": "+20% Culture; grants 1 random Inspiration(s) (Atomic Era to Atomic Era) (one-time)",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 3,
+    "GREAT_PERSON_CLASS_MUSICIAN": 3
+   },
+   "greatWorkSlots": {
+    "WRITING": 1,
+    "MUSIC": 2
+   }
+  },
+  {
+   "id": "BUILDING_CRISTO_REDENTOR",
+   "name": "Cristo Redentor",
+   "unlock": "CIVIC_MASS_MEDIA",
+   "cost": 1620,
+   "yields": {
+    "CULTURE": 4
+   },
+   "placement": {
+    "terrains": [
+     "TERRAIN_GRASS_HILLS",
+     "TERRAIN_PLAINS_HILLS",
+     "TERRAIN_TUNDRA_HILLS",
+     "TERRAIN_SNOW_HILLS",
+     "TERRAIN_DESERT_HILLS"
+    ]
+   },
+   "text": "Tourism from Seaside Resort scaled 200% in all your cities; religious Tourism is never reduced"
+  },
+  {
+   "id": "BUILDING_GOLDEN_GATE_BRIDGE",
+   "name": "Golden Gate Bridge",
+   "unlock": "TECH_COMBUSTION",
+   "cost": 1620,
+   "yields": {},
+   "placement": {
+    "notLake": true,
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "+4 Appeal; roads within 1 tiles; +100% Tourism from improvements; +100% Tourism from National Parks; map remove cliffs in direction (Radius=1)",
+   "amenities": 3
+  },
+  {
+   "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
+   "name": "Amundsen-Scott Research Station",
+   "unlock": "CIVIC_COLD_WAR",
+   "cost": 1620,
+   "yields": {},
+   "placement": {
+    "nextToDistrict": "DISTRICT_CAMPUS",
+    "terrains": [
+     "TERRAIN_SNOW",
+     "TERRAIN_SNOW_HILLS"
+    ]
+   },
+   "text": "+20% Science in all your cities; +10% Production in all your cities; +20% Science in all your cities where city has 5+ Snow tiles; +10% Production in all your cities where city has 5+ Snow tiles",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 5
+   }
+  },
+  {
+   "id": "BUILDING_SYDNEY_OPERA_HOUSE",
+   "name": "Sydney Opera House",
+   "unlock": "CIVIC_CULTURAL_HERITAGE",
+   "cost": 1850,
+   "yields": {
+    "CULTURE": 8
+   },
+   "placement": {
+    "notLake": true,
+    "nextToDistrict": "DISTRICT_HARBOR",
+    "nextToLand": true,
+    "terrains": [
+     "TERRAIN_COAST"
+    ]
+   },
+   "text": "",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MUSICIAN": 5
+   },
+   "greatWorkSlots": {
+    "MUSIC": 3
+   }
+  }
+ ],
+ "modifiers": [
+  {
+   "id": "BUILDING_HANGING_GARDENS_GROWTH",
+   "source": "BUILDING_HANGING_GARDENS",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_GROWTH_PERCENT",
+   "arguments": {
+    "amount": 15
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_MARSH_SCIENCE",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_MARSH"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_MARSH_PRODUCTION",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_MARSH"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_DESERT_FLOODPLAINS_SCIENCE",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_DESERT_FLOODPLAINS_PRODUCTION",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_GRASSLAND_FLOODPLAINS_SCIENCE",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS_GRASSLAND"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_GRASSLAND_FLOODPLAINS_PRODUCTION",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS_GRASSLAND"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_PLAINS_FLOODPLAINS_SCIENCE",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS_PLAINS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ETEMENANKI_PLAINS_FLOODPLAINS_PRODUCTION",
+   "source": "BUILDING_ETEMENANKI",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS_PLAINS"
+     }
+    ]
+   }
+  }
+ ]
+}

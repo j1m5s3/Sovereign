@@ -235,6 +235,42 @@ struct ImprovementType {
     Fixed housing;  // per improved plot the city owns
 };
 
+// One-time effects of great people and wonders (07: Great People; 03: Wonders).
+enum class GreatPersonEffectKind : uint8_t {
+    Yield = 0,          // one-time gold, faith, science or culture
+    Production,         // one-time production toward the city's current item
+    Boost,              // a Eureka or Inspiration (or the whole node if already boosted)
+    RandomBoost,        // `count` random boosts of a tree between two eras
+    PromotionXp,        // a military unit here gains enough XP for a promotion
+    Building,           // the building, free, in this city
+    Unit,               // a free unit here
+    BuildingYield,      // permanent: + yield from a building in all the player's cities
+    GreatPersonPoints,  // points toward every class
+};
+
+struct GreatPersonEffect {
+    GreatPersonEffectKind kind = GreatPersonEffectKind::Yield;
+    YieldType yield = YieldType::Gold;
+    int amount = 0;
+    bool scaled = false;      // scales with game speed
+    bool civic = false;       // Boost / RandomBoost: the civic tree
+    bool orComplete = false;  // Boost: completes the node if it is already boosted
+    TypeIndex ref = kNone;    // tech, civic, building or unit
+    int count = 0;
+    int minEra = 0, maxEra = 0;
+};
+
+// Where a wonder may stand (03: Wonders; data: wonders.md, Placement).
+struct WonderPlacement {
+    std::vector<TypeIndex> terrains;  // the plot is one of these (empty: any land)
+    bool mountain = false;            // ...or a mountain
+    std::vector<TypeIndex> features;  // ...or carries one of these
+    std::vector<TypeIndex> needsFeature;  // the plot must carry one of these
+    bool river = false, coastal = false, lake = false, notLake = false;
+    bool nextToLand = false, nextToCapital = false, nextToMountain = false, nextToCityCenter = false;
+    TypeIndex nextToDistrict = kNone, nextToResource = kNone, nextToImprovement = kNone;
+};
+
 struct BuildingType {
     std::string id, name;
     std::string district;   // e.g. "DISTRICT_CITY_CENTER"
@@ -258,6 +294,11 @@ struct BuildingType {
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
     int tradeCapacity = 0;                 // + trade route capacity
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
+    // World wonders (03: Wonders): built once in the world, on a plot of their own.
+    bool wonder = false;
+    WonderPlacement placement;
+    std::vector<GreatPersonEffect> wonderEffects;  // one-time effects on completion
+    std::string text;                              // the full effect text, for players
 };
 
 // Religion (06-religion.md; data: religion.md).
@@ -281,30 +322,6 @@ struct GreatPersonClass {
     TypeIndex unit = kNone;      // the unit a recruited great person is
     TypeIndex district = kNone;  // the district that earns its points
     int maxPerPlayer = 0;        // 0: no limit (Prophets: 1)
-};
-
-enum class GreatPersonEffectKind : uint8_t {
-    Yield = 0,          // one-time gold, faith, science or culture
-    Production,         // one-time production toward the city's current item
-    Boost,              // a Eureka or Inspiration (or the whole node if already boosted)
-    RandomBoost,        // `count` random boosts of a tree between two eras
-    PromotionXp,        // a military unit here gains enough XP for a promotion
-    Building,           // the building, free, in this city
-    Unit,               // a free unit here
-    BuildingYield,      // permanent: + yield from a building in all the player's cities
-    GreatPersonPoints,  // points toward every class
-};
-
-struct GreatPersonEffect {
-    GreatPersonEffectKind kind = GreatPersonEffectKind::Yield;
-    YieldType yield = YieldType::Gold;
-    int amount = 0;
-    bool scaled = false;      // scales with game speed
-    bool civic = false;       // Boost / RandomBoost: the civic tree
-    bool orComplete = false;  // Boost: completes the node if it is already boosted
-    TypeIndex ref = kNone;    // tech, civic, building or unit
-    int count = 0;
-    int minEra = 0, maxEra = 0;
 };
 
 struct GreatPersonAura {

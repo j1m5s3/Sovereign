@@ -185,6 +185,18 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.MaxHp = Game.cityMaxHp();
 		Marker.bCapital = C.capital;
 		Marker.Loyalty = C.loyalty;
+		for (const sov::CityWonder& W : C.wonders)
+		{
+			if (Game.visibility(View, W.pos) == sov::Visibility::Unrevealed)
+			{
+				continue;
+			}
+			FSovWonderMarker& WM = M.Wonders.AddDefaulted_GetRef();
+			WM.X = W.pos.x;
+			WM.Y = W.pos.y;
+			WM.bComplete = C.has(W.building);
+			WM.Name = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(W.building)].name.c_str());
+		}
 	}
 
 	for (const sov::Unit& U : S.units)

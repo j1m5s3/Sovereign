@@ -1077,6 +1077,135 @@ def gen_great_people():
     return {"greatPersonClasses": classes, "greatPeople": people, "greatWorkTypes": works}
 
 
+def wonder_placement(text, districts, resources, improvements):
+    """Placement column -> typed rules, or None when it needs something the core lacks
+    (a district not modelled yet, a canal)."""
+    place = {}
+    terrains = terrain_names()
+    for part in [p.strip() for p in (text or "").split(";") if p.strip()]:
+        if part == "river":
+            place["river"] = True
+        elif part == "coast":
+            place["coastal"] = True
+        elif part == "lake":
+            place["lake"] = True
+        elif part == "not lake":
+            place["notLake"] = True
+        elif part.startswith("on "):
+            names = part[3:].split("/")
+            ids, feats = [], []
+            for n in names:
+                if n == "Mountain":
+                    ids.append("MOUNTAIN")
+                elif n in terrains:
+                    ids.append(terrains[n])
+                elif n in FEATURE_IDS:
+                    feats.append(FEATURE_IDS[n])
+                else:
+                    return None
+            if ids:
+                place.setdefault("terrains", []).extend(ids)
+            if feats:
+                place.setdefault("features", []).extend(feats)
+        elif part.startswith("requires "):
+            feats = []
+            for n in part[9:].split("/"):
+                if n not in FEATURE_IDS:
+                    return None
+                feats.append(FEATURE_IDS[n])
+            place["needsFeature"] = feats
+        elif part.startswith("adjacent to "):
+            what = part[12:]
+            if what == "land":
+                place["nextToLand"] = True
+            elif what == "capital":
+                place["nextToCapital"] = True
+            elif what == "mountain":
+                place["nextToMountain"] = True
+            elif what == "City Center":
+                place["nextToCityCenter"] = True
+            elif "DISTRICT_" + snake(what) in districts:
+                place["nextToDistrict"] = "DISTRICT_" + snake(what)
+            elif what in resources:
+                place["nextToResource"] = resources[what]
+            elif what in improvements:
+                place["nextToImprovement"] = improvements[what]
+            else:
+                return None
+        else:
+            return None
+    if not place:
+        return None
+    return place
+
+
+def gen_wonders():
+    """World wonders the core can place (03: Wonders): built once in the world on their own plot.
+    Effects that fit the core become typed effects or modifiers; the text is kept for the rest."""
+    districts = {"DISTRICT_" + snake(n) for n in ["City Center"] + PLACEABLE_DISTRICTS}
+    resources = {}
+    for sec in ("Bonus resources", "Luxury resources", "Strategic resources"):
+        for r in table(SPEC / "terrain-features-resources.md", sec):
+            resources[r["Resource"]] = "RESOURCE_" + snake(r["Resource"])
+    improvements = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in table(SPEC / "improvements.md", "Improvements")
+                    if not r.get("Unique to")}
+    units = {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")}
+    eras = {e + " Era": "ERA_" + e.upper() for e in ERAS}
+    wonders, modifiers = [], []
+    for row in table(SPEC / "wonders.md", "World wonders"):
+        place = wonder_placement(row["Placement"], districts, resources, improvements)
+        if place is None:
+            continue
+        wid = "BUILDING_" + snake(row["Wonder"])
+        w = {"id": wid, "name": row["Wonder"], "unlock": unlock_id(row["Unlock"]), "cost": num(row["Cost"]),
+             "yields": yields(row["Yields"]), "placement": place, "text": row["Effects (modifiers)"]}
+        if row["Housing"]:
+            w["housing"] = num(row["Housing"])
+        if row["Amenity"]:
+            w["amenities"] = num(row["Amenity"])
+        points = gpp(row["GPP"])
+        if points:
+            w["greatPersonPoints"] = points
+        slots = {}
+        for m in re.finditer(r"(\d+) (\w+)", row["Great Work slots"] or ""):
+            slots[m.group(2).upper()] = slots.get(m.group(2).upper(), 0) + int(m.group(1))
+        if slots:
+            w["greatWorkSlots"] = slots
+        effects = []
+        for part in [p.strip() for p in row["Effects (modifiers)"].split(";") if p.strip()]:
+            m = re.fullmatch(r"grants (?:1 )?(.+?) \(one-time\)", part)
+            if m and m.group(1) in units:
+                effects.append({"kind": "UNIT", "ref": units[m.group(1)]})
+                continue
+            m = re.fullmatch(r"grants 1 Great Prophet where player can ever earn.*", part)
+            if m:
+                effects.append({"kind": "UNIT", "ref": "UNIT_GREAT_PROPHET"})
+                continue
+            m = re.fullmatch(r"grants all Eurekas from (\w+ Era) to (\w+ Era) \(one-time\)", part)
+            if m:
+                effects.append({"kind": "RANDOM_BOOST", "tree": "TECH", "count": 99, "minEra": eras[m.group(1)], "maxEra": eras[m.group(2)]})
+                continue
+            if re.fullmatch(r"\+(\d+) Trade Route capacity", part):
+                w["tradeCapacity"] = int(re.match(r"\+(\d+)", part).group(1))
+                continue
+            m = re.fullmatch(r"\+(\d+)% growth in all your cities", part)
+            if m:
+                modifiers.append({"id": wid + "_GROWTH", "source": wid, "collection": "PLAYER_CITIES",
+                                  "effect": "ADJUST_CITY_GROWTH_PERCENT", "arguments": {"amount": int(m.group(1))}})
+                continue
+            m = re.fullmatch(r"\+(\d+) (\w+) on (?:your|this city's) tiles where tile is (.+)", part)
+            if m and m.group(2) in YIELD_WORDS and m.group(3) in FEATURE_IDS:
+                modifiers.append({"id": "%s_%s_%s" % (wid, snake(m.group(3)), m.group(2).upper()), "source": wid,
+                                  "collection": "OWNER_CITY_PLOTS", "effect": "ADJUST_PLOT_YIELD",
+                                  "arguments": {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))},
+                                  "subjectRequirements": {"all": [{"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[m.group(3)]}]}})
+                continue
+        if effects:
+            w["effects"] = effects
+        wonders.append(w)
+    return {"wonders": wonders, "modifiers": modifiers}
+
+
 BELIEF_CLASSES = ["Pantheon", "Follower", "Worship", "Founder", "Enhancer"]
 
 
@@ -1120,6 +1249,7 @@ def main():
         "improvements.json": gen_improvements(),
         "greatpeople.json": gen_great_people(),
         "religion.json": gen_religion(),
+        "wonders.json": gen_wonders(),
     }
     stale = []
     for name, doc in outputs.items():

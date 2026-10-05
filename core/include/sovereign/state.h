@@ -110,6 +110,12 @@ struct FoundedReligion {
     std::vector<TypeIndex> beliefs;  // the founder's pantheon, then Founder, Follower, Worship, Enhancer
 };
 
+// A wonder's plot: reserved when its production starts, its own tile once built.
+struct CityWonder {
+    TypeIndex building = kNone;
+    Hex pos;
+};
+
 // A Great Work in one of a city's building slots.
 struct GreatWork {
     TypeIndex type = kNone;      // Rules::greatWorkTypes
@@ -150,6 +156,7 @@ struct SOV_API City {
     int fearAfterUntil = 0;        // resentment (-amenity, assassin openings) while turn < this
     std::vector<GreatWork> greatWorks;  // in the city's buildings' slots (07: Great Works)
     std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
+    std::vector<CityWonder> wonders;    // wonder plots, reserved when building starts (03: Wonders)
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
@@ -329,6 +336,8 @@ struct SOV_API GameState {
     const City* cityAt(Hex h) const;
     // The district placed on this plot, if any (city centers are not districts here).
     const CityDistrict* districtAt(Hex h) const;
+    // The wonder built or reserved on this plot (kNone: none).
+    TypeIndex wonderAt(Hex h) const;
     // Unit on this plot in the given layer, if any.
     const Unit* unitAt(Hex h, UnitLayer layer, const Rules& rules) const;
     // Any unit on the plot not owned by this player.

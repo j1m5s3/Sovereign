@@ -388,6 +388,18 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					}
 					Where = FString::Printf(TEXT(" at (%d,%d), +%s adjacency"), Plot.x, Plot.y, *Str(Best.toString()));
 				}
+				if (Item.kind == sov::ProductionKind::Building && R.buildings[static_cast<size_t>(Item.type)].wonder &&
+					std::none_of(City->wonders.begin(), City->wonders.end(), [&](const sov::CityWonder& W) { return W.building == Item.type; }))
+				{
+					// A world wonder goes on the first plot that suits it (03: Wonders).
+					const std::vector<sov::Hex> Plots = G.wonderPlots(City->id, Item.type);
+					if (Plots.empty())
+					{
+						continue;
+					}
+					Plot = Plots.front();
+					Where = FString::Printf(TEXT(" (wonder) at (%d,%d)"), Plot.x, Plot.y);
+				}
 				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item);
 				Choices.Add({FString::Printf(TEXT("%s (%d turns)%s"), *ItemName(R, Item), TurnsFor(Cost, PerTurn), *Where),
 					sov::Command::setProduction(Me(), City->id, Item, Plot)});

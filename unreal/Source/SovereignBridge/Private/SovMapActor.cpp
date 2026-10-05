@@ -255,6 +255,27 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		RoadPieces[i]->SetVisibility(false);
 	}
 
+	int32 WonderCount = 0;
+	for (const FSovWonderMarker& W : Mirror.Wonders)
+	{
+		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, CubeMesh.Get());
+		const FVector At = SovHex::Center(W.X, W.Y, SurfaceZ(W.X, W.Y));
+		if (SovArt::SetKitMesh(C, TEXT("Classical"), W.bComplete ? TEXT("Temple") : TEXT("Monument"), FLinearColor::White))
+		{
+			C->SetRelativeLocation(At);
+			C->SetRelativeScale3D(FVector(W.bComplete ? 0.07 : 0.06));
+			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+			continue;
+		}
+		C->SetRelativeLocation(At + FVector(0, 0, 20));
+		C->SetRelativeScale3D(FVector(0.4, 0.4, W.bComplete ? 0.4 : 0.15));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.85f, 0.8f, 0.6f)));
+	}
+	for (int32 i = WonderCount; i < WonderPieces.Num(); ++i)
+	{
+		WonderPieces[i]->SetVisibility(false);
+	}
+
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{
 		const FSovCityMarker& City = Mirror.Cities[i];

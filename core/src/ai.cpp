@@ -350,7 +350,7 @@ void build(View& v, UnitId id) {
     if (u->moveTarget) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
-        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.cityAt(h)) return -1;
+        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
         if (v.game.improvementsAt(v.me, h).empty()) return -1;
         int w = 10;
         if (p.resource != kNone && v.game.resourceVisible(v.me, h)) w += 20;
@@ -732,6 +732,23 @@ void production(View& v) {
                     if (b.outerDefenseHp > 0) value += threatened ? 500 : v.enemies.empty() ? 0 : 60;
                     for (const auto& gpp : b.greatPersonPoints) value += 15 * gpp.second;  // great people (07)
                     for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
+                    if (b.wonder) {
+                        // Wonders in a productive, safe city; on the plot the city has, or its first choice.
+                        const Fixed prod = rep.yields[static_cast<size_t>(YieldType::Production)];
+                        if (threatened || prod < Fixed::fromInt(4)) {
+                            value = 0;
+                            break;
+                        }
+                        value += 120 + static_cast<int>(b.wonderEffects.size()) * 40 + b.tradeCapacity * 60;
+                        if (std::none_of(c.wonders.begin(), c.wonders.end(), [&](const CityWonder& w) { return w.building == it.type; })) {
+                            const std::vector<Hex> plots = g.wonderPlots(cid, it.type);
+                            if (plots.empty()) {
+                                value = 0;
+                                break;
+                            }
+                            where = plots.front();
+                        }
+                    }
                     break;
                 }
                 case ProductionKind::District: {

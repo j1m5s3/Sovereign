@@ -139,6 +139,11 @@ public:
     int greatPersonAuraStrength(const Unit& unit) const;
     int greatPersonAuraMoves(const Unit& unit) const;
 
+    // ---- world wonders (03: Wonders)
+    bool wonderBuilt(TypeIndex building) const;
+    bool canPlaceWonder(const City& city, TypeIndex building, Hex plot) const;
+    std::vector<Hex> wonderPlots(CityId city, TypeIndex building) const;
+
     // ---- trade routes and roads (07: Trade routes; 01: Routes)
     int tradeRouteCapacity(PlayerId player) const;
     int tradeRoutesOf(PlayerId player) const;
@@ -378,6 +383,9 @@ private:
     void processGreatPeople(PlayerId player);
     void recruitGreatPerson(PlayerId player, TypeIndex person);
     void applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx);
+    // A one-time effect for a player at a plot (city: the player's city there, or null).
+    void applyEffectAt(PlayerId player, City* city, Hex at, const GreatPersonEffect& fx);
+    void completeWonder(City& city, TypeIndex building);
     void spawnLeader(PlayerId p, Hex at);
     // The leader was beaten: captured (melee, city capture) or killed (ranged, its own failed attack).
     void leaderLost(UnitId leader, PlayerId by, bool captured);

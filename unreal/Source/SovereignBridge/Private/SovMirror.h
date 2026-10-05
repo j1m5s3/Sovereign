@@ -55,6 +55,14 @@ struct FSovCityMarker
 	int32 Loyalty = 100;
 };
 
+// A wonder's plot: built, or reserved while it is being built.
+struct FSovWonderMarker
+{
+	int32 X = 0, Y = 0;
+	bool bComplete = false;
+	FString Name;
+};
+
 struct FSovMirror
 {
 	int32 Width = 0, Height = 0;
@@ -63,6 +71,7 @@ struct FSovMirror
 	TArray<FSovUnitMarker> Units;  // the viewer's own, and others' on visible plots
 	TArray<FSovCityMarker> Cities;  // on revealed plots
 	TArray<TPair<FIntPoint, FIntPoint>> Roads;  // neighbouring revealed plots joined by a road
+	TArray<FSovWonderMarker> Wonders;           // on revealed plots
 };
 
 FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);
