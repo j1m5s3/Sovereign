@@ -240,7 +240,10 @@ void Game::accumulateStrategics(PlayerId pid) {
         const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
         if (r.accumulation <= 0) continue;
         const Hex h = state_.grid.at(static_cast<int>(i));
-        if (resourceVisible(pid, h) && resourceImproved(h)) player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation;
+        if (!resourceVisible(pid, h) || !resourceImproved(h)) continue;
+        const City* home = p.city == kNoCity ? nullptr : state_.city(p.city);
+        const int extra = home && cityGovernorHas(*home, "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS") ? 1 : 0;  // Victor
+        player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
     }
     for (size_t r = 0; r < rules_->resources.size(); ++r) {
         const int cap = rules_->resources[r].stockpileCap;

@@ -91,6 +91,9 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
+    if (p.improvement != kNone && p.pillagedTurns == 0 && rules_->improvements[static_cast<size_t>(p.improvement)].powerProvided > 0 &&
+        cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
+        y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna
     if (p.fallout > 0 && at != city.pos) return Yields{};  // contaminated ground cannot be worked
     return y;
 }
@@ -277,6 +280,12 @@ CityReport Game::cityReport(CityId id) const {
             }
             rep.yields[idx(YieldType::Food)] += Fixed::fromInt(b.foodPerAdjacentMountain * std::min(2, mountains));
         }
+    }
+    // Governors: Magnus's Industrialist (+2 Production per power plant), Reyna's Renewable Subsidizer (+2 Gold from a Hydroelectric Dam).
+    for (TypeIndex bi : c->buildings) {
+        const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
+        if (b.burnsResource != kNone && cityGovernorHas(*c, "GOVERNOR_PROMOTION_INDUSTRIALIST")) rep.yields[idx(YieldType::Production)] += Fixed::fromInt(2);
+        if (b.powerProvided > 0 && cityGovernorHas(*c, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER")) rep.yields[idx(YieldType::Gold)] += Fixed::fromInt(2);
     }
     // Power [GS] (09: Power): fully powered buildings give their bonus.
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
@@ -749,6 +758,8 @@ void Game::assignCitizens(City& city) {
 }
 
 bool Game::completeItem(City& city, ProductionItem item) {
+    if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))
+        state_.players[static_cast<size_t>(city.owner)].faith += Fixed::fromInt(productionCost(city.owner, item) / 4);  // Moksha
     if (item.kind == ProductionKind::Unit) {
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
         if (city.population < u.minPopulation) return false;
@@ -780,6 +791,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
             const int pct = rules_->buildings[static_cast<size_t>(bi)].trainedXpPercent;
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
         }
+        if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
         if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
                                               (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
         assignCitizens(city);
@@ -1020,6 +1032,15 @@ void Game::processCities(PlayerId pid) {
                 }
                 if (const PassedResolution* ud = passed(ResolutionKind::UrbanDevelopment); ud && ud->option == 0 && ud->target == item.type) pct += 100;
                 prod = prod * std::max(0, pct) / 100;
+            } else if (item.kind == ProductionKind::Project) {
+                // Governors: Victor's Arms Race Proponent (nuclear projects), Pingala's Space Initiative (space race).
+                const ProjectType& pj = rules_->projects[static_cast<size_t>(item.type)];
+                const bool nuclear = pj.id == "PROJECT_MANHATTAN_PROJECT" || pj.id == "PROJECT_OPERATION_IVY" ||
+                                     std::any_of(pj.effects.begin(), pj.effects.end(), [](const ProjectEffect& e) { return e.kind == ProjectEffectKind::Wmd; });
+                int pct = 100;
+                if (nuclear && cityGovernorHas(city, "GOVERNOR_PROMOTION_ARMS_RACE_PROPONENT")) pct += 30;
+                if (pj.spaceRace && cityGovernorHas(city, "GOVERNOR_PROMOTION_SPACE_INITIATIVE")) pct += 30;
+                prod = prod * pct / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)
             prod += city.overflow;

@@ -165,10 +165,12 @@ int Game::plotAppeal(Hex plot) const {
 
 Fixed Game::districtHousing(const City& city) const {
     Fixed total;
+    const bool works = cityGovernorHas(city, "GOVERNOR_PROMOTION_WATER_WORKS");  // Liang
     for (const CityDistrict& cd : city.districts) {
         if (!cd.complete) continue;
         const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
         total += Fixed::fromInt(d.housing);
+        if (works && (d.id == "DISTRICT_NEIGHBORHOOD" || d.id == "DISTRICT_AQUEDUCT")) total += Fixed::fromInt(2);
         if (!d.appealHousing.empty()) {
             const int appeal = plotAppeal(cd.pos);
             for (const auto& [minimum, change] : d.appealHousing) {
@@ -199,8 +201,12 @@ Fixed Game::districtHousing(const City& city) const {
 
 int Game::districtAmenities(const City& city) const {
     int total = 0;
+    const bool works = cityGovernorHas(city, "GOVERNOR_PROMOTION_WATER_WORKS");  // Liang
     for (const CityDistrict& cd : city.districts) {
-        if (cd.complete) total += rules_->districts[static_cast<size_t>(cd.type)].amenities;
+        if (!cd.complete) continue;
+        total += rules_->districts[static_cast<size_t>(cd.type)].amenities;
+        const std::string& id = rules_->districts[static_cast<size_t>(cd.type)].id;
+        if (works && (id == "DISTRICT_CANAL" || id == "DISTRICT_DAM")) total += 1;
     }
     return total;
 }
@@ -278,7 +284,12 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.per));
     }
-    const int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
+    int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
+    // Reyna's Harbormaster doubles the Commercial Hub's and Harbor's adjacency in her city.
+    const Plot& here = state_.plot(plot);
+    const City* home = here.city == kNoCity ? nullptr : state_.city(here.city);
+    if (home && home->owner == player && (d.id == "DISTRICT_COMMERCIAL_HUB" || d.id == "DISTRICT_HARBOR") && cityGovernorHas(*home, "GOVERNOR_PROMOTION_HARBORMASTER"))
+        pct += 100;
     for (Fixed& y : out) y = y * std::max(0, pct) / 100;
     return out;
 }

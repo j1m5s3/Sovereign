@@ -299,6 +299,8 @@ public:
     // Envoys a player's Amani adds at this city-state (2, doubled by Puppeteer).
     int governorEnvoys(PlayerId player, PlayerId cityState) const;
     bool governorHasPromotion(const Governor& g, const char* promotionId) const;
+    // The city's own established governor holds this promotion.
+    bool cityGovernorHas(const City& city, const char* promotionId) const;
 
     // ---- diplomacy (08-diplomacy-city-states-governors.md; leader doc §10). Rules decide
     // every outcome; the dialogue layer only turns words into these deals.

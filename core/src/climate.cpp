@@ -124,10 +124,11 @@ void Game::burnPower(PlayerId pid) {
                 const BuildingType& bt = rules_->buildings[at(b)];
                 if (bt.burnsResource == kNone || bt.powerPerResource <= 0 || at(bt.burnsResource) >= p.stockpile.size()) continue;
                 const int short_ = c->powerDemand - c->powerSupply;
-                const int units = std::min(p.stockpile[at(bt.burnsResource)], (short_ + bt.powerPerResource - 1) / bt.powerPerResource);
+                const int per = bt.powerPerResource + (cityGovernorHas(*o, "GOVERNOR_PROMOTION_INDUSTRIALIST") ? 1 : 0);  // Magnus
+                const int units = std::min(p.stockpile[at(bt.burnsResource)], (short_ + per - 1) / per);
                 if (units <= 0) continue;
                 p.stockpile[at(bt.burnsResource)] -= units;
-                c->powerSupply += units * bt.powerPerResource;
+                c->powerSupply += units * per;
                 addCo2(pid, co2PerResource(rules_->resources[at(bt.burnsResource)].id) * units);
             }
         }
@@ -302,8 +303,11 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
                 sheltered = sheltered || (ni != kNone && rules_->improvements[static_cast<size_t>(ni)].halvesFloods);
             }
         }
-        // Damage.
+        // Damage (none where Liang's Reinforced Materials guards the city).
+        const City* guarded = p.city == kNoCity ? nullptr : state_.city(p.city);
+        const bool reinforced = guarded && cityGovernorHas(*guarded, "GOVERNOR_PROMOTION_REINFORCED_MATERIALS");
         for (DisasterDamage dd : dt.damage) {
+            if (reinforced) continue;
             if (sheltered) dd.percent /= 2;
             switch (dd.type) {
                 case DisasterDamageType::ImprovementDestroyed:

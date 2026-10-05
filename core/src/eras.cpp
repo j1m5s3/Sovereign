@@ -128,7 +128,8 @@ int Game::tourismPerTurn(PlayerId pid) const {
     const int era = playerEra(pid);
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
-        for (const GreatWork& w : c.greatWorks) total += rules_->greatWorkTypes[at(w.type)].tourism;
+        const int curator = cityGovernorHas(c, "GOVERNOR_PROMOTION_CURATOR") ? 2 : 1;  // Pingala
+        for (const GreatWork& w : c.greatWorks) total += rules_->greatWorkTypes[at(w.type)].tourism * curator;
         for (TypeIndex b : c.buildings) {
             const BuildingType& bt = rules_->buildings[at(b)];
             if (!bt.wonder) continue;
