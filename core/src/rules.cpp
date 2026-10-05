@@ -632,6 +632,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                                        : UnitLayer::Military;
         if (u.domain == Domain::Air) u.layer = UnitLayer::Air;  // aircraft never share a plot's layers
         u.antiAir = static_cast<int>(j["antiAir"].integer(0));
+        u.airSlots = static_cast<int>(j["airSlots"].integer(0));
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));
         u.combat = static_cast<int>(j["combat"].integer(0));
@@ -738,6 +739,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.needsRiver = j["needsRiver"].boolean(false);
             im.halvesFloods = j["halvesFloods"].boolean(false);
             im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
+            im.airSlots = static_cast<int>(j["airSlots"].integer(0));
+            im.builtById = j["builtBy"].str();
             const Json& adj = j["adjacentImprovementYield"];
             if (adj.isObject()) {
                 im.adjacentImprovementId = adj["improvement"].str();
@@ -1867,6 +1870,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     for (ImprovementType& im : improvements) {
+        if (!im.builtById.empty() && (im.builtBy = unit(im.builtById)) == kNone) {
+            *error = "improvement " + im.id + ": unknown builder unit " + im.builtById;
+            return false;
+        }
         if (!im.uniqueToId.empty() && (im.uniqueTo = civ(im.uniqueToId)) == kNone) {
             *error = "improvement " + im.id + ": unknown civilization " + im.uniqueToId;
             return false;

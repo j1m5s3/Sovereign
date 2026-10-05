@@ -832,6 +832,8 @@ void build(View& v, UnitId id) {
     if (worth(u->pos) >= 0) {
         // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+        options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
+        if (options.empty()) return;
         const City* home = s.plot(u->pos).city == kNoCity ? nullptr : s.city(s.plot(u->pos).city);
         if (home && home->powerSupply < home->powerDemand) {
             std::stable_partition(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].powerProvided > 0; });
@@ -856,6 +858,7 @@ void build(View& v, UnitId id) {
         u = s.unit(id);
         if (u && u->pos == *best && u->movesLeft > Fixed()) {
             std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+            options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
             if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
         }
         return;

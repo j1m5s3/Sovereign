@@ -279,6 +279,8 @@ def gen_units():
         }
         if combat > 0 and "no ZOC" not in special and row["Domain"] != "Air":
             u["zoneOfControl"] = True
+        if row["Unit"] == "Aircraft Carrier":
+            u["airSlots"] = 2  # 05: Naval carrier, 2 air slots (more with promotions)
         if num(row["Anti-air"]):
             u["antiAir"] = num(row["Anti-air"])  # protects adjacent plots from aircraft (05: air combat)
         if "found city" in special:
@@ -735,7 +737,8 @@ def gen_improvements():
         for r in table(SPEC / "terrain-features-resources.md", sec):
             resources[r["Resource"]] = "RESOURCE_" + snake(r["Resource"])
     rows = [r for r in table(SPEC / "improvements.md", "Improvements")
-            if r["Built by"] == "Builder" and not r["Unique to"]]
+            if r["Built by"] in ("Builder", "Military Engineer") and not r["Unique to"]
+            and r["Improvement"] != "Mountain Tunnel"]  # tunnels wait for mountain movement
     ids = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in rows}
     out = []
     for row in rows:
@@ -780,6 +783,12 @@ def gen_improvements():
             i["housing"] = int(m.group(1)) / int(m.group(2) or 1)
         if row["Appeal"] and num(row["Appeal"]):
             i["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
+        if row["Built by"] == "Military Engineer":
+            i["builtBy"] = "UNIT_MILITARY_ENGINEER"  # Fort, Airstrip, Missile Silo
+            if row["Defense"] and num(row["Defense"]):
+                i["defense"] = num(row["Defense"])
+            if row["Improvement"] == "Airstrip":
+                i["airSlots"] = 3  # 03: Airstrip, 3 air slots
         m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
         if m:
             i["powerProvided"] = int(m.group(1))  # renewables (09: Power)

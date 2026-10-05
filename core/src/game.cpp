@@ -580,6 +580,16 @@ void Game::advanceUnit(UnitId id) {
             enterPlot(*escort);
             u = state_.unit(id);  // enterPlot may change the unit list
         }
+        // A carrier takes its aircraft along (05: Naval carrier).
+        if (const int slots = typeOf(*rules_, *u).airSlots; slots > 0) {
+            int carried = 0;
+            for (Unit& o : state_.units) {
+                if (carried < slots && o.pos == u->pos && o.owner == u->owner && isAircraft(o)) {
+                    o.pos = next;
+                    ++carried;
+                }
+            }
+        }
         u->pos = next;
         u->movesLeft = inEnemyZoc(*u, next) ? Fixed() : after;
         u->activity = Activity::Awake;
@@ -644,6 +654,7 @@ CommandError Game::submit(const Command& c) {
     log_.push_back(c);
     apply(c);
     spawnCaptures();
+    checkAirBases();
     updateBoosts(c.player);
     checkVictory();
     return CommandError::Ok;

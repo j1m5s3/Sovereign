@@ -884,7 +884,12 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			ChooserTitle = TEXT("Build improvement");
 			for (sov::TypeIndex T : G.improvementsAt(Me(), U->pos))
 			{
-				Choices.Add({Str(R.improvements[static_cast<size_t>(T)].name), sov::Command::buildImprovement(Me(), U->id, T)});
+				// Only what this unit builds (Military Engineers: Fort, Airstrip, Missile Silo).
+				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, T);
+				if (G.validate(Build) == sov::CommandError::Ok)
+				{
+					Choices.Add({Str(R.improvements[static_cast<size_t>(T)].name), Build});
+				}
 			}
 			if (G.canHarvestAt(Me(), U->pos))
 			{

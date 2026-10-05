@@ -4,7 +4,7 @@
 // between bases, strike anything within their range from the base, and are intercepted on the
 // way by the strongest defender covering the target: an enemy fighter on patrol (fortified)
 // within its range, or an anti-air unit within one tile. Sovereign readings: the rebase range is
-// twice the strike range; carriers and airstrips wait.
+// twice the strike range. Aircraft Carriers carry 2 (moving them along) and an Airstrip bases 3.
 #include <algorithm>
 
 #include "sovereign/game.h"
@@ -18,6 +18,15 @@ size_t at(int i) { return static_cast<size_t>(i); }
 bool Game::isAircraft(const Unit& unit) const { return rules_->units[at(unit.type)].domain == Domain::Air; }
 
 int Game::airSlots(PlayerId player, Hex base) const {
+    // Carriers on the plot and an Airstrip in the player's land add to any city or Aerodrome slots.
+    int carried = 0;
+    for (const Unit& u : state_.units) carried += u.pos == base && u.owner == player ? rules_->units[at(u.type)].airSlots : 0;
+    const Plot& here = state_.plot(base);
+    if (here.improvement != kNone && here.owner == player && here.pillagedTurns == 0) carried += rules_->improvements[at(here.improvement)].airSlots;
+    return carried + baseAirSlots(player, base);
+}
+
+int Game::baseAirSlots(PlayerId player, Hex base) const {
     const City* center = state_.cityAt(base);
     if (center && center->owner == player) {
         const TypeIndex cc = rules_->district("DISTRICT_CITY_CENTER");
@@ -83,6 +92,18 @@ std::pair<int, UnitId> Game::interception(const Unit& attacker, Hex target) cons
         }
     }
     return {best, by};
+}
+
+// Aircraft whose base can no longer hold them (a sunk carrier, a pillaged Airstrip) are lost.
+void Game::checkAirBases() {
+    std::vector<UnitId> lost;
+    for (const Unit& u : state_.units) {
+        if (!isAircraft(u)) continue;
+        int before = 0;  // aircraft ahead of it on the same plot (by id) keep the slots first
+        for (const Unit& o : state_.units) before += o.pos == u.pos && o.id < u.id && isAircraft(o) ? 1 : 0;
+        if (before >= airSlots(u.owner, u.pos)) lost.push_back(u.id);
+    }
+    for (UnitId id : lost) removeUnit(id);
 }
 
 // Aircraft taken with a city or its Aerodrome are lost.

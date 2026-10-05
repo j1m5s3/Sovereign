@@ -1664,6 +1664,7 @@
    "moves": 3,
    "sight": 2,
    "zoneOfControl": true,
+   "airSlots": 2,
    "purchaseYield": "GOLD",
    "unlock": "TECH_COMBINED_ARMS",
    "promotionClass": "PROMOTION_CLASS_NAVAL_CARRIER"

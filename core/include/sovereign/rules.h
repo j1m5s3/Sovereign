@@ -183,6 +183,7 @@ struct UnitType {
     int ranged = 0;
     int range = 0;
     int antiAir = 0;  // strength against aircraft striking an adjacent plot (05: air combat)
+    int airSlots = 0; // aircraft it carries (Aircraft Carrier)
     int moves = 2;
     int sight = 2;
     bool zoneOfControl = false;
@@ -260,6 +261,9 @@ struct ImprovementType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;  // (loading only)
     int powerProvided = 0;   // free power to its city (renewables, 09: Power)
+    TypeIndex builtBy = kNone;  // only this unit builds it (Military Engineer); kNone: Builders
+    std::string builtById;      // (loading only)
+    int airSlots = 0;           // aircraft it bases (Airstrip)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
