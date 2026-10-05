@@ -18,7 +18,7 @@ Goal: humans play one game across machines. Specs:
 
 ## Milestones (one PR each)
 
-1. **The session protocol (`net/`, plain C++ like `battle/`, over the core):**
+1. **Done (this PR): The session protocol (`net/`, plain C++ like `battle/`, over the core):**
    - Messages:
      - hello: protocol version, rules checksum, mod list;
      - seat table and game start (the setup and seed, or a save);
@@ -45,4 +45,5 @@ Goal: humans play one game across machines. Specs:
 
 - Turns stay sequential, as the core plays them. Simultaneous and dynamic turn modes need the core to accept commands from several players at once, so they come after milestone 4.
 - The host is the order authority, not the rules authority: every machine runs the full core and rejects what it rejects. A cheating host can only reorder or drop commands, not invent state.
+- Milestone 1 as built: one message type set (Hello, Welcome with the save, Refuse, Seats, Submit, Apply, Refused, Hash, Resync, Chat). Commands travel in the save format's encoding (`encodeCommand`, now exported). The game always reaches a client as a save, so start, rejoin and resync are one path. Players outside the seat table (city-states) are the host's AI. `Game::stateMutForTests()` exists only to force a desync in tests. A three-process TCP run with `sovnet` matched hashes after 60 turns.
 - The language model runs on the speaking player's machine. Only its deal proposal and summary travel (already commands).

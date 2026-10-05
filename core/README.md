@@ -21,7 +21,8 @@ and other nondeterminism out of the core (`tools/check_core_rules.py`), and a
 check that the generated rules data is current. The same build adds the live battle
 simulation and the trained battle AI ([battle/](../battle/README.md)): `battle_tests`
 and the trainer `battle_train`; and the diplomacy dialogue layer
-([diplomacy/](../diplomacy/README.md)): `diplomacy_tests` and the `diplo_chat` tool.
+([diplomacy/](../diplomacy/README.md)): `diplomacy_tests` and the `diplo_chat` tool; and
+online play ([net/](../net/README.md)): `net_tests` and the `sovnet` tool.
 
 ## Headless simulator
 

@@ -1,12 +1,12 @@
 using System.IO;
 using UnrealBuildTool;
 
-// The rules core (../../../core), the live battle simulation (../../../battle) and the
-// diplomacy dialogue layer (../../../diplomacy, without its socket client) compiled as an
-// Unreal module. Private/Core holds one generated wrapper per source
-// (tools/check_unreal_core_module.py), so core/, battle/ and diplomacy/ never contain an
-// Unreal file. All three are plain C++17 with their own conventions, so they build without
-// PCHs or unity files (their files share anonymous-namespace names).
+// The rules core (../../../core), the live battle simulation (../../../battle), the
+// diplomacy dialogue layer (../../../diplomacy) and the online session protocol
+// (../../../net) compiled as an Unreal module, without their socket code. Private/Core holds
+// one generated wrapper per source (tools/check_unreal_core_module.py), so those folders never
+// contain an Unreal file. All are plain C++17 with their own conventions, so they build
+// without PCHs or unity files (their files share anonymous-namespace names).
 public class SovereignCore : ModuleRules
 {
 	public SovereignCore(ReadOnlyTargetRules Target) : base(Target)
@@ -20,6 +20,7 @@ public class SovereignCore : ModuleRules
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "core", "include"));
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "battle", "include"));
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "diplomacy", "include"));
+		PublicIncludePaths.Add(Path.Combine(RepoRoot, "net", "include"));
 		PrivateIncludePaths.Add(RepoRoot);
 
 		// Modular (editor) builds load the core as a DLL: export its API (sovereign/api.h).

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Keeps the Unreal SovereignCore module in step with the standalone builds.
 
-Unreal compiles the rules core, the battle simulation and the dialogue layer through one wrapper .cpp per
+Unreal compiles the rules core, the battle simulation, the dialogue layer and the session protocol through one wrapper .cpp per
 source in unreal/Source/SovereignCore/Private/Core/ (each only #includes its file), so
-core/, battle/ and diplomacy/ never hold an Unreal file. This check fails when the wrappers
-and the sovereign_core, sovereign_battle or sovereign_diplomacy sources in their
-CMakeLists.txt differ (the socket client, sovereign_diplomacy_http, stays out of Unreal).
+core/, battle/, diplomacy/ and net/ never hold an Unreal file. This check fails when the
+wrappers and the sovereign_core, sovereign_battle, sovereign_diplomacy or sovereign_net sources
+in their CMakeLists.txt differ (the socket code, sovereign_diplomacy_http and
+sovereign_net_tcp, stays out of Unreal).
 
   python3 tools/check_unreal_core_module.py          # check
   python3 tools/check_unreal_core_module.py --write  # regenerate the wrappers
@@ -21,6 +22,7 @@ LIBRARIES = [
     ("core", "sovereign_core", "SovCore_", "the core stays engine-independent"),
     ("battle", "sovereign_battle", "SovBattle_", "the battle simulation stays engine-independent"),
     ("diplomacy", "sovereign_diplomacy", "SovDiplomacy_", "the dialogue layer stays engine-independent"),
+    ("net", "sovereign_net", "SovNet_", "the session protocol stays engine-independent"),
 ]
 
 
