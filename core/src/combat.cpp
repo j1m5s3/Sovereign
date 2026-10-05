@@ -105,6 +105,7 @@ bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
     if (!t.alive || t.barbarian || state_.players[static_cast<size_t>(player)].barbarian) return false;
     const Relation& rel = state_.players[static_cast<size_t>(player)].relations[static_cast<size_t>(target)];
     if (rel.war || state_.turn < rules_->globalInt("DIPLOMACY_EARLIEST_MAJOR_DOW_TURN")) return false;
+    if (friends(player, target)) return false;  // a declared friend cannot be attacked while it lasts (08)
     // After a peace treaty, war may not resume for DIPLOMACY_PEACE_MIN_TURNS.
     return rel.since == 0 || state_.turn - rel.since >= rules_->globalInt("DIPLOMACY_PEACE_MIN_TURNS");
 }
@@ -647,14 +648,19 @@ void Game::applyCombat(const Command& c) {
         case CommandType::DeclareWar: {
             Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
             Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];
-            mine = theirs = Relation{true, state_.turn, false};
+            onWarDeclared(c.player, static_cast<PlayerId>(c.arg));
+            for (Relation* r : {&mine, &theirs}) {
+                r->war = true;
+                r->since = state_.turn;
+                r->peaceOffered = false;
+            }
             return;
         }
         case CommandType::MakePeace: {
             Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
             Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];
             mine.peaceOffered = true;
-            if (theirs.peaceOffered) mine = theirs = Relation{false, state_.turn, false};
+            if (theirs.peaceOffered) onPeace(c.player, static_cast<PlayerId>(c.arg));
             return;
         }
         case CommandType::Promote: {
@@ -688,6 +694,7 @@ void Game::applyCombat(const Command& c) {
             // Burning a city stains the ruler's name (leader doc §8.1).
             Player& p = state_.players[static_cast<size_t>(c.player)];
             p.reputation = std::max(-100, p.reputation - rules_->globalInt("REPUTATION_PER_RAZE"));
+            ++p.citiesRazed;  // every civ hears of it (agendas)
             razeCity(c.id);
             return;
         }
@@ -985,6 +992,10 @@ void Game::captureCity(City& city, UnitId attackerId) {
     }
 
     City& c = *state_.city(cid);
+    if (isMajorCiv(lost)) {
+        ++state_.players[static_cast<size_t>(me)].citiesCaptured;
+        remember(lost, me, MemoryKind::CapturedCity, -10, 60);
+    }
     if (c.originalCapital && c.originalOwner != me && !isCityState(c.originalOwner)) awardMoment(me, "MOMENT_FOREIGN_CAPITAL_TAKEN");
     c.owner = me;
     // 25% of the population is lost and the city is left at half HP with no walls.

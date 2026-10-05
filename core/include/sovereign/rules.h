@@ -607,9 +607,18 @@ struct Modifier {
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
+// A leader's agenda: what the AI version likes and dislikes (leaders-and-art-style.md,
+// Leader details; scored in diplomacy.cpp).
+enum class Agenda : uint8_t {
+    None = 0, QueenOfTheSeas, DefenderOfTheFaith, PaxRomana, SpartanPride, TolerantConqueror, Magnanimous,
+    FirstEmperor, ClosedCountry, EternalName, PatronOfTrade, HonourableWar, SapaInca,
+};
+
 struct CivType {
     std::string id, name, leader;
     std::vector<std::string> cityNames;
+    Agenda agenda = Agenda::None;
+    std::string agendaId, agendaName, agendaText;
 };
 
 // The leader's loadout (leader doc §2, §8.8; data in leader.json). Weapons set melee

@@ -1000,6 +1000,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.name = j["name"].str(id);
         c.leader = j["leader"].str();
         for (const Json& n : j["cityNames"].items()) c.cityNames.push_back(n.str());
+        c.agendaId = j["agenda"].str();
+        c.agendaName = j["agendaName"].str();
+        c.agendaText = j["agendaText"].str();
+        static const char* const agendas[] = {"", "AGENDA_QUEEN_OF_THE_SEAS", "AGENDA_DEFENDER_OF_THE_FAITH", "AGENDA_PAX_ROMANA",
+                                              "AGENDA_SPARTAN_PRIDE", "AGENDA_TOLERANT_CONQUEROR", "AGENDA_MAGNANIMOUS",
+                                              "AGENDA_FIRST_EMPEROR", "AGENDA_CLOSED_COUNTRY", "AGENDA_ETERNAL_NAME",
+                                              "AGENDA_PATRON_OF_TRADE", "AGENDA_HONOURABLE_WAR", "AGENDA_SAPA_INCA"};
+        for (size_t a = 1; a < sizeof(agendas) / sizeof(agendas[0]); ++a) {
+            if (c.agendaId == agendas[a]) c.agenda = static_cast<Agenda>(a);
+        }
         civs.push_back(std::move(c));
     }
     {

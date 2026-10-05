@@ -90,6 +90,8 @@ void writeCommand(ByteWriter& w, const Command& c) {
     writeHex(w, c.target);
     w.i32(c.arg);
     w.i32(c.arg2);
+    writeI32s(w, c.data);
+    w.str(c.text);
 }
 Command readCommand(ByteReader& r) {
     Command c;
@@ -99,6 +101,8 @@ Command readCommand(ByteReader& r) {
     c.target = readHex(r);
     c.arg = r.i32();
     c.arg2 = r.i32();
+    readI32s(r, c.data);
+    c.text = r.str();
     return c;
 }
 // Guards against out-of-range type indices before any rules code runs.
@@ -162,6 +166,17 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     for (const TradeRoute& tr : s.tradeRoutes) {
         if (tr.owner < 0 || static_cast<size_t>(tr.owner) >= s.players.size() || !inRange(tr.traderType, rules.units.size(), false)) return false;
         for (int32_t pi : tr.path) if (pi < 0 || pi >= s.grid.size()) return false;
+    }
+    auto playerOk = [&](PlayerId p) { return p >= 0 && static_cast<size_t>(p) < s.players.size(); };
+    for (const Player& p : s.players) {
+        for (const OpinionMemory& m : p.memories) if (!playerOk(m.about) || m.duration <= 0) return false;
+    }
+    for (const Deal& d : s.deals) {
+        if (!playerOk(d.from) || !playerOk(d.to)) return false;
+        for (const DealItem& i : d.items) if (!playerOk(i.from) || !inRange(i.resource, rules.resources.size(), true)) return false;
+    }
+    for (const Agreement& a : s.agreements) {
+        if (!playerOk(a.from) || !playerOk(a.to) || !inRange(a.resource, rules.resources.size(), true)) return false;
     }
     for (const FoundedReligion& rel : s.religions) {
         if (!inRange(rel.type, rules.religions.size(), false) || rel.founder < 0 || static_cast<size_t>(rel.founder) >= s.players.size()) return false;
@@ -269,7 +284,20 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.boolean(rel.war);
             w.i32(rel.since);
             w.boolean(rel.peaceOffered);
+            w.i32(rel.denouncedOn);
+            w.i32(rel.friendsUntil);
+            w.i32(rel.openBordersUntil);
+            w.i32(rel.lastProposal);
         }
+        w.u32(static_cast<uint32_t>(p.memories.size()));
+        for (const OpinionMemory& m : p.memories) {
+            w.i8(m.about);
+            w.u8(static_cast<uint8_t>(m.kind));
+            w.i16(m.amount);
+            w.i16(m.duration);
+            w.i32(m.turn);
+        }
+        writeI32s(w, {p.warsDeclared, p.surpriseWars, p.citiesCaptured, p.citiesRazed, p.tradersPlundered, p.assassinsSent});
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
             w.bytes(t->boosted);
@@ -385,6 +413,30 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(tr.turnsLeft);
     }
     w.i32(s.nextTradeRouteId);
+    w.u32(static_cast<uint32_t>(s.deals.size()));
+    for (const Deal& d : s.deals) {
+        w.i32(d.id);
+        w.i8(d.from);
+        w.i8(d.to);
+        w.i32(d.turn);
+        w.u32(static_cast<uint32_t>(d.items.size()));
+        for (const DealItem& i : d.items) {
+            w.u8(static_cast<uint8_t>(i.kind));
+            w.i8(i.from);
+            w.i32(i.amount);
+            w.i16(i.resource);
+        }
+    }
+    w.u32(static_cast<uint32_t>(s.agreements.size()));
+    for (const Agreement& a : s.agreements) {
+        w.u8(static_cast<uint8_t>(a.kind));
+        w.i8(a.from);
+        w.i8(a.to);
+        w.i32(a.amount);
+        w.i16(a.resource);
+        w.i32(a.until);
+    }
+    w.i32(s.nextDealId);
     w.i32(s.gameEra);
     w.i32(s.gameEraStart);
     w.bytes(std::vector<uint8_t>(s.worldMoments.begin(), s.worldMoments.end()));
@@ -521,6 +573,32 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.war = r.boolean();
             rel.since = r.i32();
             rel.peaceOffered = r.boolean();
+            rel.denouncedOn = r.i32();
+            rel.friendsUntil = r.i32();
+            rel.openBordersUntil = r.i32();
+            rel.lastProposal = r.i32();
+        }
+        uint32_t nmem = r.u32();
+        if (!r.checkCount(nmem, 10)) return false;
+        p.memories.resize(nmem);
+        for (OpinionMemory& m : p.memories) {
+            m.about = r.i8();
+            const uint8_t kind = r.u8();
+            if (kind > static_cast<uint8_t>(MemoryKind::Warmonger)) return false;
+            m.kind = static_cast<MemoryKind>(kind);
+            m.amount = r.i16();
+            m.duration = r.i16();
+            m.turn = r.i32();
+        }
+        {
+            std::vector<int32_t> deeds;
+            if (!readI32s(r, deeds) || deeds.size() != 6) return false;
+            p.warsDeclared = deeds[0];
+            p.surpriseWars = deeds[1];
+            p.citiesCaptured = deeds[2];
+            p.citiesRazed = deeds[3];
+            p.tradersPlundered = deeds[4];
+            p.assassinsSent = deeds[5];
         }
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();
@@ -668,6 +746,40 @@ bool deserializeState(ByteReader& r, GameState& s) {
         tr.turnsLeft = r.i32();
     }
     s.nextTradeRouteId = r.i32();
+    uint32_t ndeal = r.u32();
+    if (!r.checkCount(ndeal, 14)) return false;
+    s.deals.resize(ndeal);
+    for (Deal& d : s.deals) {
+        d.id = r.i32();
+        d.from = r.i8();
+        d.to = r.i8();
+        d.turn = r.i32();
+        uint32_t ni = r.u32();
+        if (!r.checkCount(ni, 8)) return false;
+        d.items.resize(ni);
+        for (DealItem& i : d.items) {
+            const uint8_t kind = r.u8();
+            if (kind >= kNumDealItemKinds) return false;
+            i.kind = static_cast<DealItemKind>(kind);
+            i.from = r.i8();
+            i.amount = r.i32();
+            i.resource = r.i16();
+        }
+    }
+    uint32_t nag = r.u32();
+    if (!r.checkCount(nag, 14)) return false;
+    s.agreements.resize(nag);
+    for (Agreement& a : s.agreements) {
+        const uint8_t kind = r.u8();
+        if (kind >= kNumDealItemKinds) return false;
+        a.kind = static_cast<DealItemKind>(kind);
+        a.from = r.i8();
+        a.to = r.i8();
+        a.amount = r.i32();
+        a.resource = r.i16();
+        a.until = r.i32();
+    }
+    s.nextDealId = r.i32();
     s.gameEra = r.i32();
     s.gameEraStart = r.i32();
     {

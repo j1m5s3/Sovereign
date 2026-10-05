@@ -156,6 +156,21 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				Text = FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4]);
 				break;
 			}
+			case sov::EventKind::DealProposed:
+				if (const sov::Deal* D = G.deal(E.value))
+				{
+					Text = FString::Printf(TEXT("%s proposes a deal: %s."), *CivOf(E.actor), *Str(sov::describeDeal(R, S, *D)));
+				}
+				break;
+			case sov::EventKind::DealAccepted: Text = FString::Printf(TEXT("%s accepted a deal from %s."), *CivOf(E.target), *CivOf(E.actor)); break;
+			case sov::EventKind::DealRejected: Text = FString::Printf(TEXT("%s turned down a deal from %s."), *CivOf(E.target), *CivOf(E.actor)); break;
+			case sov::EventKind::Denounced: Text = FString::Printf(TEXT("%s denounced %s."), *CivOf(E.actor), *CivOf(E.target)); break;
+			case sov::EventKind::FriendshipDeclared: Text = FString::Printf(TEXT("%s and %s declared friendship."), *CivOf(E.actor), *CivOf(E.target)); break;
+			case sov::EventKind::WarDeclared:
+				Text = FString::Printf(TEXT("%s declared %s on %s."), *CivOf(E.actor), E.value ? TEXT("a surprise war") : TEXT("war"), *CivOf(E.target));
+				break;
+			case sov::EventKind::PeaceMade: Text = FString::Printf(TEXT("%s and %s made peace."), *CivOf(E.actor), *CivOf(E.target)); break;
+			case sov::EventKind::DealBroken: Text = FString::Printf(TEXT("%s could not keep its deal with %s."), *CivOf(E.actor), *CivOf(E.target)); break;
 			case sov::EventKind::GreatPersonRecruited:
 				Text = FString::Printf(TEXT("%s joins you as a %s (Y: great people)."), *Str(R.greatPeople[static_cast<size_t>(E.value)].name),
 					*Str(R.greatPersonClasses[static_cast<size_t>(R.greatPeople[static_cast<size_t>(E.value)].cls)].name));

@@ -93,6 +93,54 @@ struct CityDistrict {
     bool complete = false;
 };
 
+// ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
+// What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace };
+constexpr int kNumDealItemKinds = 6;
+struct DealItem {
+    DealItemKind kind = DealItemKind::Gold;
+    PlayerId from = kNoPlayer;
+    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn
+    TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource
+};
+// A deal one player put to another; it waits here only while a human must answer.
+struct Deal {
+    int32_t id = 0;
+    PlayerId from = kNoPlayer, to = kNoPlayer;
+    int32_t turn = 0;
+    std::vector<DealItem> items;
+};
+// A running term of an accepted deal: gold or a resource each turn until `until`.
+struct Agreement {
+    DealItemKind kind = DealItemKind::GoldPerTurn;  // GoldPerTurn or Resource
+    PlayerId from = kNoPlayer, to = kNoPlayer;
+    int32_t amount = 0;
+    TypeIndex resource = kNone;
+    int32_t until = 0;  // last turn it runs
+};
+// Something a civ remembers about another; its weight fades to nothing over `duration` turns.
+enum class MemoryKind : uint8_t {
+    DeclaredWar = 0, SurpriseWar, Denounced, MadePeace, Gift, Deal, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger,
+};
+struct OpinionMemory {
+    PlayerId about = kNoPlayer;
+    MemoryKind kind = MemoryKind::Deal;
+    int16_t amount = 0;
+    int16_t duration = 30;
+    int32_t turn = 0;
+};
+// Why one civ feels as it does about another (shown to the player; fed to the dialogue layer).
+enum class OpinionReasonKind : uint8_t {
+    AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
+    TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda,
+};
+struct OpinionReason {
+    OpinionReasonKind kind = OpinionReasonKind::Agenda;
+    int value = 0;
+};
+// Relationship states (08: Meeting and relationship states; Allied waits for alliances).
+enum class Relationship : uint8_t { AtWar = 0, Denounced, Unfriendly, Neutral, Friendly, DeclaredFriend };
+
 // A trade route (07: Trade routes): the Trader travels it until it ends, then returns home.
 struct TradeRoute {
     int32_t id = 0;
@@ -191,6 +239,10 @@ struct Relation {
     bool war = false;
     int32_t since = 0;          // turn the current war or peace began (0: never at war)
     bool peaceOffered = false;  // this player offers peace; peace comes when both sides offer
+    int32_t denouncedOn = 0;      // turn this player denounced that one (0: not denouncing)
+    int32_t friendsUntil = 0;     // a declaration of friendship runs through this turn (both sides)
+    int32_t openBordersUntil = 0; // this player opens its borders to that one through this turn
+    int32_t lastProposal = 0;     // turn this player last put a deal to that one (AI pacing)
 };
 
 struct Player {
@@ -236,6 +288,9 @@ struct Player {
     int16_t religion = -1;        // the religion it founded (GameState::religions index)
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
+    std::vector<OpinionMemory> memories;  // what this player remembers of others (diplomacy)
+    // Deeds every civ hears of (agendas weigh them).
+    int warsDeclared = 0, surpriseWars = 0, citiesCaptured = 0, citiesRazed = 0, tradersPlundered = 0, assassinsSent = 0;
     std::vector<uint8_t> visibility;  // Visibility per plot index
     Hex startPos;
     // The throne (leader doc §5). An interregnum empties policy slots for a few turns after
@@ -305,6 +360,14 @@ enum class EventKind : uint8_t {
     AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion, GreatPersonRecruited,
     HistoricMoment,  // value: the moment
     NewAge,          // value: the Age the player entered with the new era
+    DealProposed,    // actor proposed to target; value: the deal id (in GameState::deals)
+    DealAccepted,    // actor's deal was accepted by target
+    DealRejected,    // actor's deal was turned down by target
+    Denounced,       // actor denounced target
+    FriendshipDeclared,
+    WarDeclared,     // value: 1 for a surprise war
+    PeaceMade,
+    DealBroken,      // actor could not pay what it owed target
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -342,6 +405,9 @@ struct SOV_API GameState {
     std::vector<int8_t> worldMoments;         // per moment: 1 + the era it was claimed for (world's firsts)
     int majorsAtStart = 0;                    // tourism divisor (07: Visiting tourists)
     int32_t nextTradeRouteId = 1;
+    std::vector<Deal> deals;            // proposals waiting for a human's answer
+    std::vector<Agreement> agreements;  // running deal terms
+    int32_t nextDealId = 1;
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;

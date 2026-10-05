@@ -145,7 +145,9 @@ void Game::processTourism(PlayerId pid) {
             const City* d = state_.city(r.destination);
             return r.owner == pid && d && d->owner == x.id;
         });
-        p.tourismTo[at(x.id)] += t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0)) / 100;
+        // +25% toward a civ that opens its borders to us (08: Open Borders).
+        const int borders = grantsOpenBorders(x.id, pid) ? 25 : 0;
+        p.tourismTo[at(x.id)] += t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders) / 100;
     }
 }
 

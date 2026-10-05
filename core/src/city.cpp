@@ -362,6 +362,12 @@ Fixed Game::goldPerTurn(PlayerId player) const {
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
     if (p.anarchyTurns == 0) net += founderYields(player)[idx(YieldType::Gold)];  // Tithe and the like (06)
+    // Gold promised by deals (08: Trade Deal).
+    for (const Agreement& a : state_.agreements) {
+        if (a.kind != DealItemKind::GoldPerTurn || a.until < state_.turn) continue;
+        if (a.from == player) net -= Fixed::fromInt(a.amount);
+        if (a.to == player) net += Fixed::fromInt(a.amount);
+    }
     return net;
 }
 

@@ -193,6 +193,10 @@ void Game::processTrade(PlayerId pid) {
                 const Unit* m = state_.unitAt(h, UnitLayer::Military, *rules_);
                 if (m && atWar(pid, m->owner) && !state_.cityAt(h)) {
                     state_.players[at(m->owner)].gold += Fixed::fromInt(rules_->globalInt("TRADE_ROUTE_PLUNDER_GOLD"));
+                    if (isMajorCiv(m->owner)) {
+                        ++state_.players[at(m->owner)].tradersPlundered;
+                        remember(pid, m->owner, MemoryKind::PlunderedTrader, -6, 30);
+                    }
                     cut = true;
                     home = false;
                     break;

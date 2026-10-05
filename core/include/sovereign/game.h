@@ -239,6 +239,33 @@ public:
     bool atWar(PlayerId a, PlayerId b) const;
     bool canDeclareWar(PlayerId player, PlayerId target) const;
     bool canMakePeace(PlayerId player, PlayerId target) const;
+
+    // ---- diplomacy (08-diplomacy-city-states-governors.md; leader doc §10). Rules decide
+    // every outcome; the dialogue layer only turns words into these deals.
+    bool isMajorCiv(PlayerId player) const;
+    bool hasMet(PlayerId a, PlayerId b) const;
+    bool denouncing(PlayerId by, PlayerId target) const;  // within DIPLOMACY_DENOUNCE_TIME_LIMIT
+    bool friends(PlayerId a, PlayerId b) const;            // a declaration of friendship in force
+    bool grantsOpenBorders(PlayerId owner, PlayerId to) const;
+    // How `holder` feels about `about`: the sum of its reasons, clamped to -100..100.
+    int opinionOf(PlayerId holder, PlayerId about) const;
+    std::vector<OpinionReason> opinionReasons(PlayerId holder, PlayerId about) const;
+    int agendaOpinion(PlayerId holder, PlayerId about) const;
+    Relationship relationship(PlayerId holder, PlayerId about) const;
+    bool canDenounce(PlayerId by, PlayerId target) const;
+    // Why a deal cannot be made now (CommandError::Ok when it can).
+    CommandError dealProblem(const Deal& deal) const;
+    // The deal's worth to `judge` in gold (positive: it gains), before its opinion is weighed.
+    int dealValue(PlayerId judge, const Deal& deal) const;
+    // Rules-only acceptance: value against a bar its opinion of the proposer raises or lowers.
+    bool wouldAccept(PlayerId judge, const Deal& deal) const;
+    // Items `from` could put into a deal with `to` now (amounts at their most).
+    std::vector<DealItem> offerableItems(PlayerId from, PlayerId to) const;
+    // Luxuries: improved copies owned, and access after deals (luxury amenities follow access).
+    int luxuryCopies(PlayerId player, TypeIndex resource) const;
+    int luxuryCopiesTraded(PlayerId player, TypeIndex resource) const;  // given away by running deals
+    bool hasLuxury(PlayerId player, TypeIndex resource) const;
+    const Deal* deal(int32_t id) const;
     // Abilities in force on a unit: innate ones plus those its owner's modifiers grant.
     std::vector<TypeIndex> unitAbilities(const Unit& unit) const;
     // Sum of `amount` over the unit's promotion and ability effects of this kind
@@ -393,6 +420,15 @@ private:
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
+    CommandError validateDiplomacy(const Command& c) const;
+    void applyDiplomacy(const Command& c);
+    void executeDeal(const Deal& deal);
+    // `holder` remembers something `about` did (no-op unless both are major civs).
+    void remember(PlayerId holder, PlayerId about, MemoryKind kind, int amount, int duration);
+    // War is declared: memories, deeds, friendships and running deals end.
+    void onWarDeclared(PlayerId by, PlayerId target);
+    void onPeace(PlayerId a, PlayerId b);
+    void processDiplomacy(PlayerId player);  // running deals pay, expire or break; old memories fade
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn
     // Historic moments: an ordinary one, or a world's first (per key) with the ordinary one as fallback.
     void awardMoment(PlayerId player, const char* moment);
@@ -444,5 +480,12 @@ private:
     GameState state_;
     std::vector<Command> log_;
 };
+
+// Plain-English deal terms ("England gives 100 Gold; France gives Wine for 30 turns"), for the
+// HUD, logs and the dialogue layer's prompts.
+SOV_API std::string describeDealItem(const Rules& rules, const GameState& state, const DealItem& item);
+SOV_API std::string describeDeal(const Rules& rules, const GameState& state, const Deal& deal);
+SOV_API const char* relationshipName(Relationship r);
+SOV_API const char* opinionReasonName(OpinionReasonKind k);
 
 }  // namespace sov

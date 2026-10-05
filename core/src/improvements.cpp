@@ -107,14 +107,10 @@ int Game::luxuryAmenities(const City& city) const {
     }
     std::stable_sort(mine.begin(), mine.end(), [](const City* a, const City* b) { return a->population > b->population; });
     const int rank = static_cast<int>(std::find(mine.begin(), mine.end(), &city) - mine.begin());
+    // Access after deals: copies traded away are lost, copies traded in count (08: Trade Deal).
     std::vector<uint8_t> have(rules_->resources.size(), 0);
-    for (size_t i = 0; i < state_.plots.size(); ++i) {
-        const Plot& p = state_.plots[i];
-        if (p.owner != owner || p.resource == kNone || have[static_cast<size_t>(p.resource)]) continue;
-        const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
-        if (r.cls != ResourceClass::Luxury) continue;
-        const Hex h = state_.grid.at(static_cast<int>(i));
-        if (resourceVisible(owner, h) && resourceImproved(h)) have[static_cast<size_t>(p.resource)] = 1;
+    for (size_t r = 0; r < rules_->resources.size(); ++r) {
+        if (rules_->resources[r].cls == ResourceClass::Luxury) have[r] = hasLuxury(owner, static_cast<TypeIndex>(r)) ? 1 : 0;
     }
     int amenities = 0;
     for (size_t r = 0; r < have.size(); ++r) {

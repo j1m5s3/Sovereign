@@ -216,6 +216,10 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion:
             return validateReligion(c);
+        case CommandType::ProposeDeal:
+        case CommandType::AnswerDeal:
+        case CommandType::Denounce:
+            return validateDiplomacy(c);
         case CommandType::StartTradeRoute:
             return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
         case CommandType::SendEnvoy:
@@ -299,7 +303,8 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     if (c && c->owner != unit.owner) return std::nullopt;
     // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
     const PlayerId owner = state_.plot(to).owner;
-    if (owner != kNoPlayer && owner != unit.owner && state_.plot(from).owner != owner && !atWar(unit.owner, owner)) {
+    if (owner != kNoPlayer && owner != unit.owner && state_.plot(from).owner != owner && !atWar(unit.owner, owner) &&
+        !grantsOpenBorders(owner, unit.owner)) {
         const Player& op = state_.players[static_cast<size_t>(owner)];
         for (size_t i = 0; i < rules_->civics.size(); ++i) {
             if (rules_->civics[i].enforceBorders && op.civics.has(static_cast<TypeIndex>(i)) &&
@@ -624,6 +629,9 @@ void Game::apply(const Command& c) {
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion: applyReligion(c); break;
         case CommandType::StartTradeRoute: applyTradeRoute(c); break;
+        case CommandType::ProposeDeal:
+        case CommandType::AnswerDeal:
+        case CommandType::Denounce: applyDiplomacy(c); break;
         case CommandType::SendEnvoy: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
@@ -757,6 +765,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processTrade(pid);
         processEnvoys(pid);
         processTourism(pid);
+        processDiplomacy(pid);
         healAndFortify(pid);
         healCities(pid);
     }
