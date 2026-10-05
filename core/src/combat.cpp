@@ -985,6 +985,7 @@ void Game::captureCity(City& city, UnitId attackerId) {
     }
 
     City& c = *state_.city(cid);
+    if (c.originalCapital && c.originalOwner != me && !isCityState(c.originalOwner)) awardMoment(me, "MOMENT_FOREIGN_CAPITAL_TAKEN");
     c.owner = me;
     // 25% of the population is lost and the city is left at half HP with no walls.
     const int64_t lossRaw = rules_->global("CITY_POPULATION_LOSS_TO_CONQUEST_PERCENTAGE").raw() * c.population;

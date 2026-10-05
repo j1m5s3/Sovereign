@@ -250,7 +250,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -308,6 +308,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         e.embarkedStrength = static_cast<int>(j["embarkedStrength"].integer(10));
         e.greatPersonBaseCost = static_cast<int>(j["greatPersonBaseCost"].integer(0));
         e.tradeRouteExtraTurns = static_cast<int>(j["tradeRouteExtraTurns"].integer(0));
+        e.minTurns = static_cast<int>(j["minTurns"].integer(0));
+        e.maxTurns = static_cast<int>(j["maxTurns"].integer(0));
+        e.eraScoreShift = static_cast<int>(j["eraScoreShift"].integer(0));
         eras.push_back(std::move(e));
     }
     auto readNodes = [&](const char* name, std::vector<TreeNode>& out) {
@@ -1021,6 +1024,15 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         dynasties.push_back(std::move(d));
     }
+    // Historic moments (09).
+    for (const auto& [id, j] : m.tables["moments"]) {
+        MomentType mo;
+        mo.id = id;
+        mo.name = j["name"].str(id);
+        mo.eraScore = static_cast<int>(j["eraScore"].integer(0));
+        mo.obsoleteEra = j.has("obsoleteEra") ? era(j["obsoleteEra"].str()) : -1;
+        moments.push_back(std::move(mo));
+    }
     // City-states (08) and what envoys to them give.
     auto kindOf = [](const std::string& k, CityStateKind& out) {
         static const std::pair<const char*, CityStateKind> kinds[] = {
@@ -1412,6 +1424,7 @@ TypeIndex Rules::greatPerson(const std::string& id) const { return findIn(greatP
 TypeIndex Rules::greatWorkType(const std::string& id) const { return findIn(greatWorkTypes, id); }
 TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id); }
 TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }
+TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {
     for (const Dynasty& d : dynasties) {

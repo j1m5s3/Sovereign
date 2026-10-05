@@ -56,6 +56,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.dominationVictory);
     w.boolean(s.scoreVictory);
     w.boolean(s.religiousVictory);
+    w.boolean(s.cultureVictory);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
@@ -76,6 +77,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.dominationVictory = r.boolean();
     s.scoreVictory = r.boolean();
     s.religiousVictory = r.boolean();
+    s.cultureVictory = r.boolean();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
@@ -113,7 +115,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
     if (s.winner != kNoPlayer && (s.winner < 0 || static_cast<size_t>(s.winner) >= s.players.size())) return false;
-    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Religious)) return false;
+    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Culture)) return false;
     if ((s.winner == kNoPlayer) != (s.victory == Victory::None) || s.setup.turnLimit < 0) return false;
     for (const Player& p : s.players) {
         if (!inRange(p.civ, rules.civs.size(), p.barbarian || p.cityState != kNone)) return false;
@@ -253,6 +255,15 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.envoyTokens);
         w.i32(p.influence);
         w.i8(p.firstMetBy);
+        w.boolean(p.hadSuzerain);
+        w.i32(p.eraScore);
+        w.u8(static_cast<uint8_t>(p.age));
+        w.i32(p.pastGoldenAges);
+        w.i32(p.pastDarkAges);
+        w.bytes(std::vector<uint8_t>(p.momentEras.begin(), p.momentEras.end()));
+        w.bytes(p.met);
+        writeFixed(w, p.lifetimeCulture);
+        writeI32s(w, p.tourismTo);
         w.u32(static_cast<uint32_t>(p.relations.size()));
         for (const Relation& rel : p.relations) {
             w.boolean(rel.war);
@@ -374,6 +385,10 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(tr.turnsLeft);
     }
     w.i32(s.nextTradeRouteId);
+    w.i32(s.gameEra);
+    w.i32(s.gameEraStart);
+    w.bytes(std::vector<uint8_t>(s.worldMoments.begin(), s.worldMoments.end()));
+    w.i32(s.majorsAtStart);
     w.u32(static_cast<uint32_t>(s.religions.size()));
     for (const FoundedReligion& rel : s.religions) {
         w.i16(rel.type);
@@ -487,6 +502,18 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.envoyTokens = r.i32();
         p.influence = r.i32();
         p.firstMetBy = r.i8();
+        p.hadSuzerain = r.boolean();
+        p.eraScore = r.i32();
+        p.age = static_cast<Age>(r.u8());
+        p.pastGoldenAges = r.i32();
+        p.pastDarkAges = r.i32();
+        {
+            const std::vector<uint8_t> me = r.bytes();
+            p.momentEras.assign(me.begin(), me.end());
+        }
+        p.met = r.bytes();
+        p.lifetimeCulture = readFixed(r);
+        if (!readI32s(r, p.tourismTo)) return false;
         uint32_t nrel = r.u32();
         if (!r.checkCount(nrel, 6)) return false;
         p.relations.resize(nrel);
@@ -641,6 +668,13 @@ bool deserializeState(ByteReader& r, GameState& s) {
         tr.turnsLeft = r.i32();
     }
     s.nextTradeRouteId = r.i32();
+    s.gameEra = r.i32();
+    s.gameEraStart = r.i32();
+    {
+        const std::vector<uint8_t> wm = r.bytes();
+        s.worldMoments.assign(wm.begin(), wm.end());
+    }
+    s.majorsAtStart = r.i32();
     uint32_t nrel = r.u32();
     if (!r.checkCount(nrel, 11)) return false;
     s.religions.resize(nrel);

@@ -142,6 +142,15 @@ public:
     int greatPersonAuraStrength(const Unit& unit) const;
     int greatPersonAuraMoves(const Unit& unit) const;
 
+    // ---- eras, ages and tourism (09: Era score and Ages; 07: Tourism and Culture Victory)
+    std::pair<int, int> ageThresholds(PlayerId player) const;  // (Dark below, Golden at or above) for this era's score
+    int ageLoyalty(const City& city) const;
+    int tourismPerTurn(PlayerId player) const;
+    int visitingTourists(PlayerId player, PlayerId from) const;
+    int visitingTourists(PlayerId player) const;  // from every other civ
+    int domesticTourists(PlayerId player) const;
+    PlayerId cultureVictor() const;
+
     // ---- city-states and envoys (08: City-States)
     bool isCityState(PlayerId player) const;
     int envoysAt(PlayerId player, PlayerId cityState) const;
@@ -385,6 +394,11 @@ private:
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn
+    // Historic moments: an ordinary one, or a world's first (per key) with the ordinary one as fallback.
+    void awardMoment(PlayerId player, const char* moment);
+    void awardFirst(PlayerId player, const char* worldMoment, const char* ownMoment, int key = 0);
+    void processEras();  // the world moves to the next era and every civ's age is set
+    void processTourism(PlayerId player);
     void processTrade(PlayerId player);  // routes run, end or are plundered
     CommandError validateReligion(const Command& c) const;
     void applyReligion(const Command& c);

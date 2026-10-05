@@ -29,6 +29,7 @@ add_library(sovereign_core
   src/trade.cpp
   src/wonders.cpp
   src/citystates.cpp
+  src/eras.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -82,6 +83,7 @@ add_executable(sovereign_tests
   tests/test_trade.cpp
   tests/test_wonders.cpp
   tests/test_citystates.cpp
+  tests/test_eras.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

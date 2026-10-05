@@ -1234,56 +1234,73 @@
    "name": "Ancient",
    "embarkedStrength": 10,
    "greatPersonBaseCost": 30,
-   "tradeRouteExtraTurns": 0
+   "tradeRouteExtraTurns": 0,
+   "minTurns": 40,
+   "maxTurns": 60,
+   "eraScoreShift": -3
   },
   {
    "id": "ERA_CLASSICAL",
    "name": "Classical",
    "embarkedStrength": 15,
    "greatPersonBaseCost": 60,
-   "tradeRouteExtraTurns": 0
+   "tradeRouteExtraTurns": 0,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_MEDIEVAL",
    "name": "Medieval",
    "embarkedStrength": 15,
    "greatPersonBaseCost": 120,
-   "tradeRouteExtraTurns": 10
+   "tradeRouteExtraTurns": 10,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_RENAISSANCE",
    "name": "Renaissance",
    "embarkedStrength": 30,
    "greatPersonBaseCost": 240,
-   "tradeRouteExtraTurns": 10
+   "tradeRouteExtraTurns": 10,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_INDUSTRIAL",
    "name": "Industrial",
    "embarkedStrength": 35,
    "greatPersonBaseCost": 420,
-   "tradeRouteExtraTurns": 20
+   "tradeRouteExtraTurns": 20,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_MODERN",
    "name": "Modern",
    "embarkedStrength": 50,
    "greatPersonBaseCost": 660,
-   "tradeRouteExtraTurns": 20
+   "tradeRouteExtraTurns": 20,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_ATOMIC",
    "name": "Atomic",
    "embarkedStrength": 55,
    "greatPersonBaseCost": 960,
-   "tradeRouteExtraTurns": 20
+   "tradeRouteExtraTurns": 20,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_INFORMATION",
    "name": "Information",
    "embarkedStrength": 55,
    "greatPersonBaseCost": 1320,
-   "tradeRouteExtraTurns": 30
+   "tradeRouteExtraTurns": 30,
+   "minTurns": 40,
+   "maxTurns": 60
   },
   {
    "id": "ERA_FUTURE",

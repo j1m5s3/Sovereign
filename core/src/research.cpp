@@ -278,6 +278,11 @@ void Game::applyResearch(const Command& c) {
             if (uses > 0) p.anarchyTurns = rules_->globalInt("GOVERNMENT_BASE_ANARCHY_TURNS") + uses;
             ++uses;
             p.government = gov;
+            if (const int tier = rules_->governments[static_cast<size_t>(gov)].tier; tier >= 1 && tier <= 4) {
+                const std::string world = "MOMENT_FIRST_TIER_" + std::to_string(tier) + "_GOVERNMENT_IN_WORLD";
+                const std::string own = "MOMENT_FIRST_TIER_" + std::to_string(tier) + "_GOVERNMENT";
+                awardFirst(c.player, world.c_str(), own.c_str(), tier);
+            }
             p.policies.assign(static_cast<size_t>(rules_->governments[static_cast<size_t>(gov)].totalSlots()), kNone);
             if (first) p.freeChanges = true;
             break;
@@ -294,6 +299,19 @@ void Game::applyResearch(const Command& c) {
 void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
     Player& p = state_.players[static_cast<size_t>(pid)];
     TreeProgress& tree = civic ? p.civics : p.techs;
+    {
+        // The first tech or civic of a new era is a moment, a world's first for the first civ (09).
+        const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+        const int era = nodes[static_cast<size_t>(node)].era;
+        int before = 0;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (tree.done[i]) before = std::max(before, nodes[i].era);
+        }
+        if (era > before && era > 0) {
+            awardFirst(pid, civic ? "MOMENT_WORLD_S_FIRST_CIVIC_OF_NEW_ERA" : "MOMENT_WORLD_S_FIRST_TECHNOLOGY_OF_NEW_ERA",
+                       civic ? "MOMENT_FIRST_CIVIC_OF_NEW_ERA" : "MOMENT_FIRST_TECHNOLOGY_OF_NEW_ERA", era);
+        }
+    }
     tree.done[static_cast<size_t>(node)] = 1;
     if (tree.current == node) tree.current = kNone;
     if (civic) {

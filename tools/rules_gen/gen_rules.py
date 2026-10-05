@@ -832,6 +832,28 @@ def boost_trigger(text):
     return {"type": "UNTRACKED"}
 
 
+def era_turns(row):
+    """Era length bounds and the age threshold shift (09: Era score and Ages)."""
+    out = {}
+    m = re.fullmatch(r"(\d+)/(\d+)", row["Min / max turns [R&F]"] or "")
+    if m:
+        out["minTurns"], out["maxTurns"] = int(m.group(1)), int(m.group(2))
+    if row["Era score threshold shift [GS]"]:
+        out["eraScoreShift"] = num(row["Era score threshold shift [GS]"])
+    return out
+
+
+def gen_moments():
+    """Historic moments with their era score and the era they stop counting in (09: Era score)."""
+    out = []
+    for r in table(SPEC / "eras-moments-loyalty.md", "Historic moments [R&F]"):
+        m = {"id": "MOMENT_" + snake(r["Moment"]), "name": r["Moment"], "eraScore": num(r["Era score"])}
+        if r["Obsolete era"]:
+            m["obsoleteEra"] = "ERA_" + r["Obsolete era"].replace(" Era", "").upper()
+        out.append(m)
+    return {"moments": out}
+
+
 def gen_tree(kind, name_col, prefix, key):
     ids = node_names()
     out = []
@@ -875,7 +897,8 @@ def gen_tree(kind, name_col, prefix, key):
         doc["eras"] = [{"id": "ERA_" + e.upper(), "name": e,
                         "embarkedStrength": num(stats[e + " Era"]["Embarked strength"]),
                         "greatPersonBaseCost": num(stats[e + " Era"]["GP base cost"]),
-                        "tradeRouteExtraTurns": num(stats[e + " Era"]["Trade route min end-turn change"])} for e in ERAS]
+                        "tradeRouteExtraTurns": num(stats[e + " Era"]["Trade route min end-turn change"]),
+                        **era_turns(stats[e + " Era"])} for e in ERAS]
     return doc
 
 
@@ -1296,6 +1319,7 @@ def main():
         "religion.json": gen_religion(),
         "wonders.json": gen_wonders(),
         "citystates.json": gen_city_states(),
+        "moments.json": gen_moments(),
     }
     stale = []
     for name, doc in outputs.items():

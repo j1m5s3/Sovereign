@@ -28,6 +28,7 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::Score: return TEXT("Score");
 		case sov::Victory::LastStanding: return TEXT("Last civ standing");
 		case sov::Victory::Religious: return TEXT("Religious");
+		case sov::Victory::Culture: return TEXT("Culture");
 		default: return TEXT("");
 	}
 }
@@ -83,6 +84,16 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		Line(Faith, 16, Y);
 	}
+	// The world era, this civ's age and era score (09), and tourism (07).
+	{
+		static const TCHAR* Ages[] = {TEXT("Normal Age"), TEXT("Golden Age"), TEXT("Dark Age"), TEXT("Heroic Age")};
+		const auto [Dark, Golden] = G.ageThresholds(Me);
+		const int32 EraIndex = FMath::Clamp(S.gameEra, 0, static_cast<int32>(R.eras.size()) - 1);
+		Line(FString::Printf(TEXT("%s Era, %s   Era score %d (Dark below %d, Golden at %d)   Tourism %d: %d visitors, %d at home"),
+				 *Str(R.eras[static_cast<size_t>(EraIndex)].name), Ages[static_cast<size_t>(P.age) % 4], P.eraScore, Dark, Golden,
+				 G.tourismPerTurn(Me), G.visitingTourists(Me), G.domesticTourists(Me)),
+			16, Y, FLinearColor(0.85f, 0.85f, 1.f));
+	}
 	if (P.envoyTokens > 0)
 	{
 		Line(FString::Printf(TEXT("Envoys to send: %d   O: city-states"), P.envoyTokens), 16, Y, FLinearColor(0.6f, 0.9f, 1.f));
@@ -135,6 +146,16 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::AssassinKilled: Text = FString::Printf(TEXT("An assassin sent against %s was killed."), *CivOf(E.target)); break;
 			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
 			case sov::EventKind::Rebellion: Text = FString::Printf(TEXT("Rebels rise against the iron fist of %s."), *CivOf(E.target)); break;
+			case sov::EventKind::HistoricMoment:
+				Text = FString::Printf(TEXT("Historic moment: %s (+%d era score)."), *Str(R.moments[static_cast<size_t>(E.value)].name),
+					R.moments[static_cast<size_t>(E.value)].eraScore);
+				break;
+			case sov::EventKind::NewAge:
+			{
+				static const TCHAR* Ages[] = {TEXT("a Normal Age"), TEXT("a Golden Age"), TEXT("a Dark Age"), TEXT("a Heroic Age")};
+				Text = FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4]);
+				break;
+			}
 			case sov::EventKind::GreatPersonRecruited:
 				Text = FString::Printf(TEXT("%s joins you as a %s (Y: great people)."), *Str(R.greatPeople[static_cast<size_t>(E.value)].name),
 					*Str(R.greatPersonClasses[static_cast<size_t>(R.greatPeople[static_cast<size_t>(E.value)].cls)].name));
