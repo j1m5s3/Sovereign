@@ -23,8 +23,10 @@ public:
 	ASovBattleScene();
 
 	// Ground colour from the fought-over plot; woods scatter trees (cover is decorative here).
+	// bCity: a city assault, fought before the city with the defenders backed by its walls (bWalls)
+	// or its outer houses.
 	void Build(const FSovBattleSpec& Spec, const FLinearColor& Ground, bool bWoods, const FLinearColor& AttackerColor,
-		const FLinearColor& DefenderColor);
+		const FLinearColor& DefenderColor, bool bCity = false, bool bWalls = false);
 	void Sync(const FSovBattleSim& Sim);
 	FVector ToWorld(const FVector2D& P, double Z = 0.0) const { return GetActorLocation() + FVector(P.X, P.Y, Z); }
 

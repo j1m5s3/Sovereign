@@ -229,7 +229,8 @@ struct Agent {
 // or AutoResolveBattle settles it. Nothing else may happen meanwhile.
 struct PendingBattle {
     bool active = false;
-    UnitId attacker = kNoUnit, defender = kNoUnit;
+    UnitId attacker = kNoUnit, defender = kNoUnit;  // defender: kNoUnit when the target is a city
+    CityId city = kNoCity;                          // a city assault (§9: a city holding the leader)
     Hex target;
     PlayerId liveFor = kNoPlayer;   // the human whose leader is in the fight
     UnitId leader = kNoUnit;        // that leader

@@ -15,7 +15,7 @@
 
 namespace sov {
 
-constexpr uint32_t kSaveVersion = 14;  // 2: cities (MVP-2), commands carry arg2; 3: research (MVP-3); 4: improvements; 5: combat; 6: city combat, barbarians; 7: districts; 8: victory; 9: leader gear and escorts; 10: succession, captivity, regicide; 11: assassins, leader promotions; 12: loyalty, Free Cities; 13: stances, reputation; 14: live battle contract
+constexpr uint32_t kSaveVersion = 15;  // 2: cities (MVP-2), commands carry arg2; 3: research (MVP-3); 4: improvements; 5: combat; 6: city combat, barbarians; 7: districts; 8: victory; 9: leader gear and escorts; 10: succession, captivity, regicide; 11: assassins, leader promotions; 12: loyalty, Free Cities; 13: stances, reputation; 14: live battle contract; 15: live city assaults
 
 class SOV_API ByteWriter {
 public:
