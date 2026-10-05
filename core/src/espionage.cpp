@@ -27,8 +27,6 @@ int chance3d6(int need) {
 
 int roll3d6(Rng& rng) { return rng.range(1, 6) + rng.range(1, 6) + rng.range(1, 6); }
 
-bool offensive(SpyMission m) { return m >= SpyMission::SiphonFunds; }
-
 const char* operationId(SpyMission m) {
     switch (m) {
         case SpyMission::Counterspy: return "SPYOP_COUNTERSPY";
