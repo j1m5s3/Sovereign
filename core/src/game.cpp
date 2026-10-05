@@ -188,6 +188,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:
         case CommandType::AbandonLeader:
+        case CommandType::SendAssassin:
             return validateLeader(c);
         default: break;
     }
@@ -504,7 +505,8 @@ void Game::apply(const Command& c) {
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:
-        case CommandType::AbandonLeader: applyLeader(c); break;
+        case CommandType::AbandonLeader:
+        case CommandType::SendAssassin: applyLeader(c); break;
     }
 }
 
@@ -586,6 +588,7 @@ void Game::applyEndTurn(const Command& c) {
 
 void Game::beginGlobalTurn() {
     ++state_.turn;
+    processAgents();
     processBarbarians();
 }
 

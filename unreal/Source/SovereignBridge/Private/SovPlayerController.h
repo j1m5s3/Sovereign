@@ -40,7 +40,9 @@ protected:
 		Civic,
 		Improvement,
 		Gear,
-		Throne
+		Throne,
+		Assassins,
+		Promotion
 	};
 
 	struct FChoice

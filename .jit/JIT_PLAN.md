@@ -33,7 +33,7 @@ Build-plan step 3 of `specs/sovereign/engine-and-architecture.md`: each player's
 <!-- [ ] pending · [>] active · [x] done · [-] dropped (reason) · [!] blocked -->
 1. [x] **Build** leader unit, gear and escort combat (core): `leader.json`, `UnitLayer::Leader`, start spawn, gear and `EquipGear`, mount upkeep, leader strength, escort-first defence, capture/kill/barbarian rules, city capture, `LinkEscort` movement, AI/bot handling, save v9, tests. PR "Leader milestone 1". — done 2026-10-05: 11 new tests (113 total, local MSVC build); AI equips Spear/Bronze scale/Plate in a 150-turn all-AI game; bot and AI games replay to the same hash; Unreal still links.
 2. [x] **Build** succession, captivity and regicide (core): interregnum, `ChooseSuccessor`, `AbandonLeader`, `LeaderNeeded`, dynasties, regicide elimination, AI/bot, tests. PR "Leader milestone 2". — done 2026-10-05: 6 new tests (119 total); 6-player 250-turn bot and AI games replay; save v10. A unit successor is named "<Civ> Warlord", a regent "<Civ> Regent".
-3. [!] **Build** assassins (core): blocked on James's answers to Open questions 1-2. PR "Leader milestone 3".
+3. [x] **Build** assassins, levelling and aura (core): assassin unit and agents, missions and auto-resolved attempts, events; SOVEREIGN promotion branches, leader XP, presence aura; AI/bot; tests. PR "Leader milestone 3". — done 2026-10-05: 8 new tests (127 total); bot games see leaders killed and wounded by assassins; AI trains and sends assassins once at war (and builds its first Encampment for them) but keeps its own leader guarded, so AI-vs-AI openings are rare; Unreal gets `J` assassins, `U` promotions, heir promotion choice and HUD news. Save v11.
 4. [x] **Build** leader UI (bridge): marker, gear and succession choosers, escort link, HUD, automation test. PR "Leader milestone 4". — done 2026-10-05: 4/4 Unreal tests pass; live run shows the crowned leader marker, ruler label and HUD line.
 5. [ ] **Close** slice: docs (`core/README.md`, `unreal/README.md`, JIT index, leader doc status), review against Acceptance, archive plan.
 
@@ -43,7 +43,14 @@ Build-plan step 3 of `specs/sovereign/engine-and-architecture.md`: each player's
 - Assassins (once specified) are sent by the AI and resolved automatically from rules data.
 - All of it is commands through `Game::submit`; replays and saves reproduce the state hash; CI green on GCC, Clang and MSVC; the Unreal build links and its automation tests pass; the seat-0 player can equip, escort and choose a successor in the UI.
 
-## Open questions & risks (asked 2026-10-05; recommendations in brackets)
+## Answers (James 2026-10-05: "Ok" to every recommendation)
+- Assassins are their own unit (`UNIT_ASSASSIN`, Encampment city, Political Philosophy, capacity 1 per finished Encampment). Training one creates an off-map **agent** (like a Civ spy). `SendAssassin` gives it a target civ; after `ASSASSIN_TRAVEL_TURNS` it waits in place. In each world turn, an agent in place strikes when the target's leader is outside a city, or in a city with no own military unit on or next to its plot.
+- Odds: assassin power = `ASSASSIN_BASE_POWER` + per level + per sender era, against the leader's defence (gear, terrain, wounds, `ASSASSIN_DEFENSE` promotions) plus `ASSASSIN_GUARD_PERCENT` of each guard's strength on or next to its plot. Success % = 50 + `ASSASSIN_ODDS_PER_POINT` × difference, clamped. A hit deals combat damage (killed → succession, else wounded) and the assassin comes home a level higher. A miss kills the assassin (`ASSASSIN_KILLED_PERCENT`, the leader gains `ASSASSIN_LEADER_XP`) or gets it captured (sender revealed). Rolls use the Combat stream. Outcomes go to `GameState.events`.
+- Levelling: the leader has promotion class `PROMOTION_CLASS_SOVEREIGN` and gains XP like units (barbarian cap applies) plus assassin kills. Three branches (Warlord, Statesman, Builder-King) of two promotions; only one branch's second promotion per reign. An heir keeps one promotion of the fallen leader's choice (`ChooseSuccessor` arg2).
+- Aura: own military units within `LEADER_AURA_RANGE` (+1 per `LEADER_AURA_LEVELS_PER_RANGE` levels) of the leader get +`LEADER_AURA_STRENGTH` (+ Warlord aura effects).
+- Benevolence/Fear moves to step 4 with loyalty (engine doc build plan updated).
+
+## Open questions & risks (asked 2026-10-05; recommendations in brackets; all accepted, see Answers)
 1. Assassins: own unit with own capacity, or a spy mission? [own unit, Encampment city, Political Philosophy, capacity 1 per Encampment]
 2. Assassin odds (Civ spy odds unverified). [Sovereign model on the core's combat math: power from level and the sender's era vs gear plus guards on or next to the plot; outcomes killed / wounded / assassin killed (leader XP) / assassin captured (sender revealed); numbers in data]
 3. Levelling (§3) and the presence aura (§1) are proposals. [build the SOVEREIGN tree and a 2-tile aura now with effects the core can model]
@@ -52,6 +59,8 @@ Build-plan step 3 of `specs/sovereign/engine-and-architecture.md`: each player's
 - Duels between leaders give no special war score yet (no war score system).
 
 ## Changelog
+- 2026-10-05 STEP 3 DONE — assassins as off-map agents, SOVEREIGN promotions, aura, heir keeps a promotion; the UI part shipped with this step; `sovsim --cities` reports agents and assassinations.
+- 2026-10-05 ANSWERS — James accepted all four recommendations; step 3 unblocked; leader and engine docs updated.
 - 2026-10-05 STEP 4 DONE — leader UI built ahead of step 3 (assassins wait on James); `H` opens the throne chooser.
 - 2026-10-05 STEP 2 DONE — succession, captivity (abandon only) and regicide; the interregnum counts down only while someone sits on the throne; Regicide razes the loser's cities when nobody (barbarians, own failed attack) took the leader. `LEADER_SUCCESSOR_MIN_LEVEL` added.
 - 2026-10-05 STEP 1 DONE — leader unit, gear, escorts and capture in the core; `sovsim --cities` prints each leader's gear. Until step 2 lands, a lost leader is simply gone (no successor yet).

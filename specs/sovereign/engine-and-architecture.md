@@ -48,7 +48,7 @@ Written up as the first `.jit/JIT_PLAN.md` when coding starts:
 1. Headless Civ core through MVP-7 (`specs/civ6/10-ai-ui-implementation.md`, "Recommended build order"), with tests. *Done 2026-10-05 (`core/`).*
 2. Unreal bridge showing a plain hex map. *Done 2026-10-05 (`unreal/`, UE 5.8): seat 0 plays with mouse and keyboard through commands, the AI plays the other seats.*
 3. The leader in classic control, with auto-resolved assassins.
-4. One street scene: one style, the City Center.
+4. One street scene: one style, the City Center, with the Benevolence/Fear citizen actions and the loyalty system they need (**[decided, James 2026-10-05]**).
 5. One medieval live battle.
 6. Everything else.
 

@@ -20,6 +20,11 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
     if (game.gameOver()) return;
     const GameState& s = game.state();
     const PlayerId me = s.currentPlayer;
+    // Idle assassins go after a random civ.
+    for (const Agent& a : std::vector<Agent>(s.agents)) {
+        if (a.owner != me || a.target != kNoPlayer) continue;
+        game.submit(Command::sendAssassin(me, a.id, static_cast<PlayerId>(rng.below(static_cast<uint32_t>(s.players.size())))));
+    }
     // A fallen or captured leader is replaced by the first successor allowed.
     if (s.players[static_cast<size_t>(me)].captor != kNoPlayer) game.submit(Command::abandonLeader(me));
     for (Succession k : {Succession::Heir, Succession::Unit, Succession::Regent}) {

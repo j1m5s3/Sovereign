@@ -251,6 +251,9 @@ bool FSovLeaderMirrorTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("link escort"), Session.Submit(sov::Command::linkEscort(0, WarriorId, LeaderId)), sov::CommandError::Ok);
 		TestTrue(TEXT("escort linked"), G.escortOf(*G.state().unit(LeaderId)) != nullptr);
 	}
+	// Assassins need an Encampment: nobody can send one at the start.
+	TestEqual(TEXT("no assassins yet"), G.agentCapacity(0), 0);
+	TestEqual(TEXT("cannot send a missing agent"), Session.Submit(sov::Command::sendAssassin(0, 1, 1)), sov::CommandError::CannotSendAgent);
 	return true;
 }
 

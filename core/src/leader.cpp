@@ -104,6 +104,11 @@ void Game::spawnLeader(PlayerId p, Hex at) {
     u.movesLeft = Fixed::fromInt(maxMoves(u));
 }
 
+int Game::auraRange(const Unit& leader) const {
+    const int per = std::max(1, rules_->globalInt("LEADER_AURA_LEVELS_PER_RANGE"));
+    return rules_->globalInt("LEADER_AURA_RANGE") + (leader.level() - 1) / per;
+}
+
 bool Game::hasHeir(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     const Dynasty* d = rules_->dynastyOf(p.civ);
@@ -138,9 +143,21 @@ CommandError Game::validateLeader(const Command& c) const {
     const Player& p = state_.players[static_cast<size_t>(c.player)];
     if (c.type == CommandType::ChooseSuccessor) {
         if (c.arg < 0 || c.arg > static_cast<int32_t>(Succession::Regent)) return CommandError::CannotSucceed;
+        // An heir may keep one of the fallen leader's promotions (§5).
+        if (c.arg2 != kNone && (static_cast<Succession>(c.arg) != Succession::Heir ||
+                                std::find(p.savedPromotions.begin(), p.savedPromotions.end(), c.arg2) == p.savedPromotions.end()))
+            return CommandError::CannotSucceed;
         CommandError why = CommandError::Ok;
         canSucceed(c.player, static_cast<Succession>(c.arg), c.id, &why);
         return why;
+    }
+    if (c.type == CommandType::SendAssassin) {
+        const Agent* a = agent(c.id);
+        if (!a || a->owner != c.player) return CommandError::CannotSendAgent;
+        if (c.arg == kNoPlayer) return CommandError::Ok;
+        if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg == c.player) return CommandError::CannotSendAgent;
+        const Player& t = state_.players[static_cast<size_t>(c.arg)];
+        return t.alive && !t.barbarian ? CommandError::Ok : CommandError::CannotSendAgent;
     }
     if (c.type == CommandType::AbandonLeader) return p.captor != kNoPlayer ? CommandError::Ok : CommandError::CannotSucceed;
     const Unit* u = state_.unit(c.id);
@@ -176,6 +193,14 @@ void Game::applyLeader(const Command& c) {
         startInterregnum(p);
         return;
     }
+    if (c.type == CommandType::SendAssassin) {
+        for (Agent& a : state_.agents) {
+            if (a.id != c.id) continue;
+            a.target = static_cast<PlayerId>(c.arg);
+            a.travel = c.arg == kNoPlayer ? 0 : std::max(1, rules_->globalInt("ASSASSIN_TRAVEL_TURNS"));
+        }
+        return;
+    }
     if (c.type == CommandType::ChooseSuccessor) {
         const Succession kind = static_cast<Succession>(c.arg);
         const CivType& civ = rules_->civs[static_cast<size_t>(p.civ)];
@@ -206,6 +231,7 @@ void Game::applyLeader(const Command& c) {
         for (size_t slot = 0; slot < l.gear.size(); ++slot) {
             if (p.savedGear[slot] != kNone) l.gear[slot] = p.savedGear[slot];  // the throne's armory passes on
         }
+        if (c.arg2 != kNone) l.promotions = {static_cast<TypeIndex>(c.arg2)};
         l.movesLeft = Fixed();
         p.successionPending = false;
         refreshVisibility(c.player);
@@ -247,6 +273,7 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured) {
     const PlayerId owner = l->owner;
     Player& p = state_.players[static_cast<size_t>(owner)];
     p.savedGear = l->gear;
+    p.savedPromotions = l->promotions;
     for (Unit& o : state_.units) {
         if (o.escorting == leader) o.escorting = kNoUnit;
     }
@@ -289,6 +316,136 @@ void Game::regicide(PlayerId loser, PlayerId by) {
     if (heir) refreshVisibility(by);
     // A player who loses the leader on its own turn hands the turn on.
     if (state_.currentPlayer == loser) applyEndTurn(Command::endTurn(loser));
+}
+
+// ------------------------------------------------------------------ assassins (§6)
+
+int Game::playerEra(PlayerId player) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    int era = 0;
+    for (size_t i = 0; i < rules_->techs.size(); ++i) {
+        if (p.techs.has(static_cast<TypeIndex>(i))) era = std::max(era, static_cast<int>(rules_->techs[i].era));
+    }
+    for (size_t i = 0; i < rules_->civics.size(); ++i) {
+        if (p.civics.has(static_cast<TypeIndex>(i))) era = std::max(era, static_cast<int>(rules_->civics[i].era));
+    }
+    return era;
+}
+
+int Game::agentCapacity(PlayerId player) const {
+    const TypeIndex encampment = rules_->district("DISTRICT_ENCAMPMENT");
+    int n = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner == player && encampment != kNone && c.district(encampment, true)) ++n;
+    }
+    return n * rules_->globalInt("ASSASSIN_PER_ENCAMPMENT");
+}
+
+int Game::agentsOf(PlayerId player) const {
+    return static_cast<int>(std::count_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& a) { return a.owner == player; }));
+}
+
+const Agent* Game::agent(int32_t id) const {
+    for (const Agent& a : state_.agents) {
+        if (a.id == id) return &a;
+    }
+    return nullptr;
+}
+
+int Game::assassinPower(const Agent& a) const {
+    return rules_->globalInt("ASSASSIN_BASE_POWER") + rules_->globalInt("ASSASSIN_POWER_PER_LEVEL") * (a.level - 1) +
+           rules_->globalInt("ASSASSIN_POWER_PER_ERA") * playerEra(a.owner);
+}
+
+int Game::leaderDefenseVsAssassin(const Unit& leader) const {
+    int d = meleeStrength(leader);
+    const GearType* armor = worn(*rules_, leader, GearSlot::Armor);
+    if (armor) d += armor->defense;
+    const Plot& p = state_.plot(leader.pos);
+    d += rules_->terrains[static_cast<size_t>(p.terrain)].defense;
+    if (p.feature != kNone) d += rules_->features[static_cast<size_t>(p.feature)].defense;
+    const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
+    d -= rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER") * (maxHp - leader.hp) / std::max(1, maxHp);
+    d += unitEffectTotal(leader, UnitEffectKind::AssassinDefense);
+    // Guards on or next to its plot join the fight.
+    for (const Unit& u : state_.units) {
+        if (u.owner != leader.owner || typeOf(*rules_, u).layer != UnitLayer::Military) continue;
+        if (state_.grid.distance(u.pos, leader.pos) <= 1)
+            d += meleeStrength(u) * u.hp / std::max(1, maxHp) * rules_->globalInt("ASSASSIN_GUARD_PERCENT") / 100;
+    }
+    return d;
+}
+
+bool Game::leaderExposed(const Unit& leader) const {
+    const City* c = state_.cityAt(leader.pos);
+    if (!c) return true;
+    for (const Unit& u : state_.units) {
+        if (u.owner == leader.owner && typeOf(*rules_, u).layer == UnitLayer::Military &&
+            state_.grid.distance(u.pos, leader.pos) <= 1)
+            return false;
+    }
+    return true;
+}
+
+int Game::assassinSuccessPercent(const Agent& a, const Unit& leader) const {
+    const int diff = assassinPower(a) - leaderDefenseVsAssassin(leader);
+    const int percent = 50 + diff * rules_->globalInt("ASSASSIN_ODDS_PER_POINT");
+    return std::clamp(percent, rules_->globalInt("ASSASSIN_MIN_SUCCESS"), rules_->globalInt("ASSASSIN_MAX_SUCCESS"));
+}
+
+void Game::pushEvent(EventKind kind, PlayerId actor, PlayerId target, int value) {
+    state_.events.push_back({state_.turn, kind, actor, target, value});
+    const size_t cap = 64;
+    if (state_.events.size() > cap) state_.events.erase(state_.events.begin(), state_.events.end() - static_cast<long>(cap));
+}
+
+void Game::processAgents() {
+    std::vector<int32_t> ids;
+    for (const Agent& a : state_.agents) ids.push_back(a.id);
+    Rng& rng = state_.rng.get(RngStream::Combat);
+    for (int32_t id : ids) {
+        auto it = std::find_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& x) { return x.id == id; });
+        if (it == state_.agents.end() || it->target == kNoPlayer) continue;
+        Agent& a = *it;
+        const Player& target = state_.players[static_cast<size_t>(a.target)];
+        if (!target.alive) {
+            a.target = kNoPlayer;  // nothing left to hunt: come home
+            continue;
+        }
+        if (a.travel > 0) {
+            --a.travel;
+            continue;
+        }
+        const Unit* leader = leaderOf(a.target);
+        if (!leader || !leaderExposed(*leader)) continue;  // wait for an opening
+        const int success = assassinSuccessPercent(a, *leader);
+        const PlayerId sender = a.owner, victim = a.target;
+        const UnitId leaderId = leader->id;
+        if (static_cast<int>(rng.below(100)) < success) {
+            const int diff = assassinPower(a) - leaderDefenseVsAssassin(*leader);
+            const int dmg = combatDamage(diff, rng.range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE")));
+            Unit* l = state_.unit(leaderId);
+            l->hp -= dmg;
+            a.level = std::min(4, a.level + 1);  // it comes home a level higher
+            a.target = kNoPlayer;
+            if (l->hp <= 0) {
+                pushEvent(EventKind::AssassinKilledLeader, sender, victim, dmg);
+                leaderLost(leaderId, sender, false);
+            } else {
+                pushEvent(EventKind::AssassinWoundedLeader, sender, victim, dmg);
+            }
+            continue;
+        }
+        // A miss: the assassin dies in the attempt or is taken alive (the sender is revealed).
+        const bool killed = static_cast<int>(rng.below(100)) < rules_->globalInt("ASSASSIN_KILLED_PERCENT");
+        state_.agents.erase(it);
+        if (killed) {
+            awardXp(*state_.unit(leaderId), rules_->globalInt("ASSASSIN_LEADER_XP"), false);
+            pushEvent(EventKind::AssassinKilled, sender, victim, 0);
+        } else {
+            pushEvent(EventKind::AssassinCaptured, sender, victim, 0);
+        }
+    }
 }
 
 void Game::barbarianWound(Unit& leader) {

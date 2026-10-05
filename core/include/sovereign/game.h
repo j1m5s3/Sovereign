@@ -206,6 +206,19 @@ public:
     bool hasHeir(PlayerId player) const;
     std::vector<UnitId> successorUnits(PlayerId player) const;
     bool canSucceed(PlayerId player, Succession kind, UnitId unit, CommandError* why = nullptr) const;
+    // Presence aura (§1): range in plots of the leader's strength bonus to nearby units.
+    int auraRange(const Unit& leader) const;
+    // ---- assassins (§6; numbers in leader.json)
+    int playerEra(PlayerId player) const;  // highest era among its finished techs and civics
+    int agentCapacity(PlayerId player) const;  // one per finished Encampment
+    int agentsOf(PlayerId player) const;
+    const Agent* agent(int32_t id) const;
+    int assassinPower(const Agent& agent) const;
+    // The leader's defence against an assassin: gear, terrain, wounds, promotions and guards.
+    int leaderDefenseVsAssassin(const Unit& leader) const;
+    // An opening: the leader is outside a city, or in one with no own military unit on or next to its plot.
+    bool leaderExposed(const Unit& leader) const;
+    int assassinSuccessPercent(const Agent& agent, const Unit& leader) const;
 
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
@@ -269,6 +282,8 @@ private:
     // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
     void barbarianWound(Unit& leader);
     void startInterregnum(Player& p);
+    void processAgents();  // world turn: agents travel and strike
+    void pushEvent(EventKind kind, PlayerId actor, PlayerId target, int value);
     // Regicide: the player is out and its cities pass to whoever took the leader.
     void regicide(PlayerId loser, PlayerId by);
     Unit* escortMut(const Unit& leader);

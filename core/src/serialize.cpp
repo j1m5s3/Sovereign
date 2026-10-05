@@ -166,6 +166,14 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (p.dynastyNext < 0 || p.interregnumTurns < 0) return false;
         if (p.captor != kNoPlayer && (p.captor < 0 || static_cast<size_t>(p.captor) >= s.players.size())) return false;
         for (TypeIndex g : p.savedGear) if (!inRange(g, rules.gear.size(), true)) return false;
+        for (TypeIndex pr : p.savedPromotions) if (!inRange(pr, rules.promotions.size(), false)) return false;
+    }
+    for (size_t i = 0; i < s.agents.size(); ++i) {
+        const Agent& a = s.agents[i];
+        if (i > 0 && s.agents[i - 1].id >= a.id) return false;
+        if (a.owner < 0 || static_cast<size_t>(a.owner) >= s.players.size()) return false;
+        if (a.target != kNoPlayer && (a.target < 0 || static_cast<size_t>(a.target) >= s.players.size())) return false;
+        if (a.level < 1 || a.travel < 0) return false;
     }
     return true;
 }
@@ -231,6 +239,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.interregnumTurns);
         w.i8(p.captor);
         for (TypeIndex g : p.savedGear) w.i32(g);
+        writeI32s(w, std::vector<int32_t>(p.savedPromotions.begin(), p.savedPromotions.end()));
     }
     w.u32(static_cast<uint32_t>(s.units.size()));
     for (const Unit& u : s.units) {
@@ -291,6 +300,23 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             writeHex(w, d.pos);
             w.boolean(d.complete);
         }
+    }
+    w.u32(static_cast<uint32_t>(s.agents.size()));
+    for (const Agent& a : s.agents) {
+        w.i32(a.id);
+        w.i8(a.owner);
+        w.i32(a.level);
+        w.i8(a.target);
+        w.i32(a.travel);
+    }
+    w.i32(s.nextAgentId);
+    w.u32(static_cast<uint32_t>(s.events.size()));
+    for (const GameEvent& e : s.events) {
+        w.i32(e.turn);
+        w.u8(static_cast<uint8_t>(e.kind));
+        w.i8(e.actor);
+        w.i8(e.target);
+        w.i32(e.value);
     }
     w.u32(static_cast<uint32_t>(s.camps.size()));
     for (const Camp& k : s.camps) {
@@ -386,6 +412,10 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.interregnumTurns = r.i32();
         p.captor = r.i8();
         for (TypeIndex& g : p.savedGear) g = static_cast<TypeIndex>(r.i32());
+        std::vector<int32_t> saved;
+        if (!readI32s(r, saved)) return false;
+        p.savedPromotions.clear();
+        for (int32_t v : saved) p.savedPromotions.push_back(static_cast<TypeIndex>(v));
     }
     uint32_t nu = r.u32();
     if (!r.checkCount(nu, 30)) return false;
@@ -461,6 +491,27 @@ bool deserializeState(ByteReader& r, GameState& s) {
             d.pos = readHex(r);
             d.complete = r.boolean();
         }
+    }
+    uint32_t na = r.u32();
+    if (!r.checkCount(na, 14)) return false;
+    s.agents.resize(na);
+    for (Agent& a : s.agents) {
+        a.id = r.i32();
+        a.owner = r.i8();
+        a.level = r.i32();
+        a.target = r.i8();
+        a.travel = r.i32();
+    }
+    s.nextAgentId = r.i32();
+    uint32_t ne = r.u32();
+    if (!r.checkCount(ne, 11)) return false;
+    s.events.resize(ne);
+    for (GameEvent& e : s.events) {
+        e.turn = r.i32();
+        e.kind = static_cast<EventKind>(r.u8());
+        e.actor = r.i8();
+        e.target = r.i8();
+        e.value = r.i32();
     }
     uint32_t nk = r.u32();
     if (!r.checkCount(nk, 16)) return false;

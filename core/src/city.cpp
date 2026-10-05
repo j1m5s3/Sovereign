@@ -119,6 +119,8 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYield, static_cast<YieldType>(i));
     }
+    if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
+        raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
 
     // Housing from water access, then buildings and modifiers.
     bool fresh = isRiverAdjacent(state_, c->pos), coastal = false;
@@ -135,6 +137,9 @@ CityReport Game::cityReport(CityId id) const {
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
+    // The leader's Builder-King promotions work in the city it stands in (leader doc §3).
+    const Unit* leader = leaderOf(c->owner);
+    if (leader && leader->pos == c->pos) rep.amenities += unitEffectTotal(*leader, UnitEffectKind::CityAmenities);
     if (owner.gold < Fixed()) rep.amenities -= static_cast<int>((-owner.gold).ceil() + 9) / 10;
     const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
     rep.amenitiesNeeded = std::max(0, (c->population + perAmenity - 1) / perAmenity - 1);
@@ -229,6 +234,8 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (u.domain != Domain::Land || u.mustPurchase || !u.trainable || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
             unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
+        if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
+        if (u.agent && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
         if (!u.needsBuilding.empty() &&
             std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return c.has(b); }))
             return fail(CommandError::CannotBuild);
@@ -476,6 +483,18 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (city.population < u.minPopulation) return false;
         // Training waits while the strategic resource is short.
         if (!hasStrategicFor(city.owner, item.type)) return false;
+        if (u.agent) {
+            // Assassins become off-map agents, within the capacity (leader doc §6).
+            if (agentsOf(city.owner) >= agentCapacity(city.owner)) return false;
+            Agent a;
+            a.id = state_.nextAgentId++;
+            a.owner = city.owner;
+            state_.agents.push_back(a);
+            Player& owner = state_.players[static_cast<size_t>(city.owner)];
+            if (owner.unitsTrained.size() < rules_->units.size()) owner.unitsTrained.resize(rules_->units.size(), 0);
+            ++owner.unitsTrained[static_cast<size_t>(item.type)];
+            return true;
+        }
         auto spot = unitSpawnPlot(city, item.type);
         if (!spot) return false;
         Player& p = state_.players[static_cast<size_t>(city.owner)];

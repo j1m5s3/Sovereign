@@ -80,6 +80,27 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	{
 		Line(TEXT("The throne is empty. H: choose a successor"), 16, Y, FLinearColor(1.f, 0.4f, 0.3f));
 	}
+	// Assassination news involving us from the last two turns (leader doc §6).
+	for (const sov::GameEvent& E : S.events)
+	{
+		if (E.turn < S.turn - 1 || (E.actor != Me && E.target != Me))
+		{
+			continue;
+		}
+		auto CivOf = [&](sov::PlayerId Id) {
+			const sov::Player& X = S.players[static_cast<size_t>(Id)];
+			return X.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(X.civ)].name);
+		};
+		FString Text;
+		switch (E.kind)
+		{
+			case sov::EventKind::AssassinKilledLeader: Text = FString::Printf(TEXT("An assassin from %s killed the ruler of %s."), *CivOf(E.actor), *CivOf(E.target)); break;
+			case sov::EventKind::AssassinWoundedLeader: Text = FString::Printf(TEXT("An assassin from %s wounded the ruler of %s (%d damage)."), *CivOf(E.actor), *CivOf(E.target), E.value); break;
+			case sov::EventKind::AssassinKilled: Text = FString::Printf(TEXT("An assassin sent against %s was killed."), *CivOf(E.target)); break;
+			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
+		}
+		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
+	}
 	if (P.interregnumTurns > 0)
 	{
 		Line(FString::Printf(TEXT("Interregnum: policy slots empty for %d more turn(s)"), P.interregnumTurns), 16, Y, FLinearColor(1.f, 0.6f, 0.4f));

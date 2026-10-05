@@ -178,6 +178,7 @@ struct Player {
     int interregnumTurns = 0;
     PlayerId captor = kNoPlayer;    // holds this player's captured leader
     std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
+    std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
 };
 
 struct PlayerSetup {
@@ -202,6 +203,26 @@ struct GameSetup {
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding };
 
+// An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
+// for a few turns, then strikes when the target leader is exposed.
+struct Agent {
+    int32_t id = 0;
+    PlayerId owner = kNoPlayer;
+    int level = 1;               // Recruit 1, Agent 2, Secret Agent 3, Master 4
+    PlayerId target = kNoPlayer; // kNoPlayer: idle at home
+    int travel = 0;              // turns until it is in place
+};
+
+// Things that happened that players should hear about (UI and AI read them; rules do not).
+enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured };
+struct GameEvent {
+    int32_t turn = 0;
+    EventKind kind = EventKind::AssassinKilled;
+    PlayerId actor = kNoPlayer;   // who sent the assassin
+    PlayerId target = kNoPlayer;  // whose leader was the target
+    int32_t value = 0;            // damage dealt, when any
+};
+
 // A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).
 struct Camp {
     int32_t id = 0;
@@ -221,8 +242,11 @@ struct SOV_API GameState {
     std::vector<Unit> units;    // sorted by id
     std::vector<City> cities;   // sorted by id
     std::vector<Camp> camps;    // sorted by id
+    std::vector<Agent> agents;  // sorted by id
+    std::vector<GameEvent> events;  // most recent last, capped
     UnitId nextUnitId = 1;
     int32_t nextCampId = 1;
+    int32_t nextAgentId = 1;
     CityId nextCityId = 1;
     RngSet rng;
     PlayerId winner = kNoPlayer;  // set once the game is won; every command is then refused
