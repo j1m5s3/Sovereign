@@ -134,6 +134,12 @@ CityReport Game::cityReport(CityId id) const {
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
     }
+    // Specialists (02): each earns its district's specialist yield plus its buildings' extras.
+    for (const CityDistrict& d : c->districts) {
+        if (d.specialists == 0) continue;
+        const Yields y = specialistYield(*c, d);
+        for (size_t i = 0; i < kNumYields; ++i) raw[i] += y[i] * d.specialists;
+    }
     // Envoys to city-states pay in the capital and per building (08).
     {
         const Yields ey = envoyYields(*c);
@@ -744,6 +750,7 @@ void Game::assignCitizens(City& city) {
     city.locked = keep;
     while (static_cast<int>(city.locked.size()) > city.population) city.locked.pop_back();
 
+    // Candidates: each workable plot, and each specialist slot in the city's districts (index -1 - district).
     struct Cand { int32_t index; Fixed score; };
     std::vector<Cand> cands;
     for (const Hex& h : plots) {
@@ -751,13 +758,23 @@ void Game::assignCitizens(City& city) {
         if (std::binary_search(city.locked.begin(), city.locked.end(), pi)) continue;
         cands.push_back({pi, citizenScore(plotYields(h, city))});
     }
-    std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) {
-        return a.score != b.score ? a.score > b.score : a.index < b.index;
+    for (size_t k = 0; k < city.districts.size(); ++k) {
+        CityDistrict& d = city.districts[k];
+        d.specialists = 0;
+        if (!d.complete || d.pillagedTurns > 0) continue;
+        const Fixed score = citizenScore(specialistYield(city, d));
+        for (int slot = 0; slot < specialistSlots(city, d); ++slot) cands.push_back({-1 - static_cast<int32_t>(k), score});
+    }
+    std::stable_sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) {
+        return a.score != b.score ? a.score > b.score : a.index > b.index;  // ties: plots (indices >= 0) before slots
     });
     city.worked = city.locked;
+    int citizens = static_cast<int>(city.locked.size());
     for (const Cand& c : cands) {
-        if (static_cast<int>(city.worked.size()) >= city.population) break;
-        city.worked.push_back(c.index);
+        if (citizens >= city.population) break;
+        if (c.index >= 0) city.worked.push_back(c.index);
+        else ++city.districts[static_cast<size_t>(-1 - c.index)].specialists;
+        ++citizens;
     }
     std::sort(city.worked.begin(), city.worked.end());
 }

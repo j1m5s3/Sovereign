@@ -515,6 +515,11 @@ def gen_buildings():
             b["housing"] = num(row["Housing"])
         if row["Amenity"]:
             b["amenities"] = num(row["Amenity"])
+        # Specialist slots it opens in its district, and what each specialist there gains (02: Citizens and specialists).
+        if row["Citizen slots"] and num(row["Citizen slots"]):
+            b["citizenSlots"] = num(row["Citizen slots"])
+        if row["Specialist yields"]:
+            b["specialistYields"] = yields(row["Specialist yields"])
         m = re.fullmatch(r"(\d+) HP / \+(\d+)", row["Defense"])
         if m:
             b["outerDefenseHp"], b["defense"] = int(m.group(1)), int(m.group(2))
@@ -650,6 +655,8 @@ def gen_districts():
             d["airSlots"] = num(row["Air slots"])  # aircraft based here (City Center 1, Aerodrome 2)
         if plunder(row["Pillage"]):
             d["plunder"] = plunder(row["Pillage"])  # 05: Pillage
+        if row["Specialist yields"]:
+            d["specialistYields"] = yields(row["Specialist yields"])  # each specialist's yields (02)
         if name != "City Center":
             d["unlock"] = unlock_id(row["Unlock"])
             d["cost"] = num(row["Base cost"])

@@ -96,6 +96,7 @@ struct CityDistrict {
     Hex pos;
     bool complete = false;
     uint8_t pillagedTurns = 0;  // pillaged (05: Pillage): no adjacency, its buildings idle, until repaired
+    uint8_t specialists = 0;    // citizens working here as specialists (02: Citizens and specialists)
 };
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)

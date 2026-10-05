@@ -261,3 +261,29 @@ TEST(a_canal_links_two_waters_and_lets_ships_through) {
     auto g3 = Game::fromScenario(rules(), std::move(dry));
     CHECK(!g3->findPath(ship, {5, 8}, false).has_value());
 }
+
+// ---- specialists (02: Citizens and specialists)
+
+TEST(specialists_work_district_slots) {
+    // A Campus with a Library (one slot); every plot around is desert, worth less than a specialist.
+    auto g = town(3, [](GameState& s) {
+        for (const Hex& h : s.grid.within(kCenter, 3)) {
+            if (h != kCenter) s.plot(h).terrain = rules().terrain("TERRAIN_DESERT");
+        }
+        City& c = s.cities[0];
+        c.districts.push_back({district("DISTRICT_CAMPUS"), {7, 6}, true});
+        c.buildings.push_back(rules().building("BUILDING_LIBRARY"));
+        std::sort(c.buildings.begin(), c.buildings.end());
+    });
+    City& c = g->stateMutForTests().cities[0];
+    const CityDistrict& campus = c.districts[0];
+    CHECK_EQ(g->specialistSlots(c, campus), 1);
+    CHECK(g->specialistYield(c, campus)[static_cast<size_t>(YieldType::Science)] >= Fixed::fromInt(2));
+    g->assignCitizens(c);
+    CHECK_EQ(c.districts[0].specialists, 1);
+    CHECK_EQ(static_cast<int>(c.worked.size()) + c.districts[0].specialists, c.population);
+    // The specialist's Science shows in the city.
+    const Fixed science = g->cityReport(c.id).yields[static_cast<size_t>(YieldType::Science)];
+    c.districts[0].specialists = 0;
+    CHECK(g->cityReport(c.id).yields[static_cast<size_t>(YieldType::Science)] < science);
+}

@@ -24,6 +24,9 @@
     "kind": "SCIENCE",
     "amount": 25
    },
+   "specialistYields": {
+    "SCIENCE": 2
+   },
    "unlock": "TECH_WRITING",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -88,6 +91,9 @@
     "kind": "FAITH",
     "amount": 25
    },
+   "specialistYields": {
+    "FAITH": 2
+   },
    "unlock": "TECH_ASTROLOGY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -140,6 +146,9 @@
     "kind": "GOLD",
     "amount": 50
    },
+   "specialistYields": {
+    "GOLD": 4
+   },
    "unlock": "TECH_CURRENCY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -189,6 +198,10 @@
    "name": "Encampment",
    "hp": 100,
    "attackRange": 2,
+   "specialistYields": {
+    "GOLD": 2,
+    "PRODUCTION": 1
+   },
    "unlock": "TECH_BRONZE_WORKING",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -216,6 +229,9 @@
    "plunder": {
     "kind": "CULTURE",
     "amount": 25
+   },
+   "specialistYields": {
+    "CULTURE": 2
    },
    "unlock": "CIVIC_DRAMA_AND_POETRY",
    "cost": 54,
@@ -270,6 +286,9 @@
    "plunder": {
     "kind": "SCIENCE",
     "amount": 25
+   },
+   "specialistYields": {
+    "PRODUCTION": 2
    },
    "unlock": "TECH_APPRENTICESHIP",
    "cost": 54,
@@ -353,6 +372,10 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 50
+   },
+   "specialistYields": {
+    "GOLD": 2,
+    "FOOD": 1
    },
    "unlock": "TECH_CELESTIAL_NAVIGATION",
    "cost": 54,

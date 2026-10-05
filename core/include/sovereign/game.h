@@ -115,6 +115,8 @@ public:
     std::vector<CityId> citiesNeedingProduction(PlayerId player) const;
     // Net gold per turn: city gold minus building and unit maintenance.
     Fixed goldPerTurn(PlayerId player) const;
+    // Puts its citizens to work: the best plots and specialist slots (02: Citizens and specialists).
+    void assignCitizens(City& city);
 
     // ---- districts (03-districts-buildings-wonders.md)
     // Districts needing population this city may hold: 1 + (pop - 1) / DISTRICT_POPULATION_REQUIRED_PER.
@@ -357,6 +359,10 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- specialists (02: Citizens and specialists)
+    int specialistSlots(const City& city, const CityDistrict& district) const;  // from its buildings' citizen slots
+    Yields specialistYield(const City& city, const CityDistrict& district) const;  // one specialist there
+
     // ---- formations (05: Corps and Armies)
     // Why `unit` cannot absorb `with` (Ok: it can): both the player's, the same military type, side by
     // side, with moves; a single and a single make a Corps (Nationalism), a Corps and a single an Army (Mobilization).
@@ -554,7 +560,6 @@ private:
     std::vector<uint8_t> zocMap(const Unit& mover) const;
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
-    void assignCitizens(City& city);
     bool growBorders(City& city);  // false when no plot was available
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;

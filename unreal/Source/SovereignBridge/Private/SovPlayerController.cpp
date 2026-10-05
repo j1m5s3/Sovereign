@@ -1682,6 +1682,15 @@ void ASovPlayerController::UpdatePanel()
 			C->powerDemand > 0 || C->powerSupply > 0
 				? *FString::Printf(TEXT("   Power %d/%d%s"), C->powerSupply, C->powerDemand, C->powerSupply < C->powerDemand ? TEXT(" (short)") : TEXT(""))
 				: TEXT("")));
+		// Specialists (02): citizens working district slots.
+		{
+			FString Spec;
+			for (const sov::CityDistrict& D : C->districts)
+			{
+				if (D.specialists > 0) Spec += FString::Printf(TEXT("   %s %d/%d"), *Str(R.districts[static_cast<size_t>(D.type)].name), D.specialists, G.specialistSlots(*C, D));
+			}
+			if (!Spec.IsEmpty()) L.Add(TEXT("Specialists:") + Spec);
+		}
 		// Religion here (06): the majority, and every faith with followers.
 		{
 			const int32 Maj = G.cityMajorityReligion(*C);

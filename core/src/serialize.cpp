@@ -455,6 +455,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             writeHex(w, d.pos);
             w.boolean(d.complete);
             w.u8(d.pillagedTurns);
+            w.u8(d.specialists);
         }
         w.i32(c.loyalty);
         w.i32(c.powerDemand);
@@ -884,6 +885,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             d.pos = readHex(r);
             d.complete = r.boolean();
             d.pillagedTurns = r.u8();
+            d.specialists = r.u8();
         }
         c.loyalty = r.i32();
         c.powerDemand = r.i32();

@@ -231,6 +231,25 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
     return out;
 }
 
+int Game::specialistSlots(const City& city, const CityDistrict& district) const {
+    int slots = 0;
+    for (TypeIndex b : city.buildings) {
+        const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
+        if (bt.districtType == district.type) slots += bt.citizenSlots;
+    }
+    return slots;
+}
+
+Yields Game::specialistYield(const City& city, const CityDistrict& district) const {
+    Yields y = rules_->districts[static_cast<size_t>(district.type)].specialistYields;
+    for (TypeIndex b : city.buildings) {
+        const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
+        if (bt.districtType != district.type) continue;
+        for (size_t i = 0; i < kNumYields; ++i) y[i] += bt.specialistYields[i];
+    }
+    return y;
+}
+
 Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const {
     Yields out{};
     if (districtPillaged(plot)) return out;  // 05: Pillage

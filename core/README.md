@@ -47,7 +47,7 @@ same command must print the same hash.
 | Commands (the only way state changes) | `include/sovereign/commands.h` |
 | Game: submit, replay, paths, visibility, turns | `include/sovereign/game.h` |
 | Map generator and start positions | `include/sovereign/mapgen.h` |
-| Cities: yields, growth, borders, production | `src/city.cpp` (queries on `Game`) |
+| Cities: yields, growth, borders, production, citizens and specialists | `src/city.cpp` (queries on `Game`) |
 | Research trees, boosts, governments, anarchy, policy cards | `src/research.cpp` (queries on `Game`) |
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing; pillage and repair; Corps and Armies | `src/combat.cpp` (queries on `Game`); pillage in `src/improvements.cpp` |

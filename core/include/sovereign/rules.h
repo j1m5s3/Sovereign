@@ -335,6 +335,8 @@ struct BuildingType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;   // (loading only)
     int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
+    int citizenSlots = 0;              // specialist slots it opens in its district (02)
+    Yields specialistYields{};         // extra yields for each specialist in its district
     // Power [GS] (09: Power).
     int requiredPower = 0;             // power it needs to work fully
     Yields poweredYields{};            // extra yields while its city is fully powered
@@ -475,6 +477,7 @@ struct DistrictType {
     bool canal = false;                    // between two bodies of water (or water and the City Center); ships sail through
     std::vector<std::string> exclusiveIds;  // (loading only)
     Plunder plunder;  // what pillaging it gives (05: Pillage)
+    Yields specialistYields{};  // each specialist working in it (02: Citizens and specialists)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).

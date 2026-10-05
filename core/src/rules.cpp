@@ -808,6 +808,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.maintenance = static_cast<int>(j["maintenance"].integer(0));
             b.yields = readYields(j["yields"]);
             b.housing = j["housing"].fixed();
+            b.citizenSlots = static_cast<int>(j["citizenSlots"].integer(0));
+            b.specialistYields = readYields(j["specialistYields"]);
             b.amenities = static_cast<int>(j["amenities"].integer(0));
             b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
             b.airSlots = static_cast<int>(j["airSlots"].integer(0));
@@ -878,6 +880,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.amenities = static_cast<int>(j["amenities"].integer(0));
         d.airSlots = static_cast<int>(j["airSlots"].integer(0));
         d.plunder = readPlunder(j["plunder"]);
+        d.specialistYields = readYields(j["specialistYields"]);
         d.canal = j["canal"].boolean(false);
         d.appeal = static_cast<int>(j["appeal"].integer(0));
         for (const Json& band : j["appealHousing"].items()) {
