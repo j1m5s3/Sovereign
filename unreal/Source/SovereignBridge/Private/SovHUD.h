@@ -6,6 +6,7 @@
 
 #include "SovHUD.generated.h"
 
+class ASovPlayerController;
 class USovGameSubsystem;
 
 UCLASS()
@@ -22,5 +23,6 @@ public:
 protected:
 	void DrawStatus(const USovGameSubsystem& Sub, float& Y);
 	void DrawLabels(const USovGameSubsystem& Sub);
+	void DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerController& PC);
 	void Line(const FString& Text, float X, float& Y, const FLinearColor& Color = FLinearColor::White);
 };

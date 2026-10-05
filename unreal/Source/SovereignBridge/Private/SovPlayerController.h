@@ -12,6 +12,8 @@
 
 class ASovCameraPawn;
 class ASovHUD;
+class ASovStreetScene;
+class ASovWalker;
 class ASovMapActor;
 class USovGameSubsystem;
 
@@ -26,6 +28,13 @@ public:
 	virtual void PlayerTick(float DeltaTime) override;
 
 	void SetMap(ASovMapActor* InMap) { Map = InMap; }
+
+	// ---- street scenes (step 4): the leader walks its City Center
+	bool InStreet() const { return Street != nullptr; }
+	const ASovStreetScene* GetStreet() const { return Street; }
+	const ASovWalker* GetWalker() const { return Walker; }
+	// "" when nobody is in reach; otherwise what F would do.
+	FString StreetPrompt() const;
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
 
@@ -70,6 +79,9 @@ protected:
 	void AfterUnitOrder();
 
 	void OpenChooser(EChooser Kind);
+	void EnterStreet();
+	void ExitStreet();
+	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);
 	void UpdatePanel();
 
@@ -83,6 +95,15 @@ protected:
 	int32 ChooserPage = 0;
 	FString ChooserTitle;
 	bool bWasMyTurn = false;
+
+	UPROPERTY()
+	TObjectPtr<ASovStreetScene> Street;
+
+	UPROPERTY()
+	TObjectPtr<ASovWalker> Walker;
+
+	UPROPERTY()
+	TObjectPtr<APawn> MapPawn;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second
 };
