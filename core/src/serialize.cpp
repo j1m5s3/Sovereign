@@ -175,6 +175,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (!playerOk(d.from) || !playerOk(d.to)) return false;
         for (const DealItem& i : d.items) if (!playerOk(i.from) || !inRange(i.resource, rules.resources.size(), true)) return false;
     }
+    for (const TalkRecord& t : s.talks) if (!playerOk(t.speaker) || !playerOk(t.leader)) return false;
     for (const Agreement& a : s.agreements) {
         if (!playerOk(a.from) || !playerOk(a.to) || !inRange(a.resource, rules.resources.size(), true)) return false;
     }
@@ -437,6 +438,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.until);
     }
     w.i32(s.nextDealId);
+    w.u32(static_cast<uint32_t>(s.talks.size()));
+    for (const TalkRecord& t : s.talks) {
+        w.i32(t.turn);
+        w.i8(t.speaker);
+        w.i8(t.leader);
+        w.str(t.text);
+    }
     w.i32(s.gameEra);
     w.i32(s.gameEraStart);
     w.bytes(std::vector<uint8_t>(s.worldMoments.begin(), s.worldMoments.end()));
@@ -780,6 +788,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.until = r.i32();
     }
     s.nextDealId = r.i32();
+    uint32_t ntalk = r.u32();
+    if (!r.checkCount(ntalk, 10)) return false;
+    s.talks.resize(ntalk);
+    for (TalkRecord& t : s.talks) {
+        t.turn = r.i32();
+        t.speaker = r.i8();
+        t.leader = r.i8();
+        t.text = r.str();
+        if (t.text.size() > kMaxTalkText) return false;
+    }
     s.gameEra = r.i32();
     s.gameEraStart = r.i32();
     {

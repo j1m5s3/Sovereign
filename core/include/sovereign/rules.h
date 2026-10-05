@@ -619,6 +619,7 @@ struct CivType {
     std::vector<std::string> cityNames;
     Agenda agenda = Agenda::None;
     std::string agendaId, agendaName, agendaText;
+    std::string leaning, voice;  // the leader's leaning and speaking voice (diplomacy personas)
 };
 
 // The leader's loadout (leader doc §2, §8.8; data in leader.json). Weapons set melee

@@ -60,6 +60,7 @@ enum class CommandType : uint8_t {
                                 // an AI answers at once, a human later with AnswerDeal
     AnswerDeal = 41,            // id = a waiting deal, arg = 1 accept / 0 reject (the proposer may withdraw it with 0)
     Denounce = 42,              // arg = the player to denounce
+    RecordTalk = 43,            // arg = the civ spoken to, text = the conversation's summary (printable, capped)
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -163,9 +164,14 @@ struct Command {
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }
-    static Command proposeDeal(PlayerId p, PlayerId to, const std::vector<DealItem>& items);
+    SOV_API static Command proposeDeal(PlayerId p, PlayerId to, const std::vector<DealItem>& items);
     static Command answerDeal(PlayerId p, int32_t deal, bool accept) { return {CommandType::AnswerDeal, p, deal, {}, accept ? 1 : 0, 0}; }
     static Command denounce(PlayerId p, PlayerId target) { return {CommandType::Denounce, p, -1, {}, target, 0}; }
+    static Command recordTalk(PlayerId p, PlayerId leader, const std::string& summary) {
+        Command c{CommandType::RecordTalk, p, -1, {}, leader, 0};
+        c.text = summary;
+        return c;
+    }
     // Buy a religious unit or a worship building with Faith (target.x = 1 marks a Faith purchase).
     static Command purchaseWithFaith(PlayerId p, CityId c, ProductionItem item) {
         return {CommandType::Purchase, p, c, Hex{1, 0}, static_cast<int32_t>(item.kind), item.type};

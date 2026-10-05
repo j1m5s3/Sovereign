@@ -1003,6 +1003,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.agendaId = j["agenda"].str();
         c.agendaName = j["agendaName"].str();
         c.agendaText = j["agendaText"].str();
+        c.leaning = j["leaning"].str();
+        c.voice = j["voice"].str();
         static const char* const agendas[] = {"", "AGENDA_QUEEN_OF_THE_SEAS", "AGENDA_DEFENDER_OF_THE_FAITH", "AGENDA_PAX_ROMANA",
                                               "AGENDA_SPARTAN_PRIDE", "AGENDA_TOLERANT_CONQUEROR", "AGENDA_MAGNANIMOUS",
                                               "AGENDA_FIRST_EMPEROR", "AGENDA_CLOSED_COUNTRY", "AGENDA_ETERNAL_NAME",
