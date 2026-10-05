@@ -116,6 +116,13 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
         if (rules.leaderUnit != kNone) game->spawnLeader(p.id, p.startPos);
     }
     for (const Player& p : st.players) game->refreshVisibility(p.id);
+    // Profiles carried from earlier games seed this one (leader doc §10); this game's conquests start at zero.
+    st.profiles.resize(st.players.size());
+    for (size_t i = 0; i < setup.players.size() && i < st.players.size(); ++i) {
+        if (!setup.players[i].hasProfile) continue;
+        st.profiles[i] = setup.players[i].profile;
+        st.profiles[i].citiesHeld = 0;
+    }
     game->beginPlayerTurn(0);
     return game;
 }

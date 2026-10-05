@@ -95,6 +95,7 @@ bool USovGameSubsystem::SaveGame(const FString& Name)
 	{
 		return false;
 	}
+	Session.SaveProfile();  // the player model travels to the next game (leader doc §10)
 	const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
 	TArray<uint8> Data;
 	Data.Append(Bytes.data(), static_cast<int32>(Bytes.size()));
