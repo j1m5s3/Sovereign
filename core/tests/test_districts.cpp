@@ -46,7 +46,7 @@ TEST(district_data_from_civ_tables) {
     CHECK(!campus.unlock.civic && campus.unlock.index == r.tech("TECH_WRITING"));
     CHECK(campus.needsPopulation);
     CHECK_EQ(campus.costDiscountPercent, 40);
-    CHECK_EQ(campus.adjacency.size(), 5u);
+    CHECK_EQ(campus.adjacency.size(), 6u);
     CHECK(r.districts[at(district("DISTRICT_THEATER_SQUARE"))].unlock.civic);
     CHECK(r.districts[at(district("DISTRICT_ENCAMPMENT"))].notAdjacentToCityCenter);
     CHECK_EQ(r.buildings[at(r.building("BUILDING_LIBRARY"))].districtType, district("DISTRICT_CAMPUS"));
@@ -186,4 +186,52 @@ TEST(finished_district_yields_and_unlocks_buildings) {
     REQUIRE(loaded);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
     CHECK(loaded->state().city(1)->districts[0].complete);
+}
+
+TEST(aqueduct_and_neighborhood_add_housing) {
+    // A dry inland city: the Aqueduct needs a Mountain (or river, lake, oasis) beside its plot.
+    auto g = town(3, [](GameState& s) {
+        learn(s, 0, {"TECH_ENGINEERING"});
+        s.plot({8, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    });
+    const City& c = g->state().cities[0];
+    const TypeIndex aqueduct = district("DISTRICT_AQUEDUCT");
+    CHECK(!g->canPlaceDistrict(c, aqueduct, {5, 6}));  // nothing watery beside it
+    REQUIRE(g->canPlaceDistrict(c, aqueduct, {7, 6}));  // next to the center and the Mountain
+    CHECK(!g->canPlaceDistrict(c, aqueduct, {9, 6}));  // not next to the City Center
+    const Fixed before = g->cityReport(c.id).housing;
+    GameState s = g->state();
+    s.cities[0].districts.push_back({aqueduct, {7, 6}, true});
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    CHECK(g2->cityReport(g2->state().cities[0].id).housing == before + Fixed::fromInt(4));  // 2 (no water) up to 6
+    // A Neighborhood on Average ground: 4 housing; Woods all round make it Breathtaking: 6.
+    GameState s3 = g2->state();
+    s3.cities[0].districts.push_back({district("DISTRICT_NEIGHBORHOOD"), {6, 8}, true});
+    auto g3 = Game::fromScenario(rules(), s3);
+    CHECK_EQ(g3->plotAppeal({6, 8}), 0);
+    CHECK(g3->cityReport(g3->state().cities[0].id).housing == before + Fixed::fromInt(8));
+    for (int d = 0; d < kNumDirs; ++d) {
+        auto n = s3.grid.neighbor({6, 8}, static_cast<Dir>(d));
+        if (n && *n != kCenter) s3.plot(*n).feature = rules().feature("FEATURE_FOREST");
+    }
+    auto g4 = Game::fromScenario(rules(), std::move(s3));
+    CHECK(g4->plotAppeal({6, 8}) >= 4);
+    CHECK(g4->cityReport(g4->state().cities[0].id).housing == before + Fixed::fromInt(10));
+}
+
+TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
+    auto g = town(7, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
+    GameState s = g->state();
+    Player& p = s.players[0];
+    p.civics.resize(rules().civics.size());
+    p.civics.done[at(rules().civic("CIVIC_GAMES_AND_RECREATION"))] = 1;
+    p.civics.done[at(rules().civic("CIVIC_NATURAL_HISTORY"))] = 1;
+    s.plot({6, 9}).terrain = rules().terrain("TERRAIN_COAST");
+    auto g2 = Game::fromScenario(rules(), s);
+    const int before = g2->cityReport(g2->state().cities[0].id).amenities;
+    s.cities[0].districts.push_back({district("DISTRICT_ENTERTAINMENT_COMPLEX"), {7, 7}, true});
+    auto g3 = Game::fromScenario(rules(), std::move(s));
+    const City& c = g3->state().cities[0];
+    CHECK_EQ(g3->cityReport(c.id).amenities, before + 1);
+    CHECK(!g3->canPlaceDistrict(c, district("DISTRICT_WATER_PARK"), {6, 9}));  // exclusive with the Entertainment Complex
 }

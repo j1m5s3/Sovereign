@@ -191,7 +191,7 @@ void Game::processClimate() {
             const std::string& feat = p.feature == kNone ? std::string() : rules_->features[at(p.feature)].id;
             bool ok = false;
             switch (dt.kind) {
-                case DisasterKind::Flood: ok = feat.rfind("FEATURE_FLOODPLAINS", 0) == 0; break;
+                case DisasterKind::Flood: ok = feat.rfind("FEATURE_FLOODPLAINS", 0) == 0 && !cityPrevents(p.city, true); break;
                 case DisasterKind::Eruption:
                     ok = feat == "FEATURE_VOLCANO" && setting && static_cast<int>(plotHash(i, 0xE5u) % 100) < setting->activeVolcanoes;
                     break;
@@ -204,7 +204,7 @@ void Game::processClimate() {
                         ok = n && rules_->terrains[at(state_.plot(*n).terrain)].water;
                     }
                     break;
-                case DisasterKind::Drought: ok = !t.water && p.owner != kNoPlayer && !inDrought(h); break;
+                case DisasterKind::Drought: ok = !t.water && p.owner != kNoPlayer && !inDrought(h) && !cityPrevents(p.city, false); break;
                 case DisasterKind::Fire: ok = feat == "FEATURE_FOREST" || feat == "FEATURE_JUNGLE"; break;
             }
             if (ok) sites.push_back(h);

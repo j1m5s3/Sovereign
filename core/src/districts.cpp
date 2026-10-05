@@ -101,8 +101,102 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
         rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Bonus)
         return fail(CommandError::BadTarget);
     if (d.notAdjacentToCityCenter && state_.grid.distance(city.pos, plot) == 1) return fail(CommandError::BadTarget);
+    for (TypeIndex other : d.exclusiveWith) {
+        if (city.district(other, false)) return fail(CommandError::CannotBuild);
+    }
+    if (d.onePerPlayer) {
+        for (const City& c : state_.cities) {
+            if (c.owner == city.owner && c.district(type, false)) return fail(CommandError::CannotBuild);
+        }
+    }
+    if (d.aqueduct) {
+        // Next to the City Center and to a River, Lake (fresh-water feature), Oasis or Mountain.
+        if (state_.grid.distance(city.pos, plot) != 1) return fail(CommandError::BadTarget);
+        bool water = onRiver(state_, plot);
+        for (int dir = 0; dir < kNumDirs && !water; ++dir) {
+            auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+            if (!n) continue;
+            const Plot& np = state_.plot(*n);
+            water = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain ||
+                    (np.feature != kNone && rules_->features[static_cast<size_t>(np.feature)].freshWater);
+        }
+        if (!water) return fail(CommandError::BadTarget);
+    }
+    if (d.floodplainsRiver) {
+        // On Floodplains along a river (Dam).
+        const std::string& f = p.feature == kNone ? std::string() : rules_->features[static_cast<size_t>(p.feature)].id;
+        if (f.rfind("FEATURE_FLOODPLAINS", 0) != 0 || !onRiver(state_, plot)) return fail(CommandError::BadTarget);
+    }
     if (why) *why = CommandError::Ok;
     return true;
+}
+
+int Game::plotAppeal(Hex plot) const {
+    int appeal = onRiver(state_, plot) ? 1 : 0;  // +1 once next to a river
+    for (int dir = 0; dir < kNumDirs; ++dir) {
+        auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+        if (!n) continue;
+        const Plot& np = state_.plot(*n);
+        appeal += rules_->terrains[static_cast<size_t>(np.terrain)].appeal;
+        if (np.feature != kNone) appeal += rules_->features[static_cast<size_t>(np.feature)].appeal;
+        if (np.improvement != kNone) appeal += np.pillagedTurns > 0 ? -1 : rules_->improvements[static_cast<size_t>(np.improvement)].appeal;
+        if (const CityDistrict* cd = state_.districtAt(*n)) appeal += rules_->districts[static_cast<size_t>(cd->type)].appeal;
+        if (state_.wonderAt(*n) != kNone) appeal += 1;
+        if (campAt(*n)) appeal -= 1;
+    }
+    return appeal;
+}
+
+Fixed Game::districtHousing(const City& city) const {
+    Fixed total;
+    for (const CityDistrict& cd : city.districts) {
+        if (!cd.complete) continue;
+        const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
+        total += Fixed::fromInt(d.housing);
+        if (!d.appealHousing.empty()) {
+            const int appeal = plotAppeal(cd.pos);
+            for (const auto& [minimum, change] : d.appealHousing) {
+                if (appeal >= minimum) {
+                    total += Fixed::fromInt(change);
+                    break;
+                }
+            }
+        }
+        if (d.aqueduct) {
+            // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
+            bool fresh = isRiverAdjacent(state_, city.pos), coastal = false;
+            for (const Hex& n : state_.grid.within(city.pos, 1)) {
+                const Plot& p = state_.plot(n);
+                if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].freshWater) fresh = true;
+                if (n != city.pos && rules_->terrains[static_cast<size_t>(p.terrain)].shallowWater) coastal = true;
+            }
+            if (fresh) {
+                total += rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
+            } else {
+                const Fixed base = rules_->global(coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER");
+                total += std::max(Fixed(), rules_->global("CITY_POPULATION_AQUEDUCT_MIN") - base);
+            }
+        }
+    }
+    return total;
+}
+
+int Game::districtAmenities(const City& city) const {
+    int total = 0;
+    for (const CityDistrict& cd : city.districts) {
+        if (cd.complete) total += rules_->districts[static_cast<size_t>(cd.type)].amenities;
+    }
+    return total;
+}
+
+bool Game::cityPrevents(CityId id, bool floods) const {
+    const City* c = state_.city(id);
+    if (!c) return false;
+    for (const CityDistrict& cd : c->districts) {
+        const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
+        if (cd.complete && (floods ? d.preventsFloods : d.preventsDrought)) return true;
+    }
+    return false;
 }
 
 std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {

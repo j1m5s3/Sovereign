@@ -231,6 +231,13 @@ public:
     // Yields the plot's improvement adds for its owner (base, tech bonuses, adjacency).
     Yields improvementYields(Hex plot, PlayerId owner) const;
     Fixed improvementHousing(const City& city) const;
+    // Appeal of a plot: what its neighbours contribute (01: Appeal).
+    int plotAppeal(Hex plot) const;
+    // Housing and amenities from the city's finished districts (Aqueduct, Neighborhood, Dam, ...).
+    Fixed districtHousing(const City& city) const;
+    int districtAmenities(const City& city) const;
+    // A finished district of the city that prevents droughts (or floods) on its plots [GS].
+    bool cityPrevents(CityId city, bool floods) const;
     int luxuryAmenities(const City& city) const;
     bool hasStrategicFor(PlayerId player, TypeIndex unitType) const;
     bool unitObsolete(PlayerId player, TypeIndex unitType) const;

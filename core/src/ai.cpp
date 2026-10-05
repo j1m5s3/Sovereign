@@ -908,7 +908,8 @@ void production(View& v) {
         if (items.empty()) continue;
         std::optional<ProductionItem> soldier = bestMilitaryUnit(v, items);
         const bool needGuard = !hasGarrison(v, c) && v.military < static_cast<int>(v.cities.size());
-        const bool wantArmy = v.military < desiredArmy(v);
+        // No new army while the treasury runs down (maintenance), unless at war.
+        const bool wantArmy = v.military < desiredArmy(v) && (!v.enemies.empty() || g.goldPerTurn(v.me) > Fixed());
         const bool minor = g.isCityState(v.me);  // a city-state: one city, no expansion, no trade, no wonders
         const int nCities = static_cast<int>(v.cities.size());
         const bool wantSettler = !minor && nCities + v.settlers < kMaxCities && v.settlers < 1 + nCities / 2 && c.population >= 2 &&
@@ -994,6 +995,9 @@ void production(View& v) {
                             static_cast<int>(s.religions.size()) < g.maxReligions() &&
                             std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
                             value += 150;
+                        // Housing and amenities when the city runs short (Aqueduct, Neighborhood, Entertainment Complex ...).
+                        if (popRoom <= Fixed::fromInt(1)) value += (d.aqueduct ? 6 : d.housing + (d.appealHousing.empty() ? 0 : 2)) * 40;
+                        if (rep.amenities < rep.amenitiesNeeded) value += d.amenities * 80;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
@@ -1046,6 +1050,26 @@ void purchases(View& v) {
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
+    }
+    // Still well above the reserve: buy the building that yields most per gold in any city.
+    for (int guard = 0; guard < 4; ++guard) {
+        const Fixed gold = v.s().players[at(v.me)].gold;
+        std::optional<std::pair<CityId, ProductionItem>> best;
+        int64_t bestScore = 0;
+        for (CityId cid : v.cities) {
+            for (const ProductionItem& it : g.buildableItems(cid)) {
+                if (it.kind != ProductionKind::Building || v.r.buildings[at(it.type)].wonder) continue;
+                const int cost = g.purchaseCost(v.me, it);
+                if (cost <= 0 || gold < Fixed::fromInt(cost + reserve)) continue;
+                const BuildingType& b = v.r.buildings[at(it.type)];
+                const int64_t score = static_cast<int64_t>(30 + yieldValue(b.yields) * 25 + b.amenities * 25) * 1000 / cost;
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = std::make_pair(cid, it);
+                }
+            }
+        }
+        if (!best || g.submit(Command::purchase(v.me, best->first, best->second)) != CommandError::Ok) break;
     }
 }
 

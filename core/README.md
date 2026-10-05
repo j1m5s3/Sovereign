@@ -52,7 +52,7 @@ same command must print the same hash.
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
-| Districts: placement, population limit, cost, adjacency | `src/districts.cpp` (queries on `Game`) |
+| Districts: placement (Aqueduct, Dam, exclusive and one-per-player rules), population limit, cost, adjacency, appeal, housing and amenities from Aqueduct, Neighborhood, Entertainment Complex, Water Park, Dam, Preserve | `src/districts.cpp` (queries on `Game`) |
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves, succession and regicide, assassins (off-map agents), SOVEREIGN promotions and the presence aura | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |
