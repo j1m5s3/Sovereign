@@ -254,6 +254,8 @@ public:
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
+    // The Science victory (09 [GS]): light-years a turn of the player's exoplanet expedition (0: not launched).
+    int expeditionSpeed(PlayerId player) const;
 
     // ---- climate and disasters (09: Climate and Disasters [GS])
     int climateChangePoints() const;   // one per half degree of warming
@@ -491,8 +493,9 @@ private:
     void addGrievance(PlayerId holder, PlayerId against, int amount);
     void processGrievances();          // world turn: decay, and grievances for cities held
     void processWorldCongress();       // world turn: convene, open sessions, count votes
-    void processClimate();
-    void processProfiles();            // world turn: update every major civ's play profile             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
+    void processClimate();             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
+    void processProfiles();            // world turn: update every major civ's play profile
+    void processSpaceRace();           // world turn: exoplanet expeditions travel
     void burnPower(PlayerId player);   // power plants burn their fuel (CO2)
     void addCo2(PlayerId player, int64_t amount);
     void unitCo2(PlayerId player, size_t resource, int burned);  // units emit CLIMATE_CO2_PERCENT_FROM_UNITS of the CO2

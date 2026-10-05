@@ -736,6 +736,14 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.preventsDrought = j["preventsDrought"].boolean(false);
         d.preventsFloods = j["preventsFloods"].boolean(false);
         for (const Json& x : j["exclusiveWith"].items()) d.exclusiveIds.push_back(x.str());
+        for (const Json& x : j["validTerrains"].items()) {
+            const TypeIndex t = terrain(x.str());
+            if (t == kNone) {
+                if (error) *error = "district " + id + ": unknown terrain " + x.str();
+                return false;
+            }
+            d.validTerrains.push_back(t);
+        }
         districts.push_back(std::move(d));
     }
     for (DistrictType& d : districts) {

@@ -30,6 +30,7 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::Religious: return TEXT("Religious");
 		case sov::Victory::Culture: return TEXT("Culture");
 		case sov::Victory::Diplomatic: return TEXT("Diplomatic");
+		case sov::Victory::Science: return TEXT("Science");
 		default: return TEXT("");
 	}
 }
@@ -108,6 +109,18 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			Text += FString::Printf(TEXT("   [%s %s]"), *Str(R.resolutions[static_cast<size_t>(Pr.resolution)].name), Pr.option == 0 ? TEXT("A") : TEXT("B"));
 		}
 		Line(Text, 16, Y, FLinearColor(0.75f, 0.95f, 1.f));
+	}
+	// The space race (09: Science victory): every civ whose exoplanet expedition is under way.
+	{
+		FString Race;
+		for (const sov::Player& O : S.players)
+		{
+			const int32 Speed = O.alive && !O.barbarian ? G.expeditionSpeed(O.id) : 0;
+			if (Speed <= 0) continue;
+			const FString Who = O.id == Me ? FString(TEXT("we")) : (O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name));
+			Race += FString::Printf(TEXT("   %s %d/%d ly (+%d)"), *Who, O.lightYears, R.globalInt("SCIENCE_VICTORY_POINTS_REQUIRED"), Speed);
+		}
+		if (!Race.IsEmpty()) Line(TEXT("Exoplanet expeditions:") + Race, 16, Y, FLinearColor(0.7f, 0.9f, 1.f));
 	}
 	// Climate (09: Climate and Disasters [GS]): the world's warming, its phase, our share of the CO2.
 	if (S.co2 > 0 || S.climatePhase > 0)

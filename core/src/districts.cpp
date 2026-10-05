@@ -101,6 +101,8 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
         rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Bonus)
         return fail(CommandError::BadTarget);
     if (d.notAdjacentToCityCenter && state_.grid.distance(city.pos, plot) == 1) return fail(CommandError::BadTarget);
+    if (!d.validTerrains.empty() && std::find(d.validTerrains.begin(), d.validTerrains.end(), p.terrain) == d.validTerrains.end())
+        return fail(CommandError::BadTarget);
     for (TypeIndex other : d.exclusiveWith) {
         if (city.district(other, false)) return fail(CommandError::CannotBuild);
     }

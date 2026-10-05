@@ -706,6 +706,29 @@ void Game::completeProject(City& city, TypeIndex project) {
     }
 }
 
+int Game::expeditionSpeed(PlayerId player) const {
+    // The expedition itself gives 1 light-year a turn; each laser station adds its own (repeatable).
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    int speed = 0;
+    bool launched = false;
+    for (size_t i = 0; i < rules_->projects.size() && i < p.projectsDone.size(); ++i) {
+        const ProjectType& pj = rules_->projects[i];
+        for (const ProjectEffect& e : pj.effects) {
+            if (e.kind != ProjectEffectKind::ExpeditionSpeed || p.projectsDone[i] == 0) continue;
+            speed += e.amount * p.projectsDone[i];
+            launched |= pj.maxPerPlayer == 1;  // the expedition itself (the stations are repeatable)
+        }
+    }
+    return launched ? speed : 0;
+}
+
+void Game::processSpaceRace() {
+    for (Player& p : state_.players) {
+        if (!p.alive || p.barbarian) continue;
+        p.lightYears += expeditionSpeed(p.id);
+    }
+}
+
 bool Game::growBorders(City& city) {
     const int maxDist = rules_->globalInt("PLOT_INFLUENCE_MAX_ACQUIRE_DISTANCE");
     std::optional<Hex> best;

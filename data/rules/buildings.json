@@ -857,30 +857,6 @@
    "purchasable": true
   },
   {
-   "id": "BUILDING_SMALL_ROCKET",
-   "name": "Small Rocket",
-   "district": "DISTRICT_SPACEPORT",
-   "cost": 1,
-   "maintenance": 0,
-   "yields": {}
-  },
-  {
-   "id": "BUILDING_MEDIUM_ROCKET",
-   "name": "Medium Rocket",
-   "district": "DISTRICT_SPACEPORT",
-   "cost": 1,
-   "maintenance": 0,
-   "yields": {}
-  },
-  {
-   "id": "BUILDING_LARGE_ROCKET",
-   "name": "Large Rocket",
-   "district": "DISTRICT_SPACEPORT",
-   "cost": 1,
-   "maintenance": 0,
-   "yields": {}
-  },
-  {
    "id": "BUILDING_AMPHITHEATER",
    "name": "Amphitheater",
    "district": "DISTRICT_THEATER_SQUARE",

@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
                                                         static_cast<std::streamsize>(bytes.size()));
     }
     if (game->gameOver()) {
-        static const char* names[] = {"none", "Domination", "Score", "last civ standing", "Religious", "Culture", "Diplomatic"};
+        static const char* names[] = {"none", "Domination", "Score", "last civ standing", "Religious", "Culture", "Diplomatic", "Science"};
         const PlayerId w = game->state().winner;
         std::printf("winner: player %d (%s), %s victory on turn %d, score %d\n", w,
                     rules.civs[static_cast<size_t>(game->state().players[static_cast<size_t>(w)].civ)].name.c_str(),
