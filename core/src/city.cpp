@@ -306,6 +306,10 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             !hasUnlocked(c.owner, u.unlock) || unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
         if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
+        // Civ uniques: only their civ trains them, and for it they replace their base unit.
+        const TypeIndex civ = state_.players[static_cast<size_t>(c.owner)].civ;
+        if (u.uniqueTo != kNone && u.uniqueTo != civ) return fail(CommandError::CannotBuild);
+        if (rules_->uniqueUnitFor(civ, item.type) != kNone) return fail(CommandError::CannotBuild);
         if (u.agent && !u.spy && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
         if (u.spy && spiesOf(c.owner) >= spyCapacity(c.owner)) return fail(CommandError::CannotBuild);
         if (!u.needsBuilding.empty() &&

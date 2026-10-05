@@ -40,11 +40,30 @@ void Game::linkBarbarians() {
 }
 
 void Game::noteKill(const Unit& victim, const Unit* killer) {
+    // Civ uniques: a kill heals (Scara) or brings the loser in as a Builder (Jaguar Warrior).
+    if (killer && killer->owner != victim.owner) {
+        if (Unit* k = state_.unit(killer->id)) {
+            k->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), k->hp + unitEffectTotal(*k, UnitEffectKind::HealOnKill));
+            if (unitHas(*k, UnitEffectKind::CaptureAsBuilder) && rules_->units[static_cast<size_t>(victim.type)].domain == Domain::Land &&
+                rules_->units[static_cast<size_t>(victim.type)].layer == UnitLayer::Military)
+                captures_.push_back({k->owner, victim.pos});
+        }
+    }
     // Camp boldness: +15 per kill, -10 per unit lost (BARBARIAN_BOLDNESS_PER_*).
     for (Camp& c : state_.camps) {
         if (killer && killer->camp == c.id) c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_KILL");
         if (victim.camp == c.id) c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_UNIT_LOST");
     }
+}
+
+void Game::spawnCaptures() {
+    const TypeIndex builder = rules_->unit("UNIT_BUILDER");
+    for (const auto& [owner, at] : captures_) {
+        if (builder == kNone || !state_.players[static_cast<size_t>(owner)].alive) continue;
+        if (state_.unitAt(at, UnitLayer::Civilian, *rules_) || !isLandPassable(state_, *rules_, at)) continue;
+        spawnUnit(builder, owner, at).movesLeft = Fixed();
+    }
+    captures_.clear();
 }
 
 void Game::enterPlot(Unit& unit) {

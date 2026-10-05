@@ -307,6 +307,23 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     // World wonders load as buildings (flagged by their placement), so their yields, slots and
     // points use the building paths.
     for (const auto& row : m.tables["wonders"]) m.tables["buildings"].push_back(row);
+    // A row with a `base` is that row with its own fields laid over (civ uniques: only what differs).
+    for (const char* name : {"units", "buildings", "improvements"}) {
+        Table& table = m.tables[name];
+        for (auto& [id, row] : table) {
+            const std::string baseId = row["base"].str();
+            if (baseId.empty()) continue;
+            const Json* base = nullptr;
+            for (const auto& [bid, brow] : table) {
+                if (bid == baseId) base = &brow;
+            }
+            if (!base || base == &row) {
+                *error = std::string(name) + " " + id + ": unknown base " + baseId;
+                return false;
+            }
+            row = Json::overlay(*base, row);
+        }
+    }
     globals_ = m.globals;
 
     // Eras and research trees first: everything else may be unlocked by them.
@@ -462,6 +479,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"WALL_FULL_DAMAGE", UnitEffectKind::WallFullDamage}, {"BYPASS_WALLS", UnitEffectKind::BypassWalls},
             {"AURA_STRENGTH", UnitEffectKind::AuraStrength},     {"ASSASSIN_DEFENSE", UnitEffectKind::AssassinDefense},
             {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
+            {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
+            {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -471,6 +490,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"TILE_TERRAIN", CombatAtom::TileTerrain},  {"OPPONENT_FORTIFIED", CombatAtom::OpponentFortified},
             {"OPPONENT_WOUNDED", CombatAtom::OpponentWounded}, {"DISTRICT_TILE", CombatAtom::DistrictTile},
             {"OWN_TERRITORY", CombatAtom::OwnTerritory},
+            {"ADJACENT_SAME_UNIT", CombatAtom::AdjacentSameUnit}, {"OPPONENT_TILE_BASE", CombatAtom::OpponentTileBase},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;
@@ -599,6 +619,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
         }
         u.promotionClass = j["promotionClass"].str();
+        u.uniqueToId = j["uniqueTo"].str();
         auto findAbility = [this](const std::string& aid) { return ability(aid); };
         if (!resolveList(j["abilities"], findAbility, u.abilities, "unit " + id, error)) return false;
         units.push_back(std::move(u));
@@ -609,6 +630,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             const std::string& up = j["upgradesTo"].str();
             if (!up.empty() && (units[i].upgradesTo = unit(up)) == kNone) {
                 *error = "unit " + id + ": unknown upgrade " + up;
+                return false;
+            }
+            const std::string baseId = j["base"].str();
+            if (!units[i].uniqueToId.empty() && (units[i].replaces = unit(baseId)) == kNone) {
+                *error = "unit " + id + ": a unique unit needs the base it replaces";
                 return false;
             }
             const std::string& cap = j["capturedAs"].str();
@@ -1652,6 +1678,14 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             ++k;
         }
     }
+    for (UnitType& u : units) {
+        if (u.uniqueToId.empty()) continue;
+        u.uniqueTo = civ(u.uniqueToId);
+        if (u.uniqueTo == kNone) {
+            *error = "unit " + u.id + ": unknown civilization " + u.uniqueToId;
+            return false;
+        }
+    }
     static const char* required[] = {"CITY_MIN_RANGE", "START_DISTANCE_MAJOR_CIVILIZATION", "MOVEMENT_RIVER_COST",
                                      "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS",
                                      "CITY_FOOD_CONSUMPTION_PER_POPULATION", "CITY_GROWTH_THRESHOLD",
@@ -1710,6 +1744,13 @@ TypeIndex Rules::governor(const std::string& id) const { return findIn(governors
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }
+TypeIndex Rules::uniqueUnitFor(TypeIndex civ, TypeIndex base) const {
+    if (civ == kNone || base == kNone) return kNone;
+    for (size_t i = 0; i < units.size(); ++i) {
+        if (units[i].uniqueTo == civ && units[i].replaces == base) return static_cast<TypeIndex>(i);
+    }
+    return kNone;
+}
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {

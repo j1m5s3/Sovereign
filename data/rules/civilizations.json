@@ -1,5 +1,5 @@
 {
- "_comment": "Sovereign's launch roster (specs/sovereign/leaders-and-art-style.md, Launch roster). Hand-written. Each leader's agenda (what the AI likes and dislikes) is scored in core/src/diplomacy.cpp. Civ abilities, uniques and dynasties arrive with later milestones.",
+ "_comment": "Sovereign's launch roster (specs/sovereign/leaders-and-art-style.md, Launch roster). Hand-written. Each leader's agenda (what the AI likes and dislikes) is scored in core/src/diplomacy.cpp. Unique units (units, abilities) are rows built on a `base` unit: only what differs is written, the rest comes from the generated Civ data; `uniqueTo` locks them to the civ and they replace their base for it (leaders-and-art-style: Civ abilities, uniques and dynasties). Approximations: the War Chariot and Chasqui get +1 Movement everywhere (flat land and roads are not tracked per move), the Mandinka Lancer +5 against units in desert but not the desert Movement, the Legionary one Builder charge for any improvement, the Repeating Crossbow may also move after attacking.",
  "civilizations": [
   {"id": "CIVILIZATION_ENGLAND", "name": "England", "leader": "LEADER_ELIZABETH_I",
    "agenda": "AGENDA_QUEEN_OF_THE_SEAS", "agendaName": "Queen of the Seas", "agendaText": "Likes civs that keep their fleets away from her coasts; dislikes civs with a navy larger than hers nearby.",
@@ -49,5 +49,31 @@
    "agenda": "AGENDA_SAPA_INCA", "agendaName": "Sapa Inca", "agendaText": "Dislikes civs that settle in the mountains near him.",
    "leaning": "Builder-King", "voice": "Ambitious, practical and territorial about his mountains; values roads, terraces and order; speaks firmly.",
    "cityNames": ["Cusco", "Machu Picchu", "Ollantaytambo", "Vilcabamba", "Quito", "Cajamarca", "Huanuco Pampa", "Tumebamba", "Pisac", "Vitcos", "Jauja", "Pachacamac"]}
+ ],
+ "abilities": [
+  {"id": "ABILITY_LONGBOWMAN", "name": "Longbow", "classes": [], "effects": [{"kind": "STRENGTH", "amount": 5, "when": [[{"atom": "ATTACKING"}], [{"atom": "COMBAT_TYPE", "value": "RANGED"}], [{"atom": "TILE_HILLS"}, {"atom": "TILE_FEATURE", "value": "FEATURE_FOREST"}]]}]},
+  {"id": "ABILITY_SCARA", "name": "Scara", "classes": [], "effects": [{"kind": "HEAL_ON_KILL", "amount": 10}]},
+  {"id": "ABILITY_HOPLITE", "name": "Phalanx", "classes": [], "effects": [{"kind": "STRENGTH", "amount": 10, "when": [[{"atom": "ADJACENT_SAME_UNIT"}]]}]},
+  {"id": "ABILITY_IMMORTAL", "name": "Immortals", "classes": [], "effects": [{"kind": "MELEE_AND_RANGED"}]},
+  {"id": "ABILITY_MAMLUK", "name": "Mamluk", "classes": [], "effects": [{"kind": "HEAL_AFTER_ACTION"}]},
+  {"id": "ABILITY_REPEATING_CROSSBOW", "name": "Repeating Crossbow", "classes": [], "effects": [{"kind": "ATTACK_AFTER_MOVE"}, {"kind": "MOVE_AFTER_ATTACK"}]},
+  {"id": "ABILITY_SAMURAI", "name": "Bushido", "classes": [], "effects": [{"kind": "NO_WOUNDED_PENALTY"}]},
+  {"id": "ABILITY_WAR_CHARIOT", "name": "War Chariot", "classes": [], "effects": [{"kind": "MOVE_AFTER_ATTACK"}]},
+  {"id": "ABILITY_MANDINKA_LANCER", "name": "Mandinka Lancer", "classes": [], "effects": [{"kind": "STRENGTH", "amount": 5, "when": [[{"atom": "OPPONENT_TILE_BASE", "value": "DESERT"}]]}]},
+  {"id": "ABILITY_JAGUAR_WARRIOR", "name": "Jaguar Warrior", "classes": [], "effects": [{"kind": "STRENGTH", "amount": 4, "when": [[{"atom": "TILE_FEATURE", "value": "FEATURE_FOREST"}, {"atom": "TILE_FEATURE", "value": "FEATURE_JUNGLE"}]]}, {"kind": "CAPTURE_AS_BUILDER"}]}
+ ],
+ "units": [
+  {"id": "UNIT_LONGBOWMAN", "name": "Longbowman", "base": "UNIT_CROSSBOWMAN", "uniqueTo": "CIVILIZATION_ENGLAND", "cost": 162, "abilities": ["ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF", "ABILITY_LONGBOWMAN"]},
+  {"id": "UNIT_SCARA", "name": "Scara", "base": "UNIT_KNIGHT", "uniqueTo": "CIVILIZATION_FRANCE", "moves": 5, "abilities": ["ABILITY_IGNORE_ZOC", "ABILITY_SCARA"]},
+  {"id": "UNIT_LEGIONARY", "name": "Legionary", "base": "UNIT_SWORDSMAN", "uniqueTo": "CIVILIZATION_ROME", "combat": 39, "buildCharges": 1},
+  {"id": "UNIT_HOPLITE", "name": "Hoplite", "base": "UNIT_SPEARMAN", "uniqueTo": "CIVILIZATION_GREECE", "abilities": ["ABILITY_ANTI_CAVALRY", "ABILITY_HOPLITE"]},
+  {"id": "UNIT_IMMORTAL", "name": "Immortal", "base": "UNIT_SWORDSMAN", "uniqueTo": "CIVILIZATION_PERSIA", "ranged": 25, "range": 2, "abilities": ["ABILITY_ANTI_SPEAR", "ABILITY_IMMORTAL"]},
+  {"id": "UNIT_MAMLUK", "name": "Mamluk", "base": "UNIT_KNIGHT", "uniqueTo": "CIVILIZATION_ARABIA", "abilities": ["ABILITY_IGNORE_ZOC", "ABILITY_MAMLUK"]},
+  {"id": "UNIT_REPEATING_CROSSBOW", "name": "Repeating Crossbow", "base": "UNIT_CROSSBOWMAN", "uniqueTo": "CIVILIZATION_CHINA", "abilities": ["ABILITY_RANGED_ATTACK_DISTRICT_DEBUFF", "ABILITY_REPEATING_CROSSBOW"]},
+  {"id": "UNIT_SAMURAI", "name": "Samurai", "base": "UNIT_MAN_AT_ARMS", "uniqueTo": "CIVILIZATION_JAPAN", "abilities": ["ABILITY_ANTI_SPEAR", "ABILITY_SAMURAI"]},
+  {"id": "UNIT_WAR_CHARIOT", "name": "War Chariot", "base": "UNIT_HEAVY_CHARIOT", "uniqueTo": "CIVILIZATION_EGYPT", "moves": 3, "abilities": ["ABILITY_HEAVY_CHARIOT", "ABILITY_IGNORE_ZOC", "ABILITY_WAR_CHARIOT"]},
+  {"id": "UNIT_MANDINKA_LANCER", "name": "Mandinka Lancer", "base": "UNIT_KNIGHT", "uniqueTo": "CIVILIZATION_MALI", "abilities": ["ABILITY_IGNORE_ZOC", "ABILITY_MANDINKA_LANCER"]},
+  {"id": "UNIT_JAGUAR_WARRIOR", "name": "Jaguar Warrior", "base": "UNIT_WARRIOR", "uniqueTo": "CIVILIZATION_AZTEC", "abilities": ["ABILITY_ANTI_SPEAR", "ABILITY_JAGUAR_WARRIOR"]},
+  {"id": "UNIT_CHASQUI", "name": "Chasqui", "base": "UNIT_SCOUT", "uniqueTo": "CIVILIZATION_INCA", "moves": 4}
  ]
 }

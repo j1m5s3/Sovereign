@@ -643,6 +643,7 @@ CommandError Game::submit(const Command& c) {
     if (e != CommandError::Ok) return e;
     log_.push_back(c);
     apply(c);
+    spawnCaptures();
     updateBoosts(c.player);
     checkVictory();
     return CommandError::Ok;
@@ -714,7 +715,7 @@ void Game::apply(const Command& c) {
             Unit& u = *state_.unit(c.id);
             Player& p = state_.players[static_cast<size_t>(c.player)];
             p.gold -= Fixed::fromInt(upgradeCost(u));
-            const TypeIndex to = rules_->units[static_cast<size_t>(u.type)].upgradesTo;
+            const TypeIndex to = upgradeTarget(u);
             const UnitType& up = rules_->units[static_cast<size_t>(to)];
             if (up.strategicResource != kNone && up.strategicCost > 0) p.stockpile[static_cast<size_t>(up.strategicResource)] -= up.strategicCost;
             u.type = to;  // keeps its health, experience and promotions; the upgrade takes its turn

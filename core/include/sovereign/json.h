@@ -46,6 +46,9 @@ public:
     Fixed fixed(Fixed def = Fixed()) const;
     bool boolean(bool def = false) const;
 
+    // An object with `over`'s members laid over `base`'s (same keys replaced, new keys added).
+    static Json overlay(const Json& base, const Json& over);
+
 private:
     friend class JsonParser;
     static const std::string& emptyString();

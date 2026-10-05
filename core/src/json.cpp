@@ -214,6 +214,22 @@ const Json& Json::operator[](std::string_view key) const {
     return null;
 }
 
+Json Json::overlay(const Json& base, const Json& over) {
+    if (!base.isObject() || !over.isObject()) return over;
+    Json out = base;
+    for (const auto& [key, value] : over.object_) {
+        bool replaced = false;
+        for (auto& [k, v] : out.object_) {
+            if (k == key) {
+                v = value;
+                replaced = true;
+            }
+        }
+        if (!replaced) out.object_.emplace_back(key, value);
+    }
+    return out;
+}
+
 bool Json::has(std::string_view key) const {
     if (type_ != Type::Object) return false;
     for (const auto& kv : object_) {

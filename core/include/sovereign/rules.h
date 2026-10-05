@@ -118,6 +118,10 @@ enum class UnitEffectKind : uint8_t {
     AssassinDefense,    // +amount to the leader's defence against assassins
     CityProduction,     // +amount production in the city the leader stands in
     CityAmenities,      // +amount amenities in the city the leader stands in
+    // Civ uniques (leaders-and-art-style: Civ abilities, uniques and dynasties).
+    HealOnKill,         // +amount HP when it destroys a unit
+    MeleeAndRanged,     // a ranged unit that may also attack in melee
+    CaptureAsBuilder,   // a land unit it destroys joins its owner as a Builder
 };
 
 enum class CombatAtom : uint8_t {
@@ -134,6 +138,8 @@ enum class CombatAtom : uint8_t {
     OpponentWounded,
     DistrictTile,
     OwnTerritory,
+    AdjacentSameUnit,   // a friendly unit of the same type stands next to it
+    OpponentTileBase,   // the opponent stands on terrain of this climate (value: e.g. "DESERT")
 };
 
 struct CombatCondition {
@@ -206,6 +212,10 @@ struct UnitType {
     int resourceMaintenance = 0;   // strategicResource spent per turn [GS]
     std::string promotionClass;    // empty: no promotions
     std::vector<TypeIndex> abilities;  // innate
+    // A civ's unique unit: only that civ trains it, and for that civ it replaces `replaces`.
+    TypeIndex uniqueTo = kNone;
+    TypeIndex replaces = kNone;
+    std::string uniqueToId;            // (loading only)
     TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
     bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
     bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
@@ -895,6 +905,8 @@ public:
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;
+    // The civ's unique unit replacing `base` (kNone: none, `base` itself stays).
+    TypeIndex uniqueUnitFor(TypeIndex civ, TypeIndex base) const;
     TypeIndex speed(const std::string& id) const;
     // Terrain with this climate base and relief, or kNone.
     TypeIndex terrainFor(const std::string& base, Relief relief) const;

@@ -52,6 +52,14 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
             break;
         case CombatAtom::DistrictTile: ok = x.s->cityAt(x.unit->pos) != nullptr; break;
         case CombatAtom::OwnTerritory: ok = plot.owner == x.unit->owner; break;
+        case CombatAtom::AdjacentSameUnit:
+            for (const Unit& o : x.s->units) {
+                ok = ok || (o.id != x.unit->id && o.owner == x.unit->owner && o.type == x.unit->type && x.s->grid.distance(o.pos, x.unit->pos) == 1);
+            }
+            break;
+        case CombatAtom::OpponentTileBase:
+            ok = x.opponent && x.r->terrains[static_cast<size_t>(x.s->plot(x.opponent->pos).terrain)].base == c.value;
+            break;
     }
     return c.negate ? !ok : ok;
 }
@@ -594,8 +602,9 @@ CommandError Game::validateCombat(const Command& c) const {
         if (visibility(c.player, *t) != Visibility::Visible || (!isAircraft(*u) && !lineOfSight(u->pos, *t))) return CommandError::CannotAttack;
         return CommandError::Ok;
     }
-    // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
-    if (meleeStrength(*u) <= 0 || rangedStrength(*u) > 0 || ut.bombard > 0) return CommandError::CannotAttack;
+    // Melee: ranged and siege units cannot (the Immortal can); the target must be adjacent and enterable.
+    if (meleeStrength(*u) <= 0 || (rangedStrength(*u) > 0 && !unitHas(*u, UnitEffectKind::MeleeAndRanged)) || ut.bombard > 0)
+        return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
     // Land units fight on land; ships fight on the water and against coastal cities.
     if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water) return CommandError::CannotAttack;
@@ -615,10 +624,18 @@ CommandError Game::validateCombat(const Command& c) const {
     return any ? CommandError::Ok : CommandError::CannotAttack;
 }
 
+TypeIndex Game::upgradeTarget(const Unit& unit) const {
+    const TypeIndex next = rules_->units[static_cast<size_t>(unit.type)].upgradesTo;
+    if (next == kNone) return kNone;
+    const TypeIndex civ = state_.players[static_cast<size_t>(unit.owner)].civ;
+    const TypeIndex unique = rules_->uniqueUnitFor(civ, next);
+    return unique != kNone ? unique : next;
+}
+
 int Game::upgradeCost(const Unit& unit) const {
     const UnitType& from = rules_->units[static_cast<size_t>(unit.type)];
-    if (from.upgradesTo == kNone) return -1;
-    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    if (upgradeTarget(unit) == kNone) return -1;
+    const UnitType& to = rules_->units[static_cast<size_t>(upgradeTarget(unit))];
     // UPGRADE_BASE_COST + the production difference x UPGRADE_NET_PRODUCTION_PERCENT_COST, at least
     // UPGRADE_MINIMUM_COST, scaled by game speed (exact engine formula unverified; Warrior -> Swordsman 60).
     const int diff = std::max(0, to.cost - from.cost) * rules_->globalInt("UPGRADE_NET_PRODUCTION_PERCENT_COST") / 100;
@@ -630,12 +647,12 @@ int Game::upgradeCost(const Unit& unit) const {
 CommandError Game::upgradeProblem(UnitId id) const {
     const Unit* u = state_.unit(id);
     if (!u) return CommandError::BadUnit;
-    const UnitType& from = rules_->units[static_cast<size_t>(u->type)];
-    if (from.upgradesTo == kNone) return CommandError::CannotUpgrade;
-    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    const TypeIndex target = upgradeTarget(*u);
+    if (target == kNone) return CommandError::CannotUpgrade;
+    const UnitType& to = rules_->units[static_cast<size_t>(target)];
     // In its owner's territory with moves left, the new unit known, gold and its strategic resource on hand.
     if (state_.plot(u->pos).owner != u->owner || u->movesLeft <= Fixed() || isEmbarked(*u)) return CommandError::CannotUpgrade;
-    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, from.upgradesTo)) return CommandError::CannotUpgrade;
+    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, target)) return CommandError::CannotUpgrade;
     if (state_.players[static_cast<size_t>(u->owner)].gold < Fixed::fromInt(upgradeCost(*u))) return CommandError::NotEnoughGold;
     return CommandError::Ok;
 }

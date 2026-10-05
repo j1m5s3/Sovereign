@@ -1,0 +1,100 @@
+// Civ uniques (leaders-and-art-style.md: Civ abilities, uniques and dynasties).
+#include <algorithm>
+
+#include "helpers.h"
+
+using namespace sov;
+using sovtest::addCity;
+using sovtest::addUnit;
+using sovtest::flatState;
+using sovtest::rules;
+
+namespace {
+size_t at(TypeIndex i) { return static_cast<size_t>(i); }
+ProductionItem unit(const char* id) { return {ProductionKind::Unit, rules().unit(id)}; }
+TypeIndex civ(const char* id) { return rules().civ(id); }
+
+// Player 0 plays `civ0`, player 1 `civ1`; each has a city, both know `techs`.
+GameState pair(const char* civ0, const char* civ1, std::initializer_list<const char*> techs) {
+    GameState s = flatState(24, 14, 2);
+    s.players[0].civ = civ(civ0);
+    s.players[1].civ = civ(civ1);
+    addCity(s, 0, {4, 6}, true, 5);
+    addCity(s, 1, {16, 6}, true, 5);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        for (const char* t : techs) p.techs.done[at(rules().tech(t))] = 1;
+        p.relations.resize(2);
+    }
+    return s;
+}
+}  // namespace
+
+TEST(unique_units_are_built_on_their_base) {
+    const Rules& r = rules();
+    const UnitType& longbow = r.units[at(r.unit("UNIT_LONGBOWMAN"))];
+    const UnitType& crossbow = r.units[at(r.unit("UNIT_CROSSBOWMAN"))];
+    CHECK_EQ(longbow.uniqueTo, civ("CIVILIZATION_ENGLAND"));
+    CHECK_EQ(longbow.replaces, r.unit("UNIT_CROSSBOWMAN"));
+    CHECK_EQ(longbow.cost, 162);                    // 10% cheaper
+    CHECK_EQ(longbow.ranged, crossbow.ranged);      // the rest comes from the Crossbowman
+    CHECK(longbow.unlock.civic == crossbow.unlock.civic && longbow.unlock.index == crossbow.unlock.index);
+    CHECK_EQ(longbow.upgradesTo, crossbow.upgradesTo);
+    CHECK_EQ(r.units[at(r.unit("UNIT_LEGIONARY"))].combat, 39);
+    int uniques = 0;
+    for (const UnitType& u : r.units) uniques += u.uniqueTo != kNone ? 1 : 0;
+    CHECK_EQ(uniques, 12);
+}
+
+TEST(a_unique_unit_replaces_its_base_for_its_civ_only) {
+    auto g = Game::fromScenario(rules(), pair("CIVILIZATION_ENGLAND", "CIVILIZATION_FRANCE", {"TECH_MACHINERY"}));
+    const City& english = g->state().cities[0];
+    const City& french = g->state().cities[1];
+    CHECK(g->canProduce(english, unit("UNIT_LONGBOWMAN")));
+    CHECK(!g->canProduce(english, unit("UNIT_CROSSBOWMAN")));
+    CHECK(g->canProduce(french, unit("UNIT_CROSSBOWMAN")));
+    CHECK(!g->canProduce(french, unit("UNIT_LONGBOWMAN")));
+}
+
+TEST(upgrades_lead_to_the_civs_unique) {
+    GameState s = pair("CIVILIZATION_ROME", "CIVILIZATION_FRANCE", {"TECH_IRON_WORKING", "TECH_BRONZE_WORKING"});
+    const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 7});
+    for (const Hex& h : s.grid.within({4, 6}, 2)) s.plot(h).owner = 0;
+    s.players[0].gold = Fixed::fromInt(500);
+    s.players[0].stockpile[at(rules().resource("RESOURCE_IRON"))] = 40;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->upgradeTarget(*g->state().unit(w)), rules().unit("UNIT_LEGIONARY"));
+    REQUIRE(g->submit(Command::upgradeUnit(0, w)) == CommandError::Ok);
+    CHECK_EQ(g->state().unit(w)->type, rules().unit("UNIT_LEGIONARY"));
+}
+
+TEST(hoplites_stand_together_and_immortals_fight_both_ways) {
+    GameState s = pair("CIVILIZATION_GREECE", "CIVILIZATION_PERSIA", {"TECH_BRONZE_WORKING", "TECH_IRON_WORKING"});
+    const UnitId h1 = addUnit(s, "UNIT_HOPLITE", 0, {8, 6});
+    const UnitId foe = addUnit(s, "UNIT_IMMORTAL", 1, {9, 6});
+    auto alone = Game::fromScenario(rules(), s);
+    const int single = alone->combatStrength(*alone->state().unit(h1), *alone->state().unit(foe), false, false);
+    addUnit(s, "UNIT_HOPLITE", 0, {8, 7});
+    auto pairUp = Game::fromScenario(rules(), s);
+    CHECK_EQ(pairUp->combatStrength(*pairUp->state().unit(h1), *pairUp->state().unit(foe), false, false), single + 10);
+    // The Immortal can shoot or charge.
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    s.currentPlayer = 1;
+    auto war = Game::fromScenario(rules(), std::move(s));
+    CHECK(war->previewAttack(foe, {8, 6}, true).valid);
+    CHECK(war->previewAttack(foe, {8, 6}, false).valid);
+}
+
+TEST(jaguar_warriors_bring_the_defeated_home_as_builders) {
+    GameState s = pair("CIVILIZATION_AZTEC", "CIVILIZATION_INCA", {});
+    const UnitId jaguar = addUnit(s, "UNIT_JAGUAR_WARRIOR", 0, {8, 6});
+    const UnitId victim = addUnit(s, "UNIT_WARRIOR", 1, {9, 6});
+    s.unit(victim)->hp = 5;
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::attack(0, jaguar, {9, 6})) == CommandError::Ok);
+    CHECK(g->state().unit(victim) == nullptr);
+    int builders = 0;
+    for (const Unit& u : g->state().units) builders += u.owner == 0 && u.type == rules().unit("UNIT_BUILDER") ? 1 : 0;
+    CHECK_EQ(builders, 1);
+}

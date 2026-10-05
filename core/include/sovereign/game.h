@@ -354,6 +354,7 @@ public:
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ
     // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.
     int upgradeCost(const Unit& unit) const;
+    TypeIndex upgradeTarget(const Unit& unit) const;  // the next unit in its line (the civ's unique if it has one)
     CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now
     // A unit entering this plot loses its remaining moves (enemy unit or city next to it).
     bool inEnemyZoc(const Unit& mover, Hex plot) const;
@@ -576,6 +577,8 @@ private:
     const Rules* rules_;
     GameState state_;
     std::vector<Command> log_;
+    std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command
+    void spawnCaptures();
 };
 
 // Plain-English deal terms ("England gives 100 Gold; France gives Wine for 30 turns"), for the
