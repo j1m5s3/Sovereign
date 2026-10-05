@@ -6,6 +6,7 @@
 #include "SovMirror.h"
 #include "SovSession.h"
 #include "SovStreetLayout.h"
+#include "SovBattleSim.h"
 
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
@@ -295,6 +296,51 @@ bool FSovStreetLayoutTest::RunTest(const FString& Parameters)
 	for (int32 i = 0; bSame && i < A.Pieces.Num(); ++i) bSame = A.Pieces[i].Location.Equals(B.Pieces[i].Location);
 	TestTrue(TEXT("identical placement"), bSame);
 	TestTrue(TEXT("herald and captain on the plaza"), A.Herald.Size2D() < 1800.0 && A.Captain.Size2D() < 1800.0);
+	return true;
+}
+
+namespace
+{
+FSovBattleResult RunBattle(int32 AttackerStrength, int32 DefenderStrength, int32 Seed, bool bLeaderAlone = false)
+{
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, AttackerStrength, 100, false};
+	Spec.Defender = {TEXT("Swordsman"), 1, DefenderStrength, 100, bLeaderAlone};
+	Spec.HumanSide = 0;
+	Spec.LeaderStrength = 30;
+	Spec.Seed = Seed;
+	FSovBattleSim Sim;
+	Sim.Start(Spec);
+	for (int32 i = 0; i < 20000 && !Sim.Finished(); ++i)
+	{
+		Sim.Step(1.f / 30.f);  // nobody at the controls: the battle AI fights for both sides
+	}
+	return Sim.Result();
+}
+}  // namespace
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovBattleSimTest, "Sovereign.Battle.NumbersDecideMostFights", kSovTestFlags)
+bool FSovBattleSimTest::RunTest(const FString& Parameters)
+{
+	// Even fights hurt both sides; a much stronger side usually wins and loses less.
+	const FSovBattleResult Even = RunBattle(35, 35, 1);
+	TestTrue(TEXT("both sides bleed"), Even.ToAttacker > 0 && Even.ToDefender > 0);
+	int32 StrongWins = 0, StrongLessHurt = 0;
+	for (int32 Seed = 1; Seed <= 12; ++Seed)
+	{
+		const FSovBattleResult R = RunBattle(50, 30, Seed);
+		StrongWins += R.Winner == 0;
+		StrongLessHurt += R.ToAttacker < R.ToDefender;
+	}
+	TestTrue(FString::Printf(TEXT("strong side wins %d of 12"), StrongWins), StrongWins >= 10);
+	TestTrue(FString::Printf(TEXT("strong side hurt less %d of 12"), StrongLessHurt), StrongLessHurt >= 10);
+	// Same seed, same battle when nobody intervenes.
+	const FSovBattleResult A = RunBattle(40, 38, 7), B = RunBattle(40, 38, 7);
+	TestTrue(TEXT("deterministic without input"), A.ToAttacker == B.ToAttacker && A.ToDefender == B.ToDefender && A.LeaderWound == B.LeaderWound);
+	// An unescorted leader fights alone; its damage is the unit's.
+	const FSovBattleResult Lone = RunBattle(40, 16, 3, true);
+	TestTrue(TEXT("lone leader takes the brunt"), Lone.ToDefender > 0);
+	TestTrue(TEXT("results stay within HP"), Lone.ToDefender <= 100 && Lone.ToAttacker <= 100);
 	return true;
 }
 

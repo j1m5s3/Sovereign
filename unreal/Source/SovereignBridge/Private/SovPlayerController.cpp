@@ -9,6 +9,8 @@
 #include "SovHexLayout.h"
 #include "SovMapActor.h"
 #include "SovStreetScene.h"
+#include "SovBattleScene.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 #include "Engine/World.h"
 
@@ -575,11 +577,130 @@ void ASovPlayerController::Pick(int32 Index)
 
 // ------------------------------------------------------------------ street scenes
 
+void ASovPlayerController::LookAround(float DeltaTime)
+{
+	FRotator Look = GetControlRotation();
+	if (IsInputKeyDown(EKeys::RightMouseButton))
+	{
+		float DX = 0.f, DY = 0.f;
+		GetInputMouseDelta(DX, DY);
+		Look.Yaw += DX * 2.5f;
+		Look.Pitch = FMath::ClampAngle(Look.Pitch + DY * 2.5f, -60.f, 20.f);
+	}
+	if (IsInputKeyDown(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
+	if (IsInputKeyDown(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
+	SetControlRotation(Look);
+}
+
 void ASovPlayerController::StartBattle()
 {
-	// The live battle scene arrives with battle milestone 2; until then the fight is auto-resolved.
-	Subsystem()->LastMessage = TEXT("Live battle scenes are not built yet: auto-resolving.");
-	Send(sov::Command::autoResolveBattle(Me()));
+	USovGameSubsystem* Sub = Subsystem();
+	const sov::Game& G = Sub->GetGame();
+	const sov::PendingBattle& B = G.state().pendingBattle;
+	const sov::Unit* A = G.state().unit(B.attacker);
+	const sov::Unit* D = G.state().unit(B.defender);
+	if (!A || !D)
+	{
+		Send(sov::Command::autoResolveBattle(Me()));
+		return;
+	}
+	// The game autosaves when a live battle starts (engine doc).
+	Sub->SaveGame(TEXT("autosave"));
+	const sov::Unit* L = G.state().unit(B.leader);
+	const sov::Rules& R = G.rules();
+	FSovBattleSpec Spec;
+	Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrength(*A, *D, true, false), A->hp, G.isLeader(*A)};
+	Spec.Defender = {Str(R.units[static_cast<size_t>(D->type)].name), D->owner, G.combatStrength(*D, *A, false, false), D->hp, G.isLeader(*D)};
+	Spec.HumanSide = A->owner == Me() ? 0 : 1;
+	Spec.bLeaderPresent = L != nullptr;
+	if (L)
+	{
+		Spec.LeaderStrength = G.combatStrength(*L, Spec.HumanSide == 0 ? *D : *A, Spec.HumanSide == 0, false);
+		Spec.LeaderHp = L->hp;
+	}
+	Spec.Seed = G.state().turn * 7919 + B.attacker;
+	Spec.TimeLimit = 180.f;
+	Sim.Start(Spec);
+	Outcome = FSovBattleResult();
+	bBattleSent = false;
+
+	bool bWoods = false;
+	const FLinearColor Ground = SovPlotColor(G, D->pos.x, D->pos.y, &bWoods);
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
+	Battle->Build(Spec, Ground, bWoods, SovPlayerColor(G, A->owner), SovPlayerColor(G, D->owner));
+	Battle->Sync(Sim);
+	const FVector2D Start = Sim.LeaderIndex() != INDEX_NONE ? Sim.Soldiers()[Sim.LeaderIndex()].Pos : FVector2D(Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
+	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
+	Walker->SetColor(SovPlayerColor(G, Me()));
+	Walker->GetCharacterMovement()->DisableMovement();  // the simulation moves the leader
+	MapPawn = GetPawn();
+	Possess(Walker);
+	SetControlRotation(FRotator(-20.f, Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
+	Chooser = EChooser::None;
+	Sub->LastMessage = TEXT("To battle! WASD move, left click or F strike, Tab charge/hold your men, Esc settle now.");
+}
+
+void ASovPlayerController::UpdateBattle(float DeltaTime)
+{
+	LookAround(DeltaTime);
+	if (bBattleSent)
+	{
+		BattleExitTimer -= DeltaTime;
+		if (BattleExitTimer <= 0.f)
+		{
+			ExitBattle();
+		}
+		return;
+	}
+	const FRotator Yaw(0.f, GetControlRotation().Yaw, 0.f);
+	const FVector F3 = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), R3 = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
+	FVector2D Move(0, 0);
+	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Move += FVector2D(F3);
+	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Move -= FVector2D(F3);
+	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Move += FVector2D(R3);
+	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Move -= FVector2D(R3);
+	const bool bStrike = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::F);
+	const int32 Side = Sim.GetSpec().HumanSide;
+	if (WasInputKeyJustPressed(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
+	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
+	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
+	Battle->Sync(Sim);
+	if (Sim.LeaderIndex() != INDEX_NONE)
+	{
+		const FSovSoldier& Me3 = Sim.Soldiers()[Sim.LeaderIndex()];
+		Walker->SetActorLocation(Battle->ToWorld(Me3.Pos, 90.0));
+		if (!Move.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Move.Y, Move.X)), 0.f));
+		Walker->Body->SetVisibility(Me3.bAlive);
+		Walker->Crown->SetVisibility(Me3.bAlive);
+	}
+	if (Sim.Finished() || bSettleNow)
+	{
+		// One result command into the game; the core clamps it to the band (§9).
+		Outcome = Sim.Result();
+		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound));
+		bBattleSent = true;
+		BattleExitTimer = 3.f;
+	}
+}
+
+void ASovPlayerController::ExitBattle()
+{
+	if (MapPawn)
+	{
+		Possess(MapPawn);
+	}
+	if (Walker)
+	{
+		Walker->Destroy();
+	}
+	if (Battle)
+	{
+		Battle->Destroy();
+	}
+	Walker = nullptr;
+	Battle = nullptr;
 }
 
 void ASovPlayerController::EnterStreet()
@@ -916,6 +1037,15 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	if (InBattle())
+	{
+		UpdateBattle(DeltaTime);
+		if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+		{
+			Hud->PanelLines.Reset();
+		}
+		return;
+	}
 	if (InStreet())
 	{
 		UpdateStreet(DeltaTime);

@@ -91,6 +91,18 @@ FLinearColor PlotColor(const sov::Rules& Rules, const sov::Plot& Plot, ESovRelie
 }
 }  // namespace
 
+FLinearColor SovPlotColor(const sov::Game& Game, int32 X, int32 Y, bool* bWoods)
+{
+	const sov::Plot& Plot = Game.state().plot(sov::Hex{X, Y});
+	ESovRelief Relief = ESovRelief::Flat;
+	if (bWoods)
+	{
+		const std::string Id = Plot.feature == sov::kNone ? std::string() : Game.rules().features[static_cast<size_t>(Plot.feature)].id;
+		*bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
+	}
+	return PlotColor(Game.rules(), Plot, Relief);
+}
+
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player)
 {
 	const sov::GameState& S = Game.state();
