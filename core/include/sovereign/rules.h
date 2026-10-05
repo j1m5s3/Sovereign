@@ -113,6 +113,11 @@ enum class UnitEffectKind : uint8_t {
     BombardVsUnit,      // COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER applies
     WallFullDamage,     // support: adjacent friendly melee deal full damage to walls (Battering Ram)
     BypassWalls,        // support: adjacent friendly melee hit the city past its walls (Siege Tower)
+    // The leader's SOVEREIGN promotions (leader doc §3).
+    AuraStrength,       // +amount to the presence aura
+    AssassinDefense,    // +amount to the leader's defence against assassins
+    CityProduction,     // +amount production in the city the leader stands in
+    CityAmenities,      // +amount amenities in the city the leader stands in
 };
 
 enum class CombatAtom : uint8_t {
@@ -158,6 +163,7 @@ struct PromotionType {
     int tier = 1;
     std::vector<TypeIndex> prereqs;  // any one
     std::vector<UnitEffect> effects;
+    std::string branch;  // SOVEREIGN promotions: only one branch's tier-2 promotion per reign
 };
 
 struct UnitType {
@@ -193,6 +199,8 @@ struct UnitType {
     std::string promotionClass;    // empty: no promotions
     std::vector<TypeIndex> abilities;  // innate
     TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
+    bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
+    TypeIndex needsDistrict = kNone;  // the training city must have this district finished
 };
 
 // Tile improvements built by Builders (02-cities.md, 01-map-and-terrain.md; data: improvements.md).

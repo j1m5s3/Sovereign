@@ -414,3 +414,192 @@ TEST(ai_crowns_a_successor) {
     CHECK(!g.state().players[0].successionPending);
     CHECK(g.state().currentPlayer != 0);  // and the turn ended
 }
+
+// ---- assassins, levelling and the aura (leader doc §1, §3, §6)
+
+namespace {
+TypeIndex promo(const char* id) { return rules().promotion(id); }
+
+void addEncampment(GameState& s, CityId city) {
+    City& c = *std::find_if(s.cities.begin(), s.cities.end(), [&](const City& x) { return x.id == city; });
+    c.districts.push_back({rules().district("DISTRICT_ENCAMPMENT"), Hex{c.pos.x + 1, c.pos.y + 1}, true});
+}
+
+void giveCivic(GameState& s, PlayerId p, const char* civic) {
+    Player& pl = s.players[static_cast<size_t>(p)];
+    Game::fitPlayerToRules(pl, rules());
+    pl.civics.done[at(rules().civic(civic))] = 1;
+}
+
+Agent addAgent(GameState& s, PlayerId owner, PlayerId target, int level) {
+    Agent a;
+    a.id = s.nextAgentId++;
+    a.owner = owner;
+    a.target = target;
+    a.level = level;
+    s.agents.push_back(a);
+    return a;
+}
+}  // namespace
+
+TEST(assassins_need_an_encampment_the_civic_and_capacity) {
+    CityId plain = kNoCity, camp = kNoCity;
+    auto g = duel(
+        [&](GameState& s) {
+            plain = addCity(s, 0, {2, 2}, true);
+            camp = addCity(s, 0, {8, 6}, false);
+            addEncampment(s, camp);
+            giveCivic(s, 0, "CIVIC_POLITICAL_PHILOSOPHY");
+        },
+        false);
+    const ProductionItem assassin{ProductionKind::Unit, rules().unit("UNIT_ASSASSIN")};
+    CHECK(!g->canProduce(*g->state().city(plain), assassin));
+    CHECK(g->canProduce(*g->state().city(camp), assassin));
+    CHECK_EQ(g->agentCapacity(0), 1);
+    GameState s = g->state();
+    addAgent(s, 0, kNoPlayer, 1);
+    auto full = Game::fromScenario(rules(), std::move(s));
+    CHECK(!full->canProduce(*full->state().city(camp), assassin));  // capacity reached
+}
+
+TEST(sending_assassins) {
+    int32_t id = 0;
+    auto g = duel([&](GameState& s) { id = addAgent(s, 0, kNoPlayer, 1).id; }, false);
+    CHECK_EQ(g->submit(Command::sendAssassin(0, id, 0)), CommandError::CannotSendAgent);  // not yourself
+    CHECK_EQ(g->submit(Command::sendAssassin(0, id + 5, 1)), CommandError::CannotSendAgent);
+    CHECK_EQ(g->submit(Command::sendAssassin(0, id, 1)), CommandError::Ok);
+    CHECK_EQ(g->agent(id)->target, 1);
+    CHECK_EQ(g->agent(id)->travel, rules().globalInt("ASSASSIN_TRAVEL_TURNS"));
+}
+
+TEST(guarded_leader_in_a_city_gives_no_opening) {
+    UnitId leader = 0;
+    int32_t id = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {5, 5}, true);
+            leader = addLeader(s, 0, {5, 5});
+            addUnit(s, "UNIT_WARRIOR", 0, {6, 5});
+            id = addAgent(s, 1, 0, 4).id;
+        },
+        false);
+    CHECK(!g->leaderExposed(*g->state().unit(leader)));
+    pass(*g, 10);
+    CHECK(g->leaderOf(0) && g->leaderOf(0)->hp == 100);
+    CHECK(g->agent(id) && g->agent(id)->target == 0);  // still waiting
+    CHECK(g->state().events.empty());
+}
+
+TEST(assassins_strike_exposed_leaders) {
+    // Over many seeds a Recruit against a lone, hurt leader sometimes strikes and sometimes
+    // fails; every attempt leaves a matching event.
+    int hits = 0, misses = 0;
+    for (uint64_t seed = 1; seed <= 30; ++seed) {
+        UnitId leader = 0;
+        int32_t id = 0;
+        auto g = duel(
+            [&](GameState& s) {
+                s.rng.seed(seed);
+                addCity(s, 0, {2, 2}, true);
+                leader = addLeader(s, 0, {9, 6});
+                s.units.back().hp = 40;
+                id = addAgent(s, 1, 0, 1).id;
+            },
+            false);
+        const int odds = g->assassinSuccessPercent(*g->agent(id), *g->state().unit(leader));
+        CHECK(odds > 50);  // assassins usually outmatch a lone leader (§6)
+        pass(*g, 2);       // one world turn
+        REQUIRE(g->state().events.size() == 1u);
+        const GameEvent& e = g->state().events.back();
+        CHECK(e.actor == 1 && e.target == 0);
+        if (e.kind == EventKind::AssassinKilledLeader) {
+            ++hits;
+            CHECK(!g->leaderOf(0) && g->state().players[0].successionPending);
+            CHECK_EQ(g->agent(id)->level, 2);  // it comes home a level higher
+            CHECK_EQ(g->agent(id)->target, kNoPlayer);
+        } else if (e.kind == EventKind::AssassinWoundedLeader) {
+            ++hits;
+            CHECK(g->leaderOf(0)->hp < 40);
+        } else {
+            ++misses;
+            CHECK(!g->agent(id));  // dead or captured
+        }
+    }
+    CHECK(hits > 0);
+    CHECK(misses > 0);
+}
+
+TEST(guards_lower_assassin_odds) {
+    UnitId lone = 0, guarded = 0;
+    int32_t id = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            lone = addLeader(s, 0, {3, 3});
+            guarded = addLeader(s, 1, {10, 8});
+            addUnit(s, "UNIT_WARRIOR", 1, {10, 8});
+            addUnit(s, "UNIT_WARRIOR", 1, {11, 8});
+            id = addAgent(s, 0, 1, 1).id;
+        },
+        false);
+    const Agent& a = *g->agent(id);
+    CHECK(g->leaderDefenseVsAssassin(*g->state().unit(guarded)) >= g->leaderDefenseVsAssassin(*g->state().unit(lone)) + 20);
+    CHECK(g->assassinSuccessPercent(a, *g->state().unit(guarded)) < g->assassinSuccessPercent(a, *g->state().unit(lone)));
+}
+
+TEST(leader_promotions_one_branch_per_reign) {
+    UnitId leader = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            leader = addLeader(s, 0, {5, 5});
+            s.units.back().xp = 100;
+            s.units.back().promotions = {promo("PROMOTION_SOVEREIGN_WEAPON_MASTER"), promo("PROMOTION_SOVEREIGN_MARSHAL"),
+                                         promo("PROMOTION_SOVEREIGN_WARY")};
+        },
+        false);
+    // Tier 1 of another branch is fine; its tier 2 is not once Warlord is finished.
+    CHECK(g->canPromote(leader, promo("PROMOTION_SOVEREIGN_OVERSEER")));
+    CHECK(!g->canPromote(leader, promo("PROMOTION_SOVEREIGN_SPYMASTER")));
+    CHECK(!g->canPromote(leader, promo("PROMOTION_BATTLECRY")));  // not its class
+    CHECK_EQ(g->unitEffectTotal(*g->state().unit(leader), UnitEffectKind::AssassinDefense), 15);
+}
+
+TEST(presence_aura_and_builder_king) {
+    UnitId leader = 0, nearUnit = 0, farUnit = 0, enemy = 0;
+    CityId city = kNoCity;
+    auto g = duel([&](GameState& s) {
+        city = addCity(s, 0, {4, 4}, true);
+        leader = addLeader(s, 0, {4, 4});
+        nearUnit = addUnit(s, "UNIT_WARRIOR", 0, {6, 4});
+        farUnit = addUnit(s, "UNIT_WARRIOR", 0, {12, 4});
+        enemy = addUnit(s, "UNIT_WARRIOR", 1, {13, 4});
+    });
+    const Unit& e = *g->state().unit(enemy);
+    const int aura = rules().globalInt("LEADER_AURA_STRENGTH");
+    CHECK_EQ(g->combatStrength(*g->state().unit(nearUnit), e, true, false),
+             g->combatStrength(*g->state().unit(farUnit), e, true, false) + aura);
+    const Fixed before = g->cityReport(city).yields[static_cast<size_t>(YieldType::Production)];
+    GameState s = g->state();
+    s.unit(leader)->promotions = {promo("PROMOTION_SOVEREIGN_OVERSEER")};
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g2->cityReport(city).yields[static_cast<size_t>(YieldType::Production)], before + Fixed::fromInt(2));
+}
+
+TEST(an_heir_keeps_one_promotion) {
+    UnitId leader = 0, archer = 0;
+    auto g = duel([&](GameState& s) {
+        addCity(s, 0, {2, 2}, true);
+        leader = addLeader(s, 0, {8, 5});
+        s.units.back().hp = 1;
+        s.units.back().promotions = {promo("PROMOTION_SOVEREIGN_WARY")};
+        archer = addUnit(s, "UNIT_ARCHER", 1, {10, 5});
+    });
+    pass(*g, 1);
+    REQUIRE(g->submit(Command::rangedAttack(1, archer, {8, 5})) == CommandError::Ok);
+    pass(*g, 1);
+    CHECK_EQ(g->submit(Command::chooseSuccessor(0, Succession::Heir, kNoUnit, promo("PROMOTION_SOVEREIGN_MARSHAL"))),
+             CommandError::CannotSucceed);  // it never had that one
+    CHECK_EQ(g->submit(Command::chooseSuccessor(0, Succession::Heir, kNoUnit, promo("PROMOTION_SOVEREIGN_WARY"))), CommandError::Ok);
+    REQUIRE(g->leaderOf(0));
+    CHECK(g->leaderOf(0)->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WARY")});
+    (void)leader;
+}

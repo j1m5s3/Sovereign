@@ -164,6 +164,10 @@ int main(int argc, char** argv) {
             for (const CityDistrict& d : c.districts) districtsDone += d.complete;
         }
         std::printf("districts placed %ld, finished %ld\n", districts, districtsDone);
+        int kinds[5] = {0, 0, 0, 0, 0};
+        for (const GameEvent& e : game->state().events) ++kinds[static_cast<int>(e.kind)];
+        std::printf("agents %ld; recent assassinations: %d leaders killed, %d wounded, %d assassins killed, %d captured\n",
+                    static_cast<long>(game->state().agents.size()), kinds[1], kinds[2], kinds[3], kinds[4]);
         const long camps = static_cast<long>(game->state().camps.size());
         std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld (capitals %ld), "
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",

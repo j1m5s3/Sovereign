@@ -403,6 +403,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"RANGED_VS_DISTRICT", UnitEffectKind::RangedVsDistrict},
             {"BOMBARD_VS_UNIT", UnitEffectKind::BombardVsUnit},
             {"WALL_FULL_DAMAGE", UnitEffectKind::WallFullDamage}, {"BYPASS_WALLS", UnitEffectKind::BypassWalls},
+            {"AURA_STRENGTH", UnitEffectKind::AuraStrength},     {"ASSASSIN_DEFENSE", UnitEffectKind::AssassinDefense},
+            {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -469,6 +471,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         pr.name = j["name"].str(id);
         pr.promotionClass = j["class"].str();
         pr.tier = static_cast<int>(j["tier"].integer(1));
+        pr.branch = j["branch"].str();
         if (!readEffects(j["effects"], pr.effects, "promotion " + id)) return false;
         promotions.push_back(std::move(pr));
     }
@@ -506,6 +509,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
         u.mustPurchase = j["mustPurchase"].boolean(false);
         u.trainable = j["trainable"].boolean(true);
+        u.agent = j["agent"].boolean(false);
         u.purchaseYield = j["purchaseYield"].str();
         if (!readUnlock(j["unlock"], u.unlock, "unit " + id)) return false;
         if (!u.unlock.none()) u.era = (u.unlock.civic ? civics : techs)[static_cast<size_t>(u.unlock.index)].era;
@@ -834,6 +838,17 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.leader = j["leader"].str();
         for (const Json& n : j["cityNames"].items()) c.cityNames.push_back(n.str());
         civs.push_back(std::move(c));
+    }
+    {
+        size_t k = 0;  // districts load after units
+        for (const auto& [uid, j] : m.tables["units"]) {
+            const std::string& nd = j["needsDistrict"].str();
+            if (!nd.empty() && (units[k].needsDistrict = district(nd)) == kNone) {
+                *error = "unit " + uid + ": unknown district " + nd;
+                return false;
+            }
+            ++k;
+        }
     }
     for (const auto& [id, j] : m.tables["dynasties"]) {
         Dynasty d;

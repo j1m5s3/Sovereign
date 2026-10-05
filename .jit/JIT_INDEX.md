@@ -1,8 +1,8 @@
 # Sovereign JIT index
 
-last_verified: 2026-10-05 (after Unreal bridge milestone 3, build-plan step 2)
+last_verified: 2026-10-05 (after leader milestone 3, build-plan step 3)
 
-Living map of the repo for AI agents. Read this instead of the full specs (~830 KB, ~207k tokens), then open only the files and sections a task needs. Kept current by whoever changes the docs. Active work plans go in `.jit/JIT_PLAN.md`; finished ones in `.jit/jit_history/` (build-plan step 1, the headless rules core through MVP-7, is done: `jit_history/2026-10-05-rules-core.md`; step 2, the Unreal bridge showing a plain hex map, is done: `jit_history/2026-10-05-unreal-bridge.md`).
+Living map of the repo for AI agents. Read this instead of the full specs (~830 KB, ~207k tokens), then open only the files and sections a task needs. Kept current by whoever changes the docs. Active work plans go in `.jit/JIT_PLAN.md`; finished ones in `.jit/jit_history/` (build-plan step 1, the headless rules core through MVP-7, is done: `jit_history/2026-10-05-rules-core.md`; step 2, the Unreal bridge showing a plain hex map, is done: `jit_history/2026-10-05-unreal-bridge.md`; step 3, the leader in classic control with auto-resolved assassins, is done: `jit_history/2026-10-05-leader-classic.md`).
 
 ## Reading rules
 - **Precedence:** `specs/sovereign/` overrides `specs/civ6/` where they differ. Civ VI is the baseline Sovereign clones; Sovereign docs record the deliberate changes.
@@ -24,7 +24,8 @@ Living map of the repo for AI agents. Read this instead of the full specs (~830 
 | Religion | 06-religion | religion | |
 | Gold, trade, great people, great works, tourism | 07-economy-trade-great-people | great-people, buildings (Great Work slots) | |
 | Diplomacy, city-states, governors, espionage, World Congress | 08-diplomacy-city-states-governors | diplomacy-espionage, city-states, governors, world-congress-emergencies | leader-character-brainstorm §6 (assassins) |
-| Civs and leaders | 09: Civilization and leader structure | civilizations-leaders (grep the civ name) | leaders-and-art-style (Sovereign's own roster) |
+| Civs and leaders | 09: Civilization and leader structure | civilizations-leaders (grep the civ name) | leaders-and-art-style (Sovereign's own roster, dynasties) |
+| The playable leader: gear, escorts, succession, assassins, promotions, aura | | `data/rules/leader.json` | leader-character-brainstorm §1-§6, §8.8; code in `core/src/leader.cpp` |
 | Eras, ages, victory, climate, power | 09-civs-eras-victory-climate | eras-moments-loyalty, climate-disasters, game-setup (Victories) | |
 | AI | 10: AI architecture · 08: Agendas | civilizations-leaders (Agendas) | leader-character-brainstorm §10; code in `core/src/ai.cpp` |
 | UI, saves, multiplayer, build order, testing | 10-ai-ui-implementation | | engine-and-architecture (Core foundations, Build plan); code in `core/`, Unreal front end in `unreal/` |
@@ -43,11 +44,11 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - [specs/sovereign/open-gaps-review.md] — gap review; James adopted all recommendations except gap 5 (2026-10-04). Decisions now live in the docs they affect; this file keeps the reasoning.
 
 ## Subsystems
-- [core/] — the C++ rules core (no Unreal dependency): fixed-point, RNG streams, hex grid, rules loader, game state, commands, map gen, fog of war, movement, cities (`src/city.cpp`), research, boosts, governments and policies (`src/research.cpp`), builders, improvements, luxuries and strategics (`src/improvements.cpp`), war and peace, unit and city combat, walls, capture, raze, elimination, ZOC, XP, promotions and healing (`src/combat.cpp`), barbarian camps and raiders (`src/barbarians.cpp`), district placement, cost and adjacency (`src/districts.cpp`), the AI player (`src/ai.cpp`, `include/sovereign/ai.h`), score and victories (`src/victory.cpp`), modifiers (`src/modifiers.cpp`), saves. `core/README.md` has build/test commands and a file map.
+- [core/] — the C++ rules core (no Unreal dependency): fixed-point, RNG streams, hex grid, rules loader, game state, commands, map gen, fog of war, movement, cities (`src/city.cpp`), research, boosts, governments and policies (`src/research.cpp`), builders, improvements, luxuries and strategics (`src/improvements.cpp`), war and peace, unit and city combat, walls, capture, raze, elimination, ZOC, XP, promotions and healing (`src/combat.cpp`), barbarian camps and raiders (`src/barbarians.cpp`), district placement, cost and adjacency (`src/districts.cpp`), the playable leader: gear, escorts, capture, succession, regicide, assassins and the aura (`src/leader.cpp`), the AI player (`src/ai.cpp`, `include/sovereign/ai.h`), score and victories (`src/victory.cpp`), modifiers (`src/modifiers.cpp`), saves. `core/README.md` has build/test commands and a file map.
 - [unreal/] — UE 5.8 project (`Sovereign.uproject`). `SovereignCore` compiles `core/src` through generated wrappers; `SovereignBridge` holds the session/subsystem that owns the `sov::Game`, the mirror of seat 0's knowledge (`SovMirror`), the hex map actor, input as commands (`SovPlayerController`) and the canvas HUD. `unreal/README.md` has build, run, controls and the headless automation tests.
 - [core/include/sovereign/api.h] — `SOV_API` export marker for public core declarations (empty standalone; dllexport/import when Unreal loads the core as a DLL).
 - [tools/check_unreal_core_module.py] — CTest check (and `--write` generator) keeping the Unreal core wrappers in step with `core/CMakeLists.txt`.
-- [data/rules/] — rules data the core loads. `globals/terrain/resources/units/buildings/techs/civics/governments/policies/improvements.json` are generated by `tools/rules_gen/gen_rules.py` from `specs/civ6/data` (never edit by hand); `civilizations.json`, `setup.json` and `modifiers.json` are hand-written Sovereign data.
+- [data/rules/] — rules data the core loads. `globals/terrain/resources/units/buildings/techs/civics/governments/policies/improvements.json` are generated by `tools/rules_gen/gen_rules.py` from `specs/civ6/data` (never edit by hand); `civilizations.json`, `leader.json` (leader unit, gear, dynasties, SOVEREIGN promotions, assassin unit and odds), `setup.json` and `modifiers.json` are hand-written Sovereign data.
 - [tools/check_core_rules.py] — CTest check that keeps floats, nondeterministic RNG, unordered containers, wall clock and Unreal headers and macros out of `core/`.
 - [.github/workflows/core.yml] — CI: build and test the core on Linux GCC, Linux Clang and Windows MSVC, plus a 100-turn replay check.
 - [tools/civ6_extract/] — rebuilds the rules DB from a local Civ VI install and regenerates `specs/civ6/data/` (README.md there for usage; rerun after game patches).
@@ -64,4 +65,5 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - Online: Steamworks first, Epic Online Services too.
 - The 3D world is generated from what the viewing player knows, not the true state (world doc).
 - Core implementation choices (fixed-point scale, RNG, hex layout, command log, save format, rules layering): see Decisions in `.jit/jit_history/2026-10-05-rules-core.md`.
+- Leader choices (own 1UPT layer, gear ladder and balance rule, escort-first defence, capture vs kill, interregnum, successor pool with a regent stand-in, Regicide, assassins as off-map agents and their odds, one-branch promotions, aura): see Decisions and Answers in `.jit/jit_history/2026-10-05-leader-classic.md`.
 - Unreal bridge choices (two modules, wrapper sources, `SOV_API`, C++-only project on the Entry map, mirror of seat 0's knowledge, polled input, AI seats stepped per tick): see Decisions in `.jit/jit_history/2026-10-05-unreal-bridge.md`.

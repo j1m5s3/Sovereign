@@ -238,6 +238,12 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     });
     if (bombard && bombardPenalty && oppUnit) s -= rules_->globalInt("COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER");
     if (attacking && ranged && districtPenalty && oppCity) s -= rules_->globalInt("COMBAT_RANGED_VS_DISTRICT_STRENGTH_MODIFIER");
+    // The leader's presence aura for its military units nearby (leader doc §1).
+    if (ut.layer == UnitLayer::Military) {
+        const Unit* leader = leaderOf(unit.owner);
+        if (leader && state_.grid.distance(leader->pos, unit.pos) <= auraRange(*leader))
+            s += rules_->globalInt("LEADER_AURA_STRENGTH") + unitEffectTotal(*leader, UnitEffectKind::AuraStrength);
+    }
     // Policies such as Discipline (+5 against barbarians).
     s += sumUnitStrength(state_, *rules_, owner, ut.unitClass,
                          oppOwner >= 0 && state_.players[static_cast<size_t>(oppOwner)].barbarian);
@@ -434,6 +440,13 @@ bool Game::canPromote(UnitId id, TypeIndex promotion) const {
     if (pr.promotionClass.empty() || pr.promotionClass != typeOf(*rules_, *u).promotionClass) return false;
     if (u->xp < xpForNextLevel(*u) || u->movesLeft <= Fixed()) return false;
     if (std::find(u->promotions.begin(), u->promotions.end(), promotion) != u->promotions.end()) return false;
+    // A leader finishes only one branch per reign (leader doc §3).
+    if (!pr.branch.empty() && pr.tier >= 2) {
+        for (TypeIndex have : u->promotions) {
+            const PromotionType& h = rules_->promotions[static_cast<size_t>(have)];
+            if (h.tier >= 2 && !h.branch.empty() && h.branch != pr.branch) return false;
+        }
+    }
     if (pr.prereqs.empty()) return true;
     for (TypeIndex req : pr.prereqs) {
         if (std::find(u->promotions.begin(), u->promotions.end(), req) != u->promotions.end()) return true;

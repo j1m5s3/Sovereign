@@ -1,8 +1,29 @@
 {
- "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls; Sovereign tuning) and LEADER_SUCCESSOR_MIN_LEVEL (a military unit of this level may take the throne; doc section 5).",
+ "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls; Sovereign tuning) and LEADER_SUCCESSOR_MIN_LEVEL (a military unit of this level may take the throne; doc section 5). Promotions are the SOVEREIGN class (doc section 3): three branches of two, only one branch's tier 2 per reign. Aura (doc section 1): own military units within LEADER_AURA_RANGE (+1 per LEADER_AURA_LEVELS_PER_RANGE leader levels) get +LEADER_AURA_STRENGTH. Assassins (doc section 6, decided by James 2026-10-05): an Encampment city trains them as off-map agents, ASSASSIN_PER_ENCAMPMENT capacity; power = ASSASSIN_BASE_POWER + per level + per sender era against the leader's gear, terrain, wounds, ASSASSIN_DEFENSE promotions and ASSASSIN_GUARD_PERCENT of each guard on or next to its plot; success % = 50 + ASSASSIN_ODDS_PER_POINT x difference, clamped to ASSASSIN_MIN/MAX_SUCCESS; a miss kills the assassin ASSASSIN_KILLED_PERCENT of the time (the leader gains ASSASSIN_LEADER_XP), else it is captured. All Sovereign tuning.",
  "units": [
   {"id": "UNIT_SOVEREIGN", "name": "Sovereign", "class": "LEADER", "domain": "LAND", "layer": "LEADER",
-   "cost": 0, "trainable": false, "maintenance": 0, "combat": 0, "moves": 2, "sight": 2}
+   "cost": 0, "trainable": false, "maintenance": 0, "combat": 0, "moves": 2, "sight": 2,
+   "promotionClass": "PROMOTION_CLASS_SOVEREIGN"},
+  {"id": "UNIT_ASSASSIN", "name": "Assassin", "class": "ASSASSIN", "domain": "LAND", "layer": "CIVILIAN",
+   "cost": 120, "maintenance": 2, "moves": 1, "sight": 1, "agent": true,
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY", "needsDistrict": "DISTRICT_ENCAMPMENT"}
+ ],
+ "promotions": [
+  {"id": "PROMOTION_SOVEREIGN_WEAPON_MASTER", "name": "Weapon Master", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "WARLORD", "tier": 1,
+   "effects": [{"kind": "STRENGTH", "amount": 5}]},
+  {"id": "PROMOTION_SOVEREIGN_MARSHAL", "name": "Marshal", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "WARLORD", "tier": 2,
+   "requires": ["PROMOTION_SOVEREIGN_WEAPON_MASTER"],
+   "effects": [{"kind": "AURA_STRENGTH", "amount": 2}, {"kind": "ASSASSIN_DEFENSE", "amount": 5}]},
+  {"id": "PROMOTION_SOVEREIGN_WARY", "name": "Wary", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "STATESMAN", "tier": 1,
+   "effects": [{"kind": "ASSASSIN_DEFENSE", "amount": 10}]},
+  {"id": "PROMOTION_SOVEREIGN_SPYMASTER", "name": "Spymaster", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "STATESMAN", "tier": 2,
+   "requires": ["PROMOTION_SOVEREIGN_WARY"],
+   "effects": [{"kind": "ASSASSIN_DEFENSE", "amount": 10}]},
+  {"id": "PROMOTION_SOVEREIGN_OVERSEER", "name": "Overseer", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "BUILDER_KING", "tier": 1,
+   "effects": [{"kind": "CITY_PRODUCTION", "amount": 2}]},
+  {"id": "PROMOTION_SOVEREIGN_PATRON", "name": "Patron", "class": "PROMOTION_CLASS_SOVEREIGN", "branch": "BUILDER_KING", "tier": 2,
+   "requires": ["PROMOTION_SOVEREIGN_OVERSEER"],
+   "effects": [{"kind": "CITY_PRODUCTION", "amount": 2}, {"kind": "CITY_AMENITIES", "amount": 1}]}
  ],
  "gear": [
   {"id": "GEAR_CLUB", "name": "Club", "slot": "WEAPON", "combat": 16},
@@ -57,6 +78,20 @@
  "globals": {
   "LEADER_RETREAT_HP": 30,
   "LEADER_INTERREGNUM_TURNS": 3,
-  "LEADER_SUCCESSOR_MIN_LEVEL": 4
+  "LEADER_SUCCESSOR_MIN_LEVEL": 4,
+  "LEADER_AURA_RANGE": 2,
+  "LEADER_AURA_LEVELS_PER_RANGE": 3,
+  "LEADER_AURA_STRENGTH": 3,
+  "ASSASSIN_PER_ENCAMPMENT": 1,
+  "ASSASSIN_TRAVEL_TURNS": 3,
+  "ASSASSIN_BASE_POWER": 25,
+  "ASSASSIN_POWER_PER_LEVEL": 5,
+  "ASSASSIN_POWER_PER_ERA": 10,
+  "ASSASSIN_GUARD_PERCENT": 50,
+  "ASSASSIN_ODDS_PER_POINT": 3,
+  "ASSASSIN_MIN_SUCCESS": 5,
+  "ASSASSIN_MAX_SUCCESS": 90,
+  "ASSASSIN_KILLED_PERCENT": 50,
+  "ASSASSIN_LEADER_XP": 10
  }
 }

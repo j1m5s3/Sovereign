@@ -450,8 +450,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			if (G.hasHeir(Me()))
 			{
 				const sov::Dynasty* D = R.dynastyOf(P.civ);
-				Choices.Add({FString::Printf(TEXT("The heir, %s"), *Str(D->names[static_cast<size_t>(P.dynastyNext)])),
-					sov::Command::chooseSuccessor(Me(), sov::Succession::Heir)});
+				const FString Heir = Str(D->names[static_cast<size_t>(P.dynastyNext)]);
+				Choices.Add({FString::Printf(TEXT("The heir, %s"), *Heir), sov::Command::chooseSuccessor(Me(), sov::Succession::Heir)});
+				// The heir may keep one of the fallen leader's promotions (leader doc §5).
+				for (sov::TypeIndex Kept : P.savedPromotions)
+				{
+					Choices.Add({FString::Printf(TEXT("The heir, %s, keeping %s"), *Heir, *Str(R.promotions[static_cast<size_t>(Kept)].name)),
+						sov::Command::chooseSuccessor(Me(), sov::Succession::Heir, sov::kNoUnit, Kept)});
+				}
 			}
 			for (sov::UnitId Id : G.successorUnits(Me()))
 			{
@@ -462,6 +468,56 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			if (G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
 			{
 				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent)});
+			}
+			break;
+		}
+		case EChooser::Assassins:
+		{
+			ChooserTitle = FString::Printf(TEXT("Assassins (%d of %d; one per Encampment)"), G.agentsOf(Me()), G.agentCapacity(Me()));
+			for (const sov::Agent& A : G.state().agents)
+			{
+				if (A.owner != Me())
+				{
+					continue;
+				}
+				if (A.target != sov::kNoPlayer)
+				{
+					const sov::Player& T = G.state().players[static_cast<size_t>(A.target)];
+					Choices.Add({FString::Printf(TEXT("Recall assassin %d (level %d, hunting %s%s)"), A.id, A.level,
+									 *Str(R.civs[static_cast<size_t>(T.civ)].name), A.travel > 0 ? TEXT(", travelling") : TEXT("")),
+						sov::Command::sendAssassin(Me(), A.id, sov::kNoPlayer)});
+					continue;
+				}
+				for (const sov::Player& T : G.state().players)
+				{
+					if (T.id == Me() || !T.alive || T.barbarian)
+					{
+						continue;
+					}
+					const sov::Unit* L = G.leaderOf(T.id);
+					const FString Odds = L && G.visibility(Me(), L->pos) == sov::Visibility::Visible
+											 ? FString::Printf(TEXT(", %d%% now"), G.assassinSuccessPercent(A, *L))
+											 : FString();
+					Choices.Add({FString::Printf(TEXT("Send assassin %d (level %d) after %s of %s%s"), A.id, A.level, *Str(T.leaderName),
+									 *Str(R.civs[static_cast<size_t>(T.civ)].name), *Odds),
+						sov::Command::sendAssassin(Me(), A.id, T.id)});
+				}
+			}
+			break;
+		}
+		case EChooser::Promotion:
+		{
+			const sov::Unit* U = G.state().unit(SelectedUnit);
+			if (!U)
+			{
+				break;
+			}
+			ChooserTitle = TEXT("Promotion (heals 50 and ends the unit's turn)");
+			for (sov::TypeIndex Pr : G.availablePromotions(U->id))
+			{
+				const sov::PromotionType& T = R.promotions[static_cast<size_t>(Pr)];
+				const FString Branch = T.branch.empty() ? FString() : FString::Printf(TEXT(" [%s]"), *Str(T.branch));
+				Choices.Add({FString::Printf(TEXT("%s%s"), *Str(T.name), *Branch), sov::Command::promote(Me(), U->id, Pr)});
 			}
 			break;
 		}
@@ -553,6 +609,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::T)) OpenChooser(EChooser::Research);
 	if (WasInputKeyJustPressed(EKeys::C)) OpenChooser(EChooser::Civic);
 	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
+	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
 
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::Unit* U = G.state().unit(SelectedUnit);
@@ -588,6 +645,7 @@ void ASovPlayerController::HandleOrders()
 	}
 	if (WasInputKeyJustPressed(EKeys::B)) OpenChooser(EChooser::Improvement);
 	if (WasInputKeyJustPressed(EKeys::E) && G.isLeader(*U)) OpenChooser(EChooser::Gear);
+	if (WasInputKeyJustPressed(EKeys::U)) OpenChooser(EChooser::Promotion);
 	if (WasInputKeyJustPressed(EKeys::L))
 	{
 		// Link the leader and the military unit on its plot, or end the link.
@@ -627,8 +685,10 @@ void ASovPlayerController::UpdatePanel()
 		if (G.rangedStrength(*U) > 0) Line += FString::Printf(TEXT("   Ranged %d (range %d)"), G.rangedStrength(*U), G.unitRange(*U));
 		if (const sov::Unit* E = G.isLeader(*U) ? G.escortOf(*U) : nullptr) Line += FString::Printf(TEXT("   Escort: %s"), *Str(R.units[static_cast<size_t>(E->type)].name));
 		if (T.buildCharges > 0) Line += FString::Printf(TEXT("   Charges %d"), U->charges);
+		if (!T.promotionClass.empty()) Line += FString::Printf(TEXT("   Level %d (XP %d/%d)"), U->level(), U->xp, G.xpForNextLevel(*U));
 		L.Add(Line);
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
+		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
 		if (G.isLeader(*U)) Keys += TEXT("   E gear   L link escort");
 		else if (T.layer == sov::UnitLayer::Military && G.state().unitAt(U->pos, sov::UnitLayer::Leader, R)) Keys += TEXT("   L escort the leader");
@@ -663,7 +723,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }

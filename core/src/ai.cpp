@@ -685,6 +685,13 @@ void production(View& v) {
                                  c.population >= 2 && !threatened && v.enemies.empty() && s.turn < 200;
         const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0);
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
+        // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
+        bool assassinQueued = false;
+        for (CityId other : v.cities) {
+            const City& oc = *s.city(other);
+            assassinQueued |= !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].agent;
+        }
+        const bool wantAssassin = !v.enemies.empty() && !assassinQueued && g.agentsOf(v.me) < g.agentCapacity(v.me);
 
         std::optional<ProductionItem> best;
         Hex bestAt{};
@@ -695,7 +702,8 @@ void production(View& v) {
             switch (it.kind) {
                 case ProductionKind::Unit: {
                     const UnitType& t = v.r.units[at(it.type)];
-                    if (t.foundCity) value = wantSettler ? 400 : 0;
+                    if (t.agent) value = wantAssassin ? 250 : 0;
+                    else if (t.foundCity) value = wantSettler ? 400 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? 220 : 0;
                     break;
@@ -716,7 +724,8 @@ void production(View& v) {
                     } else {
                         where = districtSpot(v, cid, it.type);
                         value = 40 + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 10;
-                        if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : 40;
+                        // At war, the first Encampment also opens assassins (leader doc §6).
+                        if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
                     break;
                 }
@@ -847,9 +856,33 @@ void succession(Game& game, PlayerId me) {
     game.submit(Command::chooseSuccessor(me, Succession::Regent));
 }
 
+// Idle assassins go after the leader of a civ we are at war with, the most exposed first.
+void sendAssassins(Game& game, PlayerId me) {
+    std::vector<int32_t> idle;
+    for (const Agent& a : game.state().agents) {
+        if (a.owner == me && a.target == kNoPlayer) idle.push_back(a.id);
+    }
+    if (idle.empty()) return;
+    PlayerId best = kNoPlayer;
+    int bestScore = INT_MIN;
+    for (const Player& p : game.state().players) {
+        if (!p.alive || p.barbarian || !game.atWar(me, p.id)) continue;
+        const Unit* l = game.leaderOf(p.id);
+        if (!l) continue;
+        const int score = (game.leaderExposed(*l) ? 1000 : 0) - game.leaderDefenseVsAssassin(*l);
+        if (score > bestScore) {
+            bestScore = score;
+            best = p.id;
+        }
+    }
+    if (best == kNoPlayer) return;
+    for (int32_t id : idle) game.submit(Command::sendAssassin(me, id, best));
+}
+
 void playTurn(Game& game) {
     if (game.gameOver()) return;
     succession(game, game.state().currentPlayer);
+    sendAssassins(game, game.state().currentPlayer);
     View v(game, game.state().currentPlayer);
     survey(v);
     diplomacy(v);

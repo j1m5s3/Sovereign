@@ -53,7 +53,9 @@ from `../data/rules`.
 | `B` | Builder: choose an improvement or harvest here |
 | `E` | Leader (in your city): change weapon, armor or mount (costs gold and the leader's turn) |
 | `L` | Link the leader and the military unit on its plot as escort (they move together), or release it |
-| `H` | The throne: choose a successor after the leader falls, or abandon a captured leader |
+| `H` | The throne: choose a successor after the leader falls (an heir may keep one promotion), or abandon a captured leader |
+| `U` | Promote the selected unit or leader (the leader has three branches; only one can be finished per reign) |
+| `J` | Assassins: send an idle one after a rival ruler (shows the odds when that ruler is in sight), or recall one |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
