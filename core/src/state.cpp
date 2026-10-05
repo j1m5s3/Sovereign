@@ -204,6 +204,7 @@ std::string describe(const Command& c) {
         case CommandType::CongressVote: return s + "CongressVote item" + std::to_string(c.id) + " option" + std::to_string(c.arg) + " candidate" + std::to_string(c.arg2);
         case CommandType::UpgradeUnit: return s + "UpgradeUnit " + std::to_string(c.id);
         case CommandType::RebaseUnit: return s + "RebaseUnit " + std::to_string(c.id) + " -> " + std::to_string(c.target.x) + "," + std::to_string(c.target.y);
+        case CommandType::LaunchWmd: return s + "LaunchWmd " + std::to_string(c.arg) + " by " + std::to_string(c.id) + " -> " + std::to_string(c.target.x) + "," + std::to_string(c.target.y);
         case CommandType::SpyMission: return s + "SpyMission agent" + std::to_string(c.id) + " " + std::to_string(c.arg) + " -> city" + std::to_string(c.arg2);
     }
     return s + "?";

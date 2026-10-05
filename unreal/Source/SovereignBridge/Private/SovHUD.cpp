@@ -138,6 +138,21 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		if (!Race.IsEmpty()) Line(TEXT("Exoplanet expeditions:") + Race, 16, Y, FLinearColor(0.7f, 0.9f, 1.f));
 	}
+	// Nuclear weapons (05): devices held by anyone (Ctrl+right-click with a bomber or Nuclear Submarine delivers ours).
+	{
+		FString Arsenal;
+		for (const sov::Player& O : S.players)
+		{
+			if (!O.alive || O.barbarian || G.wmdsHeld(O.id) == 0) continue;
+			const FString Who = O.id == Me ? FString(TEXT("we")) : (O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name));
+			Arsenal += TEXT("   ") + Who;
+			for (size_t W = 0; W < O.wmds.size() && W < R.wmds.size(); ++W)
+			{
+				if (O.wmds[W] > 0) Arsenal += FString::Printf(TEXT(" %dx %s"), O.wmds[W], *Str(R.wmds[W].name));
+			}
+		}
+		if (!Arsenal.IsEmpty()) Line(TEXT("Nuclear arsenals:") + Arsenal, 16, Y, FLinearColor(1.f, 0.6f, 0.5f));
+	}
 	// Climate (09: Climate and Disasters [GS]): the world's warming, its phase, our share of the CO2.
 	if (S.co2 > 0 || S.climatePhase > 0)
 	{

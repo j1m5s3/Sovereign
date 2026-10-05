@@ -14,6 +14,7 @@
    "range": 10,
    "moves": 10,
    "sight": 4,
+   "deliversWmd": true,
    "purchaseYield": "GOLD",
    "unlock": "TECH_ADVANCED_FLIGHT",
    "strategicCost": {
@@ -46,6 +47,7 @@
    "range": 15,
    "moves": 15,
    "sight": 5,
+   "deliversWmd": true,
    "purchaseYield": "GOLD",
    "unlock": "TECH_STEALTH_TECHNOLOGY",
    "strategicCost": {
@@ -574,6 +576,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "wmdImmune": true,
    "antiAir": 90,
    "purchaseYield": "GOLD",
    "unlock": "TECH_ROBOTICS",
@@ -1838,6 +1841,7 @@
    "range": 2,
    "moves": 4,
    "sight": 2,
+   "deliversWmd": true,
    "purchaseYield": "GOLD",
    "unlock": "TECH_TELECOMMUNICATIONS",
    "promotionClass": "PROMOTION_CLASS_NAVAL_RAIDER",

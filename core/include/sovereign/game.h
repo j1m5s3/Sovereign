@@ -351,6 +351,16 @@ public:
     void groundAircraft(const City& city);  // enemy aircraft taken with a city or its Aerodrome are lost
     void checkAirBases();                   // aircraft left without a base slot are lost
 
+    // ---- nuclear weapons (05-units-and-combat.md: Nuclear weapons)
+    int wmdsHeld(PlayerId player) const;     // devices of every kind
+    // Why a launch cannot happen (Ok: it can): a held device, a delivery in range with moves (a bomber's
+    // strike range, or the device's ICBM range from a Nuclear Submarine or the player's Missile Silo),
+    // and nothing in the blast belonging to a civ the launcher is at peace with.
+    CommandError wmdProblem(const Command& c) const;
+    std::vector<Hex> wmdBlast(Hex target, TypeIndex weapon) const;
+    void launchWmd(const Command& c);
+    void processFallout();                   // contamination runs down; units on it take damage
+
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;
     // The player's civ and leader abilities together (empty for city-states, barbarians and Free Cities).

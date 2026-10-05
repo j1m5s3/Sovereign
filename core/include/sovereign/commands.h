@@ -71,6 +71,8 @@ enum class CommandType : uint8_t {
     CongressVote = 48,          // id = item in session, arg = option (0 A, 1 B), arg2 = candidate index, target.x = votes bought with favor
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
     RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
+    LaunchWmd = 51,             // arg = weapon (Rules::wmds), target = blast centre; id = bomber or Nuclear Submarine,
+                                // or -1 with data = {x, y} of the player's Missile Silo
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -189,6 +191,12 @@ struct Command {
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
+    static Command launchWmd(PlayerId p, UnitId unit, TypeIndex weapon, Hex target) { return {CommandType::LaunchWmd, p, unit, target, weapon, 0}; }
+    static Command launchWmdFromSilo(PlayerId p, Hex silo, TypeIndex weapon, Hex target) {
+        Command c{CommandType::LaunchWmd, p, -1, target, weapon, 0};
+        c.data = {silo.x, silo.y};
+        return c;
+    }
     static Command congressVote(PlayerId p, int32_t item, int option, int32_t candidate, int extraVotes = 0) {
         return {CommandType::CongressVote, p, item, Hex{extraVotes, 0}, option, candidate};
     }

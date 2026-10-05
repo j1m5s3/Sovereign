@@ -281,6 +281,10 @@ def gen_units():
             u["zoneOfControl"] = True
         if row["Unit"] == "Aircraft Carrier":
             u["airSlots"] = 2  # 05: Naval carrier, 2 air slots (more with promotions)
+        if cls == "Air Bomber" or row["Unit"] == "Nuclear Submarine":
+            u["deliversWmd"] = True  # 05: Nuclear weapons, delivery
+        if "Unit Wmd Resistance" in (row["Innate abilities (via class tags)"] or ""):
+            u["wmdImmune"] = True
         if num(row["Anti-air"]):
             u["antiAir"] = num(row["Anti-air"])  # protects adjacent plots from aircraft (05: air combat)
         if "found city" in special:
@@ -1003,6 +1007,10 @@ def project_effects(name, text):
         if m:
             effects.append({"kind": "EXPEDITION_SPEED", "amount": int(m.group(1))})
             continue
+        m = re.fullmatch(r"\+1 (Nuclear|Thermonuclear) Device \(one-time\)", part)
+        if m:
+            effects.append({"kind": "WMD", "amount": 1, "weapon": "WMD_" + snake(m.group(1) + " Device")})
+            continue
         if part.startswith("adjust city required power"):
             continue  # power is not modelled; the station counts as powered
         unmodelled.append(part)
@@ -1052,11 +1060,17 @@ def gen_projects():
         if effects:
             pj["effects"] = effects
         # Modelled: it converts production, grants great people points, or every effect is carried.
-        pj["modelled"] = not unmodelled and bool(effects or "conversion" in pj or points or pj.get("spaceRace"))
+        # Manhattan Project and Operation Ivy only unlock the devices (05: Nuclear weapons).
+        unlocks = name in ("Manhattan Project", "Operation Ivy")
+        pj["modelled"] = not unmodelled and bool(effects or "conversion" in pj or points or pj.get("spaceRace") or unlocks)
         if unmodelled:
             pj["text"] = "; ".join(unmodelled)
         out.append(pj)
-    return {"projects": out}
+    # The devices the projects build (05: Nuclear weapons; data: units.md, WMDs).
+    wmds = [{"id": "WMD_" + snake(r["Weapon"]), "name": r["Weapon"], "blastRadius": num(r["Blast radius"]),
+             "falloutTurns": num(r["Fallout turns"]), "icbmRange": num(r["ICBM range"]), "maintenance": num(r["Maintenance"])}
+            for r in table(SPEC / "units.md", "Weapons of mass destruction")]
+    return {"projects": out, "wmds": wmds}
 
 
 def gen_world_congress():

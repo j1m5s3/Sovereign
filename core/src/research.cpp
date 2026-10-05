@@ -34,6 +34,7 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.greatPersonPoints.resize(rules.greatPersonClasses.size(), 0);
     p.greatPeopleRecruited.resize(rules.greatPersonClasses.size(), 0);
     p.projectsDone.resize(rules.projects.size(), 0);
+    p.wmds.resize(rules.wmds.size(), 0);
     if (p.leaderName.empty() && p.cityState != kNone && static_cast<size_t>(p.cityState) < rules.cityStates.size())
         p.leaderName = rules.cityStates[static_cast<size_t>(p.cityState)].name;
     if (p.leaderName.empty() && !p.barbarian && p.civ >= 0 && static_cast<size_t>(p.civ) < rules.civs.size()) {

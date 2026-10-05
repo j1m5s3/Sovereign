@@ -41,6 +41,7 @@ struct Plot {
     int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
     uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
+    uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -123,6 +124,7 @@ struct Agreement {
 // Something a civ remembers about another; its weight fades to nothing over `duration` turns.
 enum class MemoryKind : uint8_t {
     DeclaredWar = 0, SurpriseWar, Denounced, MadePeace, Gift, Deal, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, SpyCaught,
+    UsedWmd,
 };
 struct OpinionMemory {
     PlayerId about = kNoPlayer;
@@ -135,6 +137,7 @@ struct OpinionMemory {
 enum class OpinionReasonKind : uint8_t {
     AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
     TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught, Grievances,
+    UsedWmd,
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;
@@ -341,6 +344,8 @@ struct Player {
     int64_t co2 = 0;                      // CO2 it has emitted [GS]
     int diplomaticVictoryPoints = 0;      // [GS]
     int lightYears = 0;                   // the exoplanet expedition's distance travelled (09: Science victory)
+    std::vector<int32_t> wmds;            // devices held, by Rules::wmds (05: Nuclear weapons)
+    int wmdsLaunched = 0;
     int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).
     int warsDeclared = 0, surpriseWars = 0, citiesCaptured = 0, citiesRazed = 0, tradersPlundered = 0, assassinsSent = 0;
