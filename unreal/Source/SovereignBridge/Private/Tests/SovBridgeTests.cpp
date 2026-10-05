@@ -8,6 +8,8 @@
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
 #include "SovArt.h"
+#include "SovDiplomacy.h"
+#include "HAL/PlatformProcess.h"
 #include "UObject/UObjectGlobals.h"
 
 #include "sovereign/commands.h"
@@ -383,6 +385,42 @@ bool FSovArtAssetsTest::RunTest(const FString& Parameters)
 	}
 	TestNotNull(TEXT("kit material"), SovArt::KitMaterial());
 	TestNotNull(TEXT("palace mesh"), SovArt::Mesh(TEXT("Classical"), TEXT("Palace")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovDiplomacyTalkTest, "Sovereign.Bridge.DiplomacyTalkFallsBackToScript", kSovTestFlags)
+bool FSovDiplomacyTalkTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	// Port 1: no model server answers, so the scripted leader speaks (leader doc §10, Fallback).
+	FSovDiplomacyTalk Talk(Session.GetGame(), 1, 0, 1);
+	TestFalse(TEXT("the persona names the leader"), Talk.GetPersona().leaderName.empty());
+	Talk.Say(TEXT("Greetings. What do you want?"));
+	for (int32 i = 0; i < 200 && Talk.IsBusy(); ++i)
+	{
+		FPlatformProcess::Sleep(0.05f);
+	}
+	TestTrue(TEXT("the exchange finished"), Talk.Poll());
+	TestTrue(TEXT("the server check ran"), Talk.Checked());
+	TestFalse(TEXT("no model was used"), Talk.UsingModel());
+	TestTrue(TEXT("the leader answered"), Talk.Lines().Num() >= 3 && Talk.Lines().Last().Kind == FSovTalkLine::EKind::Leader &&
+		!Talk.Lines().Last().Text.IsEmpty());
+	Talk.Finish();
+	for (int32 i = 0; i < 200 && Talk.IsBusy(); ++i)
+	{
+		FPlatformProcess::Sleep(0.05f);
+	}
+	sov::Command Summary;
+	TestTrue(TEXT("a summary is ready"), Talk.SummaryReady(Summary));
+	TestEqual(TEXT("it is a RecordTalk command"), static_cast<int32>(Summary.type), static_cast<int32>(sov::CommandType::RecordTalk));
+	TestFalse(TEXT("with text"), Summary.text.empty());
 	return true;
 }
 

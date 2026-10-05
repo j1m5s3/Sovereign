@@ -94,6 +94,17 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				 G.tourismPerTurn(Me), G.visitingTourists(Me), G.domesticTourists(Me)),
 			16, Y, FLinearColor(0.85f, 0.85f, 1.f));
 	}
+	// Offers from other leaders wait for an answer on the diplomacy screen (08; leader doc §10).
+	for (const sov::Deal& D : S.deals)
+	{
+		if (D.to != Me)
+		{
+			continue;
+		}
+		const sov::Player& From = S.players[static_cast<size_t>(D.from)];
+		Line(FString::Printf(TEXT("%s offers: %s   N: diplomacy"), *Str(From.leaderName), *Str(sov::describeDeal(R, S, D))), 16, Y,
+			FLinearColor(0.6f, 1.f, 0.7f));
+	}
 	if (P.envoyTokens > 0)
 	{
 		Line(FString::Printf(TEXT("Envoys to send: %d   O: city-states"), P.envoyTokens), 16, Y, FLinearColor(0.6f, 0.9f, 1.f));

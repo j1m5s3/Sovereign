@@ -9,6 +9,6 @@ public class SovereignBridge : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
-		PrivateDependencyModuleNames.AddRange(new string[] { "SovereignCore", "ProceduralMeshComponent" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "SovereignCore", "ProceduralMeshComponent", "Slate", "SlateCore", "HTTP" });
 	}
 }

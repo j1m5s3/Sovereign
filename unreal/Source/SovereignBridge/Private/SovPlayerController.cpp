@@ -10,6 +10,12 @@
 #include "SovMapActor.h"
 #include "SovStreetScene.h"
 #include "SovBattleScene.h"
+#include "SovDiplomacyPanel.h"
+#include "Engine/GameViewportClient.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Widgets/Input/SEditableTextBox.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "Engine/World.h"
@@ -616,6 +622,23 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::Diplomacy:
+		{
+			// Every major civ we have met: its leader, how it feels about us, and any offer it waits on.
+			ChooserTitle = TEXT("Diplomacy: pick a leader to speak with");
+			for (const sov::Player& O : G.state().players)
+			{
+				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id))
+				{
+					continue;
+				}
+				const FString Offer = OfferFrom(O.id) ? FString(TEXT("  [an offer waits]")) : FString();
+				Choices.Add({FString::Printf(TEXT("%s of %s: %s (%+d)%s"), *Str(O.leaderName), *Str(R.civs[static_cast<size_t>(O.civ)].name),
+								 UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer),
+					sov::Command::denounce(Me(), O.id)});  // only arg is used: Pick opens the screen
+			}
+			break;
+		}
 		case EChooser::TradeRoute:
 		{
 			// 07: the Trader's destinations in range, with what each pays its city per turn.
@@ -756,6 +779,11 @@ void ASovPlayerController::Pick(int32 Index)
 	const EChooser Was = Chooser;
 	const sov::Command Command = Choices[I].Command;
 	Chooser = EChooser::None;
+	if (Was == EChooser::Diplomacy)
+	{
+		OpenDiplomacy(static_cast<sov::PlayerId>(Command.arg));  // the civ to talk to, not a command to send
+		return;
+	}
 	if (Was == EChooser::ReligionFounder)
 	{
 		PendingFounder = static_cast<sov::TypeIndex>(Command.arg);  // the Founder belief; now the Follower
@@ -1102,6 +1130,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
+	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
 		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
@@ -1341,7 +1370,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   I pantheon   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }
@@ -1361,6 +1390,15 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	if (InStreet())
 	{
 		UpdateStreet(DeltaTime);
+		if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+		{
+			Hud->PanelLines.Reset();
+		}
+		return;
+	}
+	if (InDiplomacy())
+	{
+		UpdateDiplomacy();
 		if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
 		{
 			Hud->PanelLines.Reset();
@@ -1392,4 +1430,162 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		else Map->SetHighlight(-1, -1);
 	}
 	UpdatePanel();
+}
+
+// ---------------------------------------------------------------- diplomacy
+
+const sov::Deal* ASovPlayerController::OfferFrom(sov::PlayerId Leader) const
+{
+	for (const sov::Deal& D : Subsystem()->GetGame().state().deals)
+	{
+		if (D.from == Leader && D.to == Me())
+		{
+			return &D;
+		}
+	}
+	return nullptr;
+}
+
+void ASovPlayerController::OpenDiplomacy(sov::PlayerId Leader)
+{
+	if (InDiplomacy() || !MyTurn())
+	{
+		return;
+	}
+	int32 Port = 8080;
+	FParse::Value(FCommandLine::Get(), TEXT("SovLlmPort="), Port);
+	const sov::Game& G = Subsystem()->GetGame();
+	Talk = MakeUnique<FSovDiplomacyTalk>(G, Leader, Me(), Port);
+	bLeavingTalk = false;
+	if (const sov::Deal* D = OfferFrom(Leader))
+	{
+		Talk->AddNote(FString::Printf(TEXT("They have put an offer to you: %s."), *Str(sov::describeDeal(G.rules(), G.state(), *D))));
+	}
+	FSovDiplomacyTalk* T = Talk.Get();
+	DiplomacyPanel = SNew(SSovDiplomacyPanel)
+		.Talk(T)
+		.Header([T]() {
+			const sov::diplomacy::Persona& P = T->GetPersona();
+			return FText::FromString(FString::Printf(TEXT("%s of %s, a %s. %s toward you (opinion %+d).\nAgenda, %s: %s"), *Str(P.leaderName),
+				*Str(P.civName), *Str(P.leaning), UTF8_TO_TCHAR(sov::relationshipName(P.relationship)), P.opinion, *Str(P.agendaName),
+				*Str(P.agendaText)));
+		})
+		.Reasons([T]() {
+			const sov::diplomacy::Persona& P = T->GetPersona();
+			FString Text = TEXT("Why they feel this way:\n");
+			for (const std::string& R : P.reasons) Text += TEXT("  ") + Str(R) + TEXT("\n");
+			if (P.reasons.empty()) Text += TEXT("  Nothing in particular yet.\n");
+			Text += TEXT("\nThey could offer:\n");
+			for (const std::string& O : P.leaderOffers) Text += TEXT("  ") + Str(O) + TEXT("\n");
+			Text += TEXT("\nYou could offer:\n");
+			for (const std::string& O : P.playerOffers) Text += TEXT("  ") + Str(O) + TEXT("\n");
+			if (!P.pastTalks.empty())
+			{
+				Text += TEXT("\nPast talks:\n");
+				for (const std::string& O : P.pastTalks) Text += TEXT("  ") + Str(O) + TEXT("\n");
+			}
+			return FText::FromString(Text);
+		})
+		.Proposal([this, T]() {
+			const sov::diplomacy::Exchange* E = T->LastExchange();
+			if (!E || E->verdict == sov::diplomacy::Verdict::None) return FText::GetEmpty();
+			const sov::Game& Gm = Subsystem()->GetGame();
+			if (E->verdict == sov::diplomacy::Verdict::Invalid) return FText::FromString(TEXT("What you asked for cannot be traded now."));
+			if (E->proposal.items.empty()) return FText::GetEmpty();
+			const TCHAR* Verdict = E->verdict == sov::diplomacy::Verdict::Accept ? TEXT("they would accept") : TEXT("they would refuse");
+			return FText::FromString(FString::Printf(TEXT("Your proposal: %s (%s)"), *Str(sov::describeDeal(Gm.rules(), Gm.state(), E->proposal)), Verdict));
+		})
+		.TheirOffer([this, Leader]() {
+			const sov::Deal* D = OfferFrom(Leader);
+			if (!D) return FText::GetEmpty();
+			const sov::Game& Gm = Subsystem()->GetGame();
+			return FText::FromString(FString::Printf(TEXT("Their offer: %s"), *Str(sov::describeDeal(Gm.rules(), Gm.state(), *D))));
+		})
+		.CanPropose([T]() {
+			const sov::diplomacy::Exchange* E = T->LastExchange();
+			return !T->IsBusy() && E && !E->proposal.items.empty();
+		})
+		.CanDenounce([this, T]() { return !T->IsBusy() && Subsystem()->GetGame().canDenounce(Me(), T->Leader()); })
+		.OnSay([T](const FString& Words) { T->Say(Words); })
+		.OnPropose([this, T]() {
+			const sov::diplomacy::Exchange* E = T->LastExchange();
+			if (!E || E->proposal.items.empty()) return;
+			if (Send(sov::diplomacy::Conversation::proposalCommand(*E)))
+			{
+				// An AI answers within the command: the newest deal event says how.
+				const auto& Events = Subsystem()->GetGame().state().events;
+				const bool bMade = !Events.empty() && Events.back().kind == sov::EventKind::DealAccepted;
+				T->AddNote(bMade ? TEXT("[The deal is made.]") : TEXT("[They turned the deal down.]"));
+			}
+			T->ClearProposal();
+			T->Refresh();
+		})
+		.OnAnswerOffer([this, T, Leader](bool bAccept) {
+			if (const sov::Deal* D = OfferFrom(Leader))
+			{
+				if (Send(sov::Command::answerDeal(Me(), D->id, bAccept)))
+				{
+					T->AddNote(bAccept ? TEXT("[You accepted their offer.]") : TEXT("[You turned their offer down.]"));
+				}
+			}
+			T->Refresh();
+		})
+		.OnDenounce([this, T]() {
+			if (Send(sov::Command::denounce(Me(), T->Leader())))
+			{
+				T->AddNote(TEXT("[You denounced them before the world.]"));
+			}
+			T->Refresh();
+		})
+		.OnLeave([this]() { CloseDiplomacy(); });
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->AddViewportWidgetContent(DiplomacyPanel.ToSharedRef(), 50);
+	}
+	FInputModeGameAndUI Mode;
+	Mode.SetWidgetToFocus(DiplomacyPanel->GetInput());
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void ASovPlayerController::UpdateDiplomacy()
+{
+	Talk->Poll();
+	sov::Command Summary;
+	if (bLeavingTalk && Talk->SummaryReady(Summary))
+	{
+		// The leader's memory of this talk, recorded like any other command (leader doc §10, Sync).
+		if (!Summary.text.empty())
+		{
+			Send(Summary);
+		}
+		if (GEngine && GEngine->GameViewport && DiplomacyPanel.IsValid())
+		{
+			GEngine->GameViewport->RemoveViewportWidgetContent(DiplomacyPanel.ToSharedRef());
+		}
+		DiplomacyPanel.Reset();
+		Talk.Reset();
+		bLeavingTalk = false;
+		FInputModeGameAndUI Mode;  // as at BeginPlay
+		Mode.SetHideCursorDuringCapture(false);
+		SetInputMode(Mode);
+		bShowMouseCursor = true;
+		return;
+	}
+	if (WasInputKeyJustPressed(EKeys::Escape))
+	{
+		CloseDiplomacy();
+	}
+}
+
+void ASovPlayerController::CloseDiplomacy()
+{
+	if (!Talk || bLeavingTalk || Talk->IsBusy())
+	{
+		return;
+	}
+	bLeavingTalk = true;
+	Talk->AddNote(TEXT("[The talk ends.]"));
+	Talk->Finish();
 }
