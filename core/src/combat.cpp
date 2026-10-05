@@ -1122,8 +1122,10 @@ void Game::payUnitFuel(PlayerId pid) {
             p.fuelShort[r] = 0;
         } else if (p.stockpile[r] >= needed[r]) {
             p.stockpile[r] -= needed[r];
+            unitCo2(pid, r, needed[r]);
             p.fuelShort[r] = 0;
         } else {
+            unitCo2(pid, r, p.stockpile[r]);
             p.stockpile[r] = 0;
             p.fuelShort[r] = 1;
         }

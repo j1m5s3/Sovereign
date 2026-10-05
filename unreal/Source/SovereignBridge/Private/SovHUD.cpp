@@ -107,6 +107,15 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		Line(Text, 16, Y, FLinearColor(0.75f, 0.95f, 1.f));
 	}
+	// Climate (09: Climate and Disasters [GS]): the world's warming, its phase, our share of the CO2.
+	if (S.co2 > 0 || S.climatePhase > 0)
+	{
+		static const TCHAR* const Roman[] = {TEXT("none"), TEXT("I"), TEXT("II"), TEXT("III"), TEXT("IV"), TEXT("V"), TEXT("VI"), TEXT("VII")};
+		const int32 Tenths = G.temperatureTenths();
+		Line(FString::Printf(TEXT("Climate: +%d.%d degrees, phase %s   World CO2 %lld (ours %lld%%)"), Tenths / 10, Tenths % 10,
+				 Roman[FMath::Clamp(S.climatePhase, 0, 7)], static_cast<long long>(S.co2), S.co2 > 0 ? static_cast<long long>(P.co2 * 100 / S.co2) : 0LL),
+			16, Y, FLinearColor(1.f, 0.85f, 0.6f));
+	}
 	// Governors (08): where each serves and whether it has established, and titles to spend.
 	if (!P.governors.empty() || G.governorTitlesLeft(Me) > 0)
 	{
@@ -165,7 +174,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	// Assassination news involving us from the last two turns (leader doc §6).
 	for (const sov::GameEvent& E : S.events)
 	{
-		const bool bWorldNews = E.kind == sov::EventKind::CongressSession || E.kind == sov::EventKind::ResolutionPassed;
+		const bool bWorldNews = E.kind == sov::EventKind::CongressSession || E.kind == sov::EventKind::ResolutionPassed || E.kind == sov::EventKind::ClimatePhase;
 		if (E.turn < S.turn - 1 || (E.actor != Me && E.target != Me && !bWorldNews))
 		{
 			continue;
@@ -194,6 +203,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				break;
 			}
 			case sov::EventKind::CongressSession: Text = TEXT("The World Congress opens a session (, to vote)."); break;
+			case sov::EventKind::Disaster: Text = FString::Printf(TEXT("Disaster: a %s strikes our lands."), *Str(R.disasters[static_cast<size_t>(E.value)].name)); break;
+			case sov::EventKind::ClimatePhase:
+				Text = FString::Printf(TEXT("The climate warms: phase %d. The seas are rising."), E.value);
+				break;
 			case sov::EventKind::ResolutionPassed:
 				Text = FString::Printf(TEXT("The World Congress passes %s%s."), *Str(R.resolutions[static_cast<size_t>(E.value)].name),
 					E.target != sov::kNoPlayer ? *FString::Printf(TEXT(" for %s"), *CivOf(E.target)) : TEXT(""));

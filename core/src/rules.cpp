@@ -259,7 +259,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "worldcongress.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "worldcongress.json", "disasters.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -379,7 +379,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         t.id = id;
         t.name = j["name"].str(id);
         t.base = j["base"].str(id);
-        const std::string& relief = j["relief"].str("FLAT");
+        const std::string relief = j["relief"].str("FLAT");
         t.relief = relief == "HILLS" ? Relief::Hills : relief == "MOUNTAIN" ? Relief::Mountain : Relief::Flat;
         t.yields = readYields(j["yields"]);
         t.moveCost = static_cast<int>(j["moveCost"].integer(1));
@@ -428,7 +428,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         ResourceType r;
         r.id = id;
         r.name = j["name"].str(id);
-        const std::string& cls = j["class"].str("BONUS");
+        const std::string cls = j["class"].str("BONUS");
         r.cls = cls == "LUXURY" ? ResourceClass::Luxury : cls == "STRATEGIC" ? ResourceClass::Strategic : ResourceClass::Bonus;
         r.yields = readYields(j["yields"]);
         if (!readUnlock(j["revealTech"], r.reveal, "resource " + id)) return false;
@@ -544,9 +544,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.id = id;
         u.name = j["name"].str(id);
         u.unitClass = j["class"].str();
-        const std::string& domain = j["domain"].str("LAND");
+        const std::string domain = j["domain"].str("LAND");
         u.domain = domain == "SEA" ? Domain::Sea : domain == "AIR" ? Domain::Air : Domain::Land;
-        const std::string& layer = j["layer"].str("MILITARY");
+        const std::string layer = j["layer"].str("MILITARY");
         u.layer = layer == "CIVILIAN" ? UnitLayer::Civilian
                   : layer == "SUPPORT" ? UnitLayer::Support
                   : layer == "LEADER"  ? UnitLayer::Leader
@@ -712,7 +712,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         const std::string where = "district " + id;
         if (!readUnlock(j["unlock"], d.unlock, where)) return false;
         d.cost = static_cast<int>(j["cost"].integer(0));
-        const std::string& progression = j["costProgression"].str("NO_COST_PROGRESSION");
+        const std::string progression = j["costProgression"].str("NO_COST_PROGRESSION");
         d.costProgression = progression == "NUM_UNDER_AVG_PLUS_TECH" ? DistrictCostProgression::NumUnderAvgPlusTech
                             : progression == "GAME_PROGRESS"         ? DistrictCostProgression::GameProgress
                                                                      : DistrictCostProgression::None;
@@ -1100,6 +1100,58 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         governors.push_back(std::move(g));
     }
+    for (const auto& [id, j] : m.tables["disasters"]) {
+        DisasterType d;
+        d.id = id;
+        d.name = j["name"].str(id);
+        static const std::pair<const char*, DisasterKind> kinds[] = {
+            {"FLOOD", DisasterKind::Flood},   {"ERUPTION", DisasterKind::Eruption}, {"BLIZZARD", DisasterKind::Blizzard}, {"DUST_STORM", DisasterKind::DustStorm},
+            {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire}};
+        for (const auto& [k, v] : kinds) {
+            if (j["kind"].str() == k) d.kind = v;
+        }
+        d.severity = static_cast<int>(j["severity"].integer(0));
+        d.hexes = static_cast<int>(j["hexes"].integer(0));
+        d.duration = static_cast<int>(j["duration"].integer(0));
+        d.chancePerDegree = static_cast<int>(j["chancePerDegree"].integer(0));
+        static const char* const levels[] = {"MINIMAL", "LIGHT", "MODERATE", "HEAVY", "HYPERREAL"};
+        for (int i = 0; i < kNumDisasterIntensities; ++i) d.frequencyTenths[static_cast<size_t>(i)] = static_cast<int>((j["frequency"][levels[i]].fixed() * 10).toInt());
+        static const std::pair<const char*, DisasterDamageType> damages[] = {
+            {"IMPROVEMENT_DESTROYED", DisasterDamageType::ImprovementDestroyed}, {"IMPROVEMENT_PILLAGED", DisasterDamageType::ImprovementPillaged},
+            {"POPULATION_LOSS", DisasterDamageType::PopulationLoss},             {"UNIT_KILLED_CIVILIAN", DisasterDamageType::CivilianKilled},
+            {"UNIT_DAMAGE_LAND", DisasterDamageType::UnitDamageLand},           {"UNIT_DAMAGE_NAVAL", DisasterDamageType::UnitDamageNaval},
+            {"SPECIFIC_IMPROVEMENT_DESTROYED", DisasterDamageType::ImprovementDestroyed}, {"SPECIFIC_IMPROVEMENT_PILLAGED", DisasterDamageType::ImprovementPillaged},
+            {"CITY_GARRISON", DisasterDamageType::CityGarrison},                 {"CITY_WALLS", DisasterDamageType::CityWalls}};
+        for (const Json& dj : j["damage"].items()) {
+            DisasterDamage dd;
+            for (const auto& [k, v] : damages) {
+                if (dj["type"].str() == k) dd.type = v;
+            }
+            dd.percent = static_cast<int>(dj["percent"].integer(0));
+            dd.minHp = static_cast<int>(dj["minHp"].integer(0));
+            dd.maxHp = static_cast<int>(dj["maxHp"].integer(0));
+            if (dd.type != DisasterDamageType::Other) d.damage.push_back(dd);
+        }
+        for (const Json& fj : j["fertility"].items()) {
+            DisasterFertility f;
+            if (!parseYieldName(fj["yield"].str(), f.yield)) continue;
+            const std::string& feat = fj["feature"].str();
+            f.feature = feat.empty() ? kNone : feature(feat);
+            if (!feat.empty() && f.feature == kNone) continue;
+            f.percent = static_cast<int>(fj["percent"].integer(0));
+            f.amount = static_cast<int>(fj["amount"].integer(0));
+            f.replaceFeature = fj["replaceFeature"].boolean(false);
+            d.fertility.push_back(f);
+        }
+        disasters.push_back(std::move(d));
+    }
+    for (const auto& [id, j] : m.tables["climatePhases"]) {
+        climatePhases.push_back({id, j["name"].str(id), static_cast<int>(j["points"].integer(0)), static_cast<int>(j["iceLoss"].integer(0)),
+                                 static_cast<int>(j["fertilityRemoval"].integer(0))});
+    }
+    for (const auto& [id, j] : m.tables["disasterIntensities"]) {
+        disasterIntensities.push_back({id, j["name"].str(id), static_cast<int>(j["activeVolcanoes"].integer(70)), static_cast<int>(j["extraRange"].integer(0))});
+    }
     for (const auto& [id, j] : m.tables["resolutions"]) {
         ResolutionType rs;
         rs.id = id;
@@ -1188,7 +1240,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         e.capital = j["capital"].boolean(false);
         if (j.has("building") && (e.building = building(j["building"].str())) == kNone) continue;  // a building not modelled
         e.production = static_cast<int>(j["production"].integer(0));
-        const std::string& toward = j["toward"].str("UNITS");
+        const std::string toward = j["toward"].str("UNITS");
         e.toward = toward == "BUILDINGS" ? EnvoyToward::Buildings : toward == "DISTRICTS" ? EnvoyToward::Districts : EnvoyToward::Units;
         for (const Json& b : j["buildings"].items()) {
             const TypeIndex bi = building(b.str());
@@ -1466,6 +1518,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.defaultPlayers = static_cast<int>(j["defaultPlayers"].integer(2));
         s.maxReligions = static_cast<int>(j["maxReligions"].integer(0));
         s.defaultCityStates = static_cast<int>(j["defaultCityStates"].integer(0));
+        s.co2PerDegree = std::max<int64_t>(1, j["co2PerDegree"].integer(2000000));
         if (s.width < 8 || s.height < 8) {
             *error = "map size " + id + " is too small";
             return false;

@@ -805,6 +805,7 @@ void Game::beginGlobalTurn() {
     processEras();
     processGrievances();
     processWorldCongress();
+    processClimate();
     processReligion();
     processAgents();
     processFreeCities();
@@ -821,6 +822,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         if (p.interregnumTurns > 0 && !p.successionPending && p.captor == kNoPlayer && --p.interregnumTurns == 0)
             p.freeChanges = true;
         payUnitFuel(pid);
+        burnPower(pid);
         processGreatPeople(pid);
         processTrade(pid);
         processEnvoys(pid);

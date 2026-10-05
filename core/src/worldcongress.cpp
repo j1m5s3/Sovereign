@@ -63,6 +63,12 @@ int Game::favorPerTurn(PlayerId pid) const {
     for (const Player& o : state_.players) held += o.id != pid ? grievances(o.id, pid) : 0;
     const int over = held - rules_->globalInt("FAVOR_GRIEVANCES_START");
     if (over > 0) favor += std::max(rules_->globalInt("FAVOR_GRIEVANCES_MINIMUM"), -(over / std::max(1, rules_->globalInt("FAVOR_GRIEVANCES_DIVISOR"))));
+    // A civ's share of the world's CO2 costs favor (09 [GS]): 1 per FAVOR_CO2_DIVISOR %, down to FAVOR_CO2_MINIMUM.
+    if (state_.co2 > 0 && p.co2 > 0) {
+        const int share = static_cast<int>(p.co2 * 100 / state_.co2);
+        favor += std::clamp(-(share / std::max(1, rules_->globalInt("FAVOR_CO2_DIVISOR"))), rules_->globalInt("FAVOR_CO2_MINIMUM"),
+                            rules_->globalInt("FAVOR_CO2_MAXIMUM"));
+    }
     return favor;
 }
 

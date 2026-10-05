@@ -106,6 +106,9 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
 	CoreSetup->liveBattles = Setup.bHumanSeat0;  // melee with the human's leader stack can be fought live
+	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
+	int32 Disasters = CoreSetup->disasterIntensity;
+	if (FParse::Value(FCommandLine::Get(), TEXT("SovDisasters="), Disasters)) CoreSetup->disasterIntensity = FMath::Clamp(Disasters, -1, 4);
 	for (int32 i = 0; i < Setup.Players; ++i)
 	{
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];

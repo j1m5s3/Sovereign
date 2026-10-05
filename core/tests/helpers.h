@@ -31,6 +31,7 @@ inline sov::GameState flatState(int w, int h, int players, bool wrap = false) {
     const Rules& r = rules();
     GameState s;
     s.setup.mapSize = "MAPSIZE_DUEL";
+    s.setup.disasterIntensity = -1;  // tests that want disasters turn them on
     s.setup.wrapX = wrap;
     s.grid = HexGrid(w, h, wrap);
     s.plots.assign(static_cast<size_t>(s.grid.size()), Plot{});

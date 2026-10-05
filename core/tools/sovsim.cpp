@@ -2,14 +2,17 @@
 // that replaying the command log reproduces the same state, and prints the
 // state hash (compare hashes across machines to catch nondeterminism).
 //
-//   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
-//          --turn-limit: Score victory after this turn instead of the speed's calendar). Stops early when someone wins.
+//   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none).
+//          Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iterator>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -47,7 +50,7 @@ int main(int argc, char** argv) {
     GameSetup setup;
     setup.seed = 1;
     int turns = 50, players = 2, aiSeats = 0;
-    std::string savePath;
+    std::string savePath, loadPath;
     bool showMap = false, showCities = false;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -58,11 +61,13 @@ int main(int argc, char** argv) {
         else if (a == "--players") players = std::atoi(next().c_str());
         else if (a == "--size") setup.mapSize = next();
         else if (a == "--save") savePath = next();
+        else if (a == "--load") loadPath = next();
         else if (a == "--map") showMap = true;
         else if (a == "--cities") showCities = true;
         else if (a == "--ai") aiSeats = 1 << 20;
         else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
         else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
+        else if (a == "--disasters") setup.disasterIntensity = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
             return 2;
@@ -78,7 +83,14 @@ int main(int argc, char** argv) {
     for (int i = 0; i < players; ++i) {
         setup.players.push_back({rules.civs[static_cast<size_t>(i) % rules.civs.size()].id, false});
     }
-    auto game = Game::create(rules, setup, &err);
+    std::unique_ptr<Game> game;
+    if (!loadPath.empty()) {
+        std::ifstream in(loadPath, std::ios::binary);
+        const std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        game = loadGame(rules, bytes, &err);
+    } else {
+        game = Game::create(rules, setup, &err);
+    }
     if (!game) {
         std::fprintf(stderr, "create: %s\n", err.c_str());
         return 1;
@@ -91,8 +103,8 @@ int main(int argc, char** argv) {
             else sovbot::playTurn(*game, botRng);
         }
     }
-    auto replayed = Game::replay(rules, setup, game->log(), &err);
-    if (!replayed || replayed->stateHash() != game->stateHash()) {
+    auto replayed = loadPath.empty() ? Game::replay(rules, setup, game->log(), &err) : nullptr;
+    if (loadPath.empty() && (!replayed || replayed->stateHash() != game->stateHash())) {
         std::fprintf(stderr, "REPLAY MISMATCH %s\n", err.c_str());
         return 1;
     }
@@ -165,7 +177,11 @@ int main(int argc, char** argv) {
         }
         std::printf("districts placed %ld, finished %ld\n", districts, districtsDone);
         int kinds[5] = {0, 0, 0, 0, 0};
-        for (const GameEvent& e : game->state().events) ++kinds[static_cast<int>(e.kind)];
+        long disasters = 0;
+        for (const GameEvent& e : game->state().events) {
+            if (static_cast<int>(e.kind) < 5) ++kinds[static_cast<int>(e.kind)];
+            disasters += e.kind == EventKind::Disaster;
+        }
         std::printf("agents %ld; recent assassinations: %d leaders killed, %d wounded, %d assassins killed, %d captured\n",
                     static_cast<long>(game->state().agents.size()), kinds[1], kinds[2], kinds[3], kinds[4]);
         long freeCities = 0, wavering = 0;
@@ -174,6 +190,9 @@ int main(int argc, char** argv) {
             wavering += c.loyalty <= 75;
         }
         std::printf("free cities %ld, cities at 75 loyalty or less %ld\n", freeCities, wavering);
+        std::printf("climate: CO2 %lld, phase %d, +%d.%d degrees, recent disasters %ld, droughts %zu\n",
+                    static_cast<long long>(game->state().co2), game->state().climatePhase, game->temperatureTenths() / 10,
+                    game->temperatureTenths() % 10, disasters, game->state().droughts.size());
         const long camps = static_cast<long>(game->state().camps.size());
         std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld (capitals %ld), "
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",
@@ -186,7 +205,7 @@ int main(int argc, char** argv) {
                                                         static_cast<std::streamsize>(bytes.size()));
     }
     if (game->gameOver()) {
-        static const char* names[] = {"none", "Domination", "Score", "last civ standing"};
+        static const char* names[] = {"none", "Domination", "Score", "last civ standing", "Religious", "Culture", "Diplomatic"};
         const PlayerId w = game->state().winner;
         std::printf("winner: player %d (%s), %s victory on turn %d, score %d\n", w,
                     rules.civs[static_cast<size_t>(game->state().players[static_cast<size_t>(w)].civ)].name.c_str(),

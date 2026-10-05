@@ -1,0 +1,1280 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "disasters": [
+  {
+   "id": "DISASTER_MODERATE_FLOOD",
+   "name": "Moderate Flood",
+   "kind": "FLOOD",
+   "severity": 0,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 20,
+   "frequency": {
+    "MINIMAL": 1.0,
+    "LIGHT": 1.5,
+    "MODERATE": 2.0,
+    "HEAVY": 3.0,
+    "HYPERREAL": 1.5
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_GRASSLAND",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_PLAINS",
+     "percent": 30,
+     "amount": 1,
+     "replaceFeature": false
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_MAJOR_FLOOD",
+   "name": "Major Flood",
+   "kind": "FLOOD",
+   "severity": 1,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 20,
+   "frequency": {
+    "MINIMAL": 0.6,
+    "LIGHT": 1.0,
+    "MODERATE": 1.5,
+    "HEAVY": 2.0,
+    "HYPERREAL": 2.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 30,
+     "maxHp": 50
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 30,
+     "maxHp": 50
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 30,
+     "maxHp": 50
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS",
+     "percent": 30,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_GRASSLAND",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS_GRASSLAND",
+     "percent": 30,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_PLAINS",
+     "percent": 45,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS_PLAINS",
+     "percent": 10,
+     "amount": 1,
+     "replaceFeature": false
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_1000_YEAR_FLOOD",
+   "name": "1000 Year Flood",
+   "kind": "FLOOD",
+   "severity": 2,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 20,
+   "frequency": {
+    "MINIMAL": 0.0,
+    "LIGHT": 0.6,
+    "MODERATE": 1.0,
+    "HEAVY": 1.5,
+    "HYPERREAL": 3.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 25,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 25,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 50,
+     "maxHp": 70
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 50,
+     "maxHp": 70
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 50,
+     "maxHp": 70
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS",
+     "percent": 45,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_GRASSLAND",
+     "percent": 40,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS_GRASSLAND",
+     "percent": 40,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_FLOODPLAINS_PLAINS",
+     "percent": 60,
+     "amount": 1,
+     "replaceFeature": false
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FLOODPLAINS_PLAINS",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": false
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_GENTLE_ERUPTION",
+   "name": "Gentle Eruption",
+   "kind": "ERUPTION",
+   "severity": 0,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 3.0,
+    "MODERATE": 4.0,
+    "HEAVY": 6.0,
+    "HYPERREAL": 2.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 35,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_CATASTROPHIC_ERUPTION",
+   "name": "Catastrophic Eruption",
+   "kind": "ERUPTION",
+   "severity": 1,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 3.0,
+    "MODERATE": 4.0,
+    "HEAVY": 6.0,
+    "HYPERREAL": 6.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 30,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 30,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 10,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_MEGACOLOSSAL_ERUPTION",
+   "name": "Megacolossal Eruption",
+   "kind": "ERUPTION",
+   "severity": 2,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 1.0,
+    "LIGHT": 2.0,
+    "MODERATE": 2.5,
+    "HEAVY": 4.0,
+    "HYPERREAL": 4.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 75,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 35,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "CULTURE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_SIGNIFICANT_BLIZZARD",
+   "name": "Significant Blizzard",
+   "kind": "BLIZZARD",
+   "severity": 1,
+   "hexes": 7,
+   "duration": 3,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 5.0,
+    "MODERATE": 8.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 5.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 25,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 10,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_CRIPPLING_BLIZZARD",
+   "name": "Crippling Blizzard",
+   "kind": "BLIZZARD",
+   "severity": 2,
+   "hexes": 19,
+   "duration": 3,
+   "chancePerDegree": 50,
+   "frequency": {
+    "LIGHT": 1.0,
+    "MODERATE": 2.0,
+    "HEAVY": 5.0,
+    "HYPERREAL": 10.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 60,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 20,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_GRADIENT_DUST_STORM",
+   "name": "Gradient Dust Storm",
+   "kind": "DUST_STORM",
+   "severity": 1,
+   "hexes": 3,
+   "duration": 3,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 5.0,
+    "MODERATE": 8.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 5.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 35,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 60,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 10,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "",
+     "percent": 20,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_HABOOB_DUST_STORM",
+   "name": "Haboob Dust Storm",
+   "kind": "DUST_STORM",
+   "severity": 2,
+   "hexes": 7,
+   "duration": 3,
+   "chancePerDegree": 50,
+   "frequency": {
+    "LIGHT": 1.0,
+    "MODERATE": 2.0,
+    "HEAVY": 5.0,
+    "HYPERREAL": 10.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 60,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 20,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "",
+     "percent": 30,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_TORNADO_FAMILY",
+   "name": "Tornado Family",
+   "kind": "TORNADO",
+   "severity": 1,
+   "hexes": 1,
+   "duration": 3,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 4.0,
+    "LIGHT": 10.0,
+    "MODERATE": 15.0,
+    "HEAVY": 20.0,
+    "HYPERREAL": 10.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 35,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 60,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": []
+  },
+  {
+   "id": "DISASTER_TORNADO_OUTBREAK",
+   "name": "Tornado Outbreak",
+   "kind": "TORNADO",
+   "severity": 2,
+   "hexes": 3,
+   "duration": 3,
+   "chancePerDegree": 50,
+   "frequency": {
+    "LIGHT": 2.0,
+    "MODERATE": 3.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 20.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": []
+  },
+  {
+   "id": "DISASTER_CATEGORY_4_HURRICANE",
+   "name": "Category-4 Hurricane",
+   "kind": "HURRICANE",
+   "severity": 1,
+   "hexes": 7,
+   "duration": 3,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 4.0,
+    "LIGHT": 10.0,
+    "MODERATE": 15.0,
+    "HEAVY": 20.0,
+    "HYPERREAL": 10.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 25,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 60,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 30,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_CATEGORY_5_HURRICANE",
+   "name": "Category-5 Hurricane",
+   "kind": "HURRICANE",
+   "severity": 2,
+   "hexes": 19,
+   "duration": 3,
+   "chancePerDegree": 50,
+   "frequency": {
+    "LIGHT": 2.0,
+    "MODERATE": 3.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 20.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 15,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "",
+     "percent": 45,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  },
+  {
+   "id": "DISASTER_MAJOR_DROUGHT",
+   "name": "Major Drought",
+   "kind": "DROUGHT",
+   "severity": 0,
+   "hexes": 7,
+   "duration": 5,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 6.0,
+    "LIGHT": 15.0,
+    "MODERATE": 23.0,
+    "HEAVY": 30.0,
+    "HYPERREAL": 15.0
+   },
+   "damage": [
+    {
+     "type": "SPECIFIC_IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": []
+  },
+  {
+   "id": "DISASTER_WITHERING_DROUGHT",
+   "name": "Withering Drought",
+   "kind": "DROUGHT",
+   "severity": 1,
+   "hexes": 7,
+   "duration": 10,
+   "chancePerDegree": 50,
+   "frequency": {
+    "LIGHT": 3.0,
+    "MODERATE": 5.0,
+    "HEAVY": 15.0,
+    "HYPERREAL": 30.0
+   },
+   "damage": [
+    {
+     "type": "SPECIFIC_IMPROVEMENT_DESTROYED",
+     "percent": 30,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "SPECIFIC_IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": []
+  },
+  {
+   "id": "DISASTER_FOREST_FIRE",
+   "name": "Forest Fire",
+   "kind": "FIRE",
+   "severity": 1,
+   "hexes": 1,
+   "duration": 9,
+   "chancePerDegree": 50,
+   "frequency": {
+    "MINIMAL": 3.0,
+    "LIGHT": 4.0,
+    "MODERATE": 6.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 15.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 101,
+     "minHp": 50,
+     "maxHp": 101
+    },
+    {
+     "type": "SPREAD",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_BURNING_JUNGLE",
+     "percent": 100,
+     "amount": 0,
+     "replaceFeature": true
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_BURNT_JUNGLE",
+     "percent": 100,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_JUNGLE",
+     "percent": 100,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_BURNING_FOREST",
+     "percent": 100,
+     "amount": 0,
+     "replaceFeature": true
+    },
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_BURNT_FOREST",
+     "percent": 100,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_FOREST",
+     "percent": 100,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ]
+  }
+ ],
+ "climatePhases": [
+  {
+   "id": "CLIMATE_PHASE_I",
+   "name": "Climate Change Phase I",
+   "points": 2,
+   "iceLoss": 10,
+   "fertilityRemoval": 0
+  },
+  {
+   "id": "CLIMATE_PHASE_II",
+   "name": "Climate Change Phase II",
+   "points": 3,
+   "iceLoss": 20,
+   "fertilityRemoval": 0
+  },
+  {
+   "id": "CLIMATE_PHASE_III",
+   "name": "Climate Change Phase III",
+   "points": 4,
+   "iceLoss": 30,
+   "fertilityRemoval": 0
+  },
+  {
+   "id": "CLIMATE_PHASE_IV",
+   "name": "Climate Change Phase IV",
+   "points": 5,
+   "iceLoss": 40,
+   "fertilityRemoval": 0
+  },
+  {
+   "id": "CLIMATE_PHASE_V",
+   "name": "Climate Change Phase V",
+   "points": 6,
+   "iceLoss": 55,
+   "fertilityRemoval": 15
+  },
+  {
+   "id": "CLIMATE_PHASE_VI",
+   "name": "Climate Change Phase VI",
+   "points": 7,
+   "iceLoss": 70,
+   "fertilityRemoval": 30
+  },
+  {
+   "id": "CLIMATE_PHASE_VII",
+   "name": "Climate Change Phase VII",
+   "points": 8,
+   "iceLoss": 85,
+   "fertilityRemoval": 45
+  }
+ ],
+ "disasterIntensities": [
+  {
+   "id": "DISASTERS_MINIMAL",
+   "name": "Minimal",
+   "activeVolcanoes": 45,
+   "extraRange": 0
+  },
+  {
+   "id": "DISASTERS_LIGHT",
+   "name": "Light",
+   "activeVolcanoes": 60,
+   "extraRange": 0
+  },
+  {
+   "id": "DISASTERS_MODERATE",
+   "name": "Moderate",
+   "activeVolcanoes": 70,
+   "extraRange": 0
+  },
+  {
+   "id": "DISASTERS_HEAVY",
+   "name": "Heavy",
+   "activeVolcanoes": 80,
+   "extraRange": 1
+  },
+  {
+   "id": "DISASTERS_HYPERREAL",
+   "name": "Hyperreal",
+   "activeVolcanoes": 95,
+   "extraRange": 1
+  }
+ ]
+}
