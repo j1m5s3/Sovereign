@@ -67,7 +67,8 @@ protected:
 		ReligionFounder,
 		ReligionFollower,
 		Evangelize,
-		TradeRoute
+		TradeRoute,
+		CityStates
 	};
 
 	struct FChoice

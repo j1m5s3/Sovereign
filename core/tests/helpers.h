@@ -120,6 +120,7 @@ inline sov::GameSetup duelSetup(uint64_t seed) {
     g.seed = seed;
     g.mapSize = "MAPSIZE_DUEL";
     g.players = {{"CIVILIZATION_ROME", true}, {"CIVILIZATION_EGYPT", false}};
+    g.cityStates = 0;  // the scenario tests count players; city-states have their own tests
     return g;
 }
 

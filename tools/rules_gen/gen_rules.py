@@ -853,6 +853,9 @@ def gen_tree(kind, name_col, prefix, key):
         m = re.search(r"(?:^|; )embark (Builder|Trader)\b", unlocks)
         if m:
             n["embarkUnit"] = "UNIT_" + snake(m.group(1))
+        m = re.search(r"grants (\d+) Envoy\(s\)", other)
+        if m:
+            n["envoys"] = int(m.group(1))
         m = re.search(r"\+(\d+) Movement while embarked", other)
         if m:
             n["embarkedMoves"] = int(m.group(1))
@@ -886,6 +889,10 @@ def gen_governments():
                        "DIPLOMATIC": num(row["Diplomatic"]), "WILDCARD": num(row["Wildcard"])}}
         if row["Unlock"]:
             g["unlock"] = ids[row["Unlock"]]
+        # Influence toward envoys (08: City-States).
+        g["influencePerTurn"] = num(row["Influence pts/turn"])
+        g["influenceThreshold"] = num(row["Influence threshold"])
+        g["envoysPerThreshold"] = num(row["Envoys per threshold"])
         out.append(g)
     return {"governments": out}
 
@@ -1206,6 +1213,44 @@ def gen_wonders():
     return {"wonders": wonders, "modifiers": modifiers}
 
 
+def gen_city_states():
+    """City-states by type and the envoy tier bonuses each type gives (08: City-States)."""
+    states = [{"id": "CITYSTATE_" + snake(r["City-state"]), "name": r["City-state"], "type": r["Type"].upper(),
+               "suzerainText": re.sub(r"\*\*[^*]+\*\*: ", "", r["Suzerain bonus"])}
+              for r in table(SPEC / "city-states.md", "City-states and suzerain bonuses")]
+    buildings = {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")}
+    tiers = []
+    for r in table(SPEC / "city-states.md", "Envoy tier bonuses by city-state type"):
+        t = r["Effect"]
+        m = re.search(r"at least (\d+) Envoys", t)
+        if not m:
+            continue
+        need = int(m.group(1))
+        base = {"id": r["Modifier"], "type": r["Type"].upper(), "envoys": need}
+        mm = re.match(r"\+(\d+) (\w+) in your capital", t)
+        if mm and mm.group(2) in YIELD_WORDS:
+            tiers.append({**base, "yield": YIELD_WORDS[mm.group(2)], "amount": int(mm.group(1)), "capital": True})
+            continue
+        mm = re.match(r"\+(\d+) (\w+) from (.+?) in all your cities", t)
+        if mm and mm.group(2) in YIELD_WORDS and mm.group(3) in buildings:
+            tiers.append({**base, "yield": YIELD_WORDS[mm.group(2)], "amount": int(mm.group(1)), "building": buildings[mm.group(3)]})
+            continue
+        # Production toward an item kind: in the capital, or in cities with one of the buildings.
+        mm = re.match(r"\+(\d+)% Production toward (units|buildings|districts) in (your capital|all your cities where (.+?)) for all players", t)
+        if mm:
+            row = {**base, "production": int(mm.group(1)), "toward": mm.group(2).upper()}
+            if mm.group(3) == "your capital":
+                row["capital"] = True
+            else:
+                names = re.findall(r"city has ([A-Z][\w' ]+?)(?= or | for |$)", mm.group(4))
+                refs = [buildings[n] for n in names if n in buildings]
+                if not refs:
+                    continue
+                row["buildings"] = refs
+            tiers.append(row)
+    return {"cityStates": states, "envoyBonuses": tiers}
+
+
 BELIEF_CLASSES = ["Pantheon", "Follower", "Worship", "Founder", "Enhancer"]
 
 
@@ -1250,6 +1295,7 @@ def main():
         "greatpeople.json": gen_great_people(),
         "religion.json": gen_religion(),
         "wonders.json": gen_wonders(),
+        "citystates.json": gen_city_states(),
     }
     stale = []
     for name, doc in outputs.items():

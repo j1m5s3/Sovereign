@@ -46,6 +46,9 @@ struct PathStep {
     Fixed movesLeft;    // after entering this plot
 };
 
+// Places the map size's city-states at the start (08: City-States); used when a game is created.
+void placeCityStates(GameState& state, const Rules& rules);
+
 class SOV_API Game {
 public:
     // Builds a new game: map, start positions, starting units, first turn.
@@ -138,6 +141,15 @@ public:
     // Great General / Admiral auras on a unit (+strength, +movement).
     int greatPersonAuraStrength(const Unit& unit) const;
     int greatPersonAuraMoves(const Unit& unit) const;
+
+    // ---- city-states and envoys (08: City-States)
+    bool isCityState(PlayerId player) const;
+    int envoysAt(PlayerId player, PlayerId cityState) const;
+    PlayerId suzerainOf(PlayerId cityState) const;  // kNoPlayer: none
+    bool canSendEnvoy(PlayerId player, PlayerId cityState) const;
+    // Yields a city earns from its owner's envoys (capital and building tiers), and production toward an item.
+    Yields envoyYields(const City& city) const;
+    int envoyProduction(const City& city, ProductionItem item) const;
 
     // ---- world wonders (03: Wonders)
     bool wonderBuilt(TypeIndex building) const;
@@ -372,6 +384,7 @@ private:
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
+    void processEnvoys(PlayerId player);  // influence and first meetings, each turn
     void processTrade(PlayerId player);  // routes run, end or are plundered
     CommandError validateReligion(const Command& c) const;
     void applyReligion(const Command& c);

@@ -107,6 +107,11 @@ CityReport Game::cityReport(CityId id) const {
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
     }
+    // Envoys to city-states pay in the capital and per building (08).
+    {
+        const Yields ey = envoyYields(*c);
+        for (size_t i = 0; i < kNumYields; ++i) raw[i] += ey[i];
+    }
     // Trade routes from this city pay by the districts at their destinations (07).
     for (const TradeRoute& tr : state_.tradeRoutes) {
         if (tr.origin != c->id) continue;
@@ -732,6 +737,7 @@ void Game::processCities(PlayerId pid) {
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
                 prod = prod * std::max(0, pct) / 100;
             }
+            prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)
             prod += city.overflow;
             city.overflow = Fixed();
             auto it = std::find_if(city.progress.begin(), city.progress.end(),

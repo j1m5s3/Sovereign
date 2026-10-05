@@ -689,7 +689,8 @@ void production(View& v) {
         std::optional<ProductionItem> soldier = bestMilitaryUnit(v, items);
         const bool needGuard = !hasGarrison(v, c) && v.military < static_cast<int>(v.cities.size());
         const bool wantArmy = v.military < desiredArmy(v);
-        const bool wantSettler = static_cast<int>(v.cities.size()) + v.settlers < kMaxCities && v.settlers < 2 &&
+        const bool minor = g.isCityState(v.me);  // a city-state: one city, no expansion, no trade, no wonders
+        const bool wantSettler = !minor && static_cast<int>(v.cities.size()) + v.settlers < kMaxCities && v.settlers < 2 &&
                                  c.population >= 2 && !threatened && v.enemies.empty() && s.turn < 200;
         int traders = 0;
         for (const Unit& u : s.units) traders += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_TRADER";
@@ -697,7 +698,7 @@ void production(View& v) {
             const City& oc = *s.city(other);
             traders += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].id == "UNIT_TRADER";
         }
-        const bool wantTrader = g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
+        const bool wantTrader = !minor && g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
         const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0);
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
         // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
@@ -732,6 +733,10 @@ void production(View& v) {
                     if (b.outerDefenseHp > 0) value += threatened ? 500 : v.enemies.empty() ? 0 : 60;
                     for (const auto& gpp : b.greatPersonPoints) value += 15 * gpp.second;  // great people (07)
                     for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
+                    if (b.wonder && minor) {
+                        value = 0;
+                        break;
+                    }
                     if (b.wonder) {
                         // Wonders in a productive, safe city; on the plot the city has, or its first choice.
                         const Fixed prod = rep.yields[static_cast<size_t>(YieldType::Production)];
@@ -989,9 +994,33 @@ void trader(View& v, UnitId id) {
     g.submit(Command::setActivity(v.me, id, Activity::Skip));
 }
 
+// Envoys (08): toward a city-state where we are close to the next tier or to suzerainty,
+// then the nearest one we have met.
+void envoys(View& v) {
+    Game& g = v.game;
+    for (int guard = 0; guard < 8 && v.s().players[at(v.me)].envoyTokens > 0; ++guard) {
+        PlayerId best = kNoPlayer;
+        int bestScore = INT_MIN;
+        for (const Player& cs : v.s().players) {
+            if (!g.canSendEnvoy(v.me, cs.id)) continue;
+            const int mine = g.envoysAt(v.me, cs.id);
+            const PlayerId suz = g.suzerainOf(cs.id);
+            int score = mine == 0 || mine == 2 || mine == 5 ? 30 : 10;  // the next tier or suzerainty
+            if (suz != kNoPlayer && suz != v.me) score -= 5;
+            score -= mine > 6 ? 40 : 0;
+            if (score > bestScore) {
+                bestScore = score;
+                best = cs.id;
+            }
+        }
+        if (best == kNoPlayer || g.submit(Command::sendEnvoy(v.me, best)) != CommandError::Ok) break;
+    }
+}
+
 // Buys a great person when the price is a small part of the treasury.
 void patronage(View& v) {
     Game& g = v.game;
+    if (g.isCityState(v.me)) return;
     for (size_t c = 0; c < v.r.greatPersonClasses.size(); ++c) {
         const int cost = g.patronageCost(v.me, static_cast<TypeIndex>(c), false);
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost * 3))
@@ -1112,8 +1141,9 @@ void playTurn(Game& game) {
     succession(game, game.state().currentPlayer);
     sendAssassins(game, game.state().currentPlayer);
     View v(game, game.state().currentPlayer);
+    const bool cityState = game.isCityState(v.me);
     survey(v);
-    diplomacy(v);
+    if (!cityState) diplomacy(v);  // city-states never start wars (08)
     research(v);
     cityActions(v);
     // Promotions as soon as they are earned (the first offered; a planner can come later).
@@ -1147,6 +1177,7 @@ void playTurn(Game& game) {
     production(v);
     purchases(v);
     patronage(v);
+    envoys(v);
     pantheon(v);
     buyReligion(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));

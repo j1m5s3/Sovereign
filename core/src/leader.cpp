@@ -164,7 +164,7 @@ CommandError Game::validateLeader(const Command& c) const {
         if (c.arg == kNoPlayer) return CommandError::Ok;
         if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg == c.player) return CommandError::CannotSendAgent;
         const Player& t = state_.players[static_cast<size_t>(c.arg)];
-        return t.alive && !t.barbarian ? CommandError::Ok : CommandError::CannotSendAgent;
+        return t.alive && !t.barbarian && t.cityState == kNone ? CommandError::Ok : CommandError::CannotSendAgent;
     }
     if (c.type == CommandType::AbandonLeader) return p.captor != kNoPlayer ? CommandError::Ok : CommandError::CannotSucceed;
     const Unit* u = state_.unit(c.id);

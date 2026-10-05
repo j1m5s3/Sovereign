@@ -55,6 +55,7 @@ same command must print the same hash.
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves, succession and regicide, assassins (off-map agents), SOVEREIGN promotions and the presence aura | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |
 | Naval movement and embarkation (ships on Coast, Ocean after Cartography; land units embark after Shipbuilding) | `src/game.cpp` (`terrainCost`), `src/combat.cpp`, `src/city.cpp` |
+| City-states: placement at the start, envoys (meeting, civics, influence), tier bonuses, suzerains | `src/citystates.cpp`, data in `../data/rules/citystates.json` |
 | World wonders: placement, once in the world, the rival refund, completion effects (wonders load as buildings flagged `wonder`) | `src/wonders.cpp`, data in `../data/rules/wonders.json` |
 | Trade routes (capacity, yields by destination district, range, length, plunder) and roads (era tiers, movement, bridges) | `src/trade.cpp`, road movement in `src/game.cpp` (`terrainCost`) |
 | Religion: pantheons, founding with a Great Prophet, beliefs (modifiers with `BELIEF_*` sources), pressure and followers, Faith purchases, spread, theological combat, founder yields, religious victory | `src/religion.cpp` (religion queries in `include/sovereign/modifiers.h`), data in `../data/rules/religion.json` |

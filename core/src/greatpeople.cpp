@@ -18,7 +18,7 @@ bool claimed(const GameState& s, TypeIndex person) {
     return at(person) < s.greatPeopleClaimed.size() && s.greatPeopleClaimed[at(person)];
 }
 
-bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity; }
+bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity && p.cityState == kNone; }
 
 }  // namespace
 

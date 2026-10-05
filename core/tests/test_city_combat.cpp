@@ -372,6 +372,7 @@ TEST(barbarian_camps_appear_out_of_sight_and_release_units) {
     std::string err;
     GameSetup setup = sovtest::duelSetup(11);
     setup.mapSize = "MAPSIZE_SMALL";
+    setup.cityStates = 0;
     setup.players = {{"CIVILIZATION_ROME", true}, {"CIVILIZATION_EGYPT", false}, {"CIVILIZATION_CHINA", false},
                      {"CIVILIZATION_INCA", false}};
     auto g = Game::create(rules(), setup, &err);

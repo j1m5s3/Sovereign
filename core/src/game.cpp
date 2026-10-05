@@ -52,6 +52,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     for (Player& p : s.players) p.relations.resize(s.players.size());
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
+    placeCityStates(s, rules);
     if (setup.barbarians) {
         // The barbarians: one extra player, at war with all, who moves in the world turn.
         Player b;
@@ -68,6 +69,15 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     game->linkBarbarians();
     for (Player& p : st.players) {
         if (p.barbarian) continue;
+        if (p.cityState != kNone) {
+            // A city-state starts with its city and two Warriors (game-setup.md, Starting units (city-states)).
+            Unit& settler = game->spawnUnit(rules.unit("UNIT_SETTLER"), p.id, p.startPos);
+            game->applyFoundCity(Command::foundCity(p.id, settler.id));
+            for (int k = 0; k < 2; ++k) {
+                if (auto spot = game->unitSpawnPlot(*st.cityAt(p.startPos), rules.unit("UNIT_WARRIOR"))) game->spawnUnit(rules.unit("UNIT_WARRIOR"), p.id, *spot);
+            }
+            continue;
+        }
         for (const std::string& unitId : rules.startingUnits) {
             TypeIndex t = rules.unit(unitId);
             UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
@@ -207,6 +217,10 @@ CommandError Game::validate(const Command& c) const {
             return validateReligion(c);
         case CommandType::StartTradeRoute:
             return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
+        case CommandType::SendEnvoy:
+            return c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size() && canSendEnvoy(c.player, static_cast<PlayerId>(c.arg))
+                       ? CommandError::Ok
+                       : CommandError::CannotSendEnvoy;
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -609,6 +623,13 @@ void Game::apply(const Command& c) {
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion: applyReligion(c); break;
         case CommandType::StartTradeRoute: applyTradeRoute(c); break;
+        case CommandType::SendEnvoy: {
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
+            --p.envoyTokens;
+            ++p.envoys[static_cast<size_t>(c.arg)];
+            break;
+        }
     }
 }
 
@@ -629,8 +650,6 @@ void Game::applyFoundCity(const Command& c) {
     const Hex at = u->pos;
     const PlayerId owner = u->owner;
     Player& p = state_.players[static_cast<size_t>(owner)];
-    const CivType& civ = rules_->civs[static_cast<size_t>(p.civ)];
-
     City city;
     city.id = state_.nextCityId++;
     city.owner = owner;
@@ -640,9 +659,14 @@ void Game::applyFoundCity(const Command& c) {
     city.hp = cityMaxHp();
     city.originalOwner = owner;
     city.originalCapital = city.capital;
-    city.name = static_cast<size_t>(p.citiesFounded) < civ.cityNames.size()
-                    ? civ.cityNames[static_cast<size_t>(p.citiesFounded)]
-                    : civ.name + " " + std::to_string(p.citiesFounded + 1);
+    if (p.cityState != kNone) {
+        city.name = rules_->cityStates[static_cast<size_t>(p.cityState)].name;
+    } else {
+        const CivType& civ = rules_->civs[static_cast<size_t>(p.civ)];
+        city.name = static_cast<size_t>(p.citiesFounded) < civ.cityNames.size()
+                        ? civ.cityNames[static_cast<size_t>(p.citiesFounded)]
+                        : civ.name + " " + std::to_string(p.citiesFounded + 1);
+    }
     ++p.citiesFounded;
     for (const Hex& h : state_.grid.within(at, 1)) {
         Plot& plot = state_.plot(h);
@@ -716,6 +740,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         payUnitFuel(pid);
         processGreatPeople(pid);
         processTrade(pid);
+        processEnvoys(pid);
         healAndFortify(pid);
         healCities(pid);
     }

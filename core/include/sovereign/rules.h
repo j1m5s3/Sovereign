@@ -476,6 +476,7 @@ struct TreeNode {
     bool ocean = false;            // units may enter Ocean (Cartography)
     int embarkedMoves = 0;         // + movement while embarked
     bool tradeCapacity = false;    // +1 trade route capacity (Foreign Trade)
+    int envoys = 0;                // envoys granted on completion (civics)
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -487,6 +488,29 @@ struct GovernmentType {
     Unlock unlock;
     std::array<int, kNumGovernmentSlotTypes> slots{};
     int totalSlots() const { return slots[0] + slots[1] + slots[2] + slots[3]; }
+    int influencePerTurn = 0;    // influence points toward envoys (08: City-States)
+    int influenceThreshold = 0;  // points per batch of envoys
+    int envoysPerThreshold = 0;
+};
+
+// City-states (08: City-States; data: city-states.md).
+enum class CityStateKind : uint8_t { Scientific = 0, Cultural, Religious, Trade, Industrial, Militaristic };
+struct CityStateType {
+    std::string id, name, suzerainText;
+    CityStateKind kind = CityStateKind::Scientific;
+};
+// What a city-state of a kind gives each player with enough envoys there, while at peace.
+enum class EnvoyToward : uint8_t { Units = 0, Buildings, Districts };
+struct EnvoyBonus {
+    CityStateKind kind = CityStateKind::Scientific;
+    int envoys = 1;
+    YieldType yield = YieldType::Food;
+    int amount = 0;             // + yield (in the capital, or per `building`)
+    bool capital = false;
+    TypeIndex building = kNone;
+    int production = 0;         // + production toward `toward` items (in the capital, or in cities with one of `buildings`)
+    EnvoyToward toward = EnvoyToward::Units;
+    std::vector<TypeIndex> buildings;
 };
 
 struct PolicyType {
@@ -612,6 +636,7 @@ struct MapSizeType {
     int width = 0, height = 0;
     int defaultPlayers = 0;
     int maxReligions = 0;  // religions that can be founded (Great Prophets) on this size
+    int defaultCityStates = 0;
 };
 
 struct GameSpeedType {
@@ -657,6 +682,8 @@ public:
     std::vector<GreatWorkType> greatWorkTypes;
     std::vector<BeliefType> beliefs;
     std::vector<RouteType> routes;  // by era, Ancient first
+    std::vector<CityStateType> cityStates;
+    std::vector<EnvoyBonus> envoyBonuses;
     std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
 

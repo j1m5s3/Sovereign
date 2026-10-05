@@ -114,6 +114,15 @@ FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player)
 	{
 		return Srgb(40, 40, 40);
 	}
+	if (Player >= 0 && Player < static_cast<int32>(S.players.size()) && S.players[static_cast<size_t>(Player)].cityState != sov::kNone)
+	{
+		// City-states by kind (08): pale versions of Civ's type colours.
+		static const FColor Kinds[] = {FColor(120, 160, 230), FColor(190, 130, 220), FColor(235, 235, 235), FColor(230, 210, 110),
+			FColor(230, 160, 90), FColor(210, 100, 100)};
+		const sov::TypeIndex Cs = S.players[static_cast<size_t>(Player)].cityState;
+		const FColor K = Kinds[static_cast<size_t>(Game.rules().cityStates[static_cast<size_t>(Cs)].kind) % 6];
+		return Srgb(K.R, K.G, K.B);
+	}
 	static const FColor Palette[] = {
 		FColor(220, 40, 40), FColor(40, 90, 220), FColor(240, 200, 30), FColor(150, 50, 200),
 		FColor(240, 130, 20), FColor(30, 190, 190), FColor(240, 110, 180), FColor(255, 255, 255),
