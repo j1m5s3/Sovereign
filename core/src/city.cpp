@@ -819,6 +819,7 @@ void Game::completeProject(City& city, TypeIndex project) {
     Player& p = state_.players[static_cast<size_t>(city.owner)];
     if (p.projectsDone.size() < rules_->projects.size()) p.projectsDone.resize(rules_->projects.size(), 0);
     ++p.projectsDone[static_cast<size_t>(project)];
+    if (pj.spaceRace) competitionScore(city.owner, CompetitionKind::SpaceStation, 30);  // space station score project
     if (pj.resource != kNone) p.stockpile[static_cast<size_t>(pj.resource)] = std::max(0, p.stockpile[static_cast<size_t>(pj.resource)] - pj.resourceAmount);
     for (const auto& [cls, points] : pj.greatPersonPoints) {
         if (static_cast<size_t>(cls) < p.greatPersonPoints.size()) p.greatPersonPoints[static_cast<size_t>(cls)] += points;

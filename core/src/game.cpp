@@ -956,6 +956,7 @@ void Game::beginGlobalTurn() {
     processClimate();
     processFallout();
     processEmergencies();
+    processCompetitions();
     processProfiles();
     processSpaceRace();
     processReligion();

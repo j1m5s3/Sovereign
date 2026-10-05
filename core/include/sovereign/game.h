@@ -366,6 +366,12 @@ public:
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
 
+    // ---- scored competitions [GS] (08: Scored Competitions)
+    void startCompetition();                                       // at a World Congress session
+    void competitionScore(PlayerId player, CompetitionKind kind, int amount);
+    int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)
+    void processCompetitions();                                    // settles the ones whose time is up (the world turn)
+
     // ---- emergencies [R&F/GS] (08: Emergencies)
     // Whether the player may join this running emergency: a living major civ that has met the target,
     // is not the target, its ally or its declared friend, and has not joined yet.
