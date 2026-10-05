@@ -279,6 +279,8 @@ def gen_units():
         }
         if combat > 0 and "no ZOC" not in special and row["Domain"] != "Air":
             u["zoneOfControl"] = True
+        if num(row["Anti-air"]):
+            u["antiAir"] = num(row["Anti-air"])  # protects adjacent plots from aircraft (05: air combat)
         if "found city" in special:
             u["foundCity"] = True
         m = re.search(r"charges (\d+)", special)
@@ -504,6 +506,9 @@ def gen_buildings():
         reqs = [ids[x.strip()] for x in row["Requires"].split(",") if x.strip() in ids]
         if reqs:
             b["requires"] = reqs
+        m = re.search(r"\+(\d+) air slots", row["Modifiers"] or "")
+        if m:
+            b["airSlots"] = int(m.group(1))  # Hangar, Airport (05: air units)
         if row["Placement"] == "river":
             b["needsRiver"] = True
         if row["Purchase"] == "Gold":
@@ -554,7 +559,7 @@ def gen_barbarians():
 # placement rules not modelled yet (flat land, rivers, aqueduct rules) and arrive with their systems.
 PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor",
                        "Aqueduct", "Neighborhood", "Entertainment Complex", "Water Park", "Dam", "Preserve",
-                       "Government Plaza", "Diplomatic Quarter", "Spaceport"]
+                       "Government Plaza", "Diplomatic Quarter", "Spaceport", "Aerodrome"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
                  "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
@@ -609,6 +614,8 @@ def gen_districts():
         m = re.search(r"attack range (\d+)", row["Placement/flags"])
         if m:
             d["attackRange"] = int(m.group(1))
+        if row["Air slots"]:
+            d["airSlots"] = num(row["Air slots"])  # aircraft based here (City Center 1, Aerodrome 2)
         if name != "City Center":
             d["unlock"] = unlock_id(row["Unlock"])
             d["cost"] = num(row["Base cost"])

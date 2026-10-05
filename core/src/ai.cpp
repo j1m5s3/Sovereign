@@ -866,6 +866,11 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     if (pv.captureCity) return 100000;
     if (pv.capture) return 5000;
     const UnitType& t = v.r.units[at(u.type)];
+    // Aircraft keep out of skies another fighter or anti-air battery holds (05: air combat).
+    if (t.domain == Domain::Air) {
+        const Hex target = pv.defender != kNoUnit ? v.s().unit(pv.defender)->pos : v.s().city(pv.city)->pos;
+        if (v.game.interception(u, target).first > t.combat * u.hp / 100) return INT_MIN;
+    }
     const int dealt = (pv.damageToDefenderMin + pv.damageToDefenderMax) / 2;
     const int taken = (pv.damageToAttackerMin + pv.damageToAttackerMax) / 2;
     if (!pv.ranged && u.hp - pv.damageToAttackerMax <= 15) return INT_MIN;  // could die
@@ -887,7 +892,8 @@ void attacks(View& v) {
     for (int round = 0; round < 4; ++round) {
         std::vector<UnitId> order;
         for (const Unit& u : v.s().units) {
-            if (u.owner == v.me && isArmy(v.r.units[at(u.type)]) && u.movesLeft > Fixed() && u.attacks < v.game.maxAttacks(u))
+            const UnitType& ut = v.r.units[at(u.type)];
+            if (u.owner == v.me && (isArmy(ut) || ut.domain == Domain::Air) && u.movesLeft > Fixed() && u.attacks < v.game.maxAttacks(u))
                 order.push_back(u.id);
         }
         std::stable_sort(order.begin(), order.end(), [&](UnitId a, UnitId b) {
@@ -1101,6 +1107,30 @@ void military(View& v) {
         if (s.plot(u->pos).owner == v.me || v.cities.empty()) rest(v, id);
         else if (!approach(v, id, s.city(v.cities.front())->pos, false)) rest(v, id);
     }
+    // 4. Aircraft: rebase toward the target city when it is out of reach, else patrol (fighters
+    // fortified at their base intercept raids within their range).
+    for (const Unit& u : s.units) {
+        if (u.owner != v.me || !v.game.isAircraft(u) || u.movesLeft <= Fixed()) continue;
+        const UnitId id = u.id;
+        if (targetCity && s.grid.distance(u.pos, *targetCity) > v.game.unitRange(u)) {
+            std::optional<Hex> best;
+            int bestDist = s.grid.distance(u.pos, *targetCity);
+            for (CityId cid : v.cities) {
+                const City& c = *s.city(cid);
+                std::vector<Hex> bases{c.pos};
+                for (const CityDistrict& d : c.districts) bases.push_back(d.pos);
+                for (const Hex& b : bases) {
+                    const int d = s.grid.distance(b, *targetCity);
+                    if (d < bestDist && v.game.rebaseProblem(id, b) == CommandError::Ok) {
+                        bestDist = d;
+                        best = b;
+                    }
+                }
+            }
+            if (best && v.game.submit(Command::rebaseUnit(v.me, id, *best)) == CommandError::Ok) continue;
+        }
+        rest(v, id);
+    }
 }
 
 // --- the leader ------------------------------------------------------------------------
@@ -1258,6 +1288,17 @@ void production(View& v) {
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
+                    else if (t.domain == Domain::Air) {
+                        int aircraft = 0, fighters = 0;
+                        for (const Unit& u : s.units) {
+                            if (u.owner != v.me || !g.isAircraft(u)) continue;
+                            ++aircraft;
+                            fighters += v.r.units[at(u.type)].ranged > 0 ? 1 : 0;
+                        }
+                        const int want = (static_cast<int>(v.cities.size()) + 2) / (v.enemies.empty() && !v.posture.has(Strategy::DominationVictory) ? 4 : 2);
+                        const bool fighter = t.ranged > 0;
+                        if (aircraft < want && (fighter ? fighters * 2 <= aircraft : fighters > 0)) value = v.enemies.empty() ? 180 : 320;
+                    }
                     break;
                 }
                 case ProductionKind::Building: {
@@ -1314,6 +1355,8 @@ void production(View& v) {
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
                     value = value * districtPercent(v, d) / 100;
+                    // The Aerodrome: room for an air force once there is war or a militaristic plan.
+                    if (d.airSlots > 1 && !c.district(it.type, false)) value = (!v.enemies.empty() || v.posture.army > 100) ? 250 : 40;
                     // The Spaceport (09: Science victory): one per civ, in its most productive city first.
                     if (d.id == "DISTRICT_SPACEPORT") {
                         const bool another = std::any_of(v.cities.begin(), v.cities.end(), [&](CityId o) {

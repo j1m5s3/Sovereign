@@ -304,6 +304,11 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 			Send(sov::Command::attack(Me(), U->id, Target));  // shows why it was refused
 		}
 	}
+	else if (G.isAircraft(*U))
+	{
+		// Aircraft rebase to one of our air bases with room (05: air units).
+		Send(sov::Command::rebaseUnit(Me(), U->id, Target));
+	}
 	else
 	{
 		Send(sov::Command::move(Me(), U->id, Target));

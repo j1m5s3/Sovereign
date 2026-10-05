@@ -443,9 +443,7 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "CompletedDistrictType=Aerodrome"
-    ]
+    "district": "DISTRICT_AERODROME"
    },
    "untrackedEffects": [
     "+1 air slots (one-time)"

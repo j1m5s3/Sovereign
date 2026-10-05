@@ -574,6 +574,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "antiAir": 90,
    "purchaseYield": "GOLD",
    "unlock": "TECH_ROBOTICS",
    "strategicCost": {
@@ -1606,6 +1607,7 @@
    "range": 1,
    "moves": 2,
    "sight": 2,
+   "antiAir": 90,
    "purchaseYield": "GOLD",
    "unlock": "TECH_ADVANCED_BALLISTICS",
    "upgradesTo": "UNIT_MOBILE_SAM",
@@ -1626,6 +1628,7 @@
    "range": 1,
    "moves": 3,
    "sight": 2,
+   "antiAir": 100,
    "purchaseYield": "GOLD",
    "unlock": "TECH_GUIDANCE_SYSTEMS",
    "abilities": [
@@ -1746,6 +1749,7 @@
    "moves": 4,
    "sight": 3,
    "zoneOfControl": true,
+   "antiAir": 90,
    "purchaseYield": "GOLD",
    "unlock": "TECH_COMBINED_ARMS",
    "strategicCost": {
@@ -1901,6 +1905,7 @@
    "moves": 5,
    "sight": 2,
    "zoneOfControl": true,
+   "antiAir": 90,
    "purchaseYield": "GOLD",
    "unlock": "TECH_REFINING",
    "strategicCost": {
@@ -1931,6 +1936,7 @@
    "moves": 5,
    "sight": 3,
    "zoneOfControl": true,
+   "antiAir": 110,
    "purchaseYield": "GOLD",
    "unlock": "TECH_LASERS",
    "strategicCost": {

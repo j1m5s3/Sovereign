@@ -337,6 +337,17 @@ public:
     int unitRange(const Unit& unit) const;
     int unitSight(const Unit& unit) const;
     int maxAttacks(const Unit& unit) const;
+    // ---- air power (05: air units and air combat; 03: Aerodrome)
+    bool isAircraft(const Unit& unit) const;
+    int airSlots(PlayerId player, Hex base) const;   // aircraft the player can base there (0: not a base)
+    int aircraftAt(Hex base) const;
+    std::optional<Hex> freeAirBase(const City& city) const;  // the city's center or Aerodrome with room
+    int rebaseRange(const Unit& aircraft) const;
+    CommandError rebaseProblem(UnitId aircraft, Hex to) const;
+    // The strongest defender covering `target` against this aircraft: (strength, unit).
+    std::pair<int, UnitId> interception(const Unit& aircraft, Hex target) const;
+    void groundAircraft(const City& city);  // enemy aircraft taken with a city or its Aerodrome are lost
+
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;
     bool difficultyAi(PlayerId player) const;     // an AI-run major civ

@@ -255,6 +255,11 @@ CommandError Game::validate(const Command& c) const {
             if (!u || u->owner != c.player) return CommandError::NotYourUnit;
             return upgradeProblem(c.id);
         }
+        case CommandType::RebaseUnit: {
+            const Unit* u = state_.unit(c.id);
+            if (!u || u->owner != c.player) return CommandError::NotYourUnit;
+            return rebaseProblem(c.id, c.target);
+        }
         case CommandType::CongressVote: {
             const int item = c.id;
             if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
@@ -291,6 +296,7 @@ CommandError Game::validate(const Command& c) const {
             }
             auto t = state_.grid.normalize(c.target);
             if (!t || *t != c.target || *t == u->pos) return CommandError::BadTarget;
+            if (isAircraft(*u)) return CommandError::BadTarget;  // aircraft rebase, they do not walk
             if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
@@ -692,6 +698,15 @@ void Game::apply(const Command& c) {
         case CommandType::AppointGovernor:
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor: applyGovernor(c); break;
+        case CommandType::RebaseUnit: {
+            Unit& u = *state_.unit(c.id);
+            u.pos = c.target;
+            u.movesLeft = Fixed();  // rebasing takes the aircraft's turn
+            u.activity = Activity::Awake;
+            u.moved = true;
+            refreshVisibility(c.player);
+            break;
+        }
         case CommandType::UpgradeUnit: {
             Unit& u = *state_.unit(c.id);
             Player& p = state_.players[static_cast<size_t>(c.player)];
