@@ -252,6 +252,7 @@ void Game::applyReligion(const Command& c) {
     switch (c.type) {
         case CommandType::FoundPantheon: {
             p.pantheon = static_cast<TypeIndex>(c.arg);
+            awardFirst(c.player, "MOMENT_WORLD_S_FIRST_PANTHEON", "MOMENT_PANTHEON_FOUNDED");
             p.faith -= Fixed::fromInt(rules_->globalInt("RELIGION_PANTHEON_MIN_FAITH"));
             const TypeIndex grant = rules_->beliefs[at(p.pantheon)].grantUnit;
             if (grant != kNone) {
@@ -275,6 +276,7 @@ void Game::applyReligion(const Command& c) {
             state_.religions.push_back(r);
             const int index = static_cast<int>(state_.religions.size()) - 1;
             p.religion = static_cast<int16_t>(index);
+            awardFirst(c.player, "MOMENT_WORLD_S_FIRST_RELIGION", "MOMENT_RELIGION_FOUNDED");
             for (City& city : state_.cities) fitPressure(city, state_.religions.size());
             // The Holy City converts at once (RELIGION_SPREAD_HOLY_CITY_PRESSURE_PER_POP).
             City& holy = *state_.city(r.holyCity);

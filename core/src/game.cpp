@@ -64,6 +64,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
         for (Player& p : s.players) p.relations.resize(s.players.size());
     }
 
+    for (const Player& p : s.players) s.majorsAtStart += !p.barbarian && p.cityState == kNone ? 1 : 0;
     auto game = std::make_unique<Game>(rules, std::move(s), std::vector<Command>{});
     GameState& st = game->state_;
     game->linkBarbarians();
@@ -628,6 +629,12 @@ void Game::apply(const Command& c) {
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
             --p.envoyTokens;
             ++p.envoys[static_cast<size_t>(c.arg)];
+            // A city-state's first suzerain is a historic moment (09).
+            Player& cs = state_.players[static_cast<size_t>(c.arg)];
+            if (!cs.hadSuzerain && suzerainOf(cs.id) == c.player) {
+                cs.hadSuzerain = true;
+                awardMoment(c.player, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN");
+            }
             break;
         }
     }
@@ -685,6 +692,13 @@ void Game::applyFoundCity(const Command& c) {
         }
     }
     const CityId newId = city.id;
+    // Hardship settlements are historic moments (09).
+    if (p.cityState == kNone && p.citiesFounded > 1) {
+        const std::string& base = rules_->terrains[static_cast<size_t>(center.terrain)].base;
+        if (base == "DESERT") awardMoment(owner, "MOMENT_DESERT_CITY");
+        else if (base == "SNOW") awardMoment(owner, "MOMENT_SNOW_CITY");
+        else if (base == "TUNDRA") awardMoment(owner, "MOMENT_TUNDRA_CITY");
+    }
     // A city stands on a road of its founder's era (01: Routes).
     if (const TypeIndex road = roadFor(owner); road != kNone) center.route = static_cast<int8_t>(road);
     // Religious Colonization: new cities start following the founder's religion (06).
@@ -722,6 +736,7 @@ void Game::applyEndTurn(const Command& c) {
 
 void Game::beginGlobalTurn() {
     ++state_.turn;
+    processEras();
     processReligion();
     processAgents();
     processFreeCities();
@@ -741,6 +756,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processGreatPeople(pid);
         processTrade(pid);
         processEnvoys(pid);
+        processTourism(pid);
         healAndFortify(pid);
         healCities(pid);
     }

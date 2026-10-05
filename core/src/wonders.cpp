@@ -77,6 +77,9 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
 
 void Game::completeWonder(City& city, TypeIndex building) {
     const BuildingType& b = rules_->buildings[at(building)];
+    // A wonder of an earlier era than the world's scores a little less (09).
+    const int wonderEra = b.unlock.none() ? 0 : (b.unlock.civic ? rules_->civics : rules_->techs)[at(b.unlock.index)].era;
+    awardMoment(city.owner, wonderEra < state_.gameEra ? "MOMENT_OLD_WORLD_WONDER_COMPLETED" : "MOMENT_WORLD_WONDER_COMPLETED");
     // One-time effects: free units here, Eurekas.
     for (const GreatPersonEffect& fx : b.wonderEffects) {
         if (fx.kind == GreatPersonEffectKind::Unit) {

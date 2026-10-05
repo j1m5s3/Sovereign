@@ -425,6 +425,15 @@ struct EraType {
     int embarkedStrength = 10;     // defence of an embarked unit whose owner is in this era (05: Embarkation)
     int greatPersonBaseCost = 0;   // great person points for this era's first great person (07)
     int tradeRouteExtraTurns = 0;  // added to a trade route's minimum length in this world era [GS]
+    int minTurns = 0, maxTurns = 0;  // how long the world stays in this era (0: no limit) [R&F]
+    int eraScoreShift = 0;           // shift to both age thresholds when this era is scored [GS]
+};
+
+// Historic moments (09: Era score and Ages; data: eras-moments-loyalty.md).
+struct MomentType {
+    std::string id, name;
+    int eraScore = 0;
+    int obsoleteEra = -1;  // stops counting once the world reaches this era (-1: never)
 };
 
 // Roads (01: Routes): movement cost along them, and whether they bridge rivers.
@@ -683,6 +692,7 @@ public:
     std::vector<BeliefType> beliefs;
     std::vector<RouteType> routes;  // by era, Ancient first
     std::vector<CityStateType> cityStates;
+    std::vector<MomentType> moments;
     std::vector<EnvoyBonus> envoyBonuses;
     std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
@@ -710,6 +720,7 @@ public:
     TypeIndex greatWorkType(const std::string& id) const;
     TypeIndex belief(const std::string& id) const;
     TypeIndex religion(const std::string& id) const;
+    TypeIndex moment(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;

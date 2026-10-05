@@ -669,6 +669,7 @@ void Game::processCities(PlayerId pid) {
         culture += fy[idx(YieldType::Culture)];
         player.faith += fy[idx(YieldType::Faith)];
     }
+    player.lifetimeCulture += culture;  // domestic tourists (07: Tourism)
     processResearch(pid, science, culture);
     accumulateStrategics(pid);
     if (player.gold <= rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE")) {
@@ -717,6 +718,14 @@ void Game::processCities(PlayerId pid) {
             ++city.population;
             city.food = Fixed();
             assignCitizens(city);
+            // A civ's first city of each size tier (09: historic moments).
+            static const std::pair<int, const char*> tiers[] = {{10, "BUSTLING"}, {15, "LARGE"}, {20, "ENORMOUS"}, {25, "GIGANTIC"}};
+            for (const auto& [size, name] : tiers) {
+                if (city.population != size) continue;
+                const std::string world = std::string("MOMENT_WORLD_S_FIRST_") + name + "_CITY";
+                const std::string own = std::string("MOMENT_FIRST_") + name + "_CITY";
+                awardFirst(pid, world.c_str(), own.c_str());
+            }
         } else if (city.food < Fixed()) {
             city.food = Fixed();
             if (city.population > 1) {

@@ -66,6 +66,7 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     if (state_.players[static_cast<size_t>(c->owner)].freeCity) {
         return change + Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_FREE_CITIES"));
     }
+    change += Fixed::fromInt(ageLoyalty(*c));  // Golden and Dark Ages (09)
     const CityReport rep = cityReport(id);
     if (!rules_->happiness.empty()) change += Fixed::fromInt(rules_->happiness[static_cast<size_t>(rep.happiness)].loyaltyPerTurn);
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)

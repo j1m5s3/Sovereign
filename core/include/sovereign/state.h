@@ -42,6 +42,7 @@ struct Plot {
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
+enum class Age : uint8_t { Normal = 0, Golden, Dark, Heroic };
 
 struct Unit {
     UnitId id = kNoUnit;
@@ -222,6 +223,16 @@ struct Player {
     int envoyTokens = 0;          // envoys waiting to be sent
     int influence = 0;            // points toward the next envoys
     PlayerId firstMetBy = kNoPlayer;  // a city-state: the first major civ to meet it (gets an envoy)
+    bool hadSuzerain = false;         // a city-state: someone has been its suzerain
+    // Ages (09: Era score and Ages [R&F]).
+    int eraScore = 0;               // this era's score so far
+    Age age = Age::Normal;          // the age set when the world entered this era
+    int pastGoldenAges = 0, pastDarkAges = 0;
+    std::vector<int8_t> momentEras; // per moment: 1 + the world era it was last earned in (0: never)
+    std::vector<uint8_t> met;       // per player: met (seen one of its cities or units)
+    // Tourism and the culture victory (07: Tourism and Culture Victory).
+    Fixed lifetimeCulture;
+    std::vector<int32_t> tourismTo;  // per player: lifetime tourism toward that civ
     int16_t religion = -1;        // the religion it founded (GameState::religions index)
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
@@ -255,6 +266,7 @@ struct GameSetup {
     bool dominationVictory = true;
     bool scoreVictory = true;
     bool religiousVictory = true;  // 06: Religious victory
+    bool cultureVictory = true;    // 07: Tourism and Culture Victory
     int cityStates = -1;           // city-states to place (-1: the map size's default)
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
@@ -263,7 +275,7 @@ struct GameSetup {
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
-enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious };
+enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture };
 
 // An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
 // for a few turns, then strikes when the target leader is exposed.
@@ -289,7 +301,11 @@ struct PendingBattle {
 };
 
 // Things that happened that players should hear about (UI and AI read them; rules do not).
-enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion, GreatPersonRecruited };
+enum class EventKind : uint8_t {
+    AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion, GreatPersonRecruited,
+    HistoricMoment,  // value: the moment
+    NewAge,          // value: the Age the player entered with the new era
+};
 struct GameEvent {
     int32_t turn = 0;
     EventKind kind = EventKind::AssassinKilled;
@@ -321,6 +337,10 @@ struct SOV_API GameState {
     std::vector<uint8_t> greatPeopleClaimed;  // per individual: recruited by someone
     std::vector<FoundedReligion> religions;   // in founding order
     std::vector<TradeRoute> tradeRoutes;      // sorted by id
+    int gameEra = 0;                          // the world era (09: Global era transitions)
+    int gameEraStart = 1;                     // turn it began
+    std::vector<int8_t> worldMoments;         // per moment: 1 + the era it was claimed for (world's firsts)
+    int majorsAtStart = 0;                    // tourism divisor (07: Visiting tourists)
     int32_t nextTradeRouteId = 1;
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;

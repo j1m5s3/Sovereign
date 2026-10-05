@@ -55,6 +55,7 @@ void Game::enterPlot(Unit& unit) {
     // Clearing a camp pays gold; its surviving units roam on without a home.
     state_.camps.erase(it);
     state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD"));
+    awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");
 }
 
 void Game::processBarbarians() {

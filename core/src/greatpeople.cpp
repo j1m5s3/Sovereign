@@ -147,6 +147,7 @@ void Game::processGreatPeople(PlayerId pid) {
         if (p.greatPersonPoints[c] < cost) continue;
         p.greatPersonPoints[c] -= cost;
         recruitGreatPerson(pid, person);
+        awardMoment(pid, rules_->greatPeople[at(person)].era < state_.gameEra ? "MOMENT_OLD_GREAT_PERSON_RECRUITED" : "MOMENT_GREAT_PERSON_RECRUITED");
     }
 }
 
@@ -253,6 +254,7 @@ void Game::applyGreatPeople(const Command& c) {
         // Points already earned count toward the price; what is left over stays.
         p.greatPersonPoints[at(cls)] = std::max(0, p.greatPersonPoints[at(cls)] - greatPersonCost(person));
         recruitGreatPerson(c.player, person);
+        awardMoment(c.player, c.arg2 == 1 ? "MOMENT_GREAT_PERSON_LURED_BY_FAITH" : "MOMENT_GREAT_PERSON_LURED_BY_GOLD");
         return;
     }
     // Activation: a Great Work, or the individual's effects; the last charge spends the unit.

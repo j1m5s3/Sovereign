@@ -1,0 +1,775 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "moments": [
+  {
+   "id": "MOMENT_FINAL_FOREIGN_CITY_TAKEN",
+   "name": "Final Foreign City Taken",
+   "eraScore": 5
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_TO_MEET_ALL_CIVILIZATIONS",
+   "name": "World's First to Meet All Civilizations",
+   "eraScore": 5
+  },
+  {
+   "id": "MOMENT_FIRST_TRADING_POSTS_IN_ALL_CIVILIZATIONS",
+   "name": "First Trading Posts in All Civilizations",
+   "eraScore": 5
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_FLIGHT",
+   "name": "World's First Flight",
+   "eraScore": 5
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION",
+   "name": "World's First Circumnavigation",
+   "eraScore": 5
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_RELIGION_TO_ADOPT_ALL_BELIEFS",
+   "name": "World's First Religion to Adopt All Beliefs",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_UNIQUE_BUILDING_CONSTRUCTED",
+   "name": "Unique Building Constructed",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_WONDER_COMPLETED",
+   "name": "World Wonder Completed",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_RIVAL_HOLY_CITY_CONVERTED",
+   "name": "Rival Holy City Converted",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_FOREIGN_CAPITAL_TAKEN",
+   "name": "Foreign Capital Taken",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_UNIQUE_DISTRICT_COMPLETED",
+   "name": "Unique District Completed",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_EMERGENCY_SUCCESSFULLY_DEFENDED",
+   "name": "Emergency Successfully Defended",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_FIRST_DISCOVERY_OF_A_NEW_CONTINENT",
+   "name": "First Discovery of a New Continent",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_UNIQUE_TILE_IMPROVEMENT_BUILT",
+   "name": "Unique Tile Improvement Built",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_NATIONAL_PARK",
+   "name": "World's First National Park",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_EXOPLANET_EXPEDITION_LAUNCHED",
+   "name": "World's First Exoplanet Expedition Launched",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_MARTIAN_COLONY_ESTABLISHED",
+   "name": "World's First Martian Colony Established",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_LANDING_ON_THE_MOON",
+   "name": "World's First Landing on the Moon",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_SATELLITE_IN_ORBIT",
+   "name": "World's First Satellite in Orbit",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_UNIQUE_UNIT_MARCHES",
+   "name": "Unique Unit Marches",
+   "eraScore": 4
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_SHIPWRECK_EXCAVATED",
+   "name": "World's First Shipwreck Excavated",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_THREATENING_CAMP_DESTROYED",
+   "name": "Threatening Camp Destroyed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_RELIGION_ADOPTS_ALL_BELIEFS",
+   "name": "Religion Adopts All Beliefs",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_AERODROME_FULLY_DEVELOPED",
+   "name": "First Aerodrome Fully Developed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_ENCAMPMENT_FULLY_DEVELOPED",
+   "name": "First Encampment Fully Developed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_ENTERTAINMENT_COMPLEX_FULLY_DEVELOPED",
+   "name": "First Entertainment Complex Fully Developed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_WATER_PARK_FULLY_DEVELOPED",
+   "name": "First Water Park Fully Developed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_OLD_WORLD_WONDER_COMPLETED",
+   "name": "Old World Wonder Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_S_LARGEST_CIVILIZATION",
+   "name": "World's Largest Civilization",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_CITY_OF_AWE",
+   "name": "City of Awe",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_ENEMY_CITY_ADOPTS_OUR_RELIGION",
+   "name": "Enemy City Adopts Our Religion",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_RESOURCE_CONSUMED_FOR_POWER_IN_WORLD",
+   "name": "First Resource consumed for Power in World",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_CAMPUS_COMPLETED",
+   "name": "Splendid Campus Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_COMMERCIAL_HUB_COMPLETED",
+   "name": "Splendid Commercial Hub Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_HARBOR_COMPLETED",
+   "name": "Splendid Harbor Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_HOLY_SITE_COMPLETED",
+   "name": "Splendid Holy Site Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_INDUSTRIAL_ZONE_COMPLETED",
+   "name": "Splendid Industrial Zone Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_SPLENDID_THEATER_SQUARE_COMPLETED",
+   "name": "Splendid Theater Square Completed",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_NEIGHBORHOOD",
+   "name": "World's First Neighborhood",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_EMERGENCY_COMPLETED_SUCCESSFULLY",
+   "name": "Emergency Completed Successfully",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_FIRST_DISCOVERY_OF_A_NATURAL_WONDER",
+   "name": "First Discovery of a Natural Wonder",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_1_GOVERNMENT_IN_WORLD",
+   "name": "First Tier 1 Government in World",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_2_GOVERNMENT_IN_WORLD",
+   "name": "First Tier 2 Government in World",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_RENAISSANCE"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_3_GOVERNMENT_IN_WORLD",
+   "name": "First Tier 3 Government in World",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_4_GOVERNMENT_IN_WORLD",
+   "name": "First Tier 4 Government in World",
+   "eraScore": 3,
+   "obsoleteEra": "ERA_FUTURE"
+  },
+  {
+   "id": "MOMENT_GREAT_PERSON_LURED_BY_FAITH",
+   "name": "Great Person Lured by Faith",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_GREAT_PERSON_LURED_BY_GOLD",
+   "name": "Great Person Lured by Gold",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_MOUNTAIN_TUNNEL_IN_WORLD",
+   "name": "First Mountain Tunnel in World",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_GREEN_IMPROVEMENT_IN_WORLD",
+   "name": "First Green Improvement in World",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_SEASIDE_RESORT",
+   "name": "World's First Seaside Resort",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_NATIONAL_PARK_FOUNDED",
+   "name": "National Park Founded",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_MET_ALL_CIVILIZATIONS",
+   "name": "Met All Civilizations",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_RELIGION",
+   "name": "World's First Religion",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD",
+   "name": "First Railroad Connection in World",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_TRADING_POSTS_IN_ALL_CIVILIZATIONS",
+   "name": "Trading Posts in All Civilizations",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_TAKING_FLIGHT",
+   "name": "Taking Flight",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_SEAFARING",
+   "name": "World's First Seafaring",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_ENEMY_VETERAN_DEFEATED",
+   "name": "Enemy Veteran Defeated",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_ROCK_BAND_CONCERT_IN_WORLD",
+   "name": "First Rock Band Concert in World",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_WORLD_CIRCUMNAVIGATED",
+   "name": "World Circumnavigated",
+   "eraScore": 3
+  },
+  {
+   "id": "MOMENT_FIRST_SHIPWRECK_EXCAVATED",
+   "name": "First Shipwreck Excavated",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_BARBARIAN_CAMP_DESTROYED",
+   "name": "Barbarian Camp Destroyed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CITY_ON_NEW_CONTINENT",
+   "name": "City on New Continent",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_RESOURCE_CONSUMED_FOR_POWER",
+   "name": "First Resource consumed for Power",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_GIGANTIC_CITY",
+   "name": "World's First Gigantic City",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_ENORMOUS_CITY",
+   "name": "World's First Enormous City",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_LARGE_CITY",
+   "name": "World's First Large City",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_BUSTLING_CITY",
+   "name": "World's First Bustling City",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_FREE_CITY_JOINS",
+   "name": "Free City Joins",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CITY_RETURNS_TO_ORIGINAL_OWNER",
+   "name": "City Returns to Original Owner",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_CIVIC_OF_NEW_ERA",
+   "name": "World's First Civic of New Era",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CANAL_COMPLETED",
+   "name": "Canal Completed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_NEIGHBORHOOD_COMPLETED",
+   "name": "First Neighborhood Completed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_ARMADA",
+   "name": "World's First Armada",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_ARMY",
+   "name": "World's First Army",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_CORPS",
+   "name": "World's First Corps",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_FLEET",
+   "name": "World's First Fleet",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_1_GOVERNMENT",
+   "name": "First Tier 1 Government",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_2_GOVERNMENT",
+   "name": "First Tier 2 Government",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_RENAISSANCE"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_3_GOVERNMENT",
+   "name": "First Tier 3 Government",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "MOMENT_FIRST_TIER_4_GOVERNMENT",
+   "name": "First Tier 4 Government",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_FUTURE"
+  },
+  {
+   "id": "MOMENT_FIRST_MOUNTAIN_TUNNEL",
+   "name": "First Mountain Tunnel",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_GREEN_IMPROVEMENT",
+   "name": "First Green Improvement",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_SEASIDE_RESORT",
+   "name": "First Seaside Resort",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_INQUISITION",
+   "name": "World's First Inquisition",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_PANTHEON",
+   "name": "World's First Pantheon",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "MOMENT_DIPLOMATIC_VICTORY_RESOLUTION_WON",
+   "name": "Diplomatic Victory Resolution Won",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CITY_STATE_S_FIRST_SUZERAIN",
+   "name": "City-State's First Suzerain",
+   "eraScore": 2,
+   "obsoleteEra": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "MOMENT_LEVIED_ARMY_STANDS_DOWN",
+   "name": "Levied Army Stands Down",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_ENEMY_CITY_STATE_PACIFIED",
+   "name": "Enemy City-State Pacified",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CITY_STATE_ARMY_LEVIED_NEAR_ENEMY",
+   "name": "City-State Army Levied Near Enemy",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_EXOPLANET_EXPEDITION_LAUNCHED",
+   "name": "Exoplanet Expedition Launched",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_MANHATTAN_PROJECT_COMPLETED",
+   "name": "Manhattan Project Completed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_MARTIAN_COLONY_ESTABLISHED",
+   "name": "Martian Colony Established",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_LANDED_ON_THE_MOON",
+   "name": "Landed on the Moon",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_OPERATION_IVY_COMPLETED",
+   "name": "Operation Ivy Completed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_SATELLITE_LAUNCHED_INTO_ORBIT",
+   "name": "Satellite Launched Into Orbit",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_RELIGION_FOUNDED",
+   "name": "Religion Founded",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_RAILROAD_CONNECTION",
+   "name": "First Railroad Connection",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_MASTER_SPY_EARNED",
+   "name": "First Master Spy Earned",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_TECHNOLOGY_OF_NEW_ERA",
+   "name": "World's First Technology of New Era",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_ON_THE_WAVES",
+   "name": "On the Waves",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_WORLD_S_FIRST_STRATEGIC_RESOURCE_POTENTIAL_UNLEASHED",
+   "name": "World's First Strategic Resource Potential Unleashed",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_ADMIRAL_DEFEATS_ENEMY",
+   "name": "Admiral Defeats Enemy",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_GENERAL_DEFEATS_ENEMY",
+   "name": "General Defeats Enemy",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_FIRST_ROCK_BAND_CONCERT",
+   "name": "First Rock Band Concert",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_CAUSE_FOR_WAR",
+   "name": "Cause for War",
+   "eraScore": 2
+  },
+  {
+   "id": "MOMENT_ARTIFACT_EXTRACTED",
+   "name": "Artifact Extracted",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_CITY_NEAR_FLOODABLE_RIVER",
+   "name": "City near Floodable River",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_AGGRESSIVE_CITY_PLACEMENT",
+   "name": "Aggressive City Placement",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_CITY_NEAR_VOLCANO",
+   "name": "City near Volcano",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_DESERT_CITY",
+   "name": "Desert City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_SNOW_CITY",
+   "name": "Snow City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_TUNDRA_CITY",
+   "name": "Tundra City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_GIGANTIC_CITY",
+   "name": "First Gigantic City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_ENORMOUS_CITY",
+   "name": "First Enormous City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_LARGE_CITY",
+   "name": "First Large City",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_BUSTLING_CITY",
+   "name": "First Bustling City",
+   "eraScore": 1,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_FIRST_CIVIC_OF_NEW_ERA",
+   "name": "First Civic of New Era",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_DISCOVERY_OF_A_NATURAL_WONDER",
+   "name": "Discovery of a Natural Wonder",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_ARMADA",
+   "name": "First Armada",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_ARMY",
+   "name": "First Army",
+   "eraScore": 1,
+   "obsoleteEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "MOMENT_FIRST_CORPS",
+   "name": "First Corps",
+   "eraScore": 1,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_FIRST_FLEET",
+   "name": "First Fleet",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_TRIBAL_VILLAGE_CONTACTED",
+   "name": "Tribal Village Contacted",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_ALL_GOVERNORS_APPOINTED",
+   "name": "All Governors Appointed",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_GOVERNOR_FULLY_PROMOTED",
+   "name": "Governor Fully Promoted",
+   "eraScore": 1,
+   "obsoleteEra": "ERA_MODERN"
+  },
+  {
+   "id": "MOMENT_GREAT_PERSON_RECRUITED",
+   "name": "Great Person Recruited",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_OLD_GREAT_PERSON_RECRUITED",
+   "name": "Old Great Person Recruited",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_IMPROVEMENT_AFTER_NATURAL_DISASTER",
+   "name": "First Improvement after Natural Disaster",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_INQUISITION_BEGINS",
+   "name": "Inquisition Begins",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_COASTAL_FLOOD_MITIGATED",
+   "name": "Coastal Flood Mitigated",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_RIVER_FLOOD_MITIGATED",
+   "name": "River Flood Mitigated",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_PANTHEON_FOUNDED",
+   "name": "Pantheon Founded",
+   "eraScore": 1,
+   "obsoleteEra": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "MOMENT_CITY_STATE_ARMY_LEVIED",
+   "name": "City-State Army Levied",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_MET_NEW_CIVILIZATION",
+   "name": "Met New Civilization",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_MASTER_SPY_EARNED",
+   "name": "Master Spy Earned",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_TECHNOLOGY_OF_NEW_ERA",
+   "name": "First Technology of New Era",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_TRADING_POST_ESTABLISHED_IN_NEW_CIVILIZATION",
+   "name": "Trading Post Established in New Civilization",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_STRATEGIC_RESOURCE_POTENTIAL_UNLEASHED",
+   "name": "Strategic Resource Potential Unleashed",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_UNIT_PROMOTED_WITH_DISTINCTION",
+   "name": "Unit Promoted with Distinction",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_FIRST_UNIT_PROMOTED_WITH_DISTINCTION",
+   "name": "First Unit Promoted with Distinction",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_ENEMY_FORMATION_DEFEATED",
+   "name": "Enemy Formation Defeated",
+   "eraScore": 1
+  },
+  {
+   "id": "MOMENT_CLIMATE_CHANGE_PHASE",
+   "name": "Climate Change Phase",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_DARK_AGE_BEGINS",
+   "name": "Dark Age Begins",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_GOLDEN_AGE_BEGINS",
+   "name": "Golden Age Begins",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_HEROIC_AGE_BEGINS",
+   "name": "Heroic Age Begins",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_NORMAL_AGE_BEGINS",
+   "name": "Normal Age Begins",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_BATTLE_FOUGHT",
+   "name": "Battle Fought",
+   "eraScore": 0
+  },
+  {
+   "id": "MOMENT_SHIP_SUNK",
+   "name": "Ship Sunk",
+   "eraScore": 0
+  }
+ ]
+}

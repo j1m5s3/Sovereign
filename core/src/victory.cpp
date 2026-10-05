@@ -65,6 +65,10 @@ void Game::checkVictory() {
     } else if (majors > 1 && alive == 1) {
         return win(last, Victory::LastStanding);  // VICTORY_DEFAULT
     }
+    if (state_.setup.cultureVictory) {
+        const PlayerId c = cultureVictor();
+        if (c != kNoPlayer) return win(c, Victory::Culture);
+    }
     if (state_.setup.religiousVictory) {
         const PlayerId r = religiousVictor();
         if (r != kNoPlayer) return win(r, Victory::Religious);
