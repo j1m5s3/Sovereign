@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Keeps the Unreal SovereignCore module in step with the standalone builds.
 
-Unreal compiles the rules core and the battle simulation through one wrapper .cpp per
+Unreal compiles the rules core, the battle simulation and the dialogue layer through one wrapper .cpp per
 source in unreal/Source/SovereignCore/Private/Core/ (each only #includes its file), so
-core/ and battle/ never hold an Unreal file. This check fails when the wrappers and the
-sovereign_core sources in core/CMakeLists.txt or the sovereign_battle sources in
-battle/CMakeLists.txt differ.
+core/, battle/ and diplomacy/ never hold an Unreal file. This check fails when the wrappers
+and the sovereign_core, sovereign_battle or sovereign_diplomacy sources in their
+CMakeLists.txt differ (the socket client, sovereign_diplomacy_http, stays out of Unreal).
 
   python3 tools/check_unreal_core_module.py          # check
   python3 tools/check_unreal_core_module.py --write  # regenerate the wrappers
@@ -20,13 +20,14 @@ WRAPPERS = ROOT / "unreal" / "Source" / "SovereignCore" / "Private" / "Core"
 LIBRARIES = [
     ("core", "sovereign_core", "SovCore_", "the core stays engine-independent"),
     ("battle", "sovereign_battle", "SovBattle_", "the battle simulation stays engine-independent"),
+    ("diplomacy", "sovereign_diplomacy", "SovDiplomacy_", "the dialogue layer stays engine-independent"),
 ]
 
 
 def library_sources(lib, target):
     cmake = ROOT / lib / "CMakeLists.txt"
     text = cmake.read_text(encoding="utf-8")
-    block = re.search(r"add_library\(%s(.*?)\)" % target, text, re.S)
+    block = re.search(r"add_library\(%s\s(.*?)\)" % target, text, re.S)
     if not block:
         raise SystemExit("%s/CMakeLists.txt: add_library(%s ...) not found" % (lib, target))
     return sorted(Path(s).name for s in re.findall(r"src/(\S+\.cpp)", block.group(1)))

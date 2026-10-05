@@ -96,6 +96,9 @@ add_test(NAME sovereign_tests COMMAND sovereign_tests)
 # The live battle simulation and the trained battle AI (battle/).
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../battle battle)
 
+# The dialogue layer for language-model diplomacy (diplomacy/).
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../diplomacy diplomacy)
+
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
   add_test(NAME no_floats_in_core

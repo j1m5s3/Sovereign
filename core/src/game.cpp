@@ -219,6 +219,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::ProposeDeal:
         case CommandType::AnswerDeal:
         case CommandType::Denounce:
+        case CommandType::RecordTalk:
             return validateDiplomacy(c);
         case CommandType::StartTradeRoute:
             return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
@@ -631,7 +632,8 @@ void Game::apply(const Command& c) {
         case CommandType::StartTradeRoute: applyTradeRoute(c); break;
         case CommandType::ProposeDeal:
         case CommandType::AnswerDeal:
-        case CommandType::Denounce: applyDiplomacy(c); break;
+        case CommandType::Denounce:
+        case CommandType::RecordTalk: applyDiplomacy(c); break;
         case CommandType::SendEnvoy: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);

@@ -79,6 +79,14 @@ bool Game::grantsOpenBorders(PlayerId owner, PlayerId to) const {
     return state_.players[at(owner)].relations[at(to)].openBordersUntil >= state_.turn;
 }
 
+std::vector<const TalkRecord*> Game::talksBetween(PlayerId a, PlayerId b) const {
+    std::vector<const TalkRecord*> out;
+    for (const TalkRecord& t : state_.talks) {
+        if ((t.speaker == a && t.leader == b) || (t.speaker == b && t.leader == a)) out.push_back(&t);
+    }
+    return out;
+}
+
 const Deal* Game::deal(int32_t id) const {
     for (const Deal& d : state_.deals) {
         if (d.id == id) return &d;
@@ -524,6 +532,16 @@ CommandError Game::validateDiplomacy(const Command& c) const {
             if (c.player != d->to) return CommandError::NoDeal;
             return c.arg == 0 ? CommandError::Ok : dealProblem(*d);
         }
+        case CommandType::RecordTalk: {
+            if (c.text.empty() || c.text.size() > kMaxTalkText) return CommandError::CannotDeal;
+            for (char ch : c.text) {
+                if (static_cast<unsigned char>(ch) < 0x20 && ch != '\n') return CommandError::CannotDeal;
+            }
+            return c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size() && isMajorCiv(static_cast<PlayerId>(c.arg)) &&
+                           isMajorCiv(c.player) && hasMet(c.player, static_cast<PlayerId>(c.arg))
+                       ? CommandError::Ok
+                       : CommandError::CannotDeal;
+        }
         case CommandType::Denounce:
             return c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size() && canDenounce(c.player, static_cast<PlayerId>(c.arg))
                        ? CommandError::Ok
@@ -553,6 +571,18 @@ void Game::applyDiplomacy(const Command& c) {
             state_.deals.erase(it);
             if (c.arg == 1) executeDeal(d);
             else if (c.player == d.to) pushEvent(EventKind::DealRejected, d.from, d.to, d.id);
+            return;
+        }
+        case CommandType::RecordTalk: {
+            const PlayerId other = static_cast<PlayerId>(c.arg);
+            state_.talks.push_back({state_.turn, c.player, other, c.text});
+            // Keep the latest kTalksKept for this pair.
+            int seen = 0;
+            for (size_t i = state_.talks.size(); i-- > 0;) {
+                const TalkRecord& t = state_.talks[i];
+                const bool pair = (t.speaker == c.player && t.leader == other) || (t.speaker == other && t.leader == c.player);
+                if (pair && ++seen > kTalksKept) state_.talks.erase(state_.talks.begin() + static_cast<std::ptrdiff_t>(i));
+            }
             return;
         }
         case CommandType::Denounce: {

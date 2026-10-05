@@ -251,6 +251,23 @@ TEST(an_ai_offers_friendship_to_a_civ_it_likes) {
     CHECK(g->friends(0, 1));
 }
 
+TEST(conversation_summaries_are_recorded_and_capped) {
+    auto g = Game::fromScenario(rules(), diploState());
+    for (int i = 0; i < kTalksKept + 2; ++i) REQUIRE(g->submit(Command::recordTalk(0, 1, "Talk " + std::to_string(i))) == CommandError::Ok);
+    const auto talks = g->talksBetween(1, 0);
+    REQUIRE(talks.size() == static_cast<size_t>(kTalksKept));
+    CHECK_EQ(talks.back()->text, std::string("Talk ") + std::to_string(kTalksKept + 1));
+    CHECK_EQ(talks.front()->text, std::string("Talk 2"));
+    CHECK(g->submit(Command::recordTalk(0, 1, std::string(kMaxTalkText + 1, 'x'))) == CommandError::CannotDeal);
+    CHECK(g->submit(Command::recordTalk(0, 1, "bad\x01")) == CommandError::CannotDeal);
+    CHECK(g->submit(Command::recordTalk(0, 1, "")) == CommandError::CannotDeal);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->talksBetween(0, 1).size(), talks.size());
+    CHECK_EQ(loaded->log().back().text, g->log().back().text);
+}
+
 TEST(diplomacy_survives_a_save) {
     auto g = Game::fromScenario(rules(), diploState());
     REQUIRE(g->submit(Command::proposeDeal(0, 1, {{DealItemKind::GoldPerTurn, 0, 1, kNone}})) == CommandError::Ok);

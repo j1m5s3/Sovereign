@@ -185,6 +185,7 @@ std::string describe(const Command& c) {
         case CommandType::ProposeDeal: return s + "ProposeDeal -> p" + std::to_string(c.arg) + " (" + std::to_string(c.data.size() / 4) + " items)";
         case CommandType::AnswerDeal: return s + (c.arg ? "AcceptDeal " : "RejectDeal ") + std::to_string(c.id);
         case CommandType::Denounce: return s + "Denounce p" + std::to_string(c.arg);
+        case CommandType::RecordTalk: return s + "RecordTalk p" + std::to_string(c.arg) + ": " + c.text;
     }
     return s + "?";
 }

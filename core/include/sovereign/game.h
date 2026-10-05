@@ -266,6 +266,8 @@ public:
     int luxuryCopiesTraded(PlayerId player, TypeIndex resource) const;  // given away by running deals
     bool hasLuxury(PlayerId player, TypeIndex resource) const;
     const Deal* deal(int32_t id) const;
+    // Past conversations between two civs (either side speaking), oldest first.
+    std::vector<const TalkRecord*> talksBetween(PlayerId a, PlayerId b) const;
     // Abilities in force on a unit: innate ones plus those its owner's modifiers grant.
     std::vector<TypeIndex> unitAbilities(const Unit& unit) const;
     // Sum of `amount` over the unit's promotion and ability effects of this kind

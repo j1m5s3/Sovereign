@@ -138,6 +138,16 @@ struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;
     int value = 0;
 };
+// A conversation's summary, recorded by the speaking player's machine (leader doc §10, Sync)
+// so every machine shares the leader's memory of past talks.
+struct TalkRecord {
+    int32_t turn = 0;
+    PlayerId speaker = kNoPlayer, leader = kNoPlayer;  // who spoke, and the civ spoken to
+    std::string text;
+};
+constexpr size_t kMaxTalkText = 400;  // characters kept per summary
+constexpr int kTalksKept = 6;         // summaries kept per pair
+
 // Relationship states (08: Meeting and relationship states; Allied waits for alliances).
 enum class Relationship : uint8_t { AtWar = 0, Denounced, Unfriendly, Neutral, Friendly, DeclaredFriend };
 
@@ -408,6 +418,7 @@ struct SOV_API GameState {
     std::vector<Deal> deals;            // proposals waiting for a human's answer
     std::vector<Agreement> agreements;  // running deal terms
     int32_t nextDealId = 1;
+    std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;
