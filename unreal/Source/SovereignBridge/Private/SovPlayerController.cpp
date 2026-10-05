@@ -17,6 +17,12 @@
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBox.h"
+#include "HAL/PlatformProcess.h"
+#include "Styling/CoreStyle.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Input/SButton.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "Engine/World.h"
@@ -1614,6 +1620,10 @@ bool ASovPlayerController::HandleSessionScreens()
 		return false;
 	}
 	FSovSession& Session = Sub->GetSessionMut();
+	if (Menu.IsValid())
+	{
+		return true;
+	}
 	if (ChatBox.IsValid())
 	{
 		if (WasInputKeyJustPressed(EKeys::Escape)) CloseChat();
@@ -1626,6 +1636,10 @@ bool ASovPlayerController::HandleSessionScreens()
 	}
 	if (Session.InLobby())
 	{
+		if (Session.UsesSteam() && Session.NetMode() == ESovNet::Host && WasInputKeyJustPressed(EKeys::F))
+		{
+			Session.InviteFriends();
+		}
 		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar)))
 		{
 			FString Error;
@@ -1699,4 +1713,102 @@ void ASovPlayerController::CloseChat()
 	FInputModeGameAndUI Mode;  // as at BeginPlay
 	Mode.SetHideCursorDuringCapture(false);
 	SetInputMode(Mode);
+}
+
+// ---------------------------------------------------------------- the main menu
+
+void ASovPlayerController::OpenMenu()
+{
+	if (Menu.IsValid() || !GEngine || !GEngine->GameViewport)
+	{
+		return;
+	}
+	TSharedPtr<SEditableTextBox> Address;
+	auto Item = [this](const FString& Label, TFunction<void()> Click) {
+		return SNew(SBox).Padding(FMargin(0.f, 4.f)).WidthOverride(420.f)[
+			SNew(SButton).HAlign(HAlign_Center).Text(FText::FromString(Label)).OnClicked_Lambda([Click]() {
+				Click();
+				return FReply::Handled();
+			})];
+	};
+	const FString Name = FPlatformProcess::UserName();
+	auto Base = [Name]() {
+		FSovSetup S;
+		S.PlayerName = Name.IsEmpty() ? FString(TEXT("Player")) : Name;
+		return S;
+	};
+	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
+		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
+				SNew(STextBlock).Text(FText::FromString(TEXT("Sovereign"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28))
+				.ColorAndOpacity(FLinearColor(1.f, 0.85f, 0.45f))]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
+				FSovSetup S = Base();
+				S.HumanSeats = 2;
+				StartFromMenu(S);
+			})]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Host a game on your network"), [this, Base]() {
+				FSovSetup S = Base();
+				S.Net = ESovNet::Host;
+				S.HumanSeats = 2;
+				StartFromMenu(S);
+			})]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SAssignNew(Address, SEditableTextBox).Text(FText::FromString(TEXT("127.0.0.1")))]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[
+					SNew(SButton).Text(FText::FromString(TEXT("Join by address"))).OnClicked_Lambda([this, Base, Address]() {
+						FSovSetup S = Base();
+						S.Net = ESovNet::Join;
+						S.JoinAddress = Address->GetText().ToString().TrimStartAndEnd();
+						StartFromMenu(S);
+						return FReply::Handled();
+					})]]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Host a game for Steam friends"), [this, Base]() {
+				FSovSetup S = Base();
+				S.Net = ESovNet::Host;
+				S.HumanSeats = 2;
+				S.bSteam = true;
+				StartFromMenu(S);
+			})]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Join a Steam friend (accept their invite)"), [this, Base]() {
+				FSovSetup S = Base();
+				S.Net = ESovNet::Join;
+				S.bSteam = true;
+				StartFromMenu(S);
+			})]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
+				SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
+				.Text_Lambda([this]() {
+					const USovGameSubsystem* S = Subsystem();
+					return FText::FromString(S ? S->LastMessage : FString());
+				})]
+		]];
+	GEngine->GameViewport->AddViewportWidgetContent(Menu.ToSharedRef(), 60);
+}
+
+void ASovPlayerController::CloseMenu()
+{
+	if (Menu.IsValid() && GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(Menu.ToSharedRef());
+	}
+	Menu.Reset();
+}
+
+void ASovPlayerController::StartFromMenu(const FSovSetup& Setup)
+{
+	USovGameSubsystem* Sub = Subsystem();
+	if (!Sub)
+	{
+		return;
+	}
+	if (Sub->StartGame(Setup))
+	{
+		CloseMenu();
+		bCenteredOnGame = false;
+	}
 }

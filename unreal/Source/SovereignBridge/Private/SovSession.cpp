@@ -12,6 +12,7 @@
 #include "sovereign_net/session.h"
 
 #include "SovNetLink.h"
+#include "SovSteam.h"
 
 FSovSetup FSovSetup::FromCommandLine()
 {
@@ -31,6 +32,12 @@ FSovSetup FSovSetup::FromCommandLine()
 	FParse::Value(Cmd, TEXT("SovPort="), Setup.Port);
 	FParse::Value(Cmd, TEXT("SovName="), Setup.PlayerName);
 	FParse::Value(Cmd, TEXT("SovAutoStart="), Setup.AutoStartPlayers);
+	if (FParse::Param(Cmd, TEXT("SovSteam")))
+	{
+		Setup.bSteam = true;
+		if (Setup.Net == ESovNet::Local) Setup.Net = ESovNet::Join;  // alone: join through an invite
+	}
+	FParse::Value(Cmd, TEXT("SovSteamLobby="), Setup.SteamLobby);
 	if (FParse::Param(Cmd, TEXT("SovHost")))
 	{
 		Setup.Net = ESovNet::Host;
@@ -43,6 +50,18 @@ FSovSetup FSovSetup::FromCommandLine()
 	}
 	Setup.HumanSeats = FMath::Clamp(Setup.HumanSeats, 1, FMath::Max(1, Setup.Players));
 	return Setup;
+}
+
+bool FSovSetup::HasStartOptions()
+{
+	static const TCHAR* const Options[] = {TEXT("SovSeed="), TEXT("SovPlayers="), TEXT("SovSize="), TEXT("SovSpectate"), TEXT("SovBattleDemo"),
+		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart")};
+	const FString Cmd = FCommandLine::Get();
+	for (const TCHAR* O : Options)
+	{
+		if (Cmd.Contains(FString(TEXT("-")) + O)) return true;
+	}
+	return false;
 }
 
 FString FSovSetup::DefaultRulesDir()
@@ -61,6 +80,9 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	Listener.reset();
 	Mode = Setup.Net;
 	AutoStartPlayers = Setup.AutoStartPlayers;
+	if (bSteam && FSovSteam::Get()) FSovSteam::Get()->LeaveLobby();
+	bSteam = Setup.bSteam;
+	LocalName = Setup.PlayerName;
 	bStalled = false;
 	bHandover = false;
 	ViewSeat = 0;
@@ -88,7 +110,41 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
 		CoreSetup->players.push_back({Civ.id, Setup.bHumanSeat0 && i < Setup.HumanSeats});
 	}
-	const std::string Name = TCHAR_TO_UTF8(*Setup.PlayerName);
+	if (bSteam)
+	{
+#if SOV_WITH_STEAM
+		FString SteamError;
+		if (Mode == ESovNet::Local || !FSovSteam::Start(SteamError))
+		{
+			OutError = Mode == ESovNet::Local ? FString(TEXT("Steam play needs hosting or joining")) : SteamError;
+			return false;
+		}
+		LocalName = FSovSteam::Get()->PersonaName();
+#else
+		OutError = TEXT("Steam is not available on this platform");
+		return false;
+#endif
+	}
+	const std::string Name = TCHAR_TO_UTF8(*LocalName);
+#if SOV_WITH_STEAM
+	if (bSteam && Mode == ESovNet::Host)
+	{
+		FSovSteam::Get()->CreateLobby(Setup.Players);
+		Listener = FSovSteam::Get()->MakeListener();
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		Notices.Add(TEXT("Opening a Steam lobby..."));
+		++Rev;
+		return true;
+	}
+	if (bSteam && Mode == ESovNet::Join)
+	{
+		if (Setup.SteamLobby != 0) FSovSteam::Get()->JoinLobby(Setup.SteamLobby);
+		Notices.Add(Setup.SteamLobby != 0 ? FString(TEXT("Joining the Steam lobby..."))
+										  : FString(TEXT("Waiting for a Steam invite: accept a friend's invite in the Steam overlay (Shift+Tab).")));
+		++Rev;
+		return true;
+	}
+#endif
 	if (Mode == ESovNet::Host)
 	{
 		// The lobby: others claim the human seats; StartHostedGame creates the game.
@@ -225,7 +281,10 @@ const sov::Game* FSovSession::CurrentGame() const
 	return Game.get();
 }
 
-bool FSovSession::IsActive() const { return IsRunning() || NetHost != nullptr || (NetClient && NetClient->connected()); }
+bool FSovSession::IsActive() const
+{
+	return IsRunning() || NetHost != nullptr || (NetClient && NetClient->connected()) || (bSteam && Mode == ESovNet::Join && !NetClient);
+}
 
 int32 FSovSession::ViewPlayer() const
 {
@@ -284,6 +343,36 @@ sov::CommandError FSovSession::Submit(const sov::Command& Command)
 bool FSovSession::Poll()
 {
 	bool bChanged = false;
+#if SOV_WITH_STEAM
+	if (bSteam)
+	{
+		FSovSteam::Tick();
+		FSovSteam* Steam = FSovSteam::Get();
+		if (Steam && Mode == ESovNet::Join && !NetClient)
+		{
+			// An invite accepted in the overlay, then the lobby's owner as our host.
+			if (const uint64 Invite = Steam->TakeInvite())
+			{
+				Steam->JoinLobby(Invite);
+				Notices.Add(TEXT("Joining the Steam lobby..."));
+			}
+			if (Steam->LobbyState() == FSovSteam::ELobby::In && !Steam->OwnsLobby())
+			{
+				NetClient = std::make_unique<sov::net::Client>(*Rules, Steam->MakeLink(Steam->LobbyOwner()), std::string(TCHAR_TO_UTF8(*LocalName)));
+				Notices.Add(TEXT("In the lobby. Waiting for the host to start."));
+				bChanged = true;
+			}
+		}
+		static FSovSteam::ELobby Shown = FSovSteam::ELobby::None;
+		if (Steam && Steam->LobbyState() != Shown)
+		{
+			Shown = Steam->LobbyState();
+			if (Shown == FSovSteam::ELobby::In && Mode == ESovNet::Host) Notices.Add(TEXT("Steam lobby open. F: invite friends."));
+			if (Shown == FSovSteam::ELobby::Failed) Notices.Add(Steam->LastError());
+			bChanged = true;
+		}
+	}
+#endif
 	if (NetHost) NetHost->poll();
 	if (NetHost && !NetHost->started() && AutoStartPlayers > 0)
 	{
@@ -335,7 +424,17 @@ bool FSovSession::Poll()
 	return bChanged;
 }
 
-bool FSovSession::InLobby() const { return (NetHost && !NetHost->started()) || (NetClient && !NetClient->inGame()); }
+bool FSovSession::InLobby() const
+{
+	return (NetHost && !NetHost->started()) || (NetClient && !NetClient->inGame()) || (bSteam && Mode == ESovNet::Join && !NetClient);
+}
+
+void FSovSession::InviteFriends()
+{
+#if SOV_WITH_STEAM
+	if (bSteam && FSovSteam::Get()) FSovSteam::Get()->InviteFriends();
+#endif
+}
 
 TArray<FString> FSovSession::LobbyLines() const
 {
