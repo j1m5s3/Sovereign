@@ -589,12 +589,14 @@ void Game::applyEndTurn(const Command& c) {
 void Game::beginGlobalTurn() {
     ++state_.turn;
     processAgents();
+    processFreeCities();
     processBarbarians();
 }
 
 void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     if (runCities) {
         processCities(pid);
+        processLoyalty(pid);
         Player& p = state_.players[static_cast<size_t>(pid)];
         if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
         // The interregnum runs out only while someone sits on the throne.

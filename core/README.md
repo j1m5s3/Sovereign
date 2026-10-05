@@ -52,6 +52,7 @@ same command must print the same hash.
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves, succession and regicide, assassins (off-map agents), SOVEREIGN promotions and the presence aura | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |
+| Loyalty, citizen pressure, loyalty levels, revolts to the Free Cities and flips back [R&F] | `src/loyalty.cpp` (queries on `Game`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |
 | Versioned saves | `include/sovereign/serialize.h` |
 | `SOV_API` export marker (empty here; dllexport when Unreal loads the core as a DLL) | `include/sovereign/api.h` |

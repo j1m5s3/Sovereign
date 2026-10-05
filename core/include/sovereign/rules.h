@@ -294,6 +294,15 @@ struct HappinessLevel {
     int minBalance = 0;  // INT32_MIN for the lowest band
     int growthPercent = 0;
     int yieldPercent = 0;  // non-food yields
+    int loyaltyPerTurn = 0;  // [R&F]
+};
+
+// Loyalty levels [R&F] (02-cities.md, Loyalty): yield and growth scaling by loyalty.
+struct LoyaltyLevel {
+    std::string id;
+    int minLoyalty = 0;
+    int yieldPercent = 0;   // added to every yield (-100 .. 0)
+    int growthPercent = 100;
 };
 
 // Research trees (04-tech-civics-government.md).
@@ -374,6 +383,7 @@ enum class ModEffect : uint8_t {
     UnitXpPercent,            // player: combat XP bonus for units of `unitClass` (empty: all)
     UnitStrength,             // player: +amount combat strength for units of `unitClass` (`vsBarbarians`: only against them)
     DistrictAdjacencyPercent, // player: +amount % adjacency yield for `district`
+    CityLoyalty,              // +amount loyalty per turn in a city [R&F]
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -489,6 +499,7 @@ public:
     std::vector<GovernmentType> governments;
     std::vector<PolicyType> policies;
     std::vector<HappinessLevel> happiness;  // ascending by minBalance
+    std::vector<LoyaltyLevel> loyaltyLevels;  // ascending by minLoyalty
     std::vector<Modifier> modifiers;
     std::vector<CivType> civs;
     std::vector<MapSizeType> mapSizes;

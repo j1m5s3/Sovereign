@@ -187,6 +187,14 @@ public:
     bool canPromote(UnitId unit, TypeIndex promotion) const;
     std::vector<TypeIndex> availablePromotions(UnitId unit) const;
 
+    // ---- loyalty [R&F] (02-cities.md, Loyalty)
+    // Net citizen pressure on a city this turn (capped at +-LOYALTY_PER_TURN_FROM_NEARBY_CITIZEN_PRESSURE_MAX_LOYALTY).
+    Fixed loyaltyPressure(const City& city) const;
+    // Loyalty change at the start of the owner's turn (Free Cities: in the world turn).
+    Fixed loyaltyPerTurn(CityId city) const;
+    const LoyaltyLevel* loyaltyLevel(const City& city) const;
+    PlayerId freeCityPlayer() const;  // kNoPlayer until the first city revolts
+
     // ---- the leader (leader doc §1, §2, §5; data in leader.json)
     bool isLeader(const Unit& unit) const;
     const Unit* leaderOf(PlayerId player) const;
@@ -282,6 +290,11 @@ private:
     // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
     void barbarianWound(Unit& leader);
     void startInterregnum(Player& p);
+    void processLoyalty(PlayerId p);
+    void processFreeCities();
+    PlayerId ensureFreeCityPlayer();
+    // Hands a city to a new owner (revolt or flip): plots, Palace, queue and citizens follow.
+    void transferCity(CityId city, PlayerId to, int loyalty);
     void processAgents();  // world turn: agents travel and strike
     void pushEvent(EventKind kind, PlayerId actor, PlayerId target, int value);
     // Regicide: the player is out and its cities pass to whoever took the leader.

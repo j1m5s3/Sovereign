@@ -15,7 +15,7 @@ namespace sov {
 
 PlayerId Game::barbarianPlayer() const {
     for (const Player& p : state_.players) {
-        if (p.barbarian) return p.id;
+        if (p.barbarian && !p.freeCity) return p.id;
     }
     return kNoPlayer;
 }
@@ -28,12 +28,14 @@ const Camp* Game::campAt(Hex h) const {
 }
 
 void Game::linkBarbarians() {
-    const PlayerId b = barbarianPlayer();
-    if (b == kNoPlayer) return;
-    for (Player& p : state_.players) {
-        if (p.id == b) continue;
-        p.relations[static_cast<size_t>(b)].war = true;
-        state_.players[static_cast<size_t>(b)].relations[static_cast<size_t>(p.id)].war = true;
+    // The barbarians and the Free Cities are at war with everyone.
+    for (const Player& b : state_.players) {
+        if (!b.barbarian) continue;
+        for (Player& p : state_.players) {
+            if (p.id == b.id) continue;
+            p.relations[static_cast<size_t>(b.id)].war = true;
+            state_.players[static_cast<size_t>(b.id)].relations[static_cast<size_t>(p.id)].war = true;
+        }
     }
 }
 

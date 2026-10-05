@@ -113,6 +113,7 @@ struct SOV_API City {
     bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
     std::vector<CityDistrict> districts;  // in placement order
+    int loyalty = 100;             // 0..LOYALTY_MAXIMUM [R&F]; at 0 the city revolts to the Free Cities
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
@@ -154,6 +155,7 @@ struct Player {
     bool human = false;
     bool alive = true;
     bool barbarian = false;   // the barbarian player: at war with all, plays in the world turn
+    bool freeCity = false;    // the Free Cities (also flagged barbarian: not a major, at war with all, takes no turns)
     int strongestUnit = 0;    // highest melee strength of any unit it has had (city defence)
     int citiesFounded = 0;  // drives city naming
     Fixed gold;

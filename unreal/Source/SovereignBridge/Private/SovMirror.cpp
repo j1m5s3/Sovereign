@@ -94,6 +94,10 @@ FLinearColor PlotColor(const sov::Rules& Rules, const sov::Plot& Plot, ESovRelie
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player)
 {
 	const sov::GameState& S = Game.state();
+	if (Player >= 0 && Player < static_cast<int32>(S.players.size()) && S.players[static_cast<size_t>(Player)].freeCity)
+	{
+		return Srgb(170, 170, 170);  // the Free Cities
+	}
 	if (Player >= 0 && Player < static_cast<int32>(S.players.size()) && S.players[static_cast<size_t>(Player)].barbarian)
 	{
 		return Srgb(40, 40, 40);
@@ -149,6 +153,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.Hp = C.hp;
 		Marker.MaxHp = Game.cityMaxHp();
 		Marker.bCapital = C.capital;
+		Marker.Loyalty = C.loyalty;
 	}
 
 	for (const sov::Unit& U : S.units)

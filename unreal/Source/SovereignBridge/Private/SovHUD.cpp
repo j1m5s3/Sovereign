@@ -137,7 +137,9 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		const FString Label = FString::Printf(TEXT("%s%s  %d"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name, C.Population);
+		// Loyalty shows once it slips below Loyal [R&F].
+		const FString Loyalty = C.Loyalty <= 75 ? FString::Printf(TEXT("  L%d"), C.Loyalty) : FString();
+		const FString Label = FString::Printf(TEXT("%s%s  %d%s"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name, C.Population, *Loyalty);
 		float W = 0, H = 0;
 		GetTextSize(Label, W, H, Font, 1.2f);
 		DrawRect(FLinearColor(0, 0, 0, 0.7f), Screen.X - W / 2 - 8, Screen.Y - H - 2, W + 12, H + 4);
