@@ -158,7 +158,9 @@ def market_stall(seed=27):
 def banner(seed=28):
     p = Piece("SM_Banner", seed)
     p.cylinder((0, 0, 0), 0.07, 6.0, WOOD, segments=6)
-    p.box((0.75, 0, 4.6), (1.4, 0.05, 2.4), CLOTH[2])  # white: tinted with the owner's colour
+    p.team_color(True)
+    p.box((0.75, 0, 4.6), (1.4, 0.05, 2.4), CLOTH[2])  # team slot: the owner's colour in game
+    p.team_color(False)
     p.cone((0, 0, 6.0), 0.15, 0.4, "#c9a43c", segments=6)
     return p
 

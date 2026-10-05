@@ -38,6 +38,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
+
+	bool bFigure = false;  // drawn by the kit's leader figure (no primitive crown)
 };
 
 UCLASS()
@@ -68,6 +70,7 @@ private:
 		TObjectPtr<UStaticMeshComponent> Body;
 		FVector Target = FVector::ZeroVector;
 		float Speed = 120.f;
+		bool bFigure = false;
 	};
 
 	FSovStreetLayout Layout;

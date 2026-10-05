@@ -7,6 +7,7 @@
 #include "UObject/ConstructorHelpers.h"
 
 #include "SovHexLayout.h"
+#include "SovArt.h"
 
 namespace
 {
@@ -205,11 +206,45 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 {
 	BuildTerrain(Mirror);
 
+	// Woods: a few kit trees per wooded tile (map scale: 1 km hexes drawn 1 m wide).
+	int32 TreeCount = 0;
+	if (SovArt::Mesh(TEXT("Nature"), TEXT("Tree_Broadleaf")))
+	{
+		for (const FSovTile& Tile : Mirror.Tiles)
+		{
+			if (!Tile.bWoods)
+			{
+				continue;
+			}
+			const uint32 H = static_cast<uint32>(Tile.X * 73856093) ^ static_cast<uint32>(Tile.Y * 19349663);
+			for (int32 k = 0; k < 3; ++k)
+			{
+				const double A = (k * 2.1 + (H % 7)) * 1.0, R = 32.0 + (H >> (k * 3) & 7) * 3.0;
+				UStaticMeshComponent* T = Marker(Trees, TreeCount++, nullptr);
+				SovArt::SetKitMesh(T, TEXT("Nature"), (H >> k) & 1 ? TEXT("Tree_Conifer") : TEXT("Tree_Broadleaf"), FLinearColor::White);
+				T->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
+				T->SetRelativeScale3D(FVector(0.075));
+				T->SetVisibility(true);
+			}
+		}
+	}
+	for (int32 i = TreeCount; i < Trees.Num(); ++i)
+	{
+		Trees[i]->SetVisibility(false);
+	}
+
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{
 		const FSovCityMarker& City = Mirror.Cities[i];
 		UStaticMeshComponent* C = Marker(CityMarkers, i, CubeMesh);
 		const double Z = SurfaceZ(City.X, City.Y);
+		// A small Palace for capitals and a hall for other cities, when the art exists.
+		if (SovArt::SetKitMesh(C, TEXT("Classical"), City.bCapital ? TEXT("Palace") : TEXT("Landmark"), FLinearColor::White))
+		{
+			C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z));
+			C->SetRelativeScale3D(FVector(City.bCapital ? 0.055 : 0.075));
+			continue;
+		}
 		C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z + CityHeight * 0.5));
 		C->SetRelativeScale3D(City.bCapital ? FVector(1.0, 1.0, CityHeight / 100.0) : FVector(0.8, 0.8, CityHeight / 100.0));
 		C->SetMaterial(0, MaterialFor(City.Color));
@@ -227,6 +262,17 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(UnitMarkers, i, Mesh);
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
+		// Kit figures in the owner's colour when the art exists; a figure stands about 45 cm tall on the map.
+		const TCHAR* FigureName = Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier");
+		if (SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color))
+		{
+			const FVector2D Offset = Unit.bLeader ? FVector2D(-38.0, -30.0) : Unit.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
+			Pos += SovHex::ToWorld(Offset, 0.0);
+			C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
+			C->SetRelativeScale3D(FVector(Unit.bLeader ? 0.3 : 0.26));
+			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // face the camera (south)
+			continue;
+		}
 		if (Unit.bLeader)
 		{
 			// The leader stands to the north-west of its escort: an owner-coloured pillar with a gold crown.

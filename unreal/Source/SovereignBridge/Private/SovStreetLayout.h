@@ -57,6 +57,7 @@ struct FSovStreetLayout
 	FVector Herald = FVector::ZeroVector;   // Benevolence: hear petitions
 	FVector Captain = FVector::ZeroVector;  // Fear: the captain of the guard
 	FVector Entry = FVector::ZeroVector;    // where the leader appears
+	FLinearColor CivColor = FLinearColor::White;  // the owner's colour (banners, herald, guards)
 
 	int32 Count(ESovStreetPiece Kind) const;
 };

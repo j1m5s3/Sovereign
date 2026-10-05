@@ -11,6 +11,8 @@ Status: art style, roster and leader abilities decided by James (2026-10-04); ab
 
 ## Art toolchain (recommended)
 
+**Pipeline built 2026-10-05:** `tools/art/` (Blender scripts → FBX → scripted Unreal import), first slice: Nature, temperate Classical City Center and Figures kits; see `tools/art/README.md`.
+
 **Who makes the art **[decided, James 2026-10-04]**:** Claude makes the art (models, kit pieces, textures) through scripted tools such as Blender's Python API, modelling from reference images gathered online. References are used only to study shapes, proportions and period detail; no downloaded image, texture or model ships in the game unless its license allows it.
 
 

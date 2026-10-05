@@ -36,6 +36,7 @@ private:
 	UStaticMeshComponent* Add(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, const FLinearColor& Color);
 
 	FLinearColor SideColor[2];
+	TArray<bool> Figure;  // per soldier: drawn by a kit figure
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Bodies;

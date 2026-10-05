@@ -1,5 +1,6 @@
 #include "SovArt.h"
 
+#include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -58,6 +59,35 @@ UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint)
 	return Mid;
 }
 
+bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint)
+{
+	UStaticMesh* M = Mesh(Kit, Name);
+	if (!M)
+	{
+		return false;
+	}
+	if (Component->GetStaticMesh() != M)
+	{
+		Component->SetStaticMesh(M);
+		Component->EmptyOverrideMaterials();
+	}
+	if (M->GetStaticMaterials().Num() > 1)
+	{
+		// One tinted instance per component and colour is plenty for the kit's simple material.
+		UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Component->GetMaterial(1));
+		if (!Mid || Mid->GetOuter() != Component)
+		{
+			Mid = Tinted(Component, Tint);
+			Component->SetMaterial(1, Mid);
+		}
+		if (Mid)
+		{
+			Mid->SetVectorParameterValue(TEXT("Tint"), Tint);
+		}
+	}
+	return true;
+}
+
 TArray<FString> RequiredAssets()
 {
 	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit")};
@@ -69,6 +99,10 @@ TArray<FString> RequiredAssets()
 			 TEXT("Granary"), TEXT("Temple"), TEXT("Landmark"), TEXT("Wall"), TEXT("MarketStall"), TEXT("Banner")})
 	{
 		Out.Add(MeshPath(TEXT("Classical"), Name));
+	}
+	for (const TCHAR* Name : {TEXT("Citizen"), TEXT("Herald"), TEXT("Captain"), TEXT("Soldier"), TEXT("Leader")})
+	{
+		Out.Add(MeshPath(TEXT("Figures"), Name));
 	}
 	return Out;
 }

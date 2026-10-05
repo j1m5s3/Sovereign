@@ -7,6 +7,7 @@
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UStaticMesh;
+class UStaticMeshComponent;
 
 namespace SovArt
 {
@@ -16,6 +17,10 @@ UStaticMesh* Mesh(const TCHAR* Kit, const FString& Name);
 UMaterialInterface* KitMaterial();
 // A tinted instance of the kit material owned by Outer (owner colours on banners and figures).
 UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint);
+// Puts a kit mesh on a component and paints its team slot (slot 1: clothing, shields, banner cloth)
+// with Tint; returns false when the mesh is missing (callers keep their primitive).
+bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint);
+
 // Every asset the game names, for the asset test.
 TArray<FString> RequiredAssets();
 }  // namespace SovArt
