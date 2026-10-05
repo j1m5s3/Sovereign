@@ -1,4 +1,7 @@
 // The computer opponent (MVP-6; 10-ai-ui-implementation.md, AI architecture).
+#include <algorithm>
+#include <string>
+
 #include "../tools/random_bot.h"
 #include "helpers.h"
 #include "sovereign/ai.h"
@@ -146,4 +149,58 @@ TEST(ai_soak_takes_a_capital_and_replays) {
     auto again = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(again);
     CHECK_EQ(again->stateHash(), g->stateHash());
+}
+
+namespace {
+bool holds(const Game& g, PlayerId p, ai::Strategy s) {
+    const std::vector<ai::Strategy> on = ai::strategies(g, p);
+    return std::find(on.begin(), on.end(), s) != on.end();
+}
+}  // namespace
+
+TEST(ai_grand_strategy_rapid_expansion_and_dark_age) {
+    GameState s = flatState(30, 20, 1);
+    addUnit(s, "UNIT_SETTLER", 0, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);  // founds the capital
+    REQUIRE(citiesOf(*g, 0) == 1);
+    GameState s1 = g->state();
+    for (uint8_t& v : s1.players[0].visibility) v = std::max(v, static_cast<uint8_t>(Visibility::Revealed));  // open land all round, explored
+    auto g1 = Game::fromScenario(rules(), s1);
+    CHECK(holds(*g1, 0, ai::Strategy::RapidExpansion));
+    CHECK(!holds(*g1, 0, ai::Strategy::ScienceVictory));  // no victory strategy in the Ancient era
+    GameState s2 = s1;
+    s2.players[0].age = Age::Dark;
+    auto g2 = Game::fromScenario(rules(), std::move(s2));
+    CHECK(holds(*g2, 0, ai::Strategy::DarkAge));
+    CHECK(!holds(*g2, 0, ai::Strategy::RapidExpansion));  // Rapid Expansion is forbidden in a Dark Age
+    CHECK_EQ(std::string(ai::strategyName(ai::Strategy::DarkAge)), std::string("Dark Age"));
+}
+
+TEST(ai_grand_strategy_domination_after_taking_a_capital) {
+    GameState s = flatState(30, 14, 3);
+    addCity(s, 0, {4, 6}, true, 5);
+    addCity(s, 0, {10, 6}, false, 4);
+    s.cities.back().originalOwner = 1;
+    s.cities.back().originalCapital = true;  // player 1's old capital
+    addCity(s, 1, {18, 6}, false, 3);
+    addCity(s, 2, {25, 6}, true, 3);
+    for (int i = 0; i < 4; ++i) addUnit(s, "UNIT_SWORDSMAN", 0, {4, 8 + i % 2});
+    s.gameEra = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(holds(*g, 0, ai::Strategy::DominationVictory));  // took a capital, two rivals, the strongest army
+    CHECK(!holds(*g, 1, ai::Strategy::DominationVictory));
+}
+
+TEST(ai_grand_strategy_agendas) {
+    TypeIndex qin = kNone;
+    for (size_t i = 0; i < rules().civs.size(); ++i) {
+        if (rules().civs[i].agenda == Agenda::FirstEmperor) qin = static_cast<TypeIndex>(i);
+    }
+    REQUIRE(qin != kNone);
+    GameState s = flatState(20, 14, 1);
+    s.players[0].civ = qin;
+    addCity(s, 0, {6, 6}, true, 3);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(holds(*g, 0, ai::Strategy::WonderObsessed));
 }
