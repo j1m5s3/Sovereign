@@ -111,6 +111,11 @@ protected:
 	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);
 	void UpdatePanel();
+	// Online and hot seat: the lobby, the hand-over screen, and the chat line (M).
+	// True when they took this frame's input.
+	bool HandleSessionScreens();
+	void OpenChat();
+	void CloseChat();
 	void OpenDiplomacy(sov::PlayerId Leader);
 	void UpdateDiplomacy();
 	void CloseDiplomacy();
@@ -153,4 +158,6 @@ protected:
 	TUniquePtr<FSovDiplomacyTalk> Talk;
 	TSharedPtr<SSovDiplomacyPanel> DiplomacyPanel;
 	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
+	TSharedPtr<class SWidget> ChatBox;
+	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

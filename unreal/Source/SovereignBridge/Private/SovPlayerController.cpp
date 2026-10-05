@@ -16,6 +16,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Layout/SBox.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "Engine/World.h"
@@ -1406,10 +1407,23 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		return;
 	}
 	UpdateCamera(DeltaTime);
+	if (HandleSessionScreens())
+	{
+		if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+		{
+			Hud->PanelLines.Reset();
+		}
+		return;
+	}
 	USovGameSubsystem* Sub = Subsystem();
 	if (!Sub || !Sub->IsRunning())
 	{
 		return;
+	}
+	if (!bCenteredOnGame)
+	{
+		bCenteredOnGame = true;
+		CenterOnHome();
 	}
 	const sov::GameState& S = Sub->GetGame().state();
 	if (SelectedUnit >= 0 && (!S.unit(SelectedUnit) || S.unit(SelectedUnit)->owner != Me())) SelectedUnit = -1;
@@ -1588,4 +1602,101 @@ void ASovPlayerController::CloseDiplomacy()
 	bLeavingTalk = true;
 	Talk->AddNote(TEXT("[The talk ends.]"));
 	Talk->Finish();
+}
+
+// ---------------------------------------------------------------- online and hot seat
+
+bool ASovPlayerController::HandleSessionScreens()
+{
+	USovGameSubsystem* Sub = Subsystem();
+	if (!Sub)
+	{
+		return false;
+	}
+	FSovSession& Session = Sub->GetSessionMut();
+	if (ChatBox.IsValid())
+	{
+		if (WasInputKeyJustPressed(EKeys::Escape)) CloseChat();
+		return true;  // typing: the map takes no keys
+	}
+	if (Session.NetMode() != ESovNet::Local && WasInputKeyJustPressed(EKeys::M))
+	{
+		OpenChat();
+		return true;
+	}
+	if (Session.InLobby())
+	{
+		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar)))
+		{
+			FString Error;
+			if (!Session.StartHostedGame(Error))
+			{
+				Sub->LastMessage = FString::Printf(TEXT("Could not start: %s"), *Error);
+			}
+			Sub->OnStateChanged.Broadcast();
+		}
+		return true;
+	}
+	if (Session.HandoverPending())
+	{
+		// Hot seat: the next human presses Enter when the screen is theirs.
+		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar))
+		{
+			Session.TakeOver();
+			SelectedUnit = SelectedCity = -1;
+			Chooser = EChooser::None;
+			Sub->OnStateChanged.Broadcast();
+			CenterOnHome();
+		}
+		return true;
+	}
+	return false;
+}
+
+void ASovPlayerController::OpenChat()
+{
+	if (ChatBox.IsValid() || !GEngine || !GEngine->GameViewport)
+	{
+		return;
+	}
+	TSharedPtr<SEditableTextBox> Box;
+	ChatBox = SNew(SBox)
+		.HAlign(HAlign_Left)
+		.VAlign(VAlign_Bottom)
+		.Padding(FMargin(16.f, 0.f, 0.f, 260.f))
+		[
+			SNew(SBox).WidthOverride(560.f)
+			[
+				SAssignNew(Box, SEditableTextBox)
+				.HintText(FText::FromString(TEXT("Say to everyone, then Enter (Esc closes)")))
+				.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type How) {
+					if (How == ETextCommit::OnEnter && !Text.IsEmpty())
+					{
+						if (USovGameSubsystem* S = Subsystem()) S->GetSessionMut().Chat(Text.ToString());
+					}
+					CloseChat();
+				})
+			]
+		];
+	GEngine->GameViewport->AddViewportWidgetContent(ChatBox.ToSharedRef(), 40);
+	FInputModeGameAndUI Mode;
+	Mode.SetWidgetToFocus(Box);
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
+}
+
+void ASovPlayerController::CloseChat()
+{
+	if (!ChatBox.IsValid())
+	{
+		return;
+	}
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(ChatBox.ToSharedRef());
+	}
+	ChatBox.Reset();
+	FInputModeGameAndUI Mode;  // as at BeginPlay
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
 }

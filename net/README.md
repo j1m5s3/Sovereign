@@ -24,6 +24,10 @@ Plain C++17 over the core, like `battle/` and `diplomacy/`. CMake builds it from
 | `tools/sovnet.cpp` | A networked game between processes, each human seat played by the AI standing in for its person |
 | `tests/test_session.cpp` | Lobby and start, 40 turns in lockstep, city-states, refused orders, a forced desync repaired, a drop played by the AI and rejoined, mod checks, chat, TCP |
 
+## In the game
+
+`unreal/README.md` (Controls, "Online" and "Hot seat") covers hosting and joining from the Unreal game. The game's own links (`unreal/Source/SovereignBridge/Private/SovNetLink.*`, engine sockets) use the same framing as `sovereign_net_tcp`, so `sovnet` and the game can share a session.
+
 ## Try it
 
 Run the host and two joiners, each from its own shell:

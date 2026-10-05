@@ -378,9 +378,31 @@ void ASovHUD::DrawHUD()
 	const UGameInstance* GI = GetGameInstance();
 	const USovGameSubsystem* Sub = GI ? GI->GetSubsystem<USovGameSubsystem>() : nullptr;
 	float Y = 12.f;
+	// Online: the lobby until the host starts the game.
+	if (Sub && Sub->GetSession().InLobby())
+	{
+		const bool bHost = Sub->GetSession().NetMode() == ESovNet::Host;
+		Line(bHost ? TEXT("Hosting a game. Enter starts it; open seats are played by the AI. M: chat")
+				   : TEXT("In the host's lobby. Waiting for the game to start. M: chat"),
+			16, Y, FLinearColor(1.f, 0.85f, 0.45f));
+		for (const FString& L : Sub->GetSession().LobbyLines()) Line(L, 32, Y);
+		Y += 10.f;
+		for (const FString& L : Sub->NetLines) Line(L, 16, Y, FLinearColor(0.7f, 0.85f, 1.f));
+		if (!Sub->LastMessage.IsEmpty()) Line(Sub->LastMessage, 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
+		return;
+	}
 	if (!Sub || !Sub->IsRunning())
 	{
 		Line(Sub ? Sub->LastMessage : FString(TEXT("No game")), 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
+		return;
+	}
+	// Hot seat: the screen stays dark until the next human takes over (their fog of war).
+	if (Sub->GetSession().HandoverPending())
+	{
+		DrawRect(FLinearColor(0.01f, 0.01f, 0.015f, 1.f), 0.f, 0.f, Canvas->ClipX, Canvas->ClipY);
+		float CY = Canvas->ClipY * 0.45f;
+		Line(FString::Printf(TEXT("%s's turn. Hand over, then press Enter."), *Sub->GetSession().HandoverName()), Canvas->ClipX * 0.38f, CY,
+			FLinearColor(1.f, 0.85f, 0.45f));
 		return;
 	}
 	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
@@ -396,6 +418,12 @@ void ASovHUD::DrawHUD()
 	}
 	DrawLabels(*Sub);
 	DrawStatus(*Sub, Y);
+	// Online: the latest notices and chat (whose turn it is shows in the status lines).
+	if (Sub->GetSession().NetMode() != ESovNet::Local)
+	{
+		float NY = Canvas->ClipY - 210.f;
+		for (const FString& L : Sub->NetLines) Line(L, Canvas->ClipX - 620.f, NY, FLinearColor(0.7f, 0.85f, 1.f));
+	}
 	float PY = Canvas->ClipY - 20.f - 18.f * PanelLines.Num();
 	for (const FString& L : PanelLines)
 	{

@@ -19,8 +19,10 @@ bool USovGameSubsystem::StartGame(const FSovSetup& Setup)
 		UE_LOG(LogSovereign, Error, TEXT("%s"), *LastMessage);
 		return false;
 	}
-	LastMessage = FString::Printf(TEXT("New game: seed %llu, %d players, %s%s"), Setup.Seed, Setup.Players, *Setup.MapSize,
-		Setup.bHumanSeat0 ? TEXT("") : TEXT(" (spectating)"));
+	LastMessage = Setup.Net == ESovNet::Local
+		? FString::Printf(TEXT("New game: seed %llu, %d players, %s%s"), Setup.Seed, Setup.Players, *Setup.MapSize,
+			  Setup.bHumanSeat0 ? (Setup.HumanSeats > 1 ? TEXT(" (hot seat)") : TEXT("")) : TEXT(" (spectating)"))
+		: FString();
 	UE_LOG(LogSovereign, Log, TEXT("%s"), *LastMessage);
 	OnStateChanged.Broadcast();
 	return true;
@@ -44,6 +46,24 @@ sov::CommandError USovGameSubsystem::Submit(const sov::Command& Command)
 
 void USovGameSubsystem::Tick(float DeltaTime)
 {
+	if (Session.Poll())
+	{
+		OnStateChanged.Broadcast();
+	}
+	for (const FString& N : Session.TakeNotices())
+	{
+		NetLines.Add(N);
+		UE_LOG(LogSovereign, Log, TEXT("%s"), *N);
+	}
+	while (NetLines.Num() > 8)
+	{
+		NetLines.RemoveAt(0);
+	}
+	// Online, the host plays the AI seats inside Poll; there is nothing to step here.
+	if (!Session.IsRunning() || Session.NetMode() != ESovNet::Local || Session.HandoverPending())
+	{
+		return;
+	}
 	if (Session.IsHumanTurn() || Session.IsGameOver() || Session.Stalled() || Session.GetGame().battlePending())
 	{
 		SinceLastSeat = 0.f;

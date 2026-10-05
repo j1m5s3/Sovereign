@@ -23,6 +23,7 @@ public:
 
 	bool IsRunning() const { return Session.IsRunning(); }
 	const FSovSession& GetSession() const { return Session; }
+	FSovSession& GetSessionMut() { return Session; }
 	const sov::Game& GetGame() const { return Session.GetGame(); }
 
 	// Sends a player's command to the core; the result is also kept as the last message.
@@ -36,13 +37,15 @@ public:
 	FSovStateChanged OnStateChanged;
 
 	FString LastMessage;
+	// Online notices and chat, newest last (a few kept for the HUD).
+	TArray<FString> NetLines;
 	// Seconds between AI seats, so their turns can be watched.
 	float AISeatDelay = 0.15f;
 
 	// FTickableGameObject
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
-	virtual bool IsTickable() const override { return Session.IsRunning(); }
+	virtual bool IsTickable() const override { return Session.IsActive(); }
 	virtual bool IsTickableInEditor() const override { return false; }
 	virtual ETickableTickType GetTickableTickType() const override { return ETickableTickType::Conditional; }
 

@@ -9,6 +9,7 @@
 #include "SovBattleSim.h"
 #include "SovArt.h"
 #include "SovDiplomacy.h"
+#include "sovereign_net/session.h"
 #include "HAL/PlatformProcess.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -421,6 +422,108 @@ bool FSovDiplomacyTalkTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("a summary is ready"), Talk.SummaryReady(Summary));
 	TestEqual(TEXT("it is a RecordTalk command"), static_cast<int32>(Summary.type), static_cast<int32>(sov::CommandType::RecordTalk));
 	TestFalse(TEXT("with text"), Summary.text.empty());
+	return true;
+}
+
+// Plays the seat whose turn it is in this session (the AI standing in for its person), through Submit.
+static void PlaySeat(FSovSession& S)
+{
+	const sov::Game& G = S.GetGame();
+	if (G.battlePending())
+	{
+		S.Submit(sov::Command::autoResolveBattle(G.state().pendingBattle.liveFor));
+		return;
+	}
+	for (const sov::Command& C : sov::net::aiCommands(S.GetRules(), G))
+	{
+		S.Submit(C);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovOnlineTest, "Sovereign.Bridge.HostAndJoinStayInLockstep", kSovTestFlags)
+bool FSovOnlineTest::RunTest(const FString& Parameters)
+{
+	FSovSetup HostSetup;
+	HostSetup.Net = ESovNet::Host;
+	HostSetup.Port = 17791;
+	HostSetup.HumanSeats = 2;
+	HostSetup.PlayerName = TEXT("Host");
+	FSovSession Host, Guest;
+	FString Error;
+	if (!Host.Start(HostSetup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	FSovSetup JoinSetup = HostSetup;
+	JoinSetup.Net = ESovNet::Join;
+	JoinSetup.PlayerName = TEXT("Guest");
+	if (!Guest.Start(JoinSetup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	auto PumpBoth = [&](int32 Rounds) {
+		for (int32 i = 0; i < Rounds; ++i)
+		{
+			Host.Poll();
+			Guest.Poll();
+			FPlatformProcess::Sleep(0.002f);
+		}
+	};
+	for (int32 i = 0; i < 500 && Host.LobbyLines().Num() > 1 && !Host.LobbyLines()[1].Contains(TEXT("Guest")); ++i) PumpBoth(1);
+	TestTrue(TEXT("the guest took seat 2"), Host.LobbyLines().Num() > 1 && Host.LobbyLines()[1].Contains(TEXT("Guest")));
+	TestTrue(TEXT("the host starts the game"), Host.StartHostedGame(Error));
+	for (int32 i = 0; i < 1000 && !Guest.IsRunning(); ++i) PumpBoth(1);
+	TestTrue(TEXT("the guest has the game"), Guest.IsRunning());
+	TestEqual(TEXT("the guest views its own seat"), Guest.ViewPlayer(), 1);
+	// Each machine plays its own seat; the host plays the rest.
+	size_t HostAt = SIZE_MAX, GuestAt = SIZE_MAX;
+	for (int32 Step = 0; Step < 20000 && Host.GetGame().state().turn < 8 && !Host.IsGameOver(); ++Step)
+	{
+		const sov::Game& HG = Host.GetGame();
+		const bool bHostTurn = HG.battlePending() ? HG.state().pendingBattle.liveFor == 0 : HG.state().currentPlayer == 0;
+		if (bHostTurn && HG.log().size() != HostAt)
+		{
+			HostAt = HG.log().size();
+			PlaySeat(Host);
+		}
+		const sov::Game& GG = Guest.GetGame();
+		const bool bGuestTurn = GG.battlePending() ? GG.state().pendingBattle.liveFor == 1 : GG.state().currentPlayer == 1;
+		if (bGuestTurn && GG.log().size() == HG.log().size() && GG.log().size() != GuestAt)
+		{
+			GuestAt = GG.log().size();
+			PlaySeat(Guest);
+		}
+		PumpBoth(1);
+	}
+	for (int32 i = 0; i < 1000 && Guest.GetGame().log().size() < Host.GetGame().log().size(); ++i) PumpBoth(1);
+	TestTrue(TEXT("eight turns were played"), Host.GetGame().state().turn >= 8);
+	TestEqual(TEXT("both machines hold the same game"), Guest.GetGame().stateHash(), Host.GetGame().stateHash());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovHotSeatTest, "Sovereign.Bridge.HotSeatHandsOver", kSovTestFlags)
+bool FSovHotSeatTest::RunTest(const FString& Parameters)
+{
+	FSovSetup Setup;
+	Setup.HumanSeats = 2;
+	FSovSession Session;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	Session.Poll();
+	TestFalse(TEXT("seat 1 starts without a hand-over"), Session.HandoverPending());
+	PlaySeat(Session);  // seat 1 (index 0) ends its turn
+	Session.Poll();
+	TestTrue(TEXT("the screen waits for the second player"), Session.HandoverPending());
+	TestEqual(TEXT("still showing the first player's view"), Session.ViewPlayer(), 0);
+	Session.TakeOver();
+	TestFalse(TEXT("handed over"), Session.HandoverPending());
+	TestEqual(TEXT("now the second player's view"), Session.ViewPlayer(), 1);
 	return true;
 }
 
