@@ -72,6 +72,7 @@ enum class CommandType : uint8_t {
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
     RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
+    FormUnit = 57,              // id = military unit, arg = a neighbouring unit of its type: a Corps/Fleet, or an Army/Armada
     Pillage = 55,               // id = military land unit: pillages the improvement or district on its plot (enemy land)
     RepairImprovement = 56,     // id = Builder: repairs the pillaged improvement on its own plot (no charge)
     BuildRailroad = 54,         // id = Military Engineer: lays a railroad on its plot for the route's resources
@@ -196,6 +197,7 @@ struct Command {
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
+    static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }
     static Command pillage(PlayerId p, UnitId unit) { return {CommandType::Pillage, p, unit, {}, 0, 0}; }
     static Command repairImprovement(PlayerId p, UnitId builder) { return {CommandType::RepairImprovement, p, builder, {}, 0, 0}; }
     static Command buildRailroad(PlayerId p, UnitId engineer) { return {CommandType::BuildRailroad, p, engineer, {}, 0, 0}; }

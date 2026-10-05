@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addUnit;
@@ -336,4 +337,40 @@ TEST(units_upgrade_for_gold_in_their_territory) {
     s.units[0].pos = {12, 6};
     auto g3 = Game::fromScenario(rules(), std::move(s));
     CHECK(g3->upgradeProblem(id) == CommandError::CannotUpgrade);
+}
+
+// ---- formations (05: Corps and Armies)
+
+TEST(twins_form_a_corps_then_an_army) {
+    GameState s = flatState(16, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const UnitId a = addUnit(s, "UNIT_INFANTRY", 0, {5, 5});
+    const UnitId b = addUnit(s, "UNIT_INFANTRY", 0, {6, 5});
+    const UnitId c = addUnit(s, "UNIT_INFANTRY", 0, {5, 6});
+    const UnitId other = addUnit(s, "UNIT_TANK", 0, {4, 5});
+    const UnitId foe = addUnit(s, "UNIT_INFANTRY", 1, {10, 5});
+    auto none = Game::fromScenario(rules(), s);
+    CHECK(none->formationProblem(0, a, b) == CommandError::BadUnit);  // Nationalism first
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATIONALISM"))] = 1;
+    auto g = Game::fromScenario(rules(), s);
+    const int single = g->combatStrength(*g->state().unit(a), *g->state().unit(foe), true, false);
+    CHECK(g->formationProblem(0, a, other) == CommandError::BadUnit);  // not the same type
+    REQUIRE(g->submit(Command::formUnit(0, a, b)) == CommandError::Ok);
+    CHECK(g->state().unit(b) == nullptr);
+    CHECK_EQ(g->state().unit(a)->formation, 1);
+    CHECK_EQ(g->combatStrength(*g->state().unit(a), *g->state().unit(foe), true, false), single + 10);
+    // An Army needs Mobilization (and the turn the Corps spent forming).
+    GameState t = g->state();
+    for (Unit& u : t.units) u.movesLeft = Fixed::fromInt(2);
+    auto h = Game::fromScenario(rules(), t);
+    CHECK(h->formationProblem(0, a, c) == CommandError::BadUnit);
+    t.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_MOBILIZATION"))] = 1;
+    auto k = Game::fromScenario(rules(), std::move(t));
+    REQUIRE(k->submit(Command::formUnit(0, a, c)) == CommandError::Ok);
+    CHECK_EQ(k->state().unit(a)->formation, 2);
+    CHECK_EQ(k->combatStrength(*k->state().unit(a), *k->state().unit(foe), true, false), single + 17);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*k), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().unit(a)->formation, 2);
 }

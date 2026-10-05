@@ -2089,6 +2089,23 @@ void playTurn(Game& game) {
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }
     survey(v);
+    // Formations (05): neighbouring twins merge into Corps, Corps and twins into Armies.
+    {
+        std::vector<std::pair<UnitId, UnitId>> merges;
+        std::vector<UnitId> taken;
+        for (const Unit& u : game.state().units) {
+            if (u.owner != v.me || std::find(taken.begin(), taken.end(), u.id) != taken.end()) continue;
+            for (const Unit& w : game.state().units) {
+                if (w.id == u.id || std::find(taken.begin(), taken.end(), w.id) != taken.end()) continue;
+                if (game.formationProblem(v.me, u.id, w.id) != CommandError::Ok) continue;
+                merges.push_back({u.id, w.id});
+                taken.push_back(u.id);
+                taken.push_back(w.id);
+                break;
+            }
+        }
+        for (const auto& [a, b] : merges) game.submit(Command::formUnit(v.me, a, b));
+    }
     military(v);
     attacks(v);  // units that moved into reach
     // Units standing in enemy land with moves to spare pillage what is there (05: Pillage).

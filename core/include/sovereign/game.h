@@ -357,6 +357,11 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- formations (05: Corps and Armies)
+    // Why `unit` cannot absorb `with` (Ok: it can): both the player's, the same military type, side by
+    // side, with moves; a single and a single make a Corps (Nationalism), a Corps and a single an Army (Mobilization).
+    CommandError formationProblem(PlayerId player, UnitId unit, UnitId with) const;
+
     // ---- pillage and repair (05: Pillage)
     CommandError pillageProblem(PlayerId player, UnitId unit) const;
     CommandError repairProblem(PlayerId player, UnitId builder) const;

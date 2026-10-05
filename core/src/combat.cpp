@@ -293,6 +293,9 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
     }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
+    // Formations (05): a Corps or Fleet +10, an Army or Armada +17.
+    if (unit.formation == 1) s += rules_->globalInt("COMBAT_CORPS_STRENGTH_MODIFIER");
+    if (unit.formation >= 2) s += rules_->globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
     const bool embarked = isEmbarked(unit);

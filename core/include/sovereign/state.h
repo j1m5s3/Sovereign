@@ -70,6 +70,7 @@ struct Unit {
     // The leader's loadout per GearSlot (kNone: empty); unused by other units.
     std::array<TypeIndex, kNumGearSlots> gear{{kNone, kNone, kNone}};
     UnitId escorting = kNoUnit;  // military unit linked to this leader; moves with it while they share a plot
+    uint8_t formation = 0;       // 0 single, 1 Corps/Fleet, 2 Army/Armada (05: Formations)
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };

@@ -198,6 +198,22 @@ CommandError Game::validateBuilder(const Command& c) const {
     return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotImprove;
 }
 
+// ---------------------------------------------------------------- formations (05: Corps and Armies)
+
+CommandError Game::formationProblem(PlayerId player, UnitId unit, UnitId with) const {
+    const Unit* u = state_.unit(unit);
+    const Unit* w = state_.unit(with);
+    if (!u || !w || u->owner != player || w->owner != player || u->id == w->id) return CommandError::NotYourUnit;
+    const UnitType& t = rules_->units[static_cast<size_t>(u->type)];
+    if (u->type != w->type || t.layer != UnitLayer::Military || (t.domain != Domain::Land && t.domain != Domain::Sea) || isLeader(*u)) return CommandError::BadUnit;
+    if (u->movesLeft <= Fixed() || w->movesLeft <= Fixed() || state_.grid.distance(u->pos, w->pos) > 1) return CommandError::BadTarget;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const auto has = [&](const char* civic) { const TypeIndex c = rules_->civic(civic); return c != kNone && p.civics.has(c); };
+    if (u->formation == 0 && w->formation == 0) return has("CIVIC_NATIONALISM") ? CommandError::Ok : CommandError::BadUnit;
+    if (u->formation == 1 && w->formation == 0) return has("CIVIC_MOBILIZATION") ? CommandError::Ok : CommandError::BadUnit;
+    return CommandError::BadUnit;
+}
+
 // ---------------------------------------------------------------- pillage (05: Pillage)
 
 bool Game::districtPillaged(Hex plot) const {

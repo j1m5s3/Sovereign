@@ -264,6 +264,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
         case CommandType::Pillage: return pillageProblem(c.player, c.id);
+        case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
@@ -738,6 +739,18 @@ void Game::apply(const Command& c) {
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
         case CommandType::Pillage: pillage(c.id); break;
+        case CommandType::FormUnit: {
+            Unit& u = *state_.unit(c.id);
+            const Unit& w = *state_.unit(c.arg);
+            ++u.formation;
+            u.hp = std::max(u.hp, w.hp);  // the stronger of the two carries on
+            u.xp = std::max(u.xp, w.xp);
+            u.movesLeft = Fixed();        // forming takes the turn
+            u.moveTarget.reset();
+            removeUnit(c.arg);
+            refreshVisibility(c.player);
+            break;
+        }
         case CommandType::RepairImprovement: {
             Unit& u = *state_.unit(c.id);
             state_.plot(u.pos).pillagedTurns = 0;

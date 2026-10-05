@@ -50,7 +50,7 @@ same command must print the same hash.
 | Cities: yields, growth, borders, production | `src/city.cpp` (queries on `Game`) |
 | Research trees, boosts, governments, anarchy, policy cards | `src/research.cpp` (queries on `Game`) |
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
-| War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing; pillage and repair | `src/combat.cpp` (queries on `Game`); pillage in `src/improvements.cpp` |
+| War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing; pillage and repair; Corps and Armies | `src/combat.cpp` (queries on `Game`); pillage in `src/improvements.cpp` |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
 | City projects (03: Projects): district projects with yield conversion and great person points, one-time effects, the space race chain and the Science victory (light-years) | `src/city.cpp` (`completeProject`, costs and rules), data in `../data/rules/projects.json` |
 | Civ identities (leaders-and-art-style): unique units, buildings and improvements on a `base`, civ and leader abilities (modifiers plus typed `CivAbility` fields) | rules loading in `src/rules.cpp` (`Json::overlay`, `uniqueUnitFor`, `combined`), hooks across `src/city.cpp`, `src/combat.cpp`, `src/districts.cpp`, `src/improvements.cpp`, `src/trade.cpp`; data in `../data/rules/civilizations.json` |

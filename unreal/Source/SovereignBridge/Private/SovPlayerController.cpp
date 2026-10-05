@@ -933,6 +933,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Formations (05): merge with a neighbouring twin.
+			for (const sov::Unit& W : G.state().units)
+			{
+				if (G.formationProblem(Me(), U->id, W.id) == sov::CommandError::Ok)
+				{
+					Choices.Add({FString::Printf(TEXT("Form %s with unit %d"), U->formation == 0 ? TEXT("a Corps") : TEXT("an Army"), W.id), sov::Command::formUnit(Me(), U->id, W.id)});
+				}
+			}
 			// Pillage (military units in enemy land) and repair (Builders on a pillaged improvement of ours).
 			if (G.pillageProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
