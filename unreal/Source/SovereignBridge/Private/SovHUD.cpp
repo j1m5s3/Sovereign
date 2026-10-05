@@ -243,6 +243,42 @@ void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerControlle
 	Line(TEXT("WASD walk   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
 }
 
+void ASovHUD::DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerController& PC)
+{
+	const FSovBattleSim& Sim = PC.GetBattleSim();
+	const FSovBattleSpec& Spec = Sim.GetSpec();
+	float Y = 12.f;
+	Line(FString::Printf(TEXT("BATTLE: %s (strength %d) attacks %s (strength %d)"), *Spec.Attacker.Name, Spec.Attacker.Strength,
+			 *Spec.Defender.Name, Spec.Defender.Strength), 16, Y, FLinearColor(1.f, 0.85f, 0.3f));
+	Line(FString::Printf(TEXT("Attackers %d/%d   Defenders %d/%d   Time %d s"), Sim.Alive(0), Sim.Started(0), Sim.Alive(1), Sim.Started(1),
+			 static_cast<int32>(Sim.TimeLeft())), 16, Y);
+	if (Sim.LeaderIndex() != INDEX_NONE)
+	{
+		const FSovSoldier& L = Sim.Soldiers()[Sim.LeaderIndex()];
+		Line(FString::Printf(TEXT("Your leader: %s"), L.bAlive ? *FString::Printf(TEXT("%d%%"), FMath::RoundToInt(100.f * L.Hp / L.MaxHp)) : TEXT("down!")), 16, Y,
+			L.bAlive ? FLinearColor::White : FLinearColor(1.f, 0.3f, 0.3f));
+	}
+	Line(FString::Printf(TEXT("Your men: %s"), Sim.Charging(Spec.HumanSide) ? TEXT("charging") : TEXT("holding")), 16, Y);
+	if (!Sub.LastMessage.IsEmpty())
+	{
+		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.8f, 0.4f));
+	}
+	if (PC.BattleSettled())
+	{
+		const FSovBattleResult& R = PC.BattleOutcome();
+		UFont* Font = GEngine->GetSmallFont();
+		const FString Text = FString::Printf(TEXT("%s   Field result: attacker lost %d HP, defender %d HP%s. The rules hold it within 25%% of the expected Civ result."),
+			R.Winner == Spec.HumanSide ? TEXT("VICTORY") : R.Winner < 0 ? TEXT("STALEMATE") : TEXT("DEFEAT"), R.ToAttacker, R.ToDefender,
+			R.LeaderWound > 0 ? *FString::Printf(TEXT(", your leader wounded %d"), R.LeaderWound) : TEXT(""));
+		float W = 0, H = 0;
+		GetTextSize(Text, W, H, Font, 1.4f);
+		DrawRect(FLinearColor(0, 0, 0, 0.7f), Canvas->ClipX / 2 - W / 2 - 8, Canvas->ClipY * 0.4f - 4, W + 16, H + 8);
+		DrawText(Text, FLinearColor::White, Canvas->ClipX / 2 - W / 2, Canvas->ClipY * 0.4f, Font, 1.4f);
+	}
+	float PY = Canvas->ClipY - 26.f;
+	Line(TEXT("WASD move   left click / F strike   Tab charge or hold   hold right mouse / Q E look   Esc settle now"), 16, PY);
+}
+
 void ASovHUD::DrawHUD()
 {
 	Super::DrawHUD();
@@ -255,6 +291,11 @@ void ASovHUD::DrawHUD()
 		return;
 	}
 	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
+	if (PC && PC->InBattle())
+	{
+		DrawBattle(*Sub, *PC);
+		return;
+	}
 	if (PC && PC->InStreet())
 	{
 		DrawStreet(*Sub, *PC);

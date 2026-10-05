@@ -24,10 +24,12 @@ struct FSovSetup
 	FString MapSize = TEXT("MAPSIZE_TINY");
 	// Seat 0 is played by the human; false lets the AI play every seat (spectating seat 0).
 	bool bHumanSeat0 = true;
+	// Developer start: seat 0's warrior on its leader's plot, an enemy warrior next to it, at war.
+	bool bBattleDemo = false;
 	// Rules data directory; empty means <repo>/data/rules beside the Unreal project.
 	FString RulesDir;
 
-	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize= and -SovSpectate.
+	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate and -SovBattleDemo.
 	static FSovSetup FromCommandLine();
 	static FString DefaultRulesDir();
 };

@@ -8,11 +8,14 @@
 
 #include "sovereign/commands.h"
 
+#include "SovBattleSim.h"
+
 #include "SovPlayerController.generated.h"
 
 class ASovCameraPawn;
 class ASovHUD;
 class ASovStreetScene;
+class ASovBattleScene;
 class ASovWalker;
 class ASovMapActor;
 class USovGameSubsystem;
@@ -35,6 +38,12 @@ public:
 	const ASovWalker* GetWalker() const { return Walker; }
 	// "" when nobody is in reach; otherwise what F would do.
 	FString StreetPrompt() const;
+
+	// ---- live battles (step 5)
+	bool InBattle() const { return Battle != nullptr; }
+	const FSovBattleSim& GetBattleSim() const { return Sim; }
+	bool BattleSettled() const { return bBattleSent; }
+	const FSovBattleResult& BattleOutcome() const { return Outcome; }
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
 
@@ -81,6 +90,9 @@ protected:
 	void OpenChooser(EChooser Kind);
 	void EnterStreet();
 	void StartBattle();
+	void UpdateBattle(float DeltaTime);
+	void ExitBattle();
+	void LookAround(float DeltaTime);
 	void ExitStreet();
 	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);
@@ -105,6 +117,14 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<APawn> MapPawn;
+
+	UPROPERTY()
+	TObjectPtr<ASovBattleScene> Battle;
+
+	FSovBattleSim Sim;
+	FSovBattleResult Outcome;
+	bool bBattleSent = false;
+	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second
 };

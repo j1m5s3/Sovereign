@@ -63,5 +63,8 @@ struct FSovMirror
 
 FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);
 
+// A plot's plain-map colour (terrain and feature) and whether it is wooded.
+FLinearColor SovPlotColor(const sov::Game& Game, int32 X, int32 Y, bool* bWoods = nullptr);
+
 // Owner colour for markers and labels (barbarians are always the last seat).
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player);

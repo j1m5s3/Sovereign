@@ -6,6 +6,7 @@
 
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 
 FSovSetup FSovSetup::FromCommandLine()
 {
@@ -18,6 +19,7 @@ FSovSetup FSovSetup::FromCommandLine()
 	{
 		Setup.bHumanSeat0 = false;
 	}
+	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
 	return Setup;
 }
 
@@ -60,6 +62,36 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	{
 		OutError = FString::Printf(TEXT("create: %s"), UTF8_TO_TCHAR(Error.c_str()));
 		return false;
+	}
+	if (Setup.bBattleDemo && Setup.Players >= 2)
+	{
+		// A hand-made opening for trying live battles: an escorted leader meets an enemy warrior.
+		sov::GameState S = Game->state();
+		const sov::Unit* Leader = Game->leaderOf(0);
+		sov::Unit* Guard = nullptr;
+		sov::Unit* Foe = nullptr;
+		for (sov::Unit& U : S.units)
+		{
+			const bool bMilitary = Rules->units[static_cast<size_t>(U.type)].layer == sov::UnitLayer::Military;
+			if (bMilitary && U.owner == 0 && !Guard) Guard = &U;
+			if (bMilitary && U.owner == 1 && !Foe) Foe = &U;
+		}
+		if (Leader && Guard && Foe)
+		{
+			Guard->pos = Leader->pos;
+			for (int32 D : {1, 0, 2, 3, 4, 5})  // east first
+			{
+				const std::optional<sov::Hex> N = S.grid.neighbor(Leader->pos, static_cast<sov::Dir>(D));
+				if (N && sov::isLandPassable(S, *Rules, *N) && !S.cityAt(*N))
+				{
+					Foe->pos = *N;
+					break;
+				}
+			}
+			S.players[0].relations[1].war = S.players[1].relations[0].war = true;
+			S.players[0].relations[1].since = S.players[1].relations[0].since = 1;
+			Game = sov::Game::fromScenario(*Rules, std::move(S));
+		}
 	}
 	++Rev;
 	return true;
