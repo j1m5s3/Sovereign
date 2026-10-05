@@ -737,6 +737,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.borderOnly = j["borderOnly"].boolean(false);
             im.needsRiver = j["needsRiver"].boolean(false);
             im.halvesFloods = j["halvesFloods"].boolean(false);
+            im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
             const Json& adj = j["adjacentImprovementYield"];
             if (adj.isObject()) {
                 im.adjacentImprovementId = adj["improvement"].str();
@@ -794,6 +795,14 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.envoysOnBuild = static_cast<int>(j["envoysOnBuild"].integer(0));
             b.trainedXpPercent = static_cast<int>(j["trainedXpPercent"].integer(0));
             b.foodPerAdjacentMountain = static_cast<int>(j["foodPerAdjacentMountain"].integer(0));
+            b.requiredPower = static_cast<int>(j["requiredPower"].integer(0));
+            b.poweredYields = readYields(j["poweredYields"]);
+            b.poweredAmenities = static_cast<int>(j["poweredAmenities"].integer(0));
+            if (j["burns"].isObject()) {
+                b.burnsResource = resource(j["burns"]["resource"].str());
+                b.powerPerResource = static_cast<int>(j["burns"]["power"].integer(0));
+            }
+            b.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
