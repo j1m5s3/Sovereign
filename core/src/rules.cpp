@@ -259,7 +259,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -331,6 +331,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.cost = static_cast<int>(j["cost"].integer(0));
             n.embarkedMoves = static_cast<int>(j["embarkedMoves"].integer(0));
             n.envoys = static_cast<int>(j["envoys"].integer(0));
+            n.spies = static_cast<int>(j["spies"].integer(0));
             for (const Json& e : j["effects"].items()) {
                 if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
@@ -565,6 +566,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.mustPurchase = j["mustPurchase"].boolean(false);
         u.trainable = j["trainable"].boolean(true);
         u.agent = j["agent"].boolean(false);
+        u.spy = j["spy"].boolean(false);
         u.purchaseYield = j["purchaseYield"].str();
         u.religiousStrength = static_cast<int>(j["religiousStrength"].integer(0));
         u.spreadCharges = static_cast<int>(j["spreadCharges"].integer(0));
@@ -1096,6 +1098,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         governors.push_back(std::move(g));
     }
+    for (const auto& [id, j] : m.tables["spyOperations"]) {
+        SpyOperationType op;
+        op.id = id;
+        op.name = j["name"].str(id);
+        op.turns = static_cast<int>(j["turns"].integer(8));
+        op.base = static_cast<int>(j["base"].integer(0));
+        op.levelChange = static_cast<int>(j["levelChange"].integer(1));
+        op.enemyChange = static_cast<int>(j["enemyChange"].integer(0));
+        op.enemyLevelChange = static_cast<int>(j["enemyLevelChange"].integer(0));
+        op.needsDistrict = j.has("district");
+        if (op.needsDistrict) op.district = district(j["district"].str());
+        spyOperations.push_back(std::move(op));
+    }
     for (const auto& [id, j] : m.tables["governorTitles"]) {
         const TypeIndex c = civic(j["civic"].str());
         if (c == kNone) {
@@ -1499,6 +1514,7 @@ TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id
 TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }
 TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id); }
 TypeIndex Rules::governor(const std::string& id) const { return findIn(governors, id); }
+TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {

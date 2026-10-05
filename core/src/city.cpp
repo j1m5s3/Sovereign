@@ -277,7 +277,8 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
         if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
-        if (u.agent && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
+        if (u.agent && !u.spy && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
+        if (u.spy && spiesOf(c.owner) >= spyCapacity(c.owner)) return fail(CommandError::CannotBuild);
         if (!u.needsBuilding.empty() &&
             std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return c.has(b); }))
             return fail(CommandError::CannotBuild);
@@ -589,10 +590,11 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (!hasStrategicFor(city.owner, item.type)) return false;
         if (u.agent) {
             // Assassins become off-map agents, within the capacity (leader doc §6).
-            if (agentsOf(city.owner) >= agentCapacity(city.owner)) return false;
+            if (u.spy ? spiesOf(city.owner) >= spyCapacity(city.owner) : agentsOf(city.owner) >= agentCapacity(city.owner)) return false;
             Agent a;
             a.id = state_.nextAgentId++;
             a.owner = city.owner;
+            a.spy = u.spy;
             state_.agents.push_back(a);
             Player& owner = state_.players[static_cast<size_t>(city.owner)];
             if (owner.unitsTrained.size() < rules_->units.size()) owner.unitsTrained.resize(rules_->units.size(), 0);

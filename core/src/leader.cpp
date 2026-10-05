@@ -160,7 +160,7 @@ CommandError Game::validateLeader(const Command& c) const {
     }
     if (c.type == CommandType::SendAssassin) {
         const Agent* a = agent(c.id);
-        if (!a || a->owner != c.player) return CommandError::CannotSendAgent;
+        if (!a || a->owner != c.player || a->spy) return CommandError::CannotSendAgent;  // spies take SpyMission
         if (c.arg == kNoPlayer) return CommandError::Ok;
         if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg == c.player) return CommandError::CannotSendAgent;
         const Player& t = state_.players[static_cast<size_t>(c.arg)];
@@ -432,7 +432,8 @@ int Game::agentCapacity(PlayerId player) const {
 }
 
 int Game::agentsOf(PlayerId player) const {
-    return static_cast<int>(std::count_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& a) { return a.owner == player; }));
+    // Assassins only: spies have their own capacity (08: Espionage).
+    return static_cast<int>(std::count_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& a) { return !a.spy && a.owner == player; }));
 }
 
 const Agent* Game::agent(int32_t id) const {

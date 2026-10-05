@@ -179,6 +179,18 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				Text = FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4]);
 				break;
 			}
+			case sov::EventKind::SpyOperation:
+			{
+				static const TCHAR* const Missions[] = {TEXT("an operation"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
+					TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
+				Text = E.actor == Me ? FString::Printf(TEXT("Your spy succeeds: %s against %s."), Missions[E.value % sov::kNumSpyMissions], *CivOf(E.target))
+									 : FString::Printf(TEXT("Spies have struck in your lands: %s."), Missions[E.value % sov::kNumSpyMissions]);
+				break;
+			}
+			case sov::EventKind::SpyCaught:
+				Text = E.actor == Me ? FString::Printf(TEXT("Your spy was caught by %s%s."), *CivOf(E.target), E.value ? TEXT(" but escaped home") : TEXT(""))
+									 : FString::Printf(TEXT("You caught a spy from %s%s."), *CivOf(E.actor), E.value ? TEXT("; it escaped") : TEXT(""));
+				break;
 			case sov::EventKind::DealProposed:
 				if (const sov::Deal* D = G.deal(E.value))
 				{

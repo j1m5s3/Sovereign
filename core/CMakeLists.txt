@@ -32,6 +32,7 @@ add_library(sovereign_core
   src/eras.cpp
   src/diplomacy.cpp
   src/governors.cpp
+  src/espionage.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -88,6 +89,7 @@ add_executable(sovereign_tests
   tests/test_eras.cpp
   tests/test_diplomacy.cpp
   tests/test_governors.cpp
+  tests/test_espionage.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE
