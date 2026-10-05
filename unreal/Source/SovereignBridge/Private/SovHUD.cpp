@@ -138,6 +138,25 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		if (!Race.IsEmpty()) Line(TEXT("Exoplanet expeditions:") + Race, 16, Y, FLinearColor(0.7f, 0.9f, 1.f));
 	}
+	// Alliances (08 [R&F]): type, level and turns left with each ally.
+	{
+		static const TCHAR* const Types[] = {TEXT("Research"), TEXT("Military"), TEXT("Economic"), TEXT("Cultural"), TEXT("Religious")};
+		FString Allies;
+		for (const sov::Player& O : S.players)
+		{
+			const sov::AllianceType T = G.alliance(Me, O.id);
+			if (T == sov::AllianceType::None) continue;
+			const FString Who = O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name);
+			Allies += FString::Printf(TEXT("   %s (%s, level %d, %d turns)"), *Who, Types[static_cast<int32>(T)], G.allianceLevel(Me, O.id),
+				P.relations[static_cast<size_t>(O.id)].allianceUntil - S.turn);
+		}
+		if (!Allies.IsEmpty()) Line(TEXT("Alliances:") + Allies, 16, Y, FLinearColor(0.6f, 1.f, 0.7f));
+	}
+	// War weariness (08): points and the amenities every city loses to them.
+	if (G.warWeariness(Me) > 0)
+	{
+		Line(FString::Printf(TEXT("War weariness %d (-%d amenities in every city)"), G.warWeariness(Me), G.warWearinessAmenities(Me)), 16, Y, FLinearColor(1.f, 0.7f, 0.5f));
+	}
 	// Nuclear weapons (05): devices held by anyone (Ctrl+right-click with a bomber or Nuclear Submarine delivers ours).
 	{
 		FString Arsenal;

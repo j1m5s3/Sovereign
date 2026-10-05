@@ -636,6 +636,7 @@ enum class ModEffect : uint8_t {
     CityReligionPressurePercent,   // + % religious pressure the city exerts
     SettlerNoPopCost,              // flag: settlers trained here cost no population
     BuilderExtraCharges,           // + build charges for builders trained here
+    WarWearinessPercent,           // player: + % war weariness gained (Propaganda -25, Fascism +20)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,

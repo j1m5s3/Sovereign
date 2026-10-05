@@ -222,6 +222,7 @@ CityReport Game::cityReport(CityId id) const {
     if (beloved(c->owner)) rep.amenities += rules_->globalInt("REPUTATION_BELOVED_AMENITIES");
     if (feared(c->owner)) rep.amenities -= rules_->globalInt("REPUTATION_FEARED_AMENITIES");
     if (owner.gold < Fixed()) rep.amenities -= static_cast<int>((-owner.gold).ceil() + 9) / 10;
+    rep.amenities -= warWearinessAmenities(c->owner);  // 08: War weariness
     const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
     rep.amenitiesNeeded = std::max(0, (c->population + perAmenity - 1) / perAmenity - 1);
     const int balance = rep.amenities - rep.amenitiesNeeded;
@@ -912,6 +913,8 @@ void Game::processCities(PlayerId pid) {
         science += fy[idx(YieldType::Science)];
         culture += fy[idx(YieldType::Culture)];
         player.faith += fy[idx(YieldType::Faith)];
+        science += allianceShare(pid, YieldType::Science);
+        culture += allianceShare(pid, YieldType::Culture);
     }
     player.lifetimeCulture += culture;  // domestic tourists (07: Tourism)
     processResearch(pid, science, culture);

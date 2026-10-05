@@ -98,8 +98,11 @@ struct CityDistrict {
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
-enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace };
-constexpr int kNumDealItemKinds = 6;
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance };
+constexpr int kNumDealItemKinds = 7;
+// Alliance types [R&F] (08: Alliance); a DealItemKind::Alliance item carries one as its amount.
+enum class AllianceType : int8_t { None = -1, Research = 0, Military, Economic, Cultural, Religious };
+constexpr int kNumAllianceTypes = 5;
 struct DealItem {
     DealItemKind kind = DealItemKind::Gold;
     PlayerId from = kNoPlayer;
@@ -290,6 +293,9 @@ struct Relation {
     int32_t friendsUntil = 0;     // a declaration of friendship runs through this turn (both sides)
     int32_t openBordersUntil = 0; // this player opens its borders to that one through this turn
     int32_t lastProposal = 0;     // turn this player last put a deal to that one (AI pacing)
+    AllianceType alliance = AllianceType::None;  // an alliance [R&F] running through allianceUntil (both sides)
+    int32_t allianceUntil = 0;
+    int32_t alliancePoints = 0;   // toward levels 2 and 3 (internal units, ALLIANCE_POINTS_MULTIPLIER a turn)
 };
 
 struct Player {
@@ -345,6 +351,7 @@ struct Player {
     int diplomaticVictoryPoints = 0;      // [GS]
     int lightYears = 0;                   // the exoplanet expedition's distance travelled (09: Science victory)
     std::vector<int32_t> wmds;            // devices held, by Rules::wmds (05: Nuclear weapons)
+    std::vector<int32_t> warWeariness;    // per other player: war weariness points against it (08: War weariness)
     int wmdsLaunched = 0;
     int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).

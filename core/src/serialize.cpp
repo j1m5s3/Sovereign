@@ -338,6 +338,9 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i32(rel.friendsUntil);
             w.i32(rel.openBordersUntil);
             w.i32(rel.lastProposal);
+            w.i8(static_cast<int8_t>(rel.alliance));
+            w.i32(rel.allianceUntil);
+            w.i32(rel.alliancePoints);
         }
         w.u32(static_cast<uint32_t>(p.memories.size()));
         for (const OpinionMemory& m : p.memories) {
@@ -361,6 +364,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.diplomaticVictoryPoints);
         w.i32(p.lightYears);
         writeI32s(w, p.wmds);
+        writeI32s(w, p.warWeariness);
         w.i32(p.wmdsLaunched);
         w.i32(p.killsThisEra);
         w.i32(p.rulingHeir);
@@ -694,6 +698,11 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.friendsUntil = r.i32();
             rel.openBordersUntil = r.i32();
             rel.lastProposal = r.i32();
+            const int8_t alliance = r.i8();
+            if (alliance < -1 || alliance >= kNumAllianceTypes) return false;
+            rel.alliance = static_cast<AllianceType>(alliance);
+            rel.allianceUntil = r.i32();
+            rel.alliancePoints = r.i32();
         }
         uint32_t nmem = r.u32();
         if (!r.checkCount(nmem, 10)) return false;
@@ -735,6 +744,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.diplomaticVictoryPoints = r.i32();
         p.lightYears = r.i32();
         if (!readI32s(r, p.wmds)) return false;
+        if (!readI32s(r, p.warWeariness)) return false;
         p.wmdsLaunched = r.i32();
         p.killsThisEra = r.i32();
         p.rulingHeir = r.i32();

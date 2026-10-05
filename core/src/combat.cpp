@@ -275,6 +275,18 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
             }
         }
     }
+    // Military alliance, level 1: +5 against a common war target (08: alliance levels).
+    {
+        const PlayerId foe = oppUnit ? oppUnit->owner : oppCity ? oppCity->owner : kNoPlayer;
+        if (foe != kNoPlayer) {
+            for (const Player& ally : state_.players) {
+                if (alliance(unit.owner, ally.id) == AllianceType::Military && atWar(ally.id, foe)) {
+                    s += 5;
+                    break;
+                }
+            }
+        }
+    }
     // A unique improvement that shelters its defenders (Beacon Tower).
     if (!attacking) {
         const TypeIndex im = state_.plot(unit.pos).improvement;
@@ -977,6 +989,16 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
     if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
+    // War weariness: fighting on ground that is not one's own, and units lost (08).
+    {
+        const PlayerId ground = state_.plot(target).owner;
+        const int foreign = rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_FOREIGN_LANDS");
+        const int allied = rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_ALLIED_LANDS");
+        if (ground != me) addWarWeariness(me, them, alliance(me, ground) != AllianceType::None ? allied : foreign);
+        if (ground != them) addWarWeariness(them, me, alliance(them, ground) != AllianceType::None ? allied : foreign);
+        if (defenderDied) addWarWeariness(them, me, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
+        if (attackerDied) addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
+    }
     if (defenderDied && !leaderD) noteKill(*def, attackerDied ? nullptr : a);
     if (attackerDied && !leaderA) noteKill(*a, defenderDied ? nullptr : def);
 
@@ -1069,6 +1091,8 @@ void Game::resolveCityAssault(UnitId attackerId, CityId cityId, bool ranged, int
     }
     city.lastAttackedTurn = state_.turn;
     a->hp -= toAttacker;
+    addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_FOREIGN_LANDS") +
+                                  (a->hp <= 0 ? rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED") : 0));
     if (a->hp <= 0) {
         if (isLeader(*a)) {
             leaderLost(attackerId, them, false);  // a leader killed storming the walls (§5)

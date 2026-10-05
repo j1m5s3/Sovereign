@@ -353,6 +353,18 @@ public:
 
     // ---- nuclear weapons (05-units-and-combat.md: Nuclear weapons)
     int wmdsHeld(PlayerId player) const;     // devices of every kind
+
+    // ---- war weariness (08: War weariness)
+    // ---- alliances [R&F] (08: Alliance)
+    AllianceType alliance(PlayerId a, PlayerId b) const;  // None when not allied
+    int allianceLevel(PlayerId a, PlayerId b) const;      // 0 not allied, else 1..3 by alliance points
+    // The highest level of an alliance of this type the player holds with anyone (0: none).
+    int bestAllianceLevel(PlayerId player, AllianceType type) const;
+    Fixed allianceShare(PlayerId player, YieldType yield) const;  // Research/Cultural level 3: 10% of the ally's yield
+    int warWeariness(PlayerId player) const;            // points against every opponent together
+    int warWearinessAmenities(PlayerId player) const;   // amenities each of its cities loses (1 per 400 points)
+    void addWarWeariness(PlayerId player, PlayerId against, int points);  // scaled by policies and grievances
+    void processWarWeariness(PlayerId player);          // decays as the player's turn begins
     // Why a launch cannot happen (Ok: it can): a held device, a delivery in range with moves (a bomber's
     // strike range, or the device's ICBM range from a Nuclear Submarine or the player's Missile Silo),
     // and nothing in the blast belonging to a civ the launcher is at peace with.

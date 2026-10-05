@@ -421,9 +421,24 @@ void diplomacy(View& v) {
         const bool theyOffer = s.players[at(e)].relations[at(v.me)].peaceOffered;
         const bool losing = mine * 100 < theirs * kPeaceRatioPercent;
         // Weariness only ends a war that is not clearly being won.
-        const bool tired = s.turn - rel.since >= kWarWeariness && mine * 100 < theirs * v.posture.warRatio * 2;
+        // Long wars, or war weariness costing two amenities a city, end a war that is not clearly being won.
+        const bool tired = (s.turn - rel.since >= kWarWeariness || v.game.warWearinessAmenities(v.me) >= 2) && mine * 100 < theirs * v.posture.warRatio * 2;
         const bool accept = theyOffer && mine * 100 < theirs * v.posture.warRatio;
         if ((losing || tired || accept) && v.game.canMakePeace(v.me, e)) v.game.submit(Command::makePeace(v.me, e));
+    }
+    // Called to arms: join the war of an ally that was attacked, against a civ we are not friends
+    // with (08: Alliance; the ally remembers who declared on it).
+    for (const Player& ally : s.players) {
+        if (v.game.alliance(v.me, ally.id) == AllianceType::None) continue;
+        for (const Player& foe : s.players) {
+            if (foe.id == v.me || !v.game.isMajorCiv(foe.id) || !v.game.atWar(ally.id, foe.id) || v.game.atWar(v.me, foe.id)) continue;
+            const bool attacked = std::any_of(ally.memories.begin(), ally.memories.end(), [&](const OpinionMemory& m) {
+                return m.about == foe.id && (m.kind == MemoryKind::DeclaredWar || m.kind == MemoryKind::SurpriseWar);
+            });
+            if (!attacked) continue;
+            if (v.game.friends(v.me, foe.id) || v.game.alliance(v.me, foe.id) != AllianceType::None || !v.game.canDeclareWar(v.me, foe.id)) continue;
+            if (v.game.submit(Command::declareWar(v.me, foe.id)) == CommandError::Ok) v.target = foe.id;
+        }
     }
     survey(v);
     if (!v.enemies.empty() || v.cities.size() < 2) {
@@ -495,6 +510,15 @@ void deals(View& v) {
         std::vector<std::vector<DealItem>> ideas;
         const bool distrusted = std::find(v.posture.distrust.begin(), v.posture.distrust.end(), o.id) != v.posture.distrust.end();
         if (opinion >= kFriendOpinion && !distrusted) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
+        // An alliance with a friend it likes, of the kind its strategy wants (08: Alliance).
+        if (opinion >= kFriendOpinion && !distrusted && v.game.friends(v.me, o.id)) {
+            AllianceType type = AllianceType::Economic;
+            if (v.posture.has(Strategy::ScienceVictory)) type = AllianceType::Research;
+            else if (v.posture.has(Strategy::DominationVictory) || v.majorWar) type = AllianceType::Military;
+            else if (v.posture.has(Strategy::CultureVictory)) type = AllianceType::Cultural;
+            else if (v.posture.has(Strategy::ReligiousVictory)) type = AllianceType::Religious;
+            ideas.insert(ideas.begin(), {{DealItemKind::Alliance, v.me, static_cast<int32_t>(type), kNone}});
+        }
         TypeIndex give = kNone, get = kNone;
         for (size_t r = 0; r < v.r.resources.size(); ++r) {
             if (v.r.resources[r].cls != ResourceClass::Luxury) continue;

@@ -95,13 +95,30 @@ std::vector<TypeIndex> Game::availableCivics(PlayerId player) const {
     return out;
 }
 
+// Research and Cultural alliances, level 3: 10% of the ally's Science or Culture from its cities
+// (08: alliance levels; the ally's own share does not count again).
+Fixed Game::allianceShare(PlayerId player, YieldType yield) const {
+    const AllianceType type = yield == YieldType::Science ? AllianceType::Research : yield == YieldType::Culture ? AllianceType::Cultural : AllianceType::None;
+    if (type == AllianceType::None) return Fixed();
+    Fixed share;
+    for (const Player& ally : state_.players) {
+        if (alliance(player, ally.id) != type || allianceLevel(player, ally.id) < 3 || ally.anarchyTurns > 0) continue;
+        Fixed theirs;
+        for (const City& c : state_.cities) {
+            if (c.owner == ally.id) theirs += cityReport(c.id).yields[static_cast<size_t>(yield)];
+        }
+        share += theirs * Fixed::ratio(1, 10);
+    }
+    return share;
+}
+
 Fixed Game::sciencePerTurn(PlayerId player) const {
     Fixed total;
     if (state_.players[static_cast<size_t>(player)].anarchyTurns > 0) return total;
     for (const City& c : state_.cities) {
         if (c.owner == player) total += cityReport(c.id).yields[idx(YieldType::Science)];
     }
-    return total;
+    return total + allianceShare(player, YieldType::Science);
 }
 
 Fixed Game::culturePerTurn(PlayerId player) const {
@@ -110,7 +127,7 @@ Fixed Game::culturePerTurn(PlayerId player) const {
     for (const City& c : state_.cities) {
         if (c.owner == player) total += cityReport(c.id).yields[idx(YieldType::Culture)];
     }
-    return total;
+    return total + allianceShare(player, YieldType::Culture);
 }
 
 bool Game::boostMet(PlayerId player, const Boost& b) const {

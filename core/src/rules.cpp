@@ -150,6 +150,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_PRODUCTION_PERCENT", ModEffect::UnitProductionPercent},
         {"ADJUST_PLOT_PURCHASE_COST_PERCENT", ModEffect::PlotPurchaseCostPercent},
         {"ADJUST_UNIT_MAINTENANCE_DISCOUNT", ModEffect::UnitMaintenanceDiscount},
+        {"ADJUST_WAR_WEARINESS_PERCENT", ModEffect::WarWearinessPercent},
         {"GRANT_ABILITY", ModEffect::GrantAbility},
         {"ADJUST_UNIT_XP_PERCENT", ModEffect::UnitXpPercent},
         {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
@@ -215,7 +216,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         return false;
     }
     // Player-wide effects and the player collection go together.
-    const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
+    const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount || mod.effect == ModEffect::WarWearinessPercent ||
                               mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
                               mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent ||
                               (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
