@@ -91,6 +91,7 @@ void Game::processEras() {
     }
     ++state_.gameEra;
     state_.gameEraStart = state_.turn;
+    for (Player& p : state_.players) p.killsThisEra = 0;
     // Difficulty: AI civs at Immortal and Deity get free Eurekas and Inspirations in the new era's trees.
     const int free = difficulty().aiFreeBoosts;
     for (Player& p : state_.players) {

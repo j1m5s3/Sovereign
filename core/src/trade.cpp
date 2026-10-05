@@ -77,6 +77,12 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     for (const CityDistrict& d : destination.districts) {
         if (d.complete) add(d.type);
     }
+    // Leader abilities: international routes (Golden Pilgrimage), and to another landmass (Sea Dogs).
+    if (!domestic) {
+        const CivAbility& ab = civAbility(origin.owner);
+        for (size_t i = 0; i < kNumYields; ++i) out[i] += ab.internationalRouteYields[i];
+        if (state_.plot(origin.pos).continent != state_.plot(destination.pos).continent) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(ab.intercontinentalRouteGold);
+    }
     // Civ ability: routes whose way crosses desert (Arabia).
     if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
         bool desert = false;

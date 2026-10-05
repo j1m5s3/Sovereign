@@ -42,6 +42,11 @@ void Game::linkBarbarians() {
 void Game::noteKill(const Unit& victim, const Unit* killer) {
     // Civ uniques: a kill heals (Scara) or brings the loser in as a Builder (Jaguar Warrior).
     if (killer && killer->owner != victim.owner) {
+        // Leader ability: Faith from kills, and the capital's mood from this era's kills (Flower Wars).
+        Player& kp = state_.players[static_cast<size_t>(killer->owner)];
+        ++kp.killsThisEra;
+        if (const int pct = civAbility(killer->owner).killFaithPercent; pct > 0)
+            kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat * pct / 100);
         if (Unit* k = state_.unit(killer->id)) {
             k->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), k->hp + unitEffectTotal(*k, UnitEffectKind::HealOnKill));
             if (unitHas(*k, UnitEffectKind::CaptureAsBuilder) && rules_->units[static_cast<size_t>(victim.type)].domain == Domain::Land &&

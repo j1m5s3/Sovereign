@@ -131,6 +131,12 @@ bool Game::canMakePeace(PlayerId player, PlayerId target) const {
 std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
     const UnitType& ut = typeOf(*rules_, unit);
     std::vector<TypeIndex> out = ut.abilities;
+    // Abilities the civ's leader grants its units of a class (Hold the Pass, Builder of Monuments).
+    for (TypeIndex a : civAbility(unit.owner).grantAbilities) {
+        const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
+        if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
+            out.push_back(a);
+    }
     for (TypeIndex a : grantedAbilities(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)])) {
         const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
         if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() &&
@@ -248,6 +254,26 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
         ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
         s += 5;
+    // Leader abilities: a class stronger near the leader (Charlemagne); units near a city following
+    // the player's religion (Saladin).
+    {
+        const CivAbility& ab = civAbility(unit.owner);
+        if (!ab.strengthNearLeader.empty()) {
+            if (const Unit* l = leaderOf(unit.owner); l && l->id != unit.id) {
+                for (const CivAbility::NearLeader& n : ab.strengthNearLeader) {
+                    if (n.unitClass == ut.unitClass && state_.grid.distance(l->pos, unit.pos) <= n.range) s += n.amount;
+                }
+            }
+        }
+        if (ab.nearFollowingCityStrength > 0 && owner.religion >= 0) {
+            for (const City& c : state_.cities) {
+                if (state_.grid.distance(c.pos, unit.pos) <= ab.nearFollowingCityRange && cityMajorityReligion(c) == owner.religion) {
+                    s += ab.nearFollowingCityStrength;
+                    break;
+                }
+            }
+        }
+    }
     // A unique improvement that shelters its defenders (Beacon Tower).
     if (!attacking) {
         const TypeIndex im = state_.plot(unit.pos).improvement;

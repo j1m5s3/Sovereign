@@ -223,3 +223,55 @@ TEST(civ_ability_modifiers_mills_and_mines) {
     const Fixed french = g->plotYields({17, 6}, g->state().cities[1])[static_cast<size_t>(YieldType::Production)];
     CHECK(english == french + Fixed::fromInt(1));
 }
+
+TEST(leader_abilities_edo_peace_and_flower_wars) {
+    // Tokugawa: +10% Science while at peace with every major civ.
+    GameState s = pair("CIVILIZATION_JAPAN", "CIVILIZATION_AZTEC", {});
+    auto peace = Game::fromScenario(rules(), s);
+    const Fixed calm = peace->cityReport(peace->state().cities[0].id).yields[static_cast<size_t>(YieldType::Science)];
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    auto war = Game::fromScenario(rules(), s);
+    const Fixed tense = war->cityReport(war->state().cities[0].id).yields[static_cast<size_t>(YieldType::Science)];
+    CHECK(calm > tense);
+    // Moctezuma: a kill pays Faith worth half the victim's strength and counts toward the capital's mood.
+    GameState a = pair("CIVILIZATION_AZTEC", "CIVILIZATION_JAPAN", {});
+    a.players[0].relations[1].war = a.players[1].relations[0].war = true;
+    const UnitId jaguar = addUnit(a, "UNIT_JAGUAR_WARRIOR", 0, {8, 6});
+    const UnitId prey = addUnit(a, "UNIT_WARRIOR", 1, {9, 6});
+    a.unit(prey)->hp = 5;
+    auto g = Game::fromScenario(rules(), std::move(a));
+    const Fixed faith = g->state().players[0].faith;
+    REQUIRE(g->submit(Command::attack(0, jaguar, {9, 6})) == CommandError::Ok);
+    CHECK(g->state().players[0].faith == faith + Fixed::fromInt(rules().units[at(rules().unit("UNIT_WARRIOR"))].combat / 2));
+    CHECK_EQ(g->state().players[0].killsThisEra, 1);
+}
+
+TEST(leader_abilities_hold_the_pass_and_earthshaker) {
+    GameState s = pair("CIVILIZATION_GREECE", "CIVILIZATION_INCA", {"TECH_BRONZE_WORKING"});
+    s.plot({8, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    s.plot({9, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    const UnitId greek = addUnit(s, "UNIT_SPEARMAN", 0, {8, 6});
+    const UnitId inca = addUnit(s, "UNIT_SPEARMAN", 1, {9, 6});
+    auto g = Game::fromScenario(rules(), s);
+    // The same unit on the same ground: Leonidas's Spearman defends 5 stronger.
+    CHECK_EQ(g->combatStrength(*g->state().unit(greek), *g->state().unit(inca), false, false),
+             g->combatStrength(*g->state().unit(inca), *g->state().unit(greek), false, false) + 5);
+    // Pachacuti: farms on hills +1 Food; a city next to a mountain +1 Housing.
+    for (const Hex& h : {Hex{5, 7}, Hex{17, 7}}) {
+        s.plot(h).terrain = rules().terrain("TERRAIN_PLAINS_HILLS");
+        s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+    }
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    const Fixed greekFood = g2->plotYields({5, 7}, g2->state().cities[0])[static_cast<size_t>(YieldType::Food)];
+    const Fixed incaFood = g2->plotYields({17, 7}, g2->state().cities[1])[static_cast<size_t>(YieldType::Food)];
+    CHECK(incaFood == greekFood + Fixed::fromInt(1));
+}
+
+TEST(leader_abilities_golden_pilgrimage_faith_purchase) {
+    GameState s = pair("CIVILIZATION_MALI", "CIVILIZATION_EGYPT", {"TECH_CURRENCY"});
+    for (City& c : s.cities) c.districts.push_back({rules().district("DISTRICT_COMMERCIAL_HUB"), {c.pos.x + 1, c.pos.y}, true});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const ProductionItem market{ProductionKind::Building, rules().building("BUILDING_MARKET")};
+    CHECK(g->faithPurchaseCost(0, g->state().cities[0], market) > 0);
+    CHECK(g->faithPurchaseCost(1, g->state().cities[1], market) < 0);
+}

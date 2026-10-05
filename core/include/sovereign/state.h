@@ -317,6 +317,7 @@ struct Player {
     TypeIndex cityState = kNone;  // Rules::cityStates: a city-state (one city, no expansion; 08)
     std::vector<int> envoys;      // per player: envoys this player sent to that city-state
     int envoyTokens = 0;          // envoys waiting to be sent
+    int killsThisEra = 0;         // enemy units destroyed since the world era began (Flower Wars)
     int influence = 0;            // points toward the next envoys
     PlayerId firstMetBy = kNoPlayer;  // a city-state: the first major civ to meet it (gets an envoy)
     bool hadSuzerain = false;         // a city-state: someone has been its suzerain

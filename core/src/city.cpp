@@ -179,14 +179,31 @@ CityReport Game::cityReport(CityId id) const {
     rep.housing += rules_->global(water);
     rep.housing += improvementHousing(*c);
     rep.housing += districtHousing(*c);
+    if (const int mh = civAbility(c->owner).mountainCityHousing; mh > 0) {
+        bool mountain = false;
+        for (const Hex& n : state_.grid.within(c->pos, 1)) mountain = mountain || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain;
+        if (mountain) rep.housing += Fixed::fromInt(mh);
+    }
     rep.housing += sumCityModifiers(state_, *rules_, *c, ModEffect::CityHousing);
 
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
-    if (const int perWonder = civAbility(c->owner).amenityPerWonder; perWonder > 0) {
-        for (TypeIndex b : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(b)].wonder ? perWonder : 0;
+    {
+        const CivAbility& ab = civAbility(c->owner);
+        for (TypeIndex b : c->buildings) {
+            const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
+            rep.amenities += bt.wonder ? ab.amenityPerWonder : 0;
+            for (const auto& [district, n] : ab.districtBuildingAmenities) rep.amenities += bt.districtType == district && district != kNone ? n : 0;
+        }
+        PlayerId holder = kNoPlayer;
+        if (ab.governorAmenity > 0 && establishedGovernor(*c, &holder) && holder == c->owner) rep.amenities += ab.governorAmenity;
+        const int religion = state_.players[static_cast<size_t>(c->owner)].religion;
+        const int majority = cityMajorityReligion(*c);
+        if (ab.foreignReligionAmenity > 0 && majority >= 0 && majority != religion) rep.amenities += ab.foreignReligionAmenity;
+        if (c->capital && ab.capitalAmenityPerKills > 0)
+            rep.amenities += std::min(ab.capitalAmenityMax, state_.players[static_cast<size_t>(c->owner)].killsThisEra / ab.capitalAmenityPerKills);
     }
     for (const Hex& h : state_.grid.within(c->pos, 3)) {
         const Plot& ip = state_.plot(h);
@@ -221,6 +238,12 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // Leader ability: while at peace with every major civ (Edo Peace).
+        if (civAbility(c->owner).peaceYieldPercent[i] > Fixed()) {
+            bool peace = true;
+            for (const Player& o : state_.players) peace = peace && !(o.id != c->owner && isMajorCiv(o.id) && atWar(c->owner, o.id));
+            if (peace) pct += static_cast<int>(civAbility(c->owner).peaceYieldPercent[i].toInt());
+        }
         // Difficulty: AI cities at Immortal and Deity (00-overview: Difficulty levels).
         if (difficultyAi(c->owner)) {
             const bool sciCulFaith = i == idx(YieldType::Science) || i == idx(YieldType::Culture) || i == idx(YieldType::Faith);
@@ -263,6 +286,19 @@ CityReport Game::cityReport(CityId id) const {
         PlayerId holder = kNoPlayer;
         if (ab.governorGold > 0 && establishedGovernor(*c, &holder) && holder == c->owner)
             rep.yields[idx(YieldType::Gold)] += Fixed::fromInt(ab.governorGold);
+    }
+    // Leader abilities on the city's buildings and wonders (Carolingian Renaissance, Builder of Monuments).
+    {
+        const CivAbility& ab = civAbility(c->owner);
+        for (TypeIndex bi : c->buildings) {
+            const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
+            for (const auto& [district, y] : ab.districtBuildingYields) {
+                if (b.districtType == district && district != kNone) {
+                    for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += y[i];
+                }
+            }
+            if (b.wonder) rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.wonderCulture);
+        }
     }
     // A district project turns part of the city's production into a yield while it runs (03: Projects).
     if (!c->queue.empty() && c->queue.front().kind == ProductionKind::Project) {
@@ -728,7 +764,8 @@ bool Game::completeItem(City& city, ProductionItem item) {
             const int pct = rules_->buildings[static_cast<size_t>(bi)].trainedXpPercent;
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
         }
-        if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt());
+        if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
+                                              (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
         assignCitizens(city);
         refreshVisibility(city.owner);
     } else if (item.kind == ProductionKind::District) {
@@ -932,9 +969,18 @@ void Game::processCities(PlayerId pid) {
         } else {
             const ProductionItem item = city.queue.front();
             if (item.kind == ProductionKind::Unit) {
-                // Policies such as Agoge speed production toward some units.
-                const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
+                // Policies such as Agoge speed production toward some units; a leader's domain (Sea Dogs).
+                const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt()) +
+                                civAbility(pid).domainProductionPercent[static_cast<size_t>(rules_->units[static_cast<size_t>(item.type)].domain)];
                 prod = prod * std::max(0, pct) / 100;
+            } else if (item.kind == ProductionKind::Building && !rules_->buildings[static_cast<size_t>(item.type)].wonder) {
+                // Leader abilities: City Center buildings (City of Marble), walls (Standardization).
+                const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
+                const CivAbility& ab = civAbility(pid);
+                int pct = 100;
+                if (b.district == "DISTRICT_CITY_CENTER") pct += ab.cityCenterBuildingProductionPercent;
+                if (b.outerDefenseHp > 0) pct += ab.wallProductionPercent;
+                prod = prod * pct / 100;
             } else if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder) {
                 // Civ ability: faster wonders of some eras (France).
                 const CivAbility& ab = civAbility(pid);

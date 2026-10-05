@@ -351,7 +351,7 @@ public:
 
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;
-    // The player's civ ability (an empty one for city-states, barbarians and Free Cities).
+    // The player's civ and leader abilities together (empty for city-states, barbarians and Free Cities).
     const CivAbility& civAbility(PlayerId player) const;
     bool difficultyAi(PlayerId player) const;     // an AI-run major civ
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ

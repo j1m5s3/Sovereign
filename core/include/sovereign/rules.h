@@ -818,11 +818,35 @@ struct CivAbility {
     Fixed freshWaterFarmHousing;        // per farm next to a river
     int mountainDistrictProductionPercent = 0;  // in cities next to a mountain
     int mountainProduction = 0;         // mountains can be worked for this much production
+    // Leader abilities (Leader details) use the same struct; these fields are theirs so far.
+    std::array<int, 3> domainProductionPercent{};  // toward units of a Domain (Land, Sea, Air)
+    std::vector<std::pair<TypeIndex, int>> greatPersonPercent;  // +% points of a great person class
+    int intercontinentalRouteGold = 0;  // international routes to another landmass
+    Yields internationalRouteYields{};
+    std::vector<std::pair<TypeIndex, Yields>> districtBuildingYields;  // per building in that district
+    std::vector<std::pair<TypeIndex, int>> districtBuildingAmenities;
+    struct NearLeader { std::string unitClass; int amount = 0, range = 0; };
+    std::vector<NearLeader> strengthNearLeader;
+    int cityCenterBuildingProductionPercent = 0, wallProductionPercent = 0;
+    int governorAmenity = 0;            // in cities with an established governor
+    std::vector<TypeIndex> grantAbilities;  // to its units of the ability's classes
+    int capturedCityLoyalty = 0;        // per turn in cities another civ founded
+    int foreignReligionAmenity = 0;     // in its cities following another religion
+    int nearFollowingCityStrength = 0, nearFollowingCityRange = 0;
+    int extraBuilderCharges = 0;
+    Yields peaceYieldPercent{};         // while at peace with every major civ
+    int wonderCulture = 0;              // per wonder in the city
+    TypeIndex faithPurchaseDistrict = kNone;  // that district's buildings can be bought with Faith
+    int killFaithPercent = 0;           // Faith per kill: % of the victim's strength
+    int capitalAmenityPerKills = 0, capitalAmenityMax = 0;  // +1 in the capital per that many kills this era
+    int mountainCityHousing = 0;        // in cities next to a mountain
 };
 
 struct CivType {
     std::string id, name, leader;
-    CivAbility ability;
+    CivAbility ability;         // the civ's own (Civ abilities, uniques and dynasties)
+    CivAbility leaderAbility;   // its launch leader's (Leader details)
+    CivAbility combined;        // both, as the rules apply them
     std::vector<std::string> cityNames;
     Agenda agenda = Agenda::None;
     std::string agendaId, agendaName, agendaText;

@@ -852,7 +852,7 @@ const CivAbility& Game::civAbility(PlayerId player) const {
     static const CivAbility none;
     if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return none;
     const TypeIndex civ = state_.players[static_cast<size_t>(player)].civ;
-    return civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size() ? none : rules_->civs[static_cast<size_t>(civ)].ability;
+    return civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size() ? none : rules_->civs[static_cast<size_t>(civ)].combined;
 }
 
 const DifficultyType& Game::difficulty() const {
