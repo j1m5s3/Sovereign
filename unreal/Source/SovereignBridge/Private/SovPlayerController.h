@@ -116,6 +116,12 @@ protected:
 	bool HandleSessionScreens();
 	void OpenChat();
 	void CloseChat();
+public:
+	// The main menu (single player, hot seat, host or join on the network or through Steam).
+	void OpenMenu();
+protected:
+	void CloseMenu();
+	void StartFromMenu(const struct FSovSetup& Setup);
 	void OpenDiplomacy(sov::PlayerId Leader);
 	void UpdateDiplomacy();
 	void CloseDiplomacy();
@@ -159,5 +165,6 @@ protected:
 	TSharedPtr<SSovDiplomacyPanel> DiplomacyPanel;
 	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
 	TSharedPtr<class SWidget> ChatBox;
+	TSharedPtr<class SWidget> Menu;
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

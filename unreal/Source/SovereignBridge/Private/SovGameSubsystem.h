@@ -22,6 +22,7 @@ public:
 	bool StartGame(const FSovSetup& Setup);
 
 	bool IsRunning() const { return Session.IsRunning(); }
+	bool IsActive() const { return Session.IsActive(); }  // running, or in an online lobby
 	const FSovSession& GetSession() const { return Session; }
 	FSovSession& GetSessionMut() { return Session; }
 	const sov::Game& GetGame() const { return Session.GetGame(); }

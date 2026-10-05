@@ -57,10 +57,16 @@ struct FSovSetup
 	FString PlayerName = TEXT("Player");
 	// Hosting: start by itself once this many players have joined (0: wait for Enter).
 	int32 AutoStartPlayers = 0;
+	// Online through Steam (a friends-only lobby and Steam's networking) instead of TCP.
+	bool bSteam = false;
+	uint64 SteamLobby = 0;  // joining: this lobby (0: wait for an invite)
 
 	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo, -SovNavalDemo,
-	// -SovDiploDemo, -SovHotSeat=N (N human seats), -SovHost (with -SovHumans=N), -SovJoin=address, -SovPort=, -SovName= and -SovAutoStart=N.
+	// -SovDiploDemo, -SovHotSeat=N (N human seats), -SovHost (with -SovHumans=N), -SovJoin=address, -SovPort=, -SovName=, -SovAutoStart=N,
+	// -SovSteam (with -SovHost, or alone to join through an invite) and -SovSteamLobby=id.
 	static FSovSetup FromCommandLine();
+	// Whether the command line asks for a game at once (any -Sov start option); otherwise the menu opens.
+	static bool HasStartOptions();
 	static FString DefaultRulesDir();
 };
 
@@ -101,6 +107,9 @@ public:
 	bool InLobby() const;
 	// Seat table and status for the lobby screen.
 	TArray<FString> LobbyLines() const;
+	bool UsesSteam() const { return bSteam; }
+	// Steam: opens the overlay to invite friends to the lobby.
+	void InviteFriends();
 	bool StartHostedGame(FString& OutError);
 	void Chat(const FString& Text);
 	// Joins, leaves, chat and resyncs since the last call.
@@ -129,6 +138,8 @@ private:
 	bool bStalled = false;
 	int32 ViewSeat = 0;
 	int32 AutoStartPlayers = 0;
+	bool bSteam = false;
+	FString LocalName;
 	bool bHandover = false;
 	const sov::Game* SeenGame = nullptr;  // online: which game object, and how long its log, at the last Poll
 	size_t SeenLog = 0;

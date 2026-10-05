@@ -382,7 +382,9 @@ void ASovHUD::DrawHUD()
 	if (Sub && Sub->GetSession().InLobby())
 	{
 		const bool bHost = Sub->GetSession().NetMode() == ESovNet::Host;
-		Line(bHost ? TEXT("Hosting a game. Enter starts it; open seats are played by the AI. M: chat")
+		const bool bSteam = Sub->GetSession().UsesSteam();
+		Line(bHost ? (bSteam ? TEXT("Hosting a game for Steam friends. F: invite friends. Enter starts it; open seats are played by the AI. M: chat")
+							 : TEXT("Hosting a game. Enter starts it; open seats are played by the AI. M: chat"))
 				   : TEXT("In the host's lobby. Waiting for the game to start. M: chat"),
 			16, Y, FLinearColor(1.f, 0.85f, 0.45f));
 		for (const FString& L : Sub->GetSession().LobbyLines()) Line(L, 32, Y);
@@ -393,7 +395,8 @@ void ASovHUD::DrawHUD()
 	}
 	if (!Sub || !Sub->IsRunning())
 	{
-		Line(Sub ? Sub->LastMessage : FString(TEXT("No game")), 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
+		// The main menu draws itself; only a failure needs a line here.
+		if (Sub && !Sub->LastMessage.IsEmpty()) Line(Sub->LastMessage, 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
 		return;
 	}
 	// Hot seat: the screen stays dark until the next human takes over (their fog of war).

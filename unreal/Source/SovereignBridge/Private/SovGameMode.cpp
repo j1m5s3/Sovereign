@@ -66,11 +66,12 @@ void ASovGameMode::StartPlay()
 
 	USovGameSubsystem* Sub = GetGameInstance()->GetSubsystem<USovGameSubsystem>();
 	StateChangedHandle = Sub->OnStateChanged.AddUObject(this, &ASovGameMode::OnStateChanged);
-	if (!Sub->IsRunning())
+	const bool bMenu = !Sub->IsActive() && !FSovSetup::HasStartOptions();
+	if (!Sub->IsActive() && !bMenu)
 	{
 		Sub->StartGame(FSovSetup::FromCommandLine());
 	}
-	else
+	else if (Sub->IsRunning())
 	{
 		OnStateChanged();
 	}
@@ -79,6 +80,10 @@ void ASovGameMode::StartPlay()
 	{
 		PC->SetMap(Map);
 		PC->CenterOnHome();
+		if (bMenu)
+		{
+			PC->OpenMenu();  // no start options: the player chooses
+		}
 	}
 }
 
