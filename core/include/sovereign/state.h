@@ -335,6 +335,7 @@ struct Player {
     int favor = 0;                        // Diplomatic Favor [GS]
     int64_t co2 = 0;                      // CO2 it has emitted [GS]
     int diplomaticVictoryPoints = 0;      // [GS]
+    int lightYears = 0;                   // the exoplanet expedition's distance travelled (09: Science victory)
     int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).
     int warsDeclared = 0, surpriseWars = 0, citiesCaptured = 0, citiesRazed = 0, tradersPlundered = 0, assassinsSent = 0;
@@ -395,6 +396,7 @@ struct GameSetup {
     bool religiousVictory = true;  // 06: Religious victory
     bool cultureVictory = true;    // 07: Tourism and Culture Victory
     bool diplomaticVictory = true; // 08: Diplomatic Victory [GS]
+    bool scienceVictory = true;    // 09: Science victory [GS] (the exoplanet expedition)
     int disasterIntensity = 2;     // 0 Minimal .. 4 Hyperreal; -1: no natural disasters (09 [GS])
     int difficulty = 3;            // Rules::difficulties: 0 Settler .. 3 Prince .. 7 Deity
     int cityStates = -1;           // city-states to place (-1: the map size's default)
@@ -405,7 +407,7 @@ struct GameSetup {
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
-enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic };
+enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };
 
 // An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
 // for a few turns, then strikes when the target leader is exposed.

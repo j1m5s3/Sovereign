@@ -411,6 +411,7 @@ struct DistrictType {
     bool floodplainsRiver = false;  // on Floodplains along a river (Dam)
     bool preventsDrought = false, preventsFloods = false;  // for its city's plots [GS]
     std::vector<TypeIndex> exclusiveWith;  // not in a city that has one of these
+    std::vector<TypeIndex> validTerrains;  // only on these terrains (empty: any; Spaceport: flat land)
     std::vector<std::string> exclusiveIds;  // (loading only)
 };
 

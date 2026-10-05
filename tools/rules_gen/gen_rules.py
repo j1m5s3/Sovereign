@@ -481,7 +481,8 @@ def gen_promotions():
 
 
 def gen_buildings():
-    rows = [r for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")]
+    # The Spaceport's "rockets" are internal markers of launch art (cost 1, no effect), not buildings.
+    rows = [r for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to") and r["District"] != "Spaceport"]
     ids = {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in rows}
     out = []
     for row in rows:
@@ -553,7 +554,7 @@ def gen_barbarians():
 # placement rules not modelled yet (flat land, rivers, aqueduct rules) and arrive with their systems.
 PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor",
                        "Aqueduct", "Neighborhood", "Entertainment Complex", "Water Park", "Dam", "Preserve",
-                       "Government Plaza", "Diplomatic Quarter"]
+                       "Government Plaza", "Diplomatic Quarter", "Spaceport"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
                  "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
@@ -644,6 +645,10 @@ def gen_districts():
                 d["preventsDrought"] = True
             if "prevents floods" in flags:
                 d["preventsFloods"] = True
+            terrains = terrain_names()
+            valid = [terrains[t.strip()] for t in (extra[name]["Valid terrain"] or "").split(",") if t.strip() in terrains]
+            if valid:
+                d["validTerrains"] = valid  # flat land only (Spaceport, Aerodrome, Canal)
             bands = re.findall(r"appeal>=(-?\d+): \+?(-?\d+)", extra[name]["Appeal housing"] or "")
             if bands:
                 d["appealHousing"] = [[int(a), int(b)] for a, b in bands]

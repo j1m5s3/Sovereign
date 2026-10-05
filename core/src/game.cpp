@@ -864,6 +864,7 @@ void Game::beginGlobalTurn() {
     processWorldCongress();
     processClimate();
     processProfiles();
+    processSpaceRace();
     processReligion();
     processAgents();
     processFreeCities();

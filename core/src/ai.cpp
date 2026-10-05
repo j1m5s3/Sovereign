@@ -266,7 +266,7 @@ Posture assess(const Game& g, PlayerId me, int sites) {
         victories.push_back({Strategy::ScienceVictory,
                              (good(mySci, sciSum) ? 1 : 0) + (era >= 3 ? 1 : 0) + (cities > 0 && campuses * 2 >= cities ? 1 : 0) +
                                  (rivals > 0 && myTechs * rivals * 100 >= techSum * 115 ? 1 : 0) + (myStrength < maxStrength ? 1 : 0),
-                             3, false, false});
+                             3, g.expeditionSpeed(me) > 0, !s.setup.scienceVictory});  // exclusive once the expedition flies
         const bool nearCulture = maxDomestic > 0 && g.visitingTourists(me) * 4 >= maxDomestic * 3;
         victories.push_back({Strategy::CultureVictory, (good(myCul, culSum) ? 1 : 0) + (greatWorks >= 1 ? 1 : 0) + (greatWorks >= 3 ? 1 : 0), 3,
                              nearCulture, !s.setup.cultureVictory});
@@ -1314,6 +1314,14 @@ void production(View& v) {
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
                     value = value * districtPercent(v, d) / 100;
+                    // The Spaceport (09: Science victory): one per civ, in its most productive city first.
+                    if (d.id == "DISTRICT_SPACEPORT") {
+                        const bool another = std::any_of(v.cities.begin(), v.cities.end(), [&](CityId o) {
+                            return o != cid && s.city(o)->district(it.type, false) != nullptr;
+                        });
+                        const int prod = static_cast<int>(rep.yields[yi(YieldType::Production)].toInt());
+                        value = another ? 0 : (v.posture.has(Strategy::ScienceVictory) ? 4000 : 1500) + prod * 20;
+                    }
                     break;
                 }
                 case ProductionKind::Project: {
@@ -1323,6 +1331,8 @@ void production(View& v) {
                     int gpp = 0;
                     for (const auto& p : pj.greatPersonPoints) gpp += p.second;
                     if (pj.converts || gpp > 0) value = 30 + gpp * 2 + (pj.converts ? pj.conversionPercent : 0);
+                    // The space race (09: Science victory): every step brings the expedition closer.
+                    if (pj.spaceRace) value = v.posture.has(Strategy::ScienceVictory) ? 1500 : 800;
                     for (const ProjectEffect& e : pj.effects) {
                         switch (e.kind) {
                             case ProjectEffectKind::Loyalty: value = std::max(value, c.loyalty < 60 ? 400 : 0); break;

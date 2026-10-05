@@ -79,6 +79,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.religiousVictory);
     w.boolean(s.cultureVictory);
     w.boolean(s.diplomaticVictory);
+    w.boolean(s.scienceVictory);
     w.i32(s.disasterIntensity);
     w.i32(s.difficulty);
     w.i32(s.turnLimit);
@@ -105,6 +106,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.religiousVictory = r.boolean();
     s.cultureVictory = r.boolean();
     s.diplomaticVictory = r.boolean();
+    s.scienceVictory = r.boolean();
     s.disasterIntensity = r.i32();
     s.difficulty = r.i32();
     s.turnLimit = r.i32();
@@ -356,6 +358,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, p.grievances);
         w.i32(p.favor);
         w.i32(p.diplomaticVictoryPoints);
+        w.i32(p.lightYears);
         w.i64(p.co2);
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
@@ -722,6 +725,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, p.grievances)) return false;
         p.favor = r.i32();
         p.diplomaticVictoryPoints = r.i32();
+        p.lightYears = r.i32();
         p.co2 = r.i64();
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();

@@ -92,3 +92,44 @@ TEST(projects_survive_a_save) {
     CHECK(loaded->state().cities[0].queue.front() == project("PROJECT_CAMPUS_RESEARCH_GRANTS"));
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(the_spaceport_needs_flat_land) {
+    GameState s = campusTown();
+    Player& p = s.players[0];
+    p.techs.done[at(rules().tech("TECH_ROCKETRY"))] = 1;
+    s.plot({6, 8}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const City& c = g->state().cities[0];
+    const TypeIndex port = rules().district("DISTRICT_SPACEPORT");
+    CHECK(g->canPlaceDistrict(c, port, {6, 7}));
+    CHECK(!g->canPlaceDistrict(c, port, {6, 8}));  // hills
+}
+
+TEST(the_space_race_and_the_science_victory) {
+    GameState s = campusTown();
+    s.cities[0].districts.push_back({rules().district("DISTRICT_SPACEPORT"), {6, 7}, true});
+    Player& p = s.players[0];
+    for (const char* t : {"TECH_ROCKETRY", "TECH_SATELLITES"}) p.techs.done[at(rules().tech(t))] = 1;
+    p.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(g->canProduce(g->state().cities[0], project("PROJECT_LAUNCH_EARTH_SATELLITE")));
+    CHECK(!g->canProduce(g->state().cities[0], project("PROJECT_LAUNCH_MOON_LANDING")));  // the satellite first
+    g->completeProject(g->stateMutForTests().cities[0], rules().project("PROJECT_LAUNCH_EARTH_SATELLITE"));
+    CHECK(std::all_of(g->state().players[0].visibility.begin(), g->state().players[0].visibility.end(), [](uint8_t v) { return v != 0; }));
+    CHECK(g->canProduce(g->state().cities[0], project("PROJECT_LAUNCH_MOON_LANDING")));
+    CHECK(!g->canProduce(g->state().cities[0], project("PROJECT_LAUNCH_EARTH_SATELLITE")));  // once
+    CHECK_EQ(g->expeditionSpeed(0), 0);
+    // The expedition, two laser stations: 3 light-years a turn; 50 to arrive.
+    for (const char* pj : {"PROJECT_LAUNCH_MOON_LANDING", "PROJECT_LAUNCH_MARS_COLONY", "PROJECT_LAUNCH_EXOPLANET_EXPEDITION",
+                           "PROJECT_BUILD_TERRESTRIAL_LASER_STATION", "PROJECT_BUILD_TERRESTRIAL_LASER_STATION"})
+        g->completeProject(g->stateMutForTests().cities[0], rules().project(pj));
+    CHECK_EQ(g->expeditionSpeed(0), 3);
+    g->stateMutForTests().players[0].lightYears = 46;
+    endTurns(*g, 1);
+    CHECK_EQ(g->state().players[0].lightYears, 49);
+    CHECK(!g->gameOver());
+    endTurns(*g, 1);
+    REQUIRE(g->gameOver());
+    CHECK(g->state().victory == Victory::Science);
+    CHECK_EQ(g->state().winner, 0);
+}

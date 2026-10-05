@@ -1583,9 +1583,9 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
+    "district": "DISTRICT_SPACEPORT",
     "untracked": [
-     "IncompleteSpaceRaceProject",
-     "CompletedDistrictType=Spaceport"
+     "IncompleteSpaceRaceProject"
     ]
    },
    "effects": [
@@ -1632,9 +1632,7 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "CompletedDistrictType=Spaceport"
-    ]
+    "district": "DISTRICT_SPACEPORT"
    },
    "untrackedEffects": [
     "+100% Production toward space race projects in all your cities"
@@ -2729,9 +2727,9 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
+    "district": "DISTRICT_SPACEPORT",
     "untracked": [
-     "IncompleteSpaceRaceProject",
-     "CompletedDistrictType=Spaceport"
+     "IncompleteSpaceRaceProject"
     ]
    },
    "effects": [
@@ -2749,9 +2747,7 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "CompletedDistrictType=Spaceport"
-    ]
+    "district": "DISTRICT_SPACEPORT"
    },
    "untrackedEffects": [
     "+100% Production toward space race projects in all your cities"
