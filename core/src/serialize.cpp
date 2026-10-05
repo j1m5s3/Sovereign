@@ -116,7 +116,8 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Religious)) return false;
     if ((s.winner == kNoPlayer) != (s.victory == Victory::None) || s.setup.turnLimit < 0) return false;
     for (const Player& p : s.players) {
-        if (!inRange(p.civ, rules.civs.size(), p.barbarian)) return false;
+        if (!inRange(p.civ, rules.civs.size(), p.barbarian || p.cityState != kNone)) return false;
+        if (!inRange(p.cityState, rules.cityStates.size(), true)) return false;
     }
     for (size_t i = 0; i < s.units.size(); ++i) {
         const Unit& u = s.units[i];
@@ -247,6 +248,11 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end()));
         w.i16(p.pantheon);
         w.i16(p.religion);
+        w.i16(p.cityState);
+        writeI32s(w, std::vector<int32_t>(p.envoys.begin(), p.envoys.end()));
+        w.i32(p.envoyTokens);
+        w.i32(p.influence);
+        w.i8(p.firstMetBy);
         w.u32(static_cast<uint32_t>(p.relations.size()));
         for (const Relation& rel : p.relations) {
             w.boolean(rel.war);
@@ -475,6 +481,12 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (int32_t v : trained) p.greatPeopleActivated.push_back(static_cast<TypeIndex>(v));
         p.pantheon = r.i16();
         p.religion = r.i16();
+        p.cityState = r.i16();
+        if (!readI32s(r, trained)) return false;
+        p.envoys.assign(trained.begin(), trained.end());
+        p.envoyTokens = r.i32();
+        p.influence = r.i32();
+        p.firstMetBy = r.i8();
         uint32_t nrel = r.u32();
         if (!r.checkCount(nrel, 6)) return false;
         p.relations.resize(nrel);

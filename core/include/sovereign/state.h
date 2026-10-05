@@ -217,6 +217,11 @@ struct Player {
     std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
     std::vector<TypeIndex> greatPeopleActivated;  // individuals whose permanent effects apply
     TypeIndex pantheon = kNone;   // Rules::beliefs (06: Pantheon)
+    TypeIndex cityState = kNone;  // Rules::cityStates: a city-state (one city, no expansion; 08)
+    std::vector<int> envoys;      // per player: envoys this player sent to that city-state
+    int envoyTokens = 0;          // envoys waiting to be sent
+    int influence = 0;            // points toward the next envoys
+    PlayerId firstMetBy = kNoPlayer;  // a city-state: the first major civ to meet it (gets an envoy)
     int16_t religion = -1;        // the religion it founded (GameState::religions index)
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
@@ -250,6 +255,7 @@ struct GameSetup {
     bool dominationVictory = true;
     bool scoreVictory = true;
     bool religiousVictory = true;  // 06: Religious victory
+    int cityStates = -1;           // city-states to place (-1: the map size's default)
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
     // off in headless games, on in the Unreal front end.

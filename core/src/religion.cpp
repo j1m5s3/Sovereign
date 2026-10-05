@@ -14,7 +14,7 @@ size_t at(TypeIndex i) { return static_cast<size_t>(i); }
 
 int speedPercent(const GameState& s, const Rules& r) { return r.speeds[at(r.speed(s.setup.speed))].costPercent; }
 
-bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity; }
+bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity && p.cityState == kNone; }
 
 bool beliefTaken(const GameState& s, TypeIndex belief) {
     for (const Player& p : s.players) {

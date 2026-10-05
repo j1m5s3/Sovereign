@@ -55,6 +55,7 @@ enum class CommandType : uint8_t {
     EvangelizeBelief = 36,      // id = Apostle, arg = a Worship, Enhancer (or missing) belief for its religion
     SpreadReligion = 37,        // id = religious unit in a city's territory: spread its religion there
     StartTradeRoute = 38,       // id = Trader in one of the player's cities, arg = destination city
+    SendEnvoy = 39,             // arg = a city-state player the sender has met
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -149,6 +150,7 @@ struct Command {
         return {CommandType::EvangelizeBelief, p, apostle, {}, belief, 0};
     }
     static Command spreadReligion(PlayerId p, UnitId u) { return {CommandType::SpreadReligion, p, u, {}, 0, 0}; }
+    static Command sendEnvoy(PlayerId p, PlayerId cityState) { return {CommandType::SendEnvoy, p, -1, {}, cityState, 0}; }
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }
@@ -209,6 +211,7 @@ enum class CommandError : uint8_t {
     CannotFoundReligion,
     CannotSpread,
     CannotTrade,
+    CannotSendEnvoy,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

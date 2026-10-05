@@ -14,7 +14,7 @@ int Game::turnLimit() const {
 
 int Game::score(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
-    if (p.barbarian) return 0;
+    if (p.barbarian || p.cityState != kNone) return 0;
     auto count = [](const std::vector<uint8_t>& done) { return static_cast<int>(std::count(done.begin(), done.end(), 1)); };
     int total = 3 * count(p.civics.done) + 2 * count(p.techs.done);
     for (const City& c : state_.cities) {
@@ -34,7 +34,7 @@ void Game::checkVictory() {
     int majors = 0, alive = 0;
     PlayerId last = kNoPlayer;
     for (const Player& p : state_.players) {
-        if (p.barbarian) continue;
+        if (p.barbarian || p.cityState != kNone) continue;
         ++majors;
         if (p.alive) {
             ++alive;
@@ -45,10 +45,10 @@ void Game::checkVictory() {
         // Domination: hold the original capital of every other major civ (alive or not;
         // one that never founded a city is skipped once it is out).
         for (const Player& p : state_.players) {
-            if (p.barbarian || !p.alive) continue;
+            if (p.barbarian || p.cityState != kNone || !p.alive) continue;
             bool all = true, any = false;
             for (const Player& q : state_.players) {
-                if (q.barbarian || q.id == p.id) continue;
+                if (q.barbarian || q.cityState != kNone || q.id == p.id) continue;
                 const City* capital = nullptr;
                 for (const City& c : state_.cities) {
                     if (c.originalCapital && c.originalOwner == q.id) capital = &c;
@@ -74,7 +74,7 @@ void Game::checkVictory() {
         PlayerId best = kNoPlayer;
         int bestScore = -1;
         for (const Player& p : state_.players) {
-            if (p.barbarian || !p.alive) continue;
+            if (p.barbarian || p.cityState != kNone || !p.alive) continue;
             const int s = score(p.id);
             if (s > bestScore) {
                 bestScore = s;

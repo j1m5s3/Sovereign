@@ -50,7 +50,8 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const sov::Player& P = S.players[static_cast<size_t>(Me)];
 	const FString Civ = P.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(P.civ)].name);
 	const sov::Player& Current = S.players[static_cast<size_t>(S.currentPlayer)];
-	const FString CurrentName = Current.civ == sov::kNone ? TEXT("Barbarians") : Str(R.civs[static_cast<size_t>(Current.civ)].name);
+	const FString CurrentName = Current.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(Current.cityState)].name)
+		: Current.civ == sov::kNone ? FString(TEXT("Barbarians")) : Str(R.civs[static_cast<size_t>(Current.civ)].name);
 
 	Line(FString::Printf(TEXT("Turn %d / %d   %s%s"), S.turn, G.turnLimit(), *Civ, Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")), 16, Y);
 	Line(FString::Printf(TEXT("Gold %s (%+s)   Science %s   Culture %s   Score %d"), *Str(P.gold.toString()),
@@ -81,6 +82,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			Faith += FString::Printf(TEXT("   Religion: %s, followed in %d cities"), *Str(R.religions[static_cast<size_t>(Rel.type)].name), Cities);
 		}
 		Line(Faith, 16, Y);
+	}
+	if (P.envoyTokens > 0)
+	{
+		Line(FString::Printf(TEXT("Envoys to send: %d   O: city-states"), P.envoyTokens), 16, Y, FLinearColor(0.6f, 0.9f, 1.f));
 	}
 	if (G.tradeRouteCapacity(Me) > 0)
 	{
@@ -119,6 +124,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		auto CivOf = [&](sov::PlayerId Id) {
 			const sov::Player& X = S.players[static_cast<size_t>(Id)];
+			if (X.cityState != sov::kNone) return Str(R.cityStates[static_cast<size_t>(X.cityState)].name);
 			return X.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(X.civ)].name);
 		};
 		FString Text;

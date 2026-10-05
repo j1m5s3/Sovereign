@@ -64,6 +64,7 @@
    "prereqs": [
     "CIVIC_FOREIGN_TRADE"
    ],
+   "envoys": 1,
    "boost": {
     "percent": 40,
     "text": "found a pantheon",
@@ -156,6 +157,7 @@
     "CIVIC_MILITARY_TRADITION",
     "CIVIC_GAMES_AND_RECREATION"
    ],
+   "envoys": 1,
    "boost": {
     "percent": 40,
     "text": "build an Encampment",
@@ -173,6 +175,7 @@
     "CIVIC_DRAMA_AND_POETRY",
     "CIVIC_MYSTICISM"
    ],
+   "envoys": 1,
    "boost": {
     "percent": 40,
     "text": "found a religion",
@@ -219,6 +222,7 @@
    "prereqs": [
     "CIVIC_DEFENSIVE_TACTICS"
    ],
+   "envoys": 1,
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Quadrireme",
@@ -266,6 +270,7 @@
     "CIVIC_MILITARY_TRAINING",
     "CIVIC_FEUDALISM"
    ],
+   "envoys": 1,
    "boost": {
     "percent": 40,
     "text": "have 8 land combat units",
@@ -423,6 +428,7 @@
    "prereqs": [
     "CIVIC_MERCANTILISM"
    ],
+   "envoys": 2,
    "boost": {
     "percent": 40,
     "text": "research Astronomy",
@@ -438,6 +444,7 @@
    "prereqs": [
     "CIVIC_THE_ENLIGHTENMENT"
    ],
+   "envoys": 2,
    "boost": {
     "percent": 40,
     "text": "build an Art Museum",
@@ -483,6 +490,7 @@
    "prereqs": [
     "CIVIC_COLONIALISM"
    ],
+   "envoys": 2,
    "boost": {
     "percent": 40,
     "text": "build an Archaeological Museum",
@@ -515,6 +523,7 @@
    "prereqs": [
     "CIVIC_NATIONALISM"
    ],
+   "envoys": 2,
    "boost": {
     "percent": 40,
     "text": "own 2 Field Cannons",
@@ -531,6 +540,7 @@
    "prereqs": [
     "CIVIC_NATURAL_HISTORY"
    ],
+   "envoys": 3,
    "boost": {
     "percent": 40,
     "text": "have a Neighborhood with appeal 4+",
@@ -666,6 +676,7 @@
    "prereqs": [
     "CIVIC_CONSERVATION"
    ],
+   "envoys": 3,
    "boost": {
     "percent": 40,
     "text": "have a themed building",
@@ -841,6 +852,7 @@
     "CIVIC_ENVIRONMENTALISM",
     "CIVIC_GLOBALIZATION"
    ],
+   "envoys": 3,
    "boost": {
     "percent": 90,
     "text": "adopt a Tier4 government",
@@ -853,6 +865,7 @@
    "name": "Global Warming Mitigation",
    "era": "ERA_FUTURE",
    "cost": 3200,
+   "envoys": 3,
    "prereqs": [
     "CIVIC_ENVIRONMENTALISM",
     "CIVIC_GLOBALIZATION",

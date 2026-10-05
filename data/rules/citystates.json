@@ -1,0 +1,762 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "cityStates": [
+  {
+   "id": "CITYSTATE_AKKAD",
+   "name": "Akkad",
+   "type": "MILITARISTIC",
+   "suzerainText": "Melee units deal full damage to walls (whole game) for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled; Anti Cavalry units deal full damage to walls (whole game) for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_ANTANANARIVO",
+   "name": "Antananarivo",
+   "type": "CULTURAL",
+   "suzerainText": "+2% Culture per Great Person earned for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_VENICE",
+   "name": "Venice",
+   "type": "TRADE",
+   "suzerainText": "international routes +1 Gold per luxury at destination in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_ARMAGH",
+   "name": "Armagh",
+   "type": "RELIGIOUS",
+   "suzerainText": "can build Monastery for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_AUCKLAND",
+   "name": "Auckland",
+   "type": "INDUSTRIAL",
+   "suzerainText": "+1 Production on your tiles where tile is Coast and Lake for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Production on your tiles where tile is Coast and Lake and player era at least (EraType=Industrial Era) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_AYUTTHAYA",
+   "name": "Ayutthaya",
+   "type": "CULTURAL",
+   "suzerainText": "on completing a building, Culture = 10% of its cost in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_ANSHAN",
+   "name": "Anshan",
+   "type": "SCIENTIFIC",
+   "suzerainText": "Great Works of type Writing give +2 Science in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; Great Works of type Artifact give +1 Science in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; Great Works of type Relic give +1 Science in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_BOLOGNA",
+   "name": "Bologna",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+1 Great General points per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Admiral points per turn in all your cities where city has Lighthouse for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Engineer points per turn in all your cities where city has Workshop for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Merchant points per turn in all your cities where city has Market for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Prophet points per turn in all your cities where city has Shrine for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Scientist points per turn in all your cities where city has Library for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Writer points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Artist points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Musician points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_BRUSSELS",
+   "name": "Brussels",
+   "type": "INDUSTRIAL",
+   "suzerainText": "adjust wonder production (Amount=15) in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_BUENOS_AIRES",
+   "name": "Buenos Aires",
+   "type": "INDUSTRIAL",
+   "suzerainText": "adjust owned bonus resource extra amenities (Amount=1) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_CAGUANA",
+   "name": "Caguana",
+   "type": "CULTURAL",
+   "suzerainText": "can build Batey for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_CAHOKIA",
+   "name": "Cahokia",
+   "type": "TRADE",
+   "suzerainText": "can build Cahokia Mounds for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_CARDIFF",
+   "name": "Cardiff",
+   "type": "INDUSTRIAL",
+   "suzerainText": "+2 Power (Free Power Source Misc) in all your cities where city has Lighthouse for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Power (Free Power Source Misc) in all your cities where city has Shipyard for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Power (Free Power Source Misc) in all your cities where city has Seaport for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_CHINGUETTI",
+   "name": "Chinguetti",
+   "type": "RELIGIOUS",
+   "suzerainText": "+1 Faith per follower for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_FEZ",
+   "name": "Fez",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+20 Science per pop when unit trained for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_GENEVA",
+   "name": "Geneva",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+15% Science in all your cities where player is at peace with all majors for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_GRANADA",
+   "name": "Granada",
+   "type": "MILITARISTIC",
+   "suzerainText": "can build Alcázar for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_HATTUSA",
+   "name": "Hattusa",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+2 Aluminum per turn where NOT has improved Aluminum and player has resource visibility (ResourceType=Aluminum) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Coal per turn where NOT has improved Coal and player has resource visibility (ResourceType=Coal) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Horses per turn where NOT has improved Horses and player has resource visibility (ResourceType=Horses) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Iron per turn where NOT has improved Iron and player has resource visibility (ResourceType=Iron) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Niter per turn where NOT has improved Niter and player has resource visibility (ResourceType=Niter) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Oil per turn where NOT has improved Oil and player has resource visibility (ResourceType=Oil) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Uranium per turn where NOT has improved Uranium and player has resource visibility (ResourceType=Uranium) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_HONG_KONG",
+   "name": "Hong Kong",
+   "type": "INDUSTRIAL",
+   "suzerainText": "+20% Production toward projects in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_HUNZA",
+   "name": "Hunza",
+   "type": "TRADE",
+   "suzerainText": "+0.2 Gold per tile of route for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_BANDAR_BRUNEI",
+   "name": "Bandar Brunei",
+   "type": "TRADE",
+   "suzerainText": "+1 Gold per Trading Post in foreign cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_JERUSALEM",
+   "name": "Jerusalem",
+   "type": "RELIGIOUS",
+   "suzerainText": "treat holy site as holy city (Value=yes) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_JOHANNESBURG",
+   "name": "Johannesburg",
+   "type": "INDUSTRIAL",
+   "suzerainText": "+1 Production per resource in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Production per resource in all your cities where has Industrialization for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_KABUL",
+   "name": "Kabul",
+   "type": "MILITARISTIC",
+   "suzerainText": "adjust unit attack experience modifier (Amount=100) for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_KANDY",
+   "name": "Kandy",
+   "type": "RELIGIOUS",
+   "suzerainText": "adjust natural wonder relic (Amount=1) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; Great Works of type Relic give Faith (scaling 150%) in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_KUMASI",
+   "name": "Kumasi",
+   "type": "CULTURAL",
+   "suzerainText": "routes to city-states +2 Culture per district for all players where is suzerain and player is at peace and player is suzerain bonus enabled; routes to city-states +1 Gold per district for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_LAHORE",
+   "name": "Lahore",
+   "type": "MILITARISTIC",
+   "suzerainText": "adjust player valid unit build (UnitType=Nihang) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_LA_VENTA",
+   "name": "La Venta",
+   "type": "RELIGIOUS",
+   "suzerainText": "can build Colossal Head for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_MOGADISHU",
+   "name": "Mogadishu",
+   "type": "TRADE",
+   "suzerainText": "ability Plunder Immunity at Sea [trade routes immune to plunder (Sea)] for your units where unit is Trader for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_MEXICO_CITY",
+   "name": "Mexico City",
+   "type": "INDUSTRIAL",
+   "suzerainText": "+3 regional range for your districts where district is Industrial Zone or district is Entertainment Complex or district is Water Park for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_MOHENJO_DARO",
+   "name": "Mohenjo-Daro",
+   "type": "CULTURAL",
+   "suzerainText": "adjust cities freshwater housing bonus (HasBonus=yes) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_MUSCAT",
+   "name": "Muscat",
+   "type": "TRADE",
+   "suzerainText": "adjust city amenities from city states (Amount=1) in all your cities where city has Commercial Hub for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_NALANDA",
+   "name": "Nalanda",
+   "type": "SCIENTIFIC",
+   "suzerainText": "can build Mahavihara for all players where is suzerain and player is at peace and player is suzerain bonus enabled; grants 1 random technology where player has improvement (ImprovementType=Mahavihara) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_NAN_MADOL",
+   "name": "Nan Madol",
+   "type": "CULTURAL",
+   "suzerainText": "+2 Culture from the district for your districts where plot is coast or plot adjacent to coast for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_NAZCA",
+   "name": "Nazca",
+   "type": "RELIGIOUS",
+   "suzerainText": "can build Nazca Line for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_NGAZARGAMU",
+   "name": "Ngazargamu",
+   "type": "MILITARISTIC",
+   "suzerainText": "20% cheaper to purchase Land units in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; 20% cheaper to purchase Land units in all your cities where city has Armory for all players where is suzerain and player is at peace and player is suzerain bonus enabled; 20% cheaper to purchase Land units in all your cities where city has Military Academy for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_MITLA",
+   "name": "Mitla",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+15% growth in all your cities where city has Campus for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_PRESLAV",
+   "name": "Preslav",
+   "type": "MILITARISTIC",
+   "suzerainText": "+2 Loyalty per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Armory for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Military Academy for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_RAPA_NUI",
+   "name": "Rapa Nui",
+   "type": "CULTURAL",
+   "suzerainText": "can build Moai for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_SAMARKAND",
+   "name": "Samarkand",
+   "type": "TRADE",
+   "suzerainText": "can build Trading Dome for all players where is suzerain and player is at peace and player is suzerain bonus enabled; international routes +1 Gold per Trading Dome in origin for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_SINGAPORE",
+   "name": "Singapore",
+   "type": "INDUSTRIAL",
+   "suzerainText": "adjust city yield per major trade partner (Amount=2, YieldType=Production) in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_TARUGA",
+   "name": "Taruga",
+   "type": "SCIENTIFIC",
+   "suzerainText": "+5% Science in all your cities where city has improved Aluminum for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Coal for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Horses for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Iron for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Niter for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Oil for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Uranium for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_VALLETTA",
+   "name": "Valletta",
+   "type": "MILITARISTIC",
+   "suzerainText": "50% cheaper to purchase Ancient Walls in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; 50% cheaper to purchase Medieval Walls in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; 50% cheaper to purchase Renaissance Walls in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; can buy buildings in City Center with Faith in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled; can buy buildings in Encampment with Faith in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_VATICAN_CITY",
+   "name": "Vatican City",
+   "type": "RELIGIOUS",
+   "suzerainText": "grant player religious pressure great person activated (Amount=400) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_VILNIUS",
+   "name": "Vilnius",
+   "type": "CULTURAL",
+   "suzerainText": "+50% to the district's Culture (adjacency) yield for your districts where district is Theater Square for all players where is suzerain and has an alliance of level 1+; +50% to the district's Culture (adjacency) yield for your districts where district is Theater Square for all players where is suzerain and has an alliance of level 2+; +50% to the district's Culture (adjacency) yield for your districts where district is Theater Square for all players where is suzerain and has an alliance of level 3+"
+  },
+  {
+   "id": "CITYSTATE_WOLIN",
+   "name": "Wolin",
+   "type": "MILITARISTIC",
+   "suzerainText": "ability Great General Points [Great General points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled; ability Wolin Naval Units [Great Admiral points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_YEREVAN",
+   "name": "Yerevan",
+   "type": "RELIGIOUS",
+   "suzerainText": "Apostle may choose any promotion for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  },
+  {
+   "id": "CITYSTATE_ZANZIBAR",
+   "name": "Zanzibar",
+   "type": "TRADE",
+   "suzerainText": "+1 Cinnamon (import) for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Cloves (import) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+  }
+ ],
+ "envoyBonuses": [
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_SMALL_INFLUENCE_CAPITAL",
+   "type": "SCIENTIFIC",
+   "envoys": 1,
+   "yield": "SCIENCE",
+   "amount": 1,
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_SMALL_INFLUENCE_ETHIOPIA",
+   "type": "SCIENTIFIC",
+   "envoys": 1,
+   "yield": "SCIENCE",
+   "amount": 1,
+   "building": "BUILDING_LIBRARY"
+  },
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_MEDIUM_INFLUENCE_ETHIOPIA",
+   "type": "SCIENTIFIC",
+   "envoys": 3,
+   "yield": "SCIENCE",
+   "amount": 2,
+   "building": "BUILDING_CONSULATE"
+  },
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_MEDIUM_INFLUENCE_UNIVERSITY",
+   "type": "SCIENTIFIC",
+   "envoys": 3,
+   "yield": "SCIENCE",
+   "amount": 2,
+   "building": "BUILDING_UNIVERSITY"
+  },
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_LARGE_INFLUENCE_ETHIOPIA",
+   "type": "SCIENTIFIC",
+   "envoys": 6,
+   "yield": "SCIENCE",
+   "amount": 3,
+   "building": "BUILDING_CHANCERY"
+  },
+  {
+   "id": "MINOR_CIV_SCIENTIFIC_LARGE_INFLUENCE_RESEARCH_LAB",
+   "type": "SCIENTIFIC",
+   "envoys": 6,
+   "yield": "SCIENCE",
+   "amount": 3,
+   "building": "BUILDING_RESEARCH_LAB"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_SMALL_INFLUENCE_CAPITAL",
+   "type": "RELIGIOUS",
+   "envoys": 1,
+   "yield": "FAITH",
+   "amount": 1,
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_SMALL_INFLUENCE_ETHIOPIA",
+   "type": "RELIGIOUS",
+   "envoys": 1,
+   "yield": "FAITH",
+   "amount": 1,
+   "building": "BUILDING_SHRINE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_MEDIUM_INFLUENCE_ETHIOPIA",
+   "type": "RELIGIOUS",
+   "envoys": 3,
+   "yield": "FAITH",
+   "amount": 2,
+   "building": "BUILDING_CONSULATE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_MEDIUM_INFLUENCE_TEMPLE",
+   "type": "RELIGIOUS",
+   "envoys": 3,
+   "yield": "FAITH",
+   "amount": 2,
+   "building": "BUILDING_TEMPLE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_ETHIOPIA",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_CHANCERY"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_CATHEDRAL",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_CATHEDRAL"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_DAR_E_MEHR",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_DAR_E_MEHR"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_GURDWARA",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_GURDWARA"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_MEETING_HOUSE",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_MEETING_HOUSE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_MOSQUE",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_MOSQUE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_PAGODA",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_PAGODA"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_STUPA",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_STUPA"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_SYNAGOGUE",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_SYNAGOGUE"
+  },
+  {
+   "id": "MINOR_CIV_RELIGIOUS_LARGE_INFLUENCE_WAT",
+   "type": "RELIGIOUS",
+   "envoys": 6,
+   "yield": "FAITH",
+   "amount": 3,
+   "building": "BUILDING_WAT"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_SMALL_INFLUENCE_CAPITAL",
+   "type": "TRADE",
+   "envoys": 1,
+   "yield": "GOLD",
+   "amount": 2,
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_TRADE_SMALL_INFLUENCE_ETHIOPIA",
+   "type": "TRADE",
+   "envoys": 1,
+   "yield": "GOLD",
+   "amount": 2,
+   "building": "BUILDING_MARKET"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_SMALL_INFLUENCE_LIGHTHOUSE",
+   "type": "TRADE",
+   "envoys": 1,
+   "yield": "GOLD",
+   "amount": 2,
+   "building": "BUILDING_LIGHTHOUSE"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_MEDIUM_INFLUENCE_ETHIOPIA",
+   "type": "TRADE",
+   "envoys": 3,
+   "yield": "GOLD",
+   "amount": 4,
+   "building": "BUILDING_CONSULATE"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_MEDIUM_INFLUENCE_BANK",
+   "type": "TRADE",
+   "envoys": 3,
+   "yield": "GOLD",
+   "amount": 4,
+   "building": "BUILDING_BANK"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_MEDIUM_INFLUENCE_SHIPYARD",
+   "type": "TRADE",
+   "envoys": 3,
+   "yield": "GOLD",
+   "amount": 4,
+   "building": "BUILDING_SHIPYARD"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_LARGE_INFLUENCE_ETHIOPIA",
+   "type": "TRADE",
+   "envoys": 6,
+   "yield": "GOLD",
+   "amount": 6,
+   "building": "BUILDING_CHANCERY"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_LARGE_INFLUENCE_STOCK_EXCHANGE",
+   "type": "TRADE",
+   "envoys": 6,
+   "yield": "GOLD",
+   "amount": 6,
+   "building": "BUILDING_STOCK_EXCHANGE"
+  },
+  {
+   "id": "MINOR_CIV_TRADE_LARGE_INFLUENCE_SEAPORT",
+   "type": "TRADE",
+   "envoys": 6,
+   "yield": "GOLD",
+   "amount": 6,
+   "building": "BUILDING_SEAPORT"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_SMALL_INFLUENCE_CAPITAL",
+   "type": "CULTURAL",
+   "envoys": 1,
+   "yield": "CULTURE",
+   "amount": 1,
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_SMALL_INFLUENCE_ETHIOPIA",
+   "type": "CULTURAL",
+   "envoys": 1,
+   "yield": "CULTURE",
+   "amount": 1,
+   "building": "BUILDING_AMPHITHEATER"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_MEDIUM_INFLUENCE_ETHIOPIA",
+   "type": "CULTURAL",
+   "envoys": 3,
+   "yield": "CULTURE",
+   "amount": 2,
+   "building": "BUILDING_CONSULATE"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_MEDIUM_INFLUENCE_MUSEUM_ART",
+   "type": "CULTURAL",
+   "envoys": 3,
+   "yield": "CULTURE",
+   "amount": 2,
+   "building": "BUILDING_ART_MUSEUM"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_MEDIUM_INFLUENCE_MUSEUM_ARTIFACT",
+   "type": "CULTURAL",
+   "envoys": 3,
+   "yield": "CULTURE",
+   "amount": 2,
+   "building": "BUILDING_ARCHAEOLOGICAL_MUSEUM"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_LARGE_INFLUENCE_ETHIOPIA",
+   "type": "CULTURAL",
+   "envoys": 6,
+   "yield": "CULTURE",
+   "amount": 3,
+   "building": "BUILDING_CHANCERY"
+  },
+  {
+   "id": "MINOR_CIV_CULTURAL_LARGE_INFLUENCE_BROADCAST_CENTER",
+   "type": "CULTURAL",
+   "envoys": 6,
+   "yield": "CULTURE",
+   "amount": 3,
+   "building": "BUILDING_BROADCAST_CENTER"
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_SMALL_INFLUENCE_CAPITAL",
+   "type": "MILITARISTIC",
+   "envoys": 1,
+   "production": 1,
+   "toward": "UNITS",
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_SMALL_INFLUENCE_ETHIOPIA",
+   "type": "MILITARISTIC",
+   "envoys": 1,
+   "production": 1,
+   "toward": "UNITS",
+   "buildings": [
+    "BUILDING_BARRACKS",
+    "BUILDING_STABLE"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_MEDIUM_INFLUENCE_ETHIOPIA",
+   "type": "MILITARISTIC",
+   "envoys": 3,
+   "production": 2,
+   "toward": "UNITS",
+   "buildings": [
+    "BUILDING_CONSULATE"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_MEDIUM_INFLUENCE_ARMORY",
+   "type": "MILITARISTIC",
+   "envoys": 3,
+   "production": 2,
+   "toward": "UNITS",
+   "buildings": [
+    "BUILDING_ARMORY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_LARGE_INFLUENCE_ETHIOPIA",
+   "type": "MILITARISTIC",
+   "envoys": 6,
+   "production": 3,
+   "toward": "UNITS",
+   "buildings": [
+    "BUILDING_CHANCERY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_MILITARISTIC_LARGE_INFLUENCE_MILITARY_ACADEMY",
+   "type": "MILITARISTIC",
+   "envoys": 6,
+   "production": 3,
+   "toward": "UNITS",
+   "buildings": [
+    "BUILDING_MILITARY_ACADEMY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_SMALL_INFLUENCE_BONUS_BUILDING_CAPITAL",
+   "type": "INDUSTRIAL",
+   "envoys": 1,
+   "production": 1,
+   "toward": "BUILDINGS",
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_SMALL_INFLUENCE_BONUS_DISTRICT_CAPITAL",
+   "type": "INDUSTRIAL",
+   "envoys": 1,
+   "production": 1,
+   "toward": "DISTRICTS",
+   "capital": true
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_SMALL_INFLUENCE_ETHIOPIA_BUILDING",
+   "type": "INDUSTRIAL",
+   "envoys": 1,
+   "production": 1,
+   "toward": "BUILDINGS",
+   "buildings": [
+    "BUILDING_WORKSHOP"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_SMALL_INFLUENCE_ETHIOPIA_DISTRICT",
+   "type": "INDUSTRIAL",
+   "envoys": 1,
+   "production": 1,
+   "toward": "DISTRICTS",
+   "buildings": [
+    "BUILDING_WORKSHOP"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_MEDIUM_INFLUENCE_ETHIOPIA_BUILDING",
+   "type": "INDUSTRIAL",
+   "envoys": 3,
+   "production": 2,
+   "toward": "BUILDINGS",
+   "buildings": [
+    "BUILDING_CONSULATE"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_MEDIUM_INFLUENCE_ETHIOPIA_DISTRICT",
+   "type": "INDUSTRIAL",
+   "envoys": 3,
+   "production": 2,
+   "toward": "DISTRICTS",
+   "buildings": [
+    "BUILDING_CONSULATE"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_MEDIUM_INFLUENCE_FACTORY_BUILDING",
+   "type": "INDUSTRIAL",
+   "envoys": 3,
+   "production": 2,
+   "toward": "BUILDINGS",
+   "buildings": [
+    "BUILDING_FACTORY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_MEDIUM_INFLUENCE_FACTORY_DISTRICT",
+   "type": "INDUSTRIAL",
+   "envoys": 3,
+   "production": 2,
+   "toward": "DISTRICTS",
+   "buildings": [
+    "BUILDING_FACTORY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_LARGE_INFLUENCE_ETHIOPIA_BUILDING",
+   "type": "INDUSTRIAL",
+   "envoys": 6,
+   "production": 3,
+   "toward": "BUILDINGS",
+   "buildings": [
+    "BUILDING_CHANCERY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_LARGE_INFLUENCE_ETHIOPIA_DISTRICT",
+   "type": "INDUSTRIAL",
+   "envoys": 6,
+   "production": 3,
+   "toward": "DISTRICTS",
+   "buildings": [
+    "BUILDING_CHANCERY"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_LARGE_INFLUENCE_POWER_PLANT_BUILDING",
+   "type": "INDUSTRIAL",
+   "envoys": 6,
+   "production": 3,
+   "toward": "BUILDINGS",
+   "buildings": [
+    "BUILDING_NUCLEAR_POWER_PLANT",
+    "BUILDING_COAL_POWER_PLANT",
+    "BUILDING_OIL_POWER_PLANT"
+   ]
+  },
+  {
+   "id": "MINOR_CIV_INDUSTRIAL_LARGE_INFLUENCE_POWER_PLANT_DISTRICT",
+   "type": "INDUSTRIAL",
+   "envoys": 6,
+   "production": 3,
+   "toward": "DISTRICTS",
+   "buildings": [
+    "BUILDING_NUCLEAR_POWER_PLANT",
+    "BUILDING_COAL_POWER_PLANT",
+    "BUILDING_OIL_POWER_PLANT"
+   ]
+  }
+ ]
+}

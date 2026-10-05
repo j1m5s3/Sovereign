@@ -585,6 +585,37 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::CityStates:
+		{
+			// 08: each city-state we have met, its kind, our envoys and its suzerain; picking sends an envoy.
+			ChooserTitle = FString::Printf(TEXT("City-states (%d envoys to send). Pick one to send an envoy"), P.envoyTokens);
+			static const TCHAR* Kinds[] = {TEXT("Scientific"), TEXT("Cultural"), TEXT("Religious"), TEXT("Trade"), TEXT("Industrial"), TEXT("Militaristic")};
+			for (const sov::Player& Cs : G.state().players)
+			{
+				if (Cs.cityState == sov::kNone || !Cs.alive)
+				{
+					continue;
+				}
+				bool bMet = false;
+				for (const sov::City& C : G.state().cities)
+				{
+					bMet |= C.owner == Cs.id && G.visibility(Me(), C.pos) != sov::Visibility::Unrevealed;
+				}
+				if (!bMet)
+				{
+					continue;
+				}
+				const sov::CityStateType& T = R.cityStates[static_cast<size_t>(Cs.cityState)];
+				const sov::PlayerId Suz = G.suzerainOf(Cs.id);
+				const FString SuzName = Suz == sov::kNoPlayer ? FString(TEXT("none"))
+					: Suz == Me() ? FString(TEXT("you"))
+					: Str(G.state().players[static_cast<size_t>(Suz)].leaderName);
+				Choices.Add({FString::Printf(TEXT("%s (%s): your envoys %d, suzerain %s"), *Str(T.name), Kinds[static_cast<size_t>(T.kind) % 6],
+								 G.envoysAt(Me(), Cs.id), *SuzName),
+					sov::Command::sendEnvoy(Me(), Cs.id)});
+			}
+			break;
+		}
 		case EChooser::TradeRoute:
 		{
 			// 07: the Trader's destinations in range, with what each pays its city per turn.
@@ -657,7 +688,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				}
 				for (const sov::Player& T : G.state().players)
 				{
-					if (T.id == Me() || !T.alive || T.barbarian)
+					if (T.id == Me() || !T.alive || T.barbarian || T.cityState != sov::kNone)
 					{
 						continue;
 					}
@@ -1070,6 +1101,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
 	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
+	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
 		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
@@ -1309,7 +1341,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   I pantheon   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }

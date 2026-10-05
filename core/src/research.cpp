@@ -33,6 +33,8 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.fuelShort.resize(rules.resources.size(), 0);
     p.greatPersonPoints.resize(rules.greatPersonClasses.size(), 0);
     p.greatPeopleRecruited.resize(rules.greatPersonClasses.size(), 0);
+    if (p.leaderName.empty() && p.cityState != kNone && static_cast<size_t>(p.cityState) < rules.cityStates.size())
+        p.leaderName = rules.cityStates[static_cast<size_t>(p.cityState)].name;
     if (p.leaderName.empty() && !p.barbarian && p.civ >= 0 && static_cast<size_t>(p.civ) < rules.civs.size()) {
         const Dynasty* d = rules.dynastyOf(p.civ);
         p.leaderName = d ? d->names.front() : rules.civs[static_cast<size_t>(p.civ)].name;
@@ -298,6 +300,7 @@ void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
         // A finished civic opens a free window to change government and
         // policies, and retires obsolete cards.
         p.freeChanges = true;
+        p.envoyTokens += rules_->civics[static_cast<size_t>(node)].envoys;  // 08: civics that grant envoys
         for (TypeIndex& slotted : p.policies) {
             if (slotted != kNone && !policyAvailable(pid, slotted)) slotted = kNone;
         }

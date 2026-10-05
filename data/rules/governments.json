@@ -10,7 +10,10 @@
     "ECONOMIC": 1,
     "DIPLOMATIC": 0,
     "WILDCARD": 0
-   }
+   },
+   "influencePerTurn": 1,
+   "influenceThreshold": 100,
+   "envoysPerThreshold": 1
   },
   {
    "id": "GOVERNMENT_AUTOCRACY",
@@ -22,7 +25,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "influencePerTurn": 3,
+   "influenceThreshold": 100,
+   "envoysPerThreshold": 1
   },
   {
    "id": "GOVERNMENT_OLIGARCHY",
@@ -34,7 +40,10 @@
     "DIPLOMATIC": 0,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "influencePerTurn": 3,
+   "influenceThreshold": 100,
+   "envoysPerThreshold": 1
   },
   {
    "id": "GOVERNMENT_CLASSICAL_REPUBLIC",
@@ -46,7 +55,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "influencePerTurn": 3,
+   "influenceThreshold": 100,
+   "envoysPerThreshold": 1
   },
   {
    "id": "GOVERNMENT_MONARCHY",
@@ -58,7 +70,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 2
    },
-   "unlock": "CIVIC_DIVINE_RIGHT"
+   "unlock": "CIVIC_DIVINE_RIGHT",
+   "influencePerTurn": 5,
+   "influenceThreshold": 150,
+   "envoysPerThreshold": 2
   },
   {
    "id": "GOVERNMENT_THEOCRACY",
@@ -70,7 +85,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_REFORMED_CHURCH"
+   "unlock": "CIVIC_REFORMED_CHURCH",
+   "influencePerTurn": 5,
+   "influenceThreshold": 150,
+   "envoysPerThreshold": 2
   },
   {
    "id": "GOVERNMENT_MERCHANT_REPUBLIC",
@@ -82,7 +100,10 @@
     "DIPLOMATIC": 2,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_EXPLORATION"
+   "unlock": "CIVIC_EXPLORATION",
+   "influencePerTurn": 5,
+   "influenceThreshold": 150,
+   "envoysPerThreshold": 2
   },
   {
    "id": "GOVERNMENT_FASCISM",
@@ -94,7 +115,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 2
    },
-   "unlock": "CIVIC_TOTALITARIANISM"
+   "unlock": "CIVIC_TOTALITARIANISM",
+   "influencePerTurn": 7,
+   "influenceThreshold": 200,
+   "envoysPerThreshold": 3
   },
   {
    "id": "GOVERNMENT_COMMUNISM",
@@ -106,7 +130,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 1
    },
-   "unlock": "CIVIC_CLASS_STRUGGLE"
+   "unlock": "CIVIC_CLASS_STRUGGLE",
+   "influencePerTurn": 7,
+   "influenceThreshold": 200,
+   "envoysPerThreshold": 3
   },
   {
    "id": "GOVERNMENT_DEMOCRACY",
@@ -118,7 +145,10 @@
     "DIPLOMATIC": 2,
     "WILDCARD": 2
    },
-   "unlock": "CIVIC_SUFFRAGE"
+   "unlock": "CIVIC_SUFFRAGE",
+   "influencePerTurn": 7,
+   "influenceThreshold": 200,
+   "envoysPerThreshold": 3
   },
   {
    "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
@@ -130,7 +160,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 5
    },
-   "unlock": "CIVIC_VENTURE_POLITICS"
+   "unlock": "CIVIC_VENTURE_POLITICS",
+   "influencePerTurn": 9,
+   "influenceThreshold": 250,
+   "envoysPerThreshold": 4
   },
   {
    "id": "GOVERNMENT_DIGITAL_DEMOCRACY",
@@ -142,7 +175,10 @@
     "DIPLOMATIC": 3,
     "WILDCARD": 5
    },
-   "unlock": "CIVIC_DISTRIBUTED_SOVEREIGNTY"
+   "unlock": "CIVIC_DISTRIBUTED_SOVEREIGNTY",
+   "influencePerTurn": 9,
+   "influenceThreshold": 250,
+   "envoysPerThreshold": 4
   },
   {
    "id": "GOVERNMENT_SYNTHETIC_TECHNOCRACY",
@@ -154,7 +190,10 @@
     "DIPLOMATIC": 1,
     "WILDCARD": 5
    },
-   "unlock": "CIVIC_OPTIMIZATION_IMPERATIVE"
+   "unlock": "CIVIC_OPTIMIZATION_IMPERATIVE",
+   "influencePerTurn": 9,
+   "influenceThreshold": 250,
+   "envoysPerThreshold": 4
   }
  ]
 }

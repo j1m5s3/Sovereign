@@ -250,7 +250,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -318,6 +318,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.era = era(j["era"].str());
             n.cost = static_cast<int>(j["cost"].integer(0));
             n.embarkedMoves = static_cast<int>(j["embarkedMoves"].integer(0));
+            n.envoys = static_cast<int>(j["envoys"].integer(0));
             for (const Json& e : j["effects"].items()) {
                 if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
@@ -924,6 +925,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         g.id = id;
         g.name = j["name"].str(id);
         g.tier = static_cast<int>(j["tier"].integer(0));
+        g.influencePerTurn = static_cast<int>(j["influencePerTurn"].integer(0));
+        g.influenceThreshold = static_cast<int>(j["influenceThreshold"].integer(0));
+        g.envoysPerThreshold = static_cast<int>(j["envoysPerThreshold"].integer(0));
         if (!readUnlock(j["unlock"], g.unlock, "government " + id)) return false;
         static const char* slotNames[kNumGovernmentSlotTypes] = {"MILITARY", "ECONOMIC", "DIPLOMATIC", "WILDCARD"};
         for (size_t k = 0; k < kNumGovernmentSlotTypes; ++k) {
@@ -1016,6 +1020,55 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
         dynasties.push_back(std::move(d));
+    }
+    // City-states (08) and what envoys to them give.
+    auto kindOf = [](const std::string& k, CityStateKind& out) {
+        static const std::pair<const char*, CityStateKind> kinds[] = {
+            {"SCIENTIFIC", CityStateKind::Scientific}, {"CULTURAL", CityStateKind::Cultural}, {"RELIGIOUS", CityStateKind::Religious},
+            {"TRADE", CityStateKind::Trade}, {"INDUSTRIAL", CityStateKind::Industrial}, {"MILITARISTIC", CityStateKind::Militaristic}};
+        for (const auto& [name, v] : kinds) {
+            if (k == name) {
+                out = v;
+                return true;
+            }
+        }
+        return false;
+    };
+    for (const auto& [id, j] : m.tables["cityStates"]) {
+        CityStateType c;
+        c.id = id;
+        c.name = j["name"].str(id);
+        c.suzerainText = j["suzerainText"].str();
+        if (!kindOf(j["type"].str(), c.kind)) {
+            *error = "city-state " + id + ": unknown type";
+            return false;
+        }
+        cityStates.push_back(std::move(c));
+    }
+    for (const auto& [id, j] : m.tables["envoyBonuses"]) {
+        EnvoyBonus e;
+        const std::string where = "envoy bonus " + id;
+        if (!kindOf(j["type"].str(), e.kind)) {
+            *error = where + ": unknown type";
+            return false;
+        }
+        e.envoys = static_cast<int>(j["envoys"].integer(1));
+        if (j.has("yield") && !parseYieldName(j["yield"].str(), e.yield)) {
+            *error = where + ": bad yield";
+            return false;
+        }
+        e.amount = static_cast<int>(j["amount"].integer(0));
+        e.capital = j["capital"].boolean(false);
+        if (j.has("building") && (e.building = building(j["building"].str())) == kNone) continue;  // a building not modelled
+        e.production = static_cast<int>(j["production"].integer(0));
+        const std::string& toward = j["toward"].str("UNITS");
+        e.toward = toward == "BUILDINGS" ? EnvoyToward::Buildings : toward == "DISTRICTS" ? EnvoyToward::Districts : EnvoyToward::Units;
+        for (const Json& b : j["buildings"].items()) {
+            const TypeIndex bi = building(b.str());
+            if (bi != kNone) e.buildings.push_back(bi);
+        }
+        if (e.production > 0 && !e.capital && e.buildings.empty()) continue;
+        envoyBonuses.push_back(std::move(e));
     }
     // Religion (06): beliefs and the religions that can be founded.
     for (const auto& [id, j] : m.tables["beliefs"]) {
@@ -1283,6 +1336,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.height = static_cast<int>(j["height"].integer(0));
         s.defaultPlayers = static_cast<int>(j["defaultPlayers"].integer(2));
         s.maxReligions = static_cast<int>(j["maxReligions"].integer(0));
+        s.defaultCityStates = static_cast<int>(j["defaultCityStates"].integer(0));
         if (s.width < 8 || s.height < 8) {
             *error = "map size " + id + " is too small";
             return false;

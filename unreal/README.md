@@ -62,6 +62,7 @@ from `../data/rules`.
 | `I` | Choose a pantheon once you have 25 Faith. A selected Great Prophet: `F` on a Holy Site founds a religion (pick a Founder, then a Follower belief). A selected Missionary or Apostle: `F` spreads its religion in the city whose land it stands on; an unused Apostle may add a belief instead. Right-click a foe's religious unit for theological combat. Religious units and worship buildings are bought with Faith from the `P` list |
 | `P` wonders | World wonders show in the production list with the plot they would take; built wonders stand on the map as temples, wonders being built as monuments |
 | `F` (Trader) | Start a trade route from the Trader's city: destinations in range with what each pays per turn. Roads appear on the map along routes |
+| `O` | City-states you have met, with their kind, your envoys and their suzerain; pick one to send an envoy (the HUD shows envoys waiting) |
 | `Y` | Great people: each class's current individual with your points, the cost and points per turn; pick one to buy it now with gold (or faith). A selected great person: `F` uses it where it stands (on its district, or a Great Work in a city with a free slot) |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
