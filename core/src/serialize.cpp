@@ -224,6 +224,9 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
 }
 }  // namespace
 
+void encodeCommand(ByteWriter& w, const Command& c) { writeCommand(w, c); }
+Command decodeCommand(ByteReader& r) { return readCommand(r); }
+
 std::vector<uint8_t> serializeState(const GameState& s) {
     ByteWriter w;
     writeSetup(w, s.setup);

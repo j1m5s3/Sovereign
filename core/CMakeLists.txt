@@ -99,6 +99,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../battle battle)
 # The dialogue layer for language-model diplomacy (diplomacy/).
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../diplomacy diplomacy)
 
+# Online play: the lockstep session (net/).
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../net net)
+
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
   add_test(NAME no_floats_in_core

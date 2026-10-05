@@ -90,6 +90,10 @@ SOV_API std::vector<uint8_t> serializeState(const GameState& s);
 SOV_API bool deserializeState(ByteReader& r, GameState& s);
 
 // Full save: header, rules checksum, state and command log.
+// One command in the save format's encoding (the network carries commands the same way).
+SOV_API void encodeCommand(ByteWriter& w, const Command& c);
+SOV_API Command decodeCommand(ByteReader& r);
+
 SOV_API std::vector<uint8_t> saveGame(const Game& game);
 SOV_API std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& bytes, std::string* error);
 

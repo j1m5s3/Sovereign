@@ -69,6 +69,8 @@ public:
 
     const Rules& rules() const { return *rules_; }
     const GameState& state() const { return state_; }
+    // Changes state outside the rules: only for tests that need a broken game (a forced desync).
+    GameState& stateMutForTests() { return state_; }
     const std::vector<Command>& log() const { return log_; }
     // Hash of the full state (not the log); compared between peers each turn.
     uint64_t stateHash() const;
