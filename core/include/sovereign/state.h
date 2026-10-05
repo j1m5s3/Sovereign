@@ -350,9 +350,34 @@ struct Player {
     std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
 };
 
+// How a major civ plays (leader doc §10, AI layer 2: player modelling), built each world turn
+// from public facts. Shares and indexes are x1000 and fade toward recent play; counts only grow.
+enum class ProfileClass : uint8_t { Melee = 0, Ranged, AntiCavalry, LightCavalry, HeavyCavalry, Siege, Naval, Other };
+constexpr size_t kNumProfileClasses = 8;
+SOV_API ProfileClass profileClassOf(const std::string& promotionClass);
+struct PlayerProfile {
+    int32_t turnsObserved = 0;
+    std::array<int32_t, kNumProfileClasses> army{};  // share of its military strength by class
+    int32_t militarism = 0;     // strength per city against the world's (1000 = average)
+    int32_t expansion = 0;      // cities against the average major (1000 = average)
+    int32_t science = 0, culture = 0, faith = 0;  // shares of its science + culture + faith
+    int32_t aggression = 0;     // wars declared (spikes) and army camped near others' cities in peace
+    int32_t leaderOutside = 0;  // share of turns its leader spends outside its cities
+    int32_t leaderExposed = 0;  // share of turns its leader is open to assassins (§6)
+    int32_t warsDeclared = 0, surpriseWars = 0;  // counts
+    int32_t citiesHeld = 0;     // cities it holds that another major founded
+    // Live battles it fought by hand (each moves these a quarter of the way): shares of its squads'
+    // time flanking, falling back and hunting the enemy leader, and of the battle its leader fought in front.
+    int32_t battles = 0;
+    int32_t battleFlank = 0, battleFallBack = 0, battleHunt = 0, battleLeaderFront = 0;
+};
+
 struct PlayerSetup {
     std::string civ;
     bool human = false;
+    // A human's profile carried from earlier games (leader doc §10: it persists between games).
+    bool hasProfile = false;
+    PlayerProfile profile;
 };
 
 struct GameSetup {
@@ -444,28 +469,6 @@ struct GameEvent {
     PlayerId actor = kNoPlayer;   // who sent the assassin
     PlayerId target = kNoPlayer;  // whose leader was the target
     int32_t value = 0;            // damage dealt, when any
-};
-
-// How a major civ plays (leader doc §10, AI layer 2: player modelling), built each world turn
-// from public facts. Shares and indexes are x1000 and fade toward recent play; counts only grow.
-enum class ProfileClass : uint8_t { Melee = 0, Ranged, AntiCavalry, LightCavalry, HeavyCavalry, Siege, Naval, Other };
-constexpr size_t kNumProfileClasses = 8;
-SOV_API ProfileClass profileClassOf(const std::string& promotionClass);
-struct PlayerProfile {
-    int32_t turnsObserved = 0;
-    std::array<int32_t, kNumProfileClasses> army{};  // share of its military strength by class
-    int32_t militarism = 0;     // strength per city against the world's (1000 = average)
-    int32_t expansion = 0;      // cities against the average major (1000 = average)
-    int32_t science = 0, culture = 0, faith = 0;  // shares of its science + culture + faith
-    int32_t aggression = 0;     // wars declared (spikes) and army camped near others' cities in peace
-    int32_t leaderOutside = 0;  // share of turns its leader spends outside its cities
-    int32_t leaderExposed = 0;  // share of turns its leader is open to assassins (§6)
-    int32_t warsDeclared = 0, surpriseWars = 0;  // counts
-    int32_t citiesHeld = 0;     // cities it holds that another major founded
-    // Live battles it fought by hand (each moves these a quarter of the way): shares of its squads'
-    // time flanking, falling back and hunting the enemy leader, and of the battle its leader fought in front.
-    int32_t battles = 0;
-    int32_t battleFlank = 0, battleFallBack = 0, battleHunt = 0, battleLeaderFront = 0;
 };
 
 // A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).

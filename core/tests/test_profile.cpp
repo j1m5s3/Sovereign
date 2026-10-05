@@ -125,3 +125,39 @@ TEST(ai_counters_a_cavalry_neighbour_with_pikes) {
     ai::playTurn(*low);
     CHECK(produces(*low) != "UNIT_SPEARMAN");
 }
+
+TEST(profiles_carry_between_games_as_text) {
+    PlayerProfile p;
+    p.turnsObserved = 240;
+    p.army[cls(ProfileClass::HeavyCavalry)] = 640;
+    p.battleFlank = 410;
+    p.surpriseWars = 2;
+    p.citiesHeld = 3;
+    const std::string text = profileToText(p);
+    CHECK(text.rfind("sovereign-profile 1\n", 0) == 0);
+    PlayerProfile back;
+    REQUIRE(profileFromText(text + "futureField 7\n", back));  // unknown keys are skipped
+    CHECK_EQ(back.army[cls(ProfileClass::HeavyCavalry)], 640);
+    CHECK_EQ(back.battleFlank, 410);
+    CHECK_EQ(back.surpriseWars, 2);
+    PlayerProfile bad;
+    CHECK(!profileFromText("not a profile\n", bad));
+    CHECK(!profileFromText("sovereign-profile 1\nbattles lots\n", bad));
+    // A new game starts from it: the human is known from turn 1 (this game's conquests start at zero).
+    GameSetup setup;
+    setup.seed = 5;
+    setup.mapSize = "MAPSIZE_DUEL";
+    setup.players.push_back({rules().civs[0].id, true, true, back});
+    setup.players.push_back({rules().civs[1].id, false});
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    REQUIRE(g->profile(0) != nullptr);
+    CHECK_EQ(g->profile(0)->army[cls(ProfileClass::HeavyCavalry)], 640);
+    CHECK_EQ(g->profile(0)->citiesHeld, 0);
+    CHECK_EQ(g->profile(1)->turnsObserved, 0);
+    auto loaded = loadGame(rules(), saveGame(*g), &err);  // the setup's profile is saved too
+    REQUIRE(loaded);
+    CHECK(loaded->state().setup.players[0].hasProfile);
+    CHECK_EQ(loaded->stateHash(), g->stateHash());
+}

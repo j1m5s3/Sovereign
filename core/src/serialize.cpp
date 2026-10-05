@@ -1,6 +1,7 @@
 #include "sovereign/serialize.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace sov {
 
@@ -42,6 +43,24 @@ ProductionItem readItem(ByteReader& r) {
     return it;
 }
 
+void writeProfile(ByteWriter& w, const PlayerProfile& p) {
+    w.i32(p.turnsObserved);
+    for (int32_t v : p.army) w.i32(v);
+    for (int32_t v : {p.militarism, p.expansion, p.science, p.culture, p.faith, p.aggression, p.leaderOutside, p.leaderExposed,
+                      p.warsDeclared, p.surpriseWars, p.citiesHeld, p.battles, p.battleFlank, p.battleFallBack, p.battleHunt,
+                      p.battleLeaderFront})
+        w.i32(v);
+}
+
+void readProfile(ByteReader& r, PlayerProfile& p) {
+    p.turnsObserved = r.i32();
+    for (int32_t& v : p.army) v = r.i32();
+    for (int32_t* v : {&p.militarism, &p.expansion, &p.science, &p.culture, &p.faith, &p.aggression, &p.leaderOutside, &p.leaderExposed,
+                       &p.warsDeclared, &p.surpriseWars, &p.citiesHeld, &p.battles, &p.battleFlank, &p.battleFallBack, &p.battleHunt,
+                       &p.battleLeaderFront})
+        *v = r.i32();
+}
+
 void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.u64(s.seed);
     w.str(s.mapSize);
@@ -51,6 +70,8 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     for (const PlayerSetup& p : s.players) {
         w.str(p.civ);
         w.boolean(p.human);
+        w.boolean(p.hasProfile);
+        if (p.hasProfile) writeProfile(w, p.profile);
     }
     w.boolean(s.barbarians);
     w.boolean(s.dominationVictory);
@@ -75,6 +96,8 @@ void readSetup(ByteReader& r, GameSetup& s) {
     for (PlayerSetup& p : s.players) {
         p.civ = r.str();
         p.human = r.boolean();
+        p.hasProfile = r.boolean();
+        if (p.hasProfile) readProfile(r, p.profile);
     }
     s.barbarians = r.boolean();
     s.dominationVictory = r.boolean();
@@ -471,14 +494,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     }
     w.i32(s.nextDealId);
     w.u32(static_cast<uint32_t>(s.profiles.size()));
-    for (const PlayerProfile& p : s.profiles) {
-        w.i32(p.turnsObserved);
-        for (int32_t v : p.army) w.i32(v);
-        for (int32_t v : {p.militarism, p.expansion, p.science, p.culture, p.faith, p.aggression, p.leaderOutside, p.leaderExposed,
-                          p.warsDeclared, p.surpriseWars, p.citiesHeld, p.battles, p.battleFlank, p.battleFallBack, p.battleHunt,
-                          p.battleLeaderFront})
-            w.i32(v);
-    }
+    for (const PlayerProfile& p : s.profiles) writeProfile(w, p);
     w.i64(s.co2);
     w.i32(s.climatePhase);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
@@ -885,14 +901,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
     uint32_t nprofile = r.u32();
     if (!r.checkCount(nprofile, 64)) return false;
     s.profiles.resize(nprofile);
-    for (PlayerProfile& p : s.profiles) {
-        p.turnsObserved = r.i32();
-        for (int32_t& v : p.army) v = r.i32();
-        for (int32_t* v : {&p.militarism, &p.expansion, &p.science, &p.culture, &p.faith, &p.aggression, &p.leaderOutside, &p.leaderExposed,
-                           &p.warsDeclared, &p.surpriseWars, &p.citiesHeld, &p.battles, &p.battleFlank, &p.battleFallBack, &p.battleHunt,
-                           &p.battleLeaderFront})
-            *v = r.i32();
-    }
+    for (PlayerProfile& p : s.profiles) readProfile(r, p);
     s.co2 = r.i64();
     s.climatePhase = r.i32();
     uint32_t ndrought = r.u32();
@@ -1075,6 +1084,72 @@ std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& b
         return nullptr;
     }
     return std::make_unique<Game>(rules, std::move(state), std::move(log));
+}
+
+// ---- profiles between games (leader doc §10) ----------------------------------------------
+
+namespace {
+struct ProfileField {
+    const char* name;
+    int32_t PlayerProfile::*field;
+};
+const ProfileField kProfileFields[] = {
+    {"turnsObserved", &PlayerProfile::turnsObserved}, {"militarism", &PlayerProfile::militarism},
+    {"expansion", &PlayerProfile::expansion},         {"science", &PlayerProfile::science},
+    {"culture", &PlayerProfile::culture},             {"faith", &PlayerProfile::faith},
+    {"aggression", &PlayerProfile::aggression},       {"leaderOutside", &PlayerProfile::leaderOutside},
+    {"leaderExposed", &PlayerProfile::leaderExposed}, {"warsDeclared", &PlayerProfile::warsDeclared},
+    {"surpriseWars", &PlayerProfile::surpriseWars},   {"battles", &PlayerProfile::battles},
+    {"battleFlank", &PlayerProfile::battleFlank},     {"battleFallBack", &PlayerProfile::battleFallBack},
+    {"battleHunt", &PlayerProfile::battleHunt},       {"battleLeaderFront", &PlayerProfile::battleLeaderFront},
+};
+const char* const kProfileClassNames[kNumProfileClasses] = {"melee", "ranged", "antiCavalry", "lightCavalry", "heavyCavalry", "siege", "naval", "other"};
+}  // namespace
+
+std::string profileToText(const PlayerProfile& p) {
+    std::string out = "sovereign-profile 1\n";
+    for (const ProfileField& f : kProfileFields) out += std::string(f.name) + " " + std::to_string(p.*(f.field)) + "\n";
+    for (size_t k = 0; k < kNumProfileClasses; ++k) out += std::string("army.") + kProfileClassNames[k] + " " + std::to_string(p.army[k]) + "\n";
+    return out;
+}
+
+bool profileFromText(const std::string& text, PlayerProfile& out) {
+    PlayerProfile p;
+    size_t pos = 0;
+    bool header = false;
+    while (pos < text.size()) {
+        size_t end = text.find('\n', pos);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(pos, end - pos);
+        pos = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+        if (!header) {
+            if (line != "sovereign-profile 1") return false;
+            header = true;
+            continue;
+        }
+        const size_t space = line.find(' ');
+        if (space == std::string::npos) return false;
+        const std::string key = line.substr(0, space);
+        char* rest = nullptr;
+        const long value = std::strtol(line.c_str() + space + 1, &rest, 10);
+        if (rest == line.c_str() + space + 1 || value < -1000000 || value > 1000000) return false;
+        for (const ProfileField& f : kProfileFields) {
+            if (key == f.name) {
+                p.*(f.field) = static_cast<int32_t>(value);
+            }
+        }
+        for (size_t k = 0; k < kNumProfileClasses; ++k) {
+            if (key == std::string("army.") + kProfileClassNames[k]) {
+                p.army[k] = static_cast<int32_t>(value);
+            }
+        }
+        // Unknown keys are skipped: newer files load in older builds.
+    }
+    if (!header) return false;
+    out = p;
+    return true;
 }
 
 }  // namespace sov

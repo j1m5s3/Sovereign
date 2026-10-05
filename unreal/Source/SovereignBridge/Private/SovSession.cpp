@@ -3,12 +3,15 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
 
 #include <algorithm>
 
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
+#include "sovereign/serialize.h"
 #include "sovereign_net/session.h"
 
 #include "SovNetLink.h"
@@ -117,6 +120,18 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	{
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
 		CoreSetup->players.push_back({Civ.id, Setup.bHumanSeat0 && i < Setup.HumanSeats});
+	}
+	// The local human's profile from earlier games (leader doc §10, player modelling): it enters the
+	// game through the setup, so replays and every machine online see the same profile.
+	if (Setup.bHumanSeat0 && !CoreSetup->players.empty() && Mode != ESovNet::Join)
+	{
+		FString Text;
+		sov::PlayerProfile Loaded;
+		if (FFileHelper::LoadFileToString(Text, *ProfilePath(Setup.PlayerName)) && sov::profileFromText(TCHAR_TO_UTF8(*Text), Loaded))
+		{
+			CoreSetup->players[0].hasProfile = true;
+			CoreSetup->players[0].profile = Loaded;
+		}
 	}
 	if (bSteam)
 	{
@@ -286,6 +301,34 @@ void FSovSession::ApplyDemos(const FSovSetup& Setup)
 		S.deals.push_back(Gift);
 		Game = sov::Game::fromScenario(*Rules, std::move(S));
 	}
+}
+
+FString FSovSession::ProfilePath(const FString& PlayerName)
+{
+	FString Safe;
+	for (const TCHAR C : PlayerName)
+	{
+		Safe.AppendChar(FChar::IsAlnum(C) || C == TEXT('-') || C == TEXT('_') ? C : TEXT('_'));
+	}
+	if (Safe.IsEmpty()) Safe = TEXT("Player");
+	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Profiles"), Safe + TEXT(".txt"));
+}
+
+void FSovSession::SaveProfile() const
+{
+	const sov::Game* G = CurrentGame();
+	if (!G || ViewSeat < 0 || static_cast<size_t>(ViewSeat) >= G->state().players.size() || !G->state().players[static_cast<size_t>(ViewSeat)].human)
+	{
+		return;
+	}
+	const sov::PlayerProfile* P = G->profile(static_cast<sov::PlayerId>(ViewSeat));
+	if (!P || P->turnsObserved == 0)
+	{
+		return;
+	}
+	const FString Path = ProfilePath(LocalName);
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
+	FFileHelper::SaveStringToFile(FString(UTF8_TO_TCHAR(sov::profileToText(*P).c_str())), *Path);
 }
 
 const sov::Game* FSovSession::CurrentGame() const

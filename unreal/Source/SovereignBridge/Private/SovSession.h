@@ -127,6 +127,10 @@ public:
 	FString HandoverName() const;
 	void TakeOver();
 
+	// ---- player modelling (leader doc §10): the local human's play profile carried between games
+	static FString ProfilePath(const FString& PlayerName);
+	void SaveProfile() const;  // writes the local seat's current profile (no-op without one)
+
 	// Bumped on every change to the game; observers resync when it moves.
 	uint64 Revision() const { return Rev; }
 
