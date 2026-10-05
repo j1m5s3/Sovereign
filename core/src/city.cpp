@@ -163,11 +163,13 @@ CityReport Game::cityReport(CityId id) const {
     const char* water = fresh ? "CITY_POPULATION_RIVER_LAKE" : coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER";
     rep.housing += rules_->global(water);
     rep.housing += improvementHousing(*c);
+    rep.housing += districtHousing(*c);
     rep.housing += sumCityModifiers(state_, *rules_, *c, ModEffect::CityHousing);
 
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
+    rep.amenities += districtAmenities(*c);
     // The leader's Builder-King promotions work in the city it stands in (leader doc §3).
     const Unit* leader = leaderOf(c->owner);
     if (leader && leader->pos == c->pos) rep.amenities += unitEffectTotal(*leader, UnitEffectKind::CityAmenities);

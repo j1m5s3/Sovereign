@@ -39,7 +39,7 @@ TEST(wonder_rules_data) {
     const Rules& r = rules();
     int wonders = 0;
     for (const BuildingType& b : r.buildings) wonders += b.wonder;
-    CHECK_EQ(wonders, 47);
+    CHECK_EQ(wonders, 52);
     const BuildingType& stonehenge = r.buildings[at(wonder("BUILDING_STONEHENGE"))];
     CHECK_EQ(stonehenge.placement.nextToResource, r.resource("RESOURCE_STONE"));
     CHECK_EQ(stonehenge.placement.terrains.size(), 5u);

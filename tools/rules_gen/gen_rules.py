@@ -551,7 +551,9 @@ def gen_barbarians():
 
 # Districts the core places so far (MVP-5, the Harbor with naval play); the rest need
 # placement rules not modelled yet (flat land, rivers, aqueduct rules) and arrive with their systems.
-PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor"]
+PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor",
+                       "Aqueduct", "Neighborhood", "Entertainment Complex", "Water Park", "Dam", "Preserve",
+                       "Government Plaza", "Diplomatic Quarter"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
                  "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
@@ -622,6 +624,29 @@ def gen_districts():
             points = gpp(row["GPP per turn"])
             if points:
                 d["greatPersonPoints"] = points
+            flags = row["Placement/flags"]
+            if row["Housing"]:
+                d["housing"] = num(row["Housing"])
+            if row["Amenity"]:
+                d["amenities"] = num(row["Amenity"])
+            if row["Appeal"]:
+                d["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
+            if "aqueduct rules" in flags:
+                d["aqueduct"] = True  # next to the City Center and a River, Lake, Oasis or Mountain
+            if "max 1 per player" in flags:
+                d["onePerPlayer"] = True
+            m = re.search(r"exclusive with ([^;]+)", flags)
+            if m:
+                d["exclusiveWith"] = ["DISTRICT_" + snake(x.strip()) for x in m.group(1).split(",") if "DISTRICT_" + snake(x.strip()) in emitted]
+            if "one per river" in flags:
+                d["floodplainsRiver"] = True  # on Floodplains along a river (Dam)
+            if "prevents drought" in flags:
+                d["preventsDrought"] = True
+            if "prevents floods" in flags:
+                d["preventsFloods"] = True
+            bands = re.findall(r"appeal>=(-?\d+): \+?(-?\d+)", extra[name]["Appeal housing"] or "")
+            if bands:
+                d["appealHousing"] = [[int(a), int(b)] for a, b in bands]
         # Trade route yields to the origin for this district at the destination (07: Trade routes),
         # "Food 0/1/0" = as origin / domestic destination / international destination.
         trade = {"domestic": {}, "international": {}}
@@ -722,6 +747,8 @@ def gen_improvements():
         m = re.fullmatch(r"(\d+)(?: \(per (\d+) tiles\))?", row["Housing"])
         if m and int(m.group(1)):
             i["housing"] = int(m.group(1)) / int(m.group(2) or 1)
+        if row["Appeal"] and num(row["Appeal"]):
+            i["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
         out.append(i)
     return {"improvements": out}
 

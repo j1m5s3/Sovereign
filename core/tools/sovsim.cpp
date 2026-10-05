@@ -3,8 +3,9 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
-//          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none).
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--bench N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none;
+//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns).
 //          Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
@@ -45,11 +46,48 @@ static void printMap(const Game& g) {
     }
 }
 
+// The pace benchmark: all-AI games on seeds 1..n, the major civs' averages at each checkpoint.
+static int runBench(const Rules& rules, GameSetup setup, int n, int turns) {
+    std::vector<int> checkpoints;
+    for (int t : {25, 50, 75, 100, 150, 200, 250, 300, 400, 500}) {
+        if (t <= turns) checkpoints.push_back(t);
+    }
+    std::vector<ai::PaceSample> sum(checkpoints.size());
+    std::vector<int> games(checkpoints.size(), 0);
+    for (int seed = 1; seed <= n; ++seed) {
+        setup.seed = static_cast<uint64_t>(seed);
+        std::string err;
+        auto game = Game::create(rules, setup, &err);
+        if (!game) {
+            std::fprintf(stderr, "create: %s\n", err.c_str());
+            return 1;
+        }
+        for (size_t k = 0; k < checkpoints.size(); ++k) {
+            while (game->state().turn < checkpoints[k] && !game->gameOver()) ai::playTurn(*game);
+            if (game->gameOver()) break;
+            const ai::PaceSample p = ai::measurePace(*game);
+            ai::PaceSample& t = sum[k];
+            t.cities += p.cities, t.population += p.population, t.techs += p.techs, t.civics += p.civics, t.era += p.era;
+            t.science += p.science, t.culture += p.culture, t.production += p.production, t.gold += p.gold;
+            ++games[k];
+        }
+    }
+    std::printf("turn  games  cities    pop  techs civics   era  science culture  prod   gold\n");
+    for (size_t k = 0; k < checkpoints.size(); ++k) {
+        if (games[k] == 0) continue;
+        const ai::PaceSample& t = sum[k];
+        const auto avg = [&](int64_t v) { return static_cast<double>(v) / 100.0 / games[k]; };
+        std::printf("%4d  %5d  %6.1f %6.1f %6.1f %6.1f %5.1f  %7.1f %7.1f %5.1f %6.0f\n", checkpoints[k], games[k], avg(t.cities), avg(t.population),
+                    avg(t.techs), avg(t.civics), avg(t.era), avg(t.science), avg(t.culture), avg(t.production), avg(t.gold));
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     std::vector<std::string> rulesDirs;
     GameSetup setup;
     setup.seed = 1;
-    int turns = 50, players = 2, aiSeats = 0;
+    int turns = 50, players = 2, aiSeats = 0, bench = 0;
     std::string savePath, loadPath;
     bool showMap = false, showCities = false;
     for (int i = 1; i < argc; ++i) {
@@ -68,6 +106,7 @@ int main(int argc, char** argv) {
         else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
         else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
         else if (a == "--disasters") setup.disasterIntensity = std::atoi(next().c_str());
+        else if (a == "--bench") bench = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
             return 2;
@@ -83,6 +122,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < players; ++i) {
         setup.players.push_back({rules.civs[static_cast<size_t>(i) % rules.civs.size()].id, false});
     }
+    if (bench > 0) return runBench(rules, setup, bench, turns);
     std::unique_ptr<Game> game;
     if (!loadPath.empty()) {
         std::ifstream in(loadPath, std::ios::binary);
@@ -113,7 +153,8 @@ int main(int argc, char** argv) {
         for (const Player& p : game->state().players) {
             auto count = [](const std::vector<uint8_t>& v) { return std::count(v.begin(), v.end(), 1); };
             std::printf("player %d (%s): gold %s, science %s/turn, culture %s/turn, techs %ld, civics %ld, government %s, policies",
-                        p.id, p.barbarian ? "Barbarians" : rules.civs[static_cast<size_t>(p.civ)].name.c_str(),
+                        p.id, p.barbarian ? "Barbarians" : p.cityState != kNone ? rules.cityStates[static_cast<size_t>(p.cityState)].name.c_str()
+                                                   : p.civ == kNone ? "?" : rules.civs[static_cast<size_t>(p.civ)].name.c_str(),
                         p.gold.toString().c_str(),
                         game->sciencePerTurn(p.id).toString().c_str(), game->culturePerTurn(p.id).toString().c_str(),
                         static_cast<long>(count(p.techs.done)), static_cast<long>(count(p.civics.done)),

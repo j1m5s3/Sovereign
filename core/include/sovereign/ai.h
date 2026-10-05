@@ -29,4 +29,13 @@ SOV_API int settleScore(const Game& game, PlayerId player, Hex plot);
 // Sum of combat strength (scaled by health) of the player's land military units.
 SOV_API int militaryStrength(const Game& game, PlayerId player);
 
+// How far along the major civs are, averaged over the living ones (the pace benchmark,
+// `sovsim --bench`; values x100 so averages keep two decimals).
+struct PaceSample {
+    int turn = 0;
+    int64_t cities = 0, population = 0, techs = 0, civics = 0, era = 0;
+    int64_t science = 0, culture = 0, production = 0, gold = 0;
+};
+SOV_API PaceSample measurePace(const Game& game);
+
 }  // namespace sov::ai

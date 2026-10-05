@@ -224,7 +224,8 @@
      "amount": 1,
      "unlock": "TECH_SMART_MATERIALS"
     }
-   ]
+   ],
+   "appeal": -1
   },
   {
    "id": "IMPROVEMENT_OFFSHORE_OIL_RIG",
@@ -247,7 +248,8 @@
      "amount": 1,
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
-   ]
+   ],
+   "appeal": -1
   },
   {
    "id": "IMPROVEMENT_OFFSHORE_WIND_FARM",
@@ -291,7 +293,8 @@
      "amount": 1,
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
-   ]
+   ],
+   "appeal": -1
   },
   {
    "id": "IMPROVEMENT_PASTURE",
@@ -400,7 +403,8 @@
      "amount": 1,
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
-   ]
+   ],
+   "appeal": -1
   },
   {
    "id": "IMPROVEMENT_SEASTEAD",

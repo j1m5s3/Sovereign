@@ -25,7 +25,10 @@ constexpr int kNewResource = 4;       // StandardSettlePlot
 constexpr int kMinSiteScore = 150;    // below this a site is not worth a Settler
 constexpr int kSettleSearch = 9;      // plots from the Settler searched for a site
 constexpr int kTravelPenalty = 8;     // site value lost per turn of travel
-constexpr int kMaxCities = 12;
+constexpr int kMaxCities = 16;
+constexpr int kSiteSurvey = 8;
+constexpr int kEarlyTurns = 120;      // the expansion phase: settlers weigh more
+constexpr int kLongBuild = 12;        // turns beyond which an item loses value in proportion        // plots around our cities searched for a free site
 constexpr int kWarRatioPercent = 130;   // own strength vs target's to declare war
 constexpr int kPeaceRatioPercent = 80;  // below this, offer peace
 constexpr int kWarWeariness = 50;       // turns of war before peace is offered anyway
@@ -42,7 +45,7 @@ size_t yi(YieldType y) { return static_cast<size_t>(y); }
 // Yield weights per point (DefaultYieldBias favours production and gold; food
 // matters most to a young empire).
 int yieldValue(const Yields& y) {
-    static const int w[kNumYields] = {3, 3, 2, 3, 2, 1};
+    static const int w[kNumYields] = {3, 3, 2, 3, 3, 1};
     Fixed total;
     for (size_t i = 0; i < kNumYields; ++i) total += y[i] * w[i];
     return static_cast<int>(total.round());
@@ -63,6 +66,8 @@ struct View {
     PlayerId target = kNoPlayer;   // the major whose cities the army marches on
     int military = 0, ranged = 0, settlers = 0, builders = 0;
     std::vector<Hex> claimed;      // sites and plots other units are already heading for
+    bool majorWar = false;         // at war with a major civ (city-state wars do not stop expansion)
+    int sites = -1;                // free city sites near our cities (-1: not counted yet this turn)
 
     View(Game& g, PlayerId p) : game(g), r(g.rules()), me(p) {}
     const GameState& s() const { return game.state(); }
@@ -108,9 +113,14 @@ void survey(View& v) {
             ++v.settlers;
     }
     v.enemies.clear();
+    v.majorWar = false;
     for (const Player& p : s.players) {
-        if (p.alive && !p.barbarian && v.hostile(p.id)) v.enemies.push_back(p.id);
+        if (p.alive && !p.barbarian && v.hostile(p.id)) {
+            v.enemies.push_back(p.id);
+            v.majorWar |= v.game.isMajorCiv(p.id);
+        }
     }
+    v.sites = -1;
 }
 
 bool hasGarrison(const View& v, const City& c) {
@@ -132,6 +142,23 @@ int distanceToCity(const GameState& s, PlayerId owner, Hex h) {
         if (c.owner == owner) best = std::min(best, s.grid.distance(c.pos, h));
     }
     return best;
+}
+
+// Free sites worth a Settler within kSiteSurvey of our cities (counted once per turn).
+int freeSites(View& v) {
+    if (v.sites >= 0) return v.sites;
+    const GameState& s = v.s();
+    std::vector<Hex> found;
+    for (CityId id : v.cities) {
+        for (const Hex& h : s.grid.within(s.city(id)->pos, kSiteSurvey)) {
+            if (v.game.visibility(v.me, h) == Visibility::Unrevealed || v.claimedNear(h, 3)) continue;
+            bool near = false;
+            for (const Hex& f : found) near = near || s.grid.distance(f, h) < 4;
+            if (!near && settleScore(v.game, v.me, h) >= kMinSiteScore) found.push_back(h);
+        }
+    }
+    v.sites = static_cast<int>(found.size());
+    return v.sites;
 }
 
 // --- diplomacy ---------------------------------------------------------------------
@@ -168,6 +195,8 @@ void diplomacy(View& v) {
     int pickStrength = INT_MAX;
     for (const Player& p : s.players) {
         if (!p.alive || p.barbarian || p.id == v.me || !v.game.canDeclareWar(v.me, p.id)) continue;
+        // City-states only once there is no more room to settle.
+        if (v.game.isCityState(p.id) && freeSites(v) > 0) continue;
         bool near = false;
         for (const City& c : s.cities) {
             if (c.owner != p.id || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
@@ -384,13 +413,13 @@ int unlockValue(const View& v, Unlock node) {
     }
     int value = 1;
     for (const UnitType& t : r.units) {
-        if (is(t.unlock)) value += isArmy(t) && power(t) > bestPower ? 4 + (v.enemies.empty() ? 0 : 4) : 1;
+        if (is(t.unlock)) value += isArmy(t) && power(t) > bestPower ? 2 + (v.enemies.empty() ? 0 : 6) : 1;
     }
     for (const BuildingType& b : r.buildings) {
-        if (is(b.unlock)) value += 3 + b.outerDefenseHp / 50;
+        if (is(b.unlock)) value += 3 + yieldValue(b.yields) / 2 + b.outerDefenseHp / 50;
     }
     for (const DistrictType& d : r.districts) {
-        if (is(d.unlock)) value += 4;
+        if (is(d.unlock)) value += 6;
     }
     for (const ImprovementType& im : r.improvements) {
         if (is(im.unlock)) value += 3;
@@ -827,7 +856,7 @@ void leader(View& v) {
 // --- production --------------------------------------------------------------------
 int desiredArmy(const View& v) {
     const int n = static_cast<int>(v.cities.size());
-    int want = n + 1 + n / 2;
+    int want = n + 1 + n / 3;
     if (!v.enemies.empty()) want += 2 * n + 2;
     return std::min(want, 4 * n + 4);
 }
@@ -879,10 +908,12 @@ void production(View& v) {
         if (items.empty()) continue;
         std::optional<ProductionItem> soldier = bestMilitaryUnit(v, items);
         const bool needGuard = !hasGarrison(v, c) && v.military < static_cast<int>(v.cities.size());
-        const bool wantArmy = v.military < desiredArmy(v);
+        // No new army while the treasury runs down (maintenance), unless at war.
+        const bool wantArmy = v.military < desiredArmy(v) && (!v.enemies.empty() || g.goldPerTurn(v.me) > Fixed());
         const bool minor = g.isCityState(v.me);  // a city-state: one city, no expansion, no trade, no wonders
-        const bool wantSettler = !minor && static_cast<int>(v.cities.size()) + v.settlers < kMaxCities && v.settlers < 2 &&
-                                 c.population >= 2 && !threatened && v.enemies.empty() && s.turn < 200;
+        const int nCities = static_cast<int>(v.cities.size());
+        const bool wantSettler = !minor && nCities + v.settlers < kMaxCities && v.settlers < 1 + nCities / 2 && c.population >= 2 &&
+                                 !threatened && !v.majorWar && v.settlers < freeSites(v);
         int traders = 0;
         for (const Unit& u : s.units) traders += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_TRADER";
         for (CityId other : v.cities) {
@@ -913,18 +944,18 @@ void production(View& v) {
                     if (t.spy) value = wantSpy ? 200 : 0;
                     else if (t.agent) value = wantAssassin ? 250 : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
-                    else if (t.foundCity) value = wantSettler ? 400 : 0;
+                    else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
-                    else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? 220 : 0;
+                    else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
                     break;
                 }
                 case ProductionKind::Building: {
                     const BuildingType& b = v.r.buildings[at(it.type)];
-                    value = 15 + yieldValue(b.yields) * 10;
+                    value = 30 + yieldValue(b.yields) * 25;
                     if (popRoom <= Fixed::fromInt(1)) value += static_cast<int>((b.housing * 30).round());
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += threatened ? 500 : v.enemies.empty() ? 0 : 60;
-                    for (const auto& gpp : b.greatPersonPoints) value += 15 * gpp.second;  // great people (07)
+                    for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
                     for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
                     if (b.wonder && minor) {
                         value = 0;
@@ -954,16 +985,19 @@ void production(View& v) {
                     int gpp = 0;  // a specialty district also earns great people and opens its buildings
                     for (const auto& p : d.greatPersonPoints) gpp += p.second;
                     if (const CityDistrict* placed = c.district(it.type, false)) {
-                        value = 60 + yieldValue(g.districtAdjacency(v.me, it.type, placed->pos)) * 10;
+                        value = 100 + 40 * gpp + yieldValue(g.districtAdjacency(v.me, it.type, placed->pos)) * 25;
                         where = placed->pos;
                     } else {
                         where = districtSpot(v, cid, it.type);
-                        value = 70 + 25 * gpp + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 10;
+                        value = 100 + 40 * gpp + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 25;
                         // The first Holy Site while religions remain to be founded (06): the race for a Prophet.
                         if (d.id == "DISTRICT_HOLY_SITE" && s.players[at(v.me)].religion < 0 &&
                             static_cast<int>(s.religions.size()) < g.maxReligions() &&
                             std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
                             value += 150;
+                        // Housing and amenities when the city runs short (Aqueduct, Neighborhood, Entertainment Complex ...).
+                        if (popRoom <= Fixed::fromInt(1)) value += (d.aqueduct ? 6 : d.housing + (d.appealHousing.empty() ? 0 : 2)) * 40;
+                        if (rep.amenities < rep.amenitiesNeeded) value += d.amenities * 80;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
@@ -971,7 +1005,11 @@ void production(View& v) {
                 }
             }
             if (value <= 0) continue;
-            const int64_t score = static_cast<int64_t>(value) * 1000 / (g.productionCost(v.me, it) + 40);
+            // Value per cost, and long builds lose value in a weak city (it should grow first).
+            const int cost = g.productionCost(v.me, it);
+            int64_t score = static_cast<int64_t>(value) * 1000 / (cost + 40);
+            const int turns = cost / std::max(1, static_cast<int>(rep.yields[yi(YieldType::Production)].toInt()));
+            if (turns > kLongBuild) score = score * kLongBuild / turns;
             if (score > bestScore) {
                 bestScore = score;
                 best = it;
@@ -1001,14 +1039,37 @@ void purchases(View& v) {
         const int cost = g.purchaseCost(v.me, *soldier);
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) g.submit(Command::purchase(v.me, c.id, *soldier));
     }
-    const int reserve = 150 + 30 * static_cast<int>(v.cities.size());
+    // Savings (DefaultSavings: units 4, slush fund 3): a small reserve, less for growth items.
+    const int reserve = 60 + 15 * static_cast<int>(v.cities.size());
     for (CityId cid : v.cities) {
         const City& c = *v.s().city(cid);
         if (c.queue.empty()) continue;
-        const int cost = g.purchaseCost(v.me, c.queue.front());
-        if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost + reserve)) {
+        const ProductionItem& front = c.queue.front();
+        const bool growth = front.kind == ProductionKind::Unit && (v.r.units[at(front.type)].foundCity || v.r.units[at(front.type)].buildCharges > 0);
+        const int cost = g.purchaseCost(v.me, front) + (growth ? 0 : reserve);
+        if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
+    }
+    // Still well above the reserve: buy the building that yields most per gold in any city.
+    for (int guard = 0; guard < 4; ++guard) {
+        const Fixed gold = v.s().players[at(v.me)].gold;
+        std::optional<std::pair<CityId, ProductionItem>> best;
+        int64_t bestScore = 0;
+        for (CityId cid : v.cities) {
+            for (const ProductionItem& it : g.buildableItems(cid)) {
+                if (it.kind != ProductionKind::Building || v.r.buildings[at(it.type)].wonder) continue;
+                const int cost = g.purchaseCost(v.me, it);
+                if (cost <= 0 || gold < Fixed::fromInt(cost + reserve)) continue;
+                const BuildingType& b = v.r.buildings[at(it.type)];
+                const int64_t score = static_cast<int64_t>(30 + yieldValue(b.yields) * 25 + b.amenities * 25) * 1000 / cost;
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = std::make_pair(cid, it);
+                }
+            }
+        }
+        if (!best || g.submit(Command::purchase(v.me, best->first, best->second)) != CommandError::Ok) break;
     }
 }
 
@@ -1239,6 +1300,34 @@ int militaryStrength(const Game& game, PlayerId player) {
         if (u.owner == player && isArmy(t)) total += power(t) * u.hp / 100;
     }
     return total;
+}
+
+PaceSample measurePace(const Game& game) {
+    const GameState& s = game.state();
+    PaceSample out;
+    out.turn = s.turn;
+    int majors = 0;
+    for (const Player& p : s.players) {
+        if (!p.alive || p.barbarian || p.freeCity || p.cityState != kNone) continue;
+        ++majors;
+        out.techs += std::count(p.techs.done.begin(), p.techs.done.end(), 1);
+        out.civics += std::count(p.civics.done.begin(), p.civics.done.end(), 1);
+        out.era += game.playerEra(p.id);
+        out.science += game.sciencePerTurn(p.id).toInt();
+        out.culture += game.culturePerTurn(p.id).toInt();
+        out.gold += p.gold.toInt();
+        for (const City& c : s.cities) {
+            if (c.owner != p.id) continue;
+            ++out.cities;
+            out.population += c.population;
+            out.production += game.cityReport(c.id).yields[yi(YieldType::Production)].toInt();
+        }
+    }
+    if (majors > 0) {
+        for (int64_t* f : {&out.cities, &out.population, &out.techs, &out.civics, &out.era, &out.science, &out.culture, &out.production, &out.gold})
+            *f = *f * 100 / majors;
+    }
+    return out;
 }
 
 int settleScore(const Game& game, PlayerId player, Hex plot) {

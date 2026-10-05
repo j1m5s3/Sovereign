@@ -234,6 +234,7 @@ struct ImprovementType {
     std::vector<ImprovementBonus> bonuses;
     std::vector<ImprovementAdjacency> adjacency;
     Fixed housing;  // per improved plot the city owns
+    int appeal = 0;  // to neighbouring plots (01: Appeal)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -401,6 +402,16 @@ struct DistrictType {
     std::vector<DistrictAdjacency> adjacency;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     Yields tradeDomestic{}, tradeInternational{};  // to a route's origin when this district is at its destination (07)
+    int housing = 0, amenities = 0;  // to its city once complete
+    int appeal = 0;                  // to neighbouring plots (01: Appeal)
+    // Housing added by the district plot's appeal: (minimum appeal, change), highest first (Neighborhood, Preserve).
+    std::vector<std::pair<int, int>> appealHousing;
+    bool aqueduct = false;          // next to the City Center and a River, Lake, Oasis or Mountain; housing to 6 or +2
+    bool onePerPlayer = false;      // Government Plaza, Diplomatic Quarter
+    bool floodplainsRiver = false;  // on Floodplains along a river (Dam)
+    bool preventsDrought = false, preventsFloods = false;  // for its city's plots [GS]
+    std::vector<TypeIndex> exclusiveWith;  // not in a city that has one of these
+    std::vector<std::string> exclusiveIds;  // (loading only)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).

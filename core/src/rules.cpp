@@ -642,6 +642,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 im.bonuses.push_back(bonus);
             }
             im.housing = j["housing"].fixed();
+            im.appeal = static_cast<int>(j["appeal"].integer(0));
             improvements.push_back(std::move(im));
         }
         // Second pass: adjacency refers to other improvements.
@@ -723,7 +724,29 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.water = j["water"].boolean(false);
         d.tradeDomestic = readYields(j["tradeYields"]["domestic"]);
         d.tradeInternational = readYields(j["tradeYields"]["international"]);
+        d.housing = static_cast<int>(j["housing"].integer(0));
+        d.amenities = static_cast<int>(j["amenities"].integer(0));
+        d.appeal = static_cast<int>(j["appeal"].integer(0));
+        for (const Json& band : j["appealHousing"].items()) {
+            if (band.items().size() == 2) d.appealHousing.push_back({static_cast<int>(band.items()[0].integer(0)), static_cast<int>(band.items()[1].integer(0))});
+        }
+        d.aqueduct = j["aqueduct"].boolean(false);
+        d.onePerPlayer = j["onePerPlayer"].boolean(false);
+        d.floodplainsRiver = j["floodplainsRiver"].boolean(false);
+        d.preventsDrought = j["preventsDrought"].boolean(false);
+        d.preventsFloods = j["preventsFloods"].boolean(false);
+        for (const Json& x : j["exclusiveWith"].items()) d.exclusiveIds.push_back(x.str());
         districts.push_back(std::move(d));
+    }
+    for (DistrictType& d : districts) {
+        for (const std::string& x : d.exclusiveIds) {
+            const TypeIndex o = district(x);
+            if (o == kNone) {
+                if (error) *error = "district " + d.id + ": unknown exclusiveWith " + x;
+                return false;
+            }
+            d.exclusiveWith.push_back(o);
+        }
     }
     for (BuildingType& b : buildings) b.districtType = district(b.district);
     // Wonder placement and one-time effects name terrains, features, resources, districts and units.

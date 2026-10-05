@@ -1617,9 +1617,7 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "CompletedDistrictType=Entertainment Complex"
-    ]
+    "district": "DISTRICT_ENTERTAINMENT_COMPLEX"
    },
    "untrackedEffects": [
     "adjust district extra regional entertainment (Amount=1) (one-time)",
