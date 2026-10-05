@@ -40,7 +40,7 @@ bool decodeMessage(const std::vector<uint8_t>& bytes, Message& out) {
     out = Message{};
     if (r.u8() != kMagic) return false;
     const uint8_t type = r.u8();
-    if (type < static_cast<uint8_t>(MsgType::Hello) || type > static_cast<uint8_t>(MsgType::Chat)) return false;
+    if (type < static_cast<uint8_t>(MsgType::Hello) || type > static_cast<uint8_t>(MsgType::Relay)) return false;
     out.type = static_cast<MsgType>(type);
     out.protocol = r.u32();
     out.a = r.i32();

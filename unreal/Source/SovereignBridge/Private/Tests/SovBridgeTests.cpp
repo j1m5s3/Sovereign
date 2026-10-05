@@ -527,4 +527,116 @@ bool FSovHotSeatTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovRemoteBattleTest, "Sovereign.Battle.OnlineSnapshotsAndRemoteOrders", kSovTestFlags)
+bool FSovRemoteBattleTest::RunTest(const FString& Parameters)
+{
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, 36, 100, false};
+	Spec.Defender = {TEXT("Spearman"), 1, 30, 100, false};
+	Spec.Seed = 11;
+	FSovBattleSim Host;
+	Host.Start(Spec, FSovBattleSim::TrainedPolicy());
+	// The other side's player commands the defenders: their order holds, whatever the AI would do.
+	Host.SetRemoteEnemy(true);
+	Host.SetOrder(1, sov::battle::Order::Hold);
+	for (int32 i = 0; i < 40; ++i) Host.Step(0.05f);
+	TestEqual(TEXT("the remote side's order stands"), static_cast<int32>(Host.GetOrder(1, 1)), static_cast<int32>(sov::battle::Order::Hold));
+	// The snapshot crosses the wire and draws the same field on the other machine.
+	FSovBattleSnapshot Snap;
+	TestTrue(TEXT("a snapshot decodes"), Snap.Decode(Host.Snapshot().Encode()));
+	FSovBattleSim View;
+	View.StartRemoteView(Spec);
+	View.ApplySnapshot(Snap);
+	TestEqual(TEXT("same soldiers"), View.Soldiers().Num(), Host.Soldiers().Num());
+	TestEqual(TEXT("same survivors"), View.Alive(0), Host.Alive(0));
+	TestEqual(TEXT("same orders"), static_cast<int32>(View.GetOrder(1, 1)), static_cast<int32>(sov::battle::Order::Hold));
+	bool bClose = true;
+	for (int32 i = 0; i < View.Soldiers().Num(); ++i)
+	{
+		bClose &= FVector2D::Distance(View.Soldiers()[i].Pos, Host.Soldiers()[i].Pos) < 0.02f;
+	}
+	TestTrue(TEXT("positions within a hundredth"), bClose);
+	TestFalse(TEXT("a truncated snapshot is refused"), Snap.Decode(std::vector<uint8_t>(3, 0)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovOnlineBattleTest, "Sovereign.Bridge.OnlineLiveBattleSettlesEverywhere", kSovTestFlags)
+bool FSovOnlineBattleTest::RunTest(const FString& Parameters)
+{
+	FSovSetup HostSetup;
+	HostSetup.Net = ESovNet::Host;
+	HostSetup.Port = 17792;
+	HostSetup.HumanSeats = 2;
+	HostSetup.bBattleDemo = true;  // seat 1's leader and warrior beside seat 2's warrior, at war
+	FSovSession Host, Guest;
+	FString Error;
+	if (!Host.Start(HostSetup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	FSovSetup JoinSetup = HostSetup;
+	JoinSetup.Net = ESovNet::Join;
+	JoinSetup.bBattleDemo = false;
+	if (!Guest.Start(JoinSetup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	auto PumpBoth = [&](int32 Rounds) {
+		for (int32 i = 0; i < Rounds; ++i)
+		{
+			Host.Poll();
+			Guest.Poll();
+			FPlatformProcess::Sleep(0.002f);
+		}
+	};
+	for (int32 i = 0; i < 500 && !(Host.LobbyLines().Num() > 1 && Host.LobbyLines()[1].Contains(TEXT("Player"))); ++i) PumpBoth(1);
+	TestTrue(TEXT("the host starts the prepared game"), Host.StartHostedGame(Error));
+	for (int32 i = 0; i < 1000 && !Guest.IsRunning(); ++i) PumpBoth(1);
+	if (!Guest.IsRunning())
+	{
+		AddError(TEXT("the guest never got the game"));
+		return false;
+	}
+	// The host's warrior, escorting its leader, attacks the guest's warrior: a live battle for the host.
+	const sov::GameState& S = Host.GetGame().state();
+	const sov::Unit* Mine = nullptr;
+	const sov::Unit* Theirs = nullptr;
+	for (const sov::Unit& U : S.units)
+	{
+		const bool bMilitary = Host.GetRules().units[static_cast<size_t>(U.type)].layer == sov::UnitLayer::Military;
+		if (bMilitary && U.owner == 0 && !Mine) Mine = &U;
+		if (bMilitary && U.owner == 1 && !Theirs) Theirs = &U;
+	}
+	if (!Mine || !Theirs)
+	{
+		AddError(TEXT("the battle demo did not set up both warriors"));
+		return false;
+	}
+	TestEqual(TEXT("the attack goes in"), Host.Submit(sov::Command::attack(0, Mine->id, Theirs->pos)), sov::CommandError::Ok);
+	TestTrue(TEXT("the battle waits for the host's leader"), Host.GetGame().battlePending() && Host.GetGame().state().pendingBattle.liveFor == 0);
+	for (int32 i = 0; i < 500 && !Guest.GetGame().battlePending(); ++i) PumpBoth(1);
+	TestTrue(TEXT("the guest sees the battle waiting"), Guest.GetGame().battlePending());
+	// The field streams to the guest; the guest's orders stream back (the controller's traffic).
+	Host.SendRelay(1, {1, 2, 3});
+	Guest.SendRelay(0, {3, 0xFF, 1});
+	TArray<TPair<int32, std::vector<uint8_t>>> AtGuest, AtHost;
+	for (int32 i = 0; i < 500 && (AtGuest.Num() == 0 || AtHost.Num() == 0); ++i)
+	{
+		PumpBoth(1);
+		AtGuest.Append(Guest.TakeRelays());
+		AtHost.Append(Host.TakeRelays());
+	}
+	TestTrue(TEXT("the guest got the field"), AtGuest.Num() == 1 && AtGuest[0].Key == 0);
+	TestTrue(TEXT("the host got the order"), AtHost.Num() == 1 && AtHost[0].Key == 1 && AtHost[0].Value.size() == 3);
+	// One result command settles it on every machine.
+	const sov::PendingBattle B = Host.GetGame().state().pendingBattle;
+	TestEqual(TEXT("the result goes in"), Host.Submit(sov::Command::battleResult(0, B.expectedToDefender, B.expectedToAttacker, 0)), sov::CommandError::Ok);
+	for (int32 i = 0; i < 500 && Guest.GetGame().log().size() < Host.GetGame().log().size(); ++i) PumpBoth(1);
+	TestFalse(TEXT("settled on the guest's machine too"), Guest.GetGame().battlePending());
+	TestEqual(TEXT("the same game on both"), Guest.GetGame().stateHash(), Host.GetGame().stateHash());
+	return true;
+}
+
 #endif  // WITH_DEV_AUTOMATION_TESTS

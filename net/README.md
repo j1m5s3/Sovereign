@@ -7,6 +7,7 @@ The lockstep session over the core's one command log (engine-and-architecture, C
 - **AI seats run on the host** and go out as commands like anyone's. So do city-states, and human seats whose player has dropped. The host also settles a live battle that waits for a seat nobody holds.
 - **Desync repair.** When a world turn begins, each client sends its state hash. If it differs from the host's hash for that turn, the host sends its save and the client reloads it. A client whose core refuses a command the host accepted, or that sees a gap in the numbering, asks for the save at once.
 - **Joining.** Players claim seats in the lobby. Seats nobody claimed are the AI's for good. After the start, a free human seat (a dropped player's) can be rejoined: the host sends its save.
+- **Live scenes.** `Relay` messages carry live scene traffic between two seats through the host, never logged: the battle's host streams the field, the other side's player sends orders. Only the one `BattleResult` command enters the log. A live battle left waiting longer than the timeout (default 300 s, `Host::setLiveBattleTimeout`) is settled by the numbers in its player's name.
 - **Join checks.** A join needs the same protocol version, the same rules data (checksum) and the same mod list.
 - **Not yet.** Turns are sequential, as the core plays them. Simultaneous and dynamic turn modes come later (see `.jit/JIT_PLAN.md`).
 

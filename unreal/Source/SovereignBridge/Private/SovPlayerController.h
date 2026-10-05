@@ -103,7 +103,12 @@ protected:
 
 	void OpenChooser(EChooser Kind);
 	void EnterStreet();
-	void StartBattle();
+	// bRemoteView: watch and command our side of a battle another machine runs (online).
+	void StartBattle(bool bRemoteView = false);
+	// Online: the other side's human in the waiting battle (kNoPlayer when there is none).
+	sov::PlayerId BattleOpponent() const;
+	// Live battle traffic: snapshots out, orders in (the battle's host); the reverse elsewhere.
+	void HandleBattleRelays();
 	void UpdateBattle(float DeltaTime);
 	void ExitBattle();
 	void LookAround(float DeltaTime);
@@ -157,6 +162,9 @@ protected:
 	sov::TypeIndex PendingFounder = sov::kNone;  // the Founder belief picked before the Follower
 	FSovBattleResult Outcome;
 	bool bBattleSent = false;
+	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle
+	sov::PlayerId PendingJoin = sov::kNoPlayer;   // the opponent asked to join before our battle began
+	float SnapshotTimer = 0.f;
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second

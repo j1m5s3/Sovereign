@@ -37,6 +37,20 @@ void Client::chat(const std::string& text) {
     if (connected() && !m.text.empty()) link_->send(encodeMessage(m));
 }
 
+void Client::sendRelay(PlayerId to, const std::vector<uint8_t>& blob) {
+    Message m;
+    m.type = MsgType::Relay;
+    m.a = to;
+    m.blob = blob;
+    if (connected()) link_->send(encodeMessage(m));
+}
+
+std::vector<std::pair<PlayerId, std::vector<uint8_t>>> Client::takeRelays() {
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> out;
+    out.swap(relays_);
+    return out;
+}
+
 void Client::apply(int32_t seq, const Command& c) {
     if (!game_ || resyncAsked_) return;
     const size_t have = game_->log().size();
@@ -94,6 +108,7 @@ void Client::handle(const Message& m) {
             ++refusals_;
             notices_.push_back(std::string("The host refused your order: ") + commandErrorName(lastRefused_));
             return;
+        case MsgType::Relay: relays_.push_back({static_cast<PlayerId>(m.a), m.blob}); return;
         case MsgType::Chat: {
             const std::string who = m.a >= 0 && static_cast<size_t>(m.a) < seats_.size() ? seats_[static_cast<size_t>(m.a)].name : "?";
             notices_.push_back(who + ": " + m.text);
