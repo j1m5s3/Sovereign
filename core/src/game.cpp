@@ -261,6 +261,7 @@ CommandError Game::validate(const Command& c) const {
             return rebaseProblem(c.id, c.target);
         }
         case CommandType::LaunchWmd: return wmdProblem(c);
+        case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::CongressVote: {
             const int item = c.id;
             if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
@@ -726,6 +727,12 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
+        case CommandType::JoinEmergency: {
+            Emergency& e = state_.emergencies[static_cast<size_t>(c.arg)];
+            if (e.members.size() < state_.players.size()) e.members.resize(state_.players.size(), 0);
+            e.members[static_cast<size_t>(c.player)] = 1;
+            break;
+        }
         case CommandType::UpgradeUnit: {
             Unit& u = *state_.unit(c.id);
             Player& p = state_.players[static_cast<size_t>(c.player)];
@@ -919,6 +926,7 @@ void Game::beginGlobalTurn() {
     processWorldCongress();
     processClimate();
     processFallout();
+    processEmergencies();
     processProfiles();
     processSpaceRace();
     processReligion();

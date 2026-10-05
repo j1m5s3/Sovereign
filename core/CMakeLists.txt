@@ -38,6 +38,7 @@ add_library(sovereign_core
   src/profile.cpp
   src/air.cpp
   src/wmd.cpp
+  src/emergencies.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -103,6 +104,7 @@ add_executable(sovereign_tests
   tests/test_projects.cpp
   tests/test_air.cpp
   tests/test_wmd.cpp
+  tests/test_emergencies.cpp
   tests/test_uniques.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)

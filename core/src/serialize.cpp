@@ -520,6 +520,16 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(d.radius);
         w.i32(d.turnsLeft);
     }
+    w.u32(static_cast<uint32_t>(s.emergencies.size()));
+    for (const Emergency& e : s.emergencies) {
+        w.u8(static_cast<uint8_t>(e.kind));
+        w.i8(e.target);
+        w.i32(e.city);
+        w.i32(e.religion);
+        w.i32(e.endTurn);
+        w.bytes(e.members);
+        w.u8(e.outcome);
+    }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
     w.u32(static_cast<uint32_t>(s.congress.size()));
@@ -944,6 +954,21 @@ bool deserializeState(ByteReader& r, GameState& s) {
         d.center = readHex(r);
         d.radius = r.i32();
         d.turnsLeft = r.i32();
+    }
+    uint32_t nemerg = r.u32();
+    if (!r.checkCount(nemerg, 16)) return false;
+    s.emergencies.resize(nemerg);
+    for (Emergency& e : s.emergencies) {
+        const uint8_t kind = r.u8();
+        if (kind >= kNumEmergencyKinds) return false;
+        e.kind = static_cast<EmergencyKind>(kind);
+        e.target = r.i8();
+        e.city = r.i32();
+        e.religion = r.i32();
+        e.endTurn = r.i32();
+        e.members = r.bytes();
+        e.outcome = r.u8();
+        if (e.outcome > 2) return false;
     }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();

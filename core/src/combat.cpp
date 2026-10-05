@@ -113,7 +113,7 @@ bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
     if (!t.alive || t.barbarian || state_.players[static_cast<size_t>(player)].barbarian) return false;
     const Relation& rel = state_.players[static_cast<size_t>(player)].relations[static_cast<size_t>(target)];
     if (rel.war || state_.turn < rules_->globalInt("DIPLOMACY_EARLIEST_MAJOR_DOW_TURN")) return false;
-    if (friends(player, target)) return false;  // a declared friend cannot be attacked while it lasts (08)
+    // A declared friend or ally can be attacked, at the price of a Betrayal emergency [GS] (08).
     // After a peace treaty, war may not resume for DIPLOMACY_PEACE_MIN_TURNS.
     return rel.since == 0 || state_.turn - rel.since >= rules_->globalInt("DIPLOMACY_PEACE_MIN_TURNS");
 }
@@ -1121,6 +1121,19 @@ void Game::captureCity(City& city, UnitId attackerId) {
     const PlayerId lost = city.owner;
     const CityId cid = city.id;
     const Hex at = city.pos;
+    // Emergencies (08): a member taking a target's city meets a Nuclear or Betrayal goal.
+    for (Emergency& e : state_.emergencies) {
+        if (e.outcome == 0 && e.target == lost && (e.kind == EmergencyKind::Nuclear || e.kind == EmergencyKind::Betrayal) &&
+            static_cast<size_t>(me) < e.members.size() && e.members[static_cast<size_t>(me)]) {
+            e.outcome = 1;
+            for (size_t m = 0; m < e.members.size() && m < state_.players.size(); ++m) {
+                if (e.members[m]) state_.players[m].favor += 100;
+            }
+        }
+    }
+    // Emergencies (08): taking a major civ's city or a city-state.
+    if (isMajorCiv(me) && isMajorCiv(lost)) triggerEmergency(EmergencyKind::Military, me, cid, lost);
+    else if (isMajorCiv(me) && isCityState(lost)) triggerEmergency(EmergencyKind::CityState, me, cid, lost);
     // The garrison dies; civilians on the center are captured or destroyed.
     std::vector<UnitId> there;
     for (const Unit& o : state_.units) if (o.pos == at && o.owner != me) there.push_back(o.id);

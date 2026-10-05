@@ -163,7 +163,7 @@ TEST(a_surprise_war_is_remembered_by_everyone) {
     CHECK(g->agendaOpinion(2, 0) < 0);
 }
 
-TEST(friendship_needs_liking_and_rules_out_war) {
+TEST(friendship_needs_liking_and_rules_out_denouncing) {
     auto g = Game::fromScenario(rules(), diploState());
     const std::vector<DealItem> friendship = {{DealItemKind::Friendship, 0, 0, kNone}};
     REQUIRE(g->submit(Command::proposeDeal(0, 1, friendship)) == CommandError::Ok);
@@ -175,7 +175,6 @@ TEST(friendship_needs_liking_and_rules_out_war) {
     CHECK(g->friends(0, 1));
     CHECK(g->friends(1, 0));
     CHECK(g->relationship(1, 0) == Relationship::DeclaredFriend);
-    CHECK(!g->canDeclareWar(0, 1));
     CHECK(!g->canDenounce(0, 1));
 }
 

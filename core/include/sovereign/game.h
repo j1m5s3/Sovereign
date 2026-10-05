@@ -355,6 +355,14 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- emergencies [R&F/GS] (08: Emergencies)
+    // Whether the player may join this running emergency: a living major civ that has met the target,
+    // is not the target, its ally or its declared friend, and has not joined yet.
+    bool canJoinEmergency(PlayerId player, int emergency) const;
+    bool inEmergencyAgainst(PlayerId member, PlayerId target) const;  // a running emergency it joined
+    void triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim);
+    void processEmergencies();               // goals met, expiry, rewards (the world turn)
+
     // ---- alliances [R&F] (08: Alliance)
     AllianceType alliance(PlayerId a, PlayerId b) const;  // None when not allied
     int allianceLevel(PlayerId a, PlayerId b) const;      // 0 not allied, else 1..3 by alliance points

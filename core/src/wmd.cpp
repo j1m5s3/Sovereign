@@ -115,6 +115,7 @@ void Game::launchWmd(const Command& c) {
     }
     refreshVisibility(c.player);
     for (PlayerId v : victims) refreshVisibility(v);
+    triggerEmergency(EmergencyKind::Nuclear, c.player, kNoCity, victims.empty() ? kNoPlayer : victims.front());
 }
 
 void Game::processFallout() {

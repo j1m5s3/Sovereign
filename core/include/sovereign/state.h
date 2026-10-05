@@ -205,6 +205,19 @@ struct FoundedReligion {
     std::vector<TypeIndex> beliefs;  // the founder's pantheon, then Founder, Follower, Worship, Enhancer
 };
 
+// A hostile emergency [R&F/GS] (08: Emergencies): civs join against the target to undo what it did.
+enum class EmergencyKind : uint8_t { Military = 0, CityState, Religious, Nuclear, Betrayal };
+constexpr int kNumEmergencyKinds = 5;
+struct Emergency {
+    EmergencyKind kind = EmergencyKind::Military;
+    PlayerId target = kNoPlayer;
+    CityId city = kNoCity;          // Military/CityState: the city taken; Religious: the Holy City
+    int32_t religion = -1;          // Religious: the Holy City's own religion (GameState::religions)
+    int32_t endTurn = 0;            // the goal must be met by then
+    std::vector<uint8_t> members;   // per player: joined
+    uint8_t outcome = 0;            // 0 running, 1 members succeeded, 2 failed (target rewarded)
+};
+
 // A wonder's plot: reserved when its production starts, its own tile once built.
 struct CityWonder {
     TypeIndex building = kNone;
@@ -522,6 +535,7 @@ struct SOV_API GameState {
     int32_t nextTradeRouteId = 1;
     std::vector<Deal> deals;            // proposals waiting for a human's answer
     std::vector<Agreement> agreements;  // running deal terms
+    std::vector<Emergency> emergencies; // hostile emergencies, running and settled (08: Emergencies)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]

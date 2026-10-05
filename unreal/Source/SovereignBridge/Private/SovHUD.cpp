@@ -152,6 +152,21 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		if (!Allies.IsEmpty()) Line(TEXT("Alliances:") + Allies, 16, Y, FLinearColor(0.6f, 1.f, 0.7f));
 	}
+	// Emergencies (08): the running ones, and whether we are in them (join from the , chooser).
+	{
+		static const TCHAR* const Kinds[] = {TEXT("Military"), TEXT("City-State"), TEXT("Religious"), TEXT("Nuclear"), TEXT("Betrayal")};
+		FString Text;
+		for (size_t k = 0; k < S.emergencies.size(); ++k)
+		{
+			const sov::Emergency& E = S.emergencies[k];
+			if (E.outcome != 0) continue;
+			const sov::Player& T = S.players[static_cast<size_t>(E.target)];
+			const FString Who = E.target == Me ? FString(TEXT("us")) : (T.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(T.civ)].name));
+			const bool bIn = static_cast<size_t>(Me) < E.members.size() && E.members[static_cast<size_t>(Me)];
+			Text += FString::Printf(TEXT("   %s vs %s (%d turns%s)"), Kinds[static_cast<int32>(E.kind)], *Who, E.endTurn - S.turn, bIn ? TEXT(", joined") : TEXT(""));
+		}
+		if (!Text.IsEmpty()) Line(TEXT("Emergencies:") + Text, 16, Y, FLinearColor(1.f, 0.55f, 0.55f));
+	}
 	// War weariness (08): points and the amenities every city loses to them.
 	if (G.warWeariness(Me) > 0)
 	{

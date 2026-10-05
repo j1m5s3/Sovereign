@@ -705,6 +705,11 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     Relation& mine = p.relations[at(target)];
     // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation; anything else is a surprise.
     const bool formal = denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    // Betrayal [GS]: war on a declared friend or an ally (08: Emergencies).
+    if (isMajorCiv(by) && isMajorCiv(target) && (friends(by, target) || alliance(by, target) != AllianceType::None))
+        triggerEmergency(EmergencyKind::Betrayal, by, kNoCity, target);
+    // Joining an emergency against the target is an Emergency War: no grievances.
+    const bool emergencyWar = inEmergencyAgainst(by, target);
     if (isMajorCiv(target)) {
         ++p.warsDeclared;
         if (!formal) ++p.surpriseWars;
@@ -712,7 +717,7 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     remember(target, by, formal ? MemoryKind::DeclaredWar : MemoryKind::SurpriseWar, formal ? -12 : -24, formal ? 60 : 80);
     // Grievances [GS]: 100 for a formal war (Sovereign's base; the engine value is unverified), 150%
     // for a surprise; declared friends of the target share 25% (SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS).
-    const int base = formal ? 100 : 150;
+    const int base = emergencyWar ? 0 : formal ? 100 : 150;
     addGrievance(target, by, base);
     for (const Player& o : state_.players) {
         if (o.id == by || o.id == target) continue;
@@ -763,7 +768,11 @@ void Game::addWarWeariness(PlayerId player, PlayerId against, int points) {
     if (p.barbarian || state_.players[at(against)].barbarian || points <= 0) return;
     const int policy = static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::WarWearinessPercent).toInt());
     const int softened = std::min(50, grievances(player, against) / 10);
-    const int gained = points * std::max(0, 100 + policy) * (100 - softened) / 10000;
+    int pct = 100 + policy;
+    for (const Emergency& e : state_.emergencies) {
+        if (e.outcome == 0 && e.kind == EmergencyKind::Betrayal && e.target == player && at(against) < e.members.size() && e.members[at(against)]) pct += 50;
+    }
+    const int gained = points * std::max(0, pct) * (100 - softened) / 10000;
     if (gained <= 0) return;
     if (p.warWeariness.size() < state_.players.size()) p.warWeariness.resize(state_.players.size(), 0);
     p.warWeariness[at(against)] += gained;

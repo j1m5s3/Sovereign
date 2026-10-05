@@ -426,6 +426,12 @@ void diplomacy(View& v) {
         const bool accept = theyOffer && mine * 100 < theirs * v.posture.warRatio;
         if ((losing || tired || accept) && v.game.canMakePeace(v.me, e)) v.game.submit(Command::makePeace(v.me, e));
     }
+    // Emergencies (08): join one against a civ it dislikes or fears.
+    for (size_t i = 0; i < s.emergencies.size(); ++i) {
+        const Emergency& e = s.emergencies[i];
+        if (!v.game.canJoinEmergency(v.me, static_cast<int>(i))) continue;
+        if (v.game.opinionOf(v.me, e.target) < 0 || militaryStrength(v.game, e.target) > mine) v.game.submit(Command::joinEmergency(v.me, static_cast<int32_t>(i)));
+    }
     // Called to arms: join the war of an ally that was attacked, against a civ we are not friends
     // with (08: Alliance; the ally remembers who declared on it).
     for (const Player& ally : s.players) {
@@ -469,7 +475,10 @@ void diplomacy(View& v) {
         }
         const int theirs = militaryStrength(v.game, p.id);
         if (v.game.wmdsHeld(p.id) > 0 && v.game.wmdsHeld(v.me) == 0) continue;  // deterred (05: Nuclear weapons)
-        if (near && mine * 100 >= theirs * v.posture.warRatio && theirs < pickStrength && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
+        if (v.game.friends(v.me, p.id) || v.game.alliance(v.me, p.id) != AllianceType::None) continue;  // no betrayal
+        // An emergency's target is fair game at three quarters of the usual margin (an Emergency War costs no grievances).
+        const int ratio = v.game.inEmergencyAgainst(v.me, p.id) ? v.posture.warRatio * 3 / 4 : v.posture.warRatio;
+        if (near && mine * 100 >= theirs * ratio && theirs < pickStrength && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
             pick = p.id;
             pickStrength = theirs;
         }
