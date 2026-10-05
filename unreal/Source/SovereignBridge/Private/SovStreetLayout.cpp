@@ -13,6 +13,16 @@ FString Str(const std::string& S)
 	return UTF8_TO_TCHAR(S.c_str());
 }
 
+// Landmark recipe per building (world doc, "How the rules pick pieces"); the rest share one hall.
+FString LandmarkRecipe(const std::string& Id)
+{
+	if (Id == "BUILDING_PALACE") return TEXT("Palace");
+	if (Id == "BUILDING_MONUMENT") return TEXT("Monument");
+	if (Id == "BUILDING_GRANARY") return TEXT("Granary");
+	if (Id == "BUILDING_SHRINE" || Id == "BUILDING_TEMPLE") return TEXT("Temple");
+	return TEXT("Landmark");
+}
+
 bool InsideHex(const FVector2D& P, double Radius)
 {
 	// Pointy-top hex: inside when |y| <= r and the slanted edges hold.
@@ -83,11 +93,24 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 	{
 		const sov::BuildingType& B = R.buildings[static_cast<size_t>(City->buildings[static_cast<size_t>(i)])];
 		const double Angle = FMath::DegreesToRadians(30.0 + 360.0 * i / FMath::Max(Buildings, 1));
-		const FVector2D At = FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * (PlazaRadius + 700.0);
 		const bool bPalace = B.granted;
+		const FVector2D At = FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * (PlazaRadius + (bPalace ? 1200.0 : 900.0));
 		const FVector Size = bPalace ? FVector(1400, 1000, 1100) : FVector(900, 700, 600 + 100 * (i % 3));
-		L.Pieces.Add({ESovStreetPiece::Landmark, FVector(At.X, At.Y, Size.Z * 0.5), Size, static_cast<float>(FMath::RadiansToDegrees(Angle)),
-			bPalace ? Civ : FLinearColor(0.78f, 0.74f, 0.66f), Str(B.name)});
+		// Kit landmarks face the plaza (their door is on -Y): yaw so -Y points at the centre.
+		const float Facing = static_cast<float>(FMath::RadiansToDegrees(Angle)) + 90.f;
+		FSovStreetPiece Piece{ESovStreetPiece::Landmark, FVector(At.X, At.Y, Size.Z * 0.5), Size, Facing,
+			bPalace ? Civ : FLinearColor(0.78f, 0.74f, 0.66f), Str(B.name), LandmarkRecipe(B.id)};
+		L.Pieces.Add(Piece);
+		if (bPalace)
+		{
+			// The ruler's banners flank the Palace in the owner's colour.
+			for (int32 Side = -1; Side <= 1; Side += 2)
+			{
+				const FVector2D Off = At + FVector2D(FMath::Cos(Angle + Side * 0.5), FMath::Sin(Angle + Side * 0.5)) * 300.0 -
+									  FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * 900.0;
+				L.Pieces.Add({ESovStreetPiece::Banner, FVector(Off.X, Off.Y, 350), FVector(30, 30, 700), Facing, Civ, FString(), TEXT("Banner")});
+			}
+		}
 	}
 
 	// Filler houses by population (stage 4, "Filler"), kept off the streets and the plaza.
@@ -119,9 +142,13 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 		const double H = Rng.FRandRange(300.0, 520.0);
 		const bool bBoarded = L.Mood == ESovStreetMood::Unhappy && Rng.FRand() < 0.35f;
 		const float Shade = Rng.FRandRange(0.75f, 0.95f);
+		static const TCHAR* HouseKinds[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+		const FString Recipe = bBoarded ? FString(TEXT("House_Boarded")) : FString(HouseKinds[Rng.RandRange(0, 2)]);
+		// Houses turn their fronts toward the plaza, with a little scatter.
+		const float Facing = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(P.Y, P.X))) + 90.f + Rng.FRandRange(-15.f, 15.f);
 		L.Pieces.Add({bBoarded ? ESovStreetPiece::Boarded : ESovStreetPiece::House, FVector(P.X, P.Y, H * 0.5),
-			FVector(Rng.FRandRange(450.0, 600.0), Rng.FRandRange(400.0, 550.0), H), static_cast<float>(Rng.FRandRange(0.f, 90.f)),
-			bBoarded ? FLinearColor(0.25f, 0.2f, 0.17f) : FLinearColor(Shade, Shade * 0.9f, Shade * 0.78f)});
+			FVector(Rng.FRandRange(450.0, 600.0), Rng.FRandRange(400.0, 550.0), H), Facing,
+			bBoarded ? FLinearColor(0.25f, 0.2f, 0.17f) : FLinearColor(Shade, Shade * 0.9f, Shade * 0.78f), FString(), Recipe});
 		++Placed;
 	}
 
@@ -140,7 +167,7 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 			const FVector2D Mid = (P0 + P1) * 0.5;
 			const FVector2D D = P1 - P0;
 			L.Pieces.Add({ESovStreetPiece::Wall, FVector(Mid.X, Mid.Y, 400), FVector(D.Size(), 250, 800),
-				static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(D.Y, D.X))), FLinearColor(0.5f, 0.48f, 0.45f)});
+				static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(D.Y, D.X))), FLinearColor(0.5f, 0.48f, 0.45f), FString(), TEXT("Wall")});
 		}
 	}
 
@@ -151,12 +178,43 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 		const FVector2D At = FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * PlazaRadius;
 		if (L.Mood == ESovStreetMood::Happy)
 		{
-			L.Pieces.Add({ESovStreetPiece::Banner, FVector(At.X, At.Y, 350), FVector(30, 30, 700), 0.f, Civ});
+			L.Pieces.Add({ESovStreetPiece::Banner, FVector(At.X, At.Y, 350), FVector(30, 30, 700), 0.f, Civ, FString(), TEXT("Banner")});
+			// Market stalls on the plaza when the city is happy (stage 5).
+			const FVector2D Stall = At * 0.7;
+			L.Pieces.Add({ESovStreetPiece::Market, FVector(Stall.X, Stall.Y, 120), FVector(260, 140, 240),
+				static_cast<float>(60.0 * i), FLinearColor(0.6f, 0.4f, 0.25f), FString(), TEXT("MarketStall")});
 		}
 		if (L.bFear)
 		{
 			L.Pieces.Add({ESovStreetPiece::Guard, FVector(At.X, At.Y, 90), FVector(60, 60, 180), 0.f, FLinearColor(0.3f, 0.05f, 0.05f)});
 		}
+	}
+
+	// Trees and bushes in the open ground near the hex edge (nature kit).
+	for (int32 Tries = 0, Trees = 0; Tries < 400 && Trees < 14; ++Tries)
+	{
+		const FVector2D P(Rng.FRandRange(-Rad, Rad), Rng.FRandRange(-Rad, Rad));
+		if (!InsideHex(P, Rad * 0.9) || P.Size() < Rad * 0.62)
+		{
+			continue;
+		}
+		bool bClear = true;
+		for (const TPair<FVector2D, FVector2D>& S : Streets)
+		{
+			bClear &= SegmentDistance(P, S.Key, S.Value) > 700.0;
+		}
+		for (const FSovStreetPiece& O : L.Pieces)
+		{
+			bClear &= O.Kind != ESovStreetPiece::House || FVector2D::Distance(P, FVector2D(O.Location)) > 650.0;
+		}
+		if (!bClear)
+		{
+			continue;
+		}
+		static const TCHAR* Greens[] = {TEXT("Tree_Broadleaf"), TEXT("Tree_Conifer"), TEXT("Bush")};
+		L.Pieces.Add({ESovStreetPiece::Tree, FVector(P.X, P.Y, 250), FVector(300, 300, 500), static_cast<float>(Rng.FRandRange(0.f, 360.f)),
+			FLinearColor(0.2f, 0.4f, 0.2f), FString(), Greens[Rng.RandRange(0, 2)]});
+		++Trees;
 	}
 
 	L.Crowd = 6 + City->population * 4;

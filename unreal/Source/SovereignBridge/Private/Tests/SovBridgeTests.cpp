@@ -7,6 +7,8 @@
 #include "SovSession.h"
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
+#include "SovArt.h"
+#include "UObject/UObjectGlobals.h"
 
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
@@ -341,6 +343,19 @@ bool FSovBattleSimTest::RunTest(const FString& Parameters)
 	const FSovBattleResult Lone = RunBattle(40, 16, 3, true);
 	TestTrue(TEXT("lone leader takes the brunt"), Lone.ToDefender > 0);
 	TestTrue(TEXT("results stay within HP"), Lone.ToDefender <= 100 && Lone.ToAttacker <= 100);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovArtAssetsTest, "Sovereign.Art.KitAssetsLoad", kSovTestFlags)
+bool FSovArtAssetsTest::RunTest(const FString& Parameters)
+{
+	// Every kit asset the game names was built by tools/art and loads.
+	for (const FString& Path : SovArt::RequiredAssets())
+	{
+		TestNotNull(*FString::Printf(TEXT("loads %s"), *Path), LoadObject<UObject>(nullptr, *Path));
+	}
+	TestNotNull(TEXT("kit material"), SovArt::KitMaterial());
+	TestNotNull(TEXT("palace mesh"), SovArt::Mesh(TEXT("Classical"), TEXT("Palace")));
 	return true;
 }
 

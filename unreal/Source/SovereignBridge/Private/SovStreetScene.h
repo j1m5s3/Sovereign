@@ -60,6 +60,8 @@ public:
 private:
 	UMaterialInstanceDynamic* MaterialFor(const FLinearColor& Color);
 	UStaticMeshComponent* AddPiece(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, float Yaw, const FLinearColor& Color);
+	// A kit mesh at true size, pivot on the ground; a non-white tint makes an owner-coloured instance.
+	UStaticMeshComponent* AddKitPiece(UStaticMesh* Mesh, const FVector& Location, float Yaw, const FLinearColor& Tint);
 
 	struct FCitizen
 	{

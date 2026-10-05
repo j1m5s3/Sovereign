@@ -9,6 +9,8 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include "SovArt.h"
+
 namespace
 {
 uint32 ColorKey(const FLinearColor& C)
@@ -110,6 +112,26 @@ UStaticMeshComponent* ASovStreetScene::AddPiece(UStaticMesh* Mesh, const FVector
 	return C;
 }
 
+UStaticMeshComponent* ASovStreetScene::AddKitPiece(UStaticMesh* Mesh, const FVector& Location, float Yaw, const FLinearColor& Tint)
+{
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this);
+	C->SetStaticMesh(Mesh);
+	C->SetupAttachment(RootComponent);
+	C->SetRelativeLocation(Location);
+	C->SetRelativeRotation(FRotator(0.f, Yaw, 0.f));
+	if (!Tint.Equals(FLinearColor::White))
+	{
+		if (UMaterialInstanceDynamic* Mid = SovArt::Tinted(this, Tint))
+		{
+			C->SetMaterial(0, Mid);
+		}
+	}
+	C->SetCollisionProfileName(TEXT("BlockAll"));
+	C->RegisterComponent();
+	Parts.Add(C);
+	return C;
+}
+
 void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 {
 	Layout = InLayout;
@@ -119,6 +141,26 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 	for (const FSovStreetPiece& P : Layout.Pieces)
 	{
 		const FVector Scale = P.Size / 100.0;
+		// Kit meshes when the art has been built (tools/art); primitives otherwise.
+		const TCHAR* Kit = P.Kind == ESovStreetPiece::Tree ? TEXT("Nature") : TEXT("Classical");
+		if (UStaticMesh* Mesh = P.Recipe.IsEmpty() ? nullptr : SovArt::Mesh(Kit, P.Recipe))
+		{
+			if (P.Kind == ESovStreetPiece::Wall)
+			{
+				// A run of wall pieces (10 m each) along the edge.
+				const int32 N = FMath::Max(1, FMath::RoundToInt(P.Size.X / 1000.0));
+				const FVector Dir = FRotator(0.f, P.Yaw, 0.f).Vector();
+				for (int32 k = 0; k < N; ++k)
+				{
+					const FVector At = FVector(P.Location.X, P.Location.Y, 0) + Dir * (P.Size.X * ((k + 0.5) / N - 0.5));
+					AddKitPiece(Mesh, At, P.Yaw, FLinearColor::White);
+				}
+				continue;
+			}
+			const bool bTint = P.Kind == ESovStreetPiece::Banner;
+			AddKitPiece(Mesh, FVector(P.Location.X, P.Location.Y, 0), P.Yaw, bTint ? P.Color : FLinearColor::White);
+			continue;
+		}
 		switch (P.Kind)
 		{
 			case ESovStreetPiece::Plaza:

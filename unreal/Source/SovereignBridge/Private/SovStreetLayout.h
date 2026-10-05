@@ -20,7 +20,9 @@ enum class ESovStreetPiece : uint8
 	Wall,
 	Banner,
 	Boarded,
-	Guard
+	Guard,
+	Tree,
+	Market
 };
 
 struct FSovStreetPiece
@@ -31,6 +33,7 @@ struct FSovStreetPiece
 	float Yaw = 0.f;
 	FLinearColor Color = FLinearColor::White;
 	FString Label;  // landmarks: the building's name
+	FString Recipe; // the kit piece that draws it (Classical/Nature mesh name), empty: primitives only
 };
 
 enum class ESovStreetMood : uint8
