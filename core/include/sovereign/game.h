@@ -341,6 +341,7 @@ public:
     // ---- air power (05: air units and air combat; 03: Aerodrome)
     bool isAircraft(const Unit& unit) const;
     int airSlots(PlayerId player, Hex base) const;   // aircraft the player can base there (0: not a base)
+    int baseAirSlots(PlayerId player, Hex base) const;  // city and Aerodrome slots alone
     int aircraftAt(Hex base) const;
     std::optional<Hex> freeAirBase(const City& city) const;  // the city's center or Aerodrome with room
     int rebaseRange(const Unit& aircraft) const;
@@ -348,6 +349,17 @@ public:
     // The strongest defender covering `target` against this aircraft: (strength, unit).
     std::pair<int, UnitId> interception(const Unit& aircraft, Hex target) const;
     void groundAircraft(const City& city);  // enemy aircraft taken with a city or its Aerodrome are lost
+    void checkAirBases();                   // aircraft left without a base slot are lost
+
+    // ---- nuclear weapons (05-units-and-combat.md: Nuclear weapons)
+    int wmdsHeld(PlayerId player) const;     // devices of every kind
+    // Why a launch cannot happen (Ok: it can): a held device, a delivery in range with moves (a bomber's
+    // strike range, or the device's ICBM range from a Nuclear Submarine or the player's Missile Silo),
+    // and nothing in the blast belonging to a civ the launcher is at peace with.
+    CommandError wmdProblem(const Command& c) const;
+    std::vector<Hex> wmdBlast(Hex target, TypeIndex weapon) const;
+    void launchWmd(const Command& c);
+    void processFallout();                   // contamination runs down; units on it take damage
 
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;

@@ -180,6 +180,12 @@ CommandError Game::validateBuilder(const Command& c) const {
         return canHarvestAt(c.player, u.pos) ? CommandError::Ok : CommandError::CannotHarvest;
     }
     if (c.arg < 0 || c.arg > INT16_MAX) return CommandError::CannotImprove;
+    // Military Engineers build their own improvements (Fort, Airstrip, Missile Silo); Builders the rest.
+    if (static_cast<size_t>(c.arg) < rules_->improvements.size()) {
+        const TypeIndex by = rules_->improvements[static_cast<size_t>(c.arg)].builtBy;
+        const bool engineer = rules_->units[static_cast<size_t>(u.type)].id == "UNIT_MILITARY_ENGINEER";
+        if (by != kNone ? u.type != by : engineer) return CommandError::CannotImprove;
+    }
     return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotImprove;
 }
 

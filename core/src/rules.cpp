@@ -632,6 +632,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                                        : UnitLayer::Military;
         if (u.domain == Domain::Air) u.layer = UnitLayer::Air;  // aircraft never share a plot's layers
         u.antiAir = static_cast<int>(j["antiAir"].integer(0));
+        u.airSlots = static_cast<int>(j["airSlots"].integer(0));
+        u.deliversWmd = j["deliversWmd"].boolean(false);
+        u.wmdImmune = j["wmdImmune"].boolean(false);
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));
         u.combat = static_cast<int>(j["combat"].integer(0));
@@ -738,6 +741,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.needsRiver = j["needsRiver"].boolean(false);
             im.halvesFloods = j["halvesFloods"].boolean(false);
             im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
+            im.airSlots = static_cast<int>(j["airSlots"].integer(0));
+            im.builtById = j["builtBy"].str();
             const Json& adj = j["adjacentImprovementYield"];
             if (adj.isObject()) {
                 im.adjacentImprovementId = adj["improvement"].str();
@@ -1800,6 +1805,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         startingUnits.push_back(u);
     }
 
+    // The weapons the projects build (05: Nuclear weapons), before the projects.
+    for (const auto& [id, j] : m.tables["wmds"]) {
+        wmds.push_back({id, j["name"].str(id), static_cast<int>(j["blastRadius"].integer(1)), static_cast<int>(j["falloutTurns"].integer(10)),
+                        static_cast<int>(j["icbmRange"].integer(12)), static_cast<int>(j["maintenance"].integer(0))});
+    }
     for (const auto& [id, row] : m.tables["projects"]) {
         const Json& j = row;
         ProjectType pj;
@@ -1829,14 +1839,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         static const std::pair<const char*, ProjectEffectKind> kinds[] = {
             {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
-            {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed}};
+            {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
+            {"WMD", ProjectEffectKind::Wmd}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;
             for (const auto& [name, kind] : kinds) {
                 if (e["kind"].str() == name) {
-                    pj.effects.push_back({kind, static_cast<int>(e["amount"].integer(0))});
-                    found = true;
+                    const TypeIndex weapon = e.has("weapon") ? wmd(e["weapon"].str()) : kNone;
+                    found = kind != ProjectEffectKind::Wmd || weapon != kNone;
+                    if (found) pj.effects.push_back({kind, static_cast<int>(e["amount"].integer(0)), weapon});
                 }
             }
             known = known && found;
@@ -1847,7 +1859,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     {
         size_t k = 0;
         for (const auto& [id, j] : m.tables["projects"]) {
-            const std::string& req = j["requires"].str();
+            const std::string req = j["requires"].str();
             if (!req.empty() && (projects[k].prerequisite = project(req)) == kNone) {
                 if (error) *error = "project " + id + ": unknown requirement " + req;
                 return false;
@@ -1867,6 +1879,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     for (ImprovementType& im : improvements) {
+        if (!im.builtById.empty() && (im.builtBy = unit(im.builtById)) == kNone) {
+            *error = "improvement " + im.id + ": unknown builder unit " + im.builtById;
+            return false;
+        }
         if (!im.uniqueToId.empty() && (im.uniqueTo = civ(im.uniqueToId)) == kNone) {
             *error = "improvement " + im.id + ": unknown civilization " + im.uniqueToId;
             return false;
@@ -1942,6 +1958,7 @@ TypeIndex Rules::governor(const std::string& id) const { return findIn(governors
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }
+TypeIndex Rules::wmd(const std::string& id) const { return findIn(wmds, id); }
 TypeIndex Rules::uniqueUnitFor(TypeIndex civ, TypeIndex base) const {
     if (civ == kNone || base == kNone) return kNone;
     for (size_t i = 0; i < units.size(); ++i) {

@@ -91,6 +91,7 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
+    if (p.fallout > 0 && at != city.pos) return Yields{};  // contaminated ground cannot be worked
     return y;
 }
 
@@ -529,6 +530,7 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         if (m > Fixed()) net -= m;
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
+    for (size_t i = 0; i < p.wmds.size() && i < rules_->wmds.size(); ++i) net -= Fixed::fromInt(p.wmds[i] * rules_->wmds[i].maintenance);
     if (p.anarchyTurns == 0) net += founderYields(player)[idx(YieldType::Gold)];  // Tithe and the like (06)
     // Gold promised by deals (08: Trade Deal).
     for (const Agreement& a : state_.agreements) {
@@ -824,6 +826,10 @@ void Game::completeProject(City& city, TypeIndex project) {
                 break;
             case ProjectEffectKind::CultureFromScience: p.civics.overflow += sciencePerTurn(city.owner) * e.amount; break;
             case ProjectEffectKind::ExpeditionSpeed: break;  // the space race (Science victory) reads projectsDone
+            case ProjectEffectKind::Wmd:
+                if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
+                if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;
+                break;
         }
     }
 }

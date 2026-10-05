@@ -38,7 +38,7 @@ TEST(project_data_from_civ_tables) {
     CHECK_EQ(grants.conversionPercent, 15);
     CHECK_EQ(grants.greatPersonPoints.size(), 1u);
     CHECK(grants.modelled);
-    CHECK(!r.projects[at(r.project("PROJECT_MANHATTAN_PROJECT"))].modelled);  // nuclear weapons are not carried
+    CHECK(r.projects[at(r.project("PROJECT_MANHATTAN_PROJECT"))].modelled);  // it unlocks the Nuclear Device
     CHECK_EQ(r.projects[at(r.project("PROJECT_LAUNCH_MOON_LANDING"))].prerequisite, r.project("PROJECT_LAUNCH_EARTH_SATELLITE"));
 }
 

@@ -282,6 +282,22 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 	{
 		return;
 	}
+	// Ctrl+right-click with a bomber or Nuclear Submarine: deliver the strongest device held (05: Nuclear weapons).
+	if ((IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl)) && G.rules().units[static_cast<size_t>(U->type)].deliversWmd)
+	{
+		const sov::Player& P = S.players[static_cast<size_t>(Me())];
+		for (int32 W = static_cast<int32>(P.wmds.size()) - 1; W >= 0; --W)
+		{
+			if (P.wmds[static_cast<size_t>(W)] > 0)
+			{
+				Send(sov::Command::launchWmd(Me(), U->id, static_cast<sov::TypeIndex>(W), Target));
+				AfterUnitOrder();
+				return;
+			}
+		}
+		Subsystem()->LastMessage = TEXT("No nuclear devices to deliver.");
+		return;
+	}
 	if (bEnemyCity || bEnemyUnit)
 	{
 		const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
@@ -884,7 +900,12 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			ChooserTitle = TEXT("Build improvement");
 			for (sov::TypeIndex T : G.improvementsAt(Me(), U->pos))
 			{
-				Choices.Add({Str(R.improvements[static_cast<size_t>(T)].name), sov::Command::buildImprovement(Me(), U->id, T)});
+				// Only what this unit builds (Military Engineers: Fort, Airstrip, Missile Silo).
+				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, T);
+				if (G.validate(Build) == sov::CommandError::Ok)
+				{
+					Choices.Add({Str(R.improvements[static_cast<size_t>(T)].name), Build});
+				}
 			}
 			if (G.canHarvestAt(Me(), U->pos))
 			{

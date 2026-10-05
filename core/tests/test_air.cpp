@@ -104,3 +104,47 @@ TEST(aircraft_are_lost_with_their_base) {
     g->groundAircraft(c);
     CHECK(g->state().unit(plane) == nullptr);
 }
+
+TEST(carriers_carry_aircraft_to_sea) {
+    GameState s = skies();
+    for (int y = 0; y < 14; ++y) {
+        for (int x = 6; x < 12; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    }
+    s.plot({5, 7}).terrain = rules().terrain("TERRAIN_GRASS");
+    const UnitId carrier = addUnit(s, "UNIT_AIRCRAFT_CARRIER", 0, {7, 3});
+    const UnitId a = addUnit(s, "UNIT_FIGHTER", 0, {4, 6});
+    const UnitId b = addUnit(s, "UNIT_FIGHTER", 0, {5, 7});
+    addUnit(s, "UNIT_FIGHTER", 0, {5, 7});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->airSlots(0, {7, 3}), 2);
+    CHECK_EQ(g->airSlots(1, {7, 3}), 0);
+    REQUIRE(g->submit(Command::rebaseUnit(0, a, {7, 3})) == CommandError::Ok);
+    REQUIRE(g->submit(Command::rebaseUnit(0, b, {7, 3})) == CommandError::Ok);
+    CHECK(g->rebaseProblem(g->state().units.back().id, {7, 3}) != CommandError::Ok);  // full
+    // The carrier sails off with both aboard.
+    REQUIRE(g->submit(Command::move(0, carrier, {8, 3})) == CommandError::Ok);
+    CHECK(g->state().unit(carrier)->pos == (Hex{8, 3}));
+    CHECK(g->state().unit(a)->pos == (Hex{8, 3}));
+    CHECK(g->state().unit(b)->pos == (Hex{8, 3}));
+    // Sunk, it takes them down with it.
+    GameState after = g->state();
+    after.units.erase(std::remove_if(after.units.begin(), after.units.end(), [&](const Unit& u) { return u.id == carrier; }), after.units.end());
+    auto sunk = Game::fromScenario(rules(), std::move(after));
+    sunk->checkAirBases();  // (runs after every command)
+    CHECK(sunk->state().unit(a) == nullptr);
+    CHECK(sunk->state().unit(b) == nullptr);
+}
+
+TEST(military_engineers_build_airstrips_and_forts) {
+    GameState s = skies();
+    const UnitId eng = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {3, 5});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {3, 7});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex airstrip = rules().improvement("IMPROVEMENT_AIRSTRIP");
+    CHECK(g->submit(Command::buildImprovement(0, builder, airstrip)) == CommandError::CannotImprove);
+    CHECK(g->submit(Command::buildImprovement(0, eng, rules().improvement("IMPROVEMENT_FARM"))) == CommandError::CannotImprove);
+    REQUIRE(g->submit(Command::buildImprovement(0, eng, airstrip)) == CommandError::Ok);
+    CHECK_EQ(g->airSlots(0, {3, 5}), 3);
+    CHECK_EQ(g->airSlots(1, {3, 5}), 0);
+    CHECK_EQ(rules().improvements[at(rules().improvement("IMPROVEMENT_FORT"))].defense, 4);
+}

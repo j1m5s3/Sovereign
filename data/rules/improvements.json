@@ -2,6 +2,26 @@
  "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
  "improvements": [
   {
+   "id": "IMPROVEMENT_AIRSTRIP",
+   "name": "Airstrip",
+   "yields": {},
+   "unlock": "TECH_FLIGHT",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_SNOW",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [],
+   "appeal": -1,
+   "builtBy": "UNIT_MILITARY_ENGINEER",
+   "airSlots": 3
+  },
+  {
    "id": "IMPROVEMENT_SEASIDE_RESORT",
    "name": "Seaside Resort",
    "yields": {},
@@ -138,6 +158,30 @@
    "housing": 0.5
   },
   {
+   "id": "IMPROVEMENT_FORT",
+   "name": "Fort",
+   "yields": {},
+   "unlock": "TECH_SIEGE_TACTICS",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [],
+   "builtBy": "UNIT_MILITARY_ENGINEER",
+   "defense": 4
+  },
+  {
    "id": "IMPROVEMENT_GEOTHERMAL_PLANT",
    "name": "Geothermal Plant",
    "yields": {
@@ -227,6 +271,24 @@
     }
    ],
    "appeal": -1
+  },
+  {
+   "id": "IMPROVEMENT_MISSILE_SILO",
+   "name": "Missile Silo",
+   "yields": {},
+   "unlock": "TECH_ROCKETRY",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_SNOW",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [],
+   "builtBy": "UNIT_MILITARY_ENGINEER"
   },
   {
    "id": "IMPROVEMENT_OFFSHORE_OIL_RIG",

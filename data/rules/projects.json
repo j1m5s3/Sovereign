@@ -53,8 +53,14 @@
     "resource": "RESOURCE_URANIUM",
     "amount": 10
    },
-   "modelled": false,
-   "text": "+1 Nuclear Device (one-time)"
+   "effects": [
+    {
+     "kind": "WMD",
+     "amount": 1,
+     "weapon": "WMD_NUCLEAR_DEVICE"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_MANHATTAN_PROJECT",
@@ -64,7 +70,7 @@
    "costProgressionParam": 0,
    "unlock": "TECH_NUCLEAR_FISSION",
    "maxPerPlayer": 1,
-   "modelled": false
+   "modelled": true
   },
   {
    "id": "PROJECT_OPERATION_IVY",
@@ -75,7 +81,7 @@
    "unlock": "TECH_NUCLEAR_FUSION",
    "maxPerPlayer": 1,
    "requires": "PROJECT_MANHATTAN_PROJECT",
-   "modelled": false
+   "modelled": true
   },
   {
    "id": "PROJECT_BUILD_THERMONUCLEAR_DEVICE",
@@ -89,8 +95,14 @@
     "resource": "RESOURCE_URANIUM",
     "amount": 20
    },
-   "modelled": false,
-   "text": "+1 Thermonuclear Device (one-time)"
+   "effects": [
+    {
+     "kind": "WMD",
+     "amount": 1,
+     "weapon": "WMD_THERMONUCLEAR_DEVICE"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_CAMPUS_RESEARCH_GRANTS",
@@ -435,6 +447,24 @@
     }
    ],
    "modelled": true
+  }
+ ],
+ "wmds": [
+  {
+   "id": "WMD_NUCLEAR_DEVICE",
+   "name": "Nuclear Device",
+   "blastRadius": 1,
+   "falloutTurns": 10,
+   "icbmRange": 12,
+   "maintenance": 14
+  },
+  {
+   "id": "WMD_THERMONUCLEAR_DEVICE",
+   "name": "Thermonuclear Device",
+   "blastRadius": 2,
+   "falloutTurns": 20,
+   "icbmRange": 15,
+   "maintenance": 16
   }
  ]
 }

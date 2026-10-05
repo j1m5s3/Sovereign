@@ -290,6 +290,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(p.route);
         w.u8(p.pillagedTurns);
         for (int8_t f : p.fertility) w.i8(f);
+        w.u8(p.fallout);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -359,6 +360,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.favor);
         w.i32(p.diplomaticVictoryPoints);
         w.i32(p.lightYears);
+        writeI32s(w, p.wmds);
+        w.i32(p.wmdsLaunched);
         w.i32(p.killsThisEra);
         w.i32(p.rulingHeir);
         w.i64(p.co2);
@@ -625,6 +628,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.route = r.i8();
         p.pillagedTurns = r.u8();
         for (int8_t& f : p.fertility) f = r.i8();
+        p.fallout = r.u8();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -697,7 +701,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (OpinionMemory& m : p.memories) {
             m.about = r.i8();
             const uint8_t kind = r.u8();
-            if (kind > static_cast<uint8_t>(MemoryKind::SpyCaught)) return false;
+            if (kind > static_cast<uint8_t>(MemoryKind::UsedWmd)) return false;
             m.kind = static_cast<MemoryKind>(kind);
             m.amount = r.i16();
             m.duration = r.i16();
@@ -730,6 +734,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.favor = r.i32();
         p.diplomaticVictoryPoints = r.i32();
         p.lightYears = r.i32();
+        if (!readI32s(r, p.wmds)) return false;
+        p.wmdsLaunched = r.i32();
         p.killsThisEra = r.i32();
         p.rulingHeir = r.i32();
         p.co2 = r.i64();

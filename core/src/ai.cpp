@@ -453,6 +453,7 @@ void diplomacy(View& v) {
             if (distanceToCity(s, v.me, c.pos) <= kNeighbourRange) near = true;
         }
         const int theirs = militaryStrength(v.game, p.id);
+        if (v.game.wmdsHeld(p.id) > 0 && v.game.wmdsHeld(v.me) == 0) continue;  // deterred (05: Nuclear weapons)
         if (near && mine * 100 >= theirs * v.posture.warRatio && theirs < pickStrength && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
             pick = p.id;
             pickStrength = theirs;
@@ -832,6 +833,8 @@ void build(View& v, UnitId id) {
     if (worth(u->pos) >= 0) {
         // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+        options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
+        if (options.empty()) return;
         const City* home = s.plot(u->pos).city == kNoCity ? nullptr : s.city(s.plot(u->pos).city);
         if (home && home->powerSupply < home->powerDemand) {
             std::stable_partition(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].powerProvided > 0; });
@@ -856,6 +859,7 @@ void build(View& v, UnitId id) {
         u = s.unit(id);
         if (u && u->pos == *best && u->movesLeft > Fixed()) {
             std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+            options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
             if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
         }
         return;
@@ -892,6 +896,47 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
 }
 
 // Makes the best attack each unit has, ranged units first; repeats while attacks land.
+// Nuclear weapons are answered in kind (05: Nuclear weapons): an enemy that struck us with one
+// gets the biggest of its cities in reach hit back, the strongest device first, one a turn.
+void nuclear(View& v) {
+    const GameState& s = v.s();
+    if (v.game.wmdsHeld(v.me) == 0) return;
+    std::vector<PlayerId> struckUs;
+    for (const OpinionMemory& m : s.players[at(v.me)].memories) {
+        if (m.kind == MemoryKind::UsedWmd && m.amount <= -40 && v.hostile(m.about)) struckUs.push_back(m.about);
+    }
+    if (struckUs.empty()) return;
+    std::vector<Command> launchers;  // with the weapon and target filled in below
+    for (const Unit& u : s.units) {
+        if (u.owner == v.me && v.r.units[at(u.type)].deliversWmd && u.movesLeft > Fixed()) launchers.push_back(Command::launchWmd(v.me, u.id, 0, {}));
+    }
+    for (const City& c : s.cities) {
+        if (c.owner != v.me) continue;
+        for (const Hex& h : s.grid.within(c.pos, 3)) {
+            const Plot& pl = s.plot(h);
+            if (pl.city == c.id && pl.improvement != kNone && v.r.improvements[at(pl.improvement)].id == "IMPROVEMENT_MISSILE_SILO")
+                launchers.push_back(Command::launchWmdFromSilo(v.me, h, 0, {}));
+        }
+    }
+    std::optional<Command> best;
+    int bestScore = 0;
+    for (TypeIndex w = static_cast<TypeIndex>(v.r.wmds.size()) - 1; w >= 0; --w) {
+        for (const City& c : s.cities) {
+            if (std::find(struckUs.begin(), struckUs.end(), c.owner) == struckUs.end()) continue;
+            for (Command cmd : launchers) {
+                cmd.arg = w;
+                cmd.target = c.pos;
+                const int score = c.population * 10 + w;
+                if (score > bestScore && v.game.validate(cmd) == CommandError::Ok) {
+                    bestScore = score;
+                    best = cmd;
+                }
+            }
+        }
+    }
+    if (best) v.game.submit(*best);
+}
+
 void attacks(View& v) {
     for (int round = 0; round < 4; ++round) {
         std::vector<UnitId> order;
@@ -1393,10 +1438,23 @@ void production(View& v) {
                     if (pj.converts || gpp > 0) value = 30 + gpp * 2 + (pj.converts ? pj.conversionPercent : 0);
                     // The space race (09: Science victory): every step brings the expedition closer.
                     if (pj.spaceRace) value = v.posture.has(Strategy::ScienceVictory) ? 1500 : 800;
+                    // Nuclear weapons: a small stock as deterrence (two devices), paid for out of spare gold.
+                    if (pj.id == "PROJECT_MANHATTAN_PROJECT" || pj.id == "PROJECT_OPERATION_IVY")
+                        value = v.posture.has(Strategy::DominationVictory) ? 300 : 150;
                     for (const ProjectEffect& e : pj.effects) {
                         switch (e.kind) {
                             case ProjectEffectKind::Loyalty: value = std::max(value, c.loyalty < 60 ? 400 : 0); break;
                             case ProjectEffectKind::RepairWalls: value = std::max(value, threatened ? 600 : 80); break;
+                            case ProjectEffectKind::Wmd: {
+                                // Devices held plus those under way in our other cities.
+                                int stock = g.wmdsHeld(v.me);
+                                for (const City& o : s.cities) {
+                                    if (o.owner != v.me || o.id == c.id || o.queue.empty() || o.queue.front().kind != ProductionKind::Project) continue;
+                                    for (const ProjectEffect& oe : v.r.projects[at(o.queue.front().type)].effects) stock += oe.kind == ProjectEffectKind::Wmd ? 1 : 0;
+                                }
+                                value = stock < 2 && g.goldPerTurn(v.me) > Fixed::fromInt(2 * v.r.wmds[at(e.weapon)].maintenance) ? 500 : 0;
+                                break;
+                            }
                             case ProjectEffectKind::Favor:
                             case ProjectEffectKind::RemoveCo2: {
                                 // Only once the world is warming and this civ is a big part of why.
@@ -1884,6 +1942,7 @@ void playTurn(Game& game) {
         std::vector<TypeIndex> promos = game.availablePromotions(u.id);
         if (!promos.empty()) game.submit(Command::promote(v.me, u.id, promos.front()));
     }
+    if (!cityState) nuclear(v);
     attacks(v);
     std::vector<UnitId> civilians;
     for (const Unit& u : game.state().units) {

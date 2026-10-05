@@ -183,6 +183,9 @@ struct UnitType {
     int ranged = 0;
     int range = 0;
     int antiAir = 0;  // strength against aircraft striking an adjacent plot (05: air combat)
+    int airSlots = 0; // aircraft it carries (Aircraft Carrier)
+    bool deliversWmd = false;  // bombers and the Nuclear Submarine (05: Nuclear weapons)
+    bool wmdImmune = false;    // the Giant Death Robot
     int moves = 2;
     int sight = 2;
     bool zoneOfControl = false;
@@ -260,6 +263,9 @@ struct ImprovementType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;  // (loading only)
     int powerProvided = 0;   // free power to its city (renewables, 09: Power)
+    TypeIndex builtBy = kNone;  // only this unit builds it (Military Engineer); kNone: Builders
+    std::string builtById;      // (loading only)
+    int airSlots = 0;           // aircraft it bases (Airstrip)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -681,10 +687,19 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
+    TypeIndex weapon = kNone;  // Wmd: Rules::wmds
+};
+// A weapon of mass destruction (05: Nuclear weapons; data: units.md, WMDs).
+struct WmdType {
+    std::string id, name;
+    int blastRadius = 1;
+    int falloutTurns = 10;
+    int icbmRange = 12;    // from a Missile Silo or a Nuclear Submarine
+    int maintenance = 0;   // gold per turn for each one held
 };
 struct ProjectType {
     std::string id, name;
@@ -943,6 +958,7 @@ public:
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
     std::vector<DifficultyType> difficulties;  // Settler .. Deity (setup.json)
     std::vector<ProjectType> projects;
+    std::vector<WmdType> wmds;
     std::vector<GearType> gear;
     std::vector<Dynasty> dynasties;
     std::vector<GreatPersonClass> greatPersonClasses;
@@ -993,6 +1009,7 @@ public:
     TypeIndex spyOperation(const std::string& id) const;
     TypeIndex resolution(const std::string& id) const;
     TypeIndex project(const std::string& id) const;
+    TypeIndex wmd(const std::string& id) const;
     TypeIndex governorPromotion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;

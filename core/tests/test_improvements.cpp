@@ -44,7 +44,7 @@ void know(GameState& s, const char* id) { s.players[0].techs.done[at(tech(id))] 
 
 TEST(improvement_data_from_civ_tables) {
     const Rules& r = rules();
-    CHECK_EQ(r.improvements.size(), 20u);  // 17 from the Civ tables, 3 civ uniques
+    CHECK_EQ(r.improvements.size(), 23u);  // 17 from the Civ tables, 3 Military Engineer ones, 3 civ uniques
     const ImprovementType& farm = r.improvements[at(improvement("IMPROVEMENT_FARM"))];
     CHECK(farm.unlock.none());
     CHECK_EQ(farm.yields[F], Fixed::fromInt(1));
