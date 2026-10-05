@@ -1316,6 +1316,28 @@ void production(View& v) {
                     value = value * districtPercent(v, d) / 100;
                     break;
                 }
+                case ProductionKind::Project: {
+                    // City projects (03: Projects): district projects fill a city with nothing better to
+                    // build; one-time effects when the city needs them.
+                    const ProjectType& pj = v.r.projects[at(it.type)];
+                    int gpp = 0;
+                    for (const auto& p : pj.greatPersonPoints) gpp += p.second;
+                    if (pj.converts || gpp > 0) value = 30 + gpp * 2 + (pj.converts ? pj.conversionPercent : 0);
+                    for (const ProjectEffect& e : pj.effects) {
+                        switch (e.kind) {
+                            case ProjectEffectKind::Loyalty: value = std::max(value, c.loyalty < 60 ? 400 : 0); break;
+                            case ProjectEffectKind::RepairWalls: value = std::max(value, threatened ? 600 : 80); break;
+                            case ProjectEffectKind::Favor:
+                            case ProjectEffectKind::RemoveCo2: {
+                                const int64_t world = s.co2;
+                                value = std::max(value, world > 0 && s.players[at(v.me)].co2 * 4 > world ? 250 : 0);
+                                break;
+                            }
+                            default: break;
+                        }
+                    }
+                    break;
+                }
             }
             if (value <= 0) continue;
             // Value per cost, and long builds lose value in a weak city (it should grow first).

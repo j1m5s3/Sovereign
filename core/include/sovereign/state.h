@@ -73,7 +73,7 @@ struct Unit {
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
 
-enum class ProductionKind : uint8_t { Unit = 0, Building = 1, District = 2 };
+enum class ProductionKind : uint8_t { Unit = 0, Building = 1, District = 2, Project = 3 };
 
 struct ProductionItem {
     ProductionKind kind = ProductionKind::Unit;
@@ -306,6 +306,7 @@ struct Player {
     std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
     std::vector<int> stockpile;     // per resource: strategic stockpile [GS]
     std::vector<int> greatPersonPoints;      // per great person class (07)
+    std::vector<int> projectsDone;           // per Rules::projects: times completed (03: Projects)
     std::vector<int> greatPeopleRecruited;   // per class
     std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
     std::vector<TypeIndex> greatPeopleActivated;  // individuals whose permanent effects apply

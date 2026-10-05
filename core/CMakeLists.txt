@@ -98,6 +98,7 @@ add_executable(sovereign_tests
   tests/test_ai_pace.cpp
   tests/test_difficulty.cpp
   tests/test_profile.cpp
+  tests/test_projects.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

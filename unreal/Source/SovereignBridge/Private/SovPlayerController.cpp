@@ -50,6 +50,7 @@ FString ItemName(const sov::Rules& R, sov::ProductionItem Item)
 		case sov::ProductionKind::Unit: return Str(R.units[T].name);
 		case sov::ProductionKind::Building: return Str(R.buildings[T].name);
 		case sov::ProductionKind::District: return Str(R.districts[T].name);
+		case sov::ProductionKind::Project: return Str(R.projects[T].name);
 	}
 	return TEXT("?");
 }

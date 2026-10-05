@@ -252,6 +252,9 @@ public:
     // ---- player modelling (leader doc §10, AI layer 2)
     const PlayerProfile* profile(PlayerId player) const;  // nullptr before the first world turn
 
+    // ---- city projects (03: Projects)
+    void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
+
     // ---- climate and disasters (09: Climate and Disasters [GS])
     int climateChangePoints() const;   // one per half degree of warming
     int temperatureTenths() const;     // degrees of warming, x10
