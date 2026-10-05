@@ -478,6 +478,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.level);
         w.i8(a.target);
         w.i32(a.travel);
+        w.boolean(a.spy);
+        w.i32(a.city);
+        w.u8(static_cast<uint8_t>(a.mission));
+        w.i32(a.missionTurns);
+        w.i32(a.sourcesCity);
+        w.i32(a.sourcesUntil);
     }
     w.i32(s.nextAgentId);
     const PendingBattle& pb = s.pendingBattle;
@@ -607,7 +613,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (OpinionMemory& m : p.memories) {
             m.about = r.i8();
             const uint8_t kind = r.u8();
-            if (kind > static_cast<uint8_t>(MemoryKind::Warmonger)) return false;
+            if (kind > static_cast<uint8_t>(MemoryKind::SpyCaught)) return false;
             m.kind = static_cast<MemoryKind>(kind);
             m.amount = r.i16();
             m.duration = r.i16();
@@ -854,6 +860,14 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.level = r.i32();
         a.target = r.i8();
         a.travel = r.i32();
+        a.spy = r.boolean();
+        a.city = r.i32();
+        const uint8_t mission = r.u8();
+        if (mission >= kNumSpyMissions) return false;
+        a.mission = static_cast<SpyMission>(mission);
+        a.missionTurns = r.i32();
+        a.sourcesCity = r.i32();
+        a.sourcesUntil = r.i32();
     }
     s.nextAgentId = r.i32();
     PendingBattle& pb = s.pendingBattle;

@@ -877,6 +877,7 @@
     "TECH_ELECTRICITY",
     "TECH_RADIO"
    ],
+   "spies": 1,
    "boost": {
     "percent": 40,
     "text": "adopt a Tier3 government",

@@ -233,6 +233,56 @@ void deals(View& v) {
     }
 }
 
+// --- espionage (08: Espionage) -----------------------------------------------------------
+// Idle spies work against the strongest rival met (the war enemy first): steal a tech boost
+// from a city with a Campus, else siphon funds from a Commercial Hub, else foment unrest; with
+// no rival worth it, they guard the capital as counterspies.
+void spies(View& v) {
+    const GameState& s = v.s();
+    PlayerId rival = v.enemies.empty() ? kNoPlayer : v.enemies.front();
+    if (rival == kNoPlayer) {
+        int best = INT_MIN;
+        for (const Player& p : s.players) {
+            if (p.id == v.me || !v.game.isMajorCiv(p.id) || !v.game.hasMet(v.me, p.id)) continue;
+            const int sc = v.game.score(p.id);
+            if (sc > best) {
+                best = sc;
+                rival = p.id;
+            }
+        }
+    }
+    for (const Agent& a : s.agents) {
+        if (!a.spy || a.owner != v.me || a.mission != SpyMission::None || a.travel > 0) continue;
+        int32_t bestCity = kNoCity;
+        SpyMission bestMission = SpyMission::None;
+        int bestValue = 0;
+        for (const City& c : s.cities) {
+            if (rival == kNoPlayer || c.owner != rival || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+            static const std::pair<SpyMission, int> tries[] = {
+                {SpyMission::StealTechBoost, 30}, {SpyMission::SiphonFunds, 25}, {SpyMission::SabotageProduction, 20}, {SpyMission::FomentUnrest, 10}};
+            for (const auto& [m, worth] : tries) {
+                if (!v.game.canSpyMission(v.me, a.id, m, c.id)) continue;
+                const int value = worth * v.game.spySuccessPercent(a.id, m, c.id) / 100 + (c.capital ? 0 : 2);
+                if (value > bestValue) {
+                    bestValue = value;
+                    bestCity = c.id;
+                    bestMission = m;
+                }
+            }
+        }
+        if (bestMission == SpyMission::None) {
+            for (CityId c : v.cities) {
+                if (v.game.state().city(c)->capital && v.game.canSpyMission(v.me, a.id, SpyMission::Counterspy, c)) {
+                    bestCity = c;
+                    bestMission = SpyMission::Counterspy;
+                }
+            }
+        }
+        if (bestMission != SpyMission::None && !(a.city == bestCity && a.mission == bestMission))
+            v.game.submit(Command::spyMission(v.me, a.id, bestMission, bestCity));
+    }
+}
+
 // --- governors (08: Governors) -----------------------------------------------------------
 // Appoint up to four in a fixed order of usefulness, then spend titles on promotions; place
 // each where it pays: Pingala in the capital, Victor in the most threatened city, Amani with
@@ -849,6 +899,7 @@ void production(View& v) {
             assassinQueued |= !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].agent;
         }
         const bool wantAssassin = !v.enemies.empty() && !assassinQueued && g.agentsOf(v.me) < g.agentCapacity(v.me);
+        const bool wantSpy = !assassinQueued && g.spiesOf(v.me) < g.spyCapacity(v.me);
 
         std::optional<ProductionItem> best;
         Hex bestAt{};
@@ -859,7 +910,8 @@ void production(View& v) {
             switch (it.kind) {
                 case ProductionKind::Unit: {
                     const UnitType& t = v.r.units[at(it.type)];
-                    if (t.agent) value = wantAssassin ? 250 : 0;
+                    if (t.spy) value = wantSpy ? 200 : 0;
+                    else if (t.agent) value = wantAssassin ? 250 : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.foundCity) value = wantSettler ? 400 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
@@ -1257,7 +1309,7 @@ void succession(Game& game, PlayerId me) {
 void sendAssassins(Game& game, PlayerId me) {
     std::vector<int32_t> idle;
     for (const Agent& a : game.state().agents) {
-        if (a.owner == me && a.target == kNoPlayer) idle.push_back(a.id);
+        if (a.owner == me && !a.spy && a.target == kNoPlayer) idle.push_back(a.id);
     }
     if (idle.empty()) return;
     PlayerId best = kNoPlayer;
@@ -1287,6 +1339,7 @@ void playTurn(Game& game) {
     if (!cityState) diplomacy(v);  // city-states never start wars (08)
     if (!cityState) deals(v);
     if (!cityState) governors(v);
+    if (!cityState) spies(v);
     research(v);
     cityActions(v);
     // Promotions as soon as they are earned (the first offered; a planner can come later).

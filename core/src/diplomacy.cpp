@@ -316,7 +316,7 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
             OpinionReasonKind::DeclaredWar, OpinionReasonKind::SurpriseWar, OpinionReasonKind::DenouncedUs,
             OpinionReasonKind::MadePeace,   OpinionReasonKind::Gifts,       OpinionReasonKind::Deals,
             OpinionReasonKind::BrokeDeal,   OpinionReasonKind::CapturedCity, OpinionReasonKind::Assassin,
-            OpinionReasonKind::PlunderedTrader, OpinionReasonKind::Warmonger,
+            OpinionReasonKind::PlunderedTrader, OpinionReasonKind::Warmonger, OpinionReasonKind::SpyCaught,
         };
         add(kinds[static_cast<size_t>(m.kind)], v);
     }
@@ -795,6 +795,7 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::PlunderedTrader: return "Plundered our trader";
         case OpinionReasonKind::Warmonger: return "Warmonger";
         case OpinionReasonKind::Agenda: return "Agenda";
+        case OpinionReasonKind::SpyCaught: return "Caught spying on us";
     }
     return "?";
 }

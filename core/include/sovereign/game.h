@@ -242,6 +242,14 @@ public:
     bool canDeclareWar(PlayerId player, PlayerId target) const;
     bool canMakePeace(PlayerId player, PlayerId target) const;
 
+    // ---- espionage (08: Espionage)
+    int spyCapacity(PlayerId player) const;   // from civics and techs
+    int spiesOf(PlayerId player) const;
+    const SpyOperationType* spyOperationFor(SpyMission mission) const;
+    bool canSpyMission(PlayerId player, int32_t spy, SpyMission mission, CityId city, CommandError* why = nullptr) const;
+    // The chance (in percent) an operation succeeds now; 100 for passive ones.
+    int spySuccessPercent(int32_t spy, SpyMission mission, CityId city) const;
+
     // ---- governors (08: Governors [R&F])
     int governorTitles(PlayerId player) const;          // earned from civics
     int governorTitlesLeft(PlayerId player) const;      // earned minus spent
@@ -438,6 +446,8 @@ private:
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
+    void processSpies(PlayerId player);  // travel, operations ending and their results
+    void resolveSpyOperation(Agent& spy);
     CommandError validateGovernor(const Command& c) const;
     void applyGovernor(const Command& c);
     void processGovernors(PlayerId player);  // establishing counts down; governors in lost cities come home

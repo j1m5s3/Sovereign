@@ -207,6 +207,7 @@ struct UnitType {
     std::vector<TypeIndex> abilities;  // innate
     TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
     bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
+    bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
     TypeIndex needsDistrict = kNone;  // the training city must have this district finished
 };
 
@@ -486,6 +487,7 @@ struct TreeNode {
     int embarkedMoves = 0;         // + movement while embarked
     bool tradeCapacity = false;    // +1 trade route capacity (Foreign Trade)
     int envoys = 0;                // envoys granted on completion (civics)
+    int spies = 0;                 // spy capacity it grants (08: Espionage)
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -617,6 +619,17 @@ struct Modifier {
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
+// A spy operation (08: Espionage; data: diplomacy-espionage.md, Spy operations). Success is
+// a 3d6 roll at or above base - 2, less the spy's level and bonuses, plus the defence.
+struct SpyOperationType {
+    std::string id, name;
+    int turns = 8;
+    int base = 0;              // 0: no roll (passive operations)
+    int levelChange = 1, enemyChange = 3, enemyLevelChange = 1;
+    TypeIndex district = kNone;  // the district the target city needs
+    bool needsDistrict = false;  // a district is named (kNone then: one the core cannot place yet)
+};
+
 // Governors (08: Governors [R&F]; data: governors.md). A governor's promotions form a tree:
 // one is its base ability; each other needs one of its `prerequisites`.
 struct GovernorPromotionType {
@@ -730,6 +743,7 @@ public:
     std::vector<RouteType> routes;  // by era, Ancient first
     std::vector<CityStateType> cityStates;
     std::vector<GovernorType> governors;
+    std::vector<SpyOperationType> spyOperations;
     std::vector<GovernorPromotionType> governorPromotions;
     std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants
     std::vector<MomentType> moments;
@@ -762,6 +776,7 @@ public:
     TypeIndex religion(const std::string& id) const;
     TypeIndex moment(const std::string& id) const;
     TypeIndex governor(const std::string& id) const;
+    TypeIndex spyOperation(const std::string& id) const;
     TypeIndex governorPromotion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;

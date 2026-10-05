@@ -740,11 +740,26 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 		}
 		case EChooser::Assassins:
 		{
-			ChooserTitle = FString::Printf(TEXT("Assassins (%d of %d; one per Encampment)"), G.agentsOf(Me()), G.agentCapacity(Me()));
+			ChooserTitle = FString::Printf(TEXT("Agents: assassins %d of %d (one per Encampment), spies %d of %d"), G.agentsOf(Me()), G.agentCapacity(Me()),
+				G.spiesOf(Me()), G.spyCapacity(Me()));
+			static const TCHAR* const Missions[] = {TEXT("idle"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
+				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
 			for (const sov::Agent& A : G.state().agents)
 			{
 				if (A.owner != Me())
 				{
+					continue;
+				}
+				if (A.spy)
+				{
+					// 08: pick the spy, then the city and operation.
+					const sov::City* At = G.state().city(A.city);
+					const FString Where = At ? FString::Printf(TEXT("%s in %s%s"), Missions[static_cast<int32>(A.mission) % sov::kNumSpyMissions], *Str(At->name),
+												   A.travel > 0 ? *FString::Printf(TEXT(", arriving in %d"), A.travel) : TEXT(""))
+											 : FString(TEXT("at home"));
+					sov::Command Open = sov::Command::spyMission(Me(), A.id, sov::SpyMission::None, sov::kNoCity);
+					Open.arg = -1;  // opens the spy's missions instead of being sent
+					Choices.Add({FString::Printf(TEXT("Spy %d (level %d): %s"), A.id, A.level, *Where), Open});
 					continue;
 				}
 				if (A.target != sov::kNoPlayer)
@@ -768,6 +783,32 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Send assassin %d (level %d) after %s of %s%s"), A.id, A.level, *Str(T.leaderName),
 									 *Str(R.civs[static_cast<size_t>(T.civ)].name), *Odds),
 						sov::Command::sendAssassin(Me(), A.id, T.id)});
+				}
+			}
+			break;
+		}
+		case EChooser::SpyMissions:
+		{
+			static const TCHAR* const Missions[] = {TEXT("Home"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
+				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
+			ChooserTitle = FString::Printf(TEXT("Spy %d: choose an operation (cities you have seen)"), SpyAgent);
+			Choices.Add({TEXT("Bring the spy home"), sov::Command::spyMission(Me(), SpyAgent, sov::SpyMission::None, sov::kNoCity)});
+			for (const sov::City& Cty : G.state().cities)
+			{
+				if (G.visibility(Me(), Cty.pos) == sov::Visibility::Unrevealed)
+				{
+					continue;
+				}
+				for (int32 M = 1; M < sov::kNumSpyMissions; ++M)
+				{
+					const sov::SpyMission Mission = static_cast<sov::SpyMission>(M);
+					if (!G.canSpyMission(Me(), SpyAgent, Mission, Cty.id))
+					{
+						continue;
+					}
+					const int32 Odds = G.spySuccessPercent(SpyAgent, Mission, Cty.id);
+					Choices.Add({FString::Printf(TEXT("%s in %s%s"), Missions[M], *Str(Cty.name), Odds < 100 ? *FString::Printf(TEXT(" (%d%%)"), Odds) : TEXT("")),
+						sov::Command::spyMission(Me(), SpyAgent, Mission, Cty.id)});
 				}
 			}
 			break;
@@ -825,6 +866,12 @@ void ASovPlayerController::Pick(int32 Index)
 	const EChooser Was = Chooser;
 	const sov::Command Command = Choices[I].Command;
 	Chooser = EChooser::None;
+	if (Was == EChooser::Assassins && Command.type == sov::CommandType::SpyMission && Command.arg == -1)
+	{
+		SpyAgent = Command.id;  // a spy: choose its operation
+		OpenChooser(EChooser::SpyMissions);
+		return;
+	}
 	if (Was == EChooser::Diplomacy)
 	{
 		OpenDiplomacy(static_cast<sov::PlayerId>(Command.arg));  // the civ to talk to, not a command to send

@@ -120,7 +120,7 @@ struct Agreement {
 };
 // Something a civ remembers about another; its weight fades to nothing over `duration` turns.
 enum class MemoryKind : uint8_t {
-    DeclaredWar = 0, SurpriseWar, Denounced, MadePeace, Gift, Deal, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger,
+    DeclaredWar = 0, SurpriseWar, Denounced, MadePeace, Gift, Deal, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, SpyCaught,
 };
 struct OpinionMemory {
     PlayerId about = kNoPlayer;
@@ -132,7 +132,7 @@ struct OpinionMemory {
 // Why one civ feels as it does about another (shown to the player; fed to the dialogue layer).
 enum class OpinionReasonKind : uint8_t {
     AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
-    TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda,
+    TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught,
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;
@@ -354,12 +354,26 @@ enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religi
 
 // An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
 // for a few turns, then strikes when the target leader is exposed.
+// What a spy is doing (08: Espionage). Counterspy and Listening Post go on until changed;
+// Gain Sources and the offensive operations end after their turns.
+enum class SpyMission : uint8_t {
+    None = 0, Counterspy, ListeningPost, GainSources, SiphonFunds, StealTechBoost, SabotageProduction, NeutralizeGovernor, FomentUnrest,
+};
+constexpr int kNumSpyMissions = 9;
+
 struct Agent {
     int32_t id = 0;
     PlayerId owner = kNoPlayer;
     int level = 1;               // Recruit 1, Agent 2, Secret Agent 3, Master 4
-    PlayerId target = kNoPlayer; // kNoPlayer: idle at home
+    PlayerId target = kNoPlayer; // assassins: the ruler hunted (kNoPlayer: idle at home)
     int travel = 0;              // turns until it is in place
+    // Spies (08: Espionage).
+    bool spy = false;
+    CityId city = kNoCity;       // the city it works in (kNoCity: at home)
+    SpyMission mission = SpyMission::None;
+    int missionTurns = 0;        // turns left on an operation that ends
+    CityId sourcesCity = kNoCity;  // Gain Sources: +2 levels on operations here until sourcesUntil
+    int32_t sourcesUntil = 0;
 };
 
 // A melee waiting for its live battle (leader doc §9, battle result contract). The core
@@ -388,6 +402,8 @@ enum class EventKind : uint8_t {
     WarDeclared,     // value: 1 for a surprise war
     PeaceMade,
     DealBroken,      // actor could not pay what it owed target
+    SpyOperation,    // actor's spy succeeded against target; value: the SpyMission (a detected or a known one)
+    SpyCaught,       // target caught actor's spy; value: 1 when it escaped
 };
 struct GameEvent {
     int32_t turn = 0;

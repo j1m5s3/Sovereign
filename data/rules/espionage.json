@@ -1,0 +1,138 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "spyOperations": [
+  {
+   "id": "SPYOP_BREACH_DAM",
+   "name": "Breach Dam",
+   "turns": 8,
+   "base": 15,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_DAM"
+  },
+  {
+   "id": "SPYOP_COUNTERSPY",
+   "name": "Counterspy",
+   "turns": 16,
+   "base": 0,
+   "levelChange": 0,
+   "enemyChange": 0,
+   "enemyLevelChange": 0
+  },
+  {
+   "id": "SPYOP_DISRUPT_ROCKETRY",
+   "name": "Disrupt Rocketry",
+   "turns": 8,
+   "base": 15,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_SPACEPORT"
+  },
+  {
+   "id": "SPYOP_FABRICATE_SCANDAL",
+   "name": "Fabricate Scandal",
+   "turns": 16,
+   "base": 13,
+   "levelChange": 1,
+   "enemyChange": 0,
+   "enemyLevelChange": 0
+  },
+  {
+   "id": "SPYOP_FOMENT_UNREST",
+   "name": "Foment Unrest",
+   "turns": 8,
+   "base": 13,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1
+  },
+  {
+   "id": "SPYOP_GAIN_SOURCES",
+   "name": "Gain Sources",
+   "turns": 8,
+   "base": 0,
+   "levelChange": 0,
+   "enemyChange": 0,
+   "enemyLevelChange": 0
+  },
+  {
+   "id": "SPYOP_GREAT_WORK_HEIST",
+   "name": "Great Work Heist",
+   "turns": 8,
+   "base": 15,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_THEATER_SQUARE"
+  },
+  {
+   "id": "SPYOP_LISTENING_POST",
+   "name": "Listening Post",
+   "turns": 8,
+   "base": 0,
+   "levelChange": 0,
+   "enemyChange": 0,
+   "enemyLevelChange": 0
+  },
+  {
+   "id": "SPYOP_NEUTRALIZE_GOVERNOR",
+   "name": "Neutralize Governor",
+   "turns": 8,
+   "base": 14,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1
+  },
+  {
+   "id": "SPYOP_RECRUIT_PARTISANS",
+   "name": "Recruit Partisans",
+   "turns": 8,
+   "base": 16,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_NEIGHBORHOOD"
+  },
+  {
+   "id": "SPYOP_SABOTAGE_PRODUCTION",
+   "name": "Sabotage Production",
+   "turns": 8,
+   "base": 14,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_INDUSTRIAL_ZONE"
+  },
+  {
+   "id": "SPYOP_SIPHON_FUNDS",
+   "name": "Siphon Funds",
+   "turns": 8,
+   "base": 13,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_COMMERCIAL_HUB"
+  },
+  {
+   "id": "SPYOP_STEAL_TECH_BOOST",
+   "name": "Steal Tech Boost",
+   "turns": 8,
+   "base": 14,
+   "levelChange": 1,
+   "enemyChange": 3,
+   "enemyLevelChange": 1,
+   "district": "DISTRICT_CAMPUS"
+  },
+  {
+   "id": "SPYOP_TRAVEL_NEW_CITY",
+   "name": "Travel New City",
+   "turns": 3,
+   "base": 0,
+   "levelChange": 0,
+   "enemyChange": 0,
+   "enemyLevelChange": 0
+  }
+ ]
+}

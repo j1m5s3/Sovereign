@@ -383,6 +383,7 @@
    "prereqs": [
     "CIVIC_GUILDS"
    ],
+   "spies": 1,
    "boost": {
     "percent": 40,
     "text": "have an alliance",
@@ -476,6 +477,7 @@
    "prereqs": [
     "CIVIC_THE_ENLIGHTENMENT"
    ],
+   "spies": 1,
    "boost": {
     "percent": 40,
     "text": "declare war using a casus belli",
@@ -602,7 +604,8 @@
    "prereqs": [
     "CIVIC_MASS_MEDIA",
     "CIVIC_MOBILIZATION"
-   ]
+   ],
+   "spies": 1
   },
   {
    "id": "CIVIC_SUFFRAGE",
@@ -691,6 +694,7 @@
    "prereqs": [
     "CIVIC_IDEOLOGY"
    ],
+   "spies": 1,
    "boost": {
     "percent": 40,
     "text": "research Nuclear Fission",

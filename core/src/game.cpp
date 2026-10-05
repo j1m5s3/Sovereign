@@ -225,6 +225,11 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor:
             return validateGovernor(c);
+        case CommandType::SpyMission: {
+            CommandError why = CommandError::CannotSpy;
+            canSpyMission(c.player, c.id, static_cast<SpyMission>(c.arg), c.arg2, &why);
+            return why;
+        }
         case CommandType::StartTradeRoute:
             return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
         case CommandType::SendEnvoy:
@@ -561,6 +566,12 @@ void Game::refreshVisibility(PlayerId pid) {
     for (const City& c : state_.cities) {
         if (c.owner == pid) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
     }
+    for (const Agent& a : state_.agents) {
+        const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;
+        if (!c) continue;
+        for (const Hex& h : state_.grid.within(c->pos, a.mission == SpyMission::ListeningPost ? 2 : 1))
+            p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
+    }
 }
 
 // Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
@@ -641,6 +652,28 @@ void Game::apply(const Command& c) {
         case CommandType::AppointGovernor:
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor: applyGovernor(c); break;
+        case CommandType::SpyMission: {
+            for (Agent& a : state_.agents) {
+                if (a.id != c.id) continue;
+                const SpyMission m = static_cast<SpyMission>(c.arg);
+                const int speed = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
+                if (m == SpyMission::None) {
+                    a.city = kNoCity;
+                    a.travel = a.missionTurns = 0;
+                } else {
+                    // A new city costs the journey first (SPYOP_TRAVEL_NEW_CITY).
+                    if (a.city != c.arg2) {
+                        const TypeIndex travel = rules_->spyOperation("SPYOP_TRAVEL_NEW_CITY");
+                        a.travel = std::max(1, (travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) * speed / 100);
+                        a.city = c.arg2;
+                    }
+                    const SpyOperationType* op = spyOperationFor(m);
+                    a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100);
+                }
+                a.mission = m;
+            }
+            break;
+        }
         case CommandType::SendEnvoy: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
@@ -776,6 +809,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processTourism(pid);
         processDiplomacy(pid);
         processGovernors(pid);
+        processSpies(pid);
         healAndFortify(pid);
         healCities(pid);
     }

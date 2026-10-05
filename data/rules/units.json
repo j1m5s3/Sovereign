@@ -1446,7 +1446,9 @@
    "moves": 1,
    "sight": 3,
    "costProgression": 75,
-   "trainable": false,
+   "agent": true,
+   "spy": true,
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE",
    "promotionClass": "PROMOTION_CLASS_ESPIONAGE"
   },
   {

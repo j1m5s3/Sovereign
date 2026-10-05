@@ -75,7 +75,8 @@ protected:
 		TradeRoute,
 		CityStates,
 		Diplomacy,
-		Governors
+		Governors,
+		SpyMissions
 	};
 
 	struct FChoice
@@ -159,6 +160,7 @@ protected:
 
 	FSovBattleSim Sim;
 	int32 BattleSquad = -1;  // the squad the human is ordering (-1: all three)
+	int32 SpyAgent = -1;  // the spy a SpyMissions chooser is for
 	sov::UnitId ReligionUnit = sov::kNoUnit;  // the Prophet or Apostle a religion chooser is for
 	sov::TypeIndex PendingFounder = sov::kNone;  // the Founder belief picked before the Follower
 	FSovBattleResult Outcome;

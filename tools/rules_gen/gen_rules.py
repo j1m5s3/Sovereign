@@ -295,10 +295,15 @@ def gen_units():
             u["minPopulation"] = int(m.group(1))
         if "must purchase" in special:
             u["mustPurchase"] = True
-        # Great People (cost 1, never bought) come from great person points and spies from
-        # espionage; neither is trained in a city queue. Both systems are not modelled yet.
-        if (num(row["Cost"]) <= 1 and not row["Purchase"]) or special == "spy":
+        # Great People (cost 1, never bought) come from great person points, not a city queue.
+        if num(row["Cost"]) <= 1 and not row["Purchase"]:
             u["trainable"] = False
+        # Spies are off-map agents within the spy capacity civics grant; the first comes with
+        # Diplomatic Service (08: Espionage).
+        if special == "spy":
+            u["agent"] = True
+            u["spy"] = True
+            u["unlock"] = "CIVIC_DIPLOMATIC_SERVICE"
         # "needs Temple" / "needs Prasat/Stave Church/Temple": any one of the buildings in the
         # city (unique buildings Sovereign does not have are dropped).
         m = re.search(r"needs (?!pop )(.+?)(?= must purchase|$)", special)
@@ -843,6 +848,22 @@ def era_turns(row):
     return out
 
 
+def gen_espionage():
+    """Spy operations: turns, the 3d6 target number and its modifiers, the district a target city
+    needs (08: Espionage; data: diplomacy-espionage.md)."""
+    districts = {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats")}
+    out = []
+    for r in table(SPEC / "diplomacy-espionage.md", "Spy operations"):
+        name = r["Operation"].replace("Spy ", "", 1)
+        op = {"id": "SPYOP_" + snake(name), "name": name, "turns": num(r["Turns"]), "base": num(r["Base probability"]),
+              "levelChange": num(r["Level prob change"]), "enemyChange": num(r["Enemy prob change"]),
+              "enemyLevelChange": num(r["Enemy level prob change"])}
+        if r["Target district"]:
+            op["district"] = districts.get(r["Target district"], "DISTRICT_" + snake(r["Target district"]))
+        out.append(op)
+    return {"spyOperations": out}
+
+
 def gen_governors():
     """Governors, their promotion trees and the civics that grant titles (08: Governors [R&F]).
     Effects stay as text here; the ones the core carries are hand-written in modifiers.json
@@ -903,6 +924,9 @@ def gen_tree(kind, name_col, prefix, key):
         m = re.search(r"grants (\d+) Envoy\(s\)", other)
         if m:
             n["envoys"] = int(m.group(1))
+        m = re.search(r"grants (\d+) Spy\b", other)
+        if m:
+            n["spies"] = int(m.group(1))
         m = re.search(r"\+(\d+) Movement while embarked", other)
         if m:
             n["embarkedMoves"] = int(m.group(1))
@@ -1346,6 +1370,7 @@ def main():
         "citystates.json": gen_city_states(),
         "moments.json": gen_moments(),
         "governors.json": gen_governors(),
+        "espionage.json": gen_espionage(),
     }
     stale = []
     for name, doc in outputs.items():
