@@ -28,14 +28,22 @@ class Piece:
     def __init__(self, name, seed=1):
         self.name = name
         self.bm = bmesh.new()
-        self.colors = {}  # face index -> (r, g, b)
+        self.colors = {}  # face -> (r, g, b)
+        self.team = set()  # faces on material slot 1 (tinted with the owner's colour in game)
+        self.tint_next = False
         self.rng = random.Random(seed)
         self.height = 1.0
 
     # ------------------------------------------------------------------ solids
+    def team_color(self, on=True):
+        """Solids added while on go to the team slot (owner colour); paint them light."""
+        self.tint_next = on
+
     def _tag(self, faces, color, jitter=0.04):
         c = srgb(color)
         for f in faces:
+            if self.tint_next:
+                self.team.add(f)
             j = 1.0 + self.rng.uniform(-jitter, jitter)
             self.colors[f] = tuple(min(1.0, max(0.0, v * j)) for v in c)
 
@@ -59,6 +67,15 @@ class Piece:
         new = bmesh.ops.create_cone(self.bm, cap_ends=True, segments=segments, radius1=radius, radius2=rt, depth=height)
         verts = new["verts"]
         self._place(verts, (center[0], center[1], center[2] + height / 2), rot_z)
+        self._tag(self._faces_of(verts), color)
+        return verts
+
+    def disc(self, center, radius, thickness, color, segments=12):
+        """A flat round plate standing upright, facing -Y (shields)."""
+        new = bmesh.ops.create_cone(self.bm, cap_ends=True, segments=segments, radius1=radius, radius2=radius, depth=thickness)
+        verts = new["verts"]
+        bmesh.ops.transform(self.bm, matrix=Matrix.Rotation(math.pi / 2, 4, "X"), verts=verts)
+        self._place(verts, center, 0.0)
         self._tag(self._faces_of(verts), color)
         return verts
 
@@ -136,6 +153,7 @@ class Piece:
         # Remember colours by face position before writing (bmesh face identity is lost on to_mesh).
         order = list(self.bm.faces)
         colors = [self.colors.get(f, (0.8, 0.8, 0.8)) for f in order]
+        team = [f in self.team for f in order]
         self.bm.to_mesh(mesh)
         self.bm.free()
         attr = mesh.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
@@ -148,6 +166,12 @@ class Piece:
                 attr.data[li].color = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), 1.0)
         for poly in mesh.polygons:
             poly.use_smooth = False
+        # Slot 0: the piece's own colours; slot 1 (only when used): team colour.
+        mesh.materials.append(bpy.data.materials.new("Base"))
+        if any(team):
+            mesh.materials.append(bpy.data.materials.new("Team"))
+            for poly, t in zip(mesh.polygons, team):
+                poly.material_index = 1 if t else 0
         obj = bpy.data.objects.new(self.name, mesh)
         bpy.context.scene.collection.objects.link(obj)
         return obj

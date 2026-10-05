@@ -22,6 +22,7 @@ with art. The game falls back to primitives for anything missing.
 | `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses) and the painted look: vertex colours darkened at the foot and lightened at the crown, flat shading |
 | `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
+| `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak); static, team-coloured clothing |
 | `blender/generate.py` | Builds every piece and exports FBX |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
 | `ue_import.py` | Imports FBX into `/Game/Art/<Kit>/` and assigns the master material `M_SovKit` (vertex colour × `Tint`) |
@@ -29,6 +30,7 @@ with art. The game falls back to primitives for anything missing.
 
 ## Conventions
 
-- Metres in Blender, pivot at the base centre, fronts (doors) face −Y.
+- Metres in Blender, pivot at the base centre, fronts (doors, faces) face −Y in Blender, which is +Y in Unreal after import (place pieces with that in mind).
+- Material slot 0 is the piece's own colours; slot 1 (`Piece.team_color()`) is team colour, tinted per instance by `SovArt::SetKitMesh`. `ue_import.py` deletes and re-creates assets so slot changes take effect.
 - Owner colours never go into a mesh: white parts (banner cloth, later figures' tunics) take the material's `Tint`.
 - A piece's name is `SM_<Name>`; the game finds it as `/Game/Art/<Kit>/SM_<Name>` (`SovArt::Mesh`). Add new names to `SovArt::RequiredAssets` so the asset test covers them.

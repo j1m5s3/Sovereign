@@ -68,6 +68,7 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 		: (Mood == TEXT("HAPPINESS_UNHAPPY") || Mood == TEXT("HAPPINESS_UNREST") || Mood == TEXT("HAPPINESS_REVOLT")) ? ESovStreetMood::Unhappy
 		: ESovStreetMood::Content;
 	const FLinearColor Civ = SovPlayerColor(Game, City->owner);
+	L.CivColor = Civ;
 	const double Rad = L.Radius;
 
 	// Plaza at the centre.

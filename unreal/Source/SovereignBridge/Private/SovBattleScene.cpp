@@ -5,6 +5,8 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include "SovArt.h"
+
 ASovBattleScene::ASovBattleScene()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -64,7 +66,13 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 			{
 				continue;  // the fighting lane stays open
 			}
-			Add(CylinderMesh, At + FVector(0, 0, 120), FVector(0.25, 0.25, 2.4), FLinearColor(0.3f, 0.2f, 0.12f));
+			UStaticMeshComponent* Trunk = Add(CylinderMesh, At + FVector(0, 0, 120), FVector(0.25, 0.25, 2.4), FLinearColor(0.3f, 0.2f, 0.12f));
+			if (SovArt::SetKitMesh(Trunk, TEXT("Nature"), Rng.FRand() < 0.5f ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer"), FLinearColor::White))
+			{
+				Trunk->SetRelativeLocationAndRotation(At, FRotator(0.f, Rng.FRandRange(0.f, 360.f), 0.f));
+				Trunk->SetRelativeScale3D(FVector(Rng.FRandRange(0.85f, 1.2f)));
+				continue;
+			}
 			Add(ConeMesh, At + FVector(0, 0, 420), FVector(1.6, 1.6, 3.2), FLinearColor(0.12f, 0.32f, 0.12f));
 		}
 	}
@@ -81,9 +89,22 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		const int32 i = Bodies.Num();
 		const FSovSoldier& S = Men[i];
 		const FLinearColor C = SideColor[S.Side];
-		Bodies.Add(Add(S.bLeader ? CylinderMesh.Get() : CylinderMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.6, 0.6, 1.7) : FVector(0.45, 0.45, 1.5), C));
-		Heads.Add(Add(S.bLeader ? SphereMesh.Get() : ConeMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.35) : FVector(0.3, 0.3, 0.45),
-			S.bLeader ? FLinearColor(1.f, 0.75f, 0.1f) : FLinearColor(0.6f, 0.6f, 0.62f)));
+		UStaticMeshComponent* Body = Add(CylinderMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.6, 0.6, 1.7) : FVector(0.45, 0.45, 1.5), C);
+		UStaticMeshComponent* Head = Add(S.bLeader ? SphereMesh.Get() : ConeMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.35) : FVector(0.3, 0.3, 0.45),
+			S.bLeader ? FLinearColor(1.f, 0.75f, 0.1f) : FLinearColor(0.6f, 0.6f, 0.62f));
+		// Kit figures when the art exists: soldiers (and leaders) in their side's colour.
+		if (SovArt::SetKitMesh(Body, TEXT("Figures"), S.bLeader ? TEXT("Leader") : TEXT("Soldier"), C))
+		{
+			Body->SetRelativeScale3D(FVector(1.0));
+			Head->SetVisibility(false);
+			Figure.Add(true);
+		}
+		else
+		{
+			Figure.Add(false);
+		}
+		Bodies.Add(Body);
+		Heads.Add(Head);
 	}
 	for (int32 i = 0; i < Men.Num(); ++i)
 	{
@@ -95,14 +116,25 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Heads[i]->SetVisibility(false);
 			continue;
 		}
+		// Figures face the enemy's side of the field (kit figures face +Y in Unreal).
+		const float Facing = S.Side == 0 ? -90.f : 90.f;
 		if (S.bAlive)
 		{
+			if (Figure[i])
+			{
+				Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Facing, 0.f));
+				continue;
+			}
 			Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 75), FRotator::ZeroRotator);
 			Heads[i]->SetRelativeLocation(FVector(S.Pos.X, S.Pos.Y, 175));
 		}
-		else
+		else if (Figure[i])
 		{
 			// The fallen lie where they fell.
+			Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 15), FRotator(0.f, Facing, 90.f));
+		}
+		else
+		{
 			Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 22), FRotator(90.f, 0.f, 0.f));
 			Bodies[i]->SetMaterial(0, MaterialFor(SideColor[S.Side] * 0.35f));
 			Heads[i]->SetVisibility(false);

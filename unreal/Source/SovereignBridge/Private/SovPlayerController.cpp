@@ -673,7 +673,7 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		Walker->SetActorLocation(Battle->ToWorld(Me3.Pos, 90.0));
 		if (!Move.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Move.Y, Move.X)), 0.f));
 		Walker->Body->SetVisibility(Me3.bAlive);
-		Walker->Crown->SetVisibility(Me3.bAlive);
+		Walker->Crown->SetVisibility(Me3.bAlive && !Walker->bFigure);
 	}
 	if (Sim.Finished() || bSettleNow)
 	{

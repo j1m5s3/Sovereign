@@ -29,7 +29,7 @@ void ASovGameMode::SpawnLighting()
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-50.f, 35.f, 0.f), Params);
+	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-50.f, -150.f, 0.f), Params);  // from behind the default views (cameras look north, +X)
 	if (UDirectionalLightComponent* L = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
 	{
 		L->SetMobility(EComponentMobility::Movable);

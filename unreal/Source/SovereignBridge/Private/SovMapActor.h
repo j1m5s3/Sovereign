@@ -49,6 +49,10 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> CityMarkers;
 
+	// Kit trees on woods tiles.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Trees;
+
 	// Gold crowns on top of leader markers.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Crowns;

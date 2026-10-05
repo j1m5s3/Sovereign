@@ -23,6 +23,7 @@ struct FSovTile
 	int32 X = 0, Y = 0;
 	ESovRelief Relief = ESovRelief::Flat;
 	bool bVisible = false;  // false: revealed earlier, drawn fogged
+	bool bWoods = false;    // woods or rainforest: trees on the tile
 	FLinearColor Color;     // terrain and feature, before fog
 };
 

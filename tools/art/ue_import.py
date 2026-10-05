@@ -47,10 +47,14 @@ def master_material():
 def import_kit(kit, files):
     tasks = []
     for path in files:
+        # A fresh import every time: reimporting over an asset keeps its old material slots.
+        asset = "/Game/Art/%s/%s" % (kit, os.path.splitext(os.path.basename(path))[0])
+        if lib.does_asset_exist(asset):
+            lib.delete_asset(asset)
         options = unreal.FbxImportUI()
         options.set_editor_property("import_mesh", True)
         options.set_editor_property("import_as_skeletal", False)
-        options.set_editor_property("import_materials", False)
+        options.set_editor_property("import_materials", False)  # slots are kept, filled with M_SovKit below
         options.set_editor_property("import_textures", False)
         options.set_editor_property("import_animations", False)
         data = options.get_editor_property("static_mesh_import_data")
@@ -85,7 +89,9 @@ def main():
             if not mesh:
                 unreal.log_error("missing after import: " + asset)
                 continue
-            mesh.set_material(0, mat)
+            # Every slot gets the kit material; the game tints slot 1 (team colour) per instance.
+            for slot in range(len(mesh.static_materials)):
+                mesh.set_material(slot, mat)
             lib.save_asset(asset)
             count += 1
     unreal.log("SOVART imported %d pieces from %s" % (count, BUILD))

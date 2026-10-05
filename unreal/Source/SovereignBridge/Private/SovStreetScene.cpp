@@ -57,6 +57,16 @@ ASovWalker::ASovWalker()
 
 void ASovWalker::SetColor(const FLinearColor& Color)
 {
+	// The leader's own figure when the art exists: robe and cloak in the owner's colour.
+	if (SovArt::SetKitMesh(Body, TEXT("Figures"), TEXT("Leader"), Color))
+	{
+		Body->SetRelativeLocation(FVector(0, 0, -90));
+		Body->SetRelativeScale3D(FVector(1.0));
+		Body->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));  // kit figures face +Y in Unreal; the character faces +X
+		Crown->SetVisibility(false);
+		bFigure = true;
+		return;
+	}
 	static UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 	UMaterialInstanceDynamic* BodyMat = UMaterialInstanceDynamic::Create(Base, this);
 	BodyMat->SetVectorParameterValue(TEXT("Color"), Color);
@@ -157,8 +167,11 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 				}
 				continue;
 			}
-			const bool bTint = P.Kind == ESovStreetPiece::Banner;
-			AddKitPiece(Mesh, FVector(P.Location.X, P.Location.Y, 0), P.Yaw, bTint ? P.Color : FLinearColor::White);
+			UStaticMeshComponent* C = AddKitPiece(Mesh, FVector(P.Location.X, P.Location.Y, 0), P.Yaw, FLinearColor::White);
+			if (P.Kind == ESovStreetPiece::Banner)
+			{
+				SovArt::SetKitMesh(C, Kit, P.Recipe, P.Color);  // the cloth takes the owner's colour
+			}
 			continue;
 		}
 		switch (P.Kind)
@@ -166,8 +179,20 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 			case ESovStreetPiece::Plaza:
 				AddPiece(CylinderMesh, P.Location, FVector(Scale.X, Scale.Y, Scale.Z), 0.f, P.Color);
 				break;
-			case ESovStreetPiece::Banner:
 			case ESovStreetPiece::Guard:
+			{
+				// Soldiers of the guard stand at the street mouths under Fear.
+				UStaticMeshComponent* G = AddPiece(CylinderMesh, P.Location, Scale, P.Yaw + 180.f, P.Color);
+				if (SovArt::SetKitMesh(G, TEXT("Figures"), TEXT("Soldier"), Layout.CivColor))
+				{
+					// Facing out of the plaza, down their street.
+					G->SetRelativeLocation(FVector(P.Location.X, P.Location.Y, 0));
+					G->SetRelativeScale3D(FVector(1.0));
+					G->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(P.Location.Y, P.Location.X)) - 90.f, 0.f));
+				}
+				break;
+			}
+			case ESovStreetPiece::Banner:
 				AddPiece(CylinderMesh, P.Location, Scale, P.Yaw, P.Color);
 				break;
 			case ESovStreetPiece::Landmark:
@@ -183,11 +208,29 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 				break;
 		}
 	}
-	// The two people the leader can talk to.
-	AddPiece(CylinderMesh, Layout.Herald + FVector(0, 0, 90), FVector(0.6, 0.6, 1.8), 0.f, FLinearColor(0.9f, 0.8f, 0.2f));
-	AddPiece(SphereMesh, Layout.Herald + FVector(0, 0, 205), FVector(0.4), 0.f, FLinearColor(0.95f, 0.8f, 0.65f));
-	AddPiece(CylinderMesh, Layout.Captain + FVector(0, 0, 90), FVector(0.7, 0.7, 1.9), 0.f, FLinearColor(0.35f, 0.08f, 0.08f));
-	AddPiece(ConeMesh, Layout.Captain + FVector(0, 0, 215), FVector(0.5, 0.5, 0.6), 0.f, FLinearColor(0.6f, 0.6f, 0.62f));
+	// The two people the leader can talk to (kit figures, primitives without the art).
+	UStaticMeshComponent* Herald = AddPiece(CylinderMesh, Layout.Herald + FVector(0, 0, 90), FVector(0.6, 0.6, 1.8), 0.f, FLinearColor(0.9f, 0.8f, 0.2f));
+	if (SovArt::SetKitMesh(Herald, TEXT("Figures"), TEXT("Herald"), Layout.CivColor))
+	{
+		Herald->SetRelativeLocation(Layout.Herald);
+		Herald->SetRelativeScale3D(FVector(1.0));
+		Herald->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // facing the street the leader walks in from (-X)
+	}
+	else
+	{
+		AddPiece(SphereMesh, Layout.Herald + FVector(0, 0, 205), FVector(0.4), 0.f, FLinearColor(0.95f, 0.8f, 0.65f));
+	}
+	UStaticMeshComponent* Captain = AddPiece(CylinderMesh, Layout.Captain + FVector(0, 0, 90), FVector(0.7, 0.7, 1.9), 0.f, FLinearColor(0.35f, 0.08f, 0.08f));
+	if (SovArt::SetKitMesh(Captain, TEXT("Figures"), TEXT("Captain"), Layout.CivColor))
+	{
+		Captain->SetRelativeLocation(Layout.Captain);
+		Captain->SetRelativeScale3D(FVector(1.0));
+		Captain->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+	}
+	else
+	{
+		AddPiece(ConeMesh, Layout.Captain + FVector(0, 0, 215), FVector(0.5, 0.5, 0.6), 0.f, FLinearColor(0.6f, 0.6f, 0.62f));
+	}
 	// Citizens wander between points on the plaza and streets (stage 5: crowd by population).
 	for (int32 i = 0; i < Layout.Crowd; ++i)
 	{
@@ -196,6 +239,11 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		const float Shade = Rng.FRandRange(0.35f, 0.85f);
 		C.Body = AddPiece(CylinderMesh, Start, FVector(0.45, 0.45, 1.6), 0.f, FLinearColor(Shade, Shade * 0.8f, Shade * 0.6f));
 		C.Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		if (SovArt::SetKitMesh(C.Body, TEXT("Figures"), TEXT("Citizen"), FLinearColor::White))
+		{
+			C.Body->SetRelativeScale3D(FVector(Rng.FRandRange(0.92f, 1.06f)));
+			C.bFigure = true;
+		}
 		C.Target = FVector(Rng.FRandRange(-3000.f, 3000.f), Rng.FRandRange(-3000.f, 3000.f), 80.f);
 		C.Speed = Rng.FRandRange(80.f, 160.f) * (Layout.bFear ? 0.6f : 1.f);  // a cowed city moves quietly
 		Citizens.Add(C);
@@ -214,6 +262,13 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 			C.Target = FVector(Rng.FRandRange(-3000.f, 3000.f), Rng.FRandRange(-3000.f, 3000.f), 80.f);
 			continue;
 		}
-		C.Body->SetRelativeLocation(Here + To.GetSafeNormal2D() * C.Speed * DeltaSeconds);
+		const FVector Step = To.GetSafeNormal2D() * C.Speed * DeltaSeconds;
+		// Figures stand on the ground and face where they walk (kit figures face +Y in Unreal).
+		const FVector Next = Here + Step;
+		C.Body->SetRelativeLocation(C.bFigure ? FVector(Next.X, Next.Y, 0.0) : Next);
+		if (C.bFigure)
+		{
+			C.Body->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
+		}
 	}
 }

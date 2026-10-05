@@ -146,6 +146,12 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		T.Y = H.y;
 		T.bVisible = V == sov::Visibility::Visible;
 		T.Color = PlotColor(Rules, S.plots[static_cast<size_t>(i)], T.Relief);
+		const sov::Plot& Pl = S.plots[static_cast<size_t>(i)];
+		if (Pl.feature != sov::kNone)
+		{
+			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
+			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
+		}
 	}
 
 	for (const sov::City& C : S.cities)
