@@ -890,9 +890,15 @@ void build(View& v, UnitId id) {
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
-        if (v.game.improvementsAt(v.me, h).empty()) return -1;
+        // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).
+        const std::vector<TypeIndex> opts = v.game.improvementsAt(v.me, h);
+        if (std::none_of(opts.begin(), opts.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy == kNone; })) return -1;
         int w = 10;
-        if (p.resource != kNone && v.game.resourceVisible(v.me, h)) w += 20;
+        if (p.resource != kNone && v.game.resourceVisible(v.me, h)) {
+            w += 20;
+            // Strategic resources feed units, power plants and railroads: worth more.
+            if (v.r.resources[at(p.resource)].cls == ResourceClass::Strategic) w += 30;
+        }
         const City* c = s.city(p.city);
         if (c && std::binary_search(c->worked.begin(), c->worked.end(), s.grid.index(h))) w += 10;
         return w;
@@ -1465,6 +1471,10 @@ void production(View& v) {
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
+                    // The first Armory once railroads are in reach: Military Engineers are trained where one stands.
+                    if (b.id == "BUILDING_ARMORY" && g.railroad() != kNone && s.players[at(v.me)].techs.has(v.r.routes[at(g.railroad())].tech) &&
+                        std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->has(it.type); }))
+                        value += 200;
                     // Power [GS]: a plant where cities in reach go short and its fuel is on hand.
                     if (b.burnsResource != kNone) {
                         int shortfall = 0;
@@ -1522,6 +1532,11 @@ void production(View& v) {
                         if (rep.amenities < rep.amenitiesNeeded) value += d.amenities * 80;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
+                        // One Encampment for an Armory once railroads are in reach: Military Engineers need it.
+                        if (d.id == "DISTRICT_ENCAMPMENT" && g.railroad() != kNone && nCities >= 3 &&
+                            s.players[at(v.me)].techs.has(v.r.routes[at(g.railroad())].tech) &&
+                            std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
+                            value = std::max(value, 140);
                     }
                     value = value * districtPercent(v, d) / 100;
                     if (d.canal) value = 20;  // a canal only where a human wants the shortcut
