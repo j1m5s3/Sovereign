@@ -632,6 +632,17 @@ struct Modifier {
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
+// A difficulty level (00-overview.md, Difficulty levels; Sovereign: skill first, AI bonuses only at the top two).
+struct DifficultyType {
+    std::string id, name;
+    int aiSkill = 3;
+    int aiYieldPercent = 0;           // Science, Culture, Faith in AI cities
+    int aiProductionGoldPercent = 0;  // Production, Gold in AI cities
+    int aiCombat = 0, aiXpPercent = 0, aiFreeBoosts = 0;  // free Eurekas and Inspirations as each era begins
+    int aiExtraWarriors = 0, aiExtraBuilders = 0, aiExtraSettlers = 0;
+    int humanCombat = 0, humanXpPercent = 0, humanCampGoldPercent = 0;
+};
+
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
 enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire };
 enum class DisasterDamageType : uint8_t {
@@ -796,6 +807,7 @@ public:
     std::vector<MapSizeType> mapSizes;
     std::vector<GameSpeedType> speeds;
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
+    std::vector<DifficultyType> difficulties;  // Settler .. Deity (setup.json)
     std::vector<GearType> gear;
     std::vector<Dynasty> dynasties;
     std::vector<GreatPersonClass> greatPersonClasses;

@@ -91,6 +91,24 @@ void Game::processEras() {
     }
     ++state_.gameEra;
     state_.gameEraStart = state_.turn;
+    // Difficulty: AI civs at Immortal and Deity get free Eurekas and Inspirations in the new era's trees.
+    const int free = difficulty().aiFreeBoosts;
+    for (Player& p : state_.players) {
+        if (free <= 0 || !difficultyAi(p.id)) continue;
+        for (int civic = 0; civic < 2; ++civic) {
+            const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+            TreeProgress& t = civic ? p.civics : p.techs;
+            int given = 0;
+            for (size_t i = 0; i < nodes.size() && given < free; ++i) {
+                if (nodes[i].era != state_.gameEra || i >= t.done.size() || t.done[i] || t.boosted[i]) continue;
+                const int cost = civic ? civicCost(static_cast<TypeIndex>(i)) : techCost(static_cast<TypeIndex>(i));
+                const int pct = nodes[i].boost.percent > 0 ? nodes[i].boost.percent : 40;
+                t.boosted[i] = 1;
+                t.progress[i] += Fixed::fromInt(cost) * pct / 100;
+                ++given;
+            }
+        }
+    }
 }
 
 int Game::ageLoyalty(const City& city) const {

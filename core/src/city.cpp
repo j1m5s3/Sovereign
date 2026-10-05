@@ -199,6 +199,12 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // Difficulty: AI cities at Immortal and Deity (00-overview: Difficulty levels).
+        if (difficultyAi(c->owner)) {
+            const bool sciCulFaith = i == idx(YieldType::Science) || i == idx(YieldType::Culture) || i == idx(YieldType::Faith);
+            const bool prodGold = i == idx(YieldType::Production) || i == idx(YieldType::Gold);
+            pct += sciCulFaith ? difficulty().aiYieldPercent : prodGold ? difficulty().aiProductionGoldPercent : 0;
+        }
         if (i != idx(YieldType::Food)) pct += moodYield;
         pct += loyaltyYield;
         rep.yields[i] = raw[i] * std::max(0, pct) / 100;

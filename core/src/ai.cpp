@@ -75,9 +75,10 @@ struct View {
     bool majorWar = false;         // at war with a major civ (city-state wars do not stop expansion)
     int sites = -1;                // free city sites near our cities (-1: not counted yet this turn)
     Posture posture;
+    int skill = 3;                 // the difficulty's AI skill (0 Settler .. 3 Prince .. 7 Deity)
     bool wantSiege = false;        // at war with walled cities and short of siege units
 
-    View(Game& g, PlayerId p) : game(g), r(g.rules()), me(p) {}
+    View(Game& g, PlayerId p) : game(g), r(g.rules()), me(p), skill(g.difficulty().aiSkill) {}
     const GameState& s() const { return game.state(); }
     bool hostile(PlayerId other) const { return game.atWar(me, other); }
     bool claimedNear(Hex h, int range) const {
@@ -295,7 +296,8 @@ Posture assess(const Game& g, PlayerId me, int sites) {
     int myCities = 0;
     for (const City& c : s.cities) myCities += c.owner == me ? 1 : 0;
     out.on[static_cast<size_t>(Strategy::DarkAge)] = pl.age == Age::Dark;
-    out.on[static_cast<size_t>(Strategy::RapidExpansion)] = sites > 0 && !majorWar && pl.age != Age::Dark && myCities < kMaxCities;
+    // Rapid Expansion is disqualified at Warlord and below (Strategies data).
+    out.on[static_cast<size_t>(Strategy::RapidExpansion)] = sites > 0 && !majorWar && pl.age != Age::Dark && myCities < kMaxCities && g.difficulty().aiSkill > 2;
     out.on[static_cast<size_t>(Strategy::WonderObsessed)] = pl.civ != kNone && r.civs[at(pl.civ)].agenda == Agenda::FirstEmperor;
     {
         // Naval: the capital's landmass holds under a fifth of the map's land (an island start), or Victoria.
@@ -826,7 +828,7 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     if (pv.defender != kNoUnit) {
         const Unit* d = v.s().unit(pv.defender);
         if (d && pv.damageToDefenderMin >= d->hp) value += 1000;  // a sure kill
-        if (d) value += (100 - d->hp) * 4;                        // focus fire on the wounded
+        if (d && v.skill >= 2) value += (100 - d->hp) * 4;        // focus fire on the wounded (from Warlord)
     } else if (pv.city != kNoCity) {
         // Melee into walls only with siege help; ranged chip damage is always welcome.
         if (pv.hitsWalls && !pv.ranged && t.bombard == 0) return INT_MIN;
@@ -997,8 +999,10 @@ void military(View& v) {
                 siegeNear += t.bombard > 0 ? 1 : 0;
             }
             const bool walled = goal->wallHp > 0;
-            const int need = v.game.cityStrength(*goal) * (walled ? kWalledRatio : kAssaultRatio) / 100;
-            assault = strength >= need && (!walled || siegeNear > 0 || goal->wallHp <= 0);
+            // Lower skill gathers less: Warlord at three quarters of the ratios, Settler and Chieftain not at all.
+            const int ratio = (walled ? kWalledRatio : kAssaultRatio) * (v.skill >= 3 ? 4 : 3) / 4;
+            const int need = v.game.cityStrength(*goal) * ratio / 100;
+            assault = v.skill <= 1 || (strength >= need && (!walled || siegeNear > 0 || goal->wallHp <= 0));
         }
     }
     bool scouted = false;
@@ -1112,6 +1116,7 @@ int desiredArmy(const View& v) {
     const int n = static_cast<int>(v.cities.size());
     int want = n + 1 + n / 3;
     if (!v.enemies.empty()) want += 2 * n + 2;
+    if (v.skill <= 1) want = want * 3 / 4;
     return std::min(want * v.posture.army / 100, 6 * n + 6);
 }
 
@@ -1313,8 +1318,8 @@ void purchases(View& v) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
     }
-    // Still well above the reserve: buy the building that yields most per gold in any city.
-    for (int guard = 0; guard < 4; ++guard) {
+    // Still well above the reserve: buy the building that yields most per gold in any city (from Warlord).
+    for (int guard = 0; guard < (v.skill >= 2 ? 4 : 0); ++guard) {
         const Fixed gold = v.s().players[at(v.me)].gold;
         std::optional<std::pair<CityId, ProductionItem>> best;
         int64_t bestScore = 0;
@@ -1337,6 +1342,7 @@ void purchases(View& v) {
 
 // Upgrades (05: Upgrades): the biggest strength gain per gold first, keeping a reserve.
 void upgrades(View& v) {
+    if (v.skill <= 1) return;  // Settler and Chieftain AIs leave their units as they are
     Game& g = v.game;
     const int reserve = 40 + 10 * static_cast<int>(v.cities.size());
     for (int guard = 0; guard < 8; ++guard) {

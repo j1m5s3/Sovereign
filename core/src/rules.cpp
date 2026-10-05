@@ -1555,6 +1555,25 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.turns = static_cast<int>(j["turns"].integer(500));
         speeds.push_back(std::move(s));
     }
+    for (const auto& [id, j] : m.tables["difficulties"]) {
+        DifficultyType d;
+        d.id = id;
+        d.name = j["name"].str(id);
+        const auto num = [&](const char* k) { return static_cast<int>(j[k].integer(0)); };
+        d.aiSkill = static_cast<int>(j["aiSkill"].integer(3));
+        d.aiYieldPercent = num("aiYieldPercent");
+        d.aiProductionGoldPercent = num("aiProductionGoldPercent");
+        d.aiCombat = num("aiCombat");
+        d.aiXpPercent = num("aiXpPercent");
+        d.aiFreeBoosts = num("aiFreeBoosts");
+        d.aiExtraWarriors = num("aiExtraWarriors");
+        d.aiExtraBuilders = num("aiExtraBuilders");
+        d.aiExtraSettlers = num("aiExtraSettlers");
+        d.humanCombat = num("humanCombat");
+        d.humanXpPercent = num("humanXpPercent");
+        d.humanCampGoldPercent = num("humanCampGoldPercent");
+        difficulties.push_back(std::move(d));
+    }
     for (const auto& [id, j] : m.tables["startingUnits"]) {
         const std::string& u = j["unit"].str();
         if (unit(u) == kNone) {

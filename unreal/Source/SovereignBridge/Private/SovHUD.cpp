@@ -55,7 +55,9 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString CurrentName = Current.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(Current.cityState)].name)
 		: Current.civ == sov::kNone ? FString(TEXT("Barbarians")) : Str(R.civs[static_cast<size_t>(Current.civ)].name);
 
-	Line(FString::Printf(TEXT("Turn %d / %d   %s%s"), S.turn, G.turnLimit(), *Civ, Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")), 16, Y);
+	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
+			 Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")),
+		16, Y);
 	Line(FString::Printf(TEXT("Gold %s (%+s)   Science %s   Culture %s   Score %d"), *Str(P.gold.toString()),
 			 *Str(G.goldPerTurn(Me).toString()), *Str(G.sciencePerTurn(Me).toString()), *Str(G.culturePerTurn(Me).toString()), G.score(Me)),
 		16, Y);

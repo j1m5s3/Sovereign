@@ -54,7 +54,8 @@ void Game::enterPlot(Unit& unit) {
     if (it == state_.camps.end()) return;
     // Clearing a camp pays gold; its surviving units roam on without a home.
     state_.camps.erase(it);
-    state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD"));
+    const int pct = 100 + (difficultyHuman(unit.owner) ? difficulty().humanCampGoldPercent : 0);  // 00-overview: Difficulty levels
+    state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD") * pct / 100);
     awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");
 }
 
@@ -96,7 +97,9 @@ void Game::placeCamps(PlayerId bp) {
     }
     if (toAdd <= 0) return;
 
-    const int cityGap = rules_->globalInt("BARBARIAN_CAMP_MINIMUM_DISTANCE_CITY");
+    // Camps keep one more tile away per difficulty level below Prince (BARBARIAN_CAMP_EXTRA_DISTANCE_PER_LOW_DIFFICULTY).
+    const int below = std::max(0, 3 - state_.setup.difficulty);
+    const int cityGap = rules_->globalInt("BARBARIAN_CAMP_MINIMUM_DISTANCE_CITY") + below * rules_->globalInt("BARBARIAN_CAMP_EXTRA_DISTANCE_PER_LOW_DIFFICULTY");
     const int campGap = rules_->globalInt("BARBARIAN_CAMP_MINIMUM_DISTANCE_ANOTHER_CAMP");
     std::vector<Hex> spots;
     for (int i = 0; i < state_.grid.size(); ++i) {

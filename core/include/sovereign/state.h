@@ -370,6 +370,7 @@ struct GameSetup {
     bool cultureVictory = true;    // 07: Tourism and Culture Victory
     bool diplomaticVictory = true; // 08: Diplomatic Victory [GS]
     int disasterIntensity = 2;     // 0 Minimal .. 4 Hyperreal; -1: no natural disasters (09 [GS])
+    int difficulty = 3;            // Rules::difficulties: 0 Settler .. 3 Prince .. 7 Deity
     int cityStates = -1;           // city-states to place (-1: the map size's default)
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);

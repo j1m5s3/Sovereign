@@ -94,6 +94,24 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             }
             game->spawnUnit(t, p.id, *spot);
         }
+        // AI civs at Immortal and Deity start with extra units (00-overview: AI starting units).
+        if (game->difficultyAi(p.id)) {
+            const DifficultyType& d = game->difficulty();
+            const std::pair<const char*, int> extras[] = {{"UNIT_SETTLER", d.aiExtraSettlers}, {"UNIT_WARRIOR", d.aiExtraWarriors}, {"UNIT_BUILDER", d.aiExtraBuilders}};
+            for (const auto& [unitId, count] : extras) {
+                const TypeIndex t = rules.unit(unitId);
+                if (t == kNone) continue;
+                const UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
+                for (int k = 0; k < count; ++k) {
+                    for (const Hex& n : st.grid.within(p.startPos, 2)) {
+                        if (isLandPassable(st, rules, n) && !st.unitAt(n, layer, rules) && !st.foreignUnitAt(n, p.id)) {
+                            game->spawnUnit(t, p.id, n);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         // The leader starts on the Settler's tile with the normal starting units (leader doc §1).
         if (rules.leaderUnit != kNone) game->spawnLeader(p.id, p.startPos);
     }
@@ -795,6 +813,21 @@ void Game::applyFoundCity(const Command& c) {
                                       [&](const Unit& x) { return x.id == c.id; }),
                        state_.units.end());
     refreshVisibility(owner);
+}
+
+const DifficultyType& Game::difficulty() const {
+    static const DifficultyType prince;
+    if (rules_->difficulties.empty()) return prince;
+    const int i = std::clamp(state_.setup.difficulty, 0, static_cast<int>(rules_->difficulties.size()) - 1);
+    return rules_->difficulties[static_cast<size_t>(i)];
+}
+
+bool Game::difficultyAi(PlayerId player) const {
+    return player >= 0 && static_cast<size_t>(player) < state_.players.size() && isMajorCiv(player) && !state_.players[static_cast<size_t>(player)].human;
+}
+
+bool Game::difficultyHuman(PlayerId player) const {
+    return player >= 0 && static_cast<size_t>(player) < state_.players.size() && isMajorCiv(player) && state_.players[static_cast<size_t>(player)].human;
 }
 
 void Game::applyEndTurn(const Command& c) {

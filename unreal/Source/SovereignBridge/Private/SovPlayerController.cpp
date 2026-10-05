@@ -2026,17 +2026,33 @@ void ASovPlayerController::OpenMenu()
 			})];
 	};
 	const FString Name = FPlatformProcess::UserName();
-	auto Base = [Name]() {
+	auto Base = [this, Name]() {
 		FSovSetup S;
 		S.PlayerName = Name.IsEmpty() ? FString(TEXT("Player")) : Name;
+		S.Difficulty = MenuDifficulty;
 		return S;
 	};
+	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
 	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
 		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
 				SNew(STextBlock).Text(FText::FromString(TEXT("Sovereign"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28))
 				.ColorAndOpacity(FLinearColor(1.f, 0.85f, 0.45f))]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
+					MenuDifficulty = FMath::Max(0, MenuDifficulty - 1);
+					return FReply::Handled();
+				})]
+				+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)[
+					SNew(STextBlock).Text_Lambda([this]() {
+						return FText::FromString(FString::Printf(TEXT("Difficulty: %s"), Levels[FMath::Clamp(MenuDifficulty, 0, 7)]));
+					})]
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT(">"))).OnClicked_Lambda([this]() {
+					MenuDifficulty = FMath::Min(7, MenuDifficulty + 1);
+					return FReply::Handled();
+				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();

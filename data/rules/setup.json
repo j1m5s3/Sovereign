@@ -15,6 +15,17 @@
   {"id": "GAMESPEED_EPIC", "costPercent": 150, "turns": 750},
   {"id": "GAMESPEED_MARATHON", "costPercent": 300, "turns": 1500}
  ],
+ "_difficulties": "Difficulty levels (00-overview.md, Difficulty levels; AI starting units). Sovereign rule (leader doc section 10, Difficulty [decided]): levels scale the AI's skill first (aiSkill 0..7); Civ's AI bonuses (yields, combat, XP, free boosts, extra starting units) apply only at Immortal and Deity, with Civ's values for those levels. Human bonuses at Settler and Chieftain and the barbarian camp gold follow Civ. aiCombat uses the guides' +1 at King .. +4 at Deity reading (Immortal +3, Deity +4).",
+ "difficulties": [
+  {"id": "DIFFICULTY_SETTLER", "name": "Settler", "aiSkill": 0, "humanCombat": 3, "humanXpPercent": 45, "humanCampGoldPercent": 15},
+  {"id": "DIFFICULTY_CHIEFTAIN", "name": "Chieftain", "aiSkill": 1, "humanCombat": 2, "humanXpPercent": 30, "humanCampGoldPercent": 10},
+  {"id": "DIFFICULTY_WARLORD", "name": "Warlord", "aiSkill": 2, "humanCampGoldPercent": 5},
+  {"id": "DIFFICULTY_PRINCE", "name": "Prince", "aiSkill": 3},
+  {"id": "DIFFICULTY_KING", "name": "King", "aiSkill": 4, "humanCampGoldPercent": -5},
+  {"id": "DIFFICULTY_EMPEROR", "name": "Emperor", "aiSkill": 5, "humanCampGoldPercent": -10},
+  {"id": "DIFFICULTY_IMMORTAL", "name": "Immortal", "aiSkill": 6, "aiYieldPercent": 24, "aiProductionGoldPercent": 60, "aiCombat": 3, "aiXpPercent": 30, "aiFreeBoosts": 3, "aiExtraWarriors": 3, "aiExtraBuilders": 2, "aiExtraSettlers": 1, "humanCampGoldPercent": -15},
+  {"id": "DIFFICULTY_DEITY", "name": "Deity", "aiSkill": 7, "aiYieldPercent": 32, "aiProductionGoldPercent": 80, "aiCombat": 4, "aiXpPercent": 40, "aiFreeBoosts": 4, "aiExtraWarriors": 4, "aiExtraBuilders": 2, "aiExtraSettlers": 2, "humanCampGoldPercent": -20}
+ ],
  "startingUnits": [
   {"id": "START_SETTLER", "unit": "UNIT_SETTLER"},
   {"id": "START_WARRIOR", "unit": "UNIT_WARRIOR"}

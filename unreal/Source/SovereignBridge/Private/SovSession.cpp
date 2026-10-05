@@ -109,6 +109,10 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
 	int32 Disasters = CoreSetup->disasterIntensity;
 	if (FParse::Value(FCommandLine::Get(), TEXT("SovDisasters="), Disasters)) CoreSetup->disasterIntensity = FMath::Clamp(Disasters, -1, 4);
+	// Difficulty: -SovDifficulty=0..7 (Settler .. Prince 3 .. Deity); Prince by default.
+	CoreSetup->difficulty = FMath::Clamp(Setup.Difficulty, 0, 7);
+	int32 Difficulty = CoreSetup->difficulty;
+	if (FParse::Value(FCommandLine::Get(), TEXT("SovDifficulty="), Difficulty)) CoreSetup->difficulty = FMath::Clamp(Difficulty, 0, 7);
 	for (int32 i = 0; i < Setup.Players; ++i)
 	{
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
