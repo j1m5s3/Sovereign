@@ -11,6 +11,7 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         case ReqType::PlotHasResource: ok = c.plot && c.plot->resource == q.ref; break;
         case ReqType::PlotHasFeature: ok = c.plot && c.plot->feature == q.ref; break;
         case ReqType::PlotHasTerrain: ok = c.plot && c.plot->terrain == q.ref; break;
+        case ReqType::PlotHasImprovement: ok = c.plot && (q.ref == kNone ? c.plot->improvement != kNone : c.plot->improvement == q.ref); break;
         case ReqType::CityHasBuilding: ok = c.city && c.city->has(q.ref); break;
         case ReqType::CityIsCapital: ok = c.city && c.city->capital; break;
         case ReqType::CityMinPopulation: ok = c.city && c.city->population >= q.value; break;

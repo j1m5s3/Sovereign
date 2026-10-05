@@ -4,6 +4,8 @@
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
+#include <algorithm>
+
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -20,6 +22,7 @@ FSovSetup FSovSetup::FromCommandLine()
 		Setup.bHumanSeat0 = false;
 	}
 	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
+	Setup.bNavalDemo = FParse::Param(Cmd, TEXT("SovNavalDemo"));
 	return Setup;
 }
 
@@ -90,6 +93,50 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			}
 			S.players[0].relations[1].war = S.players[1].relations[0].war = true;
 			S.players[0].relations[1].since = S.players[1].relations[0].since = 1;
+			Game = sov::Game::fromScenario(*Rules, std::move(S));
+		}
+	}
+	if (Setup.bNavalDemo && Game)
+	{
+		// A hand-made opening for seeing ships: Shipbuilding, a galley and an embarked warrior
+		// on the coast nearest the leader.
+		sov::GameState S = Game->state();
+		const sov::Unit* Leader = Game->leaderOf(0);
+		sov::Player& P = S.players[0];
+		sov::Game::fitPlayerToRules(P, *Rules);
+		for (const char* Tech : {"TECH_SAILING", "TECH_SHIPBUILDING"})
+		{
+			P.techs.done[static_cast<size_t>(Rules->tech(Tech))] = 1;
+		}
+		std::vector<sov::Hex> Coast;
+		if (Leader)
+		{
+			for (int32 R = 1; R <= 8 && Coast.size() < 2; ++R)
+			{
+				for (const sov::Hex& H : S.grid.within(Leader->pos, R))
+				{
+					const sov::TerrainType& T = Rules->terrains[static_cast<size_t>(S.plot(H).terrain)];
+					if (T.water && !T.impassable && T.id != "TERRAIN_OCEAN" && !S.unitAt(H, sov::UnitLayer::Military, *Rules) &&
+						std::find(Coast.begin(), Coast.end(), H) == Coast.end())
+					{
+						Coast.push_back(H);
+						if (Coast.size() == 2) break;
+					}
+				}
+			}
+		}
+		if (Coast.size() == 2)
+		{
+			for (int32 k = 0; k < 2; ++k)
+			{
+				sov::Unit U;
+				U.id = S.nextUnitId++;
+				U.type = Rules->unit(k == 0 ? "UNIT_GALLEY" : "UNIT_WARRIOR");
+				U.owner = 0;
+				U.pos = Coast[static_cast<size_t>(k)];
+				U.movesLeft = sov::Fixed::fromInt(Rules->units[static_cast<size_t>(U.type)].moves);
+				S.units.push_back(U);
+			}
 			Game = sov::Game::fromScenario(*Rules, std::move(S));
 		}
 	}

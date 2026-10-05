@@ -93,4 +93,36 @@ def leader(seed=35):
     return p
 
 
-PIECES = [citizen, herald, captain, soldier, leader]
+def ship(seed=36):
+    """A Classical war galley, side-on along X: hull, bow ram, oars, a mast and a team-painted sail."""
+    p = Piece("SM_Ship", seed)
+    p.box((0, 0, 0.45), (6.0, 1.3, 0.9), WOOD, taper=1.3)  # hull, wider at the gunwale
+    p.box((0, 0, 0.92), (5.6, 1.5, 0.08), "#8a6a48")  # deck
+    p.box((3.25, 0, 0.35), (0.7, 0.35, 0.3), BRONZE)  # ram
+    p.box((-2.9, 0, 1.25), (0.35, 0.4, 0.7), WOOD)  # raised stern
+    for i in range(6):
+        x = -2.0 + 0.8 * i
+        for side in (-1, 1):
+            p.box((x, side * 1.15, 0.55), (0.08, 0.9, 0.06), WOOD, rot_z=side * 0.25)  # oars
+    p.cylinder((0.3, 0, 0.95), 0.07, 3.4, WOOD, segments=6)  # mast
+    p.box((0.3, 0, 3.2), (0.1, 2.6, 0.08), WOOD)  # yard
+    p.team_color(True)
+    p.box((0.3, 0, 2.4), (0.06, 2.4, 1.5), LINEN, taper=0.9)  # the sail
+    p.team_color(False)
+    return p
+
+
+def boat(seed=37):
+    """The small boat an embarked land unit rides in, a team-painted strake along its side."""
+    p = Piece("SM_Boat", seed)
+    p.box((0, 0, 0.22), (2.6, 0.9, 0.44), WOOD, taper=1.3)
+    p.team_color(True)
+    for side in (-1, 1):
+        p.box((0, side * 0.56, 0.4), (2.5, 0.1, 0.14), LINEN)  # painted strakes
+    p.team_color(False)
+    for side in (-1, 1):
+        p.box((0.2, side * 0.75, 0.35), (0.06, 0.7, 0.05), WOOD, rot_z=side * 0.3)
+    return p
+
+
+PIECES = [citizen, herald, captain, soldier, leader, ship, boat]

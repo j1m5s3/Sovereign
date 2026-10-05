@@ -36,6 +36,8 @@ struct FSovUnitMarker
 	bool bCivilian = false;
 	bool bLeader = false;  // the player's Sovereign (its own layer)
 	bool bInCity = false;
+	bool bNaval = false;     // a ship
+	bool bEmbarked = false;  // a land unit afloat
 	int32 Hp = 100;
 	FString Name;  // unit type, or the ruler's name for a leader
 };

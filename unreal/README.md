@@ -38,7 +38,7 @@ Or right-click `Sovereign.uproject` > Generate Visual Studio project files and b
 "C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "C:/source/games/Sovereign/unreal/Sovereign.uproject" -game -windowed -ResX=1600 -ResY=900
 ```
 
-Options: `-SovBattleDemo` (developer start: your warrior on your leader's plot and an enemy warrior next to it, at war, to try a live battle at once), `-SovSeed=N` (default 7), `-SovPlayers=N` (default 4), `-SovSize=MAPSIZE_TINY`,
+Options: `-SovBattleDemo` (developer start: your warrior on your leader's plot and an enemy warrior next to it, at war, to try a live battle at once), `-SovNavalDemo` (developer start: Shipbuilding, a galley and an embarked warrior on the coast nearest your leader), `-SovSeed=N` (default 7), `-SovPlayers=N` (default 4), `-SovSize=MAPSIZE_TINY`,
 `-SovSpectate` (the AI plays every seat while you watch seat 0's view). Rules are read
 from `../data/rules`.
 

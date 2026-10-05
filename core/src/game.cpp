@@ -1,6 +1,7 @@
 #include "sovereign/game.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <queue>
 
 #include "sovereign/mapgen.h"
@@ -212,7 +213,7 @@ CommandError Game::validate(const Command& c) const {
             if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
-            return findPath(u->id, *t) ? CommandError::Ok : CommandError::NoPath;
+            return findPath(u->id, *t, c.arg == 1) ? CommandError::Ok : CommandError::NoPath;
         }
         case CommandType::FoundCity: {
             if (!typeOf(*rules_, *u).foundCity) return CommandError::NotASettler;
@@ -282,20 +283,77 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     return terrainCost(unit, from, to);
 }
 
+bool Game::canEmbark(PlayerId player, TypeIndex unitType) const {
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return false;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    if (rules_->units[static_cast<size_t>(unitType)].domain != Domain::Land) return false;
+    for (size_t i = 0; i < rules_->techs.size(); ++i) {
+        const TreeNode& t = rules_->techs[i];
+        if ((t.embarkAll || t.embarkUnit == unitType) && p.techs.has(static_cast<TypeIndex>(i))) return true;
+    }
+    return false;
+}
+
+bool Game::canEnterOcean(PlayerId player) const {
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return false;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    for (size_t i = 0; i < rules_->techs.size(); ++i) {
+        if (rules_->techs[i].ocean && p.techs.has(static_cast<TypeIndex>(i))) return true;
+    }
+    return false;
+}
+
+bool Game::isEmbarked(const Unit& unit) const {
+    return typeOf(*rules_, unit).domain == Domain::Land && terrainOf(*rules_, state_.plot(unit.pos)).water;
+}
+
+bool Game::isEmbarkTransition(const Unit& unit, Hex from, Hex to) const {
+    if (typeOf(*rules_, unit).domain != Domain::Land) return false;
+    return terrainOf(*rules_, state_.plot(from)).water != terrainOf(*rules_, state_.plot(to)).water;
+}
+
+bool Game::isCoastalCity(const City& city) const {
+    for (int d = 0; d < kNumDirs; ++d) {
+        auto n = state_.grid.neighbor(city.pos, static_cast<Dir>(d));
+        if (n && terrainOf(*rules_, state_.plot(*n)).water) return true;
+    }
+    return false;
+}
+
 std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const {
     const UnitType& ut = typeOf(*rules_, unit);
-    if (ut.domain != Domain::Land) return std::nullopt;  // naval and air movement arrive later
-    if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
-    const Plot& p = state_.plot(to);
-    int cost = terrainOf(*rules_, p).moveCost;
-    if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
     auto d = state_.grid.directionTo(from, to);
     if (!d) return std::nullopt;
+    const Plot& p = state_.plot(to);
+    const TerrainType& tt = terrainOf(*rules_, p);
+    const bool fromWater = terrainOf(*rules_, state_.plot(from)).water;
+    // Water: Coast and Lake for anyone afloat; Ocean once the owner has Cartography.
+    auto sailable = [&] {
+        if (!tt.water || tt.impassable) return false;
+        if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) return false;
+        return tt.id != "TERRAIN_OCEAN" || canEnterOcean(unit.owner);
+    };
+    if (ut.domain == Domain::Sea) {
+        if (tt.water) return sailable() ? std::optional<Fixed>(Fixed::fromInt(1)) : std::nullopt;
+        // Ships put into a city from the water and sail out again (a coastal city is a port).
+        if (state_.cityAt(to) && fromWater) return Fixed::fromInt(1);
+        return std::nullopt;
+    }
+    if (ut.domain != Domain::Land) return std::nullopt;  // air units arrive later
+    const int embarkCost = rules_->globalInt("MOVEMENT_EMBARK_COST");
+    if (tt.water) {
+        if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
+        return Fixed::fromInt(fromWater ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
+    }
+    if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
+    int cost = tt.moveCost;
+    if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
+    if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
     if (hasRiver(state_, from, *d)) cost += rules_->globalInt("MOVEMENT_RIVER_COST");
     return Fixed::fromInt(std::max(cost, 1));
 }
 
-std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const {
+std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool overland) const {
     const Unit* u = state_.unit(id);
     if (!u) return std::nullopt;
     auto t = state_.grid.normalize(target);
@@ -307,6 +365,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const
     if (!known(*t)) return std::nullopt;
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
     const std::vector<uint8_t> zoc = zocMap(*u);
+    const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
 
     struct Node { int turn = INT32_MAX; Fixed moves; int prev = -1; };
     std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
@@ -332,6 +391,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const
         for (int d = 0; d < kNumDirs; ++d) {
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
             if (!n || !known(*n)) continue;
+            if (keepDry && terrainOf(*rules_, state_.plot(*n)).water) continue;
             auto cost = moveCost(*u, from, *n);
             if (!cost) continue;
             int turn = cur.turn;
@@ -340,7 +400,8 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target) const
                 ++turn;
                 mp = fullMoves;
             }
-            if (mp < *cost && mp != fullMoves) {
+            // Embarking or disembarking is allowed with any movement left (it uses it up).
+            if (mp < *cost && mp != fullMoves && !isEmbarkTransition(*u, from, *n)) {
                 ++turn;
                 mp = fullMoves;
             }
@@ -370,7 +431,7 @@ void Game::advanceUnit(UnitId id) {
             u->moveTarget.reset();
             return;
         }
-        auto path = findPath(id, *u->moveTarget);
+        auto path = findPath(id, *u->moveTarget, u->moveOverland);
         if (!path || path->size() < 2) {
             u->moveTarget.reset();
             return;
@@ -379,7 +440,7 @@ void Game::advanceUnit(UnitId id) {
         const Fixed cost = *moveCost(*u, u->pos, next);
         const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
         if (u->movesLeft <= Fixed()) return;
-        if (u->movesLeft < cost && u->movesLeft != fullMoves) return;  // continue next turn
+        if (u->movesLeft < cost && u->movesLeft != fullMoves && !isEmbarkTransition(*u, u->pos, next)) return;  // continue next turn
         const Fixed after = u->movesLeft >= cost ? u->movesLeft - cost : Fixed();
         const Unit* own = state_.unitAt(next, typeOf(*rules_, *u).layer, *rules_);
         if (own && own->id != u->id) {
@@ -396,7 +457,9 @@ void Game::advanceUnit(UnitId id) {
         if (escort) {
             const auto ecost = moveCost(*escort, escort->pos, next);
             const Fixed efull = Fixed::fromInt(maxMoves(*escort));
-            if (!ecost || escort->movesLeft <= Fixed() || (escort->movesLeft < *ecost && escort->movesLeft != efull)) return;
+            if (!ecost || escort->movesLeft <= Fixed() ||
+                (escort->movesLeft < *ecost && escort->movesLeft != efull && !isEmbarkTransition(*escort, escort->pos, next)))
+                return;
             const Unit* blocker = state_.unitAt(next, UnitLayer::Military, *rules_);
             if (blocker && blocker->id != escort->id) {
                 u->moveTarget.reset();  // the pair cannot share a plot with another military unit
@@ -524,6 +587,7 @@ void Game::applyMove(const Command& c) {
         if (l && l->pos == u->pos && l->owner == u->owner) u = l;  // the escort's order moves the pair
     }
     u->moveTarget = c.target;
+    u->moveOverland = c.arg == 1;
     u->activity = Activity::Awake;
     advanceUnit(u->id);
 }

@@ -71,6 +71,7 @@ add_executable(sovereign_tests
   tests/test_leader.cpp
   tests/test_loyalty.cpp
   tests/test_battle.cpp
+  tests/test_naval.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

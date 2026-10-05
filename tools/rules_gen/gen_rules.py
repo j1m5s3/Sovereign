@@ -502,9 +502,9 @@ def gen_barbarians():
     return {"barbarianTribes": out}
 
 
-# Districts the core places so far (MVP-5); the rest need placement rules not modelled yet
-# (water, flat land, rivers, aqueduct rules) and arrive with their systems.
-PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone"]
+# Districts the core places so far (MVP-5, the Harbor with naval play); the rest need
+# placement rules not modelled yet (flat land, rivers, aqueduct rules) and arrive with their systems.
+PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
                  "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
@@ -530,6 +530,8 @@ def district_adjacency(text, emitted):
             row["kind"] = "ANY_DISTRICT"
         elif thing == "Strategic resource":
             row["kind"] = "STRATEGIC_RESOURCE"
+        elif thing == "sea resource":
+            row["kind"] = "SEA_RESOURCE"
         elif thing in FEATURE_NAMES:
             row["kind"], row["ref"] = "FEATURE", FEATURE_NAMES[thing]
         elif thing in IMPROVEMENT_NAMES:
@@ -567,6 +569,8 @@ def gen_districts():
             d["maintenance"] = num(row["Maintenance"])
             if "not adjacent to City Center" in row["Placement/flags"]:
                 d["notAdjacentToCityCenter"] = True
+            if "coast/lake" in row["Placement/flags"]:
+                d["water"] = True  # on Coast or Lake next to land
             d["adjacency"] = district_adjacency(extra[name]["Adjacency rules"], emitted)
         out.append(d)
     return {"districts": out}
@@ -781,11 +785,21 @@ def gen_tree(kind, name_col, prefix, key):
         prereqs = [ids[x.strip()] for x in row["Prerequisites"].split(",") if x.strip()]
         if prereqs:
             n["prereqs"] = prereqs
-        other = row.get("Other effects (envoys, governor titles, slots...)", "")
+        other = row.get("Other effects (envoys, governor titles, slots...)") or row.get("Other effects", "")
         flags = [f for text, f in (("grant combat adjacency", "COMBAT_ADJACENCY"),
-                                   ("adjust player enforce borders", "ENFORCE_BORDERS")) if text in other]
+                                   ("adjust player enforce borders", "ENFORCE_BORDERS"),
+                                   ("can enter Ocean", "OCEAN")) if text in other]
+        unlocks = row.get("Unlocks", "")
+        if re.search(r"(^|; )embark all\b", unlocks):
+            flags.append("EMBARK_ALL")
         if flags:
             n["effects"] = flags
+        m = re.search(r"(?:^|; )embark (Builder|Trader)\b", unlocks)
+        if m:
+            n["embarkUnit"] = "UNIT_" + snake(m.group(1))
+        m = re.search(r"\+(\d+) Movement while embarked", other)
+        if m:
+            n["embarkedMoves"] = int(m.group(1))
         if row["Boost %"]:
             n["boost"] = {"percent": num(row["Boost %"]), "text": row["Boost condition"],
                           **boost_trigger(row["Boost condition"])}
@@ -798,7 +812,10 @@ def gen_tree(kind, name_col, prefix, key):
             n["prereqs"] = info
     doc = {key: out}
     if kind == "technologies":
-        doc["eras"] = [{"id": "ERA_" + e.upper(), "name": e} for e in ERAS]
+        stats = {r["Era"]: r for r in table(SPEC / "eras-moments-loyalty.md", "Eras")}
+        doc["eras"] = [{"id": "ERA_" + e.upper(), "name": e,
+                        "embarkedStrength": num(stats[e + " Era"]["Embarked strength"]),
+                        "greatPersonBaseCost": num(stats[e + " Era"]["GP base cost"])} for e in ERAS]
     return doc
 
 

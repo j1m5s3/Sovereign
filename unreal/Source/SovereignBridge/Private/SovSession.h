@@ -26,10 +26,12 @@ struct FSovSetup
 	bool bHumanSeat0 = true;
 	// Developer start: seat 0's warrior on its leader's plot, an enemy warrior next to it, at war.
 	bool bBattleDemo = false;
+	// Developer start: seat 0 knows Shipbuilding, with a galley and an embarked warrior on the nearest coast.
+	bool bNavalDemo = false;
 	// Rules data directory; empty means <repo>/data/rules beside the Unreal project.
 	FString RulesDir;
 
-	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate and -SovBattleDemo.
+	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo and -SovNavalDemo.
 	static FSovSetup FromCommandLine();
 	static FString DefaultRulesDir();
 };

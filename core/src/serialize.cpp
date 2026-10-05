@@ -256,6 +256,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u8(static_cast<uint8_t>(u.activity));
         w.boolean(u.moveTarget.has_value());
         writeHex(w, u.moveTarget.value_or(Hex{}));
+        w.boolean(u.moveOverland);
         w.i32(u.xp);
         w.i32(u.charges);
         writeI32s(w, std::vector<int32_t>(u.promotions.begin(), u.promotions.end()));
@@ -452,6 +453,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         bool hasTarget = r.boolean();
         Hex t = readHex(r);
         u.moveTarget = hasTarget ? std::optional<Hex>(t) : std::nullopt;
+        u.moveOverland = r.boolean();
         u.xp = r.i32();
         u.charges = r.i32();
         std::vector<int32_t> promos;

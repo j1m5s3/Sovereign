@@ -100,7 +100,7 @@ TArray<FString> RequiredAssets()
 	{
 		Out.Add(MeshPath(TEXT("Classical"), Name));
 	}
-	for (const TCHAR* Name : {TEXT("Citizen"), TEXT("Herald"), TEXT("Captain"), TEXT("Soldier"), TEXT("Leader")})
+	for (const TCHAR* Name : {TEXT("Citizen"), TEXT("Herald"), TEXT("Captain"), TEXT("Soldier"), TEXT("Leader"), TEXT("Ship"), TEXT("Boat")})
 	{
 		Out.Add(MeshPath(TEXT("Figures"), Name));
 	}
