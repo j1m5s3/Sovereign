@@ -252,6 +252,9 @@ struct SOV_API City {
     const CityDistrict* district(TypeIndex type, bool completeOnly) const;
 };
 
+// The city has the building, or a civ unique that replaces it (leaders-and-art-style).
+SOV_API bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building);
+
 // A player's progress through one research tree (techs or civics). Progress
 // is kept per node, so switching away loses nothing (04-tech-civics-government.md).
 struct TreeProgress {

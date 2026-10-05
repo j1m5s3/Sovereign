@@ -98,3 +98,76 @@ TEST(jaguar_warriors_bring_the_defeated_home_as_builders) {
     for (const Unit& u : g->state().units) builders += u.owner == 0 && u.type == rules().unit("UNIT_BUILDER") ? 1 : 0;
     CHECK_EQ(builders, 1);
 }
+
+TEST(unique_buildings_replace_their_base) {
+    GameState s = pair("CIVILIZATION_FRANCE", "CIVILIZATION_ENGLAND", {"TECH_ASTROLOGY"});
+    for (City& c : s.cities) {
+        c.districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {c.pos.x + 1, c.pos.y}, true});
+        c.buildings.push_back(rules().building("BUILDING_SHRINE"));  // the Temple needs a Shrine
+        std::sort(c.buildings.begin(), c.buildings.end());
+    }
+    for (const Hex& h : s.grid.within({4, 6}, 2)) s.plot(h).city = s.cities[0].id;
+    for (const Hex& h : s.grid.within({16, 6}, 2)) s.plot(h).city = s.cities[1].id;
+    for (Player& p : s.players) p.civics.done[at(rules().civic("CIVIC_THEOLOGY"))] = 1;
+    auto g = Game::fromScenario(rules(), s);
+    const ProductionItem abbey{ProductionKind::Building, rules().building("BUILDING_ROYAL_ABBEY")};
+    const ProductionItem temple{ProductionKind::Building, rules().building("BUILDING_TEMPLE")};
+    CHECK(g->canProduce(g->state().cities[0], abbey));
+    CHECK(!g->canProduce(g->state().cities[0], temple));
+    CHECK(g->canProduce(g->state().cities[1], temple));
+    CHECK(!g->canProduce(g->state().cities[1], abbey));
+    // It counts as a Temple wherever a Temple is asked for.
+    s.cities[0].buildings.push_back(rules().building("BUILDING_ROYAL_ABBEY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    CHECK(cityHasBuilding(s.cities[0], rules(), rules().building("BUILDING_TEMPLE")));
+    CHECK_EQ(rules().buildings[at(rules().building("BUILDING_ROYAL_ABBEY"))].yields[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(1));
+}
+
+TEST(qullqa_odeon_and_forum_effects) {
+    GameState s = pair("CIVILIZATION_INCA", "CIVILIZATION_GREECE", {});
+    s.plot({5, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    s.plot({3, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    s.plot({4, 5}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    auto before = Game::fromScenario(rules(), s);
+    const Fixed food = before->cityReport(before->state().cities[0].id).yields[static_cast<size_t>(YieldType::Food)];
+    s.cities[0].buildings.push_back(rules().building("BUILDING_QULLQA"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), s);
+    // The Granary's +1 Food, and +1 per adjacent mountain up to 2.
+    CHECK(g->cityReport(g->state().cities[0].id).yields[static_cast<size_t>(YieldType::Food)] == food + Fixed::fromInt(3));
+    // The Odeon sends an envoy when built.
+    const int envoys = g->state().players[1].envoyTokens;
+    g->stateMutForTests().cities[1].districts.push_back({rules().district("DISTRICT_THEATER_SQUARE"), {17, 6}, true});
+    REQUIRE(g->completeItem(g->stateMutForTests().cities[1], {ProductionKind::Building, rules().building("BUILDING_ODEON")}));
+    CHECK_EQ(g->state().players[1].envoyTokens, envoys + 1);
+}
+
+TEST(unique_improvements) {
+    GameState s = pair("CIVILIZATION_PERSIA", "CIVILIZATION_CHINA", {"TECH_CONSTRUCTION"});
+    for (Player& p : s.players) p.civics.done[at(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
+    for (const Hex& h : s.grid.within({4, 6}, 2)) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    for (const Hex& h : s.grid.within({16, 6}, 2)) {
+        s.plot(h).owner = 1;
+        s.plot(h).city = s.cities[1].id;
+    }
+    const TypeIndex garden = rules().improvement("IMPROVEMENT_PARADISE_GARDEN");
+    const TypeIndex tower = rules().improvement("IMPROVEMENT_BEACON_TOWER");
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(g->canImproveAt(0, {5, 7}, garden));
+    CHECK(!g->canImproveAt(1, {17, 7}, garden));  // Persia's only
+    CHECK(g->canImproveAt(1, {18, 6}, tower));     // at the edge of China's land
+    CHECK(!g->canImproveAt(1, {17, 6}, tower));    // inland
+    const int amenities = g->cityReport(g->state().cities[0].id).amenities;
+    s.plot({5, 7}).improvement = garden;
+    s.plot({18, 6}).improvement = tower;
+    const UnitId guard = addUnit(s, "UNIT_SPEARMAN", 1, {18, 6});
+    const UnitId foe = addUnit(s, "UNIT_SPEARMAN", 0, {19, 6});
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g2->cityReport(g2->state().cities[0].id).amenities, amenities + 1);
+    const int defended = g2->combatStrength(*g2->state().unit(guard), *g2->state().unit(foe), false, false);
+    const int attacking = g2->combatStrength(*g2->state().unit(guard), *g2->state().unit(foe), true, false);
+    CHECK_EQ(defended, attacking + 4);
+}

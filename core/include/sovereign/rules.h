@@ -246,6 +246,19 @@ struct ImprovementType {
     std::vector<ImprovementAdjacency> adjacency;
     Fixed housing;  // per improved plot the city owns
     int appeal = 0;  // to neighbouring plots (01: Appeal)
+    // Civ unique improvements (leaders-and-art-style).
+    TypeIndex uniqueTo = kNone;
+    std::string uniqueToId;  // (loading only)
+    int amenities = 0;       // to its city
+    int defense = 0;         // combat strength for units defending on it
+    int sight = 0;           // extra sight for units on it
+    bool borderOnly = false; // only on plots at the edge of the owner's territory
+    bool needsRiver = false;
+    bool halvesFloods = false;  // flood damage on adjacent plots halved
+    TypeIndex adjacentImprovement = kNone;  // gives `adjacentYield` to adjacent improvements of this type
+    YieldType adjacentYield = YieldType::Food;
+    int adjacentAmount = 0;
+    std::string adjacentImprovementId;  // (loading only)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -295,6 +308,17 @@ struct BuildingType {
     int amenities = 0;
     int outerDefenseHp = 0;
     int airSlots = 0;  // aircraft its district can base (Hangar, Airport)
+    // A civ's unique building (leaders-and-art-style): only that civ builds it; for it, it replaces `replaces`.
+    TypeIndex uniqueTo = kNone, replaces = kNone;
+    std::string uniqueToId, replacesId;  // (loading only)
+    // Unique effects: a yield on adjacent improvements of a type (next to its district), gold per
+    // trade route from the city, envoys when built, XP for units trained in the city (% of the first
+    // promotion), food per mountain next to the city (at most 2).
+    TypeIndex adjacentImprovement = kNone;
+    YieldType adjacentYield = YieldType::Production;
+    int adjacentAmount = 0;
+    std::string adjacentImprovementId;   // (loading only)
+    int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first
     bool needsRiver = false;

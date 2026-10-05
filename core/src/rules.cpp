@@ -671,6 +671,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             im.housing = j["housing"].fixed();
             im.appeal = static_cast<int>(j["appeal"].integer(0));
+            im.uniqueToId = j["uniqueTo"].str();
+            im.amenities = static_cast<int>(j["amenities"].integer(0));
+            im.defense = static_cast<int>(j["defense"].integer(0));
+            im.sight = static_cast<int>(j["sight"].integer(0));
+            im.borderOnly = j["borderOnly"].boolean(false);
+            im.needsRiver = j["needsRiver"].boolean(false);
+            im.halvesFloods = j["halvesFloods"].boolean(false);
+            const Json& adj = j["adjacentImprovementYield"];
+            if (adj.isObject()) {
+                im.adjacentImprovementId = adj["improvement"].str();
+                parseYieldName(adj["yield"].str(), im.adjacentYield);
+                im.adjacentAmount = static_cast<int>(adj["amount"].integer(0));
+            }
             improvements.push_back(std::move(im));
         }
         // Second pass: adjacency refers to other improvements.
@@ -710,6 +723,18 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.amenities = static_cast<int>(j["amenities"].integer(0));
             b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
             b.airSlots = static_cast<int>(j["airSlots"].integer(0));
+            b.uniqueToId = j["uniqueTo"].str();
+            b.replacesId = j["base"].str();
+            const Json& adj = j["adjacentImprovementYield"];
+            if (adj.isObject()) {
+                b.adjacentImprovementId = adj["improvement"].str();
+                parseYieldName(adj["yield"].str(), b.adjacentYield);
+                b.adjacentAmount = static_cast<int>(adj["amount"].integer(0));
+            }
+            b.goldPerTradeRoute = static_cast<int>(j["goldPerTradeRoute"].integer(0));
+            b.envoysOnBuild = static_cast<int>(j["envoysOnBuild"].integer(0));
+            b.trainedXpPercent = static_cast<int>(j["trainedXpPercent"].integer(0));
+            b.foodPerAdjacentMountain = static_cast<int>(j["foodPerAdjacentMountain"].integer(0));
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
@@ -1676,6 +1701,27 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 return false;
             }
             ++k;
+        }
+    }
+    // Civ uniques: buildings and improvements name their civ, base and neighbours by id.
+    for (BuildingType& b : buildings) {
+        if (!b.uniqueToId.empty() && ((b.uniqueTo = civ(b.uniqueToId)) == kNone || (b.replaces = building(b.replacesId)) == kNone)) {
+            *error = "building " + b.id + ": unknown civilization or base";
+            return false;
+        }
+        if (!b.adjacentImprovementId.empty() && (b.adjacentImprovement = improvement(b.adjacentImprovementId)) == kNone) {
+            *error = "building " + b.id + ": unknown improvement " + b.adjacentImprovementId;
+            return false;
+        }
+    }
+    for (ImprovementType& im : improvements) {
+        if (!im.uniqueToId.empty() && (im.uniqueTo = civ(im.uniqueToId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown civilization " + im.uniqueToId;
+            return false;
+        }
+        if (!im.adjacentImprovementId.empty() && (im.adjacentImprovement = improvement(im.adjacentImprovementId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown improvement " + im.adjacentImprovementId;
+            return false;
         }
     }
     for (UnitType& u : units) {

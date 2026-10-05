@@ -186,7 +186,9 @@ int Game::unitRange(const Unit& unit) const {
 }
 
 int Game::unitSight(const Unit& unit) const {
-    return typeOf(*rules_, unit).sight + unitEffectTotal(unit, UnitEffectKind::Sight);
+    const TypeIndex im = state_.plot(unit.pos).improvement;
+    const int tower = im == kNone ? 0 : rules_->improvements[static_cast<size_t>(im)].sight;  // Beacon Tower
+    return typeOf(*rules_, unit).sight + unitEffectTotal(unit, UnitEffectKind::Sight) + tower;
 }
 
 int Game::maxAttacks(const Unit& unit) const {
@@ -246,6 +248,11 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
         ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
         s += 5;
+    // A unique improvement that shelters its defenders (Beacon Tower).
+    if (!attacking) {
+        const TypeIndex im = state_.plot(unit.pos).improvement;
+        if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
+    }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;

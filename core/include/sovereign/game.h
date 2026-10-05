@@ -254,6 +254,7 @@ public:
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
+    bool completeItem(City& city, ProductionItem item);    // finish an item now (false when it cannot complete now)
     // The Science victory (09 [GS]): light-years a turn of the player's exoplanet expedition (0: not launched).
     int expeditionSpeed(PlayerId player) const;
 
@@ -492,7 +493,6 @@ private:
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
     void assignCitizens(City& city);
-    bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;

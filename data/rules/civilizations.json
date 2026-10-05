@@ -1,5 +1,5 @@
 {
- "_comment": "Sovereign's launch roster (specs/sovereign/leaders-and-art-style.md, Launch roster). Hand-written. Each leader's agenda (what the AI likes and dislikes) is scored in core/src/diplomacy.cpp. Unique units (units, abilities) are rows built on a `base` unit: only what differs is written, the rest comes from the generated Civ data; `uniqueTo` locks them to the civ and they replace their base for it (leaders-and-art-style: Civ abilities, uniques and dynasties). Approximations: the War Chariot and Chasqui get +1 Movement everywhere (flat land and roads are not tracked per move), the Mandinka Lancer +5 against units in desert but not the desert Movement, the Legionary one Builder charge for any improvement, the Repeating Crossbow may also move after attacking.",
+ "_comment": "Sovereign's launch roster (specs/sovereign/leaders-and-art-style.md, Launch roster). Hand-written. Each leader's agenda (what the AI likes and dislikes) is scored in core/src/diplomacy.cpp. Unique units (units, abilities) are rows built on a `base` unit: only what differs is written, the rest comes from the generated Civ data; `uniqueTo` locks them to the civ and they replace their base for it (leaders-and-art-style: Civ abilities, uniques and dynasties). Unique buildings are rows built on a `base` building (whole `yields`, `greatWorkSlots` and `greatPersonPoints` objects are written out since an object replaces the base's); unique improvements are full rows. Unlocks the roster leaves open: Paradise Garden at Early Empire, Beacon Tower at Construction, Nilometer at Irrigation. Approximations: the Calmecac gives units trained there a quarter of their first promotion's XP, the War Chariot and Chasqui get +1 Movement everywhere (flat land and roads are not tracked per move), the Mandinka Lancer +5 against units in desert but not the desert Movement, the Legionary one Builder charge for any improvement, the Repeating Crossbow may also move after attacking.",
  "civilizations": [
   {"id": "CIVILIZATION_ENGLAND", "name": "England", "leader": "LEADER_ELIZABETH_I",
    "agenda": "AGENDA_QUEEN_OF_THE_SEAS", "agendaName": "Queen of the Seas", "agendaText": "Likes civs that keep their fleets away from her coasts; dislikes civs with a navy larger than hers nearby.",
@@ -75,5 +75,21 @@
   {"id": "UNIT_MANDINKA_LANCER", "name": "Mandinka Lancer", "base": "UNIT_KNIGHT", "uniqueTo": "CIVILIZATION_MALI", "abilities": ["ABILITY_IGNORE_ZOC", "ABILITY_MANDINKA_LANCER"]},
   {"id": "UNIT_JAGUAR_WARRIOR", "name": "Jaguar Warrior", "base": "UNIT_WARRIOR", "uniqueTo": "CIVILIZATION_AZTEC", "abilities": ["ABILITY_ANTI_SPEAR", "ABILITY_JAGUAR_WARRIOR"]},
   {"id": "UNIT_CHASQUI", "name": "Chasqui", "base": "UNIT_SCOUT", "uniqueTo": "CIVILIZATION_INCA", "moves": 4}
+ ],
+ "buildings": [
+  {"id": "BUILDING_MILL_TOWN", "name": "Mill Town", "base": "BUILDING_FACTORY", "uniqueTo": "CIVILIZATION_ENGLAND", "housing": 1, "adjacentImprovementYield": {"improvement": "IMPROVEMENT_MINE", "yield": "PRODUCTION", "amount": 1}},
+  {"id": "BUILDING_ROYAL_ABBEY", "name": "Royal Abbey", "base": "BUILDING_TEMPLE", "uniqueTo": "CIVILIZATION_FRANCE", "yields": {"FAITH": 4, "SCIENCE": 1, "CULTURE": 1}},
+  {"id": "BUILDING_FORUM", "name": "Forum", "base": "BUILDING_MARKET", "uniqueTo": "CIVILIZATION_ROME", "amenities": 1, "goldPerTradeRoute": 1},
+  {"id": "BUILDING_ODEON", "name": "Odeon", "base": "BUILDING_AMPHITHEATER", "uniqueTo": "CIVILIZATION_GREECE", "greatWorkSlots": {"WRITING": 3}, "envoysOnBuild": 1},
+  {"id": "BUILDING_MADRASA", "name": "Madrasa", "base": "BUILDING_UNIVERSITY", "uniqueTo": "CIVILIZATION_ARABIA", "yields": {"SCIENCE": 4, "FAITH": 2}, "greatPersonPoints": {"GREAT_PERSON_CLASS_SCIENTIST": 2}},
+  {"id": "BUILDING_CASTLE_TOWN", "name": "Castle Town", "base": "BUILDING_MEDIEVAL_WALLS", "uniqueTo": "CIVILIZATION_JAPAN", "housing": 2, "yields": {"CULTURE": 1}},
+  {"id": "BUILDING_SAHEL_MOSQUE", "name": "Sahel Mosque", "base": "BUILDING_TEMPLE", "uniqueTo": "CIVILIZATION_MALI", "yields": {"FAITH": 4, "GOLD": 2}, "housing": 1},
+  {"id": "BUILDING_CALMECAC", "name": "Calmecac", "base": "BUILDING_LIBRARY", "uniqueTo": "CIVILIZATION_AZTEC", "yields": {"SCIENCE": 2, "FAITH": 1}, "trainedXpPercent": 25},
+  {"id": "BUILDING_QULLQA", "name": "Qullqa", "base": "BUILDING_GRANARY", "uniqueTo": "CIVILIZATION_INCA", "housing": 4, "foodPerAdjacentMountain": 1}
+ ],
+ "improvements": [
+  {"id": "IMPROVEMENT_PARADISE_GARDEN", "name": "Paradise Garden", "uniqueTo": "CIVILIZATION_PERSIA", "unlock": "CIVIC_EARLY_EMPIRE", "yields": {"CULTURE": 2}, "amenities": 1, "appeal": 2, "validTerrains": ["TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_DESERT", "TERRAIN_TUNDRA"]},
+  {"id": "IMPROVEMENT_BEACON_TOWER", "name": "Beacon Tower", "uniqueTo": "CIVILIZATION_CHINA", "unlock": "TECH_CONSTRUCTION", "yields": {"CULTURE": 1}, "defense": 4, "sight": 2, "borderOnly": true, "validTerrains": ["TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_DESERT", "TERRAIN_TUNDRA", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS_HILLS", "TERRAIN_DESERT_HILLS", "TERRAIN_TUNDRA_HILLS"]},
+  {"id": "IMPROVEMENT_NILOMETER", "name": "Nilometer", "uniqueTo": "CIVILIZATION_EGYPT", "unlock": "TECH_IRRIGATION", "yields": {}, "needsRiver": true, "halvesFloods": true, "adjacentImprovementYield": {"improvement": "IMPROVEMENT_FARM", "yield": "FOOD", "amount": 1}, "validTerrains": ["TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_DESERT", "TERRAIN_TUNDRA"], "validFeatures": ["FEATURE_FLOODPLAINS", "FEATURE_FLOODPLAINS_GRASSLAND", "FEATURE_FLOODPLAINS_PLAINS"]}
  ]
 }
