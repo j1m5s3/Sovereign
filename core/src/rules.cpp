@@ -1555,7 +1555,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.turns = static_cast<int>(j["turns"].integer(500));
         speeds.push_back(std::move(s));
     }
-    for (const auto& [id, j] : m.tables["difficulties"]) {
+    for (const auto& [id, row] : m.tables["difficulties"]) {
+        const auto& j = row;
         DifficultyType d;
         d.id = id;
         d.name = j["name"].str(id);
