@@ -75,6 +75,8 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     // Migration Treaty (World Congress) on the owner: -5 (A) or +5 (B) loyalty per turn.
     if (const PassedResolution* mt = passed(ResolutionKind::MigrationTreaty); mt && mt->target == c->owner)
         change += Fixed::fromInt(mt->option == 0 ? -5 : 5);
+    // An heir's trait steadies every city (Divine Right, Shogunate Law, The Consolidator).
+    change += Fixed::fromInt(civAbility(c->owner).cityLoyalty);
     // Leader ability: conquered cities settle down faster (King of Kings).
     if (c->originalOwner != kNoPlayer && c->originalOwner != c->owner) change += Fixed::fromInt(civAbility(c->owner).capturedCityLoyalty);
     // An established governor of the owner steadies the city (08: Governors, IdentityPressure).

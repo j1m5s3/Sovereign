@@ -144,6 +144,23 @@ Status: proposed by Claude from each civ's historical specialty, at James's requ
 | Aztec | Moctezuma I | Axayacatl | Ahuitzotl |
 | Inca | Pachacuti | Topa Inca Yupanqui | Huayna Capac |
 
+**Heir traits** (designed by Claude under James's standing consent, 2026-10-05; small by intent, built in `data/rules/leader.json`). A trait applies while its heir rules; a regent, a crowned unit or a pool successor brings none.
+
+| Civ | Heir 1 trait | Heir 2 trait |
+|---|---|---|
+| England | James I, *King James Bible:* +2 Faith in the capital | Charles I, *Divine Right:* +2 Loyalty per turn in every city |
+| France | Louis the Pious, *The Pious:* Holy Site buildings +1 Faith | Charles the Bald, *Patron of Learning:* Campus buildings +1 Science |
+| Rome | Tiberius, *Full Treasury:* +3 Gold in the capital | Claudius, *Conquest of Britain:* +15% Production toward naval units |
+| Greece | Pleistarchus, *Raised in the Agoge:* +15% combat XP | Pleistoanax, *Thirty Years' Peace:* +2 Culture in the capital |
+| Persia | Cambyses II, *Conqueror of Egypt:* melee units +2 Combat Strength | Darius I, *Royal Treasury:* +2 Gold in the capital |
+| Arabia | al-Adil I, *The Consolidator:* +2 Loyalty per turn in every city | al-Kamil, *Patron of Scholars:* +2 Science in the capital |
+| China | Qin Er Shi, *Heir to the Wall:* +25% Production toward walls | Ziying, *Keeper of the Seal:* +2 Culture in the capital |
+| Japan | Tokugawa Hidetada, *Shogunate Law:* +2 Loyalty per turn in every city | Tokugawa Iemitsu, *Sakoku:* +5% Culture while at peace with every major civ |
+| Egypt | Merneptah, *Victory Stele:* wonders +1 Culture | Seti II, *The Builder's Son:* +10% Production toward wonders |
+| Mali | Maghan I, *Keeper of the Hajj:* international trade routes +1 Faith | Suleyman, *Golden Court:* +3 Gold in the capital |
+| Aztec | Axayacatl, *The Sun Stone:* +2 Faith in the capital | Ahuitzotl, *Lord of the Waters:* melee units +2 Combat Strength |
+| Inca | Topa Inca Yupanqui, *Conqueror of the Andes:* +2 Production in the capital | Huayna Capac, *Road Builder:* +10% Production toward land units |
+
 ## Open questions
 
 1. **Heirs without a character generator** **[decided, James 2026-10-04, gap review]**. Succession puts new people on the throne (heir, governor, Great General/Admiral, level 4+ unit), and each needs a model. Decided: each civ ships a short historical dynasty (starting leader plus 2 successors, e.g. Augustus → Tiberius → Claudius) as hand-made heirs, each with a small personal trait instead of a full ability. Great Generals and Admirals reuse their Great Person models. Governors and units become leader using the matching unit or governor model. Once the dynasty runs out, successors come from the pool only. Each civ's dynasty still needs choosing.

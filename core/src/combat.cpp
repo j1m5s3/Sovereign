@@ -265,6 +265,7 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
                 }
             }
         }
+        for (const auto& [cls, amount] : ab.classStrength) s += cls == ut.unitClass ? amount : 0;  // an heir's trait
         if (ab.nearFollowingCityStrength > 0 && owner.religion >= 0) {
             for (const City& c : state_.cities) {
                 if (state_.grid.distance(c.pos, unit.pos) <= ab.nearFollowingCityRange && cityMajorityReligion(c) == owner.religion) {
@@ -565,7 +566,8 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
     if (vsBarbarian && unit.level() >= rules_->globalInt("EXPERIENCE_MAX_BARB_LEVEL")) return;
     const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
                         unitEffectTotal(unit, UnitEffectKind::XpPercent) +
-                        (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0);
+                        (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0) +
+                        civAbility(unit.owner).unitXpPercent;
     xp = xp * percent / 100;
     // XP stops at the next level until the promotion is taken.
     unit.xp = std::min(unit.xp + xp, xpForNextLevel(unit));

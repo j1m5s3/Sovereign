@@ -62,18 +62,18 @@
    "strategicCost": {"resource": "RESOURCE_OIL", "amount": 1}, "upkeepAs": "UNIT_TANK"}
  ],
  "dynasties": [
-  {"id": "DYNASTY_ENGLAND", "civ": "CIVILIZATION_ENGLAND", "names": ["Elizabeth I", "James I", "Charles I"]},
-  {"id": "DYNASTY_FRANCE", "civ": "CIVILIZATION_FRANCE", "names": ["Charlemagne", "Louis the Pious", "Charles the Bald"]},
-  {"id": "DYNASTY_ROME", "civ": "CIVILIZATION_ROME", "names": ["Augustus", "Tiberius", "Claudius"]},
-  {"id": "DYNASTY_GREECE", "civ": "CIVILIZATION_GREECE", "names": ["Leonidas I", "Pleistarchus", "Pleistoanax"]},
-  {"id": "DYNASTY_PERSIA", "civ": "CIVILIZATION_PERSIA", "names": ["Cyrus the Great", "Cambyses II", "Darius I"]},
-  {"id": "DYNASTY_ARABIA", "civ": "CIVILIZATION_ARABIA", "names": ["Saladin", "al-Adil I", "al-Kamil"]},
-  {"id": "DYNASTY_CHINA", "civ": "CIVILIZATION_CHINA", "names": ["Qin Shi Huang", "Qin Er Shi", "Ziying"]},
-  {"id": "DYNASTY_JAPAN", "civ": "CIVILIZATION_JAPAN", "names": ["Tokugawa Ieyasu", "Tokugawa Hidetada", "Tokugawa Iemitsu"]},
-  {"id": "DYNASTY_EGYPT", "civ": "CIVILIZATION_EGYPT", "names": ["Ramesses II", "Merneptah", "Seti II"]},
-  {"id": "DYNASTY_MALI", "civ": "CIVILIZATION_MALI", "names": ["Mansa Musa", "Maghan I", "Suleyman"]},
-  {"id": "DYNASTY_AZTEC", "civ": "CIVILIZATION_AZTEC", "names": ["Moctezuma I", "Axayacatl", "Ahuitzotl"]},
-  {"id": "DYNASTY_INCA", "civ": "CIVILIZATION_INCA", "names": ["Pachacuti", "Topa Inca Yupanqui", "Huayna Capac"]}
+  {"id": "DYNASTY_ENGLAND", "civ": "CIVILIZATION_ENGLAND", "names": ["Elizabeth I", "James I", "Charles I"], "traits": [{"name": "King James Bible", "capitalYields": {"FAITH": 2}}, {"name": "Divine Right", "cityLoyalty": 2}]},
+  {"id": "DYNASTY_FRANCE", "civ": "CIVILIZATION_FRANCE", "names": ["Charlemagne", "Louis the Pious", "Charles the Bald"], "traits": [{"name": "The Pious", "districtBuildingYields": [{"district": "DISTRICT_HOLY_SITE", "yields": {"FAITH": 1}}]}, {"name": "Patron of Learning", "districtBuildingYields": [{"district": "DISTRICT_CAMPUS", "yields": {"SCIENCE": 1}}]}]},
+  {"id": "DYNASTY_ROME", "civ": "CIVILIZATION_ROME", "names": ["Augustus", "Tiberius", "Claudius"], "traits": [{"name": "Full Treasury", "capitalYields": {"GOLD": 3}}, {"name": "Conquest of Britain", "domainProductionPercent": {"SEA": 15}}]},
+  {"id": "DYNASTY_GREECE", "civ": "CIVILIZATION_GREECE", "names": ["Leonidas I", "Pleistarchus", "Pleistoanax"], "traits": [{"name": "Raised in the Agoge", "unitXpPercent": 15}, {"name": "Thirty Years' Peace", "capitalYields": {"CULTURE": 2}}]},
+  {"id": "DYNASTY_PERSIA", "civ": "CIVILIZATION_PERSIA", "names": ["Cyrus the Great", "Cambyses II", "Darius I"], "traits": [{"name": "Conqueror of Egypt", "classStrength": [{"class": "MELEE", "amount": 2}]}, {"name": "Royal Treasury", "capitalYields": {"GOLD": 2}}]},
+  {"id": "DYNASTY_ARABIA", "civ": "CIVILIZATION_ARABIA", "names": ["Saladin", "al-Adil I", "al-Kamil"], "traits": [{"name": "The Consolidator", "cityLoyalty": 2}, {"name": "Patron of Scholars", "capitalYields": {"SCIENCE": 2}}]},
+  {"id": "DYNASTY_CHINA", "civ": "CIVILIZATION_CHINA", "names": ["Qin Shi Huang", "Qin Er Shi", "Ziying"], "traits": [{"name": "Heir to the Wall", "wallProductionPercent": 25}, {"name": "Keeper of the Seal", "capitalYields": {"CULTURE": 2}}]},
+  {"id": "DYNASTY_JAPAN", "civ": "CIVILIZATION_JAPAN", "names": ["Tokugawa Ieyasu", "Tokugawa Hidetada", "Tokugawa Iemitsu"], "traits": [{"name": "Shogunate Law", "cityLoyalty": 2}, {"name": "Sakoku", "peaceYieldPercent": {"CULTURE": 5}}]},
+  {"id": "DYNASTY_EGYPT", "civ": "CIVILIZATION_EGYPT", "names": ["Ramesses II", "Merneptah", "Seti II"], "traits": [{"name": "Victory Stele", "wonderCulture": 1}, {"name": "The Builder's Son", "wonderProductionPercent": 10, "wonderEras": [0, 99]}]},
+  {"id": "DYNASTY_MALI", "civ": "CIVILIZATION_MALI", "names": ["Mansa Musa", "Maghan I", "Suleyman"], "traits": [{"name": "Keeper of the Hajj", "internationalRouteYields": {"FAITH": 1}}, {"name": "Golden Court", "capitalYields": {"GOLD": 3}}]},
+  {"id": "DYNASTY_AZTEC", "civ": "CIVILIZATION_AZTEC", "names": ["Moctezuma I", "Axayacatl", "Ahuitzotl"], "traits": [{"name": "The Sun Stone", "capitalYields": {"FAITH": 2}}, {"name": "Lord of the Waters", "classStrength": [{"class": "MELEE", "amount": 2}]}]},
+  {"id": "DYNASTY_INCA", "civ": "CIVILIZATION_INCA", "names": ["Pachacuti", "Topa Inca Yupanqui", "Huayna Capac"], "traits": [{"name": "Conqueror of the Andes", "capitalYields": {"PRODUCTION": 2}}, {"name": "Road Builder", "domainProductionPercent": {"LAND": 10}}]}
  ],
  "globals": {
   "LEADER_RETREAT_HP": 30,

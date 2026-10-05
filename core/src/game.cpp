@@ -851,8 +851,15 @@ void Game::applyFoundCity(const Command& c) {
 const CivAbility& Game::civAbility(PlayerId player) const {
     static const CivAbility none;
     if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return none;
-    const TypeIndex civ = state_.players[static_cast<size_t>(player)].civ;
-    return civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size() ? none : rules_->civs[static_cast<size_t>(civ)].combined;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const TypeIndex civ = p.civ;
+    if (civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size()) return none;
+    // A dynasty heir on the throne adds their trait (leaders-and-art-style: Dynasties).
+    if (p.rulingHeir > 0) {
+        const Dynasty* d = rules_->dynastyOf(civ);
+        if (d && static_cast<size_t>(p.rulingHeir) < d->combined.size()) return d->combined[static_cast<size_t>(p.rulingHeir)];
+    }
+    return rules_->civs[static_cast<size_t>(civ)].combined;
 }
 
 const DifficultyType& Game::difficulty() const {

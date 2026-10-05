@@ -39,7 +39,7 @@ Paths: prose is `specs/civ6/<file>.md`, data is `specs/civ6/data/<file>.md`, Sov
 - [specs/civ6/data/README.md] — list of the 23 generated tables.
 - [specs/sovereign/engine-and-architecture.md] — UE5 presentation + separate engine-independent C++ rules core; rules load from data; Chaos destruction plan.
 - [specs/sovereign/leader-character-brainstorm.md] — the playable leader: map presence, gear, levelling, interiors, death and heirs, assassins, AI. Brainstorm with decided sections marked `[decided]`.
-- [specs/sovereign/leaders-and-art-style.md] — stylized realism; 12 launch civs of historical leaders; civ abilities, uniques and dynasties (built: `data/rules/civilizations.json`); Claude makes the art.
+- [specs/sovereign/leaders-and-art-style.md] — stylized realism; 12 launch civs of historical leaders; civ abilities, uniques, dynasties and heir traits (built: `data/rules/civilizations.json`, `leader.json`); Claude makes the art.
 - [specs/sovereign/world-scale-and-generation.md] — map scale and procedural city/district model generation.
 - [specs/sovereign/player-retention.md] — nemesis rivals, reign story, challenges, shorter modes, mods.
 - [specs/sovereign/open-gaps-review.md] — gap review; James adopted all recommendations except gap 5 (2026-10-04). Decisions now live in the docs they affect; this file keeps the reasoning.

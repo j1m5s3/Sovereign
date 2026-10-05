@@ -275,3 +275,19 @@ TEST(leader_abilities_golden_pilgrimage_faith_purchase) {
     CHECK(g->faithPurchaseCost(0, g->state().cities[0], market) > 0);
     CHECK(g->faithPurchaseCost(1, g->state().cities[1], market) < 0);
 }
+
+TEST(heirs_bring_their_traits_to_the_throne) {
+    const Dynasty* d = rules().dynastyOf(civ("CIVILIZATION_ENGLAND"));
+    REQUIRE(d != nullptr);
+    REQUIRE(d->traits.size() == 3u);
+    CHECK_EQ(d->traits[1].name, std::string("King James Bible"));
+    GameState s = pair("CIVILIZATION_ENGLAND", "CIVILIZATION_FRANCE", {});
+    auto elizabeth = Game::fromScenario(rules(), s);
+    const Fixed faith = elizabeth->cityReport(elizabeth->state().cities[0].id).yields[static_cast<size_t>(YieldType::Faith)];
+    s.players[0].rulingHeir = 1;  // James I
+    auto james = Game::fromScenario(rules(), s);
+    CHECK(james->cityReport(james->state().cities[0].id).yields[static_cast<size_t>(YieldType::Faith)] == faith + Fixed::fromInt(2));
+    s.players[0].rulingHeir = -1;  // a regent: no dynasty trait
+    auto regent = Game::fromScenario(rules(), std::move(s));
+    CHECK(regent->cityReport(regent->state().cities[0].id).yields[static_cast<size_t>(YieldType::Faith)] == faith);
+}

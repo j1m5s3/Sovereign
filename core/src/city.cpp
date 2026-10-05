@@ -281,7 +281,7 @@ CityReport Game::cityReport(CityId id) const {
         }
         if (c->capital) {
             const int titles = governorTitles(c->owner);
-            for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += ab.capitalYieldsPerGovernorTitle[i] * titles;
+            for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += ab.capitalYieldsPerGovernorTitle[i] * titles + ab.capitalYields[i];
         }
         PlayerId holder = kNoPlayer;
         if (ab.governorGold > 0 && establishedGovernor(*c, &holder) && holder == c->owner)

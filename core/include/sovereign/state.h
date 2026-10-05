@@ -349,6 +349,7 @@ struct Player {
     // the leader falls; it counts down only while someone sits on the throne.
     std::string leaderName;
     int dynastyNext = 1;            // next heir in the civ's dynasty (0 is the starting leader)
+    int rulingHeir = 0;             // the dynasty member on the throne (0: the starting leader; -1: not of the dynasty)
     bool successionPending = false; // the leader died or was abandoned: a successor must be chosen
     int interregnumTurns = 0;
     PlayerId captor = kNoPlayer;    // holds this player's captured leader

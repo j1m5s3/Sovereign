@@ -840,6 +840,11 @@ struct CivAbility {
     int killFaithPercent = 0;           // Faith per kill: % of the victim's strength
     int capitalAmenityPerKills = 0, capitalAmenityMax = 0;  // +1 in the capital per that many kills this era
     int mountainCityHousing = 0;        // in cities next to a mountain
+    // Heir traits (leaders-and-art-style: Dynasties) so far.
+    Yields capitalYields{};
+    int cityLoyalty = 0;                // per turn in every city
+    int unitXpPercent = 0;              // combat XP for all its units
+    std::vector<std::pair<std::string, int>> classStrength;  // + strength for a unit class
 };
 
 struct CivType {
@@ -879,6 +884,8 @@ struct Dynasty {
     std::string id;
     TypeIndex civ = kNone;
     std::vector<std::string> names;
+    std::vector<CivAbility> traits;    // per name (0, the starting leader: none): the heir's personal trait
+    std::vector<CivAbility> combined;  // the civ's abilities with that heir's trait
 };
 
 struct MapSizeType {
