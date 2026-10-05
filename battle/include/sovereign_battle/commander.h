@@ -35,6 +35,14 @@ struct SOV_API Policy {
     bool load(const std::string& path, std::string* error = nullptr);
 };
 
+// Adjustments to a commander's orders against an opponent whose habits are known (leader doc
+// §10, player modelling: the battle AI adapts within its styles; it never retrains mid-game).
+struct Counter {
+    bool holdFlanks = false;  // against a flanker: the side squads hold instead of advancing
+    bool huntLeader = false;  // against a leader who fights in front: the centre hunts it
+    bool pursue = false;      // against an opponent who falls back: no holding, press on
+};
+
 class SOV_API Commander {
 public:
     static constexpr float kDecisionSeconds = 1.f;
@@ -48,13 +56,18 @@ public:
     bool isTrained() const { return policy_ != nullptr; }
     // Gives orders when a decision is due; call every simulation step before Sim::step.
     void update(Sim& sim, int side, float dt);
-    // The orders the network would give now (no timer).
+    // The orders the network would give now (no timer), after the counter.
     std::array<Order, kSquads> decide(const Sim& sim, int side);
+    void setCounter(const Counter& c) { counter_ = c; }
+    const Counter& counter() const { return counter_; }
+    static std::array<Order, kSquads> applyCounter(const Counter& c, std::array<Order, kSquads> orders);
 
 private:
+    std::array<Order, kSquads> decideRaw(const Sim& sim, int side);
     Order fixed_ = Order::Advance;
     std::shared_ptr<const Policy> policy_;
     float temperature_ = 0.f;
+    Counter counter_;
     float timer_ = 0.f;
     Rng rng_;
 };

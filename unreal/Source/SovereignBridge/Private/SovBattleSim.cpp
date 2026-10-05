@@ -55,6 +55,7 @@ void FSovBattleSim::Start(const FSovBattleSpec& InSpec, std::shared_ptr<const so
 	{
 		Enemy = sov::battle::Commander::fixed(sov::battle::Order::Advance);
 	}
+	Enemy.setCounter(Spec.Counter);
 	Idle = sov::battle::Commander::fixed(sov::battle::Order::Advance);
 	Mirror();
 }
@@ -229,5 +230,10 @@ FSovBattleResult FSovBattleSim::Result() const
 	Out.LeaderWound = R.leaderWound;
 	Out.bTimedOut = R.timedOut;
 	Out.Winner = R.winner;
+	if (!bRemoteView && Sim.spec().humanSide >= 0)
+	{
+		const sov::battle::Habits H = Sim.habits(Sim.spec().humanSide);
+		Out.Habits = {H.flank, H.fallBack, H.huntLeader, H.leaderFront};
+	}
 	return Out;
 }

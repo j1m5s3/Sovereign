@@ -1084,6 +1084,13 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	}
 	Spec.Seed = G.state().turn * 7919 + B.attacker;
 	Spec.TimeLimit = 180.f;
+	// The enemy adapts to how this human has fought before (leader doc §10, player modelling; King and up).
+	if (const sov::PlayerProfile* Prof = G.profile(Me()); Prof && Prof->battles > 0 && G.difficulty().aiSkill >= 4)
+	{
+		Spec.Counter.holdFlanks = Prof->battleFlank >= 300;
+		Spec.Counter.huntLeader = Prof->battleLeaderFront >= 400;
+		Spec.Counter.pursue = Prof->battleFallBack >= 250;
+	}
 	BattlePeer = sov::kNoPlayer;
 	SnapshotTimer = 0.f;
 	if (bRemoteView)
@@ -1215,7 +1222,7 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	{
 		// One result command into the game; the core clamps it to the band (§9).
 		Outcome = Sim.Result();
-		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound));
+		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound, Outcome.Habits));
 		bBattleSent = true;
 		BattleExitTimer = 3.f;
 	}

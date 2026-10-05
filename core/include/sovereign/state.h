@@ -462,6 +462,10 @@ struct PlayerProfile {
     int32_t leaderExposed = 0;  // share of turns its leader is open to assassins (§6)
     int32_t warsDeclared = 0, surpriseWars = 0;  // counts
     int32_t citiesHeld = 0;     // cities it holds that another major founded
+    // Live battles it fought by hand (each moves these a quarter of the way): shares of its squads'
+    // time flanking, falling back and hunting the enemy leader, and of the battle its leader fought in front.
+    int32_t battles = 0;
+    int32_t battleFlank = 0, battleFallBack = 0, battleHunt = 0, battleLeaderFront = 0;
 };
 
 // A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).

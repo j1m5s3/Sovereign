@@ -8,6 +8,8 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "sovereign/hex.h"
 #include "sovereign/state.h"
@@ -45,7 +47,8 @@ enum class CommandType : uint8_t {
     SendAssassin = 27,    // id = agent, arg = target player (-1 calls it home)
     CityStance = 28,      // id = city where the leader stands, arg = Stance
     BattleResult = 29,    // the live battle's field result: arg = damage to the defender, arg2 = to the attacker,
-                          // target.x = wound to the leader (clamped by the core); any time, by the battle's human
+                          // target.x = wound to the leader (clamped by the core); any time, by the battle's human;
+                          // data = the human's habits x1000 (flank, fall back, hunt leader, leader in front), optional
     AutoResolveBattle = 30,  // settle the pending battle with the normal Civ roll
     PatronizeGreatPerson = 31,  // arg = great person class, arg2 = 0 gold / 1 faith: buy its current individual now
     PassGreatPerson = 32,       // arg = great person class: decline its current individual
@@ -145,8 +148,10 @@ struct Command {
     static Command cityStance(PlayerId p, CityId c, Stance stance) {
         return {CommandType::CityStance, p, c, {}, static_cast<int32_t>(stance), 0};
     }
-    static Command battleResult(PlayerId p, int toDefender, int toAttacker, int leaderWound) {
-        return {CommandType::BattleResult, p, -1, Hex{leaderWound, 0}, toDefender, toAttacker};
+    static Command battleResult(PlayerId p, int toDefender, int toAttacker, int leaderWound, std::vector<int32_t> habits = {}) {
+        Command c{CommandType::BattleResult, p, -1, Hex{leaderWound, 0}, toDefender, toAttacker};
+        c.data = std::move(habits);
+        return c;
     }
     static Command autoResolveBattle(PlayerId p) { return {CommandType::AutoResolveBattle, p, -1, {}, 0, 0}; }
     static Command sendAssassin(PlayerId p, int32_t agent, PlayerId target) {

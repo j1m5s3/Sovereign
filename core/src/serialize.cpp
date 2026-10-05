@@ -475,7 +475,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.turnsObserved);
         for (int32_t v : p.army) w.i32(v);
         for (int32_t v : {p.militarism, p.expansion, p.science, p.culture, p.faith, p.aggression, p.leaderOutside, p.leaderExposed,
-                          p.warsDeclared, p.surpriseWars, p.citiesHeld})
+                          p.warsDeclared, p.surpriseWars, p.citiesHeld, p.battles, p.battleFlank, p.battleFallBack, p.battleHunt,
+                          p.battleLeaderFront})
             w.i32(v);
     }
     w.i64(s.co2);
@@ -888,7 +889,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.turnsObserved = r.i32();
         for (int32_t& v : p.army) v = r.i32();
         for (int32_t* v : {&p.militarism, &p.expansion, &p.science, &p.culture, &p.faith, &p.aggression, &p.leaderOutside, &p.leaderExposed,
-                           &p.warsDeclared, &p.surpriseWars, &p.citiesHeld})
+                           &p.warsDeclared, &p.surpriseWars, &p.citiesHeld, &p.battles, &p.battleFlank, &p.battleFallBack, &p.battleHunt,
+                           &p.battleLeaderFront})
             *v = r.i32();
     }
     s.co2 = r.i64();

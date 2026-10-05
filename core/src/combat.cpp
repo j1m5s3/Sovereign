@@ -819,7 +819,14 @@ PlayerId Game::liveBattleSide(const Unit& attacker, const Unit& defender) const 
 CommandError Game::validateBattle(const Command& c) const {
     const PendingBattle& b = state_.pendingBattle;
     if (!b.active) return CommandError::NoBattle;
-    if (c.type == CommandType::BattleResult) return c.player == b.liveFor ? CommandError::Ok : CommandError::BattlePending;
+    if (c.type == CommandType::BattleResult) {
+        if (c.player != b.liveFor) return CommandError::BattlePending;
+        if (c.data.size() > 4) return CommandError::BadTarget;
+        for (int32_t v : c.data) {
+            if (v < 0 || v > 1000) return CommandError::BadTarget;
+        }
+        return CommandError::Ok;
+    }
     if (c.type == CommandType::AutoResolveBattle) {
         // Either side may settle it with the normal roll (the AI never plays it live).
         const Unit* a = state_.unit(b.attacker);
@@ -835,6 +842,14 @@ CommandError Game::validateBattle(const Command& c) const {
 void Game::applyBattle(const Command& c) {
     const PendingBattle b = state_.pendingBattle;
     state_.pendingBattle = PendingBattle{};
+    // How the human fought, for the AI's player model (leader doc §10).
+    if (c.type == CommandType::BattleResult && c.data.size() == 4 && c.player >= 0) {
+        if (state_.profiles.size() < state_.players.size()) state_.profiles.resize(state_.players.size());
+        PlayerProfile& pr = state_.profiles[static_cast<size_t>(c.player)];
+        int32_t* fields[] = {&pr.battleFlank, &pr.battleFallBack, &pr.battleHunt, &pr.battleLeaderFront};
+        for (size_t i = 0; i < 4; ++i) *fields[i] = pr.battles == 0 ? c.data[i] : (*fields[i] * 3 + c.data[i]) / 4;
+        ++pr.battles;
+    }
     if (b.city != kNoCity && c.type == CommandType::AutoResolveBattle) {
         Rng& rng = state_.rng.get(RngStream::Combat);
         const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");

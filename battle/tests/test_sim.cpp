@@ -115,3 +115,19 @@ TEST(the_human_leader_moves_by_hand) {
     for (int i = 0; i < 10; ++i) sim.step(0.1f, &in);
     CHECK(sim.soldiers()[static_cast<size_t>(l)].pos.y > before.y + 200.f);
 }
+
+TEST(sim_measures_each_sides_habits) {
+    Sim sim;
+    sim.start(duel(30, 30, 3));
+    sim.setOrder(0, 0, Order::FlankLeft);
+    sim.setOrder(0, 1, Order::Advance);
+    sim.setOrder(0, 2, Order::FlankRight);
+    sim.setAllOrders(1, Order::FallBack);
+    for (int i = 0; i < 100 && !sim.finished(); ++i) sim.step(0.1f);
+    const Habits a = sim.habits(0), d = sim.habits(1);
+    CHECK(a.flank >= 600);  // two of three squads flanking
+    CHECK_EQ(a.fallBack, 0);
+    CHECK(d.fallBack >= 990);
+    CHECK_EQ(d.flank, 0);
+    CHECK(a.leaderFront >= 0 && a.leaderFront <= 1000);
+}

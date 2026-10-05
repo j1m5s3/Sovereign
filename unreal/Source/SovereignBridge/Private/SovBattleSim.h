@@ -30,6 +30,7 @@ struct FSovBattleSpec
 	int32 LeaderHp = 100;
 	int32 Seed = 1;
 	float TimeLimit = 180.f;      // LIVE_BATTLE_SECONDS: settles from the current state when reached
+	sov::battle::Counter Counter; // the enemy commander's answer to the human's known habits (player modelling)
 };
 
 struct FSovSoldier
@@ -65,6 +66,7 @@ struct FSovBattleResult
 	int32 LeaderWound = 0;  // HP the escorted leader lost fighting in person
 	bool bTimedOut = false;
 	int32 Winner = -1;      // side that held the field (-1: neither)
+	std::vector<int32_t> Habits;  // the human side's habits x1000 (flank, fall back, hunt leader, leader in front)
 };
 
 class FSovBattleSim

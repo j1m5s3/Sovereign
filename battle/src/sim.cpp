@@ -41,6 +41,9 @@ void Sim::start(const Spec& spec) {
     rng_.reseed(spec.seed);
     elapsed_ = 0.f;
     finished_ = timedOut_ = false;
+    orderTime_ = {};
+    leaderFrontTime_ = {};
+    sideTime_ = {};
     for (int side = 0; side < 2; ++side) {
         leader_[side] = -1;
         leaderIsUnit_[side] = false;
@@ -216,9 +219,34 @@ void Sim::moveToward(Soldier& s, Vec2 target, float speed, float dt) {
     s.pos = clampField(s.pos + s.facing * stepLen);
 }
 
+Habits Sim::habits(int side) const {
+    Habits h;
+    if (side < 0 || side > 1) return h;
+    float total = 0.f;
+    for (float t : orderTime_[side]) total += t;
+    const auto share = [&](float t, float of) { return of > 0.f ? static_cast<int>(t * 1000.f / of + 0.5f) : 0; };
+    h.flank = share(orderTime_[side][static_cast<size_t>(Order::FlankLeft)] + orderTime_[side][static_cast<size_t>(Order::FlankRight)], total);
+    h.fallBack = share(orderTime_[side][static_cast<size_t>(Order::FallBack)], total);
+    h.huntLeader = share(orderTime_[side][static_cast<size_t>(Order::HuntLeader)], total);
+    h.leaderFront = share(leaderFrontTime_[side], sideTime_[side]);
+    return h;
+}
+
 void Sim::step(float dt, const LeaderInput* human) {
     if (finished_) return;
     elapsed_ += dt;
+    // Habits: what each side's squads are told to do, and where its leader fights.
+    for (int side = 0; side < 2; ++side) {
+        sideTime_[side] += dt;
+        for (int q = 0; q < kSquads; ++q) {
+            if (squadAlive(side, q) > 0) orderTime_[side][static_cast<size_t>(orders_[side][q])] += dt;
+        }
+        const int l = leader_[side];
+        if (l >= 0 && men_[static_cast<size_t>(l)].alive) {
+            const int e = nearestEnemy(l);
+            if (e >= 0 && dist(men_[static_cast<size_t>(l)].pos, men_[static_cast<size_t>(e)].pos) <= kReach * 2.f) leaderFrontTime_[side] += dt;
+        }
+    }
     // Flanking squads switch to the attack once they reach the enemy's side.
     // Their waypoint is beside and a little behind the enemy, clear of its widest man.
     Vec2 waypoint[2][kSquads];
