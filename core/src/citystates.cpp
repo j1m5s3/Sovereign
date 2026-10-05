@@ -63,7 +63,8 @@ bool Game::isCityState(PlayerId p) const {
 
 int Game::envoysAt(PlayerId player, PlayerId cs) const {
     const Player& p = state_.players[at(player)];
-    return at(cs) < p.envoys.size() ? p.envoys[at(cs)] : 0;
+    // Amani serving there counts as envoys (08: Governors, Messenger and Puppeteer).
+    return (at(cs) < p.envoys.size() ? p.envoys[at(cs)] : 0) + governorEnvoys(player, cs);
 }
 
 PlayerId Game::suzerainOf(PlayerId cs) const {

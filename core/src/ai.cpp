@@ -233,6 +233,96 @@ void deals(View& v) {
     }
 }
 
+// --- governors (08: Governors) -----------------------------------------------------------
+// Appoint up to four in a fixed order of usefulness, then spend titles on promotions; place
+// each where it pays: Pingala in the capital, Victor in the most threatened city, Amani with
+// the city-state we court most, the rest in the largest cities without one.
+void governors(View& v) {
+    static const char* const order[] = {"GOVERNOR_PINGALA", "GOVERNOR_MAGNUS", "GOVERNOR_LIANG", "GOVERNOR_VICTOR",
+                                        "GOVERNOR_REYNA",   "GOVERNOR_MOKSHA", "GOVERNOR_AMANI"};
+    const GameState& s = v.s();
+    for (int guard = 0; guard < 8 && v.game.governorTitlesLeft(v.me) > 0; ++guard) {
+        int appointed = 0;
+        for (const char* id : order) appointed += v.game.governor(v.me, v.r.governor(id)) ? 1 : 0;
+        bool spent = false;
+        if (appointed < 4) {
+            for (const char* id : order) {
+                const TypeIndex g = v.r.governor(id);
+                if (g != kNone && v.game.canAppointGovernor(v.me, g)) {
+                    spent = v.game.submit(Command::appointGovernor(v.me, g)) == CommandError::Ok;
+                    break;
+                }
+            }
+        } else {
+            for (const char* id : order) {
+                const TypeIndex g = v.r.governor(id);
+                if (g == kNone || !v.game.governor(v.me, g)) continue;
+                std::vector<TypeIndex> promos = v.r.governors[at(g)].promotions;
+                std::stable_sort(promos.begin(), promos.end(),
+                                 [&](TypeIndex a, TypeIndex b) { return v.r.governorPromotions[at(a)].tier < v.r.governorPromotions[at(b)].tier; });
+                for (TypeIndex p : promos) {
+                    if (v.game.canPromoteGovernor(v.me, g, p)) {
+                        spent = v.game.submit(Command::promoteGovernor(v.me, g, p)) == CommandError::Ok;
+                        break;
+                    }
+                }
+                if (spent) break;
+            }
+        }
+        if (!spent) break;
+    }
+    // Places for unassigned governors.
+    std::vector<CityId> taken;
+    for (const Governor& g : s.players[at(v.me)].governors) {
+        if (g.city != kNoCity) taken.push_back(g.city);
+    }
+    auto open = [&](CityId c) { return std::find(taken.begin(), taken.end(), c) == taken.end(); };
+    for (const Governor& g : s.players[at(v.me)].governors) {
+        if (g.city != kNoCity) continue;
+        const std::string& id = v.r.governors[at(g.type)].id;
+        CityId pick = kNoCity;
+        if (id == "GOVERNOR_AMANI") {
+            int most = -1;
+            for (const Player& cs : s.players) {
+                if (cs.cityState == kNone || !cs.alive) continue;
+                for (const City& c : s.cities) {
+                    if (c.owner != cs.id || !open(c.id) || !v.game.canAssignGovernor(v.me, g.type, c.id)) continue;
+                    const int n = v.game.envoysAt(v.me, cs.id);
+                    if (n > most) {
+                        most = n;
+                        pick = c.id;
+                    }
+                }
+            }
+        }
+        if (pick == kNoCity && id == "GOVERNOR_PINGALA") {
+            for (CityId c : v.cities) {
+                if (s.city(c)->capital && open(c)) pick = c;
+            }
+        }
+        if (pick == kNoCity && id == "GOVERNOR_VICTOR") {
+            int worst = 0;
+            for (size_t i = 0; i < v.cities.size(); ++i) {
+                if (v.threat[i] > worst && open(v.cities[i])) {
+                    worst = v.threat[i];
+                    pick = v.cities[i];
+                }
+            }
+        }
+        if (pick == kNoCity) {
+            int biggest = -1;
+            for (CityId c : v.cities) {
+                const City* city = s.city(c);
+                if (open(c) && city->population > biggest) {
+                    biggest = city->population;
+                    pick = c;
+                }
+            }
+        }
+        if (pick != kNoCity && v.game.submit(Command::assignGovernor(v.me, g.type, pick)) == CommandError::Ok) taken.push_back(pick);
+    }
+}
+
 // --- research and government ---------------------------------------------------------
 // Value of what a tech or civic unlocks for us.
 int unlockValue(const View& v, Unlock node) {
@@ -1196,6 +1286,7 @@ void playTurn(Game& game) {
     survey(v);
     if (!cityState) diplomacy(v);  // city-states never start wars (08)
     if (!cityState) deals(v);
+    if (!cityState) governors(v);
     research(v);
     cityActions(v);
     // Promotions as soon as they are earned (the first offered; a planner can come later).

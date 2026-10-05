@@ -629,6 +629,45 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::Governors:
+		{
+			// 08: appoint with a title, promote along the tree, or send one to the selected city.
+			const int32 Titles = G.governorTitlesLeft(Me());
+			const sov::City* Sel = SelectedCity >= 0 ? G.state().city(SelectedCity) : nullptr;
+			ChooserTitle = FString::Printf(TEXT("Governors: %d title(s) to spend%s"), Titles,
+				Sel ? *FString::Printf(TEXT(", %s selected"), *Str(Sel->name)) : TEXT(" (select a city to assign one)"));
+			for (size_t i = 0; i < R.governors.size(); ++i)
+			{
+				const sov::TypeIndex T = static_cast<sov::TypeIndex>(i);
+				const sov::GovernorType& Gt = R.governors[i];
+				const sov::Governor* Gv = G.governor(Me(), T);
+				if (!Gv)
+				{
+					if (G.canAppointGovernor(Me(), T))
+					{
+						Choices.Add({FString::Printf(TEXT("Appoint %s the %s: %s"), *Str(Gt.name), *Str(Gt.title),
+										 *Str(R.governorPromotions[static_cast<size_t>(Gt.promotions.front())].effects)),
+							sov::Command::appointGovernor(Me(), T)});
+					}
+					continue;
+				}
+				if (Sel && G.canAssignGovernor(Me(), T, Sel->id))
+				{
+					Choices.Add({FString::Printf(TEXT("Send %s to %s (%d turns to establish)"), *Str(Gt.name), *Str(Sel->name), G.governorEstablishTurns(T)),
+						sov::Command::assignGovernor(Me(), T, Sel->id)});
+				}
+				for (sov::TypeIndex Promo : Gt.promotions)
+				{
+					if (G.canPromoteGovernor(Me(), T, Promo))
+					{
+						const sov::GovernorPromotionType& Pt = R.governorPromotions[static_cast<size_t>(Promo)];
+						Choices.Add({FString::Printf(TEXT("Promote %s: %s (%s)"), *Str(Gt.name), *Str(Pt.name), *Str(Pt.effects)),
+							sov::Command::promoteGovernor(Me(), T, Promo)});
+					}
+				}
+			}
+			break;
+		}
 		case EChooser::Diplomacy:
 		{
 			// Every major civ we have met: its leader, how it feels about us, and any offer it waits on.
@@ -1282,6 +1321,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
+	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
 		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
@@ -1526,7 +1566,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   I pantheon   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   Z governors   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }

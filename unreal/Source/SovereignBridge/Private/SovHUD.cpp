@@ -94,6 +94,18 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				 G.tourismPerTurn(Me), G.visitingTourists(Me), G.domesticTourists(Me)),
 			16, Y, FLinearColor(0.85f, 0.85f, 1.f));
 	}
+	// Governors (08): where each serves and whether it has established, and titles to spend.
+	if (!P.governors.empty() || G.governorTitlesLeft(Me) > 0)
+	{
+		FString Text = FString::Printf(TEXT("Governor titles %d"), G.governorTitlesLeft(Me));
+		for (const sov::Governor& Gv : P.governors)
+		{
+			const sov::City* At = S.city(Gv.city);
+			Text += FString::Printf(TEXT("   %s: %s"), *Str(R.governors[static_cast<size_t>(Gv.type)].name),
+				!At ? TEXT("unassigned") : Gv.establishTurns > 0 ? *FString::Printf(TEXT("%s in %d"), *Str(At->name), Gv.establishTurns) : *Str(At->name));
+		}
+		Line(Text + TEXT("   Z: governors"), 16, Y, FLinearColor(0.85f, 0.8f, 1.f));
+	}
 	// Offers from other leaders wait for an answer on the diplomacy screen (08; leader doc §10).
 	for (const sov::Deal& D : S.deals)
 	{

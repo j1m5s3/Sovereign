@@ -117,6 +117,12 @@ int Game::luxuryCopiesTraded(PlayerId player, TypeIndex resource) const {
 
 bool Game::hasLuxury(PlayerId player, TypeIndex resource) const {
     if (luxuryCopies(player, resource) - luxuryCopiesTraded(player, resource) > 0) return true;
+    // Affluence: Amani in a city-state we are suzerain of copies its luxuries (08: Governors).
+    for (const Governor& g : state_.players[at(player)].governors) {
+        const City* c = state_.city(g.city);
+        if (!c || g.establishTurns > 0 || !governorHasPromotion(g, "GOVERNOR_PROMOTION_AFFLUENCE")) continue;
+        if (state_.players[at(c->owner)].cityState != kNone && suzerainOf(c->owner) == player && luxuryCopies(c->owner, resource) > 0) return true;
+    }
     return std::any_of(state_.agreements.begin(), state_.agreements.end(), [&](const Agreement& a) {
         return a.kind == DealItemKind::Resource && a.to == player && a.resource == resource && a.until >= state_.turn;
     });

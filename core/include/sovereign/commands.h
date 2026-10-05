@@ -61,6 +61,9 @@ enum class CommandType : uint8_t {
     AnswerDeal = 41,            // id = a waiting deal, arg = 1 accept / 0 reject (the proposer may withdraw it with 0)
     Denounce = 42,              // arg = the player to denounce
     RecordTalk = 43,            // arg = the civ spoken to, text = the conversation's summary (printable, capped)
+    AppointGovernor = 44,       // arg = governor type (spends a title; it starts with its base ability)
+    PromoteGovernor = 45,       // arg = governor type, arg2 = promotion (spends a title)
+    AssignGovernor = 46,        // arg = governor type, id = city (own, or a city-state's for Amani); it starts establishing
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -167,6 +170,11 @@ struct Command {
     SOV_API static Command proposeDeal(PlayerId p, PlayerId to, const std::vector<DealItem>& items);
     static Command answerDeal(PlayerId p, int32_t deal, bool accept) { return {CommandType::AnswerDeal, p, deal, {}, accept ? 1 : 0, 0}; }
     static Command denounce(PlayerId p, PlayerId target) { return {CommandType::Denounce, p, -1, {}, target, 0}; }
+    static Command appointGovernor(PlayerId p, TypeIndex governor) { return {CommandType::AppointGovernor, p, -1, {}, governor, 0}; }
+    static Command promoteGovernor(PlayerId p, TypeIndex governor, TypeIndex promotion) {
+        return {CommandType::PromoteGovernor, p, -1, {}, governor, promotion};
+    }
+    static Command assignGovernor(PlayerId p, TypeIndex governor, CityId city) { return {CommandType::AssignGovernor, p, city, {}, governor, 0}; }
     static Command recordTalk(PlayerId p, PlayerId leader, const std::string& summary) {
         Command c{CommandType::RecordTalk, p, -1, {}, leader, 0};
         c.text = summary;
@@ -233,6 +241,7 @@ enum class CommandError : uint8_t {
     CannotDeal,
     NoDeal,
     CannotDenounce,
+    CannotGovern,
 };
 
 // The items a ProposeDeal command carries (empty when its payload is malformed).

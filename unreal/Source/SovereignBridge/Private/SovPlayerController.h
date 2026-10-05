@@ -74,7 +74,8 @@ protected:
 		Evangelize,
 		TradeRoute,
 		CityStates,
-		Diplomacy
+		Diplomacy,
+		Governors
 	};
 
 	struct FChoice

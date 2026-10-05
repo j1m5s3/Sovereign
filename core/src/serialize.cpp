@@ -169,6 +169,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     auto playerOk = [&](PlayerId p) { return p >= 0 && static_cast<size_t>(p) < s.players.size(); };
     for (const Player& p : s.players) {
+        for (const Governor& g : p.governors) {
+            if (!inRange(g.type, rules.governors.size(), false)) return false;
+            for (TypeIndex pr : g.promotions) if (!inRange(pr, rules.governorPromotions.size(), false)) return false;
+        }
         for (const OpinionMemory& m : p.memories) if (!playerOk(m.about) || m.duration <= 0) return false;
     }
     for (const Deal& d : s.deals) {
@@ -302,6 +306,14 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i32(m.turn);
         }
         writeI32s(w, {p.warsDeclared, p.surpriseWars, p.citiesCaptured, p.citiesRazed, p.tradersPlundered, p.assassinsSent});
+        w.u32(static_cast<uint32_t>(p.governors.size()));
+        for (const Governor& g : p.governors) {
+            w.i16(g.type);
+            w.i32(g.city);
+            w.i32(g.establishTurns);
+            writeI32s(w, std::vector<int32_t>(g.promotions.begin(), g.promotions.end()));
+        }
+        w.i32(p.governorTitlesSpent);
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
             w.bytes(t->boosted);
@@ -611,6 +623,19 @@ bool deserializeState(ByteReader& r, GameState& s) {
             p.tradersPlundered = deeds[4];
             p.assassinsSent = deeds[5];
         }
+        uint32_t ngov = r.u32();
+        if (!r.checkCount(ngov, 14)) return false;
+        p.governors.resize(ngov);
+        for (Governor& g : p.governors) {
+            g.type = r.i16();
+            g.city = r.i32();
+            g.establishTurns = r.i32();
+            std::vector<int32_t> promos;
+            if (!readI32s(r, promos)) return false;
+            g.promotions.clear();
+            for (int32_t v : promos) g.promotions.push_back(static_cast<TypeIndex>(v));
+        }
+        p.governorTitlesSpent = r.i32();
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();
             t->boosted = r.bytes();

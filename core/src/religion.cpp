@@ -366,6 +366,7 @@ void Game::processReligion() {
         if (holySite != kNone && c.district(holySite, true)) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_SITE_PRESSURE_MULTIPLIER");
         if (state_.religions[static_cast<size_t>(maj)].holyCity == c.id) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_CITY_PRESSURE_MULTIPLIER");
         amount = amount * (100 + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressurePercent).toInt())) / 100;
+        amount = amount * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityReligionPressurePercent).toInt())) / 100;  // Bishop
         const int range = baseRange + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressureRange).toInt());
         sources.push_back({c.pos, maj, amount, range});
     }

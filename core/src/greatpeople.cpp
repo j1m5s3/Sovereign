@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -71,13 +72,16 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     int total = 0;
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
+        int city = 0;
         for (const CityDistrict& d : c.districts) {
             if (!d.complete) continue;
-            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) total += k == cls ? v : 0;
+            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v : 0;
         }
         for (TypeIndex b : c.buildings) {
-            for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) total += k == cls ? v : 0;
+            for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;
         }
+        // Grants: more points from the city (08: Governors).
+        total += city * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityGreatPersonPercent).toInt())) / 100;
     }
     return total;
 }

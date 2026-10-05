@@ -139,8 +139,13 @@ CityReport Game::cityReport(CityId id) const {
     // Every citizen adds a little culture and science (CULTURE/SCIENCE_PERCENTAGE_YIELD_PER_POP).
     raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt("CULTURE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
     raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt("SCIENCE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
+    int districtsDone = 0;
+    for (const CityDistrict& d : c->districts) districtsDone += d.complete ? 1 : 0;
     for (size_t i = 0; i < kNumYields; ++i) {
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYield, static_cast<YieldType>(i));
+        const YieldType y = static_cast<YieldType>(i);
+        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYield, y);
+        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerPop, y) * c->population;  // Tax Collector, Researcher
+        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerDistrict, y) * districtsDone;  // Bishop
     }
     if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
         raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
@@ -600,8 +605,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (u.strategicResource != kNone) p.stockpile[static_cast<size_t>(u.strategicResource)] -= u.strategicCost;
         if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
         ++p.unitsTrained[static_cast<size_t>(item.type)];
-        city.population -= u.popCost;
-        spawnUnit(item.type, city.owner, *spot);
+        // Provision: settlers trained under Magnus cost no population (08: Governors).
+        if (sumCityModifiers(state_, *rules_, city, ModEffect::SettlerNoPopCost) <= Fixed()) city.population -= u.popCost;
+        Unit& made = spawnUnit(item.type, city.owner, *spot);
+        if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt());
         assignCitizens(city);
         refreshVisibility(city.owner);
     } else if (item.kind == ProductionKind::District) {
@@ -751,6 +758,10 @@ void Game::processCities(PlayerId pid) {
                 // Policies such as Agoge speed production toward some units.
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
                 prod = prod * std::max(0, pct) / 100;
+            } else if (item.kind == ProductionKind::District) {
+                // Zoning Commissioner (08: Governors).
+                const int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());
+                prod = prod * std::max(0, pct) / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)
             prod += city.overflow;
@@ -776,7 +787,9 @@ void Game::processCities(PlayerId pid) {
         // Border growth (02-cities.md, Border growth by culture).
         City& c3 = *state_.city(ids[k]);
         c3.borderCulture += rep.yields[idx(YieldType::Culture)];
-        const Fixed cost = Fixed::fromInt(borderGrowthCost(c3.plotsByCulture));
+        // Land Acquisition: a faster border expansion rate (08: Governors).
+        const int faster = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, c3, ModEffect::CityBorderGrowthPercent).toInt());
+        const Fixed cost = Fixed::fromInt(borderGrowthCost(c3.plotsByCulture)) * 100 / std::max(1, faster);
         if (c3.borderCulture >= cost) {
             if (growBorders(c3)) {
                 c3.borderCulture -= cost;

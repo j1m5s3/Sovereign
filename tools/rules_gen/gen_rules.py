@@ -843,6 +843,31 @@ def era_turns(row):
     return out
 
 
+def gen_governors():
+    """Governors, their promotion trees and the civics that grant titles (08: Governors [R&F]).
+    Effects stay as text here; the ones the core carries are hand-written in modifiers.json
+    against the promotion ids. Governors unique to a civ trait the roster lacks are left out."""
+    path = SPEC / "governors.md"
+    out = []
+    for r in table(path, "Governors"):
+        if r["Unique to trait"]:
+            continue
+        name = r["Governor"]
+        promos = []
+        rows = table(path, name)
+        ids = {row["Promotion"]: "GOVERNOR_PROMOTION_" + snake(row["Promotion"]) for row in rows}
+        for row in rows:
+            promos.append({"id": ids[row["Promotion"]], "name": row["Promotion"], "tier": num(row["Tier"]), "column": num(row["Column"]),
+                           "base": row["Base ability"] == "yes",
+                           "requires": [ids[x.strip()] for x in row["Requires"].split(",") if x.strip()],
+                           "effects": row["Effects"]})
+        out.append({"id": "GOVERNOR_" + snake(name), "name": name, "title": r["Title"], "establishPercent": num(r["Turns to establish"]),
+                    "loyalty": num(r["Loyalty pressure"]), "cityStates": r["Can serve city-states"] == "yes", "promotions": promos})
+    titles = [{"id": "TITLES_" + snake(r["Source"]), "civic": "CIVIC_" + snake(r["Source"]), "titles": num(r["Titles"])}
+              for r in table(path, "Sources of Governor Titles") if r["Kind"] == "Civic"]
+    return {"governors": out, "governorTitles": titles}
+
+
 def gen_moments():
     """Historic moments with their era score and the era they stop counting in (09: Era score)."""
     out = []
@@ -1320,6 +1345,7 @@ def main():
         "wonders.json": gen_wonders(),
         "citystates.json": gen_city_states(),
         "moments.json": gen_moments(),
+        "governors.json": gen_governors(),
     }
     stale = []
     for name, doc in outputs.items():

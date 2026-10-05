@@ -1,0 +1,602 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "governors": [
+  {
+   "id": "GOVERNOR_VICTOR",
+   "name": "Victor",
+   "title": "Castellan",
+   "establishPercent": 150,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_REDOUBT",
+     "name": "Redoubt",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "+5 city (inner) defense"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_GARRISON_COMMANDER",
+     "name": "Garrison Commander",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_REDOUBT"
+     ],
+     "effects": "adjust city combat bonus (Amount=5); +4 Loyalty pressure"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS",
+     "name": "Defense Logistics",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_REDOUBT"
+     ],
+     "effects": "adjust city siege protection (Protected=yes); +1 strategic accumulation per source"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_EMBRASURE",
+     "name": "Embrasure",
+     "tier": 2,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS",
+      "GOVERNOR_PROMOTION_GARRISON_COMMANDER"
+     ],
+     "effects": "adjust city attacks per turn (Amount=1); grants enough XP for a promotion for units trained in this city"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_AIR_DEFENSE_INITIATIVE",
+     "name": "Air Defense Initiative",
+     "tier": 3,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_EMBRASURE"
+     ],
+     "effects": "adjust city air defense bonus (Amount=25)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_ARMS_RACE_PROPONENT",
+     "name": "Arms Race Proponent",
+     "tier": 3,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_EMBRASURE"
+     ],
+     "effects": "+30% Production toward Manhattan Project; +30% Production toward Operation Ivy; +30% Production toward Build Nuclear Device; +30% Production toward Build Thermonuclear Device"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_AMANI",
+   "name": "Amani",
+   "title": "Diplomat",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": true,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_MESSENGER",
+     "name": "Messenger",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "governor adjust city tokens granted (Amount=2)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_EMISSARY",
+     "name": "Emissary",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_MESSENGER"
+     ],
+     "effects": "+2 Loyalty pressure"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_AFFLUENCE",
+     "name": "Affluence",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_MESSENGER"
+     ],
+     "effects": "governor adjust city copy luxuries for import"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_LOCAL_INFORMANTS",
+     "name": "Local Informants",
+     "tier": 2,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_EMISSARY"
+     ],
+     "effects": "+3 spy level when defending this city"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_FOREIGN_INVESTOR",
+     "name": "Foreign Investor",
+     "tier": 2,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_AFFLUENCE"
+     ],
+     "effects": "governor adjust city copy strategics for import"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_PUPPETEER",
+     "name": "Puppeteer",
+     "tier": 3,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_LOCAL_INFORMANTS",
+      "GOVERNOR_PROMOTION_FOREIGN_INVESTOR"
+     ],
+     "effects": "governor adjust city tokens granted modifier (Percent=100)"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_MOKSHA",
+   "name": "Moksha",
+   "title": "Cardinal",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_BISHOP",
+     "name": "Bishop",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "adjust city religion pressure (Amount=100); +2 Faith per district"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_GRAND_INQUISITOR",
+     "name": "Grand Inquisitor",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_BISHOP"
+     ],
+     "effects": "adjust city religious combat bonus (Amount=10)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_LAYING_ON_OF_HANDS",
+     "name": "Laying On Of Hands",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_BISHOP"
+     ],
+     "effects": "adjust extra heal governor (Amount=100); adjust city religious heal (Amount=100)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_CITADEL_OF_GOD",
+     "name": "Citadel of God",
+     "tier": 2,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GRAND_INQUISITOR",
+      "GOVERNOR_PROMOTION_LAYING_ON_OF_HANDS"
+     ],
+     "effects": "adjust city religion ignore pressure (Enable=yes); adjust city religion ignore combat (Enable=yes); on completing a building, Faith = 25% of its cost"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_PATRON_SAINT",
+     "name": "Patron Saint",
+     "tier": 3,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_CITADEL_OF_GOD"
+     ],
+     "effects": "adjust city religion extra promotions (Amount=1)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_DIVINE_ARCHITECT",
+     "name": "Divine Architect",
+     "tier": 3,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_CITADEL_OF_GOD"
+     ],
+     "effects": "adjust can faith purchase districts (CanPurchase=yes)"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_MAGNUS",
+   "name": "Magnus",
+   "title": "Steward",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_GROUNDBREAKER",
+     "name": "Groundbreaker",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "adjust city resource harvest bonus (Amount=50)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_SURPLUS_LOGISTICS",
+     "name": "Surplus Logistics",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GROUNDBREAKER"
+     ],
+     "effects": "+20% growth; trade routes from other civs give them +2 Food"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_PROVISION",
+     "name": "Provision",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GROUNDBREAKER"
+     ],
+     "effects": "adjust city settler consume pop (Enabled=no)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_INDUSTRIALIST",
+     "name": "Industrialist",
+     "tier": 2,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_SURPLUS_LOGISTICS"
+     ],
+     "effects": "+2 Production from Coal Power Plant; +2 Production from Oil Power Plant; +2 Production from Nuclear Power Plant; adjust resource power provided governor (Amount=1)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_BLACK_MARKETEER",
+     "name": "Black Marketeer",
+     "tier": 2,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_PROVISION"
+     ],
+     "effects": "adjust city strategic resource requirement modifier (Amount=80)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_VERTICAL_INTEGRATION",
+     "name": "Vertical Integration",
+     "tier": 3,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_INDUSTRIALIST",
+      "GOVERNOR_PROMOTION_BLACK_MARKETEER"
+     ],
+     "effects": "adjust city allowed incoming regional stacking (YieldType=Production)"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_LIANG",
+   "name": "Liang",
+   "title": "Surveyor",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_GUILDMASTER",
+     "name": "Guildmaster",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "+1 build charge(s) for units trained in this city where unit is Builder"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_ZONING_COMMISSIONER",
+     "name": "Zoning Commissioner",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GUILDMASTER"
+     ],
+     "effects": "+20% Production toward districts"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_AQUACULTURE",
+     "name": "Aquaculture",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GUILDMASTER"
+     ],
+     "effects": "may build Fishery"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_REINFORCED_MATERIALS",
+     "name": "Reinforced Materials",
+     "tier": 2,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_ZONING_COMMISSIONER"
+     ],
+     "effects": "adjust prevent structural damage (Prevent=yes)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_WATER_WORKS",
+     "name": "Water Works",
+     "tier": 2,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_AQUACULTURE"
+     ],
+     "effects": "+2 Housing for this city's districts where district is Neighborhood; +2 Housing for this city's districts where district is Aqueduct; +1 Amenity for this city's districts where district is Canal; +1 Amenity for this city's districts where district is Dam"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_PARKS_AND_RECREATION",
+     "name": "Parks and Recreation",
+     "tier": 3,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_WATER_WORKS",
+      "GOVERNOR_PROMOTION_REINFORCED_MATERIALS"
+     ],
+     "effects": "may build City Park"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_PINGALA",
+   "name": "Pingala",
+   "title": "Educator",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_LIBRARIAN",
+     "name": "Librarian",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "+15% Science; +15% Culture"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_CONNOISSEUR",
+     "name": "Connoisseur",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_LIBRARIAN"
+     ],
+     "effects": "+1 Culture per Citizen"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_RESEARCHER",
+     "name": "Researcher",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_LIBRARIAN"
+     ],
+     "effects": "+1 Science per Citizen"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_GRANTS",
+     "name": "Grants",
+     "tier": 2,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_CONNOISSEUR",
+      "GOVERNOR_PROMOTION_RESEARCHER"
+     ],
+     "effects": "+100% Great Person points"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_CURATOR",
+     "name": "Curator",
+     "tier": 3,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GRANTS"
+     ],
+     "effects": "Tourism from Sculpture scaled 200%; Tourism from Portrait scaled 200%; Tourism from Landscape scaled 200%; Tourism from Religious scaled 200%; Tourism from Writing scaled 200%; Tourism from Music scaled 200%"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_SPACE_INITIATIVE",
+     "name": "Space Initiative",
+     "tier": 3,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_GRANTS"
+     ],
+     "effects": "+30% Production toward space race projects"
+    }
+   ]
+  },
+  {
+   "id": "GOVERNOR_REYNA",
+   "name": "Reyna",
+   "title": "Financier",
+   "establishPercent": 100,
+   "loyalty": 8,
+   "cityStates": false,
+   "promotions": [
+    {
+     "id": "GOVERNOR_PROMOTION_LAND_ACQUISITION",
+     "name": "Land Acquisition",
+     "tier": 0,
+     "column": 1,
+     "base": true,
+     "requires": [],
+     "effects": "+20% border expansion rate; adjust city yield from foreign trade routes passing through (YieldType=Gold, Amount=3)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_HARBORMASTER",
+     "name": "Harbormaster",
+     "tier": 1,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_LAND_ACQUISITION"
+     ],
+     "effects": "+100% to the district's Gold (adjacency) yield for this city's districts where district is Commercial Hub; +100% to the district's Gold (adjacency) yield for this city's districts where district is Harbor"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_FORESTRY_MANAGEMENT",
+     "name": "Forestry Management",
+     "tier": 1,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_LAND_ACQUISITION"
+     ],
+     "effects": "adjust feature no improvement appeal governor (Amount=1); +2 Gold on this city's tiles where NOT plot has any improvement and plot has any feature"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_TAX_COLLECTOR",
+     "name": "Tax Collector",
+     "tier": 2,
+     "column": 1,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_HARBORMASTER",
+      "GOVERNOR_PROMOTION_FORESTRY_MANAGEMENT"
+     ],
+     "effects": "adjust city gold from citizens (Amount=2)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_CONTRACTOR",
+     "name": "Contractor",
+     "tier": 3,
+     "column": 0,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_TAX_COLLECTOR"
+     ],
+     "effects": "adjust city can purchase districts (CanPurchase=yes)"
+    },
+    {
+     "id": "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER",
+     "name": "Renewable Subsidizer",
+     "tier": 3,
+     "column": 2,
+     "base": false,
+     "requires": [
+      "GOVERNOR_PROMOTION_TAX_COLLECTOR"
+     ],
+     "effects": "+2 Gold on this city's tiles where tile has Solar Farm or tile has Wind Farm or tile has Offshore Wind Farm or tile has Geothermal Plant; +2 Gold from Hydroelectric Dam"
+    }
+   ]
+  }
+ ],
+ "governorTitles": [
+  {
+   "id": "TITLES_STATE_WORKFORCE",
+   "civic": "CIVIC_STATE_WORKFORCE",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_EARLY_EMPIRE",
+   "civic": "CIVIC_EARLY_EMPIRE",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_DEFENSIVE_TACTICS",
+   "civic": "CIVIC_DEFENSIVE_TACTICS",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_RECORDED_HISTORY",
+   "civic": "CIVIC_RECORDED_HISTORY",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_GUILDS",
+   "civic": "CIVIC_GUILDS",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_MEDIEVAL_FAIRES",
+   "civic": "CIVIC_MEDIEVAL_FAIRES",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_CIVIL_ENGINEERING",
+   "civic": "CIVIC_CIVIL_ENGINEERING",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_NATIONALISM",
+   "civic": "CIVIC_NATIONALISM",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_MASS_MEDIA",
+   "civic": "CIVIC_MASS_MEDIA",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_MOBILIZATION",
+   "civic": "CIVIC_MOBILIZATION",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_GLOBALIZATION",
+   "civic": "CIVIC_GLOBALIZATION",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_SOCIAL_MEDIA",
+   "civic": "CIVIC_SOCIAL_MEDIA",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_FUTURE_CIVIC",
+   "civic": "CIVIC_FUTURE_CIVIC",
+   "titles": 1
+  },
+  {
+   "id": "TITLES_NEAR_FUTURE_GOVERNANCE",
+   "civic": "CIVIC_NEAR_FUTURE_GOVERNANCE",
+   "titles": 1
+  }
+ ]
+}

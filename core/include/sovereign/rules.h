@@ -558,6 +558,16 @@ enum class ModEffect : uint8_t {
     ReligiousUnitsIgnoreTerrain,   // flag: religious units pay 1 per plot
     NoCombatPressureLoss,          // flag: theological defeats cost no pressure
     ReligionColonizes,             // flag: new cities start following the religion
+    // City effects (governor promotions, 08: Governors):
+    CityYieldPerPop,               // + `yield` per citizen
+    CityYieldPerDistrict,          // + `yield` per completed district
+    CityGreatPersonPercent,        // + % great person points from the city
+    CityHarvestPercent,            // + % yield from harvests and chops on its plots
+    CityBorderGrowthPercent,       // + % border expansion rate
+    CityDistrictProductionPercent, // + % production toward districts
+    CityReligionPressurePercent,   // + % religious pressure the city exerts
+    SettlerNoPopCost,              // flag: settlers trained here cost no population
+    BuilderExtraCharges,           // + build charges for builders trained here
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -567,7 +577,7 @@ enum class ReqType : uint8_t {
     CityIsCapital,
     CityMinPopulation,
     PlayerIsHuman,
-    PlotHasImprovement,  // ref kNone: any improvement
+    PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
 };
 
 struct Requirement {
@@ -584,7 +594,7 @@ struct RequirementSet {
 
 // Civ VI's modifier model (00-overview.md, Architecture recommendations):
 // who it affects (collection), what it does (effect), when (requirements).
-enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief };
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief, Governor };
 
 struct Modifier {
     std::string id;
@@ -605,6 +615,23 @@ struct Modifier {
     int per = 1;                // FounderYieldPerFollowers: followers per point
     bool foreign = false;       // UnitStrengthNearFollowingCity: foreign cities only (Crusade)
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
+};
+
+// Governors (08: Governors [R&F]; data: governors.md). A governor's promotions form a tree:
+// one is its base ability; each other needs one of its `prerequisites`.
+struct GovernorPromotionType {
+    std::string id, name, effects;  // effects: the rules text (what the core carries is in modifiers.json)
+    TypeIndex governor = kNone;
+    int tier = 0, column = 0;
+    bool base = false;
+    std::vector<TypeIndex> prerequisites;
+};
+struct GovernorType {
+    std::string id, name, title;
+    int establishPercent = 100;  // speed of establishing (Victor 150: faster)
+    int loyalty = 8;             // loyalty per turn in its city once established
+    bool cityStates = false;     // may serve in a city-state (Amani)
+    std::vector<TypeIndex> promotions;  // GovernorPromotionType indices; the base ability first
 };
 
 // A leader's agenda: what the AI version likes and dislikes (leaders-and-art-style.md,
@@ -702,6 +729,9 @@ public:
     std::vector<BeliefType> beliefs;
     std::vector<RouteType> routes;  // by era, Ancient first
     std::vector<CityStateType> cityStates;
+    std::vector<GovernorType> governors;
+    std::vector<GovernorPromotionType> governorPromotions;
+    std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants
     std::vector<MomentType> moments;
     std::vector<EnvoyBonus> envoyBonuses;
     std::vector<ReligionType> religions;
@@ -731,6 +761,8 @@ public:
     TypeIndex belief(const std::string& id) const;
     TypeIndex religion(const std::string& id) const;
     TypeIndex moment(const std::string& id) const;
+    TypeIndex governor(const std::string& id) const;
+    TypeIndex governorPromotion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;

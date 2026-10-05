@@ -242,6 +242,20 @@ public:
     bool canDeclareWar(PlayerId player, PlayerId target) const;
     bool canMakePeace(PlayerId player, PlayerId target) const;
 
+    // ---- governors (08: Governors [R&F])
+    int governorTitles(PlayerId player) const;          // earned from civics
+    int governorTitlesLeft(PlayerId player) const;      // earned minus spent
+    const Governor* governor(PlayerId player, TypeIndex type) const;  // appointed, or null
+    // The owner's governor established in this city (a city-state's: the major whose Amani serves there).
+    const Governor* establishedGovernor(const City& city, PlayerId* owner = nullptr) const;
+    bool canAppointGovernor(PlayerId player, TypeIndex type) const;
+    bool canPromoteGovernor(PlayerId player, TypeIndex type, TypeIndex promotion) const;
+    bool canAssignGovernor(PlayerId player, TypeIndex type, CityId city) const;
+    int governorEstablishTurns(TypeIndex type) const;
+    // Envoys a player's Amani adds at this city-state (2, doubled by Puppeteer).
+    int governorEnvoys(PlayerId player, PlayerId cityState) const;
+    bool governorHasPromotion(const Governor& g, const char* promotionId) const;
+
     // ---- diplomacy (08-diplomacy-city-states-governors.md; leader doc §10). Rules decide
     // every outcome; the dialogue layer only turns words into these deals.
     bool isMajorCiv(PlayerId player) const;
@@ -424,6 +438,9 @@ private:
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
+    CommandError validateGovernor(const Command& c) const;
+    void applyGovernor(const Command& c);
+    void processGovernors(PlayerId player);  // establishing counts down; governors in lost cities come home
     CommandError validateDiplomacy(const Command& c) const;
     void applyDiplomacy(const Command& c);
     void executeDeal(const Deal& deal);
