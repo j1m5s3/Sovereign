@@ -9,6 +9,9 @@
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
+#include "sovereign_net/session.h"
+
+#include "SovNetLink.h"
 
 FSovSetup FSovSetup::FromCommandLine()
 {
@@ -24,6 +27,21 @@ FSovSetup FSovSetup::FromCommandLine()
 	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
 	Setup.bNavalDemo = FParse::Param(Cmd, TEXT("SovNavalDemo"));
 	Setup.bDiploDemo = FParse::Param(Cmd, TEXT("SovDiploDemo"));
+	FParse::Value(Cmd, TEXT("SovHotSeat="), Setup.HumanSeats);
+	FParse::Value(Cmd, TEXT("SovPort="), Setup.Port);
+	FParse::Value(Cmd, TEXT("SovName="), Setup.PlayerName);
+	FParse::Value(Cmd, TEXT("SovAutoStart="), Setup.AutoStartPlayers);
+	if (FParse::Param(Cmd, TEXT("SovHost")))
+	{
+		Setup.Net = ESovNet::Host;
+		Setup.HumanSeats = 2;
+		FParse::Value(Cmd, TEXT("SovHumans="), Setup.HumanSeats);
+	}
+	if (FParse::Value(Cmd, TEXT("SovJoin="), Setup.JoinAddress))
+	{
+		Setup.Net = ESovNet::Join;
+	}
+	Setup.HumanSeats = FMath::Clamp(Setup.HumanSeats, 1, FMath::Max(1, Setup.Players));
 	return Setup;
 }
 
@@ -38,7 +56,16 @@ FSovSession::~FSovSession() = default;
 bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 {
 	Game.reset();
+	NetHost.reset();
+	NetClient.reset();
+	Listener.reset();
+	Mode = Setup.Net;
+	AutoStartPlayers = Setup.AutoStartPlayers;
 	bStalled = false;
+	bHandover = false;
+	ViewSeat = 0;
+	SeenGame = nullptr;
+	SeenLog = 0;
 	Rules = std::make_unique<sov::Rules>();
 	std::string Error;
 	const FString Dir = Setup.RulesDir.IsEmpty() ? FSovSetup::DefaultRulesDir() : Setup.RulesDir;
@@ -59,7 +86,36 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	for (int32 i = 0; i < Setup.Players; ++i)
 	{
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
-		CoreSetup->players.push_back({Civ.id, i == 0 && Setup.bHumanSeat0});
+		CoreSetup->players.push_back({Civ.id, Setup.bHumanSeat0 && i < Setup.HumanSeats});
+	}
+	const std::string Name = TCHAR_TO_UTF8(*Setup.PlayerName);
+	if (Mode == ESovNet::Host)
+	{
+		// The lobby: others claim the human seats; StartHostedGame creates the game.
+		auto L = std::make_unique<FSovTcpListener>(Setup.Port);
+		if (!L->IsListening())
+		{
+			OutError = FString::Printf(TEXT("cannot listen on port %d"), Setup.Port);
+			return false;
+		}
+		Listener = std::move(L);
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		Notices.Add(FString::Printf(TEXT("Hosting on port %d. Waiting for players; Enter starts the game."), Setup.Port));
+		++Rev;
+		return true;
+	}
+	if (Mode == ESovNet::Join)
+	{
+		std::unique_ptr<sov::net::Link> Link = FSovTcpLink::Connect(Setup.JoinAddress, Setup.Port);
+		if (!Link)
+		{
+			OutError = FString::Printf(TEXT("nobody answered at %s:%d"), *Setup.JoinAddress, Setup.Port);
+			return false;
+		}
+		NetClient = std::make_unique<sov::net::Client>(*Rules, std::move(Link), Name);
+		Notices.Add(FString::Printf(TEXT("Connected to %s:%d. Waiting for the host to start."), *Setup.JoinAddress, Setup.Port));
+		++Rev;
+		return true;
 	}
 	Game = sov::Game::create(*Rules, *CoreSetup, &Error);
 	if (!Game)
@@ -162,23 +218,57 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	return true;
 }
 
+const sov::Game* FSovSession::CurrentGame() const
+{
+	if (NetHost) return NetHost->game();
+	if (NetClient) return NetClient->game();
+	return Game.get();
+}
+
+bool FSovSession::IsActive() const { return IsRunning() || NetHost != nullptr || (NetClient && NetClient->connected()); }
+
+int32 FSovSession::ViewPlayer() const
+{
+	if (NetHost) return NetHost->seat();
+	if (NetClient) return NetClient->seat() >= 0 ? NetClient->seat() : 0;
+	return ViewSeat;
+}
+
 bool FSovSession::IsHumanTurn() const
 {
-	if (!Game)
+	const sov::Game* G = CurrentGame();
+	if (!G)
 	{
 		return false;
 	}
-	const sov::GameState& S = Game->state();
+	const sov::GameState& S = G->state();
 	return S.players[static_cast<size_t>(S.currentPlayer)].human;
 }
 
 bool FSovSession::IsGameOver() const
 {
-	return Game && Game->gameOver();
+	const sov::Game* G = CurrentGame();
+	return G && G->gameOver();
 }
 
 sov::CommandError FSovSession::Submit(const sov::Command& Command)
 {
+	if (NetHost)
+	{
+		if (!NetHost->game()) return sov::CommandError::BadPlayer;
+		const sov::CommandError Result = NetHost->submit(Command);
+		if (Result == sov::CommandError::Ok) ++Rev;
+		return Result;
+	}
+	if (NetClient)
+	{
+		// Checked here for an answer at once; it takes effect when the host's order comes back.
+		const sov::Game* G = NetClient->game();
+		if (!G) return sov::CommandError::BadPlayer;
+		const sov::CommandError Check = G->validate(Command);
+		if (Check != sov::CommandError::Ok) return Check;
+		return NetClient->submit(Command) ? sov::CommandError::Ok : sov::CommandError::BadPlayer;
+	}
 	if (!Game)
 	{
 		return sov::CommandError::BadPlayer;
@@ -189,6 +279,136 @@ sov::CommandError FSovSession::Submit(const sov::Command& Command)
 		++Rev;
 	}
 	return Result;
+}
+
+bool FSovSession::Poll()
+{
+	bool bChanged = false;
+	if (NetHost) NetHost->poll();
+	if (NetHost && !NetHost->started() && AutoStartPlayers > 0)
+	{
+		int32 Joined = 0;
+		for (size_t i = 0; i < NetHost->seats().size(); ++i)
+		{
+			Joined += static_cast<sov::PlayerId>(i) != NetHost->seat() && NetHost->seats()[i].connected ? 1 : 0;
+		}
+		FString Error;
+		if (Joined >= AutoStartPlayers && !StartHostedGame(Error))
+		{
+			Notices.Add(TEXT("Could not start: ") + Error);
+			AutoStartPlayers = 0;
+		}
+	}
+	if (NetClient) NetClient->poll();
+	if (NetHost || NetClient)
+	{
+		for (const std::string& N : NetHost ? NetHost->takeNotices() : NetClient->takeNotices())
+		{
+			Notices.Add(UTF8_TO_TCHAR(N.c_str()));
+		}
+		const sov::Game* G = CurrentGame();
+		const size_t Log = G ? G->log().size() : 0;
+		if (G != SeenGame || Log != SeenLog)
+		{
+			SeenGame = G;
+			SeenLog = Log;
+			bChanged = true;
+		}
+	}
+	// Hot seat: the turn has passed to another human on this machine.
+	if (Game && !bHandover && !Game->gameOver())
+	{
+		const sov::GameState& S = Game->state();
+		const sov::Player& Cur = S.players[static_cast<size_t>(S.currentPlayer)];
+		const sov::PlayerId Live = Game->battlePending() ? S.pendingBattle.liveFor : sov::kNoPlayer;
+		const sov::PlayerId Next = Live != sov::kNoPlayer ? Live : (Cur.human ? S.currentPlayer : sov::kNoPlayer);
+		if (Next != sov::kNoPlayer && Next != ViewSeat)
+		{
+			bHandover = true;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
+		++Rev;
+	}
+	return bChanged;
+}
+
+bool FSovSession::InLobby() const { return (NetHost && !NetHost->started()) || (NetClient && !NetClient->inGame()); }
+
+TArray<FString> FSovSession::LobbyLines() const
+{
+	TArray<FString> Lines;
+	const std::vector<sov::net::SeatInfo>* Seats = NetHost ? &NetHost->seats() : NetClient ? &NetClient->seats() : nullptr;
+	if (!Seats)
+	{
+		return Lines;
+	}
+	for (size_t i = 0; i < Seats->size(); ++i)
+	{
+		const sov::net::SeatInfo& S = (*Seats)[i];
+		const FString Who = S.connected ? FString(UTF8_TO_TCHAR(S.name.c_str())) : S.human ? FString(TEXT("(open)")) : FString(TEXT("AI"));
+		const FString Civ = i < CoreSetup->players.size() ? FString(UTF8_TO_TCHAR(CoreSetup->players[i].civ.c_str())) : FString();
+		const bool bMine = static_cast<int32>(i) == ViewPlayer();
+		Lines.Add(FString::Printf(TEXT("Seat %d: %s%s"), static_cast<int32>(i) + 1, *Who, bMine ? TEXT("  (you)") : TEXT("")));
+	}
+	return Lines;
+}
+
+bool FSovSession::StartHostedGame(FString& OutError)
+{
+	if (!NetHost)
+	{
+		return false;
+	}
+	std::string Error;
+	if (!NetHost->start(&Error))
+	{
+		OutError = UTF8_TO_TCHAR(Error.c_str());
+		return false;
+	}
+	++Rev;
+	return true;
+}
+
+void FSovSession::Chat(const FString& Text)
+{
+	const std::string T = TCHAR_TO_UTF8(*Text);
+	if (NetHost) NetHost->chat(T);
+	if (NetClient) NetClient->chat(T);
+}
+
+TArray<FString> FSovSession::TakeNotices()
+{
+	TArray<FString> Out = MoveTemp(Notices);
+	Notices.Reset();
+	return Out;
+}
+
+FString FSovSession::HandoverName() const
+{
+	if (!Game)
+	{
+		return FString();
+	}
+	const sov::GameState& S = Game->state();
+	const sov::PlayerId Live = Game->battlePending() ? S.pendingBattle.liveFor : sov::kNoPlayer;
+	const sov::Player& P = S.players[static_cast<size_t>(Live != sov::kNoPlayer ? Live : S.currentPlayer)];
+	return UTF8_TO_TCHAR(P.leaderName.c_str());
+}
+
+void FSovSession::TakeOver()
+{
+	if (!Game || !bHandover)
+	{
+		return;
+	}
+	const sov::GameState& S = Game->state();
+	const sov::PlayerId Live = Game->battlePending() ? S.pendingBattle.liveFor : sov::kNoPlayer;
+	ViewSeat = Live != sov::kNoPlayer ? Live : S.currentPlayer;
+	bHandover = false;
+	++Rev;
 }
 
 bool FSovSession::StepAI()

@@ -75,6 +75,8 @@ void Client::handle(const Message& m) {
             if (game_) {
                 ++resyncs_;
                 notices_.push_back("Resynchronised with the host.");
+            } else {
+                notices_.push_back("The game begins.");
             }
             game_ = std::move(g);
             resyncAsked_ = false;

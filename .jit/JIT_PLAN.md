@@ -30,7 +30,7 @@ Goal: humans play one game across machines. Specs:
    - Desync: each machine reports its state hash when the world turn wraps. On a mismatch, the host sends its save and the others reload.
    - A dropped player's seat goes to the AI until they rejoin from the host's save.
    - Behind a `Transport` interface, with a loopback transport for tests and a TCP transport for LAN and direct IP. Tests run 2–4 sessions in one process, through whole games, a desync and a rejoin.
-2. **Unreal: host and join.**
+2. **Done (this PR): Unreal: host and join.**
    - A lobby (direct IP or LAN): seats, civs, ready.
    - The game starts from the shared setup, and the controller plays its own seat. Other humans' turns show as "waiting for ...".
    - Chat, a desync banner with automatic resync, and disconnect handling.
@@ -46,4 +46,5 @@ Goal: humans play one game across machines. Specs:
 - Turns stay sequential, as the core plays them. Simultaneous and dynamic turn modes need the core to accept commands from several players at once, so they come after milestone 4.
 - The host is the order authority, not the rules authority: every machine runs the full core and rejects what it rejects. A cheating host can only reorder or drop commands, not invent state.
 - Milestone 1 as built: one message type set (Hello, Welcome with the save, Refuse, Seats, Submit, Apply, Refused, Hash, Resync, Chat). Commands travel in the save format's encoding (`encodeCommand`, now exported). The game always reaches a client as a save, so start, rejoin and resync are one path. Players outside the seat table (city-states) are the host's AI. `Game::stateMutForTests()` exists only to force a desync in tests. A three-process TCP run with `sovnet` matched hashes after 60 turns.
+- Milestone 2 as built: `FSovSession` has three modes (local with optional hot seat, host, join) behind the same `GetGame`/`Submit`/`ViewPlayer` the bridge already used, so the map, HUD and controller needed no network code. A joining machine checks a command against its own core for an immediate answer, then sends it; it takes effect when the host's order comes back. Engine-socket links (`SovNetLink`) use net/'s framing. The lobby, chat (`M`) and hand-over screens are HUD lines and a Slate text box; command-line options choose the mode (a menu comes with Steam lobbies in milestone 3).
 - The language model runs on the speaking player's machine. Only its deal proposal and summary travel (already commands).
