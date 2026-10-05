@@ -573,7 +573,7 @@ CommandError Game::validateCombat(const Command& c) const {
             return CommandError::CannotAttack;
         return religiousFoeAt(state_, *rules_, *u, *t) ? CommandError::Ok : CommandError::CannotAttack;
     }
-    if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader) || u->movesLeft <= Fixed() ||
+    if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader && ut.layer != UnitLayer::Air) || u->movesLeft <= Fixed() ||
         u->attacks >= maxAttacks(*u))
         return CommandError::CannotAttack;
     // Attacks on a city hit the city, whoever garrisons it; elsewhere the military unit,
@@ -590,7 +590,8 @@ CommandError Game::validateCombat(const Command& c) const {
             return CommandError::CannotAttack;
         const int dist = state_.grid.distance(u->pos, *t);
         if (dist < 1 || dist > unitRange(*u)) return CommandError::CannotAttack;
-        if (visibility(c.player, *t) != Visibility::Visible || !lineOfSight(u->pos, *t)) return CommandError::CannotAttack;
+        // Aircraft see from above (ABILITY_UNOBSTRUCTED_VIEW): no line of sight needed.
+        if (visibility(c.player, *t) != Visibility::Visible || (!isAircraft(*u) && !lineOfSight(u->pos, *t))) return CommandError::CannotAttack;
         return CommandError::Ok;
     }
     // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
@@ -737,6 +738,21 @@ void Game::applyCombat(const Command& c) {
     if (Unit* a = state_.unit(c.id); a && typeOf(*rules_, *a).religiousStrength > 0) {
         theologicalCombat(*a, *state_.unit(religiousFoeAt(state_, *rules_, *a, c.target)->id));
         return;
+    }
+    // An air strike meets the strongest interceptor or anti-air cover first (05: air combat).
+    if (Unit* air = state_.unit(c.id); air && isAircraft(*air) && c.type == CommandType::RangedAttack) {
+        const auto [aa, by] = interception(*air, c.target);
+        if (aa > 0) {
+            const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
+            air->hp -= combatDamage(aa - typeOf(*rules_, *air).combat * air->hp / 100, roll);
+            if (air->hp <= 0) {
+                const PlayerId owner = air->owner;
+                if (Unit* killer = state_.unit(by)) noteKill(*air, killer);
+                removeUnit(c.id);
+                refreshVisibility(owner);
+                return;  // shot down before the strike
+            }
+        }
     }
     if (const City* city = state_.cityAt(c.target)) {
         attackCity(c, *state_.city(city->id));
@@ -1036,7 +1052,7 @@ void Game::captureCity(City& city, UnitId attackerId) {
         if (!state_.unit(id)) continue;  // gone with a regicide earlier in this loop
         const UnitLayer layer = typeOf(*rules_, *state_.unit(id)).layer;
         if (layer == UnitLayer::Leader) leaderLost(id, me, true);  // taken with the city
-        else if (layer == UnitLayer::Military) removeUnit(id);
+        else if (layer == UnitLayer::Military || layer == UnitLayer::Air) removeUnit(id);
         else seizeCivilian(id, me);
     }
 
@@ -1051,6 +1067,7 @@ void Game::captureCity(City& city, UnitId attackerId) {
     }
     if (c.originalCapital && c.originalOwner != me && !isCityState(c.originalOwner)) awardMoment(me, "MOMENT_FOREIGN_CAPITAL_TAKEN");
     c.owner = me;
+    groundAircraft(c);  // aircraft based at its Aerodrome are lost with it
     // 25% of the population is lost and the city is left at half HP with no walls.
     const int64_t lossRaw = rules_->global("CITY_POPULATION_LOSS_TO_CONQUEST_PERCENTAGE").raw() * c.population;
     c.population = std::max(1, c.population - static_cast<int>(Fixed::fromRaw(lossRaw).toInt()));

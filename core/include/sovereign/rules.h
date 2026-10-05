@@ -28,7 +28,7 @@ enum class Relief : uint8_t { Flat = 0, Hills, Mountain };
 enum class Domain : uint8_t { Land = 0, Sea, Air };
 // 1UPT layers (05-units-and-combat.md, Stacking). The leader has its own layer so it can
 // share a plot with one military escort and one civilian (leader doc §1).
-enum class UnitLayer : uint8_t { Military = 0, Civilian, Support, Leader };
+enum class UnitLayer : uint8_t { Military = 0, Civilian, Support, Leader, Air };  // Air: aircraft, based, never stacked
 enum class ResourceClass : uint8_t { Bonus = 0, Luxury, Strategic };
 
 using TypeIndex = int16_t;
@@ -176,6 +176,7 @@ struct UnitType {
     int combat = 0;
     int ranged = 0;
     int range = 0;
+    int antiAir = 0;  // strength against aircraft striking an adjacent plot (05: air combat)
     int moves = 2;
     int sight = 2;
     bool zoneOfControl = false;
@@ -283,6 +284,7 @@ struct BuildingType {
     Fixed housing;
     int amenities = 0;
     int outerDefenseHp = 0;
+    int airSlots = 0;  // aircraft its district can base (Hangar, Airport)
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first
     bool needsRiver = false;
@@ -412,6 +414,7 @@ struct DistrictType {
     bool preventsDrought = false, preventsFloods = false;  // for its city's plots [GS]
     std::vector<TypeIndex> exclusiveWith;  // not in a city that has one of these
     std::vector<TypeIndex> validTerrains;  // only on these terrains (empty: any; Spaceport: flat land)
+    int airSlots = 0;                      // aircraft based here (City Center 1, Aerodrome 2)
     std::vector<std::string> exclusiveIds;  // (loading only)
 };
 

@@ -551,6 +551,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                   : layer == "SUPPORT" ? UnitLayer::Support
                   : layer == "LEADER"  ? UnitLayer::Leader
                                        : UnitLayer::Military;
+        if (u.domain == Domain::Air) u.layer = UnitLayer::Air;  // aircraft never share a plot's layers
+        u.antiAir = static_cast<int>(j["antiAir"].integer(0));
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));
         u.combat = static_cast<int>(j["combat"].integer(0));
@@ -681,6 +683,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.housing = j["housing"].fixed();
             b.amenities = static_cast<int>(j["amenities"].integer(0));
             b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
+            b.airSlots = static_cast<int>(j["airSlots"].integer(0));
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
@@ -726,6 +729,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.tradeInternational = readYields(j["tradeYields"]["international"]);
         d.housing = static_cast<int>(j["housing"].integer(0));
         d.amenities = static_cast<int>(j["amenities"].integer(0));
+        d.airSlots = static_cast<int>(j["airSlots"].integer(0));
         d.appeal = static_cast<int>(j["appeal"].integer(0));
         for (const Json& band : j["appealHousing"].items()) {
             if (band.items().size() == 2) d.appealHousing.push_back({static_cast<int>(band.items()[0].integer(0)), static_cast<int>(band.items()[1].integer(0))});

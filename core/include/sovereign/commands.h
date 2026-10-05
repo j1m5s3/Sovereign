@@ -70,6 +70,7 @@ enum class CommandType : uint8_t {
     SpyMission = 47,            // id = spy agent, arg = SpyMission (None: home), arg2 = city; a new city costs travel first
     CongressVote = 48,          // id = item in session, arg = option (0 A, 1 B), arg2 = candidate index, target.x = votes bought with favor
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
+    RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -187,6 +188,7 @@ struct Command {
         return {CommandType::SpyMission, p, spy, {}, static_cast<int32_t>(mission), city};
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
+    static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
     static Command congressVote(PlayerId p, int32_t item, int option, int32_t candidate, int extraVotes = 0) {
         return {CommandType::CongressVote, p, item, Hex{extraVotes, 0}, option, candidate};
     }

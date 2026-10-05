@@ -301,9 +301,9 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
     if (item.kind == ProductionKind::Unit) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->units.size()) return fail(CommandError::CannotBuild);
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
-        // Ships need a city on the coast or a lake; air units arrive later.
-        if (u.domain == Domain::Air || (u.domain == Domain::Sea && !isCoastalCity(c)) || u.mustPurchase || !u.trainable || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
-            unitObsolete(c.owner, item.type))
+        // Ships need a city on the coast or a lake; aircraft a free air slot in the city or its Aerodrome.
+        if ((u.domain == Domain::Air && !freeAirBase(c)) || (u.domain == Domain::Sea && !isCoastalCity(c)) || u.mustPurchase || !u.trainable || u.cost <= 0 ||
+            !hasUnlocked(c.owner, u.unlock) || unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
         if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
         if (u.agent && !u.spy && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
@@ -426,6 +426,7 @@ Fixed Game::goldPerTurn(PlayerId player) const {
 
 std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const {
     const UnitType& ut = rules_->units[static_cast<size_t>(unitType)];
+    if (ut.domain == Domain::Air) return freeAirBase(c);
     const UnitLayer layer = ut.layer;
     for (const Hex& h : state_.grid.within(c.pos, 1)) {  // the center comes first
         if (ut.domain == Domain::Sea) {

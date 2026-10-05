@@ -154,6 +154,7 @@ void Game::transferCity(CityId id, PlayerId to, int loyalty) {
         u->escorting = kNoUnit;
         u->activity = Activity::Fortify;
     }
+    groundAircraft(*state_.city(id));  // aircraft left at its Aerodrome cannot stay in a foreign base
     assignCitizens(*state_.city(id));
     refreshVisibility(from);
     refreshVisibility(to);
