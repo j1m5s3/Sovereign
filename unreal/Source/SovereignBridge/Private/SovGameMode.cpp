@@ -33,7 +33,7 @@ void ASovGameMode::SpawnLighting()
 	if (UDirectionalLightComponent* L = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
 	{
 		L->SetMobility(EComponentMobility::Movable);
-		L->SetIntensity(2.5f);
+		L->SetIntensity(2.6f);
 		L->SetAtmosphereSunLight(true);
 	}
 
@@ -49,7 +49,8 @@ void ASovGameMode::SpawnLighting()
 		L->SetMobility(EComponentMobility::Movable);
 		L->SourceType = ESkyLightSourceType::SLS_SpecifiedCubemap;
 		L->SetCubemap(LoadObject<UTextureCube>(nullptr, TEXT("/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap")));
-		L->SetIntensity(1.5f);
+		L->SetIntensity(1.0f);
+		L->SetLightColor(FLinearColor(1.0f, 0.93f, 0.82f));  // warm the cubemap so shaded faces are not blue
 		L->RecaptureSky();
 	}
 }
