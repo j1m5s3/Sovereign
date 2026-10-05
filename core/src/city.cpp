@@ -715,6 +715,8 @@ void Game::processCities(PlayerId pid) {
             const HappinessLevel* mood = rules_->happiness.empty() ? nullptr : &rules_->happiness[static_cast<size_t>(rep.happiness)];
             int pct = 100 + (mood ? mood->growthPercent : 0) +
                       static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityGrowthPercent).toInt());
+            // Migration Treaty (World Congress) on its target: +20% (A) or -20% (B) growth.
+            if (const PassedResolution* mt = passed(ResolutionKind::MigrationTreaty); mt && mt->target == city.owner) pct += mt->option == 0 ? 20 : -20;
             surplus = surplus * std::max(0, pct) / 100;
             if (const LoyaltyLevel* loyal = loyaltyLevel(city)) surplus = surplus * loyal->growthPercent / 100;
             const Fixed room = rep.housing - Fixed::fromInt(city.population);
@@ -761,8 +763,9 @@ void Game::processCities(PlayerId pid) {
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
                 prod = prod * std::max(0, pct) / 100;
             } else if (item.kind == ProductionKind::District) {
-                // Zoning Commissioner (08: Governors).
-                const int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());
+                // Zoning Commissioner (08: Governors); Urban Development Treaty A (World Congress).
+                int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());
+                if (const PassedResolution* ud = passed(ResolutionKind::UrbanDevelopment); ud && ud->option == 0 && ud->target == item.type) pct += 100;
                 prod = prod * std::max(0, pct) / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)

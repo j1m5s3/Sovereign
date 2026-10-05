@@ -787,6 +787,38 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::Congress:
+		{
+			// 08 [GS]: one free vote on each resolution in session, more bought with favor.
+			const int32 Favor = G.state().players[static_cast<size_t>(Me())].favor;
+			ChooserTitle = FString::Printf(TEXT("World Congress: %d favor; casting %d vote(s) (+%d bought for %d favor)"), Favor, 1 + CongressExtraVotes,
+				CongressExtraVotes, sov::Game::extraVoteCost(CongressExtraVotes));
+			if (!G.congressInSession())
+			{
+				break;
+			}
+			sov::Command More = sov::Command::congressVote(Me(), -1, 0, 0);  // id -1: buy one more vote for the next cast
+			Choices.Add({FString::Printf(TEXT("Buy another vote (total %d favor)"), sov::Game::extraVoteCost(CongressExtraVotes + 1)), More});
+			for (size_t k = 0; k < G.state().congress.size(); ++k)
+			{
+				if (G.hasVoted(Me(), static_cast<int32>(k)))
+				{
+					continue;
+				}
+				const sov::CongressItem& Item = G.state().congress[k];
+				const sov::ResolutionType& Res = R.resolutions[static_cast<size_t>(Item.resolution)];
+				for (int32 Opt = 0; Opt < 2; ++Opt)
+				{
+					for (size_t c = 0; c < Item.candidates.size(); ++c)
+					{
+						Choices.Add({FString::Printf(TEXT("%s, %s: %s (%s)"), *Str(Res.name), Opt == 0 ? TEXT("A") : TEXT("B"),
+										 *Str(G.candidateName(Item, static_cast<int32>(c))), *Str(Opt == 0 ? Res.optionA : Res.optionB)),
+							sov::Command::congressVote(Me(), static_cast<int32>(k), Opt, static_cast<int32>(c), CongressExtraVotes)});
+					}
+				}
+			}
+			break;
+		}
 		case EChooser::SpyMissions:
 		{
 			static const TCHAR* const Missions[] = {TEXT("Home"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
@@ -870,6 +902,20 @@ void ASovPlayerController::Pick(int32 Index)
 	{
 		SpyAgent = Command.id;  // a spy: choose its operation
 		OpenChooser(EChooser::SpyMissions);
+		return;
+	}
+	if (Was == EChooser::Congress)
+	{
+		if (Command.id < 0)
+		{
+			++CongressExtraVotes;  // then choose again
+			OpenChooser(EChooser::Congress);
+			return;
+		}
+		if (Send(Command))
+		{
+			CongressExtraVotes = 0;
+		}
 		return;
 	}
 	if (Was == EChooser::Diplomacy)
@@ -1369,6 +1415,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
+	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
 		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).

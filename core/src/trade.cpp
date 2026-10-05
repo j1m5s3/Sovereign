@@ -49,6 +49,9 @@ int Game::tradeRouteCapacity(PlayerId player) const {
         }
         cap += city;
     }
+    // Trade Policy (World Congress): its target gains a route (A) or loses them all (B).
+    if (const PassedResolution* tp = passed(ResolutionKind::TradePolicy); tp && tp->target == player)
+        cap = tp->option == 0 ? cap + 1 : 0;
     return cap;
 }
 

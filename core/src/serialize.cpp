@@ -57,6 +57,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.scoreVictory);
     w.boolean(s.religiousVictory);
     w.boolean(s.cultureVictory);
+    w.boolean(s.diplomaticVictory);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
@@ -78,6 +79,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.scoreVictory = r.boolean();
     s.religiousVictory = r.boolean();
     s.cultureVictory = r.boolean();
+    s.diplomaticVictory = r.boolean();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
@@ -119,7 +121,12 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
     if (s.winner != kNoPlayer && (s.winner < 0 || static_cast<size_t>(s.winner) >= s.players.size())) return false;
-    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Culture)) return false;
+    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Diplomatic)) return false;
+    for (const CongressItem& it : s.congress) {
+        if (!inRange(it.resolution, rules.resolutions.size(), false)) return false;
+        for (const CongressVote& v : it.votes) if (v.target < 0 || static_cast<size_t>(v.target) >= it.candidates.size()) return false;
+    }
+    for (const PassedResolution& pr : s.passedResolutions) if (!inRange(pr.resolution, rules.resolutions.size(), false)) return false;
     if ((s.winner == kNoPlayer) != (s.victory == Victory::None) || s.setup.turnLimit < 0) return false;
     for (const Player& p : s.players) {
         if (!inRange(p.civ, rules.civs.size(), p.barbarian || p.cityState != kNone)) return false;
@@ -314,6 +321,9 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             writeI32s(w, std::vector<int32_t>(g.promotions.begin(), g.promotions.end()));
         }
         w.i32(p.governorTitlesSpent);
+        writeI32s(w, p.grievances);
+        w.i32(p.favor);
+        w.i32(p.diplomaticVictoryPoints);
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
             w.bytes(t->boosted);
@@ -453,6 +463,26 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.until);
     }
     w.i32(s.nextDealId);
+    w.i32(s.nextCongressTurn);
+    w.i32(s.congressOpenedTurn);
+    w.u32(static_cast<uint32_t>(s.congress.size()));
+    for (const CongressItem& it : s.congress) {
+        w.i16(it.resolution);
+        writeI32s(w, it.candidates);
+        w.u32(static_cast<uint32_t>(it.votes.size()));
+        for (const CongressVote& v : it.votes) {
+            w.i8(v.player);
+            w.u8(v.option);
+            w.i32(v.target);
+            w.i32(v.votes);
+        }
+    }
+    w.u32(static_cast<uint32_t>(s.passedResolutions.size()));
+    for (const PassedResolution& pr : s.passedResolutions) {
+        w.i16(pr.resolution);
+        w.u8(pr.option);
+        w.i32(pr.target);
+    }
     w.u32(static_cast<uint32_t>(s.talks.size()));
     for (const TalkRecord& t : s.talks) {
         w.i32(t.turn);
@@ -642,6 +672,9 @@ bool deserializeState(ByteReader& r, GameState& s) {
             for (int32_t v : promos) g.promotions.push_back(static_cast<TypeIndex>(v));
         }
         p.governorTitlesSpent = r.i32();
+        if (!readI32s(r, p.grievances)) return false;
+        p.favor = r.i32();
+        p.diplomaticVictoryPoints = r.i32();
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();
             t->boosted = r.bytes();
@@ -822,6 +855,32 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.until = r.i32();
     }
     s.nextDealId = r.i32();
+    s.nextCongressTurn = r.i32();
+    s.congressOpenedTurn = r.i32();
+    uint32_t ncong = r.u32();
+    if (!r.checkCount(ncong, 10)) return false;
+    s.congress.resize(ncong);
+    for (CongressItem& it : s.congress) {
+        it.resolution = r.i16();
+        if (!readI32s(r, it.candidates)) return false;
+        uint32_t nv = r.u32();
+        if (!r.checkCount(nv, 10)) return false;
+        it.votes.resize(nv);
+        for (CongressVote& v : it.votes) {
+            v.player = r.i8();
+            v.option = r.u8();
+            v.target = r.i32();
+            v.votes = r.i32();
+        }
+    }
+    uint32_t npass = r.u32();
+    if (!r.checkCount(npass, 7)) return false;
+    s.passedResolutions.resize(npass);
+    for (PassedResolution& pr : s.passedResolutions) {
+        pr.resolution = r.i16();
+        pr.option = r.u8();
+        pr.target = r.i32();
+    }
     uint32_t ntalk = r.u32();
     if (!r.checkCount(ntalk, 10)) return false;
     s.talks.resize(ntalk);

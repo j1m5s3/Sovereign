@@ -65,6 +65,11 @@ void Game::checkVictory() {
     } else if (majors > 1 && alive == 1) {
         return win(last, Victory::LastStanding);  // VICTORY_DEFAULT
     }
+    if (state_.setup.diplomaticVictory) {
+        for (const Player& p : state_.players) {
+            if (p.alive && p.diplomaticVictoryPoints >= rules_->globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED")) return win(p.id, Victory::Diplomatic);
+        }
+    }
     if (state_.setup.cultureVictory) {
         const PlayerId c = cultureVictor();
         if (c != kNoPlayer) return win(c, Victory::Culture);

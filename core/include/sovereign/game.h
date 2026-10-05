@@ -242,6 +242,17 @@ public:
     bool canDeclareWar(PlayerId player, PlayerId target) const;
     bool canMakePeace(PlayerId player, PlayerId target) const;
 
+    // ---- grievances, favor and the World Congress (08 [GS])
+    int grievances(PlayerId holder, PlayerId against) const;
+    int favorPerTurn(PlayerId player) const;
+    bool congressInSession() const { return state_.congressOpenedTurn > 0; }
+    // Favor for `extra` votes beyond the free one: 10, 30, 60, 100... (10 more for each).
+    static int extraVoteCost(int extra) { return 5 * extra * (extra + 1); }
+    bool hasVoted(PlayerId player, int item) const;
+    // The resolution of this kind in force, or null.
+    const PassedResolution* passed(ResolutionKind kind) const;
+    std::string candidateName(const CongressItem& item, int candidate) const;
+
     // ---- espionage (08: Espionage)
     int spyCapacity(PlayerId player) const;   // from civics and techs
     int spiesOf(PlayerId player) const;
@@ -447,6 +458,13 @@ private:
     void applyGreatPeople(const Command& c);
     void applyTradeRoute(const Command& c);
     void processSpies(PlayerId player);  // travel, operations ending and their results
+    // Grievances `holder` comes to hold against `against` (Public Relations scales them).
+    void addGrievance(PlayerId holder, PlayerId against, int amount);
+    void processGrievances();          // world turn: decay, and grievances for cities held
+    void processWorldCongress();       // world turn: convene, open sessions, count votes
+    void openCongressSession();
+    void closeCongressSession();
+    void aiCongressVotes(PlayerId player);
     void resolveSpyOperation(Agent& spy);
     CommandError validateGovernor(const Command& c) const;
     void applyGovernor(const Command& c);

@@ -72,6 +72,9 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)
         change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_STARVATION"));
     change += sumCityModifiers(state_, *rules_, *c, ModEffect::CityLoyalty);
+    // Migration Treaty (World Congress) on the owner: -5 (A) or +5 (B) loyalty per turn.
+    if (const PassedResolution* mt = passed(ResolutionKind::MigrationTreaty); mt && mt->target == c->owner)
+        change += Fixed::fromInt(mt->option == 0 ? -5 : 5);
     // An established governor of the owner steadies the city (08: Governors, IdentityPressure).
     PlayerId govOwner = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &govOwner); g && govOwner == c->owner)

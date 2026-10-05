@@ -225,6 +225,16 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor:
             return validateGovernor(c);
+        case CommandType::CongressVote: {
+            const int item = c.id;
+            if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
+                !isMajorCiv(c.player))
+                return CommandError::CannotVote;
+            const CongressItem& it = state_.congress[static_cast<size_t>(item)];
+            if ((c.arg != 0 && c.arg != 1) || c.arg2 < 0 || static_cast<size_t>(c.arg2) >= it.candidates.size() || c.target.x < 0 || c.target.x > 10)
+                return CommandError::CannotVote;
+            return extraVoteCost(c.target.x) <= state_.players[static_cast<size_t>(c.player)].favor ? CommandError::Ok : CommandError::CannotVote;
+        }
         case CommandType::SpyMission: {
             CommandError why = CommandError::CannotSpy;
             canSpyMission(c.player, c.id, static_cast<SpyMission>(c.arg), c.arg2, &why);
@@ -652,6 +662,12 @@ void Game::apply(const Command& c) {
         case CommandType::AppointGovernor:
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor: applyGovernor(c); break;
+        case CommandType::CongressVote: {
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            p.favor -= extraVoteCost(c.target.x);
+            state_.congress[static_cast<size_t>(c.id)].votes.push_back({c.player, static_cast<uint8_t>(c.arg), c.arg2, 1 + c.target.x});
+            break;
+        }
         case CommandType::SpyMission: {
             for (Agent& a : state_.agents) {
                 if (a.id != c.id) continue;
@@ -787,6 +803,8 @@ void Game::applyEndTurn(const Command& c) {
 void Game::beginGlobalTurn() {
     ++state_.turn;
     processEras();
+    processGrievances();
+    processWorldCongress();
     processReligion();
     processAgents();
     processFreeCities();

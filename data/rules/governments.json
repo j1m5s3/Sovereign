@@ -13,7 +13,8 @@
    },
    "influencePerTurn": 1,
    "influenceThreshold": 100,
-   "envoysPerThreshold": 1
+   "envoysPerThreshold": 1,
+   "favor": 0
   },
   {
    "id": "GOVERNMENT_AUTOCRACY",
@@ -28,7 +29,8 @@
    "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
    "influencePerTurn": 3,
    "influenceThreshold": 100,
-   "envoysPerThreshold": 1
+   "envoysPerThreshold": 1,
+   "favor": 1
   },
   {
    "id": "GOVERNMENT_OLIGARCHY",
@@ -43,7 +45,8 @@
    "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
    "influencePerTurn": 3,
    "influenceThreshold": 100,
-   "envoysPerThreshold": 1
+   "envoysPerThreshold": 1,
+   "favor": 1
   },
   {
    "id": "GOVERNMENT_CLASSICAL_REPUBLIC",
@@ -58,7 +61,8 @@
    "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
    "influencePerTurn": 3,
    "influenceThreshold": 100,
-   "envoysPerThreshold": 1
+   "envoysPerThreshold": 1,
+   "favor": 1
   },
   {
    "id": "GOVERNMENT_MONARCHY",
@@ -73,7 +77,8 @@
    "unlock": "CIVIC_DIVINE_RIGHT",
    "influencePerTurn": 5,
    "influenceThreshold": 150,
-   "envoysPerThreshold": 2
+   "envoysPerThreshold": 2,
+   "favor": 2
   },
   {
    "id": "GOVERNMENT_THEOCRACY",
@@ -88,7 +93,8 @@
    "unlock": "CIVIC_REFORMED_CHURCH",
    "influencePerTurn": 5,
    "influenceThreshold": 150,
-   "envoysPerThreshold": 2
+   "envoysPerThreshold": 2,
+   "favor": 2
   },
   {
    "id": "GOVERNMENT_MERCHANT_REPUBLIC",
@@ -103,7 +109,8 @@
    "unlock": "CIVIC_EXPLORATION",
    "influencePerTurn": 5,
    "influenceThreshold": 150,
-   "envoysPerThreshold": 2
+   "envoysPerThreshold": 2,
+   "favor": 2
   },
   {
    "id": "GOVERNMENT_FASCISM",
@@ -118,7 +125,8 @@
    "unlock": "CIVIC_TOTALITARIANISM",
    "influencePerTurn": 7,
    "influenceThreshold": 200,
-   "envoysPerThreshold": 3
+   "envoysPerThreshold": 3,
+   "favor": 3
   },
   {
    "id": "GOVERNMENT_COMMUNISM",
@@ -133,7 +141,8 @@
    "unlock": "CIVIC_CLASS_STRUGGLE",
    "influencePerTurn": 7,
    "influenceThreshold": 200,
-   "envoysPerThreshold": 3
+   "envoysPerThreshold": 3,
+   "favor": 3
   },
   {
    "id": "GOVERNMENT_DEMOCRACY",
@@ -148,7 +157,8 @@
    "unlock": "CIVIC_SUFFRAGE",
    "influencePerTurn": 7,
    "influenceThreshold": 200,
-   "envoysPerThreshold": 3
+   "envoysPerThreshold": 3,
+   "favor": 3
   },
   {
    "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
@@ -163,7 +173,8 @@
    "unlock": "CIVIC_VENTURE_POLITICS",
    "influencePerTurn": 9,
    "influenceThreshold": 250,
-   "envoysPerThreshold": 4
+   "envoysPerThreshold": 4,
+   "favor": 4
   },
   {
    "id": "GOVERNMENT_DIGITAL_DEMOCRACY",
@@ -178,7 +189,8 @@
    "unlock": "CIVIC_DISTRIBUTED_SOVEREIGNTY",
    "influencePerTurn": 9,
    "influenceThreshold": 250,
-   "envoysPerThreshold": 4
+   "envoysPerThreshold": 4,
+   "favor": 4
   },
   {
    "id": "GOVERNMENT_SYNTHETIC_TECHNOCRACY",
@@ -193,7 +205,8 @@
    "unlock": "CIVIC_OPTIMIZATION_IMPERATIVE",
    "influencePerTurn": 9,
    "influenceThreshold": 250,
-   "envoysPerThreshold": 4
+   "envoysPerThreshold": 4,
+   "favor": 4
   }
  ]
 }

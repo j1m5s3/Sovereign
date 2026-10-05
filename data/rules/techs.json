@@ -1236,6 +1236,7 @@
    "embarkedStrength": 10,
    "greatPersonBaseCost": 30,
    "tradeRouteExtraTurns": 0,
+   "grievanceDecay": 10,
    "minTurns": 40,
    "maxTurns": 60,
    "eraScoreShift": -3
@@ -1246,6 +1247,7 @@
    "embarkedStrength": 15,
    "greatPersonBaseCost": 60,
    "tradeRouteExtraTurns": 0,
+   "grievanceDecay": 9,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1255,6 +1257,7 @@
    "embarkedStrength": 15,
    "greatPersonBaseCost": 120,
    "tradeRouteExtraTurns": 10,
+   "grievanceDecay": 8,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1264,6 +1267,7 @@
    "embarkedStrength": 30,
    "greatPersonBaseCost": 240,
    "tradeRouteExtraTurns": 10,
+   "grievanceDecay": 7,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1273,6 +1277,7 @@
    "embarkedStrength": 35,
    "greatPersonBaseCost": 420,
    "tradeRouteExtraTurns": 20,
+   "grievanceDecay": 6,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1282,6 +1287,7 @@
    "embarkedStrength": 50,
    "greatPersonBaseCost": 660,
    "tradeRouteExtraTurns": 20,
+   "grievanceDecay": 5,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1291,6 +1297,7 @@
    "embarkedStrength": 55,
    "greatPersonBaseCost": 960,
    "tradeRouteExtraTurns": 20,
+   "grievanceDecay": 4,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1300,6 +1307,7 @@
    "embarkedStrength": 55,
    "greatPersonBaseCost": 1320,
    "tradeRouteExtraTurns": 30,
+   "grievanceDecay": 3,
    "minTurns": 40,
    "maxTurns": 60
   },
@@ -1308,7 +1316,8 @@
    "name": "Future",
    "embarkedStrength": 55,
    "greatPersonBaseCost": 1320,
-   "tradeRouteExtraTurns": 30
+   "tradeRouteExtraTurns": 30,
+   "grievanceDecay": 2
   }
  ]
 }

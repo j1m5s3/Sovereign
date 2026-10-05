@@ -27,6 +27,8 @@ int chance3d6(int need) {
 
 int roll3d6(Rng& rng) { return rng.range(1, 6) + rng.range(1, 6) + rng.range(1, 6); }
 
+bool offensive(SpyMission m) { return m >= SpyMission::SiphonFunds; }
+
 const char* operationId(SpyMission m) {
     switch (m) {
         case SpyMission::Counterspy: return "SPYOP_COUNTERSPY";
@@ -163,6 +165,7 @@ void Game::resolveSpyOperation(Agent& a) {
         }
         const bool escaped = roll3d6(rng) >= escapeNeed;
         remember(victim, sender, MemoryKind::SpyCaught, escaped ? -6 : -12, escaped ? 40 : 60);
+        addGrievance(victim, sender, 25);  // espionage caught (Sovereign's base)
         pushEvent(EventKind::SpyCaught, sender, victim, escaped ? 1 : 0);
         if (escaped) {
             a.city = kNoCity;
