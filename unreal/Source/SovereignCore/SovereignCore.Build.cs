@@ -1,10 +1,11 @@
 using System.IO;
 using UnrealBuildTool;
 
-// The rules core (../../../core) compiled as an Unreal module. Private/Core holds one
-// generated wrapper per core source (tools/check_unreal_core_module.py), so core/ never
-// contains an Unreal file. The core is plain C++17 with its own conventions, so it builds
-// without PCHs or unity files (its files share anonymous-namespace names).
+// The rules core (../../../core) and the live battle simulation (../../../battle) compiled
+// as an Unreal module. Private/Core holds one generated wrapper per source
+// (tools/check_unreal_core_module.py), so core/ and battle/ never contain an Unreal file.
+// Both are plain C++17 with their own conventions, so they build without PCHs or unity
+// files (their files share anonymous-namespace names).
 public class SovereignCore : ModuleRules
 {
 	public SovereignCore(ReadOnlyTargetRules Target) : base(Target)
@@ -16,6 +17,7 @@ public class SovereignCore : ModuleRules
 		bEnableExceptions = true;
 
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "core", "include"));
+		PublicIncludePaths.Add(Path.Combine(RepoRoot, "battle", "include"));
 		PrivateIncludePaths.Add(RepoRoot);
 
 		// Modular (editor) builds load the core as a DLL: export its API (sovereign/api.h).

@@ -57,7 +57,7 @@ from `../data/rules`.
 | `U` | Promote the selected unit or leader (the leader has three branches; only one can be finished per reign) |
 | `Q` | Leader in one of your cities: walk its City Center at street level (autosaves first). WASD walk, hold right mouse or Q/E to look, `F` talks to the herald (Benevolence) or the captain of the guard (Fear), `Esc` returns to the map |
 | `V` / `X` | City panel with the leader in that city: Benevolence / Fear without walking (classic control) |
-| `B` / `R` | A melee involving your leader's stack waits for you (even on an AI's turn): `B` fights it as a live medieval battle (autosaves first), `R` auto-resolves it. In battle: WASD move the leader, left click or `F` strike, `Tab` charge or hold your men, hold right mouse or Q/E to look, `Esc` settles it now. The field result goes to the core, which keeps it within 25% of the expected Civ result |
+| `B` / `R` | A melee involving your leader's stack waits for you (even on an AI's turn): `B` fights it as a live medieval battle (autosaves first), `R` auto-resolves it. In battle: WASD move the leader, left click or `F` strike, `Tab` charge or hold your men, `1`-`6` order your squads (advance, hold, flank left, flank right, fall back, hunt their leader; `7` `8` `9` pick the left, centre or right squad, `0` all), hold right mouse or Q/E to look, `Esc` settles it now. The trained battle AI (`data/battle_ai`) leads the enemy. The field result goes to the core, which keeps it within 25% of the expected Civ result |
 | `J` | Assassins: send an idle one after a rival ruler (shows the odds when that ruler is in sight), or recall one |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
@@ -77,6 +77,7 @@ Headless automation tests (no window):
 - `Sovereign.Bridge.LeaderInMirrorAndCommands`: seat 0's leader appears as a leader marker with its ruler's name, and the escort link goes through as a command.
 - `Sovereign.Street.CityCenterFromGameState`: the generated City Center has a landmark per building (the Palace included), houses and crowd by population, six streets, no walls without wall buildings, and the same layout for the same hex.
 - `Sovereign.Battle.NumbersDecideMostFights`: the battle simulation hurts both sides in even fights, lets a much stronger side win and lose less in at least 10 of 12 seeds, repeats itself with no input, and handles an unescorted leader.
+- `Sovereign.Battle.TrainedCommanderLeads`: the trained battle AI loads from `data/battle_ai/commander.txt`, leads the enemy, the human orders one squad without touching the others, and the battle ends within HP bounds.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.

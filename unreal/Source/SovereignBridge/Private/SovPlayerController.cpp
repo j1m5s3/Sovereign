@@ -639,7 +639,8 @@ void ASovPlayerController::StartBattle()
 	}
 	Spec.Seed = G.state().turn * 7919 + B.attacker;
 	Spec.TimeLimit = 180.f;
-	Sim.Start(Spec);
+	Sim.Start(Spec, FSovBattleSim::TrainedPolicy());
+	BattleSquad = -1;
 	Outcome = FSovBattleResult();
 	bBattleSent = false;
 
@@ -658,7 +659,7 @@ void ASovPlayerController::StartBattle()
 	Possess(Walker);
 	SetControlRotation(FRotator(-20.f, Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
 	Chooser = EChooser::None;
-	Sub->LastMessage = TEXT("To battle! WASD move, left click or F strike, Tab charge/hold your men, Esc settle now.");
+	Sub->LastMessage = TEXT("To battle! WASD move, left click or F strike, Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc settle now.");
 }
 
 void ASovPlayerController::UpdateBattle(float DeltaTime)
@@ -683,6 +684,17 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	const bool bStrike = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::F);
 	const int32 Side = Sim.GetSpec().HumanSide;
 	if (WasInputKeyJustPressed(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
+	// Squad orders: 7 8 9 pick the left, centre or right squad (0: all), 1 to 6 give the order.
+	const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
+	for (int32 k = 0; k < 4; ++k)
+	{
+		if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+	}
+	const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
+	for (int32 k = 0; k < sov::battle::kOrders; ++k)
+	{
+		if (WasInputKeyJustPressed(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
+	}
 	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);

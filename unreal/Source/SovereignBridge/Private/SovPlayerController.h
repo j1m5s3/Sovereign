@@ -42,6 +42,7 @@ public:
 	// ---- live battles (step 5)
 	bool InBattle() const { return Battle != nullptr; }
 	const FSovBattleSim& GetBattleSim() const { return Sim; }
+	int32 GetBattleSquad() const { return BattleSquad; }
 	bool BattleSettled() const { return bBattleSent; }
 	const FSovBattleResult& BattleOutcome() const { return Outcome; }
 	// Centres the camera on the viewer's capital, else their first unit.
@@ -122,6 +123,7 @@ protected:
 	TObjectPtr<ASovBattleScene> Battle;
 
 	FSovBattleSim Sim;
+	int32 BattleSquad = -1;  // the squad the human is ordering (-1: all three)
 	FSovBattleResult Outcome;
 	bool bBattleSent = false;
 	float BattleExitTimer = 0.f;

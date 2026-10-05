@@ -1,13 +1,16 @@
-// A real-time melee between two Civ units, one of them with the human's leader fighting
-// in person (leader doc §9). Soldiers follow their unit's HP; their blows follow the
-// Civ strength difference (the same e^(0.04 x diff) shape as the core's damage), so the
-// numbers decide most fights and skill shifts them. The core clamps whatever comes out
-// to its band, so this simulation only has to be fair, not exact. Plain C++ so tests can
-// run it without a world; the scene drives it each frame.
+// The live battle in Unreal: an adapter over the shared battle simulation
+// (battle/include/sovereign_battle, leader doc §9), which the trainer and the headless tests
+// run too. The human fights as the leader and orders their own squads; the trained battle
+// AI (leader doc §10, layer 3) commands the other side. Plain C++ so tests can run it
+// without a world; the scene draws it each frame.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Math/RandomStream.h"
+
+THIRD_PARTY_INCLUDES_START
+#include "sovereign_battle/commander.h"
+#include "sovereign_battle/sim.h"
+THIRD_PARTY_INCLUDES_END
 
 struct FSovBattleUnitSpec
 {
@@ -34,8 +37,8 @@ struct FSovSoldier
 	FVector2D Pos = FVector2D::ZeroVector;
 	float Hp = 10.f;
 	float MaxHp = 10.f;
-	float Cooldown = 0.f;
 	int32 Side = 0;      // 0 attacker, 1 defender
+	int32 Squad = -1;    // 0 left, 1 centre, 2 right; -1 an escorted leader
 	bool bLeader = false;
 	bool bAlive = true;
 };
@@ -52,39 +55,41 @@ struct FSovBattleResult
 class FSovBattleSim
 {
 public:
-	static constexpr float Reach = 140.f;
-	static constexpr float Speed = 260.f;
-	static constexpr float SwingSeconds = 1.6f;
+	// The trained commander shipped in data/battle_ai (loaded once), or null when the file is
+	// missing or does not match this build (the enemy then advances, the scripted baseline).
+	static std::shared_ptr<const sov::battle::Policy> TrainedPolicy();
 
-	void Start(const FSovBattleSpec& Spec);
-	// Advances the fight. The human's leader moves along LeaderMove (unit vector, scaled by
-	// speed) and strikes when bStrike; it is AI-driven when LeaderMove is nullopt.
+	// Policy: who commands the side the human does not control (null: the scripted baseline).
+	void Start(const FSovBattleSpec& Spec, std::shared_ptr<const sov::battle::Policy> Policy = nullptr);
+	// Advances the fight. The human's leader moves along LeaderMove (unit vector) and strikes
+	// when bStrike; with LeaderMove unset nobody is at the controls and the leader keeps to
+	// its men.
 	void Step(float Dt, TOptional<FVector2D> LeaderMove = {}, bool bStrike = false);
-	bool Finished() const { return bFinished; }
+	bool Finished() const { return Sim.finished(); }
 	FSovBattleResult Result() const;
 
 	const TArray<FSovSoldier>& Soldiers() const { return Men; }
-	int32 Alive(int32 Side) const;
-	int32 Started(int32 Side) const { return Initial[Side]; }
-	float TimeLeft() const { return FMath::Max(0.f, Spec.TimeLimit - Elapsed); }
-	int32 LeaderIndex() const { return Leader; }
-	void SetCharge(int32 Side, bool bCharge) { Charge[Side] = bCharge; }
-	bool Charging(int32 Side) const { return Charge[Side]; }
+	int32 Alive(int32 Side) const { return Sim.alive(Side); }
+	int32 Started(int32 Side) const { return Sim.started(Side); }
+	float TimeLeft() const { return Sim.timeLeft(); }
+	int32 LeaderIndex() const { return Sim.humanLeader() >= 0 ? Sim.humanLeader() : INDEX_NONE; }
 	const FSovBattleSpec& GetSpec() const { return Spec; }
 
+	// The human's orders to their own squads (Squad -1: all three).
+	void SetOrder(int32 Side, sov::battle::Order Order, int32 Squad = -1);
+	sov::battle::Order GetOrder(int32 Side, int32 Squad = 1) const { return Sim.order(Side, Squad); }
+	// Tab: charge (advance) or hold, for all of a side's squads.
+	void SetCharge(int32 Side, bool bCharge) { SetOrder(Side, bCharge ? sov::battle::Order::Advance : sov::battle::Order::Hold); }
+	bool Charging(int32 Side) const { return Sim.order(Side, 1) != sov::battle::Order::Hold; }
+	bool EnemyTrained() const { return bEnemyTrained; }
+
 private:
-	int32 Nearest(int32 From) const;
-	void Swing(int32 From, int32 To);
-	int32 StrengthOf(const FSovSoldier& S) const;
+	void Mirror();
 
 	FSovBattleSpec Spec;
+	sov::battle::Sim Sim;
+	sov::battle::Commander Enemy = sov::battle::Commander::fixed(sov::battle::Order::Advance);
+	sov::battle::Commander Idle = sov::battle::Commander::fixed(sov::battle::Order::Advance);  // the human's squads when nobody plays
+	bool bEnemyTrained = false;
 	TArray<FSovSoldier> Men;
-	FRandomStream Rng;
-	int32 Initial[2] = {0, 0};
-	bool Charge[2] = {true, true};
-	int32 Leader = -1;                 // the human's leader (controllable)
-	int32 UnitLeader[2] = {-1, -1};    // a side whose unit is a lone leader
-	float Elapsed = 0.f;
-	bool bFinished = false;
-	bool bTimedOut = false;
 };
