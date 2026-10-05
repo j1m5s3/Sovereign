@@ -97,6 +97,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::LeaderNeeded: return "LeaderNeeded";
         case CommandError::CannotSucceed: return "CannotSucceed";
         case CommandError::CannotSendAgent: return "CannotSendAgent";
+        case CommandError::CannotTakeStance: return "CannotTakeStance";
     }
     return "Unknown";
 }
@@ -143,6 +144,7 @@ std::string describe(const Command& c) {
         case CommandType::LinkEscort: return s + "LinkEscort u" + std::to_string(c.id) + " leader" + std::to_string(c.arg);
         case CommandType::ChooseSuccessor: return s + "ChooseSuccessor kind" + std::to_string(c.arg) + " u" + std::to_string(c.id);
         case CommandType::AbandonLeader: return s + "AbandonLeader";
+        case CommandType::CityStance: return s + "CityStance city" + std::to_string(c.id) + " stance" + std::to_string(c.arg);
         case CommandType::SendAssassin: return s + "SendAssassin agent" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
     }
     return s + "?";

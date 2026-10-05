@@ -60,6 +60,9 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     const City* c = state_.city(id);
     if (!c) return Fixed();
     Fixed change = loyaltyPressure(*c);
+    // A Feared ruler's cities rarely flip: pressure losses are halved; a Beloved one gains loyalty (§8.1).
+    if (change < Fixed() && feared(c->owner)) change = change / 2;
+    if (beloved(c->owner)) change += Fixed::fromInt(rules_->globalInt("REPUTATION_BELOVED_LOYALTY"));
     if (state_.players[static_cast<size_t>(c->owner)].freeCity) {
         return change + Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_FREE_CITIES"));
     }
@@ -73,8 +76,11 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
 
 const LoyaltyLevel* Game::loyaltyLevel(const City& city) const {
     const LoyaltyLevel* level = nullptr;
-    for (const LoyaltyLevel& l : rules_->loyaltyLevels) {
-        if (city.loyalty >= l.minLoyalty) level = &l;
+    for (size_t i = 0; i < rules_->loyaltyLevels.size(); ++i) {
+        const LoyaltyLevel& l = rules_->loyaltyLevels[i];
+        // Under Fear the city does not count as in Unrest (leader doc §4).
+        const bool floor = fearActive(city) && i == 1;
+        if (city.loyalty >= l.minLoyalty || floor) level = &l;
     }
     return level;
 }
@@ -159,7 +165,15 @@ void Game::processLoyalty(PlayerId pid) {
         City* c = state_.city(ids[i]);
         if (!c || c->owner != pid) continue;
         c->loyalty = std::clamp(c->loyalty + changes[i], 0, maximum);
-        if (c->loyalty == 0) transferCity(ids[i], ensureFreeCityPlayer(), rules_->globalInt("LOYALTY_START") / 2);
+        if (c->loyalty == 0) {
+            transferCity(ids[i], ensureFreeCityPlayer(), rules_->globalInt("LOYALTY_START") / 2);
+            continue;
+        }
+        // Too much iron fist: a Feared ruler's city in Unrest, once Fear has worn off, may rebel (§8.2).
+        const bool unrest = !rules_->loyaltyLevels.empty() && c->loyalty < rules_->loyaltyLevels[1].minLoyalty;
+        if (unrest && feared(pid) && !fearActive(*c) &&
+            static_cast<int>(state_.rng.get(RngStream::Gameplay).below(100)) < rules_->globalInt("REBELLION_PERCENT"))
+            rebellion(*c);
     }
 }
 

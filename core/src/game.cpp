@@ -189,6 +189,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::ChooseSuccessor:
         case CommandType::AbandonLeader:
         case CommandType::SendAssassin:
+        case CommandType::CityStance:
             return validateLeader(c);
         default: break;
     }
@@ -506,7 +507,8 @@ void Game::apply(const Command& c) {
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:
         case CommandType::AbandonLeader:
-        case CommandType::SendAssassin: applyLeader(c); break;
+        case CommandType::SendAssassin:
+        case CommandType::CityStance: applyLeader(c); break;
     }
 }
 
@@ -581,7 +583,8 @@ void Game::applyEndTurn(const Command& c) {
         if (state_.players[next].alive && !state_.players[next].barbarian) {
             state_.currentPlayer = static_cast<PlayerId>(next);
             beginPlayerTurn(state_.currentPlayer);
-            return;
+            // A player whose last city revolted as its turn began is out: the turn moves on.
+            if (state_.players[next].alive) return;
         }
     }
 }

@@ -114,6 +114,11 @@ struct SOV_API City {
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
     std::vector<CityDistrict> districts;  // in placement order
     int loyalty = 100;             // 0..LOYALTY_MAXIMUM [R&F]; at 0 the city revolts to the Free Cities
+    // The leader's citizen stances (leader doc §4): turns until which each effect lasts.
+    int stanceTurn = -100;         // turn of the last stance (cooldown)
+    int benevolenceUntil = 0;      // +amenities while turn < this
+    int fearUntil = 0;             // order imposed while turn < this
+    int fearAfterUntil = 0;        // resentment (-amenity, assassin openings) while turn < this
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
@@ -156,6 +161,7 @@ struct Player {
     bool alive = true;
     bool barbarian = false;   // the barbarian player: at war with all, plays in the world turn
     bool freeCity = false;    // the Free Cities (also flagged barbarian: not a major, at war with all, takes no turns)
+    int reputation = 0;       // -100 Feared .. +100 Beloved (leader doc §8.1)
     int strongestUnit = 0;    // highest melee strength of any unit it has had (city defence)
     int citiesFounded = 0;  // drives city naming
     Fixed gold;
@@ -216,7 +222,7 @@ struct Agent {
 };
 
 // Things that happened that players should hear about (UI and AI read them; rules do not).
-enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured };
+enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion };
 struct GameEvent {
     int32_t turn = 0;
     EventKind kind = EventKind::AssassinKilled;

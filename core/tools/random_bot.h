@@ -77,6 +77,11 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
                     equipped = game.submit(Command::equipGear(me, id, static_cast<TypeIndex>(g))) == CommandError::Ok;
             }
             if (equipped) continue;
+            // Now and then it takes a stance in the city it stands in.
+            if (const City* here = game.state().cityAt(u->pos); here && here->owner == me && rng.chance(10)) {
+                const Stance st = rng.chance(50) ? Stance::Fear : Stance::Benevolence;
+                if (game.canTakeStance(me, here->id, st)) game.submit(Command::cityStance(me, here->id, st));
+            }
             const Unit* guard = game.state().unitAt(u->pos, UnitLayer::Military, game.rules());
             if (guard && guard->owner == me && guard->escorting != id && rng.chance(30))
                 game.submit(Command::linkEscort(me, guard->id, id));

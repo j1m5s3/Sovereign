@@ -1,5 +1,5 @@
 {
- "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls; Sovereign tuning) and LEADER_SUCCESSOR_MIN_LEVEL (a military unit of this level may take the throne; doc section 5). Promotions are the SOVEREIGN class (doc section 3): three branches of two, only one branch's tier 2 per reign. Aura (doc section 1): own military units within LEADER_AURA_RANGE (+1 per LEADER_AURA_LEVELS_PER_RANGE leader levels) get +LEADER_AURA_STRENGTH. Assassins (doc section 6, decided by James 2026-10-05): an Encampment city trains them as off-map agents, ASSASSIN_PER_ENCAMPMENT capacity; power = ASSASSIN_BASE_POWER + per level + per sender era against the leader's gear, terrain, wounds, ASSASSIN_DEFENSE promotions and ASSASSIN_GUARD_PERCENT of each guard on or next to its plot; success % = 50 + ASSASSIN_ODDS_PER_POINT x difference, clamped to ASSASSIN_MIN/MAX_SUCCESS; a miss kills the assassin ASSASSIN_KILLED_PERCENT of the time (the leader gains ASSASSIN_LEADER_XP), else it is captured. All Sovereign tuning.",
+ "_comment": "Hand-written Sovereign data for the playable leader (specs/sovereign/leader-character-brainstorm.md sections 1, 2, 5 and 8.8; dynasties from specs/sovereign/leaders-and-art-style.md). The leader is one unit per major civ on its own layer; its strength comes from gear. Gear follows the doc's example ladder and is tuned so weapon + armor is near the era's best melee unit (Warrior 20, Swordsman 35, Man-at-Arms 45, Musketman 55, Line Infantry 65, Infantry 75, Mechanized Infantry 85). Gold costs are at Standard speed and scale with game speed. Mounts cost twice the maintenance of their upkeepAs unit. Globals: LEADER_RETREAT_HP (at or below this after a barbarian fight the leader returns to its capital) and LEADER_INTERREGNUM_TURNS (turns of empty policy slots after the leader falls; Sovereign tuning) and LEADER_SUCCESSOR_MIN_LEVEL (a military unit of this level may take the throne; doc section 5). Promotions are the SOVEREIGN class (doc section 3): three branches of two, only one branch's tier 2 per reign. Aura (doc section 1): own military units within LEADER_AURA_RANGE (+1 per LEADER_AURA_LEVELS_PER_RANGE leader levels) get +LEADER_AURA_STRENGTH. Assassins (doc section 6, decided by James 2026-10-05): an Encampment city trains them as off-map agents, ASSASSIN_PER_ENCAMPMENT capacity; power = ASSASSIN_BASE_POWER + per level + per sender era against the leader's gear, terrain, wounds, ASSASSIN_DEFENSE promotions and ASSASSIN_GUARD_PERCENT of each guard on or next to its plot; success % = 50 + ASSASSIN_ODDS_PER_POINT x difference, clamped to ASSASSIN_MIN/MAX_SUCCESS; a miss kills the assassin ASSASSIN_KILLED_PERCENT of the time (the leader gains ASSASSIN_LEADER_XP), else it is captured. Citizen stances (doc section 4): the leader in a city, once per STANCE_COOLDOWN_TURNS; Benevolence costs STANCE_BENEVOLENCE_GOLD_PER_POP x population (scaled by speed) for +STANCE_BENEVOLENCE_AMENITIES amenities over STANCE_EFFECT_TURNS; Fear needs a military unit there, gives +STANCE_FEAR_LOYALTY loyalty and no Unrest or Revolt for STANCE_EFFECT_TURNS, then -STANCE_FEAR_AFTER_AMENITIES amenity for STANCE_FEAR_AFTER_TURNS, with +STANCE_FEAR_ASSASSIN_BONUS% assassin success against a leader there until then. Reputation (doc section 8.1): +-REPUTATION_PER_STANCE per stance, -REPUTATION_PER_RAZE per razed city; Beloved at +REPUTATION_THRESHOLD (+amenity, +loyalty), Feared at -REPUTATION_THRESHOLD (-amenity, pressure losses halved, +assassin success). Rebellion (doc section 8.2): a Feared ruler's Unrest city whose Fear has ended rebels REBELLION_PERCENT of turns, raising REBELLION_UNITS barbarian melee units beside it. All Sovereign tuning.",
  "units": [
   {"id": "UNIT_SOVEREIGN", "name": "Sovereign", "class": "LEADER", "domain": "LAND", "layer": "LEADER",
    "cost": 0, "trainable": false, "maintenance": 0, "combat": 0, "moves": 2, "sight": 2,
@@ -92,6 +92,23 @@
   "ASSASSIN_MIN_SUCCESS": 5,
   "ASSASSIN_MAX_SUCCESS": 90,
   "ASSASSIN_KILLED_PERCENT": 50,
-  "ASSASSIN_LEADER_XP": 10
+  "ASSASSIN_LEADER_XP": 10,
+  "STANCE_COOLDOWN_TURNS": 10,
+  "STANCE_EFFECT_TURNS": 10,
+  "STANCE_BENEVOLENCE_AMENITIES": 2,
+  "STANCE_BENEVOLENCE_GOLD_PER_POP": 10,
+  "STANCE_FEAR_LOYALTY": 20,
+  "STANCE_FEAR_AFTER_TURNS": 20,
+  "STANCE_FEAR_AFTER_AMENITIES": 1,
+  "STANCE_FEAR_ASSASSIN_BONUS": 15,
+  "REPUTATION_PER_STANCE": 10,
+  "REPUTATION_PER_RAZE": 20,
+  "REPUTATION_THRESHOLD": 50,
+  "REPUTATION_BELOVED_AMENITIES": 1,
+  "REPUTATION_BELOVED_LOYALTY": 2,
+  "REPUTATION_FEARED_AMENITIES": 1,
+  "REPUTATION_FEARED_ASSASSIN_BONUS": 10,
+  "REBELLION_PERCENT": 20,
+  "REBELLION_UNITS": 2
  }
 }

@@ -206,6 +206,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.alive);
         w.boolean(p.barbarian);
         w.boolean(p.freeCity);
+        w.i32(p.reputation);
         w.i32(p.strongestUnit);
         w.i32(p.citiesFounded);
         writeFixed(w, p.gold);
@@ -302,6 +303,10 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.boolean(d.complete);
         }
         w.i32(c.loyalty);
+        w.i32(c.stanceTurn);
+        w.i32(c.benevolenceUntil);
+        w.i32(c.fearUntil);
+        w.i32(c.fearAfterUntil);
     }
     w.u32(static_cast<uint32_t>(s.agents.size()));
     for (const Agent& a : s.agents) {
@@ -369,6 +374,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.alive = r.boolean();
         p.barbarian = r.boolean();
         p.freeCity = r.boolean();
+        p.reputation = r.i32();
         p.strongestUnit = r.i32();
         p.citiesFounded = r.i32();
         p.gold = readFixed(r);
@@ -495,6 +501,10 @@ bool deserializeState(ByteReader& r, GameState& s) {
             d.complete = r.boolean();
         }
         c.loyalty = r.i32();
+        c.stanceTurn = r.i32();
+        c.benevolenceUntil = r.i32();
+        c.fearUntil = r.i32();
+        c.fearAfterUntil = r.i32();
     }
     uint32_t na = r.u32();
     if (!r.checkCount(na, 14)) return false;

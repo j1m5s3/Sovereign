@@ -18,6 +18,12 @@ FString Str(const std::string& S)
 	return UTF8_TO_TCHAR(S.c_str());
 }
 
+// Turns left before the leader can take another stance in this city.
+int32 rules_cooldown(const sov::Game& G, const sov::City& C)
+{
+	return FMath::Max(0, C.stanceTurn + G.rules().globalInt("STANCE_COOLDOWN_TURNS") - G.state().turn);
+}
+
 FString ItemName(const sov::Rules& R, sov::ProductionItem Item)
 {
 	const size_t T = static_cast<size_t>(Item.type);
@@ -610,6 +616,16 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::C)) OpenChooser(EChooser::Civic);
 	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
 	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
+	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
+	if (SelectedCity >= 0 && (WasInputKeyJustPressed(EKeys::V) || WasInputKeyJustPressed(EKeys::X)))
+	{
+		const sov::Stance St = WasInputKeyJustPressed(EKeys::V) ? sov::Stance::Benevolence : sov::Stance::Fear;
+		if (Send(sov::Command::cityStance(Me(), SelectedCity, St)))
+		{
+			Subsystem()->LastMessage = St == sov::Stance::Benevolence ? TEXT("Petitions heard, alms given: the city warms to you.")
+																	  : TEXT("Order is imposed. The city obeys, for now.");
+		}
+	}
 
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::Unit* U = G.state().unit(SelectedUnit);
@@ -708,6 +724,17 @@ void ASovPlayerController::UpdatePanel()
 		FString Queue = TEXT("Building: ");
 		Queue += C->queue.empty() ? FString(TEXT("nothing")) : ItemName(R, C->queue.front());
 		L.Add(Queue + TEXT("   P choose production   right-click: city strike"));
+		const sov::Unit* Here = G.leaderOf(Me());
+		if (Here && Here->pos == C->pos)
+		{
+			const int32 Wait = rules_cooldown(G, *C);
+			L.Add(Wait > 0 ? FString::Printf(TEXT("Stances: ready in %d turn(s)"), Wait)
+						   : FString::Printf(TEXT("V Benevolence (%d gold, +amenities)   X Fear (needs a garrison: +loyalty, resentment later)"),
+								 G.benevolenceCost(*C)));
+		}
+		if (G.state().turn < C->benevolenceUntil) L.Add(FString::Printf(TEXT("Benevolence: %d more turn(s)"), C->benevolenceUntil - G.state().turn));
+		if (G.fearActive(*C)) L.Add(FString::Printf(TEXT("Fear: order for %d more turn(s)"), C->fearUntil - G.state().turn));
+		else if (G.state().turn < C->fearAfterUntil) L.Add(FString::Printf(TEXT("Resentment after Fear: %d more turn(s)"), C->fearAfterUntil - G.state().turn));
 	}
 	if (Chooser != EChooser::None)
 	{
