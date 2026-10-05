@@ -28,6 +28,10 @@ public:
 	// Sends a player's command to the core; the result is also kept as the last message.
 	sov::CommandError Submit(const sov::Command& Command);
 
+	// Writes the game in the core's save format (live scenes autosave on entry, engine doc).
+	bool SaveGame(const FString& Name);
+	static FString SavePath(const FString& Name);
+
 	// Fires after every change to the game (player command or an AI seat's turn).
 	FSovStateChanged OnStateChanged;
 

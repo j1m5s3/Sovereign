@@ -8,6 +8,8 @@
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
 #include "SovMirror.h"
+#include "SovPlayerController.h"
+#include "SovStreetScene.h"
 
 #include "sovereign/game.h"
 
@@ -187,6 +189,60 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	}
 }
 
+void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerController& PC)
+{
+	const ASovStreetScene* Scene = PC.GetStreet();
+	const FSovStreetLayout& L = Scene->GetLayout();
+	UFont* Font = GEngine->GetSmallFont();
+	float Y = 12.f;
+	const TCHAR* Moods[] = {TEXT("content"), TEXT("happy: banners in the square"), TEXT("unhappy: shutters closed"), TEXT("under Fear: guards at every corner")};
+	Line(FString::Printf(TEXT("%s, City Center  (%s)"), *L.CityName, Moods[static_cast<int32>(L.Mood)]), 16, Y);
+	const sov::City* City = Sub.GetGame().state().city(L.CityId);
+	if (City)
+	{
+		const sov::CityReport Rep = Sub.GetGame().cityReport(L.CityId);
+		Line(FString::Printf(TEXT("Population %d   Amenities %d/%d   Loyalty %d"), City->population, Rep.amenities, Rep.amenitiesNeeded, City->loyalty), 16, Y);
+	}
+	if (!Sub.LastMessage.IsEmpty())
+	{
+		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.8f, 0.4f));
+	}
+	// Names over the landmarks and the two people who listen.
+	for (const FSovStreetPiece& P : L.Pieces)
+	{
+		if (P.Kind != ESovStreetPiece::Landmark)
+		{
+			continue;
+		}
+		const FVector S = Project(Scene->ToWorld(P.Location + FVector(0, 0, P.Size.Z * 0.5 + 120)));
+		if (S.Z > 0)
+		{
+			float W = 0, H = 0;
+			GetTextSize(P.Label, W, H, Font, 1.1f);
+			DrawRect(FLinearColor(0, 0, 0, 0.55f), S.X - W / 2 - 3, S.Y - H - 1, W + 6, H + 2);
+			DrawText(P.Label, FLinearColor::White, S.X - W / 2, S.Y - H, Font, 1.1f);
+		}
+	}
+	for (const TPair<FVector, FString>& Who : {TPair<FVector, FString>(L.Herald, TEXT("Herald")), TPair<FVector, FString>(L.Captain, TEXT("Captain of the guard"))})
+	{
+		const FVector S = Project(Scene->ToWorld(Who.Key + FVector(0, 0, 260)));
+		if (S.Z > 0)
+		{
+			DrawText(Who.Value, FLinearColor(1.f, 0.85f, 0.3f), S.X - 30, S.Y, Font, 1.1f);
+		}
+	}
+	const FString Prompt = PC.StreetPrompt();
+	if (!Prompt.IsEmpty())
+	{
+		float W = 0, H = 0;
+		GetTextSize(Prompt, W, H, Font, 1.4f);
+		DrawRect(FLinearColor(0, 0, 0, 0.7f), Canvas->ClipX / 2 - W / 2 - 8, Canvas->ClipY * 0.7f - 4, W + 16, H + 8);
+		DrawText(Prompt, FLinearColor::White, Canvas->ClipX / 2 - W / 2, Canvas->ClipY * 0.7f, Font, 1.4f);
+	}
+	float PY = Canvas->ClipY - 26.f;
+	Line(TEXT("WASD walk   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
+}
+
 void ASovHUD::DrawHUD()
 {
 	Super::DrawHUD();
@@ -196,6 +252,12 @@ void ASovHUD::DrawHUD()
 	if (!Sub || !Sub->IsRunning())
 	{
 		Line(Sub ? Sub->LastMessage : FString(TEXT("No game")), 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
+		return;
+	}
+	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
+	if (PC && PC->InStreet())
+	{
+		DrawStreet(*Sub, *PC);
 		return;
 	}
 	DrawLabels(*Sub);

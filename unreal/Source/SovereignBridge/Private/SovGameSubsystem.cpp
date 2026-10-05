@@ -2,6 +2,11 @@
 
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
+#include "sovereign/serialize.h"
+
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSovereign, Log, All);
 
@@ -57,6 +62,25 @@ void USovGameSubsystem::Tick(float DeltaTime)
 		UE_LOG(LogSovereign, Error, TEXT("%s"), *LastMessage);
 	}
 	OnStateChanged.Broadcast();
+}
+
+FString USovGameSubsystem::SavePath(const FString& Name)
+{
+	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), Name + TEXT(".sov"));
+}
+
+bool USovGameSubsystem::SaveGame(const FString& Name)
+{
+	if (!Session.IsRunning())
+	{
+		return false;
+	}
+	const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
+	TArray<uint8> Data;
+	Data.Append(Bytes.data(), static_cast<int32>(Bytes.size()));
+	const FString Path = SavePath(Name);
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
+	return FFileHelper::SaveArrayToFile(Data, *Path);
 }
 
 TStatId USovGameSubsystem::GetStatId() const

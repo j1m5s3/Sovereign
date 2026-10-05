@@ -8,6 +8,9 @@
 #include "SovHUD.h"
 #include "SovHexLayout.h"
 #include "SovMapActor.h"
+#include "SovStreetScene.h"
+
+#include "Engine/World.h"
 
 #include "sovereign/game.h"
 
@@ -570,6 +573,124 @@ void ASovPlayerController::Pick(int32 Index)
 	}
 }
 
+// ------------------------------------------------------------------ street scenes
+
+void ASovPlayerController::EnterStreet()
+{
+	USovGameSubsystem* Sub = Subsystem();
+	const sov::Game& G = Sub->GetGame();
+	const sov::Unit* Leader = G.leaderOf(Me());
+	const sov::City* City = Leader ? G.state().cityAt(Leader->pos) : nullptr;
+	if (!City || City->owner != Me())
+	{
+		Sub->LastMessage = TEXT("The leader must stand in one of your cities to walk its streets.");
+		return;
+	}
+	// The game autosaves when a live scene starts; there is no saving inside one (engine doc).
+	Sub->SaveGame(TEXT("autosave"));
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), FRotator::ZeroRotator, Params);
+	Street->Build(BuildStreetLayout(G, City->id));
+	Walker = GetWorld()->SpawnActor<ASovWalker>(Street->ToWorld(Street->GetLayout().Entry + FVector(0, 0, 120)), FRotator::ZeroRotator, Params);
+	Walker->SetColor(SovPlayerColor(G, Me()));
+	MapPawn = GetPawn();
+	Possess(Walker);
+	SetControlRotation(FRotator(-15.f, 0.f, 0.f));
+	Chooser = EChooser::None;
+	Sub->LastMessage = FString::Printf(TEXT("You walk into %s. WASD to walk, hold right mouse to look, F to talk, Esc to return."),
+		*Street->GetLayout().CityName);
+}
+
+void ASovPlayerController::ExitStreet()
+{
+	if (MapPawn)
+	{
+		Possess(MapPawn);
+	}
+	if (Walker)
+	{
+		Walker->Destroy();
+	}
+	if (Street)
+	{
+		Street->Destroy();
+	}
+	Walker = nullptr;
+	Street = nullptr;
+	Subsystem()->LastMessage.Reset();
+}
+
+FString ASovPlayerController::StreetPrompt() const
+{
+	if (!Street || !Walker)
+	{
+		return FString();
+	}
+	const FVector At = Walker->GetActorLocation();
+	const FSovStreetLayout& L = Street->GetLayout();
+	if (FVector::Dist2D(At, Street->ToWorld(L.Herald)) < 450.0)
+	{
+		return TEXT("F: hear petitions and give alms (Benevolence)");
+	}
+	if (FVector::Dist2D(At, Street->ToWorld(L.Captain)) < 450.0)
+	{
+		return TEXT("F: order a show of force (Fear)");
+	}
+	return FString();
+}
+
+void ASovPlayerController::UpdateStreet(float DeltaTime)
+{
+	if (WasInputKeyJustPressed(EKeys::Escape))
+	{
+		ExitStreet();
+		return;
+	}
+	// Look around: the control rotation is set directly (input-axis rotation is consumed before this runs).
+	FRotator Look = GetControlRotation();
+	if (IsInputKeyDown(EKeys::RightMouseButton))
+	{
+		float DX = 0.f, DY = 0.f;
+		GetInputMouseDelta(DX, DY);
+		Look.Yaw += DX * 2.5f;
+		Look.Pitch = FMath::ClampAngle(Look.Pitch + DY * 2.5f, -60.f, 20.f);
+	}
+	if (IsInputKeyDown(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
+	if (IsInputKeyDown(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
+	SetControlRotation(Look);
+	const FRotator Yaw(0.f, GetControlRotation().Yaw, 0.f);
+	const FVector Forward = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Right = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
+	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Walker->AddMovementInput(Forward);
+	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Walker->AddMovementInput(-Forward);
+	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Walker->AddMovementInput(Right);
+	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Walker->AddMovementInput(-Right);
+	if (WasInputKeyJustPressed(EKeys::F))
+	{
+		const FSovStreetLayout& L = Street->GetLayout();
+		const FVector At = Walker->GetActorLocation();
+		const bool bHerald = FVector::Dist2D(At, Street->ToWorld(L.Herald)) < 450.0;
+		const bool bCaptain = FVector::Dist2D(At, Street->ToWorld(L.Captain)) < 450.0;
+		if (bHerald || bCaptain)
+		{
+			const sov::Stance St = bHerald ? sov::Stance::Benevolence : sov::Stance::Fear;
+			if (Send(sov::Command::cityStance(Me(), L.CityId, St)))
+			{
+				// Rebuild the street so the new mood shows (banners or guards).
+				const FVector Keep = Walker->GetActorLocation() - Street->GetActorLocation();
+				Street->Destroy();
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), FRotator::ZeroRotator, Params);
+				Street->Build(BuildStreetLayout(Subsystem()->GetGame(), L.CityId));
+				Walker->SetActorLocation(Street->GetActorLocation() + Keep);
+				Subsystem()->LastMessage = St == sov::Stance::Benevolence ? TEXT("The petitioners bless your name. (+amenities)")
+																		  : TEXT("The guard parades through the square. Order holds. (+loyalty)");
+			}
+		}
+	}
+}
+
 void ASovPlayerController::HandleOrders()
 {
 	int32 X = 0, Y = 0;
@@ -662,6 +783,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::B)) OpenChooser(EChooser::Improvement);
 	if (WasInputKeyJustPressed(EKeys::E) && G.isLeader(*U)) OpenChooser(EChooser::Gear);
 	if (WasInputKeyJustPressed(EKeys::U)) OpenChooser(EChooser::Promotion);
+	if (WasInputKeyJustPressed(EKeys::Q) && G.isLeader(*U)) EnterStreet();
 	if (WasInputKeyJustPressed(EKeys::L))
 	{
 		// Link the leader and the military unit on its plot, or end the link.
@@ -706,7 +828,7 @@ void ASovPlayerController::UpdatePanel()
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
 		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
-		if (G.isLeader(*U)) Keys += TEXT("   E gear   L link escort");
+		if (G.isLeader(*U)) Keys += TEXT("   E gear   L link escort   Q walk the streets");
 		else if (T.layer == sov::UnitLayer::Military && G.state().unitAt(U->pos, sov::UnitLayer::Leader, R)) Keys += TEXT("   L escort the leader");
 		if (T.buildCharges > 0) Keys += TEXT("   B build");
 		L.Add(Keys);
@@ -761,6 +883,15 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	if (InStreet())
+	{
+		UpdateStreet(DeltaTime);
+		if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+		{
+			Hud->PanelLines.Reset();
+		}
+		return;
+	}
 	UpdateCamera(DeltaTime);
 	USovGameSubsystem* Sub = Subsystem();
 	if (!Sub || !Sub->IsRunning())

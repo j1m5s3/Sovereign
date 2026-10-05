@@ -55,6 +55,8 @@ from `../data/rules`.
 | `L` | Link the leader and the military unit on its plot as escort (they move together), or release it |
 | `H` | The throne: choose a successor after the leader falls (an heir may keep one promotion), or abandon a captured leader |
 | `U` | Promote the selected unit or leader (the leader has three branches; only one can be finished per reign) |
+| `Q` | Leader in one of your cities: walk its City Center at street level (autosaves first). WASD walk, hold right mouse or Q/E to look, `F` talks to the herald (Benevolence) or the captain of the guard (Fear), `Esc` returns to the map |
+| `V` / `X` | City panel with the leader in that city: Benevolence / Fear without walking (classic control) |
 | `J` | Assassins: send an idle one after a rival ruler (shows the odds when that ruler is in sight), or recall one |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
@@ -72,11 +74,12 @@ Headless automation tests (no window):
 - `Sovereign.Bridge.HexLayoutRoundTrip`: world positions and picking match `sov::HexGrid`.
 - `Sovereign.Bridge.MirrorFollowsCore`: after 20 all-AI turns, the mirror's tiles, units and cities equal what seat 0 knows.
 - `Sovereign.Bridge.LeaderInMirrorAndCommands`: seat 0's leader appears as a leader marker with its ruler's name, and the escort link goes through as a command.
+- `Sovereign.Street.CityCenterFromGameState`: the generated City Center has a landmark per building (the Palace included), houses and crowd by population, six streets, no walls without wall buildings, and the same layout for the same hex.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.
 
 ## Not yet
 
-East-west wrap is not drawn (the map is shown once), and there are no rivers, resources,
+Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there are no rivers, resources,
 improvements, borders, yields, promotions UI, diplomacy UI or saves in the UI yet.

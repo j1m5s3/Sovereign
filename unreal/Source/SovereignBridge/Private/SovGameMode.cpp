@@ -6,6 +6,7 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/GameInstance.h"
 #include "Engine/SkyLight.h"
+#include "Engine/TextureCube.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -44,9 +45,11 @@ void ASovGameMode::SpawnLighting()
 	ASkyLight* SkyLight = World->SpawnActor<ASkyLight>(FVector::ZeroVector, FRotator::ZeroRotator, Params);
 	if (USkyLightComponent* L = SkyLight->GetLightComponent())
 	{
+		// Ambient light from the engine's daylight cubemap, so faces turned from the sun stay readable.
 		L->SetMobility(EComponentMobility::Movable);
-		L->bRealTimeCapture = true;
-		L->SetIntensity(1.0f);
+		L->SourceType = ESkyLightSourceType::SLS_SpecifiedCubemap;
+		L->SetCubemap(LoadObject<UTextureCube>(nullptr, TEXT("/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap")));
+		L->SetIntensity(1.5f);
 		L->RecaptureSky();
 	}
 }

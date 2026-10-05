@@ -5,6 +5,7 @@
 #include "SovHexLayout.h"
 #include "SovMirror.h"
 #include "SovSession.h"
+#include "SovStreetLayout.h"
 
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
@@ -254,6 +255,40 @@ bool FSovLeaderMirrorTest::RunTest(const FString& Parameters)
 	// Assassins need an Encampment: nobody can send one at the start.
 	TestEqual(TEXT("no assassins yet"), G.agentCapacity(0), 0);
 	TestEqual(TEXT("cannot send a missing agent"), Session.Submit(sov::Command::sendAssassin(0, 1, 1)), sov::CommandError::CannotSendAgent);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovStreetLayoutTest, "Sovereign.Street.CityCenterFromGameState", kSovTestFlags)
+bool FSovStreetLayoutTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	sov::UnitId Settler = sov::kNoUnit;
+	for (const sov::Unit& U : Session.GetGame().state().units)
+	{
+		if (U.owner == 0 && Session.GetRules().units[static_cast<size_t>(U.type)].foundCity) Settler = U.id;
+	}
+	TestEqual(TEXT("found the capital"), Session.Submit(sov::Command::foundCity(0, Settler)), sov::CommandError::Ok);
+	const sov::City& City = Session.GetGame().state().cities.back();
+	const FSovStreetLayout A = BuildStreetLayout(Session.GetGame(), City.id);
+	const FSovStreetLayout B = BuildStreetLayout(Session.GetGame(), City.id);
+	TestEqual(TEXT("one landmark per building"), A.Count(ESovStreetPiece::Landmark), static_cast<int32>(City.buildings.size()));
+	TestTrue(TEXT("the Palace is a landmark"), A.Pieces.ContainsByPredicate([](const FSovStreetPiece& P) { return P.Kind == ESovStreetPiece::Landmark && P.Label == TEXT("Palace"); }));
+	TestEqual(TEXT("filler houses follow population"), A.Count(ESovStreetPiece::House) + A.Count(ESovStreetPiece::Boarded), 10 + City.population * 8);
+	TestEqual(TEXT("six main streets"), A.Count(ESovStreetPiece::Street), 6);
+	TestFalse(TEXT("no walls yet"), A.bWalls);
+	TestEqual(TEXT("crowd by population"), A.Crowd, 6 + City.population * 4);
+	TestEqual(TEXT("same hex, same result"), A.Pieces.Num(), B.Pieces.Num());
+	bool bSame = A.Pieces.Num() == B.Pieces.Num();
+	for (int32 i = 0; bSame && i < A.Pieces.Num(); ++i) bSame = A.Pieces[i].Location.Equals(B.Pieces[i].Location);
+	TestTrue(TEXT("identical placement"), bSame);
+	TestTrue(TEXT("herald and captain on the plaza"), A.Herald.Size2D() < 1800.0 && A.Captain.Size2D() < 1800.0);
 	return true;
 }
 
