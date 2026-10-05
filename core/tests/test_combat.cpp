@@ -309,3 +309,31 @@ TEST(closed_borders_block_units_not_at_war) {
     auto war = setup(true);
     CHECK_EQ(war->submit(Command::move(0, w, {7, 5})), CommandError::Ok);
 }
+
+TEST(units_upgrade_for_gold_in_their_territory) {
+    GameState s = flatState(20, 14, 1);
+    const UnitId id = addUnit(s, "UNIT_SLINGER", 0, {6, 6});
+    s.units.back().hp = 70;
+    s.units.back().xp = 12;
+    for (const Hex& h : s.grid.within({6, 6}, 2)) s.plot(h).owner = 0;
+    Player& p = s.players[0];
+    p.techs.resize(rules().techs.size());
+    p.gold = Fixed::fromInt(100);
+    auto g = Game::fromScenario(rules(), s);
+    const Unit& u = *g->state().unit(id);
+    CHECK_EQ(g->upgradeCost(u), 10 + (60 - 35));  // UPGRADE_BASE_COST + the production difference
+    CHECK(g->upgradeProblem(id) == CommandError::CannotUpgrade);  // Archery unknown
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_ARCHERY"))] = 1;
+    auto g2 = Game::fromScenario(rules(), s);
+    REQUIRE(g2->submit(Command::upgradeUnit(0, id)) == CommandError::Ok);
+    const Unit& up = *g2->state().unit(id);
+    CHECK(up.type == rules().unit("UNIT_ARCHER"));
+    CHECK_EQ(up.hp, 70);  // keeps its health and experience
+    CHECK_EQ(up.xp, 12);
+    CHECK(up.movesLeft == Fixed());  // the upgrade takes its turn
+    CHECK(g2->state().players[0].gold == Fixed::fromInt(65));
+    // Outside its territory it cannot.
+    s.units[0].pos = {12, 6};
+    auto g3 = Game::fromScenario(rules(), std::move(s));
+    CHECK(g3->upgradeProblem(id) == CommandError::CannotUpgrade);
+}

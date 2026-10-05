@@ -39,6 +39,10 @@ constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kProposalGap = 10;        // turns between deals put to the same civ
 constexpr int kThreatRange = 4;
 constexpr int kHealBelow = 40;
+constexpr int kStageDistance = 4;     // an operation gathers this far from its target city
+constexpr int kAssaultRatio = 200;    // own strength vs the city's to start an assault (AiOperationTeams: 2x)
+constexpr int kWalledRatio = 300;     // against walls (Civ: 2x to start, 4x to continue, with siege)
+constexpr int kReinforceRange = 6;    // units this close come to a threatened city
 
 size_t at(TypeIndex i) { return static_cast<size_t>(i); }
 size_t yi(YieldType y) { return static_cast<size_t>(y); }
@@ -71,6 +75,7 @@ struct View {
     bool majorWar = false;         // at war with a major civ (city-state wars do not stop expansion)
     int sites = -1;                // free city sites near our cities (-1: not counted yet this turn)
     Posture posture;
+    bool wantSiege = false;        // at war with walled cities and short of siege units
 
     View(Game& g, PlayerId p) : game(g), r(g.rules()), me(p) {}
     const GameState& s() const { return game.state(); }
@@ -121,6 +126,8 @@ void survey(View& v) {
             v.r.units[at(c.queue.front().type)].foundCity)
             ++v.settlers;
     }
+    int siege = 0;
+    for (const Unit& u : s.units) siege += u.owner == v.me && v.r.units[at(u.type)].bombard > 0 ? 1 : 0;
     v.enemies.clear();
     v.majorWar = false;
     for (const Player& p : s.players) {
@@ -129,6 +136,9 @@ void survey(View& v) {
             v.majorWar |= v.game.isMajorCiv(p.id);
         }
     }
+    bool walls = false;
+    for (const City& c : s.cities) walls |= c.wallHp > 0 && v.hostile(c.owner) && v.game.isMajorCiv(c.owner);
+    v.wantSiege = walls && siege * 4 < v.military;
     v.sites = -1;
 }
 
@@ -816,6 +826,7 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     if (pv.defender != kNoUnit) {
         const Unit* d = v.s().unit(pv.defender);
         if (d && pv.damageToDefenderMin >= d->hp) value += 1000;  // a sure kill
+        if (d) value += (100 - d->hp) * 4;                        // focus fire on the wounded
     } else if (pv.city != kNoCity) {
         // Melee into walls only with siege help; ranged chip damage is always welcome.
         if (pv.hitsWalls && !pv.ranged && t.bombard == 0) return INT_MIN;
@@ -934,18 +945,60 @@ void military(View& v) {
         if (bestDist == 0) rest(v, id);
         else if (!approach(v, id, c.pos, true)) used[pick] = 0;
     }
-    // 2. The rest: heal, march on the target, clear camps, scout, or stand guard.
-    std::optional<Hex> targetCity;
+    // 2. Reinforcements: units near a threatened city come to its side.
+    for (size_t ci : order) {
+        if (v.threat[ci] == 0) continue;
+        const Hex spot = s.city(v.cities[ci])->pos;
+        int sent = 0;
+        for (size_t k = 0; k < army.size() && sent * 10 < v.threat[ci]; ++k) {
+            if (used[k]) continue;
+            const Unit* u = s.unit(army[k]);
+            if (!u || u->movesLeft <= Fixed() || u->hp < kHealBelow || s.grid.distance(u->pos, spot) > kReinforceRange) continue;
+            used[k] = 1;
+            ++sent;
+            if (s.grid.distance(u->pos, spot) <= 1) rest(v, army[k]);
+            else if (!approach(v, army[k], spot, false)) used[k] = 0;
+        }
+    }
+    // 3. The operation against the target civ (AiOperationDefs: attack city / attack walled city):
+    // gather at a staging plot, then assault once strong enough, siege along when there are walls.
+    std::optional<Hex> targetCity, staging;
+    bool assault = false;
     if (v.target != kNoPlayer && !v.cities.empty()) {
-        const Hex home = s.city(v.cities.front())->pos;
+        const City* goal = nullptr;
         int best = INT_MAX;
         for (const City& c : s.cities) {
             if (c.owner != v.target || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
-            const int d = s.grid.distance(home, c.pos);
+            const int d = distanceToCity(s, v.me, c.pos);
             if (d < best) {
                 best = d;
-                targetCity = c.pos;
+                goal = &c;
             }
+        }
+        if (goal) {
+            targetCity = goal->pos;
+            // Staging: the plot kStageDistance from the target nearest our own cities.
+            int bestStage = INT_MAX;
+            for (const Hex& h : s.grid.within(goal->pos, kStageDistance)) {
+                if (s.grid.distance(h, goal->pos) != kStageDistance || !isLandPassable(s, v.r, h)) continue;
+                const int d = distanceToCity(s, v.me, h);
+                if (d < bestStage) {
+                    bestStage = d;
+                    staging = h;
+                }
+            }
+            int strength = 0, siegeNear = 0;
+            for (size_t k = 0; k < army.size(); ++k) {
+                if (used[k]) continue;
+                const Unit& u = *s.unit(army[k]);
+                const UnitType& t = v.r.units[at(u.type)];
+                if (s.grid.distance(u.pos, goal->pos) > kStageDistance + 2 || u.hp < kHealBelow) continue;
+                strength += power(t) * u.hp / 100;
+                siegeNear += t.bombard > 0 ? 1 : 0;
+            }
+            const bool walled = goal->wallHp > 0;
+            const int need = v.game.cityStrength(*goal) * (walled ? kWalledRatio : kAssaultRatio) / 100;
+            assault = strength >= need && (!walled || siegeNear > 0 || goal->wallHp <= 0);
         }
     }
     bool scouted = false;
@@ -972,7 +1025,14 @@ void military(View& v) {
             }
             if (home && approach(v, id, *home, false)) continue;
         }
-        if (targetCity && t.unitClass != "RECON" && approach(v, id, *targetCity, false)) continue;
+        if (targetCity && t.unitClass != "RECON") {
+            const Hex goal = assault || !staging ? *targetCity : *staging;
+            if (!assault && staging && s.grid.distance(u->pos, *staging) <= 1) {
+                rest(v, id);  // gathered; wait for the rest
+                continue;
+            }
+            if (approach(v, id, goal, false)) continue;
+        }
         if (v.enemies.empty() && power(t) >= 15) {
             const Camp* nearest = nullptr;
             for (const Camp& camp : s.camps) {
@@ -1057,6 +1117,12 @@ int desiredArmy(const View& v) {
 
 std::optional<ProductionItem> bestMilitaryUnit(const View& v, const std::vector<ProductionItem>& items) {
     const bool wantRanged = v.ranged * 2 < v.military - v.ranged;
+    // A war on walled cities wants one siege unit per four soldiers.
+    if (v.wantSiege) {
+        for (const ProductionItem& it : items) {
+            if (it.kind == ProductionKind::Unit && v.r.units[at(it.type)].bombard > 0 && isArmy(v.r.units[at(it.type)])) return it;
+        }
+    }
     std::optional<ProductionItem> best;
     int bestScore = INT_MIN;
     for (const ProductionItem& it : items) {
@@ -1266,6 +1332,29 @@ void purchases(View& v) {
             }
         }
         if (!best || g.submit(Command::purchase(v.me, best->first, best->second)) != CommandError::Ok) break;
+    }
+}
+
+// Upgrades (05: Upgrades): the biggest strength gain per gold first, keeping a reserve.
+void upgrades(View& v) {
+    Game& g = v.game;
+    const int reserve = 40 + 10 * static_cast<int>(v.cities.size());
+    for (int guard = 0; guard < 8; ++guard) {
+        UnitId best = kNoUnit;
+        int64_t bestScore = 0;
+        for (const Unit& u : v.s().units) {
+            if (u.owner != v.me || g.upgradeProblem(u.id) != CommandError::Ok) continue;
+            const UnitType& from = v.r.units[at(u.type)];
+            const int gain = power(v.r.units[at(from.upgradesTo)]) - power(from);
+            const int cost = g.upgradeCost(u);
+            if (gain <= 0 || v.s().players[at(v.me)].gold < Fixed::fromInt(cost + reserve)) continue;
+            const int64_t score = static_cast<int64_t>(gain) * 1000 / std::max(1, cost);
+            if (score > bestScore) {
+                bestScore = score;
+                best = u.id;
+            }
+        }
+        if (best == kNoUnit || g.submit(Command::upgradeUnit(v.me, best)) != CommandError::Ok) break;
     }
 }
 
@@ -1673,6 +1762,7 @@ void playTurn(Game& game) {
     attacks(v);  // units that moved into reach
     leader(v);
     production(v);
+    upgrades(v);
     purchases(v);
     patronage(v);
     envoys(v);

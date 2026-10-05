@@ -852,12 +852,19 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				break;
 			}
-			ChooserTitle = TEXT("Promotion (heals 50 and ends the unit's turn)");
+			ChooserTitle = TEXT("Promotion or upgrade (either ends the unit's turn)");
 			for (sov::TypeIndex Pr : G.availablePromotions(U->id))
 			{
 				const sov::PromotionType& T = R.promotions[static_cast<size_t>(Pr)];
 				const FString Branch = T.branch.empty() ? FString() : FString::Printf(TEXT(" [%s]"), *Str(T.branch));
 				Choices.Add({FString::Printf(TEXT("%s%s"), *Str(T.name), *Branch), sov::Command::promote(Me(), U->id, Pr)});
+			}
+			// Upgrade to the next unit in the line (05: Upgrades), in our territory for gold.
+			const sov::TypeIndex To = R.units[static_cast<size_t>(U->type)].upgradesTo;
+			if (To != sov::kNone && G.upgradeProblem(U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({FString::Printf(TEXT("Upgrade to %s (%d gold)"), *Str(R.units[static_cast<size_t>(To)].name), G.upgradeCost(*U)),
+					sov::Command::upgradeUnit(Me(), U->id)});
 			}
 			break;
 		}

@@ -225,6 +225,11 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor:
             return validateGovernor(c);
+        case CommandType::UpgradeUnit: {
+            const Unit* u = state_.unit(c.id);
+            if (!u || u->owner != c.player) return CommandError::NotYourUnit;
+            return upgradeProblem(c.id);
+        }
         case CommandType::CongressVote: {
             const int item = c.id;
             if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
@@ -662,6 +667,18 @@ void Game::apply(const Command& c) {
         case CommandType::AppointGovernor:
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor: applyGovernor(c); break;
+        case CommandType::UpgradeUnit: {
+            Unit& u = *state_.unit(c.id);
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            p.gold -= Fixed::fromInt(upgradeCost(u));
+            const TypeIndex to = rules_->units[static_cast<size_t>(u.type)].upgradesTo;
+            const UnitType& up = rules_->units[static_cast<size_t>(to)];
+            if (up.strategicResource != kNone && up.strategicCost > 0) p.stockpile[static_cast<size_t>(up.strategicResource)] -= up.strategicCost;
+            u.type = to;  // keeps its health, experience and promotions; the upgrade takes its turn
+            u.movesLeft = Fixed();
+            u.activity = Activity::Awake;
+            break;
+        }
         case CommandType::CongressVote: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             p.favor -= extraVoteCost(c.target.x);

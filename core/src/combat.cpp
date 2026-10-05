@@ -610,6 +610,31 @@ CommandError Game::validateCombat(const Command& c) const {
     return any ? CommandError::Ok : CommandError::CannotAttack;
 }
 
+int Game::upgradeCost(const Unit& unit) const {
+    const UnitType& from = rules_->units[static_cast<size_t>(unit.type)];
+    if (from.upgradesTo == kNone) return -1;
+    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    // UPGRADE_BASE_COST + the production difference x UPGRADE_NET_PRODUCTION_PERCENT_COST, at least
+    // UPGRADE_MINIMUM_COST, scaled by game speed (exact engine formula unverified; Warrior -> Swordsman 60).
+    const int diff = std::max(0, to.cost - from.cost) * rules_->globalInt("UPGRADE_NET_PRODUCTION_PERCENT_COST") / 100;
+    const int cost = std::max(rules_->globalInt("UPGRADE_MINIMUM_COST"), rules_->globalInt("UPGRADE_BASE_COST") + diff);
+    const int speed = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
+    return std::max(1, cost * speed / 100);
+}
+
+CommandError Game::upgradeProblem(UnitId id) const {
+    const Unit* u = state_.unit(id);
+    if (!u) return CommandError::BadUnit;
+    const UnitType& from = rules_->units[static_cast<size_t>(u->type)];
+    if (from.upgradesTo == kNone) return CommandError::CannotUpgrade;
+    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    // In its owner's territory with moves left, the new unit known, gold and its strategic resource on hand.
+    if (state_.plot(u->pos).owner != u->owner || u->movesLeft <= Fixed() || isEmbarked(*u)) return CommandError::CannotUpgrade;
+    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, from.upgradesTo)) return CommandError::CannotUpgrade;
+    if (state_.players[static_cast<size_t>(u->owner)].gold < Fixed::fromInt(upgradeCost(*u))) return CommandError::NotEnoughGold;
+    return CommandError::Ok;
+}
+
 void Game::removeUnit(UnitId id) {
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(), [&](const Unit& x) { return x.id == id; }),
                        state_.units.end());

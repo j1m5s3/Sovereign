@@ -66,6 +66,7 @@ enum class CommandType : uint8_t {
     AssignGovernor = 46,        // arg = governor type, id = city (own, or a city-state's for Amani); it starts establishing
     SpyMission = 47,            // id = spy agent, arg = SpyMission (None: home), arg2 = city; a new city costs travel first
     CongressVote = 48,          // id = item in session, arg = option (0 A, 1 B), arg2 = candidate index, target.x = votes bought with favor
+    UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -180,6 +181,7 @@ struct Command {
     static Command spyMission(PlayerId p, int32_t spy, SpyMission mission, CityId city) {
         return {CommandType::SpyMission, p, spy, {}, static_cast<int32_t>(mission), city};
     }
+    static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command congressVote(PlayerId p, int32_t item, int option, int32_t candidate, int extraVotes = 0) {
         return {CommandType::CongressVote, p, item, Hex{extraVotes, 0}, option, candidate};
     }
@@ -252,6 +254,7 @@ enum class CommandError : uint8_t {
     CannotGovern,
     CannotSpy,
     CannotVote,
+    CannotUpgrade,
 };
 
 // The items a ProposeDeal command carries (empty when its payload is malformed).
