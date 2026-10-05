@@ -80,6 +80,7 @@ protected:
 
 	void OpenChooser(EChooser Kind);
 	void EnterStreet();
+	void StartBattle();
 	void ExitStreet();
 	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);

@@ -206,6 +206,9 @@ struct GameSetup {
     bool dominationVictory = true;
     bool scoreVictory = true;
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
+    // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
+    // off in headless games, on in the Unreal front end.
+    bool liveBattles = false;
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
@@ -219,6 +222,18 @@ struct Agent {
     int level = 1;               // Recruit 1, Agent 2, Secret Agent 3, Master 4
     PlayerId target = kNoPlayer; // kNoPlayer: idle at home
     int travel = 0;              // turns until it is in place
+};
+
+// A melee waiting for its live battle (leader doc §9, battle result contract). The core
+// has worked out the expected Civ result; a BattleResult command (clamped to the band)
+// or AutoResolveBattle settles it. Nothing else may happen meanwhile.
+struct PendingBattle {
+    bool active = false;
+    UnitId attacker = kNoUnit, defender = kNoUnit;
+    Hex target;
+    PlayerId liveFor = kNoPlayer;   // the human whose leader is in the fight
+    UnitId leader = kNoUnit;        // that leader
+    int expectedToDefender = 0, expectedToAttacker = 0;  // HP damage at the middle roll
 };
 
 // Things that happened that players should hear about (UI and AI read them; rules do not).
@@ -252,6 +267,7 @@ struct SOV_API GameState {
     std::vector<Camp> camps;    // sorted by id
     std::vector<Agent> agents;  // sorted by id
     std::vector<GameEvent> events;  // most recent last, capped
+    PendingBattle pendingBattle;
     UnitId nextUnitId = 1;
     int32_t nextCampId = 1;
     int32_t nextAgentId = 1;

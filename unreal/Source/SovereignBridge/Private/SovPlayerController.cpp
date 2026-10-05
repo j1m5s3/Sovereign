@@ -575,6 +575,13 @@ void ASovPlayerController::Pick(int32 Index)
 
 // ------------------------------------------------------------------ street scenes
 
+void ASovPlayerController::StartBattle()
+{
+	// The live battle scene arrives with battle milestone 2; until then the fight is auto-resolved.
+	Subsystem()->LastMessage = TEXT("Live battle scenes are not built yet: auto-resolving.");
+	Send(sov::Command::autoResolveBattle(Me()));
+}
+
 void ASovPlayerController::EnterStreet()
 {
 	USovGameSubsystem* Sub = Subsystem();
@@ -693,6 +700,17 @@ void ASovPlayerController::UpdateStreet(float DeltaTime)
 
 void ASovPlayerController::HandleOrders()
 {
+	// A live battle waits for us, whoever's turn it is (leader doc §9).
+	const sov::Game& Gm = Subsystem()->GetGame();
+	if (Gm.battlePending())
+	{
+		if (Gm.state().pendingBattle.liveFor == Me())
+		{
+			if (WasInputKeyJustPressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
+			else if (WasInputKeyJustPressed(EKeys::B)) StartBattle();
+		}
+		return;
+	}
 	int32 X = 0, Y = 0;
 	if (WasInputKeyJustPressed(EKeys::LeftMouseButton) && HexUnderCursor(X, Y))
 	{
@@ -871,6 +889,21 @@ void ASovPlayerController::UpdatePanel()
 				L.Add(FString::Printf(TEXT("  %d. %s"), i + 1, *Choices[I].Label));
 			}
 		}
+	}
+	if (G.battlePending() && G.state().pendingBattle.liveFor == Me())
+	{
+		const sov::PendingBattle& Bt = G.state().pendingBattle;
+		const sov::Unit* A = S.unit(Bt.attacker);
+		const sov::Unit* D = S.unit(Bt.defender);
+		L.Add(TEXT("BATTLE! Your leader's stack is in a melee."));
+		if (A && D)
+		{
+			L.Add(FString::Printf(TEXT("%s attacks %s. Expected: %d damage to the defender, %d to the attacker (the field can shift it 25%%)."),
+				*Str(R.units[static_cast<size_t>(A->type)].name), *Str(R.units[static_cast<size_t>(D->type)].name), Bt.expectedToDefender,
+				Bt.expectedToAttacker));
+		}
+		L.Add(TEXT("B fight it live   R auto-resolve"));
+		return;
 	}
 	if (MyTurn())
 	{

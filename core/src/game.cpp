@@ -149,6 +149,9 @@ Visibility Game::visibility(PlayerId player, Hex h) const {
 CommandError Game::validate(const Command& c) const {
     if (c.player < 0 || static_cast<size_t>(c.player) >= state_.players.size()) return CommandError::BadPlayer;
     if (!state_.players[static_cast<size_t>(c.player)].alive) return CommandError::BadPlayer;
+    // A pending live battle stops the world until it is settled, whoever's turn it is (leader doc §9).
+    if (state_.pendingBattle.active || c.type == CommandType::BattleResult || c.type == CommandType::AutoResolveBattle)
+        return validateBattle(c);
     if (c.player != state_.currentPlayer) return CommandError::NotYourTurn;
     if (state_.winner != kNoPlayer) return CommandError::GameOver;
 
@@ -509,6 +512,8 @@ void Game::apply(const Command& c) {
         case CommandType::AbandonLeader:
         case CommandType::SendAssassin:
         case CommandType::CityStance: applyLeader(c); break;
+        case CommandType::BattleResult:
+        case CommandType::AutoResolveBattle: applyBattle(c); break;
     }
 }
 

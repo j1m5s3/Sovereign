@@ -49,6 +49,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup = std::make_unique<sov::GameSetup>();
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
+	CoreSetup->liveBattles = Setup.bHumanSeat0;  // melee with the human's leader stack can be fought live
 	for (int32 i = 0; i < Setup.Players; ++i)
 	{
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
@@ -95,7 +96,7 @@ sov::CommandError FSovSession::Submit(const sov::Command& Command)
 
 bool FSovSession::StepAI()
 {
-	if (!Game || bStalled || Game->gameOver() || IsHumanTurn())
+	if (!Game || bStalled || Game->gameOver() || IsHumanTurn() || Game->battlePending())
 	{
 		return false;
 	}
@@ -104,6 +105,11 @@ bool FSovSession::StepAI()
 	const sov::PlayerId Seat = S.currentPlayer;
 	sov::ai::playTurn(*Game);
 	++Rev;
+	// An attack on the human's leader stack pauses the seat until the battle is settled.
+	if (Game->battlePending())
+	{
+		return true;
+	}
 	if (!Game->gameOver() && Game->state().turn == Turn && Game->state().currentPlayer == Seat)
 	{
 		bStalled = true;
