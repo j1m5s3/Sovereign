@@ -66,7 +66,8 @@ protected:
 		Pantheon,
 		ReligionFounder,
 		ReligionFollower,
-		Evangelize
+		Evangelize,
+		TradeRoute
 	};
 
 	struct FChoice

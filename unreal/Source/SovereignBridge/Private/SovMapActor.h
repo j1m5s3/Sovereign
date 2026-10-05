@@ -57,6 +57,10 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Crowns;
 
+	// Road segments between plot centres.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> RoadPieces;
+
 	// Boats under embarked units.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Boats;

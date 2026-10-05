@@ -691,6 +691,13 @@ void production(View& v) {
         const bool wantArmy = v.military < desiredArmy(v);
         const bool wantSettler = static_cast<int>(v.cities.size()) + v.settlers < kMaxCities && v.settlers < 2 &&
                                  c.population >= 2 && !threatened && v.enemies.empty() && s.turn < 200;
+        int traders = 0;
+        for (const Unit& u : s.units) traders += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_TRADER";
+        for (CityId other : v.cities) {
+            const City& oc = *s.city(other);
+            traders += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].id == "UNIT_TRADER";
+        }
+        const bool wantTrader = g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
         const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0);
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
         // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
@@ -711,6 +718,7 @@ void production(View& v) {
                 case ProductionKind::Unit: {
                     const UnitType& t = v.r.units[at(it.type)];
                     if (t.agent) value = wantAssassin ? 250 : 0;
+                    else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.foundCity) value = wantSettler ? 400 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? 220 : 0;
@@ -931,6 +939,39 @@ void buyReligion(View& v) {
     }
 }
 
+// Traders take the route paying most to their city (07); one with nowhere to go waits.
+void trader(View& v, UnitId id) {
+    Game& g = v.game;
+    const Unit* u = v.s().unit(id);
+    const City* origin = g.tradeOrigin(id);
+    if (!origin) {
+        // Walk home to the nearest of our cities first.
+        std::optional<Hex> home;
+        int bestDist = INT_MAX;
+        for (CityId cid : v.cities) {
+            const int d = v.s().grid.distance(u->pos, v.s().city(cid)->pos);
+            if (d < bestDist) {
+                bestDist = d;
+                home = v.s().city(cid)->pos;
+            }
+        }
+        if (home && approach(v, id, *home, false)) return;
+        g.submit(Command::setActivity(v.me, id, Activity::Skip));
+        return;
+    }
+    std::optional<CityId> best;
+    int bestValue = INT_MIN;
+    for (CityId dest : g.tradeDestinations(id)) {
+        const int value = yieldValue(g.tradeRouteYields(*origin, *v.s().city(dest)));
+        if (value > bestValue) {
+            bestValue = value;
+            best = dest;
+        }
+    }
+    if (best && g.submit(Command::startTradeRoute(v.me, id, *best)) == CommandError::Ok) return;
+    g.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
 // Buys a great person when the price is a small part of the treasury.
 void patronage(View& v) {
     Game& g = v.game;
@@ -1077,6 +1118,7 @@ void playTurn(Game& game) {
         if (v.r.units[at(u->type)].foundReligion) prophet(v, id);
         else if (u->religion >= 0) religiousUnit(v, id);
         else if (u->greatPerson != kNone) greatPerson(v, id);
+        else if (t.id == "UNIT_TRADER") trader(v, id);
         else if (t.foundCity) settle(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));

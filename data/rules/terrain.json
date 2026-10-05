@@ -514,5 +514,33 @@
     "TERRAIN_PLAINS_HILLS"
    ]
   }
+ ],
+ "routes": [
+  {
+   "id": "ROUTE_ANCIENT_ROAD",
+   "name": "Ancient Road",
+   "moveCost": 1.0
+  },
+  {
+   "id": "ROUTE_CLASSICAL_ROAD",
+   "name": "Classical Road",
+   "moveCost": 1.0,
+   "bridges": true,
+   "era": "ERA_CLASSICAL"
+  },
+  {
+   "id": "ROUTE_INDUSTRIAL_ROAD",
+   "name": "Industrial Road",
+   "moveCost": 0.75,
+   "bridges": true,
+   "era": "ERA_INDUSTRIAL"
+  },
+  {
+   "id": "ROUTE_MODERN_ROAD",
+   "name": "Modern Road",
+   "moveCost": 0.5,
+   "bridges": true,
+   "era": "ERA_MODERN"
+  }
  ]
 }

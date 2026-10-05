@@ -108,6 +108,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (!inRange(p.terrain, rules.terrains.size(), false) || !inRange(p.feature, rules.features.size(), true) ||
             !inRange(p.resource, rules.resources.size(), true) || !inRange(p.improvement, rules.improvements.size(), true))
             return false;
+        if (p.route < -1 || p.route >= static_cast<int>(rules.routes.size())) return false;
         if (p.owner != kNoPlayer && (p.owner < 0 || static_cast<size_t>(p.owner) >= s.players.size())) return false;
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
@@ -153,6 +154,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
                 !inRange(g.creator, rules.greatPeople.size(), true))
                 return false;
         }
+    }
+    for (const TradeRoute& tr : s.tradeRoutes) {
+        if (tr.owner < 0 || static_cast<size_t>(tr.owner) >= s.players.size() || !inRange(tr.traderType, rules.units.size(), false)) return false;
+        for (int32_t pi : tr.path) if (pi < 0 || pi >= s.grid.size()) return false;
     }
     for (const FoundedReligion& rel : s.religions) {
         if (!inRange(rel.type, rules.religions.size(), false) || rel.founder < 0 || static_cast<size_t>(rel.founder) >= s.players.size()) return false;
@@ -217,6 +222,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(p.owner);
         w.i32(p.city);
         w.i16(p.continent);
+        w.i8(p.route);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -345,6 +351,17 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, c.pressure);
     }
     w.bytes(s.greatPeopleClaimed);
+    w.u32(static_cast<uint32_t>(s.tradeRoutes.size()));
+    for (const TradeRoute& tr : s.tradeRoutes) {
+        w.i32(tr.id);
+        w.i8(tr.owner);
+        w.i32(tr.origin);
+        w.i32(tr.destination);
+        w.i16(tr.traderType);
+        writeI32s(w, tr.path);
+        w.i32(tr.turnsLeft);
+    }
+    w.i32(s.nextTradeRouteId);
     w.u32(static_cast<uint32_t>(s.religions.size()));
     for (const FoundedReligion& rel : s.religions) {
         w.i16(rel.type);
@@ -417,6 +434,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.owner = r.i8();
         p.city = r.i32();
         p.continent = r.i16();
+        p.route = r.i8();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -585,6 +603,19 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, c.pressure)) return false;
     }
     s.greatPeopleClaimed = r.bytes();
+    uint32_t ntr = r.u32();
+    if (!r.checkCount(ntr, 23)) return false;
+    s.tradeRoutes.resize(ntr);
+    for (TradeRoute& tr : s.tradeRoutes) {
+        tr.id = r.i32();
+        tr.owner = r.i8();
+        tr.origin = r.i32();
+        tr.destination = r.i32();
+        tr.traderType = r.i16();
+        if (!readI32s(r, tr.path)) return false;
+        tr.turnsLeft = r.i32();
+    }
+    s.nextTradeRouteId = r.i32();
     uint32_t nrel = r.u32();
     if (!r.checkCount(nrel, 11)) return false;
     s.religions.resize(nrel);

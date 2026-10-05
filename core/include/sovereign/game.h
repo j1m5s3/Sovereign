@@ -139,6 +139,20 @@ public:
     int greatPersonAuraStrength(const Unit& unit) const;
     int greatPersonAuraMoves(const Unit& unit) const;
 
+    // ---- trade routes and roads (07: Trade routes; 01: Routes)
+    int tradeRouteCapacity(PlayerId player) const;
+    int tradeRoutesOf(PlayerId player) const;
+    // What a route from origin to destination pays its origin each turn.
+    Yields tradeRouteYields(const City& origin, const City& destination) const;
+    // The plots a Trader would follow to a destination, within range (15 tiles, 30 when it sails); empty: out of reach.
+    std::vector<Hex> tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const;
+    bool canStartTradeRoute(UnitId trader, CityId destination) const;
+    const City* tradeOrigin(UnitId trader) const;  // the city a Trader would start from (in it or beside it), or null
+    std::vector<CityId> tradeDestinations(UnitId trader) const;
+    int tradeRouteLength() const;  // turns, scaled by game speed, longer in later world eras
+    // The road a player lays now (its era's tier).
+    TypeIndex roadFor(PlayerId player) const;
+
     // ---- religion (06-religion.md)
     bool canFoundPantheon(PlayerId player, TypeIndex belief) const;
     // Whether the core applies this belief's effect yet (the rest wait for their systems).
@@ -352,6 +366,8 @@ private:
     void applyLeader(const Command& c);
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
+    void applyTradeRoute(const Command& c);
+    void processTrade(PlayerId player);  // routes run, end or are plundered
     CommandError validateReligion(const Command& c) const;
     void applyReligion(const Command& c);
     void processReligion();  // passive pressure, each world turn

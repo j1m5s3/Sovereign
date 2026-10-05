@@ -304,6 +304,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         e.name = j["name"].str(id);
         e.embarkedStrength = static_cast<int>(j["embarkedStrength"].integer(10));
         e.greatPersonBaseCost = static_cast<int>(j["greatPersonBaseCost"].integer(0));
+        e.tradeRouteExtraTurns = static_cast<int>(j["tradeRouteExtraTurns"].integer(0));
         eras.push_back(std::move(e));
     }
     auto readNodes = [&](const char* name, std::vector<TreeNode>& out) {
@@ -319,6 +320,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
                 if (e.str() == "EMBARK_ALL") n.embarkAll = true;
                 if (e.str() == "OCEAN") n.ocean = true;
+                if (e.str() == "TRADE_ROUTE_CAPACITY") n.tradeCapacity = true;
             }
             if (n.era == kNone || n.cost <= 0) {
                 *error = std::string(name) + " " + id + ": bad era or cost";
@@ -389,6 +391,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         f.harvest = readYields(j["harvestYields"]);
         if (!resolveList(j["validTerrains"], findTerrain, f.validTerrains, "feature " + id, error)) return false;
         features.push_back(std::move(f));
+    }
+    for (const auto& [id, j] : m.tables["routes"]) {
+        RouteType rt;
+        rt.id = id;
+        rt.name = j["name"].str(id);
+        rt.moveCost = j["moveCost"].fixed();
+        rt.bridges = j["bridges"].boolean(false);
+        rt.era = j.has("era") ? era(j["era"].str()) : 0;
+        if (rt.era == kNone || rt.moveCost <= Fixed()) {
+            *error = "route " + id + ": bad era or cost";
+            return false;
+        }
+        routes.push_back(std::move(rt));
     }
     auto findFeature = [this](const std::string& id) { return feature(id); };
     for (const auto& [id, j] : m.tables["resources"]) {
@@ -650,6 +665,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
             b.faithOnly = j["faithOnly"].boolean(false);
+            b.tradeCapacity = static_cast<int>(j["tradeCapacity"].integer(0));
             b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
             b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
             buildings.push_back(std::move(b));
@@ -683,6 +699,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.maintenance = static_cast<int>(j["maintenance"].integer(0));
         d.notAdjacentToCityCenter = j["notAdjacentToCityCenter"].boolean(false);
         d.water = j["water"].boolean(false);
+        d.tradeDomestic = readYields(j["tradeYields"]["domestic"]);
+        d.tradeInternational = readYields(j["tradeYields"]["international"]);
         districts.push_back(std::move(d));
     }
     for (BuildingType& b : buildings) b.districtType = district(b.district);
@@ -979,6 +997,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         i = 0;
         for (const auto& [id, j] : m.tables["districts"]) {
             if (!readPoints(j["greatPersonPoints"], districts[i++].greatPersonPoints, "district " + id)) return false;
+        }
+    }
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["buildings"]) {
+            BuildingType& bt = buildings[i++];
+            if (j.has("tradeCapacityUnless") && (bt.tradeCapacityUnless = building(j["tradeCapacityUnless"].str())) == kNone) {
+                *error = "building " + id + ": unknown building";
+                return false;
+            }
         }
     }
     for (const auto& [id, j] : m.tables["greatWorkTypes"]) {

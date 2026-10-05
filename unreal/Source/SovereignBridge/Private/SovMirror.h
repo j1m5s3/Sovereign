@@ -62,6 +62,7 @@ struct FSovMirror
 	TArray<FSovTile> Tiles;  // revealed plots only
 	TArray<FSovUnitMarker> Units;  // the viewer's own, and others' on visible plots
 	TArray<FSovCityMarker> Cities;  // on revealed plots
+	TArray<TPair<FIntPoint, FIntPoint>> Roads;  // neighbouring revealed plots joined by a road
 };
 
 FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);

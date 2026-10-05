@@ -105,6 +105,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotActivate: return "CannotActivate";
         case CommandError::CannotFoundReligion: return "CannotFoundReligion";
         case CommandError::CannotSpread: return "CannotSpread";
+        case CommandError::CannotTrade: return "CannotTrade";
     }
     return "Unknown";
 }
@@ -166,6 +167,7 @@ std::string describe(const Command& c) {
                    std::to_string(c.target.x);
         case CommandType::EvangelizeBelief: return s + "EvangelizeBelief u" + std::to_string(c.id) + " belief" + std::to_string(c.arg);
         case CommandType::SpreadReligion: return s + "SpreadReligion u" + std::to_string(c.id);
+        case CommandType::StartTradeRoute: return s + "StartTradeRoute u" + std::to_string(c.id) + " -> city" + std::to_string(c.arg);
     }
     return s + "?";
 }

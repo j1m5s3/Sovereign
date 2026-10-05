@@ -152,6 +152,19 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
 			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
 		}
+		// Roads (01: Routes) to the east, south-east and south-west neighbours, so each joint is listed once.
+		if (Pl.route >= 0)
+		{
+			for (int32 D = 0; D < sov::kNumDirs; ++D)
+			{
+				const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));
+				if (!N || S.grid.index(*N) < i || S.plot(*N).route < 0 || Game.visibility(View, *N) == sov::Visibility::Unrevealed)
+				{
+					continue;
+				}
+				M.Roads.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y)});
+			}
+		}
 	}
 
 	for (const sov::City& C : S.cities)

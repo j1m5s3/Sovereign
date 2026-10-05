@@ -205,6 +205,8 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion:
             return validateReligion(c);
+        case CommandType::StartTradeRoute:
+            return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -363,6 +365,14 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
     int cost = tt.moveCost;
     if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
     if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
+    // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
+    const Plot& fp = state_.plot(from);
+    if (p.route >= 0 && fp.route >= 0) {
+        const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
+        Fixed rc = slow.moveCost;
+        if (!slow.bridges && hasRiver(state_, from, *d)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
+        return rc;
+    }
     if (hasRiver(state_, from, *d)) cost += rules_->globalInt("MOVEMENT_RIVER_COST");
     return Fixed::fromInt(std::max(cost, 1));
 }
@@ -598,6 +608,7 @@ void Game::apply(const Command& c) {
         case CommandType::FoundReligion:
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion: applyReligion(c); break;
+        case CommandType::StartTradeRoute: applyTradeRoute(c); break;
     }
 }
 
@@ -650,6 +661,8 @@ void Game::applyFoundCity(const Command& c) {
         }
     }
     const CityId newId = city.id;
+    // A city stands on a road of its founder's era (01: Routes).
+    if (const TypeIndex road = roadFor(owner); road != kNone) center.route = static_cast<int8_t>(road);
     // Religious Colonization: new cities start following the founder's religion (06).
     city.pressure.assign(state_.religions.size(), 0);
     if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())
@@ -702,6 +715,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
             p.freeChanges = true;
         payUnitFuel(pid);
         processGreatPeople(pid);
+        processTrade(pid);
         healAndFortify(pid);
         healCities(pid);
     }

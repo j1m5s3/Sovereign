@@ -256,6 +256,8 @@ struct BuildingType {
     bool wallsCannotBeBypassed = false;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
+    int tradeCapacity = 0;                 // + trade route capacity
+    TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
 };
 
 // Religion (06-religion.md; data: religion.md).
@@ -380,6 +382,7 @@ struct DistrictType {
     bool water = false;  // placed on Coast or Lake next to land (Harbor)
     std::vector<DistrictAdjacency> adjacency;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
+    Yields tradeDomestic{}, tradeInternational{};  // to a route's origin when this district is at its destination (07)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).
@@ -404,6 +407,15 @@ struct EraType {
     std::string id, name;
     int embarkedStrength = 10;     // defence of an embarked unit whose owner is in this era (05: Embarkation)
     int greatPersonBaseCost = 0;   // great person points for this era's first great person (07)
+    int tradeRouteExtraTurns = 0;  // added to a trade route's minimum length in this world era [GS]
+};
+
+// Roads (01: Routes): movement cost along them, and whether they bridge rivers.
+struct RouteType {
+    std::string id, name;
+    Fixed moveCost = Fixed::fromInt(1);
+    bool bridges = false;
+    int era = 0;  // the era whose roads these are
 };
 
 // What earns a boost. Conditions the core cannot track yet load as NotTracked
@@ -446,6 +458,7 @@ struct TreeNode {
     TypeIndex embarkUnit = kNone;  // one unit type may embark (Builders after Sailing, Traders after Celestial Navigation)
     bool ocean = false;            // units may enter Ocean (Cartography)
     int embarkedMoves = 0;         // + movement while embarked
+    bool tradeCapacity = false;    // +1 trade route capacity (Foreign Trade)
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -626,6 +639,7 @@ public:
     std::vector<GreatPersonType> greatPeople;  // every individual, by class then era (07: Great People)
     std::vector<GreatWorkType> greatWorkTypes;
     std::vector<BeliefType> beliefs;
+    std::vector<RouteType> routes;  // by era, Ancient first
     std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
 

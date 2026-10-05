@@ -1,0 +1,222 @@
+// Trade routes and roads (07-economy-trade-great-people.md, Trade routes; 01-map-and-terrain.md,
+// Routes). A Trader in one of the player's cities starts a route to a city in range; the route
+// pays its origin each turn by the districts at the destination, lays roads along the way and
+// ends after its length (the Trader comes home), or when war or a raider cuts it.
+#include <algorithm>
+#include <queue>
+
+#include "sovereign/game.h"
+#include "sovereign/mapgen.h"
+#include "sovereign/modifiers.h"
+
+namespace sov {
+
+namespace {
+
+size_t at(TypeIndex i) { return static_cast<size_t>(i); }
+
+int speedPercent(const GameState& s, const Rules& r) { return r.speeds[at(r.speed(s.setup.speed))].costPercent; }
+
+bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity; }
+
+// The city a Trader starts from: the one it stands in, or (when another civilian holds the
+// city plot) the one whose land it stands on next to the center. Sovereign convenience.
+const City* originOf(const GameState& s, const Unit& u) {
+    if (const City* c = s.cityAt(u.pos); c && c->owner == u.owner) return c;
+    const CityId id = s.plot(u.pos).city;
+    const City* c = id != kNoCity ? s.city(id) : nullptr;
+    return c && c->owner == u.owner && s.grid.distance(c->pos, u.pos) <= 1 ? c : nullptr;
+}
+
+}  // namespace
+
+int Game::tradeRouteCapacity(PlayerId player) const {
+    const Player& p = state_.players[at(player)];
+    int cap = 0;
+    for (size_t i = 0; i < rules_->civics.size(); ++i) {
+        if (rules_->civics[i].tradeCapacity && i < p.civics.done.size() && p.civics.done[i]) ++cap;
+    }
+    for (size_t i = 0; i < rules_->techs.size(); ++i) {
+        if (rules_->techs[i].tradeCapacity && i < p.techs.done.size() && p.techs.done[i]) ++cap;
+    }
+    // Markets (or Lighthouses in cities without one): at most +1 per city in this ruleset.
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        int city = 0;
+        for (TypeIndex b : c.buildings) {
+            const BuildingType& bt = rules_->buildings[at(b)];
+            if (bt.tradeCapacity > 0 && (bt.tradeCapacityUnless == kNone || !c.has(bt.tradeCapacityUnless))) city += bt.tradeCapacity;
+        }
+        cap += city;
+    }
+    return cap;
+}
+
+const City* Game::tradeOrigin(UnitId trader) const {
+    const Unit* u = state_.unit(trader);
+    return u ? originOf(state_, *u) : nullptr;
+}
+
+int Game::tradeRoutesOf(PlayerId player) const {
+    return static_cast<int>(std::count_if(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& r) { return r.owner == player; }));
+}
+
+Yields Game::tradeRouteYields(const City& origin, const City& destination) const {
+    Yields out{};
+    const bool domestic = origin.owner == destination.owner;
+    auto add = [&](TypeIndex district) {
+        const DistrictType& d = rules_->districts[at(district)];
+        const Yields& y = domestic ? d.tradeDomestic : d.tradeInternational;
+        for (size_t i = 0; i < kNumYields; ++i) out[i] += y[i];
+    };
+    const TypeIndex center = rules_->district("DISTRICT_CITY_CENTER");
+    if (center != kNone) add(center);
+    for (const CityDistrict& d : destination.districts) {
+        if (d.complete) add(d.type);
+    }
+    return out;
+}
+
+std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const {
+    const int landRange = rules_->globalInt("TRADE_ROUTE_BASE_RANGE");
+    const int waterRange = rules_->globalInt("TRADE_ROUTE_WATER_RANGE_REFUEL");
+    const bool sails = canEmbark(player, traderType);
+    const bool ocean = canEnterOcean(player);
+    // Breadth-first over plots: land, then water too once Traders may embark (07: Range).
+    auto search = [&](bool water, int range) -> std::vector<Hex> {
+        const int n = state_.grid.size();
+        std::vector<int> prev(static_cast<size_t>(n), -2), depth(static_cast<size_t>(n), 0);
+        std::queue<int> open;
+        const int start = state_.grid.index(origin.pos), goal = state_.grid.index(destination.pos);
+        prev[static_cast<size_t>(start)] = -1;
+        open.push(start);
+        while (!open.empty()) {
+            const int cur = open.front();
+            open.pop();
+            if (cur == goal) break;
+            if (depth[static_cast<size_t>(cur)] >= range) continue;
+            for (int d = 0; d < kNumDirs; ++d) {
+                auto nh = state_.grid.neighbor(state_.grid.at(cur), static_cast<Dir>(d));
+                if (!nh) continue;
+                const int ni = state_.grid.index(*nh);
+                if (prev[static_cast<size_t>(ni)] != -2) continue;
+                const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
+                const bool ok = ni == goal || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
+                if (!ok) continue;
+                prev[static_cast<size_t>(ni)] = cur;
+                depth[static_cast<size_t>(ni)] = depth[static_cast<size_t>(cur)] + 1;
+                open.push(ni);
+            }
+        }
+        std::vector<Hex> path;
+        if (prev[static_cast<size_t>(goal)] == -2) return path;
+        for (int i = goal; i != -1; i = prev[static_cast<size_t>(i)]) path.push_back(state_.grid.at(i));
+        std::reverse(path.begin(), path.end());
+        return path;
+    };
+    std::vector<Hex> path = search(false, landRange);
+    if (path.empty() && sails) path = search(true, waterRange);
+    return path;
+}
+
+bool Game::canStartTradeRoute(UnitId traderId, CityId destinationId) const {
+    const Unit* u = state_.unit(traderId);
+    if (!u || rules_->units[at(u->type)].id != "UNIT_TRADER" || u->movesLeft <= Fixed()) return false;
+    const City* origin = originOf(state_, *u);
+    const City* dest = state_.city(destinationId);
+    if (!origin || !dest || dest->id == origin->id) return false;
+    const Player& them = state_.players[at(dest->owner)];
+    if (!isMajor(them) || atWar(u->owner, dest->owner)) return false;
+    if (tradeRoutesOf(u->owner) >= tradeRouteCapacity(u->owner)) return false;
+    if (visibility(u->owner, dest->pos) == Visibility::Unrevealed) return false;
+    return !tradePath(u->owner, u->type, *origin, *dest).empty();
+}
+
+std::vector<CityId> Game::tradeDestinations(UnitId trader) const {
+    std::vector<CityId> out;
+    for (const City& c : state_.cities) {
+        if (canStartTradeRoute(trader, c.id)) out.push_back(c.id);
+    }
+    return out;
+}
+
+int Game::tradeRouteLength() const {
+    const int era = std::clamp(worldEra(), 0, static_cast<int>(rules_->eras.size()) - 1);
+    const int turns = rules_->globalInt("TRADE_ROUTE_TURN_DURATION_BASE") + rules_->eras[static_cast<size_t>(era)].tradeRouteExtraTurns;
+    return std::max(1, turns * speedPercent(state_, *rules_) / 100);
+}
+
+TypeIndex Game::roadFor(PlayerId player) const {
+    const int era = playerEra(player);
+    TypeIndex best = kNone;
+    for (size_t i = 0; i < rules_->routes.size(); ++i) {
+        if (rules_->routes[i].era <= era) best = static_cast<TypeIndex>(i);
+    }
+    return best;
+}
+
+void Game::applyTradeRoute(const Command& c) {
+    const Unit& u = *state_.unit(c.id);
+    const City& origin = *originOf(state_, u);
+    const City& dest = *state_.city(static_cast<CityId>(c.arg));
+    TradeRoute r;
+    r.id = state_.nextTradeRouteId++;
+    r.owner = c.player;
+    r.origin = origin.id;
+    r.destination = dest.id;
+    r.traderType = u.type;
+    r.turnsLeft = tradeRouteLength();
+    // Roads along the land part of the way (TRADE_ROUTE_PLACES_ROADS), upgraded to the owner's era.
+    const TypeIndex road = roadFor(c.player);
+    for (const Hex& h : tradePath(c.player, u.type, origin, dest)) {
+        r.path.push_back(state_.grid.index(h));
+        Plot& p = state_.plot(h);
+        if (road != kNone && rules_->globalInt("TRADE_ROUTE_PLACES_ROADS") > 0 && !rules_->terrains[at(p.terrain)].water && p.route < road)
+            p.route = static_cast<int8_t>(road);
+    }
+    state_.tradeRoutes.push_back(std::move(r));
+    removeUnit(c.id);  // the Trader is on the road
+}
+
+void Game::processTrade(PlayerId pid) {
+    std::vector<int32_t> ended;
+    for (TradeRoute& r : state_.tradeRoutes) {
+        if (r.owner != pid) continue;
+        const City* origin = state_.city(r.origin);
+        const City* dest = state_.city(r.destination);
+        bool home = true;  // whether the Trader comes back
+        bool cut = !origin || !dest || origin->owner != pid || atWar(pid, dest->owner);
+        // A raider at war with the owner on the road plunders it (07: Plunder).
+        if (!cut) {
+            for (int32_t pi : r.path) {
+                const Hex h = state_.grid.at(pi);
+                const Unit* m = state_.unitAt(h, UnitLayer::Military, *rules_);
+                if (m && atWar(pid, m->owner) && !state_.cityAt(h)) {
+                    state_.players[at(m->owner)].gold += Fixed::fromInt(rules_->globalInt("TRADE_ROUTE_PLUNDER_GOLD"));
+                    cut = true;
+                    home = false;
+                    break;
+                }
+            }
+        }
+        if (!cut) {
+            // Religion travels with the caravans (06: Trade routes carry pressure).
+            const int maj = cityMajorityReligion(*origin);
+            if (maj >= 0) {
+                City& d = *state_.city(r.destination);
+                if (d.pressure.size() < state_.religions.size()) d.pressure.resize(state_.religions.size(), 0);
+                d.pressure[static_cast<size_t>(maj)] += static_cast<int32_t>(rules_->global("RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_DESTINATION").round());
+            }
+            if (--r.turnsLeft > 0) continue;
+        }
+        ended.push_back(r.id);
+        if (home && origin && origin->owner == pid) {
+            if (auto spot = unitSpawnPlot(*origin, r.traderType)) spawnUnit(r.traderType, pid, *spot);
+        }
+    }
+    state_.tradeRoutes.erase(std::remove_if(state_.tradeRoutes.begin(), state_.tradeRoutes.end(),
+                                            [&](const TradeRoute& r) { return std::find(ended.begin(), ended.end(), r.id) != ended.end(); }),
+                             state_.tradeRoutes.end());
+}
+
+}  // namespace sov
