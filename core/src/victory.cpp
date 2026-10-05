@@ -65,6 +65,10 @@ void Game::checkVictory() {
     } else if (majors > 1 && alive == 1) {
         return win(last, Victory::LastStanding);  // VICTORY_DEFAULT
     }
+    if (state_.setup.religiousVictory) {
+        const PlayerId r = religiousVictor();
+        if (r != kNoPlayer) return win(r, Victory::Religious);
+    }
     if (state_.setup.scoreVictory && state_.turn > turnLimit()) {
         // Highest score; ties go to the lowest player id (Civ's tie rule is unverified).
         PlayerId best = kNoPlayer;

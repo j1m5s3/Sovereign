@@ -55,6 +55,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.barbarians);
     w.boolean(s.dominationVictory);
     w.boolean(s.scoreVictory);
+    w.boolean(s.religiousVictory);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
@@ -74,6 +75,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.barbarians = r.boolean();
     s.dominationVictory = r.boolean();
     s.scoreVictory = r.boolean();
+    s.religiousVictory = r.boolean();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
@@ -110,7 +112,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     if (s.players.empty() || s.currentPlayer < 0 || static_cast<size_t>(s.currentPlayer) >= s.players.size()) return false;
     if (s.winner != kNoPlayer && (s.winner < 0 || static_cast<size_t>(s.winner) >= s.players.size())) return false;
-    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::LastStanding)) return false;
+    if (static_cast<uint8_t>(s.victory) > static_cast<uint8_t>(Victory::Religious)) return false;
     if ((s.winner == kNoPlayer) != (s.victory == Victory::None) || s.setup.turnLimit < 0) return false;
     for (const Player& p : s.players) {
         if (!inRange(p.civ, rules.civs.size(), p.barbarian)) return false;
@@ -118,6 +120,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     for (size_t i = 0; i < s.units.size(); ++i) {
         const Unit& u = s.units[i];
         if (!inRange(u.type, rules.units.size(), false) || !inRange(u.greatPerson, rules.greatPeople.size(), true)) return false;
+        if (u.religion < -1 || u.religion >= static_cast<int>(s.religions.size())) return false;
         if (u.owner < 0 || static_cast<size_t>(u.owner) >= s.players.size() || !s.grid.valid(u.pos)) return false;
         if (i > 0 && s.units[i - 1].id >= u.id) return false;
         for (TypeIndex pr : u.promotions) if (!inRange(pr, rules.promotions.size(), false)) return false;
@@ -144,11 +147,16 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (const CityDistrict& d : c.districts) {
             if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
         }
+        if (c.pressure.size() > s.religions.size()) return false;
         for (const GreatWork& g : c.greatWorks) {
             if (!inRange(g.type, rules.greatWorkTypes.size(), false) || !inRange(g.building, rules.buildings.size(), false) ||
                 !inRange(g.creator, rules.greatPeople.size(), true))
                 return false;
         }
+    }
+    for (const FoundedReligion& rel : s.religions) {
+        if (!inRange(rel.type, rules.religions.size(), false) || rel.founder < 0 || static_cast<size_t>(rel.founder) >= s.players.size()) return false;
+        for (TypeIndex b : rel.beliefs) if (!inRange(b, rules.beliefs.size(), false)) return false;
     }
     for (size_t i = 0; i < s.camps.size(); ++i) {
         if (!s.grid.valid(s.camps[i].pos) || (i > 0 && s.camps[i - 1].id >= s.camps[i].id)) return false;
@@ -162,6 +170,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
             return false;
         for (TypeIndex g : p.greatPeoplePassed) if (!inRange(g, rules.greatPeople.size(), true)) return false;
         for (TypeIndex g : p.greatPeopleActivated) if (!inRange(g, rules.greatPeople.size(), false)) return false;
+        if (!inRange(p.pantheon, rules.beliefs.size(), true) || p.religion < -1 || p.religion >= static_cast<int>(s.religions.size())) return false;
         if (p.relations.size() != s.players.size()) return false;
         if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
         if (!inRange(p.techs.current, rules.techs.size(), true) || !inRange(p.civics.current, rules.civics.size(), true))
@@ -229,6 +238,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.greatPeopleRecruited.begin(), p.greatPeopleRecruited.end()));
         writeI32s(w, std::vector<int32_t>(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end()));
         writeI32s(w, std::vector<int32_t>(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end()));
+        w.i16(p.pantheon);
+        w.i16(p.religion);
         w.u32(static_cast<uint32_t>(p.relations.size()));
         for (const Relation& rel : p.relations) {
             w.boolean(rel.war);
@@ -271,6 +282,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeHex(w, u.moveTarget.value_or(Hex{}));
         w.boolean(u.moveOverland);
         w.i16(u.greatPerson);
+        w.i16(u.religion);
         w.i32(u.xp);
         w.i32(u.charges);
         writeI32s(w, std::vector<int32_t>(u.promotions.begin(), u.promotions.end()));
@@ -330,8 +342,16 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(g.building);
             w.i16(g.creator);
         }
+        writeI32s(w, c.pressure);
     }
     w.bytes(s.greatPeopleClaimed);
+    w.u32(static_cast<uint32_t>(s.religions.size()));
+    for (const FoundedReligion& rel : s.religions) {
+        w.i16(rel.type);
+        w.i8(rel.founder);
+        w.i32(rel.holyCity);
+        writeI32s(w, std::vector<int32_t>(rel.beliefs.begin(), rel.beliefs.end()));
+    }
     w.u32(static_cast<uint32_t>(s.agents.size()));
     for (const Agent& a : s.agents) {
         w.i32(a.id);
@@ -429,6 +449,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, trained)) return false;
         p.greatPeopleActivated.clear();
         for (int32_t v : trained) p.greatPeopleActivated.push_back(static_cast<TypeIndex>(v));
+        p.pantheon = r.i16();
+        p.religion = r.i16();
         uint32_t nrel = r.u32();
         if (!r.checkCount(nrel, 6)) return false;
         p.relations.resize(nrel);
@@ -486,6 +508,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.moveTarget = hasTarget ? std::optional<Hex>(t) : std::nullopt;
         u.moveOverland = r.boolean();
         u.greatPerson = r.i16();
+        u.religion = r.i16();
         u.xp = r.i32();
         u.charges = r.i32();
         std::vector<int32_t> promos;
@@ -559,8 +582,21 @@ bool deserializeState(ByteReader& r, GameState& s) {
             g.building = r.i16();
             g.creator = r.i16();
         }
+        if (!readI32s(r, c.pressure)) return false;
     }
     s.greatPeopleClaimed = r.bytes();
+    uint32_t nrel = r.u32();
+    if (!r.checkCount(nrel, 11)) return false;
+    s.religions.resize(nrel);
+    for (FoundedReligion& rel : s.religions) {
+        rel.type = r.i16();
+        rel.founder = r.i8();
+        rel.holyCity = r.i32();
+        std::vector<int32_t> beliefs;
+        if (!readI32s(r, beliefs)) return false;
+        rel.beliefs.clear();
+        for (int32_t v : beliefs) rel.beliefs.push_back(static_cast<TypeIndex>(v));
+    }
     uint32_t na = r.u32();
     if (!r.checkCount(na, 14)) return false;
     s.agents.resize(na);

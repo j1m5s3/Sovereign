@@ -35,7 +35,7 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
 // The city that "holds" a modifier for this subject city, or nullptr if the
 // modifier does not reach it. For player-wide sources the subject's player
 // must carry the source.
-const City* holderFor(const Modifier& m, const GameState& s, const City& subject, const Player& owner) {
+const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner) {
     const bool ownerOnly = m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots;
     if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
@@ -53,6 +53,12 @@ const City* holderFor(const Modifier& m, const GameState& s, const City& subject
             return playerHasSource(m, owner) ? &subject : nullptr;
         case ModSource::Government:
             return playerHasSource(m, owner) ? &subject : nullptr;
+        case ModSource::Belief: {
+            // A city follows the beliefs of its majority religion, or its owner's pantheon while it has none.
+            const int maj = majorityReligion(s, r, subject);
+            if (maj >= 0) return religionHas(s, maj, m.sourceIndex) ? &subject : nullptr;
+            return owner.pantheon == m.sourceIndex ? &subject : nullptr;
+        }
     }
     return nullptr;
 }
@@ -64,7 +70,7 @@ void forEachApplying(const GameState& s, const Rules& r, const City& city, bool 
     for (const Modifier& m : r.modifiers) {
         if (m.collection == ModCollection::Player) continue;
         if (isPlotCollection(m.collection) != plotEffect) continue;
-        const City* holder = holderFor(m, s, city, owner);
+        const City* holder = holderFor(m, s, r, city, owner);
         if (!holder) continue;
         ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
         if (!testRequirements(m.ownerReqs, ownerCtx)) continue;
@@ -74,6 +80,28 @@ void forEachApplying(const GameState& s, const Rules& r, const City& city, bool 
     }
 }
 }  // namespace
+
+int religionFollowers(const GameState& s, const Rules& r, const City& city, int religion) {
+    if (religion < 0 || static_cast<size_t>(religion) >= city.pressure.size() || city.population <= 0) return 0;
+    int64_t total = static_cast<int64_t>(r.globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP")) * city.population;
+    for (int32_t p : city.pressure) total += std::max<int32_t>(0, p);
+    const int64_t mine = std::max<int32_t>(0, city.pressure[static_cast<size_t>(religion)]);
+    (void)s;
+    return total <= 0 ? 0 : static_cast<int>((mine * city.population * 2 + total) / (total * 2));  // rounded
+}
+
+int majorityReligion(const GameState& s, const Rules& r, const City& city) {
+    for (size_t i = 0; i < city.pressure.size(); ++i) {
+        if (religionFollowers(s, r, city, static_cast<int>(i)) * 2 > city.population) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool religionHas(const GameState& s, int religion, TypeIndex belief) {
+    if (religion < 0 || static_cast<size_t>(religion) >= s.religions.size()) return false;
+    const std::vector<TypeIndex>& b = s.religions[static_cast<size_t>(religion)].beliefs;
+    return std::find(b.begin(), b.end(), belief) != b.end();
+}
 
 bool testRequirements(const RequirementSet& set, const ReqContext& ctx) {
     if (set.reqs.empty()) return true;
@@ -140,6 +168,9 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
             case ModSource::Everyone: applies = true; break;
             case ModSource::Policy:
             case ModSource::Government: applies = playerHasSource(m, player); break;
+            case ModSource::Belief:
+                applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
+                break;
         }
         if (!applies) continue;
         ReqContext ownerCtx{&s, &r, &player, holder, nullptr};

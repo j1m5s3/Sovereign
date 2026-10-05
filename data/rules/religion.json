@@ -1,0 +1,420 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "beliefs": [
+  {
+   "id": "BELIEF_CITY_PATRON_GODDESS",
+   "name": "City Patron Goddess",
+   "class": "PANTHEON",
+   "text": "+25% Production toward districts where NOT city has 1+ specialty districts in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_DANCE_OF_THE_AURORA",
+   "name": "Dance of the Aurora",
+   "class": "PANTHEON",
+   "text": "Holy Site gets +1 Faith per adjacent Tundra in all cities where city follows your pantheon; Holy Site gets +1 Faith per adjacent Tundra (Hills) in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_DESERT_FOLKLORE",
+   "name": "Desert Folklore",
+   "class": "PANTHEON",
+   "text": "Holy Site gets +1 Faith per adjacent Desert in all cities where city follows your pantheon; Holy Site gets +1 Faith per adjacent Desert (Hills) in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_DIVINE_SPARK",
+   "name": "Divine Spark",
+   "class": "PANTHEON",
+   "text": "+1 Great Prophet points from the district for this city's districts where district is Holy Site in all cities where city follows your pantheon; +1 Great Scientist points per turn where city has Library in all cities where city follows your pantheon; +1 Great Writer points per turn where city has Amphitheater in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_EARTH_GODDESS",
+   "name": "Earth Goddess",
+   "class": "PANTHEON",
+   "text": "+1 Faith on this city's tiles where appeal at least 4 in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_FERTILITY_RITES",
+   "name": "Fertility Rites",
+   "class": "PANTHEON",
+   "text": "+10% growth in all cities where city follows your pantheon; grants 1 Builder in your capital where has at least 1 cities (one-time) for all players where player has pantheon",
+   "grantUnit": "UNIT_BUILDER"
+  },
+  {
+   "id": "BELIEF_GODDESS_OF_FESTIVALS",
+   "name": "Goddess of Festivals",
+   "class": "PANTHEON",
+   "text": "+1 Culture on this city's tiles where tile has Plantation in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_FIRE_GODDESS",
+   "name": "Fire Goddess",
+   "class": "PANTHEON",
+   "text": "+2 Faith on this city's tiles where tile is Geothermal Fissure or tile is Volcanic Soil in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_GODDESS_OF_THE_HUNT",
+   "name": "Goddess of the Hunt",
+   "class": "PANTHEON",
+   "text": "+1 Food on this city's tiles where tile has Camp in all cities where city follows your pantheon; +1 Production on this city's tiles where tile has Camp in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_CRAFTSMEN",
+   "name": "God of Craftsmen",
+   "class": "PANTHEON",
+   "text": "+1 Production on this city's tiles where plot improved resource class type matches (ResourceClassType=Resourceclass Strategic) in all cities where city follows your pantheon; +1 Faith on this city's tiles where plot improved resource class type matches (ResourceClassType=Resourceclass Strategic) in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_HEALING",
+   "name": "God of Healing",
+   "class": "PANTHEON",
+   "text": "+30 HP healing (All) for your units where adjacent to Holy Site for all players where player has pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_THE_FORGE",
+   "name": "God of the Forge",
+   "class": "PANTHEON",
+   "text": "+25% Production toward military units in all your cities for all players where player has pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_THE_OPEN_SKY",
+   "name": "God of the Open Sky",
+   "class": "PANTHEON",
+   "text": "+1 Culture on this city's tiles where tile has Pasture in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_THE_SEA",
+   "name": "God of the Sea",
+   "class": "PANTHEON",
+   "text": "+1 Production on this city's tiles where tile has Fishing Boats in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_GOD_OF_WAR",
+   "name": "God of War",
+   "class": "PANTHEON",
+   "text": "after killing a unit gain Faith = 50% of its Combat Strength in combat where adjacent to Holy Site for all players where player has pantheon"
+  },
+  {
+   "id": "BELIEF_INITIATION_RITES",
+   "name": "Initiation Rites",
+   "class": "PANTHEON",
+   "text": "adjust player faith from dispersal (Amount=50) for all players where player has pantheon; adjust player healing from dispersal (Amount=100) for all players where player has pantheon"
+  },
+  {
+   "id": "BELIEF_LADY_OF_THE_REEDS_AND_MARSHES",
+   "name": "Lady of the Reeds and Marshes",
+   "class": "PANTHEON",
+   "text": "+2 Production on this city's tiles where tile is Marsh or tile is Oasis or tile is Desert Floodplains in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_MONUMENT_TO_THE_GODS",
+   "name": "Monument to the Gods",
+   "class": "PANTHEON",
+   "text": "+15% Production toward wonders (Ancient Era to Classical Era) in all your cities for all players where player has pantheon"
+  },
+  {
+   "id": "BELIEF_RELIGIOUS_IDOLS",
+   "name": "Religious Idols",
+   "class": "PANTHEON",
+   "text": "+2 Faith on this city's tiles where tile has a Resourceclass Bonus resource and tile has Mine in all cities where city follows your pantheon; +2 Faith on this city's tiles where tile has a Resourceclass Luxury resource and tile has Mine in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_RELIGIOUS_SETTLEMENTS",
+   "name": "Religious Settlements",
+   "class": "PANTHEON",
+   "text": "+15% border expansion rate in all cities where city follows your pantheon; grants 1 Settler in your capital where has at least 1 cities (one-time) for all players where player has pantheon",
+   "grantUnit": "UNIT_SETTLER"
+  },
+  {
+   "id": "BELIEF_RIVER_GODDESS",
+   "name": "River Goddess",
+   "class": "PANTHEON",
+   "text": "+2 Amenity for this city's districts where tile is Holy Site and adjacent to a river in all cities where city follows your pantheon; +2 Housing for this city's districts where tile is Holy Site and adjacent to a river in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_SACRED_PATH",
+   "name": "Sacred Path",
+   "class": "PANTHEON",
+   "text": "Holy Site gets +1 Faith per adjacent Rainforest in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_STONE_CIRCLES",
+   "name": "Stone Circles",
+   "class": "PANTHEON",
+   "text": "+2 Faith on this city's tiles where tile has Quarry in all cities where city follows your pantheon"
+  },
+  {
+   "id": "BELIEF_CHORAL_MUSIC",
+   "name": "Choral Music",
+   "class": "FOLLOWER",
+   "text": "+2 Culture from Shrine in all cities where city follows your religion; +4 Culture from Temple in all cities where city follows your religion"
+  },
+  {
+   "id": "BELIEF_DIVINE_INSPIRATION",
+   "name": "Divine Inspiration",
+   "class": "FOLLOWER",
+   "text": "+4 Faith per wonder in all cities where city follows your religion"
+  },
+  {
+   "id": "BELIEF_FEED_THE_WORLD",
+   "name": "Feed the World",
+   "class": "FOLLOWER",
+   "text": "+3 Food from Shrine in all cities where city follows your religion; +3 Food from Temple in all cities where city follows your religion; +2 Housing in all cities where city follows your religion and city has Shrine; +2 Housing in all cities where city follows your religion and city has Temple"
+  },
+  {
+   "id": "BELIEF_JESUIT_EDUCATION",
+   "name": "Jesuit Education",
+   "class": "FOLLOWER",
+   "text": "can buy buildings in Campus with Faith in all cities where city follows your religion; can buy buildings in Theater Square with Faith in all cities where city follows your religion"
+  },
+  {
+   "id": "BELIEF_RELIGIOUS_COMMUNITY",
+   "name": "Religious Community",
+   "class": "FOLLOWER",
+   "text": "international routes from the city +2 Gold where city has Holy Site in all cities where city follows your religion; international routes from the city +2 Gold where city has Shrine in all cities where city follows your religion; international routes from the city +2 Gold where city has Temple in all cities where city follows your religion; international routes from the city +2 Gold where city has Cathedral or city has Dar-e Mehr or city has Gurdwara or city has Meeting House or city has Mosque or city has Pagoda or city has Stupa or city has Synagogue or city has Wat in all cities where city follows your religion"
+  },
+  {
+   "id": "BELIEF_RELIQUARIES",
+   "name": "Reliquaries",
+   "class": "FOLLOWER",
+   "text": "Great Works of type Relic give Faith (scaling 300%) in all cities where city follows your religion; Tourism from Relic scaled 300% in all cities where city follows your religion"
+  },
+  {
+   "id": "BELIEF_WARRIOR_MONKS",
+   "name": "Warrior Monks",
+   "class": "FOLLOWER",
+   "text": "can buy Warrior Monk with Faith; culture bomb when Holy Site is built for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_WORK_ETHIC",
+   "name": "Work Ethic",
+   "class": "FOLLOWER",
+   "text": "Production equal to the district's Faith adjacency for all districts where city follows your religion and tile is Holy Site"
+  },
+  {
+   "id": "BELIEF_ZEN_MEDITATION",
+   "name": "Zen Meditation",
+   "class": "FOLLOWER",
+   "text": "adjust city amenities from religion (Amount=1) in all cities where city follows your religion and city has 2+ specialty districts"
+  },
+  {
+   "id": "BELIEF_CATHEDRAL",
+   "name": "Cathedral",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Cathedral",
+   "worshipBuilding": "BUILDING_CATHEDRAL"
+  },
+  {
+   "id": "BELIEF_DAR_E_MEHR",
+   "name": "Dar-e Mehr",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Dar-e Mehr",
+   "worshipBuilding": "BUILDING_DAR_E_MEHR"
+  },
+  {
+   "id": "BELIEF_GURDWARA",
+   "name": "Gurdwara",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Gurdwara",
+   "worshipBuilding": "BUILDING_GURDWARA"
+  },
+  {
+   "id": "BELIEF_MEETING_HOUSE",
+   "name": "Meeting House",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Meeting House",
+   "worshipBuilding": "BUILDING_MEETING_HOUSE"
+  },
+  {
+   "id": "BELIEF_MOSQUE",
+   "name": "Mosque",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Mosque",
+   "worshipBuilding": "BUILDING_MOSQUE"
+  },
+  {
+   "id": "BELIEF_PAGODA",
+   "name": "Pagoda",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Pagoda",
+   "worshipBuilding": "BUILDING_PAGODA"
+  },
+  {
+   "id": "BELIEF_STUPA",
+   "name": "Stupa",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Stupa",
+   "worshipBuilding": "BUILDING_STUPA"
+  },
+  {
+   "id": "BELIEF_SYNAGOGUE",
+   "name": "Synagogue",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Synagogue",
+   "worshipBuilding": "BUILDING_SYNAGOGUE"
+  },
+  {
+   "id": "BELIEF_WAT",
+   "name": "Wat",
+   "class": "WORSHIP",
+   "text": "unlocks worship building Wat",
+   "worshipBuilding": "BUILDING_WAT"
+  },
+  {
+   "id": "BELIEF_CROSS_CULTURAL_DIALOGUE",
+   "name": "Cross-Cultural Dialogue",
+   "class": "FOUNDER",
+   "text": "+1 Science per 4 follower for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_LAY_MINISTRY",
+   "name": "Lay Ministry",
+   "class": "FOUNDER",
+   "text": "+1 Culture per 1 district (Theater Square) for all players where player is religion founder; +1 Faith per 1 district (Holy Site) for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_PAPAL_PRIMACY",
+   "name": "Papal Primacy",
+   "class": "FOUNDER",
+   "text": "enable religion awards envoy religious pressure (Amount=200)"
+  },
+  {
+   "id": "BELIEF_PILGRIMAGE",
+   "name": "Pilgrimage",
+   "class": "FOUNDER",
+   "text": "+2 Faith per 1 city for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_RELIGIOUS_UNITY",
+   "name": "Religious Unity",
+   "class": "FOUNDER",
+   "text": "converting a city-state awards an Envoy"
+  },
+  {
+   "id": "BELIEF_SACRED_PLACES",
+   "name": "Sacred Places",
+   "class": "FOUNDER",
+   "text": "+2 Faith per 1 city with wonder for all players where player is religion founder; +2 Culture per 1 city with wonder for all players where player is religion founder; +2 Science per 1 city with wonder for all players where player is religion founder; +2 Gold per 1 city with wonder for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_STEWARDSHIP",
+   "name": "Stewardship",
+   "class": "FOUNDER",
+   "text": "+1 Science per 1 district (Campus) for all players where player is religion founder; +1 Gold per 1 district (Commercial Hub) for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_TITHE",
+   "name": "Tithe",
+   "class": "FOUNDER",
+   "text": "+3 Gold per 1 city for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_WORLD_CHURCH",
+   "name": "World Church",
+   "class": "FOUNDER",
+   "text": "+1 Culture per 4 follower for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_DEFENDER_OF_THE_FAITH",
+   "name": "Defender of the Faith",
+   "class": "ENHANCER",
+   "text": "+5 Combat Strength in combat for all units where player is religion founder and near religious city (FriendlyCity=yes) and NOT unit has tag Religious and NOT unit has tag Support"
+  },
+  {
+   "id": "BELIEF_HOLY_ORDER",
+   "name": "Holy Order",
+   "class": "ENHANCER",
+   "text": "30% cheaper to purchase Missionary in all your cities for all players where player is religion founder; 30% cheaper to purchase Apostle in all your cities for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_HOLY_WATERS",
+   "name": "Holy Waters",
+   "class": "ENHANCER",
+   "text": "+10 healing (All) for all units where within tiles for all districts where city follows your religion and district is Holy Site"
+  },
+  {
+   "id": "BELIEF_ITINERANT_PREACHERS",
+   "name": "Itinerant Preachers",
+   "class": "ENHANCER",
+   "text": "+3 tiles religious pressure range"
+  },
+  {
+   "id": "BELIEF_CRUSADE",
+   "name": "Crusade",
+   "class": "ENHANCER",
+   "text": "+10 Combat Strength in combat for all units where player is religion founder and near religious city (FriendlyCity=no) and NOT unit has tag Religious and NOT unit has tag Support"
+  },
+  {
+   "id": "BELIEF_MISSIONARY_ZEAL",
+   "name": "Missionary Zeal",
+   "class": "ENHANCER",
+   "text": "ability Walk on Air [ignores All movement costs; no river crossing penalty] for your units for all players where player is religion founder"
+  },
+  {
+   "id": "BELIEF_MONASTIC_ISOLATION",
+   "name": "Monastic Isolation",
+   "class": "ENHANCER",
+   "text": "100% less pressure lost when religious units die"
+  },
+  {
+   "id": "BELIEF_RELIGIOUS_COLONIZATION",
+   "name": "Religious Colonization",
+   "class": "ENHANCER",
+   "text": "religion spreads automatically"
+  },
+  {
+   "id": "BELIEF_SCRIPTURE",
+   "name": "Scripture",
+   "class": "ENHANCER",
+   "text": "religious spread x25"
+  }
+ ],
+ "religions": [
+  {
+   "id": "RELIGION_BUDDHISM",
+   "name": "Buddhism"
+  },
+  {
+   "id": "RELIGION_CATHOLICISM",
+   "name": "Catholicism"
+  },
+  {
+   "id": "RELIGION_CONFUCIANISM",
+   "name": "Confucianism"
+  },
+  {
+   "id": "RELIGION_HINDUISM",
+   "name": "Hinduism"
+  },
+  {
+   "id": "RELIGION_ISLAM",
+   "name": "Islam"
+  },
+  {
+   "id": "RELIGION_JUDAISM",
+   "name": "Judaism"
+  },
+  {
+   "id": "RELIGION_EASTERN_ORTHODOXY",
+   "name": "Eastern Orthodoxy"
+  },
+  {
+   "id": "RELIGION_PROTESTANTISM",
+   "name": "Protestantism"
+  },
+  {
+   "id": "RELIGION_SHINTO",
+   "name": "Shinto"
+  },
+  {
+   "id": "RELIGION_SIKHISM",
+   "name": "Sikhism"
+  },
+  {
+   "id": "RELIGION_TAOISM",
+   "name": "Taoism"
+  },
+  {
+   "id": "RELIGION_ZOROASTRIANISM",
+   "name": "Zoroastrianism"
+  }
+ ]
+}

@@ -5,6 +5,7 @@
 #include <queue>
 
 #include "sovereign/mapgen.h"
+#include "sovereign/modifiers.h"
 #include "sovereign/serialize.h"
 
 namespace sov {
@@ -199,6 +200,11 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::PassGreatPerson:
         case CommandType::ActivateGreatPerson:
             return validateGreatPeople(c);
+        case CommandType::FoundPantheon:
+        case CommandType::FoundReligion:
+        case CommandType::EvangelizeBelief:
+        case CommandType::SpreadReligion:
+            return validateReligion(c);
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -350,6 +356,10 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         return Fixed::fromInt(fromWater ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
     }
     if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
+    // Missionary Zeal: religious units ignore terrain (06).
+    if (ut.religiousStrength > 0 &&
+        sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed())
+        return Fixed::fromInt(fromWater ? embarkCost + 1 : 1);
     int cost = tt.moveCost;
     if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
     if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
@@ -584,6 +594,10 @@ void Game::apply(const Command& c) {
         case CommandType::PatronizeGreatPerson:
         case CommandType::PassGreatPerson:
         case CommandType::ActivateGreatPerson: applyGreatPeople(c); break;
+        case CommandType::FoundPantheon:
+        case CommandType::FoundReligion:
+        case CommandType::EvangelizeBelief:
+        case CommandType::SpreadReligion: applyReligion(c); break;
     }
 }
 
@@ -636,6 +650,10 @@ void Game::applyFoundCity(const Command& c) {
         }
     }
     const CityId newId = city.id;
+    // Religious Colonization: new cities start following the founder's religion (06).
+    city.pressure.assign(state_.religions.size(), 0);
+    if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())
+        city.pressure[static_cast<size_t>(p.religion)] = rules_->globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP") * 2;
     state_.cities.push_back(std::move(city));
     assignCitizens(*state_.city(newId));
 
@@ -667,6 +685,7 @@ void Game::applyEndTurn(const Command& c) {
 
 void Game::beginGlobalTurn() {
     ++state_.turn;
+    processReligion();
     processAgents();
     processFreeCities();
     processBarbarians();

@@ -214,7 +214,8 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
-   "trainable": false
+   "trainable": false,
+   "foundReligion": true
   },
   {
    "id": "UNIT_GREAT_SCIENTIST",
@@ -329,6 +330,9 @@
     "BUILDING_SHRINE"
    ],
    "purchaseYield": "FAITH",
+   "religiousStrength": 100,
+   "spreadCharges": 3,
+   "evictPercent": 10,
    "abilities": [
     "ABILITY_IGNORES_BORDERS",
     "ABILITY_PEACEKEEPER"
@@ -373,6 +377,8 @@
     "BUILDING_TEMPLE"
    ],
    "purchaseYield": "FAITH",
+   "religiousStrength": 90,
+   "healCharges": 3,
    "abilities": [
     "ABILITY_IGNORES_BORDERS",
     "ABILITY_PEACEKEEPER"
@@ -546,6 +552,9 @@
     "BUILDING_TEMPLE"
    ],
    "purchaseYield": "FAITH",
+   "religiousStrength": 110,
+   "spreadCharges": 3,
+   "evictPercent": 25,
    "promotionClass": "PROMOTION_CLASS_RELIGIOUS_APOSTLE",
    "abilities": [
     "ABILITY_IGNORES_BORDERS"
@@ -740,6 +749,9 @@
     "BUILDING_TEMPLE"
    ],
    "purchaseYield": "FAITH",
+   "religiousStrength": 75,
+   "spreadCharges": 3,
+   "evictPercent": 75,
    "abilities": [
     "ABILITY_DOMESTIC_SPREAD",
     "ABILITY_FRIENDLY_TERRITORY_ADVANTAGE"

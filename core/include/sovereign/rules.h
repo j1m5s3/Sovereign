@@ -188,6 +188,13 @@ struct UnitType {
     bool trainable = true;  // false: never in a city queue (Great People, spies)
     std::vector<TypeIndex> needsBuilding;  // the city must have one of these (empty: none)
     std::string purchaseYield;  // "GOLD", "FAITH" or empty
+    // Religious units (06): theological strength, spread charges, the share of other
+    // religions a spread removes, heal charges; the Great Prophet founds a religion.
+    int religiousStrength = 0;
+    int spreadCharges = 0;
+    int evictPercent = 0;
+    int healCharges = 0;
+    bool foundReligion = false;
     Unlock unlock;
     int era = 0;  // era index of its unlock (Ancient when it has none)
     TypeIndex strategicResource = kNone;  // resource spent to train it
@@ -243,11 +250,27 @@ struct BuildingType {
     bool needsRiver = false;
     bool purchasable = false;
     bool granted = false;  // given by the rules (Palace), never built
+    bool faithOnly = false;  // a worship building: bought with Faith by a religion holding its belief
     TypeIndex districtType = kNone;  // Rules::districts; kNone while its district is not modelled
     bool meleeCannotDamageWalls = false;
     bool wallsCannotBeBypassed = false;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
+};
+
+// Religion (06-religion.md; data: religion.md).
+enum class BeliefClass : uint8_t { Pantheon = 0, Follower, Worship, Founder, Enhancer };
+constexpr int kNumBeliefClasses = 5;
+
+struct BeliefType {
+    std::string id, name, text;
+    BeliefClass cls = BeliefClass::Pantheon;
+    TypeIndex worshipBuilding = kNone;  // Worship: the building it unlocks
+    TypeIndex grantUnit = kNone;        // Pantheon: a unit given in the capital when chosen
+};
+
+struct ReligionType {
+    std::string id, name;
 };
 
 // Great people (07-economy-trade-great-people.md, Great People; data: great-people.md).
@@ -461,6 +484,17 @@ enum class ModEffect : uint8_t {
     UnitStrength,             // player: +amount combat strength for units of `unitClass` (`vsBarbarians`: only against them)
     DistrictAdjacencyPercent, // player: +amount % adjacency yield for `district`
     CityLoyalty,              // +amount loyalty per turn in a city [R&F]
+    // Religion (06), player effects of founder and enhancer beliefs:
+    FounderYieldPerCity,        // + `yield` per city (any owner) following the player's religion
+    FounderYieldPerFollowers,   // + `yield` per `per` followers of the player's religion
+    FounderYieldPerDistrict,    // + `yield` per `district` in cities following the player's religion
+    ReligionPressureRange,      // + tiles of passive pressure range
+    ReligionPressurePercent,    // + % passive pressure
+    ReligiousUnitDiscountPercent,  // % off Faith purchases of religious units
+    UnitStrengthNearFollowingCity, // + strength for combat units near cities following the religion (`foreign`: only theirs)
+    ReligiousUnitsIgnoreTerrain,   // flag: religious units pay 1 per plot
+    NoCombatPressureLoss,          // flag: theological defeats cost no pressure
+    ReligionColonizes,             // flag: new cities start following the religion
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -487,7 +521,7 @@ struct RequirementSet {
 
 // Civ VI's modifier model (00-overview.md, Architecture recommendations):
 // who it affects (collection), what it does (effect), when (requirements).
-enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government };
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief };
 
 struct Modifier {
     std::string id;
@@ -505,6 +539,8 @@ struct Modifier {
     int maxEra = -1;
     TypeIndex ability = kNone;  // GrantAbility
     bool vsBarbarians = false;  // UnitStrength
+    int per = 1;                // FounderYieldPerFollowers: followers per point
+    bool foreign = false;       // UnitStrengthNearFollowingCity: foreign cities only (Crusade)
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
@@ -545,6 +581,7 @@ struct MapSizeType {
     std::string id;
     int width = 0, height = 0;
     int defaultPlayers = 0;
+    int maxReligions = 0;  // religions that can be founded (Great Prophets) on this size
 };
 
 struct GameSpeedType {
@@ -588,6 +625,8 @@ public:
     std::vector<GreatPersonClass> greatPersonClasses;
     std::vector<GreatPersonType> greatPeople;  // every individual, by class then era (07: Great People)
     std::vector<GreatWorkType> greatWorkTypes;
+    std::vector<BeliefType> beliefs;
+    std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
 
     TypeIndex terrain(const std::string& id) const;
@@ -611,6 +650,8 @@ public:
     TypeIndex greatPersonClass(const std::string& id) const;
     TypeIndex greatPerson(const std::string& id) const;
     TypeIndex greatWorkType(const std::string& id) const;
+    TypeIndex belief(const std::string& id) const;
+    TypeIndex religion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;

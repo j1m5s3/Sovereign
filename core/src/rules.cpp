@@ -154,6 +154,16 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
         {"ADJUST_DISTRICT_ADJACENCY_PERCENT", ModEffect::DistrictAdjacencyPercent},
         {"ADJUST_CITY_LOYALTY", ModEffect::CityLoyalty},
+        {"FOUNDER_YIELD_PER_CITY", ModEffect::FounderYieldPerCity},
+        {"FOUNDER_YIELD_PER_FOLLOWERS", ModEffect::FounderYieldPerFollowers},
+        {"FOUNDER_YIELD_PER_DISTRICT", ModEffect::FounderYieldPerDistrict},
+        {"ADJUST_RELIGION_PRESSURE_RANGE", ModEffect::ReligionPressureRange},
+        {"ADJUST_RELIGION_PRESSURE_PERCENT", ModEffect::ReligionPressurePercent},
+        {"ADJUST_RELIGIOUS_UNIT_DISCOUNT_PERCENT", ModEffect::ReligiousUnitDiscountPercent},
+        {"ADJUST_STRENGTH_NEAR_FOLLOWING_CITY", ModEffect::UnitStrengthNearFollowingCity},
+        {"RELIGIOUS_UNITS_IGNORE_TERRAIN", ModEffect::ReligiousUnitsIgnoreTerrain},
+        {"NO_COMBAT_PRESSURE_LOSS", ModEffect::NoCombatPressureLoss},
+        {"RELIGION_COLONIZES", ModEffect::ReligionColonizes},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -197,8 +207,15 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     // Player-wide effects and the player collection go together.
     const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
                               mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
-                              mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent;
+                              mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent ||
+                              mod.effect >= ModEffect::FounderYieldPerCity;
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
+    mod.per = std::max(1, static_cast<int>(args["per"].integer(1)));
+    mod.foreign = args["foreign"].boolean(false);
+    if (mod.effect == ModEffect::FounderYieldPerDistrict && mod.district == kNone) {
+        *error = "FOUNDER_YIELD_PER_DISTRICT needs a district";
+        return false;
+    }
     if (playerEffect != (mod.collection == ModCollection::Player)) {
         *error = "effect " + e + " does not fit collection " + c;
         return false;
@@ -233,7 +250,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -518,6 +535,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.trainable = j["trainable"].boolean(true);
         u.agent = j["agent"].boolean(false);
         u.purchaseYield = j["purchaseYield"].str();
+        u.religiousStrength = static_cast<int>(j["religiousStrength"].integer(0));
+        u.spreadCharges = static_cast<int>(j["spreadCharges"].integer(0));
+        u.evictPercent = static_cast<int>(j["evictPercent"].integer(0));
+        u.healCharges = static_cast<int>(j["healCharges"].integer(0));
+        u.foundReligion = j["foundReligion"].boolean(false);
         if (!readUnlock(j["unlock"], u.unlock, "unit " + id)) return false;
         if (!u.unlock.none()) u.era = (u.unlock.civic ? civics : techs)[static_cast<size_t>(u.unlock.index)].era;
         const Json& sc = j["strategicCost"];
@@ -627,6 +649,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
+            b.faithOnly = j["faithOnly"].boolean(false);
             b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
             b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
             buildings.push_back(std::move(b));
@@ -894,6 +917,33 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         dynasties.push_back(std::move(d));
     }
+    // Religion (06): beliefs and the religions that can be founded.
+    for (const auto& [id, j] : m.tables["beliefs"]) {
+        BeliefType b;
+        b.id = id;
+        b.name = j["name"].str(id);
+        b.text = j["text"].str();
+        const std::string& cls = j["class"].str();
+        if (cls == "PANTHEON") b.cls = BeliefClass::Pantheon;
+        else if (cls == "FOLLOWER") b.cls = BeliefClass::Follower;
+        else if (cls == "WORSHIP") b.cls = BeliefClass::Worship;
+        else if (cls == "FOUNDER") b.cls = BeliefClass::Founder;
+        else if (cls == "ENHANCER") b.cls = BeliefClass::Enhancer;
+        else {
+            *error = "belief " + id + ": unknown class " + cls;
+            return false;
+        }
+        if (j.has("worshipBuilding") && (b.worshipBuilding = building(j["worshipBuilding"].str())) == kNone) {
+            *error = "belief " + id + ": unknown building";
+            return false;
+        }
+        if (j.has("grantUnit") && (b.grantUnit = unit(j["grantUnit"].str())) == kNone) {
+            *error = "belief " + id + ": unknown unit";
+            return false;
+        }
+        beliefs.push_back(std::move(b));
+    }
+    for (const auto& [id, j] : m.tables["religions"]) religions.push_back({id, j["name"].str(id)});
     // Great people (07): classes, the points buildings and districts earn, individuals, Great Works.
     for (const auto& [id, j] : m.tables["greatPersonClasses"]) {
         GreatPersonClass c;
@@ -1108,6 +1158,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             mod.sourceKind = ModSource::Policy;
         } else if ((mod.sourceIndex = government(mod.source)) != kNone) {
             mod.sourceKind = ModSource::Government;
+        } else if ((mod.sourceIndex = belief(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Belief;
         } else {
             *error = "modifier " + id + ": unknown source " + mod.source;
             return false;
@@ -1120,6 +1172,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.width = static_cast<int>(j["width"].integer(0));
         s.height = static_cast<int>(j["height"].integer(0));
         s.defaultPlayers = static_cast<int>(j["defaultPlayers"].integer(2));
+        s.maxReligions = static_cast<int>(j["maxReligions"].integer(0));
         if (s.width < 8 || s.height < 8) {
             *error = "map size " + id + " is too small";
             return false;
@@ -1193,6 +1246,8 @@ TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id)
 TypeIndex Rules::greatPersonClass(const std::string& id) const { return findIn(greatPersonClasses, id); }
 TypeIndex Rules::greatPerson(const std::string& id) const { return findIn(greatPeople, id); }
 TypeIndex Rules::greatWorkType(const std::string& id) const { return findIn(greatWorkTypes, id); }
+TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id); }
+TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {
     for (const Dynasty& d : dynasties) {

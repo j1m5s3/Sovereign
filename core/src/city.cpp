@@ -266,7 +266,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
-        if (b.granted || c.has(item.type) || !hasUnlocked(c.owner, b.unlock)) return fail(CommandError::CannotBuild);
+        if (b.granted || b.faithOnly || c.has(item.type) || !hasUnlocked(c.owner, b.unlock)) return fail(CommandError::CannotBuild);
         // Buildings outside the City Center need their finished district.
         if (b.district != "DISTRICT_CITY_CENTER" && (b.districtType == kNone || !c.district(b.districtType, true)))
             return fail(CommandError::CannotBuild);
@@ -340,6 +340,7 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         if (m > Fixed()) net -= m;
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
+    if (p.anarchyTurns == 0) net += founderYields(player)[idx(YieldType::Gold)];  // Tithe and the like (06)
     return net;
 }
 
@@ -394,6 +395,14 @@ CommandError Game::validateCity(const Command& c) const {
             return CommandError::Ok;
         case CommandType::Purchase: {
             if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.target.x == 1) {
+                // Religious units and worship buildings, bought with Faith (06).
+                const int faith = faithPurchaseCost(c.player, *city, item);
+                if (faith < 0) return CommandError::CannotBuild;
+                if (item.kind == ProductionKind::Unit && !unitSpawnPlot(*city, item.type)) return CommandError::CannotBuild;
+                if (state_.players[static_cast<size_t>(c.player)].faith < Fixed::fromInt(faith)) return CommandError::NotEnoughFaith;
+                return CommandError::Ok;
+            }
             if (!canProduce(*city, item, &why)) return why;
             int cost = purchaseCost(c.player, item);
             if (cost < 0) return CommandError::CannotBuild;
@@ -443,6 +452,21 @@ void Game::applyCity(const Command& c) {
             else city.queue.push_back(item);
             break;
         case CommandType::Purchase:
+            if (c.target.x == 1) {
+                p.faith -= Fixed::fromInt(faithPurchaseCost(c.player, city, item));
+                if (item.kind == ProductionKind::Building) {
+                    city.buildings.push_back(item.type);
+                    std::sort(city.buildings.begin(), city.buildings.end());
+                } else {
+                    const int religion = cityMajorityReligion(city);
+                    if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
+                    ++p.unitsTrained[static_cast<size_t>(item.type)];
+                    Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
+                    u.religion = static_cast<int16_t>(religion);
+                    u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges;
+                }
+                break;
+            }
             p.gold -= Fixed::fromInt(purchaseCost(c.player, item));
             completeItem(city, item);
             // A bought building leaves the queue; what was put into it carries over.
@@ -600,6 +624,11 @@ void Game::processCities(PlayerId pid) {
             culture += r.yields[idx(YieldType::Culture)];
             player.faith += r.yields[idx(YieldType::Faith)];
         }
+        // A founder's beliefs pay for its religion's spread (06: Founder beliefs).
+        const Yields fy = founderYields(pid);
+        science += fy[idx(YieldType::Science)];
+        culture += fy[idx(YieldType::Culture)];
+        player.faith += fy[idx(YieldType::Faith)];
     }
     processResearch(pid, science, culture);
     accumulateStrategics(pid);

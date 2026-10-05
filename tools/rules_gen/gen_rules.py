@@ -298,6 +298,22 @@ def gen_units():
                 u["needsBuilding"] = need
         if row["Purchase"]:
             u["purchaseYield"] = row["Purchase"].upper()
+        # Religious units (06: Religious units): strength in theological combat, spread charges,
+        # the share of other religions a spread removes, heal charges.
+        m = re.search(r"religious str (\d+)", special)
+        if m:
+            u["religiousStrength"] = int(m.group(1))
+        m = re.search(r"spread (\d+)", special)
+        if m:
+            u["spreadCharges"] = int(m.group(1))
+        m = re.search(r"evict (\d+)%", special)
+        if m:
+            u["evictPercent"] = int(m.group(1))
+        m = re.search(r"heal charges (\d+)", special)
+        if m:
+            u["healCharges"] = int(m.group(1))
+        if special == "found religion":
+            u["foundReligion"] = True
         if row["Unlock"]:
             u["unlock"] = unlock_id(row["Unlock"])
         m = re.fullmatch(r"(\w+) (\d+)", row["Strategic cost [GS]"])
@@ -475,6 +491,8 @@ def gen_buildings():
             b["needsRiver"] = True
         if row["Purchase"] == "Gold":
             b["purchasable"] = True
+        if row["Purchase"] == "Faith":
+            b["faithOnly"] = True  # worship buildings: bought with Faith, never built
         if "melee attacks cannot damage the walls" in row["Modifiers"]:
             b["meleeCannotDamageWalls"] = True
         if "walls cannot be bypassed" in row["Modifiers"]:
@@ -905,7 +923,7 @@ GREAT_WORK_TYPES = {
     "SCULPTURE": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
     "PORTRAIT": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
     "LANDSCAPE": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
-    "RELIGIOUS": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
+    "RELIGIOUS": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE", "CATHEDRAL"]},
     "MUSIC": {"yield": "CULTURE", "amount": 4, "tourism": 4, "slots": ["MUSIC", "PALACE"]},
     "ARTIFACT": {"yield": "CULTURE", "amount": 3, "tourism": 3, "slots": ["ARTIFACT"]},
     "RELIC": {"yield": "FAITH", "amount": 4, "tourism": 8, "slots": ["RELIC", "PALACE"]},
@@ -1031,6 +1049,31 @@ def gen_great_people():
     return {"greatPersonClasses": classes, "greatPeople": people, "greatWorkTypes": works}
 
 
+BELIEF_CLASSES = ["Pantheon", "Follower", "Worship", "Founder", "Enhancer"]
+
+
+def gen_religion():
+    """Beliefs by class, the religions to found and the per-size limit (06-religion.md).
+    Belief effects the core applies are hand-written modifiers (modifiers.json, source BELIEF_*);
+    the text here is what the player reads."""
+    buildings = {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")}
+    units = {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")}
+    beliefs = []
+    for cls in BELIEF_CLASSES:
+        for row in table(SPEC / "religion.md", cls):
+            b = {"id": "BELIEF_" + snake(row["Belief"]), "name": row["Belief"], "class": cls.upper(), "text": row["Effects"]}
+            m = re.fullmatch(r"unlocks worship building (.+)", row["Effects"])
+            if m and m.group(1) in buildings:
+                b["worshipBuilding"] = buildings[m.group(1)]
+            m = re.search(r"grants 1 (\w+) in your capital", row["Effects"])
+            if m and m.group(1) in units:
+                b["grantUnit"] = units[m.group(1)]
+            beliefs.append(b)
+    religions = [{"id": "RELIGION_" + snake(r["Religion"]), "name": r["Religion"]}
+                 for r in table(SPEC / "religion.md", "Religions") if r["Religion"] not in ("Pantheon", "Custom Religion")]
+    return {"beliefs": beliefs, "religions": religions}
+
+
 def main():
     check = "--check" in sys.argv
     outputs = {
@@ -1048,6 +1091,7 @@ def main():
         "policies.json": gen_policies(),
         "improvements.json": gen_improvements(),
         "greatpeople.json": gen_great_people(),
+        "religion.json": gen_religion(),
     }
     stale = []
     for name, doc in outputs.items():
