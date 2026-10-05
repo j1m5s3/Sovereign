@@ -79,7 +79,22 @@ Commander Commander::trained(std::shared_ptr<const Policy> policy, float tempera
     return c;
 }
 
+std::array<Order, kSquads> Commander::applyCounter(const Counter& c, std::array<Order, kSquads> orders) {
+    for (int q = 0; q < kSquads; ++q) {
+        Order& o = orders[static_cast<size_t>(q)];
+        const bool side = q != 1;
+        if (c.pursue && (o == Order::Hold || o == Order::FallBack)) o = Order::Advance;
+        if (c.holdFlanks && side && (o == Order::Advance || o == Order::FallBack)) o = Order::Hold;
+        if (c.huntLeader && q == 1 && o != Order::FallBack) o = Order::HuntLeader;
+    }
+    return orders;
+}
+
 std::array<Order, kSquads> Commander::decide(const Sim& sim, int side) {
+    return applyCounter(counter_, decideRaw(sim, side));
+}
+
+std::array<Order, kSquads> Commander::decideRaw(const Sim& sim, int side) {
     std::array<Order, kSquads> out;
     out.fill(fixed_);
     if (!policy_) return out;

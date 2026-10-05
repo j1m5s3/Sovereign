@@ -144,3 +144,19 @@ TEST(the_trained_commander_does_not_flip_clear_mismatches) {
     std::printf("  upsets: %d of %d\n", upsets, games);
     CHECK(upsets * 5 <= games);
 }
+
+TEST(counters_adjust_the_orders) {
+    const std::array<Order, kSquads> base{{Order::Advance, Order::Hold, Order::Advance}};
+    Counter flanks;
+    flanks.holdFlanks = true;
+    const auto held = Commander::applyCounter(flanks, base);
+    CHECK(held[0] == Order::Hold && held[2] == Order::Hold);
+    CHECK(held[1] == Order::Hold);
+    Counter hunt;
+    hunt.huntLeader = true;
+    hunt.pursue = true;
+    const auto pressed = Commander::applyCounter(hunt, base);
+    CHECK(pressed[1] == Order::HuntLeader);
+    CHECK(pressed[0] == Order::Advance && pressed[2] == Order::Advance);
+    CHECK(Commander::applyCounter(Counter{}, base) == base);  // no counter: the network's own orders
+}

@@ -216,3 +216,21 @@ TEST(a_leader_killed_storming_a_city_starts_a_succession) {
     CHECK(g->state().players[0].successionPending);
     (void)target;
 }
+
+TEST(live_battle_habits_feed_the_profile) {
+    Field f = field();
+    Game& g = *f.game;
+    REQUIRE(g.submit(Command::attack(0, f.escort, {7, 6})) == CommandError::Ok);
+    CHECK_EQ(g.submit(Command::battleResult(0, 30, 20, 0, {500, 0, 0, 1001})), CommandError::BadTarget);  // out of range
+    REQUIRE(g.submit(Command::battleResult(0, 30, 20, 0, {800, 100, 0, 600})) == CommandError::Ok);
+    const PlayerProfile* p = g.profile(0);
+    REQUIRE(p != nullptr);
+    CHECK_EQ(p->battles, 1);
+    CHECK_EQ(p->battleFlank, 800);
+    CHECK_EQ(p->battleLeaderFront, 600);
+    // A plain result (no habits) still settles the battle and leaves the profile alone.
+    Field f2 = field();
+    REQUIRE(f2.game->submit(Command::attack(0, f2.escort, {7, 6})) == CommandError::Ok);
+    REQUIRE(f2.game->submit(Command::battleResult(0, 30, 20, 0)) == CommandError::Ok);
+    CHECK(f2.game->profile(0) == nullptr || f2.game->profile(0)->battles == 0);
+}

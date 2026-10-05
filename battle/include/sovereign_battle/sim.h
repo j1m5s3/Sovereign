@@ -94,6 +94,15 @@ struct Result {
     int winner = -1;      // side that held the field (-1: neither)
 };
 
+// How a side fought (leader doc §10, player modelling): shares x1000 of its squads' time under
+// each kind of order, and of the battle its leader spent within striking distance of the enemy.
+struct Habits {
+    int flank = 0;        // FlankLeft / FlankRight
+    int fallBack = 0;     // FallBack
+    int huntLeader = 0;   // HuntLeader
+    int leaderFront = 0;  // its leader fighting in person
+};
+
 // What the human does with the leader this frame.
 struct LeaderInput {
     Vec2 move;            // unit vector or zero
@@ -123,6 +132,7 @@ public:
     void setOrder(int side, int squad, Order o);
     void setAllOrders(int side, Order o);
     Order order(int side, int squad) const { return orders_[side][squad]; }
+    Habits habits(int side) const;
 
     const Spec& spec() const { return spec_; }
     const std::vector<Soldier>& soldiers() const { return men_; }
@@ -158,6 +168,8 @@ private:
     std::array<std::array<Vec2, kSquads>, 2> lastCentroid_{}, velocity_{};  // how each squad is moving
     std::array<std::array<int, kSquads>, 2> squadInitial_{};
     int initial_[2] = {0, 0};
+    std::array<std::array<float, kOrders>, 2> orderTime_{};  // squad-seconds under each order
+    std::array<float, 2> leaderFrontTime_{}, sideTime_{};
     int leader_[2] = {-1, -1};
     bool leaderIsUnit_[2] = {false, false};
     float elapsed_ = 0.f;
