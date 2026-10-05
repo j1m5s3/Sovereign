@@ -233,6 +233,28 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		Trees[i]->SetVisibility(false);
 	}
 
+	// Roads: a thin packed-earth strip from centre to centre (wrapping pairs are skipped).
+	int32 RoadCount = 0;
+	for (const TPair<FIntPoint, FIntPoint>& R : Mirror.Roads)
+	{
+		const FVector A = SovHex::Center(R.Key.X, R.Key.Y, SurfaceZ(R.Key.X, R.Key.Y));
+		const FVector B = SovHex::Center(R.Value.X, R.Value.Y, SurfaceZ(R.Value.X, R.Value.Y));
+		const FVector Dir = B - A;
+		if (Dir.Size2D() > SovHex::Size * 2.5)
+		{
+			continue;
+		}
+		UStaticMeshComponent* C = Marker(RoadPieces, RoadCount++, CubeMesh.Get());
+		C->SetRelativeLocation((A + B) * 0.5 + FVector(0, 0, 1.5));
+		C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))), 0.f));
+		C->SetRelativeScale3D(FVector(Dir.Size2D() / 100.0, 0.07, 0.02));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.42f, 0.33f, 0.22f)));
+	}
+	for (int32 i = RoadCount; i < RoadPieces.Num(); ++i)
+	{
+		RoadPieces[i]->SetVisibility(false);
+	}
+
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{
 		const FSovCityMarker& City = Mirror.Cities[i];

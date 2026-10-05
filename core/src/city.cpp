@@ -107,6 +107,14 @@ CityReport Game::cityReport(CityId id) const {
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
     }
+    // Trade routes from this city pay by the districts at their destinations (07).
+    for (const TradeRoute& tr : state_.tradeRoutes) {
+        if (tr.origin != c->id) continue;
+        if (const City* dest = state_.city(tr.destination)) {
+            const Yields ty = tradeRouteYields(*c, *dest);
+            for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
+        }
+    }
     // Great Works in the city's slots, and great people whose effects improve its buildings.
     for (const GreatWork& w : c->greatWorks) {
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];

@@ -38,6 +38,7 @@ struct Plot {
     PlayerId owner = kNoPlayer;
     CityId city = kNoCity;  // owning city
     int16_t continent = -1;
+    int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -89,6 +90,16 @@ struct CityDistrict {
     TypeIndex type = kNone;  // Rules::districts
     Hex pos;
     bool complete = false;
+};
+
+// A trade route (07: Trade routes): the Trader travels it until it ends, then returns home.
+struct TradeRoute {
+    int32_t id = 0;
+    PlayerId owner = kNoPlayer;
+    CityId origin = kNoCity, destination = kNoCity;
+    TypeIndex traderType = kNone;
+    std::vector<int32_t> path;  // plot indices from origin to destination
+    int turnsLeft = 0;
 };
 
 // A founded religion (06: Founding a religion).
@@ -296,6 +307,8 @@ struct SOV_API GameState {
     std::vector<Agent> agents;  // sorted by id
     std::vector<uint8_t> greatPeopleClaimed;  // per individual: recruited by someone
     std::vector<FoundedReligion> religions;   // in founding order
+    std::vector<TradeRoute> tradeRoutes;      // sorted by id
+    int32_t nextTradeRouteId = 1;
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;

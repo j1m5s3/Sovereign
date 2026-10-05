@@ -5,7 +5,16 @@
    "id": "DISTRICT_CITY_CENTER",
    "name": "City Center",
    "hp": 200,
-   "attackRange": 2
+   "attackRange": 2,
+   "tradeYields": {
+    "domestic": {
+     "FOOD": 1,
+     "PRODUCTION": 1
+    },
+    "international": {
+     "GOLD": 3
+    }
+   }
   },
   {
    "id": "DISTRICT_CAMPUS",
@@ -50,6 +59,14 @@
    ],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "FOOD": 1
+    },
+    "international": {
+     "SCIENCE": 1
+    }
    }
   },
   {
@@ -83,6 +100,14 @@
    ],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_PROPHET": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "FOOD": 1
+    },
+    "international": {
+     "FAITH": 1
+    }
    }
   },
   {
@@ -115,6 +140,14 @@
    ],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "PRODUCTION": 1
+    },
+    "international": {
+     "GOLD": 3
+    }
    }
   },
   {
@@ -132,6 +165,14 @@
    "adjacency": [],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_GENERAL": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "PRODUCTION": 1
+    },
+    "international": {
+     "PRODUCTION": 1
+    }
    }
   },
   {
@@ -155,6 +196,14 @@
     "GREAT_PERSON_CLASS_WRITER": 1,
     "GREAT_PERSON_CLASS_ARTIST": 1,
     "GREAT_PERSON_CLASS_MUSICIAN": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "FOOD": 1
+    },
+    "international": {
+     "CULTURE": 1
+    }
    }
   },
   {
@@ -201,6 +250,14 @@
    ],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "PRODUCTION": 1
+    },
+    "international": {
+     "PRODUCTION": 1
+    }
    }
   },
   {
@@ -234,6 +291,14 @@
    ],
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
+   },
+   "tradeYields": {
+    "domestic": {
+     "PRODUCTION": 1
+    },
+    "international": {
+     "GOLD": 3
+    }
    }
   }
  ]

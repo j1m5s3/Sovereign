@@ -194,7 +194,18 @@ def gen_terrain():
         if fid in IMPASSABLE_FEATURES:
             f["impassable"] = True
         features.append(f)
-    return {"terrains": terrains, "features": features}
+    # Roads by era (01: Routes; railroads need Military Engineers, not modelled yet).
+    routes = []
+    for row in table(SPEC / "terrain-features-resources.md", "Routes"):
+        if row["Only built by unit"]:
+            continue
+        r = {"id": "ROUTE_" + snake(row["Route"]), "name": row["Route"], "moveCost": float(row["Movement cost"])}
+        if row["Bridges"] == "yes":
+            r["bridges"] = True
+        if row["Prereq era"]:
+            r["era"] = "ERA_" + row["Prereq era"].replace(" Era", "").upper()
+        routes.append(r)
+    return {"terrains": terrains, "features": features, "routes": routes}
 
 
 def harvest_yields(text):
@@ -500,6 +511,11 @@ def gen_buildings():
         points = gpp(row["GPP"])
         if points:
             b["greatPersonPoints"] = points
+        if "+1 Trade Route capacity where NOT city has Market" in row["Modifiers"]:
+            b["tradeCapacityUnless"] = "BUILDING_MARKET"  # Lighthouse: only without a Market
+            b["tradeCapacity"] = 1
+        elif re.search(r"(^|; )\+1 Trade Route capacity($|;)", row["Modifiers"]):
+            b["tradeCapacity"] = 1
         slots = {}
         for m in re.finditer(r"(\d+) (\w+)", row["Great Work slots"] or ""):
             slots[m.group(2).upper()] = slots.get(m.group(2).upper(), 0) + int(m.group(1))
@@ -601,6 +617,16 @@ def gen_districts():
             points = gpp(row["GPP per turn"])
             if points:
                 d["greatPersonPoints"] = points
+        # Trade route yields to the origin for this district at the destination (07: Trade routes),
+        # "Food 0/1/0" = as origin / domestic destination / international destination.
+        trade = {"domestic": {}, "international": {}}
+        for m in re.finditer(r"(\w+) (\d+)/(\d+)/(\d+)", extra[name]["Trade route yields (as origin / domestic dest. / international dest.)"] or ""):
+            if int(m.group(3)):
+                trade["domestic"][YIELD_WORDS[m.group(1)]] = int(m.group(3))
+            if int(m.group(4)):
+                trade["international"][YIELD_WORDS[m.group(1)]] = int(m.group(4))
+        if trade["domestic"] or trade["international"]:
+            d["tradeYields"] = trade
         out.append(d)
     return {"districts": out}
 
@@ -817,7 +843,8 @@ def gen_tree(kind, name_col, prefix, key):
         other = row.get("Other effects (envoys, governor titles, slots...)") or row.get("Other effects", "")
         flags = [f for text, f in (("grant combat adjacency", "COMBAT_ADJACENCY"),
                                    ("adjust player enforce borders", "ENFORCE_BORDERS"),
-                                   ("can enter Ocean", "OCEAN")) if text in other]
+                                   ("can enter Ocean", "OCEAN"),
+                                   ("+1 Trade Route capacity", "TRADE_ROUTE_CAPACITY")) if text in other]
         unlocks = row.get("Unlocks", "")
         if re.search(r"(^|; )embark all\b", unlocks):
             flags.append("EMBARK_ALL")
@@ -844,7 +871,8 @@ def gen_tree(kind, name_col, prefix, key):
         stats = {r["Era"]: r for r in table(SPEC / "eras-moments-loyalty.md", "Eras")}
         doc["eras"] = [{"id": "ERA_" + e.upper(), "name": e,
                         "embarkedStrength": num(stats[e + " Era"]["Embarked strength"]),
-                        "greatPersonBaseCost": num(stats[e + " Era"]["GP base cost"])} for e in ERAS]
+                        "greatPersonBaseCost": num(stats[e + " Era"]["GP base cost"]),
+                        "tradeRouteExtraTurns": num(stats[e + " Era"]["Trade route min end-turn change"])} for e in ERAS]
     return doc
 
 

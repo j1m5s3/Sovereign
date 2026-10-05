@@ -30,6 +30,9 @@
    "prereqs": [
     "CIVIC_CODE_OF_LAWS"
    ],
+   "effects": [
+    "TRADE_ROUTE_CAPACITY"
+   ],
    "boost": {
     "percent": 40,
     "text": "discover a second continent",

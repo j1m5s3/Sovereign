@@ -54,6 +54,7 @@ enum class CommandType : uint8_t {
     FoundReligion = 35,         // id = Great Prophet on a Holy Site, arg = religion, arg2 = Founder belief, target.x = Follower belief
     EvangelizeBelief = 36,      // id = Apostle, arg = a Worship, Enhancer (or missing) belief for its religion
     SpreadReligion = 37,        // id = religious unit in a city's territory: spread its religion there
+    StartTradeRoute = 38,       // id = Trader in one of the player's cities, arg = destination city
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -148,6 +149,9 @@ struct Command {
         return {CommandType::EvangelizeBelief, p, apostle, {}, belief, 0};
     }
     static Command spreadReligion(PlayerId p, UnitId u) { return {CommandType::SpreadReligion, p, u, {}, 0, 0}; }
+    static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
+        return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
+    }
     // Buy a religious unit or a worship building with Faith (target.x = 1 marks a Faith purchase).
     static Command purchaseWithFaith(PlayerId p, CityId c, ProductionItem item) {
         return {CommandType::Purchase, p, c, Hex{1, 0}, static_cast<int32_t>(item.kind), item.type};
@@ -204,6 +208,7 @@ enum class CommandError : uint8_t {
     CannotActivate,
     CannotFoundReligion,
     CannotSpread,
+    CannotTrade,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

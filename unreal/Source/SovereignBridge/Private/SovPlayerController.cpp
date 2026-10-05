@@ -573,6 +573,29 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::TradeRoute:
+		{
+			// 07: the Trader's destinations in range, with what each pays its city per turn.
+			ChooserTitle = FString::Printf(TEXT("Trade route (%d of %d in use, %d turns)"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me()), G.tradeRouteLength());
+			const sov::City* From = G.tradeOrigin(ReligionUnit);
+			for (sov::CityId Dest : G.tradeDestinations(ReligionUnit))
+			{
+				const sov::City& D = *G.state().city(Dest);
+				const sov::Yields Y = G.tradeRouteYields(*From, D);
+				FString Pays;
+				static const TCHAR* Names[] = {TEXT("Food"), TEXT("Production"), TEXT("Gold"), TEXT("Science"), TEXT("Culture"), TEXT("Faith")};
+				for (size_t k = 0; k < sov::kNumYields; ++k)
+				{
+					if (Y[k] > sov::Fixed())
+					{
+						Pays += FString::Printf(TEXT(" +%s %s"), *Str(Y[k].toString()), Names[k]);
+					}
+				}
+				Choices.Add({FString::Printf(TEXT("%s%s:%s"), *Str(D.name), D.owner == Me() ? TEXT("") : TEXT(" (abroad)"), *Pays),
+					sov::Command::startTradeRoute(Me(), ReligionUnit, Dest)});
+			}
+			break;
+		}
 		case EChooser::GreatPeople:
 		{
 			// 07: each class offers one person to everyone; points earn them, gold or faith buys them now.
@@ -1056,6 +1079,12 @@ void ASovPlayerController::HandleOrders()
 	}
 	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
 	const sov::Hex Pos = U->pos;
+	if (WasInputKeyJustPressed(EKeys::F) && T.id == "UNIT_TRADER")
+	{
+		ReligionUnit = U->id;
+		OpenChooser(EChooser::TradeRoute);
+		return;
+	}
 	if (WasInputKeyJustPressed(EKeys::F) && T.foundReligion)
 	{
 		// A Great Prophet founds a religion on a Holy Site (06).
@@ -1170,6 +1199,7 @@ void ASovPlayerController::UpdatePanel()
 		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
 		if (T.foundReligion) Keys += TEXT("   F found a religion (on a Holy Site)");
+		if (T.id == "UNIT_TRADER") Keys += FString::Printf(TEXT("   F start a trade route (%d of %d in use)"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me()));
 		if (U->religion >= 0)
 		{
 			Keys += FString::Printf(TEXT("   %s, %d spread%s   F spread%s   right-click a foe's religious unit: theological combat"),

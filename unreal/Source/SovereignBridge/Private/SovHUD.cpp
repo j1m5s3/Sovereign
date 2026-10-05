@@ -82,6 +82,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		Line(Faith, 16, Y);
 	}
+	if (G.tradeRouteCapacity(Me) > 0)
+	{
+		Line(FString::Printf(TEXT("Trade routes: %d of %d"), G.tradeRoutesOf(Me), G.tradeRouteCapacity(Me)), 16, Y);
+	}
 	// The throne (leader doc §5).
 	if (const sov::Unit* L = G.leaderOf(Me))
 	{
