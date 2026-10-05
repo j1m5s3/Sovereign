@@ -78,6 +78,9 @@ Yields Game::plotYields(Hex at, const City& city) const {
             if (state_.grid.distance(home, at) == 1) y[idx(b.adjacentYield)] += Fixed::fromInt(b.adjacentAmount);
         }
     }
+    // Civ ability: worked mountains (Inca).
+    if (rules_->terrains[static_cast<size_t>(p.terrain)].relief == Relief::Mountain && at != city.pos)
+        y[idx(YieldType::Production)] += Fixed::fromInt(civAbility(city.owner).mountainProduction);
     // Ground a disaster left fertile; a drought takes 1 Food (09: Climate and Disasters).
     for (size_t i = 0; i < kNumYields; ++i) y[i] += Fixed::fromInt(p.fertility[i]);
     if (!state_.droughts.empty() && inDrought(at)) y[idx(YieldType::Food)] = std::max(Fixed(), y[idx(YieldType::Food)] - rules_->global("DROUGHT_FOOD_LOSS_PER_TILE"));
@@ -97,7 +100,9 @@ std::vector<Hex> Game::workablePlots(const City& city) const {
         if (h == city.pos) continue;
         const Plot& p = state_.plot(h);
         if (p.city != city.id || state_.districtAt(h) || state_.wonderAt(h) != kNone) continue;  // district and wonder plots are not worked
-        if (rules_->terrains[static_cast<size_t>(p.terrain)].impassable) continue;
+        const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];
+        // Mountains can be worked by a civ whose ability allows it (Inca).
+        if (t.impassable && !(t.relief == Relief::Mountain && civAbility(city.owner).mountainProduction > 0)) continue;
         if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) continue;
         out.push_back(h);
     }
@@ -180,6 +185,9 @@ CityReport Game::cityReport(CityId id) const {
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
+    if (const int perWonder = civAbility(c->owner).amenityPerWonder; perWonder > 0) {
+        for (TypeIndex b : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(b)].wonder ? perWonder : 0;
+    }
     for (const Hex& h : state_.grid.within(c->pos, 3)) {
         const Plot& ip = state_.plot(h);
         if (ip.city == c->id && ip.improvement != kNone && ip.pillagedTurns == 0) rep.amenities += rules_->improvements[static_cast<size_t>(ip.improvement)].amenities;
@@ -238,6 +246,23 @@ CityReport Game::cityReport(CityId id) const {
             }
             rep.yields[idx(YieldType::Food)] += Fixed::fromInt(b.foodPerAdjacentMountain * std::min(2, mountains));
         }
+    }
+    // Civ abilities (leaders-and-art-style): culture per suzerainty and yields per governor title in
+    // the capital; gold from an established governor.
+    {
+        const CivAbility& ab = civAbility(c->owner);
+        if (c->capital && ab.culturePerSuzerainty > 0) {
+            int suzerain = 0;
+            for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == c->owner ? 1 : 0;
+            rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.culturePerSuzerainty * suzerain);
+        }
+        if (c->capital) {
+            const int titles = governorTitles(c->owner);
+            for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += ab.capitalYieldsPerGovernorTitle[i] * titles;
+        }
+        PlayerId holder = kNoPlayer;
+        if (ab.governorGold > 0 && establishedGovernor(*c, &holder) && holder == c->owner)
+            rep.yields[idx(YieldType::Gold)] += Fixed::fromInt(ab.governorGold);
     }
     // A district project turns part of the city's production into a yield while it runs (03: Projects).
     if (!c->queue.empty() && c->queue.front().kind == ProductionKind::Project) {
@@ -910,9 +935,21 @@ void Game::processCities(PlayerId pid) {
                 // Policies such as Agoge speed production toward some units.
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt());
                 prod = prod * std::max(0, pct) / 100;
+            } else if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder) {
+                // Civ ability: faster wonders of some eras (France).
+                const CivAbility& ab = civAbility(pid);
+                const Unlock& u = rules_->buildings[static_cast<size_t>(item.type)].unlock;
+                const int era = u.none() ? 0 : (u.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(u.index)].era;
+                if (ab.wonderProductionPercent > 0 && era >= ab.wonderEraMin && era <= ab.wonderEraMax) prod = prod * (100 + ab.wonderProductionPercent) / 100;
             } else if (item.kind == ProductionKind::District) {
                 // Zoning Commissioner (08: Governors); Urban Development Treaty A (World Congress).
                 int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());
+                // Civ ability: districts go faster in cities next to a mountain (Inca).
+                if (civAbility(pid).mountainDistrictProductionPercent > 0) {
+                    bool mountain = false;
+                    for (const Hex& n : state_.grid.within(city.pos, 1)) mountain = mountain || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain;
+                    if (mountain) pct += civAbility(pid).mountainDistrictProductionPercent;
+                }
                 if (const PassedResolution* ud = passed(ResolutionKind::UrbanDevelopment); ud && ud->option == 0 && ud->target == item.type) pct += 100;
                 prod = prod * std::max(0, pct) / 100;
             }

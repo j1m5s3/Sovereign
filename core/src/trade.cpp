@@ -77,6 +77,12 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     for (const CityDistrict& d : destination.districts) {
         if (d.complete) add(d.type);
     }
+    // Civ ability: routes whose way crosses desert (Arabia).
+    if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
+        bool desert = false;
+        for (const Hex& h : state_.grid.line(origin.pos, destination.pos)) desert = desert || rules_->terrains[at(state_.plot(h).terrain)].base == "DESERT";
+        if (desert) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(gold);
+    }
     return out;
 }
 

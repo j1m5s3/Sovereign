@@ -351,6 +351,8 @@ public:
 
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;
+    // The player's civ ability (an empty one for city-states, barbarians and Free Cities).
+    const CivAbility& civAbility(PlayerId player) const;
     bool difficultyAi(PlayerId player) const;     // an AI-run major civ
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ
     // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.

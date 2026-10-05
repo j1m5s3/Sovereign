@@ -116,6 +116,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = ref.empty() ? kNone : rules.feature(ref); }
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
         else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
+        else if (type == "PLOT_NEXT_TO_RIVER") q.type = ReqType::PlotNextToRiver;
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
@@ -1105,6 +1106,42 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.agendaText = j["agendaText"].str();
         c.leaning = j["leaning"].str();
         c.voice = j["voice"].str();
+        {
+            const Json& a = j["ability"];
+            CivAbility& ab = c.ability;
+            ab.name = a["name"].str();
+            for (const Json& x : a["extraAdjacency"].items()) {
+                CivAdjacency adj;
+                adj.district = district(x["district"].str());
+                adj.from = x["from"].str().empty() ? kNone : district(x["from"].str());
+                adj.fromTerrainBase = x["fromTerrainBase"].str();
+                adj.per = std::max(1, static_cast<int>(x["per"].integer(1)));
+                parseYieldName(x["yield"].str(), adj.yield);
+                adj.amount = static_cast<int>(x["amount"].integer(0));
+                if (adj.district == kNone || (adj.from == kNone && adj.fromTerrainBase.empty())) {
+                    *error = "civilization " + id + ": bad extra adjacency";
+                    return false;
+                }
+                ab.extraAdjacency.push_back(adj);
+            }
+            ab.wonderProductionPercent = static_cast<int>(a["wonderProductionPercent"].integer(0));
+            if (a["wonderEras"].items().size() == 2) {
+                ab.wonderEraMin = static_cast<int>(a["wonderEras"].items()[0].integer(0));
+                ab.wonderEraMax = static_cast<int>(a["wonderEras"].items()[1].integer(0));
+            }
+            ab.amenityPerWonder = static_cast<int>(a["amenityPerWonder"].integer(0));
+            ab.foundPopulation = static_cast<int>(a["foundPopulation"].integer(0));
+            if (!a["foundBuilding"].str().empty()) ab.foundBuilding = building(a["foundBuilding"].str());
+            ab.culturePerSuzerainty = static_cast<int>(a["culturePerSuzerainty"].integer(0));
+            ab.governorLoyalty = static_cast<int>(a["governorLoyalty"].integer(0));
+            ab.governorGold = static_cast<int>(a["governorGold"].integer(0));
+            if (!a["extraGovernorTitleCivic"].str().empty()) ab.extraGovernorTitleCivic = civic(a["extraGovernorTitleCivic"].str());
+            ab.desertRouteGold = static_cast<int>(a["desertRouteGold"].integer(0));
+            ab.capitalYieldsPerGovernorTitle = readYields(a["capitalYieldsPerGovernorTitle"]);
+            ab.freshWaterFarmHousing = a["freshWaterFarmHousing"].fixed();
+            ab.mountainDistrictProductionPercent = static_cast<int>(a["mountainDistrictProductionPercent"].integer(0));
+            ab.mountainProduction = static_cast<int>(a["mountainProduction"].integer(0));
+        }
         static const char* const agendas[] = {"", "AGENDA_QUEEN_OF_THE_SEAS", "AGENDA_DEFENDER_OF_THE_FAITH", "AGENDA_PAX_ROMANA",
                                               "AGENDA_SPARTAN_PRIDE", "AGENDA_TOLERANT_CONQUEROR", "AGENDA_MAGNANIMOUS",
                                               "AGENDA_FIRST_EMPEROR", "AGENDA_CLOSED_COUNTRY", "AGENDA_ETERNAL_NAME",

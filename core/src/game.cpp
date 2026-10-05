@@ -833,12 +833,26 @@ void Game::applyFoundCity(const Command& c) {
     if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())
         city.pressure[static_cast<size_t>(p.religion)] = rules_->globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP") * 2;
     state_.cities.push_back(std::move(city));
+    {
+        City& made = state_.cities.back();
+        const CivAbility& ab = civAbility(owner);
+        made.population += ab.foundPopulation;
+        if (ab.foundBuilding != kNone && !made.has(ab.foundBuilding))
+            made.buildings.insert(std::lower_bound(made.buildings.begin(), made.buildings.end(), ab.foundBuilding), ab.foundBuilding);
+    }
     assignCitizens(*state_.city(newId));
 
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
                                       [&](const Unit& x) { return x.id == c.id; }),
                        state_.units.end());
     refreshVisibility(owner);
+}
+
+const CivAbility& Game::civAbility(PlayerId player) const {
+    static const CivAbility none;
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return none;
+    const TypeIndex civ = state_.players[static_cast<size_t>(player)].civ;
+    return civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size() ? none : rules_->civs[static_cast<size_t>(civ)].ability;
 }
 
 const DifficultyType& Game::difficulty() const {

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "sovereign/mapgen.h"
+
 namespace sov {
 
 namespace {
@@ -12,6 +14,13 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         case ReqType::PlotHasFeature: ok = c.plot && (q.ref == kNone ? c.plot->feature != kNone : c.plot->feature == q.ref); break;
         case ReqType::PlotHasTerrain: ok = c.plot && c.plot->terrain == q.ref; break;
         case ReqType::PlotHasImprovement: ok = c.plot && (q.ref == kNone ? c.plot->improvement != kNone : c.plot->improvement == q.ref); break;
+        case ReqType::PlotNextToRiver: {
+            // The plot's index in the grid from its address in the plot array.
+            ok = false;
+            if (c.plot && c.state && c.plot >= c.state->plots.data() && c.plot < c.state->plots.data() + c.state->plots.size())
+                ok = isRiverAdjacent(*c.state, c.state->grid.at(static_cast<int32_t>(c.plot - c.state->plots.data())));
+            break;
+        }
         case ReqType::CityHasBuilding: ok = c.city && (c.rules ? cityHasBuilding(*c.city, *c.rules, q.ref) : c.city->has(q.ref)); break;
         case ReqType::CityIsCapital: ok = c.city && c.city->capital; break;
         case ReqType::CityMinPopulation: ok = c.city && c.city->population >= q.value; break;
@@ -40,9 +49,10 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
     if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
         case ModSource::Building:
-            if (ownerOnly) return subject.has(m.sourceIndex) ? &subject : nullptr;
+            // A civ's unique building carries the modifiers of the building it replaces.
+            if (ownerOnly) return cityHasBuilding(subject, r, m.sourceIndex) ? &subject : nullptr;
             for (const City& c : s.cities) {
-                if (c.owner == owner.id && c.has(m.sourceIndex)) return &c;
+                if (c.owner == owner.id && cityHasBuilding(c, r, m.sourceIndex)) return &c;
             }
             return nullptr;
         case ModSource::Civ:

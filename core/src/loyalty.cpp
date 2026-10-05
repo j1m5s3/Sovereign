@@ -78,7 +78,7 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     // An established governor of the owner steadies the city (08: Governors, IdentityPressure).
     PlayerId govOwner = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &govOwner); g && govOwner == c->owner)
-        change += Fixed::fromInt(rules_->governors[static_cast<size_t>(g->type)].loyalty);
+        change += Fixed::fromInt(rules_->governors[static_cast<size_t>(g->type)].loyalty + civAbility(c->owner).governorLoyalty);
     return change;
 }
 

@@ -171,3 +171,55 @@ TEST(unique_improvements) {
     const int attacking = g2->combatStrength(*g2->state().unit(guard), *g2->state().unit(foe), true, false);
     CHECK_EQ(defended, attacking + 4);
 }
+
+TEST(civ_abilities_colonia_and_craft_guilds) {
+    // Rome: new cities start one larger with a Monument.
+    GameState s = pair("CIVILIZATION_ROME", "CIVILIZATION_JAPAN", {});
+    s.cities.clear();
+    const UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {6, 6});
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->submit(Command::foundCity(0, settler)) == CommandError::Ok);
+    const City& rome = g->state().cities.back();
+    CHECK_EQ(rome.population, 2);
+    CHECK(rome.has(rules().building("BUILDING_MONUMENT")));
+    // Japan: an Industrial Zone next to a Theater Square gains production adjacency.
+    GameState j = pair("CIVILIZATION_JAPAN", "CIVILIZATION_ROME", {});
+    j.cities[0].districts.push_back({rules().district("DISTRICT_THEATER_SQUARE"), {5, 7}, true});
+    auto gj = Game::fromScenario(rules(), j);
+    const TypeIndex iz = rules().district("DISTRICT_INDUSTRIAL_ZONE");
+    const Fixed withGuild = gj->districtAdjacency(0, iz, {6, 7})[static_cast<size_t>(YieldType::Production)];
+    const Fixed plain = gj->districtAdjacency(1, iz, {6, 7})[static_cast<size_t>(YieldType::Production)];
+    CHECK(withGuild == plain + Fixed::fromInt(1));
+}
+
+TEST(civ_abilities_satrapies_and_mita_labor) {
+    GameState s = pair("CIVILIZATION_PERSIA", "CIVILIZATION_INCA", {});
+    auto g = Game::fromScenario(rules(), s);
+    const int titles = g->governorTitles(0);
+    s.players[0].civics.done[at(rules().civic("CIVIC_POLITICAL_PHILOSOPHY"))] = 1;
+    s.players[1].civics.done[at(rules().civic("CIVIC_POLITICAL_PHILOSOPHY"))] = 1;
+    // Inca: the mountain next to their city can be worked for production.
+    s.plot({17, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    for (const Hex& h : s.grid.within({16, 6}, 1)) s.plot(h).city = s.cities[1].id;
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    CHECK(g2->governorTitles(0) > g2->governorTitles(1));  // Persia's extra title
+    CHECK(g2->governorTitles(0) > titles);
+    const City& inca = g2->state().cities[1];
+    const std::vector<Hex> plots = g2->workablePlots(inca);
+    CHECK(std::find(plots.begin(), plots.end(), Hex{17, 6}) != plots.end());
+    CHECK(g2->plotYields({17, 6}, inca)[static_cast<size_t>(YieldType::Production)] >= Fixed::fromInt(2));
+}
+
+TEST(civ_ability_modifiers_mills_and_mines) {
+    GameState s = pair("CIVILIZATION_ENGLAND", "CIVILIZATION_FRANCE", {});
+    for (const Hex& h : {Hex{5, 6}, Hex{17, 6}}) {
+        s.plot(h).resource = rules().resource("RESOURCE_IRON");
+        s.plot(h).resourceAmount = 1;
+        s.plot(h).improvement = rules().improvement("IMPROVEMENT_MINE");
+    }
+    for (Player& p : s.players) p.techs.done[at(rules().tech("TECH_BRONZE_WORKING"))] = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Fixed english = g->plotYields({5, 6}, g->state().cities[0])[static_cast<size_t>(YieldType::Production)];
+    const Fixed french = g->plotYields({17, 6}, g->state().cities[1])[static_cast<size_t>(YieldType::Production)];
+    CHECK(english == french + Fixed::fromInt(1));
+}

@@ -632,6 +632,7 @@ enum class ReqType : uint8_t {
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
+    PlotNextToRiver,
 };
 
 struct Requirement {
@@ -792,8 +793,36 @@ enum class Agenda : uint8_t {
     FirstEmperor, ClosedCountry, EternalName, PatronOfTrade, HonourableWar, SapaInca,
 };
 
+// A civ's own ability (leaders-and-art-style: Civ abilities, uniques and dynasties). Plot yields go
+// through civ-sourced modifiers; these are the effects the modifier model does not carry.
+struct CivAdjacency {
+    TypeIndex district = kNone;      // the district that gains
+    TypeIndex from = kNone;          // per adjacent district of this type, or
+    std::string fromTerrainBase;     // per `per` adjacent plots of this terrain climate
+    int per = 1;
+    YieldType yield = YieldType::Production;
+    int amount = 0;
+};
+struct CivAbility {
+    std::string name;
+    std::vector<CivAdjacency> extraAdjacency;
+    int wonderProductionPercent = 0, wonderEraMin = 0, wonderEraMax = 0;  // toward wonders of these eras
+    int amenityPerWonder = 0;           // in the wonder's city
+    int foundPopulation = 0;            // new cities start larger
+    TypeIndex foundBuilding = kNone;    // and with this building
+    int culturePerSuzerainty = 0;       // in the capital
+    int governorLoyalty = 0, governorGold = 0;  // in cities with an established governor
+    TypeIndex extraGovernorTitleCivic = kNone;  // +1 governor title with this civic
+    int desertRouteGold = 0;            // trade routes whose way crosses desert
+    Yields capitalYieldsPerGovernorTitle{};
+    Fixed freshWaterFarmHousing;        // per farm next to a river
+    int mountainDistrictProductionPercent = 0;  // in cities next to a mountain
+    int mountainProduction = 0;         // mountains can be worked for this much production
+};
+
 struct CivType {
     std::string id, name, leader;
+    CivAbility ability;
     std::vector<std::string> cityNames;
     Agenda agenda = Agenda::None;
     std::string agendaId, agendaName, agendaText;
