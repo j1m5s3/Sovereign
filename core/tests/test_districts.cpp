@@ -235,3 +235,29 @@ TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
     CHECK_EQ(g3->cityReport(c.id).amenities, before + 1);
     CHECK(!g3->canPlaceDistrict(c, district("DISTRICT_WATER_PARK"), {6, 9}));  // exclusive with the Entertainment Complex
 }
+
+TEST(a_canal_links_two_waters_and_lets_ships_through) {
+    // Water west at (3,8) and east at (5,8) around a land plot (4,8) next to the city's ring.
+    auto g = town(6, [](GameState& s) {
+        learn(s, 0, {"TECH_STEAM_POWER"});
+        for (const Hex& h : {Hex{3, 8}, Hex{5, 8}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+    });
+    const City& c = g->state().cities[0];
+    const TypeIndex canal = district("DISTRICT_CANAL");
+    CHECK(g->canPlaceDistrict(c, canal, {4, 8}));   // between two bodies of water
+    CHECK(!g->canPlaceDistrict(c, canal, {8, 6}));  // dry land
+    // Finished, it carries a ship across the land.
+    GameState s = g->state();
+    s.cities[0].districts.push_back({canal, {4, 8}, true});
+    for (Player& p : s.players) p.techs.done[at(rules().tech("TECH_SAILING"))] = 1;
+    const UnitId ship = sovtest::addUnit(s, "UNIT_GALLEY", 0, {3, 8});
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    auto path = g2->findPath(ship, {5, 8}, false);
+    REQUIRE(path.has_value());
+    CHECK(std::any_of(path->begin(), path->end(), [](const PathStep& st) { return st.pos == Hex{4, 8}; }));
+    // Without it, no way across.
+    GameState dry = g2->state();
+    dry.cities[0].districts.pop_back();
+    auto g3 = Game::fromScenario(rules(), std::move(dry));
+    CHECK(!g3->findPath(ship, {5, 8}, false).has_value());
+}

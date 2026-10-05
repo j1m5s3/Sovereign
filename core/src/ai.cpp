@@ -1355,6 +1355,7 @@ void production(View& v) {
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
                     value = value * districtPercent(v, d) / 100;
+                    if (d.canal) value = 20;  // a canal only where a human wants the shortcut
                     // The Aerodrome: room for an air force once there is war or a militaristic plan.
                     if (d.airSlots > 1 && !c.district(it.type, false)) value = (!v.enemies.empty() || v.posture.army > 100) ? 250 : 40;
                     // The Spaceport (09: Science victory): one per civ, in its most productive city first.

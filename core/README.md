@@ -57,7 +57,7 @@ same command must print the same hash.
 | Difficulty levels (00-overview: Difficulty levels; Sovereign: AI bonuses only at Immortal and Deity) | `Game::difficulty`, hooks in `src/city.cpp`, `src/combat.cpp`, `src/eras.cpp`, `src/barbarians.cpp`, `Game::create`; data in `../data/rules/setup.json` |
 | Air power (05: air units, air combat): bases and air slots, rebasing, air strikes, interception and anti-air | `src/air.cpp`; strikes through `src/combat.cpp` |
 | Unit upgrades (05: Upgrades): cost, rules, the command | `src/combat.cpp` (`upgradeCost`, `upgradeProblem`), applied in `src/game.cpp` |
-| Districts: placement (Aqueduct, Dam, exclusive and one-per-player rules), population limit, cost, adjacency, appeal, housing and amenities from Aqueduct, Neighborhood, Entertainment Complex, Water Park, Dam, Preserve | `src/districts.cpp` (queries on `Game`) |
+| Districts: placement (Aqueduct, Dam, Canal, flat-land districts, exclusive and one-per-player rules), population limit, cost, adjacency, appeal, housing and amenities from Aqueduct, Neighborhood, Entertainment Complex, Water Park, Dam, Preserve | `src/districts.cpp` (queries on `Game`) |
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves, succession and regicide, assassins (off-map agents), SOVEREIGN promotions and the presence aura | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |

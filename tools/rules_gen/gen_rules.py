@@ -559,7 +559,7 @@ def gen_barbarians():
 # placement rules not modelled yet (flat land, rivers, aqueduct rules) and arrive with their systems.
 PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "Theater Square", "Industrial Zone", "Harbor",
                        "Aqueduct", "Neighborhood", "Entertainment Complex", "Water Park", "Dam", "Preserve",
-                       "Government Plaza", "Diplomatic Quarter", "Spaceport", "Aerodrome"]
+                       "Government Plaza", "Diplomatic Quarter", "Spaceport", "Aerodrome", "Canal"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
                  "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
@@ -648,6 +648,8 @@ def gen_districts():
                 d["exclusiveWith"] = ["DISTRICT_" + snake(x.strip()) for x in m.group(1).split(",") if "DISTRICT_" + snake(x.strip()) in emitted]
             if "one per river" in flags:
                 d["floodplainsRiver"] = True  # on Floodplains along a river (Dam)
+            if re.search(r"(^|; )canal($|;)", flags):
+                d["canal"] = True  # links two bodies of water, or water and the City Center; ships pass
             if "prevents drought" in flags:
                 d["preventsDrought"] = True
             if "prevents floods" in flags:
