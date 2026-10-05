@@ -101,6 +101,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::AssassinKilled: Text = FString::Printf(TEXT("An assassin sent against %s was killed."), *CivOf(E.target)); break;
 			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
 			case sov::EventKind::Rebellion: Text = FString::Printf(TEXT("Rebels rise against the iron fist of %s."), *CivOf(E.target)); break;
+			case sov::EventKind::GreatPersonRecruited:
+				Text = FString::Printf(TEXT("%s joins you as a %s (Y: great people)."), *Str(R.greatPeople[static_cast<size_t>(E.value)].name),
+					*Str(R.greatPersonClasses[static_cast<size_t>(R.greatPeople[static_cast<size_t>(E.value)].cls)].name));
+				break;
 		}
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
 	}

@@ -61,7 +61,8 @@ protected:
 		Gear,
 		Throne,
 		Assassins,
-		Promotion
+		Promotion,
+		GreatPeople
 	};
 
 	struct FChoice

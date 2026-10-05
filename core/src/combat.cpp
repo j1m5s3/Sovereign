@@ -152,7 +152,7 @@ int Game::maxMoves(const Unit& unit) const {
         }
         return std::max(1, moves);
     }
-    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves);
+    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit);
     if (!isLeader(unit)) return moves;
     for (TypeIndex g : unit.gear) {
         if (g != kNone) moves += rules_->gear[static_cast<size_t>(g)].moves;  // mounts add, heavy armor subtracts
@@ -259,6 +259,8 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         if (leader && state_.grid.distance(leader->pos, unit.pos) <= auraRange(*leader))
             s += rules_->globalInt("LEADER_AURA_STRENGTH") + unitEffectTotal(*leader, UnitEffectKind::AuraStrength);
     }
+    // A Great General or Admiral nearby (05: +5 for units of its era or the next).
+    s += greatPersonAuraStrength(unit);
     // Policies such as Discipline (+5 against barbarians).
     s += sumUnitStrength(state_, *rules_, owner, ut.unitClass,
                          oppOwner >= 0 && state_.players[static_cast<size_t>(oppOwner)].barbarian);

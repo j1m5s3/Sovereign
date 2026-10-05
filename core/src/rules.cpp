@@ -233,7 +233,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -894,6 +894,159 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         dynasties.push_back(std::move(d));
     }
+    // Great people (07): classes, the points buildings and districts earn, individuals, Great Works.
+    for (const auto& [id, j] : m.tables["greatPersonClasses"]) {
+        GreatPersonClass c;
+        c.id = id;
+        c.name = j["name"].str(id);
+        c.unit = unit(j["unit"].str());
+        c.district = district(j["district"].str());
+        c.maxPerPlayer = static_cast<int>(j["maxPerPlayer"].integer(0));
+        if (c.unit == kNone) {
+            *error = "great person class " + id + ": unknown unit";
+            return false;
+        }
+        greatPersonClasses.push_back(std::move(c));
+    }
+    auto readPoints = [&](const Json& j, std::vector<std::pair<TypeIndex, int>>& out, const std::string& where) {
+        for (const auto& [cls, v] : j.members()) {
+            const TypeIndex c = greatPersonClass(cls);
+            if (c == kNone) {
+                *error = where + ": unknown great person class " + cls;
+                return false;
+            }
+            out.emplace_back(c, static_cast<int>(v.integer(0)));
+        }
+        return true;
+    };
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["buildings"]) {
+            BuildingType& b = buildings[i++];
+            if (!readPoints(j["greatPersonPoints"], b.greatPersonPoints, "building " + id)) return false;
+            for (const auto& [slot, v] : j["greatWorkSlots"].members()) b.greatWorkSlots.emplace_back(slot, static_cast<int>(v.integer(0)));
+        }
+        i = 0;
+        for (const auto& [id, j] : m.tables["districts"]) {
+            if (!readPoints(j["greatPersonPoints"], districts[i++].greatPersonPoints, "district " + id)) return false;
+        }
+    }
+    for (const auto& [id, j] : m.tables["greatWorkTypes"]) {
+        GreatWorkType w;
+        w.id = id;
+        if (!parseYieldName(j["yield"].str(), w.yield)) {
+            *error = "great work type " + id + ": bad yield";
+            return false;
+        }
+        w.amount = static_cast<int>(j["amount"].integer(0));
+        w.tourism = static_cast<int>(j["tourism"].integer(0));
+        for (const Json& s : j["slots"].items()) w.slots.push_back(s.str());
+        greatWorkTypes.push_back(std::move(w));
+    }
+    for (const auto& [id, j] : m.tables["greatPeople"]) {
+        const std::string where = "great person " + id;
+        GreatPersonType g;
+        g.id = id;
+        g.name = j["name"].str(id);
+        g.cls = greatPersonClass(j["class"].str());
+        const TypeIndex e = era(j["era"].str());
+        if (g.cls == kNone || e == kNone) {
+            *error = where + ": unknown class or era";
+            return false;
+        }
+        g.era = e;
+        g.charges = static_cast<int>(j["charges"].integer(0));
+        const Json& rq = j["requires"];
+        g.ownedTile = rq["ownedTile"].boolean(false);
+        if (rq.has("district") && (g.district = district(rq["district"].str())) == kNone) {
+            *error = where + ": unknown district " + rq["district"].str();
+            return false;
+        }
+        g.noMilitaryUnit = rq["noMilitaryUnit"].boolean(false);
+        if (rq.has("unitDomain")) {
+            const std::string& d = rq["unitDomain"].str();
+            g.unitDomain = static_cast<int>(d == "SEA" ? Domain::Sea : d == "AIR" ? Domain::Air : Domain::Land);
+        }
+        if (rq.has("missingBuilding")) g.missingBuilding = building(rq["missingBuilding"].str());
+        for (const Json& ej : j["effects"].items()) {
+            GreatPersonEffect fx;
+            const std::string& kind = ej["kind"].str();
+            const std::string& ref = ej["ref"].str();
+            fx.amount = static_cast<int>(ej["amount"].integer(0));
+            fx.count = static_cast<int>(ej["count"].integer(0));
+            fx.scaled = ej["scaled"].boolean(false);
+            fx.orComplete = ej["orComplete"].boolean(false);
+            if (kind == "YIELD") {
+                fx.kind = GreatPersonEffectKind::Yield;
+                if (!parseYieldName(ej["yield"].str(), fx.yield)) {
+                    *error = where + ": bad effect yield";
+                    return false;
+                }
+            } else if (kind == "PRODUCTION") {
+                fx.kind = GreatPersonEffectKind::Production;
+            } else if (kind == "BOOST") {
+                fx.kind = GreatPersonEffectKind::Boost;
+                fx.civic = ref.rfind("CIVIC_", 0) == 0;
+                fx.ref = fx.civic ? civic(ref) : tech(ref);
+            } else if (kind == "RANDOM_BOOST") {
+                fx.kind = GreatPersonEffectKind::RandomBoost;
+                fx.civic = ej["tree"].str() == "CIVIC";
+                fx.minEra = era(ej["minEra"].str());
+                fx.maxEra = era(ej["maxEra"].str());
+                if (fx.minEra == kNone || fx.maxEra == kNone) {
+                    *error = where + ": bad boost eras";
+                    return false;
+                }
+                fx.ref = 0;
+            } else if (kind == "PROMOTION_XP") {
+                fx.kind = GreatPersonEffectKind::PromotionXp;
+                fx.ref = 0;
+            } else if (kind == "BUILDING") {
+                fx.kind = GreatPersonEffectKind::Building;
+                fx.ref = building(ref);
+            } else if (kind == "UNIT") {
+                fx.kind = GreatPersonEffectKind::Unit;
+                fx.ref = unit(ref);
+            } else if (kind == "BUILDING_YIELD") {
+                fx.kind = GreatPersonEffectKind::BuildingYield;
+                fx.ref = building(ej["building"].str());
+                if (!parseYieldName(ej["yield"].str(), fx.yield)) {
+                    *error = where + ": bad effect yield";
+                    return false;
+                }
+            } else if (kind == "GREAT_PERSON_POINTS") {
+                fx.kind = GreatPersonEffectKind::GreatPersonPoints;
+                fx.ref = 0;
+            } else {
+                *error = where + ": unknown effect kind " + kind;
+                return false;
+            }
+            if (fx.ref == kNone && fx.kind != GreatPersonEffectKind::Yield && fx.kind != GreatPersonEffectKind::Production) {
+                *error = where + ": effect " + kind + " refers to unknown " + ref;
+                return false;
+            }
+            g.effects.push_back(fx);
+        }
+        for (const Json& t : j["untrackedEffects"].items()) g.untrackedEffects.push_back(t.str());
+        if (j.has("greatWorks")) {
+            g.greatWorkType = greatWorkType(j["greatWorks"]["type"].str());
+            g.greatWorkCount = static_cast<int>(j["greatWorks"]["count"].integer(0));
+            if (g.greatWorkType == kNone) {
+                *error = where + ": unknown great work type";
+                return false;
+            }
+        }
+        if (j.has("aura")) {
+            const Json& a = j["aura"];
+            g.hasAura = true;
+            g.aura.domain = a["domain"].str() == "SEA" ? Domain::Sea : Domain::Land;
+            g.aura.strength = static_cast<int>(a["strength"].integer(0));
+            g.aura.moves = static_cast<int>(a["moves"].integer(0));
+            g.aura.range = static_cast<int>(a["range"].integer(0));
+            for (const Json& er : a["eras"].items()) g.aura.eras.push_back(era(er.str()));
+        }
+        greatPeople.push_back(std::move(g));
+    }
     for (size_t i = 0; i < units.size(); ++i) {
         if (units[i].layer != UnitLayer::Leader) continue;
         if (leaderUnit != kNone) {
@@ -1037,6 +1190,9 @@ std::vector<const Modifier*> Rules::modifiersFrom(const std::string& source) con
 }
 TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
 TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id); }
+TypeIndex Rules::greatPersonClass(const std::string& id) const { return findIn(greatPersonClasses, id); }
+TypeIndex Rules::greatPerson(const std::string& id) const { return findIn(greatPeople, id); }
+TypeIndex Rules::greatWorkType(const std::string& id) const { return findIn(greatWorkTypes, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {
     for (const Dynasty& d : dynasties) {

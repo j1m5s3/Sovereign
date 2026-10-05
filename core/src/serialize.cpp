@@ -117,7 +117,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
     }
     for (size_t i = 0; i < s.units.size(); ++i) {
         const Unit& u = s.units[i];
-        if (!inRange(u.type, rules.units.size(), false)) return false;
+        if (!inRange(u.type, rules.units.size(), false) || !inRange(u.greatPerson, rules.greatPeople.size(), true)) return false;
         if (u.owner < 0 || static_cast<size_t>(u.owner) >= s.players.size() || !s.grid.valid(u.pos)) return false;
         if (i > 0 && s.units[i - 1].id >= u.id) return false;
         for (TypeIndex pr : u.promotions) if (!inRange(pr, rules.promotions.size(), false)) return false;
@@ -144,6 +144,11 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (const CityDistrict& d : c.districts) {
             if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
         }
+        for (const GreatWork& g : c.greatWorks) {
+            if (!inRange(g.type, rules.greatWorkTypes.size(), false) || !inRange(g.building, rules.buildings.size(), false) ||
+                !inRange(g.creator, rules.greatPeople.size(), true))
+                return false;
+        }
     }
     for (size_t i = 0; i < s.camps.size(); ++i) {
         if (!s.grid.valid(s.camps[i].pos) || (i > 0 && s.camps[i - 1].id >= s.camps[i].id)) return false;
@@ -153,6 +158,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (p.unitsTrained.size() > rules.units.size()) return false;
         if (p.stockpile.size() != rules.resources.size()) return false;
         if (p.fuelShort.size() != rules.resources.size()) return false;
+        if (p.greatPersonPoints.size() > rules.greatPersonClasses.size() || p.greatPeopleRecruited.size() > rules.greatPersonClasses.size())
+            return false;
+        for (TypeIndex g : p.greatPeoplePassed) if (!inRange(g, rules.greatPeople.size(), true)) return false;
+        for (TypeIndex g : p.greatPeopleActivated) if (!inRange(g, rules.greatPeople.size(), false)) return false;
         if (p.relations.size() != s.players.size()) return false;
         if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
         if (!inRange(p.techs.current, rules.techs.size(), true) || !inRange(p.civics.current, rules.civics.size(), true))
@@ -216,6 +225,10 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.unitsTrained.begin(), p.unitsTrained.end()));
         writeI32s(w, std::vector<int32_t>(p.stockpile.begin(), p.stockpile.end()));
         w.bytes(p.fuelShort);
+        writeI32s(w, std::vector<int32_t>(p.greatPersonPoints.begin(), p.greatPersonPoints.end()));
+        writeI32s(w, std::vector<int32_t>(p.greatPeopleRecruited.begin(), p.greatPeopleRecruited.end()));
+        writeI32s(w, std::vector<int32_t>(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end()));
+        writeI32s(w, std::vector<int32_t>(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end()));
         w.u32(static_cast<uint32_t>(p.relations.size()));
         for (const Relation& rel : p.relations) {
             w.boolean(rel.war);
@@ -257,6 +270,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(u.moveTarget.has_value());
         writeHex(w, u.moveTarget.value_or(Hex{}));
         w.boolean(u.moveOverland);
+        w.i16(u.greatPerson);
         w.i32(u.xp);
         w.i32(u.charges);
         writeI32s(w, std::vector<int32_t>(u.promotions.begin(), u.promotions.end()));
@@ -310,7 +324,14 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.benevolenceUntil);
         w.i32(c.fearUntil);
         w.i32(c.fearAfterUntil);
+        w.u32(static_cast<uint32_t>(c.greatWorks.size()));
+        for (const GreatWork& g : c.greatWorks) {
+            w.i16(g.type);
+            w.i16(g.building);
+            w.i16(g.creator);
+        }
     }
+    w.bytes(s.greatPeopleClaimed);
     w.u32(static_cast<uint32_t>(s.agents.size()));
     for (const Agent& a : s.agents) {
         w.i32(a.id);
@@ -398,6 +419,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, trained)) return false;
         p.stockpile.assign(trained.begin(), trained.end());
         p.fuelShort = r.bytes();
+        if (!readI32s(r, trained)) return false;
+        p.greatPersonPoints.assign(trained.begin(), trained.end());
+        if (!readI32s(r, trained)) return false;
+        p.greatPeopleRecruited.assign(trained.begin(), trained.end());
+        if (!readI32s(r, trained)) return false;
+        p.greatPeoplePassed.clear();
+        for (int32_t v : trained) p.greatPeoplePassed.push_back(static_cast<TypeIndex>(v));
+        if (!readI32s(r, trained)) return false;
+        p.greatPeopleActivated.clear();
+        for (int32_t v : trained) p.greatPeopleActivated.push_back(static_cast<TypeIndex>(v));
         uint32_t nrel = r.u32();
         if (!r.checkCount(nrel, 6)) return false;
         p.relations.resize(nrel);
@@ -454,6 +485,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         Hex t = readHex(r);
         u.moveTarget = hasTarget ? std::optional<Hex>(t) : std::nullopt;
         u.moveOverland = r.boolean();
+        u.greatPerson = r.i16();
         u.xp = r.i32();
         u.charges = r.i32();
         std::vector<int32_t> promos;
@@ -519,7 +551,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.benevolenceUntil = r.i32();
         c.fearUntil = r.i32();
         c.fearAfterUntil = r.i32();
+        uint32_t ngw = r.u32();
+        if (!r.checkCount(ngw, 6)) return false;
+        c.greatWorks.resize(ngw);
+        for (GreatWork& g : c.greatWorks) {
+            g.type = r.i16();
+            g.building = r.i16();
+            g.creator = r.i16();
+        }
     }
+    s.greatPeopleClaimed = r.bytes();
     uint32_t na = r.u32();
     if (!r.checkCount(na, 14)) return false;
     s.agents.resize(na);

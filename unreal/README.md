@@ -59,6 +59,7 @@ from `../data/rules`.
 | `V` / `X` | City panel with the leader in that city: Benevolence / Fear without walking (classic control) |
 | `B` / `R` | A melee involving your leader's stack waits for you (even on an AI's turn): `B` fights it as a live medieval battle (autosaves first), `R` auto-resolves it. In battle: WASD move the leader, left click or `F` strike, `Tab` charge or hold your men, `1`-`6` order your squads (advance, hold, flank left, flank right, fall back, hunt their leader; `7` `8` `9` pick the left, centre or right squad, `0` all), hold right mouse or Q/E to look, `Esc` settles it now. The trained battle AI (`data/battle_ai`) leads the enemy. The field result goes to the core, which keeps it within 25% of the expected Civ result |
 | `J` | Assassins: send an idle one after a rival ruler (shows the odds when that ruler is in sight), or recall one |
+| `Y` | Great people: each class's current individual with your points, the cost and points per turn; pick one to buy it now with gold (or faith). A selected great person: `F` uses it where it stands (on its district, or a Great Work in a city with a free slot) |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |

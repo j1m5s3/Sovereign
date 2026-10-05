@@ -47,6 +47,9 @@ enum class CommandType : uint8_t {
     BattleResult = 29,    // the live battle's field result: arg = damage to the defender, arg2 = to the attacker,
                           // target.x = wound to the leader (clamped by the core); any time, by the battle's human
     AutoResolveBattle = 30,  // settle the pending battle with the normal Civ roll
+    PatronizeGreatPerson = 31,  // arg = great person class, arg2 = 0 gold / 1 faith: buy its current individual now
+    PassGreatPerson = 32,       // arg = great person class: decline its current individual
+    ActivateGreatPerson = 33,   // id = great person unit: use it where it stands (one charge or one Great Work)
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -128,6 +131,11 @@ struct Command {
         return {CommandType::SendAssassin, p, agent, {}, target, 0};
     }
     static Command abandonLeader(PlayerId p) { return {CommandType::AbandonLeader, p, -1, {}, 0, 0}; }
+    static Command patronizeGreatPerson(PlayerId p, TypeIndex cls, bool faith) {
+        return {CommandType::PatronizeGreatPerson, p, -1, {}, cls, faith ? 1 : 0};
+    }
+    static Command passGreatPerson(PlayerId p, TypeIndex cls) { return {CommandType::PassGreatPerson, p, -1, {}, cls, 0}; }
+    static Command activateGreatPerson(PlayerId p, UnitId u) { return {CommandType::ActivateGreatPerson, p, u, {}, 0, 0}; }
 };
 
 enum class CommandError : uint8_t {
@@ -175,6 +183,9 @@ enum class CommandError : uint8_t {
     CannotTakeStance,
     BattlePending,
     NoBattle,
+    NoGreatPerson,
+    NotEnoughFaith,
+    CannotActivate,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

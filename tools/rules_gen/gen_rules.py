@@ -479,6 +479,14 @@ def gen_buildings():
             b["meleeCannotDamageWalls"] = True
         if "walls cannot be bypassed" in row["Modifiers"]:
             b["wallsCannotBeBypassed"] = True
+        points = gpp(row["GPP"])
+        if points:
+            b["greatPersonPoints"] = points
+        slots = {}
+        for m in re.finditer(r"(\d+) (\w+)", row["Great Work slots"] or ""):
+            slots[m.group(2).upper()] = slots.get(m.group(2).upper(), 0) + int(m.group(1))
+        if slots:
+            b["greatWorkSlots"] = slots
         out.append(b)
     return {"buildings": out}
 
@@ -572,6 +580,9 @@ def gen_districts():
             if "coast/lake" in row["Placement/flags"]:
                 d["water"] = True  # on Coast or Lake next to land
             d["adjacency"] = district_adjacency(extra[name]["Adjacency rules"], emitted)
+            points = gpp(row["GPP per turn"])
+            if points:
+                d["greatPersonPoints"] = points
         out.append(d)
     return {"districts": out}
 
@@ -871,6 +882,155 @@ def render(doc):
     return json.dumps({**HEADER, **doc}, indent=1, ensure_ascii=False) + "\n"
 
 
+GP_CLASSES = ["Great General", "Great Admiral", "Great Engineer", "Great Merchant", "Great Prophet",
+              "Great Scientist", "Great Writer", "Great Artist", "Great Musician"]
+
+
+def gp_class_id(name):
+    return "GREAT_PERSON_CLASS_" + snake(name.replace("Great ", ""))
+
+
+def gpp(text):
+    """'+1 Great Writer, +1 Great Artist' -> {class id: points}."""
+    out = {}
+    for m in re.finditer(r"\+(\d+) (Great \w+)", text or ""):
+        if m.group(2) in GP_CLASSES:
+            out[gp_class_id(m.group(2))] = out.get(gp_class_id(m.group(2)), 0) + int(m.group(1))
+    return out
+
+
+# Great Work types: the yield most works of each type give (great-people.md, Great Work yields).
+GREAT_WORK_TYPES = {
+    "WRITING": {"yield": "CULTURE", "amount": 2, "tourism": 2, "slots": ["WRITING", "PALACE"]},
+    "SCULPTURE": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
+    "PORTRAIT": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
+    "LANDSCAPE": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
+    "RELIGIOUS": {"yield": "CULTURE", "amount": 3, "tourism": 2, "slots": ["ART", "PALACE"]},
+    "MUSIC": {"yield": "CULTURE", "amount": 4, "tourism": 4, "slots": ["MUSIC", "PALACE"]},
+    "ARTIFACT": {"yield": "CULTURE", "amount": 3, "tourism": 3, "slots": ["ARTIFACT"]},
+    "RELIC": {"yield": "FAITH", "amount": 4, "tourism": 8, "slots": ["RELIC", "PALACE"]},
+}
+
+
+def gp_requirements(text, districts):
+    """Activation requirements -> typed fields; atoms the core cannot check yet are listed
+    under 'untracked' and ignored (the great person may be used anywhere they would allow)."""
+    req, untracked = {}, []
+    for atom in [a.strip() for a in (text or "").split(",") if a.strip()]:
+        key, _, value = atom.partition("=")
+        if key == "OwnedTile":
+            req["ownedTile"] = True
+        elif key == "CompletedDistrictType" and "DISTRICT_" + snake(value) in districts:
+            req["district"] = "DISTRICT_" + snake(value)
+        elif key == "NoMilitaryUnit":
+            req["noMilitaryUnit"] = True
+        elif key == "MilitaryUnitDomain":
+            req["unitDomain"] = value.upper()
+        elif key == "UnitCanGainExperience":
+            pass  # every military unit here can
+        elif key == "MissingBuildingType":
+            req["missingBuilding"] = "BUILDING_" + snake(value)
+        else:
+            untracked.append(atom)
+    if untracked:
+        req["untracked"] = untracked
+    return req
+
+
+def gp_effects(text, ids):
+    """Activation effects -> typed effects the core applies; the rest are kept as text."""
+    effects, untracked = [], []
+    eras = {e + " Era": "ERA_" + e.upper() for e in ERAS}
+    for part in [p.strip() for p in (text or "").split(";") if p.strip()]:
+        t = re.sub(r" \(one-time\)$", "", part)
+        m = re.fullmatch(r"one-time grant of (\d+)( \(x game speed\))? (Gold|Faith|Culture|Science)", t)
+        if m:
+            effects.append({"kind": "YIELD", "yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(1)), "scaled": bool(m.group(2))})
+            continue
+        m = re.fullmatch(r"one-time (\d+) \(x game speed\) Production", t)
+        if m:
+            effects.append({"kind": "PRODUCTION", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"(Eureka|Inspiration) for (.+?)( \(or the whole (?:tech|civic) if already boosted\))?", t)
+        if m and m.group(2) in ids["nodes"]:
+            effects.append({"kind": "BOOST", "ref": ids["nodes"][m.group(2)], "orComplete": bool(m.group(3))})
+            continue
+        m = re.fullmatch(r"grants (\d+) random (Eureka|Inspiration)\(s\) \((\w+ Era) to (\w+ Era)\)", t)
+        if m:
+            effects.append({"kind": "RANDOM_BOOST", "tree": "TECH" if m.group(2) == "Eureka" else "CIVIC", "count": int(m.group(1)),
+                            "minEra": eras[m.group(3)], "maxEra": eras[m.group(4)]})
+            continue
+        m = re.fullmatch(r"grants all (Eurekas|Inspirations) from (\w+ Era) to (\w+ Era)", t)
+        if m:
+            effects.append({"kind": "RANDOM_BOOST", "tree": "TECH" if m.group(1) == "Eurekas" else "CIVIC", "count": 99,
+                            "minEra": eras[m.group(2)], "maxEra": eras[m.group(3)]})
+            continue
+        if t == "grants enough XP for a promotion":
+            effects.append({"kind": "PROMOTION_XP"})
+            continue
+        m = re.fullmatch(r"grants (?:a |an |1 )?(.+?)( with enough XP)?", t)
+        if m and m.group(1) in ids["buildings"]:
+            effects.append({"kind": "BUILDING", "ref": ids["buildings"][m.group(1)]})
+            continue
+        if m and m.group(1) in ids["units"]:
+            effects.append({"kind": "UNIT", "ref": ids["units"][m.group(1)]})
+            continue
+        m = re.fullmatch(r"\+(\d+) (\w+) from (.+?) in all your cities", t)
+        if m and m.group(2) in YIELD_WORDS and m.group(3) in ids["buildings"]:
+            effects.append({"kind": "BUILDING_YIELD", "building": ids["buildings"][m.group(3)], "yield": YIELD_WORDS[m.group(2)],
+                            "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"(\d+) \(x game speed\) points toward every Great Person class", t)
+        if m:
+            effects.append({"kind": "GREAT_PERSON_POINTS", "amount": int(m.group(1))})
+            continue
+        untracked.append(part)
+    return effects, untracked
+
+
+def gen_great_people():
+    """Great person classes, the individuals of each and the Great Work types (07: Great People)."""
+    classes = []
+    for row in table(SPEC / "great-people.md", "Great Person classes"):
+        if row["Class"] not in GP_CLASSES:
+            continue
+        c = {"id": gp_class_id(row["Class"]), "name": row["Class"], "unit": "UNIT_" + snake(row["Unit"]),
+             "district": "DISTRICT_" + snake(row["District"])}
+        if row["Max per player"]:
+            c["maxPerPlayer"] = num(row["Max per player"])
+        classes.append(c)
+    ids = {
+        "nodes": node_names(),
+        "buildings": {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")},
+        "units": {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")},
+    }
+    districts = {"DISTRICT_" + snake(n) for n in ["City Center"] + PLACEABLE_DISTRICTS}
+    people = []
+    for cls in GP_CLASSES:
+        for row in table(SPEC / "great-people.md", cls):
+            era = "ERA_" + row["Era"].replace(" Era", "").upper()
+            g = {"id": "GREAT_PERSON_" + snake(row["Individual"]), "name": row["Individual"], "class": gp_class_id(cls),
+                 "era": era, "charges": num(row["Charges"]) if row["Charges"] else 0}
+            req = gp_requirements(row["Activation requirements"], districts)
+            if req:
+                g["requires"] = req
+            effects, untracked = gp_effects(row["Activation effects"], ids)
+            if effects:
+                g["effects"] = effects
+            if untracked:
+                g["untrackedEffects"] = untracked
+            m = re.fullmatch(r"(\d+) x (\w+)", row["Great Works"] or "")
+            if m:
+                g["greatWorks"] = {"type": m.group(2).upper(), "count": int(m.group(1))}
+            if "ability Great General [" in row["Passive/on-recruit effects"] or "ability Great Admiral [" in row["Passive/on-recruit effects"]:
+                i = ERAS.index(row["Era"].replace(" Era", ""))
+                g["aura"] = {"domain": "SEA" if cls == "Great Admiral" else "LAND", "strength": 5, "moves": 1, "range": 2,
+                             "eras": ["ERA_" + e.upper() for e in ERAS[i:i + 2]]}
+            people.append(g)
+    works = [{"id": k, **v} for k, v in GREAT_WORK_TYPES.items()]
+    return {"greatPersonClasses": classes, "greatPeople": people, "greatWorkTypes": works}
+
+
 def main():
     check = "--check" in sys.argv
     outputs = {
@@ -887,6 +1047,7 @@ def main():
         "governments.json": gen_governments(),
         "policies.json": gen_policies(),
         "improvements.json": gen_improvements(),
+        "greatpeople.json": gen_great_people(),
     }
     stale = []
     for name, doc in outputs.items():

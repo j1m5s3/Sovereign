@@ -722,16 +722,20 @@ void production(View& v) {
                     if (popRoom <= Fixed::fromInt(1)) value += static_cast<int>((b.housing * 30).round());
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += threatened ? 500 : v.enemies.empty() ? 0 : 60;
+                    for (const auto& gpp : b.greatPersonPoints) value += 15 * gpp.second;  // great people (07)
+                    for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
                     break;
                 }
                 case ProductionKind::District: {
                     const DistrictType& d = v.r.districts[at(it.type)];
+                    int gpp = 0;  // a specialty district also earns great people and opens its buildings
+                    for (const auto& p : d.greatPersonPoints) gpp += p.second;
                     if (const CityDistrict* placed = c.district(it.type, false)) {
                         value = 60 + yieldValue(g.districtAdjacency(v.me, it.type, placed->pos)) * 10;
                         where = placed->pos;
                     } else {
                         where = districtSpot(v, cid, it.type);
-                        value = 40 + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 10;
+                        value = 70 + 25 * gpp + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 10;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
@@ -777,6 +781,55 @@ void purchases(View& v) {
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost + reserve)) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
+    }
+}
+
+// Great people: used where they stand when they can be, otherwise walked to the nearest of
+// our plots that suits them (a city with a free Great Work slot, their district, a city).
+void greatPerson(View& v, UnitId id) {
+    Game& g = v.game;
+    const Unit* u = v.s().unit(id);
+    if (g.canActivateGreatPerson(id)) {
+        g.submit(Command::activateGreatPerson(v.me, id));
+        return;
+    }
+    const GreatPersonType& gp = v.r.greatPeople[at(u->greatPerson)];
+    if (gp.hasAura && gp.greatWorkCount == 0 && gp.effects.empty()) {
+        g.submit(Command::setActivity(v.me, id, Activity::Sleep));  // a general's aura, kept at home
+        return;
+    }
+    std::optional<Hex> best;
+    int bestDist = INT_MAX;
+    for (CityId cid : v.cities) {
+        const City& c = *v.s().city(cid);
+        std::vector<Hex> spots;
+        if (gp.greatWorkCount > 0) {
+            if (g.freeGreatWorkSlot(c, gp.greatWorkType) != kNone) spots.push_back(c.pos);
+        } else if (gp.district != kNone && v.r.districts[at(gp.district)].id != "DISTRICT_CITY_CENTER") {
+            const CityDistrict* d = c.district(gp.district, true);
+            if (d) spots.push_back(d->pos);
+        } else if (gp.unitDomain < 0) {
+            spots.push_back(c.pos);
+        }
+        for (const Hex& h : spots) {
+            const int d = v.s().grid.distance(u->pos, h);
+            if (h != u->pos && d < bestDist) {
+                bestDist = d;
+                best = h;
+            }
+        }
+    }
+    if (best && g.submit(Command::move(v.me, id, *best, true)) == CommandError::Ok) return;
+    g.submit(Command::setActivity(v.me, id, Activity::Sleep));  // nowhere to use it yet
+}
+
+// Buys a great person when the price is a small part of the treasury.
+void patronage(View& v) {
+    Game& g = v.game;
+    for (size_t c = 0; c < v.r.greatPersonClasses.size(); ++c) {
+        const int cost = g.patronageCost(v.me, static_cast<TypeIndex>(c), false);
+        if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost * 3))
+            g.submit(Command::patronizeGreatPerson(v.me, static_cast<TypeIndex>(c), false));
     }
 }
 
@@ -913,7 +966,8 @@ void playTurn(Game& game) {
         const Unit* u = game.state().unit(id);
         if (!u) continue;
         const UnitType& t = v.r.units[at(u->type)];
-        if (t.foundCity) settle(v, id);
+        if (u->greatPerson != kNone) greatPerson(v, id);
+        else if (t.foundCity) settle(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }
@@ -923,6 +977,7 @@ void playTurn(Game& game) {
     leader(v);
     production(v);
     purchases(v);
+    patronage(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     // Captured cities are kept (never razed).
     if (game.submit(Command::endTurn(v.me)) == CommandError::Ok) return;

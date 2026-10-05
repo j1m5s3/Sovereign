@@ -121,6 +121,24 @@ public:
     // Adjacency yields a district of this type would earn on the plot (after policy bonuses).
     Yields districtAdjacency(PlayerId player, TypeIndex district, Hex plot) const;
 
+    // ---- great people and Great Works (07-economy-trade-great-people.md)
+    // The era most living major civs have reached: great people older than it drop out.
+    int worldEra() const;
+    // The individual each class offers to everyone now; kNone when its roster is spent.
+    TypeIndex currentGreatPerson(TypeIndex cls) const;
+    // Points to recruit this individual (by its era, +30% per era ahead of the world, scaled by speed).
+    int greatPersonCost(TypeIndex person) const;
+    // Gold (or faith) to buy the class's current individual now; -1 when the player cannot.
+    int patronageCost(PlayerId player, TypeIndex cls, bool faith) const;
+    int greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const;
+    bool canActivateGreatPerson(UnitId unit, CommandError* why = nullptr) const;
+    // Slots of a type in a city's buildings, and the building with a free one that takes this work.
+    int greatWorkSlots(const City& city, const std::string& slot) const;
+    TypeIndex freeGreatWorkSlot(const City& city, TypeIndex workType) const;
+    // Great General / Admiral auras on a unit (+strength, +movement).
+    int greatPersonAuraStrength(const Unit& unit) const;
+    int greatPersonAuraMoves(const Unit& unit) const;
+
     // ---- research and government (04-tech-civics-government.md)
     int techCost(TypeIndex tech) const;    // scaled by game speed
     int civicCost(TypeIndex civic) const;  // scaled by game speed
@@ -312,6 +330,12 @@ private:
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;
     void applyLeader(const Command& c);
+    CommandError validateGreatPeople(const Command& c) const;
+    void applyGreatPeople(const Command& c);
+    // A player's turn: earn points, then recruit whoever they can afford.
+    void processGreatPeople(PlayerId player);
+    void recruitGreatPerson(PlayerId player, TypeIndex person);
+    void applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx);
     void spawnLeader(PlayerId p, Hex at);
     // The leader was beaten: captured (melee, city capture) or killed (ranged, its own failed attack).
     void leaderLost(UnitId leader, PlayerId by, bool captured);

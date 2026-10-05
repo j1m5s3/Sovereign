@@ -31,6 +31,8 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
     p.governmentUses.resize(rules.governments.size(), 0);
     p.stockpile.resize(rules.resources.size(), 0);
     p.fuelShort.resize(rules.resources.size(), 0);
+    p.greatPersonPoints.resize(rules.greatPersonClasses.size(), 0);
+    p.greatPeopleRecruited.resize(rules.greatPersonClasses.size(), 0);
     if (p.leaderName.empty() && !p.barbarian && p.civ >= 0 && static_cast<size_t>(p.civ) < rules.civs.size()) {
         const Dynasty* d = rules.dynastyOf(p.civ);
         p.leaderName = d ? d->names.front() : rules.civs[static_cast<size_t>(p.civ)].name;

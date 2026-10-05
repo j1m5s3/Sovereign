@@ -47,7 +47,10 @@
      "kind": "FEATURE",
      "ref": "FEATURE_REEF"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 1
+   }
   },
   {
    "id": "DISTRICT_HOLY_SITE",
@@ -77,7 +80,10 @@
      "tilesRequired": 2,
      "kind": "ANY_DISTRICT"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_PROPHET": 1
+   }
   },
   {
    "id": "DISTRICT_COMMERCIAL_HUB",
@@ -106,7 +112,10 @@
      "tilesRequired": 2,
      "kind": "ANY_DISTRICT"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 1
+   }
   },
   {
    "id": "DISTRICT_ENCAMPMENT",
@@ -120,7 +129,10 @@
    "needsPopulation": true,
    "maintenance": 1,
    "notAdjacentToCityCenter": true,
-   "adjacency": []
+   "adjacency": [],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
   },
   {
    "id": "DISTRICT_THEATER_SQUARE",
@@ -138,7 +150,12 @@
      "tilesRequired": 2,
      "kind": "ANY_DISTRICT"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 1,
+    "GREAT_PERSON_CLASS_ARTIST": 1,
+    "GREAT_PERSON_CLASS_MUSICIAN": 1
+   }
   },
   {
    "id": "DISTRICT_INDUSTRIAL_ZONE",
@@ -181,7 +198,10 @@
      "amount": 1,
      "kind": "STRATEGIC_RESOURCE"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "DISTRICT_HARBOR",
@@ -211,7 +231,10 @@
      "kind": "DISTRICT",
      "ref": "DISTRICT_CITY_CENTER"
     }
-   ]
+   ],
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
   }
  ]
 }

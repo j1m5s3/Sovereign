@@ -107,6 +107,16 @@ CityReport Game::cityReport(CityId id) const {
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
     }
+    // Great Works in the city's slots, and great people whose effects improve its buildings.
+    for (const GreatWork& w : c->greatWorks) {
+        const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
+        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount);
+    }
+    for (TypeIndex person : owner.greatPeopleActivated) {
+        for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {
+            if (fx.kind == GreatPersonEffectKind::BuildingYield && c->has(fx.ref)) raw[idx(fx.yield)] += Fixed::fromInt(fx.amount);
+        }
+    }
     // Finished districts add their adjacency yields to the city.
     for (const CityDistrict& d : c->districts) {
         if (!d.complete) continue;

@@ -1,0 +1,368 @@
+// Great people and Great Works (07-economy-trade-great-people.md, Great People and Great
+// Works and Culture; data: great-people.md). Every class offers one individual to everyone at
+// a time; players earn points from districts and buildings, recruit when their points reach
+// the cost (or buy with gold or faith), and use the unit where its requirements hold.
+#include <algorithm>
+
+#include "sovereign/game.h"
+
+namespace sov {
+
+namespace {
+
+size_t at(TypeIndex i) { return static_cast<size_t>(i); }
+
+int speedPercent(const GameState& s, const Rules& r) { return r.speeds[at(r.speed(s.setup.speed))].costPercent; }
+
+bool claimed(const GameState& s, TypeIndex person) {
+    return at(person) < s.greatPeopleClaimed.size() && s.greatPeopleClaimed[at(person)];
+}
+
+bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity; }
+
+}  // namespace
+
+int Game::worldEra() const {
+    std::vector<int> eras;
+    for (const Player& p : state_.players) {
+        if (isMajor(p)) eras.push_back(playerEra(p.id));
+    }
+    if (eras.empty()) return 0;
+    std::sort(eras.begin(), eras.end(), std::greater<int>());
+    return eras[(eras.size() + 1) / 2 - 1];  // reached by at least half of them
+}
+
+TypeIndex Game::currentGreatPerson(TypeIndex cls) const {
+    const int world = worldEra();
+    TypeIndex best = kNone;
+    for (size_t i = 0; i < rules_->greatPeople.size(); ++i) {
+        const GreatPersonType& g = rules_->greatPeople[i];
+        if (g.cls != cls || g.era < world || claimed(state_, static_cast<TypeIndex>(i))) continue;
+        if (best == kNone || g.era < rules_->greatPeople[at(best)].era) best = static_cast<TypeIndex>(i);
+    }
+    return best;
+}
+
+int Game::greatPersonCost(TypeIndex person) const {
+    const GreatPersonType& g = rules_->greatPeople[at(person)];
+    const int ahead = std::max(0, g.era - worldEra());
+    const int base = rules_->eras[at(static_cast<TypeIndex>(g.era))].greatPersonBaseCost * (100 + 30 * ahead) / 100;
+    return std::max(1, base * speedPercent(state_, *rules_) / 100);
+}
+
+int Game::patronageCost(PlayerId player, TypeIndex cls, bool faith) const {
+    if (cls < 0 || at(cls) >= rules_->greatPersonClasses.size()) return -1;
+    const Player& p = state_.players[at(player)];
+    const TypeIndex person = currentGreatPerson(cls);
+    if (person == kNone) return -1;
+    const GreatPersonClass& c = rules_->greatPersonClasses[at(cls)];
+    if (c.maxPerPlayer > 0 && at(cls) < p.greatPeopleRecruited.size() && p.greatPeopleRecruited[at(cls)] >= c.maxPerPlayer) return -1;
+    const int have = at(cls) < p.greatPersonPoints.size() ? p.greatPersonPoints[at(cls)] : 0;
+    const int missing = std::max(0, greatPersonCost(person) - have);
+    // The fixed part does not scale with game speed (07: Patronage).
+    return faith ? 150 + 10 * missing : 200 + 15 * missing;
+}
+
+int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
+    int total = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (const CityDistrict& d : c.districts) {
+            if (!d.complete) continue;
+            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) total += k == cls ? v : 0;
+        }
+        for (TypeIndex b : c.buildings) {
+            for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) total += k == cls ? v : 0;
+        }
+    }
+    return total;
+}
+
+int Game::greatWorkSlots(const City& city, const std::string& slot) const {
+    int n = 0;
+    for (TypeIndex b : city.buildings) {
+        for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) n += s == slot ? count : 0;
+    }
+    return n;
+}
+
+TypeIndex Game::freeGreatWorkSlot(const City& city, TypeIndex workType) const {
+    const GreatWorkType& w = rules_->greatWorkTypes[at(workType)];
+    for (TypeIndex b : city.buildings) {
+        int free = 0;
+        for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) {
+            if (std::find(w.slots.begin(), w.slots.end(), s) != w.slots.end()) free += count;
+        }
+        for (const GreatWork& g : city.greatWorks) free -= g.building == b ? 1 : 0;
+        if (free > 0) return b;
+    }
+    return kNone;
+}
+
+namespace {
+// The aura of the strongest Great General or Admiral near a unit (05: Great Generals and Admirals).
+const GreatPersonAura* bestAura(const GameState& s, const Rules& r, const Unit& unit) {
+    const UnitType& ut = r.units[at(unit.type)];
+    if (ut.layer != UnitLayer::Military) return nullptr;
+    const GreatPersonAura* best = nullptr;
+    for (const Unit& gp : s.units) {
+        if (gp.owner != unit.owner || gp.greatPerson == kNone) continue;
+        const GreatPersonType& g = r.greatPeople[at(gp.greatPerson)];
+        if (!g.hasAura || g.aura.domain != ut.domain || s.grid.distance(gp.pos, unit.pos) > g.aura.range) continue;
+        if (std::find(g.aura.eras.begin(), g.aura.eras.end(), ut.era) == g.aura.eras.end()) continue;
+        if (!best || g.aura.strength > best->strength) best = &g.aura;
+    }
+    return best;
+}
+}  // namespace
+
+int Game::greatPersonAuraStrength(const Unit& unit) const {
+    const GreatPersonAura* a = bestAura(state_, *rules_, unit);
+    return a ? a->strength : 0;
+}
+
+int Game::greatPersonAuraMoves(const Unit& unit) const {
+    const GreatPersonAura* a = bestAura(state_, *rules_, unit);
+    return a ? a->moves : 0;
+}
+
+void Game::processGreatPeople(PlayerId pid) {
+    Player& p = state_.players[at(pid)];
+    if (!isMajor(p) || rules_->greatPersonClasses.empty()) return;
+    fitPlayerToRules(p, *rules_);
+    for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
+        p.greatPersonPoints[c] += greatPersonPointsPerTurn(pid, static_cast<TypeIndex>(c));
+    }
+    for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
+        const TypeIndex person = currentGreatPerson(static_cast<TypeIndex>(c));
+        if (person == kNone) continue;
+        if (std::find(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end(), person) != p.greatPeoplePassed.end()) continue;
+        const GreatPersonClass& cls = rules_->greatPersonClasses[c];
+        if (cls.maxPerPlayer > 0 && p.greatPeopleRecruited[c] >= cls.maxPerPlayer) continue;
+        const int cost = greatPersonCost(person);
+        if (p.greatPersonPoints[c] < cost) continue;
+        p.greatPersonPoints[c] -= cost;
+        recruitGreatPerson(pid, person);
+    }
+}
+
+void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
+    const GreatPersonType& g = rules_->greatPeople[at(person)];
+    const GreatPersonClass& cls = rules_->greatPersonClasses[at(g.cls)];
+    Player& p = state_.players[at(pid)];
+    // The great person appears in the capital (or any city when the capital is full).
+    std::optional<Hex> spot;
+    for (int pass = 0; pass < 2 && !spot; ++pass) {
+        for (const City& c : state_.cities) {
+            if (c.owner != pid || (pass == 0 && !c.capital)) continue;
+            spot = unitSpawnPlot(c, cls.unit);
+            if (spot) break;
+        }
+    }
+    if (state_.greatPeopleClaimed.size() < rules_->greatPeople.size()) state_.greatPeopleClaimed.resize(rules_->greatPeople.size(), 0);
+    state_.greatPeopleClaimed[at(person)] = 1;
+    ++p.greatPeopleRecruited[at(g.cls)];
+    pushEvent(EventKind::GreatPersonRecruited, pid, kNoPlayer, person);
+    if (!spot) return;  // no city to appear in: the great person is lost
+    Unit& u = spawnUnit(cls.unit, pid, *spot);
+    u.greatPerson = person;
+    u.charges = g.greatWorkCount > 0 ? g.greatWorkCount : g.charges;
+}
+
+bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
+    auto fail = [&](CommandError e) {
+        if (why) *why = e;
+        return false;
+    };
+    const Unit* u = state_.unit(id);
+    if (!u) return fail(CommandError::BadUnit);
+    if (u->greatPerson == kNone || u->charges <= 0) return fail(CommandError::CannotActivate);
+    const GreatPersonType& g = rules_->greatPeople[at(u->greatPerson)];
+    const Plot& plot = state_.plot(u->pos);
+    const City* city = plot.city != kNoCity ? state_.city(plot.city) : nullptr;
+    if (city && city->owner != u->owner) city = nullptr;
+    if (g.greatWorkCount > 0) {
+        // A Great Work goes into a free slot of the city whose land the great person stands on.
+        if (!city || freeGreatWorkSlot(*city, g.greatWorkType) == kNone) return fail(CommandError::CannotActivate);
+        if (why) *why = CommandError::Ok;
+        return true;
+    }
+    if (g.effects.empty()) return fail(CommandError::CannotActivate);  // its effects need systems not built yet
+    if (g.ownedTile && plot.owner != u->owner) return fail(CommandError::CannotActivate);
+    if (g.district != kNone) {
+        const bool center = rules_->districts[at(g.district)].id == "DISTRICT_CITY_CENTER";
+        const CityDistrict* d = state_.districtAt(u->pos);
+        const bool ok = center ? (state_.cityAt(u->pos) && state_.cityAt(u->pos)->owner == u->owner)
+                               : (city && d && d->type == g.district && d->complete);
+        if (!ok) return fail(CommandError::CannotActivate);
+    }
+    if (g.noMilitaryUnit && state_.unitAt(u->pos, UnitLayer::Military, *rules_)) return fail(CommandError::CannotActivate);
+    if (g.unitDomain >= 0) {
+        const Unit* m = state_.unitAt(u->pos, UnitLayer::Military, *rules_);
+        if (!m || m->owner != u->owner || static_cast<int>(rules_->units[at(m->type)].domain) != g.unitDomain)
+            return fail(CommandError::CannotActivate);
+    }
+    if (g.missingBuilding != kNone && (!city || city->has(g.missingBuilding))) return fail(CommandError::CannotActivate);
+    // Effects that need a city (buildings, production) need one here.
+    for (const GreatPersonEffect& fx : g.effects) {
+        if ((fx.kind == GreatPersonEffectKind::Building || fx.kind == GreatPersonEffectKind::Production) && !city)
+            return fail(CommandError::CannotActivate);
+    }
+    if (why) *why = CommandError::Ok;
+    return true;
+}
+
+CommandError Game::validateGreatPeople(const Command& c) const {
+    if (c.type == CommandType::ActivateGreatPerson) {
+        const Unit* u = state_.unit(c.id);
+        if (!u) return CommandError::BadUnit;
+        if (u->owner != c.player) return CommandError::NotYourUnit;
+        CommandError why = CommandError::Ok;
+        canActivateGreatPerson(c.id, &why);
+        return why;
+    }
+    if (c.arg < 0 || static_cast<size_t>(c.arg) >= rules_->greatPersonClasses.size()) return CommandError::NoGreatPerson;
+    const TypeIndex cls = static_cast<TypeIndex>(c.arg);
+    if (currentGreatPerson(cls) == kNone) return CommandError::NoGreatPerson;
+    if (c.type == CommandType::PassGreatPerson) return CommandError::Ok;
+    const int cost = patronageCost(c.player, cls, c.arg2 == 1);
+    if (cost < 0) return CommandError::NoGreatPerson;
+    const Player& p = state_.players[at(c.player)];
+    if (c.arg2 == 1 ? p.faith < Fixed::fromInt(cost) : p.gold < Fixed::fromInt(cost))
+        return c.arg2 == 1 ? CommandError::NotEnoughFaith : CommandError::NotEnoughGold;
+    return CommandError::Ok;
+}
+
+void Game::applyGreatPeople(const Command& c) {
+    Player& p = state_.players[at(c.player)];
+    fitPlayerToRules(p, *rules_);
+    if (c.type == CommandType::PassGreatPerson) {
+        p.greatPeoplePassed.push_back(currentGreatPerson(static_cast<TypeIndex>(c.arg)));
+        return;
+    }
+    if (c.type == CommandType::PatronizeGreatPerson) {
+        const TypeIndex cls = static_cast<TypeIndex>(c.arg);
+        const TypeIndex person = currentGreatPerson(cls);
+        const int cost = patronageCost(c.player, cls, c.arg2 == 1);
+        if (c.arg2 == 1) p.faith -= Fixed::fromInt(cost);
+        else p.gold -= Fixed::fromInt(cost);
+        // Points already earned count toward the price; what is left over stays.
+        p.greatPersonPoints[at(cls)] = std::max(0, p.greatPersonPoints[at(cls)] - greatPersonCost(person));
+        recruitGreatPerson(c.player, person);
+        return;
+    }
+    // Activation: a Great Work, or the individual's effects; the last charge spends the unit.
+    Unit* u = state_.unit(c.id);
+    const GreatPersonType& g = rules_->greatPeople[at(u->greatPerson)];
+    if (g.greatWorkCount > 0) {
+        City& city = *state_.city(state_.plot(u->pos).city);
+        city.greatWorks.push_back({g.greatWorkType, freeGreatWorkSlot(city, g.greatWorkType), u->greatPerson});
+    } else {
+        for (const GreatPersonEffect& fx : g.effects) {
+            applyGreatPersonEffect(*u, fx);
+            u = state_.unit(c.id);  // a granted unit may move the unit list
+        }
+        if (std::any_of(g.effects.begin(), g.effects.end(),
+                        [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::BuildingYield; }))
+            p.greatPeopleActivated.push_back(u->greatPerson);
+    }
+    if (--u->charges <= 0) removeUnit(c.id);
+    refreshVisibility(c.player);
+}
+
+void Game::applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx) {
+    const PlayerId pid = unit.owner;
+    Player& p = state_.players[at(pid)];
+    const Hex here = unit.pos;
+    City* city = state_.plot(here).city != kNoCity ? state_.city(state_.plot(here).city) : nullptr;
+    if (city && city->owner != pid) city = nullptr;
+    const int speed = speedPercent(state_, *rules_);
+    switch (fx.kind) {
+        case GreatPersonEffectKind::Yield: {
+            const Fixed amount = Fixed::fromInt(fx.scaled ? fx.amount * speed / 100 : fx.amount);
+            if (fx.yield == YieldType::Gold) p.gold += amount;
+            else if (fx.yield == YieldType::Faith) p.faith += amount;
+            else if (fx.yield == YieldType::Science) processResearch(pid, amount, Fixed());
+            else if (fx.yield == YieldType::Culture) processResearch(pid, Fixed(), amount);
+            break;
+        }
+        case GreatPersonEffectKind::Production: {
+            if (!city || city->queue.empty()) break;
+            const ProductionItem item = city->queue.front();
+            bool found = false;
+            for (ProductionProgress& pr : city->progress) {
+                if (pr.item.kind == item.kind && pr.item.type == item.type) {
+                    pr.amount += Fixed::fromInt(fx.amount * speed / 100);
+                    found = true;
+                }
+            }
+            if (!found) city->progress.push_back({item, Fixed::fromInt(fx.amount * speed / 100)});
+            break;
+        }
+        case GreatPersonEffectKind::Boost:
+        case GreatPersonEffectKind::RandomBoost: {
+            const bool civic = fx.civic;
+            TreeProgress& tree = civic ? p.civics : p.techs;
+            const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+            auto boost = [&](TypeIndex node, bool orComplete) {
+                const int cost = civic ? civicCost(node) : techCost(node);
+                if (tree.done[at(node)]) return;
+                if (tree.boosted[at(node)]) {
+                    if (orComplete) {
+                        tree.progress[at(node)] = Fixed::fromInt(cost);
+                        completeNode(pid, civic, node);
+                    }
+                    return;
+                }
+                tree.boosted[at(node)] = 1;
+                const int pct = nodes[at(node)].boost.percent > 0 ? nodes[at(node)].boost.percent : 40;
+                tree.progress[at(node)] += Fixed::fromInt(cost) * pct / 100;
+            };
+            if (fx.kind == GreatPersonEffectKind::Boost) {
+                boost(fx.ref, fx.orComplete);
+                break;
+            }
+            std::vector<TypeIndex> pool;
+            for (size_t i = 0; i < nodes.size(); ++i) {
+                if (nodes[i].era >= fx.minEra && nodes[i].era <= fx.maxEra && !tree.done[i] && !tree.boosted[i])
+                    pool.push_back(static_cast<TypeIndex>(i));
+            }
+            Rng& rng = state_.rng.get(RngStream::Gameplay);
+            for (int k = 0; k < fx.count && !pool.empty(); ++k) {
+                const size_t pick = rng.below(static_cast<uint32_t>(pool.size()));
+                boost(pool[pick], false);
+                pool.erase(pool.begin() + static_cast<long>(pick));
+            }
+            break;
+        }
+        case GreatPersonEffectKind::PromotionXp: {
+            for (Unit& m : state_.units) {
+                if (m.pos == here && m.owner == pid && rules_->units[at(m.type)].layer == UnitLayer::Military) {
+                    m.xp = std::max(m.xp, xpForNextLevel(m));
+                    break;
+                }
+            }
+            break;
+        }
+        case GreatPersonEffectKind::Building: {
+            if (!city || city->has(fx.ref)) break;
+            city->buildings.push_back(fx.ref);
+            std::sort(city->buildings.begin(), city->buildings.end());
+            break;
+        }
+        case GreatPersonEffectKind::Unit: {
+            std::optional<Hex> spot;
+            if (city) spot = unitSpawnPlot(*city, fx.ref);
+            if (!spot && !state_.unitAt(here, rules_->units[at(fx.ref)].layer, *rules_)) spot = here;
+            if (spot) spawnUnit(fx.ref, pid, *spot);
+            break;
+        }
+        case GreatPersonEffectKind::BuildingYield: break;  // permanent: read from greatPeopleActivated
+        case GreatPersonEffectKind::GreatPersonPoints: {
+            for (int& pts : p.greatPersonPoints) pts += fx.amount * speed / 100;
+            break;
+        }
+    }
+}
+
+}  // namespace sov

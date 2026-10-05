@@ -38,7 +38,10 @@
     "SCIENCE": 2
    },
    "unlock": "TECH_WRITING",
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 1
+   }
   },
   {
    "id": "BUILDING_UNIVERSITY",
@@ -54,7 +57,10 @@
    "requires": [
     "BUILDING_LIBRARY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 1
+   }
   },
   {
    "id": "BUILDING_RESEARCH_LAB",
@@ -69,7 +75,10 @@
    "requires": [
     "BUILDING_UNIVERSITY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 1
+   }
   },
   {
    "id": "BUILDING_PALACE",
@@ -84,7 +93,10 @@
     "SCIENCE": 2
    },
    "housing": 1,
-   "amenities": 2
+   "amenities": 2,
+   "greatWorkSlots": {
+    "PALACE": 1
+   }
   },
   {
    "id": "BUILDING_MONUMENT",
@@ -196,7 +208,10 @@
     "GOLD": 2
    },
    "unlock": "TECH_CURRENCY",
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 1
+   }
   },
   {
    "id": "BUILDING_BANK",
@@ -211,7 +226,10 @@
    "requires": [
     "BUILDING_MARKET"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 1
+   }
   },
   {
    "id": "BUILDING_STOCK_EXCHANGE",
@@ -226,7 +244,10 @@
    "requires": [
     "BUILDING_BANK"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 1
+   }
   },
   {
    "id": "BUILDING_HYDROELECTRIC_DAM",
@@ -272,7 +293,10 @@
    },
    "unlock": "TECH_BRONZE_WORKING",
    "housing": 1,
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
   },
   {
    "id": "BUILDING_STABLE",
@@ -285,7 +309,10 @@
    },
    "unlock": "TECH_HORSEBACK_RIDING",
    "housing": 1,
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
   },
   {
    "id": "BUILDING_ARMORY",
@@ -301,7 +328,10 @@
     "BUILDING_BARRACKS",
     "BUILDING_STABLE"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
   },
   {
    "id": "BUILDING_MILITARY_ACADEMY",
@@ -317,7 +347,10 @@
    "requires": [
     "BUILDING_ARMORY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 1
+   }
   },
   {
    "id": "BUILDING_ARENA",
@@ -449,7 +482,10 @@
     "BUILDING_FOREIGN_MINISTRY",
     "BUILDING_INTELLIGENCE_AGENCY",
     "BUILDING_GRAND_MASTER_S_CHAPEL"
-   ]
+   ],
+   "greatWorkSlots": {
+    "PALACE": 4
+   }
   },
   {
    "id": "BUILDING_ROYAL_SOCIETY",
@@ -473,7 +509,10 @@
    "yields": {},
    "unlock": "TECH_CELESTIAL_NAVIGATION",
    "housing": 1,
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
   },
   {
    "id": "BUILDING_SHIPYARD",
@@ -488,7 +527,10 @@
    "requires": [
     "BUILDING_LIGHTHOUSE"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
   },
   {
    "id": "BUILDING_SEAPORT",
@@ -505,7 +547,10 @@
    "requires": [
     "BUILDING_SHIPYARD"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 1
+   }
   },
   {
    "id": "BUILDING_SHRINE",
@@ -517,7 +562,10 @@
     "FAITH": 2
    },
    "unlock": "TECH_ASTROLOGY",
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_PROPHET": 1
+   }
   },
   {
    "id": "BUILDING_TEMPLE",
@@ -532,7 +580,13 @@
    "requires": [
     "BUILDING_SHRINE"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_PROPHET": 1
+   },
+   "greatWorkSlots": {
+    "RELIC": 1
+   }
   },
   {
    "id": "BUILDING_CATHEDRAL",
@@ -545,7 +599,10 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "greatWorkSlots": {
+    "CATHEDRAL": 1
+   }
   },
   {
    "id": "BUILDING_GURDWARA",
@@ -666,7 +723,10 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_APPRENTICESHIP",
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "BUILDING_COAL_POWER_PLANT",
@@ -679,7 +739,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "BUILDING_FACTORY",
@@ -694,7 +757,10 @@
    "requires": [
     "BUILDING_WORKSHOP"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "BUILDING_OIL_POWER_PLANT",
@@ -709,7 +775,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "BUILDING_NUCLEAR_POWER_PLANT",
@@ -725,7 +794,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 1
+   }
   },
   {
    "id": "BUILDING_FOOD_MARKET",
@@ -806,7 +878,13 @@
     "CULTURE": 2
    },
    "unlock": "CIVIC_DRAMA_AND_POETRY",
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 1
+   },
+   "greatWorkSlots": {
+    "WRITING": 2
+   }
   },
   {
    "id": "BUILDING_ART_MUSEUM",
@@ -821,7 +899,14 @@
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 1,
+    "GREAT_PERSON_CLASS_ARTIST": 2
+   },
+   "greatWorkSlots": {
+    "ART": 3
+   }
   },
   {
    "id": "BUILDING_ARCHAEOLOGICAL_MUSEUM",
@@ -836,7 +921,14 @@
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 1,
+    "GREAT_PERSON_CLASS_ARTIST": 2
+   },
+   "greatWorkSlots": {
+    "ARTIFACT": 3
+   }
   },
   {
    "id": "BUILDING_BROADCAST_CENTER",
@@ -852,7 +944,14 @@
     "BUILDING_ART_MUSEUM",
     "BUILDING_ARCHAEOLOGICAL_MUSEUM"
    ],
-   "purchasable": true
+   "purchasable": true,
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ARTIST": 1,
+    "GREAT_PERSON_CLASS_MUSICIAN": 2
+   },
+   "greatWorkSlots": {
+    "MUSIC": 1
+   }
   },
   {
    "id": "BUILDING_FERRIS_WHEEL",

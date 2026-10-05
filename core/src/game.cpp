@@ -195,6 +195,10 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::SendAssassin:
         case CommandType::CityStance:
             return validateLeader(c);
+        case CommandType::PatronizeGreatPerson:
+        case CommandType::PassGreatPerson:
+        case CommandType::ActivateGreatPerson:
+            return validateGreatPeople(c);
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -577,6 +581,9 @@ void Game::apply(const Command& c) {
         case CommandType::CityStance: applyLeader(c); break;
         case CommandType::BattleResult:
         case CommandType::AutoResolveBattle: applyBattle(c); break;
+        case CommandType::PatronizeGreatPerson:
+        case CommandType::PassGreatPerson:
+        case CommandType::ActivateGreatPerson: applyGreatPeople(c); break;
     }
 }
 
@@ -675,6 +682,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         if (p.interregnumTurns > 0 && !p.successionPending && p.captor == kNoPlayer && --p.interregnumTurns == 0)
             p.freeChanges = true;
         payUnitFuel(pid);
+        processGreatPeople(pid);
         healAndFortify(pid);
         healCities(pid);
     }
