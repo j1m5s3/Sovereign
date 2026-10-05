@@ -113,7 +113,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         q.value = static_cast<int>(r["value"].integer(0));
         const std::string& ref = r["ref"].str();
         if (type == "PLOT_HAS_RESOURCE") { q.type = ReqType::PlotHasResource; q.ref = rules.resource(ref); }
-        else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = rules.feature(ref); }
+        else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = ref.empty() ? kNone : rules.feature(ref); }
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
         else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
@@ -124,7 +124,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
             *error = "unknown requirement type " + type;
             return false;
         }
-        bool needsRef = q.type == ReqType::PlotHasResource || q.type == ReqType::PlotHasFeature ||
+        bool needsRef = q.type == ReqType::PlotHasResource || (q.type == ReqType::PlotHasFeature && !ref.empty()) ||
                         q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding;
         if (needsRef && q.ref == kNone) {
             *error = "requirement " + type + " refers to unknown " + ref;
@@ -154,6 +154,15 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
         {"ADJUST_DISTRICT_ADJACENCY_PERCENT", ModEffect::DistrictAdjacencyPercent},
         {"ADJUST_CITY_LOYALTY", ModEffect::CityLoyalty},
+        {"ADJUST_CITY_YIELD_PER_POP", ModEffect::CityYieldPerPop},
+        {"ADJUST_CITY_YIELD_PER_DISTRICT", ModEffect::CityYieldPerDistrict},
+        {"ADJUST_CITY_GREAT_PERSON_PERCENT", ModEffect::CityGreatPersonPercent},
+        {"ADJUST_CITY_HARVEST_PERCENT", ModEffect::CityHarvestPercent},
+        {"ADJUST_CITY_BORDER_GROWTH_PERCENT", ModEffect::CityBorderGrowthPercent},
+        {"ADJUST_CITY_DISTRICT_PRODUCTION_PERCENT", ModEffect::CityDistrictProductionPercent},
+        {"ADJUST_CITY_RELIGION_PRESSURE_PERCENT", ModEffect::CityReligionPressurePercent},
+        {"SETTLERS_COST_NO_POPULATION", ModEffect::SettlerNoPopCost},
+        {"ADJUST_BUILDER_CHARGES", ModEffect::BuilderExtraCharges},
         {"FOUNDER_YIELD_PER_CITY", ModEffect::FounderYieldPerCity},
         {"FOUNDER_YIELD_PER_FOLLOWERS", ModEffect::FounderYieldPerFollowers},
         {"FOUNDER_YIELD_PER_DISTRICT", ModEffect::FounderYieldPerDistrict},
@@ -208,7 +217,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount ||
                               mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
                               mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent ||
-                              mod.effect >= ModEffect::FounderYieldPerCity;
+                              (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     mod.per = std::max(1, static_cast<int>(args["per"].integer(1)));
     mod.foreign = args["foreign"].boolean(false);
@@ -250,7 +259,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -1045,6 +1054,56 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         mo.obsoleteEra = j.has("obsoleteEra") ? era(j["obsoleteEra"].str()) : -1;
         moments.push_back(std::move(mo));
     }
+    // Governors and their promotion trees (08: Governors).
+    for (const auto& [id, j] : m.tables["governors"]) {
+        GovernorType g;
+        g.id = id;
+        g.name = j["name"].str(id);
+        g.title = j["title"].str();
+        g.establishPercent = std::max(1, static_cast<int>(j["establishPercent"].integer(100)));
+        g.loyalty = static_cast<int>(j["loyalty"].integer(8));
+        g.cityStates = j["cityStates"].boolean(false);
+        const TypeIndex gi = static_cast<TypeIndex>(governors.size());
+        std::vector<std::vector<std::string>> needs;
+        for (const Json& pj : j["promotions"].items()) {
+            GovernorPromotionType p;
+            p.id = pj["id"].str();
+            p.name = pj["name"].str(p.id);
+            p.effects = pj["effects"].str();
+            p.governor = gi;
+            p.tier = static_cast<int>(pj["tier"].integer(0));
+            p.column = static_cast<int>(pj["column"].integer(0));
+            p.base = pj["base"].boolean(false);
+            std::vector<std::string> req;
+            for (const Json& r : pj["requires"].items()) req.push_back(r.str());
+            needs.push_back(req);
+            g.promotions.push_back(static_cast<TypeIndex>(governorPromotions.size()));
+            governorPromotions.push_back(std::move(p));
+        }
+        // The base ability first.
+        std::stable_sort(g.promotions.begin(), g.promotions.end(),
+                         [&](TypeIndex a, TypeIndex b) { return governorPromotions[static_cast<size_t>(a)].base && !governorPromotions[static_cast<size_t>(b)].base; });
+        for (size_t k = 0; k < needs.size(); ++k) {
+            GovernorPromotionType& p = governorPromotions[governorPromotions.size() - needs.size() + k];
+            for (const std::string& r : needs[k]) {
+                const TypeIndex ri = governorPromotion(r);
+                if (ri == kNone) {
+                    *error = "governor promotion " + p.id + ": unknown requirement " + r;
+                    return false;
+                }
+                p.prerequisites.push_back(ri);
+            }
+        }
+        governors.push_back(std::move(g));
+    }
+    for (const auto& [id, j] : m.tables["governorTitles"]) {
+        const TypeIndex c = civic(j["civic"].str());
+        if (c == kNone) {
+            *error = "governor titles " + id + ": unknown civic";
+            return false;
+        }
+        governorTitleCivics.push_back({c, static_cast<int>(j["titles"].integer(1))});
+    }
     // City-states (08) and what envoys to them give.
     auto kindOf = [](const std::string& k, CityStateKind& out) {
         static const std::pair<const char*, CityStateKind> kinds[] = {
@@ -1347,6 +1406,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             mod.sourceKind = ModSource::Government;
         } else if ((mod.sourceIndex = belief(mod.source)) != kNone) {
             mod.sourceKind = ModSource::Belief;
+        } else if ((mod.sourceIndex = governorPromotion(mod.source)) != kNone) {
+            mod.sourceKind = ModSource::Governor;
         } else {
             *error = "modifier " + id + ": unknown source " + mod.source;
             return false;
@@ -1437,6 +1498,8 @@ TypeIndex Rules::greatWorkType(const std::string& id) const { return findIn(grea
 TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id); }
 TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }
 TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id); }
+TypeIndex Rules::governor(const std::string& id) const { return findIn(governors, id); }
+TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {
     for (const Dynasty& d : dynasties) {

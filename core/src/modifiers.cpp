@@ -9,7 +9,7 @@ bool testOne(const Requirement& q, const ReqContext& c) {
     bool ok = false;
     switch (q.type) {
         case ReqType::PlotHasResource: ok = c.plot && c.plot->resource == q.ref; break;
-        case ReqType::PlotHasFeature: ok = c.plot && c.plot->feature == q.ref; break;
+        case ReqType::PlotHasFeature: ok = c.plot && (q.ref == kNone ? c.plot->feature != kNone : c.plot->feature == q.ref); break;
         case ReqType::PlotHasTerrain: ok = c.plot && c.plot->terrain == q.ref; break;
         case ReqType::PlotHasImprovement: ok = c.plot && (q.ref == kNone ? c.plot->improvement != kNone : c.plot->improvement == q.ref); break;
         case ReqType::CityHasBuilding: ok = c.city && c.city->has(q.ref); break;
@@ -59,6 +59,13 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             if (maj >= 0) return religionHas(s, maj, m.sourceIndex) ? &subject : nullptr;
             return owner.pantheon == m.sourceIndex ? &subject : nullptr;
         }
+        case ModSource::Governor:
+            // The owner's governor established in this city holds the promotion (08: Governors).
+            for (const Governor& g : owner.governors) {
+                if (g.city != subject.id || g.establishTurns > 0) continue;
+                return std::find(g.promotions.begin(), g.promotions.end(), m.sourceIndex) != g.promotions.end() ? &subject : nullptr;
+            }
+            return nullptr;
     }
     return nullptr;
 }
@@ -168,6 +175,7 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
             case ModSource::Everyone: applies = true; break;
             case ModSource::Policy:
             case ModSource::Government: applies = playerHasSource(m, player); break;
+            case ModSource::Governor: applies = false; break;  // city effects only
             case ModSource::Belief:
                 applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
                 break;

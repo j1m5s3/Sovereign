@@ -151,6 +151,14 @@ constexpr int kTalksKept = 6;         // summaries kept per pair
 // Relationship states (08: Meeting and relationship states; Allied waits for alliances).
 enum class Relationship : uint8_t { AtWar = 0, Denounced, Unfriendly, Neutral, Friendly, DeclaredFriend };
 
+// An appointed governor (08: Governors [R&F]).
+struct Governor {
+    TypeIndex type = kNone;              // Rules::governors
+    CityId city = kNoCity;               // where it serves (a city-state's city for Amani); kNoCity: unassigned
+    int establishTurns = 0;              // turns until its abilities work there (0: established)
+    std::vector<TypeIndex> promotions;   // Rules::governorPromotions it holds (the base ability first)
+};
+
 // A trade route (07: Trade routes): the Trader travels it until it ends, then returns home.
 struct TradeRoute {
     int32_t id = 0;
@@ -299,6 +307,8 @@ struct Player {
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
     std::vector<OpinionMemory> memories;  // what this player remembers of others (diplomacy)
+    std::vector<Governor> governors;      // appointed governors (08)
+    int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).
     int warsDeclared = 0, surpriseWars = 0, citiesCaptured = 0, citiesRazed = 0, tradersPlundered = 0, assassinsSent = 0;
     std::vector<uint8_t> visibility;  // Visibility per plot index

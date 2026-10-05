@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -182,8 +183,10 @@ void Game::applyBuilder(const Command& c) {
         }
         // Base amounts scaled by game speed; Civ also scales them with tree
         // progress (unverified, see 01-map-and-terrain.md).
-        const int pct = speedPercent(state_, *rules_);
+        int pct = speedPercent(state_, *rules_);
         City* city = state_.city(cityId);
+        // Groundbreaker: harvests in the city yield more (08: Governors).
+        if (city) pct = pct * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, *city, ModEffect::CityHarvestPercent).toInt())) / 100;
         if (city) {
             city->overflow += gain[static_cast<size_t>(YieldType::Production)] * pct / 100;
             city->food += gain[static_cast<size_t>(YieldType::Food)] * pct / 100;

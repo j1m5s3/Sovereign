@@ -59,6 +59,7 @@ same command must print the same hash.
 | Naval movement and embarkation (ships on Coast, Ocean after Cartography; land units embark after Shipbuilding) | `src/game.cpp` (`terrainCost`), `src/combat.cpp`, `src/city.cpp` |
 | Eras and ages (moments, the world era, Dark/Golden/Heroic Ages), tourism and the culture victory | `src/eras.cpp`, data in `../data/rules/moments.json` |
 | City-states: placement at the start, envoys (meeting, civics, influence), tier bonuses, suzerains | `src/citystates.cpp`, data in `../data/rules/citystates.json` |
+| Governors: titles from civics, appointing, promoting, assigning and establishing, loyalty, promotion effects through the modifier model (ModSource::Governor), Amani in city-states | `src/governors.cpp`, data in `../data/rules/governors.json`, effects in `../data/rules/modifiers.json` (GOVERNOR_PROMOTION_* sources) |
 | Diplomacy: opinion reasons and memories, leader agendas, relationship states, deals (gold, gold per turn, luxuries, strategics, open borders, friendship, peace), denouncing, formal and surprise wars, deal text | `src/diplomacy.cpp`, agendas in `../data/rules/civilizations.json`; AI proposals in `src/ai.cpp` |
 | World wonders: placement, once in the world, the rival refund, completion effects (wonders load as buildings flagged `wonder`) | `src/wonders.cpp`, data in `../data/rules/wonders.json` |
 | Trade routes (capacity, yields by destination district, range, length, plunder) and roads (era tiers, movement, bridges) | `src/trade.cpp`, road movement in `src/game.cpp` (`terrainCost`) |

@@ -221,6 +221,10 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Denounce:
         case CommandType::RecordTalk:
             return validateDiplomacy(c);
+        case CommandType::AppointGovernor:
+        case CommandType::PromoteGovernor:
+        case CommandType::AssignGovernor:
+            return validateGovernor(c);
         case CommandType::StartTradeRoute:
             return canStartTradeRoute(c.id, static_cast<CityId>(c.arg)) ? CommandError::Ok : CommandError::CannotTrade;
         case CommandType::SendEnvoy:
@@ -634,6 +638,9 @@ void Game::apply(const Command& c) {
         case CommandType::AnswerDeal:
         case CommandType::Denounce:
         case CommandType::RecordTalk: applyDiplomacy(c); break;
+        case CommandType::AppointGovernor:
+        case CommandType::PromoteGovernor:
+        case CommandType::AssignGovernor: applyGovernor(c); break;
         case CommandType::SendEnvoy: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
@@ -768,6 +775,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processEnvoys(pid);
         processTourism(pid);
         processDiplomacy(pid);
+        processGovernors(pid);
         healAndFortify(pid);
         healCities(pid);
     }
