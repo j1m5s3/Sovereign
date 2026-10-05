@@ -446,6 +446,24 @@ struct GameEvent {
     int32_t value = 0;            // damage dealt, when any
 };
 
+// How a major civ plays (leader doc §10, AI layer 2: player modelling), built each world turn
+// from public facts. Shares and indexes are x1000 and fade toward recent play; counts only grow.
+enum class ProfileClass : uint8_t { Melee = 0, Ranged, AntiCavalry, LightCavalry, HeavyCavalry, Siege, Naval, Other };
+constexpr size_t kNumProfileClasses = 8;
+SOV_API ProfileClass profileClassOf(const std::string& promotionClass);
+struct PlayerProfile {
+    int32_t turnsObserved = 0;
+    std::array<int32_t, kNumProfileClasses> army{};  // share of its military strength by class
+    int32_t militarism = 0;     // strength per city against the world's (1000 = average)
+    int32_t expansion = 0;      // cities against the average major (1000 = average)
+    int32_t science = 0, culture = 0, faith = 0;  // shares of its science + culture + faith
+    int32_t aggression = 0;     // wars declared (spikes) and army camped near others' cities in peace
+    int32_t leaderOutside = 0;  // share of turns its leader spends outside its cities
+    int32_t leaderExposed = 0;  // share of turns its leader is open to assassins (§6)
+    int32_t warsDeclared = 0, surpriseWars = 0;  // counts
+    int32_t citiesHeld = 0;     // cities it holds that another major founded
+};
+
 // A barbarian camp (01-map-and-terrain.md, Barbarians; barbarians-goody-huts.md).
 struct Camp {
     int32_t id = 0;
@@ -486,6 +504,7 @@ struct SOV_API GameState {
         int turnsLeft = 0;
     };
     std::vector<Drought> droughts;      // -1 Food on their plots while they last
+    std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)
     std::vector<CongressItem> congress; // the resolutions in session

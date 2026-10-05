@@ -58,6 +58,11 @@ bool isArmy(const UnitType& t) { return t.layer == UnitLayer::Military && t.doma
 struct Posture {
     std::array<int, kNumYields> yield{{3, 3, 2, 3, 3, 1}};
     int settler = 100, wonder = 100, army = 100, warRatio = kWarRatioPercent;
+    // Counters from neighbours' play profiles (leader doc §10, player modelling).
+    int favorClass = -1;          // ProfileClass the army should lean to (-1: none)
+    int walls = 0;                // added value of walls
+    int assassins = 0;            // added value of assassins at war
+    std::vector<PlayerId> distrust;  // no friendship or open borders offered
     std::array<bool, static_cast<size_t>(Strategy::Count)> on{};
     bool has(Strategy s) const { return on[static_cast<size_t>(s)]; }
 };
@@ -335,6 +340,45 @@ Posture assess(const Game& g, PlayerId me, int sites) {
         yieldOf(YieldType::Culture) += 1;
         out.warRatio += 30;  // consolidate, keep loyalty
     }
+    // Counters (leader doc §10, player modelling): what its neighbours field and how they behave.
+    // Settler and Chieftain ignore profiles; Warlord to Prince read the army mix; King and up all of it.
+    const int skill = g.difficulty().aiSkill;
+    if (skill >= 2) {
+        std::array<int64_t, kNumProfileClasses> mix{};
+        int64_t weight = 0;
+        int aggressive = 0;
+        for (const Player& o : s.players) {
+            const PlayerProfile* prof = g.profile(o.id);
+            if (o.id == me || !isMajorPlayer(o) || !prof || prof->turnsObserved < 3) continue;
+            bool neighbour = false;
+            for (const City& c : s.cities) {
+                if (c.owner == o.id && g.visibility(me, c.pos) != Visibility::Unrevealed) {
+                    for (const City& mine : s.cities) neighbour = neighbour || (mine.owner == me && s.grid.distance(mine.pos, c.pos) <= kNeighbourRange);
+                }
+            }
+            if (!neighbour && !g.atWar(me, o.id)) continue;
+            const int64_t w = std::max(1, militaryStrength(g, o.id));
+            for (size_t k = 0; k < kNumProfileClasses; ++k) mix[k] += prof->army[k] * w;
+            weight += w;
+            if (skill >= 4) {
+                if (prof->aggression >= 300 || prof->surpriseWars > 0 || prof->militarism >= 1500) ++aggressive;
+                if (prof->surpriseWars > 0) out.distrust.push_back(o.id);
+                if (g.atWar(me, o.id) && prof->leaderExposed >= 300) out.assassins = std::max(out.assassins, 150);
+            }
+        }
+        if (weight > 0) {
+            const auto share = [&](ProfileClass c) { return mix[static_cast<size_t>(c)] / weight; };
+            const int64_t cavalry = share(ProfileClass::LightCavalry) + share(ProfileClass::HeavyCavalry);
+            if (cavalry >= 350) out.favorClass = static_cast<int>(ProfileClass::AntiCavalry);       // pikes against horse
+            else if (share(ProfileClass::Melee) >= 500) out.favorClass = static_cast<int>(ProfileClass::Ranged);  // archers against a melee rush
+            else if (share(ProfileClass::Ranged) >= 400) out.favorClass = static_cast<int>(ProfileClass::LightCavalry);  // riders run down archers
+            if (skill >= 4 && share(ProfileClass::Siege) >= 150) out.walls += 100;  // they bring siege: walls up
+        }
+        if (aggressive > 0) {
+            out.army += 30;
+            out.walls += 150;
+        }
+    }
     // Leader agendas add their own flavour.
     switch (pl.civ == kNone ? Agenda::None : r.civs[at(pl.civ)].agenda) {
         case Agenda::PaxRomana:
@@ -448,7 +492,8 @@ void deals(View& v) {
         const Relation& rel = s.players[at(v.me)].relations[at(o.id)];
         if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
         std::vector<std::vector<DealItem>> ideas;
-        if (opinion >= kFriendOpinion) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
+        const bool distrusted = std::find(v.posture.distrust.begin(), v.posture.distrust.end(), o.id) != v.posture.distrust.end();
+        if (opinion >= kFriendOpinion && !distrusted) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
         TypeIndex give = kNone, get = kNone;
         for (size_t r = 0; r < v.r.resources.size(); ++r) {
             if (v.r.resources[r].cls != ResourceClass::Luxury) continue;
@@ -457,7 +502,7 @@ void deals(View& v) {
             if (get == kNone && v.game.luxuryCopies(o.id, res) - v.game.luxuryCopiesTraded(o.id, res) >= 2 && !v.game.hasLuxury(v.me, res)) get = res;
         }
         if (give != kNone && get != kNone) ideas.push_back({{DealItemKind::Resource, v.me, 1, give}, {DealItemKind::Resource, o.id, 1, get}});
-        if (opinion >= 0) ideas.push_back({{DealItemKind::OpenBorders, v.me, 0, kNone}, {DealItemKind::OpenBorders, o.id, 0, kNone}});
+        if (opinion >= 0 && !distrusted) ideas.push_back({{DealItemKind::OpenBorders, v.me, 0, kNone}, {DealItemKind::OpenBorders, o.id, 0, kNone}});
         for (const std::vector<DealItem>& idea : ideas) {
             const Deal d{0, v.me, o.id, s.turn, idea};
             if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;
@@ -1136,6 +1181,7 @@ std::optional<ProductionItem> bestMilitaryUnit(const View& v, const std::vector<
         if (!isArmy(t) || t.unitClass == "RECON" || (t.bombard > 0 && v.enemies.empty())) continue;
         int score = power(t) * 100 - v.game.productionCost(v.me, it) / 2;
         if ((t.range > 0) == wantRanged) score += 800;
+        if (v.posture.favorClass >= 0 && static_cast<int>(profileClassOf(t.promotionClass)) == v.posture.favorClass) score += 1200;
         if (score > bestScore) {
             bestScore = score;
             best = it;
@@ -1207,7 +1253,7 @@ void production(View& v) {
                 case ProductionKind::Unit: {
                     const UnitType& t = v.r.units[at(it.type)];
                     if (t.spy) value = wantSpy ? 200 : 0;
-                    else if (t.agent) value = wantAssassin ? 250 : 0;
+                    else if (t.agent) value = wantAssassin ? 250 + v.posture.assassins : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
@@ -1219,7 +1265,7 @@ void production(View& v) {
                     value = 30 + worth(v, b.yields) * 25;
                     if (popRoom <= Fixed::fromInt(1)) value += static_cast<int>((b.housing * 30).round());
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
-                    if (b.outerDefenseHp > 0) value += threatened ? 500 : v.enemies.empty() ? 0 : 60;
+                    if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
                     for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
                     if (b.wonder && minor) {

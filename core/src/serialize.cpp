@@ -470,6 +470,14 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.until);
     }
     w.i32(s.nextDealId);
+    w.u32(static_cast<uint32_t>(s.profiles.size()));
+    for (const PlayerProfile& p : s.profiles) {
+        w.i32(p.turnsObserved);
+        for (int32_t v : p.army) w.i32(v);
+        for (int32_t v : {p.militarism, p.expansion, p.science, p.culture, p.faith, p.aggression, p.leaderOutside, p.leaderExposed,
+                          p.warsDeclared, p.surpriseWars, p.citiesHeld})
+            w.i32(v);
+    }
     w.i64(s.co2);
     w.i32(s.climatePhase);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
@@ -873,6 +881,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.until = r.i32();
     }
     s.nextDealId = r.i32();
+    uint32_t nprofile = r.u32();
+    if (!r.checkCount(nprofile, 64)) return false;
+    s.profiles.resize(nprofile);
+    for (PlayerProfile& p : s.profiles) {
+        p.turnsObserved = r.i32();
+        for (int32_t& v : p.army) v = r.i32();
+        for (int32_t* v : {&p.militarism, &p.expansion, &p.science, &p.culture, &p.faith, &p.aggression, &p.leaderOutside, &p.leaderExposed,
+                           &p.warsDeclared, &p.surpriseWars, &p.citiesHeld})
+            *v = r.i32();
+    }
     s.co2 = r.i64();
     s.climatePhase = r.i32();
     uint32_t ndrought = r.u32();

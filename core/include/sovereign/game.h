@@ -249,6 +249,9 @@ public:
     bool canDeclareWar(PlayerId player, PlayerId target) const;
     bool canMakePeace(PlayerId player, PlayerId target) const;
 
+    // ---- player modelling (leader doc §10, AI layer 2)
+    const PlayerProfile* profile(PlayerId player) const;  // nullptr before the first world turn
+
     // ---- climate and disasters (09: Climate and Disasters [GS])
     int climateChangePoints() const;   // one per half degree of warming
     int temperatureTenths() const;     // degrees of warming, x10
@@ -485,7 +488,8 @@ private:
     void addGrievance(PlayerId holder, PlayerId against, int amount);
     void processGrievances();          // world turn: decay, and grievances for cities held
     void processWorldCongress();       // world turn: convene, open sessions, count votes
-    void processClimate();             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
+    void processClimate();
+    void processProfiles();            // world turn: update every major civ's play profile             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
     void burnPower(PlayerId player);   // power plants burn their fuel (CO2)
     void addCo2(PlayerId player, int64_t amount);
     void unitCo2(PlayerId player, size_t resource, int burned);  // units emit CLIMATE_CO2_PERCENT_FROM_UNITS of the CO2
