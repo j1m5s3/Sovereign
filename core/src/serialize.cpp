@@ -453,6 +453,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(d.type);
             writeHex(w, d.pos);
             w.boolean(d.complete);
+            w.u8(d.pillagedTurns);
         }
         w.i32(c.loyalty);
         w.i32(c.powerDemand);
@@ -879,6 +880,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             d.type = r.i16();
             d.pos = readHex(r);
             d.complete = r.boolean();
+            d.pillagedTurns = r.u8();
         }
         c.loyalty = r.i32();
         c.powerDemand = r.i32();

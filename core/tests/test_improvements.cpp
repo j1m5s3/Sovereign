@@ -267,3 +267,70 @@ TEST(a_mountain_tunnel_opens_the_mountain) {
     REQUIRE(through.has_value());
     CHECK_EQ(*through, Fixed::fromInt(1));
 }
+
+// ---- pillage and repair (05: Pillage)
+
+TEST(pillaging_takes_plunder_and_a_builder_repairs) {
+    // Player 1's farm and mine beside its city; player 0's Warrior on the mine, at war.
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    sovtest::addCity(s, 1, {10, 6}, true, 4);
+    s.plot({11, 6}).improvement = improvement("IMPROVEMENT_MINE");
+    s.plot({10, 7}).improvement = improvement("IMPROVEMENT_FARM");
+    const UnitId raider = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {11, 6});
+    auto g = Game::fromScenario(rules(), s);
+    const Fixed gold = g->state().players[0].gold;
+    REQUIRE(g->submit(Command::pillage(0, raider)) == CommandError::Ok);
+    CHECK(g->state().plot({11, 6}).pillagedTurns > 0);
+    CHECK(g->state().players[0].gold == gold + Fixed::fromInt(50));  // a mine: 50 Gold
+    CHECK(g->submit(Command::pillage(0, raider)) != CommandError::Ok);  // already pillaged, and no moves to spare
+    // A pillaged improvement yields nothing until repaired; a Builder repairs it without a charge.
+    const City& c = *g->state().cityAt({10, 6});
+    const Yields bare = g->plotYields({11, 6}, c);
+    GameState t = g->state();
+    t.units.clear();
+    const UnitId b = sovtest::addUnit(t, "UNIT_BUILDER", 1, {11, 6});
+    t.currentPlayer = 1;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*h, 1);
+    REQUIRE(h->state().currentPlayer == 1);
+    const int charges = h->state().unit(b)->charges;
+    REQUIRE(h->submit(Command::repairImprovement(1, b)) == CommandError::Ok);
+    CHECK_EQ(h->state().plot({11, 6}).pillagedTurns, 0);
+    CHECK_EQ(h->state().unit(b)->charges, charges);
+    CHECK(h->plotYields({11, 6}, *h->state().cityAt({10, 6}))[static_cast<size_t>(YieldType::Production)] >
+          bare[static_cast<size_t>(YieldType::Production)]);
+    // Not in one's own land, nor at peace.
+    s.players[0].relations[1].war = s.players[1].relations[0].war = false;
+    auto peace = Game::fromScenario(rules(), std::move(s));
+    CHECK(peace->submit(Command::pillage(0, raider)) == CommandError::BadTarget);
+}
+
+TEST(a_pillaged_district_idles_then_recovers) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    sovtest::addCity(s, 1, {10, 6}, true, 4);
+    CityDistrict campus;
+    campus.type = rules().district("DISTRICT_CAMPUS");
+    campus.pos = {11, 6};
+    campus.complete = true;
+    s.cities[0].districts.push_back(campus);
+    s.plot({12, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");  // adjacency for the Campus
+    s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    const UnitId raider = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {11, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId cid = g->state().cities[0].id;
+    const Fixed science = g->cityReport(cid).yields[static_cast<size_t>(YieldType::Science)];
+    REQUIRE(g->submit(Command::pillage(0, raider)) == CommandError::Ok);
+    CHECK(g->state().city(cid)->districts[0].pillagedTurns > 0);
+    CHECK(g->cityReport(cid).yields[static_cast<size_t>(YieldType::Science)] < science);
+}

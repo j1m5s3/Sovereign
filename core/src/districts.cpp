@@ -233,6 +233,7 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
 
 Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const {
     Yields out{};
+    if (districtPillaged(plot)) return out;  // 05: Pillage
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
     const TypeIndex cityCenter = rules_->district("DISTRICT_CITY_CENTER");
     for (const DistrictAdjacency& a : d.adjacency) {

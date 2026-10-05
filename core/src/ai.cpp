@@ -887,8 +887,11 @@ void build(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
     if (u->moveTarget) return;
+    // A pillaged improvement is repaired first (no charge; 05: Pillage).
+    if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
+        if (p.owner == v.me && p.improvement != kNone && p.pillagedTurns > 0) return 70;  // to repair
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
         // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).
         const std::vector<TypeIndex> opts = v.game.improvementsAt(v.me, h);
@@ -903,7 +906,7 @@ void build(View& v, UnitId id) {
         if (c && std::binary_search(c->worked.begin(), c->worked.end(), s.grid.index(h))) w += 10;
         return w;
     };
-    if (worth(u->pos) >= 0) {
+    if (worth(u->pos) >= 0 && s.plot(u->pos).improvement == kNone) {
         // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
         options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
@@ -2088,6 +2091,12 @@ void playTurn(Game& game) {
     survey(v);
     military(v);
     attacks(v);  // units that moved into reach
+    // Units standing in enemy land with moves to spare pillage what is there (05: Pillage).
+    std::vector<UnitId> raiders;
+    for (const Unit& u : game.state().units) {
+        if (u.owner == v.me && game.pillageProblem(v.me, u.id) == CommandError::Ok) raiders.push_back(u.id);
+    }
+    for (UnitId uid : raiders) game.submit(Command::pillage(v.me, uid));
     leader(v);
     production(v);
     upgrades(v);

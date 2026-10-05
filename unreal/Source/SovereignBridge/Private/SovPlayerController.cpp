@@ -933,6 +933,15 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Pillage (military units in enemy land) and repair (Builders on a pillaged improvement of ours).
+			if (G.pillageProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Pillage"), sov::Command::pillage(Me(), U->id)});
+			}
+			if (G.repairProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Repair the improvement"), sov::Command::repairImprovement(Me(), U->id)});
+			}
 			// Military Engineers [GS]: a railroad here, a tunnel into a neighbouring mountain.
 			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
 			{

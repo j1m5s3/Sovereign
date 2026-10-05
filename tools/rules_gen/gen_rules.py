@@ -648,6 +648,8 @@ def gen_districts():
             d["attackRange"] = int(m.group(1))
         if row["Air slots"]:
             d["airSlots"] = num(row["Air slots"])  # aircraft based here (City Center 1, Aerodrome 2)
+        if plunder(row["Pillage"]):
+            d["plunder"] = plunder(row["Pillage"])  # 05: Pillage
         if name != "City Center":
             d["unlock"] = unlock_id(row["Unlock"])
             d["cost"] = num(row["Base cost"])
@@ -795,6 +797,8 @@ def gen_improvements():
             i["housing"] = int(m.group(1)) / int(m.group(2) or 1)
         if row["Appeal"] and num(row["Appeal"]):
             i["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
+        kind, amount = IMPROVEMENT_PLUNDER.get(row["Improvement"], ("GOLD", 25))
+        i["plunder"] = {"kind": kind, "amount": amount}
         if row["Built by"] == "Military Engineer":
             i["builtBy"] = "UNIT_MILITARY_ENGINEER"  # Fort, Airstrip, Missile Silo
             if row["Defense"] and num(row["Defense"]):
@@ -983,6 +987,18 @@ def gen_disasters():
     intensities = [{"id": "DISASTERS_" + r["Setting"].upper(), "name": r["Setting"], "activeVolcanoes": num(r["% volcanoes active"]),
                     "extraRange": num(r["Extra range"])} for r in table(path, "Disaster intensity settings")]
     return {"disasters": events, "climatePhases": phases, "disasterIntensities": intensities}
+
+
+def plunder(text):
+    """'Plunder Gold 50' / 'Plunder Heal 50' -> {"kind": "GOLD", "amount": 50} (05: Pillage)."""
+    m = re.fullmatch(r"Plunder (\w+) (\d+)", (text or "").strip())
+    return {"kind": m.group(1).upper(), "amount": int(m.group(2))} if m else None
+
+
+# Improvements' plunder is not in the extracted tables; 05-units-and-combat names these (Pillage), and the
+# rest take 25 Gold (Sovereign reading).
+IMPROVEMENT_PLUNDER = {"Farm": ("HEAL", 50), "Mine": ("GOLD", 50), "Plantation": ("FAITH", 25), "Pasture": ("FAITH", 25),
+                       "Quarry": ("FAITH", 25), "Camp": ("FAITH", 25)}
 
 
 RESOURCE_NAMES = {"Aluminum": "RESOURCE_ALUMINUM", "Uranium": "RESOURCE_URANIUM", "Coal": "RESOURCE_COAL", "Oil": "RESOURCE_OIL"}

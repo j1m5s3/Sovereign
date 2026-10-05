@@ -94,6 +94,7 @@ struct CityDistrict {
     TypeIndex type = kNone;  // Rules::districts
     Hex pos;
     bool complete = false;
+    uint8_t pillagedTurns = 0;  // pillaged (05: Pillage): no adjacency, its buildings idle, until repaired
 };
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)

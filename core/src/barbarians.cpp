@@ -211,6 +211,12 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
 void Game::barbarianAct(UnitId id) {
     const Unit* u = state_.unit(id);
     if (!u) return;
+    // Barbarians pillage what they stand on (01: Barbarians; 05: Pillage), then act with what moves remain.
+    if (pillageProblem(u->owner, id) == CommandError::Ok) {
+        pillage(id);
+        u = state_.unit(id);
+        if (!u || u->movesLeft <= Fixed()) return;
+    }
     const Camp* camp = nullptr;
     for (const Camp& c : state_.camps) {
         if (c.id == u->camp) camp = &c;

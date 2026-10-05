@@ -34,6 +34,13 @@ enum class ResourceClass : uint8_t { Bonus = 0, Luxury, Strategic };
 using TypeIndex = int16_t;
 constexpr TypeIndex kNone = -1;
 
+// What pillaging gives the unit's owner (05: Pillage; data: Districts.PlunderType/Amount).
+enum class PlunderKind : uint8_t { None = 0, Gold, Faith, Science, Culture, Heal };
+struct Plunder {
+    PlunderKind kind = PlunderKind::None;
+    int amount = 0;
+};
+
 // What unlocks a unit, building, resource, government or policy: a tech or a
 // civic (04-tech-civics-government.md). An empty unlock is available from the start.
 struct Unlock {
@@ -267,6 +274,7 @@ struct ImprovementType {
     std::string builtById;      // (loading only)
     int airSlots = 0;           // aircraft it bases (Airstrip)
     bool tunnel = false;        // Mountain Tunnel: its mountain becomes passable (built from a neighbouring plot)
+    Plunder plunder;            // what pillaging it gives
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -466,6 +474,7 @@ struct DistrictType {
     int airSlots = 0;                      // aircraft based here (City Center 1, Aerodrome 2)
     bool canal = false;                    // between two bodies of water (or water and the City Center); ships sail through
     std::vector<std::string> exclusiveIds;  // (loading only)
+    Plunder plunder;  // what pillaging it gives (05: Pillage)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).

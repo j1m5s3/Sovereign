@@ -20,6 +20,10 @@
   {
    "id": "DISTRICT_CAMPUS",
    "name": "Campus",
+   "plunder": {
+    "kind": "SCIENCE",
+    "amount": 25
+   },
    "unlock": "TECH_WRITING",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -80,6 +84,10 @@
   {
    "id": "DISTRICT_HOLY_SITE",
    "name": "Holy Site",
+   "plunder": {
+    "kind": "FAITH",
+    "amount": 25
+   },
    "unlock": "TECH_ASTROLOGY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -128,6 +136,10 @@
   {
    "id": "DISTRICT_COMMERCIAL_HUB",
    "name": "Commercial Hub",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "TECH_CURRENCY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -201,6 +213,10 @@
   {
    "id": "DISTRICT_THEATER_SQUARE",
    "name": "Theater Square",
+   "plunder": {
+    "kind": "CULTURE",
+    "amount": 25
+   },
    "unlock": "CIVIC_DRAMA_AND_POETRY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -251,6 +267,10 @@
   {
    "id": "DISTRICT_INDUSTRIAL_ZONE",
    "name": "Industrial Zone",
+   "plunder": {
+    "kind": "SCIENCE",
+    "amount": 25
+   },
    "unlock": "TECH_APPRENTICESHIP",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -330,6 +350,10 @@
   {
    "id": "DISTRICT_HARBOR",
    "name": "Harbor",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "TECH_CELESTIAL_NAVIGATION",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -378,6 +402,10 @@
   {
    "id": "DISTRICT_AQUEDUCT",
    "name": "Aqueduct",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "TECH_ENGINEERING",
    "cost": 36,
    "costProgression": "GAME_PROGRESS",
@@ -392,6 +420,10 @@
   {
    "id": "DISTRICT_NEIGHBORHOOD",
    "name": "Neighborhood",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "CIVIC_URBANIZATION",
    "cost": 54,
    "costProgression": "GAME_PROGRESS",
@@ -427,6 +459,10 @@
   {
    "id": "DISTRICT_ENTERTAINMENT_COMPLEX",
    "name": "Entertainment Complex",
+   "plunder": {
+    "kind": "HEAL",
+    "amount": 50
+   },
    "unlock": "CIVIC_GAMES_AND_RECREATION",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -451,6 +487,10 @@
   {
    "id": "DISTRICT_WATER_PARK",
    "name": "Water Park",
+   "plunder": {
+    "kind": "HEAL",
+    "amount": 50
+   },
    "unlock": "CIVIC_NATURAL_HISTORY",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -476,6 +516,10 @@
   {
    "id": "DISTRICT_DAM",
    "name": "Dam",
+   "plunder": {
+    "kind": "HEAL",
+    "amount": 50
+   },
    "unlock": "TECH_BUTTRESS",
    "cost": 81,
    "costProgression": "GAME_PROGRESS",
@@ -493,6 +537,10 @@
   {
    "id": "DISTRICT_PRESERVE",
    "name": "Preserve",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "CIVIC_MYSTICISM",
    "cost": 54,
    "costProgression": "GAME_PROGRESS",
@@ -529,6 +577,10 @@
   {
    "id": "DISTRICT_GOVERNMENT_PLAZA",
    "name": "Government Plaza",
+   "plunder": {
+    "kind": "CULTURE",
+    "amount": 25
+   },
    "unlock": "CIVIC_STATE_WORKFORCE",
    "cost": 30,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -551,6 +603,10 @@
   {
    "id": "DISTRICT_DIPLOMATIC_QUARTER",
    "name": "Diplomatic Quarter",
+   "plunder": {
+    "kind": "CULTURE",
+    "amount": 25
+   },
    "unlock": "TECH_MATHEMATICS",
    "cost": 30,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -573,6 +629,10 @@
   {
    "id": "DISTRICT_SPACEPORT",
    "name": "Spaceport",
+   "plunder": {
+    "kind": "SCIENCE",
+    "amount": 25
+   },
    "unlock": "TECH_ROCKETRY",
    "cost": 1800,
    "costProgression": "NO_COST_PROGRESSION",
@@ -593,6 +653,10 @@
    "id": "DISTRICT_AERODROME",
    "name": "Aerodrome",
    "airSlots": 2,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "TECH_FLIGHT",
    "cost": 54,
    "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
@@ -612,6 +676,10 @@
   {
    "id": "DISTRICT_CANAL",
    "name": "Canal",
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   },
    "unlock": "TECH_STEAM_POWER",
    "cost": 81,
    "costProgression": "GAME_PROGRESS",

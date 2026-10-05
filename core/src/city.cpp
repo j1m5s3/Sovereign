@@ -125,6 +125,11 @@ CityReport Game::cityReport(CityId id) const {
     }
     for (TypeIndex b : c->buildings) {
         const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
+        // A pillaged district's buildings stand idle (05: Pillage).
+        if (bt.districtType != kNone) {
+            const CityDistrict* home = c->district(bt.districtType, true);
+            if (home && home->pillagedTurns > 0) continue;
+        }
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i];
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;

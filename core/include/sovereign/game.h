@@ -357,6 +357,12 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- pillage and repair (05: Pillage)
+    CommandError pillageProblem(PlayerId player, UnitId unit) const;
+    CommandError repairProblem(PlayerId player, UnitId builder) const;
+    void pillage(UnitId unit);
+    bool districtPillaged(Hex plot) const;   // a district there, pillaged
+
     // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
     TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
