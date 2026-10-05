@@ -33,9 +33,10 @@ struct FSovUnitMarker
 	int32 Owner = 0;
 	FLinearColor Color;  // owner colour
 	bool bCivilian = false;
+	bool bLeader = false;  // the player's Sovereign (its own layer)
 	bool bInCity = false;
 	int32 Hp = 100;
-	FString Name;
+	FString Name;  // unit type, or the ruler's name for a leader
 };
 
 struct FSovCityMarker

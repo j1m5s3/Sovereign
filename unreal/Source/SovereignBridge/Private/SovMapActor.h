@@ -49,6 +49,10 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> CityMarkers;
 
+	// Gold crowns on top of leader markers.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Crowns;
+
 	UPROPERTY()
 	TMap<uint32, TObjectPtr<UMaterialInstanceDynamic>> Materials;
 

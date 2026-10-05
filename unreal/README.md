@@ -51,6 +51,9 @@ from `../data/rules`.
 | `F` | Found a city with the selected settler (opens the production chooser) |
 | `K` / `G` | Skip the unit this turn / fortify (military) or sleep (civilian) |
 | `B` | Builder: choose an improvement or harvest here |
+| `E` | Leader (in your city): change weapon, armor or mount (costs gold and the leader's turn) |
+| `L` | Link the leader and the military unit on its plot as escort (they move together), or release it |
+| `H` | The throne: choose a successor after the leader falls, or abandon a captured leader |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
@@ -66,6 +69,7 @@ Headless automation tests (no window):
 
 - `Sovereign.Bridge.HexLayoutRoundTrip`: world positions and picking match `sov::HexGrid`.
 - `Sovereign.Bridge.MirrorFollowsCore`: after 20 all-AI turns, the mirror's tiles, units and cities equal what seat 0 knows.
+- `Sovereign.Bridge.LeaderInMirrorAndCommands`: seat 0's leader appears as a leader marker with its ruler's name, and the escort link goes through as a command.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.

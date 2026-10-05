@@ -201,4 +201,57 @@ bool FSovHumanSeatTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovLeaderMirrorTest, "Sovereign.Bridge.LeaderInMirrorAndCommands", kSovTestFlags)
+bool FSovLeaderMirrorTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Game& G = Session.GetGame();
+	const sov::Unit* Leader = G.leaderOf(0);
+	if (!TestNotNull(TEXT("seat 0 has a leader"), Leader))
+	{
+		return false;
+	}
+	const FSovMirror M = BuildMirror(G, 0);
+	const FSovUnitMarker* Marker = M.Units.FindByPredicate([&](const FSovUnitMarker& U) { return U.Id == Leader->id; });
+	if (!TestNotNull(TEXT("leader marker"), Marker))
+	{
+		return false;
+	}
+	TestTrue(TEXT("marked as the leader, not a civilian"), Marker->bLeader && !Marker->bCivilian);
+	TestEqual(TEXT("labelled with the ruler"), Marker->Name, FString(UTF8_TO_TCHAR(G.state().players[0].leaderName.c_str())));
+	TestEqual(TEXT("one leader marker of ours"), M.Units.FilterByPredicate([](const FSovUnitMarker& U) { return U.bLeader && U.Owner == 0; }).Num(), 1);
+
+	// The escort link the L key sends: the starting Warrior, once it stands on the leader's plot.
+	const sov::Unit* Warrior = nullptr;
+	for (const sov::Unit& U : G.state().units)
+	{
+		if (U.owner == 0 && Session.GetRules().units[static_cast<size_t>(U.type)].layer == sov::UnitLayer::Military)
+		{
+			Warrior = &U;
+		}
+	}
+	if (!TestNotNull(TEXT("starting warrior"), Warrior))
+	{
+		return false;
+	}
+	const sov::UnitId WarriorId = Warrior->id, LeaderId = Leader->id;
+	if (Warrior->pos != Leader->pos)
+	{
+		TestEqual(TEXT("warrior joins the leader"), Session.Submit(sov::Command::move(0, WarriorId, Leader->pos)), sov::CommandError::Ok);
+	}
+	if (G.state().unit(WarriorId)->pos == G.state().unit(LeaderId)->pos)
+	{
+		TestEqual(TEXT("link escort"), Session.Submit(sov::Command::linkEscort(0, WarriorId, LeaderId)), sov::CommandError::Ok);
+		TestTrue(TEXT("escort linked"), G.escortOf(*G.state().unit(LeaderId)) != nullptr);
+	}
+	return true;
+}
+
 #endif  // WITH_DEV_AUTOMATION_TESTS

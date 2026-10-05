@@ -312,6 +312,7 @@ void ASovPlayerController::EndTurn()
 		}
 		case sov::CommandError::ResearchNeeded: OpenChooser(EChooser::Research); break;
 		case sov::CommandError::CivicNeeded: OpenChooser(EChooser::Civic); break;
+		case sov::CommandError::LeaderNeeded: OpenChooser(EChooser::Throne); break;
 		default: break;
 	}
 }
@@ -406,6 +407,64 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::Gear:
+		{
+			const sov::Unit* U = G.state().unit(SelectedUnit);
+			if (!U || !G.isLeader(*U))
+			{
+				break;
+			}
+			ChooserTitle = TEXT("Gear (in your city; takes the leader's turn)");
+			for (size_t i = 0; i < R.gear.size(); ++i)
+			{
+				const sov::GearType& Gear = R.gear[i];
+				const sov::TypeIndex Id = static_cast<sov::TypeIndex>(i);
+				if (!G.gearUnlocked(Me(), Id) || U->gear[static_cast<size_t>(Gear.slot)] == Id)
+				{
+					continue;
+				}
+				FString Stats = Gear.slot == sov::GearSlot::Armor ? FString::Printf(TEXT("+%d defence"), Gear.defense)
+					: Gear.slot == sov::GearSlot::Mount ? FString::Printf(TEXT("+%d moves, upkeep x2"), Gear.moves)
+					: Gear.ranged > 0 ? FString::Printf(TEXT("%d melee, %d ranged (range %d)"), Gear.combat, Gear.ranged, Gear.range)
+					: FString::Printf(TEXT("%d melee"), Gear.combat);
+				if (Gear.strategicResource != sov::kNone)
+				{
+					Stats += FString::Printf(TEXT(", %d %s"), Gear.strategicCost, *Str(R.resources[static_cast<size_t>(Gear.strategicResource)].name));
+				}
+				Choices.Add({FString::Printf(TEXT("%s: %s, %d gold"), *Str(Gear.name), *Stats, G.gearCost(Id)), sov::Command::equipGear(Me(), U->id, Id)});
+			}
+			if (U->gear[static_cast<size_t>(sov::GearSlot::Mount)] != sov::kNone)
+			{
+				Choices.Add({TEXT("Dismount"), sov::Command::removeGear(Me(), U->id, sov::GearSlot::Mount)});
+			}
+			break;
+		}
+		case EChooser::Throne:
+		{
+			ChooserTitle = TEXT("The throne");
+			if (P.captor != sov::kNoPlayer)
+			{
+				Choices.Add({FString::Printf(TEXT("Abandon %s and crown a successor"), *Str(P.leaderName)), sov::Command::abandonLeader(Me())});
+				break;
+			}
+			if (G.hasHeir(Me()))
+			{
+				const sov::Dynasty* D = R.dynastyOf(P.civ);
+				Choices.Add({FString::Printf(TEXT("The heir, %s"), *Str(D->names[static_cast<size_t>(P.dynastyNext)])),
+					sov::Command::chooseSuccessor(Me(), sov::Succession::Heir)});
+			}
+			for (sov::UnitId Id : G.successorUnits(Me()))
+			{
+				const sov::Unit* U = G.state().unit(Id);
+				Choices.Add({FString::Printf(TEXT("%s, level %d (the unit is lost)"), *Str(R.units[static_cast<size_t>(U->type)].name), U->level()),
+					sov::Command::chooseSuccessor(Me(), sov::Succession::Unit, Id)});
+			}
+			if (G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
+			{
+				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent)});
+			}
+			break;
+		}
 		case EChooser::Improvement:
 		{
 			const sov::Unit* U = G.state().unit(SelectedUnit);
@@ -493,6 +552,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::P)) OpenChooser(EChooser::Production);
 	if (WasInputKeyJustPressed(EKeys::T)) OpenChooser(EChooser::Research);
 	if (WasInputKeyJustPressed(EKeys::C)) OpenChooser(EChooser::Civic);
+	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
 
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::Unit* U = G.state().unit(SelectedUnit);
@@ -527,6 +587,23 @@ void ASovPlayerController::HandleOrders()
 		return;
 	}
 	if (WasInputKeyJustPressed(EKeys::B)) OpenChooser(EChooser::Improvement);
+	if (WasInputKeyJustPressed(EKeys::E) && G.isLeader(*U)) OpenChooser(EChooser::Gear);
+	if (WasInputKeyJustPressed(EKeys::L))
+	{
+		// Link the leader and the military unit on its plot, or end the link.
+		const sov::Unit* Leader = G.isLeader(*U) ? U : G.state().unitAt(U->pos, sov::UnitLayer::Leader, G.rules());
+		const sov::Unit* Guard = G.isLeader(*U) ? G.state().unitAt(U->pos, sov::UnitLayer::Military, G.rules()) : U;
+		if (Leader && Guard && Leader->owner == Me() && Guard->owner == Me())
+		{
+			const bool bLinked = G.escortOf(*Leader) && G.escortOf(*Leader)->id == Guard->id;
+			Send(sov::Command::linkEscort(Me(), Guard->id, bLinked ? -1 : Leader->id));
+			Subsystem()->LastMessage = bLinked ? TEXT("Escort released.") : TEXT("Escort linked: it moves with the leader.");
+		}
+		else
+		{
+			Subsystem()->LastMessage = TEXT("Link needs your leader and a military unit on the same plot.");
+		}
+	}
 }
 
 void ASovPlayerController::UpdatePanel()
@@ -544,13 +621,17 @@ void ASovPlayerController::UpdatePanel()
 	if (const sov::Unit* U = S.unit(SelectedUnit))
 	{
 		const sov::UnitType& T = R.units[static_cast<size_t>(U->type)];
-		FString Line = FString::Printf(TEXT("%s   HP %d   Moves %s/%d"), *Str(T.name), U->hp, *Str(U->movesLeft.toString()), G.maxMoves(*U));
-		if (T.combat > 0) Line += FString::Printf(TEXT("   Strength %d"), T.combat);
-		if (T.ranged > 0) Line += FString::Printf(TEXT("   Ranged %d (range %d)"), T.ranged, G.unitRange(*U));
+		const FString Name = G.isLeader(*U) ? Str(S.players[static_cast<size_t>(U->owner)].leaderName) : Str(T.name);
+		FString Line = FString::Printf(TEXT("%s   HP %d   Moves %s/%d"), *Name, U->hp, *Str(U->movesLeft.toString()), G.maxMoves(*U));
+		if (G.meleeStrength(*U) > 0) Line += FString::Printf(TEXT("   Strength %d"), G.meleeStrength(*U));
+		if (G.rangedStrength(*U) > 0) Line += FString::Printf(TEXT("   Ranged %d (range %d)"), G.rangedStrength(*U), G.unitRange(*U));
+		if (const sov::Unit* E = G.isLeader(*U) ? G.escortOf(*U) : nullptr) Line += FString::Printf(TEXT("   Escort: %s"), *Str(R.units[static_cast<size_t>(E->type)].name));
 		if (T.buildCharges > 0) Line += FString::Printf(TEXT("   Charges %d"), U->charges);
 		L.Add(Line);
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
 		if (T.foundCity) Keys += TEXT("   F found city");
+		if (G.isLeader(*U)) Keys += TEXT("   E gear   L link escort");
+		else if (T.layer == sov::UnitLayer::Military && G.state().unitAt(U->pos, sov::UnitLayer::Leader, R)) Keys += TEXT("   L escort the leader");
 		if (T.buildCharges > 0) Keys += TEXT("   B build");
 		L.Add(Keys);
 	}

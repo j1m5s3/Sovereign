@@ -56,6 +56,34 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString Research = P.techs.current == sov::kNone ? TEXT("none") : Str(R.techs[static_cast<size_t>(P.techs.current)].name);
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
 	Line(FString::Printf(TEXT("Research: %s   Civic: %s"), *Research, *Civic), 16, Y);
+	// The throne (leader doc §5).
+	if (const sov::Unit* L = G.leaderOf(Me))
+	{
+		FString Gear;
+		for (sov::TypeIndex GearId : L->gear)
+		{
+			if (GearId != sov::kNone)
+			{
+				Gear += (Gear.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.gear[static_cast<size_t>(GearId)].name);
+			}
+		}
+		Line(FString::Printf(TEXT("Leader: %s  HP %d   %s"), *Str(P.leaderName), L->hp, *Gear), 16, Y, FLinearColor(1.f, 0.85f, 0.3f));
+	}
+	else if (P.captor != sov::kNoPlayer)
+	{
+		const sov::Player& C = S.players[static_cast<size_t>(P.captor)];
+		Line(FString::Printf(TEXT("%s is held captive by %s. H: abandon and crown a successor"), *Str(P.leaderName),
+				 C.civ == sov::kNone ? TEXT("?") : *Str(R.civs[static_cast<size_t>(C.civ)].name)),
+			16, Y, FLinearColor(1.f, 0.4f, 0.3f));
+	}
+	else if (P.successionPending)
+	{
+		Line(TEXT("The throne is empty. H: choose a successor"), 16, Y, FLinearColor(1.f, 0.4f, 0.3f));
+	}
+	if (P.interregnumTurns > 0)
+	{
+		Line(FString::Printf(TEXT("Interregnum: policy slots empty for %d more turn(s)"), P.interregnumTurns), 16, Y, FLinearColor(1.f, 0.6f, 0.4f));
+	}
 	if (S.currentPlayer != Me)
 	{
 		Line(FString::Printf(TEXT("%s is playing..."), *CurrentName), 16, Y, FLinearColor(1.f, 0.8f, 0.3f));
@@ -103,6 +131,18 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	}
 	for (const FSovUnitMarker& U : M.Units)
 	{
+		if (U.bLeader)
+		{
+			// Leaders carry their ruler's name.
+			const FVector At = Project(SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0));
+			if (At.Z > 0)
+			{
+				float W = 0, H = 0;
+				GetTextSize(U.Name, W, H, Font, 1.0f);
+				DrawRect(FLinearColor(0, 0, 0, 0.6f), At.X - W / 2 - 3, At.Y - H - 1, W + 6, H + 2);
+				DrawText(U.Name, FLinearColor(1.f, 0.85f, 0.3f), At.X - W / 2, At.Y - H, Font, 1.0f);
+			}
+		}
 		if (U.Hp >= 100)
 		{
 			continue;

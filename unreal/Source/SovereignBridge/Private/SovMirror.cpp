@@ -164,10 +164,15 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.Y = U.pos.y;
 		Marker.Owner = U.owner;
 		Marker.Color = SovPlayerColor(Game, U.owner);
-		Marker.bCivilian = Type.layer != sov::UnitLayer::Military;
+		Marker.bLeader = Type.layer == sov::UnitLayer::Leader;
+		Marker.bCivilian = Type.layer == sov::UnitLayer::Civilian || Type.layer == sov::UnitLayer::Support;
 		Marker.bInCity = S.cityAt(U.pos) != nullptr;
 		Marker.Hp = U.hp;
 		Marker.Name = UTF8_TO_TCHAR(Type.name.c_str());
+		if (Marker.bLeader)
+		{
+			Marker.Name = UTF8_TO_TCHAR(S.players[static_cast<size_t>(U.owner)].leaderName.c_str());
+		}
 	}
 	return M;
 }

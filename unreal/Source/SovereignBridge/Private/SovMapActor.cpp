@@ -219,13 +219,26 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		CityMarkers[i]->SetVisibility(false);
 	}
 
+	int32 CrownCount = 0;
 	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
 	{
 		const FSovUnitMarker& Unit = Mirror.Units[i];
-		UStaticMeshComponent* C = Marker(UnitMarkers, i, Unit.bCivilian ? SphereMesh.Get() : ConeMesh.Get());
+		UStaticMesh* Mesh = Unit.bLeader ? CylinderMesh.Get() : Unit.bCivilian ? SphereMesh.Get() : ConeMesh.Get();
+		UStaticMeshComponent* C = Marker(UnitMarkers, i, Mesh);
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
-		if (Unit.bCivilian)
+		if (Unit.bLeader)
+		{
+			// The leader stands to the north-west of its escort: an owner-coloured pillar with a gold crown.
+			Pos += SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0);
+			C->SetRelativeScale3D(FVector(0.3, 0.3, 0.55));
+			C->SetRelativeLocation(FVector(Pos.X, Pos.Y, Z + 27.5));
+			UStaticMeshComponent* Crown = Marker(Crowns, CrownCount++, SphereMesh.Get());
+			Crown->SetRelativeScale3D(FVector(0.22));
+			Crown->SetRelativeLocation(FVector(Pos.X, Pos.Y, Z + 62.0));
+			Crown->SetMaterial(0, MaterialFor(FLinearColor(1.f, 0.75f, 0.1f)));
+		}
+		else if (Unit.bCivilian)
 		{
 			// Civilians stand to the south-east so an escort on the same plot stays visible.
 			Pos += SovHex::ToWorld(FVector2D(38.0, 30.0), 0.0);
@@ -242,6 +255,10 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = Mirror.Units.Num(); i < UnitMarkers.Num(); ++i)
 	{
 		UnitMarkers[i]->SetVisibility(false);
+	}
+	for (int32 i = CrownCount; i < Crowns.Num(); ++i)
+	{
+		Crowns[i]->SetVisibility(false);
 	}
 }
 
