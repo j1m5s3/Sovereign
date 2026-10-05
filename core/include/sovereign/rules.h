@@ -266,6 +266,7 @@ struct ImprovementType {
     TypeIndex builtBy = kNone;  // only this unit builds it (Military Engineer); kNone: Builders
     std::string builtById;      // (loading only)
     int airSlots = 0;           // aircraft it bases (Airstrip)
+    bool tunnel = false;        // Mountain Tunnel: its mountain becomes passable (built from a neighbouring plot)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -508,6 +509,11 @@ struct RouteType {
     Fixed moveCost = Fixed::fromInt(1);
     bool bridges = false;
     int era = 0;  // the era whose roads these are
+    // The railroad [GS]: laid by Military Engineers only, after `tech`, paying `resourceCost` per plot.
+    bool unitOnly = false;
+    TypeIndex tech = kNone;
+    std::vector<std::pair<TypeIndex, int>> resourceCost;
+    std::vector<std::pair<std::string, int>> resourceCostIds;  // (loading only)
 };
 
 // What earns a boost. Conditions the core cannot track yet load as NotTracked

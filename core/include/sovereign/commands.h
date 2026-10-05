@@ -72,6 +72,7 @@ enum class CommandType : uint8_t {
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
     RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
+    BuildRailroad = 54,         // id = Military Engineer: lays a railroad on its plot for the route's resources
     PromoteSpy = 53,            // id = spy agent with a promotion pending, arg = Rules::spyPromotions (one it lacks)
     LaunchWmd = 51,             // arg = weapon (Rules::wmds), target = blast centre; id = bomber or Nuclear Submarine,
                                 // or -1 with data = {x, y} of the player's Missile Silo
@@ -193,6 +194,9 @@ struct Command {
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
+    static Command buildRailroad(PlayerId p, UnitId engineer) { return {CommandType::BuildRailroad, p, engineer, {}, 0, 0}; }
+    // A Mountain Tunnel is built on the neighbouring mountain `at` (BuildImprovement with a target).
+    static Command buildTunnel(PlayerId p, UnitId engineer, TypeIndex tunnel, Hex at) { return {CommandType::BuildImprovement, p, engineer, at, tunnel, 0}; }
     static Command promoteSpy(PlayerId p, int32_t spy, TypeIndex promotion) { return {CommandType::PromoteSpy, p, spy, {}, promotion, 0}; }
     static Command joinEmergency(PlayerId p, int32_t emergency) { return {CommandType::JoinEmergency, p, -1, {}, emergency, 0}; }
     static Command launchWmd(PlayerId p, UnitId unit, TypeIndex weapon, Hex target) { return {CommandType::LaunchWmd, p, unit, target, weapon, 0}; }

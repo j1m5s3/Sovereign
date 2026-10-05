@@ -936,6 +936,32 @@ void build(View& v, UnitId id) {
 
 // --- military -------------------------------------------------------------------------
 // Expected value of an attack in points; INT_MIN when it is not worth making.
+bool approach(View& v, UnitId id, Hex goal, bool onto);
+
+// Military Engineers [GS]: railroads along the straight lines from the capital to each other city,
+// the nearest unlaid plot first (01: Routes).
+void engineer(View& v, UnitId id) {
+    const GameState& s = v.s();
+    const Unit* u = s.unit(id);
+    const TypeIndex rr = v.game.railroad();
+    const City* capital = nullptr;
+    for (CityId c : v.cities) capital = s.city(c)->capital ? s.city(c) : capital;
+    if (!u || rr == kNone || !capital) return;
+    std::vector<Hex> line;
+    for (CityId c : v.cities) {
+        if (c == capital->id) continue;
+        for (const Hex& h : s.grid.line(capital->pos, s.city(c)->pos)) {
+            if (s.plot(h).route != rr && isLandPassable(s, v.r, h) && std::find(line.begin(), line.end(), h) == line.end()) line.push_back(h);
+        }
+    }
+    if (std::find(line.begin(), line.end(), u->pos) != line.end() && v.game.submit(Command::buildRailroad(v.me, id)) == CommandError::Ok) return;
+    std::optional<Hex> best;
+    for (const Hex& h : line) {
+        if (!best || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *best)) best = h;
+    }
+    if (!best || !approach(v, id, *best, true)) v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
 int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     if (!pv.valid) return INT_MIN;
     if (pv.captureCity) return 100000;
@@ -1388,6 +1414,20 @@ void production(View& v) {
         }
         const bool wantAssassin = !v.enemies.empty() && !assassinQueued && g.agentsOf(v.me) < g.agentCapacity(v.me);
         const bool wantSpy = !assassinQueued && g.spiesOf(v.me) < g.spyCapacity(v.me);
+        // One Military Engineer to lay railroads once Steam Power and the Iron and Coal for it are in hand.
+        bool wantEngineer = false;
+        if (const TypeIndex rr = g.railroad(); rr != kNone && nCities >= 3) {
+            const RouteType& route = v.r.routes[at(rr)];
+            bool can = route.tech == kNone || s.players[at(v.me)].techs.has(route.tech);
+            for (const auto& [res, n] : route.resourceCost) can = can && s.players[at(v.me)].stockpile[at(res)] >= 4 * n;
+            int engineers = 0;
+            for (const Unit& u : s.units) engineers += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_MILITARY_ENGINEER";
+            for (CityId other : v.cities) {
+                const City& oc = *s.city(other);
+                engineers += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].id == "UNIT_MILITARY_ENGINEER";
+            }
+            wantEngineer = can && engineers == 0;
+        }
 
         std::optional<ProductionItem> best;
         Hex bestAt{};
@@ -1401,6 +1441,7 @@ void production(View& v) {
                     if (t.spy) value = wantSpy ? 200 : 0;
                     else if (t.agent) value = wantAssassin ? 250 + v.posture.assassins : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
+                    else if (t.id == "UNIT_MILITARY_ENGINEER") value = wantEngineer ? 220 : 0;
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
@@ -2025,6 +2066,7 @@ void playTurn(Game& game) {
         else if (u->greatPerson != kNone) greatPerson(v, id);
         else if (t.id == "UNIT_TRADER") trader(v, id);
         else if (t.foundCity) settle(v, id);
+        else if (t.id == "UNIT_MILITARY_ENGINEER") engineer(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }

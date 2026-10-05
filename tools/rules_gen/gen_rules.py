@@ -194,12 +194,21 @@ def gen_terrain():
         if fid in IMPASSABLE_FEATURES:
             f["impassable"] = True
         features.append(f)
-    # Roads by era (01: Routes; railroads need Military Engineers, not modelled yet).
+    # Roads by era, and the railroad Military Engineers lay (01: Routes).
     routes = []
     for row in table(SPEC / "terrain-features-resources.md", "Routes"):
-        if row["Only built by unit"]:
-            continue
         r = {"id": "ROUTE_" + snake(row["Route"]), "name": row["Route"], "moveCost": float(row["Movement cost"])}
+        if row["Only built by unit"]:
+            r["unitOnly"] = True
+            if row["Prereq tech [GS]"]:
+                r["tech"] = "TECH_" + snake(row["Prereq tech [GS]"])
+            costs = {}
+            for part in [x.strip() for x in row["Resource cost"].split(",") if x.strip()]:
+                m = re.fullmatch(r"(\w+) x(\d+)", part)
+                if m:
+                    costs["RESOURCE_" + snake(m.group(1))] = int(m.group(2))
+            if costs:
+                r["resourceCost"] = costs
         if row["Bridges"] == "yes":
             r["bridges"] = True
         if row["Prereq era"]:
@@ -741,8 +750,7 @@ def gen_improvements():
         for r in table(SPEC / "terrain-features-resources.md", sec):
             resources[r["Resource"]] = "RESOURCE_" + snake(r["Resource"])
     rows = [r for r in table(SPEC / "improvements.md", "Improvements")
-            if r["Built by"] in ("Builder", "Military Engineer") and not r["Unique to"]
-            and r["Improvement"] != "Mountain Tunnel"]  # tunnels wait for mountain movement
+            if r["Built by"] in ("Builder", "Military Engineer") and not r["Unique to"]]
     ids = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in rows}
     out = []
     for row in rows:
@@ -793,6 +801,8 @@ def gen_improvements():
                 i["defense"] = num(row["Defense"])
             if row["Improvement"] == "Airstrip":
                 i["airSlots"] = 3  # 03: Airstrip, 3 air slots
+            if row["Improvement"] == "Mountain Tunnel":
+                i["tunnel"] = True  # 01: makes the mountain passable
         m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
         if m:
             i["powerProvided"] = int(m.group(1))  # renewables (09: Power)

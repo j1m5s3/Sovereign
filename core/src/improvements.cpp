@@ -186,12 +186,60 @@ CommandError Game::validateBuilder(const Command& c) const {
         const bool engineer = rules_->units[static_cast<size_t>(u.type)].id == "UNIT_MILITARY_ENGINEER";
         if (by != kNone ? u.type != by : engineer) return CommandError::CannotImprove;
     }
+    // A Mountain Tunnel goes on a neighbouring mountain, named as the target.
+    if (static_cast<size_t>(c.arg) < rules_->improvements.size() && rules_->improvements[static_cast<size_t>(c.arg)].tunnel) {
+        const std::vector<Hex> sites = tunnelSites(c.player, c.id);
+        return std::find(sites.begin(), sites.end(), c.target) != sites.end() ? CommandError::Ok : CommandError::CannotImprove;
+    }
     return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotImprove;
+}
+
+TypeIndex Game::railroad() const {
+    for (size_t i = 0; i < rules_->routes.size(); ++i) {
+        if (rules_->routes[i].unitOnly) return static_cast<TypeIndex>(i);
+    }
+    return kNone;
+}
+
+CommandError Game::railroadProblem(PlayerId player, UnitId engineer) const {
+    const Unit* u = state_.unit(engineer);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    const TypeIndex rr = railroad();
+    if (rr == kNone || rules_->units[static_cast<size_t>(u->type)].id != "UNIT_MILITARY_ENGINEER" || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+    const RouteType& route = rules_->routes[static_cast<size_t>(rr)];
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    if (route.tech != kNone && !p.techs.has(route.tech)) return CommandError::CannotImprove;
+    for (const auto& [res, n] : route.resourceCost) {
+        if (static_cast<size_t>(res) >= p.stockpile.size() || p.stockpile[static_cast<size_t>(res)] < n) return CommandError::NotEnoughResources;
+    }
+    const Plot& here = state_.plot(u->pos);
+    if (here.route == rr || !isLandPassable(state_, *rules_, u->pos) || (here.owner != kNoPlayer && here.owner != player && !atWar(player, here.owner)))
+        return CommandError::CannotImprove;
+    return CommandError::Ok;
+}
+
+std::vector<Hex> Game::tunnelSites(PlayerId player, UnitId engineer) const {
+    std::vector<Hex> out;
+    const Unit* u = state_.unit(engineer);
+    if (!u || u->owner != player || u->charges <= 0 || u->movesLeft <= Fixed()) return out;
+    for (size_t i = 0; i < rules_->improvements.size(); ++i) {
+        const ImprovementType& im = rules_->improvements[i];
+        if (!im.tunnel || im.builtBy != u->type) continue;
+        for (const Hex& h : state_.grid.within(u->pos, 1)) {
+            const Plot& p = state_.plot(h);
+            if (h == u->pos || p.improvement != kNone || !rules_->terrains[static_cast<size_t>(p.terrain)].impassable) continue;
+            if (p.owner != kNoPlayer && p.owner != player) continue;
+            if (canImproveAt(player, h, static_cast<TypeIndex>(i)) || (p.owner == kNoPlayer && hasUnlocked(player, im.unlock))) out.push_back(h);
+        }
+    }
+    return out;
 }
 
 void Game::applyBuilder(const Command& c) {
     Unit& u = *state_.unit(c.id);
-    const Hex at = u.pos;
+    const bool tunnel = c.type == CommandType::BuildImprovement && static_cast<size_t>(c.arg) < rules_->improvements.size() &&
+                        rules_->improvements[static_cast<size_t>(c.arg)].tunnel;
+    const Hex at = tunnel ? c.target : u.pos;
     Plot& p = state_.plot(at);
     const CityId cityId = p.city;
     if (c.type == CommandType::BuildImprovement) {

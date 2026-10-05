@@ -122,7 +122,9 @@ bool isRiverAdjacent(const GameState& state, Hex h) {
 bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {
     const Plot& p = state.plot(h);
     const TerrainType& t = rules.terrains[static_cast<size_t>(p.terrain)];
-    if (t.water || t.impassable) return false;
+    if (t.water) return false;
+    // A Mountain Tunnel [GS] opens its mountain (01: Mountain tunnels).
+    if (t.impassable && !(p.improvement != kNone && rules.improvements[static_cast<size_t>(p.improvement)].tunnel)) return false;
     if (p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].impassable) return false;
     return true;
 }

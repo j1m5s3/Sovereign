@@ -357,6 +357,11 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
+    TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
+    CommandError railroadProblem(PlayerId player, UnitId engineer) const;
+    std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
+
     // ---- spy promotions (08: Espionage)
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give

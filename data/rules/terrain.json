@@ -541,6 +541,18 @@
    "moveCost": 0.5,
    "bridges": true,
    "era": "ERA_MODERN"
+  },
+  {
+   "id": "ROUTE_RAILROAD",
+   "name": "Railroad",
+   "moveCost": 0.25,
+   "unitOnly": true,
+   "tech": "TECH_STEAM_POWER",
+   "resourceCost": {
+    "RESOURCE_IRON": 1,
+    "RESOURCE_COAL": 1
+   },
+   "bridges": true
   }
  ]
 }

@@ -262,6 +262,7 @@ CommandError Game::validate(const Command& c) const {
         }
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
+        case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
             if (!a || !a->spy || a->owner != c.player || a->promotionsPending <= 0 || c.arg < 0 || static_cast<size_t>(c.arg) >= rules_->spyPromotions.size() ||
@@ -450,7 +451,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
     if (ut.religiousStrength > 0 &&
         sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed())
         return Fixed::fromInt(fromWater ? embarkCost + 1 : 1);
-    int cost = tt.moveCost;
+    int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
     if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
@@ -734,6 +735,16 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
+        case CommandType::BuildRailroad: {
+            Unit& u = *state_.unit(c.id);
+            const RouteType& rr = rules_->routes[static_cast<size_t>(railroad())];
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            for (const auto& [res, n] : rr.resourceCost) p.stockpile[static_cast<size_t>(res)] -= n;
+            state_.plot(u.pos).route = static_cast<int8_t>(railroad());
+            u.movesLeft = Fixed();  // laying track takes the engineer's turn
+            u.moveTarget.reset();
+            break;
+        }
         case CommandType::PromoteSpy:
             for (Agent& a : state_.agents) {
                 if (a.id != c.id) continue;
