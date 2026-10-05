@@ -263,6 +263,21 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.tilesRequired));  // each "per 2" row floored
     }
+    // Civ abilities: extra adjacency from a district or from terrain (leaders-and-art-style).
+    for (const CivAdjacency& a : civAbility(player).extraAdjacency) {
+        if (a.district != type) continue;
+        int matches = 0;
+        for (const Hex& n : state_.grid.within(plot, 1)) {
+            if (n == plot) continue;
+            if (a.from != kNone) {
+                const CityDistrict* nd = state_.districtAt(n);
+                matches += nd && nd->type == a.from ? 1 : 0;
+            } else {
+                matches += rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].base == a.fromTerrainBase ? 1 : 0;
+            }
+        }
+        out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.per));
+    }
     const int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
     for (Fixed& y : out) y = y * std::max(0, pct) / 100;
     return out;

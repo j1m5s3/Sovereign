@@ -116,6 +116,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = ref.empty() ? kNone : rules.feature(ref); }
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
         else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
+        else if (type == "PLOT_NEXT_TO_RIVER") q.type = ReqType::PlotNextToRiver;
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
@@ -264,6 +265,64 @@ const std::vector<std::string>& Rules::fileNames() {
     return names;
 }
 
+namespace {
+// A civ ability and its leader's applied together: amounts add, lists join, a set reference wins.
+CivAbility combineAbilities(const CivAbility& a, const CivAbility& b) {
+    CivAbility c = a;
+    c.name = a.name.empty() ? b.name : b.name.empty() ? a.name : a.name + " / " + b.name;
+    c.extraAdjacency.insert(c.extraAdjacency.end(), b.extraAdjacency.begin(), b.extraAdjacency.end());
+    if (c.wonderProductionPercent == 0) {
+        c.wonderEraMin = b.wonderEraMin;
+        c.wonderEraMax = b.wonderEraMax;
+    }
+    c.wonderProductionPercent += b.wonderProductionPercent;
+    c.amenityPerWonder += b.amenityPerWonder;
+    c.foundPopulation += b.foundPopulation;
+    if (c.foundBuilding == kNone) c.foundBuilding = b.foundBuilding;
+    c.culturePerSuzerainty += b.culturePerSuzerainty;
+    c.governorLoyalty += b.governorLoyalty;
+    c.governorGold += b.governorGold;
+    if (c.extraGovernorTitleCivic == kNone) c.extraGovernorTitleCivic = b.extraGovernorTitleCivic;
+    c.desertRouteGold += b.desertRouteGold;
+    for (size_t i = 0; i < kNumYields; ++i) {
+        c.capitalYieldsPerGovernorTitle[i] += b.capitalYieldsPerGovernorTitle[i];
+        c.internationalRouteYields[i] += b.internationalRouteYields[i];
+        c.peaceYieldPercent[i] += b.peaceYieldPercent[i];
+    }
+    c.freshWaterFarmHousing += b.freshWaterFarmHousing;
+    c.mountainDistrictProductionPercent += b.mountainDistrictProductionPercent;
+    c.mountainProduction += b.mountainProduction;
+    for (size_t i = 0; i < c.domainProductionPercent.size(); ++i) c.domainProductionPercent[i] += b.domainProductionPercent[i];
+    c.greatPersonPercent.insert(c.greatPersonPercent.end(), b.greatPersonPercent.begin(), b.greatPersonPercent.end());
+    c.intercontinentalRouteGold += b.intercontinentalRouteGold;
+    c.districtBuildingYields.insert(c.districtBuildingYields.end(), b.districtBuildingYields.begin(), b.districtBuildingYields.end());
+    c.districtBuildingAmenities.insert(c.districtBuildingAmenities.end(), b.districtBuildingAmenities.begin(), b.districtBuildingAmenities.end());
+    c.strengthNearLeader.insert(c.strengthNearLeader.end(), b.strengthNearLeader.begin(), b.strengthNearLeader.end());
+    c.cityCenterBuildingProductionPercent += b.cityCenterBuildingProductionPercent;
+    c.wallProductionPercent += b.wallProductionPercent;
+    c.governorAmenity += b.governorAmenity;
+    c.grantAbilities.insert(c.grantAbilities.end(), b.grantAbilities.begin(), b.grantAbilities.end());
+    c.capturedCityLoyalty += b.capturedCityLoyalty;
+    c.foreignReligionAmenity += b.foreignReligionAmenity;
+    c.nearFollowingCityStrength += b.nearFollowingCityStrength;
+    c.nearFollowingCityRange = std::max(c.nearFollowingCityRange, b.nearFollowingCityRange);
+    c.extraBuilderCharges += b.extraBuilderCharges;
+    c.wonderCulture += b.wonderCulture;
+    if (c.faithPurchaseDistrict == kNone) c.faithPurchaseDistrict = b.faithPurchaseDistrict;
+    c.killFaithPercent += b.killFaithPercent;
+    if (c.capitalAmenityPerKills == 0) {
+        c.capitalAmenityPerKills = b.capitalAmenityPerKills;
+        c.capitalAmenityMax = b.capitalAmenityMax;
+    }
+    c.mountainCityHousing += b.mountainCityHousing;
+    for (size_t i = 0; i < kNumYields; ++i) c.capitalYields[i] += b.capitalYields[i];
+    c.cityLoyalty += b.cityLoyalty;
+    c.unitXpPercent += b.unitXpPercent;
+    c.classStrength.insert(c.classStrength.end(), b.classStrength.begin(), b.classStrength.end());
+    return c;
+}
+}  // namespace
+
 bool Rules::load(const std::vector<std::string>& dirs, std::string* error) {
     std::vector<std::map<std::string, std::string>> layers;
     for (const std::string& dir : dirs) {
@@ -307,6 +366,23 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     // World wonders load as buildings (flagged by their placement), so their yields, slots and
     // points use the building paths.
     for (const auto& row : m.tables["wonders"]) m.tables["buildings"].push_back(row);
+    // A row with a `base` is that row with its own fields laid over (civ uniques: only what differs).
+    for (const char* name : {"units", "buildings", "improvements"}) {
+        Table& table = m.tables[name];
+        for (auto& [id, row] : table) {
+            const std::string baseId = row["base"].str();
+            if (baseId.empty()) continue;
+            const Json* base = nullptr;
+            for (const auto& [bid, brow] : table) {
+                if (bid == baseId) base = &brow;
+            }
+            if (!base || base == &row) {
+                *error = std::string(name) + " " + id + ": unknown base " + baseId;
+                return false;
+            }
+            row = Json::overlay(*base, row);
+        }
+    }
     globals_ = m.globals;
 
     // Eras and research trees first: everything else may be unlocked by them.
@@ -462,6 +538,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"WALL_FULL_DAMAGE", UnitEffectKind::WallFullDamage}, {"BYPASS_WALLS", UnitEffectKind::BypassWalls},
             {"AURA_STRENGTH", UnitEffectKind::AuraStrength},     {"ASSASSIN_DEFENSE", UnitEffectKind::AssassinDefense},
             {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
+            {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
+            {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -471,6 +549,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"TILE_TERRAIN", CombatAtom::TileTerrain},  {"OPPONENT_FORTIFIED", CombatAtom::OpponentFortified},
             {"OPPONENT_WOUNDED", CombatAtom::OpponentWounded}, {"DISTRICT_TILE", CombatAtom::DistrictTile},
             {"OWN_TERRITORY", CombatAtom::OwnTerritory},
+            {"ADJACENT_SAME_UNIT", CombatAtom::AdjacentSameUnit}, {"OPPONENT_TILE_BASE", CombatAtom::OpponentTileBase},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;
@@ -599,6 +678,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
         }
         u.promotionClass = j["promotionClass"].str();
+        u.uniqueToId = j["uniqueTo"].str();
         auto findAbility = [this](const std::string& aid) { return ability(aid); };
         if (!resolveList(j["abilities"], findAbility, u.abilities, "unit " + id, error)) return false;
         units.push_back(std::move(u));
@@ -609,6 +689,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             const std::string& up = j["upgradesTo"].str();
             if (!up.empty() && (units[i].upgradesTo = unit(up)) == kNone) {
                 *error = "unit " + id + ": unknown upgrade " + up;
+                return false;
+            }
+            const std::string baseId = j["base"].str();
+            if (!units[i].uniqueToId.empty() && (units[i].replaces = unit(baseId)) == kNone) {
+                *error = "unit " + id + ": a unique unit needs the base it replaces";
                 return false;
             }
             const std::string& cap = j["capturedAs"].str();
@@ -645,6 +730,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             im.housing = j["housing"].fixed();
             im.appeal = static_cast<int>(j["appeal"].integer(0));
+            im.uniqueToId = j["uniqueTo"].str();
+            im.amenities = static_cast<int>(j["amenities"].integer(0));
+            im.defense = static_cast<int>(j["defense"].integer(0));
+            im.sight = static_cast<int>(j["sight"].integer(0));
+            im.borderOnly = j["borderOnly"].boolean(false);
+            im.needsRiver = j["needsRiver"].boolean(false);
+            im.halvesFloods = j["halvesFloods"].boolean(false);
+            const Json& adj = j["adjacentImprovementYield"];
+            if (adj.isObject()) {
+                im.adjacentImprovementId = adj["improvement"].str();
+                parseYieldName(adj["yield"].str(), im.adjacentYield);
+                im.adjacentAmount = static_cast<int>(adj["amount"].integer(0));
+            }
             improvements.push_back(std::move(im));
         }
         // Second pass: adjacency refers to other improvements.
@@ -684,6 +782,18 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.amenities = static_cast<int>(j["amenities"].integer(0));
             b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
             b.airSlots = static_cast<int>(j["airSlots"].integer(0));
+            b.uniqueToId = j["uniqueTo"].str();
+            b.replacesId = j["base"].str();
+            const Json& adj = j["adjacentImprovementYield"];
+            if (adj.isObject()) {
+                b.adjacentImprovementId = adj["improvement"].str();
+                parseYieldName(adj["yield"].str(), b.adjacentYield);
+                b.adjacentAmount = static_cast<int>(adj["amount"].integer(0));
+            }
+            b.goldPerTradeRoute = static_cast<int>(j["goldPerTradeRoute"].integer(0));
+            b.envoysOnBuild = static_cast<int>(j["envoysOnBuild"].integer(0));
+            b.trainedXpPercent = static_cast<int>(j["trainedXpPercent"].integer(0));
+            b.foodPerAdjacentMountain = static_cast<int>(j["foodPerAdjacentMountain"].integer(0));
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
@@ -1043,6 +1153,80 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     }
     std::sort(loyaltyLevels.begin(), loyaltyLevels.end(),
               [](const LoyaltyLevel& a, const LoyaltyLevel& b) { return a.minLoyalty < b.minLoyalty; });
+    // Civ, leader and heir abilities share one reader (leaders-and-art-style).
+    auto readAbility = [&](const Json& a, CivAbility& ab, const std::string& where) -> bool {
+        ab.name = a["name"].str();
+        for (const Json& x : a["extraAdjacency"].items()) {
+            CivAdjacency adj;
+            adj.district = district(x["district"].str());
+            adj.from = x["from"].str().empty() ? kNone : district(x["from"].str());
+            adj.fromTerrainBase = x["fromTerrainBase"].str();
+            adj.per = std::max(1, static_cast<int>(x["per"].integer(1)));
+            parseYieldName(x["yield"].str(), adj.yield);
+            adj.amount = static_cast<int>(x["amount"].integer(0));
+            if (adj.district == kNone || (adj.from == kNone && adj.fromTerrainBase.empty())) {
+                *error = where + ": bad extra adjacency";
+                return false;
+            }
+            ab.extraAdjacency.push_back(adj);
+        }
+        ab.wonderProductionPercent = static_cast<int>(a["wonderProductionPercent"].integer(0));
+        if (a["wonderEras"].items().size() == 2) {
+            ab.wonderEraMin = static_cast<int>(a["wonderEras"].items()[0].integer(0));
+            ab.wonderEraMax = static_cast<int>(a["wonderEras"].items()[1].integer(0));
+        }
+        ab.amenityPerWonder = static_cast<int>(a["amenityPerWonder"].integer(0));
+        ab.foundPopulation = static_cast<int>(a["foundPopulation"].integer(0));
+        if (!a["foundBuilding"].str().empty()) ab.foundBuilding = building(a["foundBuilding"].str());
+        ab.culturePerSuzerainty = static_cast<int>(a["culturePerSuzerainty"].integer(0));
+        ab.governorLoyalty = static_cast<int>(a["governorLoyalty"].integer(0));
+        ab.governorGold = static_cast<int>(a["governorGold"].integer(0));
+        if (!a["extraGovernorTitleCivic"].str().empty()) ab.extraGovernorTitleCivic = civic(a["extraGovernorTitleCivic"].str());
+        ab.desertRouteGold = static_cast<int>(a["desertRouteGold"].integer(0));
+        ab.capitalYieldsPerGovernorTitle = readYields(a["capitalYieldsPerGovernorTitle"]);
+        ab.freshWaterFarmHousing = a["freshWaterFarmHousing"].fixed();
+        ab.mountainDistrictProductionPercent = static_cast<int>(a["mountainDistrictProductionPercent"].integer(0));
+        ab.mountainProduction = static_cast<int>(a["mountainProduction"].integer(0));
+        for (const auto& [dom, pct] : a["domainProductionPercent"].members()) {
+            const size_t k = dom == "SEA" ? 1 : dom == "AIR" ? 2 : 0;
+            ab.domainProductionPercent[k] = static_cast<int>(pct.integer(0));
+        }
+        for (const auto& [cls, pct] : a["greatPersonPercent"].members()) ab.greatPersonPercent.push_back({greatPersonClass(cls), static_cast<int>(pct.integer(0))});
+        ab.intercontinentalRouteGold = static_cast<int>(a["intercontinentalRouteGold"].integer(0));
+        ab.internationalRouteYields = readYields(a["internationalRouteYields"]);
+        for (const Json& x : a["districtBuildingYields"].items()) ab.districtBuildingYields.push_back({district(x["district"].str()), readYields(x["yields"])});
+        for (const Json& x : a["districtBuildingAmenities"].items()) ab.districtBuildingAmenities.push_back({district(x["district"].str()), static_cast<int>(x["amount"].integer(0))});
+        for (const Json& x : a["strengthNearLeader"].items())
+            ab.strengthNearLeader.push_back({x["class"].str(), static_cast<int>(x["amount"].integer(0)), static_cast<int>(x["range"].integer(0))});
+        ab.cityCenterBuildingProductionPercent = static_cast<int>(a["cityCenterBuildingProductionPercent"].integer(0));
+        ab.wallProductionPercent = static_cast<int>(a["wallProductionPercent"].integer(0));
+        ab.governorAmenity = static_cast<int>(a["governorAmenity"].integer(0));
+        for (const Json& x : a["grantAbilities"].items()) {
+            const TypeIndex g = ability(x.str());
+            if (g == kNone) {
+                *error = where + ": unknown ability " + x.str();
+                return false;
+            }
+            ab.grantAbilities.push_back(g);
+        }
+        ab.capturedCityLoyalty = static_cast<int>(a["capturedCityLoyalty"].integer(0));
+        ab.foreignReligionAmenity = static_cast<int>(a["foreignReligionAmenity"].integer(0));
+        ab.nearFollowingCityStrength = static_cast<int>(a["strengthNearFollowingCity"]["amount"].integer(0));
+        ab.nearFollowingCityRange = static_cast<int>(a["strengthNearFollowingCity"]["range"].integer(0));
+        ab.extraBuilderCharges = static_cast<int>(a["extraBuilderCharges"].integer(0));
+        ab.peaceYieldPercent = readYields(a["peaceYieldPercent"]);
+        ab.wonderCulture = static_cast<int>(a["wonderCulture"].integer(0));
+        if (!a["faithPurchaseDistrict"].str().empty()) ab.faithPurchaseDistrict = district(a["faithPurchaseDistrict"].str());
+        ab.killFaithPercent = static_cast<int>(a["killFaithPercent"].integer(0));
+        ab.capitalAmenityPerKills = static_cast<int>(a["capitalAmenityPerKills"].integer(0));
+        ab.capitalAmenityMax = static_cast<int>(a["capitalAmenityMax"].integer(0));
+        ab.mountainCityHousing = static_cast<int>(a["mountainCityHousing"].integer(0));
+        ab.capitalYields = readYields(a["capitalYields"]);
+        ab.cityLoyalty = static_cast<int>(a["cityLoyalty"].integer(0));
+        ab.unitXpPercent = static_cast<int>(a["unitXpPercent"].integer(0));
+        for (const Json& x : a["classStrength"].items()) ab.classStrength.push_back({x["class"].str(), static_cast<int>(x["amount"].integer(0))});
+        return true;
+    };
     for (const auto& [id, j] : m.tables["civilizations"]) {
         CivType c;
         c.id = id;
@@ -1054,6 +1238,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.agendaText = j["agendaText"].str();
         c.leaning = j["leaning"].str();
         c.voice = j["voice"].str();
+        if (!readAbility(j["ability"], c.ability, "civilization " + id) || !readAbility(j["leaderAbility"], c.leaderAbility, "civilization " + id))
+            return false;
+        c.combined = combineAbilities(c.ability, c.leaderAbility);
         static const char* const agendas[] = {"", "AGENDA_QUEEN_OF_THE_SEAS", "AGENDA_DEFENDER_OF_THE_FAITH", "AGENDA_PAX_ROMANA",
                                               "AGENDA_SPARTAN_PRIDE", "AGENDA_TOLERANT_CONQUEROR", "AGENDA_MAGNANIMOUS",
                                               "AGENDA_FIRST_EMPEROR", "AGENDA_CLOSED_COUNTRY", "AGENDA_ETERNAL_NAME",
@@ -1083,6 +1270,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             *error = "dynasty " + id + ": unknown civ or no names";
             return false;
         }
+        // Heirs' traits: one per heir after the starting leader.
+        d.traits.assign(d.names.size(), CivAbility{});
+        const std::vector<Json>& traits = j["traits"].items();
+        for (size_t i = 0; i < traits.size() && i + 1 < d.names.size(); ++i) {
+            if (!readAbility(traits[i], d.traits[i + 1], "dynasty " + id)) return false;
+        }
+        for (const CivAbility& t : d.traits) d.combined.push_back(combineAbilities(civs[static_cast<size_t>(d.civ)].combined, t));
         dynasties.push_back(std::move(d));
     }
     // Historic moments (09).
@@ -1652,6 +1846,35 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             ++k;
         }
     }
+    // Civ uniques: buildings and improvements name their civ, base and neighbours by id.
+    for (BuildingType& b : buildings) {
+        if (!b.uniqueToId.empty() && ((b.uniqueTo = civ(b.uniqueToId)) == kNone || (b.replaces = building(b.replacesId)) == kNone)) {
+            *error = "building " + b.id + ": unknown civilization or base";
+            return false;
+        }
+        if (!b.adjacentImprovementId.empty() && (b.adjacentImprovement = improvement(b.adjacentImprovementId)) == kNone) {
+            *error = "building " + b.id + ": unknown improvement " + b.adjacentImprovementId;
+            return false;
+        }
+    }
+    for (ImprovementType& im : improvements) {
+        if (!im.uniqueToId.empty() && (im.uniqueTo = civ(im.uniqueToId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown civilization " + im.uniqueToId;
+            return false;
+        }
+        if (!im.adjacentImprovementId.empty() && (im.adjacentImprovement = improvement(im.adjacentImprovementId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown improvement " + im.adjacentImprovementId;
+            return false;
+        }
+    }
+    for (UnitType& u : units) {
+        if (u.uniqueToId.empty()) continue;
+        u.uniqueTo = civ(u.uniqueToId);
+        if (u.uniqueTo == kNone) {
+            *error = "unit " + u.id + ": unknown civilization " + u.uniqueToId;
+            return false;
+        }
+    }
     static const char* required[] = {"CITY_MIN_RANGE", "START_DISTANCE_MAJOR_CIVILIZATION", "MOVEMENT_RIVER_COST",
                                      "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS",
                                      "CITY_FOOD_CONSUMPTION_PER_POPULATION", "CITY_GROWTH_THRESHOLD",
@@ -1710,6 +1933,13 @@ TypeIndex Rules::governor(const std::string& id) const { return findIn(governors
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }
+TypeIndex Rules::uniqueUnitFor(TypeIndex civ, TypeIndex base) const {
+    if (civ == kNone || base == kNone) return kNone;
+    for (size_t i = 0; i < units.size(); ++i) {
+        if (units[i].uniqueTo == civ && units[i].replaces == base) return static_cast<TypeIndex>(i);
+    }
+    return kNone;
+}
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {

@@ -118,6 +118,10 @@ enum class UnitEffectKind : uint8_t {
     AssassinDefense,    // +amount to the leader's defence against assassins
     CityProduction,     // +amount production in the city the leader stands in
     CityAmenities,      // +amount amenities in the city the leader stands in
+    // Civ uniques (leaders-and-art-style: Civ abilities, uniques and dynasties).
+    HealOnKill,         // +amount HP when it destroys a unit
+    MeleeAndRanged,     // a ranged unit that may also attack in melee
+    CaptureAsBuilder,   // a land unit it destroys joins its owner as a Builder
 };
 
 enum class CombatAtom : uint8_t {
@@ -134,6 +138,8 @@ enum class CombatAtom : uint8_t {
     OpponentWounded,
     DistrictTile,
     OwnTerritory,
+    AdjacentSameUnit,   // a friendly unit of the same type stands next to it
+    OpponentTileBase,   // the opponent stands on terrain of this climate (value: e.g. "DESERT")
 };
 
 struct CombatCondition {
@@ -206,6 +212,10 @@ struct UnitType {
     int resourceMaintenance = 0;   // strategicResource spent per turn [GS]
     std::string promotionClass;    // empty: no promotions
     std::vector<TypeIndex> abilities;  // innate
+    // A civ's unique unit: only that civ trains it, and for that civ it replaces `replaces`.
+    TypeIndex uniqueTo = kNone;
+    TypeIndex replaces = kNone;
+    std::string uniqueToId;            // (loading only)
     TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
     bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
     bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
@@ -236,6 +246,19 @@ struct ImprovementType {
     std::vector<ImprovementAdjacency> adjacency;
     Fixed housing;  // per improved plot the city owns
     int appeal = 0;  // to neighbouring plots (01: Appeal)
+    // Civ unique improvements (leaders-and-art-style).
+    TypeIndex uniqueTo = kNone;
+    std::string uniqueToId;  // (loading only)
+    int amenities = 0;       // to its city
+    int defense = 0;         // combat strength for units defending on it
+    int sight = 0;           // extra sight for units on it
+    bool borderOnly = false; // only on plots at the edge of the owner's territory
+    bool needsRiver = false;
+    bool halvesFloods = false;  // flood damage on adjacent plots halved
+    TypeIndex adjacentImprovement = kNone;  // gives `adjacentYield` to adjacent improvements of this type
+    YieldType adjacentYield = YieldType::Food;
+    int adjacentAmount = 0;
+    std::string adjacentImprovementId;  // (loading only)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -285,6 +308,17 @@ struct BuildingType {
     int amenities = 0;
     int outerDefenseHp = 0;
     int airSlots = 0;  // aircraft its district can base (Hangar, Airport)
+    // A civ's unique building (leaders-and-art-style): only that civ builds it; for it, it replaces `replaces`.
+    TypeIndex uniqueTo = kNone, replaces = kNone;
+    std::string uniqueToId, replacesId;  // (loading only)
+    // Unique effects: a yield on adjacent improvements of a type (next to its district), gold per
+    // trade route from the city, envoys when built, XP for units trained in the city (% of the first
+    // promotion), food per mountain next to the city (at most 2).
+    TypeIndex adjacentImprovement = kNone;
+    YieldType adjacentYield = YieldType::Production;
+    int adjacentAmount = 0;
+    std::string adjacentImprovementId;   // (loading only)
+    int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first
     bool needsRiver = false;
@@ -598,6 +632,7 @@ enum class ReqType : uint8_t {
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
+    PlotNextToRiver,
 };
 
 struct Requirement {
@@ -758,8 +793,65 @@ enum class Agenda : uint8_t {
     FirstEmperor, ClosedCountry, EternalName, PatronOfTrade, HonourableWar, SapaInca,
 };
 
+// A civ's own ability (leaders-and-art-style: Civ abilities, uniques and dynasties). Plot yields go
+// through civ-sourced modifiers; these are the effects the modifier model does not carry.
+struct CivAdjacency {
+    TypeIndex district = kNone;      // the district that gains
+    TypeIndex from = kNone;          // per adjacent district of this type, or
+    std::string fromTerrainBase;     // per `per` adjacent plots of this terrain climate
+    int per = 1;
+    YieldType yield = YieldType::Production;
+    int amount = 0;
+};
+struct CivAbility {
+    std::string name;
+    std::vector<CivAdjacency> extraAdjacency;
+    int wonderProductionPercent = 0, wonderEraMin = 0, wonderEraMax = 0;  // toward wonders of these eras
+    int amenityPerWonder = 0;           // in the wonder's city
+    int foundPopulation = 0;            // new cities start larger
+    TypeIndex foundBuilding = kNone;    // and with this building
+    int culturePerSuzerainty = 0;       // in the capital
+    int governorLoyalty = 0, governorGold = 0;  // in cities with an established governor
+    TypeIndex extraGovernorTitleCivic = kNone;  // +1 governor title with this civic
+    int desertRouteGold = 0;            // trade routes whose way crosses desert
+    Yields capitalYieldsPerGovernorTitle{};
+    Fixed freshWaterFarmHousing;        // per farm next to a river
+    int mountainDistrictProductionPercent = 0;  // in cities next to a mountain
+    int mountainProduction = 0;         // mountains can be worked for this much production
+    // Leader abilities (Leader details) use the same struct; these fields are theirs so far.
+    std::array<int, 3> domainProductionPercent{};  // toward units of a Domain (Land, Sea, Air)
+    std::vector<std::pair<TypeIndex, int>> greatPersonPercent;  // +% points of a great person class
+    int intercontinentalRouteGold = 0;  // international routes to another landmass
+    Yields internationalRouteYields{};
+    std::vector<std::pair<TypeIndex, Yields>> districtBuildingYields;  // per building in that district
+    std::vector<std::pair<TypeIndex, int>> districtBuildingAmenities;
+    struct NearLeader { std::string unitClass; int amount = 0, range = 0; };
+    std::vector<NearLeader> strengthNearLeader;
+    int cityCenterBuildingProductionPercent = 0, wallProductionPercent = 0;
+    int governorAmenity = 0;            // in cities with an established governor
+    std::vector<TypeIndex> grantAbilities;  // to its units of the ability's classes
+    int capturedCityLoyalty = 0;        // per turn in cities another civ founded
+    int foreignReligionAmenity = 0;     // in its cities following another religion
+    int nearFollowingCityStrength = 0, nearFollowingCityRange = 0;
+    int extraBuilderCharges = 0;
+    Yields peaceYieldPercent{};         // while at peace with every major civ
+    int wonderCulture = 0;              // per wonder in the city
+    TypeIndex faithPurchaseDistrict = kNone;  // that district's buildings can be bought with Faith
+    int killFaithPercent = 0;           // Faith per kill: % of the victim's strength
+    int capitalAmenityPerKills = 0, capitalAmenityMax = 0;  // +1 in the capital per that many kills this era
+    int mountainCityHousing = 0;        // in cities next to a mountain
+    // Heir traits (leaders-and-art-style: Dynasties) so far.
+    Yields capitalYields{};
+    int cityLoyalty = 0;                // per turn in every city
+    int unitXpPercent = 0;              // combat XP for all its units
+    std::vector<std::pair<std::string, int>> classStrength;  // + strength for a unit class
+};
+
 struct CivType {
     std::string id, name, leader;
+    CivAbility ability;         // the civ's own (Civ abilities, uniques and dynasties)
+    CivAbility leaderAbility;   // its launch leader's (Leader details)
+    CivAbility combined;        // both, as the rules apply them
     std::vector<std::string> cityNames;
     Agenda agenda = Agenda::None;
     std::string agendaId, agendaName, agendaText;
@@ -792,6 +884,8 @@ struct Dynasty {
     std::string id;
     TypeIndex civ = kNone;
     std::vector<std::string> names;
+    std::vector<CivAbility> traits;    // per name (0, the starting leader: none): the heir's personal trait
+    std::vector<CivAbility> combined;  // the civ's abilities with that heir's trait
 };
 
 struct MapSizeType {
@@ -895,6 +989,8 @@ public:
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;
+    // The civ's unique unit replacing `base` (kNone: none, `base` itself stays).
+    TypeIndex uniqueUnitFor(TypeIndex civ, TypeIndex base) const;
     TypeIndex speed(const std::string& id) const;
     // Terrain with this climate base and relief, or kNone.
     TypeIndex terrainFor(const std::string& base, Relief relief) const;

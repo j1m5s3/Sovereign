@@ -59,6 +59,22 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
 			 Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")),
 		16, Y);
+	// Our civ's identity (leaders-and-art-style): its ability, its leader's, and its uniques.
+	if (P.civ != sov::kNone)
+	{
+		const sov::CivType& C = R.civs[static_cast<size_t>(P.civ)];
+		FString Uniques;
+		for (const sov::UnitType& U : R.units) if (U.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(U.name);
+		for (const sov::BuildingType& B : R.buildings) if (B.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(B.name);
+		for (const sov::ImprovementType& I : R.improvements) if (I.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(I.name);
+		// The ruler, and the personal trait an heir of the dynasty brings (leaders-and-art-style: Dynasties).
+		FString Ruler = Str(P.leaderName);
+		if (const sov::Dynasty* D = R.dynastyOf(P.civ); D && P.rulingHeir > 0 && static_cast<size_t>(P.rulingHeir) < D->traits.size())
+			Ruler += FString::Printf(TEXT(" (%s)"), *Str(D->traits[static_cast<size_t>(P.rulingHeir)].name));
+		Line(FString::Printf(TEXT("%s: %s   Leader: %s   Ruler: %s   Uniques: %s"), *Str(C.name), *Str(C.ability.name), *Str(C.leaderAbility.name), *Ruler,
+				 Uniques.IsEmpty() ? TEXT("-") : *Uniques.RightChop(2)),
+			16, Y, FLinearColor(0.85f, 0.8f, 0.6f));
+	}
 	Line(FString::Printf(TEXT("Gold %s (%+s)   Science %s   Culture %s   Score %d"), *Str(P.gold.toString()),
 			 *Str(G.goldPerTurn(Me).toString()), *Str(G.sciencePerTurn(Me).toString()), *Str(G.culturePerTurn(Me).toString()), G.score(Me)),
 		16, Y);

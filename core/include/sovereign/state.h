@@ -252,6 +252,9 @@ struct SOV_API City {
     const CityDistrict* district(TypeIndex type, bool completeOnly) const;
 };
 
+// The city has the building, or a civ unique that replaces it (leaders-and-art-style).
+SOV_API bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building);
+
 // A player's progress through one research tree (techs or civics). Progress
 // is kept per node, so switching away loses nothing (04-tech-civics-government.md).
 struct TreeProgress {
@@ -314,6 +317,7 @@ struct Player {
     TypeIndex cityState = kNone;  // Rules::cityStates: a city-state (one city, no expansion; 08)
     std::vector<int> envoys;      // per player: envoys this player sent to that city-state
     int envoyTokens = 0;          // envoys waiting to be sent
+    int killsThisEra = 0;         // enemy units destroyed since the world era began (Flower Wars)
     int influence = 0;            // points toward the next envoys
     PlayerId firstMetBy = kNoPlayer;  // a city-state: the first major civ to meet it (gets an envoy)
     bool hadSuzerain = false;         // a city-state: someone has been its suzerain
@@ -345,6 +349,7 @@ struct Player {
     // the leader falls; it counts down only while someone sits on the throne.
     std::string leaderName;
     int dynastyNext = 1;            // next heir in the civ's dynasty (0 is the starting leader)
+    int rulingHeir = 0;             // the dynasty member on the throne (0: the starting leader; -1: not of the dynasty)
     bool successionPending = false; // the leader died or was abandoned: a successor must be chosen
     int interregnumTurns = 0;
     PlayerId captor = kNoPlayer;    // holds this player's captured leader

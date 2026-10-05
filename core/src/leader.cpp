@@ -238,11 +238,14 @@ void Game::applyLeader(const Command& c) {
             const Unit* u = state_.unit(c.id);
             if (!at) at = u->pos;
             p.leaderName = civ.name + " Warlord";
+            p.rulingHeir = -1;
             removeUnit(c.id);
         } else if (kind == Succession::Heir) {
+            p.rulingHeir = p.dynastyNext;  // the heir's trait rules with them
             p.leaderName = rules_->dynastyOf(p.civ)->names[static_cast<size_t>(p.dynastyNext++)];
         } else {
             p.leaderName = civ.name + " Regent";
+            p.rulingHeir = -1;
         }
         if (!at) {
             for (const Unit& o : state_.units) {

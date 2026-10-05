@@ -52,6 +52,14 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
             break;
         case CombatAtom::DistrictTile: ok = x.s->cityAt(x.unit->pos) != nullptr; break;
         case CombatAtom::OwnTerritory: ok = plot.owner == x.unit->owner; break;
+        case CombatAtom::AdjacentSameUnit:
+            for (const Unit& o : x.s->units) {
+                ok = ok || (o.id != x.unit->id && o.owner == x.unit->owner && o.type == x.unit->type && x.s->grid.distance(o.pos, x.unit->pos) == 1);
+            }
+            break;
+        case CombatAtom::OpponentTileBase:
+            ok = x.opponent && x.r->terrains[static_cast<size_t>(x.s->plot(x.opponent->pos).terrain)].base == c.value;
+            break;
     }
     return c.negate ? !ok : ok;
 }
@@ -123,6 +131,12 @@ bool Game::canMakePeace(PlayerId player, PlayerId target) const {
 std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
     const UnitType& ut = typeOf(*rules_, unit);
     std::vector<TypeIndex> out = ut.abilities;
+    // Abilities the civ's leader grants its units of a class (Hold the Pass, Builder of Monuments).
+    for (TypeIndex a : civAbility(unit.owner).grantAbilities) {
+        const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
+        if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
+            out.push_back(a);
+    }
     for (TypeIndex a : grantedAbilities(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)])) {
         const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
         if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() &&
@@ -178,7 +192,9 @@ int Game::unitRange(const Unit& unit) const {
 }
 
 int Game::unitSight(const Unit& unit) const {
-    return typeOf(*rules_, unit).sight + unitEffectTotal(unit, UnitEffectKind::Sight);
+    const TypeIndex im = state_.plot(unit.pos).improvement;
+    const int tower = im == kNone ? 0 : rules_->improvements[static_cast<size_t>(im)].sight;  // Beacon Tower
+    return typeOf(*rules_, unit).sight + unitEffectTotal(unit, UnitEffectKind::Sight) + tower;
 }
 
 int Game::maxAttacks(const Unit& unit) const {
@@ -238,6 +254,32 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
         ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
         s += 5;
+    // Leader abilities: a class stronger near the leader (Charlemagne); units near a city following
+    // the player's religion (Saladin).
+    {
+        const CivAbility& ab = civAbility(unit.owner);
+        if (!ab.strengthNearLeader.empty()) {
+            if (const Unit* l = leaderOf(unit.owner); l && l->id != unit.id) {
+                for (const CivAbility::NearLeader& n : ab.strengthNearLeader) {
+                    if (n.unitClass == ut.unitClass && state_.grid.distance(l->pos, unit.pos) <= n.range) s += n.amount;
+                }
+            }
+        }
+        for (const auto& [cls, amount] : ab.classStrength) s += cls == ut.unitClass ? amount : 0;  // an heir's trait
+        if (ab.nearFollowingCityStrength > 0 && owner.religion >= 0) {
+            for (const City& c : state_.cities) {
+                if (state_.grid.distance(c.pos, unit.pos) <= ab.nearFollowingCityRange && cityMajorityReligion(c) == owner.religion) {
+                    s += ab.nearFollowingCityStrength;
+                    break;
+                }
+            }
+        }
+    }
+    // A unique improvement that shelters its defenders (Beacon Tower).
+    if (!attacking) {
+        const TypeIndex im = state_.plot(unit.pos).improvement;
+        if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
+    }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
@@ -524,7 +566,8 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
     if (vsBarbarian && unit.level() >= rules_->globalInt("EXPERIENCE_MAX_BARB_LEVEL")) return;
     const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
                         unitEffectTotal(unit, UnitEffectKind::XpPercent) +
-                        (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0);
+                        (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0) +
+                        civAbility(unit.owner).unitXpPercent;
     xp = xp * percent / 100;
     // XP stops at the next level until the promotion is taken.
     unit.xp = std::min(unit.xp + xp, xpForNextLevel(unit));
@@ -594,8 +637,9 @@ CommandError Game::validateCombat(const Command& c) const {
         if (visibility(c.player, *t) != Visibility::Visible || (!isAircraft(*u) && !lineOfSight(u->pos, *t))) return CommandError::CannotAttack;
         return CommandError::Ok;
     }
-    // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
-    if (meleeStrength(*u) <= 0 || rangedStrength(*u) > 0 || ut.bombard > 0) return CommandError::CannotAttack;
+    // Melee: ranged and siege units cannot (the Immortal can); the target must be adjacent and enterable.
+    if (meleeStrength(*u) <= 0 || (rangedStrength(*u) > 0 && !unitHas(*u, UnitEffectKind::MeleeAndRanged)) || ut.bombard > 0)
+        return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
     // Land units fight on land; ships fight on the water and against coastal cities.
     if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water) return CommandError::CannotAttack;
@@ -615,10 +659,18 @@ CommandError Game::validateCombat(const Command& c) const {
     return any ? CommandError::Ok : CommandError::CannotAttack;
 }
 
+TypeIndex Game::upgradeTarget(const Unit& unit) const {
+    const TypeIndex next = rules_->units[static_cast<size_t>(unit.type)].upgradesTo;
+    if (next == kNone) return kNone;
+    const TypeIndex civ = state_.players[static_cast<size_t>(unit.owner)].civ;
+    const TypeIndex unique = rules_->uniqueUnitFor(civ, next);
+    return unique != kNone ? unique : next;
+}
+
 int Game::upgradeCost(const Unit& unit) const {
     const UnitType& from = rules_->units[static_cast<size_t>(unit.type)];
-    if (from.upgradesTo == kNone) return -1;
-    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    if (upgradeTarget(unit) == kNone) return -1;
+    const UnitType& to = rules_->units[static_cast<size_t>(upgradeTarget(unit))];
     // UPGRADE_BASE_COST + the production difference x UPGRADE_NET_PRODUCTION_PERCENT_COST, at least
     // UPGRADE_MINIMUM_COST, scaled by game speed (exact engine formula unverified; Warrior -> Swordsman 60).
     const int diff = std::max(0, to.cost - from.cost) * rules_->globalInt("UPGRADE_NET_PRODUCTION_PERCENT_COST") / 100;
@@ -630,12 +682,12 @@ int Game::upgradeCost(const Unit& unit) const {
 CommandError Game::upgradeProblem(UnitId id) const {
     const Unit* u = state_.unit(id);
     if (!u) return CommandError::BadUnit;
-    const UnitType& from = rules_->units[static_cast<size_t>(u->type)];
-    if (from.upgradesTo == kNone) return CommandError::CannotUpgrade;
-    const UnitType& to = rules_->units[static_cast<size_t>(from.upgradesTo)];
+    const TypeIndex target = upgradeTarget(*u);
+    if (target == kNone) return CommandError::CannotUpgrade;
+    const UnitType& to = rules_->units[static_cast<size_t>(target)];
     // In its owner's territory with moves left, the new unit known, gold and its strategic resource on hand.
     if (state_.plot(u->pos).owner != u->owner || u->movesLeft <= Fixed() || isEmbarked(*u)) return CommandError::CannotUpgrade;
-    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, from.upgradesTo)) return CommandError::CannotUpgrade;
+    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, target)) return CommandError::CannotUpgrade;
     if (state_.players[static_cast<size_t>(u->owner)].gold < Fixed::fromInt(upgradeCost(*u))) return CommandError::NotEnoughGold;
     return CommandError::Ok;
 }

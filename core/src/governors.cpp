@@ -17,6 +17,8 @@ int Game::governorTitles(PlayerId pid) const {
     const Player& p = state_.players[static_cast<size_t>(pid)];
     int n = 0;
     for (const auto& [civic, titles] : rules_->governorTitleCivics) n += p.civics.has(civic) ? titles : 0;
+    const TypeIndex extra = civAbility(pid).extraGovernorTitleCivic;  // Persia
+    if (extra != kNone && p.civics.has(extra)) ++n;
     return n;
 }
 

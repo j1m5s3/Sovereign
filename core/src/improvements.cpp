@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/modifiers.h"
 
 namespace sov {
@@ -40,6 +41,14 @@ bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
         return false;
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(improvement)];
     if (!hasUnlocked(player, im.unlock)) return false;
+    // Civ unique improvements: their civ only, some on a river or at the edge of its land.
+    if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
+    if (im.needsRiver && !isRiverAdjacent(state_, at)) return false;
+    if (im.borderOnly) {
+        bool edge = false;
+        for (const Hex& n : state_.grid.within(at, 1)) edge = edge || state_.plot(n).owner != player;
+        if (!edge) return false;
+    }
     // A visible resource only takes the improvements that work it.
     if (resourceVisible(player, at)) return contains(im.validResources, p.resource);
     if (p.feature != kNone) return contains(im.validFeatures, p.feature);
@@ -84,6 +93,13 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
         }
         y[static_cast<size_t>(a.yield)] += a.amount * (n / a.per);
     }
+    // A neighbouring unique improvement that feeds this one (Nilometer: adjacent Farms +1 Food).
+    for (const Hex& h : state_.grid.within(at, 1)) {
+        const TypeIndex ni = state_.plot(h).improvement;
+        if (h == at || ni == kNone) continue;
+        const ImprovementType& n = rules_->improvements[static_cast<size_t>(ni)];
+        if (n.adjacentImprovement == p.improvement) y[static_cast<size_t>(n.adjacentYield)] += Fixed::fromInt(n.adjacentAmount);
+    }
     return y;
 }
 
@@ -91,8 +107,12 @@ Fixed Game::improvementHousing(const City& city) const {
     Fixed total;
     for (const Hex& h : state_.grid.within(city.pos, 3)) {
         const Plot& p = state_.plot(h);
-        if (p.city == city.id && p.improvement != kNone)
+        if (p.city == city.id && p.improvement != kNone) {
             total += rules_->improvements[static_cast<size_t>(p.improvement)].housing;
+            // Civ ability: farms next to a river add housing (Aztec Chinampas).
+            if (rules_->improvements[static_cast<size_t>(p.improvement)].id == "IMPROVEMENT_FARM" && isRiverAdjacent(state_, h))
+                total += civAbility(city.owner).freshWaterFarmHousing;
+        }
     }
     return total;
 }

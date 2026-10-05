@@ -643,6 +643,7 @@ CommandError Game::submit(const Command& c) {
     if (e != CommandError::Ok) return e;
     log_.push_back(c);
     apply(c);
+    spawnCaptures();
     updateBoosts(c.player);
     checkVictory();
     return CommandError::Ok;
@@ -714,7 +715,7 @@ void Game::apply(const Command& c) {
             Unit& u = *state_.unit(c.id);
             Player& p = state_.players[static_cast<size_t>(c.player)];
             p.gold -= Fixed::fromInt(upgradeCost(u));
-            const TypeIndex to = rules_->units[static_cast<size_t>(u.type)].upgradesTo;
+            const TypeIndex to = upgradeTarget(u);
             const UnitType& up = rules_->units[static_cast<size_t>(to)];
             if (up.strategicResource != kNone && up.strategicCost > 0) p.stockpile[static_cast<size_t>(up.strategicResource)] -= up.strategicCost;
             u.type = to;  // keeps its health, experience and promotions; the upgrade takes its turn
@@ -832,12 +833,33 @@ void Game::applyFoundCity(const Command& c) {
     if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())
         city.pressure[static_cast<size_t>(p.religion)] = rules_->globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP") * 2;
     state_.cities.push_back(std::move(city));
+    {
+        City& made = state_.cities.back();
+        const CivAbility& ab = civAbility(owner);
+        made.population += ab.foundPopulation;
+        if (ab.foundBuilding != kNone && !made.has(ab.foundBuilding))
+            made.buildings.insert(std::lower_bound(made.buildings.begin(), made.buildings.end(), ab.foundBuilding), ab.foundBuilding);
+    }
     assignCitizens(*state_.city(newId));
 
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
                                       [&](const Unit& x) { return x.id == c.id; }),
                        state_.units.end());
     refreshVisibility(owner);
+}
+
+const CivAbility& Game::civAbility(PlayerId player) const {
+    static const CivAbility none;
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return none;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const TypeIndex civ = p.civ;
+    if (civ == kNone || static_cast<size_t>(civ) >= rules_->civs.size()) return none;
+    // A dynasty heir on the throne adds their trait (leaders-and-art-style: Dynasties).
+    if (p.rulingHeir > 0) {
+        const Dynasty* d = rules_->dynastyOf(civ);
+        if (d && static_cast<size_t>(p.rulingHeir) < d->combined.size()) return d->combined[static_cast<size_t>(p.rulingHeir)];
+    }
+    return rules_->civs[static_cast<size_t>(civ)].combined;
 }
 
 const DifficultyType& Game::difficulty() const {

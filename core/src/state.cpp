@@ -6,6 +6,14 @@
 
 namespace sov {
 
+bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building) {
+    if (city.has(building)) return true;
+    for (TypeIndex b : city.buildings) {
+        if (rules.buildings[static_cast<size_t>(b)].replaces == building) return true;
+    }
+    return false;
+}
+
 namespace {
 template <typename T, typename Id>
 T* findById(std::vector<T>& v, Id id) {

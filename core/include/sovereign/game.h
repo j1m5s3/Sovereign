@@ -254,6 +254,7 @@ public:
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
+    bool completeItem(City& city, ProductionItem item);    // finish an item now (false when it cannot complete now)
     // The Science victory (09 [GS]): light-years a turn of the player's exoplanet expedition (0: not launched).
     int expeditionSpeed(PlayerId player) const;
 
@@ -350,10 +351,13 @@ public:
 
     // The game's difficulty level, and whether its AI (or human) bonuses apply to this player.
     const DifficultyType& difficulty() const;
+    // The player's civ and leader abilities together (empty for city-states, barbarians and Free Cities).
+    const CivAbility& civAbility(PlayerId player) const;
     bool difficultyAi(PlayerId player) const;     // an AI-run major civ
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ
     // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.
     int upgradeCost(const Unit& unit) const;
+    TypeIndex upgradeTarget(const Unit& unit) const;  // the next unit in its line (the civ's unique if it has one)
     CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now
     // A unit entering this plot loses its remaining moves (enemy unit or city next to it).
     bool inEnemyZoc(const Unit& mover, Hex plot) const;
@@ -491,7 +495,6 @@ private:
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
     void assignCitizens(City& city);
-    bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;
@@ -576,6 +579,8 @@ private:
     const Rules* rules_;
     GameState state_;
     std::vector<Command> log_;
+    std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command
+    void spawnCaptures();
 };
 
 // Plain-English deal terms ("England gives 100 Gold; France gives Wine for 30 turns"), for the

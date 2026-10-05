@@ -261,8 +261,17 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
         const TerrainType& t = rules_->terrains[at(p.terrain)];
         const City* atCity = state_.cityAt(h);
         City* city = atCity ? state_.city(atCity->id) : nullptr;
+        // A Nilometer next to the plot halves flood damage there (Egypt).
+        bool sheltered = false;
+        if (dt.kind == DisasterKind::Flood) {
+            for (const Hex& n : state_.grid.within(h, 1)) {
+                const TypeIndex ni = state_.plot(n).improvement;
+                sheltered = sheltered || (ni != kNone && rules_->improvements[static_cast<size_t>(ni)].halvesFloods);
+            }
+        }
         // Damage.
-        for (const DisasterDamage& dd : dt.damage) {
+        for (DisasterDamage dd : dt.damage) {
+            if (sheltered) dd.percent /= 2;
             switch (dd.type) {
                 case DisasterDamageType::ImprovementDestroyed:
                     if (p.improvement != kNone && rng.chance(static_cast<uint32_t>(dd.percent))) {

@@ -143,6 +143,11 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
     if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || at(item.type) >= rules_->buildings.size()) return -1;
         const BuildingType& b = rules_->buildings[at(item.type)];
+        // Leader ability: a district's buildings for Faith at their gold price (Golden Pilgrimage).
+        if (const TypeIndex d = civAbility(player).faithPurchaseDistrict; d != kNone && b.districtType == d && !b.faithOnly && canProduce(city, item)) {
+            const int gold = purchaseCost(player, item);
+            if (gold > 0) return gold;
+        }
         if (!b.faithOnly || city.has(item.type)) return -1;
         // A worship building needs its belief in the city's majority religion, its district and prerequisites.
         bool belief = false;

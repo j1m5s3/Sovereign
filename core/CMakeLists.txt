@@ -101,6 +101,7 @@ add_executable(sovereign_tests
   tests/test_profile.cpp
   tests/test_projects.cpp
   tests/test_air.cpp
+  tests/test_uniques.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE
