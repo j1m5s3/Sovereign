@@ -509,6 +509,23 @@ def gen_buildings():
         m = re.search(r"\+(\d+) air slots", row["Modifiers"] or "")
         if m:
             b["airSlots"] = int(m.group(1))  # Hangar, Airport (05: air units)
+        # Power [GS] (09: Power): what it needs, what it gains when powered, what it burns or gives.
+        power = row["Power [GS]"] or ""
+        m = re.search(r"needs (\d+) power", power)
+        if m:
+            b["requiredPower"] = int(m.group(1))
+            if row["Extra when powered"]:
+                b["poweredYields"] = yields(row["Extra when powered"])
+            m = re.search(r"\+(\d+) amenity when powered", power)
+            if m:
+                b["poweredAmenities"] = int(m.group(1))
+        m = re.search(r"burns (\w+)", power)
+        if m:
+            # Power per resource burned (Resource_Consumption.PowerProvided, 09: Power): Coal 4, Oil 4, Uranium 16.
+            b["burns"] = {"resource": "RESOURCE_" + m.group(1).upper(), "power": {"Coal": 4, "Oil": 4, "Uranium": 16}[m.group(1)]}
+        m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
+        if m:
+            b["powerProvided"] = int(m.group(1))  # Hydroelectric Dam
         if row["Placement"] == "river":
             b["needsRiver"] = True
         if row["Purchase"] == "Gold":
@@ -763,6 +780,9 @@ def gen_improvements():
             i["housing"] = int(m.group(1)) / int(m.group(2) or 1)
         if row["Appeal"] and num(row["Appeal"]):
             i["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
+        m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
+        if m:
+            i["powerProvided"] = int(m.group(1))  # renewables (09: Power)
         out.append(i)
     return {"improvements": out}
 

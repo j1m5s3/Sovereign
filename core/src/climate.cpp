@@ -84,19 +84,52 @@ void Game::unitCo2(PlayerId pid, size_t resource, int burned) {
     addCo2(pid, co2PerResource(rules_->resources[resource].id) * burned * rules_->globalInt("CLIMATE_CO2_PERCENT_FROM_UNITS") / 100);
 }
 
+// Power [GS] (09: Power), as the player's turn begins: each city's demand from its buildings is met
+// by its own free sources (Hydroelectric Dam, renewables), then by the player's power plants within
+// POWER_PLANT_RANGE of it, nearest first, burning just enough of their resource (each unit gives
+// the plant's power; Coal and Oil 4, Uranium 16) and emitting its CO2.
 void Game::burnPower(PlayerId pid) {
-    static const char* const plants[][2] = {{"BUILDING_COAL_POWER_PLANT", "RESOURCE_COAL"},
-                                            {"BUILDING_OIL_POWER_PLANT", "RESOURCE_OIL"},
-                                            {"BUILDING_NUCLEAR_POWER_PLANT", "RESOURCE_URANIUM"}};
     Player& p = state_.players[at(pid)];
-    for (const auto& plant : plants) {
-        const TypeIndex b = rules_->building(plant[0]);
-        const TypeIndex r = rules_->resource(plant[1]);
-        if (b == kNone || r == kNone || at(r) >= p.stockpile.size()) continue;
-        for (const City& c : state_.cities) {
-            if (c.owner != pid || !c.has(b) || p.stockpile[at(r)] < 1) continue;
-            --p.stockpile[at(r)];
-            addCo2(pid, co2PerResource(plant[1]));
+    constexpr int kPlantRange = 6;  // Buildings.RegionalRange
+    std::vector<City*> mine;
+    for (City& c : state_.cities) {
+        if (c.owner != pid) continue;
+        c.powerDemand = c.powerSupply = 0;
+        for (TypeIndex b : c.buildings) {
+            const BuildingType& bt = rules_->buildings[at(b)];
+            c.powerDemand += bt.requiredPower;
+            c.powerSupply += bt.powerProvided;
+        }
+        for (const Hex& h : state_.grid.within(c.pos, 3)) {
+            const Plot& pl = state_.plot(h);
+            if (pl.city == c.id && pl.improvement != kNone && pl.pillagedTurns == 0) c.powerSupply += rules_->improvements[at(pl.improvement)].powerProvided;
+        }
+        mine.push_back(&c);
+    }
+    for (City* c : mine) {
+        if (c->powerSupply >= c->powerDemand) continue;
+        // The player's plants in reach, nearest first (ties: lower city id).
+        std::vector<std::pair<int, const City*>> plants;
+        for (const City* o : mine) {
+            const int d = state_.grid.distance(o->pos, c->pos);
+            if (d > kPlantRange) continue;
+            for (TypeIndex b : o->buildings) {
+                if (rules_->buildings[at(b)].burnsResource != kNone) plants.push_back({d, o});
+            }
+        }
+        std::stable_sort(plants.begin(), plants.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+        for (const auto& [d, o] : plants) {
+            if (c->powerSupply >= c->powerDemand) break;
+            for (TypeIndex b : o->buildings) {
+                const BuildingType& bt = rules_->buildings[at(b)];
+                if (bt.burnsResource == kNone || bt.powerPerResource <= 0 || at(bt.burnsResource) >= p.stockpile.size()) continue;
+                const int short_ = c->powerDemand - c->powerSupply;
+                const int units = std::min(p.stockpile[at(bt.burnsResource)], (short_ + bt.powerPerResource - 1) / bt.powerPerResource);
+                if (units <= 0) continue;
+                p.stockpile[at(bt.burnsResource)] -= units;
+                c->powerSupply += units * bt.powerPerResource;
+                addCo2(pid, co2PerResource(rules_->resources[at(bt.burnsResource)].id) * units);
+            }
         }
     }
 }

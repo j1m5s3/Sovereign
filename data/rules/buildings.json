@@ -28,6 +28,10 @@
     "BUILDING_HANGAR"
    ],
    "airSlots": 1,
+   "requiredPower": 1,
+   "poweredYields": {
+    "PRODUCTION": 2
+   },
    "purchasable": true
   },
   {
@@ -77,6 +81,10 @@
    "requires": [
     "BUILDING_UNIVERSITY"
    ],
+   "requiredPower": 3,
+   "poweredYields": {
+    "SCIENCE": 5
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 1
@@ -247,6 +255,10 @@
    "requires": [
     "BUILDING_BANK"
    ],
+   "requiredPower": 3,
+   "poweredYields": {
+    "GOLD": 7
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 1
@@ -260,6 +272,7 @@
    "maintenance": 1,
    "yields": {},
    "unlock": "TECH_ELECTRICITY",
+   "powerProvided": 6,
    "purchasable": true
   },
   {
@@ -394,6 +407,8 @@
    "requires": [
     "BUILDING_ZOO"
    ],
+   "requiredPower": 2,
+   "poweredAmenities": 2,
    "purchasable": true
   },
   {
@@ -753,6 +768,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "burns": {
+    "resource": "RESOURCE_COAL",
+    "power": 4
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
@@ -771,6 +790,10 @@
    "requires": [
     "BUILDING_WORKSHOP"
    ],
+   "requiredPower": 2,
+   "poweredYields": {
+    "PRODUCTION": 3
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
@@ -789,6 +812,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "burns": {
+    "resource": "RESOURCE_OIL",
+    "power": 4
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
@@ -808,6 +835,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "burns": {
+    "resource": "RESOURCE_URANIUM",
+    "power": 16
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
@@ -823,6 +854,10 @@
     "FOOD": 4
    },
    "unlock": "TECH_REPLACEABLE_PARTS",
+   "requiredPower": 1,
+   "poweredYields": {
+    "FOOD": 2
+   },
    "purchasable": true
   },
   {
@@ -836,6 +871,11 @@
    },
    "unlock": "CIVIC_CAPITALISM",
    "amenities": 1,
+   "requiredPower": 1,
+   "poweredYields": {
+    "GOLD": 2
+   },
+   "poweredAmenities": 1,
    "purchasable": true
   },
   {
@@ -934,6 +974,10 @@
     "BUILDING_ART_MUSEUM",
     "BUILDING_ARCHAEOLOGICAL_MUSEUM"
    ],
+   "requiredPower": 3,
+   "poweredYields": {
+    "CULTURE": 4
+   },
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ARTIST": 1,
@@ -982,6 +1026,8 @@
    "requires": [
     "BUILDING_AQUARIUM"
    ],
+   "requiredPower": 2,
+   "poweredAmenities": 2,
    "purchasable": true
   }
  ]

@@ -1,6 +1,8 @@
 // Climate change and natural disasters (09 [GS]): CO2 from fuel, climate phases and the sea
 // rising over coastal lowlands, disasters striking (damage and fertility), droughts, the favor
 // cost of emissions, the world turn's rolls, saves.
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/serialize.h"
 
@@ -52,6 +54,7 @@ TEST(climate_rules_data) {
 }
 
 TEST(power_plants_burn_fuel_and_emissions_cost_favor) {
+    // (Power [GS]: the plant burns only what its region needs.)
     GameState s = coastState(20, 12, 2);
     for (Player& p : s.players) {
         p.met.assign(2, 1);
@@ -62,6 +65,7 @@ TEST(power_plants_burn_fuel_and_emissions_cost_favor) {
     s.majorsAtStart = 2;
     City& c = s.cities[0];
     c.buildings.push_back(rules().building("BUILDING_COAL_POWER_PLANT"));
+    c.buildings.push_back(rules().building("BUILDING_FACTORY"));  // needs 2 power: one Coal (4 power) burns
     std::sort(c.buildings.begin(), c.buildings.end());
     const TypeIndex coal = rules().resource("RESOURCE_COAL");
     s.players[0].stockpile[at(coal)] = 5;
@@ -203,4 +207,42 @@ TEST(climate_survives_a_save) {
     CHECK_EQ(loaded->state().droughts.size(), 1u);
     CHECK_EQ(loaded->state().setup.disasterIntensity, 3);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+TEST(power_feeds_buildings_and_a_shortfall_costs_production) {
+    GameState s = coastState(24, 12, 1);
+    addCity(s, 0, {6, 6}, true, 8);
+    addCity(s, 0, {11, 6}, false, 6);   // 5 away: within a plant's reach
+    for (City& c : s.cities) {
+        c.buildings.push_back(rules().building("BUILDING_FACTORY"));
+        std::sort(c.buildings.begin(), c.buildings.end());
+    }
+    auto unpowered = Game::fromScenario(rules(), s);
+    sovtest::endTurns(*unpowered, 1);
+    const City& u = unpowered->state().cities[1];
+    CHECK_EQ(u.powerDemand, 2);
+    CHECK_EQ(u.powerSupply, 0);
+    const Fixed weak = unpowered->cityReport(u.id).yields[static_cast<size_t>(YieldType::Production)];
+    // A Coal plant in the capital powers both cities; the Factory's +3 when powered and no penalty.
+    s.cities[0].buildings.push_back(rules().building("BUILDING_COAL_POWER_PLANT"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].stockpile[at(rules().resource("RESOURCE_COAL"))] = 10;
+    auto powered = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*powered, 1);
+    const City& p = powered->state().cities[1];
+    CHECK(p.powerSupply >= p.powerDemand);
+    CHECK_EQ(powered->state().players[0].stockpile[at(rules().resource("RESOURCE_COAL"))], 8);  // one Coal per city
+    CHECK(powered->cityReport(p.id).yields[static_cast<size_t>(YieldType::Production)] > weak);
+}
+
+TEST(renewables_give_free_power) {
+    GameState s = coastState(24, 12, 1);
+    addCity(s, 0, {6, 6}, true, 8);
+    s.cities[0].buildings.push_back(rules().building("BUILDING_FOOD_MARKET"));  // needs 1
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.plot({7, 6}).improvement = rules().improvement("IMPROVEMENT_SOLAR_FARM");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*g, 1);
+    CHECK_EQ(g->state().cities[0].powerSupply, 2);
+    CHECK_EQ(g->state().co2, 0);
 }

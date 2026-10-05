@@ -830,8 +830,12 @@ void build(View& v, UnitId id) {
         return w;
     };
     if (worth(u->pos) >= 0) {
-        // The resource's own improvement comes first in the list.
+        // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+        const City* home = s.plot(u->pos).city == kNoCity ? nullptr : s.city(s.plot(u->pos).city);
+        if (home && home->powerSupply < home->powerDemand) {
+            std::stable_partition(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].powerProvided > 0; });
+        }
         if (v.game.submit(Command::buildImprovement(v.me, id, options.front())) == CommandError::Ok) return;
     }
     std::optional<Hex> best;
@@ -1308,6 +1312,18 @@ void production(View& v) {
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
+                    // Power [GS]: a plant where cities in reach go short and its fuel is on hand.
+                    if (b.burnsResource != kNone) {
+                        int shortfall = 0;
+                        for (CityId o : v.cities) {
+                            const City& oc = *s.city(o);
+                            if (s.grid.distance(oc.pos, c.pos) <= 6) shortfall += std::max(0, oc.powerDemand - oc.powerSupply);
+                        }
+                        const int fuel = s.players[at(v.me)].stockpile[at(b.burnsResource)];
+                        value += shortfall > 0 && fuel > 0 ? 300 + shortfall * 20 : 0;
+                    }
+                    // Buildings that need power are worth less where none will come.
+                    if (b.requiredPower > 0 && c.powerSupply < c.powerDemand + b.requiredPower) value = value * 2 / 3;
                     for (const auto& slot : b.greatWorkSlots) value += 10 * slot.second;
                     if (b.wonder && minor) {
                         value = 0;
@@ -1383,8 +1399,9 @@ void production(View& v) {
                             case ProjectEffectKind::RepairWalls: value = std::max(value, threatened ? 600 : 80); break;
                             case ProjectEffectKind::Favor:
                             case ProjectEffectKind::RemoveCo2: {
+                                // Only once the world is warming and this civ is a big part of why.
                                 const int64_t world = s.co2;
-                                value = std::max(value, world > 0 && s.players[at(v.me)].co2 * 4 > world ? 250 : 0);
+                                value = std::max(value, g.climateChangePoints() >= 1 && s.players[at(v.me)].co2 * 4 > world ? 250 : 0);
                                 break;
                             }
                             default: break;

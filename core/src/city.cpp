@@ -190,6 +190,9 @@ CityReport Game::cityReport(CityId id) const {
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
+    if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
+        for (TypeIndex bi : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
+    }
     {
         const CivAbility& ab = civAbility(c->owner);
         for (TypeIndex b : c->buildings) {
@@ -238,6 +241,9 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // A city short of power loses production, up to POWER_MAX_PRODUCTION_MODIFIER_PENALTY (09: Power).
+        if (i == idx(YieldType::Production) && c->powerDemand > c->powerSupply)
+            pct += rules_->globalInt("POWER_MAX_PRODUCTION_MODIFIER_PENALTY") * (c->powerDemand - c->powerSupply) / c->powerDemand;
         // Leader ability: while at peace with every major civ (Edo Peace).
         if (civAbility(c->owner).peaceYieldPercent[i] > Fixed()) {
             bool peace = true;
@@ -268,6 +274,13 @@ CityReport Game::cityReport(CityId id) const {
                 mountains += rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain ? 1 : 0;
             }
             rep.yields[idx(YieldType::Food)] += Fixed::fromInt(b.foodPerAdjacentMountain * std::min(2, mountains));
+        }
+    }
+    // Power [GS] (09: Power): fully powered buildings give their bonus.
+    if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
+        for (TypeIndex bi : c->buildings) {
+            const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
+            if (b.requiredPower > 0) for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += b.poweredYields[i];
         }
     }
     // Civ abilities (leaders-and-art-style): culture per suzerainty and yields per governor title in

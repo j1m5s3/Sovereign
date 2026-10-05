@@ -259,6 +259,7 @@ struct ImprovementType {
     YieldType adjacentYield = YieldType::Food;
     int adjacentAmount = 0;
     std::string adjacentImprovementId;  // (loading only)
+    int powerProvided = 0;   // free power to its city (renewables, 09: Power)
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -319,6 +320,13 @@ struct BuildingType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;   // (loading only)
     int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
+    // Power [GS] (09: Power).
+    int requiredPower = 0;             // power it needs to work fully
+    Yields poweredYields{};            // extra yields while its city is fully powered
+    int poweredAmenities = 0;
+    TypeIndex burnsResource = kNone;   // a power plant: burns this, `powerPerResource` power each
+    int powerPerResource = 0;
+    int powerProvided = 0;             // free power to its city (Hydroelectric Dam)
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first
     bool needsRiver = false;

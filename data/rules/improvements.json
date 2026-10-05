@@ -149,7 +149,8 @@
    "validFeatures": [
     "FEATURE_GEOTHERMAL_FISSURE"
    ],
-   "validResources": []
+   "validResources": [],
+   "powerProvided": 4
   },
   {
    "id": "IMPROVEMENT_LUMBER_MILL",
@@ -262,7 +263,8 @@
     "TERRAIN_COAST"
    ],
    "validFeatures": [],
-   "validResources": []
+   "validResources": [],
+   "powerProvided": 2
   },
   {
    "id": "IMPROVEMENT_OIL_WELL",
@@ -459,7 +461,8 @@
     "TERRAIN_TUNDRA"
    ],
    "validFeatures": [],
-   "validResources": []
+   "validResources": [],
+   "powerProvided": 2
   },
   {
    "id": "IMPROVEMENT_WIND_FARM",
@@ -477,7 +480,8 @@
     "TERRAIN_TUNDRA_HILLS"
    ],
    "validFeatures": [],
-   "validResources": []
+   "validResources": [],
+   "powerProvided": 2
   }
  ]
 }

@@ -1606,8 +1606,12 @@ void ASovPlayerController::UpdatePanel()
 			G.cityMaxHp(), *Y(sov::YieldType::Food), *Y(sov::YieldType::Production), *Y(sov::YieldType::Gold), *Y(sov::YieldType::Science),
 			*Y(sov::YieldType::Culture)));
 		const sov::LoyaltyLevel* Level = G.loyaltyLevel(*C);
-		L.Add(FString::Printf(TEXT("Loyalty %d (%+d per turn)%s"), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()),
-			Level ? *FString::Printf(TEXT("   %s"), *Str(Level->id)) : TEXT("")));
+		L.Add(FString::Printf(TEXT("Loyalty %d (%+d per turn)%s%s"), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()),
+			Level ? *FString::Printf(TEXT("   %s"), *Str(Level->id)) : TEXT(""),
+			// Power [GS] (09: Power): what the city's buildings need and what reaches it.
+			C->powerDemand > 0 || C->powerSupply > 0
+				? *FString::Printf(TEXT("   Power %d/%d%s"), C->powerSupply, C->powerDemand, C->powerSupply < C->powerDemand ? TEXT(" (short)") : TEXT(""))
+				: TEXT("")));
 		// Religion here (06): the majority, and every faith with followers.
 		{
 			const int32 Maj = G.cityMajorityReligion(*C);

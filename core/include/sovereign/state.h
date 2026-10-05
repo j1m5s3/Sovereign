@@ -246,6 +246,7 @@ struct SOV_API City {
     std::vector<GreatWork> greatWorks;  // in the city's buildings' slots (07: Great Works)
     std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
     std::vector<CityWonder> wonders;    // wonder plots, reserved when building starts (03: Wonders)
+    int powerDemand = 0, powerSupply = 0;  // this turn's power [GS] (09: Power), set as its owner's turn begins
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
