@@ -820,7 +820,82 @@ void ASovPlayerController::LookAround(float DeltaTime)
 	SetControlRotation(Look);
 }
 
-void ASovPlayerController::StartBattle()
+sov::PlayerId ASovPlayerController::BattleOpponent() const
+{
+	const USovGameSubsystem* Sub = Subsystem();
+	if (!Sub || !Sub->IsRunning() || Sub->GetSession().NetMode() == ESovNet::Local || !Sub->GetGame().battlePending())
+	{
+		return sov::kNoPlayer;
+	}
+	const sov::GameState& S = Sub->GetGame().state();
+	const sov::PendingBattle& B = S.pendingBattle;
+	const sov::Unit* A = S.unit(B.attacker);
+	const sov::Unit* D = S.unit(B.defender);
+	const sov::City* C = S.city(B.city);
+	if (!A || (!D && !C))
+	{
+		return sov::kNoPlayer;
+	}
+	const sov::PlayerId Other = A->owner == B.liveFor ? (D ? D->owner : C->owner) : A->owner;
+	return Other != B.liveFor && S.players[static_cast<size_t>(Other)].human ? Other : sov::kNoPlayer;
+}
+
+void ASovPlayerController::HandleBattleRelays()
+{
+	USovGameSubsystem* Sub = Subsystem();
+	if (!Sub || Sub->GetSession().NetMode() == ESovNet::Local)
+	{
+		return;
+	}
+	FSovSession& Session = Sub->GetSessionMut();
+	for (const TPair<int32, std::vector<uint8_t>>& R : Session.TakeRelays())
+	{
+		const std::vector<uint8_t>& M = R.Value;
+		if (M.empty()) continue;
+		const sov::PlayerId From = static_cast<sov::PlayerId>(R.Key);
+		switch (M[0])
+		{
+			case 1:  // a snapshot of the field, for the side watching
+				if (InBattle() && Sim.RemoteView() && From == BattlePeer)
+				{
+					FSovBattleSnapshot Snap;
+					if (Snap.Decode(std::vector<uint8_t>(M.begin() + 1, M.end()))) Sim.ApplySnapshot(Snap);
+				}
+				break;
+			case 2:  // the other side's player takes command of their men
+				if (InBattle() && !Sim.RemoteView())
+				{
+					BattlePeer = From;
+					Sim.SetRemoteEnemy(true);
+					Sub->LastMessage = FString::Printf(TEXT("%s takes command of their men."),
+						UTF8_TO_TCHAR(Sub->GetGame().state().players[static_cast<size_t>(From)].leaderName.c_str()));
+				}
+				else if (!InBattle())
+				{
+					PendingJoin = From;
+				}
+				break;
+			case 3:  // an order for the remote side's squads
+				if (InBattle() && !Sim.RemoteView() && From == BattlePeer && M.size() >= 3)
+				{
+					const int32 Squad = static_cast<int8>(M[1]);
+					const int32 Order = FMath::Clamp<int32>(M[2], 0, sov::battle::kOrders - 1);
+					Sim.SetOrder(1 - Sim.GetSpec().HumanSide, static_cast<sov::battle::Order>(Order), Squad < 0 ? -1 : FMath::Min(Squad, 2));
+				}
+				break;
+			case 4:  // they leave: the trained AI leads their men again
+				if (InBattle() && !Sim.RemoteView() && From == BattlePeer)
+				{
+					Sim.SetRemoteEnemy(false);
+					BattlePeer = sov::kNoPlayer;
+				}
+				break;
+			default: break;
+		}
+	}
+}
+
+void ASovPlayerController::StartBattle(bool bRemoteView)
 {
 	USovGameSubsystem* Sub = Subsystem();
 	const sov::Game& G = Sub->GetGame();
@@ -834,7 +909,10 @@ void ASovPlayerController::StartBattle()
 		return;
 	}
 	// The game autosaves when a live battle starts (engine doc).
-	Sub->SaveGame(TEXT("autosave"));
+	if (!bRemoteView)
+	{
+		Sub->SaveGame(TEXT("autosave"));
+	}
 	const sov::Unit* L = G.state().unit(B.leader);
 	const sov::Rules& R = G.rules();
 	FSovBattleSpec Spec;
@@ -867,7 +945,25 @@ void ASovPlayerController::StartBattle()
 	}
 	Spec.Seed = G.state().turn * 7919 + B.attacker;
 	Spec.TimeLimit = 180.f;
-	Sim.Start(Spec, FSovBattleSim::TrainedPolicy());
+	BattlePeer = sov::kNoPlayer;
+	SnapshotTimer = 0.f;
+	if (bRemoteView)
+	{
+		// Another machine runs this battle: we see its snapshots and command our own squads.
+		Sim.StartRemoteView(Spec);
+		BattlePeer = B.liveFor;
+		Sub->GetSessionMut().SendRelay(BattlePeer, {2});
+	}
+	else
+	{
+		Sim.Start(Spec, FSovBattleSim::TrainedPolicy());
+		if (PendingJoin != sov::kNoPlayer && PendingJoin == BattleOpponent())
+		{
+			BattlePeer = PendingJoin;
+			Sim.SetRemoteEnemy(true);
+		}
+	}
+	PendingJoin = sov::kNoPlayer;
 	BattleSquad = -1;
 	Outcome = FSovBattleResult();
 	bBattleSent = false;
@@ -887,12 +983,44 @@ void ASovPlayerController::StartBattle()
 	Possess(Walker);
 	SetControlRotation(FRotator(-20.f, Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
 	Chooser = EChooser::None;
-	Sub->LastMessage = TEXT("To battle! WASD move, left click or F strike, Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc settle now.");
+	Sub->LastMessage = bRemoteView
+		? TEXT("You command your men in a battle your rival fights live: Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc leave them to your generals.")
+		: TEXT("To battle! WASD move, left click or F strike, Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc settle now.");
 }
 
 void ASovPlayerController::UpdateBattle(float DeltaTime)
 {
 	LookAround(DeltaTime);
+	HandleBattleRelays();
+	if (Sim.RemoteView())
+	{
+		USovGameSubsystem* Sub = Subsystem();
+		FSovSession& Session = Sub->GetSessionMut();
+		const int32 Side = Sim.GetSpec().HumanSide;
+		auto SendOrder = [&](int32 Squad, sov::battle::Order Order) {
+			Session.SendRelay(BattlePeer, {3, static_cast<uint8_t>(static_cast<int8>(Squad)), static_cast<uint8_t>(Order)});
+		};
+		if (WasInputKeyJustPressed(EKeys::Tab)) SendOrder(-1, Sim.Charging(Side) ? sov::battle::Order::Hold : sov::battle::Order::Advance);
+		const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
+		for (int32 k = 0; k < 4; ++k)
+		{
+			if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+		}
+		const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
+		for (int32 k = 0; k < sov::battle::kOrders; ++k)
+		{
+			if (WasInputKeyJustPressed(OrderKeys[k])) SendOrder(BattleSquad, static_cast<sov::battle::Order>(k));
+		}
+		Battle->Sync(Sim);
+		// The battle ends when its result arrives in the game; Esc hands our men back to the AI.
+		if (!Sub->GetGame().battlePending() || WasInputKeyJustPressed(EKeys::Escape))
+		{
+			if (Sub->GetGame().battlePending()) Session.SendRelay(BattlePeer, {4});
+			Sub->LastMessage = Sub->GetGame().battlePending() ? TEXT("Your generals lead your men.") : TEXT("The battle is over.");
+			ExitBattle();
+		}
+		return;
+	}
 	if (bBattleSent)
 	{
 		BattleExitTimer -= DeltaTime;
@@ -926,6 +1054,16 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);
+	// Online: the other side's player sees the field ten times a second.
+	SnapshotTimer += DeltaTime;
+	if (BattlePeer != sov::kNoPlayer && (SnapshotTimer >= 0.1f || Sim.Finished()))
+	{
+		SnapshotTimer = 0.f;
+		std::vector<uint8_t> Msg = {1};
+		const std::vector<uint8_t> Body = Sim.Snapshot().Encode();
+		Msg.insert(Msg.end(), Body.begin(), Body.end());
+		Subsystem()->GetSessionMut().SendRelay(BattlePeer, Msg);
+	}
 	if (Sim.LeaderIndex() != INDEX_NONE)
 	{
 		const FSovSoldier& Me3 = Sim.Soldiers()[Sim.LeaderIndex()];
@@ -1088,6 +1226,12 @@ void ASovPlayerController::HandleOrders()
 		{
 			if (WasInputKeyJustPressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
 			else if (WasInputKeyJustPressed(EKeys::B)) StartBattle();
+		}
+		else if (BattleOpponent() == Me())
+		{
+			// Online: the other side's player may command their men in the live battle, or settle it.
+			if (WasInputKeyJustPressed(EKeys::B)) StartBattle(true);
+			else if (WasInputKeyJustPressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
 		}
 		return;
 	}
@@ -1353,6 +1497,11 @@ void ASovPlayerController::UpdatePanel()
 			}
 		}
 	}
+	if (G.battlePending() && G.state().pendingBattle.liveFor != Me() && BattleOpponent() == Me())
+	{
+		L.Add(FString::Printf(TEXT("BATTLE! %s fights your army live. B: take command of your men   R: settle it by the numbers   (otherwise your generals lead them)"),
+			UTF8_TO_TCHAR(S.players[static_cast<size_t>(G.state().pendingBattle.liveFor)].leaderName.c_str())));
+	}
 	if (G.battlePending() && G.state().pendingBattle.liveFor == Me())
 	{
 		const sov::PendingBattle& Bt = G.state().pendingBattle;
@@ -1402,6 +1551,10 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 			Hud->PanelLines.Reset();
 		}
 		return;
+	}
+	if (!InBattle())
+	{
+		HandleBattleRelays();
 	}
 	if (InDiplomacy())
 	{

@@ -260,6 +260,28 @@ TEST(chat_reaches_everyone) {
     CHECK_EQ(host.takeNotices().back(), std::string("Ann: Peace, friends?"));
 }
 
+TEST(relays_reach_the_seat_they_are_for) {
+    LoopbackListener net;
+    Host host(rules(), fourSeats(), net, "Host");
+    Client ann(rules(), net.connect(), "Ann");
+    Client bob(rules(), net.connect(), "Bob");
+    pump(host, {&ann, &bob});
+    ann.sendRelay(2, {1, 2, 3});  // to Bob, through the host
+    ann.sendRelay(0, {9});        // to the host's own seat
+    host.sendRelay(1, {7, 7});    // the host to Ann
+    pump(host, {&ann, &bob});
+    const auto atBob = bob.takeRelays();
+    REQUIRE(atBob.size() == 1u);
+    CHECK_EQ(atBob[0].first, 1);
+    CHECK(atBob[0].second == std::vector<uint8_t>({1, 2, 3}));
+    const auto atHost = host.takeRelays();
+    REQUIRE(atHost.size() == 1u);
+    CHECK(atHost[0].first == 1 && atHost[0].second == std::vector<uint8_t>({9}));
+    const auto atAnn = ann.takeRelays();
+    REQUIRE(atAnn.size() == 1u);
+    CHECK_EQ(atAnn[0].first, 0);
+}
+
 TEST(tcp_links_carry_a_game) {
     TcpListener listener(0, "127.0.0.1");
     REQUIRE(listener.ok());

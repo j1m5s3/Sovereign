@@ -72,21 +72,30 @@ void Host::welcome(Peer& peer) {
     peer.link->send(encodeMessage(m));
 }
 
-bool Host::start(std::string* error) {
-    if (game_) return true;
+GameSetup Host::lobbySetup() const {
     GameSetup s = setup_;
     // Seats nobody claimed are the AI's for good.
-    for (size_t i = 0; i < s.players.size(); ++i) {
-        s.players[i].human = seats_[i].human && seats_[i].connected;
-        seats_[i].human = s.players[i].human;
-    }
+    for (size_t i = 0; i < s.players.size(); ++i) s.players[i].human = seats_[i].human && seats_[i].connected;
+    return s;
+}
+
+bool Host::start(std::string* error) {
+    if (game_) return true;
+    const GameSetup s = lobbySetup();
     std::string err;
-    game_ = Game::create(rules_, s, &err);
-    if (!game_) {
+    auto g = Game::create(rules_, s, &err);
+    if (!g) {
         if (error) *error = err;
         return false;
     }
     setup_ = s;
+    return start(std::move(g));
+}
+
+bool Host::start(std::unique_ptr<Game> game) {
+    if (game_ || !game) return game_ != nullptr;
+    game_ = std::move(game);
+    for (size_t i = 0; i < seats_.size() && i < game_->state().players.size(); ++i) seats_[i].human = game_->state().players[i].human;
     sent_ = game_->log().size();
     lastTurn_ = game_->state().turn;
     turnHashes_[lastTurn_] = game_->stateHash();
@@ -201,6 +210,22 @@ void Host::handle(Peer& peer, const Message& m) {
             ++resyncs_;
             welcome(peer);
             return;
+        case MsgType::Relay: {
+            // Passed on to the seat it is for (or kept, when that is the host's own).
+            const PlayerId to = static_cast<PlayerId>(m.a);
+            if (to == hostSeat_) {
+                relays_.push_back({peer.seat, m.blob});
+                return;
+            }
+            Message r;
+            r.type = MsgType::Relay;
+            r.a = peer.seat;
+            r.blob = m.blob;
+            for (Peer& p : peers_) {
+                if (p.seat == to && p.link->connected()) p.link->send(encodeMessage(r));
+            }
+            return;
+        }
         case MsgType::Chat: {
             Message c;
             c.type = MsgType::Chat;
@@ -215,11 +240,41 @@ void Host::handle(Peer& peer, const Message& m) {
     }
 }
 
+void Host::sendRelay(PlayerId to, const std::vector<uint8_t>& blob) {
+    Message r;
+    r.type = MsgType::Relay;
+    r.a = hostSeat_;
+    r.blob = blob;
+    for (Peer& p : peers_) {
+        if (p.seat == to && p.link->connected()) p.link->send(encodeMessage(r));
+    }
+}
+
+std::vector<std::pair<PlayerId, std::vector<uint8_t>>> Host::takeRelays() {
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> out;
+    out.swap(relays_);
+    return out;
+}
+
 void Host::playAiSeats() {
     if (!game_ || game_->gameOver()) return;
-    // A live battle for a seat nobody can play is settled the Civ way.
+    // A live battle for a seat nobody can play is settled the Civ way, and so is one its player
+    // leaves waiting past the timeout (the host settles it in that player's name, as they could).
     if (game_->battlePending()) {
         const PlayerId live = game_->state().pendingBattle.liveFor;
+        const auto now = std::chrono::steady_clock::now();
+        if (battleSeenAt_ != game_->log().size()) {
+            battleSeenAt_ = game_->log().size();
+            battleSince_ = now;
+        }
+        const bool late = liveBattleTimeout_ > 0 && now - battleSince_ > std::chrono::seconds(liveBattleTimeout_);
+        if (late && live != kNoPlayer) {
+            notice("The live battle took too long; it is settled by the numbers.");
+            game_->submit(Command::autoResolveBattle(live));
+            noteTurn();
+            sendNew();
+            return;
+        }
         if (live == kNoPlayer || aiPlays(live)) {
             game_->submit(Command::autoResolveBattle(live == kNoPlayer ? game_->state().currentPlayer : live));
             noteTurn();

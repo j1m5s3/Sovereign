@@ -8,6 +8,7 @@
 // (loopback here, TCP in tcp.h, the engine's or Steam's in Unreal).
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -64,6 +65,7 @@ enum class MsgType : uint8_t {
     Hash,       // client: the state hash (b) as world turn a began
     Resync,     // client: my game no longer matches; send me yours
     Chat,       // either: text from seat a (the host fills in the seat)
+    Relay,      // either: blob for seat a (client to host) / from seat a (host to client); never logged
 };
 
 struct SeatInfo {
@@ -98,6 +100,11 @@ public:
     // Creates the game from the setup; seats nobody claimed are played by the AI. Every peer
     // gets the game.
     bool start(std::string* error = nullptr);
+    // Starts from a game made elsewhere (a save, a prepared scenario): its players' human flags
+    // say which seats people play.
+    bool start(std::unique_ptr<Game> game);
+    // The setup with each seat's human flag as the lobby stands (people in it now).
+    GameSetup lobbySetup() const;
     bool started() const { return game_ != nullptr; }
     // The host's own command (its seat's), ordered like any other.
     CommandError submit(const Command& c);
@@ -112,6 +119,13 @@ public:
     // Whether the AI is playing this player now: an AI seat, a human seat nobody holds, or a
     // player outside the seat table (city-states).
     bool aiPlays(PlayerId seat) const;
+    // Live scene traffic between two seats (not ordered, not logged): the battle's host streams
+    // the field, the other side's player sends orders (open-gaps-review gap 1).
+    void sendRelay(PlayerId to, const std::vector<uint8_t>& blob);
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> takeRelays();  // (from, blob) sent to the host's seat
+    // A live battle nobody settles within this many seconds is settled the Civ way in its
+    // player's name (0: wait without limit). Default 300.
+    void setLiveBattleTimeout(int seconds) { liveBattleTimeout_ = seconds; }
 
 private:
     struct Peer {
@@ -142,6 +156,10 @@ private:
     int lastTurn_ = 0;
     int resyncs_ = 0;
     std::vector<std::string> notices_;
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> relays_;
+    int liveBattleTimeout_ = 300;
+    size_t battleSeenAt_ = static_cast<size_t>(-1);  // log size when the waiting battle began
+    std::chrono::steady_clock::time_point battleSince_;
 };
 
 // ---- a client
@@ -153,6 +171,8 @@ public:
     // Sends a command for the host to order; it takes effect when the host's Apply comes back.
     bool submit(const Command& c);
     void chat(const std::string& text);
+    void sendRelay(PlayerId to, const std::vector<uint8_t>& blob);
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> takeRelays();  // (from, blob)
 
     bool connected() const { return link_ && link_->connected(); }
     bool inGame() const { return game_ != nullptr; }
@@ -181,6 +201,7 @@ private:
     int resyncs_ = 0;
     bool resyncAsked_ = false;
     std::vector<std::string> notices_;
+    std::vector<std::pair<PlayerId, std::vector<uint8_t>>> relays_;
 };
 
 // For tests and tools: the commands the AI would issue for the current player of `game`,

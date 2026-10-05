@@ -80,6 +80,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	Listener.reset();
 	Mode = Setup.Net;
 	AutoStartPlayers = Setup.AutoStartPlayers;
+	Demos = Setup;
 	if (bSteam && FSovSteam::Get()) FSovSteam::Get()->LeaveLobby();
 	bSteam = Setup.bSteam;
 	LocalName = Setup.PlayerName;
@@ -179,6 +180,14 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		OutError = FString::Printf(TEXT("create: %s"), UTF8_TO_TCHAR(Error.c_str()));
 		return false;
 	}
+	ApplyDemos(Setup);
+	++Rev;
+	return true;
+}
+
+// The developer starts (-SovBattleDemo, -SovNavalDemo, -SovDiploDemo) reshape the new game in Game.
+void FSovSession::ApplyDemos(const FSovSetup& Setup)
+{
 	if (Setup.bBattleDemo && Setup.Players >= 2)
 	{
 		// A hand-made opening for trying live battles: an escorted leader meets an enemy warrior.
@@ -270,8 +279,6 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		S.deals.push_back(Gift);
 		Game = sov::Game::fromScenario(*Rules, std::move(S));
 	}
-	++Rev;
-	return true;
 }
 
 const sov::Game* FSovSession::CurrentGame() const
@@ -462,6 +469,21 @@ bool FSovSession::StartHostedGame(FString& OutError)
 		return false;
 	}
 	std::string Error;
+	if (Demos.bBattleDemo || Demos.bNavalDemo || Demos.bDiploDemo)
+	{
+		// A developer start: made here with the lobby's seats, reshaped, then handed to the host.
+		Game = sov::Game::create(*Rules, NetHost->lobbySetup(), &Error);
+		if (!Game)
+		{
+			OutError = UTF8_TO_TCHAR(Error.c_str());
+			return false;
+		}
+		ApplyDemos(Demos);
+		NetHost->start(std::move(Game));
+		Game.reset();
+		++Rev;
+		return true;
+	}
 	if (!NetHost->start(&Error))
 	{
 		OutError = UTF8_TO_TCHAR(Error.c_str());
@@ -469,6 +491,25 @@ bool FSovSession::StartHostedGame(FString& OutError)
 	}
 	++Rev;
 	return true;
+}
+
+void FSovSession::SendRelay(int32 ToSeat, const std::vector<uint8_t>& Blob)
+{
+	if (NetHost) NetHost->sendRelay(static_cast<sov::PlayerId>(ToSeat), Blob);
+	if (NetClient) NetClient->sendRelay(static_cast<sov::PlayerId>(ToSeat), Blob);
+}
+
+TArray<TPair<int32, std::vector<uint8_t>>> FSovSession::TakeRelays()
+{
+	TArray<TPair<int32, std::vector<uint8_t>>> Out;
+	if (NetHost || NetClient)
+	{
+		for (auto& R : NetHost ? NetHost->takeRelays() : NetClient->takeRelays())
+		{
+			Out.Add(TPair<int32, std::vector<uint8_t>>(R.first, std::move(R.second)));
+		}
+	}
+	return Out;
 }
 
 void FSovSession::Chat(const FString& Text)

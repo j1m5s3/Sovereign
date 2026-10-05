@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace sov
 {
@@ -108,6 +109,9 @@ public:
 	// Seat table and status for the lobby screen.
 	TArray<FString> LobbyLines() const;
 	bool UsesSteam() const { return bSteam; }
+	// Live scene traffic with another seat (not ordered, not logged).
+	void SendRelay(int32 ToSeat, const std::vector<uint8_t>& Blob);
+	TArray<TPair<int32, std::vector<uint8_t>>> TakeRelays();
 	// Steam: opens the overlay to invite friends to the lobby.
 	void InviteFriends();
 	bool StartHostedGame(FString& OutError);
@@ -126,6 +130,7 @@ public:
 
 private:
 	const sov::Game* CurrentGame() const;
+	void ApplyDemos(const FSovSetup& Setup);
 
 	std::unique_ptr<sov::Rules> Rules;
 	std::unique_ptr<sov::GameSetup> CoreSetup;
@@ -137,6 +142,7 @@ private:
 	uint64 Rev = 0;
 	bool bStalled = false;
 	int32 ViewSeat = 0;
+	FSovSetup Demos;  // the setup the session started with (its developer starts apply when hosting starts)
 	int32 AutoStartPlayers = 0;
 	bool bSteam = false;
 	FString LocalName;

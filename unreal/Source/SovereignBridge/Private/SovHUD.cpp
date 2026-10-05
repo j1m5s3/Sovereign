@@ -350,8 +350,11 @@ void ASovHUD::DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerControlle
 			 Squad >= 0 ? Picked[Squad] : TEXT("all")), 16, Y);
 	Line(TEXT("1 advance  2 hold  3 flank left  4 flank right  5 fall back  6 hunt their leader   7 8 9 pick a squad, 0 all"), 16, Y,
 		FLinearColor(0.75f, 0.75f, 0.75f));
-	Line(Sim.EnemyTrained() ? TEXT("The enemy is led by the trained battle AI.") : TEXT("The enemy charges (no trained battle AI found)."), 16, Y,
-		FLinearColor(0.75f, 0.75f, 0.75f));
+	const TCHAR* Foe = Sim.RemoteView() ? TEXT("Your rival fights this battle as their leader; you command your squads.")
+		: Sim.RemoteEnemy()             ? TEXT("Your rival commands the enemy's squads.")
+		: Sim.EnemyTrained()            ? TEXT("The enemy is led by the trained battle AI.")
+										: TEXT("The enemy charges (no trained battle AI found).");
+	Line(Foe, 16, Y, FLinearColor(0.75f, 0.75f, 0.75f));
 	if (!Sub.LastMessage.IsEmpty())
 	{
 		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.8f, 0.4f));

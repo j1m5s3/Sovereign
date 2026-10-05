@@ -43,6 +43,21 @@ struct FSovSoldier
 	bool bAlive = true;
 };
 
+// The field as the battle's host sees it, streamed to the other side's player online
+// (open-gaps-review gap 1: one machine runs the scene; the other sees it and gives orders).
+struct FSovBattleSnapshot
+{
+	float TimeLeft = 0.f;
+	int32 Alive[2] = {0, 0};
+	int32 Started[2] = {0, 0};
+	uint8 Orders[2][3] = {{0, 0, 0}, {0, 0, 0}};
+	bool bFinished = false;
+	TArray<FSovSoldier> Men;
+
+	std::vector<uint8_t> Encode() const;
+	bool Decode(const std::vector<uint8_t>& Bytes);
+};
+
 struct FSovBattleResult
 {
 	int32 ToAttacker = 0;   // HP damage to the attacking unit
@@ -65,23 +80,36 @@ public:
 	// when bStrike; with LeaderMove unset nobody is at the controls and the leader keeps to
 	// its men.
 	void Step(float Dt, TOptional<FVector2D> LeaderMove = {}, bool bStrike = false);
-	bool Finished() const { return Sim.finished(); }
+	bool Finished() const { return bRemoteView ? View.bFinished : Sim.finished(); }
 	FSovBattleResult Result() const;
 
 	const TArray<FSovSoldier>& Soldiers() const { return Men; }
-	int32 Alive(int32 Side) const { return Sim.alive(Side); }
-	int32 Started(int32 Side) const { return Sim.started(Side); }
-	float TimeLeft() const { return Sim.timeLeft(); }
-	int32 LeaderIndex() const { return Sim.humanLeader() >= 0 ? Sim.humanLeader() : INDEX_NONE; }
+	int32 Alive(int32 Side) const { return bRemoteView ? View.Alive[Side] : Sim.alive(Side); }
+	int32 Started(int32 Side) const { return bRemoteView ? View.Started[Side] : Sim.started(Side); }
+	float TimeLeft() const { return bRemoteView ? View.TimeLeft : Sim.timeLeft(); }
+	int32 LeaderIndex() const { return !bRemoteView && Sim.humanLeader() >= 0 ? Sim.humanLeader() : INDEX_NONE; }
 	const FSovBattleSpec& GetSpec() const { return Spec; }
 
 	// The human's orders to their own squads (Squad -1: all three).
 	void SetOrder(int32 Side, sov::battle::Order Order, int32 Squad = -1);
-	sov::battle::Order GetOrder(int32 Side, int32 Squad = 1) const { return Sim.order(Side, Squad); }
+	sov::battle::Order GetOrder(int32 Side, int32 Squad = 1) const
+	{
+		return bRemoteView ? static_cast<sov::battle::Order>(View.Orders[Side][FMath::Clamp(Squad, 0, 2)]) : Sim.order(Side, Squad);
+	}
 	// Tab: charge (advance) or hold, for all of a side's squads.
 	void SetCharge(int32 Side, bool bCharge) { SetOrder(Side, bCharge ? sov::battle::Order::Advance : sov::battle::Order::Hold); }
-	bool Charging(int32 Side) const { return Sim.order(Side, 1) != sov::battle::Order::Hold; }
-	bool EnemyTrained() const { return bEnemyTrained; }
+	bool Charging(int32 Side) const { return GetOrder(Side, 1) != sov::battle::Order::Hold; }
+	bool EnemyTrained() const { return bEnemyTrained && !bRemoteEnemy; }
+
+	// ---- online (the battle's host)
+	// The other side's squads take a remote player's orders instead of the trained AI's.
+	void SetRemoteEnemy(bool bRemote) { bRemoteEnemy = bRemote; }
+	bool RemoteEnemy() const { return bRemoteEnemy; }
+	FSovBattleSnapshot Snapshot() const;
+	// ---- online (the other side's player): no simulation here, only the host's snapshots.
+	void StartRemoteView(const FSovBattleSpec& InSpec);
+	void ApplySnapshot(const FSovBattleSnapshot& S);
+	bool RemoteView() const { return bRemoteView; }
 
 private:
 	void Mirror();
@@ -91,5 +119,8 @@ private:
 	sov::battle::Commander Enemy = sov::battle::Commander::fixed(sov::battle::Order::Advance);
 	sov::battle::Commander Idle = sov::battle::Commander::fixed(sov::battle::Order::Advance);  // the human's squads when nobody plays
 	bool bEnemyTrained = false;
+	bool bRemoteEnemy = false;
+	bool bRemoteView = false;
+	FSovBattleSnapshot View;
 	TArray<FSovSoldier> Men;
 };

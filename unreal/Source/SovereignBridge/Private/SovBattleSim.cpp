@@ -78,7 +78,10 @@ void FSovBattleSim::Step(float Dt, TOptional<FVector2D> LeaderMove, bool bStrike
 		return;
 	}
 	const int32 Human = Spec.HumanSide;
-	Enemy.update(Sim, 1 - Human, Dt);
+	if (!bRemoteEnemy)
+	{
+		Enemy.update(Sim, 1 - Human, Dt);
+	}
 	if (LeaderMove.IsSet())
 	{
 		sov::battle::LeaderInput In;
@@ -92,6 +95,111 @@ void FSovBattleSim::Step(float Dt, TOptional<FVector2D> LeaderMove, bool bStrike
 		Sim.step(Dt);
 	}
 	Mirror();
+}
+
+FSovBattleSnapshot FSovBattleSim::Snapshot() const
+{
+	FSovBattleSnapshot S;
+	S.TimeLeft = Sim.timeLeft();
+	S.bFinished = Sim.finished();
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		S.Alive[Side] = Sim.alive(Side);
+		S.Started[Side] = Sim.started(Side);
+		for (int32 Squad = 0; Squad < 3; ++Squad) S.Orders[Side][Squad] = static_cast<uint8>(Sim.order(Side, Squad));
+	}
+	S.Men = Men;
+	return S;
+}
+
+void FSovBattleSim::StartRemoteView(const FSovBattleSpec& InSpec)
+{
+	Spec = InSpec;
+	bRemoteView = true;
+	View = FSovBattleSnapshot();
+	View.TimeLeft = Spec.TimeLimit;
+	Men.Reset();
+}
+
+void FSovBattleSim::ApplySnapshot(const FSovBattleSnapshot& S)
+{
+	View = S;
+	Men = S.Men;
+}
+
+namespace
+{
+void PutI32(std::vector<uint8_t>& B, int32 V)
+{
+	for (int32 i = 0; i < 4; ++i) B.push_back(static_cast<uint8_t>(static_cast<uint32>(V) >> (8 * i)));
+}
+bool GetI32(const std::vector<uint8_t>& B, size_t& At, int32& V)
+{
+	if (At + 4 > B.size()) return false;
+	uint32 U = 0;
+	for (int32 i = 0; i < 4; ++i) U |= static_cast<uint32>(B[At + i]) << (8 * i);
+	V = static_cast<int32>(U);
+	At += 4;
+	return true;
+}
+}  // namespace
+
+std::vector<uint8_t> FSovBattleSnapshot::Encode() const
+{
+	// Positions and hit points in hundredths: plenty for drawing, and no float on the wire.
+	std::vector<uint8_t> B;
+	PutI32(B, FMath::RoundToInt(TimeLeft * 100.f));
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		PutI32(B, Alive[Side]);
+		PutI32(B, Started[Side]);
+		for (int32 Squad = 0; Squad < 3; ++Squad) B.push_back(Orders[Side][Squad]);
+	}
+	B.push_back(bFinished ? 1 : 0);
+	PutI32(B, Men.Num());
+	for (const FSovSoldier& M : Men)
+	{
+		PutI32(B, FMath::RoundToInt(M.Pos.X * 100.f));
+		PutI32(B, FMath::RoundToInt(M.Pos.Y * 100.f));
+		PutI32(B, FMath::RoundToInt(M.Hp * 100.f));
+		PutI32(B, FMath::RoundToInt(M.MaxHp * 100.f));
+		B.push_back(static_cast<uint8_t>(M.Side));
+		B.push_back(static_cast<uint8_t>(M.Squad + 1));
+		B.push_back(static_cast<uint8_t>((M.bLeader ? 1 : 0) | (M.bAlive ? 2 : 0)));
+	}
+	return B;
+}
+
+bool FSovBattleSnapshot::Decode(const std::vector<uint8_t>& B)
+{
+	size_t At = 0;
+	int32 V = 0;
+	if (!GetI32(B, At, V)) return false;
+	TimeLeft = V / 100.f;
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		if (!GetI32(B, At, Alive[Side]) || !GetI32(B, At, Started[Side]) || At + 3 > B.size()) return false;
+		for (int32 Squad = 0; Squad < 3; ++Squad) Orders[Side][Squad] = FMath::Min<uint8>(B[At++], sov::battle::kOrders - 1);
+	}
+	if (At + 1 > B.size()) return false;
+	bFinished = B[At++] != 0;
+	int32 N = 0;
+	if (!GetI32(B, At, N) || N < 0 || N > 4096) return false;
+	Men.SetNum(N);
+	for (FSovSoldier& M : Men)
+	{
+		int32 X = 0, Y = 0, Hp = 0, MaxHp = 0;
+		if (!GetI32(B, At, X) || !GetI32(B, At, Y) || !GetI32(B, At, Hp) || !GetI32(B, At, MaxHp) || At + 3 > B.size()) return false;
+		M.Pos = FVector2D(X / 100.f, Y / 100.f);
+		M.Hp = Hp / 100.f;
+		M.MaxHp = MaxHp / 100.f;
+		M.Side = B[At++] & 1;
+		M.Squad = static_cast<int32>(B[At++]) - 1;
+		const uint8 Flags = B[At++];
+		M.bLeader = (Flags & 1) != 0;
+		M.bAlive = (Flags & 2) != 0;
+	}
+	return At == B.size();
 }
 
 void FSovBattleSim::Mirror()
