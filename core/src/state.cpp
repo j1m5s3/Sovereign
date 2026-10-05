@@ -100,6 +100,9 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotTakeStance: return "CannotTakeStance";
         case CommandError::BattlePending: return "BattlePending";
         case CommandError::NoBattle: return "NoBattle";
+        case CommandError::NoGreatPerson: return "NoGreatPerson";
+        case CommandError::NotEnoughFaith: return "NotEnoughFaith";
+        case CommandError::CannotActivate: return "CannotActivate";
     }
     return "Unknown";
 }
@@ -151,6 +154,10 @@ std::string describe(const Command& c) {
         case CommandType::AutoResolveBattle: return s + "AutoResolveBattle";
         case CommandType::CityStance: return s + "CityStance city" + std::to_string(c.id) + " stance" + std::to_string(c.arg);
         case CommandType::SendAssassin: return s + "SendAssassin agent" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
+        case CommandType::PatronizeGreatPerson:
+            return s + "PatronizeGreatPerson class" + std::to_string(c.arg) + (c.arg2 ? " faith" : " gold");
+        case CommandType::PassGreatPerson: return s + "PassGreatPerson class" + std::to_string(c.arg);
+        case CommandType::ActivateGreatPerson: return s + "ActivateGreatPerson u" + std::to_string(c.id);
     }
     return s + "?";
 }

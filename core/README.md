@@ -54,6 +54,8 @@ same command must print the same hash.
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |
 | The leader: own layer, tech-gated gear, escorts, capture, barbarian safety, linked moves, succession and regicide, assassins (off-map agents), SOVEREIGN promotions and the presence aura | `src/leader.cpp` (queries on `Game`), data in `../data/rules/leader.json` |
+| Naval movement and embarkation (ships on Coast, Ocean after Cartography; land units embark after Shipbuilding) | `src/game.cpp` (`terrainCost`), `src/combat.cpp`, `src/city.cpp` |
+| Great people and Great Works: points from districts and buildings, the shared per-class timeline, recruitment, patronage, activation effects, General and Admiral auras, Great Works in building slots | `src/greatpeople.cpp`, data in `../data/rules/greatpeople.json` |
 | Loyalty, citizen pressure, loyalty levels, revolts to the Free Cities and flips back [R&F] | `src/loyalty.cpp` (queries on `Game`) |
 | Live battle contract: pending battle, expected result, BattleResult clamped to the band, auto-resolve | `src/combat.cpp` (`PendingBattle` in `include/sovereign/state.h`) |
 | Modifier evaluation | `include/sovereign/modifiers.h` |

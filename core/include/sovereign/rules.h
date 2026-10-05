@@ -246,6 +246,75 @@ struct BuildingType {
     TypeIndex districtType = kNone;  // Rules::districts; kNone while its district is not modelled
     bool meleeCannotDamageWalls = false;
     bool wallsCannotBeBypassed = false;
+    std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
+    std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
+};
+
+// Great people (07-economy-trade-great-people.md, Great People; data: great-people.md).
+struct GreatPersonClass {
+    std::string id, name;
+    TypeIndex unit = kNone;      // the unit a recruited great person is
+    TypeIndex district = kNone;  // the district that earns its points
+    int maxPerPlayer = 0;        // 0: no limit (Prophets: 1)
+};
+
+enum class GreatPersonEffectKind : uint8_t {
+    Yield = 0,          // one-time gold, faith, science or culture
+    Production,         // one-time production toward the city's current item
+    Boost,              // a Eureka or Inspiration (or the whole node if already boosted)
+    RandomBoost,        // `count` random boosts of a tree between two eras
+    PromotionXp,        // a military unit here gains enough XP for a promotion
+    Building,           // the building, free, in this city
+    Unit,               // a free unit here
+    BuildingYield,      // permanent: + yield from a building in all the player's cities
+    GreatPersonPoints,  // points toward every class
+};
+
+struct GreatPersonEffect {
+    GreatPersonEffectKind kind = GreatPersonEffectKind::Yield;
+    YieldType yield = YieldType::Gold;
+    int amount = 0;
+    bool scaled = false;      // scales with game speed
+    bool civic = false;       // Boost / RandomBoost: the civic tree
+    bool orComplete = false;  // Boost: completes the node if it is already boosted
+    TypeIndex ref = kNone;    // tech, civic, building or unit
+    int count = 0;
+    int minEra = 0, maxEra = 0;
+};
+
+struct GreatPersonAura {
+    Domain domain = Domain::Land;
+    int strength = 0;
+    int moves = 0;
+    int range = 0;
+    std::vector<int> eras;  // unit eras it helps
+};
+
+struct GreatPersonType {
+    std::string id, name;
+    TypeIndex cls = kNone;
+    int era = 0;
+    int charges = 0;
+    // Activation requirements; ones the core cannot check yet are ignored.
+    bool ownedTile = false;
+    TypeIndex district = kNone;  // must stand on a finished district of this type (City Center: the city plot)
+    bool noMilitaryUnit = false;
+    int unitDomain = -1;         // a military unit of this Domain must share the plot
+    TypeIndex missingBuilding = kNone;
+    std::vector<GreatPersonEffect> effects;
+    std::vector<std::string> untrackedEffects;  // effects of systems not built yet (shown, not applied)
+    TypeIndex greatWorkType = kNone;
+    int greatWorkCount = 0;
+    bool hasAura = false;
+    GreatPersonAura aura;
+};
+
+struct GreatWorkType {
+    std::string id;
+    YieldType yield = YieldType::Culture;
+    int amount = 0;
+    int tourism = 0;
+    std::vector<std::string> slots;  // slot types that accept it
 };
 
 // Barbarian tribes (barbarians-goody-huts.md): which units a camp releases and how bold it is.
@@ -287,6 +356,7 @@ struct DistrictType {
     bool notAdjacentToCityCenter = false;
     bool water = false;  // placed on Coast or Lake next to land (Harbor)
     std::vector<DistrictAdjacency> adjacency;
+    std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).
@@ -515,6 +585,9 @@ public:
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
     std::vector<GearType> gear;
     std::vector<Dynasty> dynasties;
+    std::vector<GreatPersonClass> greatPersonClasses;
+    std::vector<GreatPersonType> greatPeople;  // every individual, by class then era (07: Great People)
+    std::vector<GreatWorkType> greatWorkTypes;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
 
     TypeIndex terrain(const std::string& id) const;
@@ -535,6 +608,9 @@ public:
     std::vector<const Modifier*> modifiersFrom(const std::string& source) const;
     TypeIndex civ(const std::string& id) const;
     TypeIndex gearType(const std::string& id) const;
+    TypeIndex greatPersonClass(const std::string& id) const;
+    TypeIndex greatPerson(const std::string& id) const;
+    TypeIndex greatWorkType(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;

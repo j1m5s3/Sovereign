@@ -51,6 +51,7 @@ struct Unit {
     Fixed movesLeft;
     Activity activity = Activity::Awake;
     std::optional<Hex> moveTarget;  // multi-turn move order
+    TypeIndex greatPerson = kNone;  // the individual a great person unit is (07)
     bool moveOverland = false;      // the order keeps a land unit on land (no embarking)
     int xp = 0;
     int charges = 0;  // build charges left (Builders)
@@ -89,6 +90,13 @@ struct CityDistrict {
     bool complete = false;
 };
 
+// A Great Work in one of a city's building slots.
+struct GreatWork {
+    TypeIndex type = kNone;      // Rules::greatWorkTypes
+    TypeIndex building = kNone;  // the building whose slot holds it
+    TypeIndex creator = kNone;   // Rules::greatPeople
+};
+
 struct SOV_API City {
     CityId id = kNoCity;
     PlayerId owner = kNoPlayer;
@@ -120,6 +128,7 @@ struct SOV_API City {
     int benevolenceUntil = 0;      // +amenities while turn < this
     int fearUntil = 0;             // order imposed while turn < this
     int fearAfterUntil = 0;        // resentment (-amenity, assassin openings) while turn < this
+    std::vector<GreatWork> greatWorks;  // in the city's buildings' slots (07: Great Works)
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
@@ -175,6 +184,10 @@ struct Player {
     bool freeChanges = false;          // government and policies may change this turn
     std::vector<int> unitsTrained;  // per unit type, for PREVIOUS_COPIES cost progression
     std::vector<int> stockpile;     // per resource: strategic stockpile [GS]
+    std::vector<int> greatPersonPoints;      // per great person class (07)
+    std::vector<int> greatPeopleRecruited;   // per class
+    std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
+    std::vector<TypeIndex> greatPeopleActivated;  // individuals whose permanent effects apply
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
     std::vector<uint8_t> visibility;  // Visibility per plot index
@@ -239,7 +252,7 @@ struct PendingBattle {
 };
 
 // Things that happened that players should hear about (UI and AI read them; rules do not).
-enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion };
+enum class EventKind : uint8_t { AssassinKilledLeader = 1, AssassinWoundedLeader, AssassinKilled, AssassinCaptured, Rebellion, GreatPersonRecruited };
 struct GameEvent {
     int32_t turn = 0;
     EventKind kind = EventKind::AssassinKilled;
@@ -268,6 +281,7 @@ struct SOV_API GameState {
     std::vector<City> cities;   // sorted by id
     std::vector<Camp> camps;    // sorted by id
     std::vector<Agent> agents;  // sorted by id
+    std::vector<uint8_t> greatPeopleClaimed;  // per individual: recruited by someone
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;

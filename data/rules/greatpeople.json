@@ -1,0 +1,3824 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "greatPersonClasses": [
+  {
+   "id": "GREAT_PERSON_CLASS_GENERAL",
+   "name": "Great General",
+   "unit": "UNIT_GREAT_GENERAL",
+   "district": "DISTRICT_ENCAMPMENT"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_ADMIRAL",
+   "name": "Great Admiral",
+   "unit": "UNIT_GREAT_ADMIRAL",
+   "district": "DISTRICT_HARBOR"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_ENGINEER",
+   "name": "Great Engineer",
+   "unit": "UNIT_GREAT_ENGINEER",
+   "district": "DISTRICT_INDUSTRIAL_ZONE"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_MERCHANT",
+   "name": "Great Merchant",
+   "unit": "UNIT_GREAT_MERCHANT",
+   "district": "DISTRICT_COMMERCIAL_HUB"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_PROPHET",
+   "name": "Great Prophet",
+   "unit": "UNIT_GREAT_PROPHET",
+   "district": "DISTRICT_HOLY_SITE",
+   "maxPerPlayer": 1
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_SCIENTIST",
+   "name": "Great Scientist",
+   "unit": "UNIT_GREAT_SCIENTIST",
+   "district": "DISTRICT_CAMPUS"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_WRITER",
+   "name": "Great Writer",
+   "unit": "UNIT_GREAT_WRITER",
+   "district": "DISTRICT_THEATER_SQUARE"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_ARTIST",
+   "name": "Great Artist",
+   "unit": "UNIT_GREAT_ARTIST",
+   "district": "DISTRICT_THEATER_SQUARE"
+  },
+  {
+   "id": "GREAT_PERSON_CLASS_MUSICIAN",
+   "name": "Great Musician",
+   "unit": "UNIT_GREAT_MUSICIAN",
+   "district": "DISTRICT_THEATER_SQUARE"
+  }
+ ],
+ "greatPeople": [
+  {
+   "id": "GREAT_PERSON_BOUDICA",
+   "name": "Boudica",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "AdjacentBarbarianUnit"
+    ]
+   },
+   "untrackedEffects": [
+    "adjust unit owner (NewOwner=Player) for all units where within 1 tiles and unit is barbarian (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HANNIBAL_BARCA",
+   "name": "Hannibal Barca",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SUN_TZU",
+   "name": "Sun Tzu",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 1
+   },
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_TRUNG_TRAC",
+   "name": "Trung Trac",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_ENCAMPMENT"
+   },
+   "untrackedEffects": [
+    "-25% war weariness (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_THELFL_D",
+   "name": "Æthelflæd",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+2 Loyalty per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_EL_CID",
+   "name": "El Cid",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND",
+    "untracked": [
+     "UnitMilitaryFormation=Standard Military Formation"
+    ]
+   },
+   "untrackedEffects": [
+    "is formed as Corps Military Formation (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_TIMUR",
+   "name": "Timur",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Timur Bonus Experience [+25% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GUSTAVUS_ADOLPHUS",
+   "name": "Gustavus Adolphus",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_BOMBARD"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JEANNE_D_ARC",
+   "name": "Jeanne d'Arc",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "PlayerRelicSlot"
+    ]
+   },
+   "untrackedEffects": [
+    "grants 1 Relic(s) (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_AMINA",
+   "name": "Amina",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "untrackedEffects": [
+    "grants 1 Envoy(s) (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_NAPOLEON_BONAPARTE",
+   "name": "Napoleon Bonaparte",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND",
+    "untracked": [
+     "UnitMilitaryFormation=Standard Military Formation"
+    ]
+   },
+   "untrackedEffects": [
+    "is formed as Army Military Formation (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_RANI_LAKSHMIBAI",
+   "name": "Rani Lakshmibai",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_CAVALRY"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JOS_DE_SAN_MART_N",
+   "name": "José de San Martín",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+4 Loyalty per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_DANDARA",
+   "name": "Dandara",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 2,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_WARRIOR_MONK"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_MONASH",
+   "name": "John Monash",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability John Monash Bonus Experience [+75% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARINA_RASKOVA",
+   "name": "Marina Raskova",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "CompletedDistrictType=Aerodrome"
+    ]
+   },
+   "untrackedEffects": [
+    "+1 air slots (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SAMORI_TOUR",
+   "name": "Samori Touré",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_SPEC_OPS"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_TUPAC_AMARU",
+   "name": "Tupac Amaru",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "EnemyTerritory"
+    ]
+   },
+   "untrackedEffects": [
+    "grants a Musketman in each district (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_DWIGHT_EISENHOWER",
+   "name": "Dwight Eisenhower",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "untrackedEffects": [
+    "+5% Production toward military units in all your cities (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GEORGY_ZHUKOV",
+   "name": "Georgy Zhukov",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "untrackedEffects": [
+    "ability Georgy Zhukov Flanking Bonus [50% flanking bonus where Land unit] for your units"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_DOUGLAS_MACARTHUR",
+   "name": "Douglas MacArthur",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_TANK"
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Oil per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SUDIRMAN",
+   "name": "Sudirman",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+6 Loyalty per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_AHMAD_SHAH_MASSOUD",
+   "name": "Ahmad Shah Massoud",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_MODERN_AT"
+    }
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INFORMATION",
+     "ERA_FUTURE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_VIJAYA_WIMALARATNE",
+   "name": "Vijaya Wimalaratne",
+   "class": "GREAT_PERSON_CLASS_GENERAL",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "LAND"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Vijaya Wimalaratne Bonus Experience [+100% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "LAND",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INFORMATION",
+     "ERA_FUTURE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ARTEMISIA",
+   "name": "Artemisia",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GAIUS_DUILIUS",
+   "name": "Gaius Duilius",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA",
+    "untracked": [
+     "UnitMilitaryFormation=Standard Military Formation"
+    ]
+   },
+   "untrackedEffects": [
+    "is formed as Corps Military Formation (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_THEMISTOCLES",
+   "name": "Themistocles",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_QUADRIREME"
+    }
+   ],
+   "untrackedEffects": [
+    "+20% Production toward military units in all your cities"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HANNO_THE_NAVIGATOR",
+   "name": "Hanno the Navigator",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "untrackedEffects": [
+    "grants a Naval Melee unit (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_CLASSICAL",
+     "ERA_MEDIEVAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LEIF_ERIKSON",
+   "name": "Leif Erikson",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "untrackedEffects": [
+    "can enter Ocean for your units where Sea unit",
+    "ability Leif Erikson [+1 sight] for your units"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_RAJENDRA_CHOLA",
+   "name": "Rajendra Chola",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "untrackedEffects": [
+    "ability Rajendra Chola [+3 Combat Strength in combat] for your units"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ZHENG_HE",
+   "name": "Zheng He",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_HARBOR"
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_TRADER"
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Trade Route capacity (one-time)",
+    "+2 Gold for each trade route other civs send here (one-time)",
+    "trade routes from other civs give them +2 Gold (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HIMERIOS",
+   "name": "Himerios",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Himerios Bonus Experience [+25% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MEDIEVAL",
+     "ERA_RENAISSANCE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FRANCIS_DRAKE",
+   "name": "Francis Drake",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_PRIVATEER"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Francis Drake Plunder Bonus [+50% pillage/plunder yields] for your units"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SANTA_CRUZ",
+   "name": "Santa Cruz",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA",
+    "untracked": [
+     "UnitMilitaryFormation=Standard Military Formation"
+    ]
+   },
+   "untrackedEffects": [
+    "is formed as Army Military Formation (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_YI_SUN_SIN",
+   "name": "Yi Sun-sin",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_IRONCLAD"
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Coal per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FERDINAND_MAGELLAN",
+   "name": "Ferdinand Magellan",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "VisibleLuxury"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 300,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grants 1 of the resource on the unit's tile (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_RENAISSANCE",
+     "ERA_INDUSTRIAL"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CHING_SHIH",
+   "name": "Ching Shih",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 500,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "ability Ching Shih Plunder Bonus [+60% pillage/plunder yields] for your units"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HORATIO_NELSON",
+   "name": "Horatio Nelson",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_HARBOR"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_LIGHTHOUSE"
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_SHIPYARD"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Horatio Nelson Flanking Bonus [50% flanking bonus] for your units where Sea unit"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LASKARINA_BOUBOULINA",
+   "name": "Laskarina Bouboulina",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Laskarina Bouboulina Bonus Experience [+50% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INDUSTRIAL",
+     "ERA_MODERN"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FRANZ_VON_HIPPER",
+   "name": "Franz von Hipper",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_BATTLESHIP"
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Coal per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JOAQUIM_MARQUES_LISBOA",
+   "name": "Joaquim Marques Lisboa",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "untrackedEffects": [
+    "-25% war weariness (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_TOGO_HEIHACHIRO",
+   "name": "Togo Heihachiro",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_HARBOR"
+   },
+   "untrackedEffects": [
+    "+6 Loyalty per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MATTHEW_PERRY",
+   "name": "Matthew Perry",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "CityStateTerritory"
+    ]
+   },
+   "untrackedEffects": [
+    "become city suzerain (RemoveOthers=yes) (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_MODERN",
+     "ERA_ATOMIC"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CHESTER_NIMITZ",
+   "name": "Chester Nimitz",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "noMilitaryUnit": true
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_SUBMARINE"
+    }
+   ],
+   "untrackedEffects": [
+    "+20% Production toward military units in all your cities",
+    "+1 Oil per turn (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GRACE_HOPPER",
+   "name": "Grace Hopper",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "untrackedEffects": [
+    "grants 2 random technology (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SERGEI_GORSHKOV",
+   "name": "Sergei Gorshkov",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Sergey Gorshkov Bonus Experience [+100% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_ATOMIC",
+     "ERA_INFORMATION"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CLANCY_FERNANDO",
+   "name": "Clancy Fernando",
+   "class": "GREAT_PERSON_CLASS_ADMIRAL",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "unitDomain": "SEA"
+   },
+   "effects": [
+    {
+     "kind": "PROMOTION_XP"
+    }
+   ],
+   "untrackedEffects": [
+    "ability Clancy Fernando Bonus Experience [+200% combat XP] (one-time)"
+   ],
+   "aura": {
+    "domain": "SEA",
+    "strength": 5,
+    "moves": 1,
+    "range": 2,
+    "eras": [
+     "ERA_INFORMATION",
+     "ERA_FUTURE"
+    ]
+   }
+  },
+  {
+   "id": "GREAT_PERSON_BI_SHENG",
+   "name": "Bi Sheng",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "effects": [
+    {
+     "kind": "BOOST",
+     "ref": "TECH_PRINTING",
+     "orComplete": false
+    }
+   ],
+   "untrackedEffects": [
+    "+1 district capacity (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ISIDORE_OF_MILETUS",
+   "name": "Isidore of Miletus",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 2,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteWonder"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "PRODUCTION",
+     "amount": 215
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JAMES_OF_ST_GEORGE",
+   "name": "James of St. George",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 3,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER",
+    "missingBuilding": "BUILDING_MEDIEVAL_WALLS"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_MEDIEVAL_WALLS"
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_ANCIENT_WALLS"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_IMHOTEP",
+   "name": "Imhotep",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 2,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteWonder"
+    ]
+   },
+   "untrackedEffects": [
+    "one-time 350 (x game speed) Production where plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time)",
+    "one-time 175 (x game speed) Production where NOT plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_FILIPPO_BRUNELLESCHI",
+   "name": "Filippo Brunelleschi",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 2,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteWonder"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "PRODUCTION",
+     "amount": 315
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_LEONARDO_DA_VINCI",
+   "name": "Leonardo da Vinci",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MODERN",
+     "maxEra": "ERA_MODERN"
+    },
+    {
+     "kind": "BUILDING_YIELD",
+     "building": "BUILDING_WORKSHOP",
+     "yield": "CULTURE",
+     "amount": 3
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MIMAR_SINAN",
+   "name": "Mimar Sinan",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "culture bomb when Industrial Zone is built (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ADA_LOVELACE",
+   "name": "Ada Lovelace",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "effects": [
+    {
+     "kind": "BOOST",
+     "ref": "TECH_COMPUTERS",
+     "orComplete": false
+    }
+   ],
+   "untrackedEffects": [
+    "+1 district capacity (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_GUSTAVE_EIFFEL",
+   "name": "Gustave Eiffel",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 2,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteWonder"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "PRODUCTION",
+     "amount": 480
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JAMES_WATT",
+   "name": "James Watt",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING_YIELD",
+     "building": "BUILDING_FACTORY",
+     "yield": "PRODUCTION",
+     "amount": 2
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_FACTORY"
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_WORKSHOP"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ALVAR_AALTO",
+   "name": "Alvar Aalto",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+1 Appeal (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_NIKOLA_TESLA",
+   "name": "Nikola Tesla",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "untrackedEffects": [
+    "adjust district extra regional yield (Amount=2, YieldType=Production) (one-time)",
+    "+3 regional range (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ROBERT_GODDARD",
+   "name": "Robert Goddard",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "effects": [
+    {
+     "kind": "BOOST",
+     "ref": "TECH_ROCKETRY",
+     "orComplete": false
+    }
+   ],
+   "untrackedEffects": [
+    "+20% Production toward space race projects in all your cities"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_SHAH_JAH_N",
+   "name": "Shah Jahān",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteWonder"
+    ]
+   },
+   "untrackedEffects": [
+    "purchase production in city (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_ROEBLING",
+   "name": "John Roebling",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_ATOMIC",
+   "charges": 2,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+1 Amenity per Great Person (one-time)",
+    "+2 Housing per Great Person (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JANE_DREW",
+   "name": "Jane Drew",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+3 Amenity per Great Person (one-time)",
+    "+4 Housing per Great Person (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_SERGEI_KOROLEV",
+   "name": "Sergei Korolev",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteSpaceRaceProject",
+     "CompletedDistrictType=Spaceport"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "PRODUCTION",
+     "amount": 1500
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_CHARLES_CORREA",
+   "name": "Charles Correa",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CITY_CENTER"
+   },
+   "untrackedEffects": [
+    "+2 Appeal (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOSEPH_PAXTON",
+   "name": "Joseph Paxton",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "CompletedDistrictType=Entertainment Complex"
+    ]
+   },
+   "untrackedEffects": [
+    "adjust district extra regional entertainment (Amount=1) (one-time)",
+    "+3 regional range (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_WERNHER_VON_BRAUN",
+   "name": "Wernher von Braun",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "CompletedDistrictType=Spaceport"
+    ]
+   },
+   "untrackedEffects": [
+    "+100% Production toward space race projects in all your cities"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_KENZO_TANGE",
+   "name": "Kenzo Tange",
+   "class": "GREAT_PERSON_CLASS_ENGINEER",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true
+   },
+   "untrackedEffects": [
+    "Tourism equal to 100% of the district's Culture adjacency for this city's districts (one-time)",
+    "Tourism equal to 50% of the district's Faith adjacency for this city's districts (one-time)",
+    "Tourism equal to 50% of the district's Gold adjacency for this city's districts (one-time)",
+    "Tourism equal to 100% of the district's Production adjacency for this city's districts (one-time)",
+    "Tourism equal to 100% of the district's Science adjacency for this city's districts (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_COLAEUS",
+   "name": "Colaeus",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "VisibleLuxury"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "FAITH",
+     "amount": 100,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grants 1 of the resource on the unit's tile (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MARCUS_LICINIUS_CRASSUS",
+   "name": "Marcus Licinius Crassus",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_CLASSICAL",
+   "charges": 3,
+   "requires": {
+    "untracked": [
+     "UnownedTile",
+     "AdjacentOwnedTile"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 60,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grant plot (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ZHANG_QIAN",
+   "name": "Zhang Qian",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+1 Trade Route capacity (one-time)",
+    "+2 Gold for each trade route other civs send here (one-time)",
+    "trade routes from other civs give them +2 Gold (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MARCO_POLO",
+   "name": "Marco Polo",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_TRADER"
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Trade Route capacity (one-time)",
+    "+2 Gold for each trade route other civs send here (one-time)",
+    "trade routes from other civs give them +2 Gold (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_PIERO_DE_BARDI",
+   "name": "Piero de' Bardi",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 200,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grants 1 Envoy(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_IRENE_OF_ATHENS",
+   "name": "Irene of Athens",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+1 Governor Title(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_IBN_FADLAN",
+   "name": "Ibn Fadlan",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "routes to city-states +2 Faith (one-time)",
+    "+1 Trade Route capacity (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_GIOVANNI_DE_MEDICI",
+   "name": "Giovanni de' Medici",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_BANK"
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_MARKET"
+    }
+   ],
+   "untrackedEffects": [
+    "+2 Palace slot(s) in Bank (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JAKOB_FUGGER",
+   "name": "Jakob Fugger",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 200,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grants 2 Envoy(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_RAJA_TODAR_MAL",
+   "name": "Raja Todar Mal",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "domestic routes +0.5 Gold per specialty district at destination (one-time)",
+    "grants 1 Envoy(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ZHOU_DAGUAN",
+   "name": "Zhou Daguan",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "CityStateTerritory",
+     "NonHostileTerritory"
+    ]
+   },
+   "untrackedEffects": [
+    "grant free envoys here (Amount=3) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ADAM_SMITH",
+   "name": "Adam Smith",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 500,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Governor Title(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_SPILSBURY",
+   "name": "John Spilsbury",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+1 Toys in the city (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_JACOB_ASTOR",
+   "name": "John Jacob Astor",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "GOLD",
+     "amount": 500,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "grants 2 Envoy(s) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MARY_KATHERINE_GODDARD",
+   "name": "Mary Katherine Goddard",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+1 diplomatic visibility (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_ROCKEFELLER",
+   "name": "John Rockefeller",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "adjust city trade route yield per destination strategic resource for domestic (YieldType=Gold, Amount=2) in all your cities",
+    "+3 Oil per turn (one-time)",
+    "international routes +2 Gold per strategic at destination in all your cities"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_SARAH_BREEDLOVE",
+   "name": "Sarah Breedlove",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+25% Tourism to civs with your trade routes (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_STAMFORD_RAFFLES",
+   "name": "Stamford Raffles",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "SuzerainTerritory"
+    ]
+   },
+   "untrackedEffects": [
+    "unit transfer city as gift and apply modifier (ModifierId=Greatperson City State Absorb Expansions Loyalty Attachment) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_HELENA_RUBINSTEIN",
+   "name": "Helena Rubinstein",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+2 Cosmetics in the city (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MELITTA_BENTZ",
+   "name": "Melitta Bentz",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+1 Trade Route capacity (one-time)",
+    "+25% Tourism to civs with your trade routes (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_LEVI_STRAUSS",
+   "name": "Levi Strauss",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+2 Jeans in the city (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_EST_E_LAUDER",
+   "name": "Estée Lauder",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_COMMERCIAL_HUB"
+   },
+   "untrackedEffects": [
+    "+2 Perfume in the city (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MASARU_IBUKA",
+   "name": "Masaru Ibuka",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_INDUSTRIAL_ZONE"
+   },
+   "untrackedEffects": [
+    "+10 Tourism from the district for your districts where district is Industrial Zone"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JAMSETJI_TATA",
+   "name": "Jamsetji Tata",
+   "class": "GREAT_PERSON_CLASS_MERCHANT",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "untrackedEffects": [
+    "+10 Tourism from the district for your districts where district is Campus"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JOHN_THE_BAPTIST",
+   "name": "John the Baptist",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CONFUCIUS",
+   "name": "Confucius",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ZOROASTER",
+   "name": "Zoroaster",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SIDDHARTHA_GAUTAMA",
+   "name": "Siddhartha Gautama",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LAOZI",
+   "name": "Laozi",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SIMON_PETER",
+   "name": "Simon Peter",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_BODHIDHARMA",
+   "name": "Bodhidharma",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ADI_SHANKARA",
+   "name": "Adi Shankara",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SONGTSAN_GAMPO",
+   "name": "Songtsan Gampo",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_O_NO_YASUMARO",
+   "name": "O no Yasumaro",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_IRENAEUS",
+   "name": "Irenaeus",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARTIN_LUTHER",
+   "name": "Martin Luther",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FRANCIS_OF_ASSISI",
+   "name": "Francis of Assisi",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MADHVA_ACHARYA",
+   "name": "Madhva Acharya",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_THOMAS_AQUINAS",
+   "name": "Thomas Aquinas",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HAJI_HUUD",
+   "name": "Haji Huud",
+   "class": "GREAT_PERSON_CLASS_PROPHET",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ARYABHATA",
+   "name": "Aryabhata",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 3,
+     "minEra": "ERA_CLASSICAL",
+     "maxEra": "ERA_MEDIEVAL"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_EUCLID",
+   "name": "Euclid",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MEDIEVAL",
+     "maxEra": "ERA_MEDIEVAL"
+    },
+    {
+     "kind": "BOOST",
+     "ref": "TECH_MATHEMATICS",
+     "orComplete": false
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_HYPATIA",
+   "name": "Hypatia",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING_YIELD",
+     "building": "BUILDING_LIBRARY",
+     "yield": "SCIENCE",
+     "amount": 1
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_LIBRARY"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ZHANG_HENG",
+   "name": "Zhang Heng",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_CLASSICAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "BOOST",
+     "ref": "TECH_CELESTIAL_NAVIGATION",
+     "orComplete": true
+    },
+    {
+     "kind": "BOOST",
+     "ref": "TECH_ENGINEERING",
+     "orComplete": true
+    },
+    {
+     "kind": "BOOST",
+     "ref": "TECH_MATHEMATICS",
+     "orComplete": true
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ABU_AL_QASIM_AL_ZAHRAWI",
+   "name": "Abu al-Qasim al-Zahrawi",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MEDIEVAL",
+     "maxEra": "ERA_RENAISSANCE"
+    }
+   ],
+   "untrackedEffects": [
+    "+5 HP healing (All) (one-time) for your units where Land unit"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_HILDEGARD_OF_BINGEN",
+   "name": "Hildegard of Bingen",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_HOLY_SITE"
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "FAITH",
+     "amount": 100,
+     "scaled": true
+    }
+   ],
+   "untrackedEffects": [
+    "Science equal to the district's Faith adjacency (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_OMAR_KHAYYAM",
+   "name": "Omar Khayyam",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MEDIEVAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "CIVIC",
+     "count": 1,
+     "minEra": "ERA_MEDIEVAL",
+     "maxEra": "ERA_RENAISSANCE"
+    },
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 2,
+     "minEra": "ERA_MEDIEVAL",
+     "maxEra": "ERA_RENAISSANCE"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_GALILEO_GALILEI",
+   "name": "Galileo Galilei",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "AdjacentMountain"
+    ]
+   },
+   "untrackedEffects": [
+    "250 (x game speed) Science on adjacent Mountain (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ISAAC_NEWTON",
+   "name": "Isaac Newton",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_LIBRARY"
+    },
+    {
+     "kind": "BUILDING_YIELD",
+     "building": "BUILDING_UNIVERSITY",
+     "yield": "SCIENCE",
+     "amount": 2
+    },
+    {
+     "kind": "BUILDING",
+     "ref": "BUILDING_UNIVERSITY"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_EMILIE_DU_CHATELET",
+   "name": "Emilie du Chatelet",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 3,
+     "minEra": "ERA_RENAISSANCE",
+     "maxEra": "ERA_INDUSTRIAL"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_IBN_KHALDUN",
+   "name": "Ibn Khaldun",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "untrackedEffects": [
+    "+1 Amenity (one-time)",
+    "+2 Housing (one-time)",
+    "+4% Culture while Ecstatic in all your cities (one-time)",
+    "+4% Faith while Ecstatic in all your cities (one-time)",
+    "+4% Gold while Ecstatic in all your cities (one-time)",
+    "+4% Production while Ecstatic in all your cities (one-time)",
+    "+4% Science while Ecstatic in all your cities (one-time)",
+    "+2% Culture while Happy in all your cities (one-time)",
+    "+2% Faith while Happy in all your cities (one-time)",
+    "+2% Gold while Happy in all your cities (one-time)",
+    "+2% Production while Happy in all your cities (one-time)",
+    "+2% Science while Happy in all your cities (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JAMES_YOUNG",
+   "name": "James Young",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 2,
+     "minEra": "ERA_INDUSTRIAL",
+     "maxEra": "ERA_MODERN"
+    }
+   ],
+   "untrackedEffects": [
+    "grant free resource visibility (ResourceType=Oil) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_CHARLES_DARWIN",
+   "name": "Charles Darwin",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "OnOrAdjacentNaturalWonder"
+    ]
+   },
+   "untrackedEffects": [
+    "grant unit yield adjacent natural wonders (YieldType=Science, Amount=500 (x game speed)) (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_DMITRI_MENDELEEV",
+   "name": "Dmitri Mendeleev",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_INDUSTRIAL",
+     "maxEra": "ERA_INDUSTRIAL"
+    },
+    {
+     "kind": "BOOST",
+     "ref": "TECH_CHEMISTRY",
+     "orComplete": false
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ALAN_TURING",
+   "name": "Alan Turing",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MODERN",
+     "maxEra": "ERA_MODERN"
+    },
+    {
+     "kind": "BOOST",
+     "ref": "TECH_COMPUTERS",
+     "orComplete": false
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ALBERT_EINSTEIN",
+   "name": "Albert Einstein",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MODERN",
+     "maxEra": "ERA_ATOMIC"
+    },
+    {
+     "kind": "BUILDING_YIELD",
+     "building": "BUILDING_RESEARCH_LAB",
+     "yield": "SCIENCE",
+     "amount": 4
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ALFRED_NOBEL",
+   "name": "Alfred Nobel",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_MODERN",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 1,
+     "minEra": "ERA_MODERN",
+     "maxEra": "ERA_ATOMIC"
+    },
+    {
+     "kind": "GREAT_PERSON_POINTS",
+     "amount": 100
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_JANAKI_AMMAL",
+   "name": "Janaki Ammal",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "untracked": [
+     "OnOrAdjacentFeatureType=Rainforest"
+    ]
+   },
+   "untrackedEffects": [
+    "400 (x game speed) Science on adjacent Rainforest (one-time)"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MARY_LEAKEY",
+   "name": "Mary Leakey",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_THEATER_SQUARE",
+    "untracked": [
+     "CityGreatWorkObjectType=Artifact"
+    ]
+   },
+   "untrackedEffects": [
+    "350 (x game speed) Science per Artifact in the city (one-time)",
+    "Tourism from Artifact scaled 300% in all your cities"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ERWIN_SCHR_DINGER",
+   "name": "Erwin Schrödinger",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 3,
+     "minEra": "ERA_ATOMIC",
+     "maxEra": "ERA_INFORMATION"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_MARGARET_MEAD",
+   "name": "Margaret Mead",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 1,
+   "requires": {
+    "district": "DISTRICT_CAMPUS",
+    "untracked": [
+     "NonHostileTerritory"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "YIELD",
+     "yield": "CULTURE",
+     "amount": 1000,
+     "scaled": false
+    },
+    {
+     "kind": "YIELD",
+     "yield": "SCIENCE",
+     "amount": 1000,
+     "scaled": false
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_ABDUS_SALAM",
+   "name": "Abdus Salam",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "district": "DISTRICT_CAMPUS"
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "TECH",
+     "count": 99,
+     "minEra": "ERA_INFORMATION",
+     "maxEra": "ERA_INFORMATION"
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_CARL_SAGAN",
+   "name": "Carl Sagan",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "IncompleteSpaceRaceProject",
+     "CompletedDistrictType=Spaceport"
+    ]
+   },
+   "effects": [
+    {
+     "kind": "PRODUCTION",
+     "amount": 3000
+    }
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_STEPHANIE_KWOLEK",
+   "name": "Stephanie Kwolek",
+   "class": "GREAT_PERSON_CLASS_SCIENTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 1,
+   "requires": {
+    "ownedTile": true,
+    "untracked": [
+     "CompletedDistrictType=Spaceport"
+    ]
+   },
+   "untrackedEffects": [
+    "+100% Production toward space race projects in all your cities"
+   ]
+  },
+  {
+   "id": "GREAT_PERSON_BHASA",
+   "name": "Bhasa",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HOMER",
+   "name": "Homer",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_OVID",
+   "name": "Ovid",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_QU_YUAN",
+   "name": "Qu Yuan",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_VALMIKI",
+   "name": "Valmiki",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_CLASSICAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GEOFFREY_CHAUCER",
+   "name": "Geoffrey Chaucer",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LI_BAI",
+   "name": "Li Bai",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MURASAKI_SHIKIBU",
+   "name": "Murasaki Shikibu",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_RUMI",
+   "name": "Rumi",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MEDIEVAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARGARET_CAVENDISH",
+   "name": "Margaret Cavendish",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MIGUEL_DE_CERVANTES",
+   "name": "Miguel de Cervantes",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_NICCOL_MACHIAVELLI",
+   "name": "Niccolò Machiavelli",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_WILLIAM_SHAKESPEARE",
+   "name": "William Shakespeare",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARIE_CATHERINE_D_AULNOY",
+   "name": "Marie-Catherine d'Aulnoy",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ALEXANDER_PUSHKIN",
+   "name": "Alexander Pushkin",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_EDGAR_ALLAN_POE",
+   "name": "Edgar Allan Poe",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JANE_AUSTEN",
+   "name": "Jane Austen",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JOHANN_WOLFGANG_VON_GOETHE",
+   "name": "Johann Wolfgang von Goethe",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARY_SHELLEY",
+   "name": "Mary Shelley",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JAMES_JOYCE",
+   "name": "James Joyce",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_EMILY_DICKINSON",
+   "name": "Emily Dickinson",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LEO_TOLSTOY",
+   "name": "Leo Tolstoy",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARK_TWAIN",
+   "name": "Mark Twain",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_F_SCOTT_FITZGERALD",
+   "name": "F. Scott Fitzgerald",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_BEATRIX_POTTER",
+   "name": "Beatrix Potter",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_H_G_WELLS",
+   "name": "H.G. Wells",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_RABINDRANATH_TAGORE",
+   "name": "Rabindranath Tagore",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_KAREL_CAPEK",
+   "name": "Karel Capek",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GABRIELA_MISTRAL",
+   "name": "Gabriela Mistral",
+   "class": "GREAT_PERSON_CLASS_WRITER",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "WRITING",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ANDREI_RUBLEV",
+   "name": "Andrei Rublev",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "RELIGIOUS",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HIERONYMUS_BOSCH",
+   "name": "Hieronymus Bosch",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "RELIGIOUS",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_DONATELLO",
+   "name": "Donatello",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "SCULPTURE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MICHELANGELO",
+   "name": "Michelangelo",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "RELIGIOUS",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_KAM_L_UD_D_N_BEHZ_D",
+   "name": "Kamāl ud-Dīn Behzād",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_RENAISSANCE",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_QIU_YING",
+   "name": "Qiu Ying",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_TITIAN",
+   "name": "Titian",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "RELIGIOUS",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_EL_GRECO",
+   "name": "El Greco",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "RELIGIOUS",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_REMBRANDT_VAN_RIJN",
+   "name": "Rembrandt van Rijn",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_HASEGAWA_T_HAKU",
+   "name": "Hasegawa Tōhaku",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SOFONISBA_ANGUISSOLA",
+   "name": "Sofonisba Anguissola",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ANGELICA_KAUFFMAN",
+   "name": "Angelica Kauffman",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JANG_SEUNG_EOP",
+   "name": "Jang Seung-eop",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_KATSUSHIKA_HOKUSAI",
+   "name": "Katsushika Hokusai",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_VINCENT_VAN_GOGH",
+   "name": "Vincent van Gogh",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_EDMONIA_LEWIS",
+   "name": "Edmonia Lewis",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "SCULPTURE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARIE_ANNE_COLLOT",
+   "name": "Marie-Anne Collot",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "SCULPTURE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CLAUDE_MONET",
+   "name": "Claude Monet",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_BORIS_ORLOVSKY",
+   "name": "Boris Orlovsky",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "SCULPTURE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GUSTAV_KLIMT",
+   "name": "Gustav Klimt",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_AMRITA_SHER_GIL",
+   "name": "Amrita Sher-Gil",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MARY_CASSATT",
+   "name": "Mary Cassatt",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "PORTRAIT",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_WASSILY_KANDINSKY",
+   "name": "Wassily Kandinsky",
+   "class": "GREAT_PERSON_CLASS_ARTIST",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "LANDSCAPE",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ANTONIO_VIVALDI",
+   "name": "Antonio Vivaldi",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JOHANN_SEBASTIAN_BACH",
+   "name": "Johann Sebastian Bach",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LUDWIG_VAN_BEETHOVEN",
+   "name": "Ludwig van Beethoven",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_WOLFGANG_AMADEUS_MOZART",
+   "name": "Wolfgang Amadeus Mozart",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_YATSUHASHI_KENGYO",
+   "name": "Yatsuhashi Kengyo",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_DIMITRIE_CANTEMIR",
+   "name": "Dimitrie Cantemir",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INDUSTRIAL",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ANT_NIO_CARLOS_GOMES",
+   "name": "Antônio Carlos Gomes",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FRANZ_LISZT",
+   "name": "Franz Liszt",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_FREDERIC_CHOPIN",
+   "name": "Frederic Chopin",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_PETER_ILYICH_TCHAIKOVSKY",
+   "name": "Peter Ilyich Tchaikovsky",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LIU_TIANHUA",
+   "name": "Liu Tianhua",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_SCOTT_JOPLIN",
+   "name": "Scott Joplin",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_MODERN",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 3
+   }
+  },
+  {
+   "id": "GREAT_PERSON_ANTONIN_DVORAK",
+   "name": "Antonin Dvorak",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_CLARA_SCHUMANN",
+   "name": "Clara Schumann",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_JUVENTINO_ROSAS",
+   "name": "Juventino Rosas",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_LILI_UOKALANI",
+   "name": "Lili'uokalani",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_ATOMIC",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_GAUHAR_JAAN",
+   "name": "Gauhar Jaan",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  },
+  {
+   "id": "GREAT_PERSON_MYKOLA_LEONTOVYCH",
+   "name": "Mykola Leontovych",
+   "class": "GREAT_PERSON_CLASS_MUSICIAN",
+   "era": "ERA_INFORMATION",
+   "charges": 0,
+   "requires": {
+    "ownedTile": true
+   },
+   "greatWorks": {
+    "type": "MUSIC",
+    "count": 2
+   }
+  }
+ ],
+ "greatWorkTypes": [
+  {
+   "id": "WRITING",
+   "yield": "CULTURE",
+   "amount": 2,
+   "tourism": 2,
+   "slots": [
+    "WRITING",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "SCULPTURE",
+   "yield": "CULTURE",
+   "amount": 3,
+   "tourism": 2,
+   "slots": [
+    "ART",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "PORTRAIT",
+   "yield": "CULTURE",
+   "amount": 3,
+   "tourism": 2,
+   "slots": [
+    "ART",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "LANDSCAPE",
+   "yield": "CULTURE",
+   "amount": 3,
+   "tourism": 2,
+   "slots": [
+    "ART",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "RELIGIOUS",
+   "yield": "CULTURE",
+   "amount": 3,
+   "tourism": 2,
+   "slots": [
+    "ART",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "MUSIC",
+   "yield": "CULTURE",
+   "amount": 4,
+   "tourism": 4,
+   "slots": [
+    "MUSIC",
+    "PALACE"
+   ]
+  },
+  {
+   "id": "ARTIFACT",
+   "yield": "CULTURE",
+   "amount": 3,
+   "tourism": 3,
+   "slots": [
+    "ARTIFACT"
+   ]
+  },
+  {
+   "id": "RELIC",
+   "yield": "FAITH",
+   "amount": 4,
+   "tourism": 8,
+   "slots": [
+    "RELIC",
+    "PALACE"
+   ]
+  }
+ ]
+}

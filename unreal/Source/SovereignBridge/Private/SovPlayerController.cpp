@@ -482,6 +482,36 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			break;
 		}
+		case EChooser::GreatPeople:
+		{
+			// 07: each class offers one person to everyone; points earn them, gold or faith buys them now.
+			ChooserTitle = TEXT("Great people (points / cost, +per turn). Pick one to buy it now");
+			for (size_t c = 0; c < R.greatPersonClasses.size(); ++c)
+			{
+				const sov::TypeIndex Cls = static_cast<sov::TypeIndex>(c);
+				const sov::TypeIndex Who = G.currentGreatPerson(Cls);
+				const FString ClassName = Str(R.greatPersonClasses[c].name);
+				if (Who == sov::kNone)
+				{
+					continue;
+				}
+				const sov::GreatPersonType& Gp = R.greatPeople[static_cast<size_t>(Who)];
+				const int32 Have = c < P.greatPersonPoints.size() ? P.greatPersonPoints[c] : 0;
+				const FString Head = FString::Printf(TEXT("%s: %s (%s) %d/%d, +%d"), *ClassName, *Str(Gp.name), *Str(R.eras[static_cast<size_t>(Gp.era)].name), Have,
+					G.greatPersonCost(Who), G.greatPersonPointsPerTurn(Me(), Cls));
+				const int32 Gold = G.patronageCost(Me(), Cls, false);
+				const int32 Faith = G.patronageCost(Me(), Cls, true);
+				if (Gold > 0)
+				{
+					Choices.Add({FString::Printf(TEXT("%s   buy %d gold"), *Head, Gold), sov::Command::patronizeGreatPerson(Me(), Cls, false)});
+				}
+				if (Faith > 0 && P.faith >= sov::Fixed::fromInt(Faith))
+				{
+					Choices.Add({FString::Printf(TEXT("%s   buy %d faith"), *Head, Faith), sov::Command::patronizeGreatPerson(Me(), Cls, true)});
+				}
+			}
+			break;
+		}
 		case EChooser::Assassins:
 		{
 			ChooserTitle = FString::Printf(TEXT("Assassins (%d of %d; one per Encampment)"), G.agentsOf(Me()), G.agentCapacity(Me()));
@@ -907,6 +937,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::C)) OpenChooser(EChooser::Civic);
 	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
 	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
+	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
 	if (SelectedCity >= 0 && (WasInputKeyJustPressed(EKeys::V) || WasInputKeyJustPressed(EKeys::X)))
 	{
@@ -926,6 +957,16 @@ void ASovPlayerController::HandleOrders()
 	}
 	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
 	const sov::Hex Pos = U->pos;
+	if (U->greatPerson != sov::kNone && WasInputKeyJustPressed(EKeys::F))
+	{
+		// A great person is used where it stands (07): an effect, or a Great Work in a free slot.
+		const FString Who = Str(G.rules().greatPeople[static_cast<size_t>(U->greatPerson)].name);
+		if (Send(sov::Command::activateGreatPerson(Me(), U->id)))
+		{
+			Subsystem()->LastMessage = FString::Printf(TEXT("%s has left a mark on your civilization."), *Who);
+		}
+		return;
+	}
 	if (WasInputKeyJustPressed(EKeys::F) && Send(sov::Command::foundCity(Me(), U->id)))
 	{
 		// The new city needs something to build first.
@@ -987,7 +1028,9 @@ void ASovPlayerController::UpdatePanel()
 	if (const sov::Unit* U = S.unit(SelectedUnit))
 	{
 		const sov::UnitType& T = R.units[static_cast<size_t>(U->type)];
-		const FString Name = G.isLeader(*U) ? Str(S.players[static_cast<size_t>(U->owner)].leaderName) : Str(T.name);
+		const FString Name = G.isLeader(*U)                     ? Str(S.players[static_cast<size_t>(U->owner)].leaderName)
+							 : U->greatPerson != sov::kNone ? FString::Printf(TEXT("%s, %s"), *Str(R.greatPeople[static_cast<size_t>(U->greatPerson)].name), *Str(T.name))
+															: Str(T.name);
 		FString Line = FString::Printf(TEXT("%s   HP %d   Moves %s/%d"), *Name, U->hp, *Str(U->movesLeft.toString()), G.maxMoves(*U));
 		if (G.meleeStrength(*U) > 0) Line += FString::Printf(TEXT("   Strength %d"), G.meleeStrength(*U));
 		if (G.rangedStrength(*U) > 0) Line += FString::Printf(TEXT("   Ranged %d (range %d)"), G.rangedStrength(*U), G.unitRange(*U));
@@ -998,6 +1041,15 @@ void ASovPlayerController::UpdatePanel()
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
 		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
+		if (U->greatPerson != sov::kNone)
+		{
+			const sov::GreatPersonType& Gp = R.greatPeople[static_cast<size_t>(U->greatPerson)];
+			FString Use = Gp.greatWorkCount > 0 ? FString::Printf(TEXT("creates a Great Work in a city with a free slot (%d left)"), U->charges)
+				: Gp.effects.empty()             ? FString(TEXT("its gift needs systems still to come"))
+				: Gp.district != sov::kNone      ? FString::Printf(TEXT("use on a %s"), *Str(R.districts[static_cast<size_t>(Gp.district)].name))
+												 : FString(TEXT("use where it stands"));
+			Keys += FString::Printf(TEXT("   F use (%s)%s"), *Use, G.canActivateGreatPerson(U->id) ? TEXT(", ready") : TEXT(""));
+		}
 		if (G.isLeader(*U)) Keys += TEXT("   E gear   L link escort   Q walk the streets");
 		else if (T.layer == sov::UnitLayer::Military && G.state().unitAt(U->pos, sov::UnitLayer::Leader, R)) Keys += TEXT("   L escort the leader");
 		if (T.buildCharges > 0) Keys += TEXT("   B build");
@@ -1066,7 +1118,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }
