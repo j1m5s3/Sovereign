@@ -888,7 +888,8 @@ void sendAssassins(Game& game, PlayerId me) {
 }
 
 void playTurn(Game& game) {
-    if (game.gameOver()) return;
+    // A live battle against a human is waiting; the turn resumes once it is settled.
+    if (game.gameOver() || game.battlePending()) return;
     succession(game, game.state().currentPlayer);
     sendAssassins(game, game.state().currentPlayer);
     View v(game, game.state().currentPlayer);

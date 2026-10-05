@@ -166,6 +166,9 @@ public:
     // Damage dealt for a strength difference and a roll in 0..COMBAT_MAX_EXTRA_DAMAGE.
     int combatDamage(int strengthDifference, int roll) const;
     CombatPreview previewAttack(UnitId attacker, Hex target, bool ranged) const;
+    // The human whose leader stack is in this melee (so it goes live), or kNoPlayer (leader doc §9).
+    PlayerId liveBattleSide(const Unit& attacker, const Unit& defender) const;
+    bool battlePending() const { return state_.pendingBattle.active; }
     // Strength of `unit` attacking (or, for a city strike, defending against) a city.
     int combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const;
     // City defence and strike strength (02-cities.md, City combat).
@@ -260,6 +263,10 @@ private:
     // Percent of a hit on this city that lands on its walls; -1 when it lands on the city.
     int wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const;
     void attackCity(const Command& c, City& city);
+    // Applies a unit-vs-unit fight's damage and everything that follows (kills, capture, XP, advance).
+    void resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bool ranged, int toDefender, int toAttacker);
+    CommandError validateBattle(const Command& c) const;
+    void applyBattle(const Command& c);
     void captureCity(City& city, UnitId attacker);
     void razeCity(CityId city);
     void checkElimination(PlayerId p);

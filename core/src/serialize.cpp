@@ -57,6 +57,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.scoreVictory);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
+    w.boolean(s.liveBattles);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -75,6 +76,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.scoreVictory = r.boolean();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
+    s.liveBattles = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -317,6 +319,15 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.travel);
     }
     w.i32(s.nextAgentId);
+    const PendingBattle& pb = s.pendingBattle;
+    w.boolean(pb.active);
+    w.i32(pb.attacker);
+    w.i32(pb.defender);
+    writeHex(w, pb.target);
+    w.i8(pb.liveFor);
+    w.i32(pb.leader);
+    w.i32(pb.expectedToDefender);
+    w.i32(pb.expectedToAttacker);
     w.u32(static_cast<uint32_t>(s.events.size()));
     for (const GameEvent& e : s.events) {
         w.i32(e.turn);
@@ -517,6 +528,15 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.travel = r.i32();
     }
     s.nextAgentId = r.i32();
+    PendingBattle& pb = s.pendingBattle;
+    pb.active = r.boolean();
+    pb.attacker = r.i32();
+    pb.defender = r.i32();
+    pb.target = readHex(r);
+    pb.liveFor = r.i8();
+    pb.leader = r.i32();
+    pb.expectedToDefender = r.i32();
+    pb.expectedToAttacker = r.i32();
     uint32_t ne = r.u32();
     if (!r.checkCount(ne, 11)) return false;
     s.events.resize(ne);

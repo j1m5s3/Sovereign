@@ -44,7 +44,7 @@ sov::CommandError USovGameSubsystem::Submit(const sov::Command& Command)
 
 void USovGameSubsystem::Tick(float DeltaTime)
 {
-	if (Session.IsHumanTurn() || Session.IsGameOver() || Session.Stalled())
+	if (Session.IsHumanTurn() || Session.IsGameOver() || Session.Stalled() || Session.GetGame().battlePending())
 	{
 		SinceLastSeat = 0.f;
 		return;

@@ -18,6 +18,7 @@ namespace sovbot {
 inline void playTurn(sov::Game& game, sov::Rng& rng) {
     using namespace sov;
     if (game.gameOver()) return;
+    if (game.battlePending()) game.submit(Command::autoResolveBattle(game.state().currentPlayer));
     const GameState& s = game.state();
     const PlayerId me = s.currentPlayer;
     // Idle assassins go after a random civ.

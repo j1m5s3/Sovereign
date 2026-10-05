@@ -151,6 +151,12 @@ bool FSovHumanSeatTest::RunTest(const FString& Parameters)
 	int32 Guard = 2000;
 	while (Session.GetGame().state().turn < StartTurn + 10 && !Session.IsGameOver() && Guard-- > 0)
 	{
+		if (Session.GetGame().battlePending())
+		{
+			// An AI attack on the leader stack waits for us: settle it the classic way.
+			TestEqual(TEXT("auto-resolve"), Session.Submit(sov::Command::autoResolveBattle(Me)), sov::CommandError::Ok);
+			continue;
+		}
 		if (!Session.IsHumanTurn())
 		{
 			if (!Session.StepAI() && !Session.IsGameOver())

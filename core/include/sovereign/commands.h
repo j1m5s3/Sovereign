@@ -44,6 +44,9 @@ enum class CommandType : uint8_t {
     AbandonLeader = 26,   // give up the captured leader and crown a successor
     SendAssassin = 27,    // id = agent, arg = target player (-1 calls it home)
     CityStance = 28,      // id = city where the leader stands, arg = Stance
+    BattleResult = 29,    // the live battle's field result: arg = damage to the defender, arg2 = to the attacker,
+                          // target.x = wound to the leader (clamped by the core); any time, by the battle's human
+    AutoResolveBattle = 30,  // settle the pending battle with the normal Civ roll
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -116,6 +119,10 @@ struct Command {
     static Command cityStance(PlayerId p, CityId c, Stance stance) {
         return {CommandType::CityStance, p, c, {}, static_cast<int32_t>(stance), 0};
     }
+    static Command battleResult(PlayerId p, int toDefender, int toAttacker, int leaderWound) {
+        return {CommandType::BattleResult, p, -1, Hex{leaderWound, 0}, toDefender, toAttacker};
+    }
+    static Command autoResolveBattle(PlayerId p) { return {CommandType::AutoResolveBattle, p, -1, {}, 0, 0}; }
     static Command sendAssassin(PlayerId p, int32_t agent, PlayerId target) {
         return {CommandType::SendAssassin, p, agent, {}, target, 0};
     }
@@ -165,6 +172,8 @@ enum class CommandError : uint8_t {
     CannotSucceed,
     CannotSendAgent,
     CannotTakeStance,
+    BattlePending,
+    NoBattle,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

@@ -98,6 +98,8 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotSucceed: return "CannotSucceed";
         case CommandError::CannotSendAgent: return "CannotSendAgent";
         case CommandError::CannotTakeStance: return "CannotTakeStance";
+        case CommandError::BattlePending: return "BattlePending";
+        case CommandError::NoBattle: return "NoBattle";
     }
     return "Unknown";
 }
@@ -144,6 +146,9 @@ std::string describe(const Command& c) {
         case CommandType::LinkEscort: return s + "LinkEscort u" + std::to_string(c.id) + " leader" + std::to_string(c.arg);
         case CommandType::ChooseSuccessor: return s + "ChooseSuccessor kind" + std::to_string(c.arg) + " u" + std::to_string(c.id);
         case CommandType::AbandonLeader: return s + "AbandonLeader";
+        case CommandType::BattleResult:
+            return s + "BattleResult def" + std::to_string(c.arg) + " att" + std::to_string(c.arg2) + " leader" + std::to_string(c.target.x);
+        case CommandType::AutoResolveBattle: return s + "AutoResolveBattle";
         case CommandType::CityStance: return s + "CityStance city" + std::to_string(c.id) + " stance" + std::to_string(c.arg);
         case CommandType::SendAssassin: return s + "SendAssassin agent" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
     }
