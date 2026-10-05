@@ -522,6 +522,8 @@ void Game::processAgents() {
             l->hp -= dmg;
             a.level = std::min(4, a.level + 1);  // it comes home a level higher
             a.target = kNoPlayer;
+            ++state_.players[static_cast<size_t>(sender)].assassinsSent;  // the sender is known
+            remember(victim, sender, MemoryKind::Assassin, -15, 60);
             if (l->hp <= 0) {
                 pushEvent(EventKind::AssassinKilledLeader, sender, victim, dmg);
                 leaderLost(leaderId, sender, false);
@@ -537,6 +539,8 @@ void Game::processAgents() {
             awardXp(*state_.unit(leaderId), rules_->globalInt("ASSASSIN_LEADER_XP"), false);
             pushEvent(EventKind::AssassinKilled, sender, victim, 0);
         } else {
+            ++state_.players[static_cast<size_t>(sender)].assassinsSent;
+            remember(victim, sender, MemoryKind::Assassin, -15, 60);
             pushEvent(EventKind::AssassinCaptured, sender, victim, 0);
         }
     }

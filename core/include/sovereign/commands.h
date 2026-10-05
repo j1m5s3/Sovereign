@@ -56,6 +56,10 @@ enum class CommandType : uint8_t {
     SpreadReligion = 37,        // id = religious unit in a city's territory: spread its religion there
     StartTradeRoute = 38,       // id = Trader in one of the player's cities, arg = destination city
     SendEnvoy = 39,             // arg = a city-state player the sender has met
+    ProposeDeal = 40,           // arg = the other player, data = the items (4 ints each: kind, giver, amount, resource);
+                                // an AI answers at once, a human later with AnswerDeal
+    AnswerDeal = 41,            // id = a waiting deal, arg = 1 accept / 0 reject (the proposer may withdraw it with 0)
+    Denounce = 42,              // arg = the player to denounce
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -72,6 +76,11 @@ struct Command {
     Hex target;
     int32_t arg = 0;
     int32_t arg2 = 0;
+    std::vector<int32_t> data;  // a variable payload (deal items)
+    std::string text;           // free text carried with the command (capped by validation)
+
+    Command(CommandType t = CommandType::EndTurn, PlayerId p = kNoPlayer, int32_t i = -1, Hex at = {}, int32_t a = 0, int32_t a2 = 0)
+        : type(t), player(p), id(i), target(at), arg(a), arg2(a2) {}
 
     // overland: a land unit keeps to land rather than embarking on the way.
     static Command move(PlayerId p, UnitId u, Hex to, bool overland = false) { return {CommandType::MoveUnit, p, u, to, overland ? 1 : 0, 0}; }
@@ -154,6 +163,9 @@ struct Command {
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }
+    static Command proposeDeal(PlayerId p, PlayerId to, const std::vector<DealItem>& items);
+    static Command answerDeal(PlayerId p, int32_t deal, bool accept) { return {CommandType::AnswerDeal, p, deal, {}, accept ? 1 : 0, 0}; }
+    static Command denounce(PlayerId p, PlayerId target) { return {CommandType::Denounce, p, -1, {}, target, 0}; }
     // Buy a religious unit or a worship building with Faith (target.x = 1 marks a Faith purchase).
     static Command purchaseWithFaith(PlayerId p, CityId c, ProductionItem item) {
         return {CommandType::Purchase, p, c, Hex{1, 0}, static_cast<int32_t>(item.kind), item.type};
@@ -212,7 +224,13 @@ enum class CommandError : uint8_t {
     CannotSpread,
     CannotTrade,
     CannotSendEnvoy,
+    CannotDeal,
+    NoDeal,
+    CannotDenounce,
 };
+
+// The items a ProposeDeal command carries (empty when its payload is malformed).
+SOV_API std::vector<DealItem> dealItems(const Command& c);
 
 SOV_API const char* commandErrorName(CommandError e);
 SOV_API std::string describe(const Command& c);

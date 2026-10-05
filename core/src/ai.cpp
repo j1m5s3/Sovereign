@@ -30,6 +30,9 @@ constexpr int kWarRatioPercent = 130;   // own strength vs target's to declare w
 constexpr int kPeaceRatioPercent = 80;  // below this, offer peace
 constexpr int kWarWeariness = 50;       // turns of war before peace is offered anyway
 constexpr int kNeighbourRange = 14;     // a target's city must be this close to one of ours
+constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
+constexpr int kDenounceOpinion = -25;   // at or below: denounce
+constexpr int kProposalGap = 10;        // turns between deals put to the same civ
 constexpr int kThreatRange = 4;
 constexpr int kHealBelow = 40;
 
@@ -171,14 +174,62 @@ void diplomacy(View& v) {
             if (distanceToCity(s, v.me, c.pos) <= kNeighbourRange) near = true;
         }
         const int theirs = militaryStrength(v.game, p.id);
-        if (near && mine * 100 >= theirs * kWarRatioPercent && theirs < pickStrength) {
+        if (near && mine * 100 >= theirs * kWarRatioPercent && theirs < pickStrength && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
             pick = p.id;
             pickStrength = theirs;
         }
     }
-    if (pick != kNoPlayer && v.game.submit(Command::declareWar(v.me, pick)) == CommandError::Ok) {
+    if (pick == kNoPlayer) return;
+    // A formal war: denounce first and wait out DIPLOMACY_DENOUNCE_WAR_DELAY, unless the target is
+    // so much weaker that a surprise is worth the grievance (08: War types).
+    const Relation& rel = s.players[at(v.me)].relations[at(pick)];
+    const bool ready = v.game.denouncing(v.me, pick) && s.turn - rel.denouncedOn >= v.r.globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    const bool overwhelming = mine >= 2 * pickStrength;
+    if (!ready && !overwhelming) {
+        if (v.game.canDenounce(v.me, pick)) {
+            v.game.submit(Command::denounce(v.me, pick));
+            return;
+        }
+        if (v.game.denouncing(v.me, pick)) return;
+    }
+    if (v.game.submit(Command::declareWar(v.me, pick)) == CommandError::Ok) {
         v.target = pick;
         survey(v);
+    }
+}
+
+// Deals with civs at peace: friendship with those it likes, luxury swaps, open borders; and
+// denouncing those it loathes. It asks only for deals it gains from, and asks an AI only when
+// that AI would say yes (a human always hears the offer, at most every kProposalGap turns).
+void deals(View& v) {
+    const GameState& s = v.s();
+    for (const Player& o : s.players) {
+        if (o.id == v.me || !v.game.isMajorCiv(o.id) || !v.game.hasMet(v.me, o.id) || v.game.atWar(v.me, o.id)) continue;
+        const int opinion = v.game.opinionOf(v.me, o.id);
+        if (opinion <= kDenounceOpinion && v.game.canDenounce(v.me, o.id)) {
+            v.game.submit(Command::denounce(v.me, o.id));
+            continue;
+        }
+        const Relation& rel = s.players[at(v.me)].relations[at(o.id)];
+        if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
+        std::vector<std::vector<DealItem>> ideas;
+        if (opinion >= kFriendOpinion) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
+        TypeIndex give = kNone, get = kNone;
+        for (size_t r = 0; r < v.r.resources.size(); ++r) {
+            if (v.r.resources[r].cls != ResourceClass::Luxury) continue;
+            const TypeIndex res = static_cast<TypeIndex>(r);
+            if (give == kNone && v.game.luxuryCopies(v.me, res) - v.game.luxuryCopiesTraded(v.me, res) >= 2 && !v.game.hasLuxury(o.id, res)) give = res;
+            if (get == kNone && v.game.luxuryCopies(o.id, res) - v.game.luxuryCopiesTraded(o.id, res) >= 2 && !v.game.hasLuxury(v.me, res)) get = res;
+        }
+        if (give != kNone && get != kNone) ideas.push_back({{DealItemKind::Resource, v.me, 1, give}, {DealItemKind::Resource, o.id, 1, get}});
+        if (opinion >= 0) ideas.push_back({{DealItemKind::OpenBorders, v.me, 0, kNone}, {DealItemKind::OpenBorders, o.id, 0, kNone}});
+        for (const std::vector<DealItem>& idea : ideas) {
+            const Deal d{0, v.me, o.id, s.turn, idea};
+            if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;
+            if (!o.human && !v.game.wouldAccept(o.id, d)) continue;
+            v.game.submit(Command::proposeDeal(v.me, o.id, idea));
+            break;  // one proposal per civ per turn
+        }
     }
 }
 
@@ -1144,6 +1195,7 @@ void playTurn(Game& game) {
     const bool cityState = game.isCityState(v.me);
     survey(v);
     if (!cityState) diplomacy(v);  // city-states never start wars (08)
+    if (!cityState) deals(v);
     research(v);
     cityActions(v);
     // Promotions as soon as they are earned (the first offered; a planner can come later).

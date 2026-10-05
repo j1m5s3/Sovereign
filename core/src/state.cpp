@@ -116,6 +116,9 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotSpread: return "CannotSpread";
         case CommandError::CannotTrade: return "CannotTrade";
         case CommandError::CannotSendEnvoy: return "CannotSendEnvoy";
+        case CommandError::CannotDeal: return "CannotDeal";
+        case CommandError::NoDeal: return "NoDeal";
+        case CommandError::CannotDenounce: return "CannotDenounce";
     }
     return "Unknown";
 }
@@ -179,6 +182,9 @@ std::string describe(const Command& c) {
         case CommandType::SpreadReligion: return s + "SpreadReligion u" + std::to_string(c.id);
         case CommandType::StartTradeRoute: return s + "StartTradeRoute u" + std::to_string(c.id) + " -> city" + std::to_string(c.arg);
         case CommandType::SendEnvoy: return s + "SendEnvoy -> p" + std::to_string(c.arg);
+        case CommandType::ProposeDeal: return s + "ProposeDeal -> p" + std::to_string(c.arg) + " (" + std::to_string(c.data.size() / 4) + " items)";
+        case CommandType::AnswerDeal: return s + (c.arg ? "AcceptDeal " : "RejectDeal ") + std::to_string(c.id);
+        case CommandType::Denounce: return s + "Denounce p" + std::to_string(c.arg);
     }
     return s + "?";
 }
