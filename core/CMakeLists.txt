@@ -94,6 +94,7 @@ add_executable(sovereign_tests
   tests/test_espionage.cpp
   tests/test_worldcongress.cpp
   tests/test_climate.cpp
+  tests/test_ai_pace.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE
