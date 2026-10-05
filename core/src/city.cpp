@@ -244,8 +244,8 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
     if (item.kind == ProductionKind::Unit) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->units.size()) return fail(CommandError::CannotBuild);
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
-        // Naval units need coastal cities (later).
-        if (u.domain != Domain::Land || u.mustPurchase || !u.trainable || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
+        // Ships need a city on the coast or a lake; air units arrive later.
+        if (u.domain == Domain::Air || (u.domain == Domain::Sea && !isCoastalCity(c)) || u.mustPurchase || !u.trainable || u.cost <= 0 || !hasUnlocked(c.owner, u.unlock) ||
             unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
         if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
@@ -334,9 +334,16 @@ Fixed Game::goldPerTurn(PlayerId player) const {
 }
 
 std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const {
-    const UnitLayer layer = rules_->units[static_cast<size_t>(unitType)].layer;
+    const UnitType& ut = rules_->units[static_cast<size_t>(unitType)];
+    const UnitLayer layer = ut.layer;
     for (const Hex& h : state_.grid.within(c.pos, 1)) {  // the center comes first
-        if (!isLandPassable(state_, *rules_, h)) continue;
+        if (ut.domain == Domain::Sea) {
+            // A new ship waits in the port, or on the water next to it.
+            const TerrainType& t = rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)];
+            if (h != c.pos && (!t.water || t.impassable || (t.id == "TERRAIN_OCEAN" && !canEnterOcean(c.owner)))) continue;
+        } else if (!isLandPassable(state_, *rules_, h)) {
+            continue;
+        }
         if (state_.foreignUnitAt(h, c.owner) || state_.unitAt(h, layer, *rules_)) continue;
         const City* other = state_.cityAt(h);
         if (other && other->owner != c.owner) continue;

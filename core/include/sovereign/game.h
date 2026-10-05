@@ -71,10 +71,20 @@ public:
     uint64_t stateHash() const;
 
     // Path for a unit from where it stands, planned on its owner's knowledge.
-    std::optional<std::vector<PathStep>> findPath(UnitId unit, Hex target) const;
+    // overland: a land unit does not embark on the way (it may still leave the water).
+    std::optional<std::vector<PathStep>> findPath(UnitId unit, Hex target, bool overland = false) const;
     // Movement points needed for this unit to enter `to` from adjacent `from`;
     // nullopt when it cannot enter.
     std::optional<Fixed> moveCost(const Unit& unit, Hex from, Hex to) const;
+    // ---- naval play and embarkation (05-units-and-combat.md, Embarkation)
+    bool canEmbark(PlayerId player, TypeIndex unitType) const;
+    bool canEnterOcean(PlayerId player) const;
+    // A land unit standing on water.
+    bool isEmbarked(const Unit& unit) const;
+    // Embarking or disembarking: allowed with any movement left, which it then uses up.
+    bool isEmbarkTransition(const Unit& unit, Hex from, Hex to) const;
+    // A city next to Coast or Lake: it trains ships.
+    bool isCoastalCity(const City& city) const;
     // Units that block ending the turn (05/00: "Units need orders").
     std::vector<UnitId> unitsNeedingOrders(PlayerId player) const;
     bool canFoundCityAt(PlayerId player, Hex at, CommandError* why = nullptr) const;
@@ -94,6 +104,8 @@ public:
     // Gold price of a plot, or -1 when this city cannot buy it.
     int plotPurchaseCost(CityId city, Hex plot) const;
     bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr) const;
+    // Where a unit trained in this city appears (ships: the port or the water beside it); nullopt when full.
+    std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
     std::vector<ProductionItem> buildableItems(CityId city) const;
     std::vector<CityId> citiesNeedingProduction(PlayerId player) const;
     // Net gold per turn: city gold minus building and unit maintenance.
@@ -297,7 +309,6 @@ private:
     void assignCitizens(City& city);
     bool completeItem(City& city, ProductionItem item);  // false when it cannot complete now
     bool growBorders(City& city);  // false when no plot was available
-    std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;
     void applyLeader(const Command& c);

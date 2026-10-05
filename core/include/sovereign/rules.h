@@ -262,7 +262,7 @@ struct BarbarianTribe {
 };
 
 // One adjacency row of a district (03-districts-buildings-wonders.md, Adjacency bonuses).
-enum class DistrictAdjacencyKind : uint8_t { Mountain = 0, River, AnyDistrict, District, Feature, Improvement, StrategicResource };
+enum class DistrictAdjacencyKind : uint8_t { Mountain = 0, River, AnyDistrict, District, Feature, Improvement, StrategicResource, SeaResource };
 struct DistrictAdjacency {
     YieldType yield = YieldType::Food;
     int amount = 0;
@@ -285,6 +285,7 @@ struct DistrictType {
     bool needsPopulation = false;  // counts toward the population limit
     int maintenance = 0;
     bool notAdjacentToCityCenter = false;
+    bool water = false;  // placed on Coast or Lake next to land (Harbor)
     std::vector<DistrictAdjacency> adjacency;
 };
 
@@ -308,6 +309,8 @@ struct LoyaltyLevel {
 // Research trees (04-tech-civics-government.md).
 struct EraType {
     std::string id, name;
+    int embarkedStrength = 10;     // defence of an embarked unit whose owner is in this era (05: Embarkation)
+    int greatPersonBaseCost = 0;   // great person points for this era's first great person (07)
 };
 
 // What earns a boost. Conditions the core cannot track yet load as NotTracked
@@ -346,6 +349,10 @@ struct TreeNode {
     Boost boost;
     bool combatAdjacency = false;  // enables flanking and support bonuses
     bool enforceBorders = false;   // closes the player's borders to units not at war
+    bool embarkAll = false;        // every land unit may embark (Shipbuilding)
+    TypeIndex embarkUnit = kNone;  // one unit type may embark (Builders after Sailing, Traders after Celestial Navigation)
+    bool ocean = false;            // units may enter Ocean (Cartography)
+    int embarkedMoves = 0;         // + movement while embarked
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -393,6 +400,7 @@ enum class ReqType : uint8_t {
     CityIsCapital,
     CityMinPopulation,
     PlayerIsHuman,
+    PlotHasImprovement,  // ref kNone: any improvement
 };
 
 struct Requirement {

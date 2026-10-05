@@ -96,6 +96,12 @@
     },
     {
      "yield": "GOLD",
+     "amount": 2,
+     "kind": "DISTRICT",
+     "ref": "DISTRICT_HARBOR"
+    },
+    {
+     "yield": "GOLD",
      "amount": 1,
      "tilesRequired": 2,
      "kind": "ANY_DISTRICT"
@@ -174,6 +180,36 @@
      "yield": "PRODUCTION",
      "amount": 1,
      "kind": "STRATEGIC_RESOURCE"
+    }
+   ]
+  },
+  {
+   "id": "DISTRICT_HARBOR",
+   "name": "Harbor",
+   "unlock": "TECH_CELESTIAL_NAVIGATION",
+   "cost": 54,
+   "costProgression": "NUM_UNDER_AVG_PLUS_TECH",
+   "costDiscountPercent": 40,
+   "needsPopulation": true,
+   "maintenance": 0,
+   "water": true,
+   "adjacency": [
+    {
+     "yield": "GOLD",
+     "amount": 1,
+     "kind": "SEA_RESOURCE"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 1,
+     "tilesRequired": 2,
+     "kind": "ANY_DISTRICT"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "kind": "DISTRICT",
+     "ref": "DISTRICT_CITY_CENTER"
     }
    ]
   }

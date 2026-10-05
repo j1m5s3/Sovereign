@@ -24,6 +24,7 @@
    "name": "Sailing",
    "era": "ERA_ANCIENT",
    "cost": 50,
+   "embarkUnit": "UNIT_BUILDER",
    "boost": {
     "percent": 40,
     "text": "found a coastal city",
@@ -140,6 +141,7 @@
     "TECH_SAILING",
     "TECH_ASTROLOGY"
    ],
+   "embarkUnit": "UNIT_TRADER",
    "boost": {
     "percent": 40,
     "text": "build 2 Fishing Boatss on a resource",
@@ -200,6 +202,9 @@
    "cost": 200,
    "prereqs": [
     "TECH_SAILING"
+   ],
+   "effects": [
+    "EMBARK_ALL"
    ],
    "boost": {
     "percent": 40,
@@ -392,6 +397,9 @@
    "prereqs": [
     "TECH_BUTTRESS"
    ],
+   "effects": [
+    "OCEAN"
+   ],
    "boost": {
     "percent": 40,
     "text": "build 2 Harbors",
@@ -476,6 +484,7 @@
    "prereqs": [
     "TECH_CARTOGRAPHY"
    ],
+   "embarkedMoves": 1,
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Musketman",
@@ -600,6 +609,7 @@
    "prereqs": [
     "TECH_INDUSTRIALIZATION"
    ],
+   "embarkedMoves": 2,
    "boost": {
     "percent": 40,
     "text": "build 2 Shipyards",
@@ -773,6 +783,7 @@
     "TECH_STEEL",
     "TECH_REFINING"
    ],
+   "embarkedMoves": 1,
    "boost": {
     "percent": 40,
     "text": "extract an artifact",
@@ -1220,39 +1231,57 @@
  "eras": [
   {
    "id": "ERA_ANCIENT",
-   "name": "Ancient"
+   "name": "Ancient",
+   "embarkedStrength": 10,
+   "greatPersonBaseCost": 30
   },
   {
    "id": "ERA_CLASSICAL",
-   "name": "Classical"
+   "name": "Classical",
+   "embarkedStrength": 15,
+   "greatPersonBaseCost": 60
   },
   {
    "id": "ERA_MEDIEVAL",
-   "name": "Medieval"
+   "name": "Medieval",
+   "embarkedStrength": 15,
+   "greatPersonBaseCost": 120
   },
   {
    "id": "ERA_RENAISSANCE",
-   "name": "Renaissance"
+   "name": "Renaissance",
+   "embarkedStrength": 30,
+   "greatPersonBaseCost": 240
   },
   {
    "id": "ERA_INDUSTRIAL",
-   "name": "Industrial"
+   "name": "Industrial",
+   "embarkedStrength": 35,
+   "greatPersonBaseCost": 420
   },
   {
    "id": "ERA_MODERN",
-   "name": "Modern"
+   "name": "Modern",
+   "embarkedStrength": 50,
+   "greatPersonBaseCost": 660
   },
   {
    "id": "ERA_ATOMIC",
-   "name": "Atomic"
+   "name": "Atomic",
+   "embarkedStrength": 55,
+   "greatPersonBaseCost": 960
   },
   {
    "id": "ERA_INFORMATION",
-   "name": "Information"
+   "name": "Information",
+   "embarkedStrength": 55,
+   "greatPersonBaseCost": 1320
   },
   {
    "id": "ERA_FUTURE",
-   "name": "Future"
+   "name": "Future",
+   "embarkedStrength": 55,
+   "greatPersonBaseCost": 1320
   }
  ]
 }

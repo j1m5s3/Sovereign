@@ -190,6 +190,8 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.bLeader = Type.layer == sov::UnitLayer::Leader;
 		Marker.bCivilian = Type.layer == sov::UnitLayer::Civilian || Type.layer == sov::UnitLayer::Support;
 		Marker.bInCity = S.cityAt(U.pos) != nullptr;
+		Marker.bNaval = Type.domain == sov::Domain::Sea;
+		Marker.bEmbarked = Game.isEmbarked(U);
 		Marker.Hp = U.hp;
 		Marker.Name = UTF8_TO_TCHAR(Type.name.c_str());
 		if (Marker.bLeader)

@@ -254,7 +254,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		CityMarkers[i]->SetVisibility(false);
 	}
 
-	int32 CrownCount = 0;
+	int32 CrownCount = 0, BoatCount = 0;
 	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
 	{
 		const FSovUnitMarker& Unit = Mirror.Units[i];
@@ -263,14 +263,33 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
 		// Kit figures in the owner's colour when the art exists; a figure stands about 45 cm tall on the map.
-		const TCHAR* FigureName = Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier");
+		const TCHAR* FigureName = Unit.bNaval ? TEXT("Ship") : Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier");
 		if (SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color))
 		{
+			if (Unit.bNaval)
+			{
+				C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
+				C->SetRelativeScale3D(FVector(0.14));
+				C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // side-on to the camera
+				continue;
+			}
 			const FVector2D Offset = Unit.bLeader ? FVector2D(-38.0, -30.0) : Unit.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 			Pos += SovHex::ToWorld(Offset, 0.0);
 			C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
 			C->SetRelativeScale3D(FVector(Unit.bLeader ? 0.3 : 0.26));
 			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // face the camera (south)
+			if (Unit.bEmbarked)
+			{
+				// An embarked unit rides in a boat in its owner's colour.
+				UStaticMeshComponent* B = Marker(Boats, BoatCount++, CubeMesh.Get());
+				if (SovArt::SetKitMesh(B, TEXT("Figures"), TEXT("Boat"), Unit.Color))
+				{
+					B->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
+					B->SetRelativeScale3D(FVector(0.26));
+					B->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+					C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + 0.26 * 30.0));
+				}
+			}
 			continue;
 		}
 		if (Unit.bLeader)
@@ -305,6 +324,10 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = CrownCount; i < Crowns.Num(); ++i)
 	{
 		Crowns[i]->SetVisibility(false);
+	}
+	for (int32 i = BoatCount; i < Boats.Num(); ++i)
+	{
+		Boats[i]->SetVisibility(false);
 	}
 }
 

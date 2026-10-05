@@ -51,6 +51,7 @@ struct Unit {
     Fixed movesLeft;
     Activity activity = Activity::Awake;
     std::optional<Hex> moveTarget;  // multi-turn move order
+    bool moveOverland = false;      // the order keeps a land unit on land (no embarking)
     int xp = 0;
     int charges = 0;  // build charges left (Builders)
     std::vector<TypeIndex> promotions;  // in the order taken; level = 1 + count

@@ -115,6 +115,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         if (type == "PLOT_HAS_RESOURCE") { q.type = ReqType::PlotHasResource; q.ref = rules.resource(ref); }
         else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = rules.feature(ref); }
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
+        else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
@@ -284,6 +285,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         EraType e;
         e.id = id;
         e.name = j["name"].str(id);
+        e.embarkedStrength = static_cast<int>(j["embarkedStrength"].integer(10));
+        e.greatPersonBaseCost = static_cast<int>(j["greatPersonBaseCost"].integer(0));
         eras.push_back(std::move(e));
     }
     auto readNodes = [&](const char* name, std::vector<TreeNode>& out) {
@@ -293,9 +296,12 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.name = j["name"].str(id);
             n.era = era(j["era"].str());
             n.cost = static_cast<int>(j["cost"].integer(0));
+            n.embarkedMoves = static_cast<int>(j["embarkedMoves"].integer(0));
             for (const Json& e : j["effects"].items()) {
                 if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
+                if (e.str() == "EMBARK_ALL") n.embarkAll = true;
+                if (e.str() == "OCEAN") n.ocean = true;
             }
             if (n.era == kNone || n.cost <= 0) {
                 *error = std::string(name) + " " + id + ": bad era or cost";
@@ -653,6 +659,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.needsPopulation = j["needsPopulation"].boolean(false);
         d.maintenance = static_cast<int>(j["maintenance"].integer(0));
         d.notAdjacentToCityCenter = j["notAdjacentToCityCenter"].boolean(false);
+        d.water = j["water"].boolean(false);
         districts.push_back(std::move(d));
     }
     for (BuildingType& b : buildings) b.districtType = district(b.district);
@@ -675,6 +682,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 else if (kind == "RIVER") adj.kind = DistrictAdjacencyKind::River;
                 else if (kind == "ANY_DISTRICT") adj.kind = DistrictAdjacencyKind::AnyDistrict;
                 else if (kind == "STRATEGIC_RESOURCE") adj.kind = DistrictAdjacencyKind::StrategicResource;
+                else if (kind == "SEA_RESOURCE") adj.kind = DistrictAdjacencyKind::SeaResource;
                 else if (kind == "DISTRICT") {
                     adj.kind = DistrictAdjacencyKind::District;
                     adj.ref = district(ref);
@@ -722,6 +730,19 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
         buildings[static_cast<size_t>(b)].granted = true;
+    }
+    // A tech may let one unit type embark early.
+    {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables["techs"]) {
+            TreeNode& n = techs[i++];
+            if (!j.has("embarkUnit")) continue;
+            n.embarkUnit = unit(j["embarkUnit"].str());
+            if (n.embarkUnit == kNone) {
+                *error = "tech " + id + ": unknown embark unit " + j["embarkUnit"].str();
+                return false;
+            }
+        }
     }
     // Boost conditions refer to units, buildings and the trees themselves.
     auto readBoosts = [&](const char* name, std::vector<TreeNode>& nodes) {

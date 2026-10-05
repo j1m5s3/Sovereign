@@ -83,8 +83,20 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
     // Owned by this city, within 3, open land, no visible luxury or strategic resource.
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return fail(CommandError::BadTarget);
-    if (!isLandPassable(state_, *rules_, plot) || state_.cityAt(plot) || state_.districtAt(plot) || campAt(plot))
+    if (state_.cityAt(plot) || state_.districtAt(plot) || campAt(plot)) return fail(CommandError::BadTarget);
+    if (d.water) {
+        // Harbor: Coast or Lake (not Ocean) next to land.
+        const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];
+        if (!t.water || t.impassable || t.id == "TERRAIN_OCEAN") return fail(CommandError::BadTarget);
+        bool nearLand = false;
+        for (int dir = 0; dir < kNumDirs; ++dir) {
+            auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+            if (n && !rules_->terrains[static_cast<size_t>(state_.plot(*n).terrain)].water) nearLand = true;
+        }
+        if (!nearLand) return fail(CommandError::BadTarget);
+    } else if (!isLandPassable(state_, *rules_, plot)) {
         return fail(CommandError::BadTarget);
+    }
     if (resourceVisible(city.owner, plot) &&
         rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Bonus)
         return fail(CommandError::BadTarget);
@@ -106,6 +118,7 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
 Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const {
     Yields out{};
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    const TypeIndex cityCenter = rules_->district("DISTRICT_CITY_CENTER");
     for (const DistrictAdjacency& a : d.adjacency) {
         int matches = 0;
         if (a.kind == DistrictAdjacencyKind::River) {
@@ -121,7 +134,12 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
                         hit = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain;
                         break;
                     case DistrictAdjacencyKind::AnyDistrict: hit = nd || state_.cityAt(n); break;  // city centers count
-                    case DistrictAdjacencyKind::District: hit = nd && nd->type == a.ref; break;
+                    case DistrictAdjacencyKind::District:
+                        hit = (nd && nd->type == a.ref) || (a.ref == cityCenter && state_.cityAt(n));
+                        break;
+                    case DistrictAdjacencyKind::SeaResource:
+                        hit = rules_->terrains[static_cast<size_t>(np.terrain)].water && resourceVisible(player, n);
+                        break;
                     case DistrictAdjacencyKind::Feature: hit = np.feature == a.ref; break;
                     case DistrictAdjacencyKind::Improvement: hit = np.improvement == a.ref; break;
                     case DistrictAdjacencyKind::StrategicResource:

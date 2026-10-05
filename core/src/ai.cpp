@@ -302,7 +302,7 @@ std::optional<Site> bestSite(const View& v, UnitId settler, Hex from) {
     for (Site site : sites) {
         int turns = 0;
         if (site.pos != from) {
-            auto path = v.game.findPath(settler, site.pos);
+            auto path = v.game.findPath(settler, site.pos, true);
             if (!path || path->empty()) continue;
             turns = path->back().turn + 1;
         }
@@ -327,7 +327,7 @@ void settle(View& v, UnitId id) {
         if (v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) survey(v);
         return;
     }
-    if (site && v.game.submit(Command::move(v.me, id, site->pos)) == CommandError::Ok) {
+    if (site && v.game.submit(Command::move(v.me, id, site->pos, true)) == CommandError::Ok) {
         v.claimed.push_back(site->pos);
         u = v.s().unit(id);
         if (u && u->pos == site->pos && u->movesLeft > Fixed() &&
@@ -376,7 +376,7 @@ void build(View& v, UnitId id) {
             }
         }
     }
-    if (best && v.game.submit(Command::move(v.me, id, *best)) == CommandError::Ok) {
+    if (best && v.game.submit(Command::move(v.me, id, *best, true)) == CommandError::Ok) {
         v.claimed.push_back(*best);
         u = s.unit(id);
         if (u && u->pos == *best && u->movesLeft > Fixed()) {
@@ -448,7 +448,7 @@ void attacks(View& v) {
 // Moves a unit next to `goal` (or onto it when `onto`); false when no route exists.
 bool approach(View& v, UnitId id, Hex goal, bool onto) {
     const Unit* u = v.s().unit(id);
-    if (onto) return u->pos == goal || v.game.submit(Command::move(v.me, id, goal)) == CommandError::Ok;
+    if (onto) return u->pos == goal || v.game.submit(Command::move(v.me, id, goal, true)) == CommandError::Ok;
     if (v.s().grid.distance(u->pos, goal) <= 1) return true;
     std::vector<Hex> ring;
     for (const Hex& h : v.s().grid.within(goal, 1)) {
@@ -458,7 +458,7 @@ bool approach(View& v, UnitId id, Hex goal, bool onto) {
         return v.s().grid.distance(u->pos, a) < v.s().grid.distance(u->pos, b);
     });
     for (const Hex& h : ring) {
-        if (v.game.submit(Command::move(v.me, id, h)) == CommandError::Ok) return true;
+        if (v.game.submit(Command::move(v.me, id, h, true)) == CommandError::Ok) return true;
     }
     return false;
 }
@@ -485,7 +485,7 @@ bool explore(View& v, UnitId id) {
     std::stable_sort(frontier.begin(), frontier.end(),
                      [](const std::pair<int, Hex>& a, const std::pair<int, Hex>& b) { return a.first < b.first; });
     for (size_t i = 0; i < frontier.size() && i < 6; ++i) {
-        if (v.game.submit(Command::move(v.me, id, frontier[i].second)) == CommandError::Ok) return true;
+        if (v.game.submit(Command::move(v.me, id, frontier[i].second, true)) == CommandError::Ok) return true;
     }
     return false;
 }
@@ -599,7 +599,7 @@ void leader(View& v) {
     }
     if (!capital) capital = s.city(v.cities.front());
     if (l->pos != capital->pos) {
-        if (!l->moveTarget || *l->moveTarget != capital->pos) v.game.submit(Command::move(v.me, l->id, capital->pos));
+        if (!l->moveTarget || *l->moveTarget != capital->pos) v.game.submit(Command::move(v.me, l->id, capital->pos, true));
         l = v.game.leaderOf(v.me);
         if (l && l->pos != capital->pos && !l->moveTarget) v.game.submit(Command::setActivity(v.me, l->id, Activity::Skip));
         return;

@@ -57,6 +57,10 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Crowns;
 
+	// Boats under embarked units.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Boats;
+
 	UPROPERTY()
 	TMap<uint32, TObjectPtr<UMaterialInstanceDynamic>> Materials;
 

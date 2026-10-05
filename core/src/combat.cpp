@@ -143,6 +143,15 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
 }
 
 int Game::maxMoves(const Unit& unit) const {
+    if (isEmbarked(unit)) {
+        // Embarked units move at a base rate raised by later techs (05: Embarkation).
+        int moves = rules_->globalInt("MOVEMENT_WHILE_EMBARKED_BASE");
+        const Player& p = state_.players[static_cast<size_t>(unit.owner)];
+        for (size_t i = 0; i < rules_->techs.size(); ++i) {
+            if (p.techs.has(static_cast<TypeIndex>(i))) moves += rules_->techs[i].embarkedMoves;
+        }
+        return std::max(1, moves);
+    }
     int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves);
     if (!isLeader(unit)) return moves;
     for (TypeIndex g : unit.gear) {
@@ -215,7 +224,13 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     const PlayerId oppOwner = oppUnit ? oppUnit->owner : oppCity->owner;
     const bool bombard = attacking && ranged && ut.ranged == 0 && ut.bombard > 0;
     int s = !(attacking && ranged) ? meleeStrength(unit) : bombard ? ut.bombard : rangedStrength(unit);
-    if (!attacking && isLeader(unit)) {
+    const bool embarked = isEmbarked(unit);
+    if (!attacking && embarked) {
+        // An embarked unit defends with a strength set by its owner's era (05: Embarkation).
+        const int era = std::clamp(playerEra(unit.owner), 0, static_cast<int>(rules_->eras.size()) - 1);
+        s = rules_->eras[static_cast<size_t>(era)].embarkedStrength;
+    }
+    if (!attacking && isLeader(unit) && !embarked) {
         const TypeIndex armor = unit.gear[static_cast<size_t>(GearSlot::Armor)];
         if (armor != kNone) s += rules_->gear[static_cast<size_t>(armor)].defense;  // armor counts when defending
     }
@@ -530,6 +545,7 @@ CommandError Game::validateCombat(const Command& c) const {
     const Unit* defender = city ? nullptr : defenderAt(*t);
     if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
+    if (isEmbarked(*u)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation)
 
     if (c.type == CommandType::RangedAttack) {
         if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city)) return CommandError::CannotAttack;
@@ -543,6 +559,8 @@ CommandError Game::validateCombat(const Command& c) const {
     // Melee: ranged and siege units cannot; the target must be adjacent and enterable.
     if (meleeStrength(*u) <= 0 || rangedStrength(*u) > 0 || ut.bombard > 0) return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
+    // Land units fight on land; ships fight on the water and against coastal cities.
+    if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water) return CommandError::CannotAttack;
     if (city) {
         // A city at 0 HP is only entered by a unit that can take it; barbarians never take cities.
         const bool takes = capturesCities(ut) && !state_.players[static_cast<size_t>(c.player)].barbarian;

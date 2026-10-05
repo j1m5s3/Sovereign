@@ -22,7 +22,7 @@ with art. The game falls back to primitives for anything missing.
 | `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses) and the painted look: vertex colours darkened at the foot and lightened at the crown, flat shading |
 | `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
-| `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak); static, team-coloured clothing |
+| `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), a war galley (team sail) for ships and a boat (team strakes) under embarked units; static, team-coloured cloth |
 | `blender/generate.py` | Builds every piece and exports FBX |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
 | `ue_import.py` | Imports FBX into `/Game/Art/<Kit>/` and assigns the master material `M_SovKit` (vertex colour × `Tint`) |

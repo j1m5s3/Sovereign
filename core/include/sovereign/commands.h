@@ -64,7 +64,8 @@ struct Command {
     int32_t arg = 0;
     int32_t arg2 = 0;
 
-    static Command move(PlayerId p, UnitId u, Hex to) { return {CommandType::MoveUnit, p, u, to, 0, 0}; }
+    // overland: a land unit keeps to land rather than embarking on the way.
+    static Command move(PlayerId p, UnitId u, Hex to, bool overland = false) { return {CommandType::MoveUnit, p, u, to, overland ? 1 : 0, 0}; }
     static Command foundCity(PlayerId p, UnitId u) { return {CommandType::FoundCity, p, u, {}, 0, 0}; }
     static Command setActivity(PlayerId p, UnitId u, Activity a) {
         return {CommandType::SetActivity, p, u, {}, static_cast<int32_t>(a), 0};
