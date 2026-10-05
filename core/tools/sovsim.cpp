@@ -3,8 +3,8 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--bench N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
-//          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none;
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none; --difficulty N: 0 Settler .. 3 Prince .. 7 Deity;
 //          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns).
 //          Stops early when someone wins.
 #include <algorithm>
@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
         else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
         else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
         else if (a == "--disasters") setup.disasterIntensity = std::atoi(next().c_str());
+        else if (a == "--difficulty") setup.difficulty = std::atoi(next().c_str());
         else if (a == "--bench") bench = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());

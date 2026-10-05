@@ -238,6 +238,9 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
         ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
         s += 5;
+    // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
+    if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
+    else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
     const bool embarked = isEmbarked(unit);
     if (!attacking && embarked) {
         // An embarked unit defends with a strength set by its owner's era (05: Embarkation).
@@ -520,7 +523,8 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
     // Fights with barbarians cannot take a unit past level 2 (EXPERIENCE_MAX_BARB_LEVEL).
     if (vsBarbarian && unit.level() >= rules_->globalInt("EXPERIENCE_MAX_BARB_LEVEL")) return;
     const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
-                        unitEffectTotal(unit, UnitEffectKind::XpPercent);
+                        unitEffectTotal(unit, UnitEffectKind::XpPercent) +
+                        (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0);
     xp = xp * percent / 100;
     // XP stops at the next level until the promotion is taken.
     unit.xp = std::min(unit.xp + xp, xpForNextLevel(unit));

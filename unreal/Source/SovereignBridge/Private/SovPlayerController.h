@@ -179,5 +179,6 @@ protected:
 	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
+	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

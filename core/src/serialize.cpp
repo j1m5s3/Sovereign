@@ -59,6 +59,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.cultureVictory);
     w.boolean(s.diplomaticVictory);
     w.i32(s.disasterIntensity);
+    w.i32(s.difficulty);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
@@ -82,6 +83,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.cultureVictory = r.boolean();
     s.diplomaticVictory = r.boolean();
     s.disasterIntensity = r.i32();
+    s.difficulty = r.i32();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
