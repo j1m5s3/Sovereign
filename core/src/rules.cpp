@@ -730,6 +730,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.housing = static_cast<int>(j["housing"].integer(0));
         d.amenities = static_cast<int>(j["amenities"].integer(0));
         d.airSlots = static_cast<int>(j["airSlots"].integer(0));
+        d.canal = j["canal"].boolean(false);
         d.appeal = static_cast<int>(j["appeal"].integer(0));
         for (const Json& band : j["appealHousing"].items()) {
             if (band.items().size() == 2) d.appealHousing.push_back({static_cast<int>(band.items()[0].integer(0)), static_cast<int>(band.items()[1].integer(0))});

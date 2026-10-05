@@ -124,6 +124,20 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
         }
         if (!water) return fail(CommandError::BadTarget);
     }
+    if (d.canal) {
+        // Between two bodies of water (two water neighbours not touching each other), or between
+        // water and the City Center (03: Canal [GS]).
+        std::vector<Hex> water;
+        for (int dir = 0; dir < kNumDirs; ++dir) {
+            auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+            if (n && rules_->terrains[static_cast<size_t>(state_.plot(*n).terrain)].water) water.push_back(*n);
+        }
+        bool links = !water.empty() && state_.grid.distance(city.pos, plot) == 1;
+        for (size_t a = 0; a < water.size() && !links; ++a) {
+            for (size_t b = a + 1; b < water.size() && !links; ++b) links = state_.grid.distance(water[a], water[b]) > 1;
+        }
+        if (!links) return fail(CommandError::BadTarget);
+    }
     if (d.floodplainsRiver) {
         // On Floodplains along a river (Dam).
         const std::string& f = p.feature == kNone ? std::string() : rules_->features[static_cast<size_t>(p.feature)].id;

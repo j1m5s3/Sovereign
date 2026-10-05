@@ -425,6 +425,9 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         if (tt.water) return sailable() ? std::optional<Fixed>(Fixed::fromInt(1)) : std::nullopt;
         // Ships put into a city from the water and sail out again (a coastal city is a port).
         if (state_.cityAt(to) && fromWater) return Fixed::fromInt(1);
+        // A finished Canal carries them across the land (03: Canal [GS]).
+        if (const CityDistrict* cd = state_.districtAt(to); cd && cd->complete && rules_->districts[static_cast<size_t>(cd->type)].canal)
+            return Fixed::fromInt(1);
         return std::nullopt;
     }
     if (ut.domain != Domain::Land) return std::nullopt;  // air units arrive later

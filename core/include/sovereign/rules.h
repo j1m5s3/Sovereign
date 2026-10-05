@@ -415,6 +415,7 @@ struct DistrictType {
     std::vector<TypeIndex> exclusiveWith;  // not in a city that has one of these
     std::vector<TypeIndex> validTerrains;  // only on these terrains (empty: any; Spaceport: flat land)
     int airSlots = 0;                      // aircraft based here (City Center 1, Aerodrome 2)
+    bool canal = false;                    // between two bodies of water (or water and the City Center); ships sail through
     std::vector<std::string> exclusiveIds;  // (loading only)
 };
 
