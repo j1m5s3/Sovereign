@@ -808,6 +808,7 @@ void Game::captureCity(City& city, UnitId attackerId) {
     c.locked.clear();
     c.capturedTurn = state_.turn;
     c.lastAttackedTurn = state_.turn;
+    c.loyalty = rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_COMBAT");
     c.struck = true;
     const bool wasCapital = c.capital;
     if (wasCapital) {

@@ -152,6 +152,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_UNIT_XP_PERCENT", ModEffect::UnitXpPercent},
         {"ADJUST_UNIT_STRENGTH", ModEffect::UnitStrength},
         {"ADJUST_DISTRICT_ADJACENCY_PERCENT", ModEffect::DistrictAdjacencyPercent},
+        {"ADJUST_CITY_LOYALTY", ModEffect::CityLoyalty},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -827,10 +828,21 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         h.minBalance = j.has("minBalance") ? static_cast<int>(j["minBalance"].integer(0)) : INT_MIN;
         h.growthPercent = static_cast<int>(j["growthPercent"].integer(0));
         h.yieldPercent = static_cast<int>(j["yieldPercent"].integer(0));
+        h.loyaltyPerTurn = static_cast<int>(j["loyaltyPerTurn"].integer(0));
         happiness.push_back(std::move(h));
     }
     std::sort(happiness.begin(), happiness.end(),
               [](const HappinessLevel& a, const HappinessLevel& b) { return a.minBalance < b.minBalance; });
+    for (const auto& [id, j] : m.tables["loyaltyLevels"]) {
+        LoyaltyLevel l;
+        l.id = id;
+        l.minLoyalty = static_cast<int>(j["minLoyalty"].integer(0));
+        l.yieldPercent = static_cast<int>(j["yieldPercent"].integer(0));
+        l.growthPercent = static_cast<int>(j["growthPercent"].integer(100));
+        loyaltyLevels.push_back(std::move(l));
+    }
+    std::sort(loyaltyLevels.begin(), loyaltyLevels.end(),
+              [](const LoyaltyLevel& a, const LoyaltyLevel& b) { return a.minLoyalty < b.minLoyalty; });
     for (const auto& [id, j] : m.tables["civilizations"]) {
         CivType c;
         c.id = id;

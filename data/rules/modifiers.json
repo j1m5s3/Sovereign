@@ -3,6 +3,8 @@
  "modifiers": [
   {"id": "PALACE_CITY_DEFENSE", "source": "BUILDING_PALACE", "collection": "OWNER_CITY",
    "effect": "ADJUST_CITY_DEFENSE", "arguments": {"amount": 3}},
+  {"id": "MONUMENT_LOYALTY", "source": "BUILDING_MONUMENT", "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_LOYALTY", "arguments": {"amount": 1}, "_note": "02-cities.md, Loyalty: Monument +1"},
   {"id": "WATER_MILL_RICE_FOOD", "source": "BUILDING_WATER_MILL", "collection": "OWNER_CITY_PLOTS",
    "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE", "ref": "RESOURCE_RICE"}]}},

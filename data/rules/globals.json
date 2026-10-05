@@ -482,43 +482,76 @@
   {
    "id": "HAPPINESS_REVOLT",
    "growthPercent": -100,
-   "yieldPercent": -40
+   "yieldPercent": -40,
+   "loyaltyPerTurn": -6
   },
   {
    "id": "HAPPINESS_UNREST",
    "growthPercent": -100,
    "yieldPercent": -30,
+   "loyaltyPerTurn": -6,
    "minBalance": -6
   },
   {
    "id": "HAPPINESS_UNHAPPY",
    "growthPercent": -30,
    "yieldPercent": -20,
+   "loyaltyPerTurn": -6,
    "minBalance": -4
   },
   {
    "id": "HAPPINESS_DISPLEASED",
    "growthPercent": -15,
    "yieldPercent": -10,
+   "loyaltyPerTurn": -3,
    "minBalance": -2
   },
   {
    "id": "HAPPINESS_CONTENT",
    "growthPercent": 0,
    "yieldPercent": 0,
+   "loyaltyPerTurn": 0,
    "minBalance": 0
   },
   {
    "id": "HAPPINESS_HAPPY",
    "growthPercent": 10,
    "yieldPercent": 10,
+   "loyaltyPerTurn": 3,
    "minBalance": 3
   },
   {
    "id": "HAPPINESS_ECSTATIC",
    "growthPercent": 20,
    "yieldPercent": 20,
+   "loyaltyPerTurn": 6,
    "minBalance": 5
+  }
+ ],
+ "loyaltyLevels": [
+  {
+   "id": "LOYALTY_UNREST",
+   "minLoyalty": 0,
+   "yieldPercent": -100,
+   "growthPercent": 0
+  },
+  {
+   "id": "LOYALTY_DISLOYAL",
+   "minLoyalty": 26,
+   "yieldPercent": -50,
+   "growthPercent": 25
+  },
+  {
+   "id": "LOYALTY_WAVERING_LOYALTY",
+   "minLoyalty": 51,
+   "yieldPercent": -25,
+   "growthPercent": 75
+  },
+  {
+   "id": "LOYALTY_LOYAL",
+   "minLoyalty": 76,
+   "yieldPercent": 0,
+   "growthPercent": 100
   }
  ]
 }

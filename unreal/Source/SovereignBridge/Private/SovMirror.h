@@ -49,6 +49,7 @@ struct FSovCityMarker
 	int32 Population = 1;
 	int32 Hp = 0, MaxHp = 0;
 	bool bCapital = false;
+	int32 Loyalty = 100;
 };
 
 struct FSovMirror

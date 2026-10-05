@@ -168,6 +168,12 @@ int main(int argc, char** argv) {
         for (const GameEvent& e : game->state().events) ++kinds[static_cast<int>(e.kind)];
         std::printf("agents %ld; recent assassinations: %d leaders killed, %d wounded, %d assassins killed, %d captured\n",
                     static_cast<long>(game->state().agents.size()), kinds[1], kinds[2], kinds[3], kinds[4]);
+        long freeCities = 0, wavering = 0;
+        for (const City& c : game->state().cities) {
+            freeCities += game->state().players[static_cast<size_t>(c.owner)].freeCity;
+            wavering += c.loyalty <= 75;
+        }
+        std::printf("free cities %ld, cities at 75 loyalty or less %ld\n", freeCities, wavering);
         const long camps = static_cast<long>(game->state().camps.size());
         std::printf("wars declared %ld, attacks %ld, promotions %ld, city strikes %ld, cities held by a conqueror %ld (capitals %ld), "
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",

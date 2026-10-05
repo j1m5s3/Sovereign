@@ -576,10 +576,21 @@ def gen_happiness():
     out = []
     for row in table(SPEC / "eras-moments-loyalty.md", "Amenities (happiness levels)"):
         h = {"id": "HAPPINESS_" + snake(row["Level"]),
-             "growthPercent": int(num(row["Growth %"])), "yieldPercent": int(num(row["Non-food yield %"]))}
+             "growthPercent": int(num(row["Growth %"])), "yieldPercent": int(num(row["Non-food yield %"])),
+             "loyaltyPerTurn": int(num(row["Loyalty/turn [R&F]"]))}
         if row["Min amenity balance"]:
             h["minBalance"] = num(row["Min amenity balance"])
         out.append(h)
+    return out
+
+
+def gen_loyalty_levels():
+    out = []
+    for row in table(SPEC / "eras-moments-loyalty.md", "Loyalty levels [R&F]"):
+        low = row["Loyalty range"].split("-")[0]
+        out.append({"id": "LOYALTY_" + snake(row["Level"]), "minLoyalty": int(num(low)),
+                    "yieldPercent": int(round(num(row["Yield change"]) * 100)),
+                    "growthPercent": int(round(num(row["Growth multiplier"]) * 100))})
     return out
 
 
@@ -593,7 +604,8 @@ def gen_globals():
                 values[row["Parameter"]] = num(row["Value"])
             except ValueError:
                 pass  # text-valued parameters are not rules numbers
-    return {"globals": dict(sorted(values.items())), "happinessLevels": gen_happiness()}
+    return {"globals": dict(sorted(values.items())), "happinessLevels": gen_happiness(),
+            "loyaltyLevels": gen_loyalty_levels()}
 
 
 def gen_improvements():

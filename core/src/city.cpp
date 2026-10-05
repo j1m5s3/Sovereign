@@ -149,11 +149,14 @@ CityReport Game::cityReport(CityId id) const {
         if (balance >= rules_->happiness[i].minBalance) rep.happiness = static_cast<int>(i);
     }
     const int moodYield = rules_->happiness.empty() ? 0 : rules_->happiness[static_cast<size_t>(rep.happiness)].yieldPercent;
+    const LoyaltyLevel* loyal = loyaltyLevel(*c);
+    const int loyaltyYield = loyal ? loyal->yieldPercent : 0;  // Wavering -25% ... Unrest -100% [R&F]
 
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
         if (i != idx(YieldType::Food)) pct += moodYield;
+        pct += loyaltyYield;
         rep.yields[i] = raw[i] * std::max(0, pct) / 100;
     }
     rep.foodConsumption = rules_->global("CITY_FOOD_CONSUMPTION_PER_POPULATION") * c->population;
@@ -601,6 +604,7 @@ void Game::processCities(PlayerId pid) {
             int pct = 100 + (mood ? mood->growthPercent : 0) +
                       static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityGrowthPercent).toInt());
             surplus = surplus * std::max(0, pct) / 100;
+            if (const LoyaltyLevel* loyal = loyaltyLevel(city)) surplus = surplus * loyal->growthPercent / 100;
             const Fixed room = rep.housing - Fixed::fromInt(city.population);
             if (room >= Fixed::fromInt(rules_->globalInt("CITY_HOUSING_LEFT_50PCT_GROWTH") + 1)) {
                 // full growth

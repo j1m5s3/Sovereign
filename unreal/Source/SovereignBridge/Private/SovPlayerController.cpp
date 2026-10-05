@@ -702,6 +702,9 @@ void ASovPlayerController::UpdatePanel()
 		L.Add(FString::Printf(TEXT("%s   Pop %d   HP %d/%d   Food %s  Prod %s  Gold %s  Sci %s  Cul %s"), *Str(C->name), C->population, C->hp,
 			G.cityMaxHp(), *Y(sov::YieldType::Food), *Y(sov::YieldType::Production), *Y(sov::YieldType::Gold), *Y(sov::YieldType::Science),
 			*Y(sov::YieldType::Culture)));
+		const sov::LoyaltyLevel* Level = G.loyaltyLevel(*C);
+		L.Add(FString::Printf(TEXT("Loyalty %d (%+d per turn)%s"), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()),
+			Level ? *FString::Printf(TEXT("   %s"), *Str(Level->id)) : TEXT("")));
 		FString Queue = TEXT("Building: ");
 		Queue += C->queue.empty() ? FString(TEXT("nothing")) : ItemName(R, C->queue.front());
 		L.Add(Queue + TEXT("   P choose production   right-click: city strike"));
