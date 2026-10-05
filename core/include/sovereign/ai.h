@@ -29,6 +29,16 @@ SOV_API int settleScore(const Game& game, PlayerId player, Hex plot);
 // Sum of combat strength (scaled by health) of the player's land military units.
 SOV_API int militaryStrength(const Game& game, PlayerId player);
 
+// Grand strategies (10-ai-ui-implementation.md, Strategies): re-evaluated from the state every
+// turn; at most one victory strategy is active, the situational ones stack.
+enum class Strategy : uint8_t {
+    ScienceVictory = 0, CultureVictory, ReligiousVictory, DominationVictory, DiplomaticVictory,
+    RapidExpansion, Naval, WonderObsessed, DarkAge,
+    Count
+};
+SOV_API std::vector<Strategy> strategies(const Game& game, PlayerId player);
+SOV_API const char* strategyName(Strategy s);
+
 // How far along the major civs are, averaged over the living ones (the pace benchmark,
 // `sovsim --bench`; values x100 so averages keep two decimals).
 struct PaceSample {

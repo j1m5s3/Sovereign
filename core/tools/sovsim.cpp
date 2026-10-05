@@ -54,6 +54,7 @@ static int runBench(const Rules& rules, GameSetup setup, int n, int turns) {
     }
     std::vector<ai::PaceSample> sum(checkpoints.size());
     std::vector<int> games(checkpoints.size(), 0);
+    std::vector<std::vector<int>> picked(checkpoints.size(), std::vector<int>(static_cast<size_t>(ai::Strategy::Count), 0));
     for (int seed = 1; seed <= n; ++seed) {
         setup.seed = static_cast<uint64_t>(seed);
         std::string err;
@@ -70,6 +71,10 @@ static int runBench(const Rules& rules, GameSetup setup, int n, int turns) {
             t.cities += p.cities, t.population += p.population, t.techs += p.techs, t.civics += p.civics, t.era += p.era;
             t.science += p.science, t.culture += p.culture, t.production += p.production, t.gold += p.gold;
             ++games[k];
+            for (const Player& pl : game->state().players) {
+                if (!pl.alive || pl.barbarian || pl.freeCity || pl.cityState != kNone) continue;
+                for (ai::Strategy st : ai::strategies(*game, pl.id)) ++picked[k][static_cast<size_t>(st)];
+            }
         }
     }
     std::printf("turn  games  cities    pop  techs civics   era  science culture  prod   gold\n");
@@ -79,6 +84,15 @@ static int runBench(const Rules& rules, GameSetup setup, int n, int turns) {
         const auto avg = [&](int64_t v) { return static_cast<double>(v) / 100.0 / games[k]; };
         std::printf("%4d  %5d  %6.1f %6.1f %6.1f %6.1f %5.1f  %7.1f %7.1f %5.1f %6.0f\n", checkpoints[k], games[k], avg(t.cities), avg(t.population),
                     avg(t.techs), avg(t.civics), avg(t.era), avg(t.science), avg(t.culture), avg(t.production), avg(t.gold));
+    }
+    std::printf("strategies held by major civs at each checkpoint:\n");
+    for (size_t k = 0; k < checkpoints.size(); ++k) {
+        if (games[k] == 0) continue;
+        std::printf("%4d ", checkpoints[k]);
+        for (size_t i = 0; i < picked[k].size(); ++i) {
+            if (picked[k][i] > 0) std::printf(" %s %d,", ai::strategyName(static_cast<ai::Strategy>(i)), picked[k][i]);
+        }
+        std::printf("\n");
     }
     return 0;
 }
