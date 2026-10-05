@@ -39,6 +39,8 @@ struct Plot {
     CityId city = kNoCity;  // owning city
     int16_t continent = -1;
     int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
+    uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
+    std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -330,6 +332,7 @@ struct Player {
     std::vector<Governor> governors;      // appointed governors (08)
     std::vector<int32_t> grievances;      // per player: grievances this player holds against it [GS]
     int favor = 0;                        // Diplomatic Favor [GS]
+    int64_t co2 = 0;                      // CO2 it has emitted [GS]
     int diplomaticVictoryPoints = 0;      // [GS]
     int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).
@@ -366,6 +369,7 @@ struct GameSetup {
     bool religiousVictory = true;  // 06: Religious victory
     bool cultureVictory = true;    // 07: Tourism and Culture Victory
     bool diplomaticVictory = true; // 08: Diplomatic Victory [GS]
+    int disasterIntensity = 2;     // 0 Minimal .. 4 Hyperreal; -1: no natural disasters (09 [GS])
     int cityStates = -1;           // city-states to place (-1: the map size's default)
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
@@ -430,6 +434,8 @@ enum class EventKind : uint8_t {
     SpyCaught,       // target caught actor's spy; value: 1 when it escaped
     CongressSession, // the World Congress opens a session
     ResolutionPassed,  // value: resolution; target: the candidate it applies to when that is a player
+    Disaster,        // value: disaster type; target: the owner of the plot it struck (kNoPlayer: unowned)
+    ClimatePhase,    // value: the phase the world entered
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -471,6 +477,14 @@ struct SOV_API GameState {
     std::vector<Agreement> agreements;  // running deal terms
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
+    int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]
+    int climatePhase = 0;               // 0: none yet, 1..7 (09: Climate Phases)
+    struct Drought {
+        Hex center;
+        int radius = 1;
+        int turnsLeft = 0;
+    };
+    std::vector<Drought> droughts;      // -1 Food on their plots while they last
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)
     std::vector<CongressItem> congress; // the resolutions in session

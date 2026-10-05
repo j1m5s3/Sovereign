@@ -68,7 +68,10 @@ Yields Game::plotYields(Hex at, const City& city) const {
         y[idx(YieldType::Production)] =
             std::max(y[idx(YieldType::Production)], rules_->global("YIELD_PRODUCTION_CITY_TERRAIN_REPLACE"));
     }
-    if (p.improvement != kNone && at != city.pos) {
+    // Ground a disaster left fertile; a drought takes 1 Food (09: Climate and Disasters).
+    for (size_t i = 0; i < kNumYields; ++i) y[i] += Fixed::fromInt(p.fertility[i]);
+    if (!state_.droughts.empty() && inDrought(at)) y[idx(YieldType::Food)] = std::max(Fixed(), y[idx(YieldType::Food)] - rules_->global("DROUGHT_FOOD_LOSS_PER_TILE"));
+    if (p.improvement != kNone && p.pillagedTurns == 0 && at != city.pos) {
         const Yields imp = improvementYields(at, city.owner);
         for (size_t i = 0; i < kNumYields; ++i) y[i] += imp[i];
     }

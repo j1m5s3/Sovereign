@@ -621,6 +621,40 @@ struct Modifier {
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
+// Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
+enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire };
+enum class DisasterDamageType : uint8_t {
+    ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls, Other,
+};
+struct DisasterDamage {
+    DisasterDamageType type = DisasterDamageType::Other;
+    int percent = 0, minHp = 0, maxHp = 0;
+};
+struct DisasterFertility {
+    YieldType yield = YieldType::Food;
+    TypeIndex feature = kNone;  // kNone: any affected land plot
+    int percent = 0, amount = 0;
+    bool replaceFeature = false;
+};
+constexpr int kNumDisasterIntensities = 5;  // Minimal, Light, Moderate, Heavy, Hyperreal
+struct DisasterType {
+    std::string id, name;
+    DisasterKind kind = DisasterKind::Flood;
+    int severity = 0, hexes = 0, duration = 0, chancePerDegree = 0;
+    std::array<int, kNumDisasterIntensities> frequencyTenths{};  // expected occurrences per game, x10
+    std::vector<DisasterDamage> damage;
+    std::vector<DisasterFertility> fertility;
+};
+struct ClimatePhaseType {
+    std::string id, name;
+    int points = 0;  // climate change points this phase adds (one point: 0.5 degrees)
+    int iceLoss = 0, fertilityRemoval = 0;
+};
+struct DisasterIntensityType {
+    std::string id, name;
+    int activeVolcanoes = 70, extraRange = 0;
+};
+
 // World Congress resolutions (08: Diplomatic Favor and World Congress [GS]; data:
 // world-congress-emergencies.md). The core carries the effects of the kinds listed; the others
 // are never put to a vote.
@@ -712,6 +746,7 @@ struct MapSizeType {
     int defaultPlayers = 0;
     int maxReligions = 0;  // religions that can be founded (Great Prophets) on this size
     int defaultCityStates = 0;
+    int64_t co2PerDegree = 2000000;  // CO2 for each degree of warming (09: Climate [GS])
 };
 
 struct GameSpeedType {
@@ -761,6 +796,9 @@ public:
     std::vector<GovernorType> governors;
     std::vector<SpyOperationType> spyOperations;
     std::vector<ResolutionType> resolutions;
+    std::vector<DisasterType> disasters;
+    std::vector<ClimatePhaseType> climatePhases;
+    std::vector<DisasterIntensityType> disasterIntensities;
     std::vector<std::string> promotionClasses;  // the unit promotion classes in use (Military Advisory targets)
     std::vector<GovernorPromotionType> governorPromotions;
     std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants

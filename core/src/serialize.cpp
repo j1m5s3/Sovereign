@@ -58,6 +58,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.religiousVictory);
     w.boolean(s.cultureVictory);
     w.boolean(s.diplomaticVictory);
+    w.i32(s.disasterIntensity);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
@@ -80,6 +81,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.religiousVictory = r.boolean();
     s.cultureVictory = r.boolean();
     s.diplomaticVictory = r.boolean();
+    s.disasterIntensity = r.i32();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
@@ -257,6 +259,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.city);
         w.i16(p.continent);
         w.i8(p.route);
+        w.u8(p.pillagedTurns);
+        for (int8_t f : p.fertility) w.i8(f);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -324,6 +328,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, p.grievances);
         w.i32(p.favor);
         w.i32(p.diplomaticVictoryPoints);
+        w.i64(p.co2);
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
             w.bytes(t->done);
             w.bytes(t->boosted);
@@ -463,6 +468,14 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.until);
     }
     w.i32(s.nextDealId);
+    w.i64(s.co2);
+    w.i32(s.climatePhase);
+    w.u32(static_cast<uint32_t>(s.droughts.size()));
+    for (const GameState::Drought& d : s.droughts) {
+        writeHex(w, d.center);
+        w.i32(d.radius);
+        w.i32(d.turnsLeft);
+    }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
     w.u32(static_cast<uint32_t>(s.congress.size()));
@@ -573,6 +586,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.city = r.i32();
         p.continent = r.i16();
         p.route = r.i8();
+        p.pillagedTurns = r.u8();
+        for (int8_t& f : p.fertility) f = r.i8();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -675,6 +690,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, p.grievances)) return false;
         p.favor = r.i32();
         p.diplomaticVictoryPoints = r.i32();
+        p.co2 = r.i64();
         for (TreeProgress* t : {&p.techs, &p.civics}) {
             t->done = r.bytes();
             t->boosted = r.bytes();
@@ -855,6 +871,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.until = r.i32();
     }
     s.nextDealId = r.i32();
+    s.co2 = r.i64();
+    s.climatePhase = r.i32();
+    uint32_t ndrought = r.u32();
+    if (!r.checkCount(ndrought, 16)) return false;
+    s.droughts.resize(ndrought);
+    for (GameState::Drought& d : s.droughts) {
+        d.center = readHex(r);
+        d.radius = r.i32();
+        d.turnsLeft = r.i32();
+    }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();
     uint32_t ncong = r.u32();
