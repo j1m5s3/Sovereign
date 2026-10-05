@@ -204,3 +204,26 @@ TEST(ai_grand_strategy_agendas) {
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK(holds(*g, 0, ai::Strategy::WonderObsessed));
 }
+
+TEST(ai_gathers_before_assaulting_walls) {
+    GameState s = flatState(30, 14, 2);
+    addCity(s, 0, {4, 6}, true, 3);
+    addCity(s, 1, {20, 6}, true, 6);
+    s.cities.back().wallHp = 100;  // walled
+    s.players[0].visibility.resize(static_cast<size_t>(s.grid.size()), 0);
+    for (const Hex& h : s.grid.within({20, 6}, 3)) s.players[0].visibility[static_cast<size_t>(s.grid.index(h))] = static_cast<uint8_t>(Visibility::Revealed);
+    std::vector<UnitId> army;
+    for (int i = 0; i < 2; ++i) army.push_back(addUnit(s, "UNIT_WARRIOR", 0, {12, static_cast<int32_t>(5 + i)}));
+    addUnit(s, "UNIT_WARRIOR", 0, {4, 6});  // the garrison
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    for (int t = 0; t < 4; ++t) {
+        ai::playTurn(*g);
+        while (g->state().currentPlayer != 0 && !g->gameOver()) ai::playTurn(*g);
+    }
+    // Two Warriors are far short of three times a walled city's strength: they wait at the staging ring.
+    for (UnitId id : army) {
+        const Unit* u = g->state().unit(id);
+        if (u) CHECK(g->state().grid.distance(u->pos, {20, 6}) >= 3);
+    }
+}

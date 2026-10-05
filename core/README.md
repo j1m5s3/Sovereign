@@ -52,6 +52,7 @@ same command must print the same hash.
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
+| Unit upgrades (05: Upgrades): cost, rules, the command | `src/combat.cpp` (`upgradeCost`, `upgradeProblem`), applied in `src/game.cpp` |
 | Districts: placement (Aqueduct, Dam, exclusive and one-per-player rules), population limit, cost, adjacency, appeal, housing and amenities from Aqueduct, Neighborhood, Entertainment Complex, Water Park, Dam, Preserve | `src/districts.cpp` (queries on `Game`) |
 | The AI player: diplomacy, research, production, settling, armies (commands only) | `include/sovereign/ai.h`, `src/ai.cpp` |
 | Score, turn limit and victories (Domination, last standing, Score) | `src/victory.cpp` (queries on `Game`) |

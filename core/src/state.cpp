@@ -122,6 +122,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotGovern: return "CannotGovern";
         case CommandError::CannotSpy: return "CannotSpy";
         case CommandError::CannotVote: return "CannotVote";
+        case CommandError::CannotUpgrade: return "CannotUpgrade";
     }
     return "Unknown";
 }
@@ -193,6 +194,7 @@ std::string describe(const Command& c) {
         case CommandType::PromoteGovernor: return s + "PromoteGovernor " + std::to_string(c.arg) + " " + std::to_string(c.arg2);
         case CommandType::AssignGovernor: return s + "AssignGovernor " + std::to_string(c.arg) + " -> city" + std::to_string(c.id);
         case CommandType::CongressVote: return s + "CongressVote item" + std::to_string(c.id) + " option" + std::to_string(c.arg) + " candidate" + std::to_string(c.arg2);
+        case CommandType::UpgradeUnit: return s + "UpgradeUnit " + std::to_string(c.id);
         case CommandType::SpyMission: return s + "SpyMission agent" + std::to_string(c.id) + " " + std::to_string(c.arg) + " -> city" + std::to_string(c.arg2);
     }
     return s + "?";

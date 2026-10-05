@@ -329,6 +329,9 @@ public:
     int unitRange(const Unit& unit) const;
     int unitSight(const Unit& unit) const;
     int maxAttacks(const Unit& unit) const;
+    // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.
+    int upgradeCost(const Unit& unit) const;
+    CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now
     // A unit entering this plot loses its remaining moves (enemy unit or city next to it).
     bool inEnemyZoc(const Unit& mover, Hex plot) const;
     // Combat strength of `unit` fighting `opponent` (05: Strength calculation).
