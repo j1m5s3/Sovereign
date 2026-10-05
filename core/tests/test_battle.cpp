@@ -144,3 +144,75 @@ TEST(live_battles_replay) {
     REQUIRE(replayed);
     CHECK_EQ(replayed->stateHash(), g->stateHash());
 }
+
+// ---- city assaults (leader doc §9: a city holding the leader is assaulted)
+
+namespace {
+struct Siege {
+    std::unique_ptr<Game> game;
+    CityId city = kNoCity;
+    UnitId leader = 0, attacker = 0;
+};
+
+// Player 0 (human) keeps its leader in a walled-off city at (6,6); player 1's Swordsman stands next to it.
+Siege siege(bool live = true) {
+    Siege f;
+    GameState s = flatState(16, 12, 2);
+    s.setup.liveBattles = live;
+    s.setup.players[1].human = false;
+    f.city = addCity(s, 0, {6, 6}, true, 3);
+    addCity(s, 1, {13, 9}, true);
+    f.leader = addLeader(s, 0, {6, 6});
+    f.attacker = addUnit(s, "UNIT_SWORDSMAN", 1, {7, 6});
+    s.players[0].human = true;
+    s.players[1].human = false;
+    f.game = Game::fromScenario(rules(), std::move(s));
+    f.game->submit(Command::declareWar(0, 1));
+    f.game->submit(Command::setActivity(0, f.leader, Activity::Sleep));
+    sovtest::endTurns(*f.game, 1);
+    return f;
+}
+}  // namespace
+
+TEST(assault_on_a_city_holding_the_leader_goes_live) {
+    Siege f = siege();
+    Game& g = *f.game;
+    REQUIRE(g.state().currentPlayer == 1);
+    const int hp = g.state().city(f.city)->hp;
+    REQUIRE(g.submit(Command::attack(1, f.attacker, {6, 6})) == CommandError::Ok);
+    const PendingBattle& b = g.state().pendingBattle;
+    REQUIRE(b.active);
+    CHECK(b.city == f.city && b.liveFor == 0 && b.leader == f.leader && b.defender == kNoUnit);
+    CHECK_EQ(g.state().city(f.city)->hp, hp);
+    // The defender answers out of turn; the city's loss is clamped to the band.
+    const int band = rules().globalInt("LIVE_BATTLE_BAND_PERCENT");
+    const int expected = b.expectedToDefender;
+    REQUIRE(g.submit(Command::battleResult(0, 0, 999, 10)) == CommandError::Ok);
+    CHECK_EQ(hp - g.state().city(f.city)->hp, expected * (100 - band) / 100);
+    CHECK_EQ(g.state().unit(f.leader)->hp, 90);
+}
+
+TEST(city_assaults_auto_resolve_and_stay_civ_math_without_the_switch) {
+    Siege f = siege();
+    REQUIRE(f.game->submit(Command::attack(1, f.attacker, {6, 6})) == CommandError::Ok);
+    const int hp = f.game->state().city(f.city)->hp;
+    CHECK_EQ(f.game->submit(Command::autoResolveBattle(1)), CommandError::Ok);  // the attacker may settle it too
+    CHECK(f.game->state().city(f.city)->hp < hp);
+    Siege off = siege(false);
+    REQUIRE(off.game->submit(Command::attack(1, off.attacker, {6, 6})) == CommandError::Ok);
+    CHECK(!off.game->battlePending());
+}
+
+TEST(a_leader_killed_storming_a_city_starts_a_succession) {
+    GameState s = flatState(16, 12, 2);
+    addCity(s, 0, {2, 2}, true);
+    const CityId target = addCity(s, 1, {7, 6}, true, 6);
+    const UnitId leader = addLeader(s, 0, {6, 6});
+    s.units.back().hp = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->submit(Command::declareWar(0, 1));
+    REQUIRE(g->submit(Command::attack(0, leader, {7, 6})) == CommandError::Ok);
+    CHECK(!g->leaderOf(0));
+    CHECK(g->state().players[0].successionPending);
+    (void)target;
+}

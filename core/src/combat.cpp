@@ -733,7 +733,9 @@ CommandError Game::validateBattle(const Command& c) const {
         // Either side may settle it with the normal roll (the AI never plays it live).
         const Unit* a = state_.unit(b.attacker);
         const Unit* d = state_.unit(b.defender);
-        const bool party = (a && a->owner == c.player) || (d && d->owner == c.player) || c.player == b.liveFor;
+        const City* city = state_.city(b.city);
+        const bool party = (a && a->owner == c.player) || (d && d->owner == c.player) || (city && city->owner == c.player) ||
+                           c.player == b.liveFor;
         return party ? CommandError::Ok : CommandError::BattlePending;
     }
     return CommandError::BattlePending;
@@ -742,6 +744,17 @@ CommandError Game::validateBattle(const Command& c) const {
 void Game::applyBattle(const Command& c) {
     const PendingBattle b = state_.pendingBattle;
     state_.pendingBattle = PendingBattle{};
+    if (b.city != kNoCity && c.type == CommandType::AutoResolveBattle) {
+        Rng& rng = state_.rng.get(RngStream::Combat);
+        const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
+        const Unit& a = *state_.unit(b.attacker);
+        const City& city = *state_.city(b.city);
+        const int sa = combatStrengthVsCity(a, city, true, false), sd = cityStrength(city);
+        const int dealt = combatDamage(sa - sd, rng.range(0, extra));
+        const int toAttacker = combatDamage(sd - sa, rng.range(0, extra));
+        resolveCityAssault(b.attacker, b.city, false, dealt, toAttacker);
+        return;
+    }
     if (c.type == CommandType::AutoResolveBattle) {
         Rng& rng = state_.rng.get(RngStream::Combat);
         const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
@@ -762,7 +775,8 @@ void Game::applyBattle(const Command& c) {
     const int toDefender = clampToBand(c.arg, b.expectedToDefender);
     const int toAttacker = clampToBand(c.arg2, b.expectedToAttacker);
     const int wound = std::clamp(c.target.x, 0, rules_->globalInt("LIVE_BATTLE_LEADER_MAX_WOUND"));
-    resolveUnitFight(b.attacker, b.defender, b.target, false, toDefender, toAttacker);
+    if (b.city != kNoCity) resolveCityAssault(b.attacker, b.city, false, toDefender, toAttacker);
+    else resolveUnitFight(b.attacker, b.defender, b.target, false, toDefender, toAttacker);
     // The leader fought in person: it may come out hurt, never killed by the wound alone.
     Unit* l = state_.unit(b.leader);
     if (l && l->id != b.attacker && l->id != b.defender) l->hp = std::max(1, l->hp - wound);
@@ -823,7 +837,6 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
 
 void Game::attackCity(const Command& c, City& city) {
     const bool ranged = c.type == CommandType::RangedAttack;
-    const PlayerId them = city.owner;
     Unit* a = state_.unit(c.id);
     if (!ranged && city.hp <= 0) {
         captureCity(city, c.id);  // a city at 0 HP falls to the first melee unit to enter
@@ -831,10 +844,49 @@ void Game::attackCity(const Command& c, City& city) {
     }
     const int sa = combatStrengthVsCity(*a, city, true, ranged);
     const int sd = cityStrength(city);
-    Rng& rng = state_.rng.get(RngStream::Combat);
     const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
+    // An assault (not a bombardment) on a city holding a human's leader, or by a human's leader
+    // stack, waits for its live battle (leader doc §9).
+    if (!ranged && state_.setup.liveBattles) {
+        const PlayerId side = liveAssaultSide(*a, city);
+        if (side != kNoPlayer) {
+            PendingBattle& b = state_.pendingBattle;
+            b = PendingBattle{};
+            b.active = true;
+            b.attacker = c.id;
+            b.city = city.id;
+            b.target = city.pos;
+            b.liveFor = side;
+            const Unit* l = leaderOf(side);
+            b.leader = l ? l->id : kNoUnit;
+            b.expectedToDefender = combatDamage(sa - sd, extra / 2);
+            b.expectedToAttacker = combatDamage(sd - sa, extra / 2);
+            return;
+        }
+    }
+    Rng& rng = state_.rng.get(RngStream::Combat);
     const int dealt = combatDamage(sa - sd, rng.range(0, extra));
     const int toAttacker = ranged ? 0 : combatDamage(sd - sa, rng.range(0, extra));
+    resolveCityAssault(c.id, city.id, ranged, dealt, toAttacker);
+}
+
+PlayerId Game::liveAssaultSide(const Unit& attacker, const City& city) const {
+    const Player& ap = state_.players[static_cast<size_t>(attacker.owner)];
+    if (ap.human) {
+        if (isLeader(attacker)) return attacker.owner;
+        const Unit* l = state_.unitAt(attacker.pos, UnitLayer::Leader, *rules_);
+        if (l && l->owner == attacker.owner) return attacker.owner;
+    }
+    const Unit* inside = state_.unitAt(city.pos, UnitLayer::Leader, *rules_);
+    if (inside && inside->owner == city.owner && state_.players[static_cast<size_t>(city.owner)].human) return city.owner;
+    return kNoPlayer;
+}
+
+void Game::resolveCityAssault(UnitId attackerId, CityId cityId, bool ranged, int dealt, int toAttacker) {
+    City& city = *state_.city(cityId);
+    Unit* a = state_.unit(attackerId);
+    const PlayerId them = city.owner;
+    const PlayerId me = a->owner;
     const int wallPercent = wallDamagePercent(*a, city, ranged);
     if (wallPercent >= 0) {
         city.wallHp = std::max(0, city.wallHp - roundDiv(static_cast<int64_t>(dealt) * wallPercent, 100));
@@ -844,20 +896,24 @@ void Game::attackCity(const Command& c, City& city) {
     city.lastAttackedTurn = state_.turn;
     a->hp -= toAttacker;
     if (a->hp <= 0) {
-        noteKill(*a, nullptr);
-        removeUnit(c.id);
-        refreshVisibility(c.player);
+        if (isLeader(*a)) {
+            leaderLost(attackerId, them, false);  // a leader killed storming the walls (§5)
+        } else {
+            noteKill(*a, nullptr);
+            removeUnit(attackerId);
+        }
+        refreshVisibility(me);
         return;
     }
     afterAttack(*a);
     const bool takes = !ranged && city.hp <= 0 && capturesCities(typeOf(*rules_, *a)) &&
-                       !state_.players[static_cast<size_t>(c.player)].barbarian;
+                       !state_.players[static_cast<size_t>(me)].barbarian;
     if (takes) {
-        captureCity(city, c.id);
+        captureCity(city, attackerId);
         return;
     }
     awardXp(*a, rules_->globalInt("EXPERIENCE_UNIT_VS_DISTRICT_NOT_CITY_CAPTURED"), false);
-    refreshVisibility(c.player);
+    refreshVisibility(me);
     refreshVisibility(them);
 }
 

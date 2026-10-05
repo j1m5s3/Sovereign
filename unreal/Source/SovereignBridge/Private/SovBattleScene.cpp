@@ -50,7 +50,7 @@ UStaticMeshComponent* ASovBattleScene::Add(UStaticMesh* Mesh, const FVector& Loc
 }
 
 void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Ground, bool bWoods, const FLinearColor& AttackerColor,
-	const FLinearColor& DefenderColor)
+	const FLinearColor& DefenderColor, bool bCity, bool bWalls)
 {
 	SideColor[0] = AttackerColor;
 	SideColor[1] = DefenderColor;
@@ -74,6 +74,25 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 				continue;
 			}
 			Add(ConeMesh, At + FVector(0, 0, 420), FVector(1.6, 1.6, 3.2), FLinearColor(0.12f, 0.32f, 0.12f));
+		}
+	}
+	if (bCity)
+	{
+		// The city behind the defenders: wall sections (10 m kit pieces) either side of an open gate,
+		// or the outer houses of an unwalled town.
+		const TCHAR* Houses[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+		int32 h = 0;
+		for (const float Y : {-2600.f, -1600.f, 1600.f, 2600.f})
+		{
+			const FVector At(3400.f, Y, 0.f);
+			const TCHAR* Name = bWalls ? TEXT("Wall") : Houses[h++ % 3];
+			UStaticMeshComponent* Piece = Add(CubeMesh, At + FVector(0, 0, bWalls ? 250 : 200), bWalls ? FVector(1.6, 10.0, 5.0) : FVector(5.0, 5.0, 4.0),
+				bWalls ? FLinearColor(0.5f, 0.48f, 0.45f) : FLinearColor(0.7f, 0.62f, 0.5f));
+			if (SovArt::SetKitMesh(Piece, TEXT("Classical"), Name, DefenderColor))
+			{
+				Piece->SetRelativeLocationAndRotation(At, FRotator(0.f, 90.f, 0.f));
+				Piece->SetRelativeScale3D(FVector(1.0));
+			}
 		}
 	}
 	// Banners mark each side's start.

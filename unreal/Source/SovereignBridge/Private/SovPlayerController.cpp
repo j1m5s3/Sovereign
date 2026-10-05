@@ -599,7 +599,8 @@ void ASovPlayerController::StartBattle()
 	const sov::PendingBattle& B = G.state().pendingBattle;
 	const sov::Unit* A = G.state().unit(B.attacker);
 	const sov::Unit* D = G.state().unit(B.defender);
-	if (!A || !D)
+	const sov::City* C = G.state().city(B.city);  // a city assault: the city's garrison defends
+	if (!A || (!D && !C))
 	{
 		Send(sov::Command::autoResolveBattle(Me()));
 		return;
@@ -609,13 +610,31 @@ void ASovPlayerController::StartBattle()
 	const sov::Unit* L = G.state().unit(B.leader);
 	const sov::Rules& R = G.rules();
 	FSovBattleSpec Spec;
-	Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrength(*A, *D, true, false), A->hp, G.isLeader(*A)};
-	Spec.Defender = {Str(R.units[static_cast<size_t>(D->type)].name), D->owner, G.combatStrength(*D, *A, false, false), D->hp, G.isLeader(*D)};
+	const sov::PlayerId DefOwner = D ? D->owner : C->owner;
+	const sov::Hex Where = D ? D->pos : C->pos;
+	if (D)
+	{
+		Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrength(*A, *D, true, false), A->hp, G.isLeader(*A)};
+		Spec.Defender = {Str(R.units[static_cast<size_t>(D->type)].name), D->owner, G.combatStrength(*D, *A, false, false), D->hp, G.isLeader(*D)};
+	}
+	else
+	{
+		Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrengthVsCity(*A, *C, true, false), A->hp, G.isLeader(*A)};
+		Spec.Defender = {Str(C->name), C->owner, G.cityStrength(*C), FMath::Clamp(C->hp, 1, 100), false};
+	}
 	Spec.HumanSide = A->owner == Me() ? 0 : 1;
 	Spec.bLeaderPresent = L != nullptr;
 	if (L)
 	{
-		Spec.LeaderStrength = G.combatStrength(*L, Spec.HumanSide == 0 ? *D : *A, Spec.HumanSide == 0, false);
+		if (D)
+		{
+			Spec.LeaderStrength = G.combatStrength(*L, Spec.HumanSide == 0 ? *D : *A, Spec.HumanSide == 0, false);
+		}
+		else
+		{
+			// Storming: the leader against the city; holding it: the city's own strength.
+			Spec.LeaderStrength = Spec.HumanSide == 0 ? G.combatStrengthVsCity(*L, *C, true, false) : G.cityStrength(*C);
+		}
 		Spec.LeaderHp = L->hp;
 	}
 	Spec.Seed = G.state().turn * 7919 + B.attacker;
@@ -625,11 +644,11 @@ void ASovPlayerController::StartBattle()
 	bBattleSent = false;
 
 	bool bWoods = false;
-	const FLinearColor Ground = SovPlotColor(G, D->pos.x, D->pos.y, &bWoods);
+	const FLinearColor Ground = SovPlotColor(G, Where.x, Where.y, &bWoods);
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
-	Battle->Build(Spec, Ground, bWoods, SovPlayerColor(G, A->owner), SovPlayerColor(G, D->owner));
+	Battle->Build(Spec, Ground, bWoods && !C, SovPlayerColor(G, A->owner), SovPlayerColor(G, DefOwner), C != nullptr, C && C->wallHp > 0);
 	Battle->Sync(Sim);
 	const FVector2D Start = Sim.LeaderIndex() != INDEX_NONE ? Sim.Soldiers()[Sim.LeaderIndex()].Pos : FVector2D(Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
 	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
@@ -1016,7 +1035,13 @@ void ASovPlayerController::UpdatePanel()
 		const sov::PendingBattle& Bt = G.state().pendingBattle;
 		const sov::Unit* A = S.unit(Bt.attacker);
 		const sov::Unit* D = S.unit(Bt.defender);
-		L.Add(TEXT("BATTLE! Your leader's stack is in a melee."));
+		const sov::City* C = S.city(Bt.city);
+		L.Add(C ? TEXT("BATTLE! A city is stormed, and your leader is in the fight.") : TEXT("BATTLE! Your leader's stack is in a melee."));
+		if (A && C)
+		{
+			L.Add(FString::Printf(TEXT("%s storms %s. Expected: %d damage to the city, %d to the attacker (the field can shift it 25%%)."),
+				*Str(R.units[static_cast<size_t>(A->type)].name), *Str(C->name), Bt.expectedToDefender, Bt.expectedToAttacker));
+		}
 		if (A && D)
 		{
 			L.Add(FString::Printf(TEXT("%s attacks %s. Expected: %d damage to the defender, %d to the attacker (the field can shift it 25%%)."),

@@ -323,6 +323,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     w.boolean(pb.active);
     w.i32(pb.attacker);
     w.i32(pb.defender);
+    w.i32(pb.city);
     writeHex(w, pb.target);
     w.i8(pb.liveFor);
     w.i32(pb.leader);
@@ -532,6 +533,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
     pb.active = r.boolean();
     pb.attacker = r.i32();
     pb.defender = r.i32();
+    pb.city = r.i32();
     pb.target = readHex(r);
     pb.liveFor = r.i8();
     pb.leader = r.i32();

@@ -168,6 +168,8 @@ public:
     CombatPreview previewAttack(UnitId attacker, Hex target, bool ranged) const;
     // The human whose leader stack is in this melee (so it goes live), or kNoPlayer (leader doc §9).
     PlayerId liveBattleSide(const Unit& attacker, const Unit& defender) const;
+    // The same for a melee assault on a city: the attacker's leader stack, or a human leader inside.
+    PlayerId liveAssaultSide(const Unit& attacker, const City& city) const;
     bool battlePending() const { return state_.pendingBattle.active; }
     // Strength of `unit` attacking (or, for a city strike, defending against) a city.
     int combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const;
@@ -265,6 +267,8 @@ private:
     void attackCity(const Command& c, City& city);
     // Applies a unit-vs-unit fight's damage and everything that follows (kills, capture, XP, advance).
     void resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bool ranged, int toDefender, int toAttacker);
+    // Applies an assault's damage to the city (walls first) and the attacker, then capture.
+    void resolveCityAssault(UnitId attackerId, CityId cityId, bool ranged, int dealt, int toAttacker);
     CommandError validateBattle(const Command& c) const;
     void applyBattle(const Command& c);
     void captureCity(City& city, UnitId attacker);
