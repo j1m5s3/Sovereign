@@ -83,6 +83,8 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
         // Grants: more points from the city (08: Governors).
         total += city * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityGreatPersonPercent).toInt())) / 100;
     }
+    // Patronage (World Congress): double (A) or no (B) points for its class.
+    if (const PassedResolution* pat = passed(ResolutionKind::Patronage); pat && pat->target == cls) total = pat->option == 0 ? total * 2 : 0;
     return total;
 }
 

@@ -1,0 +1,157 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "resolutions": [
+  {
+   "id": "RESOLUTION_DIPLOMATIC_VICTORY",
+   "name": "Diplomatic Victory",
+   "target": "PLAYER",
+   "optionA": "+2 Diplomatic Victory Points",
+   "optionB": "-2 Diplomatic Victory Points",
+   "minEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_LUXURY_POLICY",
+   "name": "Luxury Policy",
+   "target": "RESOURCE",
+   "optionA": "adjust player no cap resource for all major civs",
+   "optionB": "adjust player ban resource for all major civs"
+  },
+  {
+   "id": "RESOLUTION_TRADE_POLICY",
+   "name": "Trade Policy",
+   "target": "PLAYER",
+   "optionA": "+1 Trade Route capacity; +4 Gold for each trade route other civs send here in all your cities",
+   "optionB": "disables trade routes"
+  },
+  {
+   "id": "RESOLUTION_WORLD_RELIGION",
+   "name": "World Religion",
+   "target": "RELIGION",
+   "optionA": "adjust units religious strength by religion type (Amount=10) for all major civs",
+   "optionB": "adjust religion anyone condemns favor (Amount=25)",
+   "maxEra": "ERA_INDUSTRIAL"
+  },
+  {
+   "id": "RESOLUTION_MERCENARY_COMPANIES",
+   "name": "Mercenary Companies",
+   "target": "YIELD",
+   "optionA": "-100% unit production for all major civs",
+   "optionB": "+50% unit production for all major civs"
+  },
+  {
+   "id": "RESOLUTION_ARMS_CONTROL",
+   "name": "Arms Control",
+   "target": "PLAYER",
+   "optionA": "? nuclear stockpile",
+   "optionB": "+0% nuclear stockpile",
+   "minEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "RESOLUTION_HERITAGE_ORGANIZATION",
+   "name": "Heritage Organization",
+   "target": "GREATWORKOBJECT",
+   "optionA": "adjust great work object tourism modifier (Amount=100) for all major civs",
+   "optionB": "adjust great work object no tourism (NoTourism=yes) for all major civs",
+   "minEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_WORLD_IDEOLOGY",
+   "name": "World Ideology",
+   "target": "GOVERNMENT",
+   "optionA": "+1 Wildcard slot(s) for all major civs",
+   "optionB": "-1 Wildcard slot(s) for all major civs",
+   "minEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_URBAN_DEVELOPMENT_TREATY",
+   "name": "Urban Development Treaty",
+   "target": "DISTRICT",
+   "optionA": "adjust district building production (Amount=100) in all cities",
+   "optionB": "cannot produce in captured cities for all major civs",
+   "maxEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_BORDER_CONTROL_TREATY",
+   "name": "Border Control Treaty",
+   "target": "PLAYER",
+   "optionA": "adjust all districts culture bomb",
+   "optionB": "adjust city no culture border expansion in all your cities",
+   "maxEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_PUBLIC_WORKS_PROGRAM",
+   "name": "Public Works Program",
+   "target": "PROJECT",
+   "optionA": "+100% Production toward in all cities",
+   "optionB": "-50% Production toward in all cities",
+   "minEra": "ERA_ATOMIC",
+   "maxEra": "ERA_INFORMATION"
+  },
+  {
+   "id": "RESOLUTION_PATRONAGE",
+   "name": "Patronage",
+   "target": "GREATPERSONCLASS",
+   "optionA": "+100% points for all major civs",
+   "optionB": "adjust no great person points for all major civs",
+   "maxEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_GLOBAL_ENERGY_TREATY",
+   "name": "Global Energy Treaty",
+   "target": "BUILDING",
+   "optionA": "cannot produce in captured cities for all major civs",
+   "optionB": "+100% Production toward in all cities",
+   "minEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_SOVEREIGNTY",
+   "name": "Sovereignty",
+   "target": "MINORCIVBONUS",
+   "optionA": "adjust player trade route by city state bonus type modifier (Amount=100) for all major civs",
+   "optionB": "attach modifier to minorcivbonustype (ModifierId=Wc Res Disable Unique Suzerain Bonus)",
+   "maxEra": "ERA_MODERN"
+  },
+  {
+   "id": "RESOLUTION_MIGRATION_TREATY",
+   "name": "Migration Treaty",
+   "target": "PLAYER",
+   "optionA": "+20% growth in all your cities; -5 Loyalty per turn in all your cities",
+   "optionB": "-20% growth in all your cities; +5 Loyalty per turn in all your cities",
+   "minEra": "ERA_INDUSTRIAL"
+  },
+  {
+   "id": "RESOLUTION_DEFORESTATION_TREATY",
+   "name": "Deforestation Treaty",
+   "target": "FEATURE",
+   "optionA": "adjust player ban chop (NoRemove=yes) for all major civs",
+   "optionB": "+100% Gold from harvesting/chopping for all major civs",
+   "minEra": "ERA_ATOMIC",
+   "maxEra": "ERA_INFORMATION"
+  },
+  {
+   "id": "RESOLUTION_PUBLIC_RELATIONS",
+   "name": "Public Relations",
+   "target": "PLAYER",
+   "optionA": "+100% grievances generated",
+   "optionB": "-50% grievances generated",
+   "maxEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "RESOLUTION_ESPIONAGE_PACT",
+   "name": "Espionage Pact",
+   "target": "UNITOPERATION",
+   "optionA": "+2 spy levels for for all units",
+   "optionB": "change unit operation availability for all units",
+   "minEra": "ERA_INDUSTRIAL",
+   "maxEra": "ERA_ATOMIC"
+  },
+  {
+   "id": "RESOLUTION_MILITARY_ADVISORY",
+   "name": "Military Advisory",
+   "target": "UNITPROMOTIONCLASS",
+   "optionA": "+5 Combat Strength in combat for all units",
+   "optionB": "[missing modifier None] for all units",
+   "maxEra": "ERA_ATOMIC"
+  }
+ ]
+}

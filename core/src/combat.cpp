@@ -234,6 +234,10 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     const PlayerId oppOwner = oppUnit ? oppUnit->owner : oppCity->owner;
     const bool bombard = attacking && ranged && ut.ranged == 0 && ut.bombard > 0;
     int s = !(attacking && ranged) ? meleeStrength(unit) : bombard ? ut.bombard : rangedStrength(unit);
+    // Military Advisory (World Congress, option A): +5 for its promotion class.
+    if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
+        ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
+        s += 5;
     const bool embarked = isEmbarked(unit);
     if (!attacking && embarked) {
         // An embarked unit defends with a strength set by its owner's era (05: Embarkation).
@@ -695,6 +699,7 @@ void Game::applyCombat(const Command& c) {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             p.reputation = std::max(-100, p.reputation - rules_->globalInt("REPUTATION_PER_RAZE"));
             ++p.citiesRazed;  // every civ hears of it (agendas)
+            if (const City* razed = state_.city(c.id)) addGrievance(razed->originalOwner, c.player, 100);
             razeCity(c.id);
             return;
         }
@@ -995,6 +1000,10 @@ void Game::captureCity(City& city, UnitId attackerId) {
     if (isMajorCiv(lost)) {
         ++state_.players[static_cast<size_t>(me)].citiesCaptured;
         remember(lost, me, MemoryKind::CapturedCity, -10, 60);
+        addGrievance(lost, me, 50);  // Sovereign's base for a capture (engine values unverified)
+    } else if (isCityState(lost)) {
+        // Conquering a city-state angers every civ (GRIEVANCES_ALL_PLAYERS_CITY_STATE_CONQUEST).
+        for (const Player& o : state_.players) addGrievance(o.id, me, rules_->globalInt("GRIEVANCES_ALL_PLAYERS_CITY_STATE_CONQUEST"));
     }
     if (c.originalCapital && c.originalOwner != me && !isCityState(c.originalOwner)) awardMoment(me, "MOMENT_FOREIGN_CAPITAL_TAKEN");
     c.owner = me;

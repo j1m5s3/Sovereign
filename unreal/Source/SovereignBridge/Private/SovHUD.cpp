@@ -29,6 +29,7 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::LastStanding: return TEXT("Last civ standing");
 		case sov::Victory::Religious: return TEXT("Religious");
 		case sov::Victory::Culture: return TEXT("Culture");
+		case sov::Victory::Diplomatic: return TEXT("Diplomatic");
 		default: return TEXT("");
 	}
 }
@@ -94,6 +95,18 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				 G.tourismPerTurn(Me), G.visitingTourists(Me), G.domesticTourists(Me)),
 			16, Y, FLinearColor(0.85f, 0.85f, 1.f));
 	}
+	// Diplomatic Favor, victory points and the World Congress (08 [GS]).
+	{
+		FString Text = FString::Printf(TEXT("Diplomatic Favor %d (%+d/turn)   Diplomatic Victory %d/%d"), P.favor, G.favorPerTurn(Me), P.diplomaticVictoryPoints,
+			R.globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED"));
+		if (G.congressInSession()) Text += TEXT("   World Congress in session: , to vote");
+		else if (S.nextCongressTurn > 0) Text += FString::Printf(TEXT("   Congress meets on turn %d"), S.nextCongressTurn);
+		for (const sov::PassedResolution& Pr : S.passedResolutions)
+		{
+			Text += FString::Printf(TEXT("   [%s %s]"), *Str(R.resolutions[static_cast<size_t>(Pr.resolution)].name), Pr.option == 0 ? TEXT("A") : TEXT("B"));
+		}
+		Line(Text, 16, Y, FLinearColor(0.75f, 0.95f, 1.f));
+	}
 	// Governors (08): where each serves and whether it has established, and titles to spend.
 	if (!P.governors.empty() || G.governorTitlesLeft(Me) > 0)
 	{
@@ -152,7 +165,8 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	// Assassination news involving us from the last two turns (leader doc §6).
 	for (const sov::GameEvent& E : S.events)
 	{
-		if (E.turn < S.turn - 1 || (E.actor != Me && E.target != Me))
+		const bool bWorldNews = E.kind == sov::EventKind::CongressSession || E.kind == sov::EventKind::ResolutionPassed;
+		if (E.turn < S.turn - 1 || (E.actor != Me && E.target != Me && !bWorldNews))
 		{
 			continue;
 		}
@@ -179,6 +193,11 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				Text = FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4]);
 				break;
 			}
+			case sov::EventKind::CongressSession: Text = TEXT("The World Congress opens a session (, to vote)."); break;
+			case sov::EventKind::ResolutionPassed:
+				Text = FString::Printf(TEXT("The World Congress passes %s%s."), *Str(R.resolutions[static_cast<size_t>(E.value)].name),
+					E.target != sov::kNoPlayer ? *FString::Printf(TEXT(" for %s"), *CivOf(E.target)) : TEXT(""));
+				break;
 			case sov::EventKind::SpyOperation:
 			{
 				static const TCHAR* const Missions[] = {TEXT("an operation"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),

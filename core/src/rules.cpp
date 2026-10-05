@@ -259,7 +259,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "worldcongress.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -317,6 +317,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         e.embarkedStrength = static_cast<int>(j["embarkedStrength"].integer(10));
         e.greatPersonBaseCost = static_cast<int>(j["greatPersonBaseCost"].integer(0));
         e.tradeRouteExtraTurns = static_cast<int>(j["tradeRouteExtraTurns"].integer(0));
+        e.grievanceDecay = static_cast<int>(j["grievanceDecay"].integer(0));
         e.minTurns = static_cast<int>(j["minTurns"].integer(0));
         e.maxTurns = static_cast<int>(j["maxTurns"].integer(0));
         e.eraScoreShift = static_cast<int>(j["eraScoreShift"].integer(0));
@@ -940,6 +941,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         g.name = j["name"].str(id);
         g.tier = static_cast<int>(j["tier"].integer(0));
         g.influencePerTurn = static_cast<int>(j["influencePerTurn"].integer(0));
+        g.favor = static_cast<int>(j["favor"].integer(0));
         g.influenceThreshold = static_cast<int>(j["influenceThreshold"].integer(0));
         g.envoysPerThreshold = static_cast<int>(j["envoysPerThreshold"].integer(0));
         if (!readUnlock(j["unlock"], g.unlock, "government " + id)) return false;
@@ -1097,6 +1099,33 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
         }
         governors.push_back(std::move(g));
+    }
+    for (const auto& [id, j] : m.tables["resolutions"]) {
+        ResolutionType rs;
+        rs.id = id;
+        rs.name = j["name"].str(id);
+        rs.optionA = j["optionA"].str();
+        rs.optionB = j["optionB"].str();
+        static const std::pair<const char*, ResolutionKind> kinds[] = {
+            {"RESOLUTION_DIPLOMATIC_VICTORY", ResolutionKind::DiplomaticVictory}, {"RESOLUTION_TRADE_POLICY", ResolutionKind::TradePolicy},
+            {"RESOLUTION_PATRONAGE", ResolutionKind::Patronage},                   {"RESOLUTION_MIGRATION_TREATY", ResolutionKind::MigrationTreaty},
+            {"RESOLUTION_PUBLIC_RELATIONS", ResolutionKind::PublicRelations},     {"RESOLUTION_MILITARY_ADVISORY", ResolutionKind::MilitaryAdvisory},
+            {"RESOLUTION_URBAN_DEVELOPMENT_TREATY", ResolutionKind::UrbanDevelopment},
+        };
+        for (const auto& [rid, k] : kinds) {
+            if (id == rid) rs.kind = k;
+        }
+        const std::string& t = j["target"].str();
+        rs.target = t == "PLAYER" ? ResolutionTarget::Player : t == "GREATPERSONCLASS" ? ResolutionTarget::GreatPersonClass
+                  : t == "DISTRICT" ? ResolutionTarget::District : t == "UNITPROMOTIONCLASS" ? ResolutionTarget::PromotionClass
+                  : ResolutionTarget::Other;
+        rs.minEra = j.has("minEra") ? era(j["minEra"].str()) : -1;
+        rs.maxEra = j.has("maxEra") ? era(j["maxEra"].str()) : -1;
+        resolutions.push_back(std::move(rs));
+    }
+    for (const UnitType& u : units) {
+        if (!u.promotionClass.empty() && std::find(promotionClasses.begin(), promotionClasses.end(), u.promotionClass) == promotionClasses.end())
+            promotionClasses.push_back(u.promotionClass);
     }
     for (const auto& [id, j] : m.tables["spyOperations"]) {
         SpyOperationType op;
@@ -1515,6 +1544,7 @@ TypeIndex Rules::religion(const std::string& id) const { return findIn(religions
 TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id); }
 TypeIndex Rules::governor(const std::string& id) const { return findIn(governors, id); }
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
+TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {

@@ -163,6 +163,7 @@ void Game::resolveSpyOperation(Agent& a) {
         }
         const bool escaped = roll3d6(rng) >= escapeNeed;
         remember(victim, sender, MemoryKind::SpyCaught, escaped ? -6 : -12, escaped ? 40 : 60);
+        addGrievance(victim, sender, 25);  // espionage caught (Sovereign's base)
         pushEvent(EventKind::SpyCaught, sender, victim, escaped ? 1 : 0);
         if (escaped) {
             a.city = kNoCity;

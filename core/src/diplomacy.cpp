@@ -321,6 +321,7 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
         add(kinds[static_cast<size_t>(m.kind)], v);
     }
     add(OpinionReasonKind::Agenda, agendaOpinion(holder, about));
+    add(OpinionReasonKind::Grievances, -std::min(30, grievances(holder, about) / 10));
     return out;
 }
 
@@ -595,6 +596,7 @@ void Game::applyDiplomacy(const Command& c) {
             const PlayerId target = static_cast<PlayerId>(c.arg);
             state_.players[at(c.player)].relations[at(target)].denouncedOn = state_.turn;
             remember(target, c.player, MemoryKind::Denounced, -12, rules_->globalInt("DIPLOMACY_DENOUNCE_TIME_LIMIT"));
+            addGrievance(target, c.player, rules_->globalInt("GRIEVANCES_FOR_DENOUNCEMENT"));
             // A denunciation also cancels the deals still waiting between them.
             state_.deals.erase(std::remove_if(state_.deals.begin(), state_.deals.end(), [&](const Deal& d) {
                                    return (d.from == c.player && d.to == target) || (d.from == target && d.to == c.player);
@@ -659,6 +661,14 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
         if (!formal) ++p.surpriseWars;
     }
     remember(target, by, formal ? MemoryKind::DeclaredWar : MemoryKind::SurpriseWar, formal ? -12 : -24, formal ? 60 : 80);
+    // Grievances [GS]: 100 for a formal war (Sovereign's base; the engine value is unverified), 150%
+    // for a surprise; declared friends of the target share 25% (SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS).
+    const int base = formal ? 100 : 150;
+    addGrievance(target, by, base);
+    for (const Player& o : state_.players) {
+        if (o.id != by && o.id != target && friends(o.id, target))
+            addGrievance(o.id, by, base * rules_->globalInt("SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS") / 100);
+    }
     for (const Player& o : state_.players) {
         if (o.id != by && o.id != target && hasMet(o.id, by)) remember(o.id, by, MemoryKind::Warmonger, formal ? -4 : -6, 40);
     }
@@ -697,6 +707,7 @@ void Game::processDiplomacy(PlayerId pid) {
                                       [&](const Deal& d) { return d.from == pid && d.turn < state_.turn; }),
                        state_.deals.end());
     Player& p = state_.players[at(pid)];
+    p.favor = std::max(0, p.favor + favorPerTurn(pid));  // Diplomatic Favor [GS]
     // Strategic resources flow; a giver in debt or out of stock breaks its deals.
     std::vector<size_t> broken;
     for (size_t i = 0; i < state_.agreements.size(); ++i) {
@@ -796,6 +807,7 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::Warmonger: return "Warmonger";
         case OpinionReasonKind::Agenda: return "Agenda";
         case OpinionReasonKind::SpyCaught: return "Caught spying on us";
+        case OpinionReasonKind::Grievances: return "Grievances";
     }
     return "?";
 }

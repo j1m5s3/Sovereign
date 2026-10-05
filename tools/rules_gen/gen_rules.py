@@ -848,6 +848,23 @@ def era_turns(row):
     return out
 
 
+def gen_world_congress():
+    """World Congress resolutions with their target kind, the eras they can be proposed in, and
+    the two options as text; the core carries the effects of the ones it can (08: Diplomatic
+    Favor and World Congress [GS])."""
+    out = []
+    for r in table(SPEC / "world-congress-emergencies.md", "World Congress resolutions [GS]"):
+        res = {"id": "RESOLUTION_" + snake(r["Resolution"]), "name": r["Resolution"], "target": r["Target kind"].upper(),
+               "optionA": r["Option A"], "optionB": r["Option B"]}
+        lo, _, hi = r["Eras"].partition("-")
+        if lo.strip():
+            res["minEra"] = "ERA_" + lo.strip().replace(" Era", "").upper()
+        if hi.strip():
+            res["maxEra"] = "ERA_" + hi.strip().replace(" Era", "").upper()
+        out.append(res)
+    return {"resolutions": out}
+
+
 def gen_espionage():
     """Spy operations: turns, the 3d6 target number and its modifiers, the district a target city
     needs (08: Espionage; data: diplomacy-espionage.md)."""
@@ -947,6 +964,7 @@ def gen_tree(kind, name_col, prefix, key):
                         "embarkedStrength": num(stats[e + " Era"]["Embarked strength"]),
                         "greatPersonBaseCost": num(stats[e + " Era"]["GP base cost"]),
                         "tradeRouteExtraTurns": num(stats[e + " Era"]["Trade route min end-turn change"]),
+                        "grievanceDecay": num(stats[e + " Era"]["Grievance decay [GS]"]),
                         **era_turns(stats[e + " Era"])} for e in ERAS]
     return doc
 
@@ -965,6 +983,7 @@ def gen_governments():
         g["influencePerTurn"] = num(row["Influence pts/turn"])
         g["influenceThreshold"] = num(row["Influence threshold"])
         g["envoysPerThreshold"] = num(row["Envoys per threshold"])
+        g["favor"] = num(row["Favor/turn [GS]"])  # Diplomatic Favor per turn (08) [GS]
         out.append(g)
     return {"governments": out}
 
@@ -1371,6 +1390,7 @@ def main():
         "moments.json": gen_moments(),
         "governors.json": gen_governors(),
         "espionage.json": gen_espionage(),
+        "worldcongress.json": gen_world_congress(),
     }
     stale = []
     for name, doc in outputs.items():

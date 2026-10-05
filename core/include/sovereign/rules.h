@@ -428,6 +428,7 @@ struct EraType {
     int tradeRouteExtraTurns = 0;  // added to a trade route's minimum length in this world era [GS]
     int minTurns = 0, maxTurns = 0;  // how long the world stays in this era (0: no limit) [R&F]
     int eraScoreShift = 0;           // shift to both age thresholds when this era is scored [GS]
+    int grievanceDecay = 0;          // grievances that fade each turn while the world is in this era [GS]
 };
 
 // Historic moments (09: Era score and Ages; data: eras-moments-loyalty.md).
@@ -502,6 +503,7 @@ struct GovernmentType {
     int influencePerTurn = 0;    // influence points toward envoys (08: City-States)
     int influenceThreshold = 0;  // points per batch of envoys
     int envoysPerThreshold = 0;
+    int favor = 0;               // Diplomatic Favor per turn [GS]
 };
 
 // City-states (08: City-States; data: city-states.md).
@@ -617,6 +619,20 @@ struct Modifier {
     int per = 1;                // FounderYieldPerFollowers: followers per point
     bool foreign = false;       // UnitStrengthNearFollowingCity: foreign cities only (Crusade)
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
+};
+
+// World Congress resolutions (08: Diplomatic Favor and World Congress [GS]; data:
+// world-congress-emergencies.md). The core carries the effects of the kinds listed; the others
+// are never put to a vote.
+enum class ResolutionKind : uint8_t {
+    Unsupported = 0, DiplomaticVictory, TradePolicy, Patronage, MigrationTreaty, PublicRelations, MilitaryAdvisory, UrbanDevelopment,
+};
+enum class ResolutionTarget : uint8_t { Player = 0, GreatPersonClass, District, PromotionClass, Other };
+struct ResolutionType {
+    std::string id, name, optionA, optionB;
+    ResolutionKind kind = ResolutionKind::Unsupported;
+    ResolutionTarget target = ResolutionTarget::Other;
+    int minEra = -1, maxEra = -1;  // world eras it may be proposed in (-1: no bound)
 };
 
 // A spy operation (08: Espionage; data: diplomacy-espionage.md, Spy operations). Success is
@@ -744,6 +760,8 @@ public:
     std::vector<CityStateType> cityStates;
     std::vector<GovernorType> governors;
     std::vector<SpyOperationType> spyOperations;
+    std::vector<ResolutionType> resolutions;
+    std::vector<std::string> promotionClasses;  // the unit promotion classes in use (Military Advisory targets)
     std::vector<GovernorPromotionType> governorPromotions;
     std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants
     std::vector<MomentType> moments;
@@ -777,6 +795,7 @@ public:
     TypeIndex moment(const std::string& id) const;
     TypeIndex governor(const std::string& id) const;
     TypeIndex spyOperation(const std::string& id) const;
+    TypeIndex resolution(const std::string& id) const;
     TypeIndex governorPromotion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;

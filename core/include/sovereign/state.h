@@ -132,7 +132,7 @@ struct OpinionMemory {
 // Why one civ feels as it does about another (shown to the player; fed to the dialogue layer).
 enum class OpinionReasonKind : uint8_t {
     AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
-    TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught,
+    TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught, Grievances,
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;
@@ -157,6 +157,26 @@ struct Governor {
     CityId city = kNoCity;               // where it serves (a city-state's city for Amani); kNoCity: unassigned
     int establishTurns = 0;              // turns until its abilities work there (0: established)
     std::vector<TypeIndex> promotions;   // Rules::governorPromotions it holds (the base ability first)
+};
+
+// The World Congress (08: Diplomatic Favor and World Congress [GS]). A session puts two
+// resolutions to the vote; each voter picks option A or B and a target, with one free vote
+// and more bought with favor. The winners hold until the next session.
+struct CongressVote {
+    PlayerId player = kNoPlayer;
+    uint8_t option = 0;   // 0: A, 1: B
+    int32_t target = 0;   // index into the item's candidates
+    int32_t votes = 1;
+};
+struct CongressItem {
+    TypeIndex resolution = kNone;
+    std::vector<int32_t> candidates;  // players, great person classes, districts or promotion classes
+    std::vector<CongressVote> votes;
+};
+struct PassedResolution {
+    TypeIndex resolution = kNone;
+    uint8_t option = 0;
+    int32_t target = 0;   // the chosen candidate itself (a player id, a type index...)
 };
 
 // A trade route (07: Trade routes): the Trader travels it until it ends, then returns home.
@@ -308,6 +328,9 @@ struct Player {
     std::vector<Relation> relations;  // per player
     std::vector<OpinionMemory> memories;  // what this player remembers of others (diplomacy)
     std::vector<Governor> governors;      // appointed governors (08)
+    std::vector<int32_t> grievances;      // per player: grievances this player holds against it [GS]
+    int favor = 0;                        // Diplomatic Favor [GS]
+    int diplomaticVictoryPoints = 0;      // [GS]
     int governorTitlesSpent = 0;          // titles used on appointments and promotions
     // Deeds every civ hears of (agendas weigh them).
     int warsDeclared = 0, surpriseWars = 0, citiesCaptured = 0, citiesRazed = 0, tradersPlundered = 0, assassinsSent = 0;
@@ -342,6 +365,7 @@ struct GameSetup {
     bool scoreVictory = true;
     bool religiousVictory = true;  // 06: Religious victory
     bool cultureVictory = true;    // 07: Tourism and Culture Victory
+    bool diplomaticVictory = true; // 08: Diplomatic Victory [GS]
     int cityStates = -1;           // city-states to place (-1: the map size's default)
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
@@ -350,7 +374,7 @@ struct GameSetup {
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
-enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture };
+enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic };
 
 // An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
 // for a few turns, then strikes when the target leader is exposed.
@@ -404,6 +428,8 @@ enum class EventKind : uint8_t {
     DealBroken,      // actor could not pay what it owed target
     SpyOperation,    // actor's spy succeeded against target; value: the SpyMission (a detected or a known one)
     SpyCaught,       // target caught actor's spy; value: 1 when it escaped
+    CongressSession, // the World Congress opens a session
+    ResolutionPassed,  // value: resolution; target: the candidate it applies to when that is a player
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -445,6 +471,10 @@ struct SOV_API GameState {
     std::vector<Agreement> agreements;  // running deal terms
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
+    int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
+    int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)
+    std::vector<CongressItem> congress; // the resolutions in session
+    std::vector<PassedResolution> passedResolutions;  // in force until the next session
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;
