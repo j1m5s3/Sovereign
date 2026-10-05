@@ -52,6 +52,7 @@ same command must print the same hash.
 | Builders, improvements, harvests, luxuries, strategic stockpiles | `src/improvements.cpp` (queries on `Game`) |
 | War and peace, unit and city combat, walls, capture and raze, elimination, ZOC, XP, promotions, healing | `src/combat.cpp` (queries on `Game`) |
 | Barbarian player, camps and raiders (acts in the world turn) | `src/barbarians.cpp` |
+| Player profiles (leader doc §10 player modelling): army mix, militarism, expansion, yield leaning, aggression, leader exposure, per major civ each world turn | `src/profile.cpp` (`Game::profile`); read by `src/ai.cpp` counters |
 | Difficulty levels (00-overview: Difficulty levels; Sovereign: AI bonuses only at Immortal and Deity) | `Game::difficulty`, hooks in `src/city.cpp`, `src/combat.cpp`, `src/eras.cpp`, `src/barbarians.cpp`, `Game::create`; data in `../data/rules/setup.json` |
 | Unit upgrades (05: Upgrades): cost, rules, the command | `src/combat.cpp` (`upgradeCost`, `upgradeProblem`), applied in `src/game.cpp` |
 | Districts: placement (Aqueduct, Dam, exclusive and one-per-player rules), population limit, cost, adjacency, appeal, housing and amenities from Aqueduct, Neighborhood, Entertainment Complex, Water Park, Dam, Preserve | `src/districts.cpp` (queries on `Game`) |

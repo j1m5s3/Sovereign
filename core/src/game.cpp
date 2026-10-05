@@ -856,6 +856,7 @@ void Game::beginGlobalTurn() {
     processGrievances();
     processWorldCongress();
     processClimate();
+    processProfiles();
     processReligion();
     processAgents();
     processFreeCities();

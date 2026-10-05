@@ -35,6 +35,7 @@ add_library(sovereign_core
   src/espionage.cpp
   src/worldcongress.cpp
   src/climate.cpp
+  src/profile.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -96,6 +97,7 @@ add_executable(sovereign_tests
   tests/test_climate.cpp
   tests/test_ai_pace.cpp
   tests/test_difficulty.cpp
+  tests/test_profile.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE
