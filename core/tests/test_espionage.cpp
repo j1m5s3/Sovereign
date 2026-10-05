@@ -195,3 +195,91 @@ TEST(the_ai_sends_idle_spies_out) {
     REQUIRE(a);
     CHECK(a->mission != SpyMission::None);
 }
+
+// ---- the remaining operations and spy promotions (08: Espionage)
+
+namespace {
+void addDistrict(City& c, const char* id, Hex at) {
+    CityDistrict cd;
+    cd.type = rules().district(id);
+    cd.pos = at;
+    cd.complete = true;
+    c.districts.push_back(cd);
+}
+
+// Runs the operation in player 1's capital over a few seeds; returns the game after the first success.
+std::unique_ptr<Game> succeed(GameState s, SpyMission m) {
+    for (int seed = 1; seed <= 40; ++seed) {
+        GameState t = s;
+        t.rng.seed(static_cast<uint64_t>(seed));
+        Agent& a = t.agents[0];
+        a.city = t.cities[1].id;
+        a.mission = m;
+        a.missionTurns = 1;
+        auto g = Game::fromScenario(rules(), std::move(t));
+        sovtest::endTurns(*g, 2);
+        if (!g->state().events.empty() && g->state().events.back().kind == EventKind::SpyOperation) return g;
+    }
+    return nullptr;
+}
+}  // namespace
+
+TEST(a_great_work_heist_and_disrupted_rocketry) {
+    GameState s = spyState(4);
+    City& theirs = s.cities[1];
+    addDistrict(theirs, "DISTRICT_THEATER", {16, 7});
+    // A Great Work in their Palace that our own Palace has room for.
+    auto probe = Game::fromScenario(rules(), s);
+    TypeIndex work = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size() && work == kNone; ++w) {
+        if (probe->freeGreatWorkSlot(probe->state().cities[0], static_cast<TypeIndex>(w)) != kNone) work = static_cast<TypeIndex>(w);
+    }
+    REQUIRE(work != kNone);
+    GreatWork gw;
+    gw.type = work;
+    gw.building = probe->freeGreatWorkSlot(probe->state().cities[1], work);
+    REQUIRE(gw.building != kNone);
+    theirs.greatWorks.push_back(gw);
+    auto g = succeed(s, SpyMission::GreatWorkHeist);
+    REQUIRE(g);
+    CHECK(g->state().cities[1].greatWorks.empty());
+    CHECK_EQ(g->state().cities[0].greatWorks.size(), 1u);
+
+    // Disrupt Rocketry: the space race project's progress is lost.
+    GameState r = spyState(4);
+    addDistrict(r.cities[1], "DISTRICT_SPACEPORT", {16, 7});
+    r.players[1].techs.done[at(rules().tech("TECH_ROCKETRY"))] = 1;  // so the satellite stays buildable
+    const ProductionItem launch{ProductionKind::Project, rules().project("PROJECT_LAUNCH_EARTH_SATELLITE")};
+    r.cities[1].queue = {launch};
+    r.cities[1].progress.push_back({launch, Fixed::fromInt(400)});
+    auto h = succeed(r, SpyMission::DisruptRocketry);
+    REQUIRE(h);
+    for (const ProductionProgress& pp : h->state().cities[1].progress) {
+        if (pp.item == launch) CHECK(pp.amount < Fixed::fromInt(400));
+    }
+}
+
+TEST(a_successful_spy_earns_a_promotion) {
+    GameState s = spyState(1);
+    auto g = succeed(s, SpyMission::SiphonFunds);
+    REQUIRE(g);
+    const Agent* a = g->agent(s.agents[0].id);
+    REQUIRE(a);
+    CHECK_EQ(a->level, 2);
+    CHECK_EQ(a->promotionsPending, 1);
+    // Con Artist: +2 levels on Siphon Funds, so better odds there.
+    TypeIndex con = kNone;
+    for (size_t i = 0; i < rules().spyPromotions.size(); ++i) {
+        if (rules().spyPromotions[i].id == "SPY_PROMOTION_CON_ARTIST") con = static_cast<TypeIndex>(i);
+    }
+    REQUIRE(con != kNone);
+    const int before = g->spySuccessPercent(a->id, SpyMission::SiphonFunds, theirCity(*g));
+    while (g->state().currentPlayer != 0) sovtest::endTurns(*g, 1);
+    REQUIRE(g->submit(Command::promoteSpy(0, a->id, con)) == CommandError::Ok);
+    CHECK(g->spySuccessPercent(a->id, SpyMission::SiphonFunds, theirCity(*g)) > before);
+    CHECK(g->submit(Command::promoteSpy(0, a->id, con)) != CommandError::Ok);  // none pending now
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->agent(a->id)->promotions.size(), 1u);
+}

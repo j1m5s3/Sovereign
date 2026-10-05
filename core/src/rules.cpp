@@ -1437,6 +1437,26 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (op.needsDistrict) op.district = district(j["district"].str());
         spyOperations.push_back(std::move(op));
     }
+    for (const auto& [id, j] : m.tables["spyPromotions"]) {
+        SpyPromotionType sp;
+        sp.id = id;
+        sp.name = j["name"].str(id);
+        sp.levels.assign(spyOperations.size(), 0);
+        sp.faster.assign(spyOperations.size(), 0);
+        for (const auto& [op, n] : j["levels"].members()) {
+            const TypeIndex k = spyOperation(op);
+            if (k != kNone) sp.levels[static_cast<size_t>(k)] = static_cast<int>(n.integer(0));
+        }
+        for (const auto& [op, n] : j["faster"].members()) {
+            const TypeIndex k = spyOperation(op);
+            if (k != kNone) sp.faster[static_cast<size_t>(k)] = static_cast<int>(n.integer(0));
+        }
+        sp.allLevels = static_cast<int>(j["allLevels"].integer(0));
+        sp.escape = static_cast<int>(j["escape"].integer(0));
+        sp.travelFaster = static_cast<int>(j["travelFaster"].integer(0));
+        sp.counterspyLevels = static_cast<int>(j["counterspyLevels"].integer(0));
+        spyPromotions.push_back(std::move(sp));
+    }
     for (const auto& [id, j] : m.tables["governorTitles"]) {
         const TypeIndex c = civic(j["civic"].str());
         if (c == kNone) {

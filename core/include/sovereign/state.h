@@ -446,8 +446,9 @@ enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religi
 // Gain Sources and the offensive operations end after their turns.
 enum class SpyMission : uint8_t {
     None = 0, Counterspy, ListeningPost, GainSources, SiphonFunds, StealTechBoost, SabotageProduction, NeutralizeGovernor, FomentUnrest,
+    GreatWorkHeist, RecruitPartisans, BreachDam, DisruptRocketry, FabricateScandal,
 };
-constexpr int kNumSpyMissions = 9;
+constexpr int kNumSpyMissions = 14;
 
 struct Agent {
     int32_t id = 0;
@@ -462,6 +463,8 @@ struct Agent {
     int missionTurns = 0;        // turns left on an operation that ends
     CityId sourcesCity = kNoCity;  // Gain Sources: +2 levels on operations here until sourcesUntil
     int32_t sourcesUntil = 0;
+    std::vector<TypeIndex> promotions;  // Rules::spyPromotions it holds
+    int promotionsPending = 0;          // levels gained and not yet spent on a promotion
 };
 
 // A melee waiting for its live battle (leader doc §9, battle result contract). The core

@@ -294,7 +294,8 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::SpyOperation:
 			{
 				static const TCHAR* const Missions[] = {TEXT("an operation"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
-					TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
+					TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest"),
+				TEXT("Great Work Heist"), TEXT("Recruit Partisans"), TEXT("Breach Dam"), TEXT("Disrupt Rocketry"), TEXT("Fabricate Scandal")};
 				Text = E.actor == Me ? FString::Printf(TEXT("Your spy succeeds: %s against %s."), Missions[E.value % sov::kNumSpyMissions], *CivOf(E.target))
 									 : FString::Printf(TEXT("Spies have struck in your lands: %s."), Missions[E.value % sov::kNumSpyMissions]);
 				break;

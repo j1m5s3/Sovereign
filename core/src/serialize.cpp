@@ -581,6 +581,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(a.missionTurns);
         w.i32(a.sourcesCity);
         w.i32(a.sourcesUntil);
+        writeI32s(w, std::vector<int32_t>(a.promotions.begin(), a.promotions.end()));
+        w.i32(a.promotionsPending);
     }
     w.i32(s.nextAgentId);
     const PendingBattle& pb = s.pendingBattle;
@@ -1042,6 +1044,11 @@ bool deserializeState(ByteReader& r, GameState& s) {
         a.missionTurns = r.i32();
         a.sourcesCity = r.i32();
         a.sourcesUntil = r.i32();
+        std::vector<int32_t> promos;
+        if (!readI32s(r, promos)) return false;
+        a.promotions.clear();
+        for (int32_t v : promos) a.promotions.push_back(static_cast<TypeIndex>(v));
+        a.promotionsPending = r.i32();
     }
     s.nextAgentId = r.i32();
     PendingBattle& pb = s.pendingBattle;

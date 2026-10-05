@@ -765,7 +765,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			ChooserTitle = FString::Printf(TEXT("Agents: assassins %d of %d (one per Encampment), spies %d of %d"), G.agentsOf(Me()), G.agentCapacity(Me()),
 				G.spiesOf(Me()), G.spyCapacity(Me()));
 			static const TCHAR* const Missions[] = {TEXT("idle"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
-				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
+				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest"),
+				TEXT("Great Work Heist"), TEXT("Recruit Partisans"), TEXT("Breach Dam"), TEXT("Disrupt Rocketry"), TEXT("Fabricate Scandal")};
 			for (const sov::Agent& A : G.state().agents)
 			{
 				if (A.owner != Me())
@@ -855,9 +856,19 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 		case EChooser::SpyMissions:
 		{
 			static const TCHAR* const Missions[] = {TEXT("Home"), TEXT("Counterspy"), TEXT("Listening Post"), TEXT("Gain Sources"), TEXT("Siphon Funds"),
-				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest")};
+				TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest"),
+				TEXT("Great Work Heist"), TEXT("Recruit Partisans"), TEXT("Breach Dam"), TEXT("Disrupt Rocketry"), TEXT("Fabricate Scandal")};
 			ChooserTitle = FString::Printf(TEXT("Spy %d: choose an operation (cities you have seen)"), SpyAgent);
 			Choices.Add({TEXT("Bring the spy home"), sov::Command::spyMission(Me(), SpyAgent, sov::SpyMission::None, sov::kNoCity)});
+			// A promotion to choose first (08: Espionage levels).
+			if (const sov::Agent* Spy = G.agent(SpyAgent); Spy && Spy->promotionsPending > 0)
+			{
+				for (size_t Pr = 0; Pr < R.spyPromotions.size(); ++Pr)
+				{
+					const sov::Command Promote = sov::Command::promoteSpy(Me(), SpyAgent, static_cast<sov::TypeIndex>(Pr));
+					if (G.validate(Promote) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Promote: %s"), *Str(R.spyPromotions[Pr].name)), Promote});
+				}
+			}
 			for (const sov::City& Cty : G.state().cities)
 			{
 				if (G.visibility(Me(), Cty.pos) == sov::Visibility::Unrevealed)

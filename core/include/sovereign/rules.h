@@ -793,6 +793,17 @@ struct SpyOperationType {
     bool needsDistrict = false;  // a district is named (kNone then: one the core cannot place yet)
 };
 
+// A spy promotion (08: Espionage; data: promotions.md, Espionage): one is chosen per level gained.
+struct SpyPromotionType {
+    std::string id, name;
+    std::vector<int> levels;     // per Rules::spyOperations: extra levels on that operation
+    std::vector<int> faster;     // per Rules::spyOperations: % fewer turns
+    int allLevels = 0;           // extra levels on every operation
+    int escape = 0;              // easier escape (3d6 need lowered)
+    int travelFaster = 0;        // % faster to establish in a new city
+    int counterspyLevels = 0;    // extra levels when counterspying
+};
+
 // Governors (08: Governors [R&F]; data: governors.md). A governor's promotions form a tree:
 // one is its base ability; each other needs one of its `prerequisites`.
 struct GovernorPromotionType {
@@ -970,6 +981,7 @@ public:
     std::vector<CityStateType> cityStates;
     std::vector<GovernorType> governors;
     std::vector<SpyOperationType> spyOperations;
+    std::vector<SpyPromotionType> spyPromotions;
     std::vector<ResolutionType> resolutions;
     std::vector<DisasterType> disasters;
     std::vector<ClimatePhaseType> climatePhases;

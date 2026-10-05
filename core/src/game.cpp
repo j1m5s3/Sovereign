@@ -262,6 +262,13 @@ CommandError Game::validate(const Command& c) const {
         }
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
+        case CommandType::PromoteSpy: {
+            const Agent* a = agent(c.id);
+            if (!a || !a->spy || a->owner != c.player || a->promotionsPending <= 0 || c.arg < 0 || static_cast<size_t>(c.arg) >= rules_->spyPromotions.size() ||
+                std::find(a->promotions.begin(), a->promotions.end(), static_cast<TypeIndex>(c.arg)) != a->promotions.end())
+                return CommandError::CannotSpy;
+            return CommandError::Ok;
+        }
         case CommandType::CongressVote: {
             const int item = c.id;
             if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
@@ -727,6 +734,13 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
+        case CommandType::PromoteSpy:
+            for (Agent& a : state_.agents) {
+                if (a.id != c.id) continue;
+                a.promotions.push_back(static_cast<TypeIndex>(c.arg));
+                --a.promotionsPending;
+            }
+            break;
         case CommandType::JoinEmergency: {
             Emergency& e = state_.emergencies[static_cast<size_t>(c.arg)];
             if (e.members.size() < state_.players.size()) e.members.resize(state_.players.size(), 0);
@@ -763,11 +777,15 @@ void Game::apply(const Command& c) {
                     // A new city costs the journey first (SPYOP_TRAVEL_NEW_CITY).
                     if (a.city != c.arg2) {
                         const TypeIndex travel = rules_->spyOperation("SPYOP_TRAVEL_NEW_CITY");
-                        a.travel = std::max(1, (travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) * speed / 100);
+                        a.travel = std::max(1, (travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) * speed / 100 *
+                                                   100 / (100 + spyPromotionTotal(a, &SpyPromotionType::travelFaster)));
                         a.city = c.arg2;
                     }
                     const SpyOperationType* op = spyOperationFor(m);
-                    a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100);
+                    const TypeIndex opIndex = rules_->spyOperation(op ? op->id : "");
+                    int faster = 0;
+                    for (TypeIndex pr : a.promotions) faster += opIndex == kNone ? 0 : rules_->spyPromotions[static_cast<size_t>(pr)].faster[static_cast<size_t>(opIndex)];
+                    a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100 * (100 - std::min(75, faster)) / 100);
                 }
                 a.mission = m;
             }

@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 
 namespace sov {
 
@@ -37,11 +38,31 @@ const char* operationId(SpyMission m) {
         case SpyMission::SabotageProduction: return "SPYOP_SABOTAGE_PRODUCTION";
         case SpyMission::NeutralizeGovernor: return "SPYOP_NEUTRALIZE_GOVERNOR";
         case SpyMission::FomentUnrest: return "SPYOP_FOMENT_UNREST";
+        case SpyMission::GreatWorkHeist: return "SPYOP_GREAT_WORK_HEIST";
+        case SpyMission::RecruitPartisans: return "SPYOP_RECRUIT_PARTISANS";
+        case SpyMission::BreachDam: return "SPYOP_BREACH_DAM";
+        case SpyMission::DisruptRocketry: return "SPYOP_DISRUPT_ROCKETRY";
+        case SpyMission::FabricateScandal: return "SPYOP_FABRICATE_SCANDAL";
         case SpyMission::None: break;
     }
     return "";
 }
 }  // namespace
+
+int Game::spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const {
+    int n = 0;
+    for (TypeIndex p : spy.promotions) n += at(p) < rules_->spyPromotions.size() ? rules_->spyPromotions[at(p)].*field : 0;
+    return n;
+}
+
+int Game::spyOperationLevels(const Agent& spy, SpyMission m) const {
+    const TypeIndex op = rules_->spyOperation(operationId(m));
+    int n = spyPromotionTotal(spy, &SpyPromotionType::allLevels);
+    for (TypeIndex p : spy.promotions) {
+        if (op != kNone && at(p) < rules_->spyPromotions.size()) n += rules_->spyPromotions[at(p)].levels[at(op)];
+    }
+    return n;
+}
 
 int Game::spyCapacity(PlayerId pid) const {
     const Player& p = state_.players[at(pid)];
@@ -73,9 +94,14 @@ bool Game::canSpyMission(PlayerId pid, int32_t spyId, SpyMission m, CityId cityI
     if (!c || !op) return fail();
     if (m == SpyMission::Counterspy) {
         if (c->owner != pid) return fail();
+    } else if (m == SpyMission::FabricateScandal) {
+        // A city-state where another civ holds envoys to lose.
+        const PlayerId suz = isCityState(c->owner) ? suzerainOf(c->owner) : kNoPlayer;
+        if (suz == kNoPlayer || suz == pid || !hasMet(pid, suz)) return fail();
     } else if (c->owner == pid || !isMajorCiv(c->owner) || !hasMet(pid, c->owner)) {
         return fail();
     }
+    if (m == SpyMission::GreatWorkHeist && c->greatWorks.empty()) return fail();
     if (op->needsDistrict && (op->district == kNone || !c->district(op->district, true))) return fail();
     if (m == SpyMission::NeutralizeGovernor) {
         PlayerId holder = kNoPlayer;
@@ -90,13 +116,13 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     const SpyOperationType* op = spyOperationFor(m);
     const City* c = state_.city(cityId);
     if (!a || !op || !c || op->base <= 0) return 100;
-    int need = op->base - 2 - (a->level - 1) * op->levelChange;
+    int need = op->base - 2 - (a->level - 1 + spyOperationLevels(*a, m)) * op->levelChange;
     if (a->sourcesCity == cityId && state_.turn <= a->sourcesUntil) need -= rules_->globalInt("ESPIONAGE_BONUS_GAIN_SOURCES");
     // The city's best counterspy, and Amani's Local Informants (+3 levels), defend.
     int defender = 0;
     for (const Agent& o : state_.agents) {
         if (o.spy && o.owner == c->owner && o.city == cityId && o.travel == 0 && o.mission == SpyMission::Counterspy)
-            defender = std::max(defender, o.level);
+            defender = std::max(defender, o.level + spyPromotionTotal(o, &SpyPromotionType::counterspyLevels) + spyPromotionTotal(o, &SpyPromotionType::allLevels));
     }
     PlayerId holder = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &holder); g && holder == c->owner && governorHasPromotion(*g, "GOVERNOR_PROMOTION_LOCAL_INFORMANTS"))
@@ -144,7 +170,9 @@ void Game::processSpies(PlayerId pid) {
 
 void Game::resolveSpyOperation(Agent& a) {
     City& c = *state_.city(a.city);
-    const PlayerId victim = c.owner, sender = a.owner;
+    const PlayerId sender = a.owner;
+    // Fabricate Scandal wrongs the city-state's suzerain; every other operation the city's owner.
+    const PlayerId victim = a.mission == SpyMission::FabricateScandal && isCityState(c.owner) && suzerainOf(c.owner) != kNoPlayer ? suzerainOf(c.owner) : c.owner;
     const SpyMission m = a.mission;
     const int percent = spySuccessPercent(a.id, m, c.id);
     const SpyOperationType* op = spyOperationFor(m);
@@ -156,7 +184,8 @@ void Game::resolveSpyOperation(Agent& a) {
     a.mission = SpyMission::None;
     if (op && op->base > 0 && roll < need) {
         // Failure: escape home, or capture (08: Outcomes; escape base ESPIONAGE_ESCAPE_BASE_CHANCE).
-        int escapeNeed = rules_->globalInt("ESPIONAGE_ESCAPE_BASE_CHANCE") - (a.level - 1) * rules_->globalInt("ESPIONAGE_ESCAPE_LEVEL_BOOST");
+        int escapeNeed = rules_->globalInt("ESPIONAGE_ESCAPE_BASE_CHANCE") - (a.level - 1) * rules_->globalInt("ESPIONAGE_ESCAPE_LEVEL_BOOST") -
+                         spyPromotionTotal(a, &SpyPromotionType::escape);
         for (const Agent& o : state_.agents) {
             if (o.spy && o.owner == victim && o.city == c.id && o.mission == SpyMission::Counterspy)
                 escapeNeed -= rules_->globalInt("ESPIONAGE_ESCAPE_COUNTERSPY_LEVEL_MODIFIER") * o.level;
@@ -221,9 +250,71 @@ void Game::resolveSpyOperation(Agent& a) {
             c.loyalty = std::max(0, c.loyalty + rules_->globalInt("ESPIONAGE_FOMENT_UNREST_BASE_LOYALTY_CHANGE") +
                                         rules_->globalInt("ESPIONAGE_FOMENT_UNREST_LEVEL_LOYALTY_CHANGE") * a.level);
             break;
+        case SpyMission::GreatWorkHeist: {
+            // The first Great Work with a free slot of its kind in one of the thief's cities moves there.
+            for (size_t w = 0; w < c.greatWorks.size(); ++w) {
+                const TypeIndex type = c.greatWorks[w].type;
+                for (City& home : state_.cities) {
+                    if (home.owner != sender) continue;
+                    const TypeIndex slot = freeGreatWorkSlot(home, type);
+                    if (slot == kNone) continue;
+                    GreatWork moved = c.greatWorks[w];
+                    moved.building = slot;
+                    home.greatWorks.push_back(moved);
+                    c.greatWorks.erase(c.greatWorks.begin() + static_cast<std::ptrdiff_t>(w));
+                    w = c.greatWorks.size();
+                    break;
+                }
+            }
+            break;
+        }
+        case SpyMission::RecruitPartisans: {
+            // Two rebels (barbarians) of the strongest melee unit the city's owner can field rise beside it.
+            const PlayerId bp = barbarianPlayer();
+            TypeIndex best = kNone;
+            for (size_t i = 0; i < rules_->units.size(); ++i) {
+                const UnitType& ut = rules_->units[i];
+                if (ut.unitClass != "MELEE" || ut.domain != Domain::Land || ut.uniqueTo != kNone || !hasUnlocked(victim, ut.unlock)) continue;
+                if (best == kNone || ut.combat > rules_->units[at(best)].combat) best = static_cast<TypeIndex>(i);
+            }
+            int raised = 0;
+            for (const Hex& h : state_.grid.within(c.pos, 2)) {
+                if (bp == kNoPlayer || best == kNone || raised >= 2) break;
+                if (h == c.pos || !isLandPassable(state_, *rules_, h) || state_.unitAt(h, UnitLayer::Military, *rules_) || state_.cityAt(h)) continue;
+                spawnUnit(best, bp, h);
+                ++raised;
+            }
+            break;
+        }
+        case SpyMission::BreachDam:
+            // The river floods: the city's floodplain improvements are pillaged and units there are hurt.
+            for (const Hex& h : state_.grid.within(c.pos, 3)) {
+                Plot& pl = state_.plot(h);
+                if (pl.city != c.id || pl.feature == kNone || rules_->features[at(pl.feature)].id.rfind("FEATURE_FLOODPLAINS", 0) != 0) continue;
+                if (pl.improvement != kNone) pl.pillagedTurns = 5;
+                for (Unit& u : state_.units) {
+                    if (u.pos == h && !isLeader(u)) u.hp = std::max(1, u.hp - 30);
+                }
+            }
+            break;
+        case SpyMission::DisruptRocketry:
+            // The space race project under way in the city loses its progress.
+            for (ProductionProgress& pp : c.progress) {
+                if (pp.item.kind == ProductionKind::Project && rules_->projects[at(pp.item.type)].spaceRace) pp.amount = Fixed();
+            }
+            break;
+        case SpyMission::FabricateScandal: {
+            // The suzerain loses 2 envoys there, +1 per spy level beyond the first.
+            Player& cs = state_.players[at(c.owner)];
+            if (at(victim) < cs.envoys.size()) cs.envoys[at(victim)] = std::max(0, cs.envoys[at(victim)] - (1 + a.level));
+            break;
+        }
         default: break;
     }
-    a.level = std::min(rules_->globalInt("ESPIONAGE_MAX_LEVEL"), a.level + 1);
+    if (a.level < rules_->globalInt("ESPIONAGE_MAX_LEVEL")) {
+        ++a.level;
+        ++a.promotionsPending;  // a promotion to choose (08: Espionage levels)
+    }
     // A narrow success is noticed: the target knows who it was.
     if (op && roll < need + 2) remember(victim, sender, MemoryKind::SpyCaught, -4, 30);
     pushEvent(EventKind::SpyOperation, sender, victim, static_cast<int>(m));

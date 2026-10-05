@@ -1103,7 +1103,37 @@ def gen_espionage():
         if r["Target district"]:
             op["district"] = districts.get(r["Target district"], "DISTRICT_" + snake(r["Target district"]))
         out.append(op)
-    return {"spyOperations": out}
+    # Spy promotions (08: Espionage levels; data: promotions.md, Espionage): one chosen per level gained.
+    promos = []
+    for r in table(SPEC / "promotions.md", "Espionage"):
+        p = {"id": "SPY_PROMOTION_" + snake(r["Promotion"]), "name": r["Promotion"]}
+        for part in [x.strip() for x in r["Effect"].split(";") if x.strip()]:
+            m = re.fullmatch(r"\+(\d+) spy levels for Spy (.+)", part)
+            if m:
+                p.setdefault("levels", {})["SPYOP_" + snake(m.group(2))] = int(m.group(1))
+                continue
+            m = re.fullmatch(r"Spy (.+) (\d+)% faster", part)
+            if m:
+                p.setdefault("faster", {})["SPYOP_" + snake(m.group(1))] = int(m.group(2))
+                continue
+            m = re.fullmatch(r"\+(\d+) level to all spies", part)
+            if m:
+                p["allLevels"] = int(m.group(1))
+                continue
+            m = re.fullmatch(r"adjust unit escape boost \(Amount=(\d+)\)", part)
+            if m:
+                p["escape"] = int(m.group(1))
+                continue
+            m = re.fullmatch(r"spies establish (\d+)% faster", part)
+            if m:
+                p["travelFaster"] = int(m.group(1))
+                continue
+            m = re.fullmatch(r"adjust unit spy counterspy adjacent level boost \(Amount=(\d+)\)", part)
+            if m:
+                p["counterspyLevels"] = int(m.group(1))
+                continue
+        promos.append(p)
+    return {"spyOperations": out, "spyPromotions": promos}
 
 
 def gen_governors():
