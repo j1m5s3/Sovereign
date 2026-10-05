@@ -52,6 +52,7 @@ struct Unit {
     Activity activity = Activity::Awake;
     std::optional<Hex> moveTarget;  // multi-turn move order
     TypeIndex greatPerson = kNone;  // the individual a great person unit is (07)
+    int16_t religion = -1;          // a religious unit's religion (GameState::religions index)
     bool moveOverland = false;      // the order keeps a land unit on land (no embarking)
     int xp = 0;
     int charges = 0;  // build charges left (Builders)
@@ -88,6 +89,14 @@ struct CityDistrict {
     TypeIndex type = kNone;  // Rules::districts
     Hex pos;
     bool complete = false;
+};
+
+// A founded religion (06: Founding a religion).
+struct FoundedReligion {
+    TypeIndex type = kNone;     // Rules::religions
+    PlayerId founder = kNoPlayer;
+    CityId holyCity = kNoCity;
+    std::vector<TypeIndex> beliefs;  // the founder's pantheon, then Founder, Follower, Worship, Enhancer
 };
 
 // A Great Work in one of a city's building slots.
@@ -129,6 +138,7 @@ struct SOV_API City {
     int fearUntil = 0;             // order imposed while turn < this
     int fearAfterUntil = 0;        // resentment (-amenity, assassin openings) while turn < this
     std::vector<GreatWork> greatWorks;  // in the city's buildings' slots (07: Great Works)
+    std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
 
     bool has(TypeIndex building) const;
     // The city's district of this type, if placed (and, with completeOnly, finished).
@@ -188,6 +198,8 @@ struct Player {
     std::vector<int> greatPeopleRecruited;   // per class
     std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
     std::vector<TypeIndex> greatPeopleActivated;  // individuals whose permanent effects apply
+    TypeIndex pantheon = kNone;   // Rules::beliefs (06: Pantheon)
+    int16_t religion = -1;        // the religion it founded (GameState::religions index)
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
     std::vector<uint8_t> visibility;  // Visibility per plot index
@@ -219,6 +231,7 @@ struct GameSetup {
     // off, the last major civ standing wins instead (VICTORY_DEFAULT).
     bool dominationVictory = true;
     bool scoreVictory = true;
+    bool religiousVictory = true;  // 06: Religious victory
     int turnLimit = 0;  // last turn played before Score decides; 0: the game speed's calendar
     // Melee involving a human's leader stack can be fought as a live battle (leader doc §9);
     // off in headless games, on in the Unreal front end.
@@ -226,7 +239,7 @@ struct GameSetup {
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
 };
 
-enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding };
+enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious };
 
 // An off-map agent (leader doc §6): an assassin sent after another civ's leader. It travels
 // for a few turns, then strikes when the target leader is exposed.
@@ -282,6 +295,7 @@ struct SOV_API GameState {
     std::vector<Camp> camps;    // sorted by id
     std::vector<Agent> agents;  // sorted by id
     std::vector<uint8_t> greatPeopleClaimed;  // per individual: recruited by someone
+    std::vector<FoundedReligion> religions;   // in founding order
     std::vector<GameEvent> events;  // most recent last, capped
     PendingBattle pendingBattle;
     UnitId nextUnitId = 1;

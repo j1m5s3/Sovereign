@@ -27,6 +27,7 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::Domination: return TEXT("Domination");
 		case sov::Victory::Score: return TEXT("Score");
 		case sov::Victory::LastStanding: return TEXT("Last civ standing");
+		case sov::Victory::Religious: return TEXT("Religious");
 		default: return TEXT("");
 	}
 }
@@ -58,6 +59,29 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString Research = P.techs.current == sov::kNone ? TEXT("none") : Str(R.techs[static_cast<size_t>(P.techs.current)].name);
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
 	Line(FString::Printf(TEXT("Research: %s   Civic: %s"), *Research, *Civic), 16, Y);
+	// Faith and religion (06).
+	{
+		FString Faith = FString::Printf(TEXT("Faith %s"), *Str(P.faith.toString()));
+		if (P.pantheon != sov::kNone)
+		{
+			Faith += FString::Printf(TEXT("   Pantheon: %s"), *Str(R.beliefs[static_cast<size_t>(P.pantheon)].name));
+		}
+		else if (P.faith >= sov::Fixed::fromInt(R.globalInt("RELIGION_PANTHEON_MIN_FAITH")))
+		{
+			Faith += TEXT("   I: choose a pantheon");
+		}
+		if (P.religion >= 0)
+		{
+			const sov::FoundedReligion& Rel = S.religions[static_cast<size_t>(P.religion)];
+			int32 Cities = 0;
+			for (const sov::City& C : S.cities)
+			{
+				Cities += G.cityMajorityReligion(C) == P.religion;
+			}
+			Faith += FString::Printf(TEXT("   Religion: %s, followed in %d cities"), *Str(R.religions[static_cast<size_t>(Rel.type)].name), Cities);
+		}
+		Line(Faith, 16, Y);
+	}
 	// The throne (leader doc §5).
 	if (const sov::Unit* L = G.leaderOf(Me))
 	{

@@ -392,6 +392,25 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				Choices.Add({FString::Printf(TEXT("%s (%d turns)%s"), *ItemName(R, Item), TurnsFor(Cost, PerTurn), *Where),
 					sov::Command::setProduction(Me(), City->id, Item, Plot)});
 			}
+			// Religious units and worship buildings are bought with Faith (06).
+			for (size_t u = 0; u < R.units.size(); ++u)
+			{
+				const sov::ProductionItem Item{sov::ProductionKind::Unit, static_cast<sov::TypeIndex>(u)};
+				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
+				if (Faith > 0)
+				{
+					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.units[u].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+				}
+			}
+			for (size_t b = 0; b < R.buildings.size(); ++b)
+			{
+				const sov::ProductionItem Item{sov::ProductionKind::Building, static_cast<sov::TypeIndex>(b)};
+				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
+				if (Faith > 0)
+				{
+					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.buildings[b].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+				}
+			}
 			break;
 		}
 		case EChooser::Research:
@@ -479,6 +498,78 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			if (G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
 			{
 				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent)});
+			}
+			break;
+		}
+		case EChooser::Pantheon:
+		case EChooser::ReligionFounder:
+		case EChooser::ReligionFollower:
+		case EChooser::Evangelize:
+		{
+			// 06: a pantheon belief; a religion's Founder then Follower belief; an Apostle's new belief.
+			auto Note = [&](sov::TypeIndex B) {
+				const sov::BeliefType& Bt = R.beliefs[static_cast<size_t>(B)];
+				return FString::Printf(TEXT("%s: %s%s"), *Str(Bt.name), *Str(Bt.text).Left(110), G.beliefModelled(B) ? TEXT("") : TEXT(" (not in the game yet)"));
+			};
+			if (Kind == EChooser::Pantheon)
+			{
+				ChooserTitle = TEXT("Choose a pantheon");
+				for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Pantheon))
+				{
+					Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});
+				}
+			}
+			else if (Kind == EChooser::Evangelize)
+			{
+				ChooserTitle = TEXT("The Apostle adds a belief to your religion (or spreads it here)");
+				if (G.canSpreadReligion(ReligionUnit))
+				{
+					Choices.Add({TEXT("Spread the religion here"), sov::Command::spreadReligion(Me(), ReligionUnit)});
+				}
+				for (int32 Cls = static_cast<int32>(sov::BeliefClass::Follower); Cls < sov::kNumBeliefClasses; ++Cls)
+				{
+					for (sov::TypeIndex B : G.availableBeliefs(static_cast<sov::BeliefClass>(Cls)))
+					{
+						if (G.canEvangelize(ReligionUnit, B))
+						{
+							Choices.Add({Note(B), sov::Command::evangelizeBelief(Me(), ReligionUnit, B)});
+						}
+					}
+				}
+			}
+			else
+			{
+				// The first religion no one has founded, with the chosen beliefs.
+				sov::TypeIndex Religion = sov::kNone;
+				for (size_t r = 0; r < R.religions.size() && Religion == sov::kNone; ++r)
+				{
+					bool bTaken = false;
+					for (const sov::FoundedReligion& F : G.state().religions)
+					{
+						bTaken |= F.type == static_cast<sov::TypeIndex>(r);
+					}
+					if (!bTaken)
+					{
+						Religion = static_cast<sov::TypeIndex>(r);
+					}
+				}
+				const FString Name = Religion == sov::kNone ? TEXT("?") : Str(R.religions[static_cast<size_t>(Religion)].name);
+				if (Kind == EChooser::ReligionFounder)
+				{
+					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Founder belief"), *Name);
+					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Founder))
+					{
+						Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});  // placeholder: picking moves on to the Follower
+					}
+				}
+				else
+				{
+					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Follower belief"), *Name);
+					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Follower))
+					{
+						Choices.Add({Note(B), sov::Command::foundReligion(Me(), ReligionUnit, Religion, PendingFounder, B)});
+					}
+				}
 			}
 			break;
 		}
@@ -599,6 +690,12 @@ void ASovPlayerController::Pick(int32 Index)
 	const EChooser Was = Chooser;
 	const sov::Command Command = Choices[I].Command;
 	Chooser = EChooser::None;
+	if (Was == EChooser::ReligionFounder)
+	{
+		PendingFounder = static_cast<sov::TypeIndex>(Command.arg);  // the Founder belief; now the Follower
+		OpenChooser(EChooser::ReligionFollower);
+		return;
+	}
 	if (Send(Command) && Was == EChooser::Improvement)
 	{
 		AfterUnitOrder();
@@ -938,6 +1035,8 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
 	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
+	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
+		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
 	if (SelectedCity >= 0 && (WasInputKeyJustPressed(EKeys::V) || WasInputKeyJustPressed(EKeys::X)))
 	{
@@ -957,6 +1056,35 @@ void ASovPlayerController::HandleOrders()
 	}
 	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
 	const sov::Hex Pos = U->pos;
+	if (WasInputKeyJustPressed(EKeys::F) && T.foundReligion)
+	{
+		// A Great Prophet founds a religion on a Holy Site (06).
+		ReligionUnit = U->id;
+		OpenChooser(EChooser::ReligionFounder);
+		return;
+	}
+	if (WasInputKeyJustPressed(EKeys::F) && U->religion >= 0)
+	{
+		// Religious units: Apostles may add a belief; everyone spreads where they stand.
+		ReligionUnit = U->id;
+		bool bCanEvangelize = false;
+		for (int32 Cls = static_cast<int32>(sov::BeliefClass::Follower); Cls < sov::kNumBeliefClasses && !bCanEvangelize; ++Cls)
+		{
+			for (sov::TypeIndex B : G.availableBeliefs(static_cast<sov::BeliefClass>(Cls)))
+			{
+				bCanEvangelize |= G.canEvangelize(U->id, B);
+			}
+		}
+		if (bCanEvangelize)
+		{
+			OpenChooser(EChooser::Evangelize);
+		}
+		else if (Send(sov::Command::spreadReligion(Me(), U->id)))
+		{
+			Subsystem()->LastMessage = TEXT("The faith is preached in the city.");
+		}
+		return;
+	}
 	if (U->greatPerson != sov::kNone && WasInputKeyJustPressed(EKeys::F))
 	{
 		// A great person is used where it stands (07): an effect, or a Great Work in a free slot.
@@ -1041,6 +1169,13 @@ void ASovPlayerController::UpdatePanel()
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
 		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
+		if (T.foundReligion) Keys += TEXT("   F found a religion (on a Holy Site)");
+		if (U->religion >= 0)
+		{
+			Keys += FString::Printf(TEXT("   %s, %d spread%s   F spread%s   right-click a foe's religious unit: theological combat"),
+				*Str(R.religions[static_cast<size_t>(S.religions[static_cast<size_t>(U->religion)].type)].name), U->charges, U->charges == 1 ? TEXT("") : TEXT("s"),
+				R.units[static_cast<size_t>(U->type)].id == "UNIT_APOSTLE" ? TEXT(" or add a belief") : TEXT(""));
+		}
 		if (U->greatPerson != sov::kNone)
 		{
 			const sov::GreatPersonType& Gp = R.greatPeople[static_cast<size_t>(U->greatPerson)];
@@ -1065,6 +1200,20 @@ void ASovPlayerController::UpdatePanel()
 		const sov::LoyaltyLevel* Level = G.loyaltyLevel(*C);
 		L.Add(FString::Printf(TEXT("Loyalty %d (%+d per turn)%s"), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()),
 			Level ? *FString::Printf(TEXT("   %s"), *Str(Level->id)) : TEXT("")));
+		// Religion here (06): the majority, and every faith with followers.
+		{
+			const int32 Maj = G.cityMajorityReligion(*C);
+			FString Rel = FString::Printf(TEXT("Religion: %s"), Maj < 0 ? TEXT("none") : *Str(R.religions[static_cast<size_t>(S.religions[static_cast<size_t>(Maj)].type)].name));
+			for (size_t r = 0; r < S.religions.size(); ++r)
+			{
+				const int32 F = G.cityFollowers(*C, static_cast<int32>(r));
+				if (F > 0)
+				{
+					Rel += FString::Printf(TEXT("   %s %d"), *Str(R.religions[static_cast<size_t>(S.religions[r].type)].name), F);
+				}
+			}
+			L.Add(Rel);
+		}
 		FString Queue = TEXT("Building: ");
 		Queue += C->queue.empty() ? FString(TEXT("nothing")) : ItemName(R, C->queue.front());
 		L.Add(Queue + TEXT("   P choose production   right-click: city strike"));
@@ -1118,7 +1267,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }

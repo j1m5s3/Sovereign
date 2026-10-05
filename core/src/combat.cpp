@@ -69,6 +69,15 @@ bool conditionsHold(const UnitEffect& e, const ConditionContext& x) {
 int roundDiv(int64_t a, int64_t b) { return static_cast<int>((2 * a + b) / (2 * b)); }
 
 // Only these classes take a city (02-cities.md, City combat: Capture).
+// A religious unit of another player and another religion on the plot: a theological foe (06).
+const Unit* religiousFoeAt(const GameState& s, const Rules& r, const Unit& attacker, Hex at) {
+    for (const Unit& o : s.units) {
+        if (o.pos != at || o.owner == attacker.owner || o.religion < 0 || o.religion == attacker.religion) continue;
+        if (r.units[static_cast<size_t>(o.type)].religiousStrength > 0) return &o;
+    }
+    return nullptr;
+}
+
 bool capturesCities(const UnitType& ut) {
     return ut.unitClass == "MELEE" || ut.unitClass == "ANTI_CAVALRY" || ut.unitClass == "LIGHT_CAVALRY" ||
            ut.unitClass == "HEAVY_CAVALRY";
@@ -261,6 +270,17 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     }
     // A Great General or Admiral nearby (05: +5 for units of its era or the next).
     s += greatPersonAuraStrength(unit);
+    // Defender of the Faith / Crusade: in the lands of a city following the player's religion (06).
+    if (owner.religion >= 0 && ut.layer == UnitLayer::Military) {
+        const CityId cid = state_.plot(unit.pos).city;
+        if (const City* c = cid != kNoCity ? state_.city(cid) : nullptr; c && cityMajorityReligion(*c) == owner.religion) {
+            for (const Modifier& m : rules_->modifiers) {
+                if (m.effect != ModEffect::UnitStrengthNearFollowingCity || m.sourceKind != ModSource::Belief) continue;
+                if (!religionHas(state_, owner.religion, m.sourceIndex) || m.foreign != (c->owner != unit.owner)) continue;
+                s += static_cast<int>(m.amount.toInt());
+            }
+        }
+    }
     // Policies such as Discipline (+5 against barbarians).
     s += sumUnitStrength(state_, *rules_, owner, ut.unitClass,
                          oppOwner >= 0 && state_.players[static_cast<size_t>(oppOwner)].barbarian);
@@ -538,6 +558,12 @@ CommandError Game::validateCombat(const Command& c) const {
     const UnitType& ut = typeOf(*rules_, *u);
     auto t = state_.grid.normalize(c.target);
     if (!t || *t != c.target) return CommandError::BadTarget;
+    if (ut.religiousStrength > 0) {
+        // Theological combat: an adjacent religious unit of another religion, no war needed (06).
+        if (c.type != CommandType::Attack || u->religion < 0 || u->movesLeft <= Fixed() || state_.grid.distance(u->pos, *t) != 1)
+            return CommandError::CannotAttack;
+        return religiousFoeAt(state_, *rules_, *u, *t) ? CommandError::Ok : CommandError::CannotAttack;
+    }
     if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader) || u->movesLeft <= Fixed() ||
         u->attacks >= maxAttacks(*u))
         return CommandError::CannotAttack;
@@ -666,6 +692,10 @@ void Game::applyCombat(const Command& c) {
             return;
         }
         default: break;
+    }
+    if (Unit* a = state_.unit(c.id); a && typeOf(*rules_, *a).religiousStrength > 0) {
+        theologicalCombat(*a, *state_.unit(religiousFoeAt(state_, *rules_, *a, c.target)->id));
+        return;
     }
     if (const City* city = state_.cityAt(c.target)) {
         attackCity(c, *state_.city(city->id));

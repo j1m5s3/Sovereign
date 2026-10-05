@@ -600,6 +600,7 @@
    "requires": [
     "BUILDING_TEMPLE"
    ],
+   "faithOnly": true,
    "greatWorkSlots": {
     "CATHEDRAL": 1
    }
@@ -617,7 +618,8 @@
    "housing": 1,
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_MEETING_HOUSE",
@@ -631,7 +633,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_MOSQUE",
@@ -644,7 +647,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_PAGODA",
@@ -657,7 +661,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_SYNAGOGUE",
@@ -670,7 +675,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_WAT",
@@ -684,7 +690,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_STUPA",
@@ -698,7 +705,8 @@
    "amenities": 1,
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_DAR_E_MEHR",
@@ -711,7 +719,8 @@
    },
    "requires": [
     "BUILDING_TEMPLE"
-   ]
+   ],
+   "faithOnly": true
   },
   {
    "id": "BUILDING_WORKSHOP",

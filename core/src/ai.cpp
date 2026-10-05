@@ -736,6 +736,11 @@ void production(View& v) {
                     } else {
                         where = districtSpot(v, cid, it.type);
                         value = 70 + 25 * gpp + yieldValue(g.districtAdjacency(v.me, it.type, where)) * 10;
+                        // The first Holy Site while religions remain to be founded (06): the race for a Prophet.
+                        if (d.id == "DISTRICT_HOLY_SITE" && s.players[at(v.me)].religion < 0 &&
+                            static_cast<int>(s.religions.size()) < g.maxReligions() &&
+                            std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
+                            value += 150;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
                     }
@@ -821,6 +826,109 @@ void greatPerson(View& v, UnitId id) {
     }
     if (best && g.submit(Command::move(v.me, id, *best, true)) == CommandError::Ok) return;
     g.submit(Command::setActivity(v.me, id, Activity::Sleep));  // nowhere to use it yet
+}
+
+// Religion (06): a pantheon as soon as Faith allows, a religion when a Prophet reaches a Holy
+// Site, Apostles filling the belief classes, Missionaries bought and sent to the nearest city
+// that does not follow the religion yet (our own first).
+TypeIndex firstBelief(const View& v, BeliefClass cls) {
+    TypeIndex fallback = kNone;
+    for (TypeIndex b : v.game.availableBeliefs(cls)) {
+        if (v.game.beliefModelled(b)) return b;
+        if (fallback == kNone) fallback = b;
+    }
+    return fallback;
+}
+
+void pantheon(View& v) {
+    if (v.s().players[at(v.me)].pantheon != kNone) return;
+    const TypeIndex b = firstBelief(v, BeliefClass::Pantheon);
+    if (b != kNone && v.game.canFoundPantheon(v.me, b)) v.game.submit(Command::foundPantheon(v.me, b));
+}
+
+void prophet(View& v, UnitId id) {
+    Game& g = v.game;
+    const Unit* u = v.s().unit(id);
+    TypeIndex religion = kNone;
+    for (size_t r = 0; r < v.r.religions.size() && religion == kNone; ++r) {
+        bool taken = false;
+        for (const FoundedReligion& f : v.s().religions) taken |= f.type == static_cast<TypeIndex>(r);
+        if (!taken) religion = static_cast<TypeIndex>(r);
+    }
+    const TypeIndex founder = firstBelief(v, BeliefClass::Founder), follower = firstBelief(v, BeliefClass::Follower);
+    if (g.canFoundReligion(id, religion, founder, follower)) {
+        g.submit(Command::foundReligion(v.me, id, religion, founder, follower));
+        return;
+    }
+    const TypeIndex holySite = v.r.district("DISTRICT_HOLY_SITE");
+    std::optional<Hex> best;
+    int bestDist = INT_MAX;
+    for (CityId cid : v.cities) {
+        const CityDistrict* d = v.s().city(cid)->district(holySite, true);
+        if (d && d->pos != u->pos && v.s().grid.distance(u->pos, d->pos) < bestDist) {
+            bestDist = v.s().grid.distance(u->pos, d->pos);
+            best = d->pos;
+        }
+    }
+    if (!best || g.submit(Command::move(v.me, id, *best, true)) != CommandError::Ok)
+        g.submit(Command::setActivity(v.me, id, Activity::Sleep));
+}
+
+void religiousUnit(View& v, UnitId id) {
+    Game& g = v.game;
+    const Unit* u = v.s().unit(id);
+    for (int cls = static_cast<int>(BeliefClass::Follower); cls < kNumBeliefClasses; ++cls) {
+        const TypeIndex b = firstBelief(v, static_cast<BeliefClass>(cls));
+        if (b != kNone && g.canEvangelize(id, b)) {
+            g.submit(Command::evangelizeBelief(v.me, id, b));
+            return;
+        }
+    }
+    const CityId here = v.s().plot(u->pos).city;
+    if (here != kNoCity && g.cityMajorityReligion(*v.s().city(here)) != u->religion && g.canSpreadReligion(id)) {
+        g.submit(Command::spreadReligion(v.me, id));
+        return;
+    }
+    // The nearest city not following our religion, ours first; walk next to its center.
+    std::optional<Hex> best;
+    int bestScore = INT_MAX;
+    for (const City& c : v.s().cities) {
+        if (g.cityMajorityReligion(c) == u->religion || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+        const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6);
+        if (score < bestScore) {
+            bestScore = score;
+            best = c.pos;
+        }
+    }
+    if (best && approach(v, id, *best, false)) return;
+    g.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
+void buyReligion(View& v) {
+    Game& g = v.game;
+    const Player& p = v.s().players[at(v.me)];
+    if (p.religion < 0) return;
+    int missionaries = 0;
+    for (const Unit& u : v.s().units) missionaries += u.owner == v.me && u.religion >= 0;
+    for (CityId cid : v.cities) {
+        const City& c = *v.s().city(cid);
+        if (g.cityMajorityReligion(c) != p.religion) continue;
+        for (size_t b = 0; b < v.r.buildings.size(); ++b) {  // a worship building first
+            const ProductionItem item{ProductionKind::Building, static_cast<TypeIndex>(b)};
+            const int cost = g.faithPurchaseCost(v.me, c, item);
+            if (cost > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(cost + 50)) g.submit(Command::purchaseWithFaith(v.me, cid, item));
+        }
+        if (missionaries >= 3) continue;
+        for (const char* type : {"UNIT_APOSTLE", "UNIT_MISSIONARY"}) {
+            const ProductionItem item{ProductionKind::Unit, v.r.unit(type)};
+            const int cost = g.faithPurchaseCost(v.me, c, item);
+            if (cost > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(cost + 25) &&
+                g.submit(Command::purchaseWithFaith(v.me, cid, item)) == CommandError::Ok) {
+                ++missionaries;
+                break;
+            }
+        }
+    }
 }
 
 // Buys a great person when the price is a small part of the treasury.
@@ -960,13 +1068,15 @@ void playTurn(Game& game) {
     std::vector<UnitId> civilians;
     for (const Unit& u : game.state().units) {
         const UnitLayer layer = v.r.units[at(u.type)].layer;
-        if (u.owner == v.me && layer != UnitLayer::Military && layer != UnitLayer::Leader) civilians.push_back(u.id);
+        if (u.owner == v.me && ((layer != UnitLayer::Military && layer != UnitLayer::Leader) || u.religion >= 0)) civilians.push_back(u.id);
     }
     for (UnitId id : civilians) {
         const Unit* u = game.state().unit(id);
         if (!u) continue;
         const UnitType& t = v.r.units[at(u->type)];
-        if (u->greatPerson != kNone) greatPerson(v, id);
+        if (v.r.units[at(u->type)].foundReligion) prophet(v, id);
+        else if (u->religion >= 0) religiousUnit(v, id);
+        else if (u->greatPerson != kNone) greatPerson(v, id);
         else if (t.foundCity) settle(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
@@ -978,6 +1088,8 @@ void playTurn(Game& game) {
     production(v);
     purchases(v);
     patronage(v);
+    pantheon(v);
+    buyReligion(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     // Captured cities are kept (never razed).
     if (game.submit(Command::endTurn(v.me)) == CommandError::Ok) return;

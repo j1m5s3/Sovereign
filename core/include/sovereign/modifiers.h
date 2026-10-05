@@ -25,6 +25,13 @@ struct ReqContext {
 
 SOV_API bool testRequirements(const RequirementSet& set, const ReqContext& ctx);
 
+// Religion in a city (06: Spread mechanics). Followers of a religion are the population times
+// its share of the pressure, with unbelief pressing RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP
+// per citizen; the majority religion is followed by more than half (-1: none).
+SOV_API int religionFollowers(const GameState& s, const Rules& r, const City& city, int religion);
+SOV_API int majorityReligion(const GameState& s, const Rules& r, const City& city);
+SOV_API bool religionHas(const GameState& s, int religion, TypeIndex belief);
+
 // Total amount of every city-level modifier with this effect applying to the
 // city; `yield` filters yield effects.
 Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, ModEffect effect,

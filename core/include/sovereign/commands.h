@@ -50,6 +50,10 @@ enum class CommandType : uint8_t {
     PatronizeGreatPerson = 31,  // arg = great person class, arg2 = 0 gold / 1 faith: buy its current individual now
     PassGreatPerson = 32,       // arg = great person class: decline its current individual
     ActivateGreatPerson = 33,   // id = great person unit: use it where it stands (one charge or one Great Work)
+    FoundPantheon = 34,         // arg = pantheon belief
+    FoundReligion = 35,         // id = Great Prophet on a Holy Site, arg = religion, arg2 = Founder belief, target.x = Follower belief
+    EvangelizeBelief = 36,      // id = Apostle, arg = a Worship, Enhancer (or missing) belief for its religion
+    SpreadReligion = 37,        // id = religious unit in a city's territory: spread its religion there
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
@@ -136,6 +140,18 @@ struct Command {
     }
     static Command passGreatPerson(PlayerId p, TypeIndex cls) { return {CommandType::PassGreatPerson, p, -1, {}, cls, 0}; }
     static Command activateGreatPerson(PlayerId p, UnitId u) { return {CommandType::ActivateGreatPerson, p, u, {}, 0, 0}; }
+    static Command foundPantheon(PlayerId p, TypeIndex belief) { return {CommandType::FoundPantheon, p, -1, {}, belief, 0}; }
+    static Command foundReligion(PlayerId p, UnitId prophet, TypeIndex religion, TypeIndex founder, TypeIndex follower) {
+        return {CommandType::FoundReligion, p, prophet, Hex{follower, 0}, religion, founder};
+    }
+    static Command evangelizeBelief(PlayerId p, UnitId apostle, TypeIndex belief) {
+        return {CommandType::EvangelizeBelief, p, apostle, {}, belief, 0};
+    }
+    static Command spreadReligion(PlayerId p, UnitId u) { return {CommandType::SpreadReligion, p, u, {}, 0, 0}; }
+    // Buy a religious unit or a worship building with Faith (target.x = 1 marks a Faith purchase).
+    static Command purchaseWithFaith(PlayerId p, CityId c, ProductionItem item) {
+        return {CommandType::Purchase, p, c, Hex{1, 0}, static_cast<int32_t>(item.kind), item.type};
+    }
 };
 
 enum class CommandError : uint8_t {
@@ -186,6 +202,8 @@ enum class CommandError : uint8_t {
     NoGreatPerson,
     NotEnoughFaith,
     CannotActivate,
+    CannotFoundReligion,
+    CannotSpread,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

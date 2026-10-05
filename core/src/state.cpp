@@ -103,6 +103,8 @@ const char* commandErrorName(CommandError e) {
         case CommandError::NoGreatPerson: return "NoGreatPerson";
         case CommandError::NotEnoughFaith: return "NotEnoughFaith";
         case CommandError::CannotActivate: return "CannotActivate";
+        case CommandError::CannotFoundReligion: return "CannotFoundReligion";
+        case CommandError::CannotSpread: return "CannotSpread";
     }
     return "Unknown";
 }
@@ -158,6 +160,12 @@ std::string describe(const Command& c) {
             return s + "PatronizeGreatPerson class" + std::to_string(c.arg) + (c.arg2 ? " faith" : " gold");
         case CommandType::PassGreatPerson: return s + "PassGreatPerson class" + std::to_string(c.arg);
         case CommandType::ActivateGreatPerson: return s + "ActivateGreatPerson u" + std::to_string(c.id);
+        case CommandType::FoundPantheon: return s + "FoundPantheon belief" + std::to_string(c.arg);
+        case CommandType::FoundReligion:
+            return s + "FoundReligion u" + std::to_string(c.id) + " religion" + std::to_string(c.arg) + " beliefs " + std::to_string(c.arg2) + "," +
+                   std::to_string(c.target.x);
+        case CommandType::EvangelizeBelief: return s + "EvangelizeBelief u" + std::to_string(c.id) + " belief" + std::to_string(c.arg);
+        case CommandType::SpreadReligion: return s + "SpreadReligion u" + std::to_string(c.id);
     }
     return s + "?";
 }

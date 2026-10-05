@@ -25,6 +25,7 @@ add_library(sovereign_core
   src/json.cpp
   src/leader.cpp
   src/greatpeople.cpp
+  src/religion.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -74,6 +75,7 @@ add_executable(sovereign_tests
   tests/test_battle.cpp
   tests/test_naval.cpp
   tests/test_greatpeople.cpp
+  tests/test_religion.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)
 target_compile_definitions(sovereign_tests PRIVATE

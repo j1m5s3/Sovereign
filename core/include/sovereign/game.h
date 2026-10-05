@@ -139,6 +139,26 @@ public:
     int greatPersonAuraStrength(const Unit& unit) const;
     int greatPersonAuraMoves(const Unit& unit) const;
 
+    // ---- religion (06-religion.md)
+    bool canFoundPantheon(PlayerId player, TypeIndex belief) const;
+    // Whether the core applies this belief's effect yet (the rest wait for their systems).
+    bool beliefModelled(TypeIndex belief) const;
+    // Beliefs of a class no player or religion has taken yet.
+    std::vector<TypeIndex> availableBeliefs(BeliefClass cls) const;
+    int maxReligions() const;  // by map size
+    bool canFoundReligion(UnitId prophet, TypeIndex religion, TypeIndex founder, TypeIndex follower, CommandError* why = nullptr) const;
+    bool canEvangelize(UnitId apostle, TypeIndex belief) const;
+    bool canSpreadReligion(UnitId unit) const;
+    int cityMajorityReligion(const City& city) const;
+    int cityFollowers(const City& city, int religion) const;
+    // Faith to buy this item here (religious units, worship buildings); -1 when it cannot be bought with Faith.
+    int faithPurchaseCost(PlayerId player, const City& city, ProductionItem item) const;
+    int religiousStrength(const Unit& unit, bool defending) const;
+    // Yields a founder earns from its religion's spread (Tithe, Pilgrimage, World Church...).
+    Yields founderYields(PlayerId player) const;
+    // The player whose religion is the majority in every living major civ (06: Religious victory), or kNoPlayer.
+    PlayerId religiousVictor() const;
+
     // ---- research and government (04-tech-civics-government.md)
     int techCost(TypeIndex tech) const;    // scaled by game speed
     int civicCost(TypeIndex civic) const;  // scaled by game speed
@@ -332,6 +352,12 @@ private:
     void applyLeader(const Command& c);
     CommandError validateGreatPeople(const Command& c) const;
     void applyGreatPeople(const Command& c);
+    CommandError validateReligion(const Command& c) const;
+    void applyReligion(const Command& c);
+    void processReligion();  // passive pressure, each world turn
+    // Adds pressure for a religion in cities within `range` of `at` (negative: removes it).
+    void shiftPressure(Hex at, int range, int religion, int amount);
+    void theologicalCombat(Unit& attacker, Unit& defender);
     // A player's turn: earn points, then recruit whoever they can afford.
     void processGreatPeople(PlayerId player);
     void recruitGreatPerson(PlayerId player, TypeIndex person);
