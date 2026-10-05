@@ -259,7 +259,7 @@ const std::vector<std::string>& Rules::fileNames() {
     static const std::vector<std::string> names = {
         "globals.json",     "terrain.json",  "resources.json",     "promotions.json", "units.json",
         "buildings.json",   "districts.json", "barbarians.json", "techs.json",    "civics.json",        "governments.json",
-        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "worldcongress.json", "disasters.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
+        "policies.json",    "improvements.json", "greatpeople.json", "religion.json", "wonders.json", "citystates.json", "moments.json", "governors.json", "espionage.json", "worldcongress.json", "disasters.json", "projects.json", "civilizations.json", "leader.json", "setup.json", "modifiers.json",
     };
     return names;
 }
@@ -1584,6 +1584,61 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         startingUnits.push_back(u);
     }
 
+    for (const auto& [id, row] : m.tables["projects"]) {
+        const Json& j = row;
+        ProjectType pj;
+        pj.id = id;
+        pj.name = j["name"].str(id);
+        pj.districtId = j["district"].str();
+        if (!pj.districtId.empty()) pj.district = district(pj.districtId);
+        if (!readUnlock(j["unlock"], pj.unlock, "project " + id)) return false;
+        pj.cost = static_cast<int>(j["cost"].integer(0));
+        const std::string model = j["costProgression"].str("NO_PROGRESSION_MODEL");
+        pj.costProgression = model == "GAME_PROGRESS" ? DistrictCostProgression::GameProgress : DistrictCostProgression::None;
+        pj.costProgressionParam = static_cast<int>(j["costProgressionParam"].integer(0));
+        pj.maxPerPlayer = static_cast<int>(j["maxPerPlayer"].integer(0));
+        pj.spaceRace = j["spaceRace"].boolean(false);
+        if (j["conversion"].isObject() && parseYieldName(j["conversion"]["yield"].str(), pj.conversionYield)) {
+            pj.converts = true;
+            pj.conversionPercent = static_cast<int>(j["conversion"]["percent"].integer(0));
+        }
+        for (const auto& [cls, points] : j["greatPersonPoints"].members()) {
+            const TypeIndex c = greatPersonClass(cls);
+            if (c != kNone) pj.greatPersonPoints.push_back({c, static_cast<int>(points.integer(0))});
+        }
+        if (j["resourceCost"].isObject()) {
+            pj.resource = resource(j["resourceCost"]["resource"].str());
+            pj.resourceAmount = static_cast<int>(j["resourceCost"]["amount"].integer(0));
+        }
+        static const std::pair<const char*, ProjectEffectKind> kinds[] = {
+            {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
+            {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
+            {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed}};
+        bool known = true;
+        for (const Json& e : j["effects"].items()) {
+            bool found = false;
+            for (const auto& [name, kind] : kinds) {
+                if (e["kind"].str() == name) {
+                    pj.effects.push_back({kind, static_cast<int>(e["amount"].integer(0))});
+                    found = true;
+                }
+            }
+            known = known && found;
+        }
+        pj.modelled = j["modelled"].boolean(false) && known;
+        projects.push_back(std::move(pj));
+    }
+    {
+        size_t k = 0;
+        for (const auto& [id, j] : m.tables["projects"]) {
+            const std::string& req = j["requires"].str();
+            if (!req.empty() && (projects[k].prerequisite = project(req)) == kNone) {
+                if (error) *error = "project " + id + ": unknown requirement " + req;
+                return false;
+            }
+            ++k;
+        }
+    }
     static const char* required[] = {"CITY_MIN_RANGE", "START_DISTANCE_MAJOR_CIVILIZATION", "MOVEMENT_RIVER_COST",
                                      "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS",
                                      "CITY_FOOD_CONSUMPTION_PER_POPULATION", "CITY_GROWTH_THRESHOLD",
@@ -1641,6 +1696,7 @@ TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id
 TypeIndex Rules::governor(const std::string& id) const { return findIn(governors, id); }
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
+TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 
 const Dynasty* Rules::dynastyOf(TypeIndex c) const {

@@ -209,6 +209,11 @@ CityReport Game::cityReport(CityId id) const {
         pct += loyaltyYield;
         rep.yields[i] = raw[i] * std::max(0, pct) / 100;
     }
+    // A district project turns part of the city's production into a yield while it runs (03: Projects).
+    if (!c->queue.empty() && c->queue.front().kind == ProductionKind::Project) {
+        const ProjectType& pj = rules_->projects[static_cast<size_t>(c->queue.front().type)];
+        if (pj.converts) rep.yields[idx(pj.conversionYield)] += rep.yields[idx(YieldType::Production)] * pj.conversionPercent / 100;
+    }
     rep.foodConsumption = rules_->global("CITY_FOOD_CONSUMPTION_PER_POPULATION") * c->population;
     rep.defense = static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityDefense).toInt());
     return rep;
@@ -239,6 +244,19 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
         base = u.cost + u.costProgression * copies;
     } else if (item.kind == ProductionKind::District) {
         return districtCost(player, item.type);  // already scaled by game speed
+    } else if (item.kind == ProductionKind::Project) {
+        // GAME_PROGRESS: x (1 + param/100 x the larger share of the tech or civic tree completed).
+        const ProjectType& pj = rules_->projects[static_cast<size_t>(item.type)];
+        Fixed cost = Fixed::fromInt(pj.cost);
+        if (pj.costProgression == DistrictCostProgression::GameProgress) {
+            const Player& p = state_.players[static_cast<size_t>(player)];
+            auto share = [](const TreeProgress& t) {
+                const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
+                return t.done.empty() ? Fixed() : Fixed::ratio(done, static_cast<int64_t>(t.done.size()));
+            };
+            cost = cost * (Fixed::fromInt(1) + std::max(share(p.techs), share(p.civics)) * pj.costProgressionParam / 100);
+        }
+        return std::max(1, static_cast<int>(cost.toInt()) * speedPercent(state_, *rules_) / 100);
     } else {
         base = rules_->buildings[static_cast<size_t>(item.type)].cost;
     }
@@ -246,7 +264,7 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
 }
 
 int Game::purchaseCost(PlayerId player, ProductionItem item) const {
-    if (item.kind == ProductionKind::District) return -1;  // districts are built, never bought
+    if (item.kind == ProductionKind::District || item.kind == ProductionKind::Project) return -1;  // built, never bought
     if (item.kind == ProductionKind::Unit) {
         if (rules_->units[static_cast<size_t>(item.type)].purchaseYield != "GOLD") return -1;
     } else if (!rules_->buildings[static_cast<size_t>(item.type)].purchasable) {
@@ -324,6 +342,20 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             for (const CityDistrict& cd : c.districts) used += rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
             if (used >= districtLimit(c)) return fail(CommandError::CannotBuild);
         }
+    } else if (item.kind == ProductionKind::Project) {
+        if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->projects.size()) return fail(CommandError::CannotBuild);
+        const ProjectType& pj = rules_->projects[static_cast<size_t>(item.type)];
+        const Player& p = state_.players[static_cast<size_t>(c.owner)];
+        const int done = static_cast<size_t>(item.type) < p.projectsDone.size() ? p.projectsDone[static_cast<size_t>(item.type)] : 0;
+        if (!pj.modelled || !hasUnlocked(c.owner, pj.unlock) || (pj.maxPerPlayer > 0 && done >= pj.maxPerPlayer)) return fail(CommandError::CannotBuild);
+        if (!pj.districtId.empty() && (pj.district == kNone || !c.district(pj.district, true))) return fail(CommandError::CannotBuild);
+        if (pj.prerequisite != kNone && (static_cast<size_t>(pj.prerequisite) >= p.projectsDone.size() || p.projectsDone[static_cast<size_t>(pj.prerequisite)] == 0))
+            return fail(CommandError::CannotBuild);
+        if (pj.resource != kNone && p.stockpile[static_cast<size_t>(pj.resource)] < pj.resourceAmount) return fail(CommandError::NotEnoughResources);
+        // Repair Outer Defenses: only with walls that are down.
+        for (const ProjectEffect& e : pj.effects) {
+            if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+        }
     } else {
         return fail(CommandError::CannotBuild);
     }
@@ -348,6 +380,10 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
         ProductionItem it{ProductionKind::District, static_cast<TypeIndex>(i)};
         if (!canProduce(*c, it) || std::find(c->queue.begin(), c->queue.end(), it) != c->queue.end()) continue;
         if (c->district(it.type, false) || !districtPlots(id, it.type).empty()) out.push_back(it);
+    }
+    for (size_t i = 0; i < rules_->projects.size(); ++i) {
+        ProductionItem it{ProductionKind::Project, static_cast<TypeIndex>(i)};
+        if (canProduce(*c, it) && std::find(c->queue.begin(), c->queue.end(), it) == c->queue.end()) out.push_back(it);
     }
     return out;
 }
@@ -417,7 +453,7 @@ CommandError Game::validateCity(const Command& c) const {
     CommandError why = CommandError::Ok;
     switch (c.type) {
         case CommandType::SetProduction:
-            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
@@ -429,7 +465,7 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::QueueProduction:
-            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
@@ -446,7 +482,7 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::Purchase: {
-            if (c.arg < 0 || c.arg > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (c.target.x == 1) {
                 // Religious units and worship buildings, bought with Faith (06).
                 const int faith = faithPurchaseCost(c.player, *city, item);
@@ -628,6 +664,8 @@ bool Game::completeItem(City& city, ProductionItem item) {
         for (CityDistrict& d : city.districts) {
             if (d.type == item.type) d.complete = true;
         }
+    } else if (item.kind == ProductionKind::Project) {
+        completeProject(city, item.type);
     } else {
         auto it = std::lower_bound(city.buildings.begin(), city.buildings.end(), item.type);
         if (it == city.buildings.end() || *it != item.type) {
@@ -637,6 +675,35 @@ bool Game::completeItem(City& city, ProductionItem item) {
         }
     }
     return true;
+}
+
+void Game::completeProject(City& city, TypeIndex project) {
+    const ProjectType& pj = rules_->projects[static_cast<size_t>(project)];
+    Player& p = state_.players[static_cast<size_t>(city.owner)];
+    if (p.projectsDone.size() < rules_->projects.size()) p.projectsDone.resize(rules_->projects.size(), 0);
+    ++p.projectsDone[static_cast<size_t>(project)];
+    if (pj.resource != kNone) p.stockpile[static_cast<size_t>(pj.resource)] = std::max(0, p.stockpile[static_cast<size_t>(pj.resource)] - pj.resourceAmount);
+    for (const auto& [cls, points] : pj.greatPersonPoints) {
+        if (static_cast<size_t>(cls) < p.greatPersonPoints.size()) p.greatPersonPoints[static_cast<size_t>(cls)] += points;
+    }
+    for (const ProjectEffect& e : pj.effects) {
+        switch (e.kind) {
+            case ProjectEffectKind::RepairWalls: city.wallHp = cityMaxWallHp(city); break;
+            case ProjectEffectKind::Loyalty: city.loyalty = std::min(rules_->globalInt("LOYALTY_MAXIMUM"), city.loyalty + e.amount); break;
+            case ProjectEffectKind::Favor: p.favor += e.amount; break;
+            case ProjectEffectKind::RemoveCo2: {
+                const int64_t removed = std::min<int64_t>(state_.co2, e.amount);
+                state_.co2 -= removed;
+                p.co2 = std::max<int64_t>(0, p.co2 - removed);
+                break;
+            }
+            case ProjectEffectKind::RevealMap:
+                for (uint8_t& v : p.visibility) v = std::max(v, static_cast<uint8_t>(Visibility::Revealed));
+                break;
+            case ProjectEffectKind::CultureFromScience: p.civics.overflow += sciencePerTurn(city.owner) * e.amount; break;
+            case ProjectEffectKind::ExpeditionSpeed: break;  // the space race (Science victory) reads projectsDone
+        }
+    }
 }
 
 bool Game::growBorders(City& city) {

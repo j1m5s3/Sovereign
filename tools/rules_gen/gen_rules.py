@@ -928,6 +928,94 @@ def gen_disasters():
     return {"disasters": events, "climatePhases": phases, "disasterIntensities": intensities}
 
 
+RESOURCE_NAMES = {"Aluminum": "RESOURCE_ALUMINUM", "Uranium": "RESOURCE_URANIUM", "Coal": "RESOURCE_COAL", "Oil": "RESOURCE_OIL"}
+
+
+def project_effects(name, text):
+    """Completion effects the core carries (03: Projects); anything else leaves the project unmodelled."""
+    effects, unmodelled = [], []
+    if name == "Repair Outer Defenses":
+        return [{"kind": "REPAIR_WALLS"}], []
+    for part in [x.strip() for x in (text or "").split(";") if x.strip()]:
+        m = re.fullmatch(r"\+(\d+) Loyalty \(one-time\)", part)
+        if m:
+            effects.append({"kind": "LOYALTY", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Diplomatic Favor", part)
+        if m:
+            effects.append({"kind": "FAVOR", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"add player sequestered carbon \(Amount=(\d+)\)", part)
+        if m:
+            effects.append({"kind": "REMOVE_CO2", "amount": int(m.group(1))})
+            continue
+        if part == "explore entire map (one-time)":
+            effects.append({"kind": "REVEAL_MAP"})
+            continue
+        m = re.fullmatch(r"grants Culture equal to (\d+)x current Science per turn \(one-time\)", part)
+        if m:
+            effects.append({"kind": "CULTURE_FROM_SCIENCE", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) light-years per turn for the Exoplanet Expedition(?: where city is powered)?", part)
+        if m:
+            effects.append({"kind": "EXPEDITION_SPEED", "amount": int(m.group(1))})
+            continue
+        if part.startswith("adjust city required power"):
+            continue  # power is not modelled; the station counts as powered
+        unmodelled.append(part)
+    return effects, unmodelled
+
+
+def gen_projects():
+    """City projects (03: Projects; data: projects.md): district projects with a yield conversion and
+    great person points, the space race, and the GS projects whose effects the core carries."""
+    rows = table(SPEC / "projects.md", "Projects")
+    generic = {"DISTRICT_" + snake(n) for n in ["City Center"] + PLACEABLE_DISTRICTS + ["Spaceport"]}
+    out = []
+    seen = set()
+    for r in rows:
+        name, district = r["Project"], r["District"]
+        if district and "DISTRICT_" + snake(district) not in generic:
+            continue  # a unique district's project (Cothon, Street Carnival)
+        if name.startswith("Lijia"):
+            continue  # Yongle's
+        pid = "PROJECT_" + snake(name)
+        if district and pid in seen:
+            pid += "_" + snake(district)  # Bread and Circuses runs in either entertainment district
+        seen.add(pid)
+        model, param = r["Cost progression"].split()
+        pj = {"id": pid, "name": name, "cost": num(r["Cost"]), "costProgression": model,
+              "costProgressionParam": num(param)}
+        if district:
+            pj["district"] = "DISTRICT_" + snake(district)
+        if r["Unlock"]:
+            pj["unlock"] = unlock_id(r["Unlock"])
+        if r["Max per player"]:
+            pj["maxPerPlayer"] = num(r["Max per player"])
+        if r["Space race"] == "yes":
+            pj["spaceRace"] = True
+        if r["Requires"]:
+            pj["requires"] = "PROJECT_" + snake(r["Requires"])
+        m = re.fullmatch(r"(\d+)% of production -> (\w+)", r["Yield conversion"] or "")
+        if m:
+            pj["conversion"] = {"yield": YIELD_WORDS[m.group(2)], "percent": int(m.group(1))}
+        points = gpp(r["GPP"])
+        if points:
+            pj["greatPersonPoints"] = points
+        m = re.fullmatch(r"(\d+) (\w+)", r["Resource cost"] or "")
+        if m and m.group(2) in RESOURCE_NAMES:
+            pj["resourceCost"] = {"resource": RESOURCE_NAMES[m.group(2)], "amount": int(m.group(1))}
+        effects, unmodelled = project_effects(name, r["Completion effects"])
+        if effects:
+            pj["effects"] = effects
+        # Modelled: it converts production, grants great people points, or every effect is carried.
+        pj["modelled"] = not unmodelled and bool(effects or "conversion" in pj or points or pj.get("spaceRace"))
+        if unmodelled:
+            pj["text"] = "; ".join(unmodelled)
+        out.append(pj)
+    return {"projects": out}
+
+
 def gen_world_congress():
     """World Congress resolutions with their target kind, the eras they can be proposed in, and
     the two options as text; the core carries the effects of the ones it can (08: Diplomatic
@@ -1472,6 +1560,7 @@ def main():
         "espionage.json": gen_espionage(),
         "worldcongress.json": gen_world_congress(),
         "disasters.json": gen_disasters(),
+        "projects.json": gen_projects(),
     }
     stale = []
     for name, doc in outputs.items():

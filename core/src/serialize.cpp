@@ -180,7 +180,8 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         auto itemOk = [&](const ProductionItem& it) {
             return it.kind == ProductionKind::Unit ? inRange(it.type, rules.units.size(), false)
                  : it.kind == ProductionKind::Building ? inRange(it.type, rules.buildings.size(), false)
-                 : it.kind == ProductionKind::District ? inRange(it.type, rules.districts.size(), false) : false;
+                 : it.kind == ProductionKind::District ? inRange(it.type, rules.districts.size(), false)
+                 : it.kind == ProductionKind::Project ? inRange(it.type, rules.projects.size(), false) : false;
         };
         for (const ProductionItem& it : c.queue) if (!itemOk(it)) return false;
         for (const ProductionProgress& pp : c.progress) if (!itemOk(pp.item)) return false;
@@ -229,6 +230,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (p.unitsTrained.size() > rules.units.size()) return false;
         if (p.stockpile.size() != rules.resources.size()) return false;
         if (p.fuelShort.size() != rules.resources.size()) return false;
+        if (p.projectsDone.size() > rules.projects.size()) return false;
         if (p.greatPersonPoints.size() > rules.greatPersonClasses.size() || p.greatPeopleRecruited.size() > rules.greatPersonClasses.size())
             return false;
         for (TypeIndex g : p.greatPeoplePassed) if (!inRange(g, rules.greatPeople.size(), true)) return false;
@@ -307,6 +309,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.greatPeopleRecruited.begin(), p.greatPeopleRecruited.end()));
         writeI32s(w, std::vector<int32_t>(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end()));
         writeI32s(w, std::vector<int32_t>(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end()));
+        writeI32s(w, std::vector<int32_t>(p.projectsDone.begin(), p.projectsDone.end()));
         w.i16(p.pantheon);
         w.i16(p.religion);
         w.i16(p.cityState);
@@ -647,6 +650,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, trained)) return false;
         p.greatPeopleActivated.clear();
         for (int32_t v : trained) p.greatPeopleActivated.push_back(static_cast<TypeIndex>(v));
+        if (!readI32s(r, trained)) return false;
+        p.projectsDone.assign(trained.begin(), trained.end());
         p.pantheon = r.i16();
         p.religion = r.i16();
         p.cityState = r.i16();

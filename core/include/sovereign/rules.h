@@ -632,6 +632,33 @@ struct Modifier {
     TypeIndex district = kNone;  // DistrictAdjacencyPercent
 };
 
+// City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed };
+struct ProjectEffect {
+    ProjectEffectKind kind = ProjectEffectKind::Loyalty;
+    int amount = 0;
+};
+struct ProjectType {
+    std::string id, name;
+    std::string districtId;            // runs in this district ("": any city)
+    TypeIndex district = kNone;        // kNone with a districtId: a district the core lacks (not available)
+    Unlock unlock;
+    int cost = 0;
+    DistrictCostProgression costProgression = DistrictCostProgression::None;
+    int costProgressionParam = 0;      // GAME_PROGRESS: cost x (1 + param/100 x tree progress)
+    int maxPerPlayer = 0;              // 0: repeatable
+    bool spaceRace = false;
+    TypeIndex prerequisite = kNone;    // a project the player must have completed
+    bool converts = false;
+    YieldType conversionYield = YieldType::Gold;
+    int conversionPercent = 0;         // share of the city's production added as that yield while it runs
+    std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // on completion
+    TypeIndex resource = kNone;
+    int resourceAmount = 0;            // strategic resource spent on completion
+    std::vector<ProjectEffect> effects;
+    bool modelled = false;             // the core carries all of it (others are not offered)
+};
+
 // A difficulty level (00-overview.md, Difficulty levels; Sovereign: skill first, AI bonuses only at the top two).
 struct DifficultyType {
     std::string id, name;
@@ -808,6 +835,7 @@ public:
     std::vector<GameSpeedType> speeds;
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
     std::vector<DifficultyType> difficulties;  // Settler .. Deity (setup.json)
+    std::vector<ProjectType> projects;
     std::vector<GearType> gear;
     std::vector<Dynasty> dynasties;
     std::vector<GreatPersonClass> greatPersonClasses;
@@ -857,6 +885,7 @@ public:
     TypeIndex governor(const std::string& id) const;
     TypeIndex spyOperation(const std::string& id) const;
     TypeIndex resolution(const std::string& id) const;
+    TypeIndex project(const std::string& id) const;
     TypeIndex governorPromotion(const std::string& id) const;
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;

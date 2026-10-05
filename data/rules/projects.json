@@ -1,0 +1,440 @@
+{
+ "_generated": "by tools/rules_gen/gen_rules.py from specs/civ6/data; do not edit by hand",
+ "projects": [
+  {
+   "id": "PROJECT_REPAIR_OUTER_DEFENSES",
+   "name": "Repair Outer Defenses",
+   "cost": 0,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "effects": [
+    {
+     "kind": "REPAIR_WALLS"
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_SEND_AID",
+   "name": "Send Aid",
+   "cost": 200,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "modelled": false,
+   "text": "send 200 Gold to Aid Request; send 200 Gold to Military Aid Request"
+  },
+  {
+   "id": "PROJECT_TRAIN_ATHLETES",
+   "name": "Train Athletes",
+   "cost": 200,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_RECOMMISSION_NUCLEAR_REACTOR",
+   "name": "Recommission Nuclear Reactor",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "unlock": "TECH_NUCLEAR_FISSION",
+   "modelled": false,
+   "text": "city recommission reactor"
+  },
+  {
+   "id": "PROJECT_BUILD_NUCLEAR_DEVICE",
+   "name": "Build Nuclear Device",
+   "cost": 800,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "unlock": "TECH_NUCLEAR_FISSION",
+   "requires": "PROJECT_MANHATTAN_PROJECT",
+   "resourceCost": {
+    "resource": "RESOURCE_URANIUM",
+    "amount": 10
+   },
+   "modelled": false,
+   "text": "+1 Nuclear Device (one-time)"
+  },
+  {
+   "id": "PROJECT_MANHATTAN_PROJECT",
+   "name": "Manhattan Project",
+   "cost": 1000,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "unlock": "TECH_NUCLEAR_FISSION",
+   "maxPerPlayer": 1,
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_OPERATION_IVY",
+   "name": "Operation Ivy",
+   "cost": 1000,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "unlock": "TECH_NUCLEAR_FUSION",
+   "maxPerPlayer": 1,
+   "requires": "PROJECT_MANHATTAN_PROJECT",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_BUILD_THERMONUCLEAR_DEVICE",
+   "name": "Build Thermonuclear Device",
+   "cost": 1000,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "unlock": "TECH_NUCLEAR_FUSION",
+   "requires": "PROJECT_OPERATION_IVY",
+   "resourceCost": {
+    "resource": "RESOURCE_URANIUM",
+    "amount": 20
+   },
+   "modelled": false,
+   "text": "+1 Thermonuclear Device (one-time)"
+  },
+  {
+   "id": "PROJECT_CAMPUS_RESEARCH_GRANTS",
+   "name": "Campus Research Grants",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_CAMPUS",
+   "conversion": {
+    "yield": "SCIENCE",
+    "percent": 15
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_SCIENTIST": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_COMMERCIAL_HUB_INVESTMENT",
+   "name": "Commercial Hub Investment",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_COMMERCIAL_HUB",
+   "conversion": {
+    "yield": "GOLD",
+    "percent": 30
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_MERCHANT": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_ENCAMPMENT_TRAINING",
+   "name": "Encampment Training",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_ENCAMPMENT",
+   "conversion": {
+    "yield": "GOLD",
+    "percent": 15
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_GENERAL": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_BREAD_AND_CIRCUSES",
+   "name": "Bread and Circuses",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "effects": [
+    {
+     "kind": "LOYALTY",
+     "amount": 20
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_HARBOR_SHIPPING",
+   "name": "Harbor Shipping",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_HARBOR",
+   "conversion": {
+    "yield": "GOLD",
+    "percent": 15
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ADMIRAL": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_HOLY_SITE_PRAYERS",
+   "name": "Holy Site Prayers",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_HOLY_SITE",
+   "conversion": {
+    "yield": "FAITH",
+    "percent": 15
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_PROPHET": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_INDUSTRIAL_ZONE_LOGISTICS",
+   "name": "Industrial Zone Logistics",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_ENGINEER": 10
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_CONVERT_TO_COAL_POWER",
+   "name": "Convert to Coal Power",
+   "cost": 200,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "unlock": "TECH_INDUSTRIALIZATION",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_CONVERT_TO_OIL_POWER",
+   "name": "Convert to Oil Power",
+   "cost": 300,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "unlock": "TECH_ELECTRICITY",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_CARBON_RECAPTURE",
+   "name": "Carbon Recapture",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "unlock": "CIVIC_GLOBAL_WARMING_MITIGATION",
+   "effects": [
+    {
+     "kind": "FAVOR",
+     "amount": 30
+    },
+    {
+     "kind": "REMOVE_CO2",
+     "amount": 50000
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_CONVERT_TO_NUCLEAR_POWER",
+   "name": "Convert to Nuclear Power",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "unlock": "TECH_NUCLEAR_FISSION",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_DECOMMISSION_COAL_POWER_PLANT",
+   "name": "Decommission Coal Power Plant",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_DECOMMISSION_OIL_POWER_PLANT",
+   "name": "Decommission Oil Power Plant",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_DECOMMISSION_NUCLEAR_POWER_PLANT",
+   "name": "Decommission Nuclear Power Plant",
+   "cost": 400,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_INDUSTRIAL_ZONE",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_TRAIN_ASTRONAUTS",
+   "name": "Train Astronauts",
+   "cost": 200,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "modelled": false
+  },
+  {
+   "id": "PROJECT_LAUNCH_LAGRANGE_LASER_STATION",
+   "name": "Launch Lagrange Laser Station",
+   "cost": 600,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_OFFWORLD_MISSION",
+   "spaceRace": true,
+   "requires": "PROJECT_LAUNCH_EXOPLANET_EXPEDITION",
+   "resourceCost": {
+    "resource": "RESOURCE_ALUMINUM",
+    "amount": 30
+   },
+   "effects": [
+    {
+     "kind": "EXPEDITION_SPEED",
+     "amount": 1
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_BUILD_TERRESTRIAL_LASER_STATION",
+   "name": "Build Terrestrial Laser Station",
+   "cost": 600,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_OFFWORLD_MISSION",
+   "spaceRace": true,
+   "requires": "PROJECT_LAUNCH_EXOPLANET_EXPEDITION",
+   "effects": [
+    {
+     "kind": "EXPEDITION_SPEED",
+     "amount": 1
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_LAUNCH_EARTH_SATELLITE",
+   "name": "Launch Earth Satellite",
+   "cost": 900,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_ROCKETRY",
+   "maxPerPlayer": 1,
+   "spaceRace": true,
+   "effects": [
+    {
+     "kind": "REVEAL_MAP"
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_LAUNCH_MOON_LANDING",
+   "name": "Launch Moon Landing",
+   "cost": 1500,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_SATELLITES",
+   "maxPerPlayer": 1,
+   "spaceRace": true,
+   "requires": "PROJECT_LAUNCH_EARTH_SATELLITE",
+   "effects": [
+    {
+     "kind": "CULTURE_FROM_SCIENCE",
+     "amount": 10
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_LAUNCH_MARS_COLONY",
+   "name": "Launch Mars Colony",
+   "cost": 1800,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_NANOTECHNOLOGY",
+   "maxPerPlayer": 1,
+   "spaceRace": true,
+   "requires": "PROJECT_LAUNCH_MOON_LANDING",
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_LAUNCH_EXOPLANET_EXPEDITION",
+   "name": "Launch Exoplanet Expedition",
+   "cost": 2100,
+   "costProgression": "NO_PROGRESSION_MODEL",
+   "costProgressionParam": 0,
+   "district": "DISTRICT_SPACEPORT",
+   "unlock": "TECH_SMART_MATERIALS",
+   "maxPerPlayer": 1,
+   "spaceRace": true,
+   "requires": "PROJECT_LAUNCH_MARS_COLONY",
+   "effects": [
+    {
+     "kind": "EXPEDITION_SPEED",
+     "amount": 1
+    }
+   ],
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_THEATER_SQUARE_FESTIVAL",
+   "name": "Theater Square Festival",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_THEATER_SQUARE",
+   "conversion": {
+    "yield": "CULTURE",
+    "percent": 15
+   },
+   "greatPersonPoints": {
+    "GREAT_PERSON_CLASS_WRITER": 5,
+    "GREAT_PERSON_CLASS_ARTIST": 5,
+    "GREAT_PERSON_CLASS_MUSICIAN": 5
+   },
+   "modelled": true
+  },
+  {
+   "id": "PROJECT_COURT_FESTIVAL",
+   "name": "Court Festival",
+   "cost": 65,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_THEATER_SQUARE",
+   "modelled": false,
+   "text": "+50 Culture per surplus luxury (one-time); grant tourism per excess luxuries (Amount=50) (one-time)"
+  },
+  {
+   "id": "PROJECT_BREAD_AND_CIRCUSES_WATER_PARK",
+   "name": "Bread and Circuses",
+   "cost": 25,
+   "costProgression": "GAME_PROGRESS",
+   "costProgressionParam": 1500,
+   "district": "DISTRICT_WATER_PARK",
+   "effects": [
+    {
+     "kind": "LOYALTY",
+     "amount": 20
+    }
+   ],
+   "modelled": true
+  }
+ ]
+}
