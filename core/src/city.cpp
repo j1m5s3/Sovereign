@@ -140,6 +140,11 @@ CityReport Game::cityReport(CityId id) const {
     // The leader's Builder-King promotions work in the city it stands in (leader doc §3).
     const Unit* leader = leaderOf(c->owner);
     if (leader && leader->pos == c->pos) rep.amenities += unitEffectTotal(*leader, UnitEffectKind::CityAmenities);
+    // Citizen stances and reputation (leader doc §4, §8.1).
+    if (state_.turn < c->benevolenceUntil) rep.amenities += rules_->globalInt("STANCE_BENEVOLENCE_AMENITIES");
+    if (state_.turn >= c->fearUntil && state_.turn < c->fearAfterUntil) rep.amenities -= rules_->globalInt("STANCE_FEAR_AFTER_AMENITIES");
+    if (beloved(c->owner)) rep.amenities += rules_->globalInt("REPUTATION_BELOVED_AMENITIES");
+    if (feared(c->owner)) rep.amenities -= rules_->globalInt("REPUTATION_FEARED_AMENITIES");
     if (owner.gold < Fixed()) rep.amenities -= static_cast<int>((-owner.gold).ceil() + 9) / 10;
     const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
     rep.amenitiesNeeded = std::max(0, (c->population + perAmenity - 1) / perAmenity - 1);
@@ -147,6 +152,12 @@ CityReport Game::cityReport(CityId id) const {
     rep.happiness = 0;
     for (size_t i = 0; i < rules_->happiness.size(); ++i) {
         if (balance >= rules_->happiness[i].minBalance) rep.happiness = static_cast<int>(i);
+    }
+    // Under Fear the city does not count as in Unrest or Revolt (§4).
+    if (fearActive(*c)) {
+        for (size_t i = 0; i < rules_->happiness.size(); ++i) {
+            if (rules_->happiness[i].id == "HAPPINESS_UNHAPPY") rep.happiness = std::max(rep.happiness, static_cast<int>(i));
+        }
     }
     const int moodYield = rules_->happiness.empty() ? 0 : rules_->happiness[static_cast<size_t>(rep.happiness)].yieldPercent;
     const LoyaltyLevel* loyal = loyaltyLevel(*c);

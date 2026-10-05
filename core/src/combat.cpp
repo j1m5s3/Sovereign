@@ -638,7 +638,13 @@ void Game::applyCombat(const Command& c) {
             refreshVisibility(them);
             return;
         }
-        case CommandType::RazeCity: razeCity(c.id); return;
+        case CommandType::RazeCity: {
+            // Burning a city stains the ruler's name (leader doc §8.1).
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            p.reputation = std::max(-100, p.reputation - rules_->globalInt("REPUTATION_PER_RAZE"));
+            razeCity(c.id);
+            return;
+        }
         default: break;
     }
     if (const City* city = state_.cityAt(c.target)) {

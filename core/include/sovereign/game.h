@@ -194,6 +194,12 @@ public:
     Fixed loyaltyPerTurn(CityId city) const;
     const LoyaltyLevel* loyaltyLevel(const City& city) const;
     PlayerId freeCityPlayer() const;  // kNoPlayer until the first city revolts
+    // ---- citizen stances and reputation (leader doc §4, §8.1-8.2)
+    bool canTakeStance(PlayerId player, CityId city, Stance stance, CommandError* why = nullptr) const;
+    int benevolenceCost(const City& city) const;
+    bool fearActive(const City& city) const;   // order imposed: no Unrest or Revolt
+    bool beloved(PlayerId player) const;
+    bool feared(PlayerId player) const;
 
     // ---- the leader (leader doc §1, §2, §5; data in leader.json)
     bool isLeader(const Unit& unit) const;
@@ -291,6 +297,7 @@ private:
     void barbarianWound(Unit& leader);
     void startInterregnum(Player& p);
     void processLoyalty(PlayerId p);
+    void rebellion(City& city);  // a pretender's rebels appear next to the city
     void processFreeCities();
     PlayerId ensureFreeCityPlayer();
     // Hands a city to a new owner (revolt or flip): plots, Palace, queue and citizens follow.

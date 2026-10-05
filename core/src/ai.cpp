@@ -621,6 +621,14 @@ void leader(View& v) {
         }
         if (best != kNone && v.game.submit(Command::equipGear(v.me, id, best)) == CommandError::Ok) return;  // that took its turn
     }
+    // Stances in the capital (§4): Fear when loyalty slips, Benevolence when amenities run short and gold allows.
+    const CityReport rep = v.game.cityReport(capital->id);
+    if (capital->loyalty < 60 && v.game.canTakeStance(v.me, capital->id, Stance::Fear))
+        v.game.submit(Command::cityStance(v.me, capital->id, Stance::Fear));
+    else if (rep.amenities < rep.amenitiesNeeded &&
+             s.players[at(v.me)].gold > Fixed::fromInt(3 * v.game.benevolenceCost(*capital)) &&
+             v.game.canTakeStance(v.me, capital->id, Stance::Benevolence))
+        v.game.submit(Command::cityStance(v.me, capital->id, Stance::Benevolence));
     const Unit* now = s.unit(id);
     if (now->activity != Activity::Sleep && now->movesLeft > Fixed()) v.game.submit(Command::setActivity(v.me, id, Activity::Sleep));
 }

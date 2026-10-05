@@ -43,11 +43,15 @@ enum class CommandType : uint8_t {
     ChooseSuccessor = 25, // arg = Succession kind; id = the unit for Succession::Unit; arg2 = promotion an heir keeps (-1: none)
     AbandonLeader = 26,   // give up the captured leader and crown a successor
     SendAssassin = 27,    // id = agent, arg = target player (-1 calls it home)
+    CityStance = 28,      // id = city where the leader stands, arg = Stance
 };
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
 // or a regent when neither exists (a stand-in until governors and Great Generals exist).
 enum class Succession : int32_t { Heir = 0, Unit = 1, Regent = 2 };
+
+// The leader's stance toward a city's citizens (leader doc §4).
+enum class Stance : int32_t { Benevolence = 0, Fear = 1 };
 
 struct Command {
     CommandType type = CommandType::EndTurn;
@@ -109,6 +113,9 @@ struct Command {
     static Command chooseSuccessor(PlayerId p, Succession kind, UnitId unit = kNoUnit, TypeIndex keepPromotion = kNone) {
         return {CommandType::ChooseSuccessor, p, unit, {}, static_cast<int32_t>(kind), keepPromotion};
     }
+    static Command cityStance(PlayerId p, CityId c, Stance stance) {
+        return {CommandType::CityStance, p, c, {}, static_cast<int32_t>(stance), 0};
+    }
     static Command sendAssassin(PlayerId p, int32_t agent, PlayerId target) {
         return {CommandType::SendAssassin, p, agent, {}, target, 0};
     }
@@ -157,6 +164,7 @@ enum class CommandError : uint8_t {
     LeaderNeeded,
     CannotSucceed,
     CannotSendAgent,
+    CannotTakeStance,
 };
 
 SOV_API const char* commandErrorName(CommandError e);

@@ -98,8 +98,14 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::AssassinWoundedLeader: Text = FString::Printf(TEXT("An assassin from %s wounded the ruler of %s (%d damage)."), *CivOf(E.actor), *CivOf(E.target), E.value); break;
 			case sov::EventKind::AssassinKilled: Text = FString::Printf(TEXT("An assassin sent against %s was killed."), *CivOf(E.target)); break;
 			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
+			case sov::EventKind::Rebellion: Text = FString::Printf(TEXT("Rebels rise against the iron fist of %s."), *CivOf(E.target)); break;
 		}
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
+	}
+	// Reputation (leader doc §8.1).
+	{
+		const TCHAR* Standing = G.beloved(Me) ? TEXT("Beloved") : G.feared(Me) ? TEXT("Feared") : TEXT("Neither loved nor feared");
+		Line(FString::Printf(TEXT("Reputation %+d: %s"), P.reputation, Standing), 16, Y, FLinearColor(0.8f, 0.85f, 1.f));
 	}
 	if (P.interregnumTurns > 0)
 	{

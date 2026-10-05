@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 
 namespace sov {
 
@@ -151,6 +152,12 @@ CommandError Game::validateLeader(const Command& c) const {
         canSucceed(c.player, static_cast<Succession>(c.arg), c.id, &why);
         return why;
     }
+    if (c.type == CommandType::CityStance) {
+        if (c.arg < 0 || c.arg > static_cast<int32_t>(Stance::Fear)) return CommandError::CannotTakeStance;
+        CommandError why = CommandError::Ok;
+        canTakeStance(c.player, c.id, static_cast<Stance>(c.arg), &why);
+        return why;
+    }
     if (c.type == CommandType::SendAssassin) {
         const Agent* a = agent(c.id);
         if (!a || a->owner != c.player) return CommandError::CannotSendAgent;
@@ -191,6 +198,25 @@ void Game::applyLeader(const Command& c) {
         p.captor = kNoPlayer;
         p.successionPending = true;
         startInterregnum(p);
+        return;
+    }
+    if (c.type == CommandType::CityStance) {
+        City& city = *state_.city(c.id);
+        const int effect = rules_->globalInt("STANCE_EFFECT_TURNS");
+        const int step = rules_->globalInt("REPUTATION_PER_STANCE");
+        if (static_cast<Stance>(c.arg) == Stance::Benevolence) {
+            // Hear petitions, give alms, hold a feast: amenities for a while (§4).
+            p.gold -= Fixed::fromInt(benevolenceCost(city));
+            city.benevolenceUntil = state_.turn + effect;
+            p.reputation = std::min(100, p.reputation + step);
+        } else {
+            // Punishments, a show of force, curfews: order now, resentment later (§4).
+            city.loyalty = std::min(rules_->globalInt("LOYALTY_MAXIMUM"), city.loyalty + rules_->globalInt("STANCE_FEAR_LOYALTY"));
+            city.fearUntil = state_.turn + effect;
+            city.fearAfterUntil = city.fearUntil + rules_->globalInt("STANCE_FEAR_AFTER_TURNS");
+            p.reputation = std::max(-100, p.reputation - step);
+        }
+        city.stanceTurn = state_.turn;
         return;
     }
     if (c.type == CommandType::SendAssassin) {
@@ -318,6 +344,70 @@ void Game::regicide(PlayerId loser, PlayerId by) {
     if (state_.currentPlayer == loser) applyEndTurn(Command::endTurn(loser));
 }
 
+// ------------------------------------------------------------------ stances and reputation (§4, §8.1)
+
+int Game::benevolenceCost(const City& city) const {
+    const int percent = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
+    return rules_->globalInt("STANCE_BENEVOLENCE_GOLD_PER_POP") * city.population * percent / 100;
+}
+
+bool Game::fearActive(const City& city) const { return state_.turn < city.fearUntil; }
+
+bool Game::beloved(PlayerId player) const {
+    return state_.players[static_cast<size_t>(player)].reputation >= rules_->globalInt("REPUTATION_THRESHOLD");
+}
+
+bool Game::feared(PlayerId player) const {
+    return state_.players[static_cast<size_t>(player)].reputation <= -rules_->globalInt("REPUTATION_THRESHOLD");
+}
+
+bool Game::canTakeStance(PlayerId player, CityId cityId, Stance stance, CommandError* why) const {
+    auto result = [&](bool ok) {
+        if (why) *why = ok ? CommandError::Ok : CommandError::CannotTakeStance;
+        return ok;
+    };
+    const City* c = state_.city(cityId);
+    if (!c || c->owner != player) return result(false);
+    // The leader must be there in person, once per cooldown (§4).
+    const Unit* l = leaderOf(player);
+    if (!l || l->pos != c->pos) return result(false);
+    if (state_.turn - c->stanceTurn < rules_->globalInt("STANCE_COOLDOWN_TURNS")) return result(false);
+    if (stance == Stance::Benevolence) {
+        if (state_.players[static_cast<size_t>(player)].gold < Fixed::fromInt(benevolenceCost(*c))) {
+            if (why) *why = CommandError::NotEnoughGold;
+            return false;
+        }
+        return result(true);
+    }
+    // Fear needs soldiers in the city, like martial law.
+    const Unit* m = state_.unitAt(c->pos, UnitLayer::Military, *rules_);
+    return result(m && m->owner == player);
+}
+
+void Game::rebellion(City& city) {
+    const PlayerId barb = barbarianPlayer();
+    if (barb == kNoPlayer) return;
+    // The rebels carry the strongest melee arms the owner can field.
+    TypeIndex best = kNone;
+    for (size_t i = 0; i < rules_->units.size(); ++i) {
+        const UnitType& t = rules_->units[i];
+        if (t.unitClass != "MELEE" || t.domain != Domain::Land || !t.trainable || !hasUnlocked(city.owner, t.unlock)) continue;
+        if (best == kNone || t.combat > rules_->units[static_cast<size_t>(best)].combat) best = static_cast<TypeIndex>(i);
+    }
+    if (best == kNone) return;
+    int left = rules_->globalInt("REBELLION_UNITS");
+    for (const Hex& h : state_.grid.within(city.pos, 1)) {
+        if (left <= 0) break;
+        if (h == city.pos || state_.cityAt(h) || state_.unitAt(h, UnitLayer::Military, *rules_)) continue;
+        if (!isLandPassable(state_, *rules_, h) || state_.foreignUnitAt(h, barb)) continue;
+        spawnUnit(best, barb, h);
+        --left;
+    }
+    pushEvent(EventKind::Rebellion, barb, city.owner, city.id);
+    refreshVisibility(barb);
+    refreshVisibility(city.owner);
+}
+
 // ------------------------------------------------------------------ assassins (§6)
 
 int Game::playerEra(PlayerId player) const {
@@ -389,7 +479,11 @@ bool Game::leaderExposed(const Unit& leader) const {
 
 int Game::assassinSuccessPercent(const Agent& a, const Unit& leader) const {
     const int diff = assassinPower(a) - leaderDefenseVsAssassin(leader);
-    const int percent = 50 + diff * rules_->globalInt("ASSASSIN_ODDS_PER_POINT");
+    int percent = 50 + diff * rules_->globalInt("ASSASSIN_ODDS_PER_POINT");
+    // Resentful locals in a city ruled by Fear, and a Feared ruler, help the assassin (§4, §8.1).
+    const City* c = state_.cityAt(leader.pos);
+    if (c && c->owner == leader.owner && state_.turn < c->fearAfterUntil) percent += rules_->globalInt("STANCE_FEAR_ASSASSIN_BONUS");
+    if (feared(leader.owner)) percent += rules_->globalInt("REPUTATION_FEARED_ASSASSIN_BONUS");
     return std::clamp(percent, rules_->globalInt("ASSASSIN_MIN_SUCCESS"), rules_->globalInt("ASSASSIN_MAX_SUCCESS"));
 }
 
