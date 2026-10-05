@@ -1,1 +1,1 @@
-Archived to [jit_history/2026-10-05-art-slice.md](jit_history/2026-10-05-art-slice.md). City assaults as live battles are done (core `PendingBattle.city`, save version 15; the battle scene draws the walls). Next in James's step-6 order: trained battle AI.
+Archived to [jit_history/2026-10-05-battle-ai.md](jit_history/2026-10-05-battle-ai.md). Next in James's step-6 order: the remaining Civ systems (religion, trade, great people, city-states, wonders, naval, eras).

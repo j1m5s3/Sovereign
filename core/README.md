@@ -18,7 +18,9 @@ PowerShell (add `--config Release` to the build and `-C Release` to ctest).
 
 `ctest` runs the unit and scenario tests, the static check that keeps floats
 and other nondeterminism out of the core (`tools/check_core_rules.py`), and a
-check that the generated rules data is current.
+check that the generated rules data is current. The same build adds the live battle
+simulation and the trained battle AI ([battle/](../battle/README.md)): `battle_tests`
+and the trainer `battle_train`.
 
 ## Headless simulator
 

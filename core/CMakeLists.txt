@@ -78,6 +78,9 @@ target_compile_definitions(sovereign_tests PRIVATE
   SOVEREIGN_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/golden")
 add_test(NAME sovereign_tests COMMAND sovereign_tests)
 
+# The live battle simulation and the trained battle AI (battle/).
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../battle battle)
+
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
   add_test(NAME no_floats_in_core

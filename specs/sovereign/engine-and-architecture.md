@@ -49,7 +49,7 @@ Written up as the first `.jit/JIT_PLAN.md` when coding starts:
 2. Unreal bridge showing a plain hex map. *Done 2026-10-05 (`unreal/`, UE 5.8): seat 0 plays with mouse and keyboard through commands, the AI plays the other seats.*
 3. The leader in classic control, with auto-resolved assassins. *Done 2026-10-05 (`core/src/leader.cpp`, `data/rules/leader.json`, Unreal UI).*
 4. One street scene: one style, the City Center, with the Benevolence/Fear citizen actions and the loyalty system they need (**[decided, James 2026-10-05]**). *Done 2026-10-05 (loyalty and stances in the core; the street scene built from primitives until art exists).*
-5. One medieval live battle. *Done 2026-10-05 (battle result contract in the core; a scripted battle simulation in Unreal until the trained battle AI exists).*
+5. One medieval live battle. *Done 2026-10-05 (battle result contract in the core; the simulation now lives in `battle/` with the trained battle AI).*
 6. Everything else.
 
 Art **[decided, James 2026-10-04]**: Claude makes the art, modelling from reference images found online (see [leaders-and-art-style.md](leaders-and-art-style.md), Art toolchain).

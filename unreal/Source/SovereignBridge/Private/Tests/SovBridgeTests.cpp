@@ -346,6 +346,33 @@ bool FSovBattleSimTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovBattleAiTest, "Sovereign.Battle.TrainedCommanderLeads", kSovTestFlags)
+bool FSovBattleAiTest::RunTest(const FString& Parameters)
+{
+	// The trained battle AI ships in data/battle_ai and commands the side the human does not.
+	const std::shared_ptr<const sov::battle::Policy> Policy = FSovBattleSim::TrainedPolicy();
+	TestTrue(TEXT("trained commander loads"), Policy != nullptr);
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, 36, 100, false};
+	Spec.Defender = {TEXT("Swordsman"), 1, 36, 100, false};
+	Spec.HumanSide = 0;
+	Spec.LeaderStrength = 36;
+	Spec.Seed = 5;
+	FSovBattleSim Sim;
+	Sim.Start(Spec, Policy);
+	TestTrue(TEXT("enemy led by it"), Sim.EnemyTrained());
+	Sim.SetOrder(0, sov::battle::Order::Hold, 1);
+	TestTrue(TEXT("the human orders a squad"), Sim.GetOrder(0, 1) == sov::battle::Order::Hold && Sim.GetOrder(0, 0) == sov::battle::Order::Advance);
+	for (int32 i = 0; i < 20000 && !Sim.Finished(); ++i)
+	{
+		Sim.Step(1.f / 30.f, FVector2D::ZeroVector, false);  // the leader stands still; its squads follow orders
+	}
+	TestTrue(TEXT("the battle ends"), Sim.Finished());
+	const FSovBattleResult R = Sim.Result();
+	TestTrue(TEXT("results stay within HP"), R.ToAttacker <= 100 && R.ToDefender <= 100 && R.LeaderWound <= 100);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovArtAssetsTest, "Sovereign.Art.KitAssetsLoad", kSovTestFlags)
 bool FSovArtAssetsTest::RunTest(const FString& Parameters)
 {
