@@ -28,10 +28,13 @@ struct FSovSetup
 	bool bBattleDemo = false;
 	// Developer start: seat 0 knows Shipbuilding, with a galley and an embarked warrior on the nearest coast.
 	bool bNavalDemo = false;
+	// Developer start: every civ has met every other, each has 200 gold, and seat 1 waits on seat 0
+	// with a small gift of gold (to try the diplomacy screen at once).
+	bool bDiploDemo = false;
 	// Rules data directory; empty means <repo>/data/rules beside the Unreal project.
 	FString RulesDir;
 
-	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo and -SovNavalDemo.
+	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo, -SovNavalDemo and -SovDiploDemo.
 	static FSovSetup FromCommandLine();
 	static FString DefaultRulesDir();
 };

@@ -23,6 +23,7 @@ FSovSetup FSovSetup::FromCommandLine()
 	}
 	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
 	Setup.bNavalDemo = FParse::Param(Cmd, TEXT("SovNavalDemo"));
+	Setup.bDiploDemo = FParse::Param(Cmd, TEXT("SovDiploDemo"));
 	return Setup;
 }
 
@@ -139,6 +140,23 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			}
 			Game = sov::Game::fromScenario(*Rules, std::move(S));
 		}
+	}
+	if (Setup.bDiploDemo && Game && Setup.Players >= 2)
+	{
+		sov::GameState S = Game->state();
+		for (sov::Player& P : S.players)
+		{
+			P.met.assign(S.players.size(), 1);
+			P.gold = sov::Fixed::fromInt(200);
+		}
+		sov::Deal Gift;
+		Gift.id = S.nextDealId++;
+		Gift.from = 1;
+		Gift.to = 0;
+		Gift.turn = S.turn;
+		Gift.items.push_back({sov::DealItemKind::Gold, 1, 30, sov::kNone});
+		S.deals.push_back(Gift);
+		Game = sov::Game::fromScenario(*Rules, std::move(S));
 	}
 	++Rev;
 	return true;

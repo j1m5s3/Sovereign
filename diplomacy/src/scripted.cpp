@@ -149,6 +149,11 @@ bool ScriptedModel::reply(const Persona& p, const std::vector<ChatMessage>& hist
             return true;
         }
         case Verdict::Reject: {
+            if (proposal.find("friendship") != std::string::npos) {
+                text = hostile ? "Friends? You have given me no reason even to trust you."
+                               : "Friendship is earned, not asked for. Show me your goodwill first.";
+                return true;
+            }
             if (hostile) {
                 static const char* const lines[] = {"You insult me with such terms.", "No. I have no reason to favour you.",
                                                     "Do you take me for a fool? Never."};

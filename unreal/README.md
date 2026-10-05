@@ -64,6 +64,7 @@ from `../data/rules`.
 | `F` (Trader) | Start a trade route from the Trader's city: destinations in range with what each pays per turn. Roads appear on the map along routes |
 | HUD | The world era, your age and era score against its thresholds, tourism with visiting and home tourists; historic moments and new ages appear in the news lines |
 | `O` | City-states you have met, with their kind, your envoys and their suzerain; pick one to send an envoy (the HUD shows envoys waiting) |
+| `N` | Diplomacy: pick a leader you have met (with how they feel about you, and whether an offer of theirs waits), then talk. The screen shows their relationship, agenda, the reasons behind their opinion, what each side could offer and your past talks. Type and press Enter: a local model (a `llama-server` on this machine, port 8080 or `-SovLlmPort=`) or, without one, the scripted leader replies. Anything you propose shows with the rules' verdict; `Put the proposal forward` sends it (the AI answers by the rules alone), and their own offers can be accepted or rejected. `Leave` records a summary of the talk as the leader's memory. `-SovDiploDemo` starts with every civ met and an offer waiting |
 | `Y` | Great people: each class's current individual with your points, the cost and points per turn; pick one to buy it now with gold (or faith). A selected great person: `F` uses it where it stands (on its district, or a Great Work in a city with a free slot) |
 | `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
 | `.` | Next unit that needs orders |
@@ -84,6 +85,7 @@ Headless automation tests (no window):
 - `Sovereign.Street.CityCenterFromGameState`: the generated City Center has a landmark per building (the Palace included), houses and crowd by population, six streets, no walls without wall buildings, and the same layout for the same hex.
 - `Sovereign.Battle.NumbersDecideMostFights`: the battle simulation hurts both sides in even fights, lets a much stronger side win and lose less in at least 10 of 12 seeds, repeats itself with no input, and handles an unescorted leader.
 - `Sovereign.Battle.TrainedCommanderLeads`: the trained battle AI loads from `data/battle_ai/commander.txt`, leads the enemy, the human orders one squad without touching the others, and the battle ends within HP bounds.
+- `Sovereign.Bridge.DiplomacyTalkFallsBackToScript`: with no model server, a talk with an AI leader gets a scripted reply off the game thread and ends with a `RecordTalk` summary command.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.
@@ -91,4 +93,4 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 ## Not yet
 
 Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there are no rivers, resources,
-improvements, borders, yields, promotions UI, diplomacy UI or saves in the UI yet.
+improvements, borders, yields, promotions UI or saves in the UI yet.

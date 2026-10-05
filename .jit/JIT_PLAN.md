@@ -1,18 +1,48 @@
-# Plan: language-model diplomacy (step 6, item 5)
+# Plan: online play (step 6, item 6)
 
-Status: active, 2026-10-05. Previous: `jit_history/2026-10-05-civ-systems.md`.
+Status: active, 2026-10-05. Previous: `jit_history/2026-10-05-llm-diplomacy.md`.
 
-Goal (leader doc §10, layer 4): AI leaders who converse, negotiate and remember. **The model talks, the game decides:** Civ diplomacy rules decide every outcome; the model turns the player's words into a deal proposal (structured output) and writes the leader's reply in character. It cannot be talked into a deal the rules reject. A local open model through llama.cpp; a scripted fallback; safety filters; the model runs on the speaking player's machine and its proposal and a conversation summary enter the game as recorded commands.
+Goal: humans play one game across machines. Specs:
+- engine-and-architecture, Core foundations:
+  - lockstep over the one command log;
+  - non-deterministic parts are inputs;
+  - live scenes online;
+  - Steamworks first, Epic Online Services later.
+- 10-ai-ui-implementation, Multiplayer:
+  - lockstep with command broadcast;
+  - desync detection by state hashing;
+  - turn modes and timers;
+  - hot seat.
+- world-scale-and-generation: each machine builds its own world from the same state.
+- open-gaps-review, gaps 1 and 3: one machine judges a live scene, and its result enters as a command.
 
 ## Milestones (one PR each)
 
-1. **Done (this PR): Diplomacy in the core:** opinion of each civ toward each other (reasons with decay: war, denunciation, friendship, shared or rival religion, trade routes, gifts, and the twelve Sovereign agendas from leaders-and-art-style.md), relationship states, deals (gold now or per turn, luxury and strategic resources per turn, open borders, a declaration of friendship, peace), denouncing, the AI valuing and answering deals, and AI civs proposing deals to each other and to the human. Commands for all of it.
-2. **Done (this PR): The dialogue layer (`diplomacy/`, plain C++ like `battle/`):** a leader's persona from the rules (agenda, relationship, the memory of past talks), the prompt and the structured-output schema, parsing a reply into a deal the core validates, a scripted model (keyword intents, replies by relationship and agenda) as the fallback and the test double, input and output safety filters with a length cap and a fixed in-game persona, and a client for a local llama.cpp server (OpenAI-compatible HTTP, behind an interface so tests stub it). Conversation summaries enter the game as a recorded command.
-3. **Unreal diplomacy screen:** pick a civ, type a message, read the reply and the proposal, accept or reject; the leader's relationship and reasons shown; scripted replies when no model server is running.
+1. **The session protocol (`net/`, plain C++ like `battle/`, over the core):**
+   - Messages:
+     - hello: protocol version, rules checksum, mod list;
+     - seat table and game start (the setup and seed, or a save);
+     - commands with sequence numbers;
+     - per-turn state hashes;
+     - chat, leave.
+   - The host orders every command. Clients send theirs to the host, and the host validates it against its own core before broadcasting it in order. Every machine applies the same stream.
+   - AI seats are played on the host and broadcast as commands.
+   - Desync: each machine reports its state hash when the world turn wraps. On a mismatch, the host sends its save and the others reload.
+   - A dropped player's seat goes to the AI until they rejoin from the host's save.
+   - Behind a `Transport` interface, with a loopback transport for tests and a TCP transport for LAN and direct IP. Tests run 2–4 sessions in one process, through whole games, a desync and a rejoin.
+2. **Unreal: host and join.**
+   - A lobby (direct IP or LAN): seats, civs, ready.
+   - The game starts from the shared setup, and the controller plays its own seat. Other humans' turns show as "waiting for ...".
+   - Chat, a desync banner with automatic resync, and disconnect handling.
+   - Hot seat on one machine (several human seats; the screen hands over between turns).
+3. **Steam lobbies and invites** through Unreal's OnlineSubsystemSteam (development App ID 480 until Sovereign has its own). The `net/` stream runs over Steam's networking. Epic Online Services is a follow-up.
+4. **Live scenes online:**
+   - The machine of the human whose leader is in the fight hosts the live battle. An opposing human joins it through Unreal replication for that scene only; otherwise the trained battle AI leads that side.
+   - The host submits the one `BattleResult` command into the stream, and every core clamps it to the band.
+   - The other players wait, and can auto-resolve after a timeout.
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
-- No model or llama.cpp binary is downloaded or committed. The client talks to a llama.cpp server the player runs (`llama-server -m <model.gguf>`); the game falls back to the scripted model when none answers. Recommended models stay as the doc lists them (Qwen, Phi, Mistral under permissive licenses).
-- Milestone 1 as built: opinion = live reasons (war, denunciation, friendship, open borders, shared religion, their faith converting our cities, trade routes, the leader's agenda) + memories that fade (wars declared, surprise wars, denunciations, peace, gifts, deals kept and broken, captured cities, assassins, plundered traders, warmongering seen). Relationship: At War, Denounced, Declared Friend, else Friendly (opinion >= 12), Unfriendly (<= -12), Neutral. A deal to an AI is answered in the same command; a deal to a human waits (`GameState::deals`) until it answers on its turn or the proposer's next turn begins. Per-turn terms run 30 turns (`GameState::agreements`). A declared friend cannot be attacked; a war after 5 turns of denunciation is formal, anything else a surprise. Commands carry a data payload and text (save 23), ready for the dialogue layer's summaries. Random agendas, alliances, grievances and promises are not modelled yet.
-- Milestone 2 as built: two model calls per line, reading (JSON schema, temperature 0.1) then reply (told the rules' verdict: acceptable, refused, or impossible), so the reply can never contradict the rules. Summaries are factual ("England proposed (...); Charlemagne refused") from the scripted model, or a scribe's sentence from the model; `RecordTalk` keeps the last 6 per pair, 400 characters each (save 24). Each leader's `leaning` and `voice` are in `civilizations.json`. The socket client only talks to localhost.
-- Deal acceptance is pure rules code (gold-equivalent values adjusted by opinion), so the AI behaves the same with or without a model.
+- Turns stay sequential, as the core plays them. Simultaneous and dynamic turn modes need the core to accept commands from several players at once, so they come after milestone 4.
+- The host is the order authority, not the rules authority: every machine runs the full core and rejects what it rejects. A cheating host can only reorder or drop commands, not invent state.
+- The language model runs on the speaking player's machine. Only its deal proposal and summary travel (already commands).

@@ -9,6 +9,7 @@
 #include "sovereign/commands.h"
 
 #include "SovBattleSim.h"
+#include "SovDiplomacy.h"
 
 #include "SovPlayerController.generated.h"
 
@@ -19,6 +20,7 @@ class ASovBattleScene;
 class ASovWalker;
 class ASovMapActor;
 class USovGameSubsystem;
+class SSovDiplomacyPanel;
 
 UCLASS()
 class ASovPlayerController : public APlayerController
@@ -48,6 +50,9 @@ public:
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
 
+	// ---- diplomacy (leader doc §10): talking with an AI leader
+	bool InDiplomacy() const { return Talk.IsValid(); }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -68,7 +73,8 @@ protected:
 		ReligionFollower,
 		Evangelize,
 		TradeRoute,
-		CityStates
+		CityStates,
+		Diplomacy
 	};
 
 	struct FChoice
@@ -105,6 +111,11 @@ protected:
 	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);
 	void UpdatePanel();
+	void OpenDiplomacy(sov::PlayerId Leader);
+	void UpdateDiplomacy();
+	void CloseDiplomacy();
+	// The leader's offer to us that waits for an answer, if any.
+	const sov::Deal* OfferFrom(sov::PlayerId Leader) const;
 
 	UPROPERTY()
 	TObjectPtr<ASovMapActor> Map;
@@ -138,4 +149,8 @@ protected:
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second
+
+	TUniquePtr<FSovDiplomacyTalk> Talk;
+	TSharedPtr<SSovDiplomacyPanel> DiplomacyPanel;
+	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
 };
