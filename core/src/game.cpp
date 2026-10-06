@@ -268,6 +268,8 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::DesignatePark: return parkProblem(c.player, c.id);
+        case CommandType::PerformConcert: return concertProblem(c.player, c.id);
         case CommandType::ChooseDedication: return dedicationProblem(c.player, static_cast<TypeIndex>(c.arg));
         case CommandType::MoveGreatWork: return moveGreatWorkProblem(c.player, c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x));
         case CommandType::SendDelegation:
@@ -804,6 +806,8 @@ void Game::apply(const Command& c) {
             else pillage(c.id);
             break;
         case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::DesignatePark: designatePark(c.id); break;
+        case CommandType::PerformConcert: performConcert(c.id); break;
         case CommandType::ChooseDedication: chooseDedication(c.player, static_cast<TypeIndex>(c.arg)); break;
         case CommandType::MoveGreatWork: moveGreatWork(c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x)); break;
         case CommandType::SendDelegation: sendDelegation(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0); break;

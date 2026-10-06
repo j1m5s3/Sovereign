@@ -1964,6 +1964,62 @@ void buyReligion(View& v) {
     }
 }
 
+// Naturalists and Rock Bands (07): a culture strategy, or Faith to spare, buys one of each at a time.
+void buyCulture(View& v) {
+    Game& g = v.game;
+    const GameState& s = v.s();
+    const bool culture = v.posture.has(Strategy::CultureVictory);
+    int naturalists = 0, bands = 0;
+    for (const Unit& u : s.units) {
+        if (u.owner != v.me) continue;
+        naturalists += v.r.units[at(u.type)].id == "UNIT_NATURALIST";
+        bands += v.r.units[at(u.type)].id == "UNIT_ROCK_BAND";
+    }
+    bool site = false;
+    for (int i = 0; i < s.grid.size() && !site && naturalists == 0; ++i) site = s.plots[static_cast<size_t>(i)].owner == v.me && g.parkPlotsAt(v.me, s.grid.at(i));
+    for (CityId cid : v.cities) {
+        const City& c = *s.city(cid);
+        const auto buy = [&](const char* type, int reserve) {
+            const ProductionItem item{ProductionKind::Unit, v.r.unit(type)};
+            const int cost = g.faithPurchaseCost(v.me, c, item);
+            return cost > 0 && s.players[at(v.me)].faith >= Fixed::fromInt(cost + reserve) && g.submit(Command::purchaseWithFaith(v.me, cid, item)) == CommandError::Ok;
+        };
+        if (site && naturalists == 0 && buy("UNIT_NATURALIST", culture ? 0 : 300)) ++naturalists;
+        if (culture && bands < 2 && buy("UNIT_ROCK_BAND", 100)) ++bands;
+    }
+}
+
+void naturalist(View& v, UnitId id) {
+    Game& g = v.game;
+    if (g.parkProblem(v.me, id) == CommandError::Ok) {
+        g.submit(Command::designatePark(v.me, id));
+        return;
+    }
+    const Unit* u = v.s().unit(id);
+    std::optional<Hex> best;
+    for (int i = 0; i < v.s().grid.size(); ++i) {
+        const Hex h = v.s().grid.at(i);
+        if (v.s().plots[static_cast<size_t>(i)].owner != v.me || !g.parkPlotsAt(v.me, h)) continue;
+        if (!best || v.s().grid.distance(u->pos, h) < v.s().grid.distance(u->pos, *best)) best = h;
+    }
+    if (!best || !approach(v, id, *best, true)) g.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
+void rockBand(View& v, UnitId id) {
+    Game& g = v.game;
+    if (g.concertProblem(v.me, id) == CommandError::Ok) {
+        g.submit(Command::performConcert(v.me, id));
+        return;
+    }
+    const Unit* u = v.s().unit(id);
+    std::optional<Hex> best;
+    for (const City& c : v.s().cities) {
+        if (c.owner == v.me || !g.isMajorCiv(c.owner) || g.atWar(v.me, c.owner) || g.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+        if (!best || v.s().grid.distance(u->pos, c.pos) < v.s().grid.distance(u->pos, *best)) best = c.pos;
+    }
+    if (!best || !approach(v, id, *best, true)) g.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
 // Traders take the route paying most to their city (07); one with nowhere to go waits.
 void trader(View& v, UnitId id) {
     Game& g = v.game;
@@ -2230,6 +2286,8 @@ void playTurn(Game& game) {
         else if (t.foundCity) settle(v, id);
         else if (t.id == "UNIT_MILITARY_ENGINEER") engineer(v, id);
         else if (t.excavations > 0) archaeologist(v, id);
+        else if (t.id == "UNIT_NATURALIST") naturalist(v, id);
+        else if (t.id == "UNIT_ROCK_BAND") rockBand(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }
@@ -2281,6 +2339,7 @@ void playTurn(Game& game) {
     envoys(v);
     pantheon(v);
     buyReligion(v);
+    buyCulture(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     // Captured cities are kept (never razed).
     if (game.submit(Command::endTurn(v.me)) == CommandError::Ok) return;

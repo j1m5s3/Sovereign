@@ -264,6 +264,12 @@ struct ImprovementType {
     std::vector<ImprovementAdjacency> adjacency;
     Fixed housing;  // per improved plot the city owns
     int appeal = 0;  // to neighbouring plots (01: Appeal)
+    // Tourism (07): equal to the plot's appeal, Culture, Faith... once `tourismAfter` is known (none: at once).
+    std::string tourismSource;
+    int tourismPercent = 0;
+    Unlock tourismAfter;
+    int minAppeal = -100;  // the plot's appeal it needs (Seaside Resort 4)
+    bool coastal = false;  // on the coast only
     // Civ unique improvements (leaders-and-art-style).
     TypeIndex uniqueTo = kNone;
     std::string uniqueToId;  // (loading only)
@@ -529,6 +535,13 @@ struct MomentType {
     std::string id, name;
     int eraScore = 0;
     int obsoleteEra = -1;  // stops counting once the world reaches this era (-1: never)
+};
+
+// A Rock Band concert's outcome [GS] (07: Rock Bands).
+struct RockBandResult {
+    std::string id, name;
+    int albumSales = 0, tourismBomb = 0, probability = 0;
+    bool dies = false, gainsLevel = false;
 };
 
 // A dedication [R&F] (09: Dedications): chosen at a new era within its era window.
@@ -1044,6 +1057,7 @@ public:
     std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants
     std::vector<MomentType> moments;
     std::vector<DedicationType> dedications;
+    std::vector<RockBandResult> rockBandResults;
     std::vector<EnvoyBonus> envoyBonuses;
     std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)

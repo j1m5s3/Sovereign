@@ -396,7 +396,13 @@ def gen_units():
         for u in out:
             if u["name"] == row["Captured"]:
                 u["capturedAs"] = "UNIT_" + snake(row["Becomes"])
-    return {"units": out}
+    # Rock Band concert outcomes [GS] (07: Rock Bands; data: Unit_RockbandResults_XP2).
+    results = []
+    for r in table(SPEC / "units.md", "Rock Band results [GS]"):
+        results.append({"id": "ROCKBAND_RESULT_" + snake(r["Result"]), "name": r["Result"], "albumSales": num(r["Album sales"]),
+                        "tourismBomb": num(r["Tourism bomb"]), "dies": r["Dies"] == "yes", "gainsLevel": r["Gains level"] == "yes",
+                        "probability": num(r["Base probability"])})
+    return {"units": out, "rockBandResults": results}
 
 
 # ---------------------------------------------------------------- promotions
@@ -884,6 +890,16 @@ def gen_improvements():
         m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
         if m:
             i["powerProvided"] = int(m.group(1))  # renewables (09: Power)
+        # Tourism (07: Tourism sources): "TOURISMSOURCE_APPEAL x100% after " or "... after TECH_FLIGHT".
+        m = re.fullmatch(r"TOURISMSOURCE_(\w+) x(\d+)% after ?(\w*)", (row["Tourism"] or "").strip())
+        if m:
+            i["tourism"] = {"source": m.group(1), "percent": int(m.group(2))}
+            if m.group(3):
+                i["tourism"]["after"] = m.group(3)
+        if row["Min appeal"] and num(row["Min appeal"]):
+            i["minAppeal"] = num(row["Min appeal"])
+        if row["Improvement"] == "Seaside Resort":
+            i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
         out.append(i)
     return {"improvements": out}
 
