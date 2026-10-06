@@ -221,6 +221,16 @@ struct Emergency {
     uint8_t outcome = 0;            // 0 running, 1 members succeeded, 2 failed (target rewarded)
 };
 
+// A city-state's quest for one major civ (08: Quests; data: diplomacy-espionage, City-state quests):
+// fulfilled, it puts an envoy in that city-state.
+enum class QuestKind : uint8_t { Convert = 0, TradeRoute, ClearCamp, TrainUnit, BuildDistrict, Eureka, Inspiration, GreatPerson };
+constexpr int kNumQuestKinds = 8;
+struct Quest {
+    PlayerId cityState = kNoPlayer, major = kNoPlayer;
+    QuestKind kind = QuestKind::TrainUnit;
+    int32_t arg = -1;   // the unit, district, tech, civic, great person class or camp id it names
+};
+
 // A scored competition [GS] (08: Scored Competitions; data: world-congress-emergencies), called at a
 // World Congress session; every major civ takes part.
 enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation };
@@ -556,6 +566,7 @@ struct SOV_API GameState {
     std::vector<Agreement> agreements;  // running deal terms
     std::vector<Emergency> emergencies; // hostile emergencies, running and settled (08: Emergencies)
     std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
+    std::vector<Quest> quests;              // open city-state quests, one per city-state and major (08)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]

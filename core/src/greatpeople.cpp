@@ -179,6 +179,7 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
     if (state_.greatPeopleClaimed.size() < rules_->greatPeople.size()) state_.greatPeopleClaimed.resize(rules_->greatPeople.size(), 0);
     state_.greatPeopleClaimed[at(person)] = 1;
     ++p.greatPeopleRecruited[at(g.cls)];
+    questDone(pid, QuestKind::GreatPerson, g.cls);  // 08: Quests
     // The Nobel prizes count great people of their classes (08 [GS]).
     if (cls.id == "GREAT_PERSON_CLASS_WRITER" || cls.id == "GREAT_PERSON_CLASS_ARTIST" || cls.id == "GREAT_PERSON_CLASS_MUSICIAN")
         competitionScore(pid, CompetitionKind::NobelLiterature, 1);

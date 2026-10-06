@@ -152,6 +152,18 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		if (!Allies.IsEmpty()) Line(TEXT("Alliances:") + Allies, 16, Y, FLinearColor(0.6f, 1.f, 0.7f));
 	}
+	// City-state quests (08): what each city-state we have met asks of us.
+	{
+		FString Text;
+		for (const sov::Quest& Q : S.quests)
+		{
+			if (Q.major != Me) continue;
+			const sov::Player& CS = S.players[static_cast<size_t>(Q.cityState)];
+			const FString Name = CS.cityState == sov::kNone ? FString(TEXT("?")) : Str(R.cityStates[static_cast<size_t>(CS.cityState)].name);
+			Text += FString::Printf(TEXT("   %s: %s"), *Name, *Str(G.questText(Q)));
+		}
+		if (!Text.IsEmpty()) Line(TEXT("Quests:") + Text, 16, Y, FLinearColor(0.8f, 0.95f, 0.8f));
+	}
 	// Scored competitions (08 [GS]): the one running, with our standing and the leader's.
 	for (const sov::Competition& C : S.competitions)
 	{

@@ -986,6 +986,8 @@ void Game::beginGlobalTurn() {
     processFallout();
     processEmergencies();
     processCompetitions();
+    checkQuests();
+    assignQuests();
     processProfiles();
     processSpaceRace();
     processReligion();

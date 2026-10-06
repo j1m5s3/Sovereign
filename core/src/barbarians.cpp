@@ -77,7 +77,9 @@ void Game::enterPlot(Unit& unit) {
     auto it = std::find_if(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.pos == unit.pos; });
     if (it == state_.camps.end()) return;
     // Clearing a camp pays gold; its surviving units roam on without a home.
+    const int32_t cleared = it->id;
     state_.camps.erase(it);
+    questDone(unit.owner, QuestKind::ClearCamp, cleared);  // 08: Quests
     const int pct = 100 + (difficultyHuman(unit.owner) ? difficulty().humanCampGoldPercent : 0);  // 00-overview: Difficulty levels
     state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD") * pct / 100);
     awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");

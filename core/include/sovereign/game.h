@@ -384,6 +384,13 @@ public:
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
 
+    // ---- city-state quests (08: Quests)
+    void assignQuests();                                         // each city-state, each major that met it: one open quest
+    void questDone(PlayerId major, QuestKind kind, int32_t arg);  // fulfils matching quests: an envoy in each
+    void checkQuests();                                          // the quests the world's state fulfils (conversion, routes)
+    const Quest* questFor(PlayerId cityState, PlayerId major) const;
+    std::string questText(const Quest& q) const;
+
     // ---- scored competitions [GS] (08: Scored Competitions)
     void startCompetition();                                       // at a World Congress session
     void competitionScore(PlayerId player, CompetitionKind kind, int amount);

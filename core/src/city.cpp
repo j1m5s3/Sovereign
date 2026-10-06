@@ -814,6 +814,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
         }
         if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
+        questDone(city.owner, QuestKind::TrainUnit, item.type);  // 08: Quests
         if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
                                               (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
         assignCitizens(city);
@@ -822,6 +823,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         for (CityDistrict& d : city.districts) {
             if (d.type == item.type) d.complete = true;
         }
+        questDone(city.owner, QuestKind::BuildDistrict, item.type);  // 08: Quests
     } else if (item.kind == ProductionKind::Project) {
         completeProject(city, item.type);
     } else {

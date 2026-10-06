@@ -543,6 +543,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         for (int64_t b : cp.baseline) w.i64(b);
         w.boolean(cp.settled);
     }
+    w.u32(static_cast<uint32_t>(s.quests.size()));
+    for (const Quest& q : s.quests) {
+        w.i8(q.cityState);
+        w.i8(q.major);
+        w.u8(static_cast<uint8_t>(q.kind));
+        w.i32(q.arg);
+    }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
     w.u32(static_cast<uint32_t>(s.congress.size()));
@@ -1004,6 +1011,17 @@ bool deserializeState(ByteReader& r, GameState& s) {
         cp.baseline.resize(nb);
         for (int64_t& b : cp.baseline) b = r.i64();
         cp.settled = r.boolean();
+    }
+    uint32_t nquest = r.u32();
+    if (!r.checkCount(nquest, 7)) return false;
+    s.quests.resize(nquest);
+    for (Quest& q : s.quests) {
+        q.cityState = r.i8();
+        q.major = r.i8();
+        const uint8_t kind = r.u8();
+        if (kind >= kNumQuestKinds) return false;
+        q.kind = static_cast<QuestKind>(kind);
+        q.arg = r.i32();
     }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();
