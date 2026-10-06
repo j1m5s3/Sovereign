@@ -1,6 +1,7 @@
 // City rules (specs/civ6/02-cities.md): yields, citizens, growth, housing,
 // amenities, border growth, production, purchases, gold and maintenance.
 #include <algorithm>
+#include <tuple>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -147,6 +148,35 @@ CityReport Game::cityReport(CityId id) const {
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i];
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
+        // Free Market, Grand Opera, Rationalism, Simultaneum (04): +50% of the district's yield from its buildings
+        // with an adjacency of 4 or more for it, and +50% more in a city of 15 or more.
+        static const std::array<std::tuple<const char*, const char*, YieldType>, 4> kCards = {{
+            {"POLICY_FREE_MARKET", "DISTRICT_COMMERCIAL_HUB", YieldType::Gold}, {"POLICY_GRAND_OPERA", "DISTRICT_THEATER", YieldType::Culture},
+            {"POLICY_RATIONALISM", "DISTRICT_CAMPUS", YieldType::Science}, {"POLICY_SIMULTANEUM", "DISTRICT_HOLY_SITE", YieldType::Faith}}};
+        for (const auto& [card, district, yield] : kCards) {
+            if (bt.district != district || !policyIs(c->owner, card)) continue;
+            const CityDistrict* home = c->district(bt.districtType, true);
+            int pct = c->population >= 15 ? 50 : 0;
+            if (home && districtAdjacency(c->owner, home->type, home->pos)[idx(yield)] >= Fixed::fromInt(4)) pct += 50;
+            raw[idx(yield)] += bt.yields[idx(yield)] * pct / 100;
+        }
+    }
+    // Public Transport (04): a Neighborhood yields +1 Gold; +3 Food and +1 Production on ground of
+    // appeal 2 or more, and +1 Food and +1 Production more at appeal 4 or more.
+    if (policyIs(c->owner, "POLICY_PUBLIC_TRANSPORT")) {
+        for (const CityDistrict& d : c->districts) {
+            if (!d.complete || d.pillagedTurns > 0 || rules_->districts[static_cast<size_t>(d.type)].id != "DISTRICT_NEIGHBORHOOD") continue;
+            const int appeal = plotAppeal(d.pos);
+            raw[idx(YieldType::Gold)] += Fixed::fromInt(1);
+            if (appeal >= 2) {
+                raw[idx(YieldType::Food)] += Fixed::fromInt(3);
+                raw[idx(YieldType::Production)] += Fixed::fromInt(1);
+            }
+            if (appeal >= 4) {
+                raw[idx(YieldType::Food)] += Fixed::fromInt(1);
+                raw[idx(YieldType::Production)] += Fixed::fromInt(1);
+            }
+        }
     }
     // Specialists (02): each earns its district's specialist yield plus its buildings' extras.
     for (const CityDistrict& d : c->districts) {
@@ -915,6 +945,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
     }
     if (item.kind == ProductionKind::District) dedicationScore(city.owner, "DEDICATION_MONUMENTALITY", 1);
+    // Public Transport (04): a new Neighborhood brings 100 Gold.
+    if (item.kind == ProductionKind::District && rules_->districts[static_cast<size_t>(item.type)].id == "DISTRICT_NEIGHBORHOOD" &&
+        policyIs(city.owner, "POLICY_PUBLIC_TRANSPORT"))
+        state_.players[static_cast<size_t>(city.owner)].gold += Fixed::fromInt(100);
     // A new reactor starts its age (09: nuclear accidents).
     if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
     if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))

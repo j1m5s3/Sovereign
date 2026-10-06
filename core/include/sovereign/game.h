@@ -199,6 +199,7 @@ public:
     bool canEvangelize(UnitId apostle, TypeIndex belief) const;
     bool canSpreadReligion(UnitId unit) const;
     int cityMajorityReligion(const City& city) const;
+    int civReligion(PlayerId player) const;  // the religion it founded, else its capital's (-1: none)
     int cityFollowers(const City& city, int religion) const;
     // Faith to buy this item here (religious units, worship buildings); -1 when it cannot be bought with Faith.
     int faithPurchaseCost(PlayerId player, const City& city, ProductionItem item) const;
@@ -510,6 +511,7 @@ public:
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ
     // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.
     int upgradeCost(const Unit& unit) const;
+    int upgradeResourceCost(const Unit& unit) const;  // strategic resources the upgrade spends
     TypeIndex upgradeTarget(const Unit& unit) const;  // the next unit in its line (the civ's unique if it has one)
     CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now
     // A unit entering this plot loses its remaining moves (enemy unit or city next to it).

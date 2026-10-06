@@ -866,7 +866,7 @@ void Game::apply(const Command& c) {
             p.gold -= Fixed::fromInt(upgradeCost(u));
             const TypeIndex to = upgradeTarget(u);
             const UnitType& up = rules_->units[static_cast<size_t>(to)];
-            if (up.strategicResource != kNone && up.strategicCost > 0) p.stockpile[static_cast<size_t>(up.strategicResource)] -= up.strategicCost;
+            if (up.strategicResource != kNone) p.stockpile[static_cast<size_t>(up.strategicResource)] -= upgradeResourceCost(u);
             u.type = to;  // keeps its health, experience and promotions; the upgrade takes its turn
             u.movesLeft = Fixed();
             u.activity = Activity::Awake;
@@ -1113,6 +1113,10 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         u.movesLeft = Fixed::fromInt(maxMoves(u));
+        // Logistics (04): +1 starting the turn in its own territory; Integrated Attack Logistics: in an enemy's.
+        const PlayerId land = state_.plot(u.pos).owner;
+        if (land == pid && policyIs(pid, "POLICY_LOGISTICS")) u.movesLeft += Fixed::fromInt(1);
+        if (land != kNoPlayer && land != pid && atWar(pid, land) && policyIs(pid, "POLICY_INTEGRATED_ATTACK_LOGISTICS")) u.movesLeft += Fixed::fromInt(1);
         if (u.activity == Activity::Skip) u.activity = Activity::Awake;
     }
     std::vector<UnitId> moving;

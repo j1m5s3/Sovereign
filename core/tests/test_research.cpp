@@ -521,3 +521,60 @@ TEST(policy_cards_reach_routes_production_great_people_and_favor) {
         CHECK_EQ(h->state().players[0].influence - before, plain->state().players[0].influence - p + 2);
     }
 }
+
+TEST(policy_cards_in_code_military_and_economy) {
+    auto with = [](const char* card, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            if (card) s.players[0].policies[0] = policy(card);
+            edit(s);
+        });
+    };
+    auto none = [](GameState&) {};
+    // Bastions: +6 city strength.
+    {
+        auto g = with("POLICY_BASTIONS", none);
+        auto plain = with(nullptr, none);
+        CHECK_EQ(g->cityStrength(g->state().cities[0]), plain->cityStrength(plain->state().cities[0]) + 6);
+    }
+    // Professional Army: upgrades at half the gold.
+    {
+        UnitId w = kNoUnit;
+        auto warrior2 = [&](GameState& s) {
+            s.players[0].techs.done[at(tech("TECH_MINING"))] = 1;
+            s.players[0].techs.done[at(tech("TECH_BRONZE_WORKING"))] = 1;
+            s.players[0].techs.done[at(tech("TECH_IRON_WORKING"))] = 1;
+            w = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {7, 7});
+        };
+        auto g = with("POLICY_PROFESSIONAL_ARMY", warrior2);
+        auto plain = with(nullptr, warrior2);
+        REQUIRE(plain->upgradeCost(*plain->state().unit(w)) > 0);
+        CHECK_EQ(g->upgradeCost(*g->state().unit(w)), plain->upgradeCost(*plain->state().unit(w)) / 2);
+    }
+    // Logistics: +1 Movement starting the turn in its own territory.
+    {
+        UnitId w = kNoUnit;
+        auto g = with("POLICY_LOGISTICS", [&](GameState& s) {
+            w = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {7, 6});
+            s.units.back().activity = Activity::Fortify;
+        });
+        endTurns(*g, 1);
+        CHECK(g->state().unit(w)->movesLeft == Fixed::fromInt(g->maxMoves(*g->state().unit(w)) + 1));
+    }
+    // Rationalism: +50% of a Campus's building science in a city of 15.
+    {
+        auto campus = [](GameState& s) {
+            CityDistrict d;
+            d.type = rules().district("DISTRICT_CAMPUS");
+            d.pos = {7, 7};
+            d.complete = true;
+            s.cities[0].districts.push_back(d);
+            s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+            s.cities[0].population = 15;
+        };
+        auto g = with("POLICY_RATIONALISM", campus);
+        auto plain = with(nullptr, campus);
+        CHECK(g->cityReport(g->state().cities[0].id).yields[S] > plain->cityReport(plain->state().cities[0].id).yields[S]);
+    }
+}

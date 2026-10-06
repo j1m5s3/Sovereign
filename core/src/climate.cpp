@@ -110,6 +110,7 @@ void Game::burnPower(PlayerId pid) {
             c.powerSupply += bt.powerProvided;
         }
         if (technocracy) c.powerSupply += 3;
+        if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS") && c.district(rules_->district("DISTRICT_SPACEPORT"), true)) c.powerSupply += 3;  // 04
         c.powerDemand += 5 * c.laserStations;  // each Terrestrial Laser Station (09: Power)
         for (TypeIndex b : harborBuildings) c.powerSupply += cardiff && b != kNone && c.has(b) ? 2 : 0;
         for (const Hex& h : state_.grid.within(c.pos, 3)) {
