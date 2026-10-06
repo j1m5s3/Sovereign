@@ -314,7 +314,7 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
                                     : d.id == "DISTRICT_INDUSTRIAL_ZONE" ? YieldType::Production
                                     : d.id == "DISTRICT_THEATER_SQUARE" ? YieldType::Culture
                                                                         : YieldType::Food;
-    if (mountainYield != YieldType::Food && buildingsOwned(player, "BUILDING_MACHU_PICCHU") > 0) {
+    if (mountainYield != YieldType::Food && holdsWonder(player, W::MachuPicchu)) {
         int mountains = 0;
         for (const Hex& n : state_.grid.within(plot, 1)) {
             if (n != plot && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain) ++mountains;

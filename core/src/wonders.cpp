@@ -76,8 +76,13 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     return out;
 }
 
-bool Game::nearOwnWonder(const City& city, const char* wonderId, int range) const {
-    const TypeIndex b = rules_->building(wonderId);
+bool Game::holdsWonder(PlayerId player, W w) const {
+    const TypeIndex b = wonderType(w);
+    if (b == kNone) return false;
+    return std::any_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.owner == player && c.has(b); });
+}
+
+bool Game::nearOwnWonder(const City& city, TypeIndex b, int range) const {
     if (b == kNone) return false;
     for (const City& o : state_.cities) {
         if (o.owner != city.owner || !o.has(b)) continue;
@@ -88,6 +93,16 @@ bool Game::nearOwnWonder(const City& city, const char* wonderId, int range) cons
         if (state_.grid.distance(site, city.pos) <= range) return true;
     }
     return false;
+}
+
+int Game::kilwaPercent(const City& city, CityStateKind kind) const {
+    const TypeIndex kilwa = wonderType(W::Kilwa);
+    if (!holdsWonder(city.owner, W::Kilwa)) return 0;
+    int n = 0;
+    for (const Player& p : state_.players) {
+        if (p.cityState != kNone && p.alive && rules_->cityStates[at(p.cityState)].kind == kind && suzerainOf(p.id) == city.owner) ++n;
+    }
+    return (city.has(kilwa) && n >= 1 ? 15 : 0) + (n >= 2 ? 15 : 0);
 }
 
 void Game::wonderCompleted(CityId id, TypeIndex building) {
@@ -116,6 +131,9 @@ void Game::completeWonder(City& city, TypeIndex building) {
         }
     }
     syncPolicySlots(city.owner);  // Alhambra, Forbidden City, Potala Palace, Big Ben
+    // Apadana: +2 envoys for each wonder completed in its city, itself included.
+    if (city.has(rules_->building("BUILDING_APADANA")) && !policyIs(city.owner, "POLICY_ROGUE_STATE"))
+        state_.players[at(city.owner)].envoyTokens += 2;
     // Everyone else building it loses it, keeping half of what went in (R&F).
     for (City& other : state_.cities) {
         if (other.id == city.id) continue;

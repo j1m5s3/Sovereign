@@ -65,7 +65,9 @@ int Game::patronageCost(PlayerId player, TypeIndex cls, bool faith) const {
     const int have = at(cls) < p.greatPersonPoints.size() ? p.greatPersonPoints[at(cls)] : 0;
     const int missing = std::max(0, greatPersonCost(person) - have);
     // The fixed part does not scale with game speed (07: Patronage).
-    return faith ? 150 + 10 * missing : 200 + 15 * missing;
+    // The Oracle (03: Wonders): patronage with Faith 25% cheaper.
+    if (faith) return (150 + 10 * missing) * (buildingsOwned(player, "BUILDING_ORACLE") > 0 ? 75 : 100) / 100;
+    return 200 + 15 * missing;
 }
 
 int Game::greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, TypeIndex ref) const {
@@ -110,9 +112,11 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
             const City* dest = state_.city(r.destination);
             toAlly = toAlly || (r.origin == c.id && dest && alliance(player, dest->owner) == AllianceType::Cultural && allianceLevel(player, dest->owner) >= 2);
         }
+        // The Oracle (03: Wonders): +2 from each district of its city that earns points.
+        const int oracle = c.has(wonderType(W::Oracle)) ? 2 : 0;
         for (const CityDistrict& d : c.districts) {
             if (!d.complete) continue;
-            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v + (toAlly ? 1 : 0) : 0;
+            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v + (toAlly ? 1 : 0) + oracle : 0;
         }
         for (TypeIndex b : c.buildings) {
             for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;

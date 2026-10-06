@@ -172,7 +172,12 @@ std::unique_ptr<Game> Game::fromScenario(const Rules& rules, GameState state) {
 }
 
 Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
-    : rules_(&rules), state_(std::move(state)), log_(std::move(log)) {}
+    : rules_(&rules), state_(std::move(state)), log_(std::move(log)) {
+    static const char* const kWonders[] = {"BUILDING_KILWA_KISIWANI", "BUILDING_UNIVERSITY_OF_SANKORE", "BUILDING_ORACLE", "BUILDING_MACHU_PICCHU",
+                                           "BUILDING_COLOSSEUM",      "BUILDING_STATUE_OF_LIBERTY",     "BUILDING_GREAT_ZIMBABWE", "BUILDING_TORRE_DE_BEL_M"};
+    static_assert(sizeof(kWonders) / sizeof(kWonders[0]) == static_cast<size_t>(W::Count), "one id per wonder");
+    for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) wonders_[i] = rules_->building(kWonders[i]);
+}
 
 uint64_t Game::stateHash() const {
     std::vector<uint8_t> bytes = serializeState(state_);
