@@ -381,3 +381,22 @@ TEST(a_captured_spy_is_traded_back) {
     CHECK(g->agent(id)->city == kNoCity);
     CHECK(g->state().capturedSpies.empty());
 }
+
+TEST(cryptography_sharpens_our_spies_and_blunts_theirs) {
+    GameState s = spyState(1);
+    for (Player& p : s.players) {
+        p.government = rules().government("GOVERNMENT_CHIEFDOM");
+        p.policies.assign(2, kNone);
+    }
+    auto plain = Game::fromScenario(rules(), s);
+    const int32_t spy = s.agents[0].id;
+    const CityId target = s.cities[1].id;
+    const int base = plain->spySuccessPercent(spy, SpyMission::SiphonFunds, target);
+    GameState ours = s;
+    ours.players[0].policies[0] = rules().policy("POLICY_CRYPTOGRAPHY");
+    auto sharp = Game::fromScenario(rules(), std::move(ours));
+    CHECK(sharp->spySuccessPercent(spy, SpyMission::SiphonFunds, target) > base);
+    s.players[1].policies[0] = rules().policy("POLICY_CRYPTOGRAPHY");
+    auto blunt = Game::fromScenario(rules(), std::move(s));
+    CHECK(blunt->spySuccessPercent(spy, SpyMission::SiphonFunds, target) < base);
+}

@@ -164,6 +164,7 @@ public:
     bool isCityState(PlayerId player) const;
     int envoysAt(PlayerId player, PlayerId cityState) const;
     PlayerId suzerainOf(PlayerId cityState) const;  // kNoPlayer: none
+    int suzeraintiesOf(PlayerId player) const;       // living city-states it is suzerain of
     bool canSendEnvoy(PlayerId player, PlayerId cityState) const;
     // Yields a city earns from its owner's envoys (capital and building tiers), and production toward an item.
     Yields envoyYields(const City& city) const;

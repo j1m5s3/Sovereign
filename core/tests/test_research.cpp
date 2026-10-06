@@ -578,3 +578,36 @@ TEST(policy_cards_in_code_military_and_economy) {
         CHECK(g->cityReport(g->state().cities[0].id).yields[S] > plain->cityReport(plain->state().cities[0].id).yields[S]);
     }
 }
+
+TEST(policy_cards_in_code_tourism_and_diplomacy) {
+    auto with = [](const char* card, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            if (card) s.players[0].policies[0] = policy(card);
+            edit(s);
+        });
+    };
+    // Heritage Tourism: art doubles its tourism.
+    {
+        auto art = [](GameState& s) {
+            City& c = s.cities[0];
+            c.buildings.push_back(rules().building("BUILDING_AMPHITHEATER"));
+            std::sort(c.buildings.begin(), c.buildings.end());
+            GreatWork w;
+            w.type = rules().greatWorkType("SCULPTURE");
+            w.building = rules().building("BUILDING_AMPHITHEATER");
+            c.greatWorks.push_back(w);
+        };
+        auto g = with("POLICY_HERITAGE_TOURISM", art);
+        auto plain = with(nullptr, art);
+        const int work = rules().greatWorkTypes[at(rules().greatWorkType("SCULPTURE"))].tourism;
+        CHECK_EQ(g->tourismPerTurn(0), plain->tourismPerTurn(0) + work);
+    }
+    // Merchant Confederation: +1 Gold per envoy placed.
+    {
+        auto envoys = [](GameState& s) { s.players[0].envoys.assign(1, 3); };
+        auto g = with("POLICY_MERCHANT_CONFEDERATION", envoys);
+        auto plain = with(nullptr, envoys);
+        CHECK_EQ(g->goldPerTurn(0), plain->goldPerTurn(0) + Fixed::fromInt(3));
+    }
+}

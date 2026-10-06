@@ -324,6 +324,10 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // Collective Activism, International Space Agency (04): +5% Culture or Science per suzerainty.
+        if ((i == idx(YieldType::Culture) && policyIs(c->owner, "POLICY_COLLECTIVE_ACTIVISM")) ||
+            (i == idx(YieldType::Science) && policyIs(c->owner, "POLICY_INTERNATIONAL_SPACE_AGENCY")))
+            pct += 5 * suzeraintiesOf(c->owner);
         // A city short of power loses production, up to POWER_MAX_PRODUCTION_MODIFIER_PENALTY (09: Power).
         if (i == idx(YieldType::Production) && c->powerDemand > c->powerSupply)
             pct += rules_->globalInt("POWER_MAX_PRODUCTION_MODIFIER_PENALTY") * (c->powerDemand - c->powerSupply) / c->powerDemand;
@@ -380,6 +384,11 @@ CityReport Game::cityReport(CityId id) const {
             int suzerain = 0;
             for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == c->owner ? 1 : 0;
             rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.culturePerSuzerainty * suzerain);
+        }
+        // Raj (04): +2 Gold, Faith, Science and Culture in the capital per suzerainty.
+        if (c->capital && policyIs(c->owner, "POLICY_RAJ")) {
+            const int n = suzeraintiesOf(c->owner);
+            for (YieldType y : {YieldType::Gold, YieldType::Faith, YieldType::Science, YieldType::Culture}) rep.yields[idx(y)] += Fixed::fromInt(2 * n);
         }
         if (c->capital) {
             const int titles = governorTitles(c->owner);
@@ -672,6 +681,10 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         for (const CityDistrict& d : c.districts) {
             if (d.complete) net -= Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].maintenance);
         }
+    }
+    // Merchant Confederation (04): +1 Gold per envoy placed.
+    if (p.anarchyTurns == 0 && policyIs(player, "POLICY_MERCHANT_CONFEDERATION")) {
+        for (int32_t e : p.envoys) net += Fixed::fromInt(e);
     }
     const Fixed discount = sumPlayerModifiers(state_, *rules_, p, ModEffect::UnitMaintenanceDiscount);
     for (const Unit& u : state_.units) {

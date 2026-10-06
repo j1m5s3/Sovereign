@@ -138,6 +138,9 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     if (!a || !op || !c || op->base <= 0) return 100;
     int need = op->base - 2 - (a->level - 1 + spyOperationLevels(*a, m)) * op->levelChange;
     if (a->sourcesCity == cityId && state_.turn <= a->sourcesUntil) need -= rules_->globalInt("ESPIONAGE_BONUS_GAIN_SOURCES");
+    // Cryptography (04): our spies work a level higher abroad; foreign spies two lower in our cities.
+    if (policyIs(a->owner, "POLICY_CRYPTOGRAPHY")) need -= op->levelChange;
+    if (policyIs(c->owner, "POLICY_CRYPTOGRAPHY")) need += 2 * op->levelChange;
     // The city's best counterspy, and Amani's Local Informants (+3 levels), defend.
     int defender = 0;
     for (const Agent& o : state_.agents) {
@@ -259,8 +262,11 @@ void Game::resolveSpyOperation(Agent& a) {
             for (size_t i = 0; i < rules_->techs.size(); ++i) {
                 if (mark.techs.done[i] && !thief.techs.done[i] && !thief.techs.boosted[i]) options.push_back(i);
             }
-            if (!options.empty()) {
-                const size_t t = options[rng.below(static_cast<uint32_t>(options.size()))];
+            // Nuclear Espionage (04): one boost more.
+            for (int n = policyIs(sender, "POLICY_NUCLEAR_ESPIONAGE") ? 2 : 1; n > 0 && !options.empty(); --n) {
+                const size_t pick = rng.below(static_cast<uint32_t>(options.size()));
+                const size_t t = options[pick];
+                options.erase(options.begin() + static_cast<std::ptrdiff_t>(pick));
                 const int boostPct = rules_->techs[t].boost.percent > 0 ? rules_->techs[t].boost.percent : 40;
                 thief.techs.boosted[t] = 1;
                 thief.techs.progress[t] += Fixed::fromInt(techCost(static_cast<TypeIndex>(t))) * boostPct / 100;

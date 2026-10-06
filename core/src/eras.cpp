@@ -201,7 +201,12 @@ int Game::tourismPerTurn(PlayerId pid) const {
         const int curator = cityGovernorHas(c, "GOVERNOR_PROMOTION_CURATOR") ? 2 : 1;  // Pingala
         for (const GreatWork& w : c.greatWorks) {
             const int pct = themed(c, w.building) ? 100 + rules_->buildings[at(w.building)].theming->tourismPercent : 100;  // 07: Theming
-            total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100;
+            // Heritage Tourism doubles art and artifacts; Satellite Broadcasts triples music (04).
+            const std::string& kind = rules_->greatWorkTypes[at(w.type)].id;
+            int scale = 1;
+            if (policyIs(pid, "POLICY_HERITAGE_TOURISM") && (kind == "SCULPTURE" || kind == "PORTRAIT" || kind == "LANDSCAPE" || kind == "RELIGIOUS" || kind == "ARTIFACT")) scale = 2;
+            if (policyIs(pid, "POLICY_SATELLITE_BROADCASTS") && kind == "MUSIC") scale = 3;
+            total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100 * scale;
         }
         for (TypeIndex b : c.buildings) {
             const BuildingType& bt = rules_->buildings[at(b)];
@@ -243,7 +248,11 @@ void Game::processTourism(PlayerId pid) {
         });
         // +25% toward a civ that opens its borders to us (08: Open Borders).
         const int borders = grantsOpenBorders(x.id, pid) ? 25 : 0;
-        p.tourismTo[at(x.id)] += t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders) / 100;
+        // Online Communities (04): +50% more toward civs we run a route to. Space Tourism: theirs shields them by 20%.
+        const int online = route && policyIs(pid, "POLICY_ONLINE_COMMUNITIES") ? 50 : 0;
+        int toward = t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders + online) / 100;
+        if (policyIs(x.id, "POLICY_SPACE_TOURISM")) toward = toward * 80 / 100;
+        p.tourismTo[at(x.id)] += toward;
     }
 }
 

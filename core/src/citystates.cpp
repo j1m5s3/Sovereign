@@ -96,6 +96,12 @@ bool Game::canSendEnvoy(PlayerId player, PlayerId cs) const {
     return false;
 }
 
+int Game::suzeraintiesOf(PlayerId player) const {
+    int n = 0;
+    for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player ? 1 : 0;
+    return n;
+}
+
 void Game::processEnvoys(PlayerId pid) {
     Player& p = state_.players[at(pid)];
     if (!isMajor(p)) return;
