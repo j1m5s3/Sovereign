@@ -1610,7 +1610,10 @@ void production(View& v) {
                             value = 0;
                             break;
                         }
-                        value += 120 + static_cast<int>(b.wonderEffects.size()) * 40 + b.tradeCapacity * 60;
+                        int slots = 0;
+                        for (int n : b.policySlots) slots += n;
+                        value += 120 + static_cast<int>(b.wonderEffects.size()) * 40 + b.tradeCapacity * 60 + b.modifierCount * 40 + slots * 150 +
+                                 b.spreadCharges * 40;
                         value = value * v.posture.wonder / 100;
                         if (std::none_of(c.wonders.begin(), c.wonders.end(), [&](const CityWonder& w) { return w.building == it.type; })) {
                             const std::vector<Hex> plots = g.wonderPlots(cid, it.type);
