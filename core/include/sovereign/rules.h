@@ -438,6 +438,7 @@ struct GreatPersonType {
     TypeIndex missingBuilding = kNone;
     std::vector<GreatPersonEffect> effects;
     std::vector<std::string> untrackedEffects;  // effects of systems not built yet (shown, not applied)
+    bool hasModifiers = false;                   // lasting effects as modifiers (Rules::modifiers, source = its id)
     TypeIndex greatWorkType = kNone;
     int greatWorkCount = 0;
     bool hasAura = false;
@@ -709,6 +710,10 @@ enum class ModEffect : uint8_t {
     FavorPerTurn,                  // player: + Diplomatic Favor a turn
     CityFavorPerTurn,              // city: + Diplomatic Favor a turn
     InfluencePerTurn,              // player: + influence points a turn toward envoys
+    // Great people's lasting activation effects (07; generated in greatpeople.json):
+    RouteTourismPercent,           // player: + % tourism toward civs it runs a trade route to
+    DistrictTourism,               // player: + tourism from each of its completed `district`
+    CityAppeal,                    // city: + appeal on its plots
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -741,7 +746,7 @@ struct RequirementSet {
 
 // Civ VI's modifier model (00-overview.md, Architecture recommendations):
 // who it affects (collection), what it does (effect), when (requirements).
-enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief, Governor };
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief, Governor, GreatPerson };
 
 struct Modifier {
     std::string id;
@@ -765,6 +770,7 @@ struct Modifier {
     TypeIndex building = kNone;  // ItemProductionPercent
     TypeIndex gpClass = kNone;   // GreatPersonPoints, CityGreatPersonPoints
     std::string scope;           // TradeRouteYield, ItemProductionPercent
+    bool military = false;       // UnitProductionPercent: military units only
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).

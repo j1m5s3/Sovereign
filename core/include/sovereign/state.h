@@ -317,6 +317,7 @@ struct SOV_API City {
     int fearUntil = 0;             // order imposed while turn < this
     int fearAfterUntil = 0;        // resentment (-amenity, assassin openings) while turn < this
     std::vector<GreatWork> greatWorks;
+    std::vector<TypeIndex> greatPeopleHere;  // individuals used here whose lasting effects apply to this city (07)
     int32_t reactorSince = 0;  // the turn its Nuclear Power Plant was built or recommissioned (09: nuclear accidents)
     int laserStations = 0;     // Terrestrial Laser Stations built here: 5 Power of demand each (09: Power)  // in the city's buildings' slots (07: Great Works)
     std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
@@ -392,7 +393,7 @@ struct Player {
     std::vector<int> projectsDone;           // per Rules::projects: times completed (03: Projects)
     std::vector<int> greatPeopleRecruited;   // per class
     std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
-    std::vector<TypeIndex> greatPeopleActivated;  // individuals whose permanent effects apply
+    std::vector<TypeIndex> greatPeopleActivated;  // individuals it has used (their lasting effects apply)
     TypeIndex pantheon = kNone;   // Rules::beliefs (06: Pantheon)
     TypeIndex cityState = kNone;  // Rules::cityStates: a city-state (one city, no expansion; 08)
     std::vector<int> envoys;      // per player: envoys this player sent to that city-state

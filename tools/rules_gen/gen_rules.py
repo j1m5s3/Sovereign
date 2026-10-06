@@ -1741,6 +1741,53 @@ GREAT_WORK_TYPES = {
 }
 
 
+def gp_modifiers(gid, parts, ids):
+    """A great person's lasting activation effects -> modifiers (the modifiers.json shape). Effects on
+    'the city' apply in the city where the person was used (collection OWNER_CITY); the rest are the
+    player's. What stays unread is returned as text."""
+    mods, untracked = [], []
+
+    def add(collection, effect, args):
+        mods.append({"id": "%s_%d" % (gid, len(mods) + 1), "source": gid, "collection": collection, "effect": effect, "arguments": args})
+
+    for part in parts:
+        t = re.sub(r" \(one-time\)$", "", part)
+        m = re.fullmatch(r"([+-]\d+)% war weariness", t)
+        if m:
+            add("PLAYER", "ADJUST_WAR_WEARINESS_PERCENT", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward military units in all your cities", t)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT", {"amount": int(m.group(1)), "military": True})
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward space race projects in all your cities", t)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "SPACE_RACE", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% Tourism to civs with your trade routes", t)
+        if m:
+            add("PLAYER", "ADJUST_ROUTE_TOURISM_PERCENT", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Tourism from the district for your districts where district is (.+)", t)
+        if m and m.group(2) in ids["districts"]:
+            add("PLAYER", "ADJUST_DISTRICT_TOURISM", {"district": ids["districts"][m.group(2)], "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Loyalty per turn", t)
+        if m:
+            add("OWNER_CITY", "ADJUST_CITY_LOYALTY", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) (Amenity|Housing)", t)
+        if m:
+            add("OWNER_CITY", "ADJUST_CITY_AMENITIES" if m.group(2) == "Amenity" else "ADJUST_CITY_HOUSING", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Appeal", t)
+        if m:
+            add("OWNER_CITY", "ADJUST_CITY_APPEAL", {"amount": int(m.group(1))})
+            continue
+        untracked.append(part)
+    return mods, untracked
+
+
 def gp_requirements(text, districts):
     """Activation requirements -> typed fields; atoms the core cannot check yet are listed
     under 'untracked' and ignored (the great person may be used anywhere they would allow)."""
@@ -1849,8 +1896,11 @@ def gen_great_people():
             if req:
                 g["requires"] = req
             effects, untracked = gp_effects(row["Activation effects"], ids)
+            mods, untracked = gp_modifiers(g["id"], untracked, policy_refs())
             if effects:
                 g["effects"] = effects
+            if mods:
+                g["modifiers"] = mods
             if untracked:
                 g["untrackedEffects"] = untracked
             m = re.fullmatch(r"(\d+) x (\w+)", row["Great Works"] or "")

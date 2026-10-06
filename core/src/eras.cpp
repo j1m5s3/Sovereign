@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -206,6 +207,9 @@ int Game::tourismPerTurn(PlayerId pid) const {
             int scale = 1;
             if (policyIs(pid, "POLICY_HERITAGE_TOURISM") && (kind == "SCULPTURE" || kind == "PORTRAIT" || kind == "LANDSCAPE" || kind == "RELIGIOUS" || kind == "ARTIFACT")) scale = 2;
             if (policyIs(pid, "POLICY_SATELLITE_BROADCASTS") && kind == "MUSIC") scale = 3;
+            // Mary Leakey (07): artifacts triple their tourism.
+            if (kind == "ARTIFACT" && std::find(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end(), rules_->greatPerson("GREAT_PERSON_MARY_LEAKEY")) != p.greatPeopleActivated.end())
+                scale = std::max(scale, 3);
             total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100 * scale;
         }
         for (TypeIndex b : c.buildings) {
@@ -215,6 +219,9 @@ int Game::tourismPerTurn(PlayerId pid) const {
             total += rules_->globalInt("TOURISM_BASE_FROM_WONDER") + rules_->globalInt("TOURISM_ADVANCED_ERA_WONDER") * std::max(0, era - wonderEra);
         }
         if (p.religion >= 0 && state_.religions[static_cast<size_t>(p.religion)].holyCity == c.id) total += rules_->globalInt("TOURISM_FROM_HOLY_CITY");
+        for (const CityDistrict& d : c.districts) {
+            if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
+        }
         // Wish You Were Here (Golden Age): +50% tourism from cities with an established governor.
         PlayerId holder = kNoPlayer;
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;
@@ -249,7 +256,9 @@ void Game::processTourism(PlayerId pid) {
         // +25% toward a civ that opens its borders to us (08: Open Borders).
         const int borders = grantsOpenBorders(x.id, pid) ? 25 : 0;
         // Online Communities (04): +50% more toward civs we run a route to. Space Tourism: theirs shields them by 20%.
-        const int online = route && policyIs(pid, "POLICY_ONLINE_COMMUNITIES") ? 50 : 0;
+        const int online = route ? (policyIs(pid, "POLICY_ONLINE_COMMUNITIES") ? 50 : 0) +
+                                       static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::RouteTourismPercent).toInt())
+                                 : 0;  // + Sarah Breedlove, Melitta Bentz (07)
         int toward = t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders + online) / 100;
         if (policyIs(x.id, "POLICY_SPACE_TOURISM")) toward = toward * 80 / 100;
         p.tourismTo[at(x.id)] += toward;

@@ -187,6 +187,9 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_FAVOR_PER_TURN", ModEffect::FavorPerTurn},
         {"ADJUST_CITY_FAVOR_PER_TURN", ModEffect::CityFavorPerTurn},
         {"ADJUST_INFLUENCE_PER_TURN", ModEffect::InfluencePerTurn},
+        {"ADJUST_ROUTE_TOURISM_PERCENT", ModEffect::RouteTourismPercent},
+        {"ADJUST_DISTRICT_TOURISM", ModEffect::DistrictTourism},
+        {"ADJUST_CITY_APPEAL", ModEffect::CityAppeal},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -237,9 +240,11 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
                               mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent ||
                               mod.effect == ModEffect::TradeRouteYield || mod.effect == ModEffect::GreatPersonPoints ||
                               mod.effect == ModEffect::FavorPerTurn || mod.effect == ModEffect::InfluencePerTurn ||
+                              mod.effect == ModEffect::RouteTourismPercent || mod.effect == ModEffect::DistrictTourism ||
                               (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     mod.scope = args["scope"].str();
+    mod.military = args["military"].boolean(false);
     if (args.has("building") && (mod.building = rules.building(args["building"].str())) == kNone) {
         *error = "unknown building " + args["building"].str();
         return false;
@@ -1931,6 +1936,22 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             mod.sourceKind = ModSource::Policy;
             mod.sourceIndex = policy(pid);
+            modifiers.push_back(std::move(mod));
+        }
+    }
+    // Great people's lasting activation effects (07; greatpeople.json, each individual's `modifiers`).
+    for (const auto& [gid, gj] : m.tables["greatPeople"]) {
+        for (const Json& j : gj["modifiers"].items()) {
+            Modifier mod;
+            mod.id = j["id"].str();
+            mod.source = gid;
+            if (!parseModifier(j, mod, *this, error)) {
+                *error = "great person " + gid + " modifier " + mod.id + ": " + *error;
+                return false;
+            }
+            mod.sourceKind = ModSource::GreatPerson;
+            mod.sourceIndex = greatPerson(gid);
+            if (mod.sourceIndex != kNone) greatPeople[static_cast<size_t>(mod.sourceIndex)].hasModifiers = true;
             modifiers.push_back(std::move(mod));
         }
     }

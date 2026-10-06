@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/modifiers.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -194,4 +195,34 @@ TEST(a_retired_great_person_gives_the_civs_units_an_ability) {
     auto loaded = loadGame(rules(), saveGame(*g), &err);
     REQUIRE(loaded);
     CHECK_EQ(loaded->unitEffectTotal(*loaded->state().unit(warrior), UnitEffectKind::FlankingPercent), 50);
+}
+
+TEST(a_great_person_leaves_lasting_effects_in_its_city_and_realm) {
+    // Sudirman in the capital: +6 loyalty a turn there. Ibn Khaldun on a Campus: +1 Amenity, +2 Housing there.
+    GameState s = cityState("DISTRICT_CAMPUS");
+    const UnitId sudirman = addGreatPerson(s, "GREAT_PERSON_SUDIRMAN", {6, 6});
+    const UnitId khaldun = addGreatPerson(s, "GREAT_PERSON_IBN_KHALDUN", {7, 6});
+    const UnitId ike = addGreatPerson(s, "GREAT_PERSON_DWIGHT_EISENHOWER", {5, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId cid = g->state().cities[0].id;
+    const Fixed loyalty = g->loyaltyPerTurn(cid);
+    const CityReport before = g->cityReport(cid);
+    REQUIRE(g->submit(Command::activateGreatPerson(0, sudirman)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::activateGreatPerson(0, khaldun)) == CommandError::Ok);
+    CHECK_EQ(g->loyaltyPerTurn(cid), loyalty + Fixed::fromInt(6));
+    const CityReport after = g->cityReport(cid);
+    CHECK_EQ(after.amenities, before.amenities + 1);
+    CHECK_EQ(after.housing, before.housing + Fixed::fromInt(2));
+    // Eisenhower: +5% toward military units everywhere, not civilians.
+    const City& c = g->state().cities[0];
+    const Fixed military = sumUnitProductionPercent(g->state(), rules(), c, rules().unit("UNIT_WARRIOR"));
+    REQUIRE(g->submit(Command::activateGreatPerson(0, ike)) == CommandError::Ok);
+    CHECK_EQ(sumUnitProductionPercent(g->state(), rules(), g->state().cities[0], rules().unit("UNIT_WARRIOR")), military + Fixed::fromInt(5));
+    CHECK_EQ(sumUnitProductionPercent(g->state(), rules(), g->state().cities[0], rules().unit("UNIT_BUILDER")), Fixed());
+    // The city remembers who was used there, through a save.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().cities[0].greatPeopleHere.size(), 3u);  // all three stood on its land
+    CHECK_EQ(loaded->loyaltyPerTurn(cid), g->loyaltyPerTurn(cid));
 }

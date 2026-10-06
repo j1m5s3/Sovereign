@@ -161,6 +161,9 @@ int Game::plotAppeal(Hex plot) const {
         if (state_.wonderAt(*n) != kNone) appeal += 1;
         if (campAt(*n)) appeal -= 1;
     }
+    // Alvar Aalto, Charles Correa (07): appeal across the city where they were used.
+    if (const City* c = state_.city(state_.plot(plot).city); c && !c->greatPeopleHere.empty())
+        appeal += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAppeal).toInt());
     return appeal;
 }
 
