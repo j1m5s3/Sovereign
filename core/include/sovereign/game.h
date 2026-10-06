@@ -394,6 +394,9 @@ public:
     // ---- archaeology (07: Archaeology)
     void noteBattle(Hex plot, PlayerId attacker);  // remembered as a future site while the world is young enough
     bool themed(const City& city, TypeIndex building) const;  // its Great Works earn the theming bonus (07)
+    // The work would give the player a museum's theme it cannot reach without it (07; for trading).
+    bool workCompletesTheme(PlayerId player, const GreatWork& work) const;
+    const GreatWork* dealWork(const DealItem& item) const;  // the Great Work a GreatWork deal item names
     int freeSlotsFor(const City& city, TypeIndex building, TypeIndex workType) const;
     CommandError moveGreatWorkProblem(PlayerId player, CityId from, int index, CityId to, TypeIndex building) const;
     void moveGreatWork(CityId from, int index, CityId to, TypeIndex building);

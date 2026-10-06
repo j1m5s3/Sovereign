@@ -6,6 +6,7 @@
 // per turn, luxuries and strategic resources per turn, open borders, a declaration of
 // friendship and peace; an AI answers by the deal's gold value against a bar its opinion sets.
 #include <algorithm>
+#include <cctype>
 
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
@@ -452,6 +453,18 @@ CommandError Game::dealProblem(const Deal& d) const {
                 alliance = true;
                 break;
             }
+            case DealItemKind::GreatWork: {
+                // A work the giver holds, once per deal, with a free slot for it in one of the taker's cities (07).
+                const GreatWork* w = dealWork(i);
+                if (!w || war) return CommandError::CannotDeal;
+                for (const DealItem& j : d.items) {
+                    if (&j != &i && j.kind == DealItemKind::GreatWork && j.amount == i.amount && j.resource == i.resource) return CommandError::CannotDeal;
+                }
+                bool room = false;
+                for (const City& c : state_.cities) room = room || (c.owner == other && freeGreatWorkSlot(c, w->type) != kNone);
+                if (!room) return CommandError::CannotDeal;
+                break;
+            }
             case DealItemKind::Peace: {
                 if (peace || !war) return CommandError::CannotDeal;
                 const Relation& rel = state_.players[at(d.from)].relations[at(d.to)];
@@ -508,6 +521,19 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 // Nor is an alliance: only with a friend it likes well.
                 if (opinion < kAllyOpinion) value -= 1000;
                 break;
+            case DealItemKind::GreatWork: {
+                // By its tourism; far more when it completes (or would break) a museum's theme (07: Theming).
+                const GreatWork* w = dealWork(i);
+                if (!w) break;
+                const int worth = 60 + 20 * rules_->greatWorkTypes[ti(w->type)].tourism;
+                if (gives) {
+                    const City* holder = state_.city(i.amount);
+                    value -= holder && themed(*holder, w->building) ? 1000 : worth * 3 / 2;
+                } else {
+                    value += worth + (workCompletesTheme(judge, *w) ? 300 : 0);
+                }
+                break;
+            }
             case DealItemKind::Peace: {
                 const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, other);
                 const int turns = state_.turn - state_.players[at(judge)].relations[at(other)].since;
@@ -555,6 +581,16 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
     tryItem({DealItemKind::Friendship, from, 0, kNone});
     for (int t = 0; t < kNumAllianceTypes; ++t) tryItem({DealItemKind::Alliance, from, t, kNone});
     tryItem({DealItemKind::Peace, from, 0, kNone});
+    int works = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != from) continue;
+        for (size_t w = 0; w < c.greatWorks.size() && works < 6; ++w) {
+            if (themed(c, c.greatWorks[w].building)) continue;
+            const size_t before = out.size();
+            tryItem({DealItemKind::GreatWork, from, c.id, static_cast<TypeIndex>(w)});
+            works += out.size() > before ? 1 : 0;
+        }
+    }
     return out;
 }
 
@@ -652,6 +688,26 @@ void Game::applyDiplomacy(const Command& c) {
 
 void Game::executeDeal(const Deal& d) {
     const int until = state_.turn + kDealTurns;
+    // Great Works change hands first, highest index first in each city so the others keep their places.
+    std::vector<DealItem> works;
+    for (const DealItem& i : d.items) {
+        if (i.kind == DealItemKind::GreatWork && dealWork(i)) works.push_back(i);
+    }
+    std::sort(works.begin(), works.end(), [](const DealItem& a, const DealItem& b) { return a.amount != b.amount ? a.amount < b.amount : a.resource > b.resource; });
+    for (const DealItem& i : works) {
+        const PlayerId other = i.from == d.from ? d.to : d.from;
+        City& from = *state_.city(i.amount);
+        GreatWork w = from.greatWorks[ti(i.resource)];
+        for (City& c : state_.cities) {
+            if (c.owner != other) continue;
+            const TypeIndex slot = freeGreatWorkSlot(c, w.type);
+            if (slot == kNone) continue;
+            from.greatWorks.erase(from.greatWorks.begin() + i.resource);
+            w.building = slot;
+            c.greatWorks.push_back(w);
+            break;
+        }
+    }
     for (const DealItem& i : d.items) {
         const PlayerId other = i.from == d.from ? d.to : d.from;
         Player& giver = state_.players[at(i.from)];
@@ -688,6 +744,7 @@ void Game::executeDeal(const Deal& d) {
                 }
                 break;
             case DealItemKind::Peace: onPeace(d.from, d.to); break;
+            case DealItemKind::GreatWork: break;  // moved above
         }
     }
     // Both remember a deal kept; a deal that only gives is a gift.
@@ -1131,6 +1188,15 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
                    std::to_string(r.globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT")) + " turns";
         }
         case DealItemKind::Peace: return "peace";
+        case DealItemKind::GreatWork: {
+            const City* c = s.city(i.amount);
+            if (!c || i.resource < 0 || ti(i.resource) >= c->greatWorks.size()) return who + " gives a Great Work";
+            const GreatWork& w = c->greatWorks[ti(i.resource)];
+            std::string kind = r.greatWorkTypes[ti(w.type)].id;
+            std::transform(kind.begin(), kind.end(), kind.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+            const std::string by = w.creator >= 0 && ti(w.creator) < r.greatPeople.size() ? " by " + r.greatPeople[ti(w.creator)].name : "";
+            return who + " gives a Great Work (" + kind + by + ")";
+        }
     }
     return "?";
 }
