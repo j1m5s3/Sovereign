@@ -1771,6 +1771,31 @@ void purchases(View& v) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
     }
+    // Far above the reserve: a plot holding a luxury or strategic resource we have none of (02: Tile purchase).
+    {
+        std::vector<char> have(v.r.resources.size(), 0);
+        for (const Plot& p : v.s().plots) {
+            if (p.owner == v.me && p.resource != kNone) have[at(p.resource)] = 1;
+        }
+        for (CityId cid : v.cities) {
+            const City& c = *v.s().city(cid);
+            std::optional<Hex> pick;
+            int pickCost = 0;
+            for (const Hex& h : v.s().grid.within(c.pos, 3)) {
+                const Plot& p = v.s().plot(h);
+                if (p.owner != kNoPlayer || p.resource == kNone || !g.resourceVisible(v.me, h)) continue;
+                const ResourceClass cls = v.r.resources[at(p.resource)].cls;
+                if (cls == ResourceClass::Bonus || have[at(p.resource)]) continue;
+                const int cost = g.plotPurchaseCost(cid, h);
+                if (cost <= 0 || v.s().players[at(v.me)].gold < Fixed::fromInt(cost + 4 * reserve)) continue;
+                if (!pick || cost < pickCost) {
+                    pick = h;
+                    pickCost = cost;
+                }
+            }
+            if (pick && g.submit(Command::buyPlot(v.me, cid, *pick)) == CommandError::Ok) have[at(v.s().plot(*pick).resource)] = 1;
+        }
+    }
     // Still well above the reserve: buy the building that yields most per gold in any city (from Warlord).
     for (int guard = 0; guard < (v.skill >= 2 ? 4 : 0); ++guard) {
         const Fixed gold = v.s().players[at(v.me)].gold;
