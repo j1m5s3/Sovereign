@@ -20,6 +20,9 @@
     ]
    },
    "text": "grants 1 Great Prophet where player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time); grants 1 Apostle where NOT player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time)",
+   "untrackedEffects": [
+    "grants 1 Apostle where NOT player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time)"
+   ],
    "effects": [
     {
      "kind": "UNIT",
@@ -54,7 +57,10 @@
    },
    "text": "adjust city yield per flood (YieldType=Faith, Amount=1)",
    "housing": 3,
-   "amenities": 1
+   "amenities": 1,
+   "untrackedEffects": [
+    "adjust city yield per flood (YieldType=Faith, Amount=1)"
+   ]
   },
   {
    "id": "BUILDING_TEMPLE_OF_ARTEMIS",
@@ -87,6 +93,9 @@
     ]
    },
    "text": "+1 build charge(s) for your units where unit is Builder; grants 1 Builder (one-time)",
+   "untrackedEffects": [
+    "+1 build charge(s) for your units where unit is Builder"
+   ],
    "effects": [
     {
      "kind": "UNIT",
@@ -130,7 +139,17 @@
      "TERRAIN_DESERT_HILLS"
     ]
    },
-   "text": "+2 Great General points from the district for this city's districts where district is Encampment; +2 Great Admiral points from the district for this city's districts where district is Harbor; +2 Great Engineer points from the district for this city's districts where district is Industrial Zone; +2 Great Merchant points from the district for this city's districts where district is Commercial Hub; +2 Great Prophet points from the district for this city's districts where district is Holy Site; +2 Great Scientist points from the district for this city's districts where district is Campus; +2 Great Writer points from the district for this city's districts where district is Theater Square; 25% cheaper Great Person patronage with Faith"
+   "text": "+2 Great General points from the district for this city's districts where district is Encampment; +2 Great Admiral points from the district for this city's districts where district is Harbor; +2 Great Engineer points from the district for this city's districts where district is Industrial Zone; +2 Great Merchant points from the district for this city's districts where district is Commercial Hub; +2 Great Prophet points from the district for this city's districts where district is Holy Site; +2 Great Scientist points from the district for this city's districts where district is Campus; +2 Great Writer points from the district for this city's districts where district is Theater Square; 25% cheaper Great Person patronage with Faith",
+   "untrackedEffects": [
+    "+2 Great General points from the district for this city's districts where district is Encampment",
+    "+2 Great Admiral points from the district for this city's districts where district is Harbor",
+    "+2 Great Engineer points from the district for this city's districts where district is Industrial Zone",
+    "+2 Great Merchant points from the district for this city's districts where district is Commercial Hub",
+    "+2 Great Prophet points from the district for this city's districts where district is Holy Site",
+    "+2 Great Scientist points from the district for this city's districts where district is Campus",
+    "+2 Great Writer points from the district for this city's districts where district is Theater Square",
+    "25% cheaper Great Person patronage with Faith"
+   ]
   },
   {
    "id": "BUILDING_GREAT_LIGHTHOUSE",
@@ -151,7 +170,11 @@
    "text": "ability Great Lighthouse Movement [+1 Movement for naval units] for your units; +1 Movement while embarked; ability Great Lighthouse Embarked Movement for your units",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
-   }
+   },
+   "untrackedEffects": [
+    "+1 Movement while embarked",
+    "ability Great Lighthouse Embarked Movement for your units"
+   ]
   },
   {
    "id": "BUILDING_COLOSSUS",
@@ -195,7 +218,10 @@
      "FEATURE_FLOODPLAINS"
     ]
    },
-   "text": "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains"
+   "text": "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains",
+   "untrackedEffects": [
+    "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains"
+   ]
   },
   {
    "id": "BUILDING_COLOSSEUM",
@@ -216,7 +242,10 @@
     ]
    },
    "text": "+2 Loyalty per turn in all your cities where within 6 tiles of Colosseum",
-   "amenities": 2
+   "amenities": 2,
+   "untrackedEffects": [
+    "+2 Loyalty per turn in all your cities where within 6 tiles of Colosseum"
+   ]
   },
   {
    "id": "BUILDING_GREAT_LIBRARY",
@@ -244,6 +273,9 @@
    "greatWorkSlots": {
     "WRITING": 2
    },
+   "untrackedEffects": [
+    "boost from Great Scientist"
+   ],
    "effects": [
     {
      "kind": "RANDOM_BOOST",
@@ -268,7 +300,18 @@
      "FEATURE_FOREST"
     ]
    },
-   "text": "grants 2 Apostle (one-time); +2 Diplomatic Victory Points (one-time)"
+   "text": "grants 2 Apostle (one-time); +2 Diplomatic Victory Points (one-time)",
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_APOSTLE",
+     "count": 2
+    },
+    {
+     "kind": "DIPLOMATIC_VP",
+     "amount": 2
+    }
+   ]
   },
   {
    "id": "BUILDING_TERRACOTTA_ARMY",
@@ -286,7 +329,12 @@
    "text": "ability Enter Foreign Lands [can enter foreign territory] for your units; grants enough XP for a promotion for your units (one-time)",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_GENERAL": 1
-   }
+   },
+   "effects": [
+    {
+     "kind": "PROMOTE_ALL"
+    }
+   ]
   },
   {
    "id": "BUILDING_MACHU_PICCHU",
@@ -301,7 +349,12 @@
      "MOUNTAIN"
     ]
    },
-   "text": "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities; Industrial Zone gets +1 Production per adjacent Mountain in all your cities; Theater Square gets +1 Culture per adjacent Mountain in all your cities"
+   "text": "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities; Industrial Zone gets +1 Production per adjacent Mountain in all your cities; Theater Square gets +1 Culture per adjacent Mountain in all your cities",
+   "untrackedEffects": [
+    "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities",
+    "Industrial Zone gets +1 Production per adjacent Mountain in all your cities",
+    "Theater Square gets +1 Culture per adjacent Mountain in all your cities"
+   ]
   },
   {
    "id": "BUILDING_STATUE_OF_ZEUS",
@@ -325,6 +378,16 @@
    "effects": [
     {
      "kind": "UNIT",
+     "ref": "UNIT_SPEARMAN",
+     "count": 3
+    },
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_ARCHER",
+     "count": 3
+    },
+    {
+     "kind": "UNIT",
      "ref": "UNIT_BATTERING_RAM"
     }
    ]
@@ -341,7 +404,10 @@
    "text": "grant city owner influence token wonder (Amount=2) in all cities where city has Apadana",
    "greatWorkSlots": {
     "PALACE": 2
-   }
+   },
+   "untrackedEffects": [
+    "grant city owner influence token wonder (Amount=2) in all cities where city has Apadana"
+   ]
   },
   {
    "id": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
@@ -352,7 +418,11 @@
    "placement": {
     "nextToDistrict": "DISTRICT_HARBOR"
    },
-   "text": "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer); +1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake"
+   "text": "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer); +1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake",
+   "untrackedEffects": [
+    "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer)",
+    "+1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake"
+   ]
   },
   {
    "id": "BUILDING_JEBEL_BARKAL",
@@ -367,7 +437,14 @@
      "TERRAIN_DESERT_HILLS"
     ]
    },
-   "text": "+6 Iron per turn"
+   "text": "+6 Iron per turn",
+   "effects": [
+    {
+     "kind": "RESOURCE_PER_TURN",
+     "what": "RESOURCE_IRON",
+     "amount": 6
+    }
+   ]
   },
   {
    "id": "BUILDING_HAGIA_SOPHIA",
@@ -387,7 +464,8 @@
      "TERRAIN_DESERT"
     ]
    },
-   "text": "+1 spread charge(s) for your units"
+   "text": "+1 spread charge(s) for your units",
+   "spreadCharges": 1
   },
   {
    "id": "BUILDING_ALHAMBRA",
@@ -409,6 +487,9 @@
    "amenities": 2,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_GENERAL": 2
+   },
+   "policySlots": {
+    "MILITARY": 1
    }
   },
   {
@@ -443,7 +524,10 @@
    "text": "grants promotion Martyr for your units",
    "greatWorkSlots": {
     "RELIC": 2
-   }
+   },
+   "untrackedEffects": [
+    "grants promotion Martyr for your units"
+   ]
   },
   {
    "id": "BUILDING_MEENAKSHI_TEMPLE",
@@ -456,7 +540,17 @@
    "placement": {
     "nextToDistrict": "DISTRICT_HOLY_SITE"
    },
-   "text": "grants 2 Guru (one-time); ability Guide [ability Guru Movement Area of Effect [+1 Movement where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; ability Sage [ability Guru Sage Area of Effect [+5 Combat Strength in combat where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; 30% cheaper to purchase Guru in all your cities"
+   "text": "grants 2 Guru (one-time); ability Guide [ability Guru Movement Area of Effect [+1 Movement where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; ability Sage [ability Guru Sage Area of Effect [+5 Combat Strength in combat where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; 30% cheaper to purchase Guru in all your cities",
+   "untrackedEffects": [
+    "30% cheaper to purchase Guru in all your cities"
+   ],
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_GURU",
+     "count": 2
+    }
+   ]
   },
   {
    "id": "BUILDING_UNIVERSITY_OF_SANKORE",
@@ -477,7 +571,14 @@
    "text": "trade routes from other civs give them +1 Science; trade routes from other civs give them +1 Gold; +2 Science for each trade route other civs send here; trade routes from other civs give them +2 Science; trade routes from other civs give them +1 Faith",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 2
-   }
+   },
+   "untrackedEffects": [
+    "trade routes from other civs give them +1 Science",
+    "trade routes from other civs give them +1 Gold",
+    "+2 Science for each trade route other civs send here",
+    "trade routes from other civs give them +2 Science",
+    "trade routes from other civs give them +1 Faith"
+   ]
   },
   {
    "id": "BUILDING_HUEY_TEOCALLI",
@@ -492,7 +593,12 @@
      "TERRAIN_COAST"
     ]
    },
-   "text": "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time); +1 Food on this city's tiles where tile is a lake in all cities where player owns object; +1 Production on this city's tiles where tile is a lake in all cities where player owns object"
+   "text": "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time); +1 Food on this city's tiles where tile is a lake in all cities where player owns object; +1 Production on this city's tiles where tile is a lake in all cities where player owns object",
+   "untrackedEffects": [
+    "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time)",
+    "+1 Food on this city's tiles where tile is a lake in all cities where player owns object",
+    "+1 Production on this city's tiles where tile is a lake in all cities where player owns object"
+   ]
   },
   {
    "id": "BUILDING_KILWA_KISIWANI",
@@ -510,7 +616,24 @@
      "TERRAIN_DESERT"
     ]
    },
-   "text": "+15% Science where suzerain of a Minor Civ Scientific city-state (x1); +15% Faith where suzerain of a Minor Civ Religious city-state (x1); +15% Gold where suzerain of a Minor Civ Trade city-state (x1); +15% Culture where suzerain of a Minor Civ Cultural city-state (x1); +15% Production toward all units where suzerain of a Minor Civ Militaristic city-state (x1); adjust all building production modifier (Amount=15) where suzerain of a Minor Civ Industrial city-state (x1); +15% Production toward districts where suzerain of a Minor Civ Industrial city-state (x1); +15% Science in all your cities where suzerain of a Minor Civ Scientific city-state (x2); +15% Faith in all your cities where suzerain of a Minor Civ Religious city-state (x2); +15% Gold in all your cities where suzerain of a Minor Civ Trade city-state (x2); +15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2); +15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2); adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2); +15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2); grants 3 Envoy(s) (one-time)"
+   "text": "+15% Science where suzerain of a Minor Civ Scientific city-state (x1); +15% Faith where suzerain of a Minor Civ Religious city-state (x1); +15% Gold where suzerain of a Minor Civ Trade city-state (x1); +15% Culture where suzerain of a Minor Civ Cultural city-state (x1); +15% Production toward all units where suzerain of a Minor Civ Militaristic city-state (x1); adjust all building production modifier (Amount=15) where suzerain of a Minor Civ Industrial city-state (x1); +15% Production toward districts where suzerain of a Minor Civ Industrial city-state (x1); +15% Science in all your cities where suzerain of a Minor Civ Scientific city-state (x2); +15% Faith in all your cities where suzerain of a Minor Civ Religious city-state (x2); +15% Gold in all your cities where suzerain of a Minor Civ Trade city-state (x2); +15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2); +15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2); adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2); +15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2); grants 3 Envoy(s) (one-time)",
+   "untrackedEffects": [
+    "+15% Science where suzerain of a Minor Civ Scientific city-state (x1)",
+    "+15% Faith where suzerain of a Minor Civ Religious city-state (x1)",
+    "+15% Gold where suzerain of a Minor Civ Trade city-state (x1)",
+    "+15% Culture where suzerain of a Minor Civ Cultural city-state (x1)",
+    "+15% Production toward all units where suzerain of a Minor Civ Militaristic city-state (x1)",
+    "adjust all building production modifier (Amount=15) where suzerain of a Minor Civ Industrial city-state (x1)",
+    "+15% Production toward districts where suzerain of a Minor Civ Industrial city-state (x1)",
+    "+15% Science in all your cities where suzerain of a Minor Civ Scientific city-state (x2)",
+    "+15% Faith in all your cities where suzerain of a Minor Civ Religious city-state (x2)",
+    "+15% Gold in all your cities where suzerain of a Minor Civ Trade city-state (x2)",
+    "+15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2)",
+    "+15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2)",
+    "adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2)",
+    "+15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2)",
+    "grants 3 Envoy(s) (one-time)"
+   ]
   },
   {
    "id": "BUILDING_KOTOKU_IN",
@@ -521,7 +644,14 @@
    "placement": {
     "nextToDistrict": "DISTRICT_HOLY_SITE"
    },
-   "text": "+20% Faith; grants 4 Warrior Monk (one-time)"
+   "text": "+20% Faith; grants 4 Warrior Monk (one-time)",
+   "effects": [
+    {
+     "kind": "UNIT",
+     "ref": "UNIT_WARRIOR_MONK",
+     "count": 4
+    }
+   ]
   },
   {
    "id": "BUILDING_ANGKOR_WAT",
@@ -534,7 +664,13 @@
    "placement": {
     "nextToDistrict": "DISTRICT_AQUEDUCT"
    },
-   "text": "+1 Population in all your cities (one-time); +1 Housing in all your cities"
+   "text": "+1 Population in all your cities (one-time); +1 Housing in all your cities",
+   "effects": [
+    {
+     "kind": "POPULATION",
+     "amount": 1
+    }
+   ]
   },
   {
    "id": "BUILDING_VENETIAN_ARSENAL",
@@ -553,7 +689,12 @@
    "text": "+1 extra copy of Naval Melee units when trained in all your cities; +1 extra copy of Naval Ranged units when trained in all your cities; +1 extra copy of Naval Carrier units when trained in all your cities",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 2
-   }
+   },
+   "untrackedEffects": [
+    "+1 extra copy of Naval Melee units when trained in all your cities",
+    "+1 extra copy of Naval Ranged units when trained in all your cities",
+    "+1 extra copy of Naval Carrier units when trained in all your cities"
+   ]
   },
   {
    "id": "BUILDING_GREAT_ZIMBABWE",
@@ -571,7 +712,11 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 2
    },
-   "tradeCapacity": 1
+   "tradeCapacity": 1,
+   "untrackedEffects": [
+    "adjust city trade route yield per local bonus resource for domestic (YieldType=Gold, Amount=2)",
+    "international routes +2 Gold per bonus resource in origin"
+   ]
   },
   {
    "id": "BUILDING_FORBIDDEN_CITY",
@@ -591,7 +736,10 @@
      "TERRAIN_DESERT"
     ]
    },
-   "text": "+1 Wildcard slot"
+   "text": "+1 Wildcard slot",
+   "policySlots": {
+    "WILDCARD": 1
+   }
   },
   {
    "id": "BUILDING_ORSZ_GH_Z",
@@ -604,7 +752,10 @@
    "placement": {
     "river": true
    },
-   "text": "adjust player suzerain favor multiplier (Amount=100)"
+   "text": "adjust player suzerain favor multiplier (Amount=100)",
+   "untrackedEffects": [
+    "adjust player suzerain favor multiplier (Amount=100)"
+   ]
   },
   {
    "id": "BUILDING_CASA_DE_CONTRATACI_N",
@@ -618,7 +769,18 @@
    "text": "+3 Governor Title(s) (one-time); +15% Faith in all your cities where NOT city on capital's continent and city has a governor; +15% Gold in all your cities where NOT city on capital's continent and city has a governor; +15% Production in all your cities where NOT city on capital's continent and city has a governor",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 3
-   }
+   },
+   "untrackedEffects": [
+    "+15% Faith in all your cities where NOT city on capital's continent and city has a governor",
+    "+15% Gold in all your cities where NOT city on capital's continent and city has a governor",
+    "+15% Production in all your cities where NOT city on capital's continent and city has a governor"
+   ],
+   "effects": [
+    {
+     "kind": "GOVERNOR_TITLES",
+     "amount": 3
+    }
+   ]
   },
   {
    "id": "BUILDING_ST_BASIL_S_CATHEDRAL",
@@ -632,7 +794,10 @@
    "text": "+1 Food on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; +1 Production on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; +1 Culture on this city's tiles where tile is Tundra or tile is Tundra (Hills) in all cities where city has St. Basil's Cathedral; Tourism from scaled 200%",
    "greatWorkSlots": {
     "RELIC": 3
-   }
+   },
+   "untrackedEffects": [
+    "Tourism from scaled 200%"
+   ]
   },
   {
    "id": "BUILDING_TAJ_MAHAL",
@@ -643,7 +808,10 @@
    "placement": {
     "river": true
    },
-   "text": "adjust player era score per pride moment (Amount=1, MinScore=2)"
+   "text": "adjust player era score per pride moment (Amount=1, MinScore=2)",
+   "untrackedEffects": [
+    "adjust player era score per pride moment (Amount=1, MinScore=2)"
+   ]
   },
   {
    "id": "BUILDING_TORRE_DE_BEL_M",
@@ -664,7 +832,11 @@
    "text": "international routes +2 Gold per luxury at destination; grants the cheapest building of the district in all your cities where NOT city on capital's continent (one-time)",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
-   }
+   },
+   "untrackedEffects": [
+    "international routes +2 Gold per luxury at destination",
+    "grants the cheapest building of the district in all your cities where NOT city on capital's continent (one-time)"
+   ]
   },
   {
    "id": "BUILDING_POTALA_PALACE",
@@ -685,7 +857,16 @@
      "TERRAIN_SNOW_HILLS"
     ]
    },
-   "text": "+1 Diplomatic slot; +1 Diplomatic Victory Points (one-time)"
+   "text": "+1 Diplomatic slot; +1 Diplomatic Victory Points (one-time)",
+   "policySlots": {
+    "DIPLOMATIC": 1
+   },
+   "effects": [
+    {
+     "kind": "DIPLOMATIC_VP",
+     "amount": 1
+    }
+   ]
   },
   {
    "id": "BUILDING_RUHR_VALLEY",
@@ -697,7 +878,10 @@
     "river": true,
     "nextToDistrict": "DISTRICT_INDUSTRIAL_ZONE"
    },
-   "text": "+20% Production; +1 Production on this city's tiles where tile has Quarry or tile has Mine"
+   "text": "+20% Production; +1 Production on this city's tiles where tile has Quarry or tile has Mine",
+   "untrackedEffects": [
+    "+1 Production on this city's tiles where tile has Quarry or tile has Mine"
+   ]
   },
   {
    "id": "BUILDING_BOLSHOI_THEATRE",
@@ -723,7 +907,13 @@
    "greatWorkSlots": {
     "WRITING": 1,
     "MUSIC": 1
-   }
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_CIVICS",
+     "count": 2
+    }
+   ]
   },
   {
    "id": "BUILDING_OXFORD_UNIVERSITY",
@@ -744,7 +934,13 @@
    },
    "greatWorkSlots": {
     "WRITING": 2
-   }
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_TECHS",
+     "count": 2
+    }
+   ]
   },
   {
    "id": "BUILDING_STATUE_OF_LIBERTY",
@@ -760,7 +956,16 @@
      "TERRAIN_COAST"
     ]
    },
-   "text": "city is always loyal in all your cities where within 6 tiles of Statue of Liberty; +4 Diplomatic Victory Points (one-time)"
+   "text": "city is always loyal in all your cities where within 6 tiles of Statue of Liberty; +4 Diplomatic Victory Points (one-time)",
+   "untrackedEffects": [
+    "city is always loyal in all your cities where within 6 tiles of Statue of Liberty"
+   ],
+   "effects": [
+    {
+     "kind": "DIPLOMATIC_VP",
+     "amount": 4
+    }
+   ]
   },
   {
    "id": "BUILDING_BIG_BEN",
@@ -777,7 +982,16 @@
    "text": "+1 Economic slot; multiplies treasury by 50 (one-time)",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 3
-   }
+   },
+   "policySlots": {
+    "ECONOMIC": 1
+   },
+   "effects": [
+    {
+     "kind": "TREASURY_PERCENT",
+     "amount": 50
+    }
+   ]
   },
   {
    "id": "BUILDING_HERMITAGE",
@@ -838,7 +1052,16 @@
    "greatWorkSlots": {
     "WRITING": 1,
     "MUSIC": 2
-   }
+   },
+   "effects": [
+    {
+     "kind": "RANDOM_BOOST",
+     "tree": "CIVIC",
+     "count": 1,
+     "minEra": "ERA_ATOMIC",
+     "maxEra": "ERA_ATOMIC"
+    }
+   ]
   },
   {
    "id": "BUILDING_CRISTO_REDENTOR",
@@ -857,7 +1080,11 @@
      "TERRAIN_DESERT_HILLS"
     ]
    },
-   "text": "Tourism from Seaside Resort scaled 200% in all your cities; religious Tourism is never reduced"
+   "text": "Tourism from Seaside Resort scaled 200% in all your cities; religious Tourism is never reduced",
+   "untrackedEffects": [
+    "Tourism from Seaside Resort scaled 200% in all your cities",
+    "religious Tourism is never reduced"
+   ]
   },
   {
    "id": "BUILDING_GOLDEN_GATE_BRIDGE",
@@ -873,7 +1100,13 @@
     ]
    },
    "text": "+4 Appeal; roads within 1 tiles; +100% Tourism from improvements; +100% Tourism from National Parks; map remove cliffs in direction (Radius=1)",
-   "amenities": 3
+   "amenities": 3,
+   "untrackedEffects": [
+    "roads within 1 tiles",
+    "+100% Tourism from improvements",
+    "+100% Tourism from National Parks",
+    "map remove cliffs in direction (Radius=1)"
+   ]
   },
   {
    "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
@@ -891,7 +1124,11 @@
    "text": "+20% Science in all your cities; +10% Production in all your cities; +20% Science in all your cities where city has 5+ Snow tiles; +10% Production in all your cities where city has 5+ Snow tiles",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 5
-   }
+   },
+   "untrackedEffects": [
+    "+20% Science in all your cities where city has 5+ Snow tiles",
+    "+10% Production in all your cities where city has 5+ Snow tiles"
+   ]
   },
   {
    "id": "BUILDING_EST_DIO_DO_MARACAN",
@@ -924,7 +1161,13 @@
     "river": true,
     "nextToDistrict": "DISTRICT_NEIGHBORHOOD"
    },
-   "text": "Rainforest +1 Appeal in all your cities; Marsh +1 Appeal in all your cities; adjust modified free power in city (Amount=200) in all your cities; adjust city green energy tourism (Amount=100) in all your cities"
+   "text": "Rainforest +1 Appeal in all your cities; Marsh +1 Appeal in all your cities; adjust modified free power in city (Amount=200) in all your cities; adjust city green energy tourism (Amount=100) in all your cities",
+   "untrackedEffects": [
+    "Rainforest +1 Appeal in all your cities",
+    "Marsh +1 Appeal in all your cities",
+    "adjust modified free power in city (Amount=200) in all your cities",
+    "adjust city green energy tourism (Amount=100) in all your cities"
+   ]
   },
   {
    "id": "BUILDING_SYDNEY_OPERA_HOUSE",
@@ -1103,6 +1346,283 @@
       "ref": "FEATURE_FLOODPLAINS_PLAINS"
      }
     ]
+   }
+  },
+  {
+   "id": "BUILDING_GREAT_LIGHTHOUSE_1",
+   "source": "BUILDING_GREAT_LIGHTHOUSE",
+   "collection": "PLAYER",
+   "effect": "GRANT_ABILITY",
+   "arguments": {
+    "ability": "ABILITY_GREAT_LIGHTHOUSE_MOVEMENT"
+   }
+  },
+  {
+   "id": "BUILDING_TERRACOTTA_ARMY_1",
+   "source": "BUILDING_TERRACOTTA_ARMY",
+   "collection": "PLAYER",
+   "effect": "GRANT_ABILITY",
+   "arguments": {
+    "ability": "ABILITY_ENTER_FOREIGN_LANDS"
+   }
+  },
+  {
+   "id": "BUILDING_STATUE_OF_ZEUS_UNITS",
+   "source": "BUILDING_STATUE_OF_ZEUS",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+   "arguments": {
+    "unitClass": "ANTI_CAVALRY",
+    "amount": 50
+   }
+  },
+  {
+   "id": "BUILDING_CHICHEN_ITZA_PLOTS_CULTURE_0",
+   "source": "BUILDING_CHICHEN_ITZA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "CULTURE",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_JUNGLE"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_CHICHEN_ITZA_PLOTS_PRODUCTION_0",
+   "source": "BUILDING_CHICHEN_ITZA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_JUNGLE"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_MEENAKSHI_TEMPLE_1",
+   "source": "BUILDING_MEENAKSHI_TEMPLE",
+   "collection": "PLAYER",
+   "effect": "GRANT_ABILITY",
+   "arguments": {
+    "ability": "ABILITY_GUIDE"
+   }
+  },
+  {
+   "id": "BUILDING_MEENAKSHI_TEMPLE_2",
+   "source": "BUILDING_MEENAKSHI_TEMPLE",
+   "collection": "PLAYER",
+   "effect": "GRANT_ABILITY",
+   "arguments": {
+    "ability": "ABILITY_SAGE"
+   }
+  },
+  {
+   "id": "BUILDING_KOTOKU_IN_CITY_FAITH",
+   "source": "BUILDING_KOTOKU_IN",
+   "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "FAITH",
+    "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_ANGKOR_WAT_1",
+   "source": "BUILDING_ANGKOR_WAT",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_HOUSING",
+   "arguments": {
+    "amount": 1
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_FOOD_0",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FOOD",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_FOOD_1",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FOOD",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA_HILLS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_PRODUCTION_0",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_PRODUCTION_1",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA_HILLS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_CULTURE_0",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "CULTURE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_CULTURE_1",
+   "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "CULTURE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_TUNDRA_HILLS"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_RUHR_VALLEY_CITY_PRODUCTION",
+   "source": "BUILDING_RUHR_VALLEY",
+   "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_OXFORD_UNIVERSITY_CITY_SCIENCE",
+   "source": "BUILDING_OXFORD_UNIVERSITY",
+   "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_EIFFEL_TOWER_APPEAL",
+   "source": "BUILDING_EIFFEL_TOWER",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_APPEAL",
+   "arguments": {
+    "amount": 2
+   }
+  },
+  {
+   "id": "BUILDING_BROADWAY_CITY_CULTURE",
+   "source": "BUILDING_BROADWAY",
+   "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "CULTURE",
+    "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_GOLDEN_GATE_BRIDGE_APPEAL",
+   "source": "BUILDING_GOLDEN_GATE_BRIDGE",
+   "collection": "OWNER_CITY",
+   "effect": "ADJUST_CITY_APPEAL",
+   "arguments": {
+    "amount": 4
+   }
+  },
+  {
+   "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION_1",
+   "source": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION_2",
+   "source": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 10
    }
   }
  ]

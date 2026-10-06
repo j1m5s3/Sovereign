@@ -76,6 +76,10 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     return out;
 }
 
+void Game::wonderCompleted(CityId id, TypeIndex building) {
+    if (City* c = state_.city(id); c && building >= 0 && static_cast<size_t>(building) < rules_->buildings.size()) completeWonder(*c, building);
+}
+
 void Game::completeWonder(City& city, TypeIndex building) {
     const BuildingType& b = rules_->buildings[at(building)];
     // A wonder of an earlier era than the world's scores a little less (09).
