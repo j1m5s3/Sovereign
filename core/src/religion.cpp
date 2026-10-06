@@ -165,6 +165,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && buildingsOwned(player, "BUILDING_GRAND_MASTER_S_CHAPEL") > 0 &&
             std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
             return purchaseCost(player, item);
+        // Theocracy (02: Faith purchase; 04): land combat units for Faith, 15% under their Gold price.
+        if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && governmentIs(player, "GOVERNMENT_THEOCRACY") &&
+            std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
+            return std::max(1, purchaseCost(player, item) * 85 / 100);
         if (u.purchaseYield != "FAITH" || !hasUnlocked(player, u.unlock)) return -1;
         if (!u.needsBuilding.empty() && std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return city.has(b); }))
             return -1;

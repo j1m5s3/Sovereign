@@ -99,6 +99,7 @@ add_executable(sovereign_tests
   tests/test_citystates.cpp
   tests/test_clans.cpp
   tests/test_monopolies.cpp
+  tests/test_rules_gaps.cpp
   tests/test_eras.cpp
   tests/test_diplomacy.cpp
   tests/test_governors.cpp

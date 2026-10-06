@@ -400,7 +400,9 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt("CITY_MIN_RANGE");
     for (const City& c : state_.cities) {
-        if (state_.grid.distance(c.pos, at) <= minRange) return set(CommandError::TooCloseToCity);
+        // Across water (another landmass) the cities may stand one plot closer (02: Founding).
+        const bool otherLand = state_.plot(c.pos).continent != state_.plot(at).continent;
+        if (state_.grid.distance(c.pos, at) <= minRange - (otherLand ? 1 : 0)) return set(CommandError::TooCloseToCity);
     }
     if (campAt(at)) return set(CommandError::CannotFoundHere);
     return set(CommandError::Ok);
@@ -534,7 +536,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         if (!slow.bridges && hasRiver(state_, from, *d)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
         return rc;
     }
-    if (hasRiver(state_, from, *d)) cost += rules_->globalInt("MOVEMENT_RIVER_COST");
+    if (hasRiver(state_, from, *d) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
     return Fixed::fromInt(std::max(cost, 1));
 }
 

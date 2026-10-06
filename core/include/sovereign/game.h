@@ -153,7 +153,6 @@ public:
 
     // ---- eras, ages and tourism (09: Era score and Ages; 07: Tourism and Culture Victory)
     std::pair<int, int> ageThresholds(PlayerId player) const;  // (Dark below, Golden at or above) for this era's score
-    int ageLoyalty(const City& city) const;
     int tourismPerTurn(PlayerId player) const;
     int visitingTourists(PlayerId player, PlayerId from) const;
     int visitingTourists(PlayerId player) const;  // from every other civ

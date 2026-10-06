@@ -634,6 +634,14 @@ int Game::plotPurchaseCost(CityId id, Hex at) const {
     // 50 gold two plots out, 75 three out (02-cities.md, Tile purchase); rises
     // with research share once research exists.
     int cost = rules_->globalInt("PLOT_BUY_BASE_COST") * std::max(2, dist) / 2;
+    // It rises with research (02: Tile purchase; Sovereign reading of the engine's curve): up to three times the
+    // base with the whole tech or civic tree known, whichever is further.
+    const Player& buyer = state_.players[static_cast<size_t>(c->owner)];
+    const auto share = [](const TreeProgress& t) {
+        const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
+        return t.done.empty() ? 0 : static_cast<int>(done * 100 / static_cast<int64_t>(t.done.size()));
+    };
+    cost = cost * (100 + 2 * std::max(share(buyer.techs), share(buyer.civics))) / 100;
     cost = cost * speedPercent(state_, *rules_) / 100;
     const int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::PlotPurchaseCostPercent).toInt());
     return cost * std::max(0, pct) / 100;
@@ -1354,6 +1362,9 @@ void Game::processCities(PlayerId pid) {
 
         // Growth (02-cities.md, Population and food; Housing).
         Fixed surplus = rep.yields[idx(YieldType::Food)] - rep.foodConsumption;
+        // Occupied cities do not grow (02: CITY_GROWTH_OCCUPATION_MULTIPLIER): taken from a civ still at war with the owner.
+        const bool occupied = city.originalOwner != kNoPlayer && city.originalOwner != city.owner && atWar(city.owner, city.originalOwner);
+        if (occupied && surplus > Fixed()) surplus = surplus * static_cast<int>(rules_->global("CITY_GROWTH_OCCUPATION_MULTIPLIER").toInt());
         if (surplus > Fixed()) {
             const HappinessLevel* mood = rules_->happiness.empty() ? nullptr : &rules_->happiness[static_cast<size_t>(rep.happiness)];
             int pct = 100 + (mood ? mood->growthPercent : 0) +

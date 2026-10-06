@@ -55,6 +55,24 @@ TEST(citizen_pressure_follows_the_civ_formula) {
     CHECK(g->loyaltyPressure(*g->state().city(home)) > Fixed());
 }
 
+TEST(ages_scale_each_civs_citizen_pressure) {
+    // The same small city beside a foreign one: a Golden Age of the foreign civ presses harder, a Dark Age softer.
+    CityId small = kNoCity;
+    auto pressureWith = [&](Age foreign) {
+        auto g = world([&](GameState& s) {
+            addCity(s, 0, {2, 7}, true, 3);
+            small = addCity(s, 0, {9, 7}, false, 4);
+            addCity(s, 1, {13, 7}, false, 4);
+            addCity(s, 1, {20, 7}, true, 1);
+            s.players[1].age = foreign;
+        });
+        return g->loyaltyPressure(*g->state().city(small));
+    };
+    const Fixed normal = pressureWith(Age::Normal);
+    CHECK(pressureWith(Age::Golden) < normal);
+    CHECK(pressureWith(Age::Dark) > normal);
+}
+
 TEST(monument_and_loyalty_levels) {
     CityId c = kNoCity;
     auto g = world([&](GameState& s) {

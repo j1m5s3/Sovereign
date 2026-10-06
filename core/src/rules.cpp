@@ -718,6 +718,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"FOREIGN_SPREAD_PERCENT", UnitEffectKind::ForeignSpreadPercent}, {"WONDER_CHARGES", UnitEffectKind::WonderCharges},
             {"CONVERT_GOLD", UnitEffectKind::ConvertGold}, {"HEATHEN_CONVERSION", UnitEffectKind::HeathenConversion},
             {"MARTYR", UnitEffectKind::Martyr}, {"HEAL_AURA", UnitEffectKind::HealAura},
+            {"OPEN_GROUND_MOVES", UnitEffectKind::OpenGroundMoves}, {"OBSERVED_RANGE", UnitEffectKind::ObservedRange},
+            {"FIGHT_EMBARKED", UnitEffectKind::FightEmbarked},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -732,7 +734,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"IN_FORMATION", CombatAtom::InFormation},           {"TILE_FORT", CombatAtom::TileFort},
             {"COASTAL_TILE", CombatAtom::CoastalTile},           {"HOME_CONTINENT", CombatAtom::HomeContinent},
             {"OPPONENT_MINOR", CombatAtom::OpponentMinor},       {"OPPONENT_FREE_CITY", CombatAtom::OpponentFreeCity},
-            {"NEAR_OWN_TERRITORY", CombatAtom::NearOwnTerritory},
+            {"NEAR_OWN_TERRITORY", CombatAtom::NearOwnTerritory}, {"NEXT_TO_FRIENDLY_CLASS", CombatAtom::NextToFriendlyClass},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;

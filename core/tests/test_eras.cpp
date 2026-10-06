@@ -56,10 +56,6 @@ TEST(the_world_era_sets_each_civs_age) {
     CHECK(g->state().players[0].age == Age::Golden);
     CHECK(g->state().players[1].age == Age::Dark);
     CHECK_EQ(g->state().players[0].eraScore, 0);
-    // Golden Ages lift a city's loyalty, Dark Ages weigh on it (0.5 per citizen).
-    CHECK_EQ(g->ageLoyalty(g->state().cities[0]), g->state().cities[0].population / 2);
-    CHECK_EQ(g->ageLoyalty(g->state().cities[1]), -(g->state().cities[1].population / 2));
-    CHECK(g->ageLoyalty(g->state().cities[0]) > 0);
     // Out of a Dark Age straight into a Golden one: a Heroic Age.
     GameState next = g->state();
     next.players[1].eraScore = 100;

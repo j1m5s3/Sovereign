@@ -38,6 +38,12 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
     bool ok = false;
     switch (c.atom) {
         case CombatAtom::Untracked: return false;  // unknown conditions never hold, negated or not
+        case CombatAtom::NextToFriendlyClass:
+            for (const Unit& o : x.s->units) {
+                if (o.owner == x.unit->owner && o.id != x.unit->id && x.s->grid.distance(o.pos, x.unit->pos) <= 1 &&
+                    (typeOf(*x.r, o).unitClass == c.value || typeOf(*x.r, o).id == "UNIT_" + c.value)) ok = true;  // a class, or a unit (a Drone)
+            }
+            break;
         case CombatAtom::Attacking: ok = x.attacking; break;
         case CombatAtom::VsClass: ok = opp && opp->unitClass == c.value; break;
         case CombatAtom::VsDomain: ok = opp ? static_cast<int>(opp->domain) == c.arg : c.arg == 0; break;
@@ -236,6 +242,12 @@ int Game::maxMoves(const Unit& unit) const {
     }
     int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit) +
                 ((unit.wonderAbilities & 4) ? 1 : 0);  // the Bermuda Triangle (01)
+    // Heavy Chariot (05): +1 when its turn starts on open ground (flat, no feature). The data puts the ability on the
+    // whole Heavy Cavalry line (Tanks too); Civ VI gives the bonus to the Heavy Chariot alone.
+    if (const int open = typeOf(*rules_, unit).id == "UNIT_HEAVY_CHARIOT" ? unitEffectTotal(unit, UnitEffectKind::OpenGroundMoves) : 0; open > 0) {
+        const Plot& here = state_.plot(unit.pos);
+        if (here.feature == kNone && rules_->terrains[static_cast<size_t>(here.terrain)].relief == Relief::Flat) moves += open;
+    }
     // Dedications in a Golden Age (09).
     {
         const UnitType& ut = typeOf(*rules_, unit);
@@ -255,7 +267,20 @@ int Game::unitRange(const Unit& unit) const {
     const TypeIndex weapon = unit.gear[static_cast<size_t>(GearSlot::Weapon)];
     const int base = !isLeader(unit) ? typeOf(*rules_, unit).range
                      : weapon == kNone ? 0 : rules_->gear[static_cast<size_t>(weapon)].range;
-    return base > 0 ? base + unitEffectTotal(unit, UnitEffectKind::Range) : 0;
+    if (base <= 0) return 0;
+    int range = base + unitEffectTotal(unit, UnitEffectKind::Range);
+    // Observation Balloon, Drone (05: Support units): +1 range for siege units next to one.
+    if (const int observed = unitEffectTotal(unit, UnitEffectKind::ObservedRange); observed > 0) {
+        for (const Unit& o : state_.units) {
+            const std::vector<TypeIndex>& oa = typeOf(*rules_, o).abilities;
+            const TypeIndex observer = rules_->ability("ABILITY_OBSERVATION_STRENGTH_BONUS");
+            if (o.owner == unit.owner && o.id != unit.id && state_.grid.distance(o.pos, unit.pos) <= 1 && std::find(oa.begin(), oa.end(), observer) != oa.end()) {
+                range += observed;
+                break;
+            }
+        }
+    }
+    return range;
 }
 
 int Game::unitSight(const Unit& unit) const {
@@ -816,7 +841,7 @@ CommandError Game::validateCombat(const Command& c) const {
     if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
     if (camp && (camp->owner == c.player || !atWar(c.player, camp->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
-    if (isEmbarked(*u)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation)
+    if (isEmbarked(*u) && !unitHas(*u, UnitEffectKind::FightEmbarked)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation), the Giant Death Robot excepted
 
     if (c.type == CommandType::RangedAttack) {
         if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city && !camp)) return CommandError::CannotAttack;

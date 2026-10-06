@@ -4352,8 +4352,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Movement for naval units"
+     "kind": "MOVES",
+     "amount": 1
     }
    ]
   },
@@ -4420,8 +4420,8 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "adjacent to a friendly Guru unit"
+        "atom": "NEXT_TO_FRIENDLY_CLASS",
+        "value": "GURU"
        }
       ]
      ]
@@ -4465,8 +4465,8 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Movement when starting on open terrain"
+     "kind": "OPEN_GROUND_MOVES",
+     "amount": 1
     }
    ]
   },
@@ -5608,8 +5608,8 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "adjacent to a friendly Drone unit"
+        "atom": "NEXT_TO_FRIENDLY_CLASS",
+        "value": "DRONE"
        }
       ]
      ]
@@ -5624,8 +5624,8 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 range where adjacent to a friendly Observation unit"
+     "kind": "OBSERVED_RANGE",
+     "amount": 1
     }
    ]
   },
@@ -5815,8 +5815,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Movement for naval units"
+     "kind": "MOVES",
+     "amount": 1
     }
    ]
   },
@@ -6103,8 +6103,8 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "adjacent to a friendly Tagma unit"
+        "atom": "NEXT_TO_FRIENDLY_CLASS",
+        "value": "TAGMA"
        }
       ]
      ]
@@ -6125,8 +6125,8 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "adjacent to a friendly Tagma unit"
+        "atom": "NEXT_TO_FRIENDLY_CLASS",
+        "value": "TAGMA"
        }
       ]
      ]
@@ -6575,8 +6575,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit fight while embarked (CanFight=yes)"
+     "kind": "FIGHT_EMBARKED"
     }
    ]
   },
