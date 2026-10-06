@@ -33,6 +33,8 @@ std::string offerText(const Rules& r, const DealItem& i) {
         case DealItemKind::GreatWork: return "a Great Work";
         case DealItemKind::Captive: return "a captured spy";
         case DealItemKind::JointWar: return "a joint war";
+        case DealItemKind::City: return "a city";
+        case DealItemKind::Favor: return "Diplomatic Favor (up to " + std::to_string(i.amount) + ")";
         case DealItemKind::Alliance: {
             static const char* const kTypes[] = {"Research", "Military", "Economic", "Cultural", "Religious"};
             if (i.amount >= 0 && i.amount < kNumAllianceTypes) return std::string("a ") + kTypes[i.amount] + " alliance";
@@ -113,8 +115,9 @@ std::string interpretInstructions(const Persona& p) {
            "intent: \"propose\" when they offer or ask for something tradeable, \"denounce\" when they denounce you, "
            "\"leave\" when they end the talk, otherwise \"chat\". items: each thing changing hands, with from = "
            "\"player\" for what " + p.playerCivName + " gives and \"leader\" for what you give. kind is one of gold, "
-           "gold_per_turn, resource, open_borders, friendship, alliance, peace; amount for gold, gold per turn and strategic "
-           "resources; resource is the resource's name; type for an alliance (research, military, economic, cultural, religious). Use only what they actually said; leave items empty otherwise.";
+           "gold_per_turn, resource, open_borders, friendship, alliance, peace, favor, city; amount for gold, gold per turn, "
+           "Diplomatic Favor and strategic resources; resource is the resource's name; type for an alliance (research, military, "
+           "economic, cultural, religious); city is the name of a city ceded with peace. Use only what they actually said; leave items empty otherwise.";
 }
 
 std::string replyInstructions(const Persona& p, const std::string& proposal, Verdict verdict) {
@@ -144,8 +147,8 @@ std::string summaryInstructions(const Persona& p) {
 const char* interpretSchema() {
     return R"({"type":"object","properties":{"intent":{"type":"string","enum":["chat","propose","denounce","leave"]},)"
            R"("items":{"type":"array","maxItems":10,"items":{"type":"object","properties":{)"
-           R"("kind":{"type":"string","enum":["gold","gold_per_turn","resource","open_borders","friendship","alliance","peace"]},)"
-           R"("from":{"type":"string","enum":["player","leader"]},"amount":{"type":"integer"},"resource":{"type":"string"},)"
+           R"("kind":{"type":"string","enum":["gold","gold_per_turn","resource","open_borders","friendship","alliance","peace","favor","city"]},)"
+           R"("from":{"type":"string","enum":["player","leader"]},"amount":{"type":"integer"},"resource":{"type":"string"},"city":{"type":"string"},)"
            R"("type":{"type":"string","enum":["research","military","economic","cultural","religious"]}},)"
            R"("required":["kind","from"]}}},"required":["intent","items"]})";
 }

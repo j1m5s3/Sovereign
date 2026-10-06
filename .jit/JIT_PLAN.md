@@ -17,7 +17,7 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
    - Moved art is locked for 10 turns (`GREATWORK_ART_LOCK_TIME`).
    - Legacy policy cards can be slotted after their government.
 2. **Done:** **Policy changes for Gold** (`POLICY_COST_*`); **Inquisitors, Launch Inquisition and Gurus** (Remove Heresy, heal charges); **Trading Posts** (route range from the last post, +Gold per foreign post); **Future Tech and Future Civic** (repeatable).
-3. **Deals and city-states:** ceding cities and trading Diplomatic Favor in deals; Suzerain War (city-states join their suzerain's wars); Make Demand.
+3. **Done: Deals and city-states:** ceding cities and trading Diplomatic Favor in deals; Suzerain War (city-states join their suzerain's wars); Make Demand.
 4. **Larger, as time allows:**
    - World Congress resolutions (12 more);
    - historic moments (about 140 still unawarded);
@@ -38,3 +38,6 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
 - Policy changes for Gold: the spec leaves the formula unverified. The core charges POLICY_COST_BASE + (POLICY_COST_INCREASE_TO_BE_EXPONENTED x civics done)^1.5, rounded down to POLICY_COST_VISIBLE_DIVISOR; the `BuyPolicyChanges` command opens the turn's changes.
 - Launch Inquisition is open to the founder of the Apostle's religion, once. Inquisitors are bought in cities following the player's own religion.
 - Trade range refuels in the player's own cities and in cities holding its Trading Post. Routes may go to city-states (they could not before).
+- Make Demand is a deal in which only the other side gives. An AI yields to a civ at least twice as strong when the demand costs it at most 200 Gold of worth, plus 100 for each further multiple of strength. It resents the demand (−10 opinion). The AI does not make demands itself yet.
+- Ceded cities: peace deals only; never the capital or the giver's last city. A ceded city arrives at 50 loyalty. An AI losing badly values peace at 400. The AI does not offer cities itself.
+- Suzerain War: the city-states of either side's suzerainty join a war between majors, and make peace with them.
