@@ -1019,6 +1019,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.faithOnly = j["faithOnly"].boolean(false);
             b.tradeCapacity = static_cast<int>(j["tradeCapacity"].integer(0));
             b.spreadCharges = static_cast<int>(j["spreadCharges"].integer(0));
+            b.regionalRange = static_cast<int>(j["regionalRange"].integer(0));
             {
                 static const char* const slotNames[] = {"MILITARY", "ECONOMIC", "DIPLOMATIC", "WILDCARD"};
                 for (size_t k = 0; k < 4; ++k) b.policySlots[k] = static_cast<int>(j["policySlots"][slotNames[k]].integer(0));

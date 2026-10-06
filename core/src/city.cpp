@@ -340,6 +340,26 @@ CityReport Game::cityReport(CityId id) const {
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
         for (TypeIndex bi : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
     }
+    // Regional buildings (03: a Factory, Zoo, Stadium, Aquarium... reaches the owner's cities within its range): a city
+    // without one of its own takes the yields and Amenities of the nearest in range, once per building type, and its
+    // powered bonus while the holding city is powered.
+    std::vector<TypeIndex> regional;
+    for (const City& o : state_.cities) {
+        if (o.owner != c->owner || o.id == c->id) continue;
+        const int d = state_.grid.distance(o.pos, c->pos);
+        const bool powered = o.powerDemand > 0 && o.powerSupply >= o.powerDemand;
+        for (TypeIndex bi : o.buildings) {
+            const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
+            if (bt.regionalRange <= 0 || d > bt.regionalRange || c->has(bi) || std::find(regional.begin(), regional.end(), bi) != regional.end()) continue;
+            if (bt.districtType != kNone) {
+                const CityDistrict* home = o.district(bt.districtType, true);
+                if (home && home->pillagedTurns > 0) continue;
+            }
+            regional.push_back(bi);
+            for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i] + (powered && bt.requiredPower > 0 ? bt.poweredYields[i] : Fixed());
+            rep.amenities += bt.amenities + (powered ? bt.poweredAmenities : 0);
+        }
+    }
     {
         const CivAbility& ab = civAbility(c->owner);
         for (TypeIndex b : c->buildings) {

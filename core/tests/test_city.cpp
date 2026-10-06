@@ -278,3 +278,23 @@ TEST(city_bankruptcy_disbands_units) {
     // Income +5 - 1 upkeep leaves -16, below the -10 line.
     CHECK(g->state().unit(spear) == nullptr);
 }
+
+TEST(regional_buildings_reach_the_owners_cities_in_range) {
+    // A Factory (regional 6) in one city: a second city 4 plots away takes its +3 Production; one 10 away does not.
+    GameState s = flatState(30, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    const CityId a = sovtest::addCity(s, 0, {5, 5}, true, 3);
+    const CityId near = sovtest::addCity(s, 0, {9, 5}, false, 3);
+    const CityId far = sovtest::addCity(s, 0, {15, 5}, false, 3);
+    auto plain = Game::fromScenario(rules(), s);
+    City& host = *s.city(a);
+    host.districts.push_back({rules().district("DISTRICT_INDUSTRIAL_ZONE"), {5, 6}, true});
+    host.buildings.push_back(rules().building("BUILDING_WORKSHOP"));
+    host.buildings.push_back(rules().building("BUILDING_FACTORY"));
+    std::sort(host.buildings.begin(), host.buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(rules().buildings[static_cast<size_t>(rules().building("BUILDING_FACTORY"))].regionalRange == 6);
+    const size_t prod = static_cast<size_t>(YieldType::Production);
+    CHECK(g->cityReport(near).yields[prod] > plain->cityReport(near).yields[prod]);
+    CHECK_EQ(g->cityReport(far).yields[prod], plain->cityReport(far).yields[prod]);
+}

@@ -450,6 +450,7 @@ struct BuildingType {
     std::optional<Theming> theming;
     int tradeCapacity = 0;                 // + trade route capacity
     int spreadCharges = 0;                 // + spread charges for the owner's religious units (Hagia Sophia)
+    int regionalRange = 0;                 // Factory, Zoo, Stadium, Aquarium...: its yields and Amenities reach the owner's cities this near (03)
     int modifierCount = 0;                 // modifiers it carries (counted at load, for the AI's valuation)
     int policySlots[4] = {0, 0, 0, 0};     // + policy slots by PolicySlot (Alhambra, Forbidden City, Potala Palace, Big Ben)
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)

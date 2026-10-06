@@ -624,6 +624,8 @@ def gen_buildings():
             b["housing"] = num(row["Housing"])
         if row["Amenity"]:
             b["amenities"] = num(row["Amenity"])
+        if row.get("Regional range") and num(row["Regional range"]):
+            b["regionalRange"] = num(row["Regional range"])  # its effects reach the owner's cities this near (03)
         # Specialist slots it opens in its district, and what each specialist there gains (02: Citizens and specialists).
         if row["Citizen slots"] and num(row["Citizen slots"]):
             b["citizenSlots"] = num(row["Citizen slots"])
