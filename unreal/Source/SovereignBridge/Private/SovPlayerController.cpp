@@ -274,7 +274,9 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 	const bool bEnemyUnit = S.foreignUnitAt(Target, Me()) && G.visibility(Me(), Target) == sov::Visibility::Visible;
 	if (SelectedCity >= 0)
 	{
-		Send(sov::Command::cityStrike(Me(), SelectedCity, Target));
+		// Ctrl+right-click: the city's Encampment fires (03: Defense).
+		const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+		Send(bCtrl ? sov::Command::encampmentStrike(Me(), SelectedCity, Target) : sov::Command::cityStrike(Me(), SelectedCity, Target));
 		return;
 	}
 	const sov::Unit* U = S.unit(SelectedUnit);
@@ -932,6 +934,30 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			if (G.canHarvestAt(Me(), U->pos))
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
+			}
+			// Formations (05): merge with a neighbouring twin.
+			for (const sov::Unit& W : G.state().units)
+			{
+				if (G.formationProblem(Me(), U->id, W.id) == sov::CommandError::Ok)
+				{
+					Choices.Add({FString::Printf(TEXT("Form %s with unit %d"), U->formation == 0 ? TEXT("a Corps") : TEXT("an Army"), W.id), sov::Command::formUnit(Me(), U->id, W.id)});
+				}
+			}
+			// Pillage (military units in enemy land) and repair (Builders on a pillaged improvement of ours).
+			if (G.pillageProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Pillage"), sov::Command::pillage(Me(), U->id)});
+			}
+			for (const sov::Hex& Shore : G.state().grid.within(U->pos, 1))
+			{
+				if (G.coastalRaidProblem(Me(), U->id, Shore) == sov::CommandError::Ok)
+				{
+					Choices.Add({FString::Printf(TEXT("Coastal raid at %d,%d"), Shore.x, Shore.y), sov::Command::coastalRaid(Me(), U->id, Shore)});
+				}
+			}
+			if (G.repairProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Repair the improvement"), sov::Command::repairImprovement(Me(), U->id)});
 			}
 			// Military Engineers [GS]: a railroad here, a tunnel into a neighbouring mountain.
 			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
@@ -1665,6 +1691,15 @@ void ASovPlayerController::UpdatePanel()
 			C->powerDemand > 0 || C->powerSupply > 0
 				? *FString::Printf(TEXT("   Power %d/%d%s"), C->powerSupply, C->powerDemand, C->powerSupply < C->powerDemand ? TEXT(" (short)") : TEXT(""))
 				: TEXT("")));
+		// Specialists (02): citizens working district slots.
+		{
+			FString Spec;
+			for (const sov::CityDistrict& D : C->districts)
+			{
+				if (D.specialists > 0) Spec += FString::Printf(TEXT("   %s %d/%d"), *Str(R.districts[static_cast<size_t>(D.type)].name), D.specialists, G.specialistSlots(*C, D));
+			}
+			if (!Spec.IsEmpty()) L.Add(TEXT("Specialists:") + Spec);
+		}
 		// Religion here (06): the majority, and every faith with followers.
 		{
 			const int32 Maj = G.cityMajorityReligion(*C);

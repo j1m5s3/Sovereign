@@ -887,8 +887,11 @@ void build(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
     if (u->moveTarget) return;
+    // A pillaged improvement is repaired first (no charge; 05: Pillage).
+    if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
+        if (p.owner == v.me && p.improvement != kNone && p.pillagedTurns > 0) return 70;  // to repair
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
         // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).
         const std::vector<TypeIndex> opts = v.game.improvementsAt(v.me, h);
@@ -903,7 +906,7 @@ void build(View& v, UnitId id) {
         if (c && std::binary_search(c->worked.begin(), c->worked.end(), s.grid.index(h))) w += 10;
         return w;
     };
-    if (worth(u->pos) >= 0) {
+    if (worth(u->pos) >= 0 && s.plot(u->pos).improvement == kNone) {
         // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
         options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
@@ -1899,6 +1902,12 @@ void cityActions(View& v) {
         for (const Hex& h : v.s().grid.within(c->pos, 2)) {
             if (v.game.canCityStrike(cid, h) && v.game.submit(Command::cityStrike(v.me, cid, h)) == CommandError::Ok) break;
         }
+        // The Encampment fires too (03: Defense).
+        if (const CityDistrict* camp = v.game.encampmentOf(*c)) {
+            for (const Hex& h : v.s().grid.within(camp->pos, 2)) {
+                if (v.game.canEncampmentStrike(cid, h) && v.game.submit(Command::encampmentStrike(v.me, cid, h)) == CommandError::Ok) break;
+            }
+        }
     }
 }
 
@@ -2086,8 +2095,43 @@ void playTurn(Game& game) {
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }
     survey(v);
+    // Formations (05): neighbouring twins merge into Corps, Corps and twins into Armies.
+    {
+        std::vector<std::pair<UnitId, UnitId>> merges;
+        std::vector<UnitId> taken;
+        for (const Unit& u : game.state().units) {
+            if (u.owner != v.me || std::find(taken.begin(), taken.end(), u.id) != taken.end()) continue;
+            for (const Unit& w : game.state().units) {
+                if (w.id == u.id || std::find(taken.begin(), taken.end(), w.id) != taken.end()) continue;
+                if (game.formationProblem(v.me, u.id, w.id) != CommandError::Ok) continue;
+                merges.push_back({u.id, w.id});
+                taken.push_back(u.id);
+                taken.push_back(w.id);
+                break;
+            }
+        }
+        for (const auto& [a, b] : merges) game.submit(Command::formUnit(v.me, a, b));
+    }
     military(v);
     attacks(v);  // units that moved into reach
+    // Units standing in enemy land with moves to spare pillage what is there (05: Pillage).
+    std::vector<UnitId> raiders;
+    for (const Unit& u : game.state().units) {
+        if (u.owner == v.me && game.pillageProblem(v.me, u.id) == CommandError::Ok) raiders.push_back(u.id);
+    }
+    for (UnitId uid : raiders) game.submit(Command::pillage(v.me, uid));
+    // Ships raid the enemy coast beside them (05: Coastal raid).
+    std::vector<std::pair<UnitId, Hex>> raids;
+    for (const Unit& u : game.state().units) {
+        if (u.owner != v.me || v.r.units[at(u.type)].domain != Domain::Sea) continue;
+        for (const Hex& h : game.state().grid.within(u.pos, 1)) {
+            if (game.coastalRaidProblem(v.me, u.id, h) == CommandError::Ok) {
+                raids.push_back({u.id, h});
+                break;
+            }
+        }
+    }
+    for (const auto& [uid, h] : raids) game.submit(Command::coastalRaid(v.me, uid, h));
     leader(v);
     production(v);
     upgrades(v);

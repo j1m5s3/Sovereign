@@ -414,6 +414,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(u.moved);
         w.boolean(u.attacked);
         w.i32(u.camp);
+        w.u8(u.formation);
         for (TypeIndex g : u.gear) w.i32(g);
         w.i32(u.escorting);
     }
@@ -445,6 +446,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.wallHp);
         w.i32(c.lastAttackedTurn);
         w.boolean(c.struck);
+        w.boolean(c.encampmentStruck);
         w.i8(c.originalOwner);
         w.boolean(c.originalCapital);
         w.i32(c.capturedTurn);
@@ -453,6 +455,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(d.type);
             writeHex(w, d.pos);
             w.boolean(d.complete);
+            w.u8(d.pillagedTurns);
+            w.u8(d.specialists);
         }
         w.i32(c.loyalty);
         w.i32(c.powerDemand);
@@ -831,6 +835,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.moved = r.boolean();
         u.attacked = r.boolean();
         u.camp = r.i32();
+        u.formation = r.u8();
+        if (u.formation > 2) return false;
         for (TypeIndex& g : u.gear) g = static_cast<TypeIndex>(r.i32());
         u.escorting = r.i32();
     }
@@ -869,6 +875,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.wallHp = r.i32();
         c.lastAttackedTurn = r.i32();
         c.struck = r.boolean();
+        c.encampmentStruck = r.boolean();
         c.originalOwner = r.i8();
         c.originalCapital = r.boolean();
         c.capturedTurn = r.i32();
@@ -879,6 +886,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
             d.type = r.i16();
             d.pos = readHex(r);
             d.complete = r.boolean();
+            d.pillagedTurns = r.u8();
+            d.specialists = r.u8();
         }
         c.loyalty = r.i32();
         c.powerDemand = r.i32();

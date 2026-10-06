@@ -44,6 +44,7 @@
     "SCIENCE": 2
    },
    "unlock": "TECH_WRITING",
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 1
@@ -60,6 +61,7 @@
    },
    "unlock": "TECH_EDUCATION",
    "housing": 1,
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_LIBRARY"
    ],
@@ -78,6 +80,10 @@
     "SCIENCE": 3
    },
    "unlock": "TECH_CHEMISTRY",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "SCIENCE": 1
+   },
    "requires": [
     "BUILDING_UNIVERSITY"
    ],
@@ -218,6 +224,7 @@
     "GOLD": 2
    },
    "unlock": "TECH_CURRENCY",
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 1
@@ -234,6 +241,7 @@
     "GOLD": 5
    },
    "unlock": "TECH_BANKING",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_MARKET"
    ],
@@ -252,6 +260,10 @@
     "GOLD": 4
    },
    "unlock": "TECH_ECONOMICS",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "GOLD": 2
+   },
    "requires": [
     "BUILDING_BANK"
    ],
@@ -309,6 +321,7 @@
    },
    "unlock": "TECH_BRONZE_WORKING",
    "housing": 1,
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_GENERAL": 1
@@ -325,6 +338,7 @@
    },
    "unlock": "TECH_HORSEBACK_RIDING",
    "housing": 1,
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_GENERAL": 1
@@ -340,6 +354,7 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_MILITARY_ENGINEERING",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_BARRACKS",
     "BUILDING_STABLE"
@@ -360,6 +375,10 @@
    },
    "unlock": "TECH_MILITARY_SCIENCE",
    "housing": 1,
+   "citizenSlots": 1,
+   "specialistYields": {
+    "PRODUCTION": 1
+   },
    "requires": [
     "BUILDING_ARMORY"
    ],
@@ -527,6 +546,7 @@
    "yields": {},
    "unlock": "TECH_CELESTIAL_NAVIGATION",
    "housing": 1,
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
@@ -544,6 +564,7 @@
     "FOOD": 1
    },
    "unlock": "TECH_MASS_PRODUCTION",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_LIGHTHOUSE"
    ],
@@ -564,6 +585,10 @@
    },
    "unlock": "TECH_ELECTRICITY",
    "housing": 1,
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FOOD": 1
+   },
    "requires": [
     "BUILDING_SHIPYARD"
    ],
@@ -582,6 +607,7 @@
     "FAITH": 2
    },
    "unlock": "TECH_ASTROLOGY",
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_PROPHET": 1
@@ -597,6 +623,7 @@
     "FAITH": 4
    },
    "unlock": "CIVIC_THEOLOGY",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_SHRINE"
    ],
@@ -617,6 +644,10 @@
    "yields": {
     "FAITH": 3
    },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -636,6 +667,10 @@
     "FOOD": 2
    },
    "housing": 1,
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -651,6 +686,10 @@
     "FAITH": 3,
     "PRODUCTION": 2
    },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -664,6 +703,10 @@
    "maintenance": 0,
    "yields": {
     "FAITH": 3
+   },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
    },
    "requires": [
     "BUILDING_TEMPLE"
@@ -679,6 +722,10 @@
    "yields": {
     "FAITH": 3
    },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -692,6 +739,10 @@
    "maintenance": 0,
    "yields": {
     "FAITH": 5
+   },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
    },
    "requires": [
     "BUILDING_TEMPLE"
@@ -708,6 +759,10 @@
     "FAITH": 3,
     "SCIENCE": 2
    },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -723,6 +778,10 @@
     "FAITH": 3
    },
    "amenities": 1,
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
+   },
    "requires": [
     "BUILDING_TEMPLE"
    ],
@@ -736,6 +795,10 @@
    "maintenance": 0,
    "yields": {
     "FAITH": 3
+   },
+   "citizenSlots": 1,
+   "specialistYields": {
+    "FAITH": 1
    },
    "requires": [
     "BUILDING_TEMPLE"
@@ -752,6 +815,7 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_APPRENTICESHIP",
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 1
@@ -765,6 +829,10 @@
    "maintenance": 3,
    "yields": {},
    "unlock": "TECH_INDUSTRIALIZATION",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "PRODUCTION": 1
+   },
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -787,6 +855,7 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_INDUSTRIALIZATION",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_WORKSHOP"
    ],
@@ -809,6 +878,10 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_ELECTRICITY",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "PRODUCTION": 1
+   },
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -832,6 +905,10 @@
     "SCIENCE": 3
    },
    "unlock": "TECH_NUCLEAR_FISSION",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "PRODUCTION": 1
+   },
    "requires": [
     "BUILDING_FACTORY"
    ],
@@ -908,6 +985,7 @@
     "CULTURE": 2
    },
    "unlock": "CIVIC_DRAMA_AND_POETRY",
+   "citizenSlots": 1,
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_WRITER": 1
@@ -926,6 +1004,7 @@
     "CULTURE": 2
    },
    "unlock": "CIVIC_HUMANISM",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
@@ -948,6 +1027,7 @@
     "CULTURE": 2
    },
    "unlock": "CIVIC_HUMANISM",
+   "citizenSlots": 1,
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
@@ -970,6 +1050,10 @@
     "CULTURE": 2
    },
    "unlock": "TECH_RADIO",
+   "citizenSlots": 1,
+   "specialistYields": {
+    "CULTURE": 1
+   },
    "requires": [
     "BUILDING_ART_MUSEUM",
     "BUILDING_ARCHAEOLOGICAL_MUSEUM"

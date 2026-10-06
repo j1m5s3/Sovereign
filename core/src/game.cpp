@@ -263,6 +263,9 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
+        case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
+        case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
+        case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
             if (!a || !a->spy || a->owner != c.player || a->promotionsPending <= 0 || c.arg < 0 || static_cast<size_t>(c.arg) >= rules_->spyPromotions.size() ||
@@ -636,6 +639,8 @@ void Game::refreshVisibility(PlayerId pid) {
     }
     for (const City& c : state_.cities) {
         if (shares(c.owner)) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
+        // An Encampment watches its strike range (Sovereign reading; 03: Defense).
+        if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;
@@ -735,6 +740,30 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
+        case CommandType::Pillage:
+            if (c.arg == 1) pillage(c.id, c.target);
+            else pillage(c.id);
+            break;
+        case CommandType::FormUnit: {
+            Unit& u = *state_.unit(c.id);
+            const Unit& w = *state_.unit(c.arg);
+            ++u.formation;
+            u.hp = std::max(u.hp, w.hp);  // the stronger of the two carries on
+            u.xp = std::max(u.xp, w.xp);
+            u.movesLeft = Fixed();        // forming takes the turn
+            u.moveTarget.reset();
+            removeUnit(c.arg);
+            refreshVisibility(c.player);
+            break;
+        }
+        case CommandType::RepairImprovement: {
+            Unit& u = *state_.unit(c.id);
+            state_.plot(u.pos).pillagedTurns = 0;
+            u.movesLeft = Fixed();  // repairing takes the Builder's turn, not a charge
+            u.moveTarget.reset();
+            if (City* city = state_.city(state_.plot(u.pos).city)) assignCitizens(*city);
+            break;
+        }
         case CommandType::BuildRailroad: {
             Unit& u = *state_.unit(c.id);
             const RouteType& rr = rules_->routes[static_cast<size_t>(railroad())];
@@ -977,6 +1006,13 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         payUnitFuel(pid);
         burnPower(pid);
         processWarWeariness(pid);
+        // Pillaged districts are repaired over their owner's turns (Sovereign reading of the repair).
+        for (City& city : state_.cities) {
+            if (city.owner != pid) continue;
+            for (CityDistrict& d : city.districts) {
+                if (d.pillagedTurns > 0) --d.pillagedTurns;
+            }
+        }
         processGreatPeople(pid);
         processTrade(pid);
         processEnvoys(pid);

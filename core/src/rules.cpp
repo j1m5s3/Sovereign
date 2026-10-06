@@ -337,6 +337,20 @@ bool Rules::load(const std::vector<std::string>& dirs, std::string* error) {
     return loadFromText(layers, error);
 }
 
+namespace {
+Plunder readPlunder(const Json& j) {
+    Plunder p;
+    if (!j.isObject()) return p;
+    static const std::pair<const char*, PlunderKind> kinds[] = {{"GOLD", PlunderKind::Gold}, {"FAITH", PlunderKind::Faith}, {"SCIENCE", PlunderKind::Science},
+                                                                {"CULTURE", PlunderKind::Culture}, {"HEAL", PlunderKind::Heal}};
+    for (const auto& [name, kind] : kinds) {
+        if (j["kind"].str() == name) p.kind = kind;
+    }
+    p.amount = static_cast<int>(j["amount"].integer(0));
+    return p;
+}
+}  // namespace
+
 bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& layers, std::string* error) {
     std::string localError;
     if (!error) error = &localError;
@@ -750,6 +764,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
             im.airSlots = static_cast<int>(j["airSlots"].integer(0));
             im.tunnel = j["tunnel"].boolean(false);
+            im.plunder = readPlunder(j["plunder"]);
             im.builtById = j["builtBy"].str();
             const Json& adj = j["adjacentImprovementYield"];
             if (adj.isObject()) {
@@ -793,6 +808,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.maintenance = static_cast<int>(j["maintenance"].integer(0));
             b.yields = readYields(j["yields"]);
             b.housing = j["housing"].fixed();
+            b.citizenSlots = static_cast<int>(j["citizenSlots"].integer(0));
+            b.specialistYields = readYields(j["specialistYields"]);
             b.amenities = static_cast<int>(j["amenities"].integer(0));
             b.outerDefenseHp = static_cast<int>(j["outerDefenseHp"].integer(0));
             b.airSlots = static_cast<int>(j["airSlots"].integer(0));
@@ -862,6 +879,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.housing = static_cast<int>(j["housing"].integer(0));
         d.amenities = static_cast<int>(j["amenities"].integer(0));
         d.airSlots = static_cast<int>(j["airSlots"].integer(0));
+        d.plunder = readPlunder(j["plunder"]);
+        d.specialistYields = readYields(j["specialistYields"]);
         d.canal = j["canal"].boolean(false);
         d.appeal = static_cast<int>(j["appeal"].integer(0));
         for (const Json& band : j["appealHousing"].items()) {

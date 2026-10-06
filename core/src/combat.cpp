@@ -207,6 +207,11 @@ bool Game::inEnemyZoc(const Unit& mover, Hex plot) const {
         if (h == plot) continue;
         const City* c = state_.cityAt(h);
         if (c && atWar(mover.owner, c->owner)) return true;
+        // An Encampment exerts zone of control like a city (03: Defense).
+        if (const CityDistrict* d = state_.districtAt(h); d && d->complete && rules_->districts[static_cast<size_t>(d->type)].id == "DISTRICT_ENCAMPMENT") {
+            const PlayerId owner = state_.plot(h).owner;
+            if (owner != kNoPlayer && atWar(mover.owner, owner)) return true;
+        }
         for (const Unit& u : state_.units) {
             if (u.pos == h && atWar(mover.owner, u.owner) && exertsZoc(u)) return true;
         }
@@ -293,6 +298,9 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
     }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
+    // Formations (05): a Corps or Fleet +10, an Army or Armada +17.
+    if (unit.formation == 1) s += rules_->globalInt("COMBAT_CORPS_STRENGTH_MODIFIER");
+    if (unit.formation >= 2) s += rules_->globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
     const bool embarked = isEmbarked(unit);
@@ -405,6 +413,11 @@ int Game::cityStrength(const City& city) const {
     if (garrison && garrison->owner == city.owner) s = std::max(s, typeOf(*rules_, *garrison).combat);
     for (TypeIndex b : city.buildings) s += rules_->buildings[static_cast<size_t>(b)].defense;
     s += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDefense).toInt());
+    // CityStrengthModifier 2 (03: Defense; not in the extracted tables): Encampment, Government Plaza, Diplomatic Quarter.
+    for (const CityDistrict& d : city.districts) {
+        const std::string& id = rules_->districts[static_cast<size_t>(d.type)].id;
+        if (d.complete && (id == "DISTRICT_ENCAMPMENT" || id == "DISTRICT_GOVERNMENT_PLAZA" || id == "DISTRICT_DIPLOMATIC_QUARTER")) s += 2;
+    }
     const Plot& p = state_.plot(city.pos);
     s += rules_->terrains[static_cast<size_t>(p.terrain)].defense;
     if (p.feature != kNone) s += rules_->features[static_cast<size_t>(p.feature)].defense;
@@ -443,6 +456,27 @@ bool Game::canCityStrike(CityId id, Hex target) const {
     const int dist = state_.grid.distance(c->pos, *t);
     if (dist < 1 || dist > rules_->districts[static_cast<size_t>(center)].attackRange) return false;
     return visibility(c->owner, *t) == Visibility::Visible && lineOfSight(c->pos, *t);
+}
+
+const CityDistrict* Game::encampmentOf(const City& city) const {
+    for (const CityDistrict& d : city.districts) {
+        if (d.complete && d.pillagedTurns == 0 && rules_->districts[static_cast<size_t>(d.type)].id == "DISTRICT_ENCAMPMENT") return &d;
+    }
+    return nullptr;
+}
+
+bool Game::canEncampmentStrike(CityId id, Hex target) const {
+    const City* c = state_.city(id);
+    if (!c || c->encampmentStruck || cityMaxWallHp(*c) <= 0) return false;  // the Encampment arms with the city's walls
+    const CityDistrict* camp = encampmentOf(*c);
+    if (!camp) return false;
+    auto t = state_.grid.normalize(target);
+    if (!t || *t != target) return false;
+    const Unit* u = defenderAt(*t);
+    if (!u || !atWar(c->owner, u->owner)) return false;
+    const int dist = state_.grid.distance(camp->pos, *t);
+    if (dist < 1 || dist > rules_->districts[static_cast<size_t>(camp->type)].attackRange) return false;
+    return visibility(c->owner, *t) == Visibility::Visible && lineOfSight(camp->pos, *t);
 }
 
 bool Game::canRazeCity(PlayerId player, CityId id) const {
@@ -601,7 +635,8 @@ CommandError Game::validateCombat(const Command& c) const {
             const City* city = state_.city(c.id);
             if (!city) return CommandError::BadCity;
             if (city->owner != c.player) return CommandError::NotYourCity;
-            return canCityStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
+            if (c.arg == 1) return canEncampmentStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
+            return c.arg == 0 && canCityStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
         }
         case CommandType::RazeCity: {
             const City* city = state_.city(c.id);
@@ -778,7 +813,8 @@ void Game::applyCombat(const Command& c) {
             const int sd = combatStrengthVsCity(*target, city, false, true);
             const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
             target->hp -= combatDamage(sa - sd, roll);
-            city.struck = true;
+            if (c.arg == 1) city.encampmentStruck = true;
+            else city.struck = true;
             if (target->hp <= 0 && isLeader(*target)) {
                 leaderLost(target->id, city.owner, false);  // a ranged kill
             } else if (target->hp <= 0) {
@@ -1246,6 +1282,7 @@ void Game::healCities(PlayerId pid) {
         if (c.wallHp < maxWalls && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
             c.wallHp = std::min(maxWalls, c.wallHp + rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES"));
         c.struck = false;
+        c.encampmentStruck = false;
     }
 }
 

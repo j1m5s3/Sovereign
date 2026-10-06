@@ -18,6 +18,10 @@
    ],
    "validResources": [],
    "appeal": -1,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "builtBy": "UNIT_MILITARY_ENGINEER",
    "airSlots": 3
   },
@@ -34,7 +38,11 @@
    "validFeatures": [
     "FEATURE_VOLCANIC_SOIL"
    ],
-   "validResources": []
+   "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_CAMP",
@@ -69,7 +77,11 @@
      "unlock": "TECH_SYNTHETIC_MATERIALS"
     }
    ],
-   "housing": 0.5
+   "housing": 0.5,
+   "plunder": {
+    "kind": "FAITH",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_FARM",
@@ -111,7 +123,11 @@
      "needs": "TECH_REPLACEABLE_PARTS"
     }
    ],
-   "housing": 0.5
+   "housing": 0.5,
+   "plunder": {
+    "kind": "HEAL",
+    "amount": 50
+   }
   },
   {
    "id": "IMPROVEMENT_FISHING_BOATS",
@@ -155,7 +171,11 @@
      "improvement": "IMPROVEMENT_SEASTEAD"
     }
    ],
-   "housing": 0.5
+   "housing": 0.5,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_FORT",
@@ -178,6 +198,10 @@
     "FEATURE_VOLCANIC_SOIL"
    ],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "builtBy": "UNIT_MILITARY_ENGINEER",
    "defense": 4
   },
@@ -194,6 +218,10 @@
     "FEATURE_GEOTHERMAL_FISSURE"
    ],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "powerProvided": 4
   },
   {
@@ -220,7 +248,11 @@
      "amount": 1,
      "unlock": "TECH_CYBERNETICS"
     }
-   ]
+   ],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_MINE",
@@ -270,7 +302,11 @@
      "unlock": "TECH_SMART_MATERIALS"
     }
    ],
-   "appeal": -1
+   "appeal": -1,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 50
+   }
   },
   {
    "id": "IMPROVEMENT_MISSILE_SILO",
@@ -288,6 +324,10 @@
     "FEATURE_VOLCANIC_SOIL"
    ],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "builtBy": "UNIT_MILITARY_ENGINEER"
   },
   {
@@ -304,6 +344,10 @@
    ],
    "validFeatures": [],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "builtBy": "UNIT_MILITARY_ENGINEER",
    "tunnel": true
   },
@@ -329,7 +373,11 @@
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
    ],
-   "appeal": -1
+   "appeal": -1,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_OFFSHORE_WIND_FARM",
@@ -343,6 +391,10 @@
    ],
    "validFeatures": [],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "powerProvided": 2
   },
   {
@@ -375,7 +427,11 @@
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
    ],
-   "appeal": -1
+   "appeal": -1,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_PASTURE",
@@ -408,7 +464,11 @@
      "unlock": "TECH_ROBOTICS"
     }
    ],
-   "housing": 0.5
+   "housing": 0.5,
+   "plunder": {
+    "kind": "FAITH",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_PLANTATION",
@@ -452,7 +512,11 @@
      "unlock": "CIVIC_FEUDALISM"
     }
    ],
-   "housing": 0.5
+   "housing": 0.5,
+   "plunder": {
+    "kind": "FAITH",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_QUARRY",
@@ -485,7 +549,11 @@
      "unlock": "TECH_PREDICTIVE_SYSTEMS"
     }
    ],
-   "appeal": -1
+   "appeal": -1,
+   "plunder": {
+    "kind": "FAITH",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_SEASTEAD",
@@ -508,7 +576,11 @@
      "improvement": "IMPROVEMENT_FISHING_BOATS"
     }
    ],
-   "housing": 2.0
+   "housing": 2.0,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_SKI_RESORT",
@@ -523,7 +595,11 @@
     "TERRAIN_SNOW_MOUNTAIN"
    ],
    "validFeatures": [],
-   "validResources": []
+   "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   },
   {
    "id": "IMPROVEMENT_SOLAR_FARM",
@@ -541,6 +617,10 @@
    ],
    "validFeatures": [],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "powerProvided": 2
   },
   {
@@ -560,6 +640,10 @@
    ],
    "validFeatures": [],
    "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
    "powerProvided": 2
   }
  ]

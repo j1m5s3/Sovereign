@@ -34,6 +34,13 @@ enum class ResourceClass : uint8_t { Bonus = 0, Luxury, Strategic };
 using TypeIndex = int16_t;
 constexpr TypeIndex kNone = -1;
 
+// What pillaging gives the unit's owner (05: Pillage; data: Districts.PlunderType/Amount).
+enum class PlunderKind : uint8_t { None = 0, Gold, Faith, Science, Culture, Heal };
+struct Plunder {
+    PlunderKind kind = PlunderKind::None;
+    int amount = 0;
+};
+
 // What unlocks a unit, building, resource, government or policy: a tech or a
 // civic (04-tech-civics-government.md). An empty unlock is available from the start.
 struct Unlock {
@@ -267,6 +274,7 @@ struct ImprovementType {
     std::string builtById;      // (loading only)
     int airSlots = 0;           // aircraft it bases (Airstrip)
     bool tunnel = false;        // Mountain Tunnel: its mountain becomes passable (built from a neighbouring plot)
+    Plunder plunder;            // what pillaging it gives
 };
 
 // One-time effects of great people and wonders (07: Great People; 03: Wonders).
@@ -327,6 +335,8 @@ struct BuildingType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;   // (loading only)
     int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
+    int citizenSlots = 0;              // specialist slots it opens in its district (02)
+    Yields specialistYields{};         // extra yields for each specialist in its district
     // Power [GS] (09: Power).
     int requiredPower = 0;             // power it needs to work fully
     Yields poweredYields{};            // extra yields while its city is fully powered
@@ -466,6 +476,8 @@ struct DistrictType {
     int airSlots = 0;                      // aircraft based here (City Center 1, Aerodrome 2)
     bool canal = false;                    // between two bodies of water (or water and the City Center); ships sail through
     std::vector<std::string> exclusiveIds;  // (loading only)
+    Plunder plunder;  // what pillaging it gives (05: Pillage)
+    Yields specialistYields{};  // each specialist working in it (02: Citizens and specialists)
 };
 
 // Amenity balance bands (eras-moments-loyalty.md, Amenities).

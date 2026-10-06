@@ -70,6 +70,7 @@ struct Unit {
     // The leader's loadout per GearSlot (kNone: empty); unused by other units.
     std::array<TypeIndex, kNumGearSlots> gear{{kNone, kNone, kNone}};
     UnitId escorting = kNoUnit;  // military unit linked to this leader; moves with it while they share a plot
+    uint8_t formation = 0;       // 0 single, 1 Corps/Fleet, 2 Army/Armada (05: Formations)
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
@@ -94,6 +95,8 @@ struct CityDistrict {
     TypeIndex type = kNone;  // Rules::districts
     Hex pos;
     bool complete = false;
+    uint8_t pillagedTurns = 0;  // pillaged (05: Pillage): no adjacency, its buildings idle, until repaired
+    uint8_t specialists = 0;    // citizens working here as specialists (02: Citizens and specialists)
 };
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
@@ -264,6 +267,7 @@ struct SOV_API City {
     int wallHp = 0;          // outer defence hit points left
     int lastAttackedTurn = -100;
     bool struck = false;     // made its ranged strike this turn
+    bool encampmentStruck = false;  // its Encampment made its strike this turn (03: Defense)
     PlayerId originalOwner = kNoPlayer;
     bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)

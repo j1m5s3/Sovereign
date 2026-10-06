@@ -115,6 +115,8 @@ public:
     std::vector<CityId> citiesNeedingProduction(PlayerId player) const;
     // Net gold per turn: city gold minus building and unit maintenance.
     Fixed goldPerTurn(PlayerId player) const;
+    // Puts its citizens to work: the best plots and specialist slots (02: Citizens and specialists).
+    void assignCitizens(City& city);
 
     // ---- districts (03-districts-buildings-wonders.md)
     // Districts needing population this city may hold: 1 + (pop - 1) / DISTRICT_POPULATION_REQUIRED_PER.
@@ -357,6 +359,22 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- specialists (02: Citizens and specialists)
+    int specialistSlots(const City& city, const CityDistrict& district) const;  // from its buildings' citizen slots
+    Yields specialistYield(const City& city, const CityDistrict& district) const;  // one specialist there
+
+    // ---- formations (05: Corps and Armies)
+    // Why `unit` cannot absorb `with` (Ok: it can): both the player's, the same military type, side by
+    // side, with moves; a single and a single make a Corps (Nationalism), a Corps and a single an Army (Mobilization).
+    CommandError formationProblem(PlayerId player, UnitId unit, UnitId with) const;
+
+    // ---- pillage and repair (05: Pillage)
+    CommandError pillageProblem(PlayerId player, UnitId unit) const;
+    CommandError coastalRaidProblem(PlayerId player, UnitId unit, Hex at) const;  // naval melee or raider, a neighbouring plot
+    CommandError repairProblem(PlayerId player, UnitId builder) const;
+    void pillage(UnitId unit, std::optional<Hex> at = std::nullopt);  // its own plot, or the plot a coastal raid hits
+    bool districtPillaged(Hex plot) const;   // a district there, pillaged
+
     // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
     TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
@@ -429,6 +447,9 @@ public:
     // All six neighbours hold enemy units or lie in enemy ZOC: the city cannot heal.
     bool cityUnderSiege(const City& city) const;
     bool canCityStrike(CityId city, Hex target) const;
+    // The city's Encampment strikes from its own plot once the city has walls (03: Defense; range 2).
+    bool canEncampmentStrike(CityId city, Hex target) const;
+    const CityDistrict* encampmentOf(const City& city) const;  // complete and not pillaged
     bool canRazeCity(PlayerId player, CityId city) const;
     PlayerId barbarianPlayer() const;
     // Score line items (09: Score; ScoringLineItems): 3 per civic, 2 per tech, 5 per city,
@@ -543,7 +564,6 @@ private:
     std::vector<uint8_t> zocMap(const Unit& mover) const;
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
-    void assignCitizens(City& city);
     bool growBorders(City& city);  // false when no plot was available
     void placeDistrict(City& city, TypeIndex district, Hex plot);
     CommandError validateLeader(const Command& c) const;

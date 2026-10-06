@@ -9,6 +9,10 @@
 namespace sov {
 
 namespace {
+constexpr uint8_t kPillagedDistrictTurns = 10;
+}  // namespace
+
+namespace {
 template <typename T>
 bool contains(const std::vector<T>& v, T x) {
     return std::find(v.begin(), v.end(), x) != v.end();
@@ -192,6 +196,104 @@ CommandError Game::validateBuilder(const Command& c) const {
         return std::find(sites.begin(), sites.end(), c.target) != sites.end() ? CommandError::Ok : CommandError::CannotImprove;
     }
     return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotImprove;
+}
+
+// ---------------------------------------------------------------- formations (05: Corps and Armies)
+
+CommandError Game::formationProblem(PlayerId player, UnitId unit, UnitId with) const {
+    const Unit* u = state_.unit(unit);
+    const Unit* w = state_.unit(with);
+    if (!u || !w || u->owner != player || w->owner != player || u->id == w->id) return CommandError::NotYourUnit;
+    const UnitType& t = rules_->units[static_cast<size_t>(u->type)];
+    if (u->type != w->type || t.layer != UnitLayer::Military || (t.domain != Domain::Land && t.domain != Domain::Sea) || isLeader(*u)) return CommandError::BadUnit;
+    if (u->movesLeft <= Fixed() || w->movesLeft <= Fixed() || state_.grid.distance(u->pos, w->pos) > 1) return CommandError::BadTarget;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const auto has = [&](const char* civic) { const TypeIndex c = rules_->civic(civic); return c != kNone && p.civics.has(c); };
+    if (u->formation == 0 && w->formation == 0) return has("CIVIC_NATIONALISM") ? CommandError::Ok : CommandError::BadUnit;
+    if (u->formation == 1 && w->formation == 0) return has("CIVIC_MOBILIZATION") ? CommandError::Ok : CommandError::BadUnit;
+    return CommandError::BadUnit;
+}
+
+// ---------------------------------------------------------------- pillage (05: Pillage)
+
+bool Game::districtPillaged(Hex plot) const {
+    const CityDistrict* d = state_.districtAt(plot);
+    return d && d->pillagedTurns > 0;
+}
+
+CommandError Game::pillageProblem(PlayerId player, UnitId unit) const {
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
+    if (ut.layer != UnitLayer::Military || ut.domain != Domain::Land || u->movesLeft <= Fixed()) return CommandError::BadUnit;
+    const Plot& p = state_.plot(u->pos);
+    // Only an enemy's land (barbarians are at war with everyone).
+    if (p.owner == kNoPlayer || p.owner == player || !atWar(player, p.owner)) return CommandError::BadTarget;
+    if (state_.cityAt(u->pos)) return CommandError::BadTarget;
+    const bool improvement = p.improvement != kNone && p.pillagedTurns == 0;
+    const CityDistrict* d = state_.districtAt(u->pos);
+    const bool district = d && d->complete && d->pillagedTurns == 0;
+    return improvement || district ? CommandError::Ok : CommandError::BadTarget;
+}
+
+CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) const {
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
+    if (ut.domain != Domain::Sea || (ut.unitClass != "NAVAL_MELEE" && ut.unitClass != "NAVAL_RAIDER") || u->movesLeft <= Fixed()) return CommandError::BadUnit;
+    const auto t = state_.grid.normalize(at);
+    if (!t || *t != at || state_.grid.distance(u->pos, at) != 1) return CommandError::BadTarget;
+    const Plot& p = state_.plot(at);
+    if (rules_->terrains[static_cast<size_t>(p.terrain)].water || p.owner == kNoPlayer || p.owner == player || !atWar(player, p.owner) || state_.cityAt(at))
+        return CommandError::BadTarget;
+    const bool improvement = p.improvement != kNone && p.pillagedTurns == 0;
+    const CityDistrict* d = state_.districtAt(at);
+    return improvement || (d && d->complete && d->pillagedTurns == 0) ? CommandError::Ok : CommandError::BadTarget;
+}
+
+CommandError Game::repairProblem(PlayerId player, UnitId builder) const {
+    const Unit* u = state_.unit(builder);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    if (u->charges <= 0 || rules_->units[static_cast<size_t>(u->type)].buildCharges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+    const Plot& p = state_.plot(u->pos);
+    return p.owner == player && p.improvement != kNone && p.pillagedTurns > 0 ? CommandError::Ok : CommandError::CannotImprove;
+}
+
+void Game::pillage(UnitId id, std::optional<Hex> at) {
+    Unit& u = *state_.unit(id);
+    const Hex where = at ? *at : u.pos;
+    Plot& p = state_.plot(where);
+    const PlayerId victim = p.owner;
+    Plunder loot;
+    if (p.improvement != kNone && p.pillagedTurns == 0) {
+        loot = rules_->improvements[static_cast<size_t>(p.improvement)].plunder;
+        p.pillagedTurns = 255;  // until a Builder repairs it (255 world turns at the most)
+    } else if (City* home = state_.city(p.city)) {
+        for (CityDistrict& d : home->districts) {
+            if (d.pos != where) continue;
+            loot = rules_->districts[static_cast<size_t>(d.type)].plunder;
+            // Sovereign reading: the city repairs a pillaged district itself in 10 turns.
+            d.pillagedTurns = kPillagedDistrictTurns;
+        }
+    }
+    Player& owner = state_.players[static_cast<size_t>(u.owner)];
+    const Fixed amount = Fixed::fromInt(loot.amount);
+    switch (loot.kind) {
+        case PlunderKind::Gold: owner.gold += amount; break;
+        case PlunderKind::Faith: owner.faith += amount; break;
+        case PlunderKind::Science:
+            if (owner.techs.current != kNone) owner.techs.progress[static_cast<size_t>(owner.techs.current)] += amount;
+            break;
+        case PlunderKind::Culture:
+            if (owner.civics.current != kNone) owner.civics.progress[static_cast<size_t>(owner.civics.current)] += amount;
+            break;
+        case PlunderKind::Heal: u.hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), u.hp + loot.amount); break;
+        case PlunderKind::None: break;
+    }
+    const Fixed cost = Fixed::fromInt(rules_->globalInt("PILLAGE_MOVEMENT_COST"));
+    u.movesLeft = u.movesLeft > cost ? u.movesLeft - cost : Fixed();
+    if (City* city = state_.city(p.city)) assignCitizens(*city);
+    (void)victim;
 }
 
 TypeIndex Game::railroad() const {
