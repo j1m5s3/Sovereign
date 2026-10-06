@@ -218,6 +218,47 @@ PolicySlot Game::slotType(const GovernmentType& g, int slot) {
     return PolicySlot::Wildcard;
 }
 
+PolicySlot Game::policySlotType(PlayerId player, int slot) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    if (p.government == kNone) return PolicySlot::Wildcard;
+    const GovernmentType& g = rules_->governments[static_cast<size_t>(p.government)];
+    if (slot < g.totalSlots()) return slotType(g, slot);
+    slot -= g.totalSlots();
+    int extra[4] = {0, 0, 0, 0};
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (TypeIndex b : c.buildings) {
+            for (size_t k = 0; k < 4; ++k) extra[k] += rules_->buildings[static_cast<size_t>(b)].policySlots[k];
+        }
+    }
+    for (size_t k = 0; k < 4; ++k) {
+        if (slot < extra[k]) return static_cast<PolicySlot>(k);
+        slot -= extra[k];
+    }
+    return PolicySlot::Wildcard;
+}
+
+void Game::syncPolicySlots(PlayerId player) {
+    Player& p = state_.players[static_cast<size_t>(player)];
+    if (p.government == kNone) return;
+    size_t want = static_cast<size_t>(rules_->governments[static_cast<size_t>(p.government)].totalSlots());
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (TypeIndex b : c.buildings) {
+            for (int n : rules_->buildings[static_cast<size_t>(b)].policySlots) want += static_cast<size_t>(n);
+        }
+    }
+    if (p.policies.size() == want) return;
+    p.policies.resize(want, kNone);
+    // A wonder lost reorders the extra slots: a card left in a slot of another type comes out.
+    for (size_t i = 0; i < p.policies.size(); ++i) {
+        const TypeIndex pol = p.policies[i];
+        if (pol == kNone) continue;
+        const PolicySlot st = policySlotType(player, static_cast<int>(i));
+        if (st != PolicySlot::Wildcard && st != rules_->policies[static_cast<size_t>(pol)].slot) p.policies[i] = kNone;
+    }
+}
+
 bool Game::policyAvailable(PlayerId player, TypeIndex policy) const {
     if (!inRange(policy, rules_->policies.size())) return false;
     const Player& p = state_.players[static_cast<size_t>(player)];
@@ -248,7 +289,7 @@ bool Game::canSetPolicy(PlayerId player, int slot, TypeIndex policy, CommandErro
         if (!policyAvailable(player, policy)) return fail(CommandError::CannotSetPolicy);
         if (std::find(p.policies.begin(), p.policies.end(), policy) != p.policies.end())
             return fail(CommandError::CannotSetPolicy);
-        const PolicySlot st = slotType(rules_->governments[static_cast<size_t>(p.government)], slot);
+        const PolicySlot st = policySlotType(player, slot);
         if (st != PolicySlot::Wildcard && st != rules_->policies[static_cast<size_t>(policy)].slot)
             return fail(CommandError::CannotSetPolicy);
     }
@@ -305,6 +346,7 @@ void Game::applyResearch(const Command& c) {
                 awardFirst(c.player, world.c_str(), own.c_str(), tier);
             }
             p.policies.assign(static_cast<size_t>(rules_->governments[static_cast<size_t>(gov)].totalSlots()), kNone);
+            syncPolicySlots(c.player);
             if (first) p.freeChanges = true;
             break;
         }

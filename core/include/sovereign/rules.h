@@ -450,6 +450,7 @@ struct BuildingType {
     std::optional<Theming> theming;
     int tradeCapacity = 0;                 // + trade route capacity
     int spreadCharges = 0;                 // + spread charges for the owner's religious units (Hagia Sophia)
+    int policySlots[4] = {0, 0, 0, 0};     // + policy slots by PolicySlot (Alhambra, Forbidden City, Potala Palace, Big Ben)
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
     // World wonders (03: Wonders): built once in the world, on a plot of their own.
     bool wonder = false;

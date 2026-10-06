@@ -90,6 +90,9 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     PlayerId govOwner = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &govOwner); g && govOwner == c->owner)
         change += Fixed::fromInt(rules_->governors[static_cast<size_t>(g->type)].loyalty + civAbility(c->owner).governorLoyalty);
+    // Wonders (03): the Colosseum steadies the owner's cities within 6 tiles; the Statue of Liberty keeps them loyal.
+    if (nearOwnWonder(*c, "BUILDING_COLOSSEUM", 6)) change += Fixed::fromInt(2);
+    if (change < Fixed() && nearOwnWonder(*c, "BUILDING_STATUE_OF_LIBERTY", 6)) change = Fixed();
     return change;
 }
 

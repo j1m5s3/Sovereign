@@ -1151,6 +1151,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processLoyalty(pid);
         Player& p = state_.players[static_cast<size_t>(pid)];
         if (p.anarchyTurns > 0 && --p.anarchyTurns == 0) p.freeChanges = true;  // set up the new government
+        syncPolicySlots(pid);  // wonders won or lost since
         // The interregnum runs out only while someone sits on the throne.
         if (p.interregnumTurns > 0 && !p.successionPending && p.captor == kNoPlayer && --p.interregnumTurns == 0)
             p.freeChanges = true;

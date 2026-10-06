@@ -1539,6 +1539,9 @@ def policy_requirement(text, ids):
         if m and m.group(1) in ids["districts"]:
             return {"type": "CITY_HAS_DISTRICT", "ref": ids["districts"][m.group(1)]}
         return None
+    if " and " in text and " or " not in text:  # Casa de Contratación: all of them
+        parts = [one(t) for t in text.split(" and ")]
+        return None if any(p is None for p in parts) else (parts, False)
     parts = [one(t) for t in text.split(" or ")]
     if any(p is None for p in parts):
         return None
@@ -1636,7 +1639,7 @@ def policy_modifiers(pid, text, ids):
         if m and m.group(1) in ids["abilities"]:
             add("PLAYER", "GRANT_ABILITY", {"ability": ids["abilities"][m.group(1)]})
             continue
-        m = re.fullmatch(r"\+(\d+) build charge\(s\) for units you train where unit is Builder", body)
+        m = re.fullmatch(r"\+(\d+) build charge\(s\) for (?:units you train|your units) where unit is Builder", body)
         if m:
             add("PLAYER_CITIES", "ADJUST_BUILDER_CHARGES", {"amount": int(m.group(1))})
             continue
@@ -2224,17 +2227,26 @@ def wonder_effect(wid, part, w, modifiers, eras):
     if m and m.group(2) in UNIT_CLASS_WORDS:
         mod("UNITS", "PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT", {"unitClass": UNIT_CLASS_WORDS[m.group(2)], "amount": int(m.group(1))})
         return []
-    m = re.fullmatch(r"\+(\d+) (\w+) on this city's tiles where tile is (.+?)(?: or tile is (.+?))? in all cities where city has .+", t)
-    if m and m.group(2) in YIELD_WORDS:
-        out = []
-        for i, place in enumerate(p for p in (m.group(3), m.group(4)) if p):
-            req = {"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]} if place in FEATURE_IDS else \
-                  {"type": "PLOT_HAS_TERRAIN", "ref": terrain_names()[place]} if place in terrain_names() else None
-            if req is None:
+    m = re.fullmatch(r"(.+?) on this city's tiles where tile (?:is|has) (.+?)(?: or tile (?:is|has) (.+?))?(?: in all cities where city has .+)?", t)
+    if m:
+        gains = [re.fullmatch(r"\+(\d+) (\w+)", g) for g in m.group(1).split(", ")]
+        reqs = []
+        for place in (m.group(2), m.group(3)):
+            if place in FEATURE_IDS:
+                reqs.append({"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]})
+            elif place in terrain_names():
+                reqs.append({"type": "PLOT_HAS_TERRAIN", "ref": terrain_names()[place]})
+            elif place in ("Quarry", "Mine"):  # Ruhr Valley
+                reqs.append({"type": "PLOT_HAS_IMPROVEMENT", "ref": "IMPROVEMENT_" + snake(place)})
+            elif place is not None:
                 return None
-            mod("PLOTS_%s_%d" % (YIELD_WORDS[m.group(2)], i), "OWNER_CITY_PLOTS", "ADJUST_PLOT_YIELD",
-                {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, [req])
-        return out
+        if not all(g and g.group(2) in YIELD_WORDS for g in gains):
+            return None
+        for g in gains:
+            for i, req in enumerate(reqs):  # either place: one modifier each
+                mod("PLOTS_%s_%d" % (YIELD_WORDS[g.group(2)], i), "OWNER_CITY_PLOTS", "ADJUST_PLOT_YIELD",
+                    {"yield": YIELD_WORDS[g.group(2)], "amount": int(g.group(1))}, [req])
+        return []
     # One-time effects on completion.
     m = re.fullmatch(r"grants (\d+) random (technology|civic)", t)
     if m:

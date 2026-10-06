@@ -135,9 +135,13 @@ CommandError Game::concertProblem(PlayerId player, UnitId id) const {
 }
 
 void Game::grantApostlePromotion(Unit& apostle) {
+    // Mont St. Michel (03: Wonders): every Apostle is also a Martyr.
+    const TypeIndex martyr = buildingsOwned(apostle.owner, "BUILDING_MONT_ST_MICHEL") > 0 ? rules_->promotion("PROMOTION_MARTYR") : kNone;
+    if (martyr != kNone) apostle.promotions.push_back(martyr);
     std::vector<TypeIndex> open;
     for (size_t i = 0; i < rules_->promotions.size(); ++i) {
-        if (rules_->promotions[i].promotionClass == "PROMOTION_CLASS_RELIGIOUS_APOSTLE") open.push_back(static_cast<TypeIndex>(i));
+        if (rules_->promotions[i].promotionClass == "PROMOTION_CLASS_RELIGIOUS_APOSTLE" && static_cast<TypeIndex>(i) != martyr)
+            open.push_back(static_cast<TypeIndex>(i));
     }
     if (open.empty()) return;
     const TypeIndex pick = open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))];
