@@ -256,6 +256,17 @@ CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) cons
     return improvement || (d && d->complete && d->pillagedTurns == 0) ? CommandError::Ok : CommandError::BadTarget;
 }
 
+CommandError Game::chargeProblem(PlayerId player, UnitId engineer) const {
+    const Unit* u = state_.unit(engineer);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    if (u->charges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+    const CityDistrict* d = state_.districtAt(u->pos);
+    const City* c = state_.city(state_.plot(u->pos).city);
+    if (!d || d->complete || !c || c->owner != player) return CommandError::CannotImprove;
+    const DistrictType& dt = rules_->districts[static_cast<size_t>(d->type)];
+    return dt.chargePercent > 0 && dt.chargeUnit == rules_->units[static_cast<size_t>(u->type)].id ? CommandError::Ok : CommandError::CannotImprove;
+}
+
 CommandError Game::repairProblem(PlayerId player, UnitId builder) const {
     const Unit* u = state_.unit(builder);
     if (!u || u->owner != player) return CommandError::NotYourUnit;

@@ -556,6 +556,8 @@ struct DistrictType {
     std::vector<TypeIndex> validTerrains;  // only on these terrains (empty: any; Spaceport: flat land)
     int airSlots = 0;                      // aircraft based here (City Center 1, Aerodrome 2)
     bool canal = false;                    // between two bodies of water (or water and the City Center); ships sail through
+    std::string chargeUnit;                // a unit that may spend a charge on it while it is built (Military Engineer)
+    int chargePercent = 0;                 // ...for this share of its cost
     std::vector<std::string> exclusiveIds;  // (loading only)
     Plunder plunder;  // what pillaging it gives (05: Pillage)
     Yields specialistYields{};  // each specialist working in it (02: Citizens and specialists)

@@ -949,6 +949,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.plunder = readPlunder(j["plunder"]);
         d.specialistYields = readYields(j["specialistYields"]);
         d.canal = j["canal"].boolean(false);
+        d.chargeUnit = j["chargeProduction"]["unit"].str();
+        d.chargePercent = static_cast<int>(j["chargeProduction"]["percent"].integer(0));
         d.appeal = static_cast<int>(j["appeal"].integer(0));
         for (const Json& band : j["appealHousing"].items()) {
             if (band.items().size() == 2) d.appealHousing.push_back({static_cast<int>(band.items()[0].integer(0)), static_cast<int>(band.items()[1].integer(0))});

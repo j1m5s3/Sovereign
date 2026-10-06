@@ -439,3 +439,30 @@ TEST(pillaging_a_road_slows_it_until_repaired) {
     REQUIRE(d->submit(Command::pillage(0, horse)) == CommandError::Ok);
     CHECK(d->state().unit(horse)->movesLeft == moves - Fixed::fromInt(1));
 }
+
+TEST(military_engineers_speed_an_aqueduct) {
+    GameState s = engineerState();
+    CityDistrict aqueduct;
+    aqueduct.type = rules().district("DISTRICT_AQUEDUCT");
+    aqueduct.pos = {5, 6};
+    s.cities[0].districts.push_back(aqueduct);  // placed, not finished
+    s.plot({5, 6}).owner = 0;
+    s.plot({5, 6}).city = s.cities[0].id;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const UnitId eng = g->state().units.front().id;
+    const int charges = g->state().unit(eng)->charges;
+    REQUIRE(g->chargeProblem(0, eng) == CommandError::Ok);
+    REQUIRE(g->submit(Command::contributeCharge(0, eng)) == CommandError::Ok);
+    const ProductionItem item{ProductionKind::District, rules().district("DISTRICT_AQUEDUCT")};
+    const City& c = g->state().cities[0];
+    auto it = std::find_if(c.progress.begin(), c.progress.end(), [&](const ProductionProgress& pp) { return pp.item == item; });
+    REQUIRE(it != c.progress.end());
+    CHECK(it->amount == Fixed::fromInt(g->productionCost(0, item) * 20 / 100));
+    if (charges > 1) CHECK_EQ(g->state().unit(eng)->charges, charges - 1);
+    // Not on a finished district, nor with a Builder.
+    GameState t = engineerState();
+    aqueduct.complete = true;
+    t.cities[0].districts.push_back(aqueduct);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK(h->chargeProblem(0, h->state().units.front().id) != CommandError::Ok);
+}
