@@ -1851,6 +1851,36 @@ void solvency(View& v) {
     }
 }
 
+// Barbarian Clans mode (01: Barbarians): buy peace from alerted camps near our cities, hire their units while at
+// war, and set camps near an enemy's cities on that enemy, each when the gold is there to spare.
+void clans(View& v) {
+    Game& g = v.game;
+    if (!v.s().setup.barbarianClans || v.game.isCityState(v.me)) return;
+    const int reserve = 60 + 15 * static_cast<int>(v.cities.size());
+    auto near = [&](Hex h, PlayerId owner, int range) {
+        for (const City& c : v.s().cities) {
+            if (c.owner == owner && v.s().grid.distance(c.pos, h) <= range) return true;
+        }
+        return false;
+    };
+    auto afford = [&](int cost, int extra) { return cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost + extra); };
+    const std::vector<Camp> camps = v.s().camps;
+    for (const Camp& c : camps) {
+        if (!near(c.pos, v.me, 8)) continue;
+        if (c.alerted && !g.campLeavesAlone(c, v.me) && afford(g.clanCost(v.me, c.id, CommandType::BribeCamp), reserve) &&
+            g.submit(Command::bribeCamp(v.me, c.id)) == CommandError::Ok)
+            continue;
+        if (!v.enemies.empty() && afford(g.clanCost(v.me, c.id, CommandType::HireFromCamp), 2 * reserve)) g.submit(Command::hireFromCamp(v.me, c.id));
+    }
+    for (PlayerId enemy : v.enemies) {
+        if (!g.isMajorCiv(enemy)) continue;
+        for (const Camp& c : camps) {
+            if (!near(c.pos, enemy, 8) || near(c.pos, v.me, 6)) continue;
+            if (afford(g.clanCost(v.me, c.id, CommandType::InciteCamp), 2 * reserve) && g.submit(Command::inciteCamp(v.me, c.id, enemy)) == CommandError::Ok) break;
+        }
+    }
+}
+
 // Dedications (09): the one its strategy favours, else the first open.
 void dedicate(View& v) {
     static const std::pair<Strategy, const char*> kFavours[] = {
@@ -2494,6 +2524,7 @@ void playTurn(Game& game) {
     upgrades(v);
     purchases(v);
     solvency(v);
+    clans(v);
     theme(v);
     dedicate(v);
     patronage(v);

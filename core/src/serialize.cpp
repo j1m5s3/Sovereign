@@ -124,6 +124,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
+    w.boolean(s.barbarianClans);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -152,6 +153,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
+    s.barbarianClans = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -706,6 +708,15 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i16(k.tribe);
         w.boolean(k.alerted);
         w.boolean(k.scoutSaw);
+        w.i32(k.progress);
+        w.u32(static_cast<uint32_t>(k.bribes.size()));
+        for (const auto& [who, until] : k.bribes) {
+            w.i8(who);
+            w.i32(until);
+        }
+        w.i8(k.incitedAgainst);
+        w.i32(k.incitedUntil);
+        w.i32(k.hiredUntil);
     }
     w.i32(s.nextCampId);
     w.i32(s.nextUnitId);
@@ -1251,6 +1262,17 @@ bool deserializeState(ByteReader& r, GameState& s) {
         k.tribe = r.i16();
         k.alerted = r.boolean();
         k.scoutSaw = r.boolean();
+        k.progress = r.i32();
+        const uint32_t nb = r.u32();
+        if (!r.checkCount(nb, 5)) return false;
+        k.bribes.resize(nb);
+        for (auto& [who, until] : k.bribes) {
+            who = r.i8();
+            until = r.i32();
+        }
+        k.incitedAgainst = r.i8();
+        k.incitedUntil = r.i32();
+        k.hiredUntil = r.i32();
     }
     s.nextCampId = r.i32();
     s.nextUnitId = r.i32();

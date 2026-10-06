@@ -498,6 +498,7 @@ struct GameSetup {
     // off in headless games, on in the Unreal front end.
     bool liveBattles = false;
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
+    bool barbarianClans = false;  // optional mode: camps can be bribed, hired, incited, and become city-states (01: Barbarians)
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };
@@ -595,6 +596,12 @@ struct Camp {
     // camp is alerted and raids. Camps made outside placeCamps (scenarios, tests) start alerted.
     bool alerted = true;
     bool scoutSaw = false;  // its scout has seen a city and is on its way home
+    // Barbarian Clans mode (01: Barbarians): progress toward becoming a city-state, and dealings with the civs.
+    int progress = 0;                                  // a city-state at BARBARIAN_CLAN_CONVERSION_POINTS
+    std::vector<std::pair<PlayerId, int32_t>> bribes;  // players its units leave alone, until the turn
+    PlayerId incitedAgainst = kNoPlayer;               // the civ it raids, until incitedUntil
+    int32_t incitedUntil = 0;
+    int32_t hiredUntil = 0;                            // no unit for hire before this turn
 };
 
 struct SOV_API GameState {

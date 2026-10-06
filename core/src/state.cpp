@@ -131,6 +131,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotSpy: return "CannotSpy";
         case CommandError::CannotVote: return "CannotVote";
         case CommandError::CannotUpgrade: return "CannotUpgrade";
+        case CommandError::CannotTreatWithClan: return "CannotTreatWithClan";
     }
     return "Unknown";
 }
@@ -195,6 +196,9 @@ std::string describe(const Command& c) {
         case CommandType::StartTradeRoute: return s + "StartTradeRoute u" + std::to_string(c.id) + " -> city" + std::to_string(c.arg);
         case CommandType::SendEnvoy: return s + "SendEnvoy -> p" + std::to_string(c.arg);
         case CommandType::LevyMilitary: return s + "LevyMilitary p" + std::to_string(c.arg);
+        case CommandType::BribeCamp: return s + "BribeCamp camp" + std::to_string(c.id);
+        case CommandType::HireFromCamp: return s + "HireFromCamp camp" + std::to_string(c.id);
+        case CommandType::InciteCamp: return s + "InciteCamp camp" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
         case CommandType::ProposeDeal: return s + "ProposeDeal -> p" + std::to_string(c.arg) + " (" + std::to_string(c.data.size() / 4) + " items)";
         case CommandType::AnswerDeal: return s + (c.arg ? "AcceptDeal " : "RejectDeal ") + std::to_string(c.id);
         case CommandType::Denounce: return s + "Denounce p" + std::to_string(c.arg);

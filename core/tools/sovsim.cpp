@@ -3,9 +3,9 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--clans]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
 //          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none; --difficulty N: 0 Settler .. 3 Prince .. 7 Deity;
-//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns).
+//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns; --clans: the Barbarian Clans mode).
 //          Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
         else if (a == "--ai-seats") aiSeats = std::atoi(next().c_str());
         else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
         else if (a == "--disasters") setup.disasterIntensity = std::atoi(next().c_str());
+        else if (a == "--clans") setup.barbarianClans = true;
         else if (a == "--difficulty") setup.difficulty = std::atoi(next().c_str());
         else if (a == "--bench") bench = std::atoi(next().c_str());
         else {
@@ -211,13 +212,14 @@ int main(int argc, char** argv) {
         }
     }
     if (showCities) {
-        long wars = 0, attacks = 0, promotions = 0, strikes = 0, razed = 0;
+        long wars = 0, attacks = 0, promotions = 0, strikes = 0, razed = 0, clanDeals = 0;
         for (const Command& c : game->log()) {
             wars += c.type == CommandType::DeclareWar;
             attacks += c.type == CommandType::Attack || c.type == CommandType::RangedAttack;
             promotions += c.type == CommandType::Promote;
             strikes += c.type == CommandType::CityStrike;
             razed += c.type == CommandType::RazeCity;
+            clanDeals += c.type == CommandType::BribeCamp || c.type == CommandType::HireFromCamp || c.type == CommandType::InciteCamp;
         }
         long captured = 0, eliminated = 0;
         long capitals = 0;
@@ -254,6 +256,11 @@ int main(int argc, char** argv) {
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",
                     wars, attacks, promotions, strikes, captured, capitals, razed, eliminated, camps,
                     static_cast<long>(game->state().nextCampId - 1) - camps);
+        if (game->state().setup.barbarianClans) {
+            long fromClans = 0;
+            for (const Player& p : game->state().players) fromClans += p.cityState != kNone && p.startPos != Hex{} && p.id > game->barbarianPlayer() ? 1 : 0;
+            std::printf("barbarian clans: %ld dealings (bribes, hires, incitements), %ld city-states grown from camps\n", clanDeals, fromClans);
+        }
     }
     if (!savePath.empty()) {
         std::vector<uint8_t> bytes = saveGame(*game);

@@ -793,6 +793,19 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 								 UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer),
 					sov::Command::denounce(Me(), O.id)});  // only arg is used: Pick opens the screen
 			}
+			// Barbarian Clans mode (01): buy peace from a camp we have seen, or hire its best unit.
+			for (const sov::Camp& K : G.state().camps)
+			{
+				const sov::Command Bribe = sov::Command::bribeCamp(Me(), K.id);
+				if (G.validate(Bribe) == sov::CommandError::Ok)
+					Choices.Add({FString::Printf(TEXT("Bribe the clan at (%d,%d) to leave us alone (%d gold, progress %d/100)"), K.pos.x, K.pos.y,
+									 G.clanCost(Me(), K.id, sov::CommandType::BribeCamp), K.progress),
+						Bribe});
+				const sov::Command Hire = sov::Command::hireFromCamp(Me(), K.id);
+				if (G.validate(Hire) == sov::CommandError::Ok)
+					Choices.Add({FString::Printf(TEXT("Hire a unit from the clan at (%d,%d) (%d gold)"), K.pos.x, K.pos.y, G.clanCost(Me(), K.id, sov::CommandType::HireFromCamp)),
+						Hire});
+			}
 			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
 			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
 				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution"), TEXT("Golden Age War"), TEXT("Joint War")};
@@ -822,6 +835,15 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						Choices.Add({FString::Printf(TEXT("Send %s to %s (%d gold; access now %s)"), bEmbassy ? TEXT("a resident embassy") : TEXT("a delegation"), *Who,
 										 bEmbassy ? 50 : 25, UTF8_TO_TCHAR(sov::Game::accessName(G.accessLevel(Me(), O.id)))),
 							Send});
+				}
+				// Barbarian Clans mode (01): set a camp we have seen on this civ.
+				for (const sov::Camp& K : G.state().camps)
+				{
+					const sov::Command Incite = sov::Command::inciteCamp(Me(), K.id, O.id);
+					if (G.validate(Incite) == sov::CommandError::Ok)
+						Choices.Add({FString::Printf(TEXT("Incite the clan at (%d,%d) against %s (%d gold)"), K.pos.x, K.pos.y, *Who,
+										 G.clanCost(Me(), K.id, sov::CommandType::InciteCamp)),
+							Incite});
 				}
 				// Promises [GS] (30 favor each).
 				static const TCHAR* const Promises[] = {TEXT("not to settle near us"), TEXT("not to convert our cities"), TEXT("not to spy on us"), TEXT("not to dig in our lands")};
