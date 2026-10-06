@@ -3302,8 +3302,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+60% pillage/plunder yields"
+     "kind": "PLUNDER_PERCENT",
+     "amount": 60
     }
    ]
   },
@@ -3779,8 +3779,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+100% pillage/plunder yields"
+     "kind": "PLUNDER_PERCENT",
+     "amount": 100
     }
    ]
   },
@@ -3985,8 +3985,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+50% pillage/plunder yields"
+     "kind": "PLUNDER_PERCENT",
+     "amount": 50
     }
    ]
   },
@@ -4139,8 +4139,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "50% flanking bonus where Land unit"
+     "kind": "FLANKING_PERCENT",
+     "amount": 50
     }
    ]
   },
@@ -5588,8 +5588,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+40% pillage/plunder yields"
+     "kind": "PLUNDER_PERCENT",
+     "amount": 40
     }
    ]
   },

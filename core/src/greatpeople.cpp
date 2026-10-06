@@ -289,7 +289,7 @@ void Game::applyGreatPeople(const Command& c) {
             u = state_.unit(c.id);  // a granted unit may move the unit list
         }
         if (std::any_of(g.effects.begin(), g.effects.end(),
-                        [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::BuildingYield; }))
+                        [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::BuildingYield || fx.kind == GreatPersonEffectKind::Ability; }))
             p.greatPeopleActivated.push_back(u->greatPerson);
     }
     if (--u->charges <= 0) removeUnit(c.id);
@@ -387,7 +387,8 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             if (spot) spawnUnit(fx.ref, pid, *spot);
             break;
         }
-        case GreatPersonEffectKind::BuildingYield: break;  // permanent: read from greatPeopleActivated
+        case GreatPersonEffectKind::BuildingYield:
+        case GreatPersonEffectKind::Ability: break;  // permanent: read from greatPeopleActivated
         case GreatPersonEffectKind::GreatPersonPoints: {
             for (int& pts : p.greatPersonPoints) pts += fx.amount * speed / 100;
             break;

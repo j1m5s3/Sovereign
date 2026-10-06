@@ -536,8 +536,11 @@
    "class": "GREAT_PERSON_CLASS_GENERAL",
    "era": "ERA_ATOMIC",
    "charges": 1,
-   "untrackedEffects": [
-    "ability Georgy Zhukov Flanking Bonus [50% flanking bonus where Land unit] for your units"
+   "effects": [
+    {
+     "kind": "ABILITY",
+     "ref": "ABILITY_GEORGY_ZHUKOV_FLANKING_BONUS"
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -766,9 +769,14 @@
    "class": "GREAT_PERSON_CLASS_ADMIRAL",
    "era": "ERA_MEDIEVAL",
    "charges": 1,
+   "effects": [
+    {
+     "kind": "ABILITY",
+     "ref": "ABILITY_LEIF_ERIKSON"
+    }
+   ],
    "untrackedEffects": [
-    "can enter Ocean for your units where Sea unit",
-    "ability Leif Erikson [+1 sight] for your units"
+    "can enter Ocean for your units where Sea unit"
    ],
    "aura": {
     "domain": "SEA",
@@ -787,8 +795,11 @@
    "class": "GREAT_PERSON_CLASS_ADMIRAL",
    "era": "ERA_MEDIEVAL",
    "charges": 1,
-   "untrackedEffects": [
-    "ability Rajendra Chola [+3 Combat Strength in combat] for your units"
+   "effects": [
+    {
+     "kind": "ABILITY",
+     "ref": "ABILITY_RAJENDRA_CHOLA"
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -874,10 +885,11 @@
     {
      "kind": "UNIT",
      "ref": "UNIT_PRIVATEER"
+    },
+    {
+     "kind": "ABILITY",
+     "ref": "ABILITY_FRANCIS_DRAKE_PLUNDER_BONUS"
     }
-   ],
-   "untrackedEffects": [
-    "ability Francis Drake Plunder Bonus [+50% pillage/plunder yields] for your units"
    ],
    "aura": {
     "domain": "SEA",
@@ -990,10 +1002,11 @@
      "yield": "GOLD",
      "amount": 500,
      "scaled": true
+    },
+    {
+     "kind": "ABILITY",
+     "ref": "ABILITY_CHING_SHIH_PLUNDER_BONUS"
     }
-   ],
-   "untrackedEffects": [
-    "ability Ching Shih Plunder Bonus [+60% pillage/plunder yields] for your units"
    ],
    "aura": {
     "domain": "SEA",
@@ -1018,6 +1031,10 @@
    },
    "effects": [
     {
+     "kind": "ABILITY",
+     "ref": "ABILITY_HORATIO_NELSON_FLANKING_BONUS"
+    },
+    {
      "kind": "BUILDING",
      "ref": "BUILDING_LIGHTHOUSE"
     },
@@ -1025,9 +1042,6 @@
      "kind": "BUILDING",
      "ref": "BUILDING_SHIPYARD"
     }
-   ],
-   "untrackedEffects": [
-    "ability Horatio Nelson Flanking Bonus [50% flanking bonus] for your units where Sea unit"
    ],
    "aura": {
     "domain": "SEA",
