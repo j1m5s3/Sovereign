@@ -31,4 +31,4 @@ Specs: 07-great-people-great-works-tourism (Tourism sources, National Parks, Sea
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - The park's diamond, the "nearby" cities for amenities, and the reading of album sales plus the tourism bomb as one tourism gain are Sovereign readings of rules the data leaves open.
-- Not modelled: the Ski Resort's amenity, Rock Band promotions, Landmarks.
+- Not modelled: Rock Band promotions, Landmarks. The Ski Resort's amenity followed (generated improvement `amenities`).

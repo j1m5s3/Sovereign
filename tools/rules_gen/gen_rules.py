@@ -898,6 +898,10 @@ def gen_improvements():
                 i["tourism"]["after"] = m.group(3)
         if row["Min appeal"] and num(row["Min appeal"]):
             i["minAppeal"] = num(row["Min appeal"])
+        for part in (x.strip() for x in (row["Modifiers"] or "").split(";")):
+            m = re.fullmatch(r"\+(\d+) Amenity in this city", part)
+            if m:
+                i["amenities"] = int(m.group(1))  # the Ski Resort (07)
         if row["Improvement"] == "Seaside Resort":
             i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
         out.append(i)
