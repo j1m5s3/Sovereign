@@ -164,6 +164,7 @@ enum class UnitEffectKind : uint8_t {
     OpenGroundMoves,    // + movement when its turn starts on flat ground with no feature (Heavy Chariot)
     ObservedRange,      // + range while a friendly Observation unit stands next to it (Observation Balloon, Drone)
     FightEmbarked,      // may attack while embarked (Giant Death Robot)
+    Hidden,             // seen only from next to it or by units that see hidden ones (Stealth, Camouflage, Twilight Veil)
 };
 
 enum class CombatAtom : uint8_t {

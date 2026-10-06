@@ -397,8 +397,9 @@ public:
     int airSlots(PlayerId player, Hex base) const;
     // Airlift and paradrop (05): why a land unit may not be flown or dropped there (Ok when it may).
     CommandError airliftProblem(UnitId unit, Hex to) const;
-    // Whether the viewer sees the unit: on a plot in sight, and for a stealthy one (Submarine, Privateer) only next to
-    // the viewer's units or cities, or within sight of one of its units that reveals stealth (05).
+    // Whether the viewer sees the unit: on a plot in sight, and for a hidden one (Submarine, Privateer; Camouflage and
+    // Twilight Veil promotions) only next to the viewer's units or cities, or within sight of one of its units that
+    // reveals stealth (05).
     bool unitVisibleTo(PlayerId viewer, const Unit& unit) const;
     CommandError paradropProblem(UnitId unit, Hex to) const;   // aircraft the player can base there (0: not a base)
     int baseAirSlots(PlayerId player, Hex base) const;  // city and Aerodrome slots alone

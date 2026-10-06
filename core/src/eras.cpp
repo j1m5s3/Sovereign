@@ -25,9 +25,10 @@ void Game::awardMoment(PlayerId pid, const char* id) {
     if (mt.obsoleteEra >= 0 && state_.gameEra >= mt.obsoleteEra) return;
     if (p.momentEras.size() < rules_->moments.size()) p.momentEras.resize(rules_->moments.size(), 0);
     p.momentEras[at(m)] = static_cast<int8_t>(state_.gameEra + 1);
-    p.eraScore += mt.eraScore;
     // Taj Mahal (03: Wonders): +1 era score for each moment worth 2 or more.
-    if (mt.eraScore >= 2 && buildingsOwned(pid, "BUILDING_TAJ_MAHAL") > 0) ++p.eraScore;
+    const int gained = mt.eraScore + (mt.eraScore >= 2 && buildingsOwned(pid, "BUILDING_TAJ_MAHAL") > 0 ? 1 : 0);
+    p.eraScore += gained;
+    p.eraScoreTotal += gained;
     pushEvent(EventKind::HistoricMoment, pid, kNoPlayer, m);
 }
 
@@ -83,6 +84,7 @@ bool Game::goldenDedication(PlayerId player, const char* id) const {
 void Game::dedicationScore(PlayerId player, const char* id, int amount) {
     if (!dedicated(player, id) || goldenDedication(player, id)) return;
     state_.players[at(player)].eraScore += amount;
+    state_.players[at(player)].eraScoreTotal += amount;
 }
 
 void Game::awardFirst(PlayerId pid, const char* worldId, const char* ownId, int key) {

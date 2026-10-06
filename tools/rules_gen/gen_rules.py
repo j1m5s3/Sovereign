@@ -546,6 +546,7 @@ def unit_effects(text):
             "sees through features": "SEES_THROUGH_FEATURES", "can coastal raid": "COASTAL_RAID",
             "converts defeated barbarians": "HEATHEN_CONVERSION", "creates a Relic when killed in theological combat": "MARTYR",
             "adjust unit fight while embarked (CanFight=yes)": "FIGHT_EMBARKED",
+            "hidden (only visible when adjacent)": "HIDDEN",
         }
         # Abilities with a condition the core reads in code (05): naval units' movement (Great Lighthouse), open ground
         # (Heavy Chariot), range next to an Observation unit (Observation Balloon, Drone).

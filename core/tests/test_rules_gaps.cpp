@@ -1,5 +1,5 @@
 // Rules found missing by an audit of the specs (01, 02, 03, 05): city spacing across water, occupied cities,
-// Theocracy's Faith purchases, the Heavy Chariot, Observation units, the Giant Death Robot.
+// Theocracy's Faith purchases, the Heavy Chariot, Observation units, the Giant Death Robot, hidden units.
 #include <algorithm>
 
 #include "helpers.h"
@@ -142,4 +142,21 @@ TEST(submarines_hide_until_found) {
     addUnit(s, "UNIT_DESTROYER", 1, {12, 6});  // two plots away, within its sight
     auto found = Game::fromScenario(rules(), std::move(s));
     CHECK(found->unitVisibleTo(1, *found->state().unit(sub)));
+}
+
+TEST(camouflage_hides_a_unit_from_all_but_its_neighbours) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.players[1].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+    const UnitId ranger = addUnit(s, "UNIT_RANGER", 0, {10, 6});
+    addUnit(s, "UNIT_WARRIOR", 1, {12, 6});  // two plots away
+    auto plain = Game::fromScenario(rules(), s);
+    CHECK(plain->unitVisibleTo(1, *plain->state().unit(ranger)));  // no promotion: seen as usual
+    s.unit(ranger)->promotions.push_back(rules().promotion("PROMOTION_CAMOUFLAGE"));
+    auto hidden = Game::fromScenario(rules(), s);
+    CHECK(!hidden->unitVisibleTo(1, *hidden->state().unit(ranger)));
+    CHECK(hidden->unitVisibleTo(0, *hidden->state().unit(ranger)));  // its owner
+    addUnit(s, "UNIT_WARRIOR", 1, {11, 6});  // next to it
+    auto found = Game::fromScenario(rules(), std::move(s));
+    CHECK(found->unitVisibleTo(1, *found->state().unit(ranger)));
 }

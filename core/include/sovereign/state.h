@@ -412,6 +412,7 @@ struct Player {
     bool hadSuzerain = false;         // a city-state: someone has been its suzerain
     // Ages (09: Era score and Ages [R&F]).
     int eraScore = 0;               // this era's score so far
+    int eraScoreTotal = 0;          // every era's score together, counted in the score (00: Score)
     Age age = Age::Normal;          // the age set when the world entered this era
     std::vector<TypeIndex> dedications;  // Rules::dedications chosen for this era (09: Dedications)
     int dedicationsPending = 0;          // still to choose this era
