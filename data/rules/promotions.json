@@ -139,8 +139,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "pillaging costs only 1 movement"
+     "kind": "CHEAP_PILLAGE"
     }
    ]
   },
@@ -918,8 +917,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "pillaging costs only 1 movement"
+     "kind": "CHEAP_PILLAGE"
     }
    ]
   },
@@ -4979,8 +4977,7 @@
      ]
     },
     {
-     "kind": "UNTRACKED",
-     "text": "pillaging costs only 1 movement"
+     "kind": "CHEAP_PILLAGE"
     }
    ]
   },

@@ -505,6 +505,7 @@ def unit_effects(text):
             "no river crossing penalty": "NO_RIVER_PENALTY", "no combat penalty from damage": "NO_WOUNDED_PENALTY",
             "can heal after moving/attacking": "HEAL_AFTER_ACTION", "can enter foreign territory": "IGNORE_BORDERS",
             "Melee units deal full damage to walls": "WALL_FULL_DAMAGE", "Melee units bypass walls": "BYPASS_WALLS",
+            "pillaging costs only 1 movement": "CHEAP_PILLAGE",
         }
         band = band_effect(part)
         if band:

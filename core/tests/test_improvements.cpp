@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addUnit;
@@ -387,4 +388,54 @@ TEST(francis_drake_raises_plunder) {
     const Fixed gold = g->state().players[0].gold;
     REQUIRE(g->submit(Command::coastalRaid(0, galley, {11, 6})) == CommandError::Ok);
     CHECK(g->state().players[0].gold == gold + Fixed::fromInt(75));  // a mine's 50 Gold, +50%
+}
+
+TEST(pillaging_a_road_slows_it_until_repaired) {
+    // Player 1's road on (12,6)-(13,6), no improvements there; player 0's Warrior on it, at war.
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    sovtest::addCity(s, 1, {10, 6}, true, 4);
+    for (const Hex h : {Hex{12, 6}, Hex{13, 6}}) {
+        s.plot(h).route = 0;  // the Ancient Road
+        s.plot(h).owner = 1;
+    }
+    s.plot({13, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");  // 2 moves off the road
+    const UnitId raider = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {12, 6});
+    auto g = Game::fromScenario(rules(), s);
+    const Fixed along = *g->moveCost(*g->state().unit(raider), {12, 6}, {13, 6});
+    const Fixed gold = g->state().players[0].gold;
+    REQUIRE(g->submit(Command::pillage(0, raider)) == CommandError::Ok);
+    CHECK(g->state().plot({12, 6}).routePillaged);
+    CHECK(g->state().players[0].gold == gold);  // a road gives no plunder
+    CHECK(*g->moveCost(*g->state().unit(raider), {12, 6}, {13, 6}) > along);
+    CHECK_EQ(g->pillageProblem(0, raider), CommandError::BadUnit);  // the 3 moves are spent
+    // Saved, then the owner's Builder repairs it without a charge.
+    std::string err;
+    auto h = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(h);
+    CHECK(h->state().plot({12, 6}).routePillaged);
+    GameState t = h->state();
+    t.units.clear();
+    const UnitId b = sovtest::addUnit(t, "UNIT_BUILDER", 1, {12, 6});
+    t.currentPlayer = 1;
+    auto r = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*r, 1);
+    REQUIRE(r->state().currentPlayer == 1);
+    const int charges = r->state().unit(b)->charges;
+    REQUIRE(r->submit(Command::repairImprovement(1, b)) == CommandError::Ok);
+    CHECK(!r->state().plot({12, 6}).routePillaged);
+    CHECK_EQ(r->state().unit(b)->charges, charges);
+    // Depredation: pillaging costs 1 movement.
+    s.units.clear();
+    s.plot({12, 6}).routePillaged = false;
+    const UnitId horse = sovtest::addUnit(s, "UNIT_HORSEMAN", 0, {12, 6});
+    s.units.back().promotions.push_back(rules().promotion("PROMOTION_DEPREDATION"));
+    auto d = Game::fromScenario(rules(), std::move(s));
+    const Fixed moves = d->state().unit(horse)->movesLeft;
+    REQUIRE(d->submit(Command::pillage(0, horse)) == CommandError::Ok);
+    CHECK(d->state().unit(horse)->movesLeft == moves - Fixed::fromInt(1));
 }

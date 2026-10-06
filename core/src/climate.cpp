@@ -195,6 +195,7 @@ void Game::processClimate() {
             p.improvement = kNone;
             p.resource = kNone;
             p.route = -1;
+            p.routePillaged = false;
             p.pillagedTurns = 0;
             p.fertility = {};
             std::vector<UnitId> lost;

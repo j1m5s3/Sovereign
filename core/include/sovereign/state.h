@@ -39,6 +39,7 @@ struct Plot {
     CityId city = kNoCity;  // owning city
     int16_t continent = -1;
     int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
+    bool routePillaged = false;  // pillaged (05: Pillage): moves as if it had no road until repaired
     uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
@@ -107,6 +108,9 @@ struct CityDistrict {
     uint8_t pillagedTurns = 0;  // pillaged (05: Pillage): no adjacency, its buildings idle, until repaired
     uint8_t specialists = 0;    // citizens working here as specialists (02: Citizens and specialists)
 };
+
+// Sovereign reading: a city repairs a pillaged district itself in this many turns.
+constexpr uint8_t kPillagedDistrictTurns = 10;
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
