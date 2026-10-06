@@ -283,3 +283,50 @@ TEST(a_successful_spy_earns_a_promotion) {
     REQUIRE(loaded);
     CHECK_EQ(loaded->agent(a->id)->promotions.size(), 1u);
 }
+
+TEST(a_fabricated_scandal_costs_the_suzerain_envoys) {
+    // A Scientific city-state (player 2) whose suzerain is player 1 (4 envoys); player 0's spy works there.
+    GameState s = flatState(30, 14, 3);
+    s.players[2].civ = kNone;
+    for (size_t i = 0; i < rules().cityStates.size(); ++i) {
+        if (rules().cityStates[i].kind == CityStateKind::Scientific) s.players[2].cityState = static_cast<TypeIndex>(i);
+    }
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.met.assign(3, uint8_t{1});
+        p.envoys.assign(3, 0);
+    }
+    s.players[0].human = true;
+    s.players[0].civics.done[at(rules().civic("CIVIC_DIPLOMATIC_SERVICE"))] = 1;
+    addCity(s, 0, {4, 6}, true, 5);
+    addCity(s, 1, {16, 6}, true, 5);
+    addCity(s, 2, {24, 6}, true, 2);
+    s.players[1].envoys[2] = 4;
+    Agent spy;
+    spy.id = s.nextAgentId++;
+    spy.owner = 0;
+    spy.spy = true;
+    spy.level = 4;
+    s.agents.push_back(spy);
+    s.majorsAtStart = 2;
+    auto probe = Game::fromScenario(rules(), s);
+    REQUIRE(probe->suzerainOf(2) == 1);
+    CHECK(probe->canSpyMission(0, spy.id, SpyMission::FabricateScandal, probe->state().cities[2].id));
+    for (int seed = 1; seed <= 40; ++seed) {
+        GameState t = s;
+        t.rng.seed(static_cast<uint64_t>(seed));
+        t.agents[0].city = t.cities[2].id;
+        t.agents[0].mission = SpyMission::FabricateScandal;
+        t.agents[0].missionTurns = 1;
+        auto g = Game::fromScenario(rules(), std::move(t));
+        while (g->state().currentPlayer != 0 || g->state().turn == s.turn) {
+            const int before = g->state().turn * 10 + g->state().currentPlayer;
+            sovtest::endTurns(*g, 1);
+            if (g->state().turn * 10 + g->state().currentPlayer == before) break;
+        }
+        if (g->state().events.empty() || g->state().events.back().kind != EventKind::SpyOperation) continue;
+        CHECK_EQ(g->envoysAt(1, 2), 0);  // 4 envoys, less 1 + the spy's level 4, never below 0
+        return;
+    }
+    CHECK(false);  // never succeeded
+}

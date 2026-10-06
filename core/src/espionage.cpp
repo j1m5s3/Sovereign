@@ -304,9 +304,9 @@ void Game::resolveSpyOperation(Agent& a) {
             }
             break;
         case SpyMission::FabricateScandal: {
-            // The suzerain loses 2 envoys there, +1 per spy level beyond the first.
-            Player& cs = state_.players[at(c.owner)];
-            if (at(victim) < cs.envoys.size()) cs.envoys[at(victim)] = std::max(0, cs.envoys[at(victim)] - (1 + a.level));
+            // The suzerain loses 2 envoys there, +1 per spy level beyond the first (envoys are kept by the sender, per city-state).
+            Player& suzerain = state_.players[at(victim)];
+            if (at(c.owner) < suzerain.envoys.size()) suzerain.envoys[at(c.owner)] = std::max(0, suzerain.envoys[at(c.owner)] - (1 + a.level));
             break;
         }
         default: break;
