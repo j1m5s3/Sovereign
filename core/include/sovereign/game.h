@@ -692,6 +692,7 @@ private:
     void remember(PlayerId holder, PlayerId about, MemoryKind kind, int amount, int duration);
     // War is declared: memories, deeds, friendships and running deals end.
     void onWarDeclared(PlayerId by, PlayerId target, CasusBelli why = CasusBelli::None);
+    void declareWarOn(PlayerId by, PlayerId target, CasusBelli why);  // relations, grievances, memories
     void onPeace(PlayerId a, PlayerId b);
     void processDiplomacy(PlayerId player);  // running deals pay, expire or break; old memories fade
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn

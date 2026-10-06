@@ -397,7 +397,7 @@ CommandError Game::dealProblem(const Deal& d) const {
     if (d.from == d.to || !isMajorCiv(d.from) || !isMajorCiv(d.to) || !hasMet(d.from, d.to)) return CommandError::CannotDeal;
     if (d.items.empty() || d.items.size() > static_cast<size_t>(kMaxItems)) return CommandError::CannotDeal;
     const bool war = atWar(d.from, d.to);
-    bool peace = false, friendship = false, alliance = false;
+    bool peace = false, friendship = false, alliance = false, jointWar = false;
     std::vector<int> openBorders(2, 0);
     std::vector<TypeIndex> luxuries;
     int gold[2] = {0, 0}, perTurn[2] = {0, 0};
@@ -470,6 +470,25 @@ CommandError Game::dealProblem(const Deal& d) const {
                 bool room = false;
                 for (const City& c : state_.cities) room = room || (c.owner == other && freeGreatWorkSlot(c, w->type) != kNone);
                 if (!room) return CommandError::CannotDeal;
+                break;
+            }
+            case DealItemKind::JointWar: {
+                // Both go to war on a third major civ they have met (08: Joint War; the proposer needs Foreign
+                // Trade); one may already be at war with it ("join an ongoing war"), not both. Once per deal.
+                const PlayerId t = static_cast<PlayerId>(i.amount);
+                const TypeIndex trade = rules_->civic("CIVIC_FOREIGN_TRADE");
+                if (jointWar || war || i.amount < 0 || static_cast<size_t>(i.amount) >= state_.players.size() || t == d.from || t == d.to || !isMajorCiv(t))
+                    return CommandError::CannotDeal;
+                if (trade == kNone || !state_.players[at(d.from)].civics.has(trade)) return CommandError::CannotDeal;
+                int joining = 0;
+                for (PlayerId x : {d.from, d.to}) {
+                    if (!hasMet(x, t)) return CommandError::CannotDeal;
+                    if (atWar(x, t)) continue;
+                    if (!canDeclareWar(x, t)) return CommandError::CannotDeal;
+                    ++joining;
+                }
+                if (joining == 0) return CommandError::CannotDeal;
+                jointWar = true;
                 break;
             }
             case DealItemKind::Captive: {
@@ -550,6 +569,17 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 }
                 break;
             }
+            case DealItemKind::JointWar: {
+                // Help in a war it already fights is welcome; a new war only on a civ it dislikes and can match.
+                const PlayerId t = static_cast<PlayerId>(i.amount);
+                if (atWar(judge, t)) {
+                    value += 60;
+                } else {
+                    const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, t);
+                    value += opinionOf(judge, t) <= -20 && mine * 100 >= theirs * 80 ? 30 : -1000;
+                }
+                break;
+            }
             case DealItemKind::Captive: {
                 // Its own spy back is worth more to it than a caught one is to the catcher (Sovereign's values).
                 const CapturedSpy* c = dealCaptive(i);
@@ -607,6 +637,7 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
     for (const CapturedSpy& c : state_.capturedSpies) {
         if (c.captor == from && c.spy.owner == to) tryItem({DealItemKind::Captive, from, c.spy.id, kNone});
     }
+    for (const Player& t : state_.players) tryItem({DealItemKind::JointWar, from, t.id, kNone});
     int works = 0;
     for (const City& c : state_.cities) {
         if (c.owner != from) continue;
@@ -771,6 +802,7 @@ void Game::executeDeal(const Deal& d) {
                 break;
             case DealItemKind::Peace: onPeace(d.from, d.to); break;
             case DealItemKind::GreatWork: break;  // moved above
+            case DealItemKind::JointWar: break;  // declared below, once the rest of the deal is done
             case DealItemKind::Captive: {
                 // The spy comes home, idle, keeping its level and promotions.
                 auto it = std::find_if(state_.capturedSpies.begin(), state_.capturedSpies.end(),
@@ -783,6 +815,13 @@ void Game::executeDeal(const Deal& d) {
                 state_.agents.insert(slot, back);
                 break;
             }
+        }
+    }
+    // A Joint War: whichever of them is not yet at war with the target declares it, as a formal war.
+    for (const DealItem& i : d.items) {
+        if (i.kind != DealItemKind::JointWar) continue;
+        for (PlayerId x : {d.from, d.to}) {
+            if (!atWar(x, static_cast<PlayerId>(i.amount))) declareWarOn(x, static_cast<PlayerId>(i.amount), CasusBelli::JointWar);
         }
     }
     // Both remember a deal kept; a deal that only gives is a gift.
@@ -1011,6 +1050,7 @@ bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const
             return std::any_of(state_.promises.begin(), state_.promises.end(), [&](const Promise& pr) {
                 return pr.by == target && pr.to == player && pr.brokenOn > 0 && state_.turn - pr.brokenOn <= 30;
             });
+        case CasusBelli::JointWar:  // agreed in a deal, never held on its own
         case CasusBelli::None: break;
     }
     return false;
@@ -1027,6 +1067,7 @@ int Game::casusBelliGrievancePercent(CasusBelli why) const {
         case CasusBelli::Ideological: return 50;
         case CasusBelli::Retribution: return 50;
         case CasusBelli::GoldenAge: return 25;
+        case CasusBelli::JointWar: return 100;  // Joint War [100%] (08: War types)
         case CasusBelli::None: break;
     }
     return 100;
@@ -1244,6 +1285,11 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
             std::transform(kind.begin(), kind.end(), kind.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
             const std::string by = w.creator >= 0 && ti(w.creator) < r.greatPeople.size() ? " by " + r.greatPeople[ti(w.creator)].name : "";
             return who + " gives a Great Work (" + kind + by + ")";
+        }
+        case DealItemKind::JointWar: {
+            const bool known = i.amount >= 0 && static_cast<size_t>(i.amount) < s.players.size() && s.players[static_cast<size_t>(i.amount)].civ >= 0 &&
+                               ti(s.players[static_cast<size_t>(i.amount)].civ) < r.civs.size();
+            return "a joint war on " + (known ? r.civs[ti(s.players[static_cast<size_t>(i.amount)].civ)].name : std::string("?"));
         }
         case DealItemKind::Captive: {
             for (const CapturedSpy& c : s.capturedSpies) {

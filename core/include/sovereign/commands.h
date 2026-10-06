@@ -89,8 +89,8 @@ enum class CommandType : uint8_t {
 };
 
 // Casus belli (08: War types): the reason a war is declared for, each scaling the declaration's grievances.
-enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological, Retribution, GoldenAge };
-constexpr int kNumCasusBelli = 10;
+enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological, Retribution, GoldenAge, JointWar };
+constexpr int kNumCasusBelli = 11;  // JointWar only through a deal (08: Joint War)
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
 // or a regent when neither exists (a stand-in until governors and Great Generals exist).

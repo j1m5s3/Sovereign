@@ -575,6 +575,12 @@ void deals(View& v) {
                 ideas.insert(ideas.begin(), {{DealItemKind::GreatWork, o.id, c.id, static_cast<TypeIndex>(w)}, {DealItemKind::Gold, v.me, std::min(purse, price * 2), kNone}});
             }
         }
+        // A friend asked to join a war it fights (08: Joint War).
+        if (opinion >= kFriendOpinion && !distrusted) {
+            for (PlayerId e : v.enemies) {
+                if (e != o.id && v.game.isMajorCiv(e) && !v.game.atWar(o.id, e)) ideas.push_back({{DealItemKind::JointWar, v.me, e, kNone}});
+            }
+        }
         // Its own spies they caught, bought back (08: Captive deal item).
         for (const CapturedSpy& c : s.capturedSpies) {
             if (c.captor != o.id || c.spy.owner != v.me) continue;
