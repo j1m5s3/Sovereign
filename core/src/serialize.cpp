@@ -370,6 +370,9 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.projectsDone.begin(), p.projectsDone.end()));
         w.i16(p.pantheon);
         w.i16(p.religion);
+        w.boolean(p.inquisition);
+        w.i16(p.futureTechs);
+        w.i16(p.futureCivics);
         w.i16(p.cityState);
         writeI32s(w, std::vector<int32_t>(p.envoys.begin(), p.envoys.end()));
         w.i32(p.envoyTokens);
@@ -513,6 +516,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.capturedTurn);
         w.i32(c.rebellion);
         w.i32(c.rebellionCooldown);
+        w.bytes(c.tradingPosts);
         w.u32(static_cast<uint32_t>(c.districts.size()));
         for (const CityDistrict& d : c.districts) {
             w.i16(d.type);
@@ -800,6 +804,9 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.projectsDone.assign(trained.begin(), trained.end());
         p.pantheon = r.i16();
         p.religion = r.i16();
+        p.inquisition = r.boolean();
+        p.futureTechs = r.i16();
+        p.futureCivics = r.i16();
         p.cityState = r.i16();
         if (!readI32s(r, trained)) return false;
         p.envoys.assign(trained.begin(), trained.end());
@@ -994,6 +1001,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.capturedTurn = r.i32();
         c.rebellion = r.i32();
         c.rebellionCooldown = r.i32();
+        c.tradingPosts = r.bytes();
         uint32_t nd = r.u32();
         if (!r.checkCount(nd, 15)) return false;
         c.districts.resize(nd);

@@ -243,6 +243,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::ChooseCivic:
         case CommandType::ChangeGovernment:
         case CommandType::SetPolicy:
+        case CommandType::BuyPolicyChanges:
             return validateResearch(c);
         case CommandType::DeclareWar:
         case CommandType::MakePeace:
@@ -268,6 +269,8 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::FoundReligion:
         case CommandType::EvangelizeBelief:
         case CommandType::SpreadReligion:
+        case CommandType::LaunchInquisition:
+        case CommandType::HealReligious:
             return validateReligion(c);
         case CommandType::ProposeDeal:
         case CommandType::AnswerDeal:
@@ -821,7 +824,8 @@ void Game::apply(const Command& c) {
         case CommandType::ChooseResearch:
         case CommandType::ChooseCivic:
         case CommandType::ChangeGovernment:
-        case CommandType::SetPolicy: applyResearch(c); break;
+        case CommandType::SetPolicy:
+        case CommandType::BuyPolicyChanges: applyResearch(c); break;
         case CommandType::BuildImprovement:
         case CommandType::Harvest: applyBuilder(c); break;
         case CommandType::BuildIndustry: applyIndustry(c); break;
@@ -847,7 +851,9 @@ void Game::apply(const Command& c) {
         case CommandType::FoundPantheon:
         case CommandType::FoundReligion:
         case CommandType::EvangelizeBelief:
-        case CommandType::SpreadReligion: applyReligion(c); break;
+        case CommandType::SpreadReligion:
+        case CommandType::LaunchInquisition:
+        case CommandType::HealReligious: applyReligion(c); break;
         case CommandType::StartTradeRoute: applyTradeRoute(c); break;
         case CommandType::ProposeDeal:
         case CommandType::AnswerDeal:

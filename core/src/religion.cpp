@@ -153,6 +153,23 @@ bool Game::canSpreadReligion(UnitId id) const {
     return true;
 }
 
+bool Game::canLaunchInquisition(UnitId apostle) const {
+    const Unit* u = state_.unit(apostle);
+    if (!u || u->religion < 0 || rules_->units[at(u->type)].id != "UNIT_APOSTLE") return false;
+    const Player& p = state_.players[at(u->owner)];
+    return !p.inquisition && p.religion == u->religion && u->charges >= rules_->units[at(u->type)].spreadCharges;
+}
+
+bool Game::canHealReligious(UnitId guru) const {
+    const Unit* u = state_.unit(guru);
+    if (!u || rules_->units[at(u->type)].healCharges <= 0 || u->charges <= 0 || u->movesLeft <= Fixed()) return false;
+    const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
+    for (const Unit& o : state_.units) {
+        if (o.owner == u->owner && o.hp < maxHp && rules_->units[at(o.type)].religiousStrength > 0 && state_.grid.distance(o.pos, u->pos) <= 1) return true;
+    }
+    return false;
+}
+
 int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem item) const {
     const Player& p = state_.players[at(player)];
     const int speed = speedPercent(state_, *rules_);
@@ -178,7 +195,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         const bool secular = u.id == "UNIT_NATURALIST" || u.id == "UNIT_ROCK_BAND";
         // Warrior Monks (06): bought where the city follows a religion with the belief.
         const bool monk = u.id == "UNIT_WARRIOR_MONK" && cityFollows(city, Bf::WarriorMonks);
-        if (!secular && !monk && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE") return -1;
+        // Gurus wherever the city follows a religion; Inquisitors after Launch Inquisition, in cities of the player's own (06).
+        const bool inquisitor = u.id == "UNIT_INQUISITOR" && p.inquisition && majority >= 0 && majority == p.religion;
+        if (!secular && !monk && !inquisitor && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE" && u.id != "UNIT_GURU") return -1;
         if (!secular && majority < 0) return -1;
         const int copies = at(item.type) < p.unitsTrained.size() ? p.unitsTrained[at(item.type)] : 0;
         int cost = (u.cost + u.costProgression * copies) * speed / 100;
@@ -244,6 +263,7 @@ int Game::religiousStrength(const Unit& unit, bool defending) const {
         for (const UnitEffect& e : rules_->promotions[at(pr)].effects) add(e);
     }
     if (bestAllianceLevel(unit.owner, AllianceType::Religious) >= 2) s += 10;  // a Religious alliance at level 2 (08)
+    if (home && state_.players[at(unit.owner)].inquisition) s += 15;  // the Inquisition ability (06)
     if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
     const FoundedReligion& r = state_.religions[static_cast<size_t>(unit.religion)];
@@ -335,6 +355,14 @@ CommandError Game::validateReligion(const Command& c) const {
             if (u->owner != c.player) return CommandError::NotYourUnit;
             return canSpreadReligion(c.id) ? CommandError::Ok : CommandError::CannotSpread;
         }
+        case CommandType::LaunchInquisition:
+        case CommandType::HealReligious: {
+            const Unit* u = state_.unit(c.id);
+            if (!u) return CommandError::BadUnit;
+            if (u->owner != c.player) return CommandError::NotYourUnit;
+            const bool ok = c.type == CommandType::LaunchInquisition ? canLaunchInquisition(c.id) : canHealReligious(c.id);
+            return ok ? CommandError::Ok : CommandError::BadTarget;
+        }
         default: return CommandError::BadTarget;
     }
 }
@@ -380,6 +408,21 @@ void Game::applyReligion(const Command& c) {
             const Unit* u = state_.unit(c.id);
             state_.religions[static_cast<size_t>(u->religion)].beliefs.push_back(static_cast<TypeIndex>(c.arg));
             removeUnit(c.id);  // the Apostle is spent
+            break;
+        }
+        case CommandType::LaunchInquisition:
+            state_.players[at(c.player)].inquisition = true;
+            removeUnit(c.id);  // the Apostle is spent
+            break;
+        case CommandType::HealReligious: {
+            Unit& guru = *state_.unit(c.id);
+            const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
+            for (Unit& o : state_.units) {
+                if (o.owner == guru.owner && rules_->units[at(o.type)].religiousStrength > 0 && state_.grid.distance(o.pos, guru.pos) <= 1)
+                    o.hp = std::min(maxHp, o.hp + rules_->globalInt("COMBAT_HEAL_RELIGIOUS_CHARGE"));
+            }
+            guru.movesLeft = Fixed();
+            if (--guru.charges <= 0) removeUnit(c.id);
             break;
         }
         case CommandType::SpreadReligion: {

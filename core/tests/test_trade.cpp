@@ -92,7 +92,7 @@ TEST(a_trader_runs_a_route_lays_roads_and_comes_home) {
     auto g = Game::fromScenario(rules(), std::move(s));
     const CityId origin = g->state().cities[0].id, home = g->state().cities[1].id, abroad = g->state().cities[2].id;
     CHECK(g->canStartTradeRoute(trader, home));
-    CHECK(!g->canStartTradeRoute(trader, abroad));  // 16 tiles: out of a land route's 15
+    CHECK(g->canStartTradeRoute(trader, abroad));  // 16 tiles, but range refuels in our city on the way (07)
     const Fixed before = g->cityReport(origin).yields[yi(YieldType::Food)];
     REQUIRE(g->submit(Command::startTradeRoute(0, trader, home)) == CommandError::Ok);
     CHECK(!g->state().unit(trader));
@@ -103,9 +103,27 @@ TEST(a_trader_runs_a_route_lays_roads_and_comes_home) {
     CHECK_EQ(g->state().tradeRoutes[0].turnsLeft, 20);
     endTurnsAuto(*g, 2 * 20);
     CHECK(g->state().tradeRoutes.empty());
+    CHECK(g->state().city(home)->hasTradingPost(0));  // the route left a Trading Post (07)
     int traders = 0;
     for (const Unit& u : g->state().units) traders += rules().units[at(u.type)].id == "UNIT_TRADER";
     CHECK_EQ(traders, 1);  // back home
+}
+
+TEST(trading_posts_extend_range_and_pay_on_the_way) {
+    GameState s = tradeState();
+    s.cities[1].owner = 1;  // the middle city is foreign now
+    for (Plot& p : s.plots) p.owner = p.city == s.cities[1].id ? 1 : p.owner;
+    const UnitId trader = addUnit(s, "UNIT_TRADER", 0, {4, 6});
+    auto none = Game::fromScenario(rules(), s);
+    CHECK(!none->canStartTradeRoute(trader, none->state().cities[2].id));  // 16 tiles: out of a land route's 15
+    s.cities[1].tradingPosts = {1, 0};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId origin = g->state().cities[0].id, far = g->state().cities[2].id;
+    REQUIRE(g->canStartTradeRoute(trader, far));
+    const Fixed before = g->cityReport(origin).yields[yi(YieldType::Gold)];
+    const Fixed route = g->tradeRouteYields(g->state().cities[0], g->state().cities[2])[yi(YieldType::Gold)];
+    REQUIRE(g->submit(Command::startTradeRoute(0, trader, far)) == CommandError::Ok);
+    CHECK_EQ(g->cityReport(origin).yields[yi(YieldType::Gold)], before + route + Fixed::fromInt(1));  // the post in a foreign city
 }
 
 TEST(a_raider_at_war_plunders_a_route) {

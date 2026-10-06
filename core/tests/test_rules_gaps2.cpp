@@ -1,5 +1,5 @@
 // Rules found missing by an audit of the specs (04, 06, 07, 08, 09): costs by the world era, legacy cards,
-// city-state trade routes, Monarchy's envoys, the score's line items, the suzerain's resources.
+// city-state trade routes, the score's line items, the suzerain's resources, policy changes for Gold, Future Tech.
 #include "helpers.h"
 
 using namespace sov;
@@ -106,4 +106,42 @@ TEST(the_suzerain_gets_the_city_states_luxuries) {
     auto g = Game::fromScenario(rules(), std::move(s));
     REQUIRE(g->suzerainOf(1) == 0);
     CHECK(g->hasLuxury(0, lux));
+}
+
+TEST(policies_change_for_gold_between_civics) {
+    GameState s = flatState(16, 10, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    addCity(s, 0, {5, 5}, true, 3);
+    s.players[0].government = rules().government("GOVERNMENT_CHIEFDOM");
+    s.players[0].policies.assign(static_cast<size_t>(rules().governments[static_cast<size_t>(s.players[0].government)].totalSlots()), kNone);
+    s.players[0].freeChanges = false;
+    for (int i = 0; i < 12; ++i) s.players[0].civics.done[static_cast<size_t>(i)] = 1;
+    s.players[0].gold = Fixed::fromInt(1000);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int cost = g->policyChangeCost(0);
+    CHECK_EQ(cost, 240);  // 25 + (3 x 12)^1.5 = 241, shown in fives
+    REQUIRE(g->submit(Command::buyPolicyChanges(0)) == CommandError::Ok);
+    CHECK(g->state().players[0].freeChanges);
+    CHECK_EQ(g->state().players[0].gold, Fixed::fromInt(1000 - cost));
+    CHECK(g->submit(Command::buyPolicyChanges(0)) == CommandError::ChangesLocked);  // already open
+}
+
+TEST(future_tech_and_civic_repeat) {
+    GameState s = flatState(16, 10, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    addCity(s, 0, {5, 5}, true, 3);
+    const TypeIndex future = rules().tech("TECH_FUTURE_TECH"), civic = rules().civic("CIVIC_FUTURE_CIVIC");
+    s.players[0].techs.current = future;
+    s.players[0].techs.progress[static_cast<size_t>(future)] = Fixed::fromInt(1000000);
+    s.players[0].civics.current = civic;
+    s.players[0].civics.progress[static_cast<size_t>(civic)] = Fixed::fromInt(1000000);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int titles = g->governorTitles(0), favor = g->state().players[0].favor;
+    sovtest::endTurns(*g, 1);
+    const Player& p = g->state().players[0];
+    CHECK_EQ(p.futureTechs, 1);
+    CHECK_EQ(p.futureCivics, 1);
+    CHECK(!p.techs.has(future));  // still open to research again
+    CHECK_EQ(g->governorTitles(0), titles + 1);
+    CHECK(p.favor >= favor + 50);
 }

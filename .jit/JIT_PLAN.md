@@ -16,7 +16,7 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
    - The score's missing line items: great people, religion, wonders, era score.
    - Moved art is locked for 10 turns (`GREATWORK_ART_LOCK_TIME`).
    - Legacy policy cards can be slotted after their government.
-2. **Policy changes for Gold** (`POLICY_COST_*`); **Inquisitors, Launch Inquisition and Gurus** (Remove Heresy, heal charges); **Trading Posts** (route range from the last post, +Gold per foreign post); **Future Tech and Future Civic** (repeatable).
+2. **Done:** **Policy changes for Gold** (`POLICY_COST_*`); **Inquisitors, Launch Inquisition and Gurus** (Remove Heresy, heal charges); **Trading Posts** (route range from the last post, +Gold per foreign post); **Future Tech and Future Civic** (repeatable).
 3. **Deals and city-states:** ceding cities and trading Diplomatic Favor in deals; Suzerain War (city-states join their suzerain's wars); Make Demand.
 4. **Larger, as time allows:**
    - World Congress resolutions (12 more);
@@ -32,3 +32,9 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
 - AI random (hidden) agendas: Sovereign's leaders each have one hand-written agenda (specs/sovereign/leaders-and-art-style.md).
 - Liberation envoys by era: no data for them.
 - Trade route length in round trips: the flat length stands as an approximation.
+
+## Decisions (Claude's, under James's standing consent)
+
+- Policy changes for Gold: the spec leaves the formula unverified. The core charges POLICY_COST_BASE + (POLICY_COST_INCREASE_TO_BE_EXPONENTED x civics done)^1.5, rounded down to POLICY_COST_VISIBLE_DIVISOR; the `BuyPolicyChanges` command opens the turn's changes.
+- Launch Inquisition is open to the founder of the Apostle's religion, once. Inquisitors are bought in cities following the player's own religion.
+- Trade range refuels in the player's own cities and in cities holding its Trading Post. Routes may go to city-states (they could not before).
