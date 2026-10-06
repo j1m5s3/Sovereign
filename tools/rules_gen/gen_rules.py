@@ -1669,6 +1669,11 @@ def policy_modifiers(pid, text, ids):
         if m and m.group(1) in ids["abilities"]:
             add("PLAYER", "GRANT_ABILITY", {"ability": ids["abilities"][m.group(1)]})
             continue
+        # Great Lighthouse (03): "embarked units +1 movement", for all the player's embarked units like the techs' bonus.
+        m = re.fullmatch(r"\+(\d+) Movement while embarked", body)
+        if m and not where:
+            add("PLAYER", "ADJUST_EMBARKED_MOVES", {"amount": int(m.group(1))})
+            continue
         m = re.fullmatch(r"\+(\d+) build charge\(s\) for (?:units you train|your units) where unit is Builder", body)
         if m:
             add("PLAYER_CITIES", "ADJUST_BUILDER_CHARGES", {"amount": int(m.group(1))})
@@ -1897,6 +1902,8 @@ def gp_requirements(text, districts):
             pass  # every military unit here can
         elif key == "MissingBuildingType":
             req["missingBuilding"] = "BUILDING_" + snake(value)
+        elif key == "VisibleLuxury":
+            req["luxuryHere"] = True  # a luxury resource the player can see on the plot (Magellan, Colaeus)
         else:
             untracked.append(atom)
     if untracked:
@@ -1972,6 +1979,9 @@ def gp_more_effects(t, ids):
     m = re.fullmatch(r"grants (\d+) Envoy\(s\)", t)
     if m:
         return [{"kind": "ENVOYS", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"grants (\d+) of the resource on the unit's tile", t)
+    if m:
+        return [{"kind": "LUXURY_HERE", "amount": int(m.group(1))}]  # a lasting copy of the luxury (07: Colaeus)
     m = re.fullmatch(r"grant free envoys here \(Amount=(\d+)\)", t)
     if m:
         return [{"kind": "ENVOYS_HERE", "amount": int(m.group(1))}]

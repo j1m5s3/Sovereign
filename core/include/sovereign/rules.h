@@ -371,6 +371,7 @@ enum class GreatPersonEffectKind : uint8_t {
     UnitXp,             // the military unit here gains +`amount`% combat XP for good
     ConvertBarbarians,  // barbarian units next to it join the player
     Suzerain,           // the player becomes suzerain of the city-state it stands in, others' envoys removed
+    LuxuryHere,         // `amount` lasting copies of the luxury it stands on (Magellan, Colaeus)
     // Lasting, read from greatPeopleActivated (or the city's greatPeopleHere):
     TradeRoutes,        // + `amount` trade route capacity
     ResourcePerTurn,    // + `amount` of resource `ref` a turn
@@ -515,6 +516,7 @@ struct GreatPersonType {
     bool noMilitaryUnit = false;
     int unitDomain = -1;         // a military unit of this Domain must share the plot
     TypeIndex missingBuilding = kNone;
+    bool luxuryHere = false;     // a luxury the player can see must lie on the plot (Magellan, Colaeus)
     std::vector<GreatPersonEffect> effects;
     std::vector<std::string> untrackedEffects;  // effects of systems not built yet (shown, not applied)
     bool hasModifiers = false;                   // lasting effects as modifiers (Rules::modifiers, source = its id)
@@ -797,6 +799,7 @@ enum class ModEffect : uint8_t {
     DistrictTourism,               // player: + tourism from each of its completed `district`
     CityAppeal,                    // city: + appeal on its plots
     CityTourism,                   // city: + tourism (Shopping Mall, Ferris Wheel)
+    EmbarkedMoves,                 // player: + movement for its embarked units (Great Lighthouse)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,

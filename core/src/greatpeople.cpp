@@ -300,6 +300,9 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
             return fail(CommandError::CannotActivate);
     }
     if (g.missingBuilding != kNone && (!city || city->has(g.missingBuilding))) return fail(CommandError::CannotActivate);
+    // Magellan, Colaeus (07): on a luxury the player can see.
+    if (g.luxuryHere && (plot.resource == kNone || rules_->resources[at(plot.resource)].cls != ResourceClass::Luxury || !resourceVisible(u->owner, u->pos)))
+        return fail(CommandError::CannotActivate);
     // Effects that need a city (buildings, production) need one here.
     for (const GreatPersonEffect& fx : g.effects) {
         if ((fx.kind == GreatPersonEffectKind::Building || fx.kind == GreatPersonEffectKind::Production) && !city)
@@ -491,6 +494,12 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::GovernorTitles: p.governorTitlesSpent -= fx.amount; break;
+        case GreatPersonEffectKind::LuxuryHere: {
+            const TypeIndex lux = state_.plot(here).resource;
+            if (lux == kNone || rules_->resources[at(lux)].cls != ResourceClass::Luxury) break;
+            for (int k = 0; k < std::max(1, fx.amount); ++k) p.luxuryGrants.push_back(lux);
+            break;
+        }
         case GreatPersonEffectKind::RandomCivics: {
             Rng& rng = state_.rng.get(RngStream::Gameplay);
             for (int k = 0; k < fx.count; ++k) {

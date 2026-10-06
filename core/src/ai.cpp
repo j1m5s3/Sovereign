@@ -1984,7 +1984,7 @@ void upgrades(View& v) {
 }
 
 // Great people: used where they stand when they can be, otherwise walked to the nearest of
-// our plots that suits them (a city with a free Great Work slot, their district, a city).
+// our plots that suits them (a city with a free Great Work slot, their district, a luxury, a city).
 void greatPerson(View& v, UnitId id) {
     Game& g = v.game;
     const Unit* u = v.s().unit(id);
@@ -2007,6 +2007,15 @@ void greatPerson(View& v, UnitId id) {
         } else if (gp.district != kNone && v.r.districts[at(gp.district)].id != "DISTRICT_CITY_CENTER") {
             const CityDistrict* d = c.district(gp.district, true);
             if (d) spots.push_back(d->pos);
+        } else if (gp.luxuryHere) {
+            // Magellan, Colaeus: a luxury we can see on this city's land, on water for an Admiral.
+            const bool afloat = v.r.units[at(u->type)].domain == Domain::Sea;
+            for (const Hex& h : v.s().grid.within(c.pos, 3)) {
+                const Plot& pl = v.s().plot(h);
+                if (pl.city == cid && pl.resource != kNone && v.r.resources[at(pl.resource)].cls == ResourceClass::Luxury &&
+                    v.r.terrains[at(pl.terrain)].water == afloat && g.resourceVisible(v.me, h))
+                    spots.push_back(h);
+            }
         } else if (gp.unitDomain < 0) {
             spots.push_back(c.pos);
         }

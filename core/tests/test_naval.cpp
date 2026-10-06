@@ -1,4 +1,6 @@
 // Ships, embarkation and the Harbor (05-units-and-combat.md, Embarkation; 03, Harbor).
+#include <algorithm>
+
 #include "helpers.h"
 
 using namespace sov;
@@ -91,6 +93,22 @@ TEST(embarked_movement_grows_with_techs) {
     const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {9, 5});
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->maxMoves(unit(*g, w)), 5);  // 2 + 1 + 2
+}
+
+TEST(the_great_lighthouse_speeds_ships_and_embarked_units) {
+    GameState s = seaState();
+    giveTech(s, 0, "TECH_SHIPBUILDING");
+    addCity(s, 0, {7, 5}, true);
+    const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {9, 5});
+    const UnitId galley = addUnit(s, "UNIT_GALLEY", 0, {10, 6});
+    auto g = Game::fromScenario(rules(), s);
+    const int embarked = g->maxMoves(unit(*g, w)), sailing = g->maxMoves(unit(*g, galley));
+    City& port = s.cities[0];
+    port.buildings.push_back(rules().building("BUILDING_GREAT_LIGHTHOUSE"));
+    std::sort(port.buildings.begin(), port.buildings.end());
+    auto h = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(h->maxMoves(unit(*h, w)), embarked + 1);       // embarked units +1 movement (03)
+    CHECK_EQ(h->maxMoves(unit(*h, galley)), sailing + 1);   // naval units +1 movement
 }
 
 TEST(ships_keep_to_the_water_and_put_into_port) {
