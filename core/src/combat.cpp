@@ -1652,6 +1652,8 @@ void Game::healAndFortify(PlayerId pid) {
             int holyExtra = 0;
             for (const auto& [pos, extra] : holySites) holyExtra = std::max(holyExtra, state_.grid.distance(pos, u.pos) <= 1 ? extra : 0);
             u.hp = std::min(maxHp, u.hp + heal + holyExtra);
+            // Laying On Of Hands (08: Moksha): religious units in his city's territory heal fully.
+            if (ut.religiousStrength > 0 && territoryGovernorHas(u.pos, pid, "GOVERNOR_PROMOTION_LAYING_ON_OF_HANDS")) u.hp = maxHp;
         }
         // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.
         if (ut.domain == Domain::Land && nextToNaturalWonder(u.pos, "FEATURE_DEAD_SEA")) u.hp = maxHp;

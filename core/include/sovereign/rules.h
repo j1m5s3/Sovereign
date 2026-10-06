@@ -908,7 +908,8 @@ struct DifficultyType {
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
 enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear };
 enum class DisasterDamageType : uint8_t {
-    ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls, Other,
+    ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls,
+    DistrictPillaged, BuildingPillaged, BuildingDestroyed, Spread, Other,
 };
 struct DisasterDamage {
     DisasterDamageType type = DisasterDamageType::Other;

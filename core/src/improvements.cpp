@@ -162,11 +162,18 @@ int Game::luxuryAmenities(const City& city) const {
     return amenities;
 }
 
-bool Game::hasStrategicFor(PlayerId player, TypeIndex unitType) const {
+int Game::strategicCostIn(const City* city, TypeIndex unitType) const {
+    const UnitType& u = rules_->units[static_cast<size_t>(unitType)];
+    if (u.strategicResource == kNone || u.strategicCost <= 0) return 0;
+    if (city && cityGovernorHas(*city, "GOVERNOR_PROMOTION_BLACK_MARKETEER")) return (u.strategicCost * 20 + 99) / 100;
+    return u.strategicCost;
+}
+
+bool Game::hasStrategicFor(PlayerId player, TypeIndex unitType, const City* city) const {
     const UnitType& u = rules_->units[static_cast<size_t>(unitType)];
     if (u.strategicResource == kNone || u.strategicCost <= 0) return true;
     const Player& p = state_.players[static_cast<size_t>(player)];
-    return p.stockpile[static_cast<size_t>(u.strategicResource)] >= u.strategicCost;
+    return p.stockpile[static_cast<size_t>(u.strategicResource)] >= strategicCostIn(city, unitType);
 }
 
 bool Game::unitObsolete(PlayerId player, TypeIndex unitType) const {
@@ -517,7 +524,14 @@ void Game::accumulateStrategics(PlayerId pid) {
             {"POLICY_DRILL_MANUALS", "RESOURCE_NITER"}, {"POLICY_DRILL_MANUALS", "RESOURCE_COAL"}, {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_HORSES"},
             {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_IRON"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_ALUMINUM"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_OIL"}};
         for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
-        player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
+        // Foreign Investor (08: Amani): her city-state's strategics come in twice over.
+        int copies = 1;
+        if (home && p.owner != pid) {
+            PlayerId holder = kNoPlayer;
+            const Governor* amani = establishedGovernor(*home, &holder);
+            if (amani && holder == pid && governorHasPromotion(*amani, "GOVERNOR_PROMOTION_FOREIGN_INVESTOR")) copies = 2;
+        }
+        player.stockpile[static_cast<size_t>(p.resource)] += (r.accumulation + extra) * copies;
     }
     // Hattusa (08: suzerain): +2 a turn of each strategic resource revealed but not yet improved.
     if (suzerainBonus(pid, "CITYSTATE_HATTUSA")) {

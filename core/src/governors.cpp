@@ -60,6 +60,13 @@ bool Game::cityGovernorHas(const City& city, const char* promotionId) const {
     return g && holder == city.owner && governorHasPromotion(*g, promotionId);
 }
 
+bool Game::territoryGovernorHas(Hex at, PlayerId owner, const char* promotionId) const {
+    const Plot& p = state_.plot(at);
+    if (p.owner != owner || p.city == kNoCity) return false;
+    const City* c = state_.city(p.city);
+    return c && cityGovernorHas(*c, promotionId);
+}
+
 bool Game::governorHasPromotion(const Governor& g, const char* promotionId) const {
     const TypeIndex p = rules_->governorPromotion(promotionId);
     return p != kNone && std::find(g.promotions.begin(), g.promotions.end(), p) != g.promotions.end();

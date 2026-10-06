@@ -18,11 +18,12 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
    - Legacy policy cards can be slotted after their government.
 2. **Done:** **Policy changes for Gold** (`POLICY_COST_*`); **Inquisitors, Launch Inquisition and Gurus** (Remove Heresy, heal charges); **Trading Posts** (route range from the last post, +Gold per foreign post); **Future Tech and Future Civic** (repeatable).
 3. **Done: Deals and city-states:** ceding cities and trading Diplomatic Favor in deals; Suzerain War (city-states join their suzerain's wars); Make Demand.
-4. **Larger, as time allows:**
+4. **Larger, as time allows** (done so far: the governor promotions and the disaster items marked below):
    - World Congress resolutions (12 more);
    - historic moments (about 140 still unawarded);
-   - disasters pillaging districts and buildings; moving storms, spreading fires, meteor showers; deforestation's effect on warming; the Flood Barrier's scaled cost;
-   - the 9 governor promotions still without effect.
+   - **done:** disasters pillaging districts and buildings (a meltdown destroys them); storms moving on for 3 turns; forest fires spreading; deforestation scaling CO2 (-20% to +50%);
+   - **done:** governor promotions: Air Defense Initiative, Foreign Investor, Grand Inquisitor, Laying On Of Hands, Patron Saint, Black Marketeer, Vertical Integration (Messenger was already in place);
+   - left: meteor showers and Aquaculture/Parks and Recreation (the generated rules lack the meteor event, the Fishery and the City Park); the Flood Barrier's scaled cost (costs have no per-city path yet).
 
 ## Not planned
 
@@ -41,3 +42,4 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
 - Make Demand is a deal in which only the other side gives. An AI yields to a civ at least twice as strong when the demand costs it at most 200 Gold of worth, plus 100 for each further multiple of strength. It resents the demand (−10 opinion). The AI does not make demands itself yet.
 - Ceded cities: peace deals only; never the capital or the giver's last city. A ceded city arrives at 50 loyalty. An AI losing badly values peace at 400. The AI does not offer cities itself.
 - Suzerain War: the city-states of either side's suzerainty join a war between majors, and make peace with them.
+- Grand Inquisitor: +10 religious strength in Moksha's city's territory (the core does not record where a unit was bought). Black Marketeer: units trained there need 80% fewer strategic resources, rounded up. Deforestation: the level comes from the world's share of woods lost since climate tracking began, not from a running average.

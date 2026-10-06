@@ -655,6 +655,15 @@ struct SOV_API GameState {
         int turnsLeft = 0;
     };
     std::vector<Drought> droughts;      // -1 Food on their plots while they last
+    // Storms that move on, and fires that may spread, for their duration (09: Natural disasters).
+    struct Ongoing {
+        TypeIndex disaster = kNone;
+        Hex center;
+        int8_t dir = 0;
+        int turnsLeft = 0;
+    };
+    std::vector<Ongoing> ongoing;
+    int32_t woodsAtStart = -1;          // forest and rainforest plots when climate was first tracked (deforestation)
     std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t lastSpecialSession = 0;     // the turn the last special session (an emergency or an aid request) was called

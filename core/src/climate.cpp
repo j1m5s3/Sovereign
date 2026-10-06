@@ -10,6 +10,7 @@
 // Simplifications: districts and buildings are not pillaged (the core has no district
 // pillage); pillaged improvements repair themselves after five turns; fires do not spread.
 #include <algorithm>
+#include <optional>
 
 #include "sovereign/game.h"
 #include "sovereign/modifiers.h"
@@ -44,7 +45,27 @@ int radiusOf(int hexes) { return hexes >= 19 ? 2 : hexes >= 3 ? 1 : 0; }
 int Game::climateChangePoints() const {
     const TypeIndex size = rules_->mapSize(state_.setup.mapSize);
     const int64_t perDegree = size == kNone ? 2000000 : rules_->mapSizes[at(size)].co2PerDegree;
-    return static_cast<int>(std::min<int64_t>(1000, state_.co2 * 2 / std::max<int64_t>(1, perDegree)));
+    const int64_t co2 = state_.co2 * (100 + deforestationPercent()) / 100;
+    return static_cast<int>(std::min<int64_t>(1000, co2 * 2 / std::max<int64_t>(1, perDegree)));
+}
+
+namespace {
+int countWoods(const GameState& s, const Rules& r) {
+    const TypeIndex forest = r.feature("FEATURE_FOREST"), jungle = r.feature("FEATURE_JUNGLE");
+    int n = 0;
+    for (const Plot& p : s.plots) n += p.feature != kNone && (p.feature == forest || p.feature == jungle) ? 1 : 0;
+    return n;
+}
+}  // namespace
+
+// The share of woods lost sets a deforestation level (data: Light <=10% -1, Expected <=25% +1, Heavy <=40% +3,
+// Extreme +5), and the level CO2's effect (Reduced -20%, Unchanged 0, Slight +10%, Increase +30%, Huge +50%).
+// Sovereign reading: the level comes straight from the world's share lost, not a running average.
+int Game::deforestationPercent() const {
+    if (state_.woodsAtStart <= 0) return 0;
+    const int lost = std::max(0, state_.woodsAtStart - countWoods(state_, *rules_)) * 100 / state_.woodsAtStart;
+    const int level = lost <= 10 ? -1 : lost <= 25 ? 1 : lost <= 40 ? 3 : 5;
+    return level <= 0 ? -20 : level <= 1 ? 0 : level <= 2 ? 10 : level <= 3 ? 30 : 50;
 }
 
 int Game::temperatureTenths() const { return climateChangePoints() * 5; }
@@ -152,6 +173,39 @@ void Game::burnPower(PlayerId pid) {
 // ------------------------------------------------------------------ the world turn
 
 void Game::processClimate() {
+    if (state_.woodsAtStart < 0) state_.woodsAtStart = countWoods(state_, *rules_);
+    // Storms move on, fires may spread (09: Natural disasters).
+    {
+        std::vector<GameState::Ongoing> running;
+        running.swap(state_.ongoing);
+        Rng& rng = state_.rng.get(RngStream::Gameplay);
+        for (GameState::Ongoing o : running) {
+            if (o.disaster < 0 || at(o.disaster) >= rules_->disasters.size() || --o.turnsLeft < 0) continue;
+            const DisasterType& dt = rules_->disasters[at(o.disaster)];
+            std::optional<Hex> next;
+            if (dt.kind == DisasterKind::Fire) {
+                int spread = 0;
+                for (const DisasterDamage& dd : dt.damage) spread = dd.type == DisasterDamageType::Spread ? dd.percent : spread;
+                const TypeIndex forest = rules_->feature("FEATURE_FOREST"), jungle = rules_->feature("FEATURE_JUNGLE");
+                std::vector<Hex> woods;
+                for (const Hex& h : state_.grid.within(o.center, 1)) {
+                    const TypeIndex f = state_.plot(h).feature;
+                    if (f != kNone && (f == forest || f == jungle)) woods.push_back(h);
+                }
+                if (woods.empty() || !rng.chance(static_cast<uint32_t>(spread))) {
+                    if (!woods.empty()) state_.ongoing.push_back(o);  // still smouldering
+                    continue;
+                }
+                next = woods[rng.below(static_cast<uint32_t>(woods.size()))];
+            } else {
+                next = state_.grid.neighbor(o.center, static_cast<Dir>(o.dir));
+            }
+            if (!next) continue;
+            o.center = *next;
+            strikeDisaster(o.disaster, o.center, true);
+            if (o.turnsLeft > 0) state_.ongoing.push_back(o);
+        }
+    }
     // Repairs and droughts run down.
     for (Plot& p : state_.plots) {
         if (p.pillagedTurns > 0) --p.pillagedTurns;
@@ -271,7 +325,7 @@ void Game::processClimate() {
     }
 }
 
-void Game::strikeDisaster(TypeIndex disaster, Hex center) {
+void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     const DisasterType& dt = rules_->disasters[at(disaster)];
     Rng& rng = state_.rng.get(RngStream::Gameplay);
     const int intensity = std::clamp(state_.setup.disasterIntensity, 0, kNumDisasterIntensities - 1);
@@ -297,13 +351,22 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
         default: {
             const int radius = radiusOf(dt.hexes) + (dt.kind == DisasterKind::Fire ? 0 : extra);
             area = state_.grid.within(center, radius);
-            if (dt.hexes == 3 && extra == 0 && area.size() > 3) area.resize(3);
+            if (dt.hexes == 3 && extra == 0 && area.size() > 3) {
+                // Three plots: the center and two beside it.
+                std::stable_partition(area.begin(), area.end(), [&](const Hex& h) { return h == center; });
+                area.resize(3);
+            }
             break;
         }
     }
     if (area.empty()) return;
     const PlayerId victim = state_.plot(center).owner;
-    pushEvent(EventKind::Disaster, kNoPlayer, victim, static_cast<int>(disaster));
+    if (!follow) pushEvent(EventKind::Disaster, kNoPlayer, victim, static_cast<int>(disaster));
+    // Storms move on for their duration; fires may spread (09: storms last 3 turns, a forest fire 9).
+    const bool storm = dt.kind == DisasterKind::Blizzard || dt.kind == DisasterKind::DustStorm || dt.kind == DisasterKind::Tornado ||
+                       dt.kind == DisasterKind::Hurricane;
+    if (!follow && (storm || dt.kind == DisasterKind::Fire) && dt.duration > 1)
+        state_.ongoing.push_back({disaster, center, static_cast<int8_t>(rng.below(kNumDirs)), dt.duration - 1});
     if (dt.kind == DisasterKind::Drought) {
         state_.droughts.push_back({center, radiusOf(dt.hexes), std::max(1, dt.duration)});
     }
@@ -384,6 +447,33 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
                     for (UnitId id : lost) removeUnit(id);
                     break;
                 }
+                case DisasterDamageType::DistrictPillaged:
+                case DisasterDamageType::BuildingPillaged:
+                case DisasterDamageType::BuildingDestroyed: {
+                    // A district on the plot is pillaged (its buildings idle with it); a meltdown destroys its buildings.
+                    const CityDistrict* here = state_.districtAt(h);
+                    City* home = here ? state_.city(p.city) : nullptr;
+                    if (!home || !rng.chance(static_cast<uint32_t>(std::min(100, dd.percent)))) break;
+                    for (CityDistrict& d : home->districts) {
+                        if (d.pos != h) continue;
+                        if (dd.type == DisasterDamageType::BuildingDestroyed) {
+                            const TypeIndex kind = d.type;
+                            home->buildings.erase(std::remove_if(home->buildings.begin(), home->buildings.end(),
+                                                                 [&](TypeIndex b) {
+                                                                     const BuildingType& bt = rules_->buildings[at(b)];
+                                                                     return !bt.wonder && bt.districtType == kind;
+                                                                 }),
+                                                  home->buildings.end());
+                        } else if (d.complete && (dd.type == DisasterDamageType::DistrictPillaged ||
+                                                  std::any_of(home->buildings.begin(), home->buildings.end(), [&](TypeIndex b) {
+                                                      return rules_->buildings[at(b)].districtType == d.type;
+                                                  }))) {
+                            d.pillagedTurns = kPillagedDistrictTurns;
+                        }
+                    }
+                    break;
+                }
+                case DisasterDamageType::Spread:
                 case DisasterDamageType::Other: break;
             }
         }

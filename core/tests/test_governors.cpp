@@ -6,6 +6,7 @@
 
 using namespace sov;
 using sovtest::addCity;
+using sovtest::addUnit;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -241,4 +242,33 @@ TEST(contractor_buys_a_placed_district_with_gold_and_divine_architect_with_faith
     REQUIRE(h->state().city(city)->district(campus, true));
     CHECK(h->state().city(city)->queue.empty() || !(h->state().city(city)->queue.front() == item));
     CHECK(h->submit(Command::purchase(0, city, item)) == CommandError::CannotBuild);  // already complete
+}
+
+TEST(magnus_black_marketeer_and_moksha_religious_promotions) {
+    // Black Marketeer: units trained in the city need 80% fewer strategic resources.
+    auto plain = Game::fromScenario(rules(), govState());
+    auto bm = Game::fromScenario(rules(), withPromotion("GOVERNOR_MAGNUS", "GOVERNOR_PROMOTION_BLACK_MARKETEER"));
+    const TypeIndex swordsman = rules().unit("UNIT_SWORDSMAN");
+    REQUIRE(rules().units[at(swordsman)].strategicCost > 0);
+    CHECK_EQ(plain->strategicCostIn(&plain->state().cities[0], swordsman), rules().units[at(swordsman)].strategicCost);
+    CHECK_EQ(bm->strategicCostIn(&bm->state().cities[0], swordsman), (rules().units[at(swordsman)].strategicCost * 20 + 99) / 100);
+    // Grand Inquisitor: +10 religious strength in the city's territory. Laying On Of Hands: full heals there.
+    GameState base = govState();
+    addUnit(base, "UNIT_MISSIONARY", 0, {4, 6});
+    base.units.back().hp = 30;
+    base.units.back().activity = Activity::Sleep;
+    GameState gi = withPromotion("GOVERNOR_MOKSHA", "GOVERNOR_PROMOTION_GRAND_INQUISITOR");
+    gi.units = base.units;
+    gi.nextUnitId = base.nextUnitId;
+    GameState hands = withPromotion("GOVERNOR_MOKSHA", "GOVERNOR_PROMOTION_LAYING_ON_OF_HANDS");
+    hands.units = base.units;
+    hands.nextUnitId = base.nextUnitId;
+    auto g0 = Game::fromScenario(rules(), base);
+    auto g1 = Game::fromScenario(rules(), std::move(gi));
+    CHECK_EQ(g1->religiousStrength(g1->state().units.back(), false), g0->religiousStrength(g0->state().units.back(), false) + 10);
+    auto g2 = Game::fromScenario(rules(), std::move(hands));
+    sovtest::endTurns(*g2, 2);
+    sovtest::endTurns(*g0, 2);
+    CHECK_EQ(g2->state().units.back().hp, rules().globalInt("COMBAT_MAX_HIT_POINTS"));
+    CHECK(g0->state().units.back().hp < rules().globalInt("COMBAT_MAX_HIT_POINTS"));
 }

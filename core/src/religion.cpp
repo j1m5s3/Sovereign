@@ -264,6 +264,8 @@ int Game::religiousStrength(const Unit& unit, bool defending) const {
     }
     if (bestAllianceLevel(unit.owner, AllianceType::Religious) >= 2) s += 10;  // a Religious alliance at level 2 (08)
     if (home && state_.players[at(unit.owner)].inquisition) s += 15;  // the Inquisition ability (06)
+    // Grand Inquisitor (08: Moksha): +10 in the territory of his city (Sovereign reading of "units bought here").
+    if (territoryGovernorHas(unit.pos, unit.owner, "GOVERNOR_PROMOTION_GRAND_INQUISITOR")) s += 10;
     if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
     const FoundedReligion& r = state_.religions[static_cast<size_t>(unit.religion)];

@@ -1599,7 +1599,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"POPULATION_LOSS", DisasterDamageType::PopulationLoss},             {"UNIT_KILLED_CIVILIAN", DisasterDamageType::CivilianKilled},
             {"UNIT_DAMAGE_LAND", DisasterDamageType::UnitDamageLand},           {"UNIT_DAMAGE_NAVAL", DisasterDamageType::UnitDamageNaval},
             {"SPECIFIC_IMPROVEMENT_DESTROYED", DisasterDamageType::ImprovementDestroyed}, {"SPECIFIC_IMPROVEMENT_PILLAGED", DisasterDamageType::ImprovementPillaged},
-            {"CITY_GARRISON", DisasterDamageType::CityGarrison},                 {"CITY_WALLS", DisasterDamageType::CityWalls}};
+            {"CITY_GARRISON", DisasterDamageType::CityGarrison},                 {"CITY_WALLS", DisasterDamageType::CityWalls},
+            {"DISTRICT_PILLAGED", DisasterDamageType::DistrictPillaged},         {"BUILDING_PILLAGED", DisasterDamageType::BuildingPillaged},
+            {"BUILDING_DESTROYED", DisasterDamageType::BuildingDestroyed},       {"SPREAD", DisasterDamageType::Spread}};
         for (const Json& dj : j["damage"].items()) {
             DisasterDamage dd;
             for (const auto& [k, v] : damages) {
