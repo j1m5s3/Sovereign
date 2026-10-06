@@ -254,6 +254,12 @@ CityReport Game::cityReport(CityId id) const {
     }
     if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
         raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
+    // Zheng He, Zhang Qian, Marco Polo (07): +2 Gold for each other civ's trade route to the city where they were used.
+    if (const int hosts = usedHere(*c, Gp::ZhengHe) + usedHere(*c, Gp::ZhangQian) + usedHere(*c, Gp::MarcoPolo); hosts > 0) {
+        for (const TradeRoute& tr : state_.tradeRoutes) {
+            if (tr.destination == c->id && tr.owner != c->owner) raw[idx(YieldType::Gold)] += Fixed::fromInt(2 * hosts);
+        }
+    }
     // University of Sankore (03: Wonders): +2 Science for each other civ's trade route to this city.
     if (c->has(wonderType(W::Sankore))) {
         for (const TradeRoute& tr : state_.tradeRoutes) {
@@ -305,6 +311,11 @@ CityReport Game::cityReport(CityId id) const {
 
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
+    // John Roebling, Jane Drew (07): Amenities and Housing where they were used.
+    if (!c->greatPeopleHere.empty()) {
+        rep.amenities += usedHere(*c, Gp::Roebling) + 3 * usedHere(*c, Gp::JaneDrew);
+        rep.housing += Fixed::fromInt(2 * usedHere(*c, Gp::Roebling) + 4 * usedHere(*c, Gp::JaneDrew));
+    }
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
     rep.amenities += parkAmenities(*c);  // 07: National Parks
@@ -371,9 +382,16 @@ CityReport Game::cityReport(CityId id) const {
     const int loyaltyYield = loyal ? loyal->yieldPercent : 0;  // Wavering -25% ... Unrest -100% [R&F]
 
     const bool kilwa = holdsWonder(c->owner, W::Kilwa);
+    // Ibn Khaldun (07): +4% (Ecstatic) or +2% (Happy) to every yield but Food.
+    int khaldun = 0;
+    if (usedBy(c->owner, Gp::IbnKhaldun) && !rules_->happiness.empty()) {
+        const std::string& mood = rules_->happiness[static_cast<size_t>(rep.happiness)].id;
+        khaldun = mood == "HAPPINESS_ECSTATIC" ? 4 : mood == "HAPPINESS_HAPPY" ? 2 : 0;
+    }
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        if (i != idx(YieldType::Food)) pct += khaldun;
         // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.
         if (kilwa) {
             static const std::pair<YieldType, CityStateKind> kKilwa[] = {{YieldType::Science, CityStateKind::Scientific}, {YieldType::Culture, CityStateKind::Cultural},
@@ -763,7 +781,9 @@ Fixed Game::goldPerTurn(PlayerId player) const {
         if (m > Fixed()) net -= m;
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
-    for (size_t i = 0; i < p.wmds.size() && i < rules_->wmds.size(); ++i) net -= Fixed::fromInt(p.wmds[i] * rules_->wmds[i].maintenance);
+    // Second Strike Capability (04): nuclear devices cost half as much again to keep.
+    const int wmdPercent = policyIs(player, "POLICY_SECOND_STRIKE_CAPABILITY") ? 150 : 100;
+    for (size_t i = 0; i < p.wmds.size() && i < rules_->wmds.size(); ++i) net -= Fixed::fromInt(p.wmds[i] * rules_->wmds[i].maintenance * wmdPercent / 100);
     if (p.anarchyTurns == 0) net += founderYields(player)[idx(YieldType::Gold)];  // Tithe and the like (06)
     // Gold promised by deals (08: Trade Deal).
     for (const Agreement& a : state_.agreements) {
@@ -1098,8 +1118,9 @@ bool Game::completeItem(City& city, ProductionItem item) {
         for (CityDistrict& d : city.districts) {
             if (d.type != item.type) continue;
             d.complete = true;
-            // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it.
-            if (rules_->districts[static_cast<size_t>(d.type)].id == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) {
+            // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it; Mimar Sinan (07) an Industrial Zone.
+            const std::string& kind = rules_->districts[static_cast<size_t>(d.type)].id;
+            if ((kind == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) || (kind == "DISTRICT_INDUSTRIAL_ZONE" && usedBy(city.owner, Gp::MimarSinan))) {
                 for (const Hex& h : state_.grid.within(d.pos, 1)) {
                     Plot& q = state_.plot(h);
                     if (q.owner != kNoPlayer) continue;

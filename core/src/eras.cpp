@@ -235,6 +235,16 @@ int Game::tourismBase(PlayerId pid) const {
             if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
         }
         total += static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityTourism).toInt());  // Shopping Mall, Ferris Wheel
+        // Kenzo Tange (07): tourism from the city's districts' adjacency (Culture, Production and Science in full, Faith and Gold at half).
+        if (const int tange = c.greatPeopleHere.empty() ? 0 : usedHere(c, Gp::KenzoTange); tange > 0) {
+            for (const CityDistrict& d : c.districts) {
+                if (!d.complete) continue;
+                const Yields adj = districtAdjacency(pid, d.type, d.pos);
+                const Fixed t = adj[static_cast<size_t>(YieldType::Culture)] + adj[static_cast<size_t>(YieldType::Production)] + adj[static_cast<size_t>(YieldType::Science)] +
+                                (adj[static_cast<size_t>(YieldType::Faith)] + adj[static_cast<size_t>(YieldType::Gold)]) / 2;
+                total += tange * static_cast<int>(t.toInt());
+            }
+        }
         // Wish You Were Here (Golden Age): +50% tourism from cities with an established governor.
         PlayerId holder = kNoPlayer;
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;

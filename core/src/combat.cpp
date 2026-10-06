@@ -1542,6 +1542,7 @@ void Game::healAndFortify(PlayerId pid) {
     // Pantheon and religion (06): extra healing in and next to the player's Holy Sites.
     std::vector<std::pair<Hex, int>> holySites;
     const bool healing = playerHasBelief(pid, Bf::GodOfHealing);
+    const bool zahrawi = usedBy(pid, Gp::Zahrawi);
     if (healing || beliefInPlay(Bf::HolyWaters)) {
         const TypeIndex holy = rules_->district("DISTRICT_HOLY_SITE");
         for (const City& c : state_.cities) {
@@ -1571,6 +1572,7 @@ void Game::healAndFortify(PlayerId pid) {
                 heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_ENEMY" : "COMBAT_HEAL_LAND_ENEMY") + unitEffectTotal(u, UnitEffectKind::HealEnemy);
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL") + unitEffectTotal(u, UnitEffectKind::HealNeutral);
             if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
+            if (zahrawi && ut.domain == Domain::Land) heal += 5;  // Abu al-Qasim al-Zahrawi (07)
             // Chaplain (06): a friendly Apostle next to it.
             for (const auto& [pos, extra] : chaplains) heal += state_.grid.distance(pos, u.pos) <= 1 ? extra : 0;
             int holyExtra = 0;

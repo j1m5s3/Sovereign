@@ -178,6 +178,20 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(1);
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(1);
     }
+    // Great people (07): routes to a city where Zheng He, Zhang Qian or Marco Polo were used (+2 Gold for other civs), routes to
+    // city-states from where Ibn Fadlan was (+2 Faith), domestic routes from where Raja Todar Mal was (+0.5 Gold per specialty
+    // district at the destination), and every route of John Rockefeller's player (+2 Gold per strategic resource at the destination).
+    if (!destination.greatPeopleHere.empty() && !domestic)
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * (usedHere(destination, Gp::ZhengHe) + usedHere(destination, Gp::ZhangQian) + usedHere(destination, Gp::MarcoPolo)));
+    if (!origin.greatPeopleHere.empty()) {
+        if (isCityState(destination.owner)) out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(2 * usedHere(origin, Gp::IbnFadlan));
+        if (domestic && usedHere(origin, Gp::RajaTodarMal) > 0) {
+            int specialty = 0;
+            for (const CityDistrict& d : destination.districts) specialty += d.complete && rules_->districts[at(d.type)].needsPopulation ? 1 : 0;
+            out[static_cast<size_t>(YieldType::Gold)] += Fixed::ratio(specialty, 2);
+        }
+    }
+    if (usedBy(origin.owner, Gp::Rockefeller)) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * goods(destination, ResourceClass::Strategic));
     // Religious Community (06): international routes +2 Gold each for the origin's Holy Site, Shrine, Temple and worship building.
     if (!domestic && cityFollows(origin, Bf::ReligiousCommunity)) {
         int n = origin.district(rules_->district("DISTRICT_HOLY_SITE"), true) ? 1 : 0;

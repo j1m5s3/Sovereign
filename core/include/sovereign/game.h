@@ -785,6 +785,15 @@ private:
     bool beliefInPlay(Bf b) const;                      // some pantheon or religion has it
     bool cityFollows(const City& city, Bf b) const;     // the city's majority religion has it, or its owner's pantheon while it has none
     bool playerHasBelief(PlayerId player, Bf b) const;  // the player's pantheon or founded religion has it
+    // Great people whose effects are in code, looked up once (07: Great People).
+    enum class Gp : uint8_t {
+        ZhengHe, ZhangQian, MarcoPolo, IbnFadlan, RajaTodarMal, Rockefeller, MimarSinan, Crassus, Hildegard, Roebling, JaneDrew, Zahrawi,
+        IbnKhaldun, KenzoTange, Raskova, Count
+    };
+    TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
+    int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
+    bool usedBy(PlayerId player, Gp g) const;    // the player has used it
+    bool codedGreatPerson(TypeIndex person) const;
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
     uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings

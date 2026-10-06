@@ -40,7 +40,7 @@ int Game::baseAirSlots(PlayerId player, Hex base) const {
     const Plot& p = state_.plot(base);
     const City* owner = p.city == kNoCity ? nullptr : state_.city(p.city);
     if (!owner || owner->owner != player) return 0;
-    int slots = rules_->districts[at(d->type)].airSlots;
+    int slots = rules_->districts[at(d->type)].airSlots + usedHere(*owner, Gp::Raskova);  // Marina Raskova (07)
     for (TypeIndex b : owner->buildings) {
         const BuildingType& bt = rules_->buildings[at(b)];
         if (bt.districtType == d->type) slots += bt.airSlots;
