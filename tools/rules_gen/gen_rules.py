@@ -1271,7 +1271,15 @@ def gen_moments():
         if r["Obsolete era"]:
             m["obsoleteEra"] = "ERA_" + r["Obsolete era"].replace(" Era", "").upper()
         out.append(m)
-    return {"moments": out}
+    # Dedications [R&F] (09: Dedications): the era window; their effects are coded by id in the core.
+    dedications = []
+    for r in table(SPEC / "eras-moments-loyalty.md", "Dedications (commemorations) [R&F]"):
+        lo, _, hi = r["Eras"].partition("-")
+        d = {"id": "DEDICATION_" + snake(r["Dedication"]), "name": r["Dedication"], "eraMin": "ERA_" + lo.replace(" Era", "").strip().upper()}
+        if hi.strip():
+            d["eraMax"] = "ERA_" + hi.replace(" Era", "").strip().upper()
+        dedications.append(d)
+    return {"moments": out, "dedications": dedications}
 
 
 def gen_tree(kind, name_col, prefix, key):

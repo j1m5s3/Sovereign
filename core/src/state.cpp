@@ -207,6 +207,7 @@ std::string describe(const Command& c) {
         case CommandType::SendDelegation: return s + "SendDelegation " + std::to_string(c.arg) + (c.arg2 ? " embassy" : "");
         case CommandType::AskPromise: return s + "AskPromise " + std::to_string(c.arg) + " " + std::to_string(c.arg2);
         case CommandType::Excavate: return s + "Excavate " + std::to_string(c.id);
+        case CommandType::ChooseDedication: return s + "ChooseDedication " + std::to_string(c.arg);
         case CommandType::MoveGreatWork:
             return s + "MoveGreatWork city" + std::to_string(c.id) + " #" + std::to_string(c.arg) + " to city" + std::to_string(c.arg2) + " b" + std::to_string(c.target.x);
         case CommandType::FormUnit: return s + "FormUnit " + std::to_string(c.id) + " + " + std::to_string(c.arg);

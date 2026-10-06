@@ -751,7 +751,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
 			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
-				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution")};
+				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution"), TEXT("Golden Age War")};
 			for (const sov::Player& O : G.state().players)
 			{
 				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;
@@ -850,6 +850,10 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			const sov::TypeIndex Current = P.government;
 			ChooserTitle = FString::Printf(TEXT("Government: %s%s"), Current == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(Current)].name),
 				P.anarchyTurns > 0 ? *FString::Printf(TEXT(" (anarchy, %d turns)"), P.anarchyTurns) : TEXT(""));
+			// Dedications for this era (09), chosen here too.
+			for (const sov::TypeIndex D : G.availableDedications(Me()))
+				Choices.Add({FString::Printf(TEXT("Dedicate this era to %s (%d to choose)"), *Str(R.dedications[static_cast<size_t>(D)].name), P.dedicationsPending),
+					sov::Command::chooseDedication(Me(), D)});
 			for (size_t g = 0; g < R.governments.size(); ++g)
 			{
 				if (static_cast<sov::TypeIndex>(g) != Current && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g)))

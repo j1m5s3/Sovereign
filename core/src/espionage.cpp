@@ -319,6 +319,7 @@ void Game::resolveSpyOperation(Agent& a) {
     // A narrow success is noticed: the target knows who it was.
     if (op && roll < need + 2) remember(victim, sender, MemoryKind::SpyCaught, -4, 30);
     pushEvent(EventKind::SpyOperation, sender, victim, static_cast<int>(m));
+    dedicationScore(sender, "DEDICATION_BODYGUARD_OF_LIES", 1);  // 09: a successful mission
 }
 
 }  // namespace sov

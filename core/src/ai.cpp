@@ -1760,6 +1760,28 @@ void purchases(View& v) {
     }
 }
 
+// Dedications (09): the one its strategy favours, else the first open.
+void dedicate(View& v) {
+    static const std::pair<Strategy, const char*> kFavours[] = {
+        {Strategy::ScienceVictory, "DEDICATION_FREE_INQUIRY"},       {Strategy::ScienceVictory, "DEDICATION_SKY_AND_STARS"},
+        {Strategy::CultureVictory, "DEDICATION_PEN_BRUSH_AND_VOICE"}, {Strategy::CultureVictory, "DEDICATION_WISH_YOU_WERE_HERE"},
+        {Strategy::ReligiousVictory, "DEDICATION_EXODUS_OF_THE_EVANGELISTS"}, {Strategy::DominationVictory, "DEDICATION_TO_ARMS"},
+        {Strategy::DominationVictory, "DEDICATION_AUTOMATON_WARFARE"}};
+    for (int guard = 0; guard < 3; ++guard) {
+        const std::vector<TypeIndex> open = v.game.availableDedications(v.me);
+        if (open.empty()) return;
+        TypeIndex pick = open.front();
+        for (const auto& [strategy, id] : kFavours) {
+            const TypeIndex d = v.r.dedication(id);
+            if (v.posture.has(strategy) && std::find(open.begin(), open.end(), d) != open.end()) {
+                pick = d;
+                break;
+            }
+        }
+        if (v.game.submit(Command::chooseDedication(v.me, pick)) != CommandError::Ok) return;
+    }
+}
+
 // Theming (07): gather works into museums that can be themed from what the civ holds.
 void theme(View& v) {
     for (CityId cid : v.cities) {
@@ -2254,6 +2276,7 @@ void playTurn(Game& game) {
     upgrades(v);
     purchases(v);
     theme(v);
+    dedicate(v);
     patronage(v);
     envoys(v);
     pantheon(v);

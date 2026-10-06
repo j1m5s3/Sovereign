@@ -74,6 +74,7 @@ enum class CommandType : uint8_t {
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
     SendDelegation = 60,        // arg = the civ, arg2 = 1 a resident embassy (else a delegation); costs Gold (08)
     AskPromise = 59,            // arg = the civ asked, arg2 = PromiseKind; costs Diplomatic Favor [GS]
+    ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
     Excavate = 58,              // id = Archaeologist on an antiquity site or shipwreck: an Artifact into a free slot
     FormUnit = 57,              // id = military unit, arg = a neighbouring unit of its type: a Corps/Fleet, or an Army/Armada
@@ -86,8 +87,8 @@ enum class CommandType : uint8_t {
 };
 
 // Casus belli (08: War types): the reason a war is declared for, each scaling the declaration's grievances.
-enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological, Retribution };
-constexpr int kNumCasusBelli = 9;
+enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological, Retribution, GoldenAge };
+constexpr int kNumCasusBelli = 10;
 
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
 // or a regent when neither exists (a stand-in until governors and Great Generals exist).
@@ -214,6 +215,7 @@ struct Command {
     static Command moveGreatWork(PlayerId p, CityId from, int index, CityId to, TypeIndex building) {
         return {CommandType::MoveGreatWork, p, from, Hex{building, 0}, index, to};
     }
+    static Command chooseDedication(PlayerId p, TypeIndex dedication) { return {CommandType::ChooseDedication, p, -1, {}, dedication, 0}; }
     static Command excavate(PlayerId p, UnitId archaeologist) { return {CommandType::Excavate, p, archaeologist, {}, 0, 0}; }
     static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }
     static Command pillage(PlayerId p, UnitId unit) { return {CommandType::Pillage, p, unit, {}, 0, 0}; }

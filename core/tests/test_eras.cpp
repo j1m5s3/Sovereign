@@ -113,3 +113,68 @@ TEST(eras_survive_a_save) {
     CHECK_EQ(loaded->state().gameEra, 1);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+// ---- dedications [R&F] (09: Dedications)
+
+TEST(dedications_come_from_the_data_and_the_code_knows_them_all) {
+    const Rules& r = rules();
+    CHECK_EQ(r.dedications.size(), 12u);
+    for (const char* id : {"DEDICATION_FREE_INQUIRY", "DEDICATION_PEN_BRUSH_AND_VOICE", "DEDICATION_MONUMENTALITY", "DEDICATION_EXODUS_OF_THE_EVANGELISTS",
+                           "DEDICATION_HIC_SUNT_DRACONES", "DEDICATION_REFORM_THE_COINAGE", "DEDICATION_HEARTBEAT_OF_STEAM", "DEDICATION_TO_ARMS",
+                           "DEDICATION_WISH_YOU_WERE_HERE", "DEDICATION_SKY_AND_STARS", "DEDICATION_BODYGUARD_OF_LIES", "DEDICATION_AUTOMATON_WARFARE"})
+        CHECK(r.dedication(id) != kNone);
+    const DedicationType& monument = r.dedications[at(r.dedication("DEDICATION_MONUMENTALITY"))];
+    CHECK_EQ(monument.eraMin, r.era("ERA_CLASSICAL"));
+    CHECK_EQ(monument.eraMax, r.era("ERA_RENAISSANCE"));
+    CHECK_EQ(r.dedications[at(r.dedication("DEDICATION_SKY_AND_STARS"))].eraMax, -1);
+}
+
+TEST(a_dedication_scores_in_a_normal_age_and_rewards_in_a_golden_one) {
+    GameState s = eraState();
+    s.gameEra = rules().era("ERA_CLASSICAL");
+    s.players[0].dedicationsPending = 1;
+    s.players[0].gold = Fixed::fromInt(2000);
+    auto g = Game::fromScenario(rules(), s);
+    const TypeIndex monument = rules().dedication("DEDICATION_MONUMENTALITY");
+    const std::vector<TypeIndex> open = g->availableDedications(0);
+    CHECK(std::find(open.begin(), open.end(), monument) != open.end());
+    CHECK(std::find(open.begin(), open.end(), rules().dedication("DEDICATION_SKY_AND_STARS")) == open.end());  // not this era
+    REQUIRE(g->submit(Command::chooseDedication(0, monument)) == CommandError::Ok);
+    CHECK(g->availableDedications(0).empty());  // one choice in a Normal Age
+    // Normal Age: a district built is +1 era score.
+    const int before = g->state().players[0].eraScore;
+    City& c = g->stateMutForTests().cities[0];
+    CityDistrict d;
+    d.type = rules().district("DISTRICT_CAMPUS");
+    d.pos = {5, 7};
+    c.districts.push_back(d);
+    g->completeItem(c, {ProductionKind::District, d.type});
+    CHECK_EQ(g->state().players[0].eraScore, before + 1);
+    // Golden Age: no score, but Builders cost 30% less and move 2 further.
+    const ProductionItem builder{ProductionKind::Unit, rules().unit("UNIT_BUILDER")};
+    const int normalCost = g->purchaseCost(0, builder);
+    s.players[0].age = Age::Golden;
+    s.players[0].dedications = {monument};
+    s.players[0].dedicationsPending = 0;
+    const UnitId b = sovtest::addUnit(s, "UNIT_BUILDER", 0, {4, 7});
+    auto h = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(h->purchaseCost(0, builder), normalCost * 70 / 100 / 5 * 5);
+    CHECK_EQ(h->maxMoves(*h->state().unit(b)), rules().units[at(rules().unit("UNIT_BUILDER"))].moves + 2);
+}
+
+TEST(to_arms_in_a_golden_age_opens_the_golden_age_war) {
+    GameState s = eraState();
+    s.gameEra = rules().era("ERA_INDUSTRIAL");
+    for (Player& p : s.players) {
+        p.relations.resize(2);
+        p.met.assign(2, uint8_t{1});
+    }
+    s.players[0].age = Age::Golden;
+    s.players[0].dedications = {rules().dedication("DEDICATION_TO_ARMS")};
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(!g->hasCasusBelli(0, 1, CasusBelli::GoldenAge));  // not denouncing yet
+    s.players[0].relations[1].denouncedOn = s.turn;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    CHECK(h->hasCasusBelli(0, 1, CasusBelli::GoldenAge));
+    CHECK_EQ(h->casusBelliGrievancePercent(CasusBelli::GoldenAge), 25);
+}

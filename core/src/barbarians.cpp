@@ -56,6 +56,12 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
                 captures_.push_back({k->owner, victim.pos});
         }
     }
+    // Dedications (09): naval kills (Hic Sunt Dracones), Corps and Armies killed (To Arms!), kills by a Giant Death Robot.
+    if (killer && killer->owner != victim.owner && !state_.players[static_cast<size_t>(victim.owner)].barbarian) {
+        if (rules_->units[static_cast<size_t>(victim.type)].domain == Domain::Sea) dedicationScore(killer->owner, "DEDICATION_HIC_SUNT_DRACONES", 1);
+        if (victim.formation > 0) dedicationScore(killer->owner, "DEDICATION_TO_ARMS", victim.formation);
+        if (rules_->units[static_cast<size_t>(killer->type)].id == "UNIT_GIANT_DEATH_ROBOT") dedicationScore(killer->owner, "DEDICATION_AUTOMATON_WARFARE", 1);
+    }
     // Camp boldness: +15 per kill, -10 per unit lost, -5 per scout lost (BARBARIAN_BOLDNESS_PER_*).
     for (Camp& c : state_.camps) {
         if (killer && killer->camp == c.id) c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_KILL");

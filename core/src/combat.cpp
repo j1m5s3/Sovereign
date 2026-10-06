@@ -174,10 +174,18 @@ int Game::maxMoves(const Unit& unit) const {
         for (size_t i = 0; i < rules_->techs.size(); ++i) {
             if (p.techs.has(static_cast<TypeIndex>(i))) moves += rules_->techs[i].embarkedMoves;
         }
+        if (goldenDedication(unit.owner, "DEDICATION_HIC_SUNT_DRACONES")) moves += 2;  // 09
         return std::max(1, moves);
     }
     int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit) +
                 ((unit.wonderAbilities & 4) ? 1 : 0);  // the Bermuda Triangle (01)
+    // Dedications in a Golden Age (09).
+    {
+        const UnitType& ut = typeOf(*rules_, unit);
+        if (ut.id == "UNIT_BUILDER" && goldenDedication(unit.owner, "DEDICATION_MONUMENTALITY")) moves += 2;
+        if ((ut.id == "UNIT_MISSIONARY" || ut.id == "UNIT_APOSTLE" || ut.id == "UNIT_INQUISITOR") && goldenDedication(unit.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS")) moves += 2;
+        if (ut.domain == Domain::Sea && goldenDedication(unit.owner, "DEDICATION_HIC_SUNT_DRACONES")) moves += 2;
+    }
     if (!isLeader(unit)) return moves;
     for (TypeIndex g : unit.gear) {
         if (g != kNone) moves += rules_->gear[static_cast<size_t>(g)].moves;  // mounts add, heavy armor subtracts
@@ -616,7 +624,8 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
     const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
                         unitEffectTotal(unit, UnitEffectKind::XpPercent) +
                         (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0) +
-                        civAbility(unit.owner).unitXpPercent;
+                        civAbility(unit.owner).unitXpPercent +
+                        (ut.domain == Domain::Air && goldenDedication(unit.owner, "DEDICATION_SKY_AND_STARS") ? 100 : 0);  // 09
     xp = xp * percent / 100;
     // XP stops at the next level until the promotion is taken.
     unit.xp = std::min(unit.xp + xp, xpForNextLevel(unit));

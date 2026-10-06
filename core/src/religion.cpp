@@ -307,7 +307,9 @@ void Game::applyReligion(const Command& c) {
             for (size_t i = 0; i < city.pressure.size(); ++i) {
                 if (static_cast<int>(i) != u.religion) city.pressure[i] -= city.pressure[i] * t.evictPercent / 100;
             }
+            const int before = cityMajorityReligion(city);
             if (t.id != "UNIT_INQUISITOR") city.pressure[static_cast<size_t>(u.religion)] += static_cast<int32_t>(amount);
+            if (before != u.religion && cityMajorityReligion(city) == u.religion) dedicationScore(u.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS", 2);  // 09
             if (t.id != "UNIT_INQUISITOR" && city.owner != u.owner) breakPromises(u.owner, city.owner, PromiseKind::NoConverting);  // 08 [GS]
             u.movesLeft = Fixed();
             if (--u.charges <= 0) removeUnit(c.id);

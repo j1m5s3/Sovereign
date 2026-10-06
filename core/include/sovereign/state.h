@@ -395,6 +395,8 @@ struct Player {
     // Ages (09: Era score and Ages [R&F]).
     int eraScore = 0;               // this era's score so far
     Age age = Age::Normal;          // the age set when the world entered this era
+    std::vector<TypeIndex> dedications;  // Rules::dedications chosen for this era (09: Dedications)
+    int dedicationsPending = 0;          // still to choose this era
     int pastGoldenAges = 0, pastDarkAges = 0;
     std::vector<int8_t> momentEras; // per moment: 1 + the world era it was last earned in (0: never)
     std::vector<uint8_t> met;       // per player: met (seen one of its cities or units)

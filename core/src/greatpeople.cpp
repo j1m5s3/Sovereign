@@ -144,7 +144,8 @@ void Game::processGreatPeople(PlayerId pid) {
     fitPlayerToRules(p, *rules_);
     int earned = 0;
     for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
-        const int points = greatPersonPointsPerTurn(pid, static_cast<TypeIndex>(c));
+        int points = greatPersonPointsPerTurn(pid, static_cast<TypeIndex>(c));
+        if (rules_->greatPersonClasses[c].id == "GREAT_PERSON_CLASS_PROPHET" && goldenDedication(pid, "DEDICATION_EXODUS_OF_THE_EVANGELISTS")) points += 4;  // 09
         p.greatPersonPoints[c] += points;
         if (rules_->greatPersonClasses[c].id != "GREAT_PERSON_CLASS_PROPHET") earned += points;
     }
@@ -186,6 +187,7 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
     if (cls.id == "GREAT_PERSON_CLASS_SCIENTIST" || cls.id == "GREAT_PERSON_CLASS_ENGINEER" || cls.id == "GREAT_PERSON_CLASS_MERCHANT")
         competitionScore(pid, CompetitionKind::NobelPhysics, 1);
     pushEvent(EventKind::GreatPersonRecruited, pid, kNoPlayer, person);
+    dedicationScore(pid, "DEDICATION_SKY_AND_STARS", 1);  // 09: a great person earned
     if (!spot) return;  // no city to appear in: the great person is lost
     Unit& u = spawnUnit(cls.unit, pid, *spot);
     u.greatPerson = person;

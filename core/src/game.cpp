@@ -268,6 +268,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::ChooseDedication: return dedicationProblem(c.player, static_cast<TypeIndex>(c.arg));
         case CommandType::MoveGreatWork: return moveGreatWorkProblem(c.player, c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x));
         case CommandType::SendDelegation:
             if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotDeal;
@@ -697,6 +698,7 @@ void Game::refreshVisibility(PlayerId pid) {
             }
         }
         awardMoment(pid, first ? "MOMENT_FIRST_DISCOVERY_OF_A_NATURAL_WONDER" : "MOMENT_DISCOVERY_OF_A_NATURAL_WONDER");
+        dedicationScore(pid, "DEDICATION_HIC_SUNT_DRACONES", 3);
         const TypeIndex astrology = rules_->tech("TECH_ASTROLOGY");
         TreeProgress& t = p.techs;
         if (astrology != kNone && static_cast<size_t>(astrology) < t.done.size() && !t.done[static_cast<size_t>(astrology)] && !t.boosted[static_cast<size_t>(astrology)]) {
@@ -802,6 +804,7 @@ void Game::apply(const Command& c) {
             else pillage(c.id);
             break;
         case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::ChooseDedication: chooseDedication(c.player, static_cast<TypeIndex>(c.arg)); break;
         case CommandType::MoveGreatWork: moveGreatWork(c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x)); break;
         case CommandType::SendDelegation: sendDelegation(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0); break;
         case CommandType::AskPromise: askPromise(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2)); break;
@@ -878,14 +881,16 @@ void Game::apply(const Command& c) {
                     // A new city costs the journey first (SPYOP_TRAVEL_NEW_CITY).
                     if (a.city != c.arg2) {
                         const TypeIndex travel = rules_->spyOperation("SPYOP_TRAVEL_NEW_CITY");
+                        const int lies = goldenDedication(c.player, "DEDICATION_BODYGUARD_OF_LIES") ? 100 : 0;  // 09
                         a.travel = std::max(1, (travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) * speed / 100 *
-                                                   100 / (100 + spyPromotionTotal(a, &SpyPromotionType::travelFaster)));
+                                                   100 / (100 + spyPromotionTotal(a, &SpyPromotionType::travelFaster) + lies));
                         a.city = c.arg2;
                     }
                     const SpyOperationType* op = spyOperationFor(m);
                     const TypeIndex opIndex = rules_->spyOperation(op ? op->id : "");
                     int faster = 0;
                     for (TypeIndex pr : a.promotions) faster += opIndex == kNone ? 0 : rules_->spyPromotions[static_cast<size_t>(pr)].faster[static_cast<size_t>(opIndex)];
+                    if (m != SpyMission::Counterspy && m != SpyMission::ListeningPost && goldenDedication(c.player, "DEDICATION_BODYGUARD_OF_LIES")) faster += 25;  // 09
                     a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100 * (100 - std::min(75, faster)) / 100);
                 }
                 a.mission = m;

@@ -958,6 +958,9 @@ bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const
             if (p.government == kNone || t.government == kNone || p.government == t.government) return false;
             return rules_->governments[static_cast<size_t>(p.government)].tier >= 3 && rules_->governments[static_cast<size_t>(t.government)].tier >= 3;
         }
+        case CasusBelli::GoldenAge:
+            // In a Golden Age with the To Arms! dedication, right after denouncing them (09: Dedications).
+            return goldenDedication(player, "DEDICATION_TO_ARMS") && denouncing(player, target);
         case CasusBelli::Retribution:
             // They broke a promise to us within the last 30 turns (Early Empire).
             if (!has("CIVIC_EARLY_EMPIRE") || !denounced) return false;
@@ -979,6 +982,7 @@ int Game::casusBelliGrievancePercent(CasusBelli why) const {
         case CasusBelli::TerritorialExpansion: return 75;
         case CasusBelli::Ideological: return 50;
         case CasusBelli::Retribution: return 50;
+        case CasusBelli::GoldenAge: return 25;
         case CasusBelli::None: break;
     }
     return 100;

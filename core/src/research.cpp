@@ -384,8 +384,13 @@ void Game::updateBoosts(PlayerId pid) {
                                     : state_.players[static_cast<size_t>(pid)].techs;
             if (t.done[i] || t.boosted[i] || !boostMet(pid, b)) continue;
             const int cost = civic ? civicCost(static_cast<TypeIndex>(i)) : techCost(static_cast<TypeIndex>(i));
+            // Dedications (09): Free Inquiry (Eurekas) and Pen, Brush and Voice (Inspirations): +10 points in a
+            // Golden Age, +1 era score otherwise.
+            const char* const ded = civic ? "DEDICATION_PEN_BRUSH_AND_VOICE" : "DEDICATION_FREE_INQUIRY";
+            const int pct = b.percent + (goldenDedication(pid, ded) ? 10 : 0);
             t.boosted[i] = 1;
-            t.progress[i] += Fixed::fromInt(cost) * b.percent / 100;
+            t.progress[i] += Fixed::fromInt(cost) * pct / 100;
+            dedicationScore(pid, ded, 1);
             questDone(pid, civic ? QuestKind::Inspiration : QuestKind::Eureka, static_cast<int32_t>(i));  // 08: Quests
         }
     }
