@@ -268,6 +268,9 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::AskPromise:
+            if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg2 < 0 || c.arg2 >= kNumPromiseKinds) return CommandError::CannotDeal;
+            return askPromiseProblem(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2));
         case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
@@ -749,6 +752,7 @@ void Game::apply(const Command& c) {
             else pillage(c.id);
             break;
         case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::AskPromise: askPromise(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2)); break;
         case CommandType::FormUnit: {
             Unit& u = *state_.unit(c.id);
             const Unit& w = *state_.unit(c.arg);
@@ -868,6 +872,10 @@ void Game::applyFoundCity(const Command& c) {
     const Unit* u = state_.unit(c.id);
     const Hex at = u->pos;
     const PlayerId owner = u->owner;
+    // Settling within 6 of a civ it promised not to settle near breaks the promise (08 [GS]).
+    for (const City& near : state_.cities) {
+        if (near.owner != owner && state_.grid.distance(near.pos, at) <= 6) breakPromises(owner, near.owner, PromiseKind::NoSettling);
+    }
     Player& p = state_.players[static_cast<size_t>(owner)];
     City city;
     city.id = state_.nextCityId++;

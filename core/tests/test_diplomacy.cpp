@@ -476,3 +476,34 @@ TEST(a_reconquest_war_costs_no_grievances) {
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK(h->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::CannotDeclareWar);
 }
+
+// ---- promises [GS] (08: Ask Promise)
+
+TEST(a_broken_promise_brings_grievances_and_a_war_of_retribution) {
+    GameState s = diploState();
+    s.turn = 40;
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].favor = 100;
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
+    s.players[0].memories.push_back({1, MemoryKind::Gift, 30, 100, 40});   // player 0 likes 1 (irrelevant)
+    s.players[1].memories.push_back({0, MemoryKind::Gift, 30, 100, 40});   // player 1 likes 0: it will promise
+    const UnitId settler = sovtest::addUnit(s, "UNIT_SETTLER", 1, {9, 6});  // within 6 of player 0's city at (4,6)
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::askPromise(0, 1, PromiseKind::NoSettling)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].favor, 70);
+    REQUIRE(g->promised(1, 0, PromiseKind::NoSettling));
+    CHECK(g->submit(Command::askPromise(0, 1, PromiseKind::NoSettling)) != CommandError::Ok);  // already promised
+    // Player 1 settles near anyway.
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().currentPlayer == 1);
+    const int before = g->grievances(0, 1);
+    REQUIRE(g->submit(Command::foundCity(1, settler)) == CommandError::Ok);
+    CHECK(!g->promised(1, 0, PromiseKind::NoSettling));
+    CHECK_EQ(g->grievances(0, 1), before + 200);
+    // A War of Retribution once denounced long enough.
+    GameState t = g->state();
+    t.players[0].relations[1].denouncedOn = t.turn - 10;
+    t.currentPlayer = 0;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK(h->hasCasusBelli(0, 1, CasusBelli::Retribution));
+}

@@ -223,6 +223,16 @@ struct Emergency {
     uint8_t outcome = 0;            // 0 running, 1 members succeeded, 2 failed (target rewarded)
 };
 
+// A promise one civ made another (08: Ask Promise [GS]): kept for 30 turns, or broken by doing the deed.
+enum class PromiseKind : uint8_t { NoSettling = 0, NoConverting, NoSpying, NoDigging };
+constexpr int kNumPromiseKinds = 4;
+struct Promise {
+    PlayerId by = kNoPlayer, to = kNoPlayer;  // who promised, who asked
+    PromiseKind kind = PromiseKind::NoSettling;
+    int32_t until = 0;
+    int32_t brokenOn = 0;  // turn it was broken (0: kept); a War of Retribution is open for 30 turns after
+};
+
 // A city-state's quest for one major civ (08: Quests; data: diplomacy-espionage, City-state quests):
 // fulfilled, it puts an envoy in that city-state.
 enum class QuestKind : uint8_t { Convert = 0, TradeRoute, ClearCamp, TrainUnit, BuildDistrict, Eureka, Inspiration, GreatPerson };
@@ -573,6 +583,7 @@ struct SOV_API GameState {
     std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
     std::vector<Quest> quests;              // open city-state quests, one per city-state and major (08)
     std::vector<int32_t> battleSites;       // plots fought over before ARCHAEOLOGY_MAX_ERA (07: Archaeology)
+    std::vector<Promise> promises;          // promises made, kept and broken (08 [GS])
     bool antiquityPlaced = false;           // the sites have appeared (once a civ has Natural History)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first

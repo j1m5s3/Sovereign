@@ -308,6 +308,7 @@ void Game::applyReligion(const Command& c) {
                 if (static_cast<int>(i) != u.religion) city.pressure[i] -= city.pressure[i] * t.evictPercent / 100;
             }
             if (t.id != "UNIT_INQUISITOR") city.pressure[static_cast<size_t>(u.religion)] += static_cast<int32_t>(amount);
+            if (t.id != "UNIT_INQUISITOR" && city.owner != u.owner) breakPromises(u.owner, city.owner, PromiseKind::NoConverting);  // 08 [GS]
             u.movesLeft = Fixed();
             if (--u.charges <= 0) removeUnit(c.id);
             break;

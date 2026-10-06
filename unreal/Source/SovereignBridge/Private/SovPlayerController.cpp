@@ -724,7 +724,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
 			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
-				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War")};
+				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution")};
 			for (const sov::Player& O : G.state().players)
 			{
 				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;
@@ -743,6 +743,13 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					}
 				}
 				if (G.canMakePeace(Me(), O.id)) Choices.Add({FString::Printf(TEXT("Offer peace to %s"), *Who), sov::Command::makePeace(Me(), O.id)});
+				// Promises [GS] (30 favor each).
+				static const TCHAR* const Promises[] = {TEXT("not to settle near us"), TEXT("not to convert our cities"), TEXT("not to spy on us"), TEXT("not to dig in our lands")};
+				for (int32 K = 0; K < sov::kNumPromiseKinds; ++K)
+				{
+					const sov::Command Ask = sov::Command::askPromise(Me(), O.id, static_cast<sov::PromiseKind>(K));
+					if (G.validate(Ask) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Ask %s to promise %s (30 favor)"), *Who, Promises[K]), Ask});
+				}
 			}
 			break;
 		}

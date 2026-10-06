@@ -521,6 +521,16 @@ void deals(View& v) {
             v.game.submit(Command::denounce(v.me, o.id));
             continue;
         }
+        // A neighbour crowding our cities is asked to promise not to settle nearer (08 [GS]), with favor to spare.
+        if (s.players[at(v.me)].favor >= 60) {
+            bool crowding = false;
+            for (const City& theirs : s.cities) {
+                if (theirs.owner != o.id) continue;
+                for (CityId mine : v.cities) crowding = crowding || s.grid.distance(s.city(mine)->pos, theirs.pos) <= 6;
+            }
+            const Command ask = Command::askPromise(v.me, o.id, PromiseKind::NoSettling);
+            if (crowding && v.game.validate(ask) == CommandError::Ok) v.game.submit(ask);
+        }
         const Relation& rel = s.players[at(v.me)].relations[at(o.id)];
         if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
         std::vector<std::vector<DealItem>> ideas;

@@ -700,6 +700,48 @@ void Game::executeDeal(const Deal& d) {
     pushEvent(EventKind::DealAccepted, d.from, d.to, d.id);
 }
 
+// Promises [GS] (08: Ask Promise): a civ asks another not to settle near it, convert its cities, spy
+// on it or dig in its land, for 30 turns and DIPLOMACY_PROMISE_FAVOR_COST (30) Diplomatic Favor. An AI
+// asked answers at once: it promises when it does not dislike the asker or the asker is much stronger;
+// a refusal gives the asker 25 grievances against it. (A human asked is taken to promise; Sovereign
+// reading until the diplomacy screen asks them.) Doing the deed while a promise holds breaks it: the
+// asker gains GRIEVANCE_MULTIPLIER_FOR_BROKEN_PROMISE (200%) of a formal war's 100 grievances, remembers
+// it as a broken deal, and holds a War of Retribution casus belli for 30 turns.
+CommandError Game::askPromiseProblem(PlayerId asker, PlayerId of, PromiseKind kind) const {
+    if (asker == of || !isMajorCiv(asker) || !isMajorCiv(of) || !hasMet(asker, of) || atWar(asker, of)) return CommandError::CannotDeal;
+    if (state_.players[at(asker)].favor < 30 || promised(of, asker, kind)) return CommandError::CannotDeal;
+    return CommandError::Ok;
+}
+
+bool Game::promised(PlayerId by, PlayerId to, PromiseKind kind) const {
+    return std::any_of(state_.promises.begin(), state_.promises.end(), [&](const Promise& pr) {
+        return pr.by == by && pr.to == to && pr.kind == kind && pr.brokenOn == 0 && pr.until >= state_.turn;
+    });
+}
+
+bool Game::wouldPromise(PlayerId of, PlayerId asker) const {
+    if (state_.players[at(of)].human) return true;
+    return opinionOf(of, asker) >= 0 || ai::militaryStrength(*this, asker) >= 2 * ai::militaryStrength(*this, of);
+}
+
+void Game::askPromise(PlayerId asker, PlayerId of, PromiseKind kind) {
+    state_.players[at(asker)].favor -= 30;
+    if (wouldPromise(of, asker)) {
+        state_.promises.push_back({of, asker, kind, state_.turn + 30, 0});
+    } else {
+        addGrievance(asker, of, 25);
+    }
+}
+
+void Game::breakPromises(PlayerId by, PlayerId to, PromiseKind kind) {
+    for (Promise& pr : state_.promises) {
+        if (pr.by != by || pr.to != to || pr.kind != kind || pr.brokenOn != 0 || pr.until < state_.turn) continue;
+        pr.brokenOn = state_.turn;
+        addGrievance(to, by, 100 * rules_->globalInt("GRIEVANCE_MULTIPLIER_FOR_BROKEN_PROMISE") / 100);
+        remember(to, by, MemoryKind::BrokeDeal, -15, 60);
+    }
+}
+
 // Casus belli (08: War types). Each needs its civic and its condition, and, except Protectorate,
 // DIPLOMACY_DENOUNCE_WAR_DELAY turns of denouncement first; the declaration's grievances are the
 // formal war's times the war type's percent.
@@ -766,6 +808,12 @@ bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const
             if (p.government == kNone || t.government == kNone || p.government == t.government) return false;
             return rules_->governments[static_cast<size_t>(p.government)].tier >= 3 && rules_->governments[static_cast<size_t>(t.government)].tier >= 3;
         }
+        case CasusBelli::Retribution:
+            // They broke a promise to us within the last 30 turns (Early Empire).
+            if (!has("CIVIC_EARLY_EMPIRE") || !denounced) return false;
+            return std::any_of(state_.promises.begin(), state_.promises.end(), [&](const Promise& pr) {
+                return pr.by == target && pr.to == player && pr.brokenOn > 0 && state_.turn - pr.brokenOn <= 30;
+            });
         case CasusBelli::None: break;
     }
     return false;
@@ -780,6 +828,7 @@ int Game::casusBelliGrievancePercent(CasusBelli why) const {
         case CasusBelli::Colonial: return 50;
         case CasusBelli::TerritorialExpansion: return 75;
         case CasusBelli::Ideological: return 50;
+        case CasusBelli::Retribution: return 50;
         case CasusBelli::None: break;
     }
     return 100;

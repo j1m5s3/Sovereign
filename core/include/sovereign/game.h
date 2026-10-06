@@ -420,6 +420,13 @@ public:
     void triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim);
     void processEmergencies();               // goals met, expiry, rewards (the world turn)
 
+    // ---- promises [GS] (08: Ask Promise)
+    CommandError askPromiseProblem(PlayerId asker, PlayerId of, PromiseKind kind) const;
+    bool wouldPromise(PlayerId of, PlayerId asker) const;            // an AI's answer
+    void askPromise(PlayerId asker, PlayerId of, PromiseKind kind);
+    void breakPromises(PlayerId by, PlayerId to, PromiseKind kind);  // the deed was done
+    bool promised(PlayerId by, PlayerId to, PromiseKind kind) const;  // a promise in force
+
     // ---- casus belli (08: War types)
     bool hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const;  // civic and condition met
     int casusBelliGrievancePercent(CasusBelli why) const;                        // of a formal war's grievances
