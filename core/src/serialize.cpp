@@ -289,7 +289,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         const size_t slots = p.government == kNone
                                  ? 0
                                  : static_cast<size_t>(rules.governments[static_cast<size_t>(p.government)].totalSlots());
-        if (p.policies.size() != slots) return false;
+        if (p.policies.size() < slots || p.policies.size() > slots + 16) return false;  // + wonders' slots
         for (TypeIndex pol : p.policies) if (!inRange(pol, rules.policies.size(), true)) return false;
         if (p.anarchyTurns < 0) return false;
         if (p.dynastyNext < 0 || p.interregnumTurns < 0) return false;

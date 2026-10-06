@@ -26,6 +26,8 @@ void Game::awardMoment(PlayerId pid, const char* id) {
     if (p.momentEras.size() < rules_->moments.size()) p.momentEras.resize(rules_->moments.size(), 0);
     p.momentEras[at(m)] = static_cast<int8_t>(state_.gameEra + 1);
     p.eraScore += mt.eraScore;
+    // Taj Mahal (03: Wonders): +1 era score for each moment worth 2 or more.
+    if (mt.eraScore >= 2 && buildingsOwned(pid, "BUILDING_TAJ_MAHAL") > 0) ++p.eraScore;
     pushEvent(EventKind::HistoricMoment, pid, kNoPlayer, m);
 }
 

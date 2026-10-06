@@ -93,9 +93,6 @@
     ]
    },
    "text": "+1 build charge(s) for your units where unit is Builder; grants 1 Builder (one-time)",
-   "untrackedEffects": [
-    "+1 build charge(s) for your units where unit is Builder"
-   ],
    "effects": [
     {
      "kind": "UNIT",
@@ -770,11 +767,6 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_MERCHANT": 3
    },
-   "untrackedEffects": [
-    "+15% Faith in all your cities where NOT city on capital's continent and city has a governor",
-    "+15% Gold in all your cities where NOT city on capital's continent and city has a governor",
-    "+15% Production in all your cities where NOT city on capital's continent and city has a governor"
-   ],
    "effects": [
     {
      "kind": "GOVERNOR_TITLES",
@@ -878,10 +870,7 @@
     "river": true,
     "nextToDistrict": "DISTRICT_INDUSTRIAL_ZONE"
    },
-   "text": "+20% Production; +1 Production on this city's tiles where tile has Quarry or tile has Mine",
-   "untrackedEffects": [
-    "+1 Production on this city's tiles where tile has Quarry or tile has Mine"
-   ]
+   "text": "+20% Production; +1 Production on this city's tiles where tile has Quarry or tile has Mine"
   },
   {
    "id": "BUILDING_BOLSHOI_THEATRE",
@@ -1205,6 +1194,15 @@
    }
   },
   {
+   "id": "BUILDING_PYRAMIDS_1",
+   "source": "BUILDING_PYRAMIDS",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_BUILDER_CHARGES",
+   "arguments": {
+    "amount": 1
+   }
+  },
+  {
    "id": "BUILDING_ETEMENANKI_MARSH_SCIENCE",
    "source": "BUILDING_ETEMENANKI",
    "collection": "OWNER_CITY_PLOTS",
@@ -1450,6 +1448,69 @@
    }
   },
   {
+   "id": "BUILDING_CASA_DE_CONTRATACI_N_1",
+   "source": "BUILDING_CASA_DE_CONTRATACI_N",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "FAITH",
+    "amount": 15
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "CITY_ON_CAPITAL_CONTINENT",
+      "negate": true
+     },
+     {
+      "type": "CITY_HAS_GOVERNOR"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_CASA_DE_CONTRATACI_N_2",
+   "source": "BUILDING_CASA_DE_CONTRATACI_N",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "GOLD",
+    "amount": 15
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "CITY_ON_CAPITAL_CONTINENT",
+      "negate": true
+     },
+     {
+      "type": "CITY_HAS_GOVERNOR"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_CASA_DE_CONTRATACI_N_3",
+   "source": "BUILDING_CASA_DE_CONTRATACI_N",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 15
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "CITY_ON_CAPITAL_CONTINENT",
+      "negate": true
+     },
+     {
+      "type": "CITY_HAS_GOVERNOR"
+     }
+    ]
+   }
+  },
+  {
    "id": "BUILDING_ST_BASIL_S_CATHEDRAL_PLOTS_FOOD_0",
    "source": "BUILDING_ST_BASIL_S_CATHEDRAL",
    "collection": "OWNER_CITY_PLOTS",
@@ -1565,6 +1626,42 @@
    "arguments": {
     "yield": "PRODUCTION",
     "amount": 20
+   }
+  },
+  {
+   "id": "BUILDING_RUHR_VALLEY_PLOTS_PRODUCTION_0",
+   "source": "BUILDING_RUHR_VALLEY",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_IMPROVEMENT",
+      "ref": "IMPROVEMENT_QUARRY"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_RUHR_VALLEY_PLOTS_PRODUCTION_1",
+   "source": "BUILDING_RUHR_VALLEY",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_IMPROVEMENT",
+      "ref": "IMPROVEMENT_MINE"
+     }
+    ]
    }
   },
   {

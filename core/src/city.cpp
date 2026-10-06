@@ -1065,6 +1065,11 @@ bool Game::completeItem(City& city, ProductionItem item) {
         questDone(city.owner, QuestKind::TrainUnit, item.type);  // 08: Quests
         if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
                                               (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
+        // Venetian Arsenal (03: Wonders): a second naval melee, ranged or carrier unit (`made` is not used after this).
+        if ((u.unitClass == "NAVAL_MELEE" || u.unitClass == "NAVAL_RANGED" || u.unitClass == "NAVAL_CARRIER") &&
+            buildingsOwned(city.owner, "BUILDING_VENETIAN_ARSENAL") > 0) {
+            if (auto again = unitSpawnPlot(city, item.type)) spawnUnit(item.type, city.owner, *again);
+        }
         assignCitizens(city);
         refreshVisibility(city.owner);
     } else if (item.kind == ProductionKind::District) {

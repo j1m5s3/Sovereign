@@ -906,15 +906,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			static const TCHAR* const SlotNames[] = {TEXT("Military"), TEXT("Economic"), TEXT("Diplomatic"), TEXT("Wildcard"), TEXT("Great Person")};
 			if (Current != sov::kNone)
 			{
-				const sov::GovernmentType& Gov = R.governments[static_cast<size_t>(Current)];
-				for (int32 Slot = 0; Slot < Gov.totalSlots(); ++Slot)
+				for (int32 Slot = 0; Slot < static_cast<int32>(P.policies.size()); ++Slot)
 				{
 					const sov::TypeIndex In = static_cast<size_t>(Slot) < P.policies.size() ? P.policies[static_cast<size_t>(Slot)] : sov::kNone;
 					const FString Holds = In == sov::kNone ? FString(TEXT("empty")) : Str(R.policies[static_cast<size_t>(In)].name);
 					for (size_t pol = 0; pol < R.policies.size(); ++pol)
 					{
 						if (static_cast<sov::TypeIndex>(pol) == In || !G.canSetPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))) continue;
-						Choices.Add({FString::Printf(TEXT("%s slot %d (%s): %s"), SlotNames[static_cast<int32>(sov::Game::slotType(Gov, Slot))], Slot + 1, *Holds,
+						Choices.Add({FString::Printf(TEXT("%s slot %d (%s): %s"), SlotNames[static_cast<int32>(G.policySlotType(Me(), Slot))], Slot + 1, *Holds,
 										 *Str(R.policies[pol].name)),
 							sov::Command::setPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))});
 					}

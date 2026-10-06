@@ -12,10 +12,19 @@ Specs: 03-districts-buildings-wonders (Wonders); data/wonders ("Effects (modifie
    - lasting: a strategic resource a turn (Jebel Barkal, read with the great people's `RESOURCE_PER_TURN`);
    - fields: `spreadCharges` (Hagia Sophia: + charges on bought religious units) and `policySlots` (Alhambra, Forbidden City, Potala Palace, Big Ben; read in milestone 2).
    What is left is listed per wonder in `untrackedEffects`.
-2. **Next: Effects in code.** Wonders' policy slots; Colosseum and Statue of Liberty loyalty; Machu Picchu's Mountain adjacency; Venetian Arsenal's extra ships; Mont St. Michel's Martyr; Great Bath floods; Pyramids' Builder charge; Oracle's district points; Petra, Ruhr Valley, Huey Teocalli and Mausoleum plot yields; Kilwa Kisiwani; University of Sankore; Great Zimbabwe; Taj Mahal; Casa de Contratación; Amundsen-Scott; Biosphère; Golden Gate Bridge; Cristo Redentor; St. Basil's; Torre de Belém; Országház; Apadana; Meenakshi Temple.
+2. **Done: Policy slots and the first effects in code.** Wonders' policy slots (Alhambra, Forbidden City, Potala Palace, Big Ben) follow the government's (`Game::policySlotType`, `syncPolicySlots`). Also:
+   - Colosseum: +2 loyalty within 6 tiles; Statue of Liberty: no loyalty loss within 6 tiles (`Game::nearOwnWonder`);
+   - Machu Picchu: Mountain adjacency; Venetian Arsenal: a second naval unit; Taj Mahal: era score; Mont St. Michel: Martyr Apostles.
+   The generator now also reads Pyramids' Builder charge, Ruhr Valley's Mines and Quarries, and Casa de Contratación's "and" conditions.
+3. **Next: The rest in code:**
+   - Kilwa Kisiwani, University of Sankore, Great Zimbabwe, Torre de Belém;
+   - Oracle, Meenakshi Temple, Apadana, Országház;
+   - Great Bath, Petra, Huey Teocalli, Mausoleum, Amundsen-Scott;
+   - the tourism wonders (Cristo Redentor, St. Basil's, Golden Gate Bridge, Biosphère).
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - One effect parser for great people and wonders (`parseEffect` in `rules.cpp`). Wonder effect kinds that are lasting count while the owner holds the wonder (`greatPersonEffectTotal` reads the owner's cities' wonders for `RESOURCE_PER_TURN`).
 - Big Ben's "multiplies treasury by 50" is +50% of the treasury (the Civ VI value), kind `TREASURY_PERCENT`.
 - `Game::wonderCompleted` gives scenarios and tests a wonder's completion effects.
+- Wonder policy slots come after the government's in `Player::policies`; a save may hold more slots than the government has. When a wonder is lost, the slots are resized at its old owner's next turn and cards in slots of the wrong type come out.

@@ -309,6 +309,18 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.per));
     }
+    // Machu Picchu (03: Wonders): +1 per adjacent Mountain for Commercial Hubs, Industrial Zones and Theater Squares.
+    const YieldType mountainYield = d.id == "DISTRICT_COMMERCIAL_HUB" ? YieldType::Gold
+                                    : d.id == "DISTRICT_INDUSTRIAL_ZONE" ? YieldType::Production
+                                    : d.id == "DISTRICT_THEATER_SQUARE" ? YieldType::Culture
+                                                                        : YieldType::Food;
+    if (mountainYield != YieldType::Food && buildingsOwned(player, "BUILDING_MACHU_PICCHU") > 0) {
+        int mountains = 0;
+        for (const Hex& n : state_.grid.within(plot, 1)) {
+            if (n != plot && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain) ++mountains;
+        }
+        out[static_cast<size_t>(mountainYield)] += Fixed::fromInt(mountains);
+    }
     int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
     // Reyna's Harbormaster doubles the Commercial Hub's and Harbor's adjacency in her city.
     const Plot& here = state_.plot(plot);

@@ -76,8 +76,28 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     return out;
 }
 
+bool Game::nearOwnWonder(const City& city, const char* wonderId, int range) const {
+    const TypeIndex b = rules_->building(wonderId);
+    if (b == kNone) return false;
+    for (const City& o : state_.cities) {
+        if (o.owner != city.owner || !o.has(b)) continue;
+        Hex site = o.pos;
+        for (const CityWonder& cw : o.wonders) {
+            if (cw.building == b) site = cw.pos;
+        }
+        if (state_.grid.distance(site, city.pos) <= range) return true;
+    }
+    return false;
+}
+
 void Game::wonderCompleted(CityId id, TypeIndex building) {
-    if (City* c = state_.city(id); c && building >= 0 && static_cast<size_t>(building) < rules_->buildings.size()) completeWonder(*c, building);
+    City* c = state_.city(id);
+    if (!c || building < 0 || static_cast<size_t>(building) >= rules_->buildings.size()) return;
+    if (!c->has(building)) {
+        c->buildings.push_back(building);
+        std::sort(c->buildings.begin(), c->buildings.end());
+    }
+    completeWonder(*c, building);
 }
 
 void Game::completeWonder(City& city, TypeIndex building) {
@@ -95,6 +115,7 @@ void Game::completeWonder(City& city, TypeIndex building) {
             applyEffectAt(city.owner, &city, city.pos, fx);
         }
     }
+    syncPolicySlots(city.owner);  // Alhambra, Forbidden City, Potala Palace, Big Ben
     // Everyone else building it loses it, keeping half of what went in (R&F).
     for (City& other : state_.cities) {
         if (other.id == city.id) continue;

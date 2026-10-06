@@ -181,6 +181,8 @@ public:
     bool canPlaceWonder(const City& city, TypeIndex building, Hex plot) const;
     std::vector<Hex> wonderPlots(CityId city, TypeIndex building) const;
     void wonderCompleted(CityId city, TypeIndex building);  // its completion effects (scenarios, tests)
+    // The city lies within `range` of a wonder its owner holds (Colosseum, Statue of Liberty).
+    bool nearOwnWonder(const City& city, const char* wonderId, int range) const;
 
     // ---- trade routes and roads (07: Trade routes; 01: Routes)
     int tradeRouteCapacity(PlayerId player) const;
@@ -238,6 +240,9 @@ public:
     // Slot type of slot `slot` of a government: Military slots first, then
     // Economic, Diplomatic and Wildcard.
     static PolicySlot slotType(const GovernmentType& government, int slot);
+    // A player's slots are the government's, then those of the wonders they hold (Alhambra, Forbidden City...).
+    PolicySlot policySlotType(PlayerId player, int slot) const;
+    void syncPolicySlots(PlayerId player);  // sizes the player's slots to their government and wonders
     // ---- improvements and resources (01-map-and-terrain.md, 02-cities.md)
     bool resourceVisible(PlayerId player, Hex plot) const;
     // The plot's resource is worked by a matching improvement or a city center.

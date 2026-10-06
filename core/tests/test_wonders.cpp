@@ -129,6 +129,45 @@ TEST(wonder_one_time_effects_apply_on_completion) {
     CHECK_EQ(g->state().cities[1].population, 3);  // not ours
 }
 
+TEST(wonders_add_policy_slots) {
+    GameState s = wonderState();
+    Player& me = s.players[0];
+    me.government = rules().government("GOVERNMENT_CHIEFDOM");
+    const int base = rules().governments[at(me.government)].totalSlots();
+    me.policies.assign(static_cast<size_t>(base), kNone);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId mine = g->state().cities[0].id;
+    g->wonderCompleted(mine, wonder("BUILDING_ALHAMBRA"));
+
+    REQUIRE(g->state().players[0].policies.size() == static_cast<size_t>(base + 1));
+    CHECK(g->policySlotType(0, base) == PolicySlot::Military);
+    // Saved and loaded with the extra slot.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().players[0].policies.size(), static_cast<size_t>(base + 1));
+}
+
+TEST(wonder_effects_in_code) {
+    // Machu Picchu: a Commercial Hub next to a Mountain gains +1 Gold.
+    GameState s = wonderState();
+    s.plot({7, 6}).terrain = rules().terrain("TERRAIN_DESERT_MOUNTAIN");
+    const TypeIndex hub = rules().district("DISTRICT_COMMERCIAL_HUB");
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(wonder("BUILDING_MACHU_PICCHU"));
+    s.cities[0].buildings.push_back(wonder("BUILDING_COLOSSEUM"));
+    s.cities[0].buildings.push_back(wonder("BUILDING_TAJ_MAHAL"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const size_t gold = static_cast<size_t>(YieldType::Gold);
+    CHECK_EQ(g->districtAdjacency(0, hub, {6, 6})[gold], plain->districtAdjacency(0, hub, {6, 6})[gold] + Fixed::fromInt(1));
+    // The Colosseum: +2 loyalty a turn in the owner's cities within 6 tiles.
+    const CityId mine = g->state().cities[0].id;
+    CHECK(g->loyaltyPerTurn(mine) >= plain->loyaltyPerTurn(mine) + Fixed::fromInt(2));  // and its Amenities
+    CHECK(g->nearOwnWonder(g->state().cities[0], "BUILDING_COLOSSEUM", 6));
+    CHECK(!g->nearOwnWonder(g->state().cities[1], "BUILDING_COLOSSEUM", 6));
+}
+
 TEST(jebel_barkal_gives_iron_while_it_stands) {
     GameState s = wonderState();
     s.cities[0].buildings.push_back(wonder("BUILDING_JEBEL_BARKAL"));
