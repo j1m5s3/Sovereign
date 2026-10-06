@@ -1,5 +1,7 @@
 // Espionage (08: Espionage): capacity from civics, training spies, travel, the 3d6 ladder and
 // what defends against it, each operation's effect, failure and capture, saves, the AI.
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/ai.h"
 #include "sovereign/serialize.h"
@@ -346,4 +348,36 @@ TEST(an_intelligence_agency_adds_a_spy_and_a_listening_post_hears_all) {
     const GameEvent work{1, EventKind::SpyOperation, 1, kNoPlayer, 0};  // needs Top Secret otherwise
     CHECK(g->accessLevel(0, 1) < 4);
     CHECK(g->hearsOf(0, work));
+}
+
+TEST(a_captured_spy_is_traded_back) {
+    GameState s = spyState(2);
+    CapturedSpy held;
+    held.spy = s.agents[0];
+    held.captor = 1;
+    s.capturedSpies.push_back(held);
+    s.agents.clear();
+    s.players[0].gold = Fixed::fromInt(200);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int32_t id = g->state().capturedSpies[0].spy.id;
+    CHECK(g->agent(id) == nullptr);  // held, not at its owner's command
+    // Saved while held.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    REQUIRE(loaded->state().capturedSpies.size() == 1u);
+    CHECK_EQ(loaded->state().capturedSpies[0].captor, 1);
+    // Only the captor offers it, and only to its owner.
+    const std::vector<DealItem> offer = g->offerableItems(1, 0);
+    CHECK(std::any_of(offer.begin(), offer.end(), [&](const DealItem& i) { return i.kind == DealItemKind::Captive && i.amount == id; }));
+    CHECK(g->dealProblem({0, 0, 1, 0, {{DealItemKind::Captive, 0, id, kNone}}}) != CommandError::Ok);
+    // Bought back for gold: it comes home idle, keeping its level.
+    const std::vector<DealItem> terms = {{DealItemKind::Captive, 1, id, kNone}, {DealItemKind::Gold, 0, 90, kNone}};
+    REQUIRE(g->wouldAccept(1, {0, 0, 1, 0, terms}));
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, terms)) == CommandError::Ok);
+    REQUIRE(g->agent(id) != nullptr);
+    CHECK_EQ(g->agent(id)->level, 2);
+    CHECK_EQ(g->agent(id)->owner, 0);
+    CHECK(g->agent(id)->city == kNoCity);
+    CHECK(g->state().capturedSpies.empty());
 }

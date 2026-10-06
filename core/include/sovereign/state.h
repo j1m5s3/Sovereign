@@ -116,15 +116,15 @@ constexpr uint8_t kPillagedDistrictTurns = 10;
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
-enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork };
-constexpr int kNumDealItemKinds = 8;
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork, Captive };
+constexpr int kNumDealItemKinds = 9;
 // Alliance types [R&F] (08: Alliance); a DealItemKind::Alliance item carries one as its amount.
 enum class AllianceType : int8_t { None = -1, Research = 0, Military, Economic, Cultural, Religious };
 constexpr int kNumAllianceTypes = 5;
 struct DealItem {
     DealItemKind kind = DealItemKind::Gold;
     PlayerId from = kNoPlayer;
-    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it
+    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it; Captive: the spy's id
     TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource; GreatWork: its index in that city
 };
 // A deal one player put to another; it waits here only while a human must answer.
@@ -527,6 +527,12 @@ struct Agent {
     int promotionsPending = 0;          // levels gained and not yet spent on a promotion
 };
 
+// A spy caught at work, held by the civ that caught it until it is traded back (08: Outcomes; Captive deal item).
+struct CapturedSpy {
+    Agent spy;
+    PlayerId captor = kNoPlayer;
+};
+
 // A melee waiting for its live battle (leader doc §9, battle result contract). The core
 // has worked out the expected Civ result; a BattleResult command (clamped to the band)
 // or AutoResolveBattle settles it. Nothing else may happen meanwhile.
@@ -593,6 +599,7 @@ struct SOV_API GameState {
     std::vector<City> cities;   // sorted by id
     std::vector<Camp> camps;    // sorted by id
     std::vector<Agent> agents;  // sorted by id
+    std::vector<CapturedSpy> capturedSpies;  // in the order they were caught
     std::vector<uint8_t> greatPeopleClaimed;  // per individual: recruited by someone
     std::vector<FoundedReligion> religions;   // in founding order
     std::vector<TradeRoute> tradeRoutes;      // sorted by id
