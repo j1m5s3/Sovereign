@@ -209,6 +209,12 @@ TEST(gunboat_diplomacy_opens_city_state_borders) {
     CHECK(!g->grantsOpenBorders(2, 1));  // no envoy, no card
 }
 
+TEST(city_states_hold_their_loyalty) {
+    auto g = Game::fromScenario(rules(), csState());
+    // Pressed by a bigger neighbour, a city-state still gains loyalty (+20 a turn toward itself).
+    CHECK(g->loyaltyPerTurn(g->state().cities[2].id) > Fixed());
+}
+
 TEST(kilwa_kisiwani_counts_suzerainties) {
     GameState s = csState();
     s.players[0].envoys[2] = 3;  // suzerain of the Scientific city-state

@@ -279,6 +279,13 @@ TEST(sacred_places_pays_for_wonders_in_following_cities) {
     CHECK_EQ(g->founderYields(0)[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(2));  // the Holy City has the Pyramids
 }
 
+TEST(a_founded_religion_steadies_loyalty) {
+    auto plain = Game::fromScenario(rules(), religionState());
+    auto g = withReligion(religionState());
+    const CityId holy = g->state().cities[0].id;
+    CHECK_EQ(g->loyaltyPerTurn(holy), plain->loyaltyPerTurn(holy) + Fixed::fromInt(3));  // its own founded religion
+}
+
 TEST(religion_survives_a_save) {
     GameState s = religionState();
     s.players[0].pantheon = belief("BELIEF_STONE_CIRCLES");
