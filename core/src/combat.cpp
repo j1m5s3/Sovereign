@@ -113,7 +113,7 @@ bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
     if (!t.alive || t.barbarian || state_.players[static_cast<size_t>(player)].barbarian) return false;
     const Relation& rel = state_.players[static_cast<size_t>(player)].relations[static_cast<size_t>(target)];
     if (rel.war || state_.turn < rules_->globalInt("DIPLOMACY_EARLIEST_MAJOR_DOW_TURN")) return false;
-    if (friends(player, target)) return false;  // a declared friend cannot be attacked while it lasts (08)
+    // A declared friend or ally can be attacked, at the price of a Betrayal emergency [GS] (08).
     // After a peace treaty, war may not resume for DIPLOMACY_PEACE_MIN_TURNS.
     return rel.since == 0 || state_.turn - rel.since >= rules_->globalInt("DIPLOMACY_PEACE_MIN_TURNS");
 }
@@ -270,6 +270,18 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
             for (const City& c : state_.cities) {
                 if (state_.grid.distance(c.pos, unit.pos) <= ab.nearFollowingCityRange && cityMajorityReligion(c) == owner.religion) {
                     s += ab.nearFollowingCityStrength;
+                    break;
+                }
+            }
+        }
+    }
+    // Military alliance, level 1: +5 against a common war target (08: alliance levels).
+    {
+        const PlayerId foe = oppUnit ? oppUnit->owner : oppCity ? oppCity->owner : kNoPlayer;
+        if (foe != kNoPlayer) {
+            for (const Player& ally : state_.players) {
+                if (alliance(unit.owner, ally.id) == AllianceType::Military && atWar(ally.id, foe)) {
+                    s += 5;
                     break;
                 }
             }
@@ -977,6 +989,16 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
     if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
+    // War weariness: fighting on ground that is not one's own, and units lost (08).
+    {
+        const PlayerId ground = state_.plot(target).owner;
+        const int foreign = rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_FOREIGN_LANDS");
+        const int allied = rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_ALLIED_LANDS");
+        if (ground != me) addWarWeariness(me, them, alliance(me, ground) != AllianceType::None ? allied : foreign);
+        if (ground != them) addWarWeariness(them, me, alliance(them, ground) != AllianceType::None ? allied : foreign);
+        if (defenderDied) addWarWeariness(them, me, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
+        if (attackerDied) addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
+    }
     if (defenderDied && !leaderD) noteKill(*def, attackerDied ? nullptr : a);
     if (attackerDied && !leaderA) noteKill(*a, defenderDied ? nullptr : def);
 
@@ -1069,6 +1091,8 @@ void Game::resolveCityAssault(UnitId attackerId, CityId cityId, bool ranged, int
     }
     city.lastAttackedTurn = state_.turn;
     a->hp -= toAttacker;
+    addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_FOREIGN_LANDS") +
+                                  (a->hp <= 0 ? rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED") : 0));
     if (a->hp <= 0) {
         if (isLeader(*a)) {
             leaderLost(attackerId, them, false);  // a leader killed storming the walls (§5)
@@ -1097,6 +1121,19 @@ void Game::captureCity(City& city, UnitId attackerId) {
     const PlayerId lost = city.owner;
     const CityId cid = city.id;
     const Hex at = city.pos;
+    // Emergencies (08): a member taking a target's city meets a Nuclear or Betrayal goal.
+    for (Emergency& e : state_.emergencies) {
+        if (e.outcome == 0 && e.target == lost && (e.kind == EmergencyKind::Nuclear || e.kind == EmergencyKind::Betrayal) &&
+            static_cast<size_t>(me) < e.members.size() && e.members[static_cast<size_t>(me)]) {
+            e.outcome = 1;
+            for (size_t m = 0; m < e.members.size() && m < state_.players.size(); ++m) {
+                if (e.members[m]) state_.players[m].favor += 100;
+            }
+        }
+    }
+    // Emergencies (08): taking a major civ's city or a city-state.
+    if (isMajorCiv(me) && isMajorCiv(lost)) triggerEmergency(EmergencyKind::Military, me, cid, lost);
+    else if (isMajorCiv(me) && isCityState(lost)) triggerEmergency(EmergencyKind::CityState, me, cid, lost);
     // The garrison dies; civilians on the center are captured or destroyed.
     std::vector<UnitId> there;
     for (const Unit& o : state_.units) if (o.pos == at && o.owner != me) there.push_back(o.id);

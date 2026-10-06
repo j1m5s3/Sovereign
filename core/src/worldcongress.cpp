@@ -57,6 +57,7 @@ int Game::favorPerTurn(PlayerId pid) const {
     if (p.government != kNone && p.anarchyTurns == 0) favor += rules_->governments[at(p.government)].favor;
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN");
+        if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");
     }
     // Grievances held against it beyond FAVOR_GRIEVANCES_START cost 1 per FAVOR_GRIEVANCES_DIVISOR.
     int held = 0;

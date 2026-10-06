@@ -30,6 +30,11 @@ std::string offerText(const Rules& r, const DealItem& i) {
         case DealItemKind::OpenBorders: return "open borders";
         case DealItemKind::Friendship: return "a declaration of friendship";
         case DealItemKind::Peace: return "peace";
+        case DealItemKind::Alliance: {
+            static const char* const kTypes[] = {"Research", "Military", "Economic", "Cultural", "Religious"};
+            if (i.amount >= 0 && i.amount < kNumAllianceTypes) return std::string("a ") + kTypes[i.amount] + " alliance";
+            return "an alliance";
+        }
     }
     return "?";
 }

@@ -83,6 +83,15 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         for (size_t i = 0; i < kNumYields; ++i) out[i] += ab.internationalRouteYields[i];
         if (state_.plot(origin.pos).continent != state_.plot(destination.pos).continent) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(ab.intercontinentalRouteGold);
     }
+    // Alliances [R&F], level 1: routes to an ally of the type carry its yield (08: alliance levels).
+    if (!domestic) {
+        static const std::pair<AllianceType, YieldType> kRouteYield[] = {{AllianceType::Research, YieldType::Science}, {AllianceType::Economic, YieldType::Gold},
+                                                                         {AllianceType::Cultural, YieldType::Culture}, {AllianceType::Religious, YieldType::Faith}};
+        const AllianceType type = alliance(origin.owner, destination.owner);
+        for (const auto& [t, y] : kRouteYield) {
+            if (type == t) out[static_cast<size_t>(y)] += Fixed::fromInt(t == AllianceType::Economic ? 4 : 2);
+        }
+    }
     // Civ ability: routes whose way crosses desert (Arabia).
     if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
         bool desert = false;

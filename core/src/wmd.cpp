@@ -104,6 +104,7 @@ void Game::launchWmd(const Command& c) {
         if (covered > 0) city.population = std::max(1, city.population - covered);
     }
     for (PlayerId v : victims) {
+        addWarWeariness(c.player, v, rules_->globalInt("WAR_WEARINESS_PER_WMD_LAUNCHED"));
         if (state_.players[at(v)].barbarian) continue;
         remember(v, c.player, MemoryKind::UsedWmd, -40, 100);
         addGrievance(v, c.player, kVictimGrievance);
@@ -114,6 +115,7 @@ void Game::launchWmd(const Command& c) {
     }
     refreshVisibility(c.player);
     for (PlayerId v : victims) refreshVisibility(v);
+    triggerEmergency(EmergencyKind::Nuclear, c.player, kNoCity, victims.empty() ? kNoPlayer : victims.front());
 }
 
 void Game::processFallout() {

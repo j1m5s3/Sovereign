@@ -815,6 +815,17 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			const int32 Favor = G.state().players[static_cast<size_t>(Me())].favor;
 			ChooserTitle = FString::Printf(TEXT("World Congress: %d favor; casting %d vote(s) (+%d bought for %d favor)"), Favor, 1 + CongressExtraVotes,
 				CongressExtraVotes, sov::Game::extraVoteCost(CongressExtraVotes));
+			// Emergencies (08): join any we may.
+			static const TCHAR* const Kinds[] = {TEXT("Military"), TEXT("City-State"), TEXT("Religious"), TEXT("Nuclear"), TEXT("Betrayal")};
+			for (size_t k = 0; k < G.state().emergencies.size(); ++k)
+			{
+				const sov::Emergency& E = G.state().emergencies[k];
+				if (!G.canJoinEmergency(Me(), static_cast<int32>(k))) continue;
+				const sov::Player& T = G.state().players[static_cast<size_t>(E.target)];
+				const FString Who = T.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(T.civ)].name);
+				Choices.Add({FString::Printf(TEXT("Join the %s Emergency against %s (until turn %d)"), Kinds[static_cast<int32>(E.kind)], *Who, E.endTurn),
+					sov::Command::joinEmergency(Me(), static_cast<int32>(k))});
+			}
 			if (!G.congressInSession())
 			{
 				break;

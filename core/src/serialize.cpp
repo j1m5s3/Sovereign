@@ -338,6 +338,9 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i32(rel.friendsUntil);
             w.i32(rel.openBordersUntil);
             w.i32(rel.lastProposal);
+            w.i8(static_cast<int8_t>(rel.alliance));
+            w.i32(rel.allianceUntil);
+            w.i32(rel.alliancePoints);
         }
         w.u32(static_cast<uint32_t>(p.memories.size()));
         for (const OpinionMemory& m : p.memories) {
@@ -361,6 +364,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.diplomaticVictoryPoints);
         w.i32(p.lightYears);
         writeI32s(w, p.wmds);
+        writeI32s(w, p.warWeariness);
         w.i32(p.wmdsLaunched);
         w.i32(p.killsThisEra);
         w.i32(p.rulingHeir);
@@ -515,6 +519,16 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeHex(w, d.center);
         w.i32(d.radius);
         w.i32(d.turnsLeft);
+    }
+    w.u32(static_cast<uint32_t>(s.emergencies.size()));
+    for (const Emergency& e : s.emergencies) {
+        w.u8(static_cast<uint8_t>(e.kind));
+        w.i8(e.target);
+        w.i32(e.city);
+        w.i32(e.religion);
+        w.i32(e.endTurn);
+        w.bytes(e.members);
+        w.u8(e.outcome);
     }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
@@ -694,6 +708,11 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.friendsUntil = r.i32();
             rel.openBordersUntil = r.i32();
             rel.lastProposal = r.i32();
+            const int8_t alliance = r.i8();
+            if (alliance < -1 || alliance >= kNumAllianceTypes) return false;
+            rel.alliance = static_cast<AllianceType>(alliance);
+            rel.allianceUntil = r.i32();
+            rel.alliancePoints = r.i32();
         }
         uint32_t nmem = r.u32();
         if (!r.checkCount(nmem, 10)) return false;
@@ -735,6 +754,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.diplomaticVictoryPoints = r.i32();
         p.lightYears = r.i32();
         if (!readI32s(r, p.wmds)) return false;
+        if (!readI32s(r, p.warWeariness)) return false;
         p.wmdsLaunched = r.i32();
         p.killsThisEra = r.i32();
         p.rulingHeir = r.i32();
@@ -934,6 +954,21 @@ bool deserializeState(ByteReader& r, GameState& s) {
         d.center = readHex(r);
         d.radius = r.i32();
         d.turnsLeft = r.i32();
+    }
+    uint32_t nemerg = r.u32();
+    if (!r.checkCount(nemerg, 16)) return false;
+    s.emergencies.resize(nemerg);
+    for (Emergency& e : s.emergencies) {
+        const uint8_t kind = r.u8();
+        if (kind >= kNumEmergencyKinds) return false;
+        e.kind = static_cast<EmergencyKind>(kind);
+        e.target = r.i8();
+        e.city = r.i32();
+        e.religion = r.i32();
+        e.endTurn = r.i32();
+        e.members = r.bytes();
+        e.outcome = r.u8();
+        if (e.outcome > 2) return false;
     }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();

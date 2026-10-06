@@ -9,6 +9,7 @@
 
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -18,6 +19,7 @@ size_t ti(TypeIndex i) { return static_cast<size_t>(i); }
 constexpr int kItemInts = 4;
 constexpr int kMaxItems = 10;
 constexpr int kFriendlyOpinion = 12;    // at or above: Friendly (and friendship is on the table)
+constexpr int kAllyOpinion = 15;       // at or above: an alliance is on the table (the AI's friendship bar)
 constexpr int kUnfriendlyOpinion = -12; // at or below: Unfriendly
 constexpr int kDealTurns = 30;          // per-turn deal terms (DIPLOMACY_*_TIME_LIMIT)
 }  // namespace
@@ -72,6 +74,29 @@ bool Game::denouncing(PlayerId by, PlayerId target) const {
 bool Game::friends(PlayerId a, PlayerId b) const {
     if (a < 0 || b < 0 || a == b) return false;
     return state_.players[at(a)].relations[at(b)].friendsUntil >= state_.turn;
+}
+
+AllianceType Game::alliance(PlayerId a, PlayerId b) const {
+    if (a < 0 || b < 0 || a == b || at(a) >= state_.players.size() || at(b) >= state_.players.size()) return AllianceType::None;
+    const auto& rels = state_.players[at(a)].relations;
+    if (at(b) >= rels.size()) return AllianceType::None;
+    const Relation& r = rels[at(b)];
+    return r.allianceUntil >= state_.turn ? r.alliance : AllianceType::None;
+}
+
+int Game::allianceLevel(PlayerId a, PlayerId b) const {
+    if (alliance(a, b) == AllianceType::None) return 0;
+    const int points = state_.players[at(a)].relations[at(b)].alliancePoints;
+    if (points >= rules_->globalInt("ALLIANCE_LEVEL_THREE_XP")) return 3;
+    return points >= rules_->globalInt("ALLIANCE_LEVEL_TWO_XP") ? 2 : 1;
+}
+
+int Game::bestAllianceLevel(PlayerId player, AllianceType type) const {
+    int best = 0;
+    for (const Player& o : state_.players) {
+        if (alliance(player, o.id) == type) best = std::max(best, allianceLevel(player, o.id));
+    }
+    return best;
 }
 
 bool Game::grantsOpenBorders(PlayerId owner, PlayerId to) const {
@@ -364,7 +389,7 @@ CommandError Game::dealProblem(const Deal& d) const {
     if (d.from == d.to || !isMajorCiv(d.from) || !isMajorCiv(d.to) || !hasMet(d.from, d.to)) return CommandError::CannotDeal;
     if (d.items.empty() || d.items.size() > static_cast<size_t>(kMaxItems)) return CommandError::CannotDeal;
     const bool war = atWar(d.from, d.to);
-    bool peace = false, friendship = false;
+    bool peace = false, friendship = false, alliance = false;
     std::vector<int> openBorders(2, 0);
     std::vector<TypeIndex> luxuries;
     int gold[2] = {0, 0}, perTurn[2] = {0, 0};
@@ -417,6 +442,16 @@ CommandError Game::dealProblem(const Deal& d) const {
                     return CommandError::CannotDeal;
                 friendship = true;
                 break;
+            case DealItemKind::Alliance: {
+                // Declared friends who both have Civil Service, not allied already (08: Alliance).
+                const TypeIndex civil = rules_->civic("CIVIC_CIVIL_SERVICE");
+                const auto has = [&](PlayerId x) { return civil != kNone && state_.players[at(x)].civics.has(civil); };
+                if (alliance || war || i.amount < 0 || i.amount >= kNumAllianceTypes || !friends(d.from, d.to) || !has(d.from) || !has(d.to) ||
+                    this->alliance(d.from, d.to) != AllianceType::None)
+                    return CommandError::CannotDeal;
+                alliance = true;
+                break;
+            }
             case DealItemKind::Peace: {
                 if (peace || !war) return CommandError::CannotDeal;
                 const Relation& rel = state_.players[at(d.from)].relations[at(d.to)];
@@ -469,6 +504,10 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 // Friendship is not bought: a civ declares it only with someone it already likes.
                 if (opinion < kFriendlyOpinion) value -= 1000;
                 break;
+            case DealItemKind::Alliance:
+                // Nor is an alliance: only with a friend it likes well.
+                if (opinion < kAllyOpinion) value -= 1000;
+                break;
             case DealItemKind::Peace: {
                 const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, other);
                 const int turns = state_.turn - state_.players[at(judge)].relations[at(other)].since;
@@ -514,6 +553,7 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
     }
     tryItem({DealItemKind::OpenBorders, from, 0, kNone});
     tryItem({DealItemKind::Friendship, from, 0, kNone});
+    for (int t = 0; t < kNumAllianceTypes; ++t) tryItem({DealItemKind::Alliance, from, t, kNone});
     tryItem({DealItemKind::Peace, from, 0, kNone});
     return out;
 }
@@ -639,6 +679,14 @@ void Game::executeDeal(const Deal& d) {
                 state_.players[at(d.to)].relations[at(d.from)].friendsUntil = state_.turn + rules_->globalInt("DIPLOMACY_DECLARED_FRIENDSHIP_TIME_LIMIT");
                 pushEvent(EventKind::FriendshipDeclared, d.from, d.to, 0);
                 break;
+            case DealItemKind::Alliance:
+                for (PlayerId x : {d.from, d.to}) {
+                    Relation& rel = state_.players[at(x)].relations[at(x == d.from ? d.to : d.from)];
+                    if (rel.alliance != static_cast<AllianceType>(i.amount)) rel.alliancePoints = 0;  // a new type starts over
+                    rel.alliance = static_cast<AllianceType>(i.amount);
+                    rel.allianceUntil = state_.turn + rules_->globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT");
+                }
+                break;
             case DealItemKind::Peace: onPeace(d.from, d.to); break;
         }
     }
@@ -657,6 +705,11 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     Relation& mine = p.relations[at(target)];
     // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation; anything else is a surprise.
     const bool formal = denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    // Betrayal [GS]: war on a declared friend or an ally (08: Emergencies).
+    if (isMajorCiv(by) && isMajorCiv(target) && (friends(by, target) || alliance(by, target) != AllianceType::None))
+        triggerEmergency(EmergencyKind::Betrayal, by, kNoCity, target);
+    // Joining an emergency against the target is an Emergency War: no grievances.
+    const bool emergencyWar = inEmergencyAgainst(by, target);
     if (isMajorCiv(target)) {
         ++p.warsDeclared;
         if (!formal) ++p.surpriseWars;
@@ -664,11 +717,12 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     remember(target, by, formal ? MemoryKind::DeclaredWar : MemoryKind::SurpriseWar, formal ? -12 : -24, formal ? 60 : 80);
     // Grievances [GS]: 100 for a formal war (Sovereign's base; the engine value is unverified), 150%
     // for a surprise; declared friends of the target share 25% (SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS).
-    const int base = formal ? 100 : 150;
+    const int base = emergencyWar ? 0 : formal ? 100 : 150;
     addGrievance(target, by, base);
     for (const Player& o : state_.players) {
-        if (o.id != by && o.id != target && friends(o.id, target))
-            addGrievance(o.id, by, base * rules_->globalInt("SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS") / 100);
+        if (o.id == by || o.id == target) continue;
+        if (alliance(o.id, target) != AllianceType::None) addGrievance(o.id, by, base * rules_->globalInt("SHARE_WAR_GRIEVANCES_ALLY") / 100);
+        else if (friends(o.id, target)) addGrievance(o.id, by, base * rules_->globalInt("SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS") / 100);
     }
     for (const Player& o : state_.players) {
         if (o.id != by && o.id != target && hasMet(o.id, by)) remember(o.id, by, MemoryKind::Warmonger, formal ? -4 : -6, 40);
@@ -678,6 +732,9 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
         Relation& r = state_.players[at(a)].relations[at(b)];
         r.friendsUntil = 0;
         r.openBordersUntil = 0;
+        r.alliance = AllianceType::None;
+        r.allianceUntil = 0;
+        r.alliancePoints = 0;
     }
     state_.agreements.erase(std::remove_if(state_.agreements.begin(), state_.agreements.end(), [&](const Agreement& a) {
                                 return (a.from == by && a.to == target) || (a.from == target && a.to == by);
@@ -690,6 +747,47 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     pushEvent(EventKind::WarDeclared, by, target, formal ? 0 : 1);
 }
 
+// War weariness (08: War weariness): points against each opponent from fighting away from home
+// (2 a combat on foreign ground), units lost (3 each) and nuclear weapons launched (10). Policies
+// and the government scale it (Propaganda -25%, Fascism +20%), and grievances held against the
+// enemy soften it (Sovereign: -1% per 10, at most -50%). Each city loses an amenity per 400 points.
+// It decays as the player's turn begins: 50 a turn at war with that player, 200 at peace.
+int Game::warWeariness(PlayerId player) const {
+    int total = 0;
+    for (int32_t w : state_.players[at(player)].warWeariness) total += w;
+    return total;
+}
+
+int Game::warWearinessAmenities(PlayerId player) const {
+    return warWeariness(player) / std::max(1, rules_->globalInt("WAR_WEARINESS_POINTS_FOR_AMENITY_LOSS"));
+}
+
+void Game::addWarWeariness(PlayerId player, PlayerId against, int points) {
+    if (player == against || player < 0 || against < 0 || at(player) >= state_.players.size() || at(against) >= state_.players.size()) return;
+    Player& p = state_.players[at(player)];
+    if (p.barbarian || state_.players[at(against)].barbarian || points <= 0) return;
+    const int policy = static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::WarWearinessPercent).toInt());
+    const int softened = std::min(50, grievances(player, against) / 10);
+    int pct = 100 + policy;
+    for (const Emergency& e : state_.emergencies) {
+        if (e.outcome == 0 && e.kind == EmergencyKind::Betrayal && e.target == player && at(against) < e.members.size() && e.members[at(against)]) pct += 50;
+    }
+    const int gained = points * std::max(0, pct) * (100 - softened) / 10000;
+    if (gained <= 0) return;
+    if (p.warWeariness.size() < state_.players.size()) p.warWeariness.resize(state_.players.size(), 0);
+    p.warWeariness[at(against)] += gained;
+}
+
+void Game::processWarWeariness(PlayerId player) {
+    Player& p = state_.players[at(player)];
+    for (size_t o = 0; o < p.warWeariness.size(); ++o) {
+        if (p.warWeariness[o] <= 0) continue;
+        const int decay = atWar(player, static_cast<PlayerId>(o)) ? rules_->globalInt("WAR_WEARINESS_DECAY_TURN_AT_WAR")
+                                                                   : rules_->globalInt("WAR_WEARINESS_DECAY_TURN_AT_PEACE");
+        p.warWeariness[o] = std::max(0, p.warWeariness[o] - decay);
+    }
+}
+
 void Game::onPeace(PlayerId a, PlayerId b) {
     for (PlayerId x : {a, b}) {
         Relation& r = state_.players[at(x)].relations[at(x == a ? b : a)];
@@ -699,6 +797,12 @@ void Game::onPeace(PlayerId a, PlayerId b) {
     }
     remember(a, b, MemoryKind::MadePeace, 4, kDealTurns);
     remember(b, a, MemoryKind::MadePeace, 4, kDealTurns);
+    // Peace lifts most of the weariness at once (WAR_WEARINESS_DECAY_PEACE_DECLARED).
+    for (PlayerId x : {a, b}) {
+        std::vector<int32_t>& w = state_.players[at(x)].warWeariness;
+        const PlayerId other = x == a ? b : a;
+        if (at(other) < w.size()) w[at(other)] = std::max(0, w[at(other)] - rules_->globalInt("WAR_WEARINESS_DECAY_PEACE_DECLARED"));
+    }
     pushEvent(EventKind::PeaceMade, a, b, 0);
 }
 
@@ -709,6 +813,26 @@ void Game::processDiplomacy(PlayerId pid) {
                        state_.deals.end());
     Player& p = state_.players[at(pid)];
     p.favor = std::max(0, p.favor + favorPerTurn(pid));  // Diplomatic Favor [GS]
+    // Alliances [R&F]: points each turn, more with trade routes either way; a lapsed one ends.
+    for (size_t o = 0; o < p.relations.size(); ++o) {
+        Relation& rel = p.relations[o];
+        if (rel.alliance == AllianceType::None) continue;
+        if (rel.allianceUntil < state_.turn) {
+            rel.alliance = AllianceType::None;
+            rel.alliancePoints = 0;
+            continue;
+        }
+        int points = rules_->globalInt("ALLIANCE_POINTS_MULTIPLIER");
+        bool out = false, in = false;
+        for (const TradeRoute& tr : state_.tradeRoutes) {
+            const City* dest = state_.city(tr.destination);
+            if (!dest) continue;
+            out = out || (tr.owner == pid && dest->owner == static_cast<PlayerId>(o));
+            in = in || (tr.owner == static_cast<PlayerId>(o) && dest->owner == pid);
+        }
+        points += (out ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0) + (in ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0);
+        rel.alliancePoints += points;
+    }
     // Strategic resources flow; a giver in debt or out of stock breaks its deals.
     std::vector<size_t> broken;
     for (size_t i = 0; i < state_.agreements.size(); ++i) {
@@ -763,6 +887,11 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
         }
         case DealItemKind::OpenBorders: return who + " opens its borders for " + std::to_string(kDealTurns) + " turns";
         case DealItemKind::Friendship: return "a declaration of friendship";
+        case DealItemKind::Alliance: {
+            static const char* const kTypes[] = {"Research", "Military", "Economic", "Cultural", "Religious"};
+            return std::string("a ") + (i.amount >= 0 && i.amount < kNumAllianceTypes ? kTypes[i.amount] : "?") + " Alliance for " +
+                   std::to_string(r.globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT")) + " turns";
+        }
         case DealItemKind::Peace: return "peace";
     }
     return "?";

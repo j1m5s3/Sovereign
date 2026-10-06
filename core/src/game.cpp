@@ -261,6 +261,7 @@ CommandError Game::validate(const Command& c) const {
             return rebaseProblem(c.id, c.target);
         }
         case CommandType::LaunchWmd: return wmdProblem(c);
+        case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::CongressVote: {
             const int item = c.id;
             if (!congressInSession() || item < 0 || static_cast<size_t>(item) >= state_.congress.size() || hasVoted(c.player, item) ||
@@ -620,11 +621,13 @@ void Game::refreshVisibility(PlayerId pid) {
                 p.visibility[static_cast<size_t>(state_.grid.index(target))] = static_cast<uint8_t>(Visibility::Visible);
         }
     };
+    // Military alliance, level 2: allies see what each other sees (08: alliance levels).
+    const auto shares = [&](PlayerId o) { return o == pid || (alliance(pid, o) == AllianceType::Military && allianceLevel(pid, o) >= 2); };
     for (const Unit& u : state_.units) {
-        if (u.owner == pid) see(u.pos, unitSight(u));
+        if (shares(u.owner)) see(u.pos, unitSight(u));
     }
     for (const City& c : state_.cities) {
-        if (c.owner == pid) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
+        if (shares(c.owner)) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
     }
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;
@@ -724,6 +727,12 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
+        case CommandType::JoinEmergency: {
+            Emergency& e = state_.emergencies[static_cast<size_t>(c.arg)];
+            if (e.members.size() < state_.players.size()) e.members.resize(state_.players.size(), 0);
+            e.members[static_cast<size_t>(c.player)] = 1;
+            break;
+        }
         case CommandType::UpgradeUnit: {
             Unit& u = *state_.unit(c.id);
             Player& p = state_.players[static_cast<size_t>(c.player)];
@@ -917,6 +926,7 @@ void Game::beginGlobalTurn() {
     processWorldCongress();
     processClimate();
     processFallout();
+    processEmergencies();
     processProfiles();
     processSpaceRace();
     processReligion();
@@ -936,6 +946,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
             p.freeChanges = true;
         payUnitFuel(pid);
         burnPower(pid);
+        processWarWeariness(pid);
         processGreatPeople(pid);
         processTrade(pid);
         processEnvoys(pid);

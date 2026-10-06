@@ -163,7 +163,7 @@ TEST(a_surprise_war_is_remembered_by_everyone) {
     CHECK(g->agendaOpinion(2, 0) < 0);
 }
 
-TEST(friendship_needs_liking_and_rules_out_war) {
+TEST(friendship_needs_liking_and_rules_out_denouncing) {
     auto g = Game::fromScenario(rules(), diploState());
     const std::vector<DealItem> friendship = {{DealItemKind::Friendship, 0, 0, kNone}};
     REQUIRE(g->submit(Command::proposeDeal(0, 1, friendship)) == CommandError::Ok);
@@ -175,7 +175,6 @@ TEST(friendship_needs_liking_and_rules_out_war) {
     CHECK(g->friends(0, 1));
     CHECK(g->friends(1, 0));
     CHECK(g->relationship(1, 0) == Relationship::DeclaredFriend);
-    CHECK(!g->canDeclareWar(0, 1));
     CHECK(!g->canDenounce(0, 1));
 }
 
@@ -282,4 +281,170 @@ TEST(diplomacy_survives_a_save) {
     CHECK(loaded->log()[0].data == g->log()[0].data);
     CHECK_EQ(loaded->opinionOf(1, 0), g->opinionOf(1, 0));
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+// ---- war weariness (08: War weariness)
+
+TEST(fighting_abroad_and_losses_bring_war_weariness) {
+    GameState s = diploState();
+    s.players[0].relations.resize(2);
+    s.players[1].relations.resize(2);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    const UnitId a = addUnit(s, "UNIT_WARRIOR", 0, {13, 6});  // next to player 1's capital at (14,6), on its land
+    const UnitId d = addUnit(s, "UNIT_SCOUT", 1, {13, 7});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->state().plot({13, 7}).owner == 1);
+    REQUIRE(g->submit(Command::attack(0, a, {13, 7})) == CommandError::Ok);
+    // The attacker fought on foreign ground (+2); the defender at home (0), but lost its Scout (+3).
+    CHECK_EQ(g->state().players[0].warWeariness[1], 2);
+    const bool killed = g->state().unit(d) == nullptr;
+    CHECK_EQ(g->state().players[1].warWeariness.empty() ? 0 : g->state().players[1].warWeariness[0], killed ? 3 : 0);
+}
+
+TEST(war_weariness_costs_amenities_and_fades) {
+    GameState s = diploState();
+    s.players[0].relations.resize(2);
+    s.players[1].relations.resize(2);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    auto calm = Game::fromScenario(rules(), s);
+    const int before = calm->cityReport(calm->state().cities[0].id).amenities;
+    s.players[0].warWeariness = {0, 850};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->warWearinessAmenities(0), 2);
+    CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, before - 2);
+    g->processWarWeariness(0);
+    CHECK_EQ(g->state().players[0].warWeariness[1], 800);  // -50 a turn at war
+    GameState st = g->state();
+    st.players[0].relations[1].war = st.players[1].relations[0].war = false;
+    auto peace = Game::fromScenario(rules(), std::move(st));
+    peace->processWarWeariness(0);
+    CHECK_EQ(peace->state().players[0].warWeariness[1], 600);  // -200 at peace
+}
+
+TEST(policies_and_grievances_scale_war_weariness) {
+    GameState s = diploState();
+    s.players[0].government = rules().government("GOVERNMENT_FASCISM");
+    auto g = Game::fromScenario(rules(), s);
+    g->addWarWeariness(0, 1, 100);
+    CHECK_EQ(g->state().players[0].warWeariness[1], 120);  // Fascism +20%
+    s.players[0].government = kNone;
+    s.players[0].grievances.assign(2, 0);
+    s.players[0].grievances[1] = 300;  // held against the enemy: -30%
+    auto h = Game::fromScenario(rules(), std::move(s));
+    h->addWarWeariness(0, 1, 100);
+    CHECK_EQ(h->state().players[0].warWeariness[1], 70);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*h), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().players[0].warWeariness[1], 70);
+}
+
+// ---- alliances [R&F] (08: Alliance)
+
+namespace {
+// Two declared friends with Civil Service who like each other.
+GameState friendsState() {
+    GameState s = diploState();
+    const TypeIndex civil = rules().civic("CIVIC_CIVIL_SERVICE");
+    for (Player& p : s.players) {
+        p.civics.done[static_cast<size_t>(civil)] = 1;
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].friendsUntil = s.players[1].relations[0].friendsUntil = 30;
+    for (PlayerId x : {0, 1}) s.players[static_cast<size_t>(x)].memories.push_back({static_cast<PlayerId>(1 - x), MemoryKind::Gift, 40, 100, 0});
+    return s;
+}
+}  // namespace
+
+TEST(friends_with_civil_service_form_an_alliance) {
+    GameState s = friendsState();
+    auto g = Game::fromScenario(rules(), s);
+    const std::vector<DealItem> alliance{{DealItemKind::Alliance, 0, static_cast<int32_t>(AllianceType::Research), kNone}};
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, alliance)) == CommandError::Ok);  // the AI answers at once
+    CHECK(g->alliance(0, 1) == AllianceType::Research);
+    CHECK(g->alliance(1, 0) == AllianceType::Research);
+    CHECK_EQ(g->allianceLevel(0, 1), 1);
+    // Not twice, and not without friendship.
+    CHECK(g->submit(Command::proposeDeal(0, 1, alliance)) != CommandError::Ok);
+    s.players[0].relations[1].friendsUntil = s.players[1].relations[0].friendsUntil = 0;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    CHECK(h->submit(Command::proposeDeal(0, 1, alliance)) != CommandError::Ok);
+}
+
+TEST(alliance_points_raise_the_level_and_the_alliance_lapses) {
+    GameState s = friendsState();
+    for (PlayerId x : {0, 1}) {
+        Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        r.alliance = AllianceType::Military;
+        r.allianceUntil = s.turn + 30;
+        r.alliancePoints = rules().globalInt("ALLIANCE_LEVEL_TWO_XP");
+    }
+    auto g = Game::fromScenario(rules(), s);
+    CHECK_EQ(g->allianceLevel(0, 1), 2);
+    // Level 2 of a Military alliance: player 0 sees what its ally's units see.
+    GameState st = g->state();
+    const UnitId scout = addUnit(st, "UNIT_SCOUT", 1, {24, 10});
+    const UnitId mine = addUnit(st, "UNIT_SCOUT", 0, {4, 7});
+    auto seen = Game::fromScenario(rules(), std::move(st));
+    REQUIRE(seen->submit(Command::setActivity(0, mine, Activity::Fortify)) == CommandError::Ok);
+    REQUIRE(seen->submit(Command::move(0, mine, {5, 7})) == CommandError::Ok);  // moving refreshes player 0's sight
+    CHECK(seen->visibility(0, seen->state().unit(scout)->pos) == Visibility::Visible);
+    s.players[0].relations[1].allianceUntil = s.players[1].relations[0].allianceUntil = s.turn - 1;
+    auto lapsed = Game::fromScenario(rules(), std::move(s));
+    CHECK(lapsed->alliance(0, 1) == AllianceType::None);
+}
+
+TEST(allies_strike_harder_at_a_common_foe_and_route_yields) {
+    GameState s = friendsState();
+    s.players.resize(3);
+    Player& foe = s.players[2];
+    foe.id = 2;
+    Game::fitPlayerToRules(foe, rules());
+    for (Player& p : s.players) {
+        p.met.assign(3, 1);
+        p.relations.resize(3);
+    }
+    addCity(s, 2, {24, 10}, true, 3);
+    for (PlayerId x : {0, 1}) {
+        Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        r.alliance = AllianceType::Military;
+        r.allianceUntil = s.turn + 30;
+    }
+    for (PlayerId x : {0, 1}) s.players[static_cast<size_t>(x)].relations[2].war = s.players[2].relations[static_cast<size_t>(x)].war = true;
+    const UnitId a = addUnit(s, "UNIT_WARRIOR", 0, {20, 10});
+    const UnitId d = addUnit(s, "UNIT_WARRIOR", 2, {21, 10});
+    s.majorsAtStart = 3;
+    auto g = Game::fromScenario(rules(), s);
+    const int allied = g->combatStrength(*g->state().unit(a), *g->state().unit(d), true, false);
+    s.players[1].relations[2].war = s.players[2].relations[1].war = false;  // the ally is at peace with the foe
+    auto alone = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(allied, alone->combatStrength(*alone->state().unit(a), *alone->state().unit(d), true, false) + 5);
+    // A Research ally's route carries Science.
+    GameState r = friendsState();
+    for (PlayerId x : {0, 1}) {
+        Relation& rel = r.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        rel.alliance = AllianceType::Research;
+        rel.allianceUntil = r.turn + 30;
+    }
+    auto withAlly = Game::fromScenario(rules(), r);
+    auto plain = Game::fromScenario(rules(), friendsState());
+    const Yields y1 = withAlly->tradeRouteYields(withAlly->state().cities[0], withAlly->state().cities[1]);
+    const Yields y0 = plain->tradeRouteYields(plain->state().cities[0], plain->state().cities[1]);
+    CHECK(y1[static_cast<size_t>(YieldType::Science)] == y0[static_cast<size_t>(YieldType::Science)] + Fixed::fromInt(2));
+}
+
+TEST(alliances_survive_a_save) {
+    GameState s = friendsState();
+    for (PlayerId x : {0, 1}) {
+        Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        r.alliance = AllianceType::Cultural;
+        r.allianceUntil = s.turn + 30;
+        r.alliancePoints = 44;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK(loaded->alliance(0, 1) == AllianceType::Cultural);
+    CHECK_EQ(loaded->state().players[0].relations[1].alliancePoints, 44);
 }
