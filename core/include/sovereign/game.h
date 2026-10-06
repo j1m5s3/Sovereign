@@ -35,6 +35,7 @@ struct CombatPreview {
     CityId city = kNoCity;         // the target is this city (damage figures are to its walls or HP)
     bool hitsWalls = false;        // the damage lands on the city's walls
     bool captureCity = false;      // a melee move into a city at 0 HP: taken without a fight
+    bool encampment = false;       // the target is `city`'s Encampment (damage to its walls or HP)
     int attackerStrength = 0, defenderStrength = 0;
     int damageToDefenderMin = 0, damageToDefenderMax = 0;
     int damageToAttackerMin = 0, damageToAttackerMax = 0;  // melee only
@@ -532,6 +533,13 @@ public:
     // The city's Encampment strikes from its own plot once the city has walls (03: Defense; range 2).
     bool canEncampmentStrike(CityId city, Hex target) const;
     const CityDistrict* encampmentOf(const City& city) const;  // complete and not pillaged
+    // The Encampment as a combat target (05: City combat): its own hit points (Districts.HitPoints)
+    // and the city's walls as its outer defences.
+    const City* encampmentTargetAt(Hex plot) const;  // the city whose standing Encampment is here
+    int encampmentMaxHp(const City& city) const;
+    int encampmentHp(const City& city) const;
+    int encampmentWallHp(const City& city) const;
+    int encampmentStrength(const City& city) const;
     bool canRazeCity(PlayerId player, CityId city) const;
     PlayerId barbarianPlayer() const;
     // Score line items (09: Score; ScoringLineItems): 3 per civic, 2 per tech, 5 per city,
@@ -616,7 +624,9 @@ private:
     int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;
     // Percent of a hit on this city that lands on its walls; -1 when it lands on the city.
     int wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const;
+    int wallDamagePercent(const Unit& attacker, const City& city, bool ranged, Hex at, int wallHp) const;
     void attackCity(const Command& c, City& city);
+    void attackEncampment(const Command& c, City& city);
     // Applies a unit-vs-unit fight's damage and everything that follows (kills, capture, XP, advance).
     void resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bool ranged, int toDefender, int toAttacker);
     // Applies an assault's damage to the city (walls first) and the attacker, then capture.

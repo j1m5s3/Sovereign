@@ -107,6 +107,8 @@ struct CityDistrict {
     bool complete = false;
     uint8_t pillagedTurns = 0;  // pillaged (05: Pillage): no adjacency, its buildings idle, until repaired
     uint8_t specialists = 0;    // citizens working here as specialists (02: Citizens and specialists)
+    int16_t damage = 0;         // Encampment (05: City combat): hit points lost
+    int16_t wallDamage = 0;     // Encampment: outer defences lost
 };
 
 // Sovereign reading: a city repairs a pillaged district itself in this many turns.

@@ -11,4 +11,4 @@ Specs: 03-districts-buildings-wonders (Defense); data/districts (Encampment HP 1
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - Sovereign reading: an Encampment watches its strike range (sight 2 from its plot), so it can see what it may hit.
-- Not modelled: the Encampment's own hit points and outer defences (attacks on it, its capture), which would need districts as combat targets.
+- Not modelled at first: the Encampment's own hit points and outer defences (attacks on it, its capture), which would need districts as combat targets. Since added: `2026-10-06-encampment-combat.md`.

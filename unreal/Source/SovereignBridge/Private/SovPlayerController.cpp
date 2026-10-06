@@ -1869,6 +1869,12 @@ void ASovPlayerController::UpdatePanel()
 		L.Add(FString::Printf(TEXT("%s   Pop %d   HP %d/%d   Food %s  Prod %s  Gold %s  Sci %s  Cul %s"), *Str(C->name), C->population, C->hp,
 			G.cityMaxHp(), *Y(sov::YieldType::Food), *Y(sov::YieldType::Production), *Y(sov::YieldType::Gold), *Y(sov::YieldType::Science),
 			*Y(sov::YieldType::Culture)));
+		// The Encampment's own hit points and outer defences (05: City combat).
+		if (G.encampmentOf(*C))
+		{
+			L.Add(FString::Printf(TEXT("Encampment   HP %d/%d   Walls %d/%d"), G.encampmentHp(*C), G.encampmentMaxHp(*C), G.encampmentWallHp(*C),
+				G.cityMaxWallHp(*C)));
+		}
 		const sov::LoyaltyLevel* Level = G.loyaltyLevel(*C);
 		L.Add(FString::Printf(TEXT("Loyalty %d (%+d per turn)%s%s"), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()),
 			Level ? *FString::Printf(TEXT("   %s"), *Str(Level->id)) : TEXT(""),

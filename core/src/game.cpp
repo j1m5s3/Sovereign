@@ -384,6 +384,8 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // attacks and captures are their own commands
     const City* c = state_.cityAt(to);
     if (c && c->owner != unit.owner) return std::nullopt;
+    // Nor an enemy Encampment that still stands (05: City combat).
+    if (const City* camp = encampmentTargetAt(to); camp && atWar(unit.owner, camp->owner)) return std::nullopt;
     // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
     const PlayerId owner = state_.plot(to).owner;
     if (owner != kNoPlayer && owner != unit.owner && state_.plot(from).owner != owner && !atWar(unit.owner, owner) &&
@@ -1093,7 +1095,8 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         for (City& city : state_.cities) {
             if (city.owner != pid) continue;
             for (CityDistrict& d : city.districts) {
-                if (d.pillagedTurns > 0) --d.pillagedTurns;
+                // A repaired Encampment stands again at full strength.
+                if (d.pillagedTurns > 0 && --d.pillagedTurns == 0) d.damage = d.wallDamage = 0;
             }
         }
         processGreatPeople(pid);

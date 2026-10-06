@@ -47,7 +47,7 @@ from `../data/rules`.
 | Input | Action |
 |---|---|
 | Left click | Select your unit or city (click again to cycle units, then the city) |
-| Right click | Selected unit: move, or attack an enemy (ranged if it can). Selected city: city strike |
+| Right click | Selected unit: move, or attack an enemy unit, city or Encampment (ranged if it can). Selected city: city strike |
 | Shift | With one of your cities selected: Shift+left-click a plot locks a citizen to it (or frees it); Shift when picking from the `P` list adds the item to the queue |
 | Alt+right click | Launch the strongest nuclear device you hold from one of your Missile Silos in range of the plot |
 | `F` | Found a city with the selected settler (opens the production chooser) |

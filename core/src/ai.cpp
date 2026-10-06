@@ -1045,7 +1045,8 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     const UnitType& t = v.r.units[at(u.type)];
     // Aircraft keep out of skies another fighter or anti-air battery holds (05: air combat).
     if (t.domain == Domain::Air) {
-        const Hex target = pv.defender != kNoUnit ? v.s().unit(pv.defender)->pos : v.s().city(pv.city)->pos;
+        const City* c = pv.defender != kNoUnit ? nullptr : v.s().city(pv.city);
+        const Hex target = !c ? v.s().unit(pv.defender)->pos : pv.encampment ? v.game.encampmentOf(*c)->pos : c->pos;
         if (v.game.interception(u, target).first > t.combat * u.hp / 100) return INT_MIN;
     }
     const int dealt = (pv.damageToDefenderMin + pv.damageToDefenderMax) / 2;
@@ -1059,7 +1060,7 @@ int attackValue(const View& v, const Unit& u, const CombatPreview& pv) {
     } else if (pv.city != kNoCity) {
         // Melee into walls only with siege help; ranged chip damage is always welcome.
         if (pv.hitsWalls && !pv.ranged && t.bombard == 0) return INT_MIN;
-        value += 200;
+        value += pv.encampment ? 100 : 200;  // an Encampment is worth less than the city itself
     }
     return value > 0 ? value : INT_MIN;
 }
