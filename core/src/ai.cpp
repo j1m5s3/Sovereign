@@ -564,6 +564,17 @@ void deals(View& v) {
         }
         if (give != kNone && get != kNone) ideas.push_back({{DealItemKind::Resource, v.me, 1, give}, {DealItemKind::Resource, o.id, 1, get}});
         if (opinion >= 0 && !distrusted) ideas.push_back({{DealItemKind::OpenBorders, v.me, 0, kNone}, {DealItemKind::OpenBorders, o.id, 0, kNone}});
+        // A Great Work of theirs that completes a museum's theme here (07: Theming), for gold.
+        for (const City& c : s.cities) {
+            if (c.owner != o.id) continue;
+            for (size_t w = 0; w < c.greatWorks.size(); ++w) {
+                if (v.game.themed(c, c.greatWorks[w].building) || !v.game.workCompletesTheme(v.me, c.greatWorks[w])) continue;
+                const int price = 60 + 20 * v.r.greatWorkTypes[at(c.greatWorks[w].type)].tourism;
+                const int purse = static_cast<int>(s.players[at(v.me)].gold.toInt());
+                if (purse < price * 2) continue;
+                ideas.insert(ideas.begin(), {{DealItemKind::GreatWork, o.id, c.id, static_cast<TypeIndex>(w)}, {DealItemKind::Gold, v.me, std::min(purse, price * 2), kNone}});
+            }
+        }
         for (const std::vector<DealItem>& idea : ideas) {
             const Deal d{0, v.me, o.id, s.turn, idea};
             if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;

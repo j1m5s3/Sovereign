@@ -87,6 +87,45 @@ void Game::moveGreatWork(CityId from, int index, CityId to, TypeIndex building) 
     state_.city(to)->greatWorks.push_back(w);
 }
 
+const GreatWork* Game::dealWork(const DealItem& item) const {
+    const City* c = state_.city(item.amount);
+    if (!c || c->owner != item.from || item.resource < 0 || static_cast<size_t>(item.resource) >= c->greatWorks.size()) return nullptr;
+    return &c->greatWorks[static_cast<size_t>(item.resource)];
+}
+
+bool Game::workCompletesTheme(PlayerId player, const GreatWork& work) const {
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (TypeIndex b : c.buildings) {
+            const BuildingType& bt = rules_->buildings[at(b)];
+            if (!bt.theming || themed(c, b)) continue;
+            const GreatWorkType& t = rules_->greatWorkTypes[at(work.type)];
+            bool fits = false;
+            for (const auto& [slot, n] : bt.greatWorkSlots) fits = fits || std::find(t.slots.begin(), t.slots.end(), slot) != t.slots.end();
+            if (!fits) continue;
+            int slots = 0;
+            for (const auto& [slot, n] : bt.greatWorkSlots) slots += n;
+            const bool byObject = bt.theming->sameObject || bt.theming->uniquePerson;
+            const int key = byObject ? work.type : work.era;
+            const int who = byObject ? work.creator : work.civ;
+            if (key < 0 || who < 0) continue;
+            // Distinct people (or civilizations) of the work's theme the player already holds outside themed buildings.
+            std::vector<int> seen;
+            for (const City& o : state_.cities) {
+                if (o.owner != player) continue;
+                for (const GreatWork& w : o.greatWorks) {
+                    if (themed(o, w.building)) continue;
+                    if ((byObject ? w.type : w.era) != key) continue;
+                    const int x = byObject ? w.creator : w.civ;
+                    if (x >= 0 && std::find(seen.begin(), seen.end(), x) == seen.end()) seen.push_back(x);
+                }
+            }
+            if (std::find(seen.begin(), seen.end(), who) == seen.end() && static_cast<int>(seen.size()) == slots - 1) return true;
+        }
+    }
+    return false;
+}
+
 std::vector<Command> Game::themingMoves(PlayerId player, CityId cityId, TypeIndex building) const {
     std::vector<Command> moves;
     const City* city = state_.city(cityId);

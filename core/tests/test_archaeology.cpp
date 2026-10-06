@@ -111,3 +111,39 @@ TEST(works_move_between_slots_to_theme_a_museum) {
     CHECK(g->state().city(b)->greatWorks.size() == 1u);  // the portrait went over
     CHECK(g->themingMoves(0, a, art).empty());           // nothing left to do
 }
+
+TEST(a_great_work_that_completes_a_theme_is_worth_buying) {
+    GameState s = flatState(24, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.met.assign(2, uint8_t{1});
+        p.gold = Fixed::fromInt(1000);
+    }
+    s.players[0].human = true;
+    s.majorsAtStart = 2;
+    addCity(s, 0, {4, 6}, true, 6);
+    addCity(s, 1, {16, 6}, true, 6);
+    const TypeIndex art = rules().building("BUILDING_ART_MUSEUM"), palace = rules().building("BUILDING_PALACE");
+    TypeIndex sculpture = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size(); ++w) {
+        if (rules().greatWorkTypes[w].id == "SCULPTURE") sculpture = static_cast<TypeIndex>(w);
+    }
+    s.cities[0].buildings = {palace};
+    s.cities[0].greatWorks = {{sculpture, palace, 3, -1, kNone}};
+    s.cities[1].buildings = {art};
+    s.cities[1].greatWorks = {{sculpture, art, 1, -1, kNone}, {sculpture, art, 2, -1, kNone}};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId mine = g->state().cities[0].id, theirs = g->state().cities[1].id;
+    CHECK(g->workCompletesTheme(1, g->state().cities[0].greatWorks[0]));
+    const std::vector<DealItem> offer = {{DealItemKind::GreatWork, 0, mine, 0}, {DealItemKind::Gold, 1, 250, kNone}};
+    REQUIRE(g->dealProblem(Deal{0, 0, 1, 1, offer}) == CommandError::Ok);
+    CHECK(describeDeal(rules(), g->state(), Deal{0, 0, 1, 1, offer}).find("sculpture") != std::string::npos);
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, offer)) == CommandError::Ok);
+    CHECK(g->state().events.back().kind == EventKind::DealAccepted);
+    CHECK(g->state().city(mine)->greatWorks.empty());
+    REQUIRE(g->state().city(theirs)->greatWorks.size() == 3u);
+    CHECK(g->themed(*g->state().city(theirs), art));
+    // A work in a themed museum is not for sale.
+    const std::vector<DealItem> back = {{DealItemKind::GreatWork, 1, theirs, 0}, {DealItemKind::Gold, 0, 600, kNone}};
+    CHECK(!g->wouldAccept(1, Deal{0, 0, 1, 1, back}));
+}

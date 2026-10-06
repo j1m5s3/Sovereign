@@ -106,16 +106,16 @@ struct CityDistrict {
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
-enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance };
-constexpr int kNumDealItemKinds = 7;
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork };
+constexpr int kNumDealItemKinds = 8;
 // Alliance types [R&F] (08: Alliance); a DealItemKind::Alliance item carries one as its amount.
 enum class AllianceType : int8_t { None = -1, Research = 0, Military, Economic, Cultural, Religious };
 constexpr int kNumAllianceTypes = 5;
 struct DealItem {
     DealItemKind kind = DealItemKind::Gold;
     PlayerId from = kNoPlayer;
-    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn
-    TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource
+    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it
+    TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource; GreatWork: its index in that city
 };
 // A deal one player put to another; it waits here only while a human must answer.
 struct Deal {
