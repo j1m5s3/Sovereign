@@ -820,6 +820,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.housing = j["housing"].fixed();
             im.appeal = static_cast<int>(j["appeal"].integer(0));
             im.uniqueToId = j["uniqueTo"].str();
+            im.cityStateId = j["cityState"].str();
             im.amenities = static_cast<int>(j["amenities"].integer(0));
             im.defense = static_cast<int>(j["defense"].integer(0));
             im.sight = static_cast<int>(j["sight"].integer(0));
@@ -857,9 +858,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 }
                 adj.amount = a["amount"].fixed();
                 adj.per = std::max(1, static_cast<int>(a["per"].integer(1)));
-                adj.improvement = improvement(a["improvement"].str());
-                if (adj.improvement == kNone) {
-                    *error = where + ": unknown adjacent improvement " + a["improvement"].str();
+                adj.improvement = a.has("improvement") ? improvement(a["improvement"].str()) : kNone;
+                adj.district = a["district"].str();
+                adj.feature = a.has("feature") ? feature(a["feature"].str()) : kNone;
+                const std::string& rc = a["resourceClass"].str();
+                adj.resourceClass = rc == "BONUS" ? static_cast<int>(ResourceClass::Bonus) : rc == "LUXURY" ? static_cast<int>(ResourceClass::Luxury) : -1;
+                if (adj.improvement == kNone && adj.district.empty() && adj.feature == kNone && adj.resourceClass < 0) {
+                    *error = where + ": adjacency to nothing known";
                     return false;
                 }
                 if (!readUnlock(a["needs"], adj.needs, where) || !readUnlock(a["obsoleteWith"], adj.obsoleteWith, where))
@@ -2170,6 +2175,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         if (!im.uniqueToId.empty() && (im.uniqueTo = civ(im.uniqueToId)) == kNone) {
             *error = "improvement " + im.id + ": unknown civilization " + im.uniqueToId;
+            return false;
+        }
+        if (!im.cityStateId.empty() && (im.cityState = cityState(im.cityStateId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown city-state " + im.cityStateId;
             return false;
         }
         if (!im.adjacentImprovementId.empty() && (im.adjacentImprovement = improvement(im.adjacentImprovementId)) == kNone) {

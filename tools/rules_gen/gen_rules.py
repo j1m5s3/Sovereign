@@ -908,12 +908,19 @@ def gen_improvements():
     for sec in ("Bonus resources", "Luxury resources", "Strategic resources"):
         for r in table(SPEC / "terrain-features-resources.md", sec):
             resources[r["Resource"]] = "RESOURCE_" + snake(r["Resource"])
+    # City-states' unique improvements: built by the Builders of whoever enjoys the city-state's suzerain bonus (08).
+    city_states = {r["City-state"]: "CITYSTATE_" + snake(r["City-state"]) for r in table(SPEC / "city-states.md", "City-states and suzerain bonuses")}
     rows = [r for r in table(SPEC / "improvements.md", "Improvements")
-            if r["Built by"] in ("Builder", "Military Engineer") and not r["Unique to"]]
+            if r["Built by"] in ("Builder", "Military Engineer") and (not r["Unique to"] or r["Unique to"] in city_states)]
     ids = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in rows}
+    districts = {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats") if not r.get("Unique to")}
+    adjacent_kinds = {"district": ("district", "ANY"), "Bonus resource": ("resourceClass", "BONUS"), "Luxury resource": ("resourceClass", "LUXURY"),
+                      "Woods": ("feature", "FEATURE_FOREST"), "Rainforest": ("feature", "FEATURE_JUNGLE")}
     out = []
     for row in rows:
         i = {"id": ids[row["Improvement"]], "name": row["Improvement"], "yields": yields(row["Base yields"])}
+        if row["Unique to"]:
+            i["cityState"] = city_states[row["Unique to"]]
         if row["Unlock"]:
             i["unlock"] = unlock_id(row["Unlock"])
         terr, feat = [], []
@@ -939,10 +946,16 @@ def gen_improvements():
         adjacency = []
         for part in filter(None, (x.strip() for x in row["Adjacency"].split(";"))):
             m = re.fullmatch(r"\+(\d+) (\w+) per (?:(\d+) )?(.+?)(?: \((.+)\))?", part)
-            if not m or m.group(4) not in ids:
-                continue  # adjacency to districts and unique improvements arrives with them
-            a = {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1)), "per": int(m.group(3) or 1),
-                 "improvement": ids[m.group(4)]}
+            if not m or not (m.group(4) in ids or m.group(4) in districts or m.group(4) in adjacent_kinds):
+                continue  # adjacency to unique districts and civs' unique improvements arrives with them
+            a = {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1)), "per": int(m.group(3) or 1)}
+            if m.group(4) in ids:
+                a["improvement"] = ids[m.group(4)]
+            elif m.group(4) in districts:
+                a["district"] = districts[m.group(4)]
+            else:
+                key, value = adjacent_kinds[m.group(4)]
+                a[key] = value
             for cond in filter(None, (c.strip() for c in (m.group(5) or "").split(","))):
                 c = re.fullmatch(r"(needs|obsolete with) (.+)", cond)
                 a["needs" if c.group(1) == "needs" else "obsoleteWith"] = unlock_id(c.group(2))
@@ -956,10 +969,10 @@ def gen_improvements():
             i["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
         kind, amount = IMPROVEMENT_PLUNDER.get(row["Improvement"], ("GOLD", 25))
         i["plunder"] = {"kind": kind, "amount": amount}
+        if row["Defense"] and num(row["Defense"]):
+            i["defense"] = num(row["Defense"])  # Fort; Granada's Alcázar
         if row["Built by"] == "Military Engineer":
             i["builtBy"] = "UNIT_MILITARY_ENGINEER"  # Fort, Airstrip, Missile Silo
-            if row["Defense"] and num(row["Defense"]):
-                i["defense"] = num(row["Defense"])
             if row["Improvement"] == "Airstrip":
                 i["airSlots"] = 3  # 03: Airstrip, 3 air slots
             if row["Improvement"] == "Mountain Tunnel":
