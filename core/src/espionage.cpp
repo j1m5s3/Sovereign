@@ -69,6 +69,12 @@ bool Game::governmentIs(PlayerId pid, const char* governmentId) const {
     return p.government != kNone && p.anarchyTurns == 0 && rules_->governments[at(p.government)].id == governmentId;
 }
 
+bool Game::policyIs(PlayerId pid, const char* policyId) const {
+    const Player& p = state_.players[at(pid)];
+    if (p.government == kNone || p.anarchyTurns > 0) return false;
+    return std::any_of(p.policies.begin(), p.policies.end(), [&](TypeIndex x) { return x != kNone && rules_->policies[at(x)].id == policyId; });
+}
+
 int Game::buildingsOwned(PlayerId pid, const char* buildingId) const {
     const TypeIndex b = rules_->building(buildingId);
     if (b == kNone) return 0;

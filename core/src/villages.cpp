@@ -91,7 +91,9 @@ void Game::enterVillage(Unit& unit) {
         case GoodyKind::Inspiration: boost(true, pick->amount); break;
         case GoodyKind::Eureka: boost(false, pick->amount); break;
         case GoodyKind::GovernorTitle: --p.governorTitlesSpent; break;  // one more title to spend
-        case GoodyKind::Envoy: ++p.envoyTokens; break;
+        case GoodyKind::Envoy:
+            if (!policyIs(p.id, "POLICY_ROGUE_STATE")) ++p.envoyTokens;
+            break;
         case GoodyKind::Favor: p.favor += pick->amount; break;
         case GoodyKind::Faith: p.faith += Fixed::fromInt(pick->amount); break;
         case GoodyKind::Gold: p.gold += Fixed::fromInt(pick->amount); break;

@@ -105,6 +105,14 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         for (const Hex& h : state_.grid.within(origin.pos, 3)) owns = owns || (paititi != kNone && state_.plot(h).feature == paititi && state_.plot(h).city == origin.id);
         if (owns) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(4);
     }
+    // Dark Age cards (09): Isolationism (+2 Food and Production on domestic routes); Letters of Marque halves route yields.
+    if (domestic && policyIs(origin.owner, "POLICY_ISOLATIONISM")) {
+        out[static_cast<size_t>(YieldType::Food)] += Fixed::fromInt(2);
+        out[static_cast<size_t>(YieldType::Production)] += Fixed::fromInt(2);
+    }
+    if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
+        for (Fixed& y : out) y = y / 2;
+    }
     // Civ ability: routes whose way crosses desert (Arabia).
     if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
         bool desert = false;
@@ -233,7 +241,7 @@ void Game::processTrade(PlayerId pid) {
                 const Unit* m = state_.unitAt(h, UnitLayer::Military, *rules_);
                 if (m && atWar(pid, m->owner) && !state_.cityAt(h)) {
                     state_.players[at(m->owner)].gold += Fixed::fromInt(
-                        rules_->globalInt("TRADE_ROUTE_PLUNDER_GOLD") * (100 + unitEffectTotal(*m, UnitEffectKind::PlunderPercent)) / 100);
+                        rules_->globalInt("TRADE_ROUTE_PLUNDER_GOLD") * (100 + plunderPercent(*m)) / 100);
                     if (isMajorCiv(m->owner)) {
                         ++state_.players[at(m->owner)].tradersPlundered;
                         remember(pid, m->owner, MemoryKind::PlunderedTrader, -6, 30);

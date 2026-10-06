@@ -460,6 +460,9 @@ def condition_atom(text):
         a["atom"] = "DISTRICT_TILE"
     elif text == "in own territory":
         a["atom"] = "OWN_TERRITORY"
+    elif re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text):
+        era = re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text).group(1)
+        a.update(atom="OPPONENT_MIN_ERA", value="ERA_" + era.upper())
     else:
         a.update(atom="UNTRACKED", value=text)
     return a
@@ -493,6 +496,11 @@ def unit_effects(text):
     out = []
     for part in filter(None, (p.strip() for p in text.split("; "))):
         m = re.fullmatch(r"([+-]\d+) Combat Strength in combat(?: where (.*))?", part)
+        # Inquisition [R&F]: read "friendly territory" as the unit's own territory.
+        territory = re.fullmatch(r"([+-]\d+) Combat Strength in friendly territory", part)
+        if territory:
+            out.append({"kind": "STRENGTH", "amount": int(territory.group(1)), "when": [[{"atom": "OWN_TERRITORY"}]]})
+            continue
         simple = [
             (r"\+(\d+) Movement", "MOVES"), (r"\+(\d+) range", "RANGE"), (r"\+(\d+) sight", "SIGHT"),
             (r"\+(\d+) attack\(s\) per turn", "ATTACKS"), (r"\+(\d+)% combat XP", "XP_PERCENT"),
@@ -1453,7 +1461,12 @@ def gen_policies():
             obsolete = [policy_ids[x.strip()] for x in row["Obsoleted by"].split(",") if x.strip()]
             if obsolete:
                 p["obsoletedBy"] = obsolete
-            if row["Age requirement [R&F]"]:
+            # Dark Age cards [R&F]: only in a Dark Age, while the world is in their era window (09: Ages).
+            age = re.fullmatch(r"Dark Age (\w+) Era-(\w+) Era", row["Age requirement [R&F]"] or "")
+            if age:
+                p["darkAge"] = True
+                p["eras"] = ["ERA_" + age.group(1).upper(), "ERA_" + age.group(2).upper()]
+            elif row["Age requirement [R&F]"]:
                 p["ageRequirement"] = row["Age requirement [R&F]"]
             if row["Government-exclusive [GS]"]:
                 p["government"] = govs[row["Government-exclusive [GS]"]]

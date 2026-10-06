@@ -167,6 +167,26 @@
   {"id": "SCRIPTURE_ADJACENCY", "source": "POLICY_SCRIPTURE", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_HOLY_SITE", "amount": 100}},
   {"id": "AESTHETICS_ADJACENCY", "source": "POLICY_AESTHETICS", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_THEATER_SQUARE", "amount": 100}},
   {"id": "TOWN_CHARTERS_ADJACENCY", "source": "POLICY_TOWN_CHARTERS", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_COMMERCIAL_HUB", "amount": 100}},
-  {"id": "CRAFTSMEN_ADJACENCY", "source": "POLICY_CRAFTSMEN", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_INDUSTRIAL_ZONE", "amount": 100}}
+  {"id": "CRAFTSMEN_ADJACENCY", "source": "POLICY_CRAFTSMEN", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_INDUSTRIAL_ZONE", "amount": 100}},
+  {"id": "MONASTICISM_SCIENCE", "source": "POLICY_MONASTICISM", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "SCIENCE", "amount": 75}, "subjectRequirements": {"all": [{"type": "CITY_HAS_DISTRICT", "ref": "DISTRICT_HOLY_SITE"}]}},
+  {"id": "MONASTICISM_CULTURE", "source": "POLICY_MONASTICISM", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "CULTURE", "amount": -25}},
+  {"id": "TWILIGHT_VALOR_ATTACK", "source": "POLICY_TWILIGHT_VALOR", "collection": "PLAYER", "effect": "GRANT_ABILITY", "arguments": {"ability": "ABILITY_TWILIGHT_VALOR_ATTACK_BONUS"}},
+  {"id": "INQUISITION_TERRITORY", "source": "POLICY_INQUISITION", "collection": "PLAYER", "effect": "GRANT_ABILITY", "arguments": {"ability": "ABILITY_INQUISITION_FRIENDLY_TERRITORY_BONUS"}},
+  {"id": "INQUISITION_SCIENCE", "source": "POLICY_INQUISITION", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "SCIENCE", "amount": -25}},
+  {"id": "LETTERS_OF_MARQUE_RAIDERS", "source": "POLICY_LETTERS_OF_MARQUE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"unitClass": "NAVAL_RAIDER", "amount": 100}},
+  {"id": "ROBBER_BARONS_PRODUCTION", "source": "POLICY_ROBBER_BARONS", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "PRODUCTION", "amount": 25}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_FACTORY"}]}},
+  {"id": "ROBBER_BARONS_GOLD", "source": "POLICY_ROBBER_BARONS", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "GOLD", "amount": 50}, "subjectRequirements": {"all": [{"type": "CITY_HAS_BUILDING", "ref": "BUILDING_STOCK_EXCHANGE"}]}},
+  {"id": "ROBBER_BARONS_AMENITIES", "source": "POLICY_ROBBER_BARONS", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_AMENITIES", "arguments": {"amount": -2}},
+  {"id": "ELITE_FORCES_XP", "source": "POLICY_ELITE_FORCES", "collection": "PLAYER", "effect": "ADJUST_UNIT_XP_PERCENT", "arguments": {"amount": 100}},
+  {"id": "ELITE_FORCES_MAINTENANCE", "source": "POLICY_ELITE_FORCES", "collection": "PLAYER", "effect": "ADJUST_UNIT_MAINTENANCE_DISCOUNT", "arguments": {"amount": -2}},
+  {"id": "COLLECTIVISM_FARMS", "source": "POLICY_COLLECTIVISM", "collection": "PLAYER_CITY_PLOTS", "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1}, "subjectRequirements": {"all": [{"type": "PLOT_HAS_IMPROVEMENT", "ref": "IMPROVEMENT_FARM"}]}},
+  {"id": "COLLECTIVISM_HOUSING", "source": "POLICY_COLLECTIVISM", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_HOUSING", "arguments": {"amount": 2}},
+  {"id": "COLLECTIVISM_ADJACENCY", "source": "POLICY_COLLECTIVISM", "collection": "PLAYER", "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT", "arguments": {"district": "DISTRICT_INDUSTRIAL_ZONE", "amount": 100}},
+  {"id": "COLLECTIVISM_GREAT_PEOPLE", "source": "POLICY_COLLECTIVISM", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_GREAT_PERSON_PERCENT", "arguments": {"amount": -50}},
+  {"id": "CYBER_WARFARE_COMBAT", "source": "POLICY_CYBER_WARFARE", "collection": "PLAYER", "effect": "GRANT_ABILITY", "arguments": {"ability": "ABILITY_CYBER_WARFARE_COMBAT_BONUS"}},
+  {"id": "AUTOMATED_WORKFORCE_AMENITIES", "source": "POLICY_AUTOMATED_WORKFORCE", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_AMENITIES", "arguments": {"amount": -1}},
+  {"id": "AUTOMATED_WORKFORCE_LOYALTY", "source": "POLICY_AUTOMATED_WORKFORCE", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_LOYALTY", "arguments": {"amount": -5}},
+  {"id": "DISINFORMATION_SCIENCE", "source": "POLICY_DISINFORMATION_CAMPAIGN", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "SCIENCE", "amount": -10}},
+  {"id": "DISINFORMATION_CULTURE", "source": "POLICY_DISINFORMATION_CAMPAIGN", "collection": "PLAYER_CITIES", "effect": "ADJUST_CITY_YIELD_PERCENT", "arguments": {"yield": "CULTURE", "amount": -10}}
  ]
 }
