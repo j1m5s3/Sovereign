@@ -38,3 +38,7 @@ Specs: 06-religion (Pantheons, Beliefs); data: `religion.json` `text`.
 - God of War: Faith for a kill next to a Holy Site, as the data says (Civ VI: within 8 tiles). God of Craftsmen counts any improvement on the strategic resource.
 - Religious Unity counts conversions by passive pressure only (`processReligion`); Missionaries' conversions do not award the envoy.
 - Warrior Monks could not be bought at all before; they now need the belief in the city's religion.
+
+## Follow-up: the AI weighs pantheons
+
+The AI took the first pantheon with data modifiers, so code-only beliefs were never chosen (`beliefModelled` now counts them). It now tries each available pantheon on a copy of the game and keeps the one that raises its cities' yields, Amenities and Housing most (`bestPantheon` in `ai.cpp`; it weighs only once a pantheon is affordable). In two test games (seeds 7 and 3, 6 civs) the picks spread across Desert Folklore, Dance of the Aurora, Divine Spark, City Patron Goddess, Earth Goddess, Lady of the Reeds and Marshes and God of the Open Sky. Pace benchmark at turn 200: cities 7.6 (was 7.9), science 59.2 (51.9), production 91.3 (88.4).
