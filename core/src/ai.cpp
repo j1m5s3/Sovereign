@@ -609,6 +609,7 @@ void spies(View& v) {
         int bestValue = 0;
         for (const City& c : s.cities) {
             if (rival == kNoPlayer || c.owner != rival || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+            if (v.game.promised(v.me, rival, PromiseKind::NoSpying)) continue;  // 08 [GS]
             // Disrupting a rival's rocketry is worth most once its expedition is near; a Great Work
             // only with a free slot at home (canSpyMission does not check that).
             bool spaceRace = false;
@@ -969,7 +970,8 @@ void archaeologist(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
     if (!u) return;
-    if (v.game.excavateProblem(v.me, id) == CommandError::Ok) {
+    const auto promisedNot = [&](PlayerId owner) { return owner != kNoPlayer && owner != v.me && v.game.promised(v.me, owner, PromiseKind::NoDigging); };  // 08 [GS]
+    if (!promisedNot(s.plot(u->pos).owner) && v.game.excavateProblem(v.me, id) == CommandError::Ok) {
         v.game.submit(Command::excavate(v.me, id));
         return;
     }
@@ -977,7 +979,7 @@ void archaeologist(View& v, UnitId id) {
     for (int i = 0; i < s.grid.size(); ++i) {
         const Hex h = s.grid.at(i);
         const Plot& p = s.plot(h);
-        if (p.antiquity == 0 || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
+        if (p.antiquity == 0 || promisedNot(p.owner) || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
         if (!best || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *best)) best = h;
     }
     if (!best || !approach(v, id, *best, true)) v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
@@ -1837,7 +1839,8 @@ void religiousUnit(View& v, UnitId id) {
         }
     }
     const CityId here = v.s().plot(u->pos).city;
-    if (here != kNoCity && g.cityMajorityReligion(*v.s().city(here)) != u->religion && g.canSpreadReligion(id)) {
+    const auto promisedNot = [&](PlayerId owner) { return owner != v.me && g.promised(v.me, owner, PromiseKind::NoConverting); };  // 08 [GS]
+    if (here != kNoCity && g.cityMajorityReligion(*v.s().city(here)) != u->religion && !promisedNot(v.s().city(here)->owner) && g.canSpreadReligion(id)) {
         g.submit(Command::spreadReligion(v.me, id));
         return;
     }
@@ -1845,7 +1848,7 @@ void religiousUnit(View& v, UnitId id) {
     std::optional<Hex> best;
     int bestScore = INT_MAX;
     for (const City& c : v.s().cities) {
-        if (g.cityMajorityReligion(c) == u->religion || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+        if (g.cityMajorityReligion(c) == u->religion || promisedNot(c.owner) || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
         const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6);
         if (score < bestScore) {
             bestScore = score;
@@ -2024,6 +2027,9 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
     const GameState& s = game.state();
     const Rules& r = game.rules();
     if (!game.canFoundCityAt(player, plot)) return -1;
+    for (const City& c : s.cities) {  // a promise not to settle near them is kept (08 [GS])
+        if (c.owner != player && s.grid.distance(c.pos, plot) <= 6 && game.promised(player, c.owner, PromiseKind::NoSettling)) return -1;
+    }
     for (const Camp& camp : s.camps) {
         if (s.grid.distance(camp.pos, plot) <= 3) return -1;
     }
