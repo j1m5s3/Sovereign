@@ -938,7 +938,7 @@ void build(View& v, UnitId id) {
     if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
-        if (p.owner == v.me && p.improvement != kNone && p.pillagedTurns > 0) return 70;  // to repair
+        if (p.owner == v.me && ((p.improvement != kNone && p.pillagedTurns > 0) || p.routePillaged)) return 70;  // to repair
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
         // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).
         const std::vector<TypeIndex> opts = v.game.improvementsAt(v.me, h);

@@ -166,12 +166,13 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
 		}
 		// Roads (01: Routes) to the east, south-east and south-west neighbours, so each joint is listed once.
-		if (Pl.route >= 0)
+		// A pillaged road is not drawn until it is repaired (05: Pillage).
+		if (Pl.route >= 0 && !Pl.routePillaged)
 		{
 			for (int32 D = 0; D < sov::kNumDirs; ++D)
 			{
 				const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));
-				if (!N || S.grid.index(*N) < i || S.plot(*N).route < 0 || Game.visibility(View, *N) == sov::Visibility::Unrevealed)
+				if (!N || S.grid.index(*N) < i || S.plot(*N).route < 0 || S.plot(*N).routePillaged || Game.visibility(View, *N) == sov::Visibility::Unrevealed)
 				{
 					continue;
 				}

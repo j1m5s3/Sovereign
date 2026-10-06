@@ -208,8 +208,10 @@ void Game::applyTradeRoute(const Command& c) {
     for (const Hex& h : tradePath(c.player, u.type, origin, dest)) {
         r.path.push_back(state_.grid.index(h));
         Plot& p = state_.plot(h);
-        if (road != kNone && rules_->globalInt("TRADE_ROUTE_PLACES_ROADS") > 0 && !rules_->terrains[at(p.terrain)].water && p.route < road)
+        if (road != kNone && rules_->globalInt("TRADE_ROUTE_PLACES_ROADS") > 0 && !rules_->terrains[at(p.terrain)].water && p.route < road) {
             p.route = static_cast<int8_t>(road);
+            p.routePillaged = false;
+        }
     }
     state_.tradeRoutes.push_back(std::move(r));
     removeUnit(c.id);  // the Trader is on the road

@@ -474,7 +474,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
     if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
-    if (p.route >= 0 && fp.route >= 0) {
+    if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
         const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
         Fixed rc = slow.moveCost;
         if (!slow.bridges && hasRiver(state_, from, *d)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
@@ -827,6 +827,7 @@ void Game::apply(const Command& c) {
         case CommandType::RepairImprovement: {
             Unit& u = *state_.unit(c.id);
             state_.plot(u.pos).pillagedTurns = 0;
+            state_.plot(u.pos).routePillaged = false;
             u.movesLeft = Fixed();  // repairing takes the Builder's turn, not a charge
             u.moveTarget.reset();
             if (City* city = state_.city(state_.plot(u.pos).city)) assignCitizens(*city);
@@ -838,6 +839,7 @@ void Game::apply(const Command& c) {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             for (const auto& [res, n] : rr.resourceCost) p.stockpile[static_cast<size_t>(res)] -= n;
             state_.plot(u.pos).route = static_cast<int8_t>(railroad());
+            state_.plot(u.pos).routePillaged = false;
             u.movesLeft = Fixed();  // laying track takes the engineer's turn
             u.moveTarget.reset();
             break;
@@ -981,7 +983,10 @@ void Game::applyFoundCity(const Command& c) {
         else if (base == "TUNDRA") awardMoment(owner, "MOMENT_TUNDRA_CITY");
     }
     // A city stands on a road of its founder's era (01: Routes).
-    if (const TypeIndex road = roadFor(owner); road != kNone) center.route = static_cast<int8_t>(road);
+    if (const TypeIndex road = roadFor(owner); road != kNone) {
+        center.route = static_cast<int8_t>(road);
+        center.routePillaged = false;
+    }
     // Religious Colonization: new cities start following the founder's religion (06).
     city.pressure.assign(state_.religions.size(), 0);
     if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())

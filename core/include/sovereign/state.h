@@ -39,6 +39,7 @@ struct Plot {
     CityId city = kNoCity;  // owning city
     int16_t continent = -1;
     int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
+    bool routePillaged = false;  // pillaged (05: Pillage): moves as if it had no road until repaired
     uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage

@@ -236,7 +236,8 @@ CommandError Game::pillageProblem(PlayerId player, UnitId unit) const {
     const bool improvement = p.improvement != kNone && p.pillagedTurns == 0;
     const CityDistrict* d = state_.districtAt(u->pos);
     const bool district = d && d->complete && d->pillagedTurns == 0;
-    return improvement || district ? CommandError::Ok : CommandError::BadTarget;
+    const bool route = p.route >= 0 && !p.routePillaged;
+    return improvement || district || route ? CommandError::Ok : CommandError::BadTarget;
 }
 
 CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) const {
@@ -259,7 +260,10 @@ CommandError Game::repairProblem(PlayerId player, UnitId builder) const {
     if (!u || u->owner != player) return CommandError::NotYourUnit;
     if (u->charges <= 0 || rules_->units[static_cast<size_t>(u->type)].buildCharges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
     const Plot& p = state_.plot(u->pos);
-    return p.owner == player && p.improvement != kNone && p.pillagedTurns > 0 ? CommandError::Ok : CommandError::CannotImprove;
+    const bool improvement = p.owner == player && p.improvement != kNone && p.pillagedTurns > 0;
+    // A pillaged road on the player's land or on no one's.
+    const bool route = p.routePillaged && (p.owner == player || p.owner == kNoPlayer);
+    return improvement || route ? CommandError::Ok : CommandError::CannotImprove;
 }
 
 void Game::pillage(UnitId id, std::optional<Hex> at) {
@@ -271,13 +275,19 @@ void Game::pillage(UnitId id, std::optional<Hex> at) {
     if (p.improvement != kNone && p.pillagedTurns == 0) {
         loot = rules_->improvements[static_cast<size_t>(p.improvement)].plunder;
         p.pillagedTurns = 255;  // until a Builder repairs it (255 world turns at the most)
-    } else if (City* home = state_.city(p.city)) {
-        for (CityDistrict& d : home->districts) {
-            if (d.pos != where) continue;
-            loot = rules_->districts[static_cast<size_t>(d.type)].plunder;
-            // Sovereign reading: the city repairs a pillaged district itself in 10 turns.
-            d.pillagedTurns = kPillagedDistrictTurns;
+    } else {
+        bool district = false;
+        if (City* home = state_.city(p.city)) {
+            for (CityDistrict& d : home->districts) {
+                if (d.pos != where || !d.complete || d.pillagedTurns > 0) continue;
+                loot = rules_->districts[static_cast<size_t>(d.type)].plunder;
+                // Sovereign reading: the city repairs a pillaged district itself in 10 turns.
+                d.pillagedTurns = kPillagedDistrictTurns;
+                district = true;
+            }
         }
+        // With nothing else left to take, the road (no plunder).
+        if (!district && p.route >= 0) p.routePillaged = true;
     }
     Player& owner = state_.players[static_cast<size_t>(u.owner)];
     // Plunder bonuses (Francis Drake, Ching Shih...) raise the yields, not the healing.
@@ -295,7 +305,7 @@ void Game::pillage(UnitId id, std::optional<Hex> at) {
         case PlunderKind::Heal: u.hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), u.hp + loot.amount); break;
         case PlunderKind::None: break;
     }
-    const Fixed cost = Fixed::fromInt(rules_->globalInt("PILLAGE_MOVEMENT_COST"));
+    const Fixed cost = Fixed::fromInt(rules_->globalInt(unitEffectTotal(u, UnitEffectKind::CheapPillage) > 0 ? "PILLAGE_ADVANCED_MOVEMENT_COST" : "PILLAGE_MOVEMENT_COST"));
     u.movesLeft = u.movesLeft > cost ? u.movesLeft - cost : Fixed();
     if (City* city = state_.city(p.city)) assignCitizens(*city);
     (void)victim;

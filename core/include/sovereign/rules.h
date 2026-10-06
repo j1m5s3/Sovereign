@@ -140,6 +140,7 @@ enum class UnitEffectKind : uint8_t {
     BandLevel,          // +amount levels for a concert at `at`
     BandBurst,          // +amount tourism from a concert at `at`
     PlunderPercent,     // +amount% to what it gains by pillaging or plundering (07: Plunder)
+    CheapPillage,       // pillaging costs PILLAGE_ADVANCED_MOVEMENT_COST (05: Pillage)
 };
 
 enum class CombatAtom : uint8_t {

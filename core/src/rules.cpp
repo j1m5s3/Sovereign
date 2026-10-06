@@ -566,7 +566,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
             {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
-            {"PLUNDER_PERCENT", UnitEffectKind::PlunderPercent},
+            {"PLUNDER_PERCENT", UnitEffectKind::PlunderPercent}, {"CHEAP_PILLAGE", UnitEffectKind::CheapPillage},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
