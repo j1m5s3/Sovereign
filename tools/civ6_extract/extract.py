@@ -572,9 +572,9 @@ def gen_wonders(c: Ctx, out):
     rows = building_rows(c, True)
     s = [("World wonders", table(
         ["Wonder", "Unlock", "Era", "Cost", "Yields", "Housing", "Amenity", "Regional range", "GPP", "Great Work slots", "Placement",
-         "Flags [GS]", "Effects (modifiers)"],
+         "Requires", "Flags [GS]", "Effects (modifiers)"],
         [(b["name"], b["unlock"], era_of_unlock(c, b["raw"]), b["cost"], b["yields"], b["housing"], b["amen"], b["regional"], b["gpp"], b["gw"],
-          b["place"] + (f"; {b['district']}" if b["district"] else ""), b["power"], b["mods"]) for b in rows]))]
+          b["place"] + (f"; {b['district']}" if b["district"] else ""), b["prereq"].replace(", ", " or "), b["power"], b["mods"]) for b in rows]))]
     return write(out, "wonders.md", "World Wonders", "", s)
 
 

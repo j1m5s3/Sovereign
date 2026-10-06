@@ -577,6 +577,8 @@ public:
     int encampmentWallHp(const City& city) const;
     int encampmentStrength(const City& city) const;
     bool canRazeCity(PlayerId player, CityId city) const;
+    // A city captured this turn may go back to its original owner, alive and not at war with the player (02).
+    bool canLiberateCity(PlayerId player, CityId city) const;
     PlayerId barbarianPlayer() const;
     // Score line items (09: Score; ScoringLineItems): 3 per civic, 2 per tech, 5 per city,
     // 2 per finished district, 1 per population. Cost scaling of techs and civics is unverified and not applied.

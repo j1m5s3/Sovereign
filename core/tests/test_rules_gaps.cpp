@@ -67,3 +67,21 @@ TEST(support_units_and_open_ground) {
     CHECK_EQ(g->maxMoves(*g->state().unit(chariot)), ct.moves + 1);  // flat grassland, no feature
     CHECK_EQ(g->unitRange(*g->state().unit(catapult)), g->unitRange(*g->state().unit(lone)) + 1);
 }
+
+TEST(a_captured_city_can_be_liberated) {
+    GameState s = flatState(24, 12, 3);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {3, 5}, true, 3);
+    const CityId freed = addCity(s, 0, {12, 5}, false, 3);
+    addCity(s, 2, {20, 5}, true, 3);
+    s.city(freed)->originalOwner = 2;
+    s.city(freed)->capturedTurn = s.turn;
+    for (Player& p : s.players) p.relations.resize(3);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->canLiberateCity(0, freed));
+    REQUIRE(g->submit(Command::liberateCity(0, freed)) == CommandError::Ok);
+    CHECK_EQ(g->state().city(freed)->owner, 2);
+    CHECK_EQ(g->state().city(freed)->loyalty, rules().globalInt("LOYALTY_AFTER_TRANSFERRED_BY_LIBERATION"));
+    CHECK_EQ(g->state().players[0].favor, rules().globalInt("FAVOR_FOR_LIBERATE_PLAYER_CITY"));
+    CHECK(!g->canLiberateCity(2, freed));  // its own now
+}
