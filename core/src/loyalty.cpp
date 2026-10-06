@@ -1,6 +1,5 @@
 // Loyalty and the Free Cities [R&F] (specs/civ6/02-cities.md, Loyalty): citizen pressure,
-// per-turn change, revolt at 0 and flipping back. Eras (age factors), governors and
-// religion are not modelled yet; their inputs count as neutral.
+// per-turn change (ages, governors, religion, amenities...), revolt at 0 and flipping back.
 #include <algorithm>
 
 #include "sovereign/game.h"
@@ -67,6 +66,14 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     if (beloved(c->owner)) change += Fixed::fromInt(rules_->globalInt("REPUTATION_BELOVED_LOYALTY"));
     if (state_.players[static_cast<size_t>(c->owner)].freeCity) {
         return change + Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_FREE_CITIES"));
+    }
+    // City-states hold to themselves (IDENTITY_PER_TURN_FROM_CITY_STATES).
+    if (isCityState(c->owner)) return change + Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_CITY_STATES"));
+    // Religion: a majority religion the owner founded steadies the city; one another civ founded unsettles it.
+    if (const int maj = cityMajorityReligion(*c); maj >= 0) {
+        const PlayerId founder = state_.religions[static_cast<size_t>(maj)].founder;
+        if (founder == c->owner) change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_RELIGION_MATCHING_FOUNDED"));
+        else if (founder != kNoPlayer) change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_RELIGION_MISMATCHING_FOUNDED"));
     }
     change += Fixed::fromInt(ageLoyalty(*c));  // Golden and Dark Ages (09)
     const CityReport rep = cityReport(id);
