@@ -169,6 +169,10 @@ public:
     // Levy Military (08): the Gold to take a city-state's military units for LEVY_MILITARY_TURN_DURATION
     // (LEVY_MILITARY_PERCENT_OF_UNIT_PURCHASE_COST of their purchase cost; -1: not possible).
     int levyCost(PlayerId player, PlayerId cityState) const;
+    // Barbarian Clans mode (01: Barbarians): what dealing with a camp costs, and why it may not be done (Ok when it may).
+    int clanCost(PlayerId player, int32_t camp, CommandType action) const;  // gold, or -1
+    CommandError clanProblem(PlayerId player, int32_t camp, CommandType action, PlayerId against) const;
+    bool campLeavesAlone(const Camp& camp, PlayerId player) const;  // bribed by it, or incited against someone else
     bool levied(const Unit& unit) const;             // serving a suzerain under a levy
     void processLevies(PlayerId player);             // levies running out send their units home
     bool canSendEnvoy(PlayerId player, PlayerId cityState) const;
@@ -675,7 +679,10 @@ private:
     void processBarbarians();
     void placeCamps(PlayerId barbarian);
     void releaseUnit(Camp& camp, PlayerId barbarian);
-    bool releaseScout(Camp& camp, PlayerId bp);  // false when no Scout can be placed
+    bool releaseScout(Camp& camp, PlayerId bp);
+    TypeIndex campUnitType(const Camp& camp, bool ranged, Domain& domain) const;  // the unit the camp would raise
+    void applyClan(const Command& c);
+    void convertCamp(int32_t camp);  // the camp becomes a city-state  // false when no Scout can be placed
     bool isBarbarianScout(const Unit& u) const;
     void barbarianScoutAct(UnitId id);
     void barbarianAct(UnitId id);

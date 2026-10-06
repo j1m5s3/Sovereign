@@ -333,6 +333,9 @@ CommandError Game::validate(const Command& c) const {
             return c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size() && canSendEnvoy(c.player, static_cast<PlayerId>(c.arg))
                        ? CommandError::Ok
                        : CommandError::CannotSendEnvoy;
+        case CommandType::BribeCamp:
+        case CommandType::HireFromCamp:
+        case CommandType::InciteCamp: return clanProblem(c.player, c.id, c.type, static_cast<PlayerId>(c.arg));
         case CommandType::LevyMilitary: {
             if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotSendEnvoy;
             const int cost = levyCost(c.player, static_cast<PlayerId>(c.arg));
@@ -966,6 +969,9 @@ void Game::apply(const Command& c) {
             }
             break;
         }
+        case CommandType::BribeCamp:
+        case CommandType::HireFromCamp:
+        case CommandType::InciteCamp: applyClan(c); break;
         case CommandType::LevyMilitary: {
             const PlayerId cs = static_cast<PlayerId>(c.arg);
             Player& p = state_.players[static_cast<size_t>(c.player)];

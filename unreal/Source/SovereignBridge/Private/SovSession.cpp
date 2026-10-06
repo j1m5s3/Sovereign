@@ -112,6 +112,8 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
 	int32 Disasters = CoreSetup->disasterIntensity;
 	if (FParse::Value(FCommandLine::Get(), TEXT("SovDisasters="), Disasters)) CoreSetup->disasterIntensity = FMath::Clamp(Disasters, -1, 4);
+	// Barbarian Clans mode: -SovClans (camps can be bribed, hired, incited and grow into city-states).
+	CoreSetup->barbarianClans = FParse::Param(FCommandLine::Get(), TEXT("SovClans"));
 	// Difficulty: -SovDifficulty=0..7 (Settler .. Prince 3 .. Deity); Prince by default.
 	CoreSetup->difficulty = FMath::Clamp(Setup.Difficulty, 0, 7);
 	int32 Difficulty = CoreSetup->difficulty;

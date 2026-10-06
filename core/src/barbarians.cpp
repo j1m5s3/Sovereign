@@ -15,6 +15,13 @@
 
 namespace sov {
 
+namespace {
+// Barbarian Clans mode (01: Barbarians; Sovereign values, the spec gives only the outline): a camp becomes a
+// city-state at 100 points, earning 2 a turn and 10 for each bribe or hire, losing 10 for each unit killed.
+// Bribes and incitements last 10 turns (scaled by game speed); a camp hires out a unit at most every 5 turns.
+constexpr int kClanPoints = 100, kClanPerTurn = 2, kClanDeal = 10, kClanUnitLost = 10, kClanTurns = 10, kHireTurns = 5;
+}  // namespace
+
 PlayerId Game::barbarianPlayer() const {
     for (const Player& p : state_.players) {
         if (p.barbarian && !p.freeCity) return p.id;
@@ -55,6 +62,12 @@ void Game::killReward(Player& to, const UnitEffect& e, const UnitType& victim) {
 }
 
 void Game::noteKill(const Unit& victim, const Unit* killer) {
+    // Barbarian Clans mode: a clan that loses a unit falls back from becoming a city-state.
+    if (state_.setup.barbarianClans && victim.camp != 0) {
+        for (Camp& c : state_.camps) {
+            if (c.id == victim.camp) c.progress = std::max(0, c.progress - kClanUnitLost);
+        }
+    }
     // Civ uniques: a kill heals (Scara) or brings the loser in as a Builder (Jaguar Warrior).
     if (killer && killer->owner != victim.owner) {
         // Leader ability: Faith from kills, and the capital's mood from this era's kills (Flower Wars).
@@ -179,6 +192,17 @@ void Game::processBarbarians() {
     }
     refreshVisibility(bp);
     placeCamps(bp);
+    // Barbarian Clans mode: camps grow toward city-states; dealings run out.
+    if (state_.setup.barbarianClans) {
+        std::vector<int32_t> ready;
+        for (Camp& c : state_.camps) {
+            c.progress += kClanPerTurn;
+            c.bribes.erase(std::remove_if(c.bribes.begin(), c.bribes.end(), [&](const auto& bribe) { return bribe.second < state_.turn; }), c.bribes.end());
+            if (c.incitedUntil < state_.turn) c.incitedAgainst = kNoPlayer;
+            if (c.progress >= kClanPoints) ready.push_back(c.id);
+        }
+        for (int32_t id : ready) convertCamp(id);
+    }
     for (Camp& c : state_.camps) {
         c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_TURN");
         if (--c.spawnTimer <= 0) {
@@ -274,7 +298,24 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
     Rng& rng = state_.rng.get(RngStream::Gameplay);
     const bool ranged = rng.chance(static_cast<uint32_t>(tribe.rangedPercent));
-    Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
+    Domain domain = Domain::Land;
+    const TypeIndex type = campUnitType(camp, ranged, domain);
+    if (type == kNone) return;
+    const bool atSea = domain == Domain::Sea;
+    std::optional<Hex> spot;
+    for (const Hex& h : state_.grid.within(camp.pos, 1)) {
+        if (spot) break;
+        const bool fits = atSea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+        if (fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.foreignUnitAt(h, bp) && !state_.cityAt(h)) spot = h;
+    }
+    if (!spot) return;
+    Unit& u = spawnUnit(type, bp, *spot);
+    u.camp = camp.id;
+}
+
+TypeIndex Game::campUnitType(const Camp& camp, bool ranged, Domain& domain) const {
+    const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
+    domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
     // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT).
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
@@ -302,17 +343,151 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
         domain = Domain::Land;
         type = best("MELEE");
     }
-    if (type == kNone) return;
-    const bool atSea = domain == Domain::Sea;
-    std::optional<Hex> spot;
-    for (const Hex& h : state_.grid.within(camp.pos, 1)) {
-        if (spot) break;
-        const bool fits = atSea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
-        if (fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.foreignUnitAt(h, bp) && !state_.cityAt(h)) spot = h;
+    return type;
+}
+
+namespace {
+const Camp* findCamp(const GameState& s, int32_t id) {
+    for (const Camp& c : s.camps) {
+        if (c.id == id) return &c;
     }
-    if (!spot) return;
-    Unit& u = spawnUnit(type, bp, *spot);
-    u.camp = camp.id;
+    return nullptr;
+}
+}  // namespace
+
+int Game::clanCost(PlayerId player, int32_t id, CommandType action) const {
+    const Camp* c = findCamp(state_, id);
+    if (!c || player < 0 || static_cast<size_t>(player) >= state_.players.size()) return -1;
+    const int era = std::max(0, playerEra(player));
+    const int speed = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
+    if (action == CommandType::BribeCamp) return 50 * (era + 1) * speed / 100;
+    if (action == CommandType::InciteCamp) return 100 * (era + 1) * speed / 100;
+    if (action == CommandType::HireFromCamp) {
+        Domain domain = Domain::Land;
+        const TypeIndex t = campUnitType(*c, false, domain);
+        if (t == kNone) return -1;
+        const int cost = purchaseCost(player, {ProductionKind::Unit, t});
+        return cost > 0 ? cost : rules_->units[static_cast<size_t>(t)].cost * 2 * speed / 100;
+    }
+    return -1;
+}
+
+CommandError Game::clanProblem(PlayerId player, int32_t id, CommandType action, PlayerId against) const {
+    const Camp* c = findCamp(state_, id);
+    if (!state_.setup.barbarianClans || !c || !isMajorCiv(player) || visibility(player, c->pos) == Visibility::Unrevealed)
+        return CommandError::CannotTreatWithClan;
+    if (action == CommandType::BribeCamp) {
+        for (const auto& [who, until] : c->bribes) {
+            if (who == player && until >= state_.turn) return CommandError::CannotTreatWithClan;
+        }
+    } else if (action == CommandType::HireFromCamp) {
+        if (state_.turn < c->hiredUntil) return CommandError::CannotTreatWithClan;
+        Domain domain = Domain::Land;
+        const TypeIndex t = campUnitType(*c, false, domain);
+        if (t == kNone) return CommandError::CannotTreatWithClan;
+        bool room = false;
+        for (const Hex& h : state_.grid.within(c->pos, 1)) {
+            const bool fits = domain == Domain::Sea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+            room = room || (h != c->pos && fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.cityAt(h));
+        }
+        if (!room) return CommandError::CannotTreatWithClan;
+    } else if (action == CommandType::InciteCamp) {
+        if (against == player || !isMajorCiv(against) || !hasMet(player, against)) return CommandError::CannotTreatWithClan;
+        if (c->incitedAgainst != kNoPlayer && c->incitedUntil >= state_.turn) return CommandError::CannotTreatWithClan;
+    } else {
+        return CommandError::CannotTreatWithClan;
+    }
+    const int cost = clanCost(player, id, action);
+    if (cost < 0) return CommandError::CannotTreatWithClan;
+    return state_.players[static_cast<size_t>(player)].gold >= Fixed::fromInt(cost) ? CommandError::Ok : CommandError::NotEnoughGold;
+}
+
+bool Game::campLeavesAlone(const Camp& camp, PlayerId player) const {
+    if (player == kNoPlayer) return false;
+    for (const auto& [who, until] : camp.bribes) {
+        if (who == player && until >= state_.turn) return true;
+    }
+    return camp.incitedAgainst != kNoPlayer && camp.incitedUntil >= state_.turn && camp.incitedAgainst != player;
+}
+
+void Game::applyClan(const Command& c) {
+    Camp* camp = nullptr;
+    for (Camp& k : state_.camps) camp = k.id == c.id ? &k : camp;
+    if (!camp) return;
+    const int cost = clanCost(c.player, c.id, c.type);
+    state_.players[static_cast<size_t>(c.player)].gold -= Fixed::fromInt(cost);
+    const int turns = kClanTurns * rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent / 100;
+    if (c.type == CommandType::BribeCamp) {
+        camp->bribes.erase(std::remove_if(camp->bribes.begin(), camp->bribes.end(), [&](const auto& b) { return b.first == c.player; }), camp->bribes.end());
+        camp->bribes.push_back({c.player, state_.turn + turns});
+        camp->progress += kClanDeal;
+    } else if (c.type == CommandType::HireFromCamp) {
+        Domain domain = Domain::Land;
+        const TypeIndex t = campUnitType(*camp, false, domain);
+        for (const Hex& h : state_.grid.within(camp->pos, 1)) {
+            const bool fits = domain == Domain::Sea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+            if (h == camp->pos || !fits || state_.unitAt(h, UnitLayer::Military, *rules_) || state_.cityAt(h)) continue;
+            spawnUnit(t, c.player, h);
+            break;
+        }
+        camp->hiredUntil = state_.turn + kHireTurns;
+        camp->progress += kClanDeal;
+        refreshVisibility(c.player);
+    } else if (c.type == CommandType::InciteCamp) {
+        camp->incitedAgainst = static_cast<PlayerId>(c.arg);
+        camp->incitedUntil = state_.turn + turns;
+        camp->alerted = true;
+        camp->boldness = std::max(camp->boldness, 100);
+    }
+}
+
+void Game::convertCamp(int32_t id) {
+    auto it = std::find_if(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.id == id; });
+    if (it == state_.camps.end()) return;
+    const Hex at = it->pos;
+    // Not beside a city, and only while a city-state of the setup's list is still unused.
+    for (const City& c : state_.cities) {
+        if (state_.grid.distance(c.pos, at) < 4) return;
+    }
+    TypeIndex kind = kNone;
+    for (size_t k = 0; k < rules_->cityStates.size() && kind == kNone; ++k) {
+        bool used = false;
+        for (const Player& p : state_.players) used = used || p.cityState == static_cast<TypeIndex>(k);
+        if (!used) kind = static_cast<TypeIndex>(k);
+    }
+    if (kind == kNone) return;
+    state_.camps.erase(it);
+    Player p;
+    p.id = static_cast<PlayerId>(state_.players.size());
+    p.cityState = kind;
+    p.startPos = at;
+    p.leaderName = rules_->cityStates[static_cast<size_t>(kind)].name;
+    fitPlayerToRules(p, *rules_);
+    p.visibility.assign(static_cast<size_t>(state_.grid.size()), 0);
+    // It knows what at least half the major civs know.
+    int majors = 0;
+    for (const Player& o : state_.players) majors += isMajorCiv(o.id) ? 1 : 0;
+    for (size_t t = 0; t < rules_->techs.size(); ++t) {
+        int knowing = 0;
+        for (const Player& o : state_.players) knowing += isMajorCiv(o.id) && o.techs.has(static_cast<TypeIndex>(t)) ? 1 : 0;
+        if (majors > 0 && knowing * 2 >= majors) p.techs.done[t] = 1;
+    }
+    const PlayerId pid = p.id;
+    state_.players.push_back(std::move(p));
+    for (Player& o : state_.players) o.relations.resize(state_.players.size());
+    linkBarbarians();
+    // The clan's warriors serve the new city-state; one of them founds the city.
+    for (Unit& u : state_.units) {
+        if (u.camp != id) continue;
+        u.owner = pid;
+        u.camp = 0;
+    }
+    const TypeIndex settler = rules_->unit("UNIT_SETTLER");
+    if (settler != kNone && !state_.unitAt(at, UnitLayer::Civilian, *rules_)) {
+        Unit& s = spawnUnit(settler, pid, at);
+        applyFoundCity(Command::foundCity(pid, s.id));
+    }
+    refreshVisibility(pid);
 }
 
 bool Game::isBarbarianScout(const Unit& u) const {
@@ -408,12 +583,23 @@ void Game::barbarianAct(UnitId id) {
     const int raidAt = tribe ? tribe->raidBoldness : 0;
     const int cityAt = tribe ? tribe->attackBoldness : 0;
     const PlayerId me = u->owner;
+    // Barbarian Clans mode: its units leave bribed civs alone, and an incited camp's go after their target.
+    const bool incited = camp && camp->incitedAgainst != kNoPlayer && camp->incitedUntil >= state_.turn;
+    auto spared = [&](PlayerId owner) { return camp && campLeavesAlone(*camp, owner); };
+    auto ownerAt = [&](Hex h) {
+        if (const City* c = state_.cityAt(h)) return c->owner;
+        for (const Unit& o : state_.units) {
+            if (o.pos == h && o.owner != me) return o.owner;
+        }
+        return kNoPlayer;
+    };
 
     auto tryAttack = [&]() {
         const Unit* self = state_.unit(id);
         if (!self || self->movesLeft <= Fixed()) return false;
         const bool ranged = unitRange(*self) > 0;
         for (const Hex& h : state_.grid.within(self->pos, std::max(1, unitRange(*self)))) {
+            if (spared(ownerAt(h))) continue;
             CombatPreview pv = previewAttack(id, h, ranged);
             if (!pv.valid) continue;
             if (pv.city != kNoCity ? bold < cityAt || !alerted : !pv.capture && pv.damageToAttackerMax > pv.damageToDefenderMax) continue;
@@ -427,18 +613,18 @@ void Game::barbarianAct(UnitId id) {
     // Pick where to go: the nearest target within 8 plots once bold enough, else home.
     u = state_.unit(id);
     std::optional<Hex> goal;
-    int bestDist = 9;
+    int bestDist = incited ? 16 : 9;  // an incited camp's units go further for their target
     if (bold >= raidAt && alerted) {
         for (const Unit& e : state_.units) {
             const int d = state_.grid.distance(u->pos, e.pos);
-            if (atWar(me, e.owner) && d < bestDist) {
+            if (atWar(me, e.owner) && !spared(e.owner) && d < bestDist) {
                 bestDist = d;
                 goal = e.pos;
             }
         }
         for (const City& c : state_.cities) {
             const int d = state_.grid.distance(u->pos, c.pos);
-            if (bold >= cityAt && d < bestDist) {
+            if (bold >= cityAt && !spared(c.owner) && d < bestDist) {
                 bestDist = d;
                 goal = c.pos;
             }
