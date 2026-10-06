@@ -130,3 +130,34 @@ TEST(envoys_survive_a_save) {
     CHECK(loaded->isCityState(2));
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(a_suzerain_levies_a_city_states_army) {
+    GameState s = csState();
+    s.players[0].envoys[2] = 3;  // suzerain
+    s.players[0].gold = Fixed::fromInt(1000);
+    const UnitId w1 = sovtest::addUnit(s, "UNIT_WARRIOR", 2, {15, 6});
+    const UnitId w2 = sovtest::addUnit(s, "UNIT_WARRIOR", 2, {17, 6});
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->suzerainOf(2) == 0);
+    const int cost = g->levyCost(0, 2);
+    REQUIRE(cost > 0);
+    CHECK_EQ(g->levyCost(1, 2), -1);  // not its suzerain
+    REQUIRE(g->submit(Command::levyMilitary(0, 2)) == CommandError::Ok);
+    CHECK_EQ(g->state().unit(w1)->owner, 0);
+    CHECK_EQ(g->state().unit(w2)->owner, 0);
+    CHECK(g->levied(*g->state().unit(w1)));
+    CHECK(g->state().players[0].gold == Fixed::fromInt(1000 - cost));
+    CHECK_EQ(g->levyCost(0, 2), -1);  // once at a time
+    // Saved, then the levy runs out and the army goes home.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().levies.size(), 1u);
+    GameState t = g->state();
+    t.levies[0].until = t.turn;
+    for (Unit& u : t.units) u.activity = Activity::Sleep;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*h, 3);
+    CHECK_EQ(h->state().unit(w1)->owner, 2);
+    CHECK(h->state().levies.empty());
+}

@@ -617,6 +617,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(pr.until);
         w.i32(pr.brokenOn);
     }
+    w.u32(static_cast<uint32_t>(s.levies.size()));
+    for (const Levy& lv : s.levies) {
+        w.i8(lv.player);
+        w.i8(lv.cityState);
+        w.i32(lv.until);
+        writeI32s(w, std::vector<int32_t>(lv.units.begin(), lv.units.end()));
+    }
     w.boolean(s.antiquityPlaced);
     w.u32(static_cast<uint32_t>(s.quests.size()));
     for (const Quest& q : s.quests) {
@@ -1119,6 +1126,17 @@ bool deserializeState(ByteReader& r, GameState& s) {
         pr.kind = static_cast<PromiseKind>(kind);
         pr.until = r.i32();
         pr.brokenOn = r.i32();
+    }
+    uint32_t nlevy = r.u32();
+    if (!r.checkCount(nlevy, 10)) return false;
+    s.levies.resize(nlevy);
+    for (Levy& lv : s.levies) {
+        lv.player = r.i8();
+        lv.cityState = r.i8();
+        lv.until = r.i32();
+        std::vector<int32_t> ids;
+        if (!readI32s(r, ids)) return false;
+        lv.units.assign(ids.begin(), ids.end());
     }
     s.antiquityPlaced = r.boolean();
     uint32_t nquest = r.u32();

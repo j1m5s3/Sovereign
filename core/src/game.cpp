@@ -307,6 +307,12 @@ CommandError Game::validate(const Command& c) const {
             return c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size() && canSendEnvoy(c.player, static_cast<PlayerId>(c.arg))
                        ? CommandError::Ok
                        : CommandError::CannotSendEnvoy;
+        case CommandType::LevyMilitary: {
+            if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotSendEnvoy;
+            const int cost = levyCost(c.player, static_cast<PlayerId>(c.arg));
+            if (cost < 0) return CommandError::CannotSendEnvoy;
+            return state_.players[static_cast<size_t>(c.player)].gold >= Fixed::fromInt(cost) ? CommandError::Ok : CommandError::NotEnoughGold;
+        }
         default: break;
     }
     const Unit* u = state_.unit(c.id);
@@ -919,6 +925,24 @@ void Game::apply(const Command& c) {
             }
             break;
         }
+        case CommandType::LevyMilitary: {
+            const PlayerId cs = static_cast<PlayerId>(c.arg);
+            Player& p = state_.players[static_cast<size_t>(c.player)];
+            p.gold -= Fixed::fromInt(levyCost(c.player, cs));
+            Levy lv;
+            lv.player = c.player;
+            lv.cityState = cs;
+            lv.until = state_.turn + rules_->globalInt("LEVY_MILITARY_TURN_DURATION") * rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent / 100;
+            for (Unit& u : state_.units) {
+                if (u.owner != cs || rules_->units[static_cast<size_t>(u.type)].layer != UnitLayer::Military) continue;
+                u.owner = c.player;
+                lv.units.push_back(u.id);
+            }
+            state_.levies.push_back(lv);
+            refreshVisibility(c.player);
+            refreshVisibility(cs);
+            break;
+        }
         case CommandType::SendEnvoy: {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
@@ -1117,6 +1141,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         payUnitFuel(pid);
         burnPower(pid);
         processWarWeariness(pid);
+        processLevies(pid);
         // Pillaged districts are repaired over their owner's turns (Sovereign reading of the repair).
         for (City& city : state_.cities) {
             if (city.owner != pid) continue;

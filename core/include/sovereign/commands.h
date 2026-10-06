@@ -76,6 +76,7 @@ enum class CommandType : uint8_t {
     AskPromise = 59,            // arg = the civ asked, arg2 = PromiseKind; costs Diplomatic Favor [GS]
     DesignatePark = 63,         // id = Naturalist: a National Park of its plot and three beside it (07)
     PerformConcert = 64,        // id = Rock Band in a foreign city's district or wonder plot: tourism toward that civ [GS]
+    LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
     Excavate = 58,              // id = Archaeologist on an antiquity site or shipwreck: an Artifact into a free slot
@@ -196,6 +197,7 @@ struct Command {
     }
     static Command spreadReligion(PlayerId p, UnitId u) { return {CommandType::SpreadReligion, p, u, {}, 0, 0}; }
     static Command sendEnvoy(PlayerId p, PlayerId cityState) { return {CommandType::SendEnvoy, p, -1, {}, cityState, 0}; }
+    static Command levyMilitary(PlayerId p, PlayerId cityState) { return {CommandType::LevyMilitary, p, -1, {}, cityState, 0}; }
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }

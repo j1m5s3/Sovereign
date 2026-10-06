@@ -26,6 +26,6 @@ Specs: 03-districts-buildings-wonders; data/buildings (Modifiers).
 
 - Warlord's Throne's "+20% Production (City Captured)" is read as a standing bonus in cities taken from other civs.
 - Not modelled:
-  - Foreign Ministry: city-state levies are not modelled.
+  - Foreign Ministry: city-state levies were not modelled yet (they followed in `2026-10-06-levies.md`, with its +4 and half-price levy).
   - Royal Society: Builders do not contribute to projects.
   - The Consulate's spy defence.
