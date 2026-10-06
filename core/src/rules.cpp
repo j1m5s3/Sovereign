@@ -926,6 +926,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.appeal = static_cast<int>(j["appeal"].integer(0));
             im.uniqueToId = j["uniqueTo"].str();
             im.cityStateId = j["cityState"].str();
+            im.governorPromotionId = j["governorPromotion"].str();
+            im.governorYields = readYields(j["governorYields"]);
+            im.waterAmenity = static_cast<int>(j["waterAmenity"].integer(0));
             im.amenities = static_cast<int>(j["amenities"].integer(0));
             im.defense = static_cast<int>(j["defense"].integer(0));
             im.sight = static_cast<int>(j["sight"].integer(0));
@@ -1582,7 +1585,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         static const std::pair<const char*, DisasterKind> kinds[] = {
             {"FLOOD", DisasterKind::Flood},   {"ERUPTION", DisasterKind::Eruption}, {"BLIZZARD", DisasterKind::Blizzard}, {"DUST_STORM", DisasterKind::DustStorm},
             {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire},
-            {"NUCLEAR", DisasterKind::Nuclear}};
+            {"NUCLEAR", DisasterKind::Nuclear}, {"METEOR", DisasterKind::Meteor}};
         for (const auto& [k, v] : kinds) {
             if (j["kind"].str() == k) d.kind = v;
         }
@@ -2201,6 +2204,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         if (!im.cityStateId.empty() && (im.cityState = cityState(im.cityStateId)) == kNone) {
             *error = "improvement " + im.id + ": unknown city-state " + im.cityStateId;
+            return false;
+        }
+        if (!im.governorPromotionId.empty() && (im.governorPromotion = governorPromotion(im.governorPromotionId)) == kNone) {
+            *error = "improvement " + im.id + ": unknown governor promotion " + im.governorPromotionId;
             return false;
         }
         if (!im.adjacentImprovementId.empty() && (im.adjacentImprovement = improvement(im.adjacentImprovementId)) == kNone) {

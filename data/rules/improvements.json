@@ -765,6 +765,43 @@
    }
   },
   {
+   "id": "IMPROVEMENT_CITY_PARK",
+   "name": "City Park",
+   "yields": {
+    "CULTURE": 1
+   },
+   "governorPromotion": "GOVERNOR_PROMOTION_PARKS_AND_RECREATION",
+   "governorYields": {
+    "CULTURE": 3
+   },
+   "waterAmenity": 1,
+   "unlock": "CIVIC_GAMES_AND_RECREATION",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "appeal": 2,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
+   }
+  },
+  {
    "id": "IMPROVEMENT_COLOSSAL_HEAD",
    "name": "Colossal Head",
    "yields": {
@@ -823,6 +860,28 @@
     "source": "FAITH",
     "percent": 100,
     "after": "TECH_FLIGHT"
+   }
+  },
+  {
+   "id": "IMPROVEMENT_FISHERY",
+   "name": "Fishery",
+   "yields": {
+    "FOOD": 1
+   },
+   "governorPromotion": "GOVERNOR_PROMOTION_AQUACULTURE",
+   "governorYields": {
+    "PRODUCTION": 1
+   },
+   "unlock": "TECH_SAILING",
+   "validTerrains": [
+    "TERRAIN_COAST"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "housing": 0.5,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
    }
   },
   {

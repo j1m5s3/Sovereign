@@ -491,7 +491,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Plot = Plots.front();
 					Where = FString::Printf(TEXT(" (wonder) at (%d,%d)"), Plot.x, Plot.y);
 				}
-				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item);
+				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item, City);
 				Choices.Add({FString::Printf(TEXT("%s (%d turns)%s"), *ItemName(R, Item), TurnsFor(Cost, PerTurn), *Where),
 					sov::Command::setProduction(Me(), City->id, Item, Plot)});
 			}

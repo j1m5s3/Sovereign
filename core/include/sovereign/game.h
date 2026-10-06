@@ -104,7 +104,8 @@ public:
     std::vector<Hex> workablePlots(const City& city) const;
     int growthThreshold(int population) const;
     int borderGrowthCost(int plotsAcquired) const;
-    int productionCost(PlayerId player, ProductionItem item) const;
+    // `city`: where it is built, for costs that depend on it (the Flood Barrier; 09).
+    int productionCost(PlayerId player, ProductionItem item, const City* city = nullptr) const;
     // Gold price, or -1 when the item cannot be bought with gold.
     int purchaseCost(PlayerId player, ProductionItem item) const;
     bool canTrainFormation(const City& city, TypeIndex unit, int formation) const;  // a Corps (1) or Army (2) whole (05)

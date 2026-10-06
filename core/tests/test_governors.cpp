@@ -272,3 +272,23 @@ TEST(magnus_black_marketeer_and_moksha_religious_promotions) {
     CHECK_EQ(g2->state().units.back().hp, rules().globalInt("COMBAT_MAX_HIT_POINTS"));
     CHECK(g0->state().units.back().hp < rules().globalInt("COMBAT_MAX_HIT_POINTS"));
 }
+
+TEST(liang_opens_the_fishery_and_the_city_park) {
+    const TypeIndex fishery = rules().improvement("IMPROVEMENT_FISHERY"), park = rules().improvement("IMPROVEMENT_CITY_PARK");
+    REQUIRE(fishery != kNone && park != kNone);
+    const auto setUp = [](GameState s) {
+        s.plot({5, 6}).terrain = rules().terrain("TERRAIN_COAST");
+        for (size_t i = 0; i < s.players[0].techs.done.size(); ++i) s.players[0].techs.done[i] = 1;
+        for (size_t i = 0; i < s.players[0].civics.done.size(); ++i) s.players[0].civics.done[i] = 1;
+        return s;
+    };
+    auto plain = Game::fromScenario(rules(), setUp(govState()));
+    auto liang = Game::fromScenario(rules(), setUp(withPromotion("GOVERNOR_LIANG", "GOVERNOR_PROMOTION_AQUACULTURE")));
+    CHECK(!plain->canImproveAt(0, {5, 6}, fishery));
+    CHECK(liang->canImproveAt(0, {5, 6}, fishery));
+    CHECK(!liang->canImproveAt(0, {3, 6}, park));  // that needs Parks and Recreation
+    GameState built = setUp(withPromotion("GOVERNOR_LIANG", "GOVERNOR_PROMOTION_AQUACULTURE"));
+    built.plot({5, 6}).improvement = fishery;
+    auto g = Game::fromScenario(rules(), std::move(built));
+    CHECK(g->improvementYields({5, 6}, 0)[static_cast<size_t>(YieldType::Production)] == Fixed::fromInt(1));  // Aquaculture's +1
+}

@@ -318,6 +318,12 @@ struct ImprovementType {
     // City-states' unique improvements (08): for players enjoying that city-state's suzerain bonus.
     TypeIndex cityState = kNone;
     std::string cityStateId;  // (loading only)
+    // Improvements a governor opens (08: Liang's Fishery and City Park): built only where the city's governor
+    // holds the promotion, which adds `governorYields` there.
+    TypeIndex governorPromotion = kNone;
+    std::string governorPromotionId;  // (loading only)
+    Yields governorYields{};
+    int waterAmenity = 0;    // to its city when beside the coast, a lake or a river (City Park)
     int amenities = 0;       // to its city
     int defense = 0;         // combat strength for units defending on it
     int sight = 0;           // extra sight for units on it
@@ -906,7 +912,7 @@ struct DifficultyType {
 };
 
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
-enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear };
+enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear, Meteor };
 enum class DisasterDamageType : uint8_t {
     ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls,
     DistrictPillaged, BuildingPillaged, BuildingDestroyed, Spread, Other,

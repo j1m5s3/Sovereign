@@ -1279,6 +1279,37 @@
    "fertility": []
   },
   {
+   "id": "DISASTER_METEOR_SHOWER",
+   "name": "Meteor Shower",
+   "kind": "METEOR",
+   "severity": 1,
+   "hexes": 1,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 3.0,
+    "LIGHT": 4.0,
+    "MODERATE": 6.0,
+    "HEAVY": 10.0,
+    "HYPERREAL": 15.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 101,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": []
+  },
+  {
    "id": "DISASTER_FOREST_FIRE",
    "name": "Forest Fire",
    "kind": "FIRE",

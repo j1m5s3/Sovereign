@@ -392,7 +392,15 @@ CityReport Game::cityReport(CityId id) const {
     }
     for (const Hex& h : state_.grid.within(c->pos, 3)) {
         const Plot& ip = state_.plot(h);
-        if (ip.city == c->id && ip.improvement != kNone && ip.pillagedTurns == 0) rep.amenities += rules_->improvements[static_cast<size_t>(ip.improvement)].amenities;
+        if (ip.city == c->id && ip.improvement != kNone && ip.pillagedTurns == 0) {
+            const ImprovementType& it = rules_->improvements[static_cast<size_t>(ip.improvement)];
+            rep.amenities += it.amenities;
+            if (it.waterAmenity > 0) {
+                bool wet = isRiverAdjacent(state_, h);
+                for (const Hex& n : state_.grid.within(h, 1)) wet = wet || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].water;
+                if (wet) rep.amenities += it.waterAmenity;  // the City Park (08)
+            }
+        }
     }
     // The leader's Builder-King promotions work in the city it stands in (leader doc §3).
     const Unit* leader = leaderOf(c->owner);
@@ -570,7 +578,7 @@ int Game::borderGrowthCost(int plotsAcquired) const {
     return static_cast<int>(t.floor() * speedPercent(state_, *rules_) / 100);
 }
 
-int Game::productionCost(PlayerId player, ProductionItem item) const {
+int Game::productionCost(PlayerId player, ProductionItem item, const City* city) const {
     int base = 0;
     if (item.kind == ProductionKind::Unit) {
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
@@ -597,6 +605,13 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
         return std::max(1, static_cast<int>(cost.toInt()) * speedPercent(state_, *rules_) / 100);
     } else {
         base = rules_->buildings[static_cast<size_t>(item.type)].cost;
+        // The Flood Barrier (09; data: CostMultiplierPerTile, CostMultiplierPerSeaLevel): x the city's coastal lowland
+        // plots, and x (1 + the sea level rises already seen). Sovereign reading of the multipliers.
+        if (city && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_FLOOD_BARRIER") {
+            int lowland = 0;
+            for (const Hex& h : state_.grid.within(city->pos, 3)) lowland += state_.plot(h).city == city->id && lowlandBand(h) > 0 ? 1 : 0;
+            base = base * std::max(1, lowland) * (1 + std::max(0, state_.climatePhase - 1));
+        }
     }
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
@@ -1523,7 +1538,7 @@ void Game::processCities(PlayerId pid) {
                 it = city.progress.end() - 1;
             }
             it->amount += prod;
-            const Fixed cost = Fixed::fromInt(productionCost(pid, item));
+            const Fixed cost = Fixed::fromInt(productionCost(pid, item, &city));
             if (it->amount >= cost && completeItem(city, item)) {
                 City& c2 = *state_.city(ids[k]);  // completeItem may spawn units, never cities
                 auto it2 = std::find_if(c2.progress.begin(), c2.progress.end(),
