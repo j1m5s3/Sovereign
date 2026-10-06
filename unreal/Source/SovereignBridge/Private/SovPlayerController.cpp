@@ -886,6 +886,27 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const sov::Command Pass = sov::Command::passGreatPerson(Me(), Cls);
 				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("%s   pass on %s"), *ClassName, *Str(Gp.name)), Pass});
 			}
+			// 07: Great Works move between our slots (for theming); every move the rules allow.
+			for (const sov::City& From : G.state().cities)
+			{
+				if (From.owner != Me()) continue;
+				for (size_t W = 0; W < From.greatWorks.size(); ++W)
+				{
+					const sov::GreatWork& Work = From.greatWorks[W];
+					const FString Kind = Str(R.greatWorkTypes[static_cast<size_t>(Work.type)].id).ToLower();
+					const FString WorkName = Work.creator != sov::kNone ? FString::Printf(TEXT("%s's %s"), *Str(R.greatPeople[static_cast<size_t>(Work.creator)].name), *Kind) : Kind;
+					for (const sov::City& To : G.state().cities)
+					{
+						if (To.owner != Me()) continue;
+						for (const sov::TypeIndex B : To.buildings)
+						{
+							const sov::Command Move = sov::Command::moveGreatWork(Me(), From.id, static_cast<int>(W), To.id, B);
+							if (G.validate(Move) != sov::CommandError::Ok) continue;
+							Choices.Add({FString::Printf(TEXT("Move %s from %s to the %s in %s"), *WorkName, *Str(From.name), *Str(R.buildings[static_cast<size_t>(B)].name), *Str(To.name)), Move});
+						}
+					}
+				}
+			}
 			break;
 		}
 		case EChooser::Government:
