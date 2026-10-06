@@ -919,6 +919,12 @@ void Game::applyCity(const Command& c) {
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                     if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
                     if (bought.spreadCharges > 0 && city.has(rules_->building("BUILDING_MOSQUE"))) ++u.charges;  // Mosque (03)
+                    if (bought.spreadCharges > 0) {
+                        for (const City& o : state_.cities) {
+                            if (o.owner != c.player) continue;
+                            for (TypeIndex b : o.buildings) u.charges += rules_->buildings[static_cast<size_t>(b)].spreadCharges;  // Hagia Sophia
+                        }
+                    }
                 }
                 break;
             }

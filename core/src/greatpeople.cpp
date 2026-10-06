@@ -75,6 +75,17 @@ int Game::greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, Ty
             if (fx.kind == kind && (ref == kNone || fx.ref == ref)) total += std::max(1, fx.amount);
         }
     }
+    // A wonder's lasting effects count while its owner holds it (Jebel Barkal's Iron).
+    if (kind == GreatPersonEffectKind::ResourcePerTurn) {
+        for (const City& c : state_.cities) {
+            if (c.owner != player) continue;
+            for (TypeIndex b : c.buildings) {
+                for (const GreatPersonEffect& fx : rules_->buildings[at(b)].wonderEffects) {
+                    if (fx.kind == kind && (ref == kNone || fx.ref == ref)) total += std::max(1, fx.amount);
+                }
+            }
+        }
+    }
     return total;
 }
 
@@ -433,6 +444,31 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::GovernorTitles: p.governorTitlesSpent -= fx.amount; break;
+        case GreatPersonEffectKind::RandomCivics: {
+            Rng& rng = state_.rng.get(RngStream::Gameplay);
+            for (int k = 0; k < fx.count; ++k) {
+                const std::vector<TypeIndex> open = availableCivics(pid);
+                if (open.empty()) break;
+                const TypeIndex t = open[rng.below(static_cast<uint32_t>(open.size()))];
+                p.civics.progress[at(t)] = Fixed::fromInt(civicCost(t));
+                completeNode(pid, true, t);
+            }
+            break;
+        }
+        case GreatPersonEffectKind::DiplomaticVp: p.diplomaticVictoryPoints += fx.amount; break;
+        case GreatPersonEffectKind::Population:
+            for (City& c : state_.cities) {
+                if (c.owner == pid) c.population += fx.amount;
+            }
+            break;
+        case GreatPersonEffectKind::PromoteAll:
+            for (Unit& m : state_.units) {
+                if (m.owner == pid && rules_->units[at(m.type)].layer == UnitLayer::Military) m.xp = std::max(m.xp, xpForNextLevel(m));
+            }
+            break;
+        case GreatPersonEffectKind::TreasuryPercent:
+            if (p.gold > Fixed()) p.gold += p.gold * fx.amount / 100;
+            break;
         case GreatPersonEffectKind::Relic: {
             const TypeIndex relic = rules_->greatWorkType("RELIC");
             for (int k = 0; k < fx.amount && relic != kNone; ++k) {

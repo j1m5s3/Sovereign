@@ -100,6 +100,44 @@ TEST(wonder_effects_reach_every_city) {
     CHECK_EQ(sumCityModifiers(g->state(), rules(), g->state().cities[1], ModEffect::CityGrowthPercent), Fixed());
 }
 
+TEST(wonder_effects_are_generated) {
+    const Rules& r = rules();
+    const BuildingType& big = r.buildings[at(wonder("BUILDING_BIG_BEN"))];
+    bool treasury = false;
+    for (const GreatPersonEffect& fx : big.wonderEffects) treasury = treasury || (fx.kind == GreatPersonEffectKind::TreasuryPercent && fx.amount == 50);
+    CHECK(treasury);
+    CHECK_EQ(r.buildings[at(wonder("BUILDING_HAGIA_SOPHIA"))].spreadCharges, 1);
+    // Kotoku-in's Faith percent in its own city comes as a modifier.
+    GameState s = wonderState();
+    s.cities[0].buildings.push_back(wonder("BUILDING_KOTOKU_IN"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(sumCityModifiers(g->state(), rules(), g->state().cities[0], ModEffect::CityYieldPercent) > Fixed());
+}
+
+TEST(wonder_one_time_effects_apply_on_completion) {
+    GameState s = wonderState();
+    s.players[0].gold = Fixed::fromInt(300);
+    const int pop = s.cities[0].population;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId mine = g->state().cities[0].id;
+    // Big Ben adds half the treasury; Angkor Wat adds a citizen to every city of its owner.
+    g->wonderCompleted(mine, wonder("BUILDING_BIG_BEN"));
+    CHECK(g->state().players[0].gold == Fixed::fromInt(450));
+    g->wonderCompleted(mine, wonder("BUILDING_ANGKOR_WAT"));
+    CHECK_EQ(g->state().cities[0].population, pop + 1);
+    CHECK_EQ(g->state().cities[1].population, 3);  // not ours
+}
+
+TEST(jebel_barkal_gives_iron_while_it_stands) {
+    GameState s = wonderState();
+    s.cities[0].buildings.push_back(wonder("BUILDING_JEBEL_BARKAL"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->greatPersonEffectTotal(0, GreatPersonEffectKind::ResourcePerTurn, rules().resource("RESOURCE_IRON")), 6);
+    CHECK_EQ(g->greatPersonEffectTotal(1, GreatPersonEffectKind::ResourcePerTurn, rules().resource("RESOURCE_IRON")), 0);
+}
+
 TEST(wonder_sites_survive_a_save) {
     GameState s = wonderState();
     auto g = Game::fromScenario(rules(), std::move(s));

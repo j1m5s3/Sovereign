@@ -180,6 +180,7 @@ public:
     bool wonderBuilt(TypeIndex building) const;
     bool canPlaceWonder(const City& city, TypeIndex building, Hex plot) const;
     std::vector<Hex> wonderPlots(CityId city, TypeIndex building) const;
+    void wonderCompleted(CityId city, TypeIndex building);  // its completion effects (scenarios, tests)
 
     // ---- trade routes and roads (07: Trade routes; 01: Routes)
     int tradeRouteCapacity(PlayerId player) const;

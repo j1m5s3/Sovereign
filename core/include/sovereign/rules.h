@@ -366,6 +366,12 @@ enum class GreatPersonEffectKind : uint8_t {
     DistrictCapacity,   // + `amount` districts in the city where it was used
     Ocean,              // the player's ships may enter Ocean
     ArtifactTourism,    // artifacts give `amount`% of their tourism
+    // One-time, from world wonders (World Wonders):
+    RandomCivics,       // `count` random available civics, completed
+    DiplomaticVp,       // + `amount` diplomatic victory points
+    Population,         // + `amount` population in each of the player's cities
+    PromoteAll,         // every military unit of the player gains enough XP for a promotion
+    TreasuryPercent,    // + `amount`% of the player's gold
 };
 
 struct GreatPersonEffect {
@@ -443,11 +449,12 @@ struct BuildingType {
     };
     std::optional<Theming> theming;
     int tradeCapacity = 0;                 // + trade route capacity
+    int spreadCharges = 0;                 // + spread charges for the owner's religious units (Hagia Sophia)
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
     // World wonders (03: Wonders): built once in the world, on a plot of their own.
     bool wonder = false;
     WonderPlacement placement;
-    std::vector<GreatPersonEffect> wonderEffects;  // one-time effects on completion
+    std::vector<GreatPersonEffect> wonderEffects;  // one-time effects on completion (lasting kinds: while it stands)
     std::string text;                              // the full effect text, for players
 };
 

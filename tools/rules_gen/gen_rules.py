@@ -2121,6 +2121,7 @@ def gen_wonders():
     units = {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")}
     eras = {e + " Era": "ERA_" + e.upper() for e in ERAS}
     wonders, modifiers = [], []
+    refs = policy_refs()
     for row in table(SPEC / "wonders.md", "World wonders"):
         place = wonder_placement(row["Placement"], districts, resources, improvements)
         if place is None:
@@ -2140,11 +2141,14 @@ def gen_wonders():
             slots[m.group(2).upper()] = slots.get(m.group(2).upper(), 0) + int(m.group(1))
         if slots:
             w["greatWorkSlots"] = slots
-        effects = []
+        effects, rest = [], []
         for part in [p.strip() for p in row["Effects (modifiers)"].split(";") if p.strip()]:
-            m = re.fullmatch(r"grants (?:1 )?(.+?) \(one-time\)", part)
-            if m and m.group(1) in units:
-                effects.append({"kind": "UNIT", "ref": units[m.group(1)]})
+            m = re.fullmatch(r"grants (?:(\d+) )?(.+?) \(one-time\)", part)
+            if m and m.group(2) in units:
+                e = {"kind": "UNIT", "ref": units[m.group(2)]}
+                if m.group(1) and int(m.group(1)) > 1:
+                    e["count"] = int(m.group(1))
+                effects.append(e)
                 continue
             m = re.fullmatch(r"grants 1 Great Prophet where player can ever earn.*", part)
             if m:
@@ -2169,10 +2173,90 @@ def gen_wonders():
                                   "arguments": {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))},
                                   "subjectRequirements": {"all": [{"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[m.group(3)]}]}})
                 continue
+            typed = wonder_effect(wid, part, w, modifiers, eras)
+            if typed is None:
+                rest.append(part)
+            else:
+                effects += typed
+        # The rest through the policy card parser (in all your cities, conditions...).
+        more, untracked = policy_modifiers(wid, "; ".join(rest), refs)
+        modifiers += more
+        if untracked:
+            w["untrackedEffects"] = untracked  # in code, or still to come
         if effects:
             w["effects"] = effects
         wonders.append(w)
     return {"wonders": wonders, "modifiers": modifiers}
+
+
+STRATEGIC_RESOURCES = {"Horses", "Iron", "Niter", "Coal", "Oil", "Aluminum", "Uranium"}
+
+
+def wonder_effect(wid, part, w, modifiers, eras):
+    """A wonder's effect the policy parser does not read -> typed effects ([] when it became a
+    field or a modifier), or None to leave it to the policy parser."""
+    def mod(suffix, collection, effect, args, reqs=None):
+        m = {"id": "%s_%s" % (wid, suffix), "source": wid, "collection": collection, "effect": effect, "arguments": args}
+        if reqs:
+            m["subjectRequirements"] = {"all": reqs}
+        modifiers.append(m)
+    t = re.sub(r" \(one-time\)$", "", part)
+    m = re.fullmatch(r"\+(\d+)% (\w+)", t)
+    if m and m.group(2) in YIELD_WORDS:
+        mod("CITY_" + YIELD_WORDS[m.group(2)], "OWNER_CITY", "ADJUST_CITY_YIELD_PERCENT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))})
+        return []
+    m = re.fullmatch(r"\+(\d+) Appeal( in all your cities)?", t)
+    if m:
+        mod("APPEAL", "PLAYER_CITIES" if m.group(2) else "OWNER_CITY", "ADJUST_CITY_APPEAL", {"amount": int(m.group(1))})
+        return []
+    m = re.fullmatch(r"\+(\d+) (\w+) per turn", t)
+    if m and m.group(2) in STRATEGIC_RESOURCES:
+        return [{"kind": "RESOURCE_PER_TURN", "what": "RESOURCE_" + m.group(2).upper(), "amount": int(m.group(1))}]  # while it stands
+    m = re.fullmatch(r"\+(\d+) (Military|Economic|Diplomatic|Wildcard) slot", t)
+    if m:
+        w.setdefault("policySlots", {})[m.group(2).upper()] = int(m.group(1))
+        return []
+    m = re.fullmatch(r"\+(\d+) spread charge\(s\) for your units", t)
+    if m:
+        w["spreadCharges"] = int(m.group(1))  # Hagia Sophia: religious units bought or trained
+        return []
+    m = re.fullmatch(r"\+(\d+)% Production toward (.+?) units of any era in all your cities", t)
+    if m and m.group(2) in UNIT_CLASS_WORDS:
+        mod("UNITS", "PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT", {"unitClass": UNIT_CLASS_WORDS[m.group(2)], "amount": int(m.group(1))})
+        return []
+    m = re.fullmatch(r"\+(\d+) (\w+) on this city's tiles where tile is (.+?)(?: or tile is (.+?))? in all cities where city has .+", t)
+    if m and m.group(2) in YIELD_WORDS:
+        out = []
+        for i, place in enumerate(p for p in (m.group(3), m.group(4)) if p):
+            req = {"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]} if place in FEATURE_IDS else \
+                  {"type": "PLOT_HAS_TERRAIN", "ref": terrain_names()[place]} if place in terrain_names() else None
+            if req is None:
+                return None
+            mod("PLOTS_%s_%d" % (YIELD_WORDS[m.group(2)], i), "OWNER_CITY_PLOTS", "ADJUST_PLOT_YIELD",
+                {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, [req])
+        return out
+    # One-time effects on completion.
+    m = re.fullmatch(r"grants (\d+) random (technology|civic)", t)
+    if m:
+        return [{"kind": "RANDOM_TECHS" if m.group(2) == "technology" else "RANDOM_CIVICS", "count": int(m.group(1))}]
+    m = re.fullmatch(r"grants (\d+) random Inspiration\(s\) \((\w+ Era) to (\w+ Era)\)", t)
+    if m:
+        return [{"kind": "RANDOM_BOOST", "tree": "CIVIC", "count": int(m.group(1)), "minEra": eras[m.group(2)], "maxEra": eras[m.group(3)]}]
+    m = re.fullmatch(r"\+(\d+) Diplomatic Victory Points", t)
+    if m:
+        return [{"kind": "DIPLOMATIC_VP", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"\+(\d+) Governor Title\(s\)", t)
+    if m:
+        return [{"kind": "GOVERNOR_TITLES", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"\+(\d+) Population in all your cities", t)
+    if m:
+        return [{"kind": "POPULATION", "amount": int(m.group(1))}]
+    if t == "grants enough XP for a promotion for your units":
+        return [{"kind": "PROMOTE_ALL"}]
+    m = re.fullmatch(r"multiplies treasury by (\d+)", t)
+    if m:
+        return [{"kind": "TREASURY_PERCENT", "amount": int(m.group(1))}]
+    return None
 
 
 CS_SUFFIX = " for all players where is suzerain and player is at peace and player is suzerain bonus enabled"

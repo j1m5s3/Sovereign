@@ -417,6 +417,102 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     checksum_ = sum;
+    // One effect of a great person or a wonder (07: Great People; World Wonders): its kind and arguments.
+    auto parseEffect = [&](const Json& ej, const std::string& where, GreatPersonEffect& fx) -> bool {
+        const std::string& kind = ej["kind"].str();
+        const std::string& ref = ej["ref"].str();
+        fx.amount = static_cast<int>(ej["amount"].integer(0));
+        fx.count = static_cast<int>(ej["count"].integer(0));
+        fx.scaled = ej["scaled"].boolean(false);
+        fx.orComplete = ej["orComplete"].boolean(false);
+        if (kind == "YIELD") {
+            fx.kind = GreatPersonEffectKind::Yield;
+            if (!parseYieldName(ej["yield"].str(), fx.yield)) {
+                *error = where + ": bad effect yield";
+                return false;
+            }
+        } else if (kind == "PRODUCTION") {
+            fx.kind = GreatPersonEffectKind::Production;
+        } else if (kind == "BOOST") {
+            fx.kind = GreatPersonEffectKind::Boost;
+            fx.civic = ref.rfind("CIVIC_", 0) == 0;
+            fx.ref = fx.civic ? civic(ref) : tech(ref);
+        } else if (kind == "RANDOM_BOOST") {
+            fx.kind = GreatPersonEffectKind::RandomBoost;
+            fx.civic = ej["tree"].str() == "CIVIC";
+            fx.minEra = era(ej["minEra"].str());
+            fx.maxEra = era(ej["maxEra"].str());
+            if (fx.minEra == kNone || fx.maxEra == kNone) {
+                *error = where + ": bad boost eras";
+                return false;
+            }
+            fx.ref = 0;
+        } else if (kind == "PROMOTION_XP") {
+            fx.kind = GreatPersonEffectKind::PromotionXp;
+            fx.ref = 0;
+        } else if (kind == "BUILDING") {
+            fx.kind = GreatPersonEffectKind::Building;
+            fx.ref = building(ref);
+        } else if (kind == "UNIT") {
+            fx.kind = GreatPersonEffectKind::Unit;
+            fx.ref = unit(ref);
+        } else if (kind == "BUILDING_YIELD") {
+            fx.kind = GreatPersonEffectKind::BuildingYield;
+            fx.ref = building(ej["building"].str());
+            if (!parseYieldName(ej["yield"].str(), fx.yield)) {
+                *error = where + ": bad effect yield";
+                return false;
+            }
+        } else if (kind == "ABILITY") {
+            fx.kind = GreatPersonEffectKind::Ability;
+            fx.ref = ability(ref);
+        } else if (kind == "GREAT_PERSON_POINTS") {
+            fx.kind = GreatPersonEffectKind::GreatPersonPoints;
+            fx.ref = 0;
+        } else {
+            static const std::pair<const char*, GreatPersonEffectKind> kMore[] = {
+                {"ENVOYS", GreatPersonEffectKind::Envoys}, {"ENVOYS_HERE", GreatPersonEffectKind::EnvoysHere},
+                {"GOVERNOR_TITLES", GreatPersonEffectKind::GovernorTitles}, {"RELIC", GreatPersonEffectKind::Relic},
+                {"RANDOM_TECHS", GreatPersonEffectKind::RandomTechs}, {"FORMATION", GreatPersonEffectKind::Formation},
+                {"UNITS_IN_DISTRICTS", GreatPersonEffectKind::UnitsInDistricts}, {"NAVAL_MELEE_UNIT", GreatPersonEffectKind::NavalMeleeUnit},
+                {"SCIENCE_ADJACENT", GreatPersonEffectKind::ScienceAdjacent}, {"SCIENCE_PER_ARTIFACT", GreatPersonEffectKind::SciencePerArtifact},
+                {"SCIENCE_NEAR_WONDER", GreatPersonEffectKind::ScienceNearWonder}, {"WONDER_PRODUCTION", GreatPersonEffectKind::WonderProduction},
+                {"UNIT_XP", GreatPersonEffectKind::UnitXp}, {"CONVERT_BARBARIANS", GreatPersonEffectKind::ConvertBarbarians},
+                {"SUZERAIN", GreatPersonEffectKind::Suzerain}, {"TRADE_ROUTES", GreatPersonEffectKind::TradeRoutes},
+                {"RESOURCE_PER_TURN", GreatPersonEffectKind::ResourcePerTurn}, {"DISTRICT_CAPACITY", GreatPersonEffectKind::DistrictCapacity},
+                {"OCEAN", GreatPersonEffectKind::Ocean}, {"ARTIFACT_TOURISM", GreatPersonEffectKind::ArtifactTourism},
+                {"RANDOM_CIVICS", GreatPersonEffectKind::RandomCivics}, {"DIPLOMATIC_VP", GreatPersonEffectKind::DiplomaticVp},
+                {"POPULATION", GreatPersonEffectKind::Population}, {"PROMOTE_ALL", GreatPersonEffectKind::PromoteAll},
+                {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent},
+            };
+            bool known = false;
+            for (const auto& [name, k] : kMore) {
+                if (kind == name) {
+                    fx.kind = k;
+                    known = true;
+                }
+            }
+            if (!known) {
+                *error = where + ": unknown effect kind " + kind;
+                return false;
+            }
+            fx.what = ej["what"].str();
+            fx.ref = 0;
+            if (fx.kind == GreatPersonEffectKind::UnitsInDistricts) fx.ref = unit(ref);
+            if (fx.kind == GreatPersonEffectKind::ResourcePerTurn) fx.ref = resource(fx.what);
+            if (fx.kind == GreatPersonEffectKind::ScienceAdjacent && fx.what != "MOUNTAIN" && feature(fx.what) == kNone) fx.ref = kNone;
+            if (fx.kind == GreatPersonEffectKind::WonderProduction) {
+                fx.minEra = era(ej["minEra"].str());
+                fx.maxEra = era(ej["maxEra"].str());
+                if (fx.minEra == kNone || fx.maxEra == kNone) fx.ref = kNone;
+            }
+        }
+        if (fx.ref == kNone && fx.kind != GreatPersonEffectKind::Yield && fx.kind != GreatPersonEffectKind::Production) {
+            *error = where + ": effect " + kind + " refers to unknown " + ref;
+            return false;
+        }
+        return true;
+    };
     // World wonders load as buildings (flagged by their placement), so their yields, slots and
     // points use the building paths.
     for (const auto& row : m.tables["wonders"]) m.tables["buildings"].push_back(row);
@@ -915,6 +1011,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.purchasable = j["purchasable"].boolean(false);
             b.faithOnly = j["faithOnly"].boolean(false);
             b.tradeCapacity = static_cast<int>(j["tradeCapacity"].integer(0));
+            b.spreadCharges = static_cast<int>(j["spreadCharges"].integer(0));
             b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
             b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
             b.wonder = j.has("placement");
@@ -1045,25 +1142,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             for (const Json& ej : j["effects"].items()) {
                 GreatPersonEffect fx;
-                const std::string& kind = ej["kind"].str();
-                if (kind == "UNIT") {
-                    fx.kind = GreatPersonEffectKind::Unit;
-                    fx.ref = unit(ej["ref"].str());
-                } else if (kind == "RANDOM_BOOST") {
-                    fx.kind = GreatPersonEffectKind::RandomBoost;
-                    fx.civic = ej["tree"].str() == "CIVIC";
-                    fx.count = static_cast<int>(ej["count"].integer(0));
-                    fx.minEra = era(ej["minEra"].str());
-                    fx.maxEra = era(ej["maxEra"].str());
-                    fx.ref = fx.minEra == kNone || fx.maxEra == kNone ? kNone : 0;
-                } else {
-                    *error = where + ": unknown effect " + kind;
-                    return false;
-                }
-                if (fx.ref == kNone) {
-                    *error = where + ": bad effect";
-                    return false;
-                }
+                if (!parseEffect(ej, where, fx)) return false;
                 b.wonderEffects.push_back(fx);
             }
         }
@@ -1800,95 +1879,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (rq.has("missingBuilding")) g.missingBuilding = building(rq["missingBuilding"].str());
         for (const Json& ej : j["effects"].items()) {
             GreatPersonEffect fx;
-            const std::string& kind = ej["kind"].str();
-            const std::string& ref = ej["ref"].str();
-            fx.amount = static_cast<int>(ej["amount"].integer(0));
-            fx.count = static_cast<int>(ej["count"].integer(0));
-            fx.scaled = ej["scaled"].boolean(false);
-            fx.orComplete = ej["orComplete"].boolean(false);
-            if (kind == "YIELD") {
-                fx.kind = GreatPersonEffectKind::Yield;
-                if (!parseYieldName(ej["yield"].str(), fx.yield)) {
-                    *error = where + ": bad effect yield";
-                    return false;
-                }
-            } else if (kind == "PRODUCTION") {
-                fx.kind = GreatPersonEffectKind::Production;
-            } else if (kind == "BOOST") {
-                fx.kind = GreatPersonEffectKind::Boost;
-                fx.civic = ref.rfind("CIVIC_", 0) == 0;
-                fx.ref = fx.civic ? civic(ref) : tech(ref);
-            } else if (kind == "RANDOM_BOOST") {
-                fx.kind = GreatPersonEffectKind::RandomBoost;
-                fx.civic = ej["tree"].str() == "CIVIC";
-                fx.minEra = era(ej["minEra"].str());
-                fx.maxEra = era(ej["maxEra"].str());
-                if (fx.minEra == kNone || fx.maxEra == kNone) {
-                    *error = where + ": bad boost eras";
-                    return false;
-                }
-                fx.ref = 0;
-            } else if (kind == "PROMOTION_XP") {
-                fx.kind = GreatPersonEffectKind::PromotionXp;
-                fx.ref = 0;
-            } else if (kind == "BUILDING") {
-                fx.kind = GreatPersonEffectKind::Building;
-                fx.ref = building(ref);
-            } else if (kind == "UNIT") {
-                fx.kind = GreatPersonEffectKind::Unit;
-                fx.ref = unit(ref);
-            } else if (kind == "BUILDING_YIELD") {
-                fx.kind = GreatPersonEffectKind::BuildingYield;
-                fx.ref = building(ej["building"].str());
-                if (!parseYieldName(ej["yield"].str(), fx.yield)) {
-                    *error = where + ": bad effect yield";
-                    return false;
-                }
-            } else if (kind == "ABILITY") {
-                fx.kind = GreatPersonEffectKind::Ability;
-                fx.ref = ability(ref);
-            } else if (kind == "GREAT_PERSON_POINTS") {
-                fx.kind = GreatPersonEffectKind::GreatPersonPoints;
-                fx.ref = 0;
-            } else {
-                static const std::pair<const char*, GreatPersonEffectKind> kMore[] = {
-                    {"ENVOYS", GreatPersonEffectKind::Envoys}, {"ENVOYS_HERE", GreatPersonEffectKind::EnvoysHere},
-                    {"GOVERNOR_TITLES", GreatPersonEffectKind::GovernorTitles}, {"RELIC", GreatPersonEffectKind::Relic},
-                    {"RANDOM_TECHS", GreatPersonEffectKind::RandomTechs}, {"FORMATION", GreatPersonEffectKind::Formation},
-                    {"UNITS_IN_DISTRICTS", GreatPersonEffectKind::UnitsInDistricts}, {"NAVAL_MELEE_UNIT", GreatPersonEffectKind::NavalMeleeUnit},
-                    {"SCIENCE_ADJACENT", GreatPersonEffectKind::ScienceAdjacent}, {"SCIENCE_PER_ARTIFACT", GreatPersonEffectKind::SciencePerArtifact},
-                    {"SCIENCE_NEAR_WONDER", GreatPersonEffectKind::ScienceNearWonder}, {"WONDER_PRODUCTION", GreatPersonEffectKind::WonderProduction},
-                    {"UNIT_XP", GreatPersonEffectKind::UnitXp}, {"CONVERT_BARBARIANS", GreatPersonEffectKind::ConvertBarbarians},
-                    {"SUZERAIN", GreatPersonEffectKind::Suzerain}, {"TRADE_ROUTES", GreatPersonEffectKind::TradeRoutes},
-                    {"RESOURCE_PER_TURN", GreatPersonEffectKind::ResourcePerTurn}, {"DISTRICT_CAPACITY", GreatPersonEffectKind::DistrictCapacity},
-                    {"OCEAN", GreatPersonEffectKind::Ocean}, {"ARTIFACT_TOURISM", GreatPersonEffectKind::ArtifactTourism},
-                };
-                bool known = false;
-                for (const auto& [name, k] : kMore) {
-                    if (kind == name) {
-                        fx.kind = k;
-                        known = true;
-                    }
-                }
-                if (!known) {
-                    *error = where + ": unknown effect kind " + kind;
-                    return false;
-                }
-                fx.what = ej["what"].str();
-                fx.ref = 0;
-                if (fx.kind == GreatPersonEffectKind::UnitsInDistricts) fx.ref = unit(ref);
-                if (fx.kind == GreatPersonEffectKind::ResourcePerTurn) fx.ref = resource(fx.what);
-                if (fx.kind == GreatPersonEffectKind::ScienceAdjacent && fx.what != "MOUNTAIN" && feature(fx.what) == kNone) fx.ref = kNone;
-                if (fx.kind == GreatPersonEffectKind::WonderProduction) {
-                    fx.minEra = era(ej["minEra"].str());
-                    fx.maxEra = era(ej["maxEra"].str());
-                    if (fx.minEra == kNone || fx.maxEra == kNone) fx.ref = kNone;
-                }
-            }
-            if (fx.ref == kNone && fx.kind != GreatPersonEffectKind::Yield && fx.kind != GreatPersonEffectKind::Production) {
-                *error = where + ": effect " + kind + " refers to unknown " + ref;
-                return false;
-            }
+            if (!parseEffect(ej, where, fx)) return false;
             g.effects.push_back(fx);
         }
         for (const Json& t : j["untrackedEffects"].items()) g.untrackedEffects.push_back(t.str());
