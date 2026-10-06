@@ -949,6 +949,27 @@ void settle(View& v, UnitId id) {
 }
 
 // --- builders ----------------------------------------------------------------------
+// The improvement worth most on the plot (its yields; housing for a city near its cap), the
+// resource's own improvement kept first.
+void pickImprovement(const View& v, Hex h, std::vector<TypeIndex>& options) {
+    if (options.size() < 2) return;
+    const GameState& s = v.s();
+    const Plot& p = s.plot(h);
+    const City* home = p.city == kNoCity ? nullptr : s.city(p.city);
+    bool tight = false;
+    if (home) tight = v.game.cityReport(home->id).housing - Fixed::fromInt(home->population) <= Fixed::fromInt(2);
+    const bool resource = p.resource != kNone && v.game.resourceVisible(v.me, h);
+    std::stable_sort(options.begin(), options.end(), [&](TypeIndex a, TypeIndex b) {
+        const auto score = [&](TypeIndex im) {
+            const ImprovementType& t = v.r.improvements[at(im)];
+            int sc = worth(v, t.yields) * 10 + (tight ? static_cast<int>((t.housing * 40).round()) : 0);
+            if (resource && std::find(t.validResources.begin(), t.validResources.end(), p.resource) != t.validResources.end()) sc += 1000;
+            return sc;
+        };
+        return score(a) > score(b);
+    });
+}
+
 void build(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
@@ -981,6 +1002,7 @@ void build(View& v, UnitId id) {
         options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
         if (options.empty()) return;
         const City* home = s.plot(u->pos).city == kNoCity ? nullptr : s.city(s.plot(u->pos).city);
+        pickImprovement(v, u->pos, options);
         if (home && home->powerSupply < home->powerDemand) {
             std::stable_partition(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].powerProvided > 0; });
         }
@@ -1005,6 +1027,7 @@ void build(View& v, UnitId id) {
         if (u && u->pos == *best && u->movesLeft > Fixed()) {
             std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
             options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
+            pickImprovement(v, u->pos, options);
             if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
         }
         return;
@@ -1519,7 +1542,21 @@ void production(View& v) {
             traders += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].id == "UNIT_TRADER";
         }
         const bool wantTrader = !minor && g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
-        const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0);
+        // Worked plots a Builder could still improve (farms are housing and food; mines production).
+        int unimproved = 0;
+        for (int32_t wi : c.worked) {
+            const Hex h = s.grid.at(wi);
+            const Plot& pl = s.plot(h);
+            if (pl.improvement != kNone || s.cityAt(h) || s.districtAt(h)) continue;
+            for (size_t im = 0; im < v.r.improvements.size(); ++im) {
+                if (g.canImproveAt(v.me, h, static_cast<TypeIndex>(im))) {
+                    ++unimproved;
+                    break;
+                }
+            }
+        }
+        const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0) ||
+                                 (unimproved >= 2 && v.builders < static_cast<int>(v.cities.size()) * 3 / 2);
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
         // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
         bool assassinQueued = false;
@@ -1565,7 +1602,7 @@ void production(View& v) {
                         value = sites > 0 && diggers == 0 ? 200 : 0;
                     }
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
-                    else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
+                    else if (t.buildCharges > 0) value = wantBuilder ? 160 + 40 * std::min(unimproved, 6) : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
                     else if (t.domain == Domain::Air) {
                         int aircraft = 0, fighters = 0;
@@ -1586,7 +1623,7 @@ void production(View& v) {
                     // Upkeep the treasury cannot carry (07): it waits while gold per turn would fall below zero, unless it pays its own way.
                     if (b.maintenance > 0 && goldPerTurn < Fixed::fromInt(b.maintenance) && b.yields[static_cast<size_t>(YieldType::Gold)] < Fixed::fromInt(b.maintenance))
                         value /= 4;
-                    if (popRoom <= Fixed::fromInt(1)) value += static_cast<int>((b.housing * 30).round());
+                    if (popRoom <= Fixed::fromInt(2)) value += static_cast<int>((b.housing * 30).round());
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
@@ -1650,7 +1687,7 @@ void production(View& v) {
                             std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
                             value += 150;
                         // Housing and amenities when the city runs short (Aqueduct, Neighborhood, Entertainment Complex ...).
-                        if (popRoom <= Fixed::fromInt(1)) value += (d.aqueduct ? 6 : d.housing + (d.appealHousing.empty() ? 0 : 2)) * 40;
+                        if (popRoom <= Fixed::fromInt(2)) value += (d.aqueduct ? 6 : d.housing + (d.appealHousing.empty() ? 0 : 2)) * 40;
                         if (rep.amenities < rep.amenitiesNeeded) value += d.amenities * 80;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
@@ -1758,7 +1795,7 @@ void purchases(View& v) {
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) g.submit(Command::purchase(v.me, c.id, *soldier));
     }
     // Savings (DefaultSavings: units 4, slush fund 3): a small reserve, less for growth items.
-    const int reserve = 60 + 15 * static_cast<int>(v.cities.size());
+    const int reserve = 30 + 5 * static_cast<int>(v.cities.size());
     for (CityId cid : v.cities) {
         const City& c = *v.s().city(cid);
         if (c.queue.empty()) continue;
