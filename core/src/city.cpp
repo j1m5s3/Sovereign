@@ -110,6 +110,11 @@ Yields Game::plotYields(Hex at, const City& city) const {
         cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
         y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna
     if (p.fallout > 0 && at != city.pos) return Yields{};  // contaminated ground cannot be worked
+    // An Industry (+2 Gold) or Corporation (+4 Gold, +2 Production) on the luxury (07: Monopolies and Corporations).
+    if (p.industry > 0 && p.pillagedTurns == 0) {
+        y[idx(YieldType::Gold)] += Fixed::fromInt(2 * p.industry);
+        if (p.industry == 2) y[idx(YieldType::Production)] += Fixed::fromInt(2);
+    }
     // Earth Goddess (06): +1 Faith on plots of Appeal 4 or more.
     if (cityFollows(city, Bf::EarthGoddess) && plotAppeal(at) >= 4) y[idx(YieldType::Faith)] += Fixed::fromInt(1);
     return y;
@@ -382,6 +387,13 @@ CityReport Game::cityReport(CityId id) const {
     const int loyaltyYield = loyal ? loyal->yieldPercent : 0;  // Wavering -25% ... Unrest -100% [R&F]
 
     const bool kilwa = holdsWonder(c->owner, W::Kilwa);
+    int industries = 0;
+    if (state_.setup.monopolies) {
+        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+            const Plot& q = state_.plot(h);
+            industries += q.city == c->id && q.pillagedTurns == 0 ? 10 * q.industry : 0;
+        }
+    }
     // Ibn Khaldun (07): +4% (Ecstatic) or +2% (Happy) to every yield but Food.
     int khaldun = 0;
     if (usedBy(c->owner, Gp::IbnKhaldun) && !rules_->happiness.empty()) {
@@ -392,6 +404,7 @@ CityReport Game::cityReport(CityId id) const {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
         if (i != idx(YieldType::Food)) pct += khaldun;
+        if (i == idx(YieldType::Gold)) pct += industries;  // 07: +10% per Industry, +20% per Corporation in the city
         // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.
         if (kilwa) {
             static const std::pair<YieldType, CityStateKind> kKilwa[] = {{YieldType::Science, CityStateKind::Scientific}, {YieldType::Culture, CityStateKind::Cultural},
@@ -762,6 +775,7 @@ std::vector<CityId> Game::citiesNeedingProduction(PlayerId player) const {
 Fixed Game::goldPerTurn(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed net;
+    net += Fixed::fromInt(3 * monopolySources(player));  // 07: Monopolies
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
         if (p.anarchyTurns == 0) net += cityReport(c.id).yields[idx(YieldType::Gold)];  // anarchy: no gold

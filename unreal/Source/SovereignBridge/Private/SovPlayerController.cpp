@@ -1137,6 +1137,12 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Monopolies and Corporations mode (07): an Industry on the luxury, or a Corporation of one.
+			const sov::Command Industry = sov::Command::buildIndustry(Me(), U->id);
+			if (G.validate(Industry) == sov::CommandError::Ok)
+			{
+				Choices.Add({G.state().plot(U->pos).industry == 0 ? TEXT("Found an Industry here") : TEXT("Grow the Industry into a Corporation"), Industry});
+			}
 			// Archaeology (07): an Archaeologist digs the site it stands on.
 			if (G.excavateProblem(Me(), U->id) == sov::CommandError::Ok)
 			{

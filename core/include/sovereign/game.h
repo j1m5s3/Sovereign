@@ -169,6 +169,11 @@ public:
     // Levy Military (08): the Gold to take a city-state's military units for LEVY_MILITARY_TURN_DURATION
     // (LEVY_MILITARY_PERCENT_OF_UNIT_PURCHASE_COST of their purchase cost; -1: not possible).
     int levyCost(PlayerId player, PlayerId cityState) const;
+    // Monopolies and Corporations mode (07): why an Industry (or a Corporation) may not be made at the plot (Ok when it
+    // may), the luxuries the player holds a monopoly of, and how many of a luxury's improved sources it owns.
+    CommandError industryProblem(PlayerId player, Hex plot) const;
+    bool hasMonopoly(PlayerId player, TypeIndex luxury) const;
+    int monopolySources(PlayerId player) const;  // improved sources of all its monopolies
     // Barbarian Clans mode (01: Barbarians): what dealing with a camp costs, and why it may not be done (Ok when it may).
     int clanCost(PlayerId player, int32_t camp, CommandType action) const;  // gold, or -1
     CommandError clanProblem(PlayerId player, int32_t camp, CommandType action, PlayerId against) const;
@@ -682,6 +687,7 @@ private:
     bool releaseScout(Camp& camp, PlayerId bp);
     TypeIndex campUnitType(const Camp& camp, bool ranged, Domain& domain) const;  // the unit the camp would raise
     void applyClan(const Command& c);
+    void applyIndustry(const Command& c);
     void convertCamp(int32_t camp);  // the camp becomes a city-state  // false when no Scout can be placed
     bool isBarbarianScout(const Unit& u) const;
     void barbarianScoutAct(UnitId id);

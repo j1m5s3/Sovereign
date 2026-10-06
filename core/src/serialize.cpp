@@ -125,6 +125,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.regicide);
     w.boolean(s.liveBattles);
     w.boolean(s.barbarianClans);
+    w.boolean(s.monopolies);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -154,6 +155,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.regicide = r.boolean();
     s.liveBattles = r.boolean();
     s.barbarianClans = r.boolean();
+    s.monopolies = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -343,6 +345,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u8(p.antiquity);
         w.boolean(p.park);
         w.boolean(p.routePillaged);
+        w.u8(p.industry);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -756,6 +759,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.antiquity = r.u8();
         p.park = r.boolean();
         p.routePillaged = r.boolean();
+        p.industry = r.u8();
+        if (p.industry > 2) return false;
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;

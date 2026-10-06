@@ -954,8 +954,11 @@ void build(View& v, UnitId id) {
     if (u->moveTarget) return;
     // A pillaged improvement is repaired first (no charge; 05: Pillage).
     if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
+    // Monopolies and Corporations mode (07): an Industry, or a Corporation of one, on an improved luxury.
+    if (s.setup.monopolies && v.game.submit(Command::buildIndustry(v.me, id)) == CommandError::Ok) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
+        if (s.setup.monopolies && v.game.industryProblem(v.me, h) == CommandError::Ok) return 80;
         if (p.owner == v.me && ((p.improvement != kNone && p.pillagedTurns > 0) || p.routePillaged)) return 70;  // to repair
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
         // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).

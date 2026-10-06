@@ -429,6 +429,71 @@ void Game::applyBuilder(const Command& c) {
     if (City* city = state_.city(cityId)) assignCitizens(*city);
 }
 
+// Monopolies and Corporations mode (07; Sovereign values, the spec gives only the outline). After Economics a Builder
+// makes an Industry on an improved luxury the player owns, one per luxury type; after Electricity it turns the
+// Industry into a Corporation. An Industry gives +2 Gold on its plot and +10% Gold in its city, a Corporation +4 Gold
+// and +2 Production and +20%. Owning 60% or more of a luxury's improved sources in the world (at least 2) is a
+// Monopoly: +3 Gold and +2 Tourism a turn for each of those sources.
+CommandError Game::industryProblem(PlayerId player, Hex at) const {
+    const Plot& p = state_.plot(at);
+    if (!state_.setup.monopolies || p.owner != player || p.city == kNoCity || p.resource == kNone || p.pillagedTurns > 0)
+        return CommandError::CannotImprove;
+    if (rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Luxury || !resourceVisible(player, at) || !resourceImproved(at))
+        return CommandError::CannotImprove;
+    const Player& pl = state_.players[static_cast<size_t>(player)];
+    if (p.industry == 0) {
+        const TypeIndex economics = rules_->tech("TECH_ECONOMICS");
+        if (economics == kNone || !pl.techs.has(economics)) return CommandError::CannotImprove;
+        for (const Plot& o : state_.plots) {
+            if (o.owner == player && o.resource == p.resource && o.industry > 0) return CommandError::CannotImprove;  // one per luxury type
+        }
+        return CommandError::Ok;
+    }
+    const TypeIndex electricity = rules_->tech("TECH_ELECTRICITY");
+    return p.industry == 1 && electricity != kNone && pl.techs.has(electricity) ? CommandError::Ok : CommandError::CannotImprove;
+}
+
+void Game::applyIndustry(const Command& c) {
+    Unit& u = *state_.unit(c.id);
+    Plot& p = state_.plot(u.pos);
+    p.industry = static_cast<uint8_t>(p.industry + 1);
+    const CityId cityId = p.city;
+    u.movesLeft = Fixed();
+    u.moveTarget.reset();
+    if (--u.charges <= 0) {
+        const UnitId gone = u.id;
+        state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(), [&](const Unit& x) { return x.id == gone; }), state_.units.end());
+    }
+    if (City* city = state_.city(cityId)) assignCitizens(*city);
+}
+
+bool Game::hasMonopoly(PlayerId player, TypeIndex luxury) const {
+    if (!state_.setup.monopolies || luxury == kNone) return false;
+    int mine = 0, all = 0;
+    for (size_t i = 0; i < state_.plots.size(); ++i) {
+        const Plot& p = state_.plots[i];
+        if (p.resource != luxury || p.owner == kNoPlayer || !resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+        ++all;
+        mine += p.owner == player ? 1 : 0;
+    }
+    return mine >= 2 && mine * 100 >= all * 60;
+}
+
+int Game::monopolySources(PlayerId player) const {
+    if (!state_.setup.monopolies) return 0;
+    std::vector<int> mine(rules_->resources.size(), 0), all(rules_->resources.size(), 0);
+    for (size_t i = 0; i < state_.plots.size(); ++i) {
+        const Plot& p = state_.plots[i];
+        if (p.resource == kNone || p.owner == kNoPlayer || rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Luxury) continue;
+        if (!resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+        ++all[static_cast<size_t>(p.resource)];
+        mine[static_cast<size_t>(p.resource)] += p.owner == player ? 1 : 0;
+    }
+    int n = 0;
+    for (size_t r = 0; r < mine.size(); ++r) n += mine[r] >= 2 && mine[r] * 100 >= all[r] * 60 ? mine[r] : 0;
+    return n;
+}
+
 // --------------------------------------------------------------- processing
 
 void Game::accumulateStrategics(PlayerId pid) {
