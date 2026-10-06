@@ -788,9 +788,10 @@ private:
     // Great people whose effects are in code, looked up once (07: Great People).
     enum class Gp : uint8_t {
         ZhengHe, ZhangQian, MarcoPolo, IbnFadlan, RajaTodarMal, Rockefeller, MimarSinan, Crassus, Hildegard, Roebling, JaneDrew, Zahrawi,
-        IbnKhaldun, KenzoTange, Raskova, Count
+        IbnKhaldun, KenzoTange, Raskova, Spilsbury, Rubinstein, Strauss, Lauder, Count
     };
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
+    TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;

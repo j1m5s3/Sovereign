@@ -251,6 +251,19 @@ TEST(great_people_effects_in_code) {
     CHECK_EQ(g->state().plot({9, 6}).city, cid);
 }
 
+TEST(luxury_corporations_supply_their_products) {
+    GameState s = cityState("DISTRICT_COMMERCIAL_HUB");
+    const UnitId lauder = addGreatPerson(s, "GREAT_PERSON_EST_E_LAUDER", {7, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex perfume = rules().resource("RESOURCE_PERFUME");
+    CHECK(!g->hasLuxury(0, perfume));
+    const int amenities = g->cityReport(g->state().cities[0].id).amenities;
+    REQUIRE(g->submit(Command::activateGreatPerson(0, lauder)) == CommandError::Ok);
+    CHECK_EQ(g->luxuryCopies(0, perfume), 2);
+    CHECK(g->hasLuxury(0, perfume));
+    CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, amenities + 1);
+}
+
 TEST(great_people_one_time_gifts) {
     // On the Commercial Hub: Irene of Athens (+1 governor title), Jakob Fugger (+2 envoys), Marco Polo (+1 trade route).
     GameState s = cityState("DISTRICT_COMMERCIAL_HUB");
