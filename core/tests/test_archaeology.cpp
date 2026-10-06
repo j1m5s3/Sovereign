@@ -103,7 +103,9 @@ TEST(works_move_between_slots_to_theme_a_museum) {
     // A single move straight in needs a free slot.
     CHECK(g->submit(Command::moveGreatWork(0, b, 0, a, art)) == CommandError::Ok);
     CHECK(g->submit(Command::moveGreatWork(0, b, 0, a, art)) == CommandError::BadTarget);  // now full
-    REQUIRE(g->submit(Command::moveGreatWork(0, a, 2, b, art)) == CommandError::Ok);      // and back
+    // Moved art is locked for GREATWORK_ART_LOCK_TIME turns (07), so it cannot go straight back.
+    CHECK(g->state().city(a)->greatWorks[2].lockedUntil == g->state().turn + rules().globalInt("GREATWORK_ART_LOCK_TIME"));
+    CHECK(g->submit(Command::moveGreatWork(0, a, 2, b, art)) == CommandError::BadTarget);
     const std::vector<Command> moves = g->themingMoves(0, a, art);
     REQUIRE(!moves.empty());
     for (const Command& m : moves) REQUIRE(g->submit(m) == CommandError::Ok);

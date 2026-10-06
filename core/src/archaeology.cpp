@@ -76,6 +76,7 @@ CommandError Game::moveGreatWorkProblem(PlayerId player, CityId from, int index,
     if (index < 0 || static_cast<size_t>(index) >= a->greatWorks.size()) return CommandError::BadTarget;
     const GreatWork& w = a->greatWorks[static_cast<size_t>(index)];
     if (from == to && w.building == building) return CommandError::BadTarget;
+    if (state_.turn < w.lockedUntil) return CommandError::BadTarget;  // art just moved or traded (07)
     return freeSlotsFor(*b, building, w.type) > 0 ? CommandError::Ok : CommandError::BadTarget;
 }
 
@@ -84,7 +85,15 @@ void Game::moveGreatWork(CityId from, int index, CityId to, TypeIndex building) 
     GreatWork w = a.greatWorks[static_cast<size_t>(index)];
     a.greatWorks.erase(a.greatWorks.begin() + index);
     w.building = building;
+    lockArt(w);
     state_.city(to)->greatWorks.push_back(w);
+}
+
+// Art (sculpture, portrait, landscape, religious art) moved or traded is locked for GREATWORK_ART_LOCK_TIME turns (07).
+void Game::lockArt(GreatWork& w) const {
+    const std::string& kind = rules_->greatWorkTypes[at(w.type)].id;
+    if (kind == "SCULPTURE" || kind == "PORTRAIT" || kind == "LANDSCAPE" || kind == "RELIGIOUS")
+        w.lockedUntil = state_.turn + rules_->globalInt("GREATWORK_ART_LOCK_TIME");
 }
 
 const GreatWork* Game::dealWork(const DealItem& item) const {
@@ -142,7 +151,7 @@ std::vector<Command> Game::themingMoves(PlayerId player, CityId cityId, TypeInde
         for (size_t i = 0; i < c.greatWorks.size(); ++i) {
             const GreatWork& w = c.greatWorks[i];
             const bool here = c.id == cityId && w.building == building;
-            if (!here && themed(c, w.building)) continue;
+            if (!here && (themed(c, w.building) || state_.turn < w.lockedUntil)) continue;
             const GreatWorkType& t = rules_->greatWorkTypes[at(w.type)];
             bool fits = false;
             for (const auto& [slot, n] : b.greatWorkSlots) fits = fits || std::find(t.slots.begin(), t.slots.end(), slot) != t.slots.end();
@@ -180,6 +189,10 @@ std::vector<Command> Game::themingMoves(PlayerId player, CityId cityId, TypeInde
         bool ok = true;
         for (const GreatWork& w : city->greatWorks) {
             if (w.building != building || std::any_of(pick.begin(), pick.end(), [&](const Cand* p) { return p->work == &w; })) continue;
+            if (state_.turn < w.lockedUntil) {  // locked art cannot leave
+                ok = false;
+                continue;
+            }
             bool placed = false;
             for (const City& c : state_.cities) {
                 if (c.owner != player || placed) continue;

@@ -45,12 +45,23 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
 
 // ------------------------------------------------------------------ queries
 
+namespace {
+// Nodes of eras before the world's cost less, of later eras more (04: [GS] TECH_COST_PERCENT_CHANGE_*).
+int worldEraPercent(const GameState& s, const Rules& r, int nodeEra) {
+    if (nodeEra < s.gameEra) return 100 + r.globalInt("TECH_COST_PERCENT_CHANGE_BEFORE_GAME_ERA");
+    if (nodeEra > s.gameEra) return 100 + r.globalInt("TECH_COST_PERCENT_CHANGE_AFTER_GAME_ERA");
+    return 100;
+}
+}  // namespace
+
 int Game::techCost(TypeIndex tech) const {
-    return std::max(1, rules_->techs[static_cast<size_t>(tech)].cost * speedPercent(state_, *rules_) / 100);
+    const TreeNode& n = rules_->techs[static_cast<size_t>(tech)];
+    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era) / 100);
 }
 
 int Game::civicCost(TypeIndex civic) const {
-    return std::max(1, rules_->civics[static_cast<size_t>(civic)].cost * speedPercent(state_, *rules_) / 100);
+    const TreeNode& n = rules_->civics[static_cast<size_t>(civic)];
+    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era) / 100);
 }
 
 bool Game::hasUnlocked(PlayerId player, Unlock u) const {
@@ -265,6 +276,18 @@ bool Game::policyAvailable(PlayerId player, TypeIndex policy) const {
     const PolicyType& pt = rules_->policies[static_cast<size_t>(policy)];
     // Dark Age cards (09: Ages): in a Dark Age, while the world is in their era window.
     if (pt.darkAge) return p.age == Age::Dark && state_.gameEra >= pt.minEra && state_.gameEra <= pt.maxEra;
+    // Legacy cards (04: PolicyToUnlock): a Wildcard carrying a government's bonus, once the player has left that government.
+    static const std::pair<const char*, const char*> kLegacy[] = {
+        {"POLICY_AUTOCRATIC_LEGACY", "GOVERNMENT_AUTOCRACY"},   {"POLICY_OLIGARCHIC_LEGACY", "GOVERNMENT_OLIGARCHY"},
+        {"POLICY_REPUBLICAN_LEGACY", "GOVERNMENT_CLASSICAL_REPUBLIC"}, {"POLICY_MONARCHIC_LEGACY", "GOVERNMENT_MONARCHY"},
+        {"POLICY_THEOCRATIC_LEGACY", "GOVERNMENT_THEOCRACY"},   {"POLICY_MERCANTILE_LEGACY", "GOVERNMENT_MERCHANT_REPUBLIC"},
+        {"POLICY_FASCIST_LEGACY", "GOVERNMENT_FASCISM"},        {"POLICY_COMMUNIST_LEGACY", "GOVERNMENT_COMMUNISM"},
+        {"POLICY_DEMOCRATIC_LEGACY", "GOVERNMENT_DEMOCRACY"}};
+    for (const auto& [card, gov] : kLegacy) {
+        if (pt.id != card) continue;
+        const TypeIndex g = rules_->government(gov);
+        return g != kNone && p.government != g && static_cast<size_t>(g) < p.governmentUses.size() && p.governmentUses[static_cast<size_t>(g)] > 0;
+    }
     if (pt.unlock.none() || !hasUnlocked(player, pt.unlock)) return false;
     for (TypeIndex replacement : pt.obsoletedBy) {
         const Unlock& u = rules_->policies[static_cast<size_t>(replacement)].unlock;

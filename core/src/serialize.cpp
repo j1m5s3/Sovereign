@@ -539,6 +539,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(g.creator);
             w.i8(g.era);
             w.i16(g.civ);
+            w.i32(g.lockedUntil);
         }
         writeI32s(w, std::vector<int32_t>(c.greatPeopleHere.begin(), c.greatPeopleHere.end()));
         writeI32s(w, c.pressure);
@@ -1023,6 +1024,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             g.creator = r.i16();
             g.era = r.i8();
             g.civ = r.i16();
+            g.lockedUntil = r.i32();
         }
         {
             std::vector<int32_t> here;

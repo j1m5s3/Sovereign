@@ -262,8 +262,29 @@ void Game::processTourism(PlayerId pid) {
     if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
     const int t = tourismPerTurn(pid);
     if (t <= 0) return;
+    // Religious tourism (06): halved after The Enlightenment, and halved again toward a civ whose cities mostly follow
+    // another religion (TOURISM_DIFFERENT_RELIGION_REDUCTION).
+    int religious = 0;
+    if (p.religion >= 0 && static_cast<size_t>(p.religion) < state_.religions.size()) {
+        const City* holy = state_.city(state_.religions[static_cast<size_t>(p.religion)].holyCity);
+        if (holy && holy->owner == pid) religious = rules_->globalInt("TOURISM_FROM_HOLY_CITY");
+    }
+    const TypeIndex enlightenment = rules_->civic("CIVIC_THE_ENLIGHTENMENT");
+    const int religiousLost = enlightenment != kNone && p.civics.has(enlightenment) ? religious / 2 : 0;
+    auto mainReligion = [&](PlayerId who) {
+        std::vector<int> n(state_.religions.size(), 0);
+        for (const City& c : state_.cities) {
+            const int maj = c.owner == who ? cityMajorityReligion(c) : -1;
+            if (maj >= 0) ++n[static_cast<size_t>(maj)];
+        }
+        const auto best = std::max_element(n.begin(), n.end());
+        return best == n.end() || *best == 0 ? -1 : static_cast<int>(best - n.begin());
+    };
     for (const Player& x : state_.players) {
         if (x.id == pid || !isMajor(x)) continue;
+        int base = t - religiousLost;
+        if (religious > 0 && mainReligion(x.id) != p.religion)
+            base -= (religious - religiousLost) * rules_->globalInt("TOURISM_DIFFERENT_RELIGION_REDUCTION") / 100;
         // +25% toward a civ we run a trade route to (TOURISM_TRADE_ROUTE_BONUS).
         const bool route = std::any_of(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& r) {
             const City* d = state_.city(r.destination);
@@ -275,7 +296,7 @@ void Game::processTourism(PlayerId pid) {
         const int online = route ? (policyIs(pid, "POLICY_ONLINE_COMMUNITIES") ? 50 : 0) +
                                        static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::RouteTourismPercent).toInt())
                                  : 0;  // + Sarah Breedlove, Melitta Bentz (07)
-        int toward = t * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders + online) / 100;
+        int toward = std::max(0, base) * (100 + (route ? rules_->globalInt("TOURISM_TRADE_ROUTE_BONUS") : 0) + borders + online) / 100;
         if (policyIs(x.id, "POLICY_SPACE_TOURISM")) toward = toward * 80 / 100;
         p.tourismTo[at(x.id)] += toward;
     }

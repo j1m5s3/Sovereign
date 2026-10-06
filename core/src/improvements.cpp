@@ -498,9 +498,14 @@ int Game::monopolySources(PlayerId player) const {
 
 void Game::accumulateStrategics(PlayerId pid) {
     Player& player = state_.players[static_cast<size_t>(pid)];
+    // The suzerain also gathers its city-states' strategic resources (08: Suzerain).
+    std::vector<PlayerId> holders{pid};
+    for (const Player& cs : state_.players) {
+        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) holders.push_back(cs.id);
+    }
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         const Plot& p = state_.plots[i];
-        if (p.owner != pid || p.resource == kNone) continue;
+        if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
         const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
         if (r.accumulation <= 0) continue;
         const Hex h = state_.grid.at(static_cast<int>(i));

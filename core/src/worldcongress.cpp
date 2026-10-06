@@ -60,6 +60,7 @@ int Game::favorPerTurn(PlayerId pid) const {
     if (!isMajor(p)) return 0;
     int favor = rules_->globalInt("WORLD_CONGRESS_BASELINE_FAVOR_PER_TURN");
     if (p.government != kNone && p.anarchyTurns == 0) favor += rules_->governments[at(p.government)].favor;
+    if (governmentIs(pid, "GOVERNMENT_MONARCHY")) favor += 2 * buildingsOwned(pid, "BUILDING_RENAISSANCE_WALLS");  // Monarchy (08)
     if (policyIs(pid, "POLICY_DISINFORMATION_CAMPAIGN")) favor += 3 * buildingsOwned(pid, "BUILDING_BROADCAST_CENTER");  // 09
     // Policy cards (04): Diplomatic Capital, Rabblerousing; Monarchic Legacy per walled city.
     favor += static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::FavorPerTurn).toInt());

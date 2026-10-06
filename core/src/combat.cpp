@@ -945,6 +945,16 @@ void Game::seizeCivilian(UnitId id, PlayerId captor) {
         rules_->units[static_cast<size_t>(becomes)].foundCity)
         becomes = rules_->unit("UNIT_BUILDER");
     if (becomes == kNone) {
+        // Condemn Heretic (06): a religious unit taken takes its religion's pressure off the cities nearby.
+        const UnitType& ut = typeOf(*rules_, *o);
+        if (o->religion >= 0 && (ut.religiousStrength > 0 || ut.spreadCharges > 0)) {
+            const int range = rules_->globalInt("RELIGION_SPREAD_RANGE_UNIT_CAPTURE");
+            for (City& c : state_.cities) {
+                if (state_.grid.distance(c.pos, o->pos) > range || static_cast<size_t>(o->religion) >= c.pressure.size()) continue;
+                int32_t& pv = c.pressure[static_cast<size_t>(o->religion)];
+                pv = std::max(0, pv - rules_->globalInt("RELIGION_SPREAD_UNIT_CAPTURE"));
+            }
+        }
         removeUnit(id);
         return;
     }
