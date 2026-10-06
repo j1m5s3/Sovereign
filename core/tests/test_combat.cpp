@@ -358,6 +358,7 @@ TEST(twins_form_a_corps_then_an_army) {
     REQUIRE(g->submit(Command::formUnit(0, a, b)) == CommandError::Ok);
     CHECK(g->state().unit(b) == nullptr);
     CHECK_EQ(g->state().unit(a)->formation, 1);
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_WORLD_S_FIRST_CORPS"));  // 09
     CHECK_EQ(g->combatStrength(*g->state().unit(a), *g->state().unit(foe), true, false), single + 10);
     // An Army needs Mobilization (and the turn the Corps spent forming).
     GameState t = g->state();

@@ -202,13 +202,15 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     // Routes to a city-state bring the sender a bonus by its type (07: MINOR_CIV_*_SEND_TRADE_ROUTE_BONUS).
     if (isCityState(destination.owner)) {
         const TypeIndex cst = state_.players[at(destination.owner)].cityState;
-        switch (rules_->cityStates[at(cst)].kind) {
-            case CityStateKind::Scientific: out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(1); break;
-            case CityStateKind::Cultural: out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(1); break;
-            case CityStateKind::Religious: out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(1); break;
+        const CityStateKind kind = rules_->cityStates[at(cst)].kind;
+        const int n = resolutionHits(ResolutionKind::Sovereignty, 0, static_cast<int32_t>(kind)) ? 2 : 1;  // Sovereignty A (World Congress)
+        switch (kind) {
+            case CityStateKind::Scientific: out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(n); break;
+            case CityStateKind::Cultural: out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(n); break;
+            case CityStateKind::Religious: out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(n); break;
             case CityStateKind::Industrial:
-            case CityStateKind::Militaristic: out[static_cast<size_t>(YieldType::Production)] += Fixed::fromInt(1); break;
-            case CityStateKind::Trade: out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2); break;
+            case CityStateKind::Militaristic: out[static_cast<size_t>(YieldType::Production)] += Fixed::fromInt(n); break;
+            case CityStateKind::Trade: out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * n); break;
         }
     }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
@@ -383,7 +385,21 @@ void Game::processTrade(PlayerId pid) {
             // A completed route leaves the owner a Trading Post at its destination (07).
             City& d = *state_.city(r.destination);
             if (d.tradingPosts.size() < state_.players.size()) d.tradingPosts.resize(state_.players.size(), 0);
+            // Historic moments (09): a post in a new civilization; posts in every civilization.
+            const auto postsWith = [&](PlayerId civ) {
+                for (const City& o : state_.cities) {
+                    if (o.owner == civ && o.hasTradingPost(pid)) return true;
+                }
+                return false;
+            };
+            const bool newCiv = d.owner != pid && isMajorCiv(d.owner) && !postsWith(d.owner);
             d.tradingPosts[at(pid)] = 1;
+            if (newCiv) {
+                awardMoment(pid, "MOMENT_TRADING_POST_ESTABLISHED_IN_NEW_CIVILIZATION");
+                bool all = true;
+                for (const Player& x : state_.players) all = all && (x.id == pid || !isMajorCiv(x.id) || postsWith(x.id));
+                if (all) awardFirst(pid, "MOMENT_FIRST_TRADING_POSTS_IN_ALL_CIVILIZATIONS", "MOMENT_TRADING_POSTS_IN_ALL_CIVILIZATIONS", 0);
+            }
         }
         ended.push_back(r.id);
         if (home && origin && origin->owner == pid) {

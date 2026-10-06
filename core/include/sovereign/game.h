@@ -320,6 +320,8 @@ public:
     bool hasVoted(PlayerId player, int item) const;
     // The resolution of this kind in force, or null.
     const PassedResolution* passed(ResolutionKind kind) const;
+    // A passed resolution of this kind with this option and target (World Congress [GS]).
+    bool resolutionHits(ResolutionKind kind, uint8_t option, int32_t target) const;
     std::string candidateName(const CongressItem& item, int candidate) const;
 
     // ---- espionage (08: Espionage)
@@ -760,6 +762,9 @@ private:
     // Historic moments: an ordinary one, or a world's first (per key) with the ordinary one as fallback.
     void awardMoment(PlayerId player, const char* moment);
     void awardFirst(PlayerId player, const char* worldMoment, const char* ownMoment, int key = 0);
+    void awardOnce(PlayerId pid, const char* id);  // a moment a player earns only once
+    void unitMoments(PlayerId pid, TypeIndex unitType);  // moments for a unit trained or bought (09)
+    void buildingMoments(City& city, TypeIndex building);  // moments for a building completed (09)
     void processEras();  // the world moves to the next era and every civ's age is set
     void processTourism(PlayerId player);
     void processTrade(PlayerId player);  // routes run, end or are plundered

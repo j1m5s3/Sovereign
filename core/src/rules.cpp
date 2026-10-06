@@ -1643,14 +1643,26 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"RESOLUTION_PATRONAGE", ResolutionKind::Patronage},                   {"RESOLUTION_MIGRATION_TREATY", ResolutionKind::MigrationTreaty},
             {"RESOLUTION_PUBLIC_RELATIONS", ResolutionKind::PublicRelations},     {"RESOLUTION_MILITARY_ADVISORY", ResolutionKind::MilitaryAdvisory},
             {"RESOLUTION_URBAN_DEVELOPMENT_TREATY", ResolutionKind::UrbanDevelopment},
+            {"RESOLUTION_LUXURY_POLICY", ResolutionKind::LuxuryPolicy},           {"RESOLUTION_WORLD_RELIGION", ResolutionKind::WorldReligion},
+            {"RESOLUTION_HERITAGE_ORGANIZATION", ResolutionKind::HeritageOrganization}, {"RESOLUTION_WORLD_IDEOLOGY", ResolutionKind::WorldIdeology},
+            {"RESOLUTION_BORDER_CONTROL_TREATY", ResolutionKind::BorderControl},  {"RESOLUTION_PUBLIC_WORKS_PROGRAM", ResolutionKind::PublicWorks},
+            {"RESOLUTION_GLOBAL_ENERGY_TREATY", ResolutionKind::GlobalEnergy},    {"RESOLUTION_SOVEREIGNTY", ResolutionKind::Sovereignty},
+            {"RESOLUTION_DEFORESTATION_TREATY", ResolutionKind::DeforestationTreaty}, {"RESOLUTION_ESPIONAGE_PACT", ResolutionKind::EspionagePact},
         };
         for (const auto& [rid, k] : kinds) {
             if (id == rid) rs.kind = k;
         }
         const std::string& t = j["target"].str();
-        rs.target = t == "PLAYER" ? ResolutionTarget::Player : t == "GREATPERSONCLASS" ? ResolutionTarget::GreatPersonClass
-                  : t == "DISTRICT" ? ResolutionTarget::District : t == "UNITPROMOTIONCLASS" ? ResolutionTarget::PromotionClass
-                  : ResolutionTarget::Other;
+        static const std::pair<const char*, ResolutionTarget> targets[] = {
+            {"PLAYER", ResolutionTarget::Player},       {"GREATPERSONCLASS", ResolutionTarget::GreatPersonClass}, {"DISTRICT", ResolutionTarget::District},
+            {"UNITPROMOTIONCLASS", ResolutionTarget::PromotionClass}, {"RESOURCE", ResolutionTarget::Resource}, {"RELIGION", ResolutionTarget::Religion},
+            {"GREATWORKOBJECT", ResolutionTarget::GreatWorkObject}, {"GOVERNMENT", ResolutionTarget::Government}, {"PROJECT", ResolutionTarget::Project},
+            {"BUILDING", ResolutionTarget::Building},   {"MINORCIVBONUS", ResolutionTarget::CityStateKind}, {"FEATURE", ResolutionTarget::Feature},
+            {"UNITOPERATION", ResolutionTarget::SpyOperation}};
+        rs.target = ResolutionTarget::Other;
+        for (const auto& [name, tt] : targets) {
+            if (t == name) rs.target = tt;
+        }
         rs.minEra = j.has("minEra") ? era(j["minEra"].str()) : -1;
         rs.maxEra = j.has("maxEra") ? era(j["maxEra"].str()) : -1;
         resolutions.push_back(std::move(rs));

@@ -266,6 +266,7 @@ int Game::religiousStrength(const Unit& unit, bool defending) const {
     if (home && state_.players[at(unit.owner)].inquisition) s += 15;  // the Inquisition ability (06)
     // Grand Inquisitor (08: Moksha): +10 in the territory of his city (Sovereign reading of "units bought here").
     if (territoryGovernorHas(unit.pos, unit.owner, "GOVERNOR_PROMOTION_GRAND_INQUISITOR")) s += 10;
+    if (unit.religion >= 0 && resolutionHits(ResolutionKind::WorldReligion, 0, unit.religion)) s += 10;  // World Religion (World Congress)
     if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
     const FoundedReligion& r = state_.religions[static_cast<size_t>(unit.religion)];
@@ -409,11 +410,20 @@ void Game::applyReligion(const Command& c) {
         case CommandType::EvangelizeBelief: {
             const Unit* u = state_.unit(c.id);
             state_.religions[static_cast<size_t>(u->religion)].beliefs.push_back(static_cast<TypeIndex>(c.arg));
+            {
+                // Every class of belief held (founder, follower, worship, enhancer): a moment (09).
+                bool classes[kNumBeliefClasses] = {};
+                for (TypeIndex b : state_.religions[static_cast<size_t>(u->religion)].beliefs) classes[static_cast<int>(rules_->beliefs[at(b)].cls)] = true;
+                bool all = true;
+                for (int k = static_cast<int>(BeliefClass::Follower); k < kNumBeliefClasses; ++k) all = all && classes[k];
+                if (all) awardFirst(c.player, "MOMENT_WORLD_S_FIRST_RELIGION_TO_ADOPT_ALL_BELIEFS", "MOMENT_RELIGION_ADOPTS_ALL_BELIEFS", 0);
+            }
             removeUnit(c.id);  // the Apostle is spent
             break;
         }
         case CommandType::LaunchInquisition:
             state_.players[at(c.player)].inquisition = true;
+            awardFirst(c.player, "MOMENT_WORLD_S_FIRST_INQUISITION", "MOMENT_INQUISITION_BEGINS", 0);
             removeUnit(c.id);  // the Apostle is spent
             break;
         case CommandType::HealReligious: {
@@ -446,6 +456,12 @@ void Game::applyReligion(const Command& c) {
             if (t.id != "UNIT_INQUISITOR") city.pressure[static_cast<size_t>(u.religion)] += static_cast<int32_t>(pressed);
             if (before != u.religion && cityMajorityReligion(city) == u.religion) {
                 dedicationScore(u.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS", 2);  // 09
+                // A rival's Holy City, or a city of a civ at war with it, turned (09: Historic moments).
+                for (size_t ri = 0; ri < state_.religions.size(); ++ri) {
+                    if (static_cast<int>(ri) != u.religion && state_.religions[ri].holyCity == city.id && state_.religions[ri].founder != u.owner)
+                        awardMoment(u.owner, "MOMENT_RIVAL_HOLY_CITY_CONVERTED");
+                }
+                if (city.owner != u.owner && atWar(u.owner, city.owner)) awardMoment(u.owner, "MOMENT_ENEMY_CITY_ADOPTS_OUR_RELIGION");
                 // Indulgence Vendor: Gold the first time it turns a city (bit 0x80 of wonderAbilities marks it spent).
                 if (const int gold = unitEffectTotal(u, UnitEffectKind::ConvertGold); gold > 0 && !(u.wonderAbilities & 0x80)) {
                     state_.players[at(u.owner)].gold += Fixed::fromInt(gold);

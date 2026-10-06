@@ -58,6 +58,7 @@ int Game::spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) cons
 int Game::spyOperationLevels(const Agent& spy, SpyMission m) const {
     const TypeIndex op = rules_->spyOperation(operationId(m));
     int n = spyPromotionTotal(spy, &SpyPromotionType::allLevels);
+    if (resolutionHits(ResolutionKind::EspionagePact, 0, static_cast<int32_t>(m))) n += 2;  // Espionage Pact A (World Congress)
     for (TypeIndex p : spy.promotions) {
         if (op != kNone && at(p) < rules_->spyPromotions.size()) n += rules_->spyPromotions[at(p)].levels[at(op)];
     }
@@ -109,6 +110,7 @@ bool Game::canSpyMission(PlayerId pid, int32_t spyId, SpyMission m, CityId cityI
     const Agent* a = agent(spyId);
     if (!a || !a->spy || a->owner != pid || static_cast<int>(m) >= kNumSpyMissions) return fail();
     if (m == SpyMission::None) return true;  // home
+    if (resolutionHits(ResolutionKind::EspionagePact, 1, static_cast<int32_t>(m))) return fail();  // Espionage Pact B (World Congress)
     const City* c = state_.city(cityId);
     const SpyOperationType* op = spyOperationFor(m);
     if (!c || !op) return fail();
@@ -355,6 +357,7 @@ void Game::resolveSpyOperation(Agent& a) {
     if (a.level < rules_->globalInt("ESPIONAGE_MAX_LEVEL")) {
         ++a.level;
         ++a.promotionsPending;  // a promotion to choose (08: Espionage levels)
+        if (a.level == rules_->globalInt("ESPIONAGE_MAX_LEVEL")) awardFirst(a.owner, "MOMENT_FIRST_MASTER_SPY_EARNED", "MOMENT_MASTER_SPY_EARNED", 0);
     }
     // A narrow success is noticed: the target knows who it was.
     if (op && roll < need + 2) remember(victim, sender, MemoryKind::SpyCaught, -4, 30);

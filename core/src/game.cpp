@@ -889,6 +889,11 @@ void Game::apply(const Command& c) {
             Unit& u = *state_.unit(c.id);
             const Unit& w = *state_.unit(c.arg);
             ++u.formation;
+            {
+                const bool naval = rules_->units[static_cast<size_t>(u.type)].domain == Domain::Sea;
+                if (u.formation == 1) awardFirst(c.player, naval ? "MOMENT_WORLD_S_FIRST_FLEET" : "MOMENT_WORLD_S_FIRST_CORPS", naval ? "MOMENT_FIRST_FLEET" : "MOMENT_FIRST_CORPS", 0);
+                else awardFirst(c.player, naval ? "MOMENT_WORLD_S_FIRST_ARMADA" : "MOMENT_WORLD_S_FIRST_ARMY", naval ? "MOMENT_FIRST_ARMADA" : "MOMENT_FIRST_ARMY", 0);
+            }
             u.hp = std::max(u.hp, w.hp);  // the stronger of the two carries on
             u.xp = std::max(u.xp, w.xp);
             u.movesLeft = Fixed();        // forming takes the turn
@@ -1009,6 +1014,7 @@ void Game::apply(const Command& c) {
                 lv.units.push_back(u.id);
             }
             state_.levies.push_back(lv);
+            awardMoment(c.player, "MOMENT_CITY_STATE_ARMY_LEVIED");  // 09
             refreshVisibility(c.player);
             refreshVisibility(cs);
             break;

@@ -963,6 +963,8 @@ void Game::seizeCivilian(UnitId id, PlayerId captor) {
         // Condemn Heretic (06): a religious unit taken takes its religion's pressure off the cities nearby.
         const UnitType& ut = typeOf(*rules_, *o);
         if (o->religion >= 0 && (ut.religiousStrength > 0 || ut.spreadCharges > 0)) {
+            // World Religion option B (World Congress): condemning its units earns 25 Diplomatic Favor.
+            if (resolutionHits(ResolutionKind::WorldReligion, 1, o->religion) && captor >= 0) state_.players[static_cast<size_t>(captor)].favor += 25;
             const int range = rules_->globalInt("RELIGION_SPREAD_RANGE_UNIT_CAPTURE");
             for (City& c : state_.cities) {
                 if (state_.grid.distance(c.pos, o->pos) > range || static_cast<size_t>(o->religion) >= c.pressure.size()) continue;
@@ -1009,6 +1011,9 @@ void Game::applyCombat(const Command& c) {
         case CommandType::Promote: {
             Unit* u = state_.unit(c.id);
             u->promotions.push_back(static_cast<TypeIndex>(c.arg));
+            // A third promotion is a distinction (09; Sovereign reading), once an era.
+            if (u->promotions.size() == 3)
+                awardFirst(c.player, "MOMENT_FIRST_UNIT_PROMOTED_WITH_DISTINCTION", "MOMENT_UNIT_PROMOTED_WITH_DISTINCTION", state_.gameEra);
             u->xp = 0;  // excess XP is lost on promotion
             u->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), u->hp + rules_->globalInt("EXPERIENCE_PROMOTE_HEALED"));
             u->movesLeft = Fixed();  // promoting ends the unit's turn
@@ -1044,6 +1049,7 @@ void Game::applyCombat(const Command& c) {
                 rules_->globalInt(minor ? "FAVOR_FOR_LIBERATE_CITY_STATE" : "FAVOR_FOR_LIBERATE_PLAYER_CITY");
             remember(to, c.player, MemoryKind::Gift, 30, 60);
             transferCity(c.id, to, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_LIBERATION"));
+            awardMoment(to, "MOMENT_CITY_RETURNS_TO_ORIGINAL_OWNER");  // 09
             refreshVisibility(c.player);
             refreshVisibility(to);
             return;
@@ -1519,7 +1525,9 @@ void Game::captureCity(City& city, UnitId attackerId) {
     }
     refreshVisibility(me);
     refreshVisibility(lost);
+    const bool major = isMajorCiv(lost);
     checkElimination(lost);
+    if (major && !state_.players[static_cast<size_t>(lost)].alive) awardMoment(me, "MOMENT_FINAL_FOREIGN_CITY_TAKEN");  // 09
 }
 
 void Game::razeCity(CityId id) {

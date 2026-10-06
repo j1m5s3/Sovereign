@@ -78,6 +78,7 @@ CommandError Game::parkProblem(PlayerId player, UnitId id) const {
 
 void Game::designatePark(UnitId id) {
     const auto plots = parkPlots(id);
+    awardFirst(state_.unit(id)->owner, "MOMENT_WORLD_S_FIRST_NATIONAL_PARK", "MOMENT_NATIONAL_PARK_FOUNDED", 0);
     if (plots) for (const Hex& h : *plots) state_.plot(h).park = true;
     removeUnit(id);
 }
@@ -162,6 +163,7 @@ void Game::grantBandPromotion(Unit& band) {
 
 void Game::performConcert(UnitId id) {
     Unit& u = *state_.unit(id);
+    awardFirst(u.owner, "MOMENT_FIRST_ROCK_BAND_CONCERT_IN_WORLD", "MOMENT_FIRST_ROCK_BAND_CONCERT", 0);
     const PlayerId host = state_.plot(u.pos).owner;
     const std::vector<RockBandResult>& results = rules_->rockBandResults;
     std::vector<int> weights;

@@ -96,10 +96,13 @@ void Game::processEmergencies() {
         else if (state_.turn >= e.endTurn) e.outcome = 2;
         if (e.outcome == 1) {
             for (size_t m = 0; m < e.members.size() && m < state_.players.size(); ++m) {
-                if (e.members[m]) state_.players[m].favor += 100;
+                if (!e.members[m]) continue;
+                state_.players[m].favor += 100;
+                awardMoment(static_cast<PlayerId>(m), "MOMENT_EMERGENCY_COMPLETED_SUCCESSFULLY");  // 09
             }
         } else if (e.outcome == 2) {
             state_.players[at(e.target)].favor += 200;
+            awardMoment(e.target, "MOMENT_EMERGENCY_SUCCESSFULLY_DEFENDED");  // 09
         }
     }
 }

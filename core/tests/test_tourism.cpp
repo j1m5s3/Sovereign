@@ -60,6 +60,7 @@ TEST(a_national_park_draws_tourism_and_cheers_its_city) {
     const int tourism = g->tourismPerTurn(0);
     REQUIRE(g->submit(Command::designatePark(0, naturalist)) == CommandError::Ok);
     CHECK(!g->state().unit(naturalist));
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_WORLD_S_FIRST_NATIONAL_PARK"));  // 09
     int appeal = 0;
     for (const Hex& h : *plots) {
         CHECK(g->state().plot(h).park);

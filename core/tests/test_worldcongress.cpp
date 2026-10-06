@@ -45,7 +45,7 @@ TEST(congress_rules_data) {
     const Rules& r = rules();
     int supported = 0;
     for (const ResolutionType& res : r.resolutions) supported += res.kind != ResolutionKind::Unsupported ? 1 : 0;
-    CHECK_EQ(supported, 7);
+    CHECK_EQ(supported, 17);  // all but Mercenary Companies and Arms Control
     CHECK_EQ(r.resolutions[at(r.resolution("RESOLUTION_DIPLOMATIC_VICTORY"))].minEra, r.era("ERA_MODERN"));
     CHECK_EQ(r.eras[0].grievanceDecay, 10);
     CHECK_EQ(r.governments[at(r.government("GOVERNMENT_MONARCHY"))].favor, 2);
@@ -148,4 +148,75 @@ TEST(congress_survives_a_save) {
     CHECK_EQ(loaded->state().players[0].favor, 40);
     CHECK_EQ(loaded->grievances(1, 0), 77);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+namespace {
+// wcState() with one resolution in force.
+std::unique_ptr<Game> withResolution(const char* resolution, uint8_t option, int32_t target, GameState s = wcState()) {
+    s.passedResolutions.push_back({rules().resolution(resolution), option, target});
+    return Game::fromScenario(rules(), std::move(s));
+}
+}  // namespace
+
+TEST(more_resolutions_take_effect) {
+    // Global Energy Treaty: A bans the chosen power building; Public Works: +100% toward a project.
+    TypeIndex plant = kNone;
+    for (size_t i = 0; i < rules().buildings.size() && plant == kNone; ++i) {
+        if (rules().buildings[i].powerPerResource > 0 && !rules().buildings[i].wonder) plant = static_cast<TypeIndex>(i);
+    }
+    REQUIRE(plant != kNone);
+    GameState s = wcState();
+    for (size_t i = 0; i < s.players[0].techs.done.size(); ++i) s.players[0].techs.done[i] = 1;
+    for (size_t i = 0; i < s.players[0].civics.done.size(); ++i) s.players[0].civics.done[i] = 1;
+    auto open = Game::fromScenario(rules(), s);
+    auto banned = withResolution("RESOLUTION_GLOBAL_ENERGY_TREATY", 0, plant, s);
+    const ProductionItem item{ProductionKind::Building, plant};
+    CommandError why = CommandError::Ok;
+    CHECK(!banned->canProduce(banned->state().cities[0], item, &why));
+    CHECK(why == CommandError::CannotBuild);
+    // Espionage Pact B: the operation is closed; A: two levels more.
+    auto closed = withResolution("RESOLUTION_ESPIONAGE_PACT", 1, static_cast<int32_t>(SpyMission::SiphonFunds));
+    Agent spy;
+    spy.owner = 0;
+    CHECK_EQ(closed->spyOperationLevels(spy, SpyMission::StealTechBoost), open->spyOperationLevels(spy, SpyMission::StealTechBoost));
+    auto pact = withResolution("RESOLUTION_ESPIONAGE_PACT", 0, static_cast<int32_t>(SpyMission::SiphonFunds));
+    CHECK_EQ(pact->spyOperationLevels(spy, SpyMission::SiphonFunds), open->spyOperationLevels(spy, SpyMission::SiphonFunds) + 2);
+    // World Ideology A: a Wildcard slot more under the chosen government.
+    GameState gov = wcState();
+    const TypeIndex monarchy = rules().government("GOVERNMENT_MONARCHY");
+    gov.players[0].government = monarchy;
+    gov.players[0].policies.assign(static_cast<size_t>(rules().governments[at(monarchy)].totalSlots()), kNone);
+    auto ideology = withResolution("RESOLUTION_WORLD_IDEOLOGY", 0, monarchy, gov);
+    ideology->syncPolicySlots(0);
+    CHECK_EQ(ideology->state().players[0].policies.size(), static_cast<size_t>(rules().governments[at(monarchy)].totalSlots() + 1));
+    // Border Control Treaty B: borders stop growing.
+    GameState grow = wcState();
+    grow.cities[0].borderCulture = Fixed::fromInt(10000);
+    auto stuck = withResolution("RESOLUTION_BORDER_CONTROL_TREATY", 1, 0, grow);
+    auto free = Game::fromScenario(rules(), grow);
+    sovtest::endTurns(*stuck, 2);
+    sovtest::endTurns(*free, 2);
+    CHECK(stuck->state().cities[0].plotsByCulture < free->state().cities[0].plotsByCulture);
+}
+
+TEST(luxury_policy_and_deforestation_treaty) {
+    GameState s = wcState();
+    TypeIndex lux = kNone;
+    for (size_t i = 0; i < rules().resources.size() && lux == kNone; ++i) {
+        if (rules().resources[i].cls == ResourceClass::Luxury && rules().resources[i].reveal.none()) lux = static_cast<TypeIndex>(i);
+    }
+    REQUIRE(lux != kNone);
+    s.plot({4, 6}).resource = lux;  // the capital's center counts as improved
+    auto plain = Game::fromScenario(rules(), s);
+    auto banned = withResolution("RESOLUTION_LUXURY_POLICY", 1, lux, s);
+    CHECK_EQ(banned->luxuryAmenities(banned->state().cities[0]), plain->luxuryAmenities(plain->state().cities[0]) - 1);
+    // Deforestation Treaty A: woods may not be chopped.
+    GameState w = wcState();
+    const TypeIndex forest = rules().feature("FEATURE_FOREST");
+    w.plot({5, 6}).feature = forest;
+    for (size_t i = 0; i < w.players[0].techs.done.size(); ++i) w.players[0].techs.done[i] = 1;
+    auto chop = Game::fromScenario(rules(), w);
+    auto noChop = withResolution("RESOLUTION_DEFORESTATION_TREATY", 0, forest, w);
+    CHECK(chop->canHarvestAt(0, {5, 6}));
+    CHECK(!noChop->canHarvestAt(0, {5, 6}));
 }

@@ -1182,6 +1182,7 @@ void Game::onWarDeclared(PlayerId by, PlayerId target, CasusBelli why) {
     // A casus belli scales the grievances (08: War types).
     const int base = emergencyWar ? 0 : justified ? casusBelliGrievancePercent(why) : formal ? 100 : 150;
     addGrievance(target, by, base);
+    if (justified && isMajorCiv(target)) awardMoment(by, "MOMENT_CAUSE_FOR_WAR");  // 09
     // War on a city-state angers the civs with envoys there, and its suzerain more (08: GRIEVANCES_*_CITY_STATE_DOW).
     if (isCityState(target)) {
         const PlayerId suzerain = suzerainOf(target);

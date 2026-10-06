@@ -100,6 +100,13 @@ inline CityScenario capitalScenario(sov::GameState s = flatState(20, 14, 1)) {
 }
 
 // Ends `n` turns, keeping research going with the first available choice.
+// Whether the player has earned the historic moment (09).
+inline bool hasMoment(const sov::Game& g, sov::PlayerId p, const char* id) {
+    const sov::TypeIndex m = rules().moment(id);
+    const std::vector<int8_t>& eras = g.state().players[static_cast<size_t>(p)].momentEras;
+    return m != sov::kNone && static_cast<size_t>(m) < eras.size() && eras[static_cast<size_t>(m)] > 0;
+}
+
 inline void endTurns(sov::Game& g, int n) {
     using namespace sov;
     for (int i = 0; i < n; ++i) {

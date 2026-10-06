@@ -259,6 +259,9 @@ void Game::syncPolicySlots(PlayerId player) {
             for (int n : rules_->buildings[static_cast<size_t>(b)].policySlots) want += static_cast<size_t>(n);
         }
     }
+    // World Ideology (World Congress): a Wildcard slot more (A) or fewer (B) under the chosen government.
+    if (const PassedResolution* wi = passed(ResolutionKind::WorldIdeology); wi && wi->target == p.government)
+        want = wi->option == 0 ? want + 1 : (want > 0 ? want - 1 : 0);
     if (p.policies.size() == want) return;
     p.policies.resize(want, kNone);
     // A wonder lost reorders the extra slots: a card left in a slot of another type comes out.

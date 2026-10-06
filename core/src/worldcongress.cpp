@@ -104,6 +104,11 @@ const PassedResolution* Game::passed(ResolutionKind kind) const {
     return nullptr;
 }
 
+bool Game::resolutionHits(ResolutionKind kind, uint8_t option, int32_t target) const {
+    const PassedResolution* r = passed(kind);
+    return r && r->option == option && r->target == target;
+}
+
 bool Game::hasVoted(PlayerId pid, int item) const {
     if (item < 0 || at(item) >= state_.congress.size()) return false;
     for (const CongressVote& v : state_.congress[at(item)].votes) {
@@ -123,6 +128,21 @@ std::string Game::candidateName(const CongressItem& item, int candidate) const {
         case ResolutionTarget::GreatPersonClass: return rules_->greatPersonClasses[at(c)].name;
         case ResolutionTarget::District: return rules_->districts[at(c)].name;
         case ResolutionTarget::PromotionClass: return rules_->promotionClasses[at(c)];
+        case ResolutionTarget::Resource: return rules_->resources[at(c)].name;
+        case ResolutionTarget::Religion: return at(c) < state_.religions.size() ? rules_->religions[at(state_.religions[at(c)].type)].name : "?";
+        case ResolutionTarget::GreatWorkObject: return rules_->greatWorkTypes[at(c)].id;
+        case ResolutionTarget::Government: return rules_->governments[at(c)].name;
+        case ResolutionTarget::Project: return rules_->projects[at(c)].name;
+        case ResolutionTarget::Building: return rules_->buildings[at(c)].name;
+        case ResolutionTarget::CityStateKind: {
+            static const char* const kKinds[] = {"Scientific", "Cultural", "Religious", "Trade", "Industrial", "Militaristic"};
+            return c >= 0 && c < 6 ? kKinds[c] : "?";
+        }
+        case ResolutionTarget::Feature: return rules_->features[at(c)].name;
+        case ResolutionTarget::SpyOperation: {
+            const SpyOperationType* op = spyOperationFor(static_cast<SpyMission>(c));
+            return op ? op->name : "?";
+        }
         case ResolutionTarget::Other: break;
     }
     return "?";
@@ -172,9 +192,53 @@ void Game::openCongressSession() {
             case ResolutionTarget::PromotionClass:
                 for (size_t i = 0; i < rules_->promotionClasses.size(); ++i) item.candidates.push_back(static_cast<int32_t>(i));
                 break;
+            case ResolutionTarget::Resource:
+                for (size_t i = 0; i < rules_->resources.size(); ++i) {
+                    if (rules_->resources[i].cls == ResourceClass::Luxury) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::Religion:
+                for (size_t i = 0; i < state_.religions.size(); ++i) item.candidates.push_back(static_cast<int32_t>(i));
+                break;
+            case ResolutionTarget::GreatWorkObject:
+                for (size_t i = 0; i < rules_->greatWorkTypes.size(); ++i) {
+                    if (rules_->greatWorkTypes[i].tourism > 0) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::Government:
+                for (size_t i = 0; i < rules_->governments.size(); ++i) {
+                    if (!rules_->governments[i].unlock.none()) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::Project:
+                for (size_t i = 0; i < rules_->projects.size(); ++i) {
+                    if (!rules_->projects[i].converts) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::Building:
+                // Power plants and renewables (Global Energy Treaty).
+                for (size_t i = 0; i < rules_->buildings.size(); ++i) {
+                    const BuildingType& b = rules_->buildings[i];
+                    if (!b.wonder && (b.powerPerResource > 0 || b.powerProvided > 0)) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::CityStateKind:
+                for (int k = 0; k < 6; ++k) item.candidates.push_back(k);
+                break;
+            case ResolutionTarget::Feature:
+                for (size_t i = 0; i < rules_->features.size(); ++i) {
+                    if (rules_->features[i].removable && !rules_->features[i].removeTech.none()) item.candidates.push_back(static_cast<int32_t>(i));
+                }
+                break;
+            case ResolutionTarget::SpyOperation:
+                for (int m = static_cast<int>(SpyMission::ListeningPost); m < kNumSpyMissions; ++m) item.candidates.push_back(m);
+                break;
             case ResolutionTarget::Other: break;
         }
     }
+    // A target kind with nothing to choose (no religion founded yet) is dropped.
+    state_.congress.erase(std::remove_if(state_.congress.begin(), state_.congress.end(), [](const CongressItem& i) { return i.candidates.empty(); }),
+                          state_.congress.end());
     state_.congressOpenedTurn = state_.turn;
     pushEvent(EventKind::CongressSession, kNoPlayer, kNoPlayer, 0);
     for (const Player& p : state_.players) {
@@ -213,6 +277,7 @@ void Game::closeCongressSession() {
             // A one-time change, not a standing effect.
             Player& p = state_.players[at(passedRes.target)];
             p.diplomaticVictoryPoints = std::max(0, p.diplomaticVictoryPoints + (option == 0 ? 2 : -2));
+            if (option == 0) awardMoment(p.id, "MOMENT_DIPLOMATIC_VICTORY_RESOLUTION_WON");  // 09
         } else {
             state_.passedResolutions.push_back(passedRes);
         }
@@ -220,6 +285,9 @@ void Game::closeCongressSession() {
     }
     state_.congress.clear();
     state_.congressOpenedTurn = 0;
+    for (const Player& p : state_.players) {
+        if (isMajor(p)) syncPolicySlots(p.id);  // World Ideology changes the Wildcard slots
+    }
 }
 
 void Game::processWorldCongress() {
@@ -328,8 +396,44 @@ void Game::aiCongressVotes(PlayerId me) {
                 }
                 break;
             }
+            case ResolutionKind::WorldReligion:
+                target = self.religion >= 0 ? indexOf(item, self.religion) : 0;
+                break;
+            case ResolutionKind::WorldIdeology:
+                target = indexOf(item, self.government);
+                break;
+            case ResolutionKind::LuxuryPolicy: {
+                // More amenities from a luxury it has.
+                for (size_t i = 0; i < item.candidates.size(); ++i) {
+                    if (hasLuxury(me, static_cast<TypeIndex>(item.candidates[i]))) {
+                        target = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+                break;
+            }
+            case ResolutionKind::Sovereignty: {
+                // Double the trade bonus of the kind of city-state it trades with most.
+                int counts[6] = {0, 0, 0, 0, 0, 0};
+                for (const TradeRoute& r : state_.tradeRoutes) {
+                    const City* d = r.owner == me ? state_.city(r.destination) : nullptr;
+                    if (d && isCityState(d->owner)) ++counts[static_cast<int>(rules_->cityStates[at(state_.players[at(d->owner)].cityState)].kind)];
+                }
+                target = static_cast<int32_t>(std::max_element(counts, counts + 6) - counts);
+                break;
+            }
+            case ResolutionKind::BorderControl:
+            case ResolutionKind::HeritageOrganization:
+            case ResolutionKind::PublicWorks:
+            case ResolutionKind::GlobalEnergy:
+            case ResolutionKind::DeforestationTreaty:
+            case ResolutionKind::EspionagePact:
+                target = target < static_cast<int32_t>(item.candidates.size()) ? target : 0;
+                if (kind == ResolutionKind::GlobalEnergy || kind == ResolutionKind::DeforestationTreaty) option = 1;  // the bonus, not the ban
+                break;
             case ResolutionKind::Unsupported: break;
         }
+        if (target < 0 || target >= static_cast<int32_t>(item.candidates.size())) target = 0;
         // Extra votes where it matters most, while the favor lasts.
         int extra = 0;
         while (extraVoteCost(extra + 1) <= self.favor / 2 && extra < stake) ++extra;

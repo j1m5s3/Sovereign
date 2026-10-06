@@ -253,7 +253,11 @@ void Game::processFreeCities() {
                 best = p.id;
             }
         }
-        if (best != kNoPlayer) transferCity(id, best, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_CULTURAL_IDENTITY"));
+        if (best != kNoPlayer) {
+            const bool free = state_.players[static_cast<size_t>(c.owner)].freeCity;
+            transferCity(id, best, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_CULTURAL_IDENTITY"));
+            if (free) awardMoment(best, "MOMENT_FREE_CITY_JOINS");  // 09
+        }
         else c.loyalty = 1;
     }
 }
