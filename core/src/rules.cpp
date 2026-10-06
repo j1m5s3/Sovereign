@@ -126,6 +126,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "CITY_ON_CAPITAL_CONTINENT") { q.type = ReqType::CityOnCapitalContinent; }
         else if (type == "CITY_CAPTURED") { q.type = ReqType::CityCaptured; }
         else if (type == "CITY_HAS_IMPROVED_RESOURCE") { q.type = ReqType::CityHasImprovedResource; q.ref = rules.resource(ref); }
+        else if (type == "CITY_MIN_TERRAIN_TILES") { q.type = ReqType::CityMinTerrainTiles; q.ref = rules.terrain(ref); }
         else if (type == "PLAYER_AT_PEACE") { q.type = ReqType::PlayerAtPeace; }
         else if (type == "WORLD_MIN_ERA") { q.type = ReqType::WorldMinEra; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }

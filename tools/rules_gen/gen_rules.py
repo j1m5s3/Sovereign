@@ -1533,6 +1533,9 @@ def policy_requirement(text, ids):
         m = re.fullmatch(r"city population (\d+)\+", t)
         if m:
             return {"type": "CITY_MIN_POPULATION", "value": int(m.group(1))}
+        m = re.fullmatch(r"city has (\d+)\+ (\w+) tiles", t)
+        if m and m.group(2) in TERRAIN_BASES:  # Amundsen-Scott: hills of the terrain count too
+            return {"type": "CITY_MIN_TERRAIN_TILES", "ref": TERRAIN_BASES[m.group(2)][0], "value": int(m.group(1))}
         m = re.fullmatch(r"city has (.+)", t)
         if m and m.group(1) in ids["buildings"]:
             return {"type": "CITY_HAS_BUILDING", "ref": ids["buildings"][m.group(1)]}
@@ -2230,22 +2233,30 @@ def wonder_effect(wid, part, w, modifiers, eras):
     m = re.fullmatch(r"(.+?) on this city's tiles where tile (?:is|has) (.+?)(?: or tile (?:is|has) (.+?))?(?: in all cities where city has .+)?", t)
     if m:
         gains = [re.fullmatch(r"\+(\d+) (\w+)", g) for g in m.group(1).split(", ")]
-        reqs = []
+        alternatives = []  # each a list of requirements that must all hold
         for place in (m.group(2), m.group(3)):
-            if place in FEATURE_IDS:
-                reqs.append({"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]})
+            k = re.fullmatch(r"(\w+) Class and NOT tile is (.+)", place or "")  # Petra: desert and its hills, not floodplains
+            if k and k.group(1) in TERRAIN_BASES and k.group(2) in FEATURE_IDS:
+                tid = TERRAIN_BASES[k.group(1)][0]
+                for terrain in (tid, tid + "_HILLS"):
+                    alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": terrain},
+                                         {"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[k.group(2)], "negate": True}])
+            elif place == "Coast and Lake and NOT tile is a lake":  # Mausoleum (the map has no lakes apart from Coast)
+                alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}])
+            elif place in FEATURE_IDS:
+                alternatives.append([{"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]}])
             elif place in terrain_names():
-                reqs.append({"type": "PLOT_HAS_TERRAIN", "ref": terrain_names()[place]})
+                alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": terrain_names()[place]}])
             elif place in ("Quarry", "Mine"):  # Ruhr Valley
-                reqs.append({"type": "PLOT_HAS_IMPROVEMENT", "ref": "IMPROVEMENT_" + snake(place)})
+                alternatives.append([{"type": "PLOT_HAS_IMPROVEMENT", "ref": "IMPROVEMENT_" + snake(place)}])
             elif place is not None:
                 return None
         if not all(g and g.group(2) in YIELD_WORDS for g in gains):
             return None
         for g in gains:
-            for i, req in enumerate(reqs):  # either place: one modifier each
+            for i, reqs in enumerate(alternatives):  # either place: one modifier each
                 mod("PLOTS_%s_%d" % (YIELD_WORDS[g.group(2)], i), "OWNER_CITY_PLOTS", "ADJUST_PLOT_YIELD",
-                    {"yield": YIELD_WORDS[g.group(2)], "amount": int(g.group(1))}, [req])
+                    {"yield": YIELD_WORDS[g.group(2)], "amount": int(g.group(1))}, reqs)
         return []
     # One-time effects on completion.
     m = re.fullmatch(r"grants (\d+) random (technology|civic)", t)

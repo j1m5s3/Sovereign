@@ -796,6 +796,7 @@ enum class ReqType : uint8_t {
     CityOnCapitalContinent,     // on the same landmass as the owner's capital
     CityCaptured,               // founded by another civ
     CityHasImprovedResource,    // a plot of the city holds resource `ref` under a working improvement
+    CityMinTerrainTiles,        // at least `value` of the city's plots on terrain `ref` or its hills (Amundsen-Scott)
     PlayerAtPeace,              // the owner is at war with no major civ
     WorldMinEra,                // the world era is at least `value`
     CityMinPopulation,

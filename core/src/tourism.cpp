@@ -15,6 +15,7 @@ size_t at(int i) { return static_cast<size_t>(i); }
 // Flight pastures, plantations and others their Culture (or Faith, Food) (07; generated `tourism`).
 int Game::improvementTourism(PlayerId player) const {
     int total = 0;
+    const bool cristo = holdsWonder(player, W::Cristo);  // Cristo Redentor (03): Seaside Resorts double
     for (int i = 0; i < state_.grid.size(); ++i) {
         const Plot& p = state_.plots[at(i)];
         if (p.owner != player || p.improvement == kNone || p.pillagedTurns > 0 || p.city == kNoCity) continue;
@@ -32,7 +33,7 @@ int Game::improvementTourism(PlayerId player) const {
                               : im.tourismSource == "GOLD" ? YieldType::Gold : YieldType::Culture;
             amount = static_cast<int>(y[static_cast<size_t>(t)].toInt());
         }
-        total += amount * im.tourismPercent / 100;
+        total += amount * im.tourismPercent / 100 * (cristo && im.id == "IMPROVEMENT_SEASIDE_RESORT" ? 2 : 1);
     }
     return total;
 }

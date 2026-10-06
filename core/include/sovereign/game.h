@@ -772,10 +772,13 @@ private:
 
     const Rules* rules_;
     // World wonders read in hot paths, looked up once (03: Wonders).
-    enum class W : uint8_t { Kilwa, Sankore, Oracle, MachuPicchu, Colosseum, Liberty, Zimbabwe, Torre, Count };
+    enum class W : uint8_t { Kilwa, Sankore, Oracle, MachuPicchu, Colosseum, Liberty, Zimbabwe, Torre, Eiffel, GoldenGate, Biosphere, Cristo, Count };
     TypeIndex wonders_[static_cast<size_t>(W::Count)] = {};
     TypeIndex wonderType(W w) const { return wonders_[static_cast<size_t>(w)]; }
     bool holdsWonder(PlayerId player, W w) const;  // one of the player's cities has it
+    static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
+    uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
+    void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings
     GameState state_;
     std::vector<Command> log_;
     std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command

@@ -151,20 +151,26 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
 
 int Game::plotAppeal(Hex plot) const {
     int appeal = onRiver(state_, plot) ? 1 : 0;  // +1 once next to a river
+    const City* home = state_.city(state_.plot(plot).city);
+    const uint32_t held = home ? heldWonders(home->owner) : 0;
+    const bool biosphere = (held & bit(W::Biosphere)) != 0;  // Biosphère (03): Rainforest and Marsh +1 Appeal
     for (int dir = 0; dir < kNumDirs; ++dir) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
         if (!n) continue;
         const Plot& np = state_.plot(*n);
         appeal += rules_->terrains[static_cast<size_t>(np.terrain)].appeal;
-        if (np.feature != kNone) appeal += rules_->features[static_cast<size_t>(np.feature)].appeal;
+        if (np.feature != kNone) {
+            const FeatureType& f = rules_->features[static_cast<size_t>(np.feature)];
+            appeal += f.appeal + (biosphere && (f.id == "FEATURE_JUNGLE" || f.id == "FEATURE_MARSH") ? 1 : 0);
+        }
         if (np.improvement != kNone) appeal += np.pillagedTurns > 0 ? -1 : rules_->improvements[static_cast<size_t>(np.improvement)].appeal;
         if (const CityDistrict* cd = state_.districtAt(*n)) appeal += rules_->districts[static_cast<size_t>(cd->type)].appeal;
         if (state_.wonderAt(*n) != kNone) appeal += 1;
         if (campAt(*n)) appeal -= 1;
     }
-    // Alvar Aalto, Charles Correa (07): appeal across the city where they were used.
-    if (const City* c = state_.city(state_.plot(plot).city); c && !c->greatPeopleHere.empty())
-        appeal += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAppeal).toInt());
+    // Alvar Aalto, Charles Correa (07): appeal across the city where they were used; Eiffel Tower, Golden Gate Bridge (03) in all.
+    if (home && (!home->greatPeopleHere.empty() || (held & (bit(W::Eiffel) | bit(W::GoldenGate))) != 0))
+        appeal += static_cast<int>(sumCityModifiers(state_, *rules_, *home, ModEffect::CityAppeal).toInt());
     return appeal;
 }
 
