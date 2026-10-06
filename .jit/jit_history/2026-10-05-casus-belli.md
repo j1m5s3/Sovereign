@@ -10,4 +10,4 @@ Specs: 08-diplomacy-city-states-governors (War: war types and their grievance pe
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
-- Not modelled: Joint War invitations (allies join through the call to arms instead). The War of Retribution followed in `2026-10-05-promises.md`, the Golden Age War in `2026-10-05-dedications.md`.
+- Not modelled at first: Joint War invitations (allies join through the call to arms instead); since added as a deal item: `2026-10-06-joint-war.md`. The War of Retribution followed in `2026-10-05-promises.md`, the Golden Age War in `2026-10-05-dedications.md`.

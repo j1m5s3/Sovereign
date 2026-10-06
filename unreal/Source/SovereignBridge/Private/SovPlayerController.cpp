@@ -790,7 +790,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
 			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
-				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution"), TEXT("Golden Age War")};
+				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution"), TEXT("Golden Age War"), TEXT("Joint War")};
 			for (const sov::Player& O : G.state().players)
 			{
 				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;

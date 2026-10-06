@@ -118,6 +118,18 @@ bool Game::canDeclareWar(PlayerId player, PlayerId target) const {
     return rel.since == 0 || state_.turn - rel.since >= rules_->globalInt("DIPLOMACY_PEACE_MIN_TURNS");
 }
 
+void Game::declareWarOn(PlayerId by, PlayerId target, CasusBelli why) {
+    Relation& mine = state_.players[static_cast<size_t>(by)].relations[static_cast<size_t>(target)];
+    Relation& theirs = state_.players[static_cast<size_t>(target)].relations[static_cast<size_t>(by)];
+    onWarDeclared(by, target, why);
+    for (Relation* r : {&mine, &theirs}) {
+        r->war = true;
+        r->since = state_.turn;
+        r->peaceOffered = false;
+        r->delegation = 0;  // war sends delegations and embassies home (08)
+    }
+}
+
 bool Game::canMakePeace(PlayerId player, PlayerId target) const {
     if (!atWar(player, target)) return false;
     if (state_.players[static_cast<size_t>(player)].barbarian || state_.players[static_cast<size_t>(target)].barbarian)
@@ -860,18 +872,9 @@ void Game::afterAttack(Unit& u) {
 
 void Game::applyCombat(const Command& c) {
     switch (c.type) {
-        case CommandType::DeclareWar: {
-            Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
-            Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];
-            onWarDeclared(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2));
-            for (Relation* r : {&mine, &theirs}) {
-                r->war = true;
-                r->since = state_.turn;
-                r->peaceOffered = false;
-                r->delegation = 0;  // war sends delegations and embassies home (08)
-            }
+        case CommandType::DeclareWar:
+            declareWarOn(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2));
             return;
-        }
         case CommandType::MakePeace: {
             Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
             Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];

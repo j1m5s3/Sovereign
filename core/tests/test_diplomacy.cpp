@@ -1,5 +1,7 @@
 // Diplomacy: opinions and agendas, deals, denouncing, friendship, open borders and peace
 // (08-diplomacy-city-states-governors.md; leaders-and-art-style.md, the twelve agendas).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/ai.h"
 #include "sovereign/serialize.h"
@@ -568,4 +570,41 @@ TEST(an_embassy_follows_diplomatic_service_and_brings_favor_with_a_diplomatic_qu
     t.cities[0].districts.push_back(dq);
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK_EQ(h->favorPerTurn(0), before + 1);
+}
+
+TEST(a_joint_war_is_agreed_and_declared_together) {
+    GameState s = diploState(3);
+    for (Player& p : s.players) p.relations.resize(3);
+    s.turn = 40;
+    // Player 1 has an army and holds a grudge against player 2.
+    for (int i = 0; i < 4; ++i) addUnit(s, "UNIT_SWORDSMAN", 1, {14, 4 + i});
+    OpinionMemory grudge;
+    grudge.about = 2;
+    grudge.kind = MemoryKind::SurpriseWar;
+    grudge.amount = -60;
+    grudge.duration = 100;
+    grudge.turn = s.turn;
+    s.players[1].memories.push_back(grudge);
+    const std::vector<DealItem> terms = {{DealItemKind::JointWar, 0, 2, kNone}};
+    {
+        auto g = Game::fromScenario(rules(), s);
+        CHECK(g->dealProblem({0, 0, 1, 0, terms}) != CommandError::Ok);  // the proposer needs Foreign Trade
+    }
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_FOREIGN_TRADE"))] = 1;
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->dealProblem({0, 0, 1, 0, terms}) == CommandError::Ok);
+    CHECK(g->dealProblem({0, 0, 1, 0, {{DealItemKind::JointWar, 0, 1, kNone}}}) != CommandError::Ok);  // not on one of them
+    const std::vector<DealItem> offer = g->offerableItems(0, 1);
+    CHECK(std::any_of(offer.begin(), offer.end(), [](const DealItem& i) { return i.kind == DealItemKind::JointWar && i.amount == 2; }));
+    REQUIRE(g->wouldAccept(1, {0, 0, 1, 0, terms}));
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, terms)) == CommandError::Ok);
+    CHECK(g->atWar(0, 2));
+    CHECK(g->atWar(1, 2));
+    CHECK(!g->atWar(0, 1));
+    CHECK_EQ(g->grievances(2, 0), 100);  // a formal war's grievances, with no denouncement
+    // Joining a war already fought: only the newcomer declares.
+    s.players[1].relations[2].war = s.players[2].relations[1].war = true;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(h->submit(Command::proposeDeal(0, 1, terms)) == CommandError::Ok);
+    CHECK(h->atWar(0, 2));
 }
