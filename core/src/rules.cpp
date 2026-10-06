@@ -1411,7 +1411,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.name = j["name"].str(id);
         static const std::pair<const char*, DisasterKind> kinds[] = {
             {"FLOOD", DisasterKind::Flood},   {"ERUPTION", DisasterKind::Eruption}, {"BLIZZARD", DisasterKind::Blizzard}, {"DUST_STORM", DisasterKind::DustStorm},
-            {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire}};
+            {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire},
+            {"NUCLEAR", DisasterKind::Nuclear}};
         for (const auto& [k, v] : kinds) {
             if (j["kind"].str() == k) d.kind = v;
         }
@@ -1419,6 +1420,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.hexes = static_cast<int>(j["hexes"].integer(0));
         d.duration = static_cast<int>(j["duration"].integer(0));
         d.chancePerDegree = static_cast<int>(j["chancePerDegree"].integer(0));
+        d.minTurnAtRisk = static_cast<int>(j["minTurnAtRisk"].integer(0));
+        d.fallout = static_cast<int>(j["fallout"].integer(0));
         static const char* const levels[] = {"MINIMAL", "LIGHT", "MODERATE", "HEAVY", "HYPERREAL"};
         for (int i = 0; i < kNumDisasterIntensities; ++i) d.frequencyTenths[static_cast<size_t>(i)] = static_cast<int>((j["frequency"][levels[i]].fixed() * 10).toInt());
         static const std::pair<const char*, DisasterDamageType> damages[] = {
@@ -1957,7 +1960,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
             {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
             {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}, {"COMPETITION", ProjectEffectKind::Competition},
-            {"DECOMMISSION", ProjectEffectKind::Decommission}, {"FESTIVAL", ProjectEffectKind::Festival}};
+            {"DECOMMISSION", ProjectEffectKind::Decommission}, {"FESTIVAL", ProjectEffectKind::Festival}, {"RECOMMISSION", ProjectEffectKind::Recommission}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;

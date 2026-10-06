@@ -240,6 +240,14 @@ void Game::processClimate() {
                     break;
                 case DisasterKind::Drought: ok = !t.water && p.owner != kNoPlayer && !inDrought(h) && !cityPrevents(p.city, false); break;
                 case DisasterKind::Fire: ok = feat == "FEATURE_FOREST" || feat == "FEATURE_JUNGLE"; break;
+                case DisasterKind::Nuclear: {
+                    // The Industrial Zone of a city whose reactor is old enough (09: nuclear accidents).
+                    const CityDistrict* zone = state_.districtAt(h);
+                    const City* home = zone ? state_.city(p.city) : nullptr;
+                    ok = home && rules_->districts[at(zone->type)].id == "DISTRICT_INDUSTRIAL_ZONE" && home->has(rules_->building("BUILDING_NUCLEAR_POWER_PLANT")) &&
+                         state_.turn - home->reactorSince >= dt.minTurnAtRisk;
+                    break;
+                }
             }
             if (ok) sites.push_back(h);
         }
@@ -266,6 +274,11 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
             break;
         case DisasterKind::Eruption: area = state_.grid.within(center, 1 + extra); break;
         case DisasterKind::Drought: area = state_.grid.within(center, radiusOf(dt.hexes)); break;
+        case DisasterKind::Nuclear:
+            // The Industrial Zone, one ring more per severity (Sovereign reading; the data gives no radius).
+            area = state_.grid.within(center, dt.severity);
+            for (const Hex& h : area) state_.plot(h).fallout = static_cast<uint8_t>(std::max<int>(state_.plot(h).fallout, std::min(255, dt.fallout)));
+            break;
         default: {
             const int radius = radiusOf(dt.hexes) + (dt.kind == DisasterKind::Fire ? 0 : extra);
             area = state_.grid.within(center, radius);

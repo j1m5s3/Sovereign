@@ -1058,13 +1058,14 @@ def era_turns(row):
 
 
 DISASTER_KINDS = [("Flood", "FLOOD"), ("Eruption", "ERUPTION"), ("Blizzard", "BLIZZARD"), ("Dust Storm", "DUST_STORM"),
-                  ("Tornado", "TORNADO"), ("Hurricane", "HURRICANE"), ("Drought", "DROUGHT"), ("Forest Fire", "FIRE")]
+                  ("Tornado", "TORNADO"), ("Hurricane", "HURRICANE"), ("Drought", "DROUGHT"), ("Forest Fire", "FIRE"),
+                  ("Radioactive Steam Venting", "NUCLEAR"), ("Major Radiation Leak", "NUCLEAR"), ("Nuclear Meltdown", "NUCLEAR")]
 
 
 def gen_disasters():
     """Natural disasters the core runs (09: Climate and Disasters [GS]; data: climate-disasters.md):
     frequency per game by Disaster Intensity, damage, fertility afterwards; the climate phases;
-    intensity settings. Natural-wonder eruptions, nuclear accidents and meteors are left out."""
+    intensity settings; nuclear accidents at aging reactors. Natural-wonder eruptions and meteors are left out."""
     path = SPEC / "climate-disasters.md"
     # Storm rows name Ice as their feature: the engine's stand-in for any affected land tile.
     storm_kinds = {"BLIZZARD", "DUST_STORM", "TORNADO", "HURRICANE"}
@@ -1082,6 +1083,8 @@ def gen_disasters():
         events.append({"id": "DISASTER_" + snake(name), "name": name, "kind": kind, "severity": num(r["Severity"]),
                        "hexes": num(r["Hexes"]), "duration": num(r["Duration"]), "chancePerDegree": num(r["ChanceIncreasePerDegree"]),
                        "frequency": {}, "damage": [], "fertility": []})
+        if kind == "NUCLEAR":
+            events[-1]["minTurnAtRisk"] = num(r["MinTurnAtRisk"])
     by_name = {e["name"]: e for e in events}
     # Later rows for a repeated event name are the ordinary (not natural-wonder) variant.
     for r in table(path, "Event frequencies by disaster intensity"):
@@ -1090,6 +1093,8 @@ def gen_disasters():
             e["frequency"][r["Realism setting"].upper()] = num(r["Occurrences per game"])
     damage = {}
     for r in table(path, "Event damage"):
+        if r["Event"] in by_name and r["Damage type"] == "radiation leaked":
+            by_name[r["Event"]]["fallout"] = num(r["Fallout turns"])  # nuclear accidents (09)
         if r["Event"] in by_name:
             damage.setdefault(r["Event"], {})[r["Damage type"]] = {"type": snake(r["Damage type"]), "percent": num(r["%"]),
                                                                      "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
@@ -1136,6 +1141,8 @@ def project_effects(name, text):
         return [{"kind": "COMPETITION", "competition": "WORLD_GAMES", "amount": 50}], []
     if name == "Train Astronauts":
         return [{"kind": "COMPETITION", "competition": "SPACE_STATION", "amount": 30}], []
+    if text and text.strip() == "city recommission reactor":
+        return [{"kind": "RECOMMISSION"}], []  # 09: a nuclear plant's risk starts over
     m = re.fullmatch(r"Decommission (\w+) Power Plant", name)
     if m:
         return [{"kind": "DECOMMISSION", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Climate

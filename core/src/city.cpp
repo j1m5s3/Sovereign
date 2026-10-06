@@ -568,6 +568,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
                 if (!running) return fail(CommandError::CannotBuild);
             }
             if (e.kind == ProjectEffectKind::Decommission && (e.weapon == kNone || !c.has(e.weapon))) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Recommission && !c.has(rules_->building("BUILDING_NUCLEAR_POWER_PLANT"))) return fail(CommandError::CannotBuild);
             if (e.kind == ProjectEffectKind::Aid) {
                 const Competition* aid = runningAidRequest();
                 if (!aid || aid->beneficiary == c.owner || atWar(c.owner, aid->beneficiary)) return fail(CommandError::CannotBuild);
@@ -902,6 +903,8 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
     }
     if (item.kind == ProductionKind::District) dedicationScore(city.owner, "DEDICATION_MONUMENTALITY", 1);
+    // A new reactor starts its age (09: nuclear accidents).
+    if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
     if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))
         state_.players[static_cast<size_t>(city.owner)].faith += Fixed::fromInt(productionCost(city.owner, item) / 4);  // Moksha
     if (item.kind == ProductionKind::Unit) {
@@ -994,6 +997,7 @@ void Game::completeProject(City& city, TypeIndex project) {
                     competitionScore(city.owner, aid->kind, e.amount);
                 }
                 break;
+            case ProjectEffectKind::Recommission: city.reactorSince = state_.turn; break;
             case ProjectEffectKind::Competition: competitionScore(city.owner, static_cast<CompetitionKind>(e.weapon), e.amount); break;
             case ProjectEffectKind::Decommission:
                 // The plant goes, and with it the city's burning of its fuel (09: Climate).

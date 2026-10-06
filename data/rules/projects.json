@@ -50,8 +50,12 @@
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
    "unlock": "TECH_NUCLEAR_FISSION",
-   "modelled": false,
-   "text": "city recommission reactor"
+   "effects": [
+    {
+     "kind": "RECOMMISSION"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_BUILD_NUCLEAR_DEVICE",

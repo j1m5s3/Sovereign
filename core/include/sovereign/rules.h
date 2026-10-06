@@ -745,7 +745,7 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid, Competition, Decommission, Festival };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid, Competition, Decommission, Festival, Recommission };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
@@ -793,7 +793,7 @@ struct DifficultyType {
 };
 
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
-enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire };
+enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear };
 enum class DisasterDamageType : uint8_t {
     ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls, Other,
 };
@@ -812,6 +812,7 @@ struct DisasterType {
     std::string id, name;
     DisasterKind kind = DisasterKind::Flood;
     int severity = 0, hexes = 0, duration = 0, chancePerDegree = 0;
+    int minTurnAtRisk = 0, fallout = 0;  // Nuclear: a reactor's age before it is at risk; fallout turns
     std::array<int, kNumDisasterIntensities> frequencyTenths{};  // expected occurrences per game, x10
     std::vector<DisasterDamage> damage;
     std::vector<DisasterFertility> fertility;

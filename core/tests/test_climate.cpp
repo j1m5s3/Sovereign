@@ -39,7 +39,7 @@ GameState coastState(int w, int h, int players) {
 
 TEST(climate_rules_data) {
     const Rules& r = rules();
-    CHECK_EQ(r.disasters.size(), 17u);
+    CHECK_EQ(r.disasters.size(), 20u);  // 17 natural disasters and 3 nuclear accidents
     CHECK_EQ(r.climatePhases.size(), 7u);
     CHECK_EQ(r.disasterIntensities.size(), 5u);
     CHECK_EQ(r.climatePhases[6].points, 8);
@@ -245,4 +245,36 @@ TEST(renewables_give_free_power) {
     sovtest::endTurns(*g, 1);
     CHECK_EQ(g->state().cities[0].powerSupply, 2);
     CHECK_EQ(g->state().co2, 0);
+}
+
+// ---- nuclear accidents (09: Climate and disasters)
+
+TEST(an_old_reactor_can_melt_down_and_recommissioning_renews_it) {
+    GameState s = flatState(20, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    s.turn = 100;
+    addCity(s, 0, {6, 6}, true, 6);
+    City& c = s.cities[0];
+    CityDistrict zone;
+    zone.type = rules().district("DISTRICT_INDUSTRIAL_ZONE");
+    zone.pos = {7, 6};
+    zone.complete = true;
+    c.districts.push_back(zone);
+    c.buildings = {rules().building("BUILDING_NUCLEAR_POWER_PLANT")};
+    c.reactorSince = 60;
+    const TypeIndex meltdown = disaster("DISASTER_NUCLEAR_MELTDOWN");
+    CHECK_EQ(rules().disasters[at(meltdown)].minTurnAtRisk, 30);
+    CHECK_EQ(rules().disasters[at(meltdown)].fallout, 20);
+    auto g = Game::fromScenario(rules(), s);
+    g->strikeDisaster(meltdown, {7, 6});
+    CHECK_EQ(g->state().plot({7, 6}).fallout, 20);
+    CHECK_EQ(g->state().plot({9, 6}).fallout, 20);  // two rings out (severity 2)
+    // Recommissioning starts the reactor's age over.
+    const ProductionItem renew{ProductionKind::Project, rules().project("PROJECT_RECOMMISSION_NUCLEAR_REACTOR")};
+    s.players[0].techs.done[at(rules().tech("TECH_NUCLEAR_FISSION"))] = 1;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(rules().projects[at(renew.type)].modelled);
+    REQUIRE(h->canProduce(h->state().cities[0], renew));
+    h->completeProject(h->stateMutForTests().cities[0], renew.type);
+    CHECK_EQ(h->state().cities[0].reactorSince, 100);
 }

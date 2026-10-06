@@ -20,4 +20,7 @@ Specs: 08-diplomacy-city-states-governors (Scored Competitions, Diplomatic Victo
 - **Generated effects.** `tools/rules_gen` now gives Train Athletes and Train Astronauts a COMPETITION effect, scoring 50 for the World Games and 30 for the Space Station (the data's score sources). Their projects are open only while that competition runs.
 - **Decommissioning.** Decommission Coal, Oil or Nuclear Power Plant (DECOMMISSION) removes the plant from the city, and with it the fuel it burns. The AI keeps its plants.
 - **Court Festival.** FESTIVAL gives 50 Culture and 50 tourism (toward each major) per luxury copy held beyond the first.
-- **Still unmodelled.** Recommission Nuclear Reactor: nuclear accidents are not modelled.
+- **Nuclear accidents.** The generator now also produces Radioactive Steam Venting, Major Radiation Leak and Nuclear Meltdown (kind NUCLEAR, with `minTurnAtRisk` 10/20/30 and `fallout` 2/10/20 from the data).
+  - They can strike the Industrial Zone of a city whose Nuclear Power Plant is at least that old (`City::reactorSince`, set when the plant is built; save version 60).
+  - Fallout covers the zone and one more ring per severity (Sovereign reading).
+- **Recommission Nuclear Reactor** (RECOMMISSION, needs the plant) resets the reactor's age. The AI renews a reactor 30 turns old.
