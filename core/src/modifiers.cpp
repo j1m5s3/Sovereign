@@ -10,7 +10,7 @@ namespace {
 bool testOne(const Requirement& q, const ReqContext& c) {
     bool ok = false;
     switch (q.type) {
-        case ReqType::PlotHasResource: ok = c.plot && c.plot->resource == q.ref; break;
+        case ReqType::PlotHasResource: ok = c.plot && (q.ref == kNone ? c.plot->resource != kNone : c.plot->resource == q.ref); break;  // no ref: any
         case ReqType::PlotHasFeature: ok = c.plot && (q.ref == kNone ? c.plot->feature != kNone : c.plot->feature == q.ref); break;
         case ReqType::PlotHasTerrain: ok = c.plot && c.plot->terrain == q.ref; break;
         case ReqType::PlotHasImprovement: ok = c.plot && (q.ref == kNone ? c.plot->improvement != kNone : c.plot->improvement == q.ref); break;
@@ -41,6 +41,7 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             ok = c.city && n >= q.value;
             break;
         }
+        case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
         case ReqType::CityOnCapitalContinent: {
             ok = false;
             if (c.city && c.state) {

@@ -72,6 +72,9 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
                 for (const UnitEffect& e : rules_->promotions[static_cast<size_t>(pr)].effects) killReward(kp, e, vt);
             }
         }
+        // War Department (03): the victor heals 20.
+        if (Unit* k = state_.unit(killer->id); k && buildingsOwned(killer->owner, "BUILDING_WAR_DEPARTMENT") > 0)
+            k->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), k->hp + 20);
         // Native Conquest (04): gold of half the victim's strength.
         if (policyIs(killer->owner, "POLICY_NATIVE_CONQUEST")) kp.gold += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat / 2);
         if (Unit* k = state_.unit(killer->id)) {
