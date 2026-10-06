@@ -1,6 +1,6 @@
 # Plan: city-state suzerain bonuses (step 6, "everything else")
 
-Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-alliance-effects.md`. Chosen by Claude under James's standing consent: of the 48 city-states' suzerain bonuses (08: Suzerain), only Cardiff's is applied; the rest are kept as text (`suzerainText` in `citystates.json`). James can redirect at any point.
+Status: done, 2026-10-06. Previous: `jit_history/2026-10-06-alliance-effects.md`. Chosen by Claude under James's standing consent: of the 48 city-states' suzerain bonuses (08: Suzerain), only Cardiff's is applied; the rest are kept as text (`suzerainText` in `citystates.json`). James can redirect at any point.
 
 Specs: 08-diplomacy-city-states-governors (Suzerain); data/city-states (every city-state's suzerain bonus).
 
@@ -10,7 +10,7 @@ Specs: 08-diplomacy-city-states-governors (Suzerain); data/city-states (every ci
    - wonder and project production;
    - Geneva's peace condition; Auckland's coast production and era condition;
    - Mitla's district condition, Taruga's improved-resource condition, Muscat's amenities.
-2. **Bonuses in code:** Akkad (walls), Kabul (XP), Ayutthaya (Culture on buildings), Anshan (Great Works' Science), Antananarivo (Culture per great person), Hattusa (unimproved strategics), Hunza (route length), Johannesburg (resources), Singapore (trade partners), Valletta (walls and Faith purchases), Mohenjo-Daro (fresh water housing), Venice (luxuries at the destination), Kumasi (routes to city-states).
+2. **Done: Bonuses in code:** Akkad (walls), Kabul (XP), Ayutthaya (Culture on buildings), Anshan (Great Works' Science), Antananarivo (Culture per great person), Hattusa (unimproved strategics), Hunza (route length), Johannesburg (resources), Singapore (trade partners), Valletta (walls and Faith purchases), Mohenjo-Daro (fresh water housing), Venice (luxuries at the destination), Kumasi (routes to city-states).
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
@@ -25,3 +25,4 @@ Specs: 08-diplomacy-city-states-governors (Suzerain); data/city-states (every ci
   - Lahore's Nihang;
   - Yerevan and Wolin's promotions.
 - Milestone 1 as built: modifiers for 11 city-states (Auckland, Bologna, Brussels, Geneva, Hong Kong, Mogadishu, Muscat, Mitla, Preslav, Taruga, Wolin; Cardiff stays in code). `envoysAt`, `suzerainOf` and `enjoysSuzerainBonus` are free functions in `modifiers.cpp`; the `Game` methods call them, and Cardiff now uses `enjoysSuzerainBonus` too. New requirements: `PLAYER_AT_PEACE`, `WORLD_MIN_ERA` (Auckland's Industrial-era line reads the world era), `CITY_HAS_IMPROVED_RESOURCE`, and a district form of `city has`. The new item production scope `PROJECTS` covers every project. Mogadishu's and Wolin's abilities are granted but their effects are text.
+- Milestone 2 as built (`Game::suzerainBonus`). Akkad: melee and anti-cavalry units deal full damage to walls. Kabul: double XP from attacking. Ayutthaya: Culture of a tenth of each building's cost when it is done. Anshan: +2 Science from writing, +1 from artifacts and relics. Antananarivo: +2% Culture per great person recruited. Hattusa: +2 a turn of each revealed strategic resource with no improved source. Hunza: +0.2 Gold per plot between a route's cities. Johannesburg: +1 Production per kind of improved resource in the city, +2 after Industrialization. Singapore: +2 Production per major trade partner. Valletta: City Center buildings for Faith at their Gold price, and walls at half price (walls are not purchasable in the data, so that part waits). Mohenjo-Daro: every city houses as if on a river. Venice: +1 Gold per improved luxury at an international destination. Kumasi: +2 Culture and +1 Gold per district on routes to city-states. Not modelled: Chinguetti's Faith per follower (the data's rate would swamp Faith), and Fez.

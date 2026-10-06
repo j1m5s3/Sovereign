@@ -120,6 +120,11 @@ void Game::processLevies(PlayerId player) {
     refreshVisibility(player);
 }
 
+bool Game::suzerainBonus(PlayerId player, const char* cityStateId) const {
+    const TypeIndex type = rules_->cityState(cityStateId);
+    return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
+}
+
 int Game::suzeraintiesOf(PlayerId player) const {
     int n = 0;
     for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player ? 1 : 0;

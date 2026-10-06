@@ -165,6 +165,7 @@ public:
     int envoysAt(PlayerId player, PlayerId cityState) const;
     PlayerId suzerainOf(PlayerId cityState) const;  // kNoPlayer: none
     int suzeraintiesOf(PlayerId player) const;       // living city-states it is suzerain of
+    bool suzerainBonus(PlayerId player, const char* cityStateId) const;  // enjoys that city-state's suzerain bonus (08)
     // Levy Military (08): the Gold to take a city-state's military units for LEVY_MILITARY_TURN_DURATION
     // (LEVY_MILITARY_PERCENT_OF_UNIT_PURCHASE_COST of their purchase cost; -1: not possible).
     int levyCost(PlayerId player, PlayerId cityState) const;

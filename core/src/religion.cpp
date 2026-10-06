@@ -150,6 +150,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
     if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || at(item.type) >= rules_->buildings.size()) return -1;
         const BuildingType& b = rules_->buildings[at(item.type)];
+        // Valletta (08: suzerain): City Center buildings for Faith, at their Gold price.
+        if (b.district == "DISTRICT_CITY_CENTER" && !b.wonder && suzerainBonus(player, "CITYSTATE_VALLETTA") && canProduce(city, item, nullptr, true))
+            return purchaseCost(player, item);
         // Leader ability: a district's buildings for Faith at their gold price (Golden Pilgrimage).
         if (const TypeIndex d = civAbility(player).faithPurchaseDistrict; d != kNone && b.districtType == d && !b.faithOnly && canProduce(city, item)) {
             const int gold = purchaseCost(player, item);
