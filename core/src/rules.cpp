@@ -659,6 +659,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.antiAir = static_cast<int>(j["antiAir"].integer(0));
         u.airSlots = static_cast<int>(j["airSlots"].integer(0));
         u.deliversWmd = j["deliversWmd"].boolean(false);
+        u.excavations = static_cast<int>(j["excavations"].integer(0));
         u.wmdImmune = j["wmdImmune"].boolean(false);
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));

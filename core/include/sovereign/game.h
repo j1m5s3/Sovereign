@@ -387,6 +387,13 @@ public:
     // ---- natural wonders (01: Natural wonders)
     bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
 
+    // ---- archaeology (07: Archaeology)
+    void noteBattle(Hex plot);              // remembered as a future site while the world is young enough
+    void placeAntiquity();                  // once any civ has Natural History
+    CommandError excavateProblem(PlayerId player, UnitId archaeologist) const;
+    void excavate(UnitId archaeologist);
+    bool seesAntiquity(PlayerId player) const;  // it knows Natural History
+
     // ---- tribal villages (01: Tribal Villages)
     void enterVillage(Unit& unit);   // the reward: a category, then a reward in it, by weight
 

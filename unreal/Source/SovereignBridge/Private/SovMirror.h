@@ -73,6 +73,7 @@ struct FSovMirror
 	TArray<TPair<FIntPoint, FIntPoint>> Roads;  // neighbouring revealed plots joined by a road
 	TArray<FSovWonderMarker> Wonders;           // on revealed plots
 	TArray<FIntPoint> Villages;                 // tribal villages on revealed plots (01)
+	TArray<FIntPoint> Antiquity;                // antiquity sites and shipwrecks, once the viewer knows Natural History (07)
 };
 
 FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);

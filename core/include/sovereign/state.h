@@ -43,6 +43,7 @@ struct Plot {
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
     bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
+    uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -571,6 +572,8 @@ struct SOV_API GameState {
     std::vector<Emergency> emergencies; // hostile emergencies, running and settled (08: Emergencies)
     std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
     std::vector<Quest> quests;              // open city-state quests, one per city-state and major (08)
+    std::vector<int32_t> battleSites;       // plots fought over before ARCHAEOLOGY_MAX_ERA (07: Archaeology)
+    bool antiquityPlaced = false;           // the sites have appeared (once a civ has Natural History)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]

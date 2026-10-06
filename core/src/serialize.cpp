@@ -294,6 +294,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         for (int8_t f : p.fertility) w.i8(f);
         w.u8(p.fallout);
         w.boolean(p.village);
+        w.u8(p.antiquity);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -547,6 +548,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(cp.settled);
         w.i8(cp.beneficiary);
     }
+    writeI32s(w, s.battleSites);
+    w.boolean(s.antiquityPlaced);
     w.u32(static_cast<uint32_t>(s.quests.size()));
     for (const Quest& q : s.quests) {
         w.i8(q.cityState);
@@ -670,6 +673,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (int8_t& f : p.fertility) f = r.i8();
         p.fallout = r.u8();
         p.village = r.boolean();
+        p.antiquity = r.u8();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -1018,6 +1022,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         cp.settled = r.boolean();
         cp.beneficiary = r.i8();
     }
+    if (!readI32s(r, s.battleSites)) return false;
+    s.antiquityPlaced = r.boolean();
     uint32_t nquest = r.u32();
     if (!r.checkCount(nquest, 7)) return false;
     s.quests.resize(nquest);

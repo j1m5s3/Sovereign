@@ -307,6 +307,8 @@ def gen_units():
         }
         if combat > 0 and "no ZOC" not in special and row["Domain"] != "Air":
             u["zoneOfControl"] = True
+        if row["Unit"] == "Archaeologist":
+            u["excavations"] = 3  # 07: Archaeology (the Archaeologist's three digs; not in the extracted table)
         if row["Unit"] == "Aircraft Carrier":
             u["airSlots"] = 2  # 05: Naval carrier, 2 air slots (more with promotions)
         if cls == "Air Bomber" or row["Unit"] == "Nuclear Submarine":

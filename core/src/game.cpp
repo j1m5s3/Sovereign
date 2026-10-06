@@ -267,6 +267,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
+        case CommandType::Excavate: return excavateProblem(c.player, c.id);
         case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
@@ -747,6 +748,7 @@ void Game::apply(const Command& c) {
             if (c.arg == 1) pillage(c.id, c.target);
             else pillage(c.id);
             break;
+        case CommandType::Excavate: excavate(c.id); break;
         case CommandType::FormUnit: {
             Unit& u = *state_.unit(c.id);
             const Unit& w = *state_.unit(c.arg);
@@ -991,6 +993,7 @@ void Game::beginGlobalTurn() {
     processCompetitions();
     checkQuests();
     assignQuests();
+    placeAntiquity();
     processProfiles();
     processSpaceRace();
     processReligion();
@@ -1051,7 +1054,7 @@ Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {
     u.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     u.movesLeft = Fixed::fromInt(rules_->units[static_cast<size_t>(type)].moves);
     const UnitType& ut = rules_->units[static_cast<size_t>(type)];
-    u.charges = ut.buildCharges;
+    u.charges = ut.buildCharges > 0 ? ut.buildCharges : ut.excavations;
     Player& p = state_.players[static_cast<size_t>(owner)];
     if (ut.layer == UnitLayer::Military) p.strongestUnit = std::max(p.strongestUnit, ut.combat);
     state_.units.push_back(u);  // ids only grow, so the vector stays sorted

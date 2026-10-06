@@ -289,6 +289,20 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		VillagePieces[i]->SetVisibility(false);
 	}
+	// Antiquity sites (07): a pale stone.
+	int32 SiteCount = 0;
+	for (const FIntPoint& A : Mirror.Antiquity)
+	{
+		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, CubeMesh.Get());
+		C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 4));
+		C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
+		C->SetRelativeScale3D(FVector(0.16, 0.1, 0.08));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.8f, 0.78f, 0.7f)));
+	}
+	for (int32 i = SiteCount; i < AntiquityPieces.Num(); ++i)
+	{
+		AntiquityPieces[i]->SetVisibility(false);
+	}
 
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{

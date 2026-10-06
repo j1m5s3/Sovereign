@@ -954,6 +954,25 @@ void build(View& v, UnitId id) {
 // Expected value of an attack in points; INT_MIN when it is not worth making.
 bool approach(View& v, UnitId id, Hex goal, bool onto);
 
+// Archaeologists (07): dig where they stand, else walk to the nearest site they may dig.
+void archaeologist(View& v, UnitId id) {
+    const GameState& s = v.s();
+    const Unit* u = s.unit(id);
+    if (!u) return;
+    if (v.game.excavateProblem(v.me, id) == CommandError::Ok) {
+        v.game.submit(Command::excavate(v.me, id));
+        return;
+    }
+    std::optional<Hex> best;
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const Hex h = s.grid.at(i);
+        const Plot& p = s.plot(h);
+        if (p.antiquity == 0 || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
+        if (!best || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *best)) best = h;
+    }
+    if (!best || !approach(v, id, *best, true)) v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
+
 // Military Engineers [GS]: railroads along the straight lines from the capital to each other city,
 // the nearest unlaid plot first (01: Routes).
 void engineer(View& v, UnitId id) {
@@ -1468,6 +1487,13 @@ void production(View& v) {
                     else if (t.agent) value = wantAssassin ? 250 + v.posture.assassins : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.id == "UNIT_MILITARY_ENGINEER") value = wantEngineer ? 220 : 0;
+                    else if (t.excavations > 0) {
+                        // An Archaeologist while sites lie open and none is out digging (07).
+                        int sites = 0, diggers = 0;
+                        for (const Plot& pl : s.plots) sites += pl.antiquity != 0 && (pl.owner == kNoPlayer || pl.owner == v.me) ? 1 : 0;
+                        for (const Unit& o : s.units) diggers += o.owner == v.me && v.r.units[at(o.type)].excavations > 0 ? 1 : 0;
+                        value = sites > 0 && diggers == 0 ? 200 : 0;
+                    }
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
@@ -2109,6 +2135,7 @@ void playTurn(Game& game) {
         else if (t.id == "UNIT_TRADER") trader(v, id);
         else if (t.foundCity) settle(v, id);
         else if (t.id == "UNIT_MILITARY_ENGINEER") engineer(v, id);
+        else if (t.excavations > 0) archaeologist(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }

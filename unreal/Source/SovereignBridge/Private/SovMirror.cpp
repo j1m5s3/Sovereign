@@ -216,6 +216,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 	{
 		const sov::Hex H = S.grid.at(I);
 		if (S.plot(H).village && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Villages.Add(FIntPoint(H.x, H.y));
+		if (S.plot(H).antiquity && Game.seesAntiquity(View) && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Antiquity.Add(FIntPoint(H.x, H.y));
 	}
 
 	for (const sov::Unit& U : S.units)

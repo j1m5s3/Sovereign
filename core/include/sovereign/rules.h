@@ -198,6 +198,7 @@ struct UnitType {
     int antiAir = 0;  // strength against aircraft striking an adjacent plot (05: air combat)
     int airSlots = 0; // aircraft it carries (Aircraft Carrier)
     bool deliversWmd = false;  // bombers and the Nuclear Submarine (05: Nuclear weapons)
+    int excavations = 0;       // antiquity sites it may dig (the Archaeologist; 07: Archaeology)
     bool wmdImmune = false;    // the Giant Death Robot
     int moves = 2;
     int sight = 2;

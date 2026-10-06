@@ -61,6 +61,7 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> WonderPieces;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> VillagePieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> AntiquityPieces;
 
 	// Road segments between plot centres.
 	UPROPERTY()

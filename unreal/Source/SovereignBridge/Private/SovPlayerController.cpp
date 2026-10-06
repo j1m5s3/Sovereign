@@ -1004,6 +1004,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Archaeology (07): an Archaeologist digs the site it stands on.
+			if (G.excavateProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Excavate an Artifact"), sov::Command::excavate(Me(), U->id)});
+			}
 			// Formations (05): merge with a neighbouring twin.
 			for (const sov::Unit& W : G.state().units)
 			{

@@ -72,6 +72,7 @@ enum class CommandType : uint8_t {
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
     RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
+    Excavate = 58,              // id = Archaeologist on an antiquity site or shipwreck: an Artifact into a free slot
     FormUnit = 57,              // id = military unit, arg = a neighbouring unit of its type: a Corps/Fleet, or an Army/Armada
     Pillage = 55,               // id = military land unit: pillages the improvement or district on its plot (enemy land)
     RepairImprovement = 56,     // id = Builder: repairs the pillaged improvement on its own plot (no charge)
@@ -205,6 +206,7 @@ struct Command {
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
+    static Command excavate(PlayerId p, UnitId archaeologist) { return {CommandType::Excavate, p, archaeologist, {}, 0, 0}; }
     static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }
     static Command pillage(PlayerId p, UnitId unit) { return {CommandType::Pillage, p, unit, {}, 0, 0}; }
     // A coastal raid (05): a naval melee unit or raider pillages the neighbouring land plot `at` (arg 1).
