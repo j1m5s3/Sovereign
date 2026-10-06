@@ -99,6 +99,12 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             if (maj >= 0) return religionHas(s, maj, m.sourceIndex) ? &subject : nullptr;
             return owner.pantheon == m.sourceIndex ? &subject : nullptr;
         }
+        case ModSource::GreatPerson: {
+            // Its city effects where it was used; its player effects once its owner has used it (07).
+            if (m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots)
+                return std::find(subject.greatPeopleHere.begin(), subject.greatPeopleHere.end(), m.sourceIndex) != subject.greatPeopleHere.end() ? &subject : nullptr;
+            return std::find(owner.greatPeopleActivated.begin(), owner.greatPeopleActivated.end(), m.sourceIndex) != owner.greatPeopleActivated.end() ? &subject : nullptr;
+        }
         case ModSource::Governor:
             // The owner's governor established in this city holds the promotion (08: Governors).
             for (const Governor& g : owner.governors) {
@@ -189,6 +195,7 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
         if (m.unit != kNone && m.unit != unitType) return;
         if (m.maxEra >= 0 && u.era > m.maxEra) return;
         if (m.minEra >= 0 && u.era < m.minEra) return;
+        if (m.military && u.layer != UnitLayer::Military) return;
         total += m.amount;
     });
     return total;
@@ -217,6 +224,9 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
             case ModSource::Policy:
             case ModSource::Government: applies = playerHasSource(m, player); break;
             case ModSource::Governor: applies = false; break;  // city effects only
+            case ModSource::GreatPerson:
+                applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
+                break;
             case ModSource::Belief:
                 applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
                 break;
@@ -307,6 +317,14 @@ Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player
         if (hit) out[static_cast<size_t>(m.yield)] += m.amount;
     });
     return out;
+}
+
+int districtTourism(const GameState& s, const Rules& r, const Player& player, TypeIndex district) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, ModEffect::DistrictTourism, [&](const Modifier& m) {
+        if (m.district == district) total += m.amount;
+    });
+    return static_cast<int>(total.toInt());
 }
 
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {

@@ -65,6 +65,9 @@ SOV_API Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, con
 SOV_API Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
                                         bool suzerain);
 
+// Tourism from each of the player's completed districts of this type (Masaru Ibuka, Jamsetji Tata).
+SOV_API int districtTourism(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
+
 // Combat XP bonus percent for the player's units of this class.
 SOV_API Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 

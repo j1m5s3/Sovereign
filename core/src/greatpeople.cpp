@@ -214,7 +214,7 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
         if (why) *why = CommandError::Ok;
         return true;
     }
-    if (g.effects.empty()) return fail(CommandError::CannotActivate);  // its effects need systems not built yet
+    if (g.effects.empty() && !g.hasModifiers) return fail(CommandError::CannotActivate);  // its effects need systems not built yet
     if (g.ownedTile && plot.owner != u->owner) return fail(CommandError::CannotActivate);
     if (g.district != kNone) {
         const bool center = rules_->districts[at(g.district)].id == "DISTRICT_CITY_CENTER";
@@ -290,9 +290,9 @@ void Game::applyGreatPeople(const Command& c) {
             applyGreatPersonEffect(*u, fx);
             u = state_.unit(c.id);  // a granted unit may move the unit list
         }
-        if (std::any_of(g.effects.begin(), g.effects.end(),
-                        [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::BuildingYield || fx.kind == GreatPersonEffectKind::Ability; }))
-            p.greatPeopleActivated.push_back(u->greatPerson);
+        // Its lasting effects: the player's, and the city's where it was used (07).
+        p.greatPeopleActivated.push_back(u->greatPerson);
+        if (City* here = state_.city(state_.plot(u->pos).city); here && here->owner == c.player) here->greatPeopleHere.push_back(u->greatPerson);
     }
     if (--u->charges <= 0) removeUnit(c.id);
     refreshVisibility(c.player);

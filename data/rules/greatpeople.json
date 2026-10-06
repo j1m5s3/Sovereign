@@ -142,8 +142,16 @@
     "ownedTile": true,
     "district": "DISTRICT_ENCAMPMENT"
    },
-   "untrackedEffects": [
-    "-25% war weariness (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_TRUNG_TRAC_1",
+     "source": "GREAT_PERSON_TRUNG_TRAC",
+     "collection": "PLAYER",
+     "effect": "ADJUST_WAR_WEARINESS_PERCENT",
+     "arguments": {
+      "amount": -25
+     }
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -166,8 +174,16 @@
     "ownedTile": true,
     "district": "DISTRICT_CITY_CENTER"
    },
-   "untrackedEffects": [
-    "+2 Loyalty per turn (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_THELFL_D_1",
+     "source": "GREAT_PERSON_THELFL_D",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     }
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -367,8 +383,16 @@
     "ownedTile": true,
     "district": "DISTRICT_CITY_CENTER"
    },
-   "untrackedEffects": [
-    "+4 Loyalty per turn (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_JOS_DE_SAN_MART_N_1",
+     "source": "GREAT_PERSON_JOS_DE_SAN_MART_N",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 4
+     }
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -516,8 +540,17 @@
    "class": "GREAT_PERSON_CLASS_GENERAL",
    "era": "ERA_ATOMIC",
    "charges": 1,
-   "untrackedEffects": [
-    "+5% Production toward military units in all your cities (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_DWIGHT_EISENHOWER_1",
+     "source": "GREAT_PERSON_DWIGHT_EISENHOWER",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "amount": 5,
+      "military": true
+     }
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -592,8 +625,16 @@
     "ownedTile": true,
     "district": "DISTRICT_CITY_CENTER"
    },
-   "untrackedEffects": [
-    "+6 Loyalty per turn (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_SUDIRMAN_1",
+     "source": "GREAT_PERSON_SUDIRMAN",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 6
+     }
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -726,8 +767,17 @@
      "ref": "UNIT_QUADRIREME"
     }
    ],
-   "untrackedEffects": [
-    "+20% Production toward military units in all your cities"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_THEMISTOCLES_1",
+     "source": "GREAT_PERSON_THEMISTOCLES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "amount": 20,
+      "military": true
+     }
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -1117,8 +1167,16 @@
    "class": "GREAT_PERSON_CLASS_ADMIRAL",
    "era": "ERA_MODERN",
    "charges": 1,
-   "untrackedEffects": [
-    "-25% war weariness (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_JOAQUIM_MARQUES_LISBOA_1",
+     "source": "GREAT_PERSON_JOAQUIM_MARQUES_LISBOA",
+     "collection": "PLAYER",
+     "effect": "ADJUST_WAR_WEARINESS_PERCENT",
+     "arguments": {
+      "amount": -25
+     }
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -1141,8 +1199,16 @@
     "ownedTile": true,
     "district": "DISTRICT_HARBOR"
    },
-   "untrackedEffects": [
-    "+6 Loyalty per turn (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_TOGO_HEIHACHIRO_1",
+     "source": "GREAT_PERSON_TOGO_HEIHACHIRO",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 6
+     }
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -1195,8 +1261,19 @@
      "ref": "UNIT_SUBMARINE"
     }
    ],
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_CHESTER_NIMITZ_1",
+     "source": "GREAT_PERSON_CHESTER_NIMITZ",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "amount": 20,
+      "military": true
+     }
+    }
+   ],
    "untrackedEffects": [
-    "+20% Production toward military units in all your cities",
     "+1 Oil per turn (one-time)"
    ],
    "aura": {
@@ -1501,8 +1578,16 @@
     "ownedTile": true,
     "district": "DISTRICT_CITY_CENTER"
    },
-   "untrackedEffects": [
-    "+1 Appeal (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_ALVAR_AALTO_1",
+     "source": "GREAT_PERSON_ALVAR_AALTO",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_APPEAL",
+     "arguments": {
+      "amount": 1
+     }
+    }
    ]
   },
   {
@@ -1537,8 +1622,17 @@
      "orComplete": false
     }
    ],
-   "untrackedEffects": [
-    "+20% Production toward space race projects in all your cities"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_ROBERT_GODDARD_1",
+     "source": "GREAT_PERSON_ROBERT_GODDARD",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "SPACE_RACE",
+      "amount": 20
+     }
+    }
    ]
   },
   {
@@ -1617,8 +1711,16 @@
     "ownedTile": true,
     "district": "DISTRICT_CITY_CENTER"
    },
-   "untrackedEffects": [
-    "+2 Appeal (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_CHARLES_CORREA_1",
+     "source": "GREAT_PERSON_CHARLES_CORREA",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_APPEAL",
+     "arguments": {
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -1646,8 +1748,17 @@
     "ownedTile": true,
     "district": "DISTRICT_SPACEPORT"
    },
-   "untrackedEffects": [
-    "+100% Production toward space race projects in all your cities"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_WERNHER_VON_BRAUN_1",
+     "source": "GREAT_PERSON_WERNHER_VON_BRAUN",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "SPACE_RACE",
+      "amount": 100
+     }
+    }
    ]
   },
   {
@@ -1978,8 +2089,16 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
-   "untrackedEffects": [
-    "+25% Tourism to civs with your trade routes (one-time)"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_SARAH_BREEDLOVE_1",
+     "source": "GREAT_PERSON_SARAH_BREEDLOVE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_ROUTE_TOURISM_PERCENT",
+     "arguments": {
+      "amount": 25
+     }
+    }
    ]
   },
   {
@@ -2021,9 +2140,19 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_MELITTA_BENTZ_1",
+     "source": "GREAT_PERSON_MELITTA_BENTZ",
+     "collection": "PLAYER",
+     "effect": "ADJUST_ROUTE_TOURISM_PERCENT",
+     "arguments": {
+      "amount": 25
+     }
+    }
+   ],
    "untrackedEffects": [
-    "+1 Trade Route capacity (one-time)",
-    "+25% Tourism to civs with your trade routes (one-time)"
+    "+1 Trade Route capacity (one-time)"
    ]
   },
   {
@@ -2064,8 +2193,17 @@
     "ownedTile": true,
     "district": "DISTRICT_INDUSTRIAL_ZONE"
    },
-   "untrackedEffects": [
-    "+10 Tourism from the district for your districts where district is Industrial Zone"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_MASARU_IBUKA_1",
+     "source": "GREAT_PERSON_MASARU_IBUKA",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_TOURISM",
+     "arguments": {
+      "district": "DISTRICT_INDUSTRIAL_ZONE",
+      "amount": 10
+     }
+    }
    ]
   },
   {
@@ -2078,8 +2216,17 @@
     "ownedTile": true,
     "district": "DISTRICT_CAMPUS"
    },
-   "untrackedEffects": [
-    "+10 Tourism from the district for your districts where district is Campus"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_JAMSETJI_TATA_1",
+     "source": "GREAT_PERSON_JAMSETJI_TATA",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_TOURISM",
+     "arguments": {
+      "district": "DISTRICT_CAMPUS",
+      "amount": 10
+     }
+    }
    ]
   },
   {
@@ -2478,9 +2625,27 @@
     "ownedTile": true,
     "district": "DISTRICT_CAMPUS"
    },
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_IBN_KHALDUN_1",
+     "source": "GREAT_PERSON_IBN_KHALDUN",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     }
+    },
+    {
+     "id": "GREAT_PERSON_IBN_KHALDUN_2",
+     "source": "GREAT_PERSON_IBN_KHALDUN",
+     "collection": "OWNER_CITY",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 2
+     }
+    }
+   ],
    "untrackedEffects": [
-    "+1 Amenity (one-time)",
-    "+2 Housing (one-time)",
     "+4% Culture while Ecstatic in all your cities (one-time)",
     "+4% Faith while Ecstatic in all your cities (one-time)",
     "+4% Gold while Ecstatic in all your cities (one-time)",
@@ -2761,8 +2926,17 @@
     "ownedTile": true,
     "district": "DISTRICT_SPACEPORT"
    },
-   "untrackedEffects": [
-    "+100% Production toward space race projects in all your cities"
+   "modifiers": [
+    {
+     "id": "GREAT_PERSON_STEPHANIE_KWOLEK_1",
+     "source": "GREAT_PERSON_STEPHANIE_KWOLEK",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "SPACE_RACE",
+      "amount": 100
+     }
+    }
    ]
   },
   {
