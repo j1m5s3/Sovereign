@@ -109,6 +109,9 @@ void Game::competitionScore(PlayerId player, CompetitionKind kind, int amount) {
     }
 }
 
+static_assert(static_cast<int>(CompetitionKind::WorldGames) == 1 && static_cast<int>(CompetitionKind::SpaceStation) == 6,
+              "rules.cpp maps competition projects to these values");
+
 int Game::competitionStanding(const Competition& c, PlayerId player) const {
     const Player& p = state_.players[at(player)];
     const int64_t base = at(player) < c.baseline.size() ? c.baseline[at(player)] : 0;
@@ -120,7 +123,7 @@ int Game::competitionStanding(const Competition& c, PlayerId player) const {
                 if (city.owner != player) continue;
                 n += (stadium != kNone && city.has(stadium) ? 1 : 0) + (aquatics != kNone && city.has(aquatics) ? 1 : 0);
             }
-            return n;
+            return n + (at(player) < c.scores.size() ? c.scores[at(player)] : 0);  // plus Train Athletes
         }
         case CompetitionKind::NobelPeace: return static_cast<int>(std::max<int64_t>(0, p.favor - base));
         case CompetitionKind::ClimateAccords: return -static_cast<int>(std::min<int64_t>(1000000, std::max<int64_t>(0, p.co2 - base)));

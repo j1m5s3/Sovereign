@@ -562,6 +562,19 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         // Repair Outer Defenses: only with walls that are down. Send Aid: only while another civ asks for aid.
         for (const ProjectEffect& e : pj.effects) {
             if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Competition) {
+                bool running = false;
+                for (const Competition& cp : state_.competitions) running = running || (!cp.settled && static_cast<TypeIndex>(cp.kind) == e.weapon);
+                if (!running) return fail(CommandError::CannotBuild);
+            }
+            if (e.kind == ProjectEffectKind::Decommission && (e.weapon == kNone || !c.has(e.weapon))) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Recommission && !c.has(rules_->building("BUILDING_NUCLEAR_POWER_PLANT"))) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Convert) {
+                // A city with another kind of power plant converts it (09: Power).
+                bool other = false;
+                for (TypeIndex b : c.buildings) other = other || (b != e.weapon && rules_->buildings[static_cast<size_t>(b)].burnsResource != kNone);
+                if (e.weapon == kNone || c.has(e.weapon) || !other) return fail(CommandError::CannotBuild);
+            }
             if (e.kind == ProjectEffectKind::Aid) {
                 const Competition* aid = runningAidRequest();
                 if (!aid || aid->beneficiary == c.owner || atWar(c.owner, aid->beneficiary)) return fail(CommandError::CannotBuild);
@@ -804,6 +817,7 @@ void Game::applyCity(const Command& c) {
                     const UnitType& bought = rules_->units[static_cast<size_t>(item.type)];
                     // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
                     u.religion = static_cast<int16_t>(bought.religiousStrength > 0 || bought.spreadCharges > 0 ? religion : -1);
+                    if (bought.id == "UNIT_ROCK_BAND") grantBandPromotion(u);  // every band starts with one (07)
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                 }
@@ -895,6 +909,8 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
     }
     if (item.kind == ProductionKind::District) dedicationScore(city.owner, "DEDICATION_MONUMENTALITY", 1);
+    // A new reactor starts its age (09: nuclear accidents).
+    if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
     if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))
         state_.players[static_cast<size_t>(city.owner)].faith += Fixed::fromInt(productionCost(city.owner, item) / 4);  // Moksha
     if (item.kind == ProductionKind::Unit) {
@@ -961,6 +977,7 @@ void Game::completeProject(City& city, TypeIndex project) {
     if (p.projectsDone.size() < rules_->projects.size()) p.projectsDone.resize(rules_->projects.size(), 0);
     ++p.projectsDone[static_cast<size_t>(project)];
     if (pj.spaceRace) competitionScore(city.owner, CompetitionKind::SpaceStation, 30);  // space station score project
+    if (pj.id == "PROJECT_BUILD_TERRESTRIAL_LASER_STATION") ++city.laserStations;  // 09: +5 power demand each
     if (pj.resource != kNone) p.stockpile[static_cast<size_t>(pj.resource)] = std::max(0, p.stockpile[static_cast<size_t>(pj.resource)] - pj.resourceAmount);
     for (const auto& [cls, points] : pj.greatPersonPoints) {
         if (static_cast<size_t>(cls) < p.greatPersonPoints.size()) p.greatPersonPoints[static_cast<size_t>(cls)] += points;
@@ -987,6 +1004,32 @@ void Game::completeProject(City& city, TypeIndex project) {
                     competitionScore(city.owner, aid->kind, e.amount);
                 }
                 break;
+            case ProjectEffectKind::Recommission: city.reactorSince = state_.turn; break;
+            case ProjectEffectKind::Convert:
+                city.buildings.erase(std::remove_if(city.buildings.begin(), city.buildings.end(),
+                                                    [&](TypeIndex b) { return rules_->buildings[static_cast<size_t>(b)].burnsResource != kNone; }),
+                                     city.buildings.end());
+                city.buildings.insert(std::lower_bound(city.buildings.begin(), city.buildings.end(), e.weapon), e.weapon);
+                if (rules_->buildings[static_cast<size_t>(e.weapon)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
+                break;
+            case ProjectEffectKind::Competition: competitionScore(city.owner, static_cast<CompetitionKind>(e.weapon), e.amount); break;
+            case ProjectEffectKind::Decommission:
+                // The plant goes, and with it the city's burning of its fuel (09: Climate).
+                city.buildings.erase(std::remove(city.buildings.begin(), city.buildings.end(), e.weapon), city.buildings.end());
+                break;
+            case ProjectEffectKind::Festival: {
+                // Court Festival: Culture and tourism for each luxury copy beyond the first held.
+                int surplus = 0;
+                for (size_t r = 0; r < rules_->resources.size(); ++r) {
+                    if (rules_->resources[r].cls == ResourceClass::Luxury) surplus += std::max(0, luxuryCopies(city.owner, static_cast<TypeIndex>(r)) - 1);
+                }
+                p.civics.overflow += Fixed::fromInt(e.amount * surplus);
+                if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
+                for (const Player& o : state_.players) {
+                    if (o.id != city.owner && isMajorCiv(o.id)) p.tourismTo[static_cast<size_t>(o.id)] += e.amount * surplus;
+                }
+                break;
+            }
             case ProjectEffectKind::Wmd:
                 if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
                 if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;
@@ -1195,6 +1238,7 @@ void Game::processCities(PlayerId pid) {
                 int pct = 100;
                 if (nuclear && cityGovernorHas(city, "GOVERNOR_PROMOTION_ARMS_RACE_PROPONENT")) pct += 30;
                 if (pj.spaceRace && cityGovernorHas(city, "GOVERNOR_PROMOTION_SPACE_INITIATIVE")) pct += 30;
+                if (governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY")) pct += 30;  // 04: Synthetic Technocracy
                 prod = prod * pct / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)

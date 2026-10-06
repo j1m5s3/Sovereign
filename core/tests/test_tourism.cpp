@@ -93,3 +93,23 @@ TEST(a_rock_band_plays_a_foreign_city_for_tourism) {
     const Unit* after = g->state().unit(band);
     CHECK(!after || after->movesLeft == Fixed());
 }
+
+TEST(a_bands_promotion_adds_its_burst_where_it_plays) {
+    GameState s = landState();
+    CityDistrict campus;
+    campus.type = rules().district("DISTRICT_CAMPUS");
+    campus.pos = {17, 6};
+    campus.complete = true;
+    s.cities[1].districts.push_back(campus);
+    s.plot({17, 6}).owner = 1;
+    s.plot({17, 6}).city = s.cities[1].id;
+    const UnitId band = addUnit(s, "UNIT_ROCK_BAND", 0, {17, 6});
+    s.units.back().promotions.push_back(rules().promotion("PROMOTION_SPACE_ROCK"));
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex space = rules().promotion("PROMOTION_SPACE_ROCK");
+    bool burst = false;
+    for (const UnitEffect& e : rules().promotions[at(space)].effects) burst = burst || (e.kind == UnitEffectKind::BandBurst && e.at == "DISTRICT_CAMPUS");
+    REQUIRE(burst);
+    REQUIRE(g->submit(Command::performConcert(0, band)) == CommandError::Ok);
+    CHECK(g->state().players[0].tourismTo[1] >= 500);
+}

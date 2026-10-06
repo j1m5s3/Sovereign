@@ -136,6 +136,9 @@ enum class UnitEffectKind : uint8_t {
     HealOnKill,         // +amount HP when it destroys a unit
     MeleeAndRanged,     // a ranged unit that may also attack in melee
     CaptureAsBuilder,   // a land unit it destroys joins its owner as a Builder
+    // Rock Band promotions [GS] (07: Rock Bands).
+    BandLevel,          // +amount levels for a concert at `at`
+    BandBurst,          // +amount tourism from a concert at `at`
 };
 
 enum class CombatAtom : uint8_t {
@@ -168,6 +171,7 @@ struct UnitEffect {
     UnitEffectKind kind = UnitEffectKind::Untracked;
     int amount = 0;
     std::vector<std::vector<CombatCondition>> when;  // every group needs any one condition
+    std::string at;  // BandLevel/BandBurst: a district or improvement id, or WONDER, NATIONAL_PARK, NATURAL_WONDER
 };
 
 struct AbilityType {
@@ -541,7 +545,7 @@ struct MomentType {
 struct RockBandResult {
     std::string id, name;
     int albumSales = 0, tourismBomb = 0, probability = 0;
-    bool dies = false, gainsLevel = false;
+    bool dies = false, gainsLevel = false, extraPromotion = false;
 };
 
 // A dedication [R&F] (09: Dedications): chosen at a new era within its era window.
@@ -741,11 +745,12 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid, Competition, Decommission, Festival, Recommission, Convert };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
-    TypeIndex weapon = kNone;  // Wmd: Rules::wmds
+    TypeIndex weapon = kNone;  // Wmd: Rules::wmds; Decommission: the power plant (Rules::buildings);
+                               // Competition: the CompetitionKind it scores
 };
 // A weapon of mass destruction (05: Nuclear weapons; data: units.md, WMDs).
 struct WmdType {
@@ -788,7 +793,7 @@ struct DifficultyType {
 };
 
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).
-enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire };
+enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear };
 enum class DisasterDamageType : uint8_t {
     ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls, Other,
 };
@@ -807,6 +812,7 @@ struct DisasterType {
     std::string id, name;
     DisasterKind kind = DisasterKind::Flood;
     int severity = 0, hexes = 0, duration = 0, chancePerDegree = 0;
+    int minTurnAtRisk = 0, fallout = 0;  // Nuclear: a reactor's age before it is at risk; fallout turns
     std::array<int, kNumDisasterIntensities> frequencyTenths{};  // expected occurrences per game, x10
     std::vector<DisasterDamage> damage;
     std::vector<DisasterFertility> fertility;

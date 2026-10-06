@@ -565,6 +565,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
             {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
+            {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -587,6 +588,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 return false;
             }
             fx.amount = static_cast<int>(e["amount"].integer(0));
+            fx.at = e["at"].str();
             for (const Json& group : e["when"].items()) {
                 std::vector<CombatCondition> any;
                 for (const Json& a : group.items()) {
@@ -1350,6 +1352,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         rb.probability = static_cast<int>(j["probability"].integer(0));
         rb.dies = j["dies"].boolean(false);
         rb.gainsLevel = j["gainsLevel"].boolean(false);
+        rb.extraPromotion = j["extraPromotion"].boolean(false);
         rockBandResults.push_back(std::move(rb));
     }
     for (const auto& [id, j] : m.tables["dedications"]) {
@@ -1408,7 +1411,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.name = j["name"].str(id);
         static const std::pair<const char*, DisasterKind> kinds[] = {
             {"FLOOD", DisasterKind::Flood},   {"ERUPTION", DisasterKind::Eruption}, {"BLIZZARD", DisasterKind::Blizzard}, {"DUST_STORM", DisasterKind::DustStorm},
-            {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire}};
+            {"TORNADO", DisasterKind::Tornado}, {"HURRICANE", DisasterKind::Hurricane}, {"DROUGHT", DisasterKind::Drought}, {"FIRE", DisasterKind::Fire},
+            {"NUCLEAR", DisasterKind::Nuclear}};
         for (const auto& [k, v] : kinds) {
             if (j["kind"].str() == k) d.kind = v;
         }
@@ -1416,6 +1420,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.hexes = static_cast<int>(j["hexes"].integer(0));
         d.duration = static_cast<int>(j["duration"].integer(0));
         d.chancePerDegree = static_cast<int>(j["chancePerDegree"].integer(0));
+        d.minTurnAtRisk = static_cast<int>(j["minTurnAtRisk"].integer(0));
+        d.fallout = static_cast<int>(j["fallout"].integer(0));
         static const char* const levels[] = {"MINIMAL", "LIGHT", "MODERATE", "HEAVY", "HYPERREAL"};
         for (int i = 0; i < kNumDisasterIntensities; ++i) d.frequencyTenths[static_cast<size_t>(i)] = static_cast<int>((j["frequency"][levels[i]].fixed() * 10).toInt());
         static const std::pair<const char*, DisasterDamageType> damages[] = {
@@ -1953,14 +1959,20 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
             {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
-            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}};
+            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}, {"COMPETITION", ProjectEffectKind::Competition},
+            {"DECOMMISSION", ProjectEffectKind::Decommission}, {"FESTIVAL", ProjectEffectKind::Festival}, {"RECOMMISSION", ProjectEffectKind::Recommission},
+            {"CONVERT", ProjectEffectKind::Convert}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;
             for (const auto& [name, kind] : kinds) {
                 if (e["kind"].str() == name) {
-                    const TypeIndex weapon = e.has("weapon") ? wmd(e["weapon"].str()) : kNone;
-                    found = kind != ProjectEffectKind::Wmd || weapon != kNone;
+                    TypeIndex weapon = e.has("weapon") ? wmd(e["weapon"].str()) : kNone;
+                    if (kind == ProjectEffectKind::Decommission || kind == ProjectEffectKind::Convert) weapon = building(e["building"].str());
+                    // CompetitionKind::WorldGames (1) and SpaceStation (6); state.h is out of reach here (checked in competitions.cpp).
+                    if (kind == ProjectEffectKind::Competition) weapon = e["competition"].str() == "WORLD_GAMES" ? 1 : e["competition"].str() == "SPACE_STATION" ? 6 : kNone;
+                    found = (kind != ProjectEffectKind::Wmd && kind != ProjectEffectKind::Decommission && kind != ProjectEffectKind::Competition &&
+                             kind != ProjectEffectKind::Convert) || weapon != kNone;
                     if (found) pj.effects.push_back({kind, static_cast<int>(e["amount"].integer(0)), weapon});
                 }
             }

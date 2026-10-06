@@ -1041,6 +1041,189 @@
    ]
   },
   {
+   "id": "DISASTER_RADIOACTIVE_STEAM_VENTING",
+   "name": "Radioactive Steam Venting",
+   "kind": "NUCLEAR",
+   "severity": 0,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 1.0,
+    "MODERATE": 1.0,
+    "HEAVY": 1.0,
+    "HYPERREAL": 1.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 10,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "RADIATION_LEAKED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [],
+   "minTurnAtRisk": 10,
+   "fallout": 2
+  },
+  {
+   "id": "DISASTER_MAJOR_RADIATION_LEAK",
+   "name": "Major Radiation Leak",
+   "kind": "NUCLEAR",
+   "severity": 1,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 1.0,
+    "MODERATE": 1.0,
+    "HEAVY": 1.0,
+    "HYPERREAL": 1.0
+   },
+   "damage": [
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 50,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "RADIATION_LEAKED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 50,
+     "minHp": 20,
+     "maxHp": 50
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 50,
+     "minHp": 20,
+     "maxHp": 50
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 50,
+     "minHp": 20,
+     "maxHp": 50
+    }
+   ],
+   "fertility": [],
+   "minTurnAtRisk": 20,
+   "fallout": 10
+  },
+  {
+   "id": "DISASTER_NUCLEAR_MELTDOWN",
+   "name": "Nuclear Meltdown",
+   "kind": "NUCLEAR",
+   "severity": 2,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 1.0,
+    "MODERATE": 1.0,
+    "HEAVY": 1.0,
+    "HYPERREAL": 1.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_DESTROYED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "RADIATION_LEAKED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 20,
+     "maxHp": 50
+    },
+    {
+     "type": "UNIT_DAMAGE_NAVAL",
+     "percent": 100,
+     "minHp": 20,
+     "maxHp": 50
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 20,
+     "maxHp": 50
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [],
+   "minTurnAtRisk": 30,
+   "fallout": 20
+  },
+  {
    "id": "DISASTER_MAJOR_DROUGHT",
    "name": "Major Drought",
    "kind": "DROUGHT",

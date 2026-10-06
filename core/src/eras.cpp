@@ -185,6 +185,7 @@ int Game::tourismPerTurn(PlayerId pid) const {
     const int era = playerEra(pid);
     const bool wish = goldenDedication(pid, "DEDICATION_WISH_YOU_WERE_HERE");
     total += improvementTourism(pid) + parkTourism(pid);  // 07: resorts, improvements after Flight, National Parks
+    const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
         const int before = total;
@@ -204,7 +205,7 @@ int Game::tourismPerTurn(PlayerId pid) const {
         PlayerId holder = kNoPlayer;
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;
     }
-    return total;
+    return technocracy ? total * 90 / 100 : total;  // 04: Synthetic Technocracy, -10% Tourism
 }
 
 void Game::processTourism(PlayerId pid) {

@@ -64,6 +64,11 @@ int Game::spyOperationLevels(const Agent& spy, SpyMission m) const {
     return n;
 }
 
+bool Game::governmentIs(PlayerId pid, const char* governmentId) const {
+    const Player& p = state_.players[at(pid)];
+    return p.government != kNone && p.anarchyTurns == 0 && rules_->governments[at(p.government)].id == governmentId;
+}
+
 int Game::buildingsOwned(PlayerId pid, const char* buildingId) const {
     const TypeIndex b = rules_->building(buildingId);
     if (b == kNone) return 0;

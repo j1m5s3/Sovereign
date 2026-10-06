@@ -628,7 +628,8 @@
    "tourism": {
     "source": "APPEAL",
     "percent": 100
-   }
+   },
+   "amenities": 1
   },
   {
    "id": "IMPROVEMENT_SOLAR_FARM",

@@ -128,8 +128,20 @@ CommandError Game::concertProblem(PlayerId player, UnitId id) const {
     if (rules_->units[at(u->type)].id != "UNIT_ROCK_BAND" || u->movesLeft <= Fixed() || rules_->rockBandResults.empty()) return CommandError::BadUnit;
     const Plot& p = state_.plot(u->pos);
     if (p.owner == kNoPlayer || p.owner == player || !isMajorCiv(p.owner) || atWar(player, p.owner)) return CommandError::BadTarget;
-    if (!state_.cityAt(u->pos) && !state_.districtAt(u->pos) && state_.wonderAt(u->pos) == kNone) return CommandError::BadTarget;
+    const bool resort = p.improvement != kNone && rules_->improvements[at(p.improvement)].tourismSource == "APPEAL";
+    const bool natural = p.feature != kNone && rules_->features[at(p.feature)].naturalWonder;
+    if (!state_.cityAt(u->pos) && !state_.districtAt(u->pos) && state_.wonderAt(u->pos) == kNone && !p.park && !resort && !natural) return CommandError::BadTarget;
     return CommandError::Ok;
+}
+
+void Game::grantBandPromotion(Unit& band) {
+    std::vector<TypeIndex> open;
+    for (size_t i = 0; i < rules_->promotions.size(); ++i) {
+        if (rules_->promotions[i].promotionClass != "PROMOTION_CLASS_ROCK_BAND") continue;
+        if (std::find(band.promotions.begin(), band.promotions.end(), static_cast<TypeIndex>(i)) == band.promotions.end()) open.push_back(static_cast<TypeIndex>(i));
+    }
+    if (open.empty()) return;
+    band.promotions.push_back(open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))]);
 }
 
 void Game::performConcert(UnitId id) {
@@ -138,7 +150,24 @@ void Game::performConcert(UnitId id) {
     const std::vector<RockBandResult>& results = rules_->rockBandResults;
     std::vector<int> weights;
     for (const RockBandResult& r : results) weights.push_back(r.probability);
-    const int level = 1 + u.xp;
+    // The band's promotions (07): extra levels and a tourism burst where this concert is held.
+    std::vector<std::string> places;
+    if (state_.cityAt(u.pos)) places.push_back("DISTRICT_CITY_CENTER");
+    if (const CityDistrict* d = state_.districtAt(u.pos)) places.push_back(rules_->districts[at(d->type)].id);
+    if (state_.wonderAt(u.pos) != kNone) places.push_back("WONDER");
+    const Plot& here = state_.plot(u.pos);
+    if (here.park) places.push_back("NATIONAL_PARK");
+    if (here.improvement != kNone) places.push_back(rules_->improvements[at(here.improvement)].id);
+    if (here.feature != kNone && rules_->features[at(here.feature)].naturalWonder) places.push_back("NATURAL_WONDER");
+    int bonusLevels = 0, burst = 0;
+    for (TypeIndex pr : u.promotions) {
+        for (const UnitEffect& e : rules_->promotions[at(pr)].effects) {
+            if (std::find(places.begin(), places.end(), e.at) == places.end()) continue;
+            if (e.kind == UnitEffectKind::BandLevel) bonusLevels += e.amount;
+            if (e.kind == UnitEffectKind::BandBurst) burst += e.amount;
+        }
+    }
+    const int level = 1 + u.xp + bonusLevels;
     for (int l = 1; l < level; ++l) {
         for (size_t k = 0; k < 2 && k < weights.size(); ++k) weights[k] += 2;
         for (size_t k = 0; k < 2 && k + 2 <= weights.size(); ++k) weights[weights.size() - 1 - k] = std::max(1, weights[weights.size() - 1 - k] - 2);
@@ -152,8 +181,9 @@ void Game::performConcert(UnitId id) {
     const RockBandResult& r = results[pick];
     Player& owner = state_.players[at(u.owner)];
     if (owner.tourismTo.size() < state_.players.size()) owner.tourismTo.resize(state_.players.size(), 0);
-    owner.tourismTo[at(host)] += std::max(0, r.albumSales + r.tourismBomb);
-    if (r.gainsLevel && level < rules_->globalInt("ROCK_BAND_MAX_LEVEL")) ++u.xp;
+    owner.tourismTo[at(host)] += std::max(0, r.albumSales + r.tourismBomb) + burst;
+    if (r.gainsLevel && 1 + u.xp < rules_->globalInt("ROCK_BAND_MAX_LEVEL")) ++u.xp;
+    if (r.extraPromotion) grantBandPromotion(u);
     u.movesLeft = Fixed();
     if (r.dies) removeUnit(id);
 }

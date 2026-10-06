@@ -401,6 +401,7 @@ def gen_units():
     for r in table(SPEC / "units.md", "Rock Band results [GS]"):
         results.append({"id": "ROCKBAND_RESULT_" + snake(r["Result"]), "name": r["Result"], "albumSales": num(r["Album sales"]),
                         "tourismBomb": num(r["Tourism bomb"]), "dies": r["Dies"] == "yes", "gainsLevel": r["Gains level"] == "yes",
+                        "extraPromotion": r["Extra promotion"] == "yes",
                         "probability": num(r["Base probability"])})
     return {"units": out, "rockBandResults": results}
 
@@ -464,6 +465,28 @@ def condition_atom(text):
     return a
 
 
+# Where a Rock Band promotion's concert bonus applies (07: Rock Bands). Civ-unique districts are left out:
+# Sovereign defines its own uniques.
+BAND_PLACES = {"Wonder": "WONDER", "Entertainment Complex": "DISTRICT_ENTERTAINMENT_COMPLEX", "Theater Square": "DISTRICT_THEATER",
+               "Water Park": "DISTRICT_WATER_PARK", "Spaceport": "DISTRICT_SPACEPORT", "Campus": "DISTRICT_CAMPUS",
+               "Harbor": "DISTRICT_HARBOR", "Seaside Resort": "IMPROVEMENT_SEASIDE_RESORT",
+               "national park": "NATIONAL_PARK", "natural wonder": "NATURAL_WONDER"}
+
+
+def band_effect(part):
+    m = (re.fullmatch(r"\+(\d+) Rock Band level (?:when performing )?at (.+)", part) or
+         re.fullmatch(r"adjust unit rock band level (national park|natural wonder) \(Amount=(\d+)\)", part))
+    if m:
+        amount, place = (m.group(1), m.group(2)) if part.startswith("+") else (m.group(2), m.group(1))
+        return {"kind": "BAND_LEVEL", "amount": int(amount), "at": BAND_PLACES[place]} if place in BAND_PLACES else {"kind": "UNTRACKED", "text": part}
+    m = (re.fullmatch(r"\+(\d+) Tourism burst at (.+)", part) or
+         re.fullmatch(r"adjust unit tourism bomb (national park|natural wonder) \(Amount=(\d+)\)", part))
+    if m:
+        amount, place = (m.group(1), m.group(2)) if part.startswith("+") else (m.group(2), m.group(1))
+        return {"kind": "BAND_BURST", "amount": int(amount), "at": BAND_PLACES[place]} if place in BAND_PLACES else {"kind": "UNTRACKED", "text": part}
+    return None
+
+
 def unit_effects(text):
     """Effect text of a promotion or ability -> list of effect objects. Conditions
     are 'A and B or C' = A and (B or C): a list of any-of groups that must all hold."""
@@ -482,6 +505,10 @@ def unit_effects(text):
             "can heal after moving/attacking": "HEAL_AFTER_ACTION", "can enter foreign territory": "IGNORE_BORDERS",
             "Melee units deal full damage to walls": "WALL_FULL_DAMAGE", "Melee units bypass walls": "BYPASS_WALLS",
         }
+        band = band_effect(part)
+        if band:
+            out.append(band)
+            continue
         if m:
             e = {"kind": "STRENGTH", "amount": int(m.group(1))}
             if m.group(2):
@@ -898,6 +925,10 @@ def gen_improvements():
                 i["tourism"]["after"] = m.group(3)
         if row["Min appeal"] and num(row["Min appeal"]):
             i["minAppeal"] = num(row["Min appeal"])
+        for part in (x.strip() for x in (row["Modifiers"] or "").split(";")):
+            m = re.fullmatch(r"\+(\d+) Amenity in this city", part)
+            if m:
+                i["amenities"] = int(m.group(1))  # the Ski Resort (07)
         if row["Improvement"] == "Seaside Resort":
             i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
         out.append(i)
@@ -1027,13 +1058,14 @@ def era_turns(row):
 
 
 DISASTER_KINDS = [("Flood", "FLOOD"), ("Eruption", "ERUPTION"), ("Blizzard", "BLIZZARD"), ("Dust Storm", "DUST_STORM"),
-                  ("Tornado", "TORNADO"), ("Hurricane", "HURRICANE"), ("Drought", "DROUGHT"), ("Forest Fire", "FIRE")]
+                  ("Tornado", "TORNADO"), ("Hurricane", "HURRICANE"), ("Drought", "DROUGHT"), ("Forest Fire", "FIRE"),
+                  ("Radioactive Steam Venting", "NUCLEAR"), ("Major Radiation Leak", "NUCLEAR"), ("Nuclear Meltdown", "NUCLEAR")]
 
 
 def gen_disasters():
     """Natural disasters the core runs (09: Climate and Disasters [GS]; data: climate-disasters.md):
     frequency per game by Disaster Intensity, damage, fertility afterwards; the climate phases;
-    intensity settings. Natural-wonder eruptions, nuclear accidents and meteors are left out."""
+    intensity settings; nuclear accidents at aging reactors. Natural-wonder eruptions and meteors are left out."""
     path = SPEC / "climate-disasters.md"
     # Storm rows name Ice as their feature: the engine's stand-in for any affected land tile.
     storm_kinds = {"BLIZZARD", "DUST_STORM", "TORNADO", "HURRICANE"}
@@ -1051,6 +1083,8 @@ def gen_disasters():
         events.append({"id": "DISASTER_" + snake(name), "name": name, "kind": kind, "severity": num(r["Severity"]),
                        "hexes": num(r["Hexes"]), "duration": num(r["Duration"]), "chancePerDegree": num(r["ChanceIncreasePerDegree"]),
                        "frequency": {}, "damage": [], "fertility": []})
+        if kind == "NUCLEAR":
+            events[-1]["minTurnAtRisk"] = num(r["MinTurnAtRisk"])
     by_name = {e["name"]: e for e in events}
     # Later rows for a repeated event name are the ordinary (not natural-wonder) variant.
     for r in table(path, "Event frequencies by disaster intensity"):
@@ -1059,6 +1093,8 @@ def gen_disasters():
             e["frequency"][r["Realism setting"].upper()] = num(r["Occurrences per game"])
     damage = {}
     for r in table(path, "Event damage"):
+        if r["Event"] in by_name and r["Damage type"] == "radiation leaked":
+            by_name[r["Event"]]["fallout"] = num(r["Fallout turns"])  # nuclear accidents (09)
         if r["Event"] in by_name:
             damage.setdefault(r["Event"], {})[r["Damage type"]] = {"type": snake(r["Damage type"]), "percent": num(r["%"]),
                                                                      "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
@@ -1099,6 +1135,20 @@ def project_effects(name, text):
     effects, unmodelled = [], []
     if name == "Repair Outer Defenses":
         return [{"kind": "REPAIR_WALLS"}], []
+    # Competition projects score their competition (data: world-congress-emergencies, score sources:
+    # "world games score project" 50, "space station score project" 30).
+    if name == "Train Athletes":
+        return [{"kind": "COMPETITION", "competition": "WORLD_GAMES", "amount": 50}], []
+    if name == "Train Astronauts":
+        return [{"kind": "COMPETITION", "competition": "SPACE_STATION", "amount": 30}], []
+    if text and text.strip() == "city recommission reactor":
+        return [{"kind": "RECOMMISSION"}], []  # 09: a nuclear plant's risk starts over
+    m = re.fullmatch(r"Convert to (\w+) Power", name)
+    if m:
+        return [{"kind": "CONVERT", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Power
+    m = re.fullmatch(r"Decommission (\w+) Power Plant", name)
+    if m:
+        return [{"kind": "DECOMMISSION", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Climate
     for part in [x.strip() for x in (text or "").split(";") if x.strip()]:
         m = re.fullmatch(r"\+(\d+) Loyalty \(one-time\)", part)
         if m:
@@ -1132,6 +1182,12 @@ def project_effects(name, text):
             if not any(e["kind"] == "AID" for e in effects):
                 effects.append({"kind": "AID", "amount": int(m.group(1))})  # 08: Aid Request
             continue
+        m = re.fullmatch(r"\+(\d+) Culture per surplus luxury \(one-time\)", part)
+        if m:
+            effects.append({"kind": "FESTIVAL", "amount": int(m.group(1))})  # Court Festival
+            continue
+        if part.startswith("grant tourism per excess luxuries"):
+            continue  # carried by FESTIVAL
         if part.startswith("adjust city required power"):
             continue  # power is not modelled; the station counts as powered
         unmodelled.append(part)
