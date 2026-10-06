@@ -291,7 +291,7 @@ void Game::pillage(UnitId id, std::optional<Hex> at) {
     }
     Player& owner = state_.players[static_cast<size_t>(u.owner)];
     // Plunder bonuses (Francis Drake, Ching Shih...) raise the yields, not the healing.
-    const int bonus = loot.kind == PlunderKind::Heal ? 0 : unitEffectTotal(u, UnitEffectKind::PlunderPercent);
+    const int bonus = loot.kind == PlunderKind::Heal ? 0 : plunderPercent(u);
     const Fixed amount = Fixed::fromInt(loot.amount * (100 + bonus) / 100);
     switch (loot.kind) {
         case PlunderKind::Gold: owner.gold += amount; break;

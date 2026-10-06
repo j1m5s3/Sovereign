@@ -339,7 +339,7 @@ void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
         // A finished civic opens a free window to change government and
         // policies, and retires obsolete cards.
         p.freeChanges = true;
-        p.envoyTokens += rules_->civics[static_cast<size_t>(node)].envoys;  // 08: civics that grant envoys
+        if (!policyIs(pid, "POLICY_ROGUE_STATE")) p.envoyTokens += rules_->civics[static_cast<size_t>(node)].envoys;  // 08: civics that grant envoys
         for (TypeIndex& slotted : p.policies) {
             if (slotted != kNone && !policyAvailable(pid, slotted)) slotted = kNone;
         }

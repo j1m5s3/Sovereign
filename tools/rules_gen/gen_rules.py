@@ -460,6 +460,9 @@ def condition_atom(text):
         a["atom"] = "DISTRICT_TILE"
     elif text == "in own territory":
         a["atom"] = "OWN_TERRITORY"
+    elif re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text):
+        era = re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text).group(1)
+        a.update(atom="OPPONENT_MIN_ERA", value="ERA_" + era.upper())
     else:
         a.update(atom="UNTRACKED", value=text)
     return a

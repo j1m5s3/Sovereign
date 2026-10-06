@@ -159,6 +159,7 @@ enum class CombatAtom : uint8_t {
     OwnTerritory,
     AdjacentSameUnit,   // a friendly unit of the same type stands next to it
     OpponentTileBase,   // the opponent stands on terrain of this climate (value: e.g. "DESERT")
+    OpponentMinEra,     // the opponent unit is of this era or later (ref: Rules::eras)
 };
 
 struct CombatCondition {

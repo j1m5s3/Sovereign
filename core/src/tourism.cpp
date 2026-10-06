@@ -181,7 +181,11 @@ void Game::performConcert(UnitId id) {
     const RockBandResult& r = results[pick];
     Player& owner = state_.players[at(u.owner)];
     if (owner.tourismTo.size() < state_.players.size()) owner.tourismTo.resize(state_.players.size(), 0);
-    owner.tourismTo[at(host)] += std::max(0, r.albumSales + r.tourismBomb) + burst;
+    int earned = std::max(0, r.albumSales + r.tourismBomb) + burst;
+    // Flower Power (09): +50% concert tourism while at peace.
+    if (policyIs(u.owner, "POLICY_FLOWER_POWER") && std::none_of(state_.players.begin(), state_.players.end(), [&](const Player& o) { return atWar(u.owner, o.id); }))
+        earned = earned * 3 / 2;
+    owner.tourismTo[at(host)] += earned;
     if (r.gainsLevel && 1 + u.xp < rules_->globalInt("ROCK_BAND_MAX_LEVEL")) ++u.xp;
     if (r.extraPromotion) grantBandPromotion(u);
     u.movesLeft = Fixed();

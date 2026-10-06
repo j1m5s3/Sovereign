@@ -113,7 +113,7 @@ public:
     int districtPurchaseCost(const City& city, TypeIndex district, bool faith) const;
     // Gold price of a plot, or -1 when this city cannot buy it.
     int plotPurchaseCost(CityId city, Hex plot) const;
-    bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr) const;
+    bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr, bool purchase = false) const;
     // Where a unit trained in this city appears (ships: the port or the water beside it); nullopt when full.
     std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
     std::vector<ProductionItem> buildableItems(CityId city) const;
@@ -289,6 +289,7 @@ public:
     int spyCapacity(PlayerId player) const;   // from civics and techs
     int buildingsOwned(PlayerId pid, const char* buildingId) const;  // in all its cities
     bool governmentIs(PlayerId pid, const char* governmentId) const;  // in force (not in anarchy)
+    bool policyIs(PlayerId pid, const char* policyId) const;          // slotted and in force
     int stockpileCap(PlayerId pid, TypeIndex resource) const;        // the resource's cap plus its buildings' raises (01)
     int spiesOf(PlayerId player) const;
     const SpyOperationType* spyOperationFor(SpyMission mission) const;
@@ -345,6 +346,7 @@ public:
     // Sum of `amount` over the unit's promotion and ability effects of this kind
     // (conditions ignored); an effect without an amount counts 1.
     int unitEffectTotal(const Unit& unit, UnitEffectKind kind) const;
+    int plunderPercent(const Unit& unit) const;  // + % to its pillage and plunder yields
     bool unitHas(const Unit& unit, UnitEffectKind kind) const { return unitEffectTotal(unit, kind) > 0; }
     int maxMoves(const Unit& unit) const;
     int unitRange(const Unit& unit) const;

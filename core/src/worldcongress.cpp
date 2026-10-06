@@ -46,7 +46,11 @@ void Game::processGrievances() {
     const int era = std::clamp(state_.gameEra, 0, static_cast<int>(rules_->eras.size()) - 1);
     const int decay = rules_->eras[at(era)].grievanceDecay;
     for (Player& p : state_.players) {
-        for (int32_t& g : p.grievances) g = std::max(0, g - decay);
+        for (size_t against = 0; against < p.grievances.size(); ++against) {
+            // Cyber Warfare (09): grievances against its holder do not decay.
+            if (against < state_.players.size() && policyIs(static_cast<PlayerId>(against), "POLICY_CYBER_WARFARE")) continue;
+            p.grievances[against] = std::max(0, p.grievances[against] - decay);
+        }
     }
 }
 
@@ -55,6 +59,7 @@ int Game::favorPerTurn(PlayerId pid) const {
     if (!isMajor(p)) return 0;
     int favor = rules_->globalInt("WORLD_CONGRESS_BASELINE_FAVOR_PER_TURN");
     if (p.government != kNone && p.anarchyTurns == 0) favor += rules_->governments[at(p.government)].favor;
+    if (policyIs(pid, "POLICY_DISINFORMATION_CAMPAIGN")) favor += 3 * buildingsOwned(pid, "BUILDING_BROADCAST_CENTER");  // 09
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN");
         if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");

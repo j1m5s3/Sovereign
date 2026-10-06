@@ -442,6 +442,9 @@ int Game::purchaseCost(PlayerId player, ProductionItem item) const {
         const std::string& id = rules_->units[static_cast<size_t>(item.type)].id;
         if (id == "UNIT_BUILDER" || id == "UNIT_SETTLER") cost = cost * 70 / 100;  // 09: Monumentality
     }
+    // Flower Power (09): units cost twice as much to buy, Rock Bands excepted.
+    if (item.kind == ProductionKind::Unit && policyIs(player, "POLICY_FLOWER_POWER") && rules_->units[static_cast<size_t>(item.type)].id != "UNIT_ROCK_BAND")
+        cost *= 2;
     return cost / 5 * 5;
 }
 
@@ -488,7 +491,7 @@ bool Game::canTrainFormation(const City& c, TypeIndex unit, int formation) const
     return school != kNone && cityHasBuilding(c, *rules_, school);
 }
 
-bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) const {
+bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, bool purchase) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
         return false;
@@ -507,6 +510,9 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (u.uniqueTo != kNone && u.uniqueTo != civ) return fail(CommandError::CannotBuild);
         if (rules_->uniqueUnitFor(civ, item.type) != kNone) return fail(CommandError::CannotBuild);
         if (u.agent && !u.spy && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
+        // Dark Age cards (09): Isolationism trains no Settlers; under Flower Power units are only bought.
+        if (u.foundCity && policyIs(c.owner, "POLICY_ISOLATIONISM")) return fail(CommandError::CannotBuild);
+        if (!purchase && policyIs(c.owner, "POLICY_FLOWER_POWER")) return fail(CommandError::CannotBuild);
         if (u.spy && spiesOf(c.owner) >= spyCapacity(c.owner)) return fail(CommandError::CannotBuild);
         if (!u.needsBuilding.empty() &&
             std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return cityHasBuilding(c, *rules_, b); }))
@@ -731,7 +737,7 @@ CommandError Game::validateCity(const Command& c) const {
                 if (state_.players[static_cast<size_t>(c.player)].faith < Fixed::fromInt(faith)) return CommandError::NotEnoughFaith;
                 return CommandError::Ok;
             }
-            if (!canProduce(*city, item, &why)) return why;
+            if (!canProduce(*city, item, &why, true)) return why;
             int cost = purchaseCost(c.player, item);
             if (cost < 0) return CommandError::CannotBuild;
             if (item.kind == ProductionKind::Unit) {
@@ -964,7 +970,8 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (it == city.buildings.end() || *it != item.type) {
             city.buildings.insert(it, item.type);
             city.wallHp += rules_->buildings[static_cast<size_t>(item.type)].outerDefenseHp;  // new walls stand at full HP
-            state_.players[static_cast<size_t>(city.owner)].envoyTokens += rules_->buildings[static_cast<size_t>(item.type)].envoysOnBuild;
+            if (!policyIs(city.owner, "POLICY_ROGUE_STATE"))  // Rogue State: no envoys (09)
+                state_.players[static_cast<size_t>(city.owner)].envoyTokens += rules_->buildings[static_cast<size_t>(item.type)].envoysOnBuild;
             if (rules_->buildings[static_cast<size_t>(item.type)].wonder) completeWonder(city, item.type);
         }
     }
@@ -1239,6 +1246,9 @@ void Game::processCities(PlayerId pid) {
                 if (nuclear && cityGovernorHas(city, "GOVERNOR_PROMOTION_ARMS_RACE_PROPONENT")) pct += 30;
                 if (pj.spaceRace && cityGovernorHas(city, "GOVERNOR_PROMOTION_SPACE_INITIATIVE")) pct += 30;
                 if (governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY")) pct += 30;  // 04: Synthetic Technocracy
+                // Dark Age cards (09): Rogue State (nuclear projects), Automated Workforce (all projects).
+                if (nuclear && policyIs(pid, "POLICY_ROGUE_STATE")) pct += 50;
+                if (policyIs(pid, "POLICY_AUTOMATED_WORKFORCE")) pct += 20;
                 prod = prod * pct / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)

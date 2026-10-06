@@ -60,6 +60,9 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
         case CombatAtom::OpponentTileBase:
             ok = x.opponent && x.r->terrains[static_cast<size_t>(x.s->plot(x.opponent->pos).terrain)].base == c.value;
             break;
+        case CombatAtom::OpponentMinEra:
+            ok = x.opponent && x.r->units[static_cast<size_t>(x.opponent->type)].era >= c.ref;
+            break;
     }
     return c.negate ? !ok : ok;
 }
@@ -188,6 +191,11 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
     return total;
 }
 
+int Game::plunderPercent(const Unit& unit) const {
+    // Abilities and promotions (Francis Drake...), and Letters of Marque (09: +100% for all units).
+    return unitEffectTotal(unit, UnitEffectKind::PlunderPercent) + (policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE") ? 100 : 0);
+}
+
 int Game::maxMoves(const Unit& unit) const {
     if (isEmbarked(unit)) {
         // Embarked units move at a base rate raised by later techs (05: Embarkation).
@@ -207,6 +215,7 @@ int Game::maxMoves(const Unit& unit) const {
         if (ut.id == "UNIT_BUILDER" && goldenDedication(unit.owner, "DEDICATION_MONUMENTALITY")) moves += 2;
         if ((ut.id == "UNIT_MISSIONARY" || ut.id == "UNIT_APOSTLE" || ut.id == "UNIT_INQUISITOR") && goldenDedication(unit.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS")) moves += 2;
         if (ut.domain == Domain::Sea && goldenDedication(unit.owner, "DEDICATION_HIC_SUNT_DRACONES")) moves += 2;
+        if (ut.unitClass == "NAVAL_RAIDER" && policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE")) moves += 2;  // 09
     }
     if (!isLeader(unit)) return moves;
     for (TypeIndex g : unit.gear) {
@@ -1474,7 +1483,9 @@ void Game::healAndFortify(PlayerId pid) {
         const bool acted = u.moved || u.attacked;
         const bool fuelShort = ut.resourceMaintenance > 0 && ut.strategicResource != kNone &&
                                owner.fuelShort[static_cast<size_t>(ut.strategicResource)];
-        if (u.hp < maxHp && !fuelShort && (!acted || unitHas(u, UnitEffectKind::HealAfterAction))) {
+        // Twilight Valor (09): units do not heal.
+        const bool valor = policyIs(pid, "POLICY_TWILIGHT_VALOR");
+        if (u.hp < maxHp && !fuelShort && !valor && (!acted || unitHas(u, UnitEffectKind::HealAfterAction))) {
             const Plot& p = state_.plot(u.pos);
             const City* c = state_.cityAt(u.pos);
             const bool naval = ut.domain == Domain::Sea;

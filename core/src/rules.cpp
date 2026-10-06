@@ -578,6 +578,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"OPPONENT_WOUNDED", CombatAtom::OpponentWounded}, {"DISTRICT_TILE", CombatAtom::DistrictTile},
             {"OWN_TERRITORY", CombatAtom::OwnTerritory},
             {"ADJACENT_SAME_UNIT", CombatAtom::AdjacentSameUnit}, {"OPPONENT_TILE_BASE", CombatAtom::OpponentTileBase},
+            {"OPPONENT_MIN_ERA", CombatAtom::OpponentMinEra},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;
@@ -609,6 +610,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                     if (c.atom == CombatAtom::CombatType) c.arg = c.value == "RANGED" ? 1 : 0;
                     if (c.atom == CombatAtom::TileFeature) c.ref = feature(c.value);
                     if (c.atom == CombatAtom::TileTerrain) c.ref = terrain(c.value);
+                    if (c.atom == CombatAtom::OpponentMinEra && (c.ref = era(c.value)) == kNone) {
+                        *error = where + ": unknown era " + c.value;
+                        return false;
+                    }
                     if ((c.atom == CombatAtom::TileFeature || c.atom == CombatAtom::TileTerrain) && c.ref == kNone) {
                         *error = where + ": unknown plot type " + c.value;
                         return false;

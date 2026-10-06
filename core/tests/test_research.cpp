@@ -343,3 +343,81 @@ TEST(dark_age_cards_come_with_a_dark_age_and_go_with_it) {
     CHECK(later->state().players[0].age != Age::Dark);
     CHECK(later->state().players[0].policies[static_cast<size_t>(wild)] == kNone);
 }
+
+TEST(dark_age_cards_do_what_their_text_says) {
+    // Each card slotted straight into the first slot (its effect, not its slot rules, is tested here).
+    auto with = [](const char* card, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            s.players[0].policies[0] = policy(card);
+            edit(s);
+        });
+    };
+    // Isolationism: no new cities and no Settlers; domestic routes +2 Food and Production.
+    {
+        auto g = with("POLICY_ISOLATIONISM", [](GameState&) {});
+        const City& c = g->state().cities[0];
+        CHECK(!g->canFoundCityAt(0, {12, 6}));
+        CHECK(!g->canProduce(c, {ProductionKind::Unit, rules().unit("UNIT_SETTLER")}));
+        CHECK(g->canProduce(c, warrior()));
+        const Yields y = g->tradeRouteYields(c, c);
+        CHECK(y[static_cast<size_t>(YieldType::Food)] >= Fixed::fromInt(2));
+        CHECK(y[P] >= Fixed::fromInt(2));
+    }
+    // Twilight Valor: wounded units stay wounded.
+    {
+        UnitId hurt = kNoUnit;
+        auto g = with("POLICY_TWILIGHT_VALOR", [&](GameState& s) {
+            hurt = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {7, 7});
+            s.units.back().hp = 50;
+            s.units.back().activity = Activity::Fortify;
+        });
+        endTurns(*g, 1);
+        CHECK_EQ(g->state().unit(hurt)->hp, 50);
+    }
+    // Letters of Marque: raiders +2 Movement, +100% plunder, route yields halved.
+    {
+        UnitId raider = kNoUnit, warrior2 = kNoUnit;
+        auto g = with("POLICY_LETTERS_OF_MARQUE", [&](GameState& s) {
+            raider = sovtest::addUnit(s, "UNIT_PRIVATEER", 0, {7, 7});
+            warrior2 = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {7, 8});
+        });
+        CHECK_EQ(g->maxMoves(*g->state().unit(raider)), rules().units[at(rules().unit("UNIT_PRIVATEER"))].moves + 2);
+        CHECK_EQ(g->plunderPercent(*g->state().unit(warrior2)), 100);
+    }
+    // Flower Power: units are bought, at twice the price, not trained; Rock Bands keep their price.
+    {
+        auto g = with("POLICY_FLOWER_POWER", [](GameState&) {});
+        auto plain = capitalWith([](GameState& s) { chiefdom(s); });
+        const City& c = g->state().cities[0];
+        CHECK(!g->canProduce(c, warrior()));
+        CHECK(g->canProduce(c, warrior(), nullptr, true));
+        CHECK_EQ(g->purchaseCost(0, warrior()), plain->purchaseCost(0, warrior()) * 2);
+    }
+    // Rogue State: no envoys from civics.
+    {
+        auto g = with("POLICY_ROGUE_STATE", [](GameState& s) {
+            s.players[0].civics.current = civic("CIVIC_MYSTICISM");
+            s.players[0].civics.done[at(civic("CIVIC_FOREIGN_TRADE"))] = 1;
+            s.players[0].civics.done[at(civic("CIVIC_CRAFTSMANSHIP"))] = 1;
+            s.players[0].civics.progress[at(civic("CIVIC_MYSTICISM"))] = Fixed::fromInt(1000);
+        });
+        const int tokens = g->state().players[0].envoyTokens;
+        endTurns(*g, 1);
+        REQUIRE(g->state().players[0].civics.has(civic("CIVIC_MYSTICISM")));
+        CHECK_EQ(g->state().players[0].envoyTokens, tokens);
+    }
+    // Cyber Warfare: grievances against us do not fade (held here by the only civ, against itself).
+    {
+        auto keep = [](GameState& s) { s.players[0].grievances.assign(1, 100); };
+        auto g = with("POLICY_CYBER_WARFARE", keep);
+        auto plain = capitalWith([&](GameState& s) {
+            chiefdom(s);
+            keep(s);
+        });
+        endTurns(*g, 2);
+        endTurns(*plain, 2);
+        CHECK_EQ(g->state().players[0].grievances[0], 100);
+        CHECK(plain->state().players[0].grievances[0] < 100);
+    }
+}

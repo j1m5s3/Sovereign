@@ -3615,8 +3615,8 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "opponent era at least (MinimumEraType=Information Era)"
+        "atom": "OPPONENT_MIN_ERA",
+        "value": "ERA_INFORMATION"
        }
       ]
      ]
