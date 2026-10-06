@@ -53,6 +53,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
     placeCityStates(s, rules);
+    placeNaturalWonders(s, rules);
     if (setup.tribalVillages) placeVillages(s, rules);
     if (setup.barbarians) {
         // The barbarians: one extra player, at war with all, who moves in the world turn.
@@ -345,6 +346,7 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     if (!isLandPassable(state_, *rules_, at)) return set(CommandError::CannotFoundHere);
     const Plot& p = state_.plot(at);
     if (p.owner != kNoPlayer && p.owner != player) return set(CommandError::CannotFoundHere);
+    if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt("CITY_MIN_RANGE");
     for (const City& c : state_.cities) {
         if (state_.grid.distance(c.pos, at) <= minRange) return set(CommandError::TooCloseToCity);

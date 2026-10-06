@@ -77,6 +77,12 @@ struct FeatureType {
     Unlock removeTech;  // tech a Builder needs to harvest it
     Yields harvest{};   // one-time yields from harvesting (base, Standard speed)
     std::vector<TypeIndex> validTerrains;
+    // Natural wonders (01): placed by the map script over `tiles` plots; they give their own yields,
+    // `adjacentYields` to neighbouring plots, and may double neighbours' terrain yields.
+    bool naturalWonder = false;
+    int tiles = 1;
+    Yields adjacentYields{};
+    bool doublesAdjacentTerrain = false;
 };
 
 struct ResourceType {

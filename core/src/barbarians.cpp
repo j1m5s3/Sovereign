@@ -187,7 +187,7 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
     Rng& rng = state_.rng.get(RngStream::Gameplay);
     const bool ranged = rng.chance(static_cast<uint32_t>(tribe.rangedPercent));
-    const Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
+    Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
     // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT).
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
@@ -210,11 +210,17 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     TypeIndex type = best(ranged ? (tribe.coastal ? "NAVAL_RANGED" : "RANGED") : tribe.unitClass);
     if (type == kNone && !ranged) type = best(tribe.coastal ? "NAVAL_MELEE" : "MELEE");
     if (type == kNone && ranged) type = best(tribe.unitClass);
+    // Before anyone sails, a naval camp sends its people out on foot.
+    if (type == kNone && tribe.coastal) {
+        domain = Domain::Land;
+        type = best("MELEE");
+    }
     if (type == kNone) return;
+    const bool atSea = domain == Domain::Sea;
     std::optional<Hex> spot;
     for (const Hex& h : state_.grid.within(camp.pos, 1)) {
         if (spot) break;
-        const bool fits = tribe.coastal ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+        const bool fits = atSea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
         if (fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.foreignUnitAt(h, bp) && !state_.cityAt(h)) spot = h;
     }
     if (!spot) return;

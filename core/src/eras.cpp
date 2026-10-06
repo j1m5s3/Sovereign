@@ -195,17 +195,22 @@ int Game::domesticTourists(PlayerId pid) const {
 }
 
 PlayerId Game::cultureVictor() const {
+    // Sovereign floor: at least kMinTouristsPerRival visiting tourists per rival major as well. With few
+    // civs one early tourist (a tribal village's relic) otherwise wins, as each tourist both counts for
+    // the host and comes off the rival's domestic tourists (07: Tourism).
+    constexpr int kMinTouristsPerRival = 5;
     for (const Player& p : state_.players) {
         if (!isMajor(p)) continue;
         const int visitors = visitingTourists(p.id);
         if (visitors <= 0) continue;
-        bool all = true, rival = false;
+        bool all = true;
+        int rivals = 0;
         for (const Player& x : state_.players) {
             if (x.id == p.id || !isMajor(x)) continue;
-            rival = true;
+            ++rivals;
             if (visitors <= domesticTourists(x.id)) all = false;
         }
-        if (all && rival) return p.id;
+        if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return p.id;
     }
     return kNoPlayer;
 }

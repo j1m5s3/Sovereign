@@ -111,6 +111,7 @@ add_executable(sovereign_tests
   tests/test_competitions.cpp
   tests/test_quests.cpp
   tests/test_villages.cpp
+  tests/test_natural_wonders.cpp
   tests/test_uniques.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)

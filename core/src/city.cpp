@@ -91,6 +91,20 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
+    // Natural wonders next door (01): their adjacent yields, or the terrain's yields again (Torres del Paine).
+    if (!rules_->features.empty()) {
+        for (const Hex& n : state_.grid.within(at, 1)) {
+            const Plot& np = state_.plot(n);
+            if (n == at || np.feature == kNone || np.feature == p.feature) continue;
+            const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
+            if (!nw.naturalWonder) continue;
+            for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
+            if (nw.doublesAdjacentTerrain) {
+                const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
+                for (size_t i = 0; i < kNumYields; ++i) y[i] += ty[i];
+            }
+        }
+    }
     if (p.improvement != kNone && p.pillagedTurns == 0 && rules_->improvements[static_cast<size_t>(p.improvement)].powerProvided > 0 &&
         cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
         y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna

@@ -489,6 +489,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         f.id = id;
         f.name = j["name"].str(id);
         f.yields = readYields(j["yields"]);
+        f.naturalWonder = j["naturalWonder"].boolean(false);
+        f.tiles = static_cast<int>(j["tiles"].integer(1));
+        f.adjacentYields = readYields(j["adjacentYields"]);
+        f.doublesAdjacentTerrain = j["doublesAdjacentTerrain"].boolean(false);
         f.moveChange = static_cast<int>(j["moveChange"].integer(0));
         f.defense = static_cast<int>(j["defense"].integer(0));
         f.appeal = static_cast<int>(j["appeal"].integer(0));

@@ -194,6 +194,25 @@ def gen_terrain():
         if fid in IMPASSABLE_FEATURES:
             f["impassable"] = True
         features.append(f)
+    # Natural wonders (01: Natural wonders), features the map script places in clusters.
+    mountains = [t["id"] for t in terrains if t["relief"] == "MOUNTAIN"]
+    for row in table(SPEC / "terrain-features-resources.md", "Natural wonders"):
+        valid = []
+        for v in (x.strip() for x in row["Valid terrains"].split(",")):
+            for tid in (mountains if v == "Mountain" else [tnames[v]] if v in tnames else []):
+                if tid not in valid:
+                    valid.append(tid)
+        f = {"id": "FEATURE_" + snake(row["Natural wonder"].replace("á", "a").replace("ạ", "a").replace("ö", "o").replace("ï", "i").replace("ö", "o")),
+             "name": row["Natural wonder"], "naturalWonder": True, "tiles": num(row["Tiles"]),
+             "yields": yields(row["Yields"]), "adjacentYields": yields(row["Adjacent tile yields"]),
+             "appeal": num(row["Appeal"]), "validTerrains": valid}
+        if row["Impassable"] == "yes":
+            f["impassable"] = True
+        if row["Doubles adjacent terrain yield"] == "yes":
+            f["doublesAdjacentTerrain"] = True
+        if row["Fresh water"] == "yes":
+            f["freshWater"] = True
+        features.append(f)
     # Roads by era, and the railroad Military Engineers lay (01: Routes).
     routes = []
     for row in table(SPEC / "terrain-features-resources.md", "Routes"):

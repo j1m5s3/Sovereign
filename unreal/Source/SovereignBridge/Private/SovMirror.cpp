@@ -85,6 +85,10 @@ FLinearColor PlotColor(const sov::Rules& Rules, const sov::Plot& Plot, ESovRelie
 		{
 			C = FMath::Lerp(C, Tint, Amount);
 		}
+		else if (Rules.features[static_cast<size_t>(Plot.feature)].naturalWonder)
+		{
+			C = FMath::Lerp(C, Srgb(214, 175, 72), 0.6f);  // natural wonders (01): a golden landmark
+		}
 	}
 	C.A = 1.f;
 	return C;
