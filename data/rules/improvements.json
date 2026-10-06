@@ -42,7 +42,13 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "tourism": {
+    "source": "APPEAL",
+    "percent": 100
+   },
+   "minAppeal": 4,
+   "coastal": true
   },
   {
    "id": "IMPROVEMENT_CAMP",
@@ -306,6 +312,11 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 50
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 0,
+    "after": "TECH_FLIGHT"
    }
   },
   {
@@ -468,6 +479,11 @@
    "plunder": {
     "kind": "FAITH",
     "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
    }
   },
   {
@@ -516,6 +532,11 @@
    "plunder": {
     "kind": "FAITH",
     "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
    }
   },
   {
@@ -580,6 +601,10 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100
    }
   },
   {
@@ -599,6 +624,10 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
+   },
+   "tourism": {
+    "source": "APPEAL",
+    "percent": 100
    }
   },
   {

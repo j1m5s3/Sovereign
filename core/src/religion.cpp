@@ -132,8 +132,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
             return -1;
         // Missionaries and Apostles carry the city's majority religion; Inquisitors, Gurus and
         // Warrior Monks wait for the beliefs and actions that open them.
-        if (u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE") return -1;
-        if (majority < 0) return -1;
+        // Naturalists and Rock Bands are bought with Faith whatever the city follows (07).
+        const bool secular = u.id == "UNIT_NATURALIST" || u.id == "UNIT_ROCK_BAND";
+        if (!secular && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE") return -1;
+        if (!secular && majority < 0) return -1;
         const int copies = at(item.type) < p.unitsTrained.size() ? p.unitsTrained[at(item.type)] : 0;
         int cost = (u.cost + u.costProgression * copies) * speed / 100;
         const int discount = static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());

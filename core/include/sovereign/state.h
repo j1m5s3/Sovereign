@@ -44,6 +44,7 @@ struct Plot {
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
     bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
     uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
+    bool park = false;     // part of a National Park (07: National Parks)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };

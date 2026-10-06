@@ -74,6 +74,8 @@ enum class CommandType : uint8_t {
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
     SendDelegation = 60,        // arg = the civ, arg2 = 1 a resident embassy (else a delegation); costs Gold (08)
     AskPromise = 59,            // arg = the civ asked, arg2 = PromiseKind; costs Diplomatic Favor [GS]
+    DesignatePark = 63,         // id = Naturalist: a National Park of its plot and three beside it (07)
+    PerformConcert = 64,        // id = Rock Band in a foreign city's district or wonder plot: tourism toward that civ [GS]
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
     Excavate = 58,              // id = Archaeologist on an antiquity site or shipwreck: an Artifact into a free slot
@@ -215,6 +217,8 @@ struct Command {
     static Command moveGreatWork(PlayerId p, CityId from, int index, CityId to, TypeIndex building) {
         return {CommandType::MoveGreatWork, p, from, Hex{building, 0}, index, to};
     }
+    static Command designatePark(PlayerId p, UnitId naturalist) { return {CommandType::DesignatePark, p, naturalist, {}, 0, 0}; }
+    static Command performConcert(PlayerId p, UnitId band) { return {CommandType::PerformConcert, p, band, {}, 0, 0}; }
     static Command chooseDedication(PlayerId p, TypeIndex dedication) { return {CommandType::ChooseDedication, p, -1, {}, dedication, 0}; }
     static Command excavate(PlayerId p, UnitId archaeologist) { return {CommandType::Excavate, p, archaeologist, {}, 0, 0}; }
     static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }

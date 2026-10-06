@@ -393,6 +393,17 @@ public:
     // ---- natural wonders (01: Natural wonders)
     bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
 
+    // ---- tourism from the land: improvements, National Parks, Rock Bands (07: Tourism sources)
+    int improvementTourism(PlayerId player) const;
+    std::optional<std::array<Hex, 4>> parkPlots(UnitId naturalist) const;  // the park it would make here
+    std::optional<std::array<Hex, 4>> parkPlotsAt(PlayerId player, Hex plot) const;
+    CommandError parkProblem(PlayerId player, UnitId naturalist) const;
+    void designatePark(UnitId naturalist);
+    int parkTourism(PlayerId player) const;
+    int parkAmenities(const City& city) const;
+    CommandError concertProblem(PlayerId player, UnitId band) const;
+    void performConcert(UnitId band);
+
     // ---- dedications [R&F] (09: Dedications)
     std::vector<TypeIndex> availableDedications(PlayerId player) const;
     CommandError dedicationProblem(PlayerId player, TypeIndex dedication) const;

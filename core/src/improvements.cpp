@@ -48,6 +48,13 @@ bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
     if (im.needsRiver && !isRiverAdjacent(state_, at)) return false;
+    if (p.park) return false;  // a National Park keeps its land as it is (07)
+    if (im.minAppeal > -100 && plotAppeal(at) < im.minAppeal) return false;  // Seaside Resort: Breathtaking (07)
+    if (im.coastal) {
+        bool coast = false;
+        for (const Hex& n : state_.grid.within(at, 1)) coast = coast || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater;
+        if (!coast) return false;
+    }
     if (im.borderOnly) {
         bool edge = false;
         for (const Hex& n : state_.grid.within(at, 1)) edge = edge || state_.plot(n).owner != player;

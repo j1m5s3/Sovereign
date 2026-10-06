@@ -298,6 +298,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u8(p.fallout);
         w.boolean(p.village);
         w.u8(p.antiquity);
+        w.boolean(p.park);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -696,6 +697,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.fallout = r.u8();
         p.village = r.boolean();
         p.antiquity = r.u8();
+        p.park = r.boolean();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;

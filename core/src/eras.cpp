@@ -184,6 +184,7 @@ int Game::tourismPerTurn(PlayerId pid) const {
     int total = 0;
     const int era = playerEra(pid);
     const bool wish = goldenDedication(pid, "DEDICATION_WISH_YOU_WERE_HERE");
+    total += improvementTourism(pid) + parkTourism(pid);  // 07: resorts, improvements after Flight, National Parks
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
         const int before = total;

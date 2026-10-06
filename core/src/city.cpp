@@ -228,6 +228,7 @@ CityReport Game::cityReport(CityId id) const {
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
+    rep.amenities += parkAmenities(*c);  // 07: National Parks
     // Natural wonders (01): the city owning Pamukkale gains an amenity per natural wonder in its land.
     {
         const TypeIndex pamukkale = rules_->feature("FEATURE_PAMUKKALE");
@@ -800,7 +801,9 @@ void Game::applyCity(const Command& c) {
                     if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
                     ++p.unitsTrained[static_cast<size_t>(item.type)];
                     Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
-                    u.religion = static_cast<int16_t>(religion);
+                    const UnitType& bought = rules_->units[static_cast<size_t>(item.type)];
+                    // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
+                    u.religion = static_cast<int16_t>(bought.religiousStrength > 0 || bought.spreadCharges > 0 ? religion : -1);
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                 }

@@ -1056,6 +1056,15 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Excavate an Artifact"), sov::Command::excavate(Me(), U->id)});
 			}
+			// Tourism (07): a Naturalist makes a National Park here; a Rock Band plays the foreign city.
+			if (G.parkProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Designate a National Park"), sov::Command::designatePark(Me(), U->id)});
+			}
+			if (G.concertProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Perform a concert"), sov::Command::performConcert(Me(), U->id)});
+			}
 			// Formations (05): merge with a neighbouring twin.
 			for (const sov::Unit& W : G.state().units)
 			{

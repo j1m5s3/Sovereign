@@ -767,6 +767,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.needsRiver = j["needsRiver"].boolean(false);
             im.halvesFloods = j["halvesFloods"].boolean(false);
             im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
+            if (j.has("tourism")) {
+                im.tourismSource = j["tourism"]["source"].str();
+                im.tourismPercent = static_cast<int>(j["tourism"]["percent"].integer(100));
+                if (j["tourism"].has("after") && !readUnlock(j["tourism"]["after"], im.tourismAfter, "improvement " + id)) return false;
+            }
+            im.minAppeal = j.has("minAppeal") ? static_cast<int>(j["minAppeal"].integer(0)) : -100;
+            im.coastal = j["coastal"].boolean(false);
             im.airSlots = static_cast<int>(j["airSlots"].integer(0));
             im.tunnel = j["tunnel"].boolean(false);
             im.plunder = readPlunder(j["plunder"]);
@@ -1333,6 +1340,17 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         mo.eraScore = static_cast<int>(j["eraScore"].integer(0));
         mo.obsoleteEra = j.has("obsoleteEra") ? era(j["obsoleteEra"].str()) : -1;
         moments.push_back(std::move(mo));
+    }
+    for (const auto& [id, j] : m.tables["rockBandResults"]) {
+        RockBandResult rb;
+        rb.id = id;
+        rb.name = j["name"].str(id);
+        rb.albumSales = static_cast<int>(j["albumSales"].integer(0));
+        rb.tourismBomb = static_cast<int>(j["tourismBomb"].integer(0));
+        rb.probability = static_cast<int>(j["probability"].integer(0));
+        rb.dies = j["dies"].boolean(false);
+        rb.gainsLevel = j["gainsLevel"].boolean(false);
+        rockBandResults.push_back(std::move(rb));
     }
     for (const auto& [id, j] : m.tables["dedications"]) {
         DedicationType d;

@@ -1958,5 +1958,61 @@
     "ABILITY_ANTI_AIR_COVER"
    ]
   }
+ ],
+ "rockBandResults": [
+  {
+   "id": "ROCKBAND_RESULT_LEGENDS_OF_ROCK",
+   "name": "Legends of Rock",
+   "albumSales": 200,
+   "tourismBomb": 200,
+   "dies": false,
+   "gainsLevel": true,
+   "probability": 17
+  },
+  {
+   "id": "ROCKBAND_RESULT_HEADLINERS",
+   "name": "Headliners",
+   "albumSales": 150,
+   "tourismBomb": 0,
+   "dies": false,
+   "gainsLevel": true,
+   "probability": 15
+  },
+  {
+   "id": "ROCKBAND_RESULT_RISING_STARS",
+   "name": "Rising Stars",
+   "albumSales": 100,
+   "tourismBomb": 150,
+   "dies": false,
+   "gainsLevel": false,
+   "probability": 13
+  },
+  {
+   "id": "ROCKBAND_RESULT_OPENING_ACT",
+   "name": "Opening Act",
+   "albumSales": 50,
+   "tourismBomb": -25,
+   "dies": false,
+   "gainsLevel": false,
+   "probability": 11
+  },
+  {
+   "id": "ROCKBAND_RESULT_CREATIVE_DIFFERENCES",
+   "name": "Creative Differences",
+   "albumSales": 0,
+   "tourismBomb": 100,
+   "dies": true,
+   "gainsLevel": false,
+   "probability": 9
+  },
+  {
+   "id": "ROCKBAND_RESULT_AGING_ROCKERS",
+   "name": "Aging Rockers",
+   "albumSales": 0,
+   "tourismBomb": -25,
+   "dies": true,
+   "gainsLevel": false,
+   "probability": 7
+  }
  ]
 }
