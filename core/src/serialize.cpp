@@ -511,6 +511,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(c.originalOwner);
         w.boolean(c.originalCapital);
         w.i32(c.capturedTurn);
+        w.i32(c.rebellion);
+        w.i32(c.rebellionCooldown);
         w.u32(static_cast<uint32_t>(c.districts.size()));
         for (const CityDistrict& d : c.districts) {
             w.i16(d.type);
@@ -989,6 +991,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.originalOwner = r.i8();
         c.originalCapital = r.boolean();
         c.capturedTurn = r.i32();
+        c.rebellion = r.i32();
+        c.rebellionCooldown = r.i32();
         uint32_t nd = r.u32();
         if (!r.checkCount(nd, 15)) return false;
         c.districts.resize(nd);

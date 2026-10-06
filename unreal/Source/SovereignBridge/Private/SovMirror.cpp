@@ -222,7 +222,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 
 	for (const sov::Unit& U : S.units)
 	{
-		if (U.owner != View && Game.visibility(View, U.pos) != sov::Visibility::Visible)
+		if (!Game.unitVisibleTo(View, U))  // in sight, and stealthy ships only when found (05)
 		{
 			continue;
 		}

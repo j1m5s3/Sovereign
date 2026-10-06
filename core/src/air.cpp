@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 
 namespace sov {
 
@@ -16,6 +17,63 @@ size_t at(int i) { return static_cast<size_t>(i); }
 }  // namespace
 
 bool Game::isAircraft(const Unit& unit) const { return rules_->units[at(unit.type)].domain == Domain::Air; }
+
+namespace {
+// The player's Aerodrome with an Airport on this plot (05: Airlift).
+bool airportAt(const GameState& s, const Rules& r, PlayerId player, Hex h) {
+    const CityDistrict* d = s.districtAt(h);
+    const City* c = s.city(s.plot(h).city);
+    const TypeIndex airport = r.building("BUILDING_AIRPORT");
+    return d && d->complete && d->pillagedTurns == 0 && r.districts[static_cast<size_t>(d->type)].id == "DISTRICT_AERODROME" && c && c->owner == player &&
+           airport != kNone && c->has(airport);
+}
+}  // namespace
+
+CommandError Game::airliftProblem(UnitId id, Hex to) const {
+    const Unit* u = state_.unit(id);
+    if (!u) return CommandError::BadUnit;
+    const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
+    const TypeIndex civic = rules_->civic("CIVIC_RAPID_DEPLOYMENT");
+    if (ut.domain != Domain::Land || ut.layer != UnitLayer::Military || isEmbarked(*u) || u->movesLeft < Fixed::fromInt(maxMoves(*u))) return CommandError::BadTarget;
+    if (civic == kNone || !state_.players[static_cast<size_t>(u->owner)].civics.has(civic)) return CommandError::BadTarget;
+    auto h = state_.grid.normalize(to);
+    if (!h || *h == u->pos || !airportAt(state_, *rules_, u->owner, u->pos) || !airportAt(state_, *rules_, u->owner, *h)) return CommandError::BadTarget;
+    return state_.unitAt(*h, UnitLayer::Military, *rules_) ? CommandError::BadTarget : CommandError::Ok;
+}
+
+bool Game::unitVisibleTo(PlayerId viewer, const Unit& unit) const {
+    if (unit.owner == viewer) return true;
+    if (visibility(viewer, unit.pos) != Visibility::Visible) return false;
+    const TypeIndex stealth = rules_->ability("ABILITY_STEALTH");
+    const std::vector<TypeIndex>& own = rules_->units[static_cast<size_t>(unit.type)].abilities;
+    if (stealth == kNone || std::find(own.begin(), own.end(), stealth) == own.end()) return true;
+    for (const City& c : state_.cities) {
+        if (c.owner == viewer && state_.grid.distance(c.pos, unit.pos) <= 1) return true;
+    }
+    const TypeIndex reveal = rules_->ability("ABILITY_REVEAL_STEALTH");
+    for (const Unit& o : state_.units) {
+        if (o.owner != viewer) continue;
+        const int d = state_.grid.distance(o.pos, unit.pos);
+        if (d <= 1) return true;
+        const std::vector<TypeIndex>& oa = rules_->units[static_cast<size_t>(o.type)].abilities;
+        if (reveal != kNone && std::find(oa.begin(), oa.end(), reveal) != oa.end() && d <= unitSight(o)) return true;
+    }
+    return false;
+}
+
+CommandError Game::paradropProblem(UnitId id, Hex to) const {
+    const Unit* u = state_.unit(id);
+    if (!u) return CommandError::BadUnit;
+    const std::vector<TypeIndex> abilities = unitAbilities(*u);
+    const TypeIndex drop = rules_->ability("ABILITY_PARADROP");
+    if (drop == kNone || std::find(abilities.begin(), abilities.end(), drop) == abilities.end()) return CommandError::BadTarget;
+    if (state_.plot(u->pos).owner != u->owner || u->movesLeft < Fixed::fromInt(maxMoves(*u))) return CommandError::BadTarget;
+    auto h = state_.grid.normalize(to);
+    if (!h || *h == u->pos || state_.grid.distance(u->pos, *h) > 3 || !isLandPassable(state_, *rules_, *h) || state_.cityAt(*h)) return CommandError::BadTarget;
+    if (visibility(u->owner, *h) == Visibility::Unrevealed || state_.unitAt(*h, UnitLayer::Military, *rules_) || state_.foreignUnitAt(*h, u->owner))
+        return CommandError::BadTarget;
+    return CommandError::Ok;
+}
 
 int Game::airSlots(PlayerId player, Hex base) const {
     // Carriers on the plot and an Airstrip in the player's land add to any city or Aerodrome slots.

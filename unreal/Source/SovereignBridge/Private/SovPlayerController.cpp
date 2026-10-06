@@ -373,6 +373,14 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 		// Aircraft rebase to one of our air bases with room (05: air units).
 		Send(sov::Command::rebaseUnit(Me(), U->id, Target));
 	}
+	else if (G.airliftProblem(U->id, Target) == sov::CommandError::Ok)
+	{
+		Send(sov::Command::airlift(Me(), U->id, Target));  // Aerodrome to Aerodrome with Airports (05)
+	}
+	else if (G.paradropProblem(U->id, Target) == sov::CommandError::Ok && S.grid.distance(U->pos, Target) > 1)
+	{
+		Send(sov::Command::paradrop(Me(), U->id, Target));  // Spec Ops from our land (05)
+	}
 	else
 	{
 		Send(sov::Command::move(Me(), U->id, Target));

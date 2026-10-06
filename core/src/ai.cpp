@@ -121,7 +121,7 @@ void survey(View& v) {
             if (u.moveTarget && (t.foundCity || t.buildCharges > 0)) v.claimed.push_back(*u.moveTarget);
             continue;
         }
-        if (!v.hostile(u.owner) || !isArmy(t) || v.game.visibility(v.me, u.pos) != Visibility::Visible) continue;
+        if (!v.hostile(u.owner) || !isArmy(t) || !v.game.unitVisibleTo(v.me, u)) continue;
         for (size_t i = 0; i < v.cities.size(); ++i) {
             if (s.grid.distance(s.city(v.cities[i])->pos, u.pos) <= kThreatRange) v.threat[i] += power(t) * u.hp / 100;
         }

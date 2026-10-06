@@ -1363,6 +1363,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         h.growthPercent = static_cast<int>(j["growthPercent"].integer(0));
         h.yieldPercent = static_cast<int>(j["yieldPercent"].integer(0));
         h.loyaltyPerTurn = static_cast<int>(j["loyaltyPerTurn"].integer(0));
+        h.rebellionPoints = static_cast<int>(j["rebellionPoints"].integer(0));
         happiness.push_back(std::move(h));
     }
     std::sort(happiness.begin(), happiness.end(),

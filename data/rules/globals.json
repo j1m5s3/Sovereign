@@ -483,13 +483,15 @@
    "id": "HAPPINESS_REVOLT",
    "growthPercent": -100,
    "yieldPercent": -40,
-   "loyaltyPerTurn": -6
+   "loyaltyPerTurn": -6,
+   "rebellionPoints": 4
   },
   {
    "id": "HAPPINESS_UNREST",
    "growthPercent": -100,
    "yieldPercent": -30,
    "loyaltyPerTurn": -6,
+   "rebellionPoints": 1,
    "minBalance": -6
   },
   {
@@ -497,6 +499,7 @@
    "growthPercent": -30,
    "yieldPercent": -20,
    "loyaltyPerTurn": -6,
+   "rebellionPoints": 0,
    "minBalance": -4
   },
   {
@@ -504,6 +507,7 @@
    "growthPercent": -15,
    "yieldPercent": -10,
    "loyaltyPerTurn": -3,
+   "rebellionPoints": -1,
    "minBalance": -2
   },
   {
@@ -511,6 +515,7 @@
    "growthPercent": 0,
    "yieldPercent": 0,
    "loyaltyPerTurn": 0,
+   "rebellionPoints": -1,
    "minBalance": 0
   },
   {
@@ -518,6 +523,7 @@
    "growthPercent": 10,
    "yieldPercent": 10,
    "loyaltyPerTurn": 3,
+   "rebellionPoints": -1,
    "minBalance": 3
   },
   {
@@ -525,6 +531,7 @@
    "growthPercent": 20,
    "yieldPercent": 20,
    "loyaltyPerTurn": 6,
+   "rebellionPoints": -1,
    "minBalance": 5
   }
  ],

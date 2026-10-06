@@ -288,6 +288,12 @@ CommandError Game::validate(const Command& c) const {
             if (!u || u->owner != c.player) return CommandError::NotYourUnit;
             return rebaseProblem(c.id, c.target);
         }
+        case CommandType::Airlift:
+        case CommandType::Paradrop: {
+            const Unit* u = state_.unit(c.id);
+            if (!u || u->owner != c.player) return CommandError::NotYourUnit;
+            return c.type == CommandType::Airlift ? airliftProblem(c.id, c.target) : paradropProblem(c.id, c.target);
+        }
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
@@ -850,9 +856,11 @@ void Game::apply(const Command& c) {
         case CommandType::AppointGovernor:
         case CommandType::PromoteGovernor:
         case CommandType::AssignGovernor: applyGovernor(c); break;
+        case CommandType::Airlift:
+        case CommandType::Paradrop:
         case CommandType::RebaseUnit: {
             Unit& u = *state_.unit(c.id);
-            u.pos = c.target;
+            u.pos = *state_.grid.normalize(c.target);
             u.movesLeft = Fixed();  // rebasing takes the aircraft's turn
             u.activity = Activity::Awake;
             u.moved = true;

@@ -851,6 +851,7 @@ CommandError Game::validateCombat(const Command& c) const {
     if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
     if (camp && (camp->owner == c.player || !atWar(c.player, camp->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
+    if (defender && !city && !camp && !unitVisibleTo(c.player, *defender)) return CommandError::CannotAttack;  // a hidden Submarine (05: stealth)
     if (isEmbarked(*u) && !unitHas(*u, UnitEffectKind::FightEmbarked)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation), the Giant Death Robot excepted
 
     if (c.type == CommandType::RangedAttack) {
