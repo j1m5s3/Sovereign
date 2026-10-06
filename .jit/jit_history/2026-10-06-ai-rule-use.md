@@ -29,3 +29,7 @@ An all-AI soak game (seed 12, 6 civs, Small, 350 turns) ended with the city-stat
 - in debt and still losing gold, the AI locks up to half of each city's citizens onto the plots that pay the most Gold (2+), and frees them once the treasury is above 100.
 
 Muscat now stays between -71 and +69 gold. The pace benchmark is unchanged (7.7 cities, science 58.3 at turn 200).
+
+## Follow-up: loyalty from city-states and Free Cities
+
+The same soak game showed early capitals (Paris, population 1, turn 49; London, turn 89) revolting under pressure from neighbouring city-states, then joining those city-states. Civ VI's loyalty sources (CivFanatics Civ VI Loyalty Guide, civilization.fandom.com Loyalty (Civ6)) say city-states and Free Cities exert no loyalty pressure, and a Free City joins the civilization that pressed it hardest. Capitals can flip in Civ VI, so they still can here. Now city-states' and Free Cities' citizens press on no other city (`loyaltyPressure`), and a Free City joins only a major civ (`processFreeCities`). Pace benchmark at turn 200: 8.4 cities (was 7.7), population 49.7 (43.6), science 65.4 (58.3), production 99.3 (89.7).

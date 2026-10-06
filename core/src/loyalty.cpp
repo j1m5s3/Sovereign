@@ -47,6 +47,8 @@ Fixed Game::loyaltyPressure(const City& city) const {
     for (const City& o : state_.cities) {
         // A Cultural alliance (08): no loyalty pressure between the allies.
         if (o.owner != city.owner && alliance(o.owner, city.owner) == AllianceType::Cultural) continue;
+        // City-states and Free Cities press on no one else (Civ VI Loyalty guide: they have no impact).
+        if (o.owner != city.owner && (isCityState(o.owner) || state_.players[static_cast<size_t>(o.owner)].freeCity)) continue;
         const Fixed p = pressureFrom(state_, *rules_, o, city.pos);
         if (o.owner == city.owner) domestic += p;
         else foreign += p;
@@ -223,7 +225,7 @@ void Game::processFreeCities() {
         PlayerId best = kNoPlayer;
         Fixed bestPressure;
         for (const Player& p : state_.players) {
-            if (!p.alive || p.barbarian) continue;
+            if (!p.alive || p.barbarian || p.cityState != kNone) continue;  // only a major civ takes it in
             Fixed pressure;
             for (const City& o : state_.cities) {
                 if (o.owner == p.id) pressure += pressureFrom(state_, *rules_, o, c.pos);
