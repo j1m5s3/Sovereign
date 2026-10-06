@@ -29,6 +29,8 @@
 
 #include "sovereign/game.h"
 
+#include <algorithm>
+
 namespace
 {
 FString Str(const std::string& S)
@@ -241,6 +243,20 @@ void ASovPlayerController::ClickSelect(int32 X, int32 Y)
 {
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::GameState& S = G.state();
+	// Shift+click with one of our cities selected: lock a citizen to the plot, or free a locked one (02: Citizens).
+	if (SelectedCity >= 0 && (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)))
+	{
+		if (const sov::City* C = S.city(SelectedCity); C && C->owner == Me())
+		{
+			const int32 Index = S.grid.index(sov::Hex{X, Y});
+			const bool bLocked = std::binary_search(C->locked.begin(), C->locked.end(), Index);
+			if (Send(sov::Command::lockPlot(Me(), C->id, sov::Hex{X, Y}, !bLocked)))
+			{
+				Subsystem()->LastMessage = bLocked ? TEXT("Citizen freed from the plot.") : TEXT("Citizen locked to the plot.");
+			}
+			return;
+		}
+	}
 	TArray<int32> Mine;
 	for (const sov::Unit& U : S.units)
 	{
@@ -284,6 +300,29 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 		// Ctrl+right-click: the city's Encampment fires (03: Defense).
 		const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
 		Send(bCtrl ? sov::Command::encampmentStrike(Me(), SelectedCity, Target) : sov::Command::cityStrike(Me(), SelectedCity, Target));
+		return;
+	}
+	// Alt+right-click: the strongest device from one of our Missile Silos in range (05: Nuclear weapons).
+	if (IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt))
+	{
+		const sov::Player& P = S.players[static_cast<size_t>(Me())];
+		const sov::TypeIndex Silo = G.rules().improvement("IMPROVEMENT_MISSILE_SILO");
+		for (int32 W = static_cast<int32>(P.wmds.size()) - 1; W >= 0; --W)
+		{
+			if (P.wmds[static_cast<size_t>(W)] <= 0) continue;
+			for (int32 I = 0; I < S.grid.size(); ++I)
+			{
+				const sov::Plot& Pl = S.plots[static_cast<size_t>(I)];
+				if (Pl.owner != Me() || Pl.improvement != Silo || Silo == sov::kNone) continue;
+				const sov::Command Launch = sov::Command::launchWmdFromSilo(Me(), S.grid.at(I), static_cast<sov::TypeIndex>(W), Target);
+				if (G.validate(Launch) == sov::CommandError::Ok)
+				{
+					Send(Launch);
+					return;
+				}
+			}
+		}
+		Subsystem()->LastMessage = TEXT("No Missile Silo in range with a device to launch.");
 		return;
 	}
 	const sov::Unit* U = S.unit(SelectedUnit);
@@ -1118,7 +1157,10 @@ void ASovPlayerController::Pick(int32 Index)
 		return;
 	}
 	const EChooser Was = Chooser;
-	const sov::Command Command = Choices[I].Command;
+	sov::Command Command = Choices[I].Command;
+	// Shift with a production choice: add it to the queue instead of replacing (02: Production queue).
+	if (Command.type == sov::CommandType::SetProduction && (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)))
+		Command.type = sov::CommandType::QueueProduction;
 	const std::vector<sov::Command> Then = Choices[I].Then;
 	Chooser = EChooser::None;
 	if (!Then.empty())
@@ -1917,6 +1959,9 @@ void ASovPlayerController::UpdatePanel()
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
 		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   F2 government   Z governors   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
+		if (SelectedCity >= 0)
+			L.Add(TEXT("City: P production (Shift+pick to queue)   Shift+click a plot to lock or free a citizen   Ctrl+right-click Encampment strike"));
+		L.Add(TEXT("Alt+right-click: launch a nuclear device from a Missile Silo in range"));
 	}
 }
 
