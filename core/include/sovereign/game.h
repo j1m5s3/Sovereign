@@ -182,7 +182,9 @@ public:
     std::vector<Hex> wonderPlots(CityId city, TypeIndex building) const;
     void wonderCompleted(CityId city, TypeIndex building);  // its completion effects (scenarios, tests)
     // The city lies within `range` of a wonder its owner holds (Colosseum, Statue of Liberty).
-    bool nearOwnWonder(const City& city, const char* wonderId, int range) const;
+    bool nearOwnWonder(const City& city, TypeIndex wonder, int range) const;
+    // Kilwa Kisiwani: +15% in its city with one suzerainty of the kind, +15% in every city with two (0, 15 or 30).
+    int kilwaPercent(const City& city, CityStateKind kind) const;
 
     // ---- trade routes and roads (07: Trade routes; 01: Routes)
     int tradeRouteCapacity(PlayerId player) const;
@@ -769,6 +771,11 @@ private:
     Unit& spawnUnit(TypeIndex type, PlayerId owner, Hex pos);
 
     const Rules* rules_;
+    // World wonders read in hot paths, looked up once (03: Wonders).
+    enum class W : uint8_t { Kilwa, Sankore, Oracle, MachuPicchu, Colosseum, Liberty, Zimbabwe, Torre, Count };
+    TypeIndex wonders_[static_cast<size_t>(W::Count)] = {};
+    TypeIndex wonderType(W w) const { return wonders_[static_cast<size_t>(w)]; }
+    bool holdsWonder(PlayerId player, W w) const;  // one of the player's cities has it
     GameState state_;
     std::vector<Command> log_;
     std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command

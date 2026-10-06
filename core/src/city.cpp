@@ -245,6 +245,12 @@ CityReport Game::cityReport(CityId id) const {
     }
     if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
         raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
+    // University of Sankore (03: Wonders): +2 Science for each other civ's trade route to this city.
+    if (c->has(wonderType(W::Sankore))) {
+        for (const TradeRoute& tr : state_.tradeRoutes) {
+            if (tr.destination == c->id && tr.owner != c->owner) raw[idx(YieldType::Science)] += Fixed::fromInt(2);
+        }
+    }
     // Johannesburg (08: suzerain): +1 Production per kind of improved resource here, +1 more after Industrialization.
     if (suzerainBonus(c->owner, "CITYSTATE_JOHANNESBURG")) {
         std::vector<TypeIndex> kinds;
@@ -355,9 +361,16 @@ CityReport Game::cityReport(CityId id) const {
     const LoyaltyLevel* loyal = loyaltyLevel(*c);
     const int loyaltyYield = loyal ? loyal->yieldPercent : 0;  // Wavering -25% ... Unrest -100% [R&F]
 
+    const bool kilwa = holdsWonder(c->owner, W::Kilwa);
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.
+        if (kilwa) {
+            static const std::pair<YieldType, CityStateKind> kKilwa[] = {{YieldType::Science, CityStateKind::Scientific}, {YieldType::Culture, CityStateKind::Cultural},
+                                                                         {YieldType::Faith, CityStateKind::Religious}, {YieldType::Gold, CityStateKind::Trade}};
+            for (const auto& [y, k] : kKilwa) pct += i == idx(y) ? kilwaPercent(*c, k) : 0;
+        }
         // Antananarivo (08: suzerain): +2% Culture per great person earned.
         if (i == idx(YieldType::Culture) && suzerainBonus(c->owner, "CITYSTATE_ANTANANARIVO")) {
             int earned = 0;
@@ -1365,6 +1378,11 @@ void Game::processCities(PlayerId pid) {
                 if (nuclear && policyIs(pid, "POLICY_ROGUE_STATE")) pct += 50;
                 if (policyIs(pid, "POLICY_AUTOMATED_WORKFORCE")) pct += 20;
                 prod = prod * pct / 100;
+            }
+            // Kilwa Kisiwani (03: Wonders): units by Militaristic suzerainties, buildings and districts by Industrial ones.
+            if (item.kind != ProductionKind::Project) {
+                if (const int kp = kilwaPercent(city, item.kind == ProductionKind::Unit ? CityStateKind::Militaristic : CityStateKind::Industrial); kp > 0)
+                    prod = prod * (100 + kp) / 100;
             }
             // Policy cards (04): wonders by era, walls, districts and their buildings, space race projects.
             if (item.kind != ProductionKind::Unit)

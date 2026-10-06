@@ -67,7 +67,9 @@ int Game::favorPerTurn(PlayerId pid) const {
         if (c.owner == pid) favor += static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityFavorPerTurn).toInt());
     }
     for (const Player& cs : state_.players) {
-        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN");
+        // Országház (03: Wonders) doubles the favor from suzerainties.
+        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid)
+            favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN") * (buildingsOwned(pid, "BUILDING_ORSZ_GH_Z") > 0 ? 2 : 1);
         if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");
     }
     // A Diplomatic Quarter [GS]: +1 a turn for each delegation and embassy it keeps (08: Resident Embassy).

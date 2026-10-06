@@ -145,6 +145,7 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         int cost = (u.cost + u.costProgression * copies) * speed / 100;
         const int discount = static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());
         cost = cost * std::max(0, 100 - discount) / 100;
+        if (u.id == "UNIT_GURU" && buildingsOwned(player, "BUILDING_MEENAKSHI_TEMPLE") > 0) cost = cost * 70 / 100;  // Meenakshi Temple (03)
         return std::max(1, cost);
     }
     if (item.kind == ProductionKind::Building) {

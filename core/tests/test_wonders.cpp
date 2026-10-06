@@ -164,8 +164,34 @@ TEST(wonder_effects_in_code) {
     // The Colosseum: +2 loyalty a turn in the owner's cities within 6 tiles.
     const CityId mine = g->state().cities[0].id;
     CHECK(g->loyaltyPerTurn(mine) >= plain->loyaltyPerTurn(mine) + Fixed::fromInt(2));  // and its Amenities
-    CHECK(g->nearOwnWonder(g->state().cities[0], "BUILDING_COLOSSEUM", 6));
-    CHECK(!g->nearOwnWonder(g->state().cities[1], "BUILDING_COLOSSEUM", 6));
+    CHECK(g->nearOwnWonder(g->state().cities[0], wonder("BUILDING_COLOSSEUM"), 6));
+    CHECK(!g->nearOwnWonder(g->state().cities[1], wonder("BUILDING_COLOSSEUM"), 6));
+}
+
+TEST(wonders_of_great_people_trade_and_envoys) {
+    // The Oracle: +2 Great Scientist points from the Campus of its city; Faith patronage a quarter cheaper.
+    GameState s = wonderState();
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {6, 6}, true});
+    const TypeIndex scientist = rules().greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(wonder("BUILDING_ORACLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), s);
+    CHECK_EQ(g->greatPersonPointsPerTurn(0, scientist), plain->greatPersonPointsPerTurn(0, scientist) + 2);
+    if (plain->patronageCost(0, scientist, true) > 0) CHECK_EQ(g->patronageCost(0, scientist, true), plain->patronageCost(0, scientist, true) * 75 / 100);
+    // Apadana: +2 envoys for each wonder completed in its city.
+    const int tokens = g->state().players[0].envoyTokens;
+    g->wonderCompleted(g->state().cities[0].id, wonder("BUILDING_APADANA"));
+    CHECK_EQ(g->state().players[0].envoyTokens, tokens + 2);
+    // University of Sankore: other civs' routes to it carry +1 Science and +1 Gold.
+    GameState t = wonderState();
+    auto before = Game::fromScenario(rules(), t);
+    t.cities[1].buildings.push_back(wonder("BUILDING_UNIVERSITY_OF_SANKORE"));
+    std::sort(t.cities[1].buildings.begin(), t.cities[1].buildings.end());
+    auto after = Game::fromScenario(rules(), std::move(t));
+    const size_t sci = static_cast<size_t>(YieldType::Science);
+    CHECK_EQ(after->tradeRouteYields(after->state().cities[0], after->state().cities[1])[sci],
+             before->tradeRouteYields(before->state().cities[0], before->state().cities[1])[sci] + Fixed::fromInt(1));
 }
 
 TEST(jebel_barkal_gives_iron_while_it_stands) {

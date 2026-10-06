@@ -161,6 +161,23 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(2 * districts);
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(districts);
     }
+    // Wonders (03): Great Zimbabwe (+2 Gold per bonus resource of the origin), Torre de Belém (+2 Gold per luxury at an
+    // international destination), University of Sankore (+1 Science and +1 Gold on other civs' routes to it).
+    auto goods = [&](const City& city, ResourceClass cls) {
+        int n = 0;
+        for (const Hex& h : state_.grid.within(city.pos, 3)) {
+            const Plot& p = state_.plot(h);
+            n += p.city == city.id && p.resource != kNone && rules_->resources[at(p.resource)].cls == cls && resourceImproved(h) ? 1 : 0;
+        }
+        return n;
+    };
+    if (origin.has(wonderType(W::Zimbabwe))) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * goods(origin, ResourceClass::Bonus));
+    if (!domestic && origin.has(wonderType(W::Torre)))
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * goods(destination, ResourceClass::Luxury));
+    if (!domestic && destination.has(wonderType(W::Sankore))) {
+        out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(1);
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(1);
+    }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;

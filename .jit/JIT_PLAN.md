@@ -16,11 +16,16 @@ Specs: 03-districts-buildings-wonders (Wonders); data/wonders ("Effects (modifie
    - Colosseum: +2 loyalty within 6 tiles; Statue of Liberty: no loyalty loss within 6 tiles (`Game::nearOwnWonder`);
    - Machu Picchu: Mountain adjacency; Venetian Arsenal: a second naval unit; Taj Mahal: era score; Mont St. Michel: Martyr Apostles.
    The generator now also reads Pyramids' Builder charge, Ruhr Valley's Mines and Quarries, and Casa de Contratación's "and" conditions.
-3. **Next: The rest in code:**
-   - Kilwa Kisiwani, University of Sankore, Great Zimbabwe, Torre de Belém;
-   - Oracle, Meenakshi Temple, Apadana, Országház;
+3. **Done: Trade, city-state and great person wonders:**
+   - Kilwa Kisiwani: `Game::kilwaPercent`, yields and production by suzerainties of each kind;
+   - University of Sankore: +2 Science per foreign route to it, and +1 Science and +1 Gold for the route's origin;
+   - Great Zimbabwe: +2 Gold per bonus resource of the origin; Torre de Belém: +2 Gold per luxury at an international destination;
+   - Oracle: +2 points per district, Faith patronage 25% cheaper; Meenakshi Temple: Gurus 30% cheaper;
+   - Apadana: +2 envoys per wonder completed in its city; Országház: double favor from suzerainties.
+4. **Next: Terrain and tourism wonders:**
    - Great Bath, Petra, Huey Teocalli, Mausoleum, Amundsen-Scott;
-   - the tourism wonders (Cristo Redentor, St. Basil's, Golden Gate Bridge, Biosphère).
+   - Cristo Redentor, St. Basil's, Golden Gate Bridge, Biosphère;
+   - Torre de Belém's free buildings.
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
@@ -28,3 +33,5 @@ Specs: 03-districts-buildings-wonders (Wonders); data/wonders ("Effects (modifie
 - Big Ben's "multiplies treasury by 50" is +50% of the treasury (the Civ VI value), kind `TREASURY_PERCENT`.
 - `Game::wonderCompleted` gives scenarios and tests a wonder's completion effects.
 - Wonder policy slots come after the government's in `Player::policies`; a save may hold more slots than the government has. When a wonder is lost, the slots are resized at its old owner's next turn and cards in slots of the wrong type come out.
+- Wonders read in hot paths are looked up once per `Game` (`Game::W`, `wonderType`, `holdsWonder`); string lookups of long ids allocate.
+- The generator drops accented letters from ids (`BUILDING_ORSZ_GH_Z`, `BUILDING_TORRE_DE_BEL_M`); code uses the ids as generated.

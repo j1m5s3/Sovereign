@@ -195,6 +195,18 @@ TEST(a_suzerain_enjoys_its_city_states_bonus) {
     CHECK(enjoysSuzerainBonus(e->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
 }
 
+TEST(kilwa_kisiwani_counts_suzerainties) {
+    GameState s = csState();
+    s.players[0].envoys[2] = 3;  // suzerain of the Scientific city-state
+    s.cities[0].buildings.push_back(rules().building("BUILDING_KILWA_KISIWANI"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->suzerainOf(2) == 0);
+    CHECK_EQ(g->kilwaPercent(g->state().cities[0], CityStateKind::Scientific), 15);
+    CHECK_EQ(g->kilwaPercent(g->state().cities[0], CityStateKind::Cultural), 0);
+    CHECK_EQ(g->kilwaPercent(g->state().cities[1], CityStateKind::Scientific), 0);  // not its owner's
+}
+
 TEST(suzerain_bonuses_in_code) {
     auto suzerainOfType = [](const char* id) {
         GameState s = csState();
