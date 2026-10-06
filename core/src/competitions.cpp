@@ -55,6 +55,30 @@ void Game::startCompetition() {
     state_.competitions.push_back(std::move(c));
 }
 
+// Aid Request [GS] (08: Scored Competitions; data: Aid Request rewards and score sources): a disaster
+// that costs a major civ population opens one when no competition runs; for 30 turns the others may run
+// the Send Aid project in their cities, each completion sending the struck civ 200 Gold and scoring 200.
+void Game::requestAid(PlayerId victim) {
+    if (!isMajorCiv(victim)) return;
+    for (const Competition& c : state_.competitions) {
+        if (!c.settled) return;
+    }
+    Competition c;
+    c.kind = CompetitionKind::AidRequest;
+    c.endTurn = state_.turn + 30;
+    c.scores.assign(state_.players.size(), 0);
+    c.baseline.assign(state_.players.size(), 0);
+    c.beneficiary = victim;
+    state_.competitions.push_back(std::move(c));
+}
+
+const Competition* Game::runningAidRequest() const {
+    for (const Competition& c : state_.competitions) {
+        if (!c.settled && c.kind == CompetitionKind::AidRequest) return &c;
+    }
+    return nullptr;
+}
+
 void Game::competitionScore(PlayerId player, CompetitionKind kind, int amount) {
     if (amount == 0 || player < 0 || !isMajorCiv(player)) return;
     for (Competition& c : state_.competitions) {
@@ -112,7 +136,8 @@ void Game::processCompetitions() {
                     case CompetitionKind::WorldGames:
                     case CompetitionKind::NobelPeace:
                     case CompetitionKind::SpaceStation: dvp = 1; break;
-                    case CompetitionKind::ClimateAccords: dvp = 2; break;
+                    case CompetitionKind::ClimateAccords:
+                    case CompetitionKind::AidRequest: dvp = 2; break;
                     default: break;
                 }
                 p.diplomaticVictoryPoints += dvp;
@@ -121,8 +146,9 @@ void Game::processCompetitions() {
                 }
             }
             const bool high = rank < topHalf;
-            if (high && c.kind != CompetitionKind::NobelLiterature && c.kind != CompetitionKind::NobelPhysics) p.favor += climate ? 100 : 50;
-            if (!high && climate) p.favor += 50;
+            const bool aid = c.kind == CompetitionKind::AidRequest;
+            if (high && c.kind != CompetitionKind::NobelLiterature && c.kind != CompetitionKind::NobelPhysics) p.favor += climate || aid ? 100 : 50;
+            if (!high && (climate || aid)) p.favor += 50;
             if (c.kind == CompetitionKind::NobelPhysics) {
                 // A Eureka toward an Industrial-or-later tech it lacks.
                 const TypeIndex industrial = rules_->era("ERA_INDUSTRIAL");

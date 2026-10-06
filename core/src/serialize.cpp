@@ -545,6 +545,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u32(static_cast<uint32_t>(cp.baseline.size()));
         for (int64_t b : cp.baseline) w.i64(b);
         w.boolean(cp.settled);
+        w.i8(cp.beneficiary);
     }
     w.u32(static_cast<uint32_t>(s.quests.size()));
     for (const Quest& q : s.quests) {
@@ -1015,6 +1016,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         cp.baseline.resize(nb);
         for (int64_t& b : cp.baseline) b = r.i64();
         cp.settled = r.boolean();
+        cp.beneficiary = r.i8();
     }
     uint32_t nquest = r.u32();
     if (!r.checkCount(nquest, 7)) return false;

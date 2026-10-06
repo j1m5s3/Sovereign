@@ -234,14 +234,15 @@ struct Quest {
 
 // A scored competition [GS] (08: Scored Competitions; data: world-congress-emergencies), called at a
 // World Congress session; every major civ takes part.
-enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation };
-constexpr int kNumCompetitionKinds = 7;
+enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation, AidRequest };
+constexpr int kNumCompetitionKinds = 8;
 struct Competition {
     CompetitionKind kind = CompetitionKind::WorldsFair;
     int32_t endTurn = 0;
     std::vector<int32_t> scores;    // per player
     std::vector<int64_t> baseline;  // per player: favor (Peace) or CO2 (Climate Accords) when it began
     bool settled = false;
+    PlayerId beneficiary = kNoPlayer;  // Aid Request: the civ struck by the disaster
 };
 
 // A wonder's plot: reserved when its production starts, its own tile once built.

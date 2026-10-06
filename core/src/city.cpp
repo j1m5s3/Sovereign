@@ -516,9 +516,13 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (pj.prerequisite != kNone && (static_cast<size_t>(pj.prerequisite) >= p.projectsDone.size() || p.projectsDone[static_cast<size_t>(pj.prerequisite)] == 0))
             return fail(CommandError::CannotBuild);
         if (pj.resource != kNone && p.stockpile[static_cast<size_t>(pj.resource)] < pj.resourceAmount) return fail(CommandError::NotEnoughResources);
-        // Repair Outer Defenses: only with walls that are down.
+        // Repair Outer Defenses: only with walls that are down. Send Aid: only while another civ asks for aid.
         for (const ProjectEffect& e : pj.effects) {
             if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Aid) {
+                const Competition* aid = runningAidRequest();
+                if (!aid || aid->beneficiary == c.owner) return fail(CommandError::CannotBuild);
+            }
         }
     } else {
         return fail(CommandError::CannotBuild);
@@ -891,6 +895,12 @@ void Game::completeProject(City& city, TypeIndex project) {
                 break;
             case ProjectEffectKind::CultureFromScience: p.civics.overflow += sciencePerTurn(city.owner) * e.amount; break;
             case ProjectEffectKind::ExpeditionSpeed: break;  // the space race (Science victory) reads projectsDone
+            case ProjectEffectKind::Aid:
+                if (const Competition* aid = runningAidRequest(); aid && aid->beneficiary != kNoPlayer) {
+                    state_.players[static_cast<size_t>(aid->beneficiary)].gold += Fixed::fromInt(e.amount);
+                    competitionScore(city.owner, CompetitionKind::AidRequest, e.amount);
+                }
+                break;
             case ProjectEffectKind::Wmd:
                 if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
                 if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;

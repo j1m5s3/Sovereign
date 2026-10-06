@@ -399,6 +399,8 @@ public:
 
     // ---- scored competitions [GS] (08: Scored Competitions)
     void startCompetition();                                       // at a World Congress session
+    void requestAid(PlayerId victim);                              // a disaster cost it population: an Aid Request
+    const Competition* runningAidRequest() const;
     void competitionScore(PlayerId player, CompetitionKind kind, int amount);
     int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)
     void processCompetitions();                                    // settles the ones whose time is up (the world turn)

@@ -92,3 +92,24 @@ TEST(great_people_score_the_nobel_prizes) {
     CHECK_EQ(loaded->state().competitions[0].scores[0], 1);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(an_aid_request_opens_the_send_aid_project) {
+    GameState s = world("ERA_MEDIEVAL");
+    auto g = Game::fromScenario(rules(), s);
+    const ProductionItem aid{ProductionKind::Project, rules().project("PROJECT_SEND_AID")};
+    CHECK(!g->canProduce(g->state().cities[1], aid));  // no one asks yet
+    g->requestAid(0);
+    REQUIRE(g->runningAidRequest() != nullptr);
+    CHECK(g->canProduce(g->state().cities[1], aid));
+    CHECK(!g->canProduce(g->state().cities[0], aid));  // not the struck civ itself
+    const Fixed gold = g->state().players[0].gold;
+    g->completeProject(g->stateMutForTests().cities[1], aid.type);
+    CHECK(g->state().players[0].gold == gold + Fixed::fromInt(200));
+    CHECK_EQ(g->competitionStanding(*g->runningAidRequest(), 1), 200);
+    GameState late = g->state();
+    late.turn = late.competitions.back().endTurn;
+    const int dvp = late.players[1].diplomaticVictoryPoints;
+    auto h = Game::fromScenario(rules(), std::move(late));
+    h->processCompetitions();
+    CHECK_EQ(h->state().players[1].diplomaticVictoryPoints, dvp + 2);
+}

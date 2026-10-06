@@ -1095,6 +1095,11 @@ def project_effects(name, text):
         if m:
             effects.append({"kind": "WMD", "amount": 1, "weapon": "WMD_" + snake(m.group(1) + " Device")})
             continue
+        m = re.fullmatch(r"send (\d+) Gold to (?:Military )?Aid Request", part)
+        if m:
+            if not any(e["kind"] == "AID" for e in effects):
+                effects.append({"kind": "AID", "amount": int(m.group(1))})  # 08: Aid Request
+            continue
         if part.startswith("adjust city required power"):
             continue  # power is not modelled; the station counts as powered
         unmodelled.append(part)

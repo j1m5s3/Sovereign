@@ -1914,7 +1914,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
             {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
-            {"WMD", ProjectEffectKind::Wmd}};
+            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;

@@ -1588,6 +1588,7 @@ void production(View& v) {
                         switch (e.kind) {
                             case ProjectEffectKind::Loyalty: value = std::max(value, c.loyalty < 60 ? 400 : 0); break;
                             case ProjectEffectKind::RepairWalls: value = std::max(value, threatened ? 600 : 80); break;
+                            case ProjectEffectKind::Aid: value = std::max(value, 150); break;  // Diplomatic Victory points
                             case ProjectEffectKind::Wmd: {
                                 // Devices held plus those under way in our other cities.
                                 int stock = g.wmdsHeld(v.me);

@@ -712,7 +712,7 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
