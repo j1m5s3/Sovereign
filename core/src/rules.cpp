@@ -604,6 +604,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"SEES_THROUGH_FEATURES", UnitEffectKind::SeesThroughFeatures}, {"COASTAL_RAID", UnitEffectKind::CoastalRaid},
             {"HEAL_NEUTRAL", UnitEffectKind::HealNeutral}, {"HEAL_ENEMY", UnitEffectKind::HealEnemy},
             {"AIR_SLOTS", UnitEffectKind::AirSlots}, {"KILL_YIELD", UnitEffectKind::KillYield},
+            {"SPREAD_CHARGES", UnitEffectKind::SpreadCharges}, {"EVICT_PERCENT", UnitEffectKind::EvictPercent},
+            {"FOREIGN_SPREAD_PERCENT", UnitEffectKind::ForeignSpreadPercent}, {"WONDER_CHARGES", UnitEffectKind::WonderCharges},
+            {"CONVERT_GOLD", UnitEffectKind::ConvertGold}, {"HEATHEN_CONVERSION", UnitEffectKind::HeathenConversion},
+            {"MARTYR", UnitEffectKind::Martyr}, {"HEAL_AURA", UnitEffectKind::HealAura},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},

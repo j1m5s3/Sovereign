@@ -1526,6 +1526,13 @@ void Game::healAndFortify(PlayerId pid) {
     const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     const int fortifyMax = rules_->globalInt("FORTIFY_TURN_MAX");
     const Player& owner = state_.players[static_cast<size_t>(pid)];
+    // Chaplains (06): Apostles that heal the units next to them.
+    std::vector<std::pair<Hex, int>> chaplains;
+    for (const Unit& o : state_.units) {
+        if (o.owner == pid && !o.promotions.empty() && typeOf(*rules_, o).spreadCharges > 0) {
+            if (const int extra = unitEffectTotal(o, UnitEffectKind::HealAura); extra > 0) chaplains.push_back({o.pos, extra});
+        }
+    }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         const UnitType& ut = typeOf(*rules_, u);
@@ -1545,6 +1552,8 @@ void Game::healAndFortify(PlayerId pid) {
                 heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_ENEMY" : "COMBAT_HEAL_LAND_ENEMY") + unitEffectTotal(u, UnitEffectKind::HealEnemy);
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL") + unitEffectTotal(u, UnitEffectKind::HealNeutral);
             if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
+            // Chaplain (06): a friendly Apostle next to it.
+            for (const auto& [pos, extra] : chaplains) heal += state_.grid.distance(pos, u.pos) <= 1 ? extra : 0;
             u.hp = std::min(maxHp, u.hp + heal);
         }
         // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.

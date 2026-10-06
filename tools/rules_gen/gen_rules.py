@@ -526,6 +526,11 @@ def unit_effects(text):
             (r"\+(\d+)% pillage/plunder yields", "PLUNDER_PERCENT"),
             (r"\+(\d+) HP healing \(Neutral\)", "HEAL_NEUTRAL"), (r"\+(\d+) HP healing \(Enemy\)", "HEAL_ENEMY"),
             (r"\+(\d+) air slots", "AIR_SLOTS"),
+            (r"\+(\d+) spread charge\(s\)", "SPREAD_CHARGES"), (r"removes (\d+)% of other religions", "EVICT_PERCENT"),
+            (r"adjust unit foreign spread modifier \(Amount=(\d+)\)", "FOREIGN_SPREAD_PERCENT"),
+            (r"adjust unit natural wonder deferred charges \(Amount=(\d+)\)", "WONDER_CHARGES"),
+            (r"\+(\d+) Gold when a unit is trained/bought", "CONVERT_GOLD"),
+            (r"\+(\d+) HP healing \(All\) for your units where within tiles", "HEAL_AURA"),
         ]
         flags = {
             "can move after attacking": "MOVE_AFTER_ATTACK", "can attack after moving": "ATTACK_AFTER_MOVE",
@@ -537,6 +542,7 @@ def unit_effects(text):
             "ignores Hills movement costs": "IGNORE_HILLS", "ignores Forest movement costs": "IGNORE_FOREST",
             "ignores All movement costs": "IGNORE_TERRAIN", "no movement cost to embark/disembark": "FREE_EMBARK",
             "sees through features": "SEES_THROUGH_FEATURES", "can coastal raid": "COASTAL_RAID",
+            "converts defeated barbarians": "HEATHEN_CONVERSION", "creates a Relic when killed in theological combat": "MARTYR",
         }
         kill = re.fullmatch(r"after killing a unit gain (Gold|Faith|Culture) = (\d+)% of its Combat Strength in combat(?: where vs (Sea|Land) units)?", part)
         if kill:

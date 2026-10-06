@@ -121,6 +121,19 @@ void Game::enterPlot(Unit& unit) {
         if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_MOUNT_EVEREST")) unit.wonderAbilities |= 1;
         if (ut.domain == Domain::Land && id == "FEATURE_FOUNTAIN_OF_YOUTH") unit.wonderAbilities |= 2;
         if (ut.domain == Domain::Sea && id == "FEATURE_BERMUDA_TRIANGLE") unit.wonderAbilities |= 4;
+        // Pilgrim (06): more charges the first time it stands next to a natural wonder (bit 0x40 marks it spent).
+        if (const int more = ut.spreadCharges > 0 && !unit.promotions.empty() ? unitEffectTotal(unit, UnitEffectKind::WonderCharges) : 0;
+            more > 0 && !(unit.wonderAbilities & 0x40)) {
+            bool wonder = false;
+            for (const Hex& h : state_.grid.within(unit.pos, 1)) {
+                const TypeIndex f = state_.plot(h).feature;
+                wonder = wonder || (f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder);
+            }
+            if (wonder) {
+                unit.charges += more;
+                unit.wonderAbilities |= 0x40;
+            }
+        }
     }
     if (state_.plot(unit.pos).village && isMajorCiv(unit.owner)) {
         const UnitId id = unit.id;

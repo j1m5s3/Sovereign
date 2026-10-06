@@ -177,16 +177,19 @@ int Game::civReligion(PlayerId player) const {
 int Game::religiousStrength(const Unit& unit, bool defending) const {
     int s = rules_->units[at(unit.type)].religiousStrength;
     if (s <= 0) return s;
-    // Abilities that strengthen religious units in their own territory (Inquisitor; the Inquisition card).
-    const PlayerId owner = state_.plot(unit.pos).owner;
-    if (owner == unit.owner) {
-        for (TypeIndex a : unitAbilities(unit)) {
-            for (const UnitEffect& e : rules_->abilities[at(a)].effects) {
-                const bool territory = e.kind == UnitEffectKind::Strength && e.when.size() == 1 && e.when[0].size() == 1 &&
-                                       e.when[0][0].atom == CombatAtom::OwnTerritory && !e.when[0][0].negate;
-                if (territory) s += e.amount;
-            }
-        }
+    // Abilities and promotions that strengthen religious units: always (Debater, Religious Orders), or in
+    // their own territory (Inquisitor; the Inquisition card).
+    const bool home = state_.plot(unit.pos).owner == unit.owner;
+    auto add = [&](const UnitEffect& e) {
+        if (e.kind != UnitEffectKind::Strength) return;
+        const bool territory = e.when.size() == 1 && e.when[0].size() == 1 && e.when[0][0].atom == CombatAtom::OwnTerritory && !e.when[0][0].negate;
+        if (e.when.empty() || (territory && home)) s += e.amount;
+    };
+    for (TypeIndex a : unitAbilities(unit)) {
+        for (const UnitEffect& e : rules_->abilities[at(a)].effects) add(e);
+    }
+    for (TypeIndex pr : unit.promotions) {
+        for (const UnitEffect& e : rules_->promotions[at(pr)].effects) add(e);
     }
     if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
@@ -327,12 +330,28 @@ void Game::applyReligion(const Command& c) {
             const int64_t amount = static_cast<int64_t>(t.religiousStrength) * rules_->globalInt("RELIGION_SPREAD_STRENGTH_MULTIPLIER") / 100 *
                                    u.hp / std::max(1, maxHp);
             // Others lose a share of their pressure; then this religion gains (06: Spread Religion).
+            // Proselytizer removes more; Translator presses three times as hard in other civs' cities.
+            const int evict = std::min(100, t.evictPercent + unitEffectTotal(u, UnitEffectKind::EvictPercent));
             for (size_t i = 0; i < city.pressure.size(); ++i) {
-                if (static_cast<int>(i) != u.religion) city.pressure[i] -= city.pressure[i] * t.evictPercent / 100;
+                if (static_cast<int>(i) != u.religion) city.pressure[i] -= city.pressure[i] * evict / 100;
             }
+            const int64_t pressed = city.owner != u.owner ? amount * (100 + unitEffectTotal(u, UnitEffectKind::ForeignSpreadPercent)) / 100 : amount;
             const int before = cityMajorityReligion(city);
-            if (t.id != "UNIT_INQUISITOR") city.pressure[static_cast<size_t>(u.religion)] += static_cast<int32_t>(amount);
-            if (before != u.religion && cityMajorityReligion(city) == u.religion) dedicationScore(u.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS", 2);  // 09
+            if (t.id != "UNIT_INQUISITOR") city.pressure[static_cast<size_t>(u.religion)] += static_cast<int32_t>(pressed);
+            if (before != u.religion && cityMajorityReligion(city) == u.religion) {
+                dedicationScore(u.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS", 2);  // 09
+                // Indulgence Vendor: Gold the first time it turns a city (bit 0x80 of wonderAbilities marks it spent).
+                if (const int gold = unitEffectTotal(u, UnitEffectKind::ConvertGold); gold > 0 && !(u.wonderAbilities & 0x80)) {
+                    state_.players[at(u.owner)].gold += Fixed::fromInt(gold);
+                    u.wonderAbilities |= 0x80;
+                }
+            }
+            // Heathen Conversion: the barbarians next to it join its owner.
+            if (unitHas(u, UnitEffectKind::HeathenConversion)) {
+                for (Unit& o : state_.units) {
+                    if (state_.players[at(o.owner)].barbarian && state_.grid.distance(o.pos, u.pos) == 1) o.owner = u.owner;
+                }
+            }
             if (t.id != "UNIT_INQUISITOR" && city.owner != u.owner) breakPromises(u.owner, city.owner, PromiseKind::NoConverting);  // 08 [GS]
             u.movesLeft = Fixed();
             if (--u.charges <= 0) removeUnit(c.id);
@@ -372,6 +391,20 @@ void Game::theologicalCombat(Unit& attacker, Unit& defender) {
     };
     const UnitId aid = attacker.id, did = defender.id;
     const bool defenderDies = defender.hp <= 0, attackerDies = attacker.hp <= 0;
+    // Martyr (06): a Relic in a free slot of its owner's if it falls.
+    for (Unit* fallen : {defenderDies ? &defender : nullptr, attackerDies ? &attacker : nullptr}) {
+        if (!fallen || !unitHas(*fallen, UnitEffectKind::Martyr)) continue;
+        const TypeIndex relic = rules_->greatWorkType("RELIC");
+        for (City& c : state_.cities) {
+            const TypeIndex slot = c.owner == fallen->owner && relic != kNone ? freeGreatWorkSlot(c, relic) : kNone;
+            if (slot == kNone) continue;
+            GreatWork w;
+            w.type = relic;
+            w.building = slot;
+            c.greatWorks.push_back(w);
+            break;
+        }
+    }
     if (defenderDies) settle(defender, attacker);
     if (attackerDies) settle(attacker, defender);
     if (defenderDies) removeUnit(did);

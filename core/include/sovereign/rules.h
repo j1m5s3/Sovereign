@@ -152,6 +152,15 @@ enum class UnitEffectKind : uint8_t {
     HealEnemy,          // + HP healing in enemy territory
     AirSlots,           // + aircraft it can carry
     KillYield,          // `amount`% of a killed unit's strength as yield `at` (GOLD, FAITH, CULTURE)
+    // Apostle promotions (06: one random promotion for each new Apostle):
+    SpreadCharges,      // + spread charges (Orator)
+    EvictPercent,       // + % of other religions removed when it spreads (Proselytizer)
+    ForeignSpreadPercent,  // + % spread strength in other civs' cities (Translator)
+    WonderCharges,      // + charges the first time it stands next to a natural wonder (Pilgrim)
+    ConvertGold,        // + Gold the first time it turns a city to its religion (Indulgence Vendor)
+    HeathenConversion,  // spreading turns the barbarians next to it (Heathen Conversion)
+    Martyr,             // a Relic if it dies in theological combat
+    HealAura,           // + healing for the owner's units next to it (Chaplain)
 };
 
 enum class CombatAtom : uint8_t {
