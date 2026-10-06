@@ -18,9 +18,9 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-gaps.md
    - Legacy policy cards can be slotted after their government.
 2. **Done:** **Policy changes for Gold** (`POLICY_COST_*`); **Inquisitors, Launch Inquisition and Gurus** (Remove Heresy, heal charges); **Trading Posts** (route range from the last post, +Gold per foreign post); **Future Tech and Future Civic** (repeatable).
 3. **Done: Deals and city-states:** ceding cities and trading Diplomatic Favor in deals; Suzerain War (city-states join their suzerain's wars); Make Demand.
-4. **Larger, as time allows** (done so far: the governor promotions and the disaster items marked below):
-   - World Congress resolutions (12 more);
-   - historic moments (about 140 still unawarded);
+4. **Larger, as time allows** (done: the items marked below):
+   - **done:** World Congress resolutions: Luxury Policy, World Religion, Heritage Organization, World Ideology, Border Control, Public Works, Global Energy, Sovereignty, Deforestation Treaty, Espionage Pact (Mercenary Companies and Arms Control left: their data effects are unclear);
+   - **done:** about 70 more historic moments (formations, parks, concerts, excavations, the Inquisition, all beliefs, conversions, fully developed districts, unique units/buildings/improvements, the space race, the bomb, liberation, Free Cities, levies, master spies, governors, trading posts, meeting everyone, the largest civilization, veterans and formations defeated, Great Generals and Admirals, threatening camps, power, emergencies, Diplomatic Victory resolutions, casus belli, the final foreign city). Left: circumnavigation, new continents, railroad connections, strategic potential, city placement, City of Awe, unique districts, levies near enemies, pacified city-states, and the score-0 ones. Ages in three 250-turn AI games: Normal 69%, Golden 14%, Dark 13%, Heroic 4%, so ERA_SCORE_THRESHOLD_ADJUST stays at -10;
    - **done:** disasters pillaging districts and buildings (a meltdown destroys them); storms moving on for 3 turns; forest fires spreading; deforestation scaling CO2 (-20% to +50%);
    - **done:** governor promotions: Air Defense Initiative, Foreign Investor, Grand Inquisitor, Laying On Of Hands, Patron Saint, Black Marketeer, Vertical Integration (Messenger was already in place);
    - left: meteor showers and Aquaculture/Parks and Recreation (the generated rules lack the meteor event, the Fishery and the City Park); the Flood Barrier's scaled cost (costs have no per-city path yet).

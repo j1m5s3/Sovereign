@@ -113,6 +113,7 @@ void Game::processLevies(PlayerId player) {
         }
         for (UnitId id : disband) removeUnit(id);
         if (home) refreshVisibility(lv.cityState);
+        awardMoment(player, "MOMENT_LEVIED_ARMY_STANDS_DOWN");  // 09
     }
     state_.levies.erase(std::remove_if(state_.levies.begin(), state_.levies.end(),
                                        [&](const Levy& lv) { return lv.player == player && state_.turn >= lv.until; }),

@@ -143,11 +143,15 @@ void Game::applyGovernor(const Command& c) {
             g.promotions.push_back(rules_->governors[at(type)].promotions.front());  // the base ability
             p.governors.push_back(g);
             ++p.governorTitlesSpent;
+            if (p.governors.size() >= rules_->governors.size()) awardOnce(c.player, "MOMENT_ALL_GOVERNORS_APPOINTED");  // 09
             return;
         }
         case CommandType::PromoteGovernor:
             for (Governor& g : p.governors) {
-                if (g.type == type) g.promotions.push_back(static_cast<TypeIndex>(c.arg2));
+                if (g.type == type) {
+                    g.promotions.push_back(static_cast<TypeIndex>(c.arg2));
+                    if (g.promotions.size() >= rules_->governors[at(type)].promotions.size()) awardMoment(c.player, "MOMENT_GOVERNOR_FULLY_PROMOTED");  // 09
+                }
             }
             ++p.governorTitlesSpent;
             return;

@@ -164,6 +164,7 @@ void Game::burnPower(PlayerId pid) {
                 if (units <= 0) continue;
                 p.stockpile[at(bt.burnsResource)] -= units;
                 c->powerSupply += units * per;
+                awardFirst(pid, "MOMENT_FIRST_RESOURCE_CONSUMED_FOR_POWER_IN_WORLD", "MOMENT_FIRST_RESOURCE_CONSUMED_FOR_POWER", 0);  // 09
                 addCo2(pid, co2PerResource(rules_->resources[at(bt.burnsResource)].id) * units);
             }
         }

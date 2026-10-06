@@ -44,6 +44,12 @@ PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
 }
 
 bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type) {
+    // Sovereignty option B (World Congress): city-states of the chosen kind give no unique bonus.
+    for (const PassedResolution& pr : s.passedResolutions) {
+        if (r.resolutions[static_cast<size_t>(pr.resolution)].kind == ResolutionKind::Sovereignty && pr.option == 1 && type >= 0 &&
+            pr.target == static_cast<int32_t>(r.cityStates[static_cast<size_t>(type)].kind))
+            return false;
+    }
     for (const Player& cs : s.players) {
         if (cs.cityState != type || !cs.alive) continue;
         const auto& rels = s.players[static_cast<size_t>(player)].relations;

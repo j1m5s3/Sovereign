@@ -293,6 +293,10 @@ void Game::excavate(UnitId id) {
     const PlayerId landOwner = state_.plot(u.pos).owner;
     if (landOwner != kNoPlayer && landOwner != u.owner) breakPromises(u.owner, landOwner, PromiseKind::NoDigging);  // 08 [GS]
     dedicationScore(u.owner, "DEDICATION_WISH_YOU_WERE_HERE", 1);  // 09: an artifact extracted
+    if (rules_->terrains[at(state_.plot(u.pos).terrain)].water)
+        awardFirst(u.owner, "MOMENT_WORLD_S_FIRST_SHIPWRECK_EXCAVATED", "MOMENT_FIRST_SHIPWRECK_EXCAVATED", 0);
+    else
+        awardMoment(u.owner, "MOMENT_ARTIFACT_EXTRACTED");
     state_.plot(u.pos).antiquity = 0;
     TypeIndex artifact = kNone;
     for (size_t w = 0; w < rules_->greatWorkTypes.size(); ++w) artifact = rules_->greatWorkTypes[w].id == "ARTIFACT" ? static_cast<TypeIndex>(w) : artifact;

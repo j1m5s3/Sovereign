@@ -104,6 +104,7 @@ TEST(a_trader_runs_a_route_lays_roads_and_comes_home) {
     endTurnsAuto(*g, 2 * 20);
     CHECK(g->state().tradeRoutes.empty());
     CHECK(g->state().city(home)->hasTradingPost(0));  // the route left a Trading Post (07)
+    CHECK(!sovtest::hasMoment(*g, 0, "MOMENT_TRADING_POST_ESTABLISHED_IN_NEW_CIVILIZATION"));  // its own city: no new civ
     int traders = 0;
     for (const Unit& u : g->state().units) traders += rules().units[at(u.type)].id == "UNIT_TRADER";
     CHECK_EQ(traders, 1);  // back home

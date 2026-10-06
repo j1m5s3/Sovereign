@@ -79,6 +79,7 @@ bool Game::canHarvestAt(PlayerId player, Hex at) const {
     if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || p.improvement != kNone) return false;
     if (p.feature != kNone) {
         const FeatureType& f = rules_->features[static_cast<size_t>(p.feature)];
+        if (resolutionHits(ResolutionKind::DeforestationTreaty, 0, p.feature)) return false;  // World Congress: no chopping it
         return f.removable && !f.removeTech.none() && hasUnlocked(player, f.removeTech);
     }
     if (!resourceVisible(player, at)) return false;
@@ -157,7 +158,12 @@ int Game::luxuryAmenities(const City& city) const {
     }
     int amenities = 0;
     for (size_t r = 0; r < have.size(); ++r) {
-        if (have[r] && rank < rules_->resources[r].amenityCities) ++amenities;
+        if (!have[r]) continue;
+        // Luxury Policy (World Congress): option A lifts the luxury's cap (twice the cities), B bans it.
+        const int32_t res = static_cast<int32_t>(r);
+        if (resolutionHits(ResolutionKind::LuxuryPolicy, 1, res)) continue;
+        const int reach = rules_->resources[r].amenityCities * (resolutionHits(ResolutionKind::LuxuryPolicy, 0, res) ? 2 : 1);
+        if (rank < reach) ++amenities;
     }
     return amenities;
 }
@@ -395,11 +401,20 @@ void Game::applyBuilder(const Command& c) {
     const CityId cityId = p.city;
     if (c.type == CommandType::BuildImprovement) {
         p.improvement = static_cast<TypeIndex>(c.arg);
+        // Historic moments (09): a unique improvement, a tunnel, a resort, a green improvement.
+        const ImprovementType& built = rules_->improvements[static_cast<size_t>(c.arg)];
+        if (built.uniqueTo != kNone) awardOnce(c.player, "MOMENT_UNIQUE_TILE_IMPROVEMENT_BUILT");
+        if (built.tunnel) awardFirst(c.player, "MOMENT_FIRST_MOUNTAIN_TUNNEL_IN_WORLD", "MOMENT_FIRST_MOUNTAIN_TUNNEL", 0);
+        if (built.id == "IMPROVEMENT_SEASIDE_RESORT") awardFirst(c.player, "MOMENT_WORLD_S_FIRST_SEASIDE_RESORT", "MOMENT_FIRST_SEASIDE_RESORT", 0);
+        if (built.id == "IMPROVEMENT_SOLAR_FARM" || built.id == "IMPROVEMENT_WIND_FARM" || built.id == "IMPROVEMENT_OFFSHORE_WIND_FARM")
+            awardFirst(c.player, "MOMENT_FIRST_GREEN_IMPROVEMENT_IN_WORLD", "MOMENT_FIRST_GREEN_IMPROVEMENT", 0);
     } else {
         // Harvest: the feature (or the bonus resource) goes, its yields go to the owning city.
         Yields gain{};
+        bool treaty = false;
         if (p.feature != kNone) {
             gain = rules_->features[static_cast<size_t>(p.feature)].harvest;
+            treaty = resolutionHits(ResolutionKind::DeforestationTreaty, 1, p.feature);  // World Congress: +100% from it
             p.feature = kNone;
         } else {
             gain = rules_->resources[static_cast<size_t>(p.resource)].harvest;
@@ -419,6 +434,7 @@ void Game::applyBuilder(const Command& c) {
         City* city = state_.city(cityId);
         // Groundbreaker: harvests in the city yield more (08: Governors).
         if (city) pct = pct * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, *city, ModEffect::CityHarvestPercent).toInt())) / 100;
+        if (treaty) pct *= 2;
         if (city) {
             city->overflow += gain[static_cast<size_t>(YieldType::Production)] * pct / 100;
             city->food += gain[static_cast<size_t>(YieldType::Food)] * pct / 100;

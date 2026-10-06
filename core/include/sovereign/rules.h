@@ -946,8 +946,13 @@ struct DisasterIntensityType {
 // are never put to a vote.
 enum class ResolutionKind : uint8_t {
     Unsupported = 0, DiplomaticVictory, TradePolicy, Patronage, MigrationTreaty, PublicRelations, MilitaryAdvisory, UrbanDevelopment,
+    LuxuryPolicy, WorldReligion, HeritageOrganization, WorldIdeology, BorderControl, PublicWorks, GlobalEnergy, Sovereignty,
+    DeforestationTreaty, EspionagePact,
 };
-enum class ResolutionTarget : uint8_t { Player = 0, GreatPersonClass, District, PromotionClass, Other };
+enum class ResolutionTarget : uint8_t {
+    Player = 0, GreatPersonClass, District, PromotionClass, Resource, Religion, GreatWorkObject, Government, Project, Building,
+    CityStateKind, Feature, SpyOperation, Other,
+};
 struct ResolutionType {
     std::string id, name, optionA, optionB;
     ResolutionKind kind = ResolutionKind::Unsupported;

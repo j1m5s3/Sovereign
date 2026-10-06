@@ -704,6 +704,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
         if (b.granted || b.faithOnly || c.has(item.type) || !hasUnlocked(c.owner, b.unlock)) return fail(CommandError::CannotBuild);
+        if (resolutionHits(ResolutionKind::GlobalEnergy, 0, item.type)) return fail(CommandError::CannotBuild);  // Global Energy Treaty A
         // Civ uniques: only their civ builds them, and for it they replace their base building.
         const TypeIndex civ = state_.players[static_cast<size_t>(c.owner)].civ;
         if (b.uniqueTo != kNone && b.uniqueTo != civ) return fail(CommandError::CannotBuild);
@@ -1009,6 +1010,7 @@ void Game::applyCity(const Command& c) {
                     const int religion = cityMajorityReligion(city);
                     if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
                     ++p.unitsTrained[static_cast<size_t>(item.type)];
+                    unitMoments(c.player, item.type);
                     Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
                     const UnitType& bought = rules_->units[static_cast<size_t>(item.type)];
                     // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
@@ -1151,6 +1153,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (u.strategicResource != kNone) p.stockpile[static_cast<size_t>(u.strategicResource)] -= strategicCostIn(&city, item.type);
         if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
         ++p.unitsTrained[static_cast<size_t>(item.type)];
+        unitMoments(city.owner, item.type);
         // Provision: settlers trained under Magnus cost no population (08: Governors).
         if (sumCityModifiers(state_, *rules_, city, ModEffect::SettlerNoPopCost) <= Fixed()) city.population -= u.popCost;
         Unit& made = spawnUnit(item.type, city.owner, *spot);
@@ -1179,7 +1182,12 @@ bool Game::completeItem(City& city, ProductionItem item) {
             d.complete = true;
             // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it; Mimar Sinan (07) an Industrial Zone.
             const std::string& kind = rules_->districts[static_cast<size_t>(d.type)].id;
-            if ((kind == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) || (kind == "DISTRICT_INDUSTRIAL_ZONE" && usedBy(city.owner, Gp::MimarSinan))) {
+            // Historic moments (09).
+            if (kind == "DISTRICT_NEIGHBORHOOD") awardFirst(city.owner, "MOMENT_WORLD_S_FIRST_NEIGHBORHOOD", "MOMENT_FIRST_NEIGHBORHOOD_COMPLETED", 0);
+            if (kind == "DISTRICT_CANAL") awardMoment(city.owner, "MOMENT_CANAL_COMPLETED");
+            if (kind == "DISTRICT_DAM") awardMoment(city.owner, "MOMENT_RIVER_FLOOD_MITIGATED");
+            const bool bomb = resolutionHits(ResolutionKind::BorderControl, 0, city.owner);  // Border Control Treaty A (World Congress)
+            if (bomb || (kind == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) || (kind == "DISTRICT_INDUSTRIAL_ZONE" && usedBy(city.owner, Gp::MimarSinan))) {
                 for (const Hex& h : state_.grid.within(d.pos, 1)) {
                     Plot& q = state_.plot(h);
                     if (q.owner != kNoPlayer) continue;
@@ -1199,6 +1207,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
             if (!policyIs(city.owner, "POLICY_ROGUE_STATE"))  // Rogue State: no envoys (09)
                 state_.players[static_cast<size_t>(city.owner)].envoyTokens += rules_->buildings[static_cast<size_t>(item.type)].envoysOnBuild;
             if (rules_->buildings[static_cast<size_t>(item.type)].wonder) completeWonder(city, item.type);
+            buildingMoments(city, item.type);
         }
     }
     return true;
@@ -1211,6 +1220,17 @@ void Game::completeProject(City& city, TypeIndex project) {
     ++p.projectsDone[static_cast<size_t>(project)];
     if (pj.spaceRace) competitionScore(city.owner, CompetitionKind::SpaceStation, 30);  // space station score project
     if (pj.id == "PROJECT_BUILD_TERRESTRIAL_LASER_STATION") ++city.laserStations;  // 09: +5 power demand each
+    // Historic moments (09): the space race and the bomb.
+    static const std::tuple<const char*, const char*, const char*> kSpace[] = {
+        {"PROJECT_LAUNCH_EARTH_SATELLITE", "MOMENT_WORLD_S_FIRST_SATELLITE_IN_ORBIT", "MOMENT_SATELLITE_LAUNCHED_INTO_ORBIT"},
+        {"PROJECT_LAUNCH_MOON_LANDING", "MOMENT_WORLD_S_FIRST_LANDING_ON_THE_MOON", "MOMENT_LANDED_ON_THE_MOON"},
+        {"PROJECT_LAUNCH_MARS_COLONY", "MOMENT_WORLD_S_FIRST_MARTIAN_COLONY_ESTABLISHED", "MOMENT_MARTIAN_COLONY_ESTABLISHED"},
+        {"PROJECT_LAUNCH_EXOPLANET_EXPEDITION", "MOMENT_WORLD_S_FIRST_EXOPLANET_EXPEDITION_LAUNCHED", "MOMENT_EXOPLANET_EXPEDITION_LAUNCHED"}};
+    for (const auto& [id, world, own] : kSpace) {
+        if (pj.id == id) awardFirst(city.owner, world, own, 0);
+    }
+    if (pj.id == "PROJECT_MANHATTAN_PROJECT") awardOnce(city.owner, "MOMENT_MANHATTAN_PROJECT_COMPLETED");
+    if (pj.id == "PROJECT_OPERATION_IVY") awardOnce(city.owner, "MOMENT_OPERATION_IVY_COMPLETED");
     if (pj.resource != kNone) p.stockpile[static_cast<size_t>(pj.resource)] = std::max(0, p.stockpile[static_cast<size_t>(pj.resource)] - pj.resourceAmount);
     for (const auto& [cls, points] : pj.greatPersonPoints) {
         if (static_cast<size_t>(cls) < p.greatPersonPoints.size()) p.greatPersonPoints[static_cast<size_t>(cls)] += points;
@@ -1443,6 +1463,7 @@ void Game::processCities(PlayerId pid) {
                 const CivAbility& ab = civAbility(pid);
                 int pct = 100;
                 if (b.district == "DISTRICT_CITY_CENTER") pct += ab.cityCenterBuildingProductionPercent;
+                if (resolutionHits(ResolutionKind::GlobalEnergy, 1, item.type)) pct += 100;  // Global Energy Treaty B (World Congress)
                 if (b.outerDefenseHp > 0) pct += ab.wallProductionPercent;
                 prod = prod * pct / 100;
             } else if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder) {
@@ -1480,6 +1501,8 @@ void Game::processCities(PlayerId pid) {
                 if (nuclear && policyIs(pid, "POLICY_ROGUE_STATE")) pct += 50;
                 if (policyIs(pid, "POLICY_AUTOMATED_WORKFORCE")) pct += 20;
                 pct += 5 * state_.players[static_cast<size_t>(pid)].futureTechs;  // Future Tech [GS] (04)
+                // Public Works Program (World Congress): +100% (A) or -50% (B) toward the chosen project.
+                if (const PassedResolution* pw = passed(ResolutionKind::PublicWorks); pw && pw->target == item.type) pct += pw->option == 0 ? 100 : -50;
                 prod = prod * pct / 100;
             }
             // Kilwa Kisiwani (03: Wonders): units by Militaristic suzerainties, buildings and districts by Industrial ones.
@@ -1517,7 +1540,7 @@ void Game::processCities(PlayerId pid) {
         // Land Acquisition: a faster border expansion rate (08: Governors).
         const int faster = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, c3, ModEffect::CityBorderGrowthPercent).toInt());
         const Fixed cost = Fixed::fromInt(borderGrowthCost(c3.plotsByCulture)) * 100 / std::max(1, faster);
-        if (c3.borderCulture >= cost) {
+        if (c3.borderCulture >= cost && !resolutionHits(ResolutionKind::BorderControl, 1, c3.owner)) {  // Border Control Treaty B
             if (growBorders(c3)) {
                 c3.borderCulture -= cost;
                 ++c3.plotsByCulture;

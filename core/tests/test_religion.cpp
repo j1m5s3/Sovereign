@@ -338,6 +338,7 @@ TEST(an_apostle_launches_the_inquisition) {
     REQUIRE(g->submit(Command::launchInquisition(0, a)) == CommandError::Ok);
     CHECK(!g->state().unit(a));  // spent
     CHECK(g->state().players[0].inquisition);
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_WORLD_S_FIRST_INQUISITION"));  // 09
     CHECK_EQ(g->faithPurchaseCost(0, *g->state().city(holy), inquisitor), 75);
     REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
     CHECK(!g->canLaunchInquisition(g->state().units.back().id));  // once

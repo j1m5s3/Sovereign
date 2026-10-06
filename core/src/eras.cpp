@@ -104,6 +104,50 @@ void Game::awardFirst(PlayerId pid, const char* worldId, const char* ownId, int 
     state_.players[at(pid)].momentEras[at(o)] = static_cast<int8_t>(key + 1);
 }
 
+void Game::awardOnce(PlayerId pid, const char* id) {
+    const TypeIndex m = rules_->moment(id);
+    const Player& p = state_.players[at(pid)];
+    if (m == kNone || (at(m) < p.momentEras.size() && p.momentEras[at(m)] > 0)) return;
+    awardMoment(pid, id);
+}
+
+// Units (09: Historic moments): a civ's unique unit, its first aircraft and its first ship.
+void Game::unitMoments(PlayerId pid, TypeIndex unitType) {
+    const UnitType& u = rules_->units[at(unitType)];
+    if (u.uniqueTo != kNone) awardOnce(pid, "MOMENT_UNIQUE_UNIT_MARCHES");
+    if (u.domain == Domain::Air) awardFirst(pid, "MOMENT_WORLD_S_FIRST_FLIGHT", "MOMENT_TAKING_FLIGHT", 0);
+    if (u.domain == Domain::Sea && u.combat > 0) awardFirst(pid, "MOMENT_WORLD_S_FIRST_SEAFARING", "MOMENT_ON_THE_WAVES", 0);
+}
+
+// Buildings (09): a unique building; the first district of a type with every building ("Splendid ...", "Fully
+// developed"); the Flood Barrier.
+void Game::buildingMoments(City& city, TypeIndex building) {
+    const BuildingType& b = rules_->buildings[at(building)];
+    if (b.uniqueTo != kNone) awardOnce(city.owner, "MOMENT_UNIQUE_BUILDING_CONSTRUCTED");
+    if (b.id == "BUILDING_FLOOD_BARRIER") awardMoment(city.owner, "MOMENT_COASTAL_FLOOD_MITIGATED");
+    if (b.districtType == kNone || b.wonder) return;
+    const TypeIndex civ = state_.players[at(city.owner)].civ;
+    for (size_t i = 0; i < rules_->buildings.size(); ++i) {
+        const BuildingType& o = rules_->buildings[i];
+        if (o.districtType != b.districtType || o.wonder || o.faithOnly || o.granted || (o.uniqueTo != kNone && o.uniqueTo != civ)) continue;
+        bool replaced = false;  // a civ's unique building stands in for the one it replaces
+        for (const BuildingType& u : rules_->buildings) replaced = replaced || (u.uniqueTo == civ && civ != kNone && u.replaces == static_cast<TypeIndex>(i));
+        if (replaced) continue;
+        if (!city.has(static_cast<TypeIndex>(i))) return;
+    }
+    static const std::pair<const char*, const char*> kDeveloped[] = {
+        {"DISTRICT_CAMPUS", "MOMENT_SPLENDID_CAMPUS_COMPLETED"}, {"DISTRICT_COMMERCIAL_HUB", "MOMENT_SPLENDID_COMMERCIAL_HUB_COMPLETED"},
+        {"DISTRICT_HARBOR", "MOMENT_SPLENDID_HARBOR_COMPLETED"}, {"DISTRICT_HOLY_SITE", "MOMENT_SPLENDID_HOLY_SITE_COMPLETED"},
+        {"DISTRICT_INDUSTRIAL_ZONE", "MOMENT_SPLENDID_INDUSTRIAL_ZONE_COMPLETED"}, {"DISTRICT_THEATER_SQUARE", "MOMENT_SPLENDID_THEATER_SQUARE_COMPLETED"},
+        {"DISTRICT_AERODROME", "MOMENT_FIRST_AERODROME_FULLY_DEVELOPED"}, {"DISTRICT_ENCAMPMENT", "MOMENT_FIRST_ENCAMPMENT_FULLY_DEVELOPED"},
+        {"DISTRICT_ENTERTAINMENT_COMPLEX", "MOMENT_FIRST_ENTERTAINMENT_COMPLEX_FULLY_DEVELOPED"},
+        {"DISTRICT_WATER_PARK", "MOMENT_FIRST_WATER_PARK_FULLY_DEVELOPED"}};
+    const std::string& district = rules_->districts[at(b.districtType)].id;
+    for (const auto& [id, moment] : kDeveloped) {
+        if (district == id) awardOnce(city.owner, moment);
+    }
+}
+
 std::pair<int, int> Game::ageThresholds(PlayerId pid) const {
     const Player& p = state_.players[at(pid)];
     int shift = rules_->globalInt("THRESHOLD_SHIFT_PER_PAST_GOLDEN_AGE") * p.pastGoldenAges +
@@ -215,6 +259,9 @@ int Game::tourismBase(PlayerId pid) const {
             // Mary Leakey (07): artifacts triple their tourism.
             if (kind == "ARTIFACT") scale = std::max(scale, greatPersonEffectTotal(pid, GreatPersonEffectKind::ArtifactTourism) / 100);
             if (kind == "RELIC" && cityFollows(c, Bf::Reliquaries)) scale *= 3;  // Reliquaries (06)
+            // Heritage Organization (World Congress): option A doubles the kind's tourism, B silences it.
+            if (resolutionHits(ResolutionKind::HeritageOrganization, 0, w.type)) scale *= 2;
+            if (resolutionHits(ResolutionKind::HeritageOrganization, 1, w.type)) scale = 0;
             total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100 * scale;
         }
         for (TypeIndex b : c.buildings) {
@@ -258,6 +305,21 @@ void Game::processTourism(PlayerId pid) {
         if (!seen) continue;
         state_.players[at(pid)].met[at(x.id)] = 1;
         awardMoment(pid, "MOMENT_MET_NEW_CIVILIZATION");
+        bool all = true;
+        for (const Player& y : state_.players) all = all && (y.id == pid || !isMajor(y) || state_.players[at(pid)].met[at(y.id)]);
+        if (all) awardFirst(pid, "MOMENT_WORLD_S_FIRST_TO_MEET_ALL_CIVILIZATIONS", "MOMENT_MET_ALL_CIVILIZATIONS", 0);
+    }
+    // The world's largest civilization: three cities more than any other (Sovereign reading).
+    {
+        int mine = 0, other = 0;
+        std::vector<int> counts(state_.players.size(), 0);
+        for (const City& c : state_.cities) ++counts[at(c.owner)];
+        for (const Player& x : state_.players) {
+            if (!isMajor(x)) continue;
+            if (x.id == pid) mine = counts[at(x.id)];
+            else other = std::max(other, counts[at(x.id)]);
+        }
+        if (mine >= 6 && mine >= other + 3) awardOnce(pid, "MOMENT_WORLD_S_LARGEST_CIVILIZATION");
     }
     if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
     const int t = tourismPerTurn(pid);

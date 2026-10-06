@@ -73,6 +73,19 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
         // Leader ability: Faith from kills, and the capital's mood from this era's kills (Flower Wars).
         Player& kp = state_.players[static_cast<size_t>(killer->owner)];
         ++kp.killsThisEra;
+        // Historic moments (09): a veteran (two promotions or more) or a formation beaten; a victory beside a Great General or Admiral.
+        if (isMajorCiv(killer->owner) && isMajorCiv(victim.owner)) {
+            if (victim.promotions.size() >= 2) awardMoment(killer->owner, "MOMENT_ENEMY_VETERAN_DEFEATED");
+            if (victim.formation > 0) awardMoment(killer->owner, "MOMENT_ENEMY_FORMATION_DEFEATED");
+            for (const Unit& gp : state_.units) {
+                if (gp.owner != killer->owner || state_.grid.distance(gp.pos, killer->pos) > 2) continue;
+                const std::string& gid = rules_->units[static_cast<size_t>(gp.type)].id;
+                if (gid == "UNIT_GREAT_GENERAL" || gid == "UNIT_GREAT_ADMIRAL") {
+                    awardMoment(killer->owner, gid == "UNIT_GREAT_GENERAL" ? "MOMENT_GENERAL_DEFEATS_ENEMY" : "MOMENT_ADMIRAL_DEFEATS_ENEMY");
+                    break;
+                }
+            }
+        }
         if (const int pct = civAbility(killer->owner).killFaithPercent; pct > 0)
             kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat * pct / 100);
         // Disciples (06): a Warrior Monk's victory presses its religion (+100) on the cities within 4 plots.
@@ -192,6 +205,13 @@ void Game::enterPlot(Unit& unit) {
         unit.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     }
     awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");
+    // A camp within 6 plots of one of its cities was a threat (09; Sovereign reading of "threatening").
+    for (const City& home : state_.cities) {
+        if (home.owner == unit.owner && state_.grid.distance(home.pos, unit.pos) <= 6) {
+            awardMoment(unit.owner, "MOMENT_THREATENING_CAMP_DESTROYED");
+            break;
+        }
+    }
 }
 
 void Game::processBarbarians() {
