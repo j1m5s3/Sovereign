@@ -1842,7 +1842,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   Z governors   I pantheon   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   F2 government   Z governors   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }
