@@ -76,7 +76,8 @@ CommandError Game::parkProblem(PlayerId player, UnitId id) const {
 }
 
 void Game::designatePark(UnitId id) {
-    for (const Hex& h : *parkPlots(id)) state_.plot(h).park = true;
+    const auto plots = parkPlots(id);
+    if (plots) for (const Hex& h : *plots) state_.plot(h).park = true;
     removeUnit(id);
 }
 
