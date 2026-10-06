@@ -92,6 +92,13 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
             if (type == t) out[static_cast<size_t>(y)] += Fixed::fromInt(t == AllianceType::Economic ? 4 : 2);
         }
     }
+    // Natural wonders (01): +4 Gold on international routes from the city owning Païtiti.
+    if (!domestic) {
+        const TypeIndex paititi = rules_->feature("FEATURE_PAITITI");
+        bool owns = false;
+        for (const Hex& h : state_.grid.within(origin.pos, 3)) owns = owns || (paititi != kNone && state_.plot(h).feature == paititi && state_.plot(h).city == origin.id);
+        if (owns) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(4);
+    }
     // Civ ability: routes whose way crosses desert (Arabia).
     if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
         bool desert = false;

@@ -700,11 +700,248 @@ void Game::executeDeal(const Deal& d) {
     pushEvent(EventKind::DealAccepted, d.from, d.to, d.id);
 }
 
-void Game::onWarDeclared(PlayerId by, PlayerId target) {
+// Promises [GS] (08: Ask Promise): a civ asks another not to settle near it, convert its cities, spy
+// on it or dig in its land, for 30 turns and DIPLOMACY_PROMISE_FAVOR_COST (30) Diplomatic Favor. An AI
+// asked answers at once: it promises when it does not dislike the asker or the asker is much stronger;
+// a refusal gives the asker 25 grievances against it. (A human asked is taken to promise; Sovereign
+// reading until the diplomacy screen asks them.) Doing the deed while a promise holds breaks it: the
+// asker gains GRIEVANCE_MULTIPLIER_FOR_BROKEN_PROMISE (200%) of a formal war's 100 grievances, remembers
+// it as a broken deal, and holds a War of Retribution casus belli for 30 turns.
+CommandError Game::askPromiseProblem(PlayerId asker, PlayerId of, PromiseKind kind) const {
+    if (asker == of || !isMajorCiv(asker) || !isMajorCiv(of) || !hasMet(asker, of) || atWar(asker, of)) return CommandError::CannotDeal;
+    if (state_.players[at(asker)].favor < 30 || promised(of, asker, kind)) return CommandError::CannotDeal;
+    return CommandError::Ok;
+}
+
+bool Game::promised(PlayerId by, PlayerId to, PromiseKind kind) const {
+    return std::any_of(state_.promises.begin(), state_.promises.end(), [&](const Promise& pr) {
+        return pr.by == by && pr.to == to && pr.kind == kind && pr.brokenOn == 0 && pr.until >= state_.turn;
+    });
+}
+
+bool Game::wouldPromise(PlayerId of, PlayerId asker) const {
+    if (state_.players[at(of)].human) return true;
+    return opinionOf(of, asker) >= 0 || ai::militaryStrength(*this, asker) >= 2 * ai::militaryStrength(*this, of);
+}
+
+void Game::askPromise(PlayerId asker, PlayerId of, PromiseKind kind) {
+    state_.players[at(asker)].favor -= 30;
+    if (wouldPromise(of, asker)) {
+        state_.promises.push_back({of, asker, kind, state_.turn + 30, 0});
+    } else {
+        addGrievance(asker, of, 25);
+    }
+}
+
+void Game::breakPromises(PlayerId by, PlayerId to, PromiseKind kind) {
+    for (Promise& pr : state_.promises) {
+        if (pr.by != by || pr.to != to || pr.kind != kind || pr.brokenOn != 0 || pr.until < state_.turn) continue;
+        pr.brokenOn = state_.turn;
+        addGrievance(to, by, 100 * rules_->globalInt("GRIEVANCE_MULTIPLIER_FOR_BROKEN_PROMISE") / 100);
+        remember(to, by, MemoryKind::BrokeDeal, -15, 60);
+    }
+}
+
+// Delegations and resident embassies (08: Diplomatic actions; data: DiplomaticActions). A Send Delegation
+// (25 Gold, until Diplomatic Service) or a Resident Embassy (50 Gold, from Diplomatic Service; it replaces
+// the delegation) goes to a met major at peace; an AI turns it away while it denounces or dislikes the
+// sender. It stays until war between them. Each is a Delegate source of access; with a Diplomatic Quarter
+// [GS] the sender gains 1 Favor a turn for each (favorPerTurn). The land path a delegation needs in
+// Civ VI is not checked (Sovereign reading).
+CommandError Game::delegationProblem(PlayerId from, PlayerId to, bool embassy) const {
+    if (from == to || !isMajorCiv(from) || !isMajorCiv(to) || !hasMet(from, to) || atWar(from, to)) return CommandError::CannotDeal;
+    const Player& p = state_.players[at(from)];
+    const TypeIndex service = rules_->civic("CIVIC_DIPLOMATIC_SERVICE");
+    const bool served = service != kNone && p.civics.has(service);
+    const uint8_t have = p.relations[at(to)].delegation;
+    if (embassy ? (!served || have >= 2) : (served || have >= 1)) return CommandError::CannotDeal;
+    if (p.relations[at(to)].lastProposal == state_.turn) return CommandError::CannotDeal;  // turned away this turn
+    if (p.gold < Fixed::fromInt(embassy ? 50 : 25)) return CommandError::NotEnoughGold;
+    return CommandError::Ok;
+}
+
+bool Game::wouldReceive(PlayerId to, PlayerId from) const {
+    if (state_.players[at(to)].human) return true;  // a human's leader receives every delegation (Sovereign reading)
+    return !denouncing(to, from) && opinionOf(to, from) > -20;
+}
+
+void Game::sendDelegation(PlayerId from, PlayerId to, bool embassy) {
+    Player& p = state_.players[at(from)];
+    if (!wouldReceive(to, from)) {
+        p.relations[at(to)].lastProposal = state_.turn;
+        pushEvent(EventKind::DealRejected, from, to, -1);
+        return;
+    }
+    p.gold -= Fixed::fromInt(embassy ? 50 : 25);
+    p.relations[at(to)].delegation = static_cast<uint8_t>(embassy ? 2 : 1);
+    if (!embassy) remember(to, from, MemoryKind::Gift, 3, 30);  // a delegation flatters (+opinion)
+}
+
+// Access level (08; data: Visibilities, DiplomaticVisibilitySources): met is Limited; each source adds one,
+// up to Top Secret: the Printing tech, a trade route to the civ, a delegation or embassy with it, an
+// alliance, and a spy in one of its cities (one more if the spy is level 3 or better).
+int Game::accessLevel(PlayerId viewer, PlayerId target) const {
+    if (viewer == target) return 4;
+    if (viewer < 0 || target < 0 || !hasMet(viewer, target)) return 0;
+    const Player& p = state_.players[at(viewer)];
+    int level = 1;
+    const TypeIndex printing = rules_->tech("TECH_PRINTING");
+    level += printing != kNone && p.techs.has(printing) ? 1 : 0;
+    level += std::any_of(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& t) {
+        const City* d = state_.city(t.destination);
+        return t.owner == viewer && d && d->owner == target;
+    }) ? 1 : 0;
+    level += p.relations[at(target)].delegation > 0 ? 1 : 0;
+    level += alliance(viewer, target) != AllianceType::None ? 1 : 0;
+    int spy = 0;
+    for (const Agent& a : state_.agents) {
+        const City* c = a.spy && a.owner == viewer && a.travel == 0 ? state_.city(a.city) : nullptr;
+        if (c && c->owner == target) spy = std::max(spy, a.level >= 3 ? 2 : 1);
+    }
+    return std::min(4, level + spy);
+}
+
+const char* Game::accessName(int level) {
+    static const char* const names[] = {"None", "Limited", "Open", "Secret", "Top Secret"};
+    return names[std::clamp(level, 0, 4)];
+}
+
+// Gossip (08: Access level): what outsiders hear of a civ's doings. Wars, peace, denunciations and
+// friendships are heard by all who have met it; deals and new ages from Open; great people and
+// historic moments from Secret; its spies' work only at Top Secret (Sovereign reading of the gossip tiers).
+int Game::gossipLevel(EventKind kind) {
+    switch (kind) {
+        case EventKind::WarDeclared:
+        case EventKind::PeaceMade:
+        case EventKind::Denounced:
+        case EventKind::FriendshipDeclared:
+        case EventKind::AssassinKilledLeader:
+        case EventKind::Rebellion: return 1;
+        case EventKind::DealAccepted:
+        case EventKind::DealBroken:
+        case EventKind::NewAge: return 2;
+        case EventKind::GreatPersonRecruited:
+        case EventKind::HistoricMoment: return 3;
+        case EventKind::SpyOperation: return 4;
+        default: return 99;  // private, or world news shown to all anyway
+    }
+}
+
+bool Game::hearsOf(PlayerId viewer, const GameEvent& e) const {
+    if (e.actor == viewer || e.target == viewer) return true;
+    const int need = gossipLevel(e.kind);
+    if (need > 4) return false;
+    const PlayerId about = e.actor != kNoPlayer ? e.actor : e.target;
+    return about != kNoPlayer && isMajorCiv(about) && accessLevel(viewer, about) >= need;
+}
+
+// Casus belli (08: War types). Each needs its civic and its condition, and, except Protectorate,
+// DIPLOMACY_DENOUNCE_WAR_DELAY turns of denouncement first; the declaration's grievances are the
+// formal war's times the war type's percent.
+bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const {
+    if (why == CasusBelli::None || !isMajorCiv(player) || !isMajorCiv(target)) return false;
+    const Player& p = state_.players[at(player)];
+    const auto has = [&](const char* civic) { const TypeIndex c = rules_->civic(civic); return c != kNone && p.civics.has(c); };
+    const Relation& rel = p.relations[at(target)];
+    const bool denounced = denouncing(player, target) && state_.turn - rel.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    switch (why) {
+        case CasusBelli::HolyWar: {
+            // They converted one of our cities.
+            if (!has("CIVIC_DIPLOMATIC_SERVICE") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                const int maj = c.owner == player ? cityMajorityReligion(c) : -1;
+                if (maj >= 0 && static_cast<size_t>(maj) < state_.religions.size() && state_.religions[static_cast<size_t>(maj)].founder == target && p.religion != maj) return true;
+            }
+            return false;
+        }
+        case CasusBelli::Liberation:
+            // They hold a city of a friend or ally of ours.
+            if (!has("CIVIC_DIPLOMATIC_SERVICE") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                if (c.owner == target && c.originalOwner != target && c.originalOwner != player &&
+                    (friends(player, c.originalOwner) || alliance(player, c.originalOwner) != AllianceType::None))
+                    return true;
+            }
+            return false;
+        case CasusBelli::Reconquest:
+            // They hold a city we used to own.
+            if (!has("CIVIC_DEFENSIVE_TACTICS") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                if (c.owner == target && c.originalOwner == player) return true;
+            }
+            return false;
+        case CasusBelli::Protectorate:
+            // They are at war with a city-state we are suzerain of (no denouncement needed).
+            if (!has("CIVIC_DEFENSIVE_TACTICS")) return false;
+            for (const Player& cs : state_.players) {
+                if (isCityState(cs.id) && cs.alive && suzerainOf(cs.id) == player && atWar(target, cs.id)) return true;
+            }
+            return false;
+        case CasusBelli::Colonial:
+            return has("CIVIC_NATIONALISM") && denounced && playerEra(player) - playerEra(target) >= 2;
+        case CasusBelli::TerritorialExpansion: {
+            // Two of our cities within range of two of theirs (DIPLOMACY_ADJACENT_EMPIRE_*).
+            if (!has("CIVIC_MOBILIZATION") || !denounced) return false;
+            const int range = rules_->globalInt("DIPLOMACY_ADJACENT_EMPIRE_RANGE"), need = rules_->globalInt("DIPLOMACY_ADJACENT_EMPIRE_CITIES_REQUIRED");
+            int mine = 0, theirs = 0;
+            for (const City& a : state_.cities) {
+                if (a.owner != player && a.owner != target) continue;
+                bool near = false;
+                for (const City& b : state_.cities) {
+                    if (b.owner == (a.owner == player ? target : player) && state_.grid.distance(a.pos, b.pos) <= range) near = true;
+                }
+                if (near) (a.owner == player ? mine : theirs)++;
+            }
+            return mine >= need && theirs >= need;
+        }
+        case CasusBelli::Ideological: {
+            // Both in tier-3-or-later governments, and different ones.
+            if (!has("CIVIC_IDEOLOGY") || !denounced) return false;
+            const Player& t = state_.players[at(target)];
+            if (p.government == kNone || t.government == kNone || p.government == t.government) return false;
+            return rules_->governments[static_cast<size_t>(p.government)].tier >= 3 && rules_->governments[static_cast<size_t>(t.government)].tier >= 3;
+        }
+        case CasusBelli::Retribution:
+            // They broke a promise to us within the last 30 turns (Early Empire).
+            if (!has("CIVIC_EARLY_EMPIRE") || !denounced) return false;
+            return std::any_of(state_.promises.begin(), state_.promises.end(), [&](const Promise& pr) {
+                return pr.by == target && pr.to == player && pr.brokenOn > 0 && state_.turn - pr.brokenOn <= 30;
+            });
+        case CasusBelli::None: break;
+    }
+    return false;
+}
+
+int Game::casusBelliGrievancePercent(CasusBelli why) const {
+    switch (why) {
+        case CasusBelli::HolyWar: return 50;
+        case CasusBelli::Liberation: return 0;
+        case CasusBelli::Reconquest: return 0;
+        case CasusBelli::Protectorate: return 0;
+        case CasusBelli::Colonial: return 50;
+        case CasusBelli::TerritorialExpansion: return 75;
+        case CasusBelli::Ideological: return 50;
+        case CasusBelli::Retribution: return 50;
+        case CasusBelli::None: break;
+    }
+    return 100;
+}
+
+CasusBelli Game::bestCasusBelli(PlayerId player, PlayerId target) const {
+    CasusBelli best = CasusBelli::None;
+    for (int w = 1; w < kNumCasusBelli; ++w) {
+        const CasusBelli why = static_cast<CasusBelli>(w);
+        if (hasCasusBelli(player, target, why) && (best == CasusBelli::None || casusBelliGrievancePercent(why) < casusBelliGrievancePercent(best))) best = why;
+    }
+    return best;
+}
+
+void Game::onWarDeclared(PlayerId by, PlayerId target, CasusBelli why) {
     Player& p = state_.players[at(by)];
     Relation& mine = p.relations[at(target)];
-    // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation; anything else is a surprise.
-    const bool formal = denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation, or has a casus belli; anything else is a surprise.
+    const bool justified = why != CasusBelli::None;
+    const bool formal = justified || (denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY"));
     // Betrayal [GS]: war on a declared friend or an ally (08: Emergencies).
     if (isMajorCiv(by) && isMajorCiv(target) && (friends(by, target) || alliance(by, target) != AllianceType::None))
         triggerEmergency(EmergencyKind::Betrayal, by, kNoCity, target);
@@ -717,7 +954,8 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     remember(target, by, formal ? MemoryKind::DeclaredWar : MemoryKind::SurpriseWar, formal ? -12 : -24, formal ? 60 : 80);
     // Grievances [GS]: 100 for a formal war (Sovereign's base; the engine value is unverified), 150%
     // for a surprise; declared friends of the target share 25% (SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS).
-    const int base = emergencyWar ? 0 : formal ? 100 : 150;
+    // A casus belli scales the grievances (08: War types).
+    const int base = emergencyWar ? 0 : justified ? casusBelliGrievancePercent(why) : formal ? 100 : 150;
     addGrievance(target, by, base);
     for (const Player& o : state_.players) {
         if (o.id == by || o.id == target) continue;

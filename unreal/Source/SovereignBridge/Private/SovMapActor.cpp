@@ -275,6 +275,34 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		WonderPieces[i]->SetVisibility(false);
 	}
+	// Tribal villages (01): a small hut.
+	int32 VillageCount = 0;
+	for (const FIntPoint& V : Mirror.Villages)
+	{
+		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, CubeMesh.Get());
+		C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)) + FVector(0, 0, 10));
+		C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
+		C->SetRelativeScale3D(FVector(0.22, 0.22, 0.18));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.55f, 0.4f, 0.22f)));
+	}
+	for (int32 i = VillageCount; i < VillagePieces.Num(); ++i)
+	{
+		VillagePieces[i]->SetVisibility(false);
+	}
+	// Antiquity sites (07): a pale stone.
+	int32 SiteCount = 0;
+	for (const FIntPoint& A : Mirror.Antiquity)
+	{
+		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, CubeMesh.Get());
+		C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 4));
+		C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
+		C->SetRelativeScale3D(FVector(0.16, 0.1, 0.08));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.8f, 0.78f, 0.7f)));
+	}
+	for (int32 i = SiteCount; i < AntiquityPieces.Num(); ++i)
+	{
+		AntiquityPieces[i]->SetVisibility(false);
+	}
 
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{

@@ -489,6 +489,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         f.id = id;
         f.name = j["name"].str(id);
         f.yields = readYields(j["yields"]);
+        f.naturalWonder = j["naturalWonder"].boolean(false);
+        f.tiles = static_cast<int>(j["tiles"].integer(1));
+        f.adjacentYields = readYields(j["adjacentYields"]);
+        f.doublesAdjacentTerrain = j["doublesAdjacentTerrain"].boolean(false);
         f.moveChange = static_cast<int>(j["moveChange"].integer(0));
         f.defense = static_cast<int>(j["defense"].integer(0));
         f.appeal = static_cast<int>(j["appeal"].integer(0));
@@ -655,6 +659,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.antiAir = static_cast<int>(j["antiAir"].integer(0));
         u.airSlots = static_cast<int>(j["airSlots"].integer(0));
         u.deliversWmd = j["deliversWmd"].boolean(false);
+        u.excavations = static_cast<int>(j["excavations"].integer(0));
         u.wmdImmune = j["wmdImmune"].boolean(false);
         u.cost = static_cast<int>(j["cost"].integer(0));
         u.maintenance = static_cast<int>(j["maintenance"].integer(0));
@@ -1463,6 +1468,29 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (op.needsDistrict) op.district = district(j["district"].str());
         spyOperations.push_back(std::move(op));
     }
+    for (const auto& [id, j] : m.tables["goodies"]) {
+        static const std::pair<const char*, GoodyKind> kinds[] = {
+            {"RELIC", GoodyKind::Relic}, {"INSPIRATION", GoodyKind::Inspiration}, {"EUREKA", GoodyKind::Eureka}, {"GOVERNOR_TITLE", GoodyKind::GovernorTitle},
+            {"ENVOY", GoodyKind::Envoy}, {"FAVOR", GoodyKind::Favor}, {"FAITH", GoodyKind::Faith}, {"GOLD", GoodyKind::Gold}, {"XP", GoodyKind::Xp},
+            {"HEAL", GoodyKind::Heal}, {"STRATEGIC", GoodyKind::Strategic}, {"TECH", GoodyKind::Tech}, {"POPULATION", GoodyKind::Population},
+            {"UNIT", GoodyKind::Unit}};
+        GoodyType g;
+        g.id = id;
+        g.category = j["category"].str();
+        g.weight = static_cast<int>(j["weight"].integer(0));
+        bool known = false;
+        for (const auto& [name, kind] : kinds) {
+            if (j["kind"].str() == name) {
+                g.kind = kind;
+                known = true;
+            }
+        }
+        g.amount = static_cast<int>(j["amount"].integer(0));
+        g.unit = j.has("unit") ? unit(j["unit"].str()) : kNone;
+        g.minTurn = static_cast<int>(j["minTurn"].integer(0));
+        g.needsCity = j["needsCity"].boolean(false);
+        if (known && (g.kind != GoodyKind::Unit || g.unit != kNone)) goodies.push_back(std::move(g));
+    }
     for (const auto& [id, j] : m.tables["spyPromotions"]) {
         SpyPromotionType sp;
         sp.id = id;
@@ -1887,7 +1915,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
             {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
-            {"WMD", ProjectEffectKind::Wmd}};
+            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;

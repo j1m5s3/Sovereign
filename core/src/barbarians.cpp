@@ -73,11 +73,18 @@ void Game::spawnCaptures() {
 
 void Game::enterPlot(Unit& unit) {
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    if (state_.plot(unit.pos).village && isMajorCiv(unit.owner)) {
+        const UnitId id = unit.id;
+        enterVillage(unit);
+        if (!state_.unit(id)) return;
+    }
     if (owner.barbarian || rules_->units[static_cast<size_t>(unit.type)].layer != UnitLayer::Military) return;
     auto it = std::find_if(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.pos == unit.pos; });
     if (it == state_.camps.end()) return;
     // Clearing a camp pays gold; its surviving units roam on without a home.
+    const int32_t cleared = it->id;
     state_.camps.erase(it);
+    questDone(unit.owner, QuestKind::ClearCamp, cleared);  // 08: Quests
     const int pct = 100 + (difficultyHuman(unit.owner) ? difficulty().humanCampGoldPercent : 0);  // 00-overview: Difficulty levels
     state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD") * pct / 100);
     awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");
@@ -180,7 +187,7 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
     Rng& rng = state_.rng.get(RngStream::Gameplay);
     const bool ranged = rng.chance(static_cast<uint32_t>(tribe.rangedPercent));
-    const Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
+    Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
     // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT).
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
@@ -203,11 +210,17 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     TypeIndex type = best(ranged ? (tribe.coastal ? "NAVAL_RANGED" : "RANGED") : tribe.unitClass);
     if (type == kNone && !ranged) type = best(tribe.coastal ? "NAVAL_MELEE" : "MELEE");
     if (type == kNone && ranged) type = best(tribe.unitClass);
+    // Before anyone sails, a naval camp sends its people out on foot.
+    if (type == kNone && tribe.coastal) {
+        domain = Domain::Land;
+        type = best("MELEE");
+    }
     if (type == kNone) return;
+    const bool atSea = domain == Domain::Sea;
     std::optional<Hex> spot;
     for (const Hex& h : state_.grid.within(camp.pos, 1)) {
         if (spot) break;
-        const bool fits = tribe.coastal ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+        const bool fits = atSea ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
         if (fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.foreignUnitAt(h, bp) && !state_.cityAt(h)) spot = h;
     }
     if (!spot) return;

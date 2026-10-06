@@ -170,6 +170,7 @@ void Game::processSpies(PlayerId pid) {
 
 void Game::resolveSpyOperation(Agent& a) {
     City& c = *state_.city(a.city);
+    breakPromises(a.owner, c.owner, PromiseKind::NoSpying);  // an operation against a civ it promised not to spy on (08 [GS])
     const PlayerId sender = a.owner;
     // Fabricate Scandal wrongs the city-state's suzerain; every other operation the city's owner.
     const PlayerId victim = a.mission == SpyMission::FabricateScandal && isCityState(c.owner) && suzerainOf(c.owner) != kNoPlayer ? suzerainOf(c.owner) : c.owner;

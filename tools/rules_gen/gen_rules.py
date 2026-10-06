@@ -194,6 +194,25 @@ def gen_terrain():
         if fid in IMPASSABLE_FEATURES:
             f["impassable"] = True
         features.append(f)
+    # Natural wonders (01: Natural wonders), features the map script places in clusters.
+    mountains = [t["id"] for t in terrains if t["relief"] == "MOUNTAIN"]
+    for row in table(SPEC / "terrain-features-resources.md", "Natural wonders"):
+        valid = []
+        for v in (x.strip() for x in row["Valid terrains"].split(",")):
+            for tid in (mountains if v == "Mountain" else [tnames[v]] if v in tnames else []):
+                if tid not in valid:
+                    valid.append(tid)
+        f = {"id": "FEATURE_" + snake(row["Natural wonder"].replace("á", "a").replace("ạ", "a").replace("ö", "o").replace("ï", "i").replace("ö", "o")),
+             "name": row["Natural wonder"], "naturalWonder": True, "tiles": num(row["Tiles"]),
+             "yields": yields(row["Yields"]), "adjacentYields": yields(row["Adjacent tile yields"]),
+             "appeal": num(row["Appeal"]), "validTerrains": valid}
+        if row["Impassable"] == "yes":
+            f["impassable"] = True
+        if row["Doubles adjacent terrain yield"] == "yes":
+            f["doublesAdjacentTerrain"] = True
+        if row["Fresh water"] == "yes":
+            f["freshWater"] = True
+        features.append(f)
     # Roads by era, and the railroad Military Engineers lay (01: Routes).
     routes = []
     for row in table(SPEC / "terrain-features-resources.md", "Routes"):
@@ -288,6 +307,8 @@ def gen_units():
         }
         if combat > 0 and "no ZOC" not in special and row["Domain"] != "Air":
             u["zoneOfControl"] = True
+        if row["Unit"] == "Archaeologist":
+            u["excavations"] = 3  # 07: Archaeology (the Archaeologist's three digs; not in the extracted table)
         if row["Unit"] == "Aircraft Carrier":
             u["airSlots"] = 2  # 05: Naval carrier, 2 air slots (more with promotions)
         if cls == "Air Bomber" or row["Unit"] == "Nuclear Submarine":
@@ -589,7 +610,39 @@ def gen_barbarians():
             t["resource"] = "RESOURCE_" + snake(row["Required resource"])
             t["resourceRange"] = num(row["Resource range"])
         out.append(t)
-    return {"barbarianTribes": out}
+    # Tribal village rewards (01: Tribal Villages; data: Tribal village rewards); the meteor site waits for meteors.
+    goodies = []
+    units = {"Recon": "UNIT_SCOUT", "Builder": "UNIT_BUILDER", "Trader": "UNIT_TRADER", "Settler": "UNIT_SETTLER"}
+    for row in table(SPEC / "barbarians-goody-huts.md", "Tribal village rewards"):
+        if row["Category"] == "Meteor Goodies" or not num(row["Weight"]):
+            continue
+        eff = row["Effect"]
+        g = {"id": "GOODY_" + snake(row["Reward"]), "category": row["Category"].replace("Goodyhut ", "").upper(), "weight": num(row["Weight"])}
+        rules = [(r"grants 1 Relic", ("RELIC", 1)), (r"\+(\d+) Inspiration", ("INSPIRATION", None)), (r"\+(\d+) Eureka", ("EUREKA", None)),
+                 (r"\+(\d+) Governor Title", ("GOVERNOR_TITLE", None)), (r"grants (\d+) Envoy", ("ENVOY", None)),
+                 (r"\+(\d+) Diplomatic Favor", ("FAVOR", None)), (r"grant of (\d+) Faith", ("FAITH", None)), (r"grant of (\d+) Gold", ("GOLD", None)),
+                 (r"grants (\d+) XP", ("XP", None)), (r"adjust unit heal \(Amount=(\d+)\)", ("HEAL", None)),
+                 (r"most advanced strategic resource count \(Amount=(\d+)", ("STRATEGIC", None)), (r"grants 1 random technology", ("TECH", 1)),
+                 (r"\+(\d+) Population", ("POPULATION", None))]
+        for pattern, (kind, fixed) in rules:
+            m = re.search(pattern, eff)
+            if m:
+                g["kind"] = kind
+                g["amount"] = fixed if fixed is not None else int(m.group(1))
+                break
+        m = re.search(r"grants (?:a |1 )(\w+)(?: unit)? in the nearest city", eff)
+        if m and m.group(1) in units:
+            g["kind"] = "UNIT"
+            g["unit"] = units[m.group(1)]
+            g["amount"] = 1
+        if "kind" not in g:
+            continue  # not carried (the unit upgrade)
+        if row["Min turn"]:
+            g["minTurn"] = num(row["Min turn"])
+        if row["Min one city"] == "yes":
+            g["needsCity"] = True
+        goodies.append(g)
+    return {"barbarianTribes": out, "goodies": goodies}
 
 
 # Districts the core places so far (MVP-5, the Harbor with naval play); the rest need
@@ -1043,6 +1096,11 @@ def project_effects(name, text):
         m = re.fullmatch(r"\+1 (Nuclear|Thermonuclear) Device \(one-time\)", part)
         if m:
             effects.append({"kind": "WMD", "amount": 1, "weapon": "WMD_" + snake(m.group(1) + " Device")})
+            continue
+        m = re.fullmatch(r"send (\d+) Gold to (?:Military )?Aid Request", part)
+        if m:
+            if not any(e["kind"] == "AID" for e in effects):
+                effects.append({"kind": "AID", "amount": int(m.group(1))})  # 08: Aid Request
             continue
         if part.startswith("adjust city required power"):
             continue  # power is not modelled; the station counts as powered

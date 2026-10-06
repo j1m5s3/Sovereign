@@ -383,6 +383,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
         c->worked.clear();
         c->locked.clear();
         assignCitizens(*c);
+        requestAid(c->owner);  // 08: Aid Request (opens only when no competition runs)
     }
 }
 

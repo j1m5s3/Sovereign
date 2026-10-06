@@ -53,6 +53,8 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
     placeCityStates(s, rules);
+    placeNaturalWonders(s, rules);
+    if (setup.tribalVillages) placeVillages(s, rules);
     if (setup.barbarians) {
         // The barbarians: one extra player, at war with all, who moves in the world turn.
         Player b;
@@ -265,6 +267,13 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
+        case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::SendDelegation:
+            if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotDeal;
+            return delegationProblem(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0);
+        case CommandType::AskPromise:
+            if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg2 < 0 || c.arg2 >= kNumPromiseKinds) return CommandError::CannotDeal;
+            return askPromiseProblem(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2));
         case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
             const Agent* a = agent(c.id);
@@ -344,6 +353,7 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     if (!isLandPassable(state_, *rules_, at)) return set(CommandError::CannotFoundHere);
     const Plot& p = state_.plot(at);
     if (p.owner != kNoPlayer && p.owner != player) return set(CommandError::CannotFoundHere);
+    if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt("CITY_MIN_RANGE");
     for (const City& c : state_.cities) {
         if (state_.grid.distance(c.pos, at) <= minRange) return set(CommandError::TooCloseToCity);
@@ -642,6 +652,14 @@ void Game::refreshVisibility(PlayerId pid) {
         // An Encampment watches its strike range (Sovereign reading; 03: Defense).
         if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
+    // Diplomatic access (08): Secret shows a civ's capital, Top Secret all its cities.
+    for (const City& c : state_.cities) {
+        if (c.owner == pid || !isMajorCiv(c.owner)) continue;
+        const int access = accessLevel(pid, c.owner);
+        if (access >= 4 || (access >= 3 && c.capital)) {
+            for (const Hex& h : state_.grid.within(c.pos, 1)) p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
+        }
+    }
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;
         if (!c) continue;
@@ -744,6 +762,9 @@ void Game::apply(const Command& c) {
             if (c.arg == 1) pillage(c.id, c.target);
             else pillage(c.id);
             break;
+        case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::SendDelegation: sendDelegation(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0); break;
+        case CommandType::AskPromise: askPromise(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2)); break;
         case CommandType::FormUnit: {
             Unit& u = *state_.unit(c.id);
             const Unit& w = *state_.unit(c.arg);
@@ -863,6 +884,10 @@ void Game::applyFoundCity(const Command& c) {
     const Unit* u = state_.unit(c.id);
     const Hex at = u->pos;
     const PlayerId owner = u->owner;
+    // Settling within 6 of a civ it promised not to settle near breaks the promise (08 [GS]).
+    for (const City& near : state_.cities) {
+        if (near.owner != owner && state_.grid.distance(near.pos, at) <= 6) breakPromises(owner, near.owner, PromiseKind::NoSettling);
+    }
     Player& p = state_.players[static_cast<size_t>(owner)];
     City city;
     city.id = state_.nextCityId++;
@@ -986,6 +1011,9 @@ void Game::beginGlobalTurn() {
     processFallout();
     processEmergencies();
     processCompetitions();
+    checkQuests();
+    assignQuests();
+    placeAntiquity();
     processProfiles();
     processSpaceRace();
     processReligion();
@@ -1046,7 +1074,7 @@ Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {
     u.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     u.movesLeft = Fixed::fromInt(rules_->units[static_cast<size_t>(type)].moves);
     const UnitType& ut = rules_->units[static_cast<size_t>(type)];
-    u.charges = ut.buildCharges;
+    u.charges = ut.buildCharges > 0 ? ut.buildCharges : ut.excavations;
     Player& p = state_.players[static_cast<size_t>(owner)];
     if (ut.layer == UnitLayer::Military) p.strongestUnit = std::max(p.strongestUnit, ut.combat);
     state_.units.push_back(u);  // ids only grow, so the vector stays sorted

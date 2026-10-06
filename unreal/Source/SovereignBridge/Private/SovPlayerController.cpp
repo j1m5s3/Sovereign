@@ -460,6 +460,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.buildings[b].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
 				}
 			}
+			// Gold buys units and buildings outright (02: Purchasing), and plots next to the city's border.
+			for (const sov::ProductionItem& Item : G.buildableItems(City->id))
+			{
+				if (Item.kind != sov::ProductionKind::Unit && Item.kind != sov::ProductionKind::Building) continue;
+				const sov::Command Buy = sov::Command::purchase(Me(), City->id, Item);
+				if (G.validate(Buy) != sov::CommandError::Ok) continue;
+				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item)), Buy});
+			}
+			for (const sov::Hex& H : G.state().grid.within(City->pos, 3))
+			{
+				const sov::Command Buy = sov::Command::buyPlot(Me(), City->id, H);
+				if (G.validate(Buy) == sov::CommandError::Ok)
+					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
+			}
+			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
 			break;
 		}
 		case EChooser::Research:
@@ -707,6 +722,44 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 								 UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer),
 					sov::Command::denounce(Me(), O.id)});  // only arg is used: Pick opens the screen
 			}
+			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
+			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
+				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War"), TEXT("War of Retribution")};
+			for (const sov::Player& O : G.state().players)
+			{
+				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;
+				const FString Who = Str(R.civs[static_cast<size_t>(O.civ)].name);
+				if (G.canDeclareWar(Me(), O.id))
+				{
+					const bool bFormal = G.denouncing(Me(), O.id);
+					Choices.Add({FString::Printf(TEXT("Declare %s war on %s"), bFormal ? TEXT("a formal") : TEXT("a surprise"), *Who), sov::Command::declareWar(Me(), O.id)});
+					for (int32 W = 1; W < sov::kNumCasusBelli; ++W)
+					{
+						if (G.hasCasusBelli(Me(), O.id, static_cast<sov::CasusBelli>(W)))
+						{
+							Choices.Add({FString::Printf(TEXT("Declare a %s on %s (%d%% grievances)"), Reasons[W], *Who, G.casusBelliGrievancePercent(static_cast<sov::CasusBelli>(W))),
+								sov::Command::declareWarFor(Me(), O.id, static_cast<sov::CasusBelli>(W))});
+						}
+					}
+				}
+				if (G.canMakePeace(Me(), O.id)) Choices.Add({FString::Printf(TEXT("Offer peace to %s"), *Who), sov::Command::makePeace(Me(), O.id)});
+				// Delegations and embassies (08): access levels.
+				for (const bool bEmbassy : {false, true})
+				{
+					const sov::Command Send = sov::Command::sendDelegation(Me(), O.id, bEmbassy);
+					if (G.validate(Send) == sov::CommandError::Ok)
+						Choices.Add({FString::Printf(TEXT("Send %s to %s (%d gold; access now %s)"), bEmbassy ? TEXT("a resident embassy") : TEXT("a delegation"), *Who,
+										 bEmbassy ? 50 : 25, UTF8_TO_TCHAR(sov::Game::accessName(G.accessLevel(Me(), O.id)))),
+							Send});
+				}
+				// Promises [GS] (30 favor each).
+				static const TCHAR* const Promises[] = {TEXT("not to settle near us"), TEXT("not to convert our cities"), TEXT("not to spy on us"), TEXT("not to dig in our lands")};
+				for (int32 K = 0; K < sov::kNumPromiseKinds; ++K)
+				{
+					const sov::Command Ask = sov::Command::askPromise(Me(), O.id, static_cast<sov::PromiseKind>(K));
+					if (G.validate(Ask) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Ask %s to promise %s (30 favor)"), *Who, Promises[K]), Ask});
+				}
+			}
 			break;
 		}
 		case EChooser::TradeRoute:
@@ -758,6 +811,38 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (Faith > 0 && P.faith >= sov::Fixed::fromInt(Faith))
 				{
 					Choices.Add({FString::Printf(TEXT("%s   buy %d faith"), *Head, Faith), sov::Command::patronizeGreatPerson(Me(), Cls, true)});
+				}
+				const sov::Command Pass = sov::Command::passGreatPerson(Me(), Cls);
+				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("%s   pass on %s"), *ClassName, *Str(Gp.name)), Pass});
+			}
+			break;
+		}
+		case EChooser::Government:
+		{
+			// 04: Governments and policies. A new government, then a card for each slot of the current one.
+			const sov::TypeIndex Current = P.government;
+			ChooserTitle = FString::Printf(TEXT("Government: %s%s"), Current == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(Current)].name),
+				P.anarchyTurns > 0 ? *FString::Printf(TEXT(" (anarchy, %d turns)"), P.anarchyTurns) : TEXT(""));
+			for (size_t g = 0; g < R.governments.size(); ++g)
+			{
+				if (static_cast<sov::TypeIndex>(g) != Current && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g)))
+					Choices.Add({FString::Printf(TEXT("Adopt %s"), *Str(R.governments[g].name)), sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(g))});
+			}
+			static const TCHAR* const SlotNames[] = {TEXT("Military"), TEXT("Economic"), TEXT("Diplomatic"), TEXT("Wildcard"), TEXT("Great Person")};
+			if (Current != sov::kNone)
+			{
+				const sov::GovernmentType& Gov = R.governments[static_cast<size_t>(Current)];
+				for (int32 Slot = 0; Slot < Gov.totalSlots(); ++Slot)
+				{
+					const sov::TypeIndex In = static_cast<size_t>(Slot) < P.policies.size() ? P.policies[static_cast<size_t>(Slot)] : sov::kNone;
+					const FString Holds = In == sov::kNone ? FString(TEXT("empty")) : Str(R.policies[static_cast<size_t>(In)].name);
+					for (size_t pol = 0; pol < R.policies.size(); ++pol)
+					{
+						if (static_cast<sov::TypeIndex>(pol) == In || !G.canSetPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))) continue;
+						Choices.Add({FString::Printf(TEXT("%s slot %d (%s): %s"), SlotNames[static_cast<int32>(sov::Game::slotType(Gov, Slot))], Slot + 1, *Holds,
+										 *Str(R.policies[pol].name)),
+							sov::Command::setPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))});
+					}
 				}
 			}
 			break;
@@ -935,6 +1020,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Archaeology (07): an Archaeologist digs the site it stands on.
+			if (G.excavateProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Excavate an Artifact"), sov::Command::excavate(Me(), U->id)});
+			}
 			// Formations (05): merge with a neighbouring twin.
 			for (const sov::Unit& W : G.state().units)
 			{
@@ -1010,7 +1100,7 @@ void ASovPlayerController::Pick(int32 Index)
 		}
 		return;
 	}
-	if (Was == EChooser::Diplomacy)
+	if (Was == EChooser::Diplomacy && Command.type == sov::CommandType::Denounce)
 	{
 		OpenDiplomacy(static_cast<sov::PlayerId>(Command.arg));  // the civ to talk to, not a command to send
 		return;
@@ -1513,6 +1603,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
+	if (WasInputKeyJustPressed(EKeys::F2)) OpenChooser(EChooser::Government);
 	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
 	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
@@ -1772,7 +1863,7 @@ void ASovPlayerController::UpdatePanel()
 	if (MyTurn())
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
-		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   Z governors   I pantheon   J assassins   WASD/wheel camera"),
+		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   F2 government   Z governors   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
 	}
 }
@@ -1883,11 +1974,15 @@ void ASovPlayerController::OpenDiplomacy(sov::PlayerId Leader)
 	FSovDiplomacyTalk* T = Talk.Get();
 	DiplomacyPanel = SNew(SSovDiplomacyPanel)
 		.Talk(T)
-		.Header([T]() {
+		.Header([this, T]() {
 			const sov::diplomacy::Persona& P = T->GetPersona();
-			return FText::FromString(FString::Printf(TEXT("%s of %s, a %s. %s toward you (opinion %+d).\nAgenda, %s: %s"), *Str(P.leaderName),
-				*Str(P.civName), *Str(P.leaning), UTF8_TO_TCHAR(sov::relationshipName(P.relationship)), P.opinion, *Str(P.agendaName),
-				*Str(P.agendaText)));
+			// Their agenda shows from Open access (08: Access level).
+			const int32 Access = Subsystem()->GetGame().accessLevel(Me(), T->Leader());
+			const FString Agenda = Access >= 2 ? FString::Printf(TEXT("Agenda, %s: %s"), *Str(P.agendaName), *Str(P.agendaText))
+											   : FString(TEXT("Agenda: unknown (needs Open access: Printing, a delegation, a trade route, an alliance or a spy)"));
+			return FText::FromString(FString::Printf(TEXT("%s of %s, a %s. %s toward you (opinion %+d). Access: %s.\n%s"), *Str(P.leaderName),
+				*Str(P.civName), *Str(P.leaning), UTF8_TO_TCHAR(sov::relationshipName(P.relationship)), P.opinion,
+				UTF8_TO_TCHAR(sov::Game::accessName(Access)), *Agenda));
 		})
 		.Reasons([T]() {
 			const sov::diplomacy::Persona& P = T->GetPersona();

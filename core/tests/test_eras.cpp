@@ -82,11 +82,18 @@ TEST(wonders_and_holy_cities_bring_tourism) {
 
 TEST(visitors_beyond_every_rivals_home_tourists_win) {
     GameState s = eraState();
-    s.players[0].tourismTo = {0, 2 * 200 * 3};  // three visitors from player 1
-    s.players[1].lifetimeCulture = Fixed::fromInt(500);  // five domestic tourists, three of them visiting us
+    s.players[0].tourismTo = {0, 2 * 200 * 6};  // six visitors from player 1 (the Sovereign floor: 5 per rival)
+    s.players[1].lifetimeCulture = Fixed::fromInt(900);  // nine domestic tourists, six of them visiting us
+    GameState few = s;
+    few.players[0].tourismTo = {0, 2 * 200 * 2};  // two visitors beat one domestic tourist, but are under the floor
+    few.players[1].lifetimeCulture = Fixed::fromInt(300);
+    auto early = Game::fromScenario(rules(), std::move(few));
+    CHECK_EQ(early->visitingTourists(0, 1), 2);
+    CHECK_EQ(early->domesticTourists(1), 1);
+    CHECK_EQ(early->cultureVictor(), kNoPlayer);
     auto g = Game::fromScenario(rules(), std::move(s));
-    CHECK_EQ(g->visitingTourists(0, 1), 3);
-    CHECK_EQ(g->domesticTourists(1), 2);
+    CHECK_EQ(g->visitingTourists(0, 1), 6);
+    CHECK_EQ(g->domesticTourists(1), 3);
     CHECK_EQ(g->cultureVictor(), 0);
     sovtest::endTurns(*g, 1);
     CHECK(g->state().victory == Victory::Culture);

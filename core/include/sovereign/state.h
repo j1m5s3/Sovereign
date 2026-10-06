@@ -42,6 +42,8 @@ struct Plot {
     uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
+    bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
+    uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -221,16 +223,37 @@ struct Emergency {
     uint8_t outcome = 0;            // 0 running, 1 members succeeded, 2 failed (target rewarded)
 };
 
+// A promise one civ made another (08: Ask Promise [GS]): kept for 30 turns, or broken by doing the deed.
+enum class PromiseKind : uint8_t { NoSettling = 0, NoConverting, NoSpying, NoDigging };
+constexpr int kNumPromiseKinds = 4;
+struct Promise {
+    PlayerId by = kNoPlayer, to = kNoPlayer;  // who promised, who asked
+    PromiseKind kind = PromiseKind::NoSettling;
+    int32_t until = 0;
+    int32_t brokenOn = 0;  // turn it was broken (0: kept); a War of Retribution is open for 30 turns after
+};
+
+// A city-state's quest for one major civ (08: Quests; data: diplomacy-espionage, City-state quests):
+// fulfilled, it puts an envoy in that city-state.
+enum class QuestKind : uint8_t { Convert = 0, TradeRoute, ClearCamp, TrainUnit, BuildDistrict, Eureka, Inspiration, GreatPerson };
+constexpr int kNumQuestKinds = 8;
+struct Quest {
+    PlayerId cityState = kNoPlayer, major = kNoPlayer;
+    QuestKind kind = QuestKind::TrainUnit;
+    int32_t arg = -1;   // the unit, district, tech, civic, great person class or camp id it names
+};
+
 // A scored competition [GS] (08: Scored Competitions; data: world-congress-emergencies), called at a
 // World Congress session; every major civ takes part.
-enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation };
-constexpr int kNumCompetitionKinds = 7;
+enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation, AidRequest };
+constexpr int kNumCompetitionKinds = 8;
 struct Competition {
     CompetitionKind kind = CompetitionKind::WorldsFair;
     int32_t endTurn = 0;
     std::vector<int32_t> scores;    // per player
     std::vector<int64_t> baseline;  // per player: favor (Peace) or CO2 (Climate Accords) when it began
     bool settled = false;
+    PlayerId beneficiary = kNoPlayer;  // Aid Request: the civ struck by the disaster
 };
 
 // A wonder's plot: reserved when its production starts, its own tile once built.
@@ -325,6 +348,7 @@ struct Relation {
     AllianceType alliance = AllianceType::None;  // an alliance [R&F] running through allianceUntil (both sides)
     int32_t allianceUntil = 0;
     int32_t alliancePoints = 0;   // toward levels 2 and 3 (internal units, ALLIANCE_POINTS_MULTIPLIER a turn)
+    uint8_t delegation = 0;       // this player keeps 1 a delegation, 2 a resident embassy, with that one (08)
 };
 
 struct Player {
@@ -436,6 +460,7 @@ struct GameSetup {
     bool wrapX = true;
     std::vector<PlayerSetup> players;
     bool barbarians = true;
+    bool tribalVillages = true;    // 01: Tribal Villages
     // Victories (09-civs-eras-victory-climate.md, Victory conditions). With Domination
     // off, the last major civ standing wins instead (VICTORY_DEFAULT).
     bool dominationVictory = true;
@@ -515,6 +540,7 @@ enum class EventKind : uint8_t {
     ResolutionPassed,  // value: resolution; target: the candidate it applies to when that is a player
     Disaster,        // value: disaster type; target: the owner of the plot it struck (kNoPlayer: unowned)
     ClimatePhase,    // value: the phase the world entered
+    GoodyHut,        // actor entered a tribal village; value: the reward (Rules::goodies)
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -556,6 +582,10 @@ struct SOV_API GameState {
     std::vector<Agreement> agreements;  // running deal terms
     std::vector<Emergency> emergencies; // hostile emergencies, running and settled (08: Emergencies)
     std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
+    std::vector<Quest> quests;              // open city-state quests, one per city-state and major (08)
+    std::vector<int32_t> battleSites;       // plots fought over before ARCHAEOLOGY_MAX_ERA (07: Archaeology)
+    std::vector<Promise> promises;          // promises made, kept and broken (08 [GS])
+    bool antiquityPlaced = false;           // the sites have appeared (once a civ has Natural History)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]

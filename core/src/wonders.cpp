@@ -26,6 +26,7 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return false;
     if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return false;
     if (resourceVisible(city.owner, plot)) return false;  // not on resources
+    if (p.feature != kNone && rules_->features[at(p.feature)].naturalWonder) return false;  // nor on natural wonders
     const WonderPlacement& w = b.placement;
     const TerrainType& t = rules_->terrains[at(p.terrain)];
     const bool water = std::any_of(w.terrains.begin(), w.terrains.end(), [&](TypeIndex x) { return rules_->terrains[at(x)].water; });

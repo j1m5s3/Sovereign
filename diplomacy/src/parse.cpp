@@ -79,12 +79,22 @@ bool parseInterpretation(const std::string& json, const Game& game, const Person
             d.amount = luxury ? 1 : std::max<int32_t>(1, d.amount);
         } else if (kind == "open_borders") d.kind = DealItemKind::OpenBorders;
         else if (kind == "friendship") d.kind = DealItemKind::Friendship;
+        else if (kind == "alliance") d.kind = DealItemKind::Alliance;
         else if (kind == "peace") d.kind = DealItemKind::Peace;
         else continue;
         if ((d.kind == DealItemKind::Gold || d.kind == DealItemKind::GoldPerTurn) && d.amount <= 0) continue;
         if (d.kind != DealItemKind::Gold && d.kind != DealItemKind::GoldPerTurn && d.kind != DealItemKind::Resource) d.amount = 0;
-        // One friendship or peace for both sides; keep the first.
-        const bool mutual = d.kind == DealItemKind::Friendship || d.kind == DealItemKind::Peace;
+        // An alliance's type rides in its amount (08: Alliance); Economic when none is named.
+        if (d.kind == DealItemKind::Alliance) {
+            static const char* const kTypes[] = {"research", "military", "economic", "cultural", "religious"};
+            const std::string type = lower(it["type"].str());
+            d.amount = static_cast<int32_t>(AllianceType::Economic);
+            for (int t = 0; t < kNumAllianceTypes; ++t) {
+                if (type == kTypes[t]) d.amount = t;
+            }
+        }
+        // One friendship, alliance or peace for both sides; keep the first.
+        const bool mutual = d.kind == DealItemKind::Friendship || d.kind == DealItemKind::Peace || d.kind == DealItemKind::Alliance;
         if (mutual && std::any_of(out.items.begin(), out.items.end(), [&](const DealItem& x) { return x.kind == d.kind; })) continue;
         out.items.push_back(d);
     }

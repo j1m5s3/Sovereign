@@ -91,6 +91,20 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
+    // Natural wonders next door (01): their adjacent yields, or the terrain's yields again (Torres del Paine).
+    if (!rules_->features.empty()) {
+        for (const Hex& n : state_.grid.within(at, 1)) {
+            const Plot& np = state_.plot(n);
+            if (n == at || np.feature == kNone || np.feature == p.feature) continue;
+            const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
+            if (!nw.naturalWonder) continue;
+            for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
+            if (nw.doublesAdjacentTerrain) {
+                const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
+                for (size_t i = 0; i < kNumYields; ++i) y[i] += ty[i];
+            }
+        }
+    }
     if (p.improvement != kNone && p.pillagedTurns == 0 && rules_->improvements[static_cast<size_t>(p.improvement)].powerProvided > 0 &&
         cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
         y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna
@@ -205,6 +219,19 @@ CityReport Game::cityReport(CityId id) const {
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
+    // Natural wonders (01): the city owning Pamukkale gains an amenity per natural wonder in its land.
+    {
+        const TypeIndex pamukkale = rules_->feature("FEATURE_PAMUKKALE");
+        bool owns = false;
+        std::vector<TypeIndex> wonders;
+        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+            const Plot& pl = state_.plot(h);
+            if (pl.city != c->id || pl.feature == kNone || !rules_->features[static_cast<size_t>(pl.feature)].naturalWonder) continue;
+            owns = owns || pl.feature == pamukkale;
+            if (std::find(wonders.begin(), wonders.end(), pl.feature) == wonders.end()) wonders.push_back(pl.feature);
+        }
+        if (owns) rep.amenities += static_cast<int>(wonders.size());
+    }
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
         for (TypeIndex bi : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
     }
@@ -489,9 +516,13 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         if (pj.prerequisite != kNone && (static_cast<size_t>(pj.prerequisite) >= p.projectsDone.size() || p.projectsDone[static_cast<size_t>(pj.prerequisite)] == 0))
             return fail(CommandError::CannotBuild);
         if (pj.resource != kNone && p.stockpile[static_cast<size_t>(pj.resource)] < pj.resourceAmount) return fail(CommandError::NotEnoughResources);
-        // Repair Outer Defenses: only with walls that are down.
+        // Repair Outer Defenses: only with walls that are down. Send Aid: only while another civ asks for aid.
         for (const ProjectEffect& e : pj.effects) {
             if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Aid) {
+                const Competition* aid = runningAidRequest();
+                if (!aid || aid->beneficiary == c.owner) return fail(CommandError::CannotBuild);
+            }
         }
     } else {
         return fail(CommandError::CannotBuild);
@@ -814,6 +845,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
         }
         if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
+        questDone(city.owner, QuestKind::TrainUnit, item.type);  // 08: Quests
         if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
                                               (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
         assignCitizens(city);
@@ -822,6 +854,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         for (CityDistrict& d : city.districts) {
             if (d.type == item.type) d.complete = true;
         }
+        questDone(city.owner, QuestKind::BuildDistrict, item.type);  // 08: Quests
     } else if (item.kind == ProductionKind::Project) {
         completeProject(city, item.type);
     } else {
@@ -862,6 +895,12 @@ void Game::completeProject(City& city, TypeIndex project) {
                 break;
             case ProjectEffectKind::CultureFromScience: p.civics.overflow += sciencePerTurn(city.owner) * e.amount; break;
             case ProjectEffectKind::ExpeditionSpeed: break;  // the space race (Science victory) reads projectsDone
+            case ProjectEffectKind::Aid:
+                if (const Competition* aid = runningAidRequest(); aid && aid->beneficiary != kNoPlayer) {
+                    state_.players[static_cast<size_t>(aid->beneficiary)].gold += Fixed::fromInt(e.amount);
+                    competitionScore(city.owner, CompetitionKind::AidRequest, e.amount);
+                }
+                break;
             case ProjectEffectKind::Wmd:
                 if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
                 if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;
@@ -1044,6 +1083,10 @@ void Game::processCities(PlayerId pid) {
                 const Unlock& u = rules_->buildings[static_cast<size_t>(item.type)].unlock;
                 const int era = u.none() ? 0 : (u.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(u.index)].era;
                 if (ab.wonderProductionPercent > 0 && era >= ab.wonderEraMin && era <= ab.wonderEraMax) prod = prod * (100 + ab.wonderProductionPercent) / 100;
+                // Natural wonders (01): +50% toward a wonder built beside Ik-Kil.
+                for (const CityWonder& w : city.wonders) {
+                    if (w.building == item.type && nextToNaturalWonder(w.pos, "FEATURE_IK_KIL")) prod = prod * 150 / 100;
+                }
             } else if (item.kind == ProductionKind::District) {
                 // Zoning Commissioner (08: Governors); Urban Development Treaty A (World Congress).
                 int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());

@@ -384,8 +384,30 @@ public:
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
 
+    // ---- natural wonders (01: Natural wonders)
+    bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
+
+    // ---- archaeology (07: Archaeology)
+    void noteBattle(Hex plot);              // remembered as a future site while the world is young enough
+    void placeAntiquity();                  // once any civ has Natural History
+    CommandError excavateProblem(PlayerId player, UnitId archaeologist) const;
+    void excavate(UnitId archaeologist);
+    bool seesAntiquity(PlayerId player) const;  // it knows Natural History
+
+    // ---- tribal villages (01: Tribal Villages)
+    void enterVillage(Unit& unit);   // the reward: a category, then a reward in it, by weight
+
+    // ---- city-state quests (08: Quests)
+    void assignQuests();                                         // each city-state, each major that met it: one open quest
+    void questDone(PlayerId major, QuestKind kind, int32_t arg);  // fulfils matching quests: an envoy in each
+    void checkQuests();                                          // the quests the world's state fulfils (conversion, routes)
+    const Quest* questFor(PlayerId cityState, PlayerId major) const;
+    std::string questText(const Quest& q) const;
+
     // ---- scored competitions [GS] (08: Scored Competitions)
     void startCompetition();                                       // at a World Congress session
+    void requestAid(PlayerId victim);                              // a disaster cost it population: an Aid Request
+    const Competition* runningAidRequest() const;
     void competitionScore(PlayerId player, CompetitionKind kind, int amount);
     int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)
     void processCompetitions();                                    // settles the ones whose time is up (the world turn)
@@ -397,6 +419,27 @@ public:
     bool inEmergencyAgainst(PlayerId member, PlayerId target) const;  // a running emergency it joined
     void triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim);
     void processEmergencies();               // goals met, expiry, rewards (the world turn)
+
+    // ---- delegations, embassies and diplomatic access (08: Access level, Diplomatic actions)
+    CommandError delegationProblem(PlayerId from, PlayerId to, bool embassy) const;
+    bool wouldReceive(PlayerId to, PlayerId from) const;  // an AI lets the delegation in
+    void sendDelegation(PlayerId from, PlayerId to, bool embassy);
+    int accessLevel(PlayerId viewer, PlayerId target) const;  // 0 None, 1 Limited, 2 Open, 3 Secret, 4 Top Secret
+    static const char* accessName(int level);
+    static int gossipLevel(EventKind kind);               // the access an outsider needs to hear of it
+    bool hearsOf(PlayerId viewer, const GameEvent& e) const;
+
+    // ---- promises [GS] (08: Ask Promise)
+    CommandError askPromiseProblem(PlayerId asker, PlayerId of, PromiseKind kind) const;
+    bool wouldPromise(PlayerId of, PlayerId asker) const;            // an AI's answer
+    void askPromise(PlayerId asker, PlayerId of, PromiseKind kind);
+    void breakPromises(PlayerId by, PlayerId to, PromiseKind kind);  // the deed was done
+    bool promised(PlayerId by, PlayerId to, PromiseKind kind) const;  // a promise in force
+
+    // ---- casus belli (08: War types)
+    bool hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const;  // civic and condition met
+    int casusBelliGrievancePercent(CasusBelli why) const;                        // of a formal war's grievances
+    CasusBelli bestCasusBelli(PlayerId player, PlayerId target) const;          // the cheapest it holds (None: none)
 
     // ---- alliances [R&F] (08: Alliance)
     AllianceType alliance(PlayerId a, PlayerId b) const;  // None when not allied
@@ -595,7 +638,7 @@ private:
     // `holder` remembers something `about` did (no-op unless both are major civs).
     void remember(PlayerId holder, PlayerId about, MemoryKind kind, int amount, int duration);
     // War is declared: memories, deeds, friendships and running deals end.
-    void onWarDeclared(PlayerId by, PlayerId target);
+    void onWarDeclared(PlayerId by, PlayerId target, CasusBelli why = CasusBelli::None);
     void onPeace(PlayerId a, PlayerId b);
     void processDiplomacy(PlayerId player);  // running deals pay, expire or break; old memories fade
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn

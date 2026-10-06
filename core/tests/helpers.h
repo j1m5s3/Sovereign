@@ -54,7 +54,8 @@ inline sov::UnitId addUnit(sov::GameState& s, const char* type, sov::PlayerId ow
     u.owner = owner;
     u.pos = pos;
     u.movesLeft = sov::Fixed::fromInt(rules().units[static_cast<size_t>(u.type)].moves);
-    u.charges = rules().units[static_cast<size_t>(u.type)].buildCharges;
+    const sov::UnitType& ut = rules().units[static_cast<size_t>(u.type)];
+    u.charges = ut.buildCharges > 0 ? ut.buildCharges : ut.excavations;
     s.units.push_back(u);
     return u.id;
 }

@@ -298,6 +298,8 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
     }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
+    // Natural wonders (01): land units beside the Giant's Causeway +5.
+    if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_GIANT_S_CAUSEWAY")) s += 5;
     // Formations (05): a Corps or Fleet +10, an Army or Armada +17.
     if (unit.formation == 1) s += rules_->globalInt("COMBAT_CORPS_STRENGTH_MODIFIER");
     if (unit.formation >= 2) s += rules_->globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
@@ -626,8 +628,10 @@ CommandError Game::validateCombat(const Command& c) const {
     const bool playerArg = c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size();
     switch (c.type) {
         case CommandType::DeclareWar:
-            return playerArg && canDeclareWar(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
-                                                                                     : CommandError::CannotDeclareWar;
+            if (c.arg2 < 0 || c.arg2 >= kNumCasusBelli) return CommandError::CannotDeclareWar;
+            if (!playerArg || !canDeclareWar(c.player, static_cast<PlayerId>(c.arg))) return CommandError::CannotDeclareWar;
+            return c.arg2 == 0 || hasCasusBelli(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2)) ? CommandError::Ok
+                                                                                                                            : CommandError::CannotDeclareWar;
         case CommandType::MakePeace:
             return playerArg && canMakePeace(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
                                                                                     : CommandError::CannotMakePeace;
@@ -781,11 +785,12 @@ void Game::applyCombat(const Command& c) {
         case CommandType::DeclareWar: {
             Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
             Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];
-            onWarDeclared(c.player, static_cast<PlayerId>(c.arg));
+            onWarDeclared(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2));
             for (Relation* r : {&mine, &theirs}) {
                 r->war = true;
                 r->since = state_.turn;
                 r->peaceOffered = false;
+                r->delegation = 0;  // war sends delegations and embassies home (08)
             }
             return;
         }
@@ -1025,6 +1030,7 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
     if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
+    noteBattle(target);  // 07: Archaeology
     // War weariness: fighting on ground that is not one's own, and units lost (08).
     {
         const PlayerId ground = state_.plot(target).owner;
@@ -1341,6 +1347,9 @@ void Game::healAndFortify(PlayerId pid) {
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL");
             u.hp = std::min(maxHp, u.hp + heal);
         }
+        // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.
+        if (ut.domain == Domain::Land && nextToNaturalWonder(u.pos, "FEATURE_DEAD_SEA")) u.hp = maxHp;
+        if (ut.domain == Domain::Sea && !ut.promotionClass.empty() && nextToNaturalWonder(u.pos, "FEATURE_LYSEFJORD")) u.xp = std::max(u.xp, xpForNextLevel(u));
         if (u.activity == Activity::Fortify && !acted) u.fortifyTurns = std::min(fortifyMax, u.fortifyTurns + 1);
         u.moved = false;
         u.attacked = false;

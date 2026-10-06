@@ -102,6 +102,15 @@ bool ScriptedModel::interpret(const Persona& p, const std::vector<ChatMessage>&,
     auto add = [&](const std::string& item) { items += (items.empty() ? "" : ",") + item; };
     if (has(w, "peace")) add(R"({"kind":"peace","from":"player"})");
     if (has(w, "friend")) add(R"({"kind":"friendship","from":"player"})");
+    if (has(w, "allian")) {
+        // The alliance's type from the words around it (08: Alliance).
+        const char* type = has(w, "research") || has(w, "science") ? "research"
+                           : has(w, "military") || has(w, "war")   ? "military"
+                           : has(w, "cultur")                      ? "cultural"
+                           : has(w, "relig") || has(w, "faith")    ? "religious"
+                                                                    : "economic";
+        add(std::string(R"({"kind":"alliance","from":"player","type":")") + type + R"("})");
+    }
     // "X for Y": the speaker gives X for Y, unless X is what they ask for ("give me X for Y").
     const size_t forAt = w.find(" for ");
     std::string tradeItems;

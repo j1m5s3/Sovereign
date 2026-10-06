@@ -110,8 +110,8 @@ std::string interpretInstructions(const Persona& p) {
            "intent: \"propose\" when they offer or ask for something tradeable, \"denounce\" when they denounce you, "
            "\"leave\" when they end the talk, otherwise \"chat\". items: each thing changing hands, with from = "
            "\"player\" for what " + p.playerCivName + " gives and \"leader\" for what you give. kind is one of gold, "
-           "gold_per_turn, resource, open_borders, friendship, peace; amount for gold, gold per turn and strategic "
-           "resources; resource is the resource's name. Use only what they actually said; leave items empty otherwise.";
+           "gold_per_turn, resource, open_borders, friendship, alliance, peace; amount for gold, gold per turn and strategic "
+           "resources; resource is the resource's name; type for an alliance (research, military, economic, cultural, religious). Use only what they actually said; leave items empty otherwise.";
 }
 
 std::string replyInstructions(const Persona& p, const std::string& proposal, Verdict verdict) {
@@ -141,8 +141,9 @@ std::string summaryInstructions(const Persona& p) {
 const char* interpretSchema() {
     return R"({"type":"object","properties":{"intent":{"type":"string","enum":["chat","propose","denounce","leave"]},)"
            R"("items":{"type":"array","maxItems":10,"items":{"type":"object","properties":{)"
-           R"("kind":{"type":"string","enum":["gold","gold_per_turn","resource","open_borders","friendship","peace"]},)"
-           R"("from":{"type":"string","enum":["player","leader"]},"amount":{"type":"integer"},"resource":{"type":"string"}},)"
+           R"("kind":{"type":"string","enum":["gold","gold_per_turn","resource","open_borders","friendship","alliance","peace"]},)"
+           R"("from":{"type":"string","enum":["player","leader"]},"amount":{"type":"integer"},"resource":{"type":"string"},)"
+           R"("type":{"type":"string","enum":["research","military","economic","cultural","religious"]}},)"
            R"("required":["kind","from"]}}},"required":["intent","items"]})";
 }
 

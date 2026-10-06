@@ -81,6 +81,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.diplomaticVictory);
     w.boolean(s.scienceVictory);
     w.i32(s.disasterIntensity);
+    w.boolean(s.tribalVillages);
     w.i32(s.difficulty);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
@@ -108,6 +109,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.diplomaticVictory = r.boolean();
     s.scienceVictory = r.boolean();
     s.disasterIntensity = r.i32();
+    s.tribalVillages = r.boolean();
     s.difficulty = r.i32();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
@@ -291,6 +293,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u8(p.pillagedTurns);
         for (int8_t f : p.fertility) w.i8(f);
         w.u8(p.fallout);
+        w.boolean(p.village);
+        w.u8(p.antiquity);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -341,6 +345,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i8(static_cast<int8_t>(rel.alliance));
             w.i32(rel.allianceUntil);
             w.i32(rel.alliancePoints);
+            w.u8(rel.delegation);
         }
         w.u32(static_cast<uint32_t>(p.memories.size()));
         for (const OpinionMemory& m : p.memories) {
@@ -542,6 +547,24 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u32(static_cast<uint32_t>(cp.baseline.size()));
         for (int64_t b : cp.baseline) w.i64(b);
         w.boolean(cp.settled);
+        w.i8(cp.beneficiary);
+    }
+    writeI32s(w, s.battleSites);
+    w.u32(static_cast<uint32_t>(s.promises.size()));
+    for (const Promise& pr : s.promises) {
+        w.i8(pr.by);
+        w.i8(pr.to);
+        w.u8(static_cast<uint8_t>(pr.kind));
+        w.i32(pr.until);
+        w.i32(pr.brokenOn);
+    }
+    w.boolean(s.antiquityPlaced);
+    w.u32(static_cast<uint32_t>(s.quests.size()));
+    for (const Quest& q : s.quests) {
+        w.i8(q.cityState);
+        w.i8(q.major);
+        w.u8(static_cast<uint8_t>(q.kind));
+        w.i32(q.arg);
     }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
@@ -658,6 +681,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.pillagedTurns = r.u8();
         for (int8_t& f : p.fertility) f = r.i8();
         p.fallout = r.u8();
+        p.village = r.boolean();
+        p.antiquity = r.u8();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -728,6 +753,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.alliance = static_cast<AllianceType>(alliance);
             rel.allianceUntil = r.i32();
             rel.alliancePoints = r.i32();
+            rel.delegation = r.u8();
+            if (rel.delegation > 2) return false;
         }
         uint32_t nmem = r.u32();
         if (!r.checkCount(nmem, 10)) return false;
@@ -1004,6 +1031,32 @@ bool deserializeState(ByteReader& r, GameState& s) {
         cp.baseline.resize(nb);
         for (int64_t& b : cp.baseline) b = r.i64();
         cp.settled = r.boolean();
+        cp.beneficiary = r.i8();
+    }
+    if (!readI32s(r, s.battleSites)) return false;
+    uint32_t npromise = r.u32();
+    if (!r.checkCount(npromise, 11)) return false;
+    s.promises.resize(npromise);
+    for (Promise& pr : s.promises) {
+        pr.by = r.i8();
+        pr.to = r.i8();
+        const uint8_t kind = r.u8();
+        if (kind >= kNumPromiseKinds) return false;
+        pr.kind = static_cast<PromiseKind>(kind);
+        pr.until = r.i32();
+        pr.brokenOn = r.i32();
+    }
+    s.antiquityPlaced = r.boolean();
+    uint32_t nquest = r.u32();
+    if (!r.checkCount(nquest, 7)) return false;
+    s.quests.resize(nquest);
+    for (Quest& q : s.quests) {
+        q.cityState = r.i8();
+        q.major = r.i8();
+        const uint8_t kind = r.u8();
+        if (kind >= kNumQuestKinds) return false;
+        q.kind = static_cast<QuestKind>(kind);
+        q.arg = r.i32();
     }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();

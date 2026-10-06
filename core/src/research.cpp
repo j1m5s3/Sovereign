@@ -386,6 +386,7 @@ void Game::updateBoosts(PlayerId pid) {
             const int cost = civic ? civicCost(static_cast<TypeIndex>(i)) : techCost(static_cast<TypeIndex>(i));
             t.boosted[i] = 1;
             t.progress[i] += Fixed::fromInt(cost) * b.percent / 100;
+            questDone(pid, civic ? QuestKind::Inspiration : QuestKind::Eureka, static_cast<int32_t>(i));  // 08: Quests
         }
     }
 }

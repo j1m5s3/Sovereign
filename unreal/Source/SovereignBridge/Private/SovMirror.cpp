@@ -85,6 +85,10 @@ FLinearColor PlotColor(const sov::Rules& Rules, const sov::Plot& Plot, ESovRelie
 		{
 			C = FMath::Lerp(C, Tint, Amount);
 		}
+		else if (Rules.features[static_cast<size_t>(Plot.feature)].naturalWonder)
+		{
+			C = FMath::Lerp(C, Srgb(214, 175, 72), 0.6f);  // natural wonders (01): a golden landmark
+		}
 	}
 	C.A = 1.f;
 	return C;
@@ -206,6 +210,13 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			WM.bComplete = C.has(W.building);
 			WM.Name = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(W.building)].name.c_str());
 		}
+	}
+
+	for (int32 I = 0; I < S.grid.size(); ++I)
+	{
+		const sov::Hex H = S.grid.at(I);
+		if (S.plot(H).village && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Villages.Add(FIntPoint(H.x, H.y));
+		if (S.plot(H).antiquity && Game.seesAntiquity(View) && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Antiquity.Add(FIntPoint(H.x, H.y));
 	}
 
 	for (const sov::Unit& U : S.units)

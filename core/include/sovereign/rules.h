@@ -77,6 +77,12 @@ struct FeatureType {
     Unlock removeTech;  // tech a Builder needs to harvest it
     Yields harvest{};   // one-time yields from harvesting (base, Standard speed)
     std::vector<TypeIndex> validTerrains;
+    // Natural wonders (01): placed by the map script over `tiles` plots; they give their own yields,
+    // `adjacentYields` to neighbouring plots, and may double neighbours' terrain yields.
+    bool naturalWonder = false;
+    int tiles = 1;
+    Yields adjacentYields{};
+    bool doublesAdjacentTerrain = false;
 };
 
 struct ResourceType {
@@ -192,6 +198,7 @@ struct UnitType {
     int antiAir = 0;  // strength against aircraft striking an adjacent plot (05: air combat)
     int airSlots = 0; // aircraft it carries (Aircraft Carrier)
     bool deliversWmd = false;  // bombers and the Nuclear Submarine (05: Nuclear weapons)
+    int excavations = 0;       // antiquity sites it may dig (the Archaeologist; 07: Archaeology)
     bool wmdImmune = false;    // the Giant Death Robot
     int moves = 2;
     int sight = 2;
@@ -706,7 +713,7 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
@@ -809,6 +816,18 @@ struct SpyOperationType {
     int levelChange = 1, enemyChange = 3, enemyLevelChange = 1;
     TypeIndex district = kNone;  // the district the target city needs
     bool needsDistrict = false;  // a district is named (kNone then: one the core cannot place yet)
+};
+
+// A tribal village's reward (01: Tribal Villages; data: barbarians-goody-huts).
+enum class GoodyKind : uint8_t { Relic = 0, Inspiration, Eureka, GovernorTitle, Envoy, Favor, Faith, Gold, Xp, Heal, Strategic, Tech, Population, Unit };
+struct GoodyType {
+    std::string id, category;
+    int weight = 0;
+    GoodyKind kind = GoodyKind::Gold;
+    int amount = 0;
+    TypeIndex unit = kNone;  // Unit: what appears in the nearest city
+    int minTurn = 0;
+    bool needsCity = false;
 };
 
 // A spy promotion (08: Espionage; data: promotions.md, Espionage): one is chosen per level gained.
@@ -1000,6 +1019,7 @@ public:
     std::vector<GovernorType> governors;
     std::vector<SpyOperationType> spyOperations;
     std::vector<SpyPromotionType> spyPromotions;
+    std::vector<GoodyType> goodies;
     std::vector<ResolutionType> resolutions;
     std::vector<DisasterType> disasters;
     std::vector<ClimatePhaseType> climatePhases;

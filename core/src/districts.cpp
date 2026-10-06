@@ -84,6 +84,7 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return fail(CommandError::BadTarget);
     if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return fail(CommandError::BadTarget);
+    if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return fail(CommandError::BadTarget);  // 01: natural wonders
     if (d.water) {
         // Harbor: Coast or Lake (not Ocean) next to land.
         const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];

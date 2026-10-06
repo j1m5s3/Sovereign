@@ -489,6 +489,13 @@ void diplomacy(View& v) {
     const Relation& rel = s.players[at(v.me)].relations[at(pick)];
     const bool ready = v.game.denouncing(v.me, pick) && s.turn - rel.denouncedOn >= v.r.globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
     const bool overwhelming = mine >= 2 * pickStrength;
+    // The cheapest casus belli it holds goes first (08: War types); Protectorate needs no denouncement.
+    const CasusBelli why = v.game.bestCasusBelli(v.me, pick);
+    if (why != CasusBelli::None && v.game.submit(Command::declareWarFor(v.me, pick, why)) == CommandError::Ok) {
+        v.target = pick;
+        survey(v);
+        return;
+    }
     if (!ready && !overwhelming) {
         if (v.game.canDenounce(v.me, pick)) {
             v.game.submit(Command::denounce(v.me, pick));
@@ -513,6 +520,26 @@ void deals(View& v) {
         if (opinion <= kDenounceOpinion && v.game.canDenounce(v.me, o.id)) {
             v.game.submit(Command::denounce(v.me, o.id));
             continue;
+        }
+        // Delegations and embassies with every met major (08): access, and favor with a Diplomatic Quarter.
+        if (s.players[at(v.me)].gold >= Fixed::fromInt(150) && v.game.wouldReceive(o.id, v.me)) {
+            for (const bool embassy : {true, false}) {
+                const Command send = Command::sendDelegation(v.me, o.id, embassy);
+                if (v.game.validate(send) == CommandError::Ok) {
+                    v.game.submit(send);
+                    break;
+                }
+            }
+        }
+        // A neighbour crowding our cities is asked to promise not to settle nearer (08 [GS]), with favor to spare.
+        if (s.players[at(v.me)].favor >= 60) {
+            bool crowding = false;
+            for (const City& theirs : s.cities) {
+                if (theirs.owner != o.id) continue;
+                for (CityId mine : v.cities) crowding = crowding || s.grid.distance(s.city(mine)->pos, theirs.pos) <= 6;
+            }
+            const Command ask = Command::askPromise(v.me, o.id, PromiseKind::NoSettling);
+            if (crowding && v.game.validate(ask) == CommandError::Ok) v.game.submit(ask);
         }
         const Relation& rel = s.players[at(v.me)].relations[at(o.id)];
         if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
@@ -592,6 +619,7 @@ void spies(View& v) {
         int bestValue = 0;
         for (const City& c : s.cities) {
             if (rival == kNoPlayer || c.owner != rival || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+            if (v.game.promised(v.me, rival, PromiseKind::NoSpying)) continue;  // 08 [GS]
             // Disrupting a rival's rocketry is worth most once its expedition is near; a Great Work
             // only with a free slot at home (canSpyMission does not check that).
             bool spaceRace = false;
@@ -851,13 +879,21 @@ std::optional<Site> bestSite(const View& v, UnitId settler, Hex from) {
     return best;
 }
 
+// Settling here would break a promise not to settle near someone (08 [GS]).
+bool breaksSettlingPromise(const View& v, Hex plot) {
+    for (const City& c : v.s().cities) {
+        if (c.owner != v.me && v.s().grid.distance(c.pos, plot) <= 6 && v.game.promised(v.me, c.owner, PromiseKind::NoSettling)) return true;
+    }
+    return false;
+}
+
 void settle(View& v, UnitId id) {
     const Unit* u = v.s().unit(id);
     if (v.cities.empty() && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
         survey(v);
         return;
     }
-    if (u->moveTarget && v.game.canFoundCityAt(v.me, *u->moveTarget)) {
+    if (u->moveTarget && v.game.canFoundCityAt(v.me, *u->moveTarget) && !breaksSettlingPromise(v, *u->moveTarget)) {
         v.claimed.push_back(*u->moveTarget);
         return;  // still on its way
     }
@@ -875,7 +911,7 @@ void settle(View& v, UnitId id) {
         return;
     }
     // Nowhere good in reach: settle here if allowed, else wait.
-    if (!site && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
+    if (!site && !breaksSettlingPromise(v, u->pos) && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
         survey(v);
         return;
     }
@@ -946,6 +982,26 @@ void build(View& v, UnitId id) {
 // --- military -------------------------------------------------------------------------
 // Expected value of an attack in points; INT_MIN when it is not worth making.
 bool approach(View& v, UnitId id, Hex goal, bool onto);
+
+// Archaeologists (07): dig where they stand, else walk to the nearest site they may dig.
+void archaeologist(View& v, UnitId id) {
+    const GameState& s = v.s();
+    const Unit* u = s.unit(id);
+    if (!u) return;
+    const auto promisedNot = [&](PlayerId owner) { return owner != kNoPlayer && owner != v.me && v.game.promised(v.me, owner, PromiseKind::NoDigging); };  // 08 [GS]
+    if (!promisedNot(s.plot(u->pos).owner) && v.game.excavateProblem(v.me, id) == CommandError::Ok) {
+        v.game.submit(Command::excavate(v.me, id));
+        return;
+    }
+    std::optional<Hex> best;
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const Hex h = s.grid.at(i);
+        const Plot& p = s.plot(h);
+        if (p.antiquity == 0 || promisedNot(p.owner) || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
+        if (!best || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *best)) best = h;
+    }
+    if (!best || !approach(v, id, *best, true)) v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
+}
 
 // Military Engineers [GS]: railroads along the straight lines from the capital to each other city,
 // the nearest unlaid plot first (01: Routes).
@@ -1104,6 +1160,16 @@ void rest(View& v, UnitId id) {
 bool explore(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
+    // A tribal village it knows of nearby comes first (01: Tribal Villages).
+    {
+        std::optional<Hex> village;
+        for (const Hex& h : s.grid.within(u->pos, 6)) {
+            if (s.plot(h).village && v.game.visibility(v.me, h) != Visibility::Unrevealed &&
+                (!village || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *village)))
+                village = h;
+        }
+        if (village && v.game.submit(Command::move(v.me, id, *village, true)) == CommandError::Ok) return true;
+    }
     std::vector<std::pair<int, Hex>> frontier;
     for (const Hex& h : s.grid.within(u->pos, 8)) {
         if (h == u->pos || v.game.visibility(v.me, h) == Visibility::Unrevealed || !isLandPassable(s, v.r, h)) continue;
@@ -1451,6 +1517,13 @@ void production(View& v) {
                     else if (t.agent) value = wantAssassin ? 250 + v.posture.assassins : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.id == "UNIT_MILITARY_ENGINEER") value = wantEngineer ? 220 : 0;
+                    else if (t.excavations > 0) {
+                        // An Archaeologist while sites lie open and none is out digging (07).
+                        int sites = 0, diggers = 0;
+                        for (const Plot& pl : s.plots) sites += pl.antiquity != 0 && (pl.owner == kNoPlayer || pl.owner == v.me) ? 1 : 0;
+                        for (const Unit& o : s.units) diggers += o.owner == v.me && v.r.units[at(o.type)].excavations > 0 ? 1 : 0;
+                        value = sites > 0 && diggers == 0 ? 200 : 0;
+                    }
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     else if (t.buildCharges > 0) value = wantBuilder ? 160 : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
@@ -1571,6 +1644,7 @@ void production(View& v) {
                         switch (e.kind) {
                             case ProjectEffectKind::Loyalty: value = std::max(value, c.loyalty < 60 ? 400 : 0); break;
                             case ProjectEffectKind::RepairWalls: value = std::max(value, threatened ? 600 : 80); break;
+                            case ProjectEffectKind::Aid: value = std::max(value, 150); break;  // Diplomatic Victory points
                             case ProjectEffectKind::Wmd: {
                                 // Devices held plus those under way in our other cities.
                                 int stock = g.wmdsHeld(v.me);
@@ -1783,7 +1857,8 @@ void religiousUnit(View& v, UnitId id) {
         }
     }
     const CityId here = v.s().plot(u->pos).city;
-    if (here != kNoCity && g.cityMajorityReligion(*v.s().city(here)) != u->religion && g.canSpreadReligion(id)) {
+    const auto promisedNot = [&](PlayerId owner) { return owner != v.me && g.promised(v.me, owner, PromiseKind::NoConverting); };  // 08 [GS]
+    if (here != kNoCity && g.cityMajorityReligion(*v.s().city(here)) != u->religion && !promisedNot(v.s().city(here)->owner) && g.canSpreadReligion(id)) {
         g.submit(Command::spreadReligion(v.me, id));
         return;
     }
@@ -1791,7 +1866,7 @@ void religiousUnit(View& v, UnitId id) {
     std::optional<Hex> best;
     int bestScore = INT_MAX;
     for (const City& c : v.s().cities) {
-        if (g.cityMajorityReligion(c) == u->religion || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+        if (g.cityMajorityReligion(c) == u->religion || promisedNot(c.owner) || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
         const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6);
         if (score < bestScore) {
             bestScore = score;
@@ -1970,6 +2045,9 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
     const GameState& s = game.state();
     const Rules& r = game.rules();
     if (!game.canFoundCityAt(player, plot)) return -1;
+    for (const City& c : s.cities) {  // a promise not to settle near them is kept (08 [GS])
+        if (c.owner != player && s.grid.distance(c.pos, plot) <= 6 && game.promised(player, c.owner, PromiseKind::NoSettling)) return -1;
+    }
     for (const Camp& camp : s.camps) {
         if (s.grid.distance(camp.pos, plot) <= 3) return -1;
     }
@@ -2091,6 +2169,7 @@ void playTurn(Game& game) {
         else if (t.id == "UNIT_TRADER") trader(v, id);
         else if (t.foundCity) settle(v, id);
         else if (t.id == "UNIT_MILITARY_ENGINEER") engineer(v, id);
+        else if (t.excavations > 0) archaeologist(v, id);
         else if (u->charges > 0) build(v, id);
         else if (!u->moveTarget) game.submit(Command::setActivity(v.me, id, Activity::Skip));
     }

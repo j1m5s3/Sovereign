@@ -448,3 +448,124 @@ TEST(alliances_survive_a_save) {
     CHECK(loaded->alliance(0, 1) == AllianceType::Cultural);
     CHECK_EQ(loaded->state().players[0].relations[1].alliancePoints, 44);
 }
+
+// ---- casus belli (08: War types)
+
+TEST(a_reconquest_war_costs_no_grievances) {
+    GameState s = diploState();
+    s.turn = 40;
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_DEFENSIVE_TACTICS"))] = 1;
+    s.cities[1].originalOwner = 0;  // player 1 holds a city player 0 founded
+    auto noDenounce = Game::fromScenario(rules(), s);
+    CHECK(!noDenounce->hasCasusBelli(0, 1, CasusBelli::Reconquest));  // denouncement first
+    s.players[0].relations[1].denouncedOn = 30;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->denouncing(0, 1));
+    REQUIRE(g->hasCasusBelli(0, 1, CasusBelli::Reconquest));
+    CHECK(g->bestCasusBelli(0, 1) == CasusBelli::Reconquest);
+    CHECK(!g->hasCasusBelli(0, 1, CasusBelli::Colonial));
+    const int before = g->grievances(1, 0);
+    REQUIRE(g->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::Ok);
+    CHECK_EQ(g->grievances(1, 0), before);  // 0%
+    CHECK(g->atWar(0, 1));
+    // A casus belli it does not hold is refused.
+    GameState t = diploState();
+    t.turn = 40;
+    for (Player& p : t.players) p.relations.resize(2);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK(h->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::CannotDeclareWar);
+}
+
+// ---- promises [GS] (08: Ask Promise)
+
+TEST(a_broken_promise_brings_grievances_and_a_war_of_retribution) {
+    GameState s = diploState();
+    s.turn = 40;
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].favor = 100;
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
+    s.players[0].memories.push_back({1, MemoryKind::Gift, 30, 100, 40});   // player 0 likes 1 (irrelevant)
+    s.players[1].memories.push_back({0, MemoryKind::Gift, 30, 100, 40});   // player 1 likes 0: it will promise
+    const UnitId settler = sovtest::addUnit(s, "UNIT_SETTLER", 1, {9, 6});  // within 6 of player 0's city at (4,6)
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::askPromise(0, 1, PromiseKind::NoSettling)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].favor, 70);
+    REQUIRE(g->promised(1, 0, PromiseKind::NoSettling));
+    CHECK(g->submit(Command::askPromise(0, 1, PromiseKind::NoSettling)) != CommandError::Ok);  // already promised
+    // Player 1 settles near anyway.
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().currentPlayer == 1);
+    const int before = g->grievances(0, 1);
+    REQUIRE(g->submit(Command::foundCity(1, settler)) == CommandError::Ok);
+    CHECK(!g->promised(1, 0, PromiseKind::NoSettling));
+    CHECK_EQ(g->grievances(0, 1), before + 200);
+    // A War of Retribution once denounced long enough.
+    GameState t = g->state();
+    t.players[0].relations[1].denouncedOn = t.turn - 10;
+    t.currentPlayer = 0;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK(h->hasCasusBelli(0, 1, CasusBelli::Retribution));
+}
+
+// ---- delegations, embassies and access (08: Access level)
+
+TEST(delegations_and_spies_raise_access_and_bring_gossip) {
+    GameState s = diploState(3);
+    for (Player& p : s.players) p.relations.resize(3);
+    s.players[0].met[2] = 0;
+    s.players[2].met[0] = 0;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->accessLevel(0, 1), 1);  // met: Limited
+    CHECK_EQ(g->accessLevel(0, 2), 0);  // not met
+    CHECK(g->submit(Command::sendDelegation(0, 1, true)) != CommandError::Ok);  // no embassy before Diplomatic Service
+    REQUIRE(g->submit(Command::sendDelegation(0, 1, false)) == CommandError::Ok);
+    CHECK(g->state().players[0].gold == Fixed::fromInt(275));
+    CHECK_EQ(g->accessLevel(0, 1), 2);  // Open
+    CHECK(g->submit(Command::sendDelegation(0, 1, false)) != CommandError::Ok);  // one is enough
+    // Gossip: a war between 1 and 2 is heard at Limited; a great person of 1's needs Secret.
+    const GameEvent war{1, EventKind::WarDeclared, 1, 2, 0};
+    const GameEvent person{1, EventKind::GreatPersonRecruited, 1, kNoPlayer, 0};
+    CHECK(g->hearsOf(0, war));
+    CHECK(!g->hearsOf(0, person));
+    // A level-3 spy in 1's city adds two levels: Top Secret, which shows all its cities.
+    GameState t = g->state();
+    Agent spy;
+    spy.id = 1;
+    spy.owner = 0;
+    spy.spy = true;
+    spy.level = 3;
+    spy.city = t.cities[1].id;
+    t.agents.push_back(spy);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->accessLevel(0, 1), 4);
+    CHECK(h->hearsOf(0, person));
+    CHECK(Game::gossipLevel(EventKind::SpyOperation) == 4);
+    // War sends the delegation home.
+    GameState u = h->state();
+    u.agents.clear();
+    auto k = Game::fromScenario(rules(), std::move(u));
+    REQUIRE(k->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    CHECK_EQ(k->state().players[0].relations[1].delegation, 0);
+    CHECK_EQ(k->accessLevel(0, 1), 1);
+}
+
+TEST(an_embassy_follows_diplomatic_service_and_brings_favor_with_a_diplomatic_quarter) {
+    GameState s = diploState();
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_DIPLOMATIC_SERVICE"))] = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->submit(Command::sendDelegation(0, 1, false)) != CommandError::Ok);  // delegations are obsolete
+    const int before = g->favorPerTurn(0);
+    REQUIRE(g->submit(Command::sendDelegation(0, 1, true)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].relations[1].delegation, 2);
+    CHECK_EQ(g->favorPerTurn(0), before);  // no Diplomatic Quarter yet
+    GameState t = g->state();
+    CityDistrict dq;
+    dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
+    dq.pos = {5, 7};
+    dq.complete = true;
+    t.cities[0].districts.push_back(dq);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->favorPerTurn(0), before + 1);
+}

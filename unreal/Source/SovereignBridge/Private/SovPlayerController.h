@@ -77,7 +77,8 @@ protected:
 		Diplomacy,
 		Governors,
 		SpyMissions,
-		Congress
+		Congress,
+		Government
 	};
 
 	struct FChoice

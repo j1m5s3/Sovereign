@@ -22,6 +22,10 @@ SOV_API bool chooseStartPositions(GameState& state, const Rules& rules, std::str
 
 // True if a land unit can stand on this plot.
 SOV_API bool isLandPassable(const GameState& state, const Rules& rules, Hex h);
+// Places the map size's natural wonders on clusters of valid plots away from every start (01).
+SOV_API void placeNaturalWonders(GameState& state, const Rules& rules);
+// Scatters tribal villages over open land away from every start (01: Tribal Villages).
+SOV_API void placeVillages(GameState& state, const Rules& rules);
 
 // True if a river runs along the edge between h and its neighbour in d.
 SOV_API bool hasRiver(const GameState& state, Hex h, Dir d);

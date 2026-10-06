@@ -129,6 +129,68 @@ bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {
     return true;
 }
 
+// Natural wonders per map size: Duel 2, Tiny 3, Small 4, Standard 5, Large 6, Huge 7 (01). Each goes on
+// a plot of a valid terrain with no feature, resource or owner, at least 4 plots from any start, plus
+// as many neighbouring valid plots as its footprint needs (Sovereign: any shape of neighbours).
+void placeNaturalWonders(GameState& state, const Rules& rules) {
+    static const std::pair<const char*, int> kCounts[] = {{"MAPSIZE_DUEL", 2}, {"MAPSIZE_TINY", 3}, {"MAPSIZE_SMALL", 4},
+                                                          {"MAPSIZE_STANDARD", 5}, {"MAPSIZE_LARGE", 6}, {"MAPSIZE_HUGE", 7}};
+    int want = 2;
+    for (const auto& [id, n] : kCounts) want = state.setup.mapSize == id ? n : want;
+    std::vector<TypeIndex> wonders;
+    for (size_t f = 0; f < rules.features.size(); ++f) {
+        if (rules.features[f].naturalWonder) wonders.push_back(static_cast<TypeIndex>(f));
+    }
+    Rng& rng = state.rng.get(RngStream::MapGen);
+    const auto fits = [&](const FeatureType& f, Hex h) {
+        const Plot& p = state.plot(h);
+        if (p.feature != kNone || p.resource != kNone || p.owner != kNoPlayer) return false;
+        return std::find(f.validTerrains.begin(), f.validTerrains.end(), p.terrain) != f.validTerrains.end();
+    };
+    int placed = 0;
+    for (int tries = 0; tries < 400 && placed < want && !wonders.empty(); ++tries) {
+        const size_t k = rng.below(static_cast<uint32_t>(wonders.size()));
+        const FeatureType& f = rules.features[static_cast<size_t>(wonders[k])];
+        const Hex h = state.grid.at(static_cast<int>(rng.below(static_cast<uint32_t>(state.grid.size()))));
+        if (!fits(f, h)) continue;
+        bool far = true;
+        for (const Player& p : state.players) far = far && state.grid.distance(p.startPos, h) >= 4;
+        if (!far) continue;
+        std::vector<Hex> cluster{h};
+        for (const Hex& n : state.grid.within(h, 1)) {
+            if (static_cast<int>(cluster.size()) >= f.tiles) break;
+            if (n != h && fits(f, n)) cluster.push_back(n);
+        }
+        if (static_cast<int>(cluster.size()) < f.tiles) continue;
+        for (const Hex& c : cluster) state.plot(c).feature = wonders[k];
+        wonders.erase(wonders.begin() + static_cast<std::ptrdiff_t>(k));  // each wonder once
+        ++placed;
+    }
+}
+
+// Sovereign reading of the map script's density (unverified in the specs): one village per 25 land
+// plots, at least 4 plots from any start and 4 from each other, on unowned passable land with no
+// resource of note left unchecked (resources are kept).
+void placeVillages(GameState& state, const Rules& rules) {
+    Rng& rng = state.rng.get(RngStream::MapGen);
+    std::vector<Hex> land;
+    for (int i = 0; i < state.grid.size(); ++i) {
+        const Hex h = state.grid.at(i);
+        if (isLandPassable(state, rules, h) && state.plot(h).owner == kNoPlayer) land.push_back(h);
+    }
+    const size_t target = land.size() / 25;
+    std::vector<Hex> placed;
+    for (size_t tries = 0; tries < land.size() * 2 && placed.size() < target && !land.empty(); ++tries) {
+        const Hex h = land[rng.below(static_cast<uint32_t>(land.size()))];
+        bool ok = true;
+        for (const Player& p : state.players) ok = ok && state.grid.distance(p.startPos, h) >= 4;
+        for (const Hex& o : placed) ok = ok && state.grid.distance(o, h) >= 4;
+        if (!ok) continue;
+        state.plot(h).village = true;
+        placed.push_back(h);
+    }
+}
+
 void generateMap(GameState& state, const Rules& rules) {
     const HexGrid& g = state.grid;
     const int w = g.width(), h = g.height();

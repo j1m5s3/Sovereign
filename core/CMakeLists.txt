@@ -40,6 +40,9 @@ add_library(sovereign_core
   src/wmd.cpp
   src/emergencies.cpp
   src/competitions.cpp
+  src/quests.cpp
+  src/villages.cpp
+  src/archaeology.cpp
   src/loyalty.cpp
   src/mapgen.cpp
   src/modifiers.cpp
@@ -107,6 +110,10 @@ add_executable(sovereign_tests
   tests/test_wmd.cpp
   tests/test_emergencies.cpp
   tests/test_competitions.cpp
+  tests/test_quests.cpp
+  tests/test_villages.cpp
+  tests/test_natural_wonders.cpp
+  tests/test_archaeology.cpp
   tests/test_uniques.cpp
 )
 target_link_libraries(sovereign_tests PRIVATE sovereign_core)

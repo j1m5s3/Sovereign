@@ -20,8 +20,13 @@
    "cost": 200,
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
-   "modelled": false,
-   "text": "send 200 Gold to Aid Request; send 200 Gold to Military Aid Request"
+   "effects": [
+    {
+     "kind": "AID",
+     "amount": 200
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_TRAIN_ATHLETES",

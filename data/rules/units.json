@@ -417,6 +417,7 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "excavations": 3,
    "needsBuilding": [
     "BUILDING_ARCHAEOLOGICAL_MUSEUM"
    ],
