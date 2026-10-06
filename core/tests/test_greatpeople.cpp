@@ -227,6 +227,30 @@ TEST(a_great_person_leaves_lasting_effects_in_its_city_and_realm) {
     CHECK_EQ(loaded->loyaltyPerTurn(cid), g->loyaltyPerTurn(cid));
 }
 
+TEST(great_people_effects_in_code) {
+    // John Roebling in the City Center: +1 Amenity, +2 Housing there. Marco Polo on the Commercial Hub: other civs' routes
+    // to the city carry +2 Gold. Crassus on an unowned plot beside the player's land claims it.
+    GameState s = cityState("DISTRICT_COMMERCIAL_HUB");
+    const UnitId roebling = addGreatPerson(s, "GREAT_PERSON_JOHN_ROEBLING", {6, 6});
+    const UnitId polo = addGreatPerson(s, "GREAT_PERSON_MARCO_POLO", {7, 6});
+    const UnitId crassus = addGreatPerson(s, "GREAT_PERSON_MARCUS_LICINIUS_CRASSUS", {9, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId cid = g->state().cities[0].id;
+    const CityReport before = g->cityReport(cid);
+    const size_t gold = static_cast<size_t>(YieldType::Gold);
+    const Fixed route = g->tradeRouteYields(g->state().cities[1], g->state().cities[0])[gold];
+    REQUIRE(g->submit(Command::activateGreatPerson(0, roebling)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::activateGreatPerson(0, polo)) == CommandError::Ok);
+    const CityReport after = g->cityReport(cid);
+    CHECK_EQ(after.amenities, before.amenities + 1);
+    CHECK_EQ(after.housing, before.housing + Fixed::fromInt(2));
+    CHECK_EQ(g->tradeRouteYields(g->state().cities[1], g->state().cities[0])[gold], route + Fixed::fromInt(2));
+    REQUIRE(g->state().plot({9, 6}).owner == kNoPlayer);
+    REQUIRE(g->submit(Command::activateGreatPerson(0, crassus)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({9, 6}).owner, 0);
+    CHECK_EQ(g->state().plot({9, 6}).city, cid);
+}
+
 TEST(great_people_one_time_gifts) {
     // On the Commercial Hub: Irene of Athens (+1 governor title), Jakob Fugger (+2 envoys), Marco Polo (+1 trade route).
     GameState s = cityState("DISTRICT_COMMERCIAL_HUB");

@@ -113,6 +113,10 @@ int Game::bestAllianceLevel(PlayerId player, AllianceType type) const {
 
 bool Game::grantsOpenBorders(PlayerId owner, PlayerId to) const {
     if (owner < 0 || to < 0 || owner == to) return false;
+    // Gunboat Diplomacy (04): city-states the player has an envoy with open their borders.
+    if (isCityState(owner) && at(owner) < state_.players[at(to)].envoys.size() && state_.players[at(to)].envoys[at(owner)] > 0 &&
+        policyIs(to, "POLICY_GUNBOAT_DIPLOMACY"))
+        return true;
     return state_.players[at(owner)].relations[at(to)].openBordersUntil >= state_.turn;
 }
 
@@ -1226,6 +1230,8 @@ void Game::processDiplomacy(PlayerId pid) {
             in = in || (tr.owner == static_cast<PlayerId>(o) && dest->owner == pid);
         }
         points += (out ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0) + (in ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0);
+        // Wisselbanken, Democratic Legacy (04): +1 a turn each.
+        points += (policyIs(pid, "POLICY_WISSELBANKEN") ? 1 : 0) + (policyIs(pid, "POLICY_DEMOCRATIC_LEGACY") ? 1 : 0);
         rel.alliancePoints += points;
     }
     // Strategic resources flow; a giver in debt or out of stock breaks its deals.

@@ -70,6 +70,21 @@ int Game::patronageCost(PlayerId player, TypeIndex cls, bool faith) const {
     return 200 + 15 * missing;
 }
 
+int Game::usedHere(const City& city, Gp g) const {
+    const TypeIndex person = greatPeople_[static_cast<size_t>(g)];
+    return person == kNone ? 0 : static_cast<int>(std::count(city.greatPeopleHere.begin(), city.greatPeopleHere.end(), person));
+}
+
+bool Game::usedBy(PlayerId player, Gp g) const {
+    const TypeIndex person = greatPeople_[static_cast<size_t>(g)];
+    const std::vector<TypeIndex>& used = state_.players[at(player)].greatPeopleActivated;
+    return person != kNone && std::find(used.begin(), used.end(), person) != used.end();
+}
+
+bool Game::codedGreatPerson(TypeIndex person) const {
+    return person != kNone && std::find(std::begin(greatPeople_), std::end(greatPeople_), person) != std::end(greatPeople_);
+}
+
 int Game::greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, TypeIndex ref) const {
     int total = 0;
     for (TypeIndex person : state_.players[at(player)].greatPeopleActivated) {
@@ -257,7 +272,13 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
         if (why) *why = CommandError::Ok;
         return true;
     }
-    if (g.effects.empty() && !g.hasModifiers) return fail(CommandError::CannotActivate);  // its effects need systems not built yet
+    if (g.effects.empty() && !g.hasModifiers && !codedGreatPerson(u->greatPerson)) return fail(CommandError::CannotActivate);  // its effects need systems not built yet
+    // Crassus: on an unowned plot beside the player's land, which he claims.
+    if (u->greatPerson == greatPeople_[static_cast<size_t>(Gp::Crassus)]) {
+        bool beside = false;
+        for (const Hex& n : state_.grid.within(u->pos, 1)) beside = beside || (state_.plot(n).owner == u->owner && state_.plot(n).city != kNoCity);
+        if (plot.owner != kNoPlayer || !beside) return fail(CommandError::CannotActivate);
+    }
     if (g.ownedTile && plot.owner != u->owner) return fail(CommandError::CannotActivate);
     if (g.district != kNone) {
         const bool center = rules_->districts[at(g.district)].id == "DISTRICT_CITY_CENTER";
@@ -332,6 +353,20 @@ void Game::applyGreatPeople(const Command& c) {
         for (const GreatPersonEffect& fx : g.effects) {
             applyGreatPersonEffect(*u, fx);
             u = state_.unit(c.id);  // a granted unit may move the unit list
+        }
+        // Effects in code: Crassus claims the plot for the neighbouring city; Hildegard gives Science equal to the Holy Site's Faith adjacency.
+        if (u->greatPerson == greatPeople_[static_cast<size_t>(Gp::Crassus)]) {
+            for (const Hex& n : state_.grid.within(u->pos, 1)) {
+                const Plot& q = state_.plot(n);
+                if (q.owner != c.player || q.city == kNoCity) continue;
+                state_.plot(u->pos).owner = c.player;
+                state_.plot(u->pos).city = q.city;
+                break;
+            }
+        }
+        if (u->greatPerson == greatPeople_[static_cast<size_t>(Gp::Hildegard)]) {
+            if (const CityDistrict* d = state_.districtAt(u->pos))
+                processResearch(c.player, districtAdjacency(c.player, d->type, d->pos)[static_cast<size_t>(YieldType::Faith)], Fixed());
         }
         // Its lasting effects: the player's, and the city's where it was used (07).
         p.greatPeopleActivated.push_back(u->greatPerson);

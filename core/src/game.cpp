@@ -185,6 +185,13 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
                                            "BELIEF_RELIGIOUS_UNITY"};
     static_assert(sizeof(kBeliefs) / sizeof(kBeliefs[0]) == static_cast<size_t>(Bf::Count), "one id per belief");
     for (size_t i = 0; i < static_cast<size_t>(Bf::Count); ++i) beliefs_[i] = rules_->belief(kBeliefs[i]);
+    static const char* const kPeople[] = {
+        "GREAT_PERSON_ZHENG_HE",    "GREAT_PERSON_ZHANG_QIAN",        "GREAT_PERSON_MARCO_POLO",          "GREAT_PERSON_IBN_FADLAN",
+        "GREAT_PERSON_RAJA_TODAR_MAL", "GREAT_PERSON_JOHN_ROCKEFELLER", "GREAT_PERSON_MIMAR_SINAN",         "GREAT_PERSON_MARCUS_LICINIUS_CRASSUS",
+        "GREAT_PERSON_HILDEGARD_OF_BINGEN", "GREAT_PERSON_JOHN_ROEBLING", "GREAT_PERSON_JANE_DREW",       "GREAT_PERSON_ABU_AL_QASIM_AL_ZAHRAWI",
+        "GREAT_PERSON_IBN_KHALDUN", "GREAT_PERSON_KENZO_TANGE",       "GREAT_PERSON_MARINA_RASKOVA"};
+    static_assert(sizeof(kPeople) / sizeof(kPeople[0]) == static_cast<size_t>(Gp::Count), "one id per great person");
+    for (size_t i = 0; i < static_cast<size_t>(Gp::Count); ++i) greatPeople_[i] = rules_->greatPerson(kPeople[i]);
 }
 
 uint64_t Game::stateHash() const {

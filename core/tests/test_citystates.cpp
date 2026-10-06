@@ -195,6 +195,20 @@ TEST(a_suzerain_enjoys_its_city_states_bonus) {
     CHECK(enjoysSuzerainBonus(e->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
 }
 
+TEST(gunboat_diplomacy_opens_city_state_borders) {
+    GameState s = csState();
+    s.players[0].envoys[2] = 1;
+    s.players[0].government = rules().government("GOVERNMENT_CHIEFDOM");
+    s.players[0].policies.assign(static_cast<size_t>(rules().governments[at(s.players[0].government)].totalSlots()), kNone);
+    for (Player& p : s.players) p.relations.resize(3);
+    auto plain = Game::fromScenario(rules(), s);
+    CHECK(!plain->grantsOpenBorders(2, 0));
+    s.players[0].policies[0] = rules().policy("POLICY_GUNBOAT_DIPLOMACY");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->grantsOpenBorders(2, 0));
+    CHECK(!g->grantsOpenBorders(2, 1));  // no envoy, no card
+}
+
 TEST(kilwa_kisiwani_counts_suzerainties) {
     GameState s = csState();
     s.players[0].envoys[2] = 3;  // suzerain of the Scientific city-state
