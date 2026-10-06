@@ -110,6 +110,8 @@ Yields Game::plotYields(Hex at, const City& city) const {
         cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
         y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna
     if (p.fallout > 0 && at != city.pos) return Yields{};  // contaminated ground cannot be worked
+    // Earth Goddess (06): +1 Faith on plots of Appeal 4 or more.
+    if (cityFollows(city, Bf::EarthGoddess) && plotAppeal(at) >= 4) y[idx(YieldType::Faith)] += Fixed::fromInt(1);
     return y;
 }
 

@@ -178,6 +178,10 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
                                            "BUILDING_EIFFEL_TOWER",   "BUILDING_GOLDEN_GATE_BRIDGE",    "BUILDING_BIOSPH_RE",       "BUILDING_CRISTO_REDENTOR"};
     static_assert(sizeof(kWonders) / sizeof(kWonders[0]) == static_cast<size_t>(W::Count), "one id per wonder");
     for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) wonders_[i] = rules_->building(kWonders[i]);
+    static const char* const kBeliefs[] = {"BELIEF_DANCE_OF_THE_AURORA", "BELIEF_DESERT_FOLKLORE", "BELIEF_SACRED_PATH", "BELIEF_EARTH_GODDESS",
+                                           "BELIEF_GOD_OF_HEALING",      "BELIEF_GOD_OF_WAR",      "BELIEF_INITIATION_RITES", "BELIEF_HOLY_WATERS"};
+    static_assert(sizeof(kBeliefs) / sizeof(kBeliefs[0]) == static_cast<size_t>(Bf::Count), "one id per belief");
+    for (size_t i = 0; i < static_cast<size_t>(Bf::Count); ++i) beliefs_[i] = rules_->belief(kBeliefs[i]);
 }
 
 uint64_t Game::stateHash() const {

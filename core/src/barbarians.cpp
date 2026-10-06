@@ -62,6 +62,16 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
         ++kp.killsThisEra;
         if (const int pct = civAbility(killer->owner).killFaithPercent; pct > 0)
             kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat * pct / 100);
+        // God of War (06): Faith of half the victim's strength for a victory next to one of the victor's Holy Sites.
+        if (playerHasBelief(killer->owner, Bf::GodOfWar)) {
+            const TypeIndex holy = rules_->district("DISTRICT_HOLY_SITE");
+            bool near = false;
+            for (const City& c : state_.cities) {
+                if (c.owner != killer->owner) continue;
+                for (const CityDistrict& d : c.districts) near = near || (d.complete && d.type == holy && state_.grid.distance(d.pos, victim.pos) <= 1);
+            }
+            if (near) kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat / 2);
+        }
         // Kill rewards of its promotions and abilities (Boarding: Gold from ships it sinks).
         if (const Unit* k = state_.unit(killer->id)) {
             const UnitType& vt = rules_->units[static_cast<size_t>(victim.type)];
@@ -152,6 +162,11 @@ void Game::enterPlot(Unit& unit) {
     questDone(unit.owner, QuestKind::ClearCamp, cleared);  // 08: Quests
     const int pct = 100 + (difficultyHuman(unit.owner) ? difficulty().humanCampGoldPercent : 0);  // 00-overview: Difficulty levels
     state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD") * pct / 100);
+    // Initiation Rites (06): +50 Faith, and the unit that cleared it heals fully.
+    if (playerHasBelief(unit.owner, Bf::InitiationRites)) {
+        state_.players[static_cast<size_t>(unit.owner)].faith += Fixed::fromInt(50);
+        unit.hp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
+    }
     awardMoment(unit.owner, "MOMENT_BARBARIAN_CAMP_DESTROYED");
 }
 

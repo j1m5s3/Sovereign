@@ -95,6 +95,14 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             break;
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
+        case ReqType::PlotHasResourceClass:
+            ok = c.plot && c.rules && c.plot->resource != kNone && static_cast<int>(c.rules->resources[static_cast<size_t>(c.plot->resource)].cls) == q.value;
+            break;
+        case ReqType::CityDistrictNextToRiver:
+            if (c.city && c.state) {
+                for (const CityDistrict& d : c.city->districts) ok = ok || (d.complete && d.type == q.ref && isRiverAdjacent(*c.state, d.pos));
+            }
+            break;
         case ReqType::CityMinTerrainTiles:
             if (c.city && c.state && c.rules && q.ref != kNone) {
                 const std::string& base = c.rules->terrains[static_cast<size_t>(q.ref)].base;
@@ -175,6 +183,8 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
         case ModSource::Government:
             return playerHasSource(m, owner) ? &subject : nullptr;
         case ModSource::Belief: {
+            // Player-wide collections: the beliefs of the owner's pantheon and founded religion (God of the Forge...).
+            if (!ownerOnly) return owner.pantheon == m.sourceIndex || (owner.religion >= 0 && religionHas(s, owner.religion, m.sourceIndex)) ? &subject : nullptr;
             // A city follows the beliefs of its majority religion, or its owner's pantheon while it has none.
             const int maj = majorityReligion(s, r, subject);
             if (maj >= 0) return religionHas(s, maj, m.sourceIndex) ? &subject : nullptr;
