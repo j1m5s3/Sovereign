@@ -1523,6 +1523,8 @@ def policy_requirement(text, ids):
         m = re.fullmatch(r"city has (.+)", t)
         if m and m.group(1) in ids["buildings"]:
             return {"type": "CITY_HAS_BUILDING", "ref": ids["buildings"][m.group(1)]}
+        if m and m.group(1) in ids["districts"]:
+            return {"type": "CITY_HAS_DISTRICT", "ref": ids["districts"][m.group(1)]}
         return None
     parts = [one(t) for t in text.split(" or ")]
     if any(p is None for p in parts):
@@ -2160,11 +2162,67 @@ def gen_wonders():
     return {"wonders": wonders, "modifiers": modifiers}
 
 
+CS_SUFFIX = " for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+
+
+def cs_modifiers(cid, text, ids):
+    """A city-state's suzerain bonus -> modifiers (source = the city-state; the core applies them to its
+    suzerain at peace with it). City-state forms first, then the policy card parser."""
+    mods, rest = [], []
+
+    def add(collection, effect, args, reqs=None):
+        m = {"id": "%s_S%d" % (cid, len(mods) + 1), "source": cid, "collection": collection, "effect": effect, "arguments": args}
+        if reqs:
+            m["subjectRequirements"] = {"all": reqs}
+        mods.append(m)
+
+    eras = {e: i for i, e in enumerate(ERAS)}
+    for t in [p.strip() for p in text.replace(CS_SUFFIX, "").split(";") if p.strip()]:
+        m = re.fullmatch(r"adjust wonder production \(Amount=(\d+)\) in all your cities", t)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "WONDERS", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward projects in all your cities", t)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "PROJECTS", "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% (\w+) in all your cities where player is at peace with all majors", t)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD_PERCENT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, [{"type": "PLAYER_AT_PEACE"}])
+            continue
+        m = re.fullmatch(r"\+(\d+) (\w+) on your tiles where tile is Coast and Lake(?: and player era at least \(EraType=(\w+) Era\))?", t)
+        if m and m.group(2) in YIELD_WORDS:
+            reqs = [{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}]
+            if m.group(3):
+                reqs.append({"type": "WORLD_MIN_ERA", "value": eras[m.group(3)]})
+            add("PLAYER_CITY_PLOTS", "ADJUST_PLOT_YIELD", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, reqs)
+            continue
+        m = re.fullmatch(r"\+(\d+)% (\w+) in all your cities where city has improved (\w+)", t)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD_PERCENT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))},
+                [{"type": "CITY_HAS_IMPROVED_RESOURCE", "ref": "RESOURCE_" + m.group(3).upper()}])
+            continue
+        m = re.fullmatch(r"adjust city amenities from city states \(Amount=(\d+)\) in all your cities where city has (.+)", t)
+        if m and m.group(2) in ids["districts"]:
+            add("PLAYER_CITIES", "ADJUST_CITY_AMENITIES", {"amount": int(m.group(1))}, [{"type": "CITY_HAS_DISTRICT", "ref": ids["districts"][m.group(2)]}])
+            continue
+        rest.append(t)
+    more, untracked = policy_modifiers(cid, "; ".join(rest), ids)
+    return mods + more, untracked
+
+
 def gen_city_states():
     """City-states by type and the envoy tier bonuses each type gives (08: City-States)."""
     states = [{"id": "CITYSTATE_" + snake(r["City-state"]), "name": r["City-state"], "type": r["Type"].upper(),
                "suzerainText": re.sub(r"\*\*[^*]+\*\*: ", "", r["Suzerain bonus"])}
               for r in table(SPEC / "city-states.md", "City-states and suzerain bonuses")]
+    refs = policy_refs()
+    for st in states:
+        if st["id"] == "CITYSTATE_CARDIFF":
+            continue  # its free power is read in code (09: Power)
+        mods, _ = cs_modifiers(st["id"], st["suzerainText"], refs)
+        if mods:
+            st["modifiers"] = mods
     buildings = {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")}
     tiers = []
     for r in table(SPEC / "city-states.md", "Envoy tier bonuses by city-state type"):

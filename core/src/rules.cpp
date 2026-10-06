@@ -125,6 +125,9 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "CITY_MIN_SPECIALTY_DISTRICTS") { q.type = ReqType::CityMinSpecialtyDistricts; }
         else if (type == "CITY_ON_CAPITAL_CONTINENT") { q.type = ReqType::CityOnCapitalContinent; }
         else if (type == "CITY_CAPTURED") { q.type = ReqType::CityCaptured; }
+        else if (type == "CITY_HAS_IMPROVED_RESOURCE") { q.type = ReqType::CityHasImprovedResource; q.ref = rules.resource(ref); }
+        else if (type == "PLAYER_AT_PEACE") { q.type = ReqType::PlayerAtPeace; }
+        else if (type == "WORLD_MIN_ERA") { q.type = ReqType::WorldMinEra; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
         else {
@@ -132,7 +135,8 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
             return false;
         }
         bool needsRef = (q.type == ReqType::PlotHasResource && !ref.empty()) || (q.type == ReqType::PlotHasFeature && !ref.empty()) ||
-                        q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding || q.type == ReqType::CityHasDistrict;
+                        q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding || q.type == ReqType::CityHasDistrict ||
+                        q.type == ReqType::CityHasImprovedResource;
         if (needsRef && q.ref == kNone) {
             *error = "requirement " + type + " refers to unknown " + ref;
             return false;
@@ -2004,6 +2008,21 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             modifiers.push_back(std::move(mod));
         }
     }
+    // City-states' suzerain bonuses (08; citystates.json, each city-state's `modifiers`).
+    for (const auto& [cid, cj] : m.tables["cityStates"]) {
+        for (const Json& j : cj["modifiers"].items()) {
+            Modifier mod;
+            mod.id = j["id"].str();
+            mod.source = cid;
+            if (!parseModifier(j, mod, *this, error)) {
+                *error = "city-state " + cid + " modifier " + mod.id + ": " + *error;
+                return false;
+            }
+            mod.sourceKind = ModSource::CityState;
+            mod.sourceIndex = cityState(cid);
+            modifiers.push_back(std::move(mod));
+        }
+    }
     for (const auto& [id, j] : m.tables["mapSizes"]) {
         MapSizeType s;
         s.id = id;
@@ -2216,6 +2235,7 @@ TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
 TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id); }
 TypeIndex Rules::greatPersonClass(const std::string& id) const { return findIn(greatPersonClasses, id); }
 TypeIndex Rules::greatPerson(const std::string& id) const { return findIn(greatPeople, id); }
+TypeIndex Rules::cityState(const std::string& id) const { return findIn(cityStates, id); }
 TypeIndex Rules::greatWorkType(const std::string& id) const { return findIn(greatWorkTypes, id); }
 TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id); }
 TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }

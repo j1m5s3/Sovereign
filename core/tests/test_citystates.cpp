@@ -1,5 +1,6 @@
 // City-states and envoys (08-diplomacy-city-states-governors.md, City-States).
 #include "helpers.h"
+#include "sovereign/modifiers.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -160,4 +161,36 @@ TEST(a_suzerain_levies_a_city_states_army) {
     sovtest::endTurns(*h, 3);
     CHECK_EQ(h->state().unit(w1)->owner, 2);
     CHECK(h->state().levies.empty());
+}
+
+TEST(a_suzerain_enjoys_its_city_states_bonus) {
+    // Geneva: +15% Science in every city while at peace with all majors.
+    GameState s = csState();
+    s.players[2].cityState = rules().cityState("CITYSTATE_GENEVA");
+    s.players[0].envoys[2] = 3;
+    for (Player& p : s.players) p.relations.resize(3);
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->suzerainOf(2) == 0);
+    CHECK(enjoysSuzerainBonus(g->state(), rules(), 0, rules().cityState("CITYSTATE_GENEVA")));
+    CHECK(!enjoysSuzerainBonus(g->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
+    GameState none = s;
+    none.players[2].cityState = rules().cityState("CITYSTATE_MITLA");  // the same envoy bonuses, no science of its own
+    auto plain = Game::fromScenario(rules(), std::move(none));
+    const CityId mine = g->state().cities[0].id;
+    CHECK(g->cityReport(mine).yields[yi(YieldType::Science)] > plain->cityReport(mine).yields[yi(YieldType::Science)]);
+    // At war with a major, the bonus lapses.
+    GameState war = s;
+    war.players[0].relations[1].war = war.players[1].relations[0].war = true;
+    auto w = Game::fromScenario(rules(), std::move(war));
+    CHECK_EQ(w->cityReport(mine).yields[yi(YieldType::Science)], plain->cityReport(mine).yields[yi(YieldType::Science)]);
+    // A level-3 Economic ally of the suzerain shares it.
+    GameState allied = s;
+    for (auto [a, b] : {std::pair<int, int>{0, 1}, {1, 0}}) {
+        Relation& r = allied.players[static_cast<size_t>(a)].relations[static_cast<size_t>(b)];
+        r.alliance = AllianceType::Economic;
+        r.allianceUntil = 1000;
+        r.alliancePoints = 960;
+    }
+    auto e = Game::fromScenario(rules(), std::move(allied));
+    CHECK(enjoysSuzerainBonus(e->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
 }

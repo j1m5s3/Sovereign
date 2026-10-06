@@ -29,7 +29,49 @@
    "id": "CITYSTATE_AUCKLAND",
    "name": "Auckland",
    "type": "INDUSTRIAL",
-   "suzerainText": "+1 Production on your tiles where tile is Coast and Lake for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Production on your tiles where tile is Coast and Lake and player era at least (EraType=Industrial Era) for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+1 Production on your tiles where tile is Coast and Lake for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Production on your tiles where tile is Coast and Lake and player era at least (EraType=Industrial Era) for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_AUCKLAND_S1",
+     "source": "CITYSTATE_AUCKLAND",
+     "collection": "PLAYER_CITY_PLOTS",
+     "effect": "ADJUST_PLOT_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "PLOT_HAS_TERRAIN",
+        "ref": "TERRAIN_COAST"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_AUCKLAND_S2",
+     "source": "CITYSTATE_AUCKLAND",
+     "collection": "PLAYER_CITY_PLOTS",
+     "effect": "ADJUST_PLOT_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "PLOT_HAS_TERRAIN",
+        "ref": "TERRAIN_COAST"
+       },
+       {
+        "type": "WORLD_MIN_ERA",
+        "value": 4
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_AYUTTHAYA",
@@ -47,13 +89,193 @@
    "id": "CITYSTATE_BOLOGNA",
    "name": "Bologna",
    "type": "SCIENTIFIC",
-   "suzerainText": "+1 Great General points per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Admiral points per turn in all your cities where city has Lighthouse for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Engineer points per turn in all your cities where city has Workshop for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Merchant points per turn in all your cities where city has Market for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Prophet points per turn in all your cities where city has Shrine for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Scientist points per turn in all your cities where city has Library for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Writer points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Artist points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Musician points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+1 Great General points per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Admiral points per turn in all your cities where city has Lighthouse for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Engineer points per turn in all your cities where city has Workshop for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Merchant points per turn in all your cities where city has Market for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Prophet points per turn in all your cities where city has Shrine for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Scientist points per turn in all your cities where city has Library for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Writer points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Artist points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +1 Great Musician points per turn in all your cities where city has Amphitheater for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_BOLOGNA_1",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_GENERAL",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_BARRACKS"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_STABLE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_2",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ADMIRAL",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_LIGHTHOUSE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_3",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ENGINEER",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WORKSHOP"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_4",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MERCHANT",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MARKET"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_5",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_PROPHET",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_SHRINE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_6",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_SCIENTIST",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_LIBRARY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_7",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_WRITER",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AMPHITHEATER"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_8",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ARTIST",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AMPHITHEATER"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_BOLOGNA_9",
+     "source": "CITYSTATE_BOLOGNA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MUSICIAN",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AMPHITHEATER"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_BRUSSELS",
    "name": "Brussels",
    "type": "INDUSTRIAL",
-   "suzerainText": "adjust wonder production (Amount=15) in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "adjust wonder production (Amount=15) in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_BRUSSELS_S1",
+     "source": "CITYSTATE_BRUSSELS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "WONDERS",
+      "amount": 15
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_BUENOS_AIRES",
@@ -95,7 +317,26 @@
    "id": "CITYSTATE_GENEVA",
    "name": "Geneva",
    "type": "SCIENTIFIC",
-   "suzerainText": "+15% Science in all your cities where player is at peace with all majors for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+15% Science in all your cities where player is at peace with all majors for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_GENEVA_S1",
+     "source": "CITYSTATE_GENEVA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 15
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "PLAYER_AT_PEACE"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_GRANADA",
@@ -113,7 +354,19 @@
    "id": "CITYSTATE_HONG_KONG",
    "name": "Hong Kong",
    "type": "INDUSTRIAL",
-   "suzerainText": "+20% Production toward projects in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+20% Production toward projects in all your cities for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_HONG_KONG_S1",
+     "source": "CITYSTATE_HONG_KONG",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "PROJECTS",
+      "amount": 20
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_HUNZA",
@@ -173,7 +426,18 @@
    "id": "CITYSTATE_MOGADISHU",
    "name": "Mogadishu",
    "type": "TRADE",
-   "suzerainText": "ability Plunder Immunity at Sea [trade routes immune to plunder (Sea)] for your units where unit is Trader for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "ability Plunder Immunity at Sea [trade routes immune to plunder (Sea)] for your units where unit is Trader for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_MOGADISHU_1",
+     "source": "CITYSTATE_MOGADISHU",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_PLUNDER_IMMUNITY_AT_SEA"
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_MEXICO_CITY",
@@ -191,7 +455,26 @@
    "id": "CITYSTATE_MUSCAT",
    "name": "Muscat",
    "type": "TRADE",
-   "suzerainText": "adjust city amenities from city states (Amount=1) in all your cities where city has Commercial Hub for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "adjust city amenities from city states (Amount=1) in all your cities where city has Commercial Hub for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_MUSCAT_S1",
+     "source": "CITYSTATE_MUSCAT",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_DISTRICT",
+        "ref": "DISTRICT_COMMERCIAL_HUB"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_NALANDA",
@@ -221,13 +504,89 @@
    "id": "CITYSTATE_MITLA",
    "name": "Mitla",
    "type": "SCIENTIFIC",
-   "suzerainText": "+15% growth in all your cities where city has Campus for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+15% growth in all your cities where city has Campus for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_MITLA_1",
+     "source": "CITYSTATE_MITLA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GROWTH_PERCENT",
+     "arguments": {
+      "amount": 15
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_DISTRICT",
+        "ref": "DISTRICT_CAMPUS"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_PRESLAV",
    "name": "Preslav",
    "type": "MILITARISTIC",
-   "suzerainText": "+2 Loyalty per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Armory for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Military Academy for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+2 Loyalty per turn in all your cities where city has Barracks or city has Stable for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Armory for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +2 Loyalty per turn in all your cities where city has Military Academy for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_PRESLAV_1",
+     "source": "CITYSTATE_PRESLAV",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_BARRACKS"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_STABLE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_PRESLAV_2",
+     "source": "CITYSTATE_PRESLAV",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ARMORY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_PRESLAV_3",
+     "source": "CITYSTATE_PRESLAV",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_RAPA_NUI",
@@ -251,7 +610,135 @@
    "id": "CITYSTATE_TARUGA",
    "name": "Taruga",
    "type": "SCIENTIFIC",
-   "suzerainText": "+5% Science in all your cities where city has improved Aluminum for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Coal for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Horses for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Iron for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Niter for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Oil for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Uranium for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "+5% Science in all your cities where city has improved Aluminum for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Coal for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Horses for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Iron for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Niter for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Oil for all players where is suzerain and player is at peace and player is suzerain bonus enabled; +5% Science in all your cities where city has improved Uranium for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_TARUGA_S1",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_ALUMINUM"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S2",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_COAL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S3",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_HORSES"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S4",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_IRON"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S5",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_NITER"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S6",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_OIL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "CITYSTATE_TARUGA_S7",
+     "source": "CITYSTATE_TARUGA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_IMPROVED_RESOURCE",
+        "ref": "RESOURCE_URANIUM"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_VALLETTA",
@@ -275,7 +762,27 @@
    "id": "CITYSTATE_WOLIN",
    "name": "Wolin",
    "type": "MILITARISTIC",
-   "suzerainText": "ability Great General Points [Great General points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled; ability Wolin Naval Units [Great Admiral points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled"
+   "suzerainText": "ability Great General Points [Great General points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled; ability Wolin Naval Units [Great Admiral points per kill = 25% of victim strength] for your units for all players where is suzerain and player is at peace and player is suzerain bonus enabled",
+   "modifiers": [
+    {
+     "id": "CITYSTATE_WOLIN_1",
+     "source": "CITYSTATE_WOLIN",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_GREAT_GENERAL_POINTS"
+     }
+    },
+    {
+     "id": "CITYSTATE_WOLIN_2",
+     "source": "CITYSTATE_WOLIN",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_WOLIN_NAVAL_UNITS"
+     }
+    }
+   ]
   },
   {
    "id": "CITYSTATE_YEREVAN",

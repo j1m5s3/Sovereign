@@ -62,29 +62,9 @@ bool Game::isCityState(PlayerId p) const {
     return p >= 0 && at(p) < state_.players.size() && state_.players[at(p)].cityState != kNone;
 }
 
-int Game::envoysAt(PlayerId player, PlayerId cs) const {
-    const Player& p = state_.players[at(player)];
-    // Amani serving there counts as envoys (08: Governors, Messenger and Puppeteer).
-    return (at(cs) < p.envoys.size() ? p.envoys[at(cs)] : 0) + governorEnvoys(player, cs);
-}
+int Game::envoysAt(PlayerId player, PlayerId cs) const { return sov::envoysAt(state_, *rules_, player, cs); }
 
-PlayerId Game::suzerainOf(PlayerId cs) const {
-    // The most envoys, at least INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN, and more than anyone else.
-    PlayerId best = kNoPlayer;
-    int most = 0;
-    bool tie = false;
-    for (const Player& p : state_.players) {
-        const int n = envoysAt(p.id, cs);
-        if (n > most) {
-            most = n;
-            best = p.id;
-            tie = false;
-        } else if (n == most && n > 0) {
-            tie = true;
-        }
-    }
-    return !tie && most >= rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") ? best : kNoPlayer;
-}
+PlayerId Game::suzerainOf(PlayerId cs) const { return sov::suzerainOf(state_, *rules_, cs); }
 
 bool Game::canSendEnvoy(PlayerId player, PlayerId cs) const {
     const Player& p = state_.players[at(player)];
