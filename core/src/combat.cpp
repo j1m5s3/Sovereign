@@ -486,6 +486,40 @@ const CityDistrict* Game::encampmentOf(const City& city) const {
     return nullptr;
 }
 
+const City* Game::encampmentTargetAt(Hex plot) const {
+    const City* c = state_.city(state_.plot(plot).city);
+    if (!c) return nullptr;
+    const CityDistrict* camp = encampmentOf(*c);
+    return camp && camp->pos == plot ? c : nullptr;
+}
+
+int Game::encampmentMaxHp(const City& city) const {
+    const CityDistrict* camp = encampmentOf(city);
+    return camp ? rules_->districts[static_cast<size_t>(camp->type)].hp : 0;
+}
+
+int Game::encampmentHp(const City& city) const {
+    const CityDistrict* camp = encampmentOf(city);
+    return camp ? std::max(0, encampmentMaxHp(city) - camp->damage) : 0;
+}
+
+int Game::encampmentWallHp(const City& city) const {
+    // The Encampment's outer defences follow the city's walls (03: Defense).
+    const CityDistrict* camp = encampmentOf(city);
+    return camp ? std::max(0, cityMaxWallHp(city) - camp->wallDamage) : 0;
+}
+
+int Game::encampmentStrength(const City& city) const {
+    // The city's strength, wounded by the Encampment's own hit points instead of the city's.
+    const int maxHp = cityMaxHp();
+    const int64_t mult = rules_->globalInt("COMBAT_WOUNDED_DISTRICT_DAMAGE_MULTIPLIER");
+    const int cityWound = city.hp < maxHp ? roundDiv(mult * (maxHp - std::max(0, city.hp)), maxHp) : 0;
+    const int campMax = std::max(1, encampmentMaxHp(city));
+    const int hp = encampmentHp(city);
+    const int campWound = hp < campMax ? roundDiv(mult * (campMax - hp), campMax) : 0;
+    return cityStrength(city) + cityWound - campWound;
+}
+
 bool Game::canEncampmentStrike(CityId id, Hex target) const {
     const City* c = state_.city(id);
     if (!c || c->encampmentStruck || cityMaxWallHp(*c) <= 0) return false;  // the Encampment arms with the city's walls
@@ -514,8 +548,12 @@ int Game::combatDamage(int strengthDifference, int roll) const {
 }
 
 int Game::wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const {
+    return wallDamagePercent(attacker, city, ranged, city.pos, city.wallHp);
+}
+
+int Game::wallDamagePercent(const Unit& attacker, const City& city, bool ranged, Hex at, int wallHp) const {
     // Walls take hits first, scaled by attack type (05: Walls; 02-cities.md, City combat).
-    if (city.wallHp <= 0) return -1;
+    if (wallHp <= 0) return -1;
     const UnitType& ut = typeOf(*rules_, attacker);
     if (ranged) {
         const bool bombard = ut.ranged == 0 && ut.bombard > 0;
@@ -524,7 +562,7 @@ int Game::wallDamagePercent(const Unit& attacker, const City& city, bool ranged)
     // Support units next to the city: Siege Tower lets melee past the walls, Battering Ram gives full damage.
     bool bypass = false, ram = false;
     for (const Unit& s : state_.units) {
-        if (s.owner != attacker.owner || state_.grid.distance(s.pos, city.pos) != 1) continue;
+        if (s.owner != attacker.owner || state_.grid.distance(s.pos, at) != 1) continue;
         bypass = bypass || unitHas(s, UnitEffectKind::BypassWalls);
         ram = ram || unitHas(s, UnitEffectKind::WallFullDamage);
     }
@@ -553,6 +591,23 @@ CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) co
         out.defenderStrength = cityStrength(*city);
         const int diff = out.attackerStrength - out.defenderStrength;
         const int wallPercent = wallDamagePercent(*a, *city, ranged);
+        out.hitsWalls = wallPercent >= 0;
+        const int percent = out.hitsWalls ? wallPercent : 100;
+        out.damageToDefenderMin = roundDiv(static_cast<int64_t>(combatDamage(diff, 0)) * percent, 100);
+        out.damageToDefenderMax = roundDiv(static_cast<int64_t>(combatDamage(diff, extra)) * percent, 100);
+        if (!ranged) {
+            out.damageToAttackerMin = combatDamage(-diff, 0);
+            out.damageToAttackerMax = combatDamage(-diff, extra);
+        }
+        return out;
+    }
+    if (const City* camp = encampmentTargetAt(target)) {
+        out.city = camp->id;
+        out.encampment = true;
+        out.attackerStrength = combatStrengthVsCity(*a, *camp, true, ranged);
+        out.defenderStrength = encampmentStrength(*camp);
+        const int diff = out.attackerStrength - out.defenderStrength;
+        const int wallPercent = wallDamagePercent(*a, *camp, ranged, target, encampmentWallHp(*camp));
         out.hitsWalls = wallPercent >= 0;
         const int percent = out.hitsWalls ? wallPercent : 100;
         out.damageToDefenderMin = roundDiv(static_cast<int64_t>(combatDamage(diff, 0)) * percent, 100);
@@ -692,14 +747,17 @@ CommandError Game::validateCombat(const Command& c) const {
         return CommandError::CannotAttack;
     // Attacks on a city hit the city, whoever garrisons it; elsewhere the military unit,
     // then a leader, defends the plot (leader doc §1: escorts first).
+    // A standing Encampment is fought like a city, whoever stands in it (05: City combat).
     const City* city = state_.cityAt(*t);
-    const Unit* defender = city ? nullptr : defenderAt(*t);
+    const City* camp = city ? nullptr : encampmentTargetAt(*t);
+    const Unit* defender = city || camp ? nullptr : defenderAt(*t);
     if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
+    if (camp && (camp->owner == c.player || !atWar(c.player, camp->owner))) return CommandError::CannotAttack;
     if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
     if (isEmbarked(*u)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation)
 
     if (c.type == CommandType::RangedAttack) {
-        if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city)) return CommandError::CannotAttack;
+        if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city && !camp)) return CommandError::CannotAttack;
         if (u->moved && unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove))
             return CommandError::CannotAttack;
         const int dist = state_.grid.distance(u->pos, *t);
@@ -719,7 +777,7 @@ CommandError Game::validateCombat(const Command& c) const {
         const bool takes = capturesCities(ut) && !state_.players[static_cast<size_t>(c.player)].barbarian;
         return city->hp > 0 || takes ? CommandError::Ok : CommandError::CannotAttack;
     }
-    if (defender) return CommandError::Ok;
+    if (defender || camp) return CommandError::Ok;
     // No military unit: capture the civilians there if they belong to an enemy.
     bool any = false;
     for (const Unit& o : state_.units) {
@@ -881,6 +939,10 @@ void Game::applyCombat(const Command& c) {
     }
     if (const City* city = state_.cityAt(c.target)) {
         attackCity(c, *state_.city(city->id));
+        return;
+    }
+    if (const City* camp = encampmentTargetAt(c.target)) {
+        attackEncampment(c, *state_.city(camp->id));
         return;
     }
 
@@ -1128,6 +1190,52 @@ void Game::attackCity(const Command& c, City& city) {
     resolveCityAssault(c.id, city.id, ranged, dealt, toAttacker);
 }
 
+// An Encampment is fought where it stands and never goes live; at 0 HP it falls and is pillaged
+// until its city repairs it (Sovereign reading of 05: City combat).
+void Game::attackEncampment(const Command& c, City& city) {
+    const bool ranged = c.type == CommandType::RangedAttack;
+    Unit* a = state_.unit(c.id);
+    CityDistrict* camp = nullptr;
+    for (CityDistrict& d : city.districts) {
+        if (&d == encampmentOf(city)) camp = &d;
+    }
+    const PlayerId them = city.owner;
+    const PlayerId me = a->owner;
+    const int sa = combatStrengthVsCity(*a, city, true, ranged);
+    const int sd = encampmentStrength(city);
+    const int maxHp = encampmentMaxHp(city);
+    Rng& rng = state_.rng.get(RngStream::Combat);
+    const int extra = rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE");
+    const int dealt = combatDamage(sa - sd, rng.range(0, extra));
+    const int toAttacker = ranged ? 0 : combatDamage(sd - sa, rng.range(0, extra));
+    const int wallPercent = wallDamagePercent(*a, city, ranged, camp->pos, encampmentWallHp(city));
+    if (wallPercent >= 0) {
+        const int64_t toWalls = roundDiv(static_cast<int64_t>(dealt) * wallPercent, 100);
+        camp->wallDamage = static_cast<int16_t>(std::min<int64_t>(cityMaxWallHp(city), camp->wallDamage + toWalls));
+    } else {
+        camp->damage = static_cast<int16_t>(std::min(maxHp, camp->damage + dealt));
+    }
+    if (camp->damage >= maxHp) camp->pillagedTurns = kPillagedDistrictTurns;  // fallen
+    city.lastAttackedTurn = state_.turn;
+    a->hp -= toAttacker;
+    addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_COMBAT_IN_FOREIGN_LANDS") +
+                                  (a->hp <= 0 ? rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED") : 0));
+    if (a->hp <= 0) {
+        if (isLeader(*a)) {
+            leaderLost(c.id, them, false);
+        } else {
+            noteKill(*a, nullptr);
+            removeUnit(c.id);
+        }
+        refreshVisibility(me);
+        return;
+    }
+    afterAttack(*a);
+    awardXp(*a, rules_->globalInt("EXPERIENCE_UNIT_VS_DISTRICT_NOT_CITY_CAPTURED"), false);
+    refreshVisibility(me);
+    refreshVisibility(them);
+}
+
 PlayerId Game::liveAssaultSide(const Unit& attacker, const City& city) const {
     const Player& ap = state_.players[static_cast<size_t>(attacker.owner)];
     if (ap.human) {
@@ -1307,6 +1415,14 @@ void Game::healCities(PlayerId pid) {
         const int maxWalls = cityMaxWallHp(c);
         if (c.wallHp < maxWalls && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
             c.wallHp = std::min(maxWalls, c.wallHp + rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES"));
+        // A standing Encampment heals and repairs its outer defences as its city does.
+        for (CityDistrict& d : c.districts) {
+            if (&d != encampmentOf(c)) continue;
+            if (d.damage > 0 && !cityUnderSiege(c))
+                d.damage = static_cast<int16_t>(std::max(0, d.damage - rules_->globalInt("COMBAT_HEAL_CITY_GARRISON")));
+            if (d.wallDamage > 0 && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
+                d.wallDamage = static_cast<int16_t>(std::max(0, d.wallDamage - rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES")));
+        }
         c.struck = false;
         c.encampmentStruck = false;
     }

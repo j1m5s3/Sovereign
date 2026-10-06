@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addCity;
@@ -504,4 +505,92 @@ TEST(a_camp_raids_only_once_its_scout_brings_word_of_a_city) {
     CHECK(g->state().camps[0].alerted);
     REQUIRE(g->state().unit(scout));
     CHECK(g->state().grid.distance(g->state().unit(scout)->pos, {11, 5}) <= 1);
+}
+
+TEST(an_encampment_is_fought_and_falls) {
+    UnitId sword = kNoUnit, archer = kNoUnit, guard = kNoUnit;
+    auto setup = [&](GameState& s) {
+        CityDistrict camp;
+        camp.type = rules().district("DISTRICT_ENCAMPMENT");
+        camp.pos = {10, 5};
+        camp.complete = true;
+        s.cities[0].districts.push_back(camp);
+        s.plot({10, 5}).owner = 1;
+        s.plot({10, 5}).city = s.cities[0].id;
+        guard = addUnit(s, "UNIT_WARRIOR", 1, {10, 5});  // standing in it: the Encampment fights, not the guard
+        sword = addUnit(s, "UNIT_SWORDSMAN", 0, {11, 5});
+        archer = addUnit(s, "UNIT_ARCHER", 0, {12, 5});
+        s.players[1].strongestUnit = 45;  // a city strength of 35: it takes more than one exchange
+        for (Unit& u : s.units) u.activity = Activity::Sleep;
+        for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+    };
+    auto g = siege(setup);
+    const CityId cid = g->state().cities[0].id;
+    REQUIRE(g->encampmentTargetAt({10, 5}) != nullptr);
+    CHECK_EQ(g->encampmentHp(g->state().cities[0]), 100);
+    CHECK(!g->moveCost(*g->state().unit(sword), {11, 5}, {10, 5}));  // it is not walked into
+    const CombatPreview p = g->previewAttack(sword, {10, 5}, false);
+    REQUIRE(p.valid);
+    CHECK(p.encampment);
+    CHECK_EQ(p.city, cid);
+    const int cityHp = g->state().cities[0].hp;
+    REQUIRE(g->submit(Command::rangedAttack(0, archer, {10, 5})) == CommandError::Ok);
+    REQUIRE(g->submit(Command::attack(0, sword, {10, 5})) == CommandError::Ok);
+    CHECK(g->encampmentHp(g->state().cities[0]) < 100);
+    REQUIRE(g->encampmentHp(g->state().cities[0]) > 0);
+    CHECK_EQ(g->state().cities[0].hp, cityHp);       // the city itself is untouched
+    CHECK_EQ(g->state().unit(guard)->hp, 100);        // and so is its guard
+    CHECK(g->state().unit(sword)->hp < 100);          // melee pays for it
+    CHECK((g->state().unit(sword)->pos == Hex{11, 5}));  // and stays outside
+    // It heals on its owner's turn, and survives a save.
+    const int hurt = g->state().cities[0].districts[0].damage;
+    endTurns(*g, 1);
+    REQUIRE(g->state().currentPlayer == 1);
+    CHECK(g->state().cities[0].districts[0].damage < hurt);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().cities[0].districts[0].damage, g->state().cities[0].districts[0].damage);
+    // At 0 HP it falls: pillaged, no longer a target or an obstacle, back at full strength once repaired.
+    GameState s = g->state();
+    s.cities[0].districts[0].damage = 95;
+    s.currentPlayer = 0;
+    for (Unit& u : s.units) {
+        u.movesLeft = Fixed::fromInt(2);
+        u.attacks = 0;
+        u.activity = Activity::Sleep;
+    }
+    auto h = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(h->submit(Command::rangedAttack(0, archer, {10, 5})) == CommandError::Ok);
+    CHECK(h->state().cities[0].districts[0].pillagedTurns > 0);
+    CHECK(h->encampmentTargetAt({10, 5}) == nullptr);
+    CHECK(!h->canEncampmentStrike(cid, {11, 5}));
+    REQUIRE(h->submit(Command::setActivity(0, archer, Activity::Sleep)) == CommandError::Ok);
+    endTurns(*h, 2 * (kPillagedDistrictTurns + 1));  // its owner repairs it over its own turns
+    CHECK_EQ(h->state().cities[0].districts[0].pillagedTurns, 0);
+    CHECK_EQ(h->encampmentHp(h->state().cities[0]), 100);
+}
+
+TEST(an_encampment_shares_its_citys_walls) {
+    UnitId archer = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        CityDistrict camp;
+        camp.type = rules().district("DISTRICT_ENCAMPMENT");
+        camp.pos = {10, 5};
+        camp.complete = true;
+        s.cities[0].districts.push_back(camp);
+        s.plot({10, 5}).owner = 1;
+        s.plot({10, 5}).city = s.cities[0].id;
+        archer = addUnit(s, "UNIT_ARCHER", 0, {12, 5});
+        for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+    });
+    const City& c = g->state().cities[0];
+    REQUIRE(g->encampmentWallHp(c) > 0);
+    const int walls = g->encampmentWallHp(c);
+    REQUIRE(g->previewAttack(archer, {10, 5}, true).hitsWalls);
+    REQUIRE(g->submit(Command::rangedAttack(0, archer, {10, 5})) == CommandError::Ok);
+    CHECK(g->encampmentWallHp(g->state().cities[0]) < walls);
+    CHECK_EQ(g->encampmentHp(g->state().cities[0]), 100);
+    CHECK_EQ(g->state().cities[0].wallHp, g->cityMaxWallHp(g->state().cities[0]));  // the city's own walls are untouched
 }
