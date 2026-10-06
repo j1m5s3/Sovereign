@@ -565,6 +565,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
             {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
+            {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -587,6 +588,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 return false;
             }
             fx.amount = static_cast<int>(e["amount"].integer(0));
+            fx.at = e["at"].str();
             for (const Json& group : e["when"].items()) {
                 std::vector<CombatCondition> any;
                 for (const Json& a : group.items()) {
@@ -1350,6 +1352,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         rb.probability = static_cast<int>(j["probability"].integer(0));
         rb.dies = j["dies"].boolean(false);
         rb.gainsLevel = j["gainsLevel"].boolean(false);
+        rb.extraPromotion = j["extraPromotion"].boolean(false);
         rockBandResults.push_back(std::move(rb));
     }
     for (const auto& [id, j] : m.tables["dedications"]) {

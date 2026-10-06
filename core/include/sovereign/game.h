@@ -402,6 +402,7 @@ public:
     int parkTourism(PlayerId player) const;
     int parkAmenities(const City& city) const;
     CommandError concertProblem(PlayerId player, UnitId band) const;
+    void grantBandPromotion(Unit& band);  // a random Rock Band promotion it lacks
     void performConcert(UnitId band);
 
     // ---- dedications [R&F] (09: Dedications)

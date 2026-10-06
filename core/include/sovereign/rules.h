@@ -136,6 +136,9 @@ enum class UnitEffectKind : uint8_t {
     HealOnKill,         // +amount HP when it destroys a unit
     MeleeAndRanged,     // a ranged unit that may also attack in melee
     CaptureAsBuilder,   // a land unit it destroys joins its owner as a Builder
+    // Rock Band promotions [GS] (07: Rock Bands).
+    BandLevel,          // +amount levels for a concert at `at`
+    BandBurst,          // +amount tourism from a concert at `at`
 };
 
 enum class CombatAtom : uint8_t {
@@ -168,6 +171,7 @@ struct UnitEffect {
     UnitEffectKind kind = UnitEffectKind::Untracked;
     int amount = 0;
     std::vector<std::vector<CombatCondition>> when;  // every group needs any one condition
+    std::string at;  // BandLevel/BandBurst: a district or improvement id, or WONDER, NATIONAL_PARK, NATURAL_WONDER
 };
 
 struct AbilityType {
@@ -541,7 +545,7 @@ struct MomentType {
 struct RockBandResult {
     std::string id, name;
     int albumSales = 0, tourismBomb = 0, probability = 0;
-    bool dies = false, gainsLevel = false;
+    bool dies = false, gainsLevel = false, extraPromotion = false;
 };
 
 // A dedication [R&F] (09: Dedications): chosen at a new era within its era window.

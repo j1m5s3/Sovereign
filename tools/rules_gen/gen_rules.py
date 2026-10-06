@@ -401,6 +401,7 @@ def gen_units():
     for r in table(SPEC / "units.md", "Rock Band results [GS]"):
         results.append({"id": "ROCKBAND_RESULT_" + snake(r["Result"]), "name": r["Result"], "albumSales": num(r["Album sales"]),
                         "tourismBomb": num(r["Tourism bomb"]), "dies": r["Dies"] == "yes", "gainsLevel": r["Gains level"] == "yes",
+                        "extraPromotion": r["Extra promotion"] == "yes",
                         "probability": num(r["Base probability"])})
     return {"units": out, "rockBandResults": results}
 
@@ -464,6 +465,28 @@ def condition_atom(text):
     return a
 
 
+# Where a Rock Band promotion's concert bonus applies (07: Rock Bands). Civ-unique districts are left out:
+# Sovereign defines its own uniques.
+BAND_PLACES = {"Wonder": "WONDER", "Entertainment Complex": "DISTRICT_ENTERTAINMENT_COMPLEX", "Theater Square": "DISTRICT_THEATER",
+               "Water Park": "DISTRICT_WATER_PARK", "Spaceport": "DISTRICT_SPACEPORT", "Campus": "DISTRICT_CAMPUS",
+               "Harbor": "DISTRICT_HARBOR", "Seaside Resort": "IMPROVEMENT_SEASIDE_RESORT",
+               "national park": "NATIONAL_PARK", "natural wonder": "NATURAL_WONDER"}
+
+
+def band_effect(part):
+    m = (re.fullmatch(r"\+(\d+) Rock Band level (?:when performing )?at (.+)", part) or
+         re.fullmatch(r"adjust unit rock band level (national park|natural wonder) \(Amount=(\d+)\)", part))
+    if m:
+        amount, place = (m.group(1), m.group(2)) if part.startswith("+") else (m.group(2), m.group(1))
+        return {"kind": "BAND_LEVEL", "amount": int(amount), "at": BAND_PLACES[place]} if place in BAND_PLACES else {"kind": "UNTRACKED", "text": part}
+    m = (re.fullmatch(r"\+(\d+) Tourism burst at (.+)", part) or
+         re.fullmatch(r"adjust unit tourism bomb (national park|natural wonder) \(Amount=(\d+)\)", part))
+    if m:
+        amount, place = (m.group(1), m.group(2)) if part.startswith("+") else (m.group(2), m.group(1))
+        return {"kind": "BAND_BURST", "amount": int(amount), "at": BAND_PLACES[place]} if place in BAND_PLACES else {"kind": "UNTRACKED", "text": part}
+    return None
+
+
 def unit_effects(text):
     """Effect text of a promotion or ability -> list of effect objects. Conditions
     are 'A and B or C' = A and (B or C): a list of any-of groups that must all hold."""
@@ -482,6 +505,10 @@ def unit_effects(text):
             "can heal after moving/attacking": "HEAL_AFTER_ACTION", "can enter foreign territory": "IGNORE_BORDERS",
             "Melee units deal full damage to walls": "WALL_FULL_DAMAGE", "Melee units bypass walls": "BYPASS_WALLS",
         }
+        band = band_effect(part)
+        if band:
+            out.append(band)
+            continue
         if m:
             e = {"kind": "STRENGTH", "amount": int(m.group(1))}
             if m.group(2):

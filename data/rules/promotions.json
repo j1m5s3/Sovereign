@@ -2170,8 +2170,9 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Rock Band level when performing at Wonder"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "WONDER"
     }
    ]
   },
@@ -2182,8 +2183,9 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+2 Rock Band level when performing at Entertainment Complex"
+     "kind": "BAND_LEVEL",
+     "amount": 2,
+     "at": "DISTRICT_ENTERTAINMENT_COMPLEX"
     },
     {
      "kind": "UNTRACKED",
@@ -2202,8 +2204,9 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+2 Rock Band level when performing at Theater Square"
+     "kind": "BAND_LEVEL",
+     "amount": 2,
+     "at": "DISTRICT_THEATER"
     },
     {
      "kind": "UNTRACKED",
@@ -2242,20 +2245,24 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit tourism bomb national park (Amount=1000)"
+     "kind": "BAND_BURST",
+     "amount": 1000,
+     "at": "NATIONAL_PARK"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit rock band level national park (Amount=1)"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "NATIONAL_PARK"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit tourism bomb natural wonder (Amount=1000)"
+     "kind": "BAND_BURST",
+     "amount": 1000,
+     "at": "NATURAL_WONDER"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit rock band level natural wonder (Amount=1)"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "NATURAL_WONDER"
     }
    ]
   },
@@ -2278,8 +2285,9 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+2 Rock Band level when performing at Water Park"
+     "kind": "BAND_LEVEL",
+     "amount": 2,
+     "at": "DISTRICT_WATER_PARK"
     },
     {
      "kind": "UNTRACKED",
@@ -2318,20 +2326,24 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+500 Tourism burst at Spaceport"
+     "kind": "BAND_BURST",
+     "amount": 500,
+     "at": "DISTRICT_SPACEPORT"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Rock Band level when performing at Spaceport"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "DISTRICT_SPACEPORT"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Rock Band level when performing at Campus"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "DISTRICT_CAMPUS"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+500 Tourism burst at Campus"
+     "kind": "BAND_BURST",
+     "amount": 500,
+     "at": "DISTRICT_CAMPUS"
     },
     {
      "kind": "UNTRACKED",
@@ -2358,20 +2370,24 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+500 Tourism burst at Seaside Resort"
+     "kind": "BAND_BURST",
+     "amount": 500,
+     "at": "IMPROVEMENT_SEASIDE_RESORT"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Rock Band level at Seaside Resort"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "IMPROVEMENT_SEASIDE_RESORT"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+1 Rock Band level when performing at Harbor"
+     "kind": "BAND_LEVEL",
+     "amount": 1,
+     "at": "DISTRICT_HARBOR"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+500 Tourism burst at Harbor"
+     "kind": "BAND_BURST",
+     "amount": 500,
+     "at": "DISTRICT_HARBOR"
     },
     {
      "kind": "UNTRACKED",

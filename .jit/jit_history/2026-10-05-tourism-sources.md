@@ -31,4 +31,10 @@ Specs: 07-great-people-great-works-tourism (Tourism sources, National Parks, Sea
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - The park's diamond, the "nearby" cities for amenities, and the reading of album sales plus the tourism bomb as one tourism gain are Sovereign readings of rules the data leaves open.
-- Not modelled: Rock Band promotions, Landmarks. The Ski Resort's amenity followed (generated improvement `amenities`).
+- Not modelled: Landmarks; the Rock Band promotions for concert range, loyalty, gold per concert and conversion. The Ski Resort's amenity followed (generated improvement `amenities`).
+
+## Follow-up: Rock Band promotions (2026-10-05)
+
+- **Generated effects.** `tools/rules_gen` reads the Rock Band promotions' concert effects as BAND_LEVEL ("+N Rock Band level when performing at X") and BAND_BURST ("+N Tourism burst at X", Music Festival's bombs). The places are a district or improvement id, or WONDER, NATIONAL_PARK, NATURAL_WONDER; civ-unique districts are left out. `UnitEffect::at` holds the place.
+- **Promotions.** Every Rock Band bought starts with one random promotion, and an outcome with an extra promotion grants another.
+- **Concerts.** A concert adds the promotions' levels and bursts where it is held. Bands may also play in a foreign National Park, resort or natural wonder.
