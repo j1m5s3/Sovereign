@@ -113,6 +113,55 @@ void Game::awardOnce(PlayerId pid, const char* id) {
     awardMoment(pid, id);
 }
 
+// Circumnavigation (09: Historic moments): the civ has seen a plot in every column of a map that wraps
+// east-west (Sovereign reading of the engine's test). The first civ earns the world's first.
+void Game::circumnavigationMoment(PlayerId pid) {
+    const Player& p = state_.players[at(pid)];
+    const TypeIndex first = rules_->moment("MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION"), later = rules_->moment("MOMENT_WORLD_CIRCUMNAVIGATED");
+    if (!isMajor(p) || !state_.grid.wrapX() || first == kNone || later == kNone || p.visibility.size() < static_cast<size_t>(state_.grid.size())) return;
+    for (TypeIndex m : {first, later}) {
+        if (at(m) < p.momentEras.size() && p.momentEras[at(m)] > 0) return;
+    }
+    const int w = state_.grid.width(), h = state_.grid.height();
+    for (int x = 0; x < w; ++x) {
+        bool seen = false;
+        for (int y = 0; y < h && !seen; ++y) seen = p.visibility[static_cast<size_t>(y * w + x)] != static_cast<uint8_t>(Visibility::Unrevealed);
+        if (!seen) return;
+    }
+    awardFirst(pid, "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION", "MOMENT_WORLD_CIRCUMNAVIGATED");
+}
+
+// A railroad connection (09: Historic moments): the track through the plot just laid or mended reaches two
+// of the civ's City Centers, on it or next to it (Sovereign reading). The first civ earns the world's first.
+void Game::railroadMoment(PlayerId pid, Hex laid) {
+    const Player& p = state_.players[at(pid)];
+    const TypeIndex first = rules_->moment("MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"), own = rules_->moment("MOMENT_FIRST_RAILROAD_CONNECTION");
+    const TypeIndex rr = railroad();
+    if (!isMajor(p) || rr == kNone || first == kNone || own == kNone) return;
+    if (state_.plot(laid).route != rr || state_.plot(laid).routePillaged) return;
+    for (TypeIndex m : {first, own}) {
+        if (at(m) < p.momentEras.size() && p.momentEras[at(m)] > 0) return;
+    }
+    std::vector<uint8_t> visited(static_cast<size_t>(state_.grid.size()), 0);
+    std::vector<Hex> open{laid};
+    visited[static_cast<size_t>(state_.grid.index(laid))] = 1;
+    std::vector<CityId> reached;
+    while (!open.empty()) {
+        const Hex cur = open.back();
+        open.pop_back();
+        for (const Hex& n : state_.grid.within(cur, 1)) {
+            const City* c = state_.cityAt(n);
+            if (c && c->owner == pid && std::find(reached.begin(), reached.end(), c->id) == reached.end()) reached.push_back(c->id);
+            const Plot& np = state_.plot(n);
+            uint8_t& v = visited[static_cast<size_t>(state_.grid.index(n))];
+            if (v || np.route != rr || np.routePillaged) continue;
+            v = 1;
+            open.push_back(n);
+        }
+    }
+    if (reached.size() >= 2) awardFirst(pid, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD", "MOMENT_FIRST_RAILROAD_CONNECTION");
+}
+
 // Units (09: Historic moments): a civ's unique unit, its first aircraft and its first ship.
 void Game::unitMoments(PlayerId pid, TypeIndex unitType) {
     const UnitType& u = rules_->units[at(unitType)];
