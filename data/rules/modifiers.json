@@ -223,6 +223,8 @@
   {"id": "RIVER_GODDESS_AMENITIES", "source": "BELIEF_RIVER_GODDESS", "collection": "OWNER_CITY", "effect": "ADJUST_CITY_AMENITIES", "arguments": {"amount": 2},
    "subjectRequirements": {"all": [{"type": "CITY_DISTRICT_NEXT_TO_RIVER", "ref": "DISTRICT_HOLY_SITE"}]}},
   {"id": "RIVER_GODDESS_HOUSING", "source": "BELIEF_RIVER_GODDESS", "collection": "OWNER_CITY", "effect": "ADJUST_CITY_HOUSING", "arguments": {"amount": 2},
-   "subjectRequirements": {"all": [{"type": "CITY_DISTRICT_NEXT_TO_RIVER", "ref": "DISTRICT_HOLY_SITE"}]}}
+   "subjectRequirements": {"all": [{"type": "CITY_DISTRICT_NEXT_TO_RIVER", "ref": "DISTRICT_HOLY_SITE"}]}},
+  {"id": "ZEN_MEDITATION_AMENITIES", "source": "BELIEF_ZEN_MEDITATION", "collection": "OWNER_CITY", "effect": "ADJUST_CITY_AMENITIES", "arguments": {"amount": 1},
+   "subjectRequirements": {"all": [{"type": "CITY_MIN_SPECIALTY_DISTRICTS", "value": 2}]}}
  ]
 }

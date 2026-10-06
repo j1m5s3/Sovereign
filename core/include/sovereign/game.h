@@ -777,7 +777,10 @@ private:
     TypeIndex wonderType(W w) const { return wonders_[static_cast<size_t>(w)]; }
     bool holdsWonder(PlayerId player, W w) const;  // one of the player's cities has it
     // Beliefs read in hot paths, looked up once (06: Religion).
-    enum class Bf : uint8_t { DanceOfTheAurora, DesertFolklore, SacredPath, EarthGoddess, GodOfHealing, GodOfWar, InitiationRites, HolyWaters, Count };
+    enum class Bf : uint8_t {
+        DanceOfTheAurora, DesertFolklore, SacredPath, EarthGoddess, GodOfHealing, GodOfWar, InitiationRites, HolyWaters,
+        DivineInspiration, JesuitEducation, ReligiousCommunity, Reliquaries, WarriorMonks, WorkEthic, SacredPlaces, PapalPrimacy, ReligiousUnity, Count
+    };
     TypeIndex beliefs_[static_cast<size_t>(Bf::Count)] = {};
     bool beliefInPlay(Bf b) const;                      // some pantheon or religion has it
     bool cityFollows(const City& city, Bf b) const;     // the city's majority religion has it, or its owner's pantheon while it has none

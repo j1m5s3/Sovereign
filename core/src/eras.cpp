@@ -221,6 +221,7 @@ int Game::tourismBase(PlayerId pid) const {
             if (policyIs(pid, "POLICY_SATELLITE_BROADCASTS") && kind == "MUSIC") scale = 3;
             // Mary Leakey (07): artifacts triple their tourism.
             if (kind == "ARTIFACT") scale = std::max(scale, greatPersonEffectTotal(pid, GreatPersonEffectKind::ArtifactTourism) / 100);
+            if (kind == "RELIC" && cityFollows(c, Bf::Reliquaries)) scale *= 3;  // Reliquaries (06)
             total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100 * scale;
         }
         for (TypeIndex b : c.buildings) {
