@@ -110,6 +110,12 @@ TEST(the_scripted_reader_finds_offers_in_plain_words) {
     REQUIRE(m.interpret(p, {}, "I denounce you!", json));
     REQUIRE(parseInterpretation(json, *g, p, in));
     CHECK(in.intent == Intent::Denounce);
+    // An alliance, its type read from the words (08: Alliance).
+    REQUIRE(m.interpret(p, {}, "Let us form a research alliance", json));
+    REQUIRE(parseInterpretation(json, *g, p, in));
+    REQUIRE(in.items.size() == 1u);
+    CHECK(in.items[0].kind == DealItemKind::Alliance);
+    CHECK_EQ(in.items[0].amount, static_cast<int32_t>(AllianceType::Research));
 }
 
 TEST(input_is_cleaned_and_injection_neutralised) {
