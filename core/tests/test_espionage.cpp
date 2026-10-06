@@ -227,7 +227,7 @@ std::unique_ptr<Game> succeed(GameState s, SpyMission m) {
 TEST(a_great_work_heist_and_disrupted_rocketry) {
     GameState s = spyState(4);
     City& theirs = s.cities[1];
-    addDistrict(theirs, "DISTRICT_THEATER", {16, 7});
+    addDistrict(theirs, "DISTRICT_THEATER_SQUARE", {16, 7});
     // A Great Work in their Palace that our own Palace has room for.
     auto probe = Game::fromScenario(rules(), s);
     TypeIndex work = kNone;
