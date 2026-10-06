@@ -80,7 +80,8 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		16, Y);
 	const FString Research = P.techs.current == sov::kNone ? TEXT("none") : Str(R.techs[static_cast<size_t>(P.techs.current)].name);
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
-	Line(FString::Printf(TEXT("Research: %s   Civic: %s"), *Research, *Civic), 16, Y);
+	const FString Gov = P.government == sov::kNone ? TEXT("none") : Str(R.governments[static_cast<size_t>(P.government)].name);
+	Line(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov), 16, Y);
 	// Faith and religion (06).
 	{
 		FString Faith = FString::Printf(TEXT("Faith %s"), *Str(P.faith.toString()));

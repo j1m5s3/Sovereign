@@ -460,6 +460,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.buildings[b].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
 				}
 			}
+			// Gold buys units and buildings outright (02: Purchasing), and plots next to the city's border.
+			for (const sov::ProductionItem& Item : G.buildableItems(City->id))
+			{
+				if (Item.kind != sov::ProductionKind::Unit && Item.kind != sov::ProductionKind::Building) continue;
+				const sov::Command Buy = sov::Command::purchase(Me(), City->id, Item);
+				if (G.validate(Buy) != sov::CommandError::Ok) continue;
+				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item)), Buy});
+			}
+			for (const sov::Hex& H : G.state().grid.within(City->pos, 3))
+			{
+				const sov::Command Buy = sov::Command::buyPlot(Me(), City->id, H);
+				if (G.validate(Buy) == sov::CommandError::Ok)
+					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
+			}
+			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
 			break;
 		}
 		case EChooser::Research:
@@ -780,6 +795,38 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (Faith > 0 && P.faith >= sov::Fixed::fromInt(Faith))
 				{
 					Choices.Add({FString::Printf(TEXT("%s   buy %d faith"), *Head, Faith), sov::Command::patronizeGreatPerson(Me(), Cls, true)});
+				}
+				const sov::Command Pass = sov::Command::passGreatPerson(Me(), Cls);
+				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("%s   pass on %s"), *ClassName, *Str(Gp.name)), Pass});
+			}
+			break;
+		}
+		case EChooser::Government:
+		{
+			// 04: Governments and policies. A new government, then a card for each slot of the current one.
+			const sov::TypeIndex Current = P.government;
+			ChooserTitle = FString::Printf(TEXT("Government: %s%s"), Current == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(Current)].name),
+				P.anarchyTurns > 0 ? *FString::Printf(TEXT(" (anarchy, %d turns)"), P.anarchyTurns) : TEXT(""));
+			for (size_t g = 0; g < R.governments.size(); ++g)
+			{
+				if (static_cast<sov::TypeIndex>(g) != Current && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g)))
+					Choices.Add({FString::Printf(TEXT("Adopt %s"), *Str(R.governments[g].name)), sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(g))});
+			}
+			static const TCHAR* const SlotNames[] = {TEXT("Military"), TEXT("Economic"), TEXT("Diplomatic"), TEXT("Wildcard"), TEXT("Great Person")};
+			if (Current != sov::kNone)
+			{
+				const sov::GovernmentType& Gov = R.governments[static_cast<size_t>(Current)];
+				for (int32 Slot = 0; Slot < Gov.totalSlots(); ++Slot)
+				{
+					const sov::TypeIndex In = static_cast<size_t>(Slot) < P.policies.size() ? P.policies[static_cast<size_t>(Slot)] : sov::kNone;
+					const FString Holds = In == sov::kNone ? FString(TEXT("empty")) : Str(R.policies[static_cast<size_t>(In)].name);
+					for (size_t pol = 0; pol < R.policies.size(); ++pol)
+					{
+						if (static_cast<sov::TypeIndex>(pol) == In || !G.canSetPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))) continue;
+						Choices.Add({FString::Printf(TEXT("%s slot %d (%s): %s"), SlotNames[static_cast<int32>(sov::Game::slotType(Gov, Slot))], Slot + 1, *Holds,
+										 *Str(R.policies[pol].name)),
+							sov::Command::setPolicy(Me(), Slot, static_cast<sov::TypeIndex>(pol))});
+					}
 				}
 			}
 			break;
@@ -1535,6 +1582,7 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
+	if (WasInputKeyJustPressed(EKeys::F2)) OpenChooser(EChooser::Government);
 	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
 	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
