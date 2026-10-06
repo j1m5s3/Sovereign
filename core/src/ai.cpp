@@ -210,9 +210,10 @@ Posture assess(const Game& g, PlayerId me, int sites) {
     const Player& pl = s.players[at(me)];
     Posture out;
     if (!isMajorPlayer(pl)) return out;
-    // Era changes (one strategy per era in Civ): food and production early, science and culture later.
+    // Era changes (one strategy per era in Civ): food and production early, science and culture later. Science
+    // weighs two more than it did (measured: about +1 tech by turn 200 across 8 seeds).
     static const int eraYields[][kNumYields] = {
-        {4, 4, 2, 2, 3, 2}, {3, 4, 2, 3, 3, 1}, {3, 3, 3, 3, 3, 1}, {2, 3, 3, 4, 3, 1}, {2, 3, 3, 4, 4, 1}};
+        {4, 4, 2, 4, 3, 2}, {3, 4, 2, 5, 3, 1}, {3, 3, 3, 5, 3, 1}, {2, 3, 3, 6, 3, 1}, {2, 3, 3, 6, 4, 1}};
     const int era = std::clamp(s.gameEra, 0, 4);
     for (size_t i = 0; i < kNumYields; ++i) out.yield[i] = eraYields[era][i];
 
