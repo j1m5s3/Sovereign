@@ -33,12 +33,14 @@ bool readI32s(ByteReader& r, std::vector<int32_t>& v) {
 void writeFixed(ByteWriter& w, Fixed f) { w.i64(f.raw()); }
 Fixed readFixed(ByteReader& r) { return Fixed::fromRaw(r.i64()); }
 void writeItem(ByteWriter& w, ProductionItem it) {
-    w.u8(static_cast<uint8_t>(it.kind));
+    w.u8(static_cast<uint8_t>(it.packedKind()));
     w.i16(it.type);
 }
 ProductionItem readItem(ByteReader& r) {
     ProductionItem it;
-    it.kind = static_cast<ProductionKind>(r.u8());
+    const uint8_t packed = r.u8();
+    it.kind = static_cast<ProductionKind>(packed & 15);
+    it.formation = static_cast<uint8_t>(packed >> 4);
     it.type = r.i16();
     return it;
 }
@@ -182,6 +184,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (c.originalOwner < 0 || static_cast<size_t>(c.originalOwner) >= s.players.size()) return false;
         for (TypeIndex b : c.buildings) if (!inRange(b, rules.buildings.size(), false)) return false;
         auto itemOk = [&](const ProductionItem& it) {
+            if (it.formation > 2 || (it.formation > 0 && it.kind != ProductionKind::Unit)) return false;
             return it.kind == ProductionKind::Unit ? inRange(it.type, rules.units.size(), false)
                  : it.kind == ProductionKind::Building ? inRange(it.type, rules.buildings.size(), false)
                  : it.kind == ProductionKind::District ? inRange(it.type, rules.districts.size(), false)

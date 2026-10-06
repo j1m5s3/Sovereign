@@ -374,3 +374,45 @@ TEST(twins_form_a_corps_then_an_army) {
     REQUIRE(loaded);
     CHECK_EQ(loaded->state().unit(a)->formation, 2);
 }
+
+// ---- Corps and Armies trained whole (05: Corps and Armies)
+
+TEST(a_military_academy_trains_corps_and_armies_whole) {
+    GameState s = sovtest::flatState(16, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const CityId city = sovtest::addCity(s, 0, {4, 5}, true, 8);
+    const TypeIndex spear = rules().unit("UNIT_SPEARMAN");
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_BRONZE_WORKING"))] = 1;
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATIONALISM"))] = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const ProductionItem single{ProductionKind::Unit, spear};
+    const ProductionItem corps{ProductionKind::Unit, spear, 1};
+    const ProductionItem army{ProductionKind::Unit, spear, 2};
+    REQUIRE(g->canProduce(*g->state().city(city), single));
+    CHECK(!g->canProduce(*g->state().city(city), corps));  // no Military Academy
+    GameState t = g->state();
+    t.cities[0].buildings.push_back(rules().building("BUILDING_MILITARY_ACADEMY"));
+    std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+    auto h = Game::fromScenario(rules(), std::move(t));
+    const City& c = *h->state().city(city);
+    CHECK(h->canProduce(c, corps));
+    CHECK(!h->canProduce(c, army));  // Armies need Mobilization
+    CHECK_EQ(h->productionCost(0, corps), h->productionCost(0, single) * 3 / 2);
+    const auto items = h->buildableItems(city);
+    CHECK(std::find(items.begin(), items.end(), corps) != items.end());
+    // Bought outright, it arrives as a Corps; the command carries the formation.
+    GameState u = h->state();
+    u.players[0].gold = Fixed::fromInt(10000);
+    auto k = Game::fromScenario(rules(), std::move(u));
+    const size_t before = k->state().units.size();
+    REQUIRE(k->submit(Command::purchase(0, city, corps)) == CommandError::Ok);
+    REQUIRE(k->state().units.size() == before + 1);
+    CHECK_EQ(k->state().units.back().type, spear);
+    CHECK_EQ(k->state().units.back().formation, 1);
+    // A Corps in the queue survives a save.
+    REQUIRE(k->submit(Command::setProduction(0, city, corps)) == CommandError::Ok);
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*k), &err);
+    REQUIRE(back);
+    CHECK(back->state().city(city)->queue.front() == corps);
+}

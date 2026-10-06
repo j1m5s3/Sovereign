@@ -1426,7 +1426,9 @@ std::optional<ProductionItem> bestMilitaryUnit(const View& v, const std::vector<
         if (it.kind != ProductionKind::Unit) continue;
         const UnitType& t = v.r.units[at(it.type)];
         if (!isArmy(t) || t.unitClass == "RECON" || (t.bombard > 0 && v.enemies.empty())) continue;
-        int score = power(t) * 100 - v.game.productionCost(v.me, it) / 2;
+        // A Corps or Army trained whole fights at +10 / +17 (05: Corps and Armies).
+        const int formationBonus = it.formation == 1 ? v.r.globalInt("COMBAT_CORPS_STRENGTH_MODIFIER") : it.formation == 2 ? v.r.globalInt("COMBAT_ARMY_STRENGTH_MODIFIER") : 0;
+        int score = (power(t) + formationBonus) * 100 - v.game.productionCost(v.me, it) / 2;
         if ((t.range > 0) == wantRanged) score += 800;
         if (v.posture.favorClass >= 0 && static_cast<int>(profileClassOf(t.promotionClass)) == v.posture.favorClass) score += 1200;
         if (score > bestScore) {

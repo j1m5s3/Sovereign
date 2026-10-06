@@ -106,6 +106,7 @@ public:
     int productionCost(PlayerId player, ProductionItem item) const;
     // Gold price, or -1 when the item cannot be bought with gold.
     int purchaseCost(PlayerId player, ProductionItem item) const;
+    bool canTrainFormation(const City& city, TypeIndex unit, int formation) const;  // a Corps (1) or Army (2) whole (05)
     // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
     // Divine Architect) (08: Governors); -1 when it cannot be.
     int districtPurchaseCost(const City& city, TypeIndex district, bool faith) const;

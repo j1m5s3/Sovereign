@@ -11,5 +11,5 @@ Specs: 05-units-and-combat (Formations; combat strength modifiers); data/global-
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - Both units must be the player's, the same military land or naval type (not the leader), side by side, with moves left. The unit keeps the higher HP and XP of the two and its own promotions; forming takes its turn. `Unit::formation` (0, 1, 2; save version 45) survives upgrades.
-- Not modelled: training Corps and Armies directly in cities with a Military Academy or Seaport (UNIT_CORPS_COST_MODIFIER 1.5, UNIT_ARMY_COST_MODIFIER 2.0), the anti-air bonus (+7) and the three-singles Army.
+- Not modelled: the anti-air bonus (+7) and the three-singles Army. Training Corps and Armies directly followed in `2026-10-05-trained-corps.md`.
 - AI: every turn, before moving its army, it merges each unit with the first neighbouring twin it may; at war or at peace.

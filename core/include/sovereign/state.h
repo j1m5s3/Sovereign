@@ -82,7 +82,10 @@ enum class ProductionKind : uint8_t { Unit = 0, Building = 1, District = 2, Proj
 struct ProductionItem {
     ProductionKind kind = ProductionKind::Unit;
     TypeIndex type = kNone;
-    bool operator==(const ProductionItem& o) const { return kind == o.kind && type == o.type; }
+    uint8_t formation = 0;  // a unit trained as a Corps/Fleet (1) or an Army/Armada (2) (05: Corps and Armies)
+    bool operator==(const ProductionItem& o) const { return kind == o.kind && type == o.type && formation == o.formation; }
+    // Commands carry the kind and the formation together in one argument.
+    int32_t packedKind() const { return static_cast<int32_t>(kind) | (static_cast<int32_t>(formation) << 4); }
 };
 
 // Production already put into an item; kept when the player switches away.

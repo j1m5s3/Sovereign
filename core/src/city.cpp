@@ -395,6 +395,9 @@ int Game::productionCost(PlayerId player, ProductionItem item) const {
         const Player& p = state_.players[static_cast<size_t>(player)];
         int copies = static_cast<size_t>(item.type) < p.unitsTrained.size() ? p.unitsTrained[static_cast<size_t>(item.type)] : 0;
         base = u.cost + u.costProgression * copies;
+        // Trained as a Corps or an Army (05): UNIT_CORPS_COST_MODIFIER / UNIT_ARMY_COST_MODIFIER.
+        if (item.formation > 0)
+            base = static_cast<int>((Fixed::fromInt(base) * rules_->global(item.formation == 1 ? "UNIT_CORPS_COST_MODIFIER" : "UNIT_ARMY_COST_MODIFIER")).toInt());
     } else if (item.kind == ProductionKind::District) {
         return districtCost(player, item.type);  // already scaled by game speed
     } else if (item.kind == ProductionKind::Project) {
@@ -459,6 +462,18 @@ int Game::plotPurchaseCost(CityId id, Hex at) const {
     return cost * std::max(0, pct) / 100;
 }
 
+// Corps and Armies trained whole (05: Corps and Armies): land units in a city with a Military Academy,
+// ships in one with a Seaport, once the civ has Nationalism (Corps, Fleets) or Mobilization (Armies, Armadas).
+bool Game::canTrainFormation(const City& c, TypeIndex unit, int formation) const {
+    const UnitType& u = rules_->units[static_cast<size_t>(unit)];
+    if (formation < 1 || formation > 2 || u.layer != UnitLayer::Military || (u.domain != Domain::Land && u.domain != Domain::Sea) || u.agent) return false;
+    if (u.combat <= 0 && u.ranged <= 0) return false;
+    const TypeIndex civic = rules_->civic(formation == 1 ? "CIVIC_NATIONALISM" : "CIVIC_MOBILIZATION");
+    if (civic == kNone || !state_.players[static_cast<size_t>(c.owner)].civics.has(civic)) return false;
+    const TypeIndex school = rules_->building(u.domain == Domain::Land ? "BUILDING_MILITARY_ACADEMY" : "BUILDING_SEAPORT");
+    return school != kNone && cityHasBuilding(c, *rules_, school);
+}
+
 bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
@@ -472,6 +487,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             !hasUnlocked(c.owner, u.unlock) || unitObsolete(c.owner, item.type))
             return fail(CommandError::CannotBuild);
         if (u.needsDistrict != kNone && !c.district(u.needsDistrict, true)) return fail(CommandError::CannotBuild);
+        if (item.formation > 0 && !canTrainFormation(c, item.type, item.formation)) return fail(CommandError::CannotBuild);
         // Civ uniques: only their civ trains them, and for it they replace their base unit.
         const TypeIndex civ = state_.players[static_cast<size_t>(c.owner)].civ;
         if (u.uniqueTo != kNone && u.uniqueTo != civ) return fail(CommandError::CannotBuild);
@@ -550,7 +566,13 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
     if (!c) return out;
     for (size_t i = 0; i < rules_->units.size(); ++i) {
         ProductionItem it{ProductionKind::Unit, static_cast<TypeIndex>(i)};
-        if (canProduce(*c, it) && hasStrategicFor(c->owner, it.type)) out.push_back(it);
+        if (!canProduce(*c, it) || !hasStrategicFor(c->owner, it.type)) continue;
+        out.push_back(it);
+        // The same unit trained as a Corps or an Army where the city can (05: Corps and Armies).
+        for (uint8_t f = 1; f <= 2; ++f) {
+            const ProductionItem whole{ProductionKind::Unit, it.type, f};
+            if (canProduce(*c, whole)) out.push_back(whole);
+        }
     }
     for (size_t i = 0; i < rules_->buildings.size(); ++i) {
         ProductionItem it{ProductionKind::Building, static_cast<TypeIndex>(i)};
@@ -632,11 +654,11 @@ CommandError Game::validateCity(const Command& c) const {
     const City* city = state_.city(c.id);
     if (!city) return CommandError::BadCity;
     if (city->owner != c.player) return CommandError::NotYourCity;
-    const ProductionItem item{static_cast<ProductionKind>(c.arg), static_cast<TypeIndex>(c.arg2)};
+    const ProductionItem item{static_cast<ProductionKind>(c.arg & 15), static_cast<TypeIndex>(c.arg2), static_cast<uint8_t>((c.arg >> 4) & 15)};
     CommandError why = CommandError::Ok;
     switch (c.type) {
         case CommandType::SetProduction:
-            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || (c.arg & 15) > 3 || (c.arg >> 4) > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
@@ -648,7 +670,7 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::QueueProduction:
-            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || (c.arg & 15) > 3 || (c.arg >> 4) > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
@@ -665,7 +687,7 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::BadTarget;
             return CommandError::Ok;
         case CommandType::Purchase: {
-            if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (c.arg < 0 || (c.arg & 15) > 3 || (c.arg >> 4) > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (item.kind == ProductionKind::District) {
                 const bool faith = c.target.x == 1;
                 const int cost = districtPurchaseCost(*city, item.type, faith);
@@ -720,7 +742,7 @@ CommandError Game::validateCity(const Command& c) const {
 
 void Game::applyCity(const Command& c) {
     City& city = *state_.city(c.id);
-    const ProductionItem item{static_cast<ProductionKind>(c.arg), static_cast<TypeIndex>(c.arg2)};
+    const ProductionItem item{static_cast<ProductionKind>(c.arg & 15), static_cast<TypeIndex>(c.arg2), static_cast<uint8_t>((c.arg >> 4) & 15)};
     Player& p = state_.players[static_cast<size_t>(c.player)];
     switch (c.type) {
         case CommandType::SetProduction:
@@ -876,6 +898,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         // Provision: settlers trained under Magnus cost no population (08: Governors).
         if (sumCityModifiers(state_, *rules_, city, ModEffect::SettlerNoPopCost) <= Fixed()) city.population -= u.popCost;
         Unit& made = spawnUnit(item.type, city.owner, *spot);
+        made.formation = item.formation;
         for (TypeIndex bi : city.buildings) {
             const int pct = rules_->buildings[static_cast<size_t>(bi)].trainedXpPercent;
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
@@ -1103,7 +1126,8 @@ void Game::processCities(PlayerId pid) {
             if (item.kind == ProductionKind::Unit) {
                 // Policies such as Agoge speed production toward some units; a leader's domain (Sea Dogs).
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt()) +
-                                civAbility(pid).domainProductionPercent[static_cast<size_t>(rules_->units[static_cast<size_t>(item.type)].domain)];
+                                civAbility(pid).domainProductionPercent[static_cast<size_t>(rules_->units[static_cast<size_t>(item.type)].domain)] +
+                                (item.formation > 0 ? 25 : 0);  // the Military Academy or Seaport that trains it (05)
                 prod = prod * std::max(0, pct) / 100;
             } else if (item.kind == ProductionKind::Building && !rules_->buildings[static_cast<size_t>(item.type)].wonder) {
                 // Leader abilities: City Center buildings (City of Marble), walls (Standardization).
