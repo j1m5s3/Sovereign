@@ -780,6 +780,9 @@ enum class ReqType : uint8_t {
     CityMinSpecialtyDistricts,  // at least `value` completed districts that count toward the population limit
     CityOnCapitalContinent,     // on the same landmass as the owner's capital
     CityCaptured,               // founded by another civ
+    CityHasImprovedResource,    // a plot of the city holds resource `ref` under a working improvement
+    PlayerAtPeace,              // the owner is at war with no major civ
+    WorldMinEra,                // the world era is at least `value`
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
@@ -800,7 +803,7 @@ struct RequirementSet {
 
 // Civ VI's modifier model (00-overview.md, Architecture recommendations):
 // who it affects (collection), what it does (effect), when (requirements).
-enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief, Governor, GreatPerson };
+enum class ModSource : uint8_t { Building = 0, Civ, Everyone, Policy, Government, Belief, Governor, GreatPerson, CityState };
 
 struct Modifier {
     std::string id;
@@ -1172,6 +1175,7 @@ public:
     TypeIndex gearType(const std::string& id) const;
     TypeIndex greatPersonClass(const std::string& id) const;
     TypeIndex greatPerson(const std::string& id) const;
+    TypeIndex cityState(const std::string& id) const;
     TypeIndex greatWorkType(const std::string& id) const;
     TypeIndex belief(const std::string& id) const;
     TypeIndex religion(const std::string& id) const;

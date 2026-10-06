@@ -7,6 +7,59 @@
 namespace sov {
 
 namespace {
+}  // namespace
+
+int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cs) {
+    const Player& p = s.players[static_cast<size_t>(player)];
+    int n = static_cast<size_t>(cs) < p.envoys.size() ? p.envoys[static_cast<size_t>(cs)] : 0;
+    // Amani serving there counts as envoys (08: Governors, Messenger and Puppeteer).
+    for (const Governor& g : p.governors) {
+        const City* c = s.city(g.city);
+        if (!c || c->owner != cs || g.establishTurns > 0) continue;
+        const bool puppeteer = std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex pr) {
+            return r.governorPromotions[static_cast<size_t>(pr)].id == "GOVERNOR_PROMOTION_PUPPETEER";
+        });
+        n += puppeteer ? 4 : 2;
+        break;
+    }
+    return n;
+}
+
+PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
+    // The most envoys, at least INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN, and more than anyone else.
+    PlayerId best = kNoPlayer;
+    int most = 0;
+    bool tie = false;
+    for (const Player& p : s.players) {
+        const int n = envoysAt(s, r, p.id, cs);
+        if (n > most) {
+            most = n;
+            best = p.id;
+            tie = false;
+        } else if (n == most && n > 0) {
+            tie = true;
+        }
+    }
+    return !tie && most >= r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") ? best : kNoPlayer;
+}
+
+bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type) {
+    for (const Player& cs : s.players) {
+        if (cs.cityState != type || !cs.alive) continue;
+        const auto& rels = s.players[static_cast<size_t>(player)].relations;
+        if (static_cast<size_t>(cs.id) < rels.size() && rels[static_cast<size_t>(cs.id)].war) return false;
+        const PlayerId suz = suzerainOf(s, r, cs.id);
+        if (suz == player) return true;
+        // A level-3 Economic alliance shares the ally's suzerain bonuses (08: alliance levels).
+        if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
+        const Relation& rel = rels[static_cast<size_t>(suz)];
+        return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
+    }
+    return false;
+}
+
+namespace {
+
 bool testOne(const Requirement& q, const ReqContext& c) {
     bool ok = false;
     switch (q.type) {
@@ -42,6 +95,22 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             break;
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
+        case ReqType::CityHasImprovedResource:
+            if (c.city && c.state) {
+                for (size_t i = 0; i < c.state->plots.size() && !ok; ++i) {
+                    const Plot& p = c.state->plots[i];
+                    ok = p.city == c.city->id && p.resource == q.ref && p.improvement != kNone && p.pillagedTurns == 0;
+                }
+            }
+            break;
+        case ReqType::PlayerAtPeace:
+            ok = c.player && c.state;
+            for (size_t i = 0; ok && i < c.player->relations.size() && i < c.state->players.size(); ++i) {
+                const Player& o = c.state->players[i];
+                ok = !(c.player->relations[i].war && o.cityState == kNone && !o.barbarian);
+            }
+            break;
+        case ReqType::WorldMinEra: ok = c.state && c.state->gameEra >= q.value; break;
         case ReqType::CityOnCapitalContinent: {
             ok = false;
             if (c.city && c.state) {
@@ -106,6 +175,8 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
                 return std::find(subject.greatPeopleHere.begin(), subject.greatPeopleHere.end(), m.sourceIndex) != subject.greatPeopleHere.end() ? &subject : nullptr;
             return std::find(owner.greatPeopleActivated.begin(), owner.greatPeopleActivated.end(), m.sourceIndex) != owner.greatPeopleActivated.end() ? &subject : nullptr;
         }
+        case ModSource::CityState:
+            return enjoysSuzerainBonus(s, r, owner.id, m.sourceIndex) ? &subject : nullptr;
         case ModSource::Governor:
             // The owner's governor established in this city holds the promotion (08: Governors).
             for (const Governor& g : owner.governors) {
@@ -228,6 +299,7 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
             case ModSource::GreatPerson:
                 applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
                 break;
+            case ModSource::CityState: applies = enjoysSuzerainBonus(s, r, player.id, m.sourceIndex); break;
             case ModSource::Belief:
                 applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
                 break;
@@ -286,7 +358,7 @@ Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& c
         } else if (item.kind == ProductionKind::District) {
             hit = m.scope == "DISTRICT" && m.district == item.type;
         } else if (item.kind == ProductionKind::Project && item.type >= 0 && static_cast<size_t>(item.type) < r.projects.size()) {
-            hit = m.scope == "SPACE_RACE" && r.projects[static_cast<size_t>(item.type)].spaceRace;
+            hit = (m.scope == "SPACE_RACE" && r.projects[static_cast<size_t>(item.type)].spaceRace) || m.scope == "PROJECTS";
         }
         if (hit) total += m.amount;
     });

@@ -68,6 +68,13 @@ SOV_API Yields tradeRouteModifierYields(const GameState& s, const Rules& r, cons
 // Tourism from each of the player's completed districts of this type (Masaru Ibuka, Jamsetji Tata).
 SOV_API int districtTourism(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
 
+// City-states (08): envoys a player has there (with Amani's), the suzerain (kNoPlayer: none), and whether
+// a player enjoys the suzerain bonus of a city-state type (its suzerain, or a level-3 Economic ally of it,
+// at peace with the city-state).
+SOV_API int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cityState);
+SOV_API PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cityState);
+SOV_API bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex cityStateType);
+
 // Combat XP bonus percent for the player's units of this class.
 SOV_API Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 

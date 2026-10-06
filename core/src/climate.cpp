@@ -12,6 +12,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -96,8 +97,8 @@ void Game::burnPower(PlayerId pid) {
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
     bool cardiff = false;
     for (const Player& cs : state_.players) {
-        cardiff = cardiff || (cs.cityState != kNone && cs.alive && rules_->cityStates[at(cs.cityState)].id == "CITYSTATE_CARDIFF" && suzerainOf(cs.id) == pid &&
-                              !atWar(pid, cs.id));
+        cardiff = cardiff || (cs.cityState != kNone && cs.alive && rules_->cityStates[at(cs.cityState)].id == "CITYSTATE_CARDIFF" &&
+                              enjoysSuzerainBonus(state_, *rules_, pid, cs.cityState));
     }
     const TypeIndex harborBuildings[] = {rules_->building("BUILDING_LIGHTHOUSE"), rules_->building("BUILDING_SHIPYARD"), rules_->building("BUILDING_SEAPORT")};
     std::vector<City*> mine;
