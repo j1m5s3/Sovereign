@@ -298,6 +298,8 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         if (im != kNone && state_.plot(unit.pos).owner == unit.owner) s += rules_->improvements[static_cast<size_t>(im)].defense;
     }
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
+    // Natural wonders (01): land units beside the Giant's Causeway +5.
+    if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_GIANT_S_CAUSEWAY")) s += 5;
     // Formations (05): a Corps or Fleet +10, an Army or Armada +17.
     if (unit.formation == 1) s += rules_->globalInt("COMBAT_CORPS_STRENGTH_MODIFIER");
     if (unit.formation >= 2) s += rules_->globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
@@ -1341,6 +1343,9 @@ void Game::healAndFortify(PlayerId pid) {
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL");
             u.hp = std::min(maxHp, u.hp + heal);
         }
+        // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.
+        if (ut.domain == Domain::Land && nextToNaturalWonder(u.pos, "FEATURE_DEAD_SEA")) u.hp = maxHp;
+        if (ut.domain == Domain::Sea && !ut.promotionClass.empty() && nextToNaturalWonder(u.pos, "FEATURE_LYSEFJORD")) u.xp = std::max(u.xp, xpForNextLevel(u));
         if (u.activity == Activity::Fortify && !acted) u.fortifyTurns = std::min(fortifyMax, u.fortifyTurns + 1);
         u.moved = false;
         u.attacked = false;

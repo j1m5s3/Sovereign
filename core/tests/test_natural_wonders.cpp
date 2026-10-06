@@ -57,3 +57,28 @@ TEST(the_map_script_places_natural_wonders) {
     CHECK(seen.size() >= 1u);
     CHECK(seen.size() <= 4u);  // Small: 4
 }
+
+TEST(natural_wonder_effects) {
+    // Giant's Causeway: +5 to a land unit beside it.
+    GameState s = flatState(16, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const UnitId a = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+    const UnitId d = sovtest::addUnit(s, "UNIT_WARRIOR", 1, {6, 5});
+    auto plain = Game::fromScenario(rules(), s);
+    const int base = plain->combatStrength(*plain->state().unit(a), *plain->state().unit(d), true, false);
+    s.plot({4, 5}).feature = rules().feature("FEATURE_GIANT_S_CAUSEWAY");
+    auto g = Game::fromScenario(rules(), s);
+    CHECK_EQ(g->combatStrength(*g->state().unit(a), *g->state().unit(d), true, false), base + 5);
+
+    // Pamukkale: its city gains an amenity per natural wonder in its land (itself and Uluru here).
+    GameState t = flatState(16, 12, 1);
+    Game::fitPlayerToRules(t.players[0], rules());
+    addCity(t, 0, {6, 6}, true, 3);
+    auto none = Game::fromScenario(rules(), t);
+    const int amen = none->cityReport(none->state().cities[0].id).amenities;
+    t.plot({7, 6}).feature = rules().feature("FEATURE_PAMUKKALE");
+    t.plot({5, 6}).terrain = rules().terrain("TERRAIN_DESERT");
+    t.plot({5, 6}).feature = rules().feature("FEATURE_ULURU");
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->cityReport(h->state().cities[0].id).amenities, amen + 2);
+}

@@ -219,6 +219,19 @@ CityReport Game::cityReport(CityId id) const {
     rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
     rep.amenities += luxuryAmenities(*c);
     rep.amenities += districtAmenities(*c);
+    // Natural wonders (01): the city owning Pamukkale gains an amenity per natural wonder in its land.
+    {
+        const TypeIndex pamukkale = rules_->feature("FEATURE_PAMUKKALE");
+        bool owns = false;
+        std::vector<TypeIndex> wonders;
+        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+            const Plot& pl = state_.plot(h);
+            if (pl.city != c->id || pl.feature == kNone || !rules_->features[static_cast<size_t>(pl.feature)].naturalWonder) continue;
+            owns = owns || pl.feature == pamukkale;
+            if (std::find(wonders.begin(), wonders.end(), pl.feature) == wonders.end()) wonders.push_back(pl.feature);
+        }
+        if (owns) rep.amenities += static_cast<int>(wonders.size());
+    }
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
         for (TypeIndex bi : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
     }
@@ -1060,6 +1073,10 @@ void Game::processCities(PlayerId pid) {
                 const Unlock& u = rules_->buildings[static_cast<size_t>(item.type)].unlock;
                 const int era = u.none() ? 0 : (u.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(u.index)].era;
                 if (ab.wonderProductionPercent > 0 && era >= ab.wonderEraMin && era <= ab.wonderEraMax) prod = prod * (100 + ab.wonderProductionPercent) / 100;
+                // Natural wonders (01): +50% toward a wonder built beside Ik-Kil.
+                for (const CityWonder& w : city.wonders) {
+                    if (w.building == item.type && nextToNaturalWonder(w.pos, "FEATURE_IK_KIL")) prod = prod * 150 / 100;
+                }
             } else if (item.kind == ProductionKind::District) {
                 // Zoning Commissioner (08: Governors); Urban Development Treaty A (World Congress).
                 int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDistrictProductionPercent).toInt());

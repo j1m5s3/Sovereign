@@ -13,6 +13,15 @@ namespace {
 size_t at(int i) { return static_cast<size_t>(i); }
 }  // namespace
 
+bool Game::nextToNaturalWonder(Hex plot, const char* featureId) const {
+    const TypeIndex f = rules_->feature(featureId);
+    if (f == kNone) return false;
+    for (const Hex& n : state_.grid.within(plot, 1)) {
+        if (n != plot && state_.plot(n).feature == f) return true;
+    }
+    return false;
+}
+
 void Game::enterVillage(Unit& unit) {
     state_.plot(unit.pos).village = false;
     const PlayerId pid = unit.owner;

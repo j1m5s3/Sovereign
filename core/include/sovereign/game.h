@@ -384,6 +384,9 @@ public:
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
 
+    // ---- natural wonders (01: Natural wonders)
+    bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
+
     // ---- tribal villages (01: Tribal Villages)
     void enterVillage(Unit& unit);   // the reward: a category, then a reward in it, by weight
 

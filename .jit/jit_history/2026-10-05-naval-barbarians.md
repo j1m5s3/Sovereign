@@ -11,4 +11,5 @@ Specs: 01-map-and-terrain (Barbarians: "Coastal camps are naval tribes"; "Naval 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - Their ships raid the coast beside them (coastal raids, recorded in `jit_history/2026-10-05-pillage.md`). The scout that turns a camp aggressive is still not modelled.
+- Before half the majors can build a ship, a naval camp releases land melee units instead (found when the natural wonders shifted a camp onto the coast in an early test game).
 - A 6-AI Deity test game showed naval barbarians at sea (up to 6 at a time) and ran to its end at turn 359.
