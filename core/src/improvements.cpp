@@ -434,6 +434,19 @@ void Game::accumulateStrategics(PlayerId pid) {
         for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
         player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
     }
+    // Hattusa (08: suzerain): +2 a turn of each strategic resource revealed but not yet improved.
+    if (suzerainBonus(pid, "CITYSTATE_HATTUSA")) {
+        for (size_t r = 0; r < rules_->resources.size() && r < player.stockpile.size(); ++r) {
+            const ResourceType& rt = rules_->resources[r];
+            if (rt.cls != ResourceClass::Strategic || !hasUnlocked(pid, rt.reveal)) continue;
+            bool improved = false;
+            for (size_t i = 0; i < state_.plots.size() && !improved; ++i) {
+                const Plot& p = state_.plots[i];
+                improved = p.owner == pid && p.resource == static_cast<TypeIndex>(r) && resourceImproved(state_.grid.at(static_cast<int>(i)));
+            }
+            if (!improved) player.stockpile[r] += 2;
+        }
+    }
     // Great people (07): resources a turn (Douglas MacArthur, Yi Sun-sin, John Rockefeller...).
     for (size_t r = 0; r < rules_->resources.size() && r < player.stockpile.size(); ++r)
         player.stockpile[r] += greatPersonEffectTotal(pid, GreatPersonEffectKind::ResourcePerTurn, static_cast<TypeIndex>(r));

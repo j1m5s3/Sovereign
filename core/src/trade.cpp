@@ -143,6 +143,24 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         }
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(goods);
     }
+    // City-state suzerains (08): Venice (+1 Gold per luxury at an international destination), Hunza (+0.2 Gold
+    // per plot of the way), Kumasi (+2 Culture and +1 Gold per district on routes to city-states).
+    if (!domestic && suzerainBonus(origin.owner, "CITYSTATE_VENICE")) {
+        int luxuries = 0;
+        for (const Hex& h : state_.grid.within(destination.pos, 3)) {
+            const Plot& p = state_.plot(h);
+            luxuries += p.city == destination.id && p.resource != kNone && rules_->resources[at(p.resource)].cls == ResourceClass::Luxury && resourceImproved(h) ? 1 : 0;
+        }
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(luxuries);
+    }
+    if (suzerainBonus(origin.owner, "CITYSTATE_HUNZA"))
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::ratio(state_.grid.distance(origin.pos, destination.pos), 5);
+    if (isCityState(destination.owner) && suzerainBonus(origin.owner, "CITYSTATE_KUMASI")) {
+        int districts = 0;
+        for (const CityDistrict& d : destination.districts) districts += d.complete ? 1 : 0;
+        out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(2 * districts);
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(districts);
+    }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;

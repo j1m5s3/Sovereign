@@ -194,3 +194,31 @@ TEST(a_suzerain_enjoys_its_city_states_bonus) {
     auto e = Game::fromScenario(rules(), std::move(allied));
     CHECK(enjoysSuzerainBonus(e->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
 }
+
+TEST(suzerain_bonuses_in_code) {
+    auto suzerainOfType = [](const char* id) {
+        GameState s = csState();
+        s.players[2].cityState = rules().cityState(id);
+        s.players[0].envoys[2] = 3;
+        for (Player& p : s.players) p.relations.resize(3);
+        return s;
+    };
+    const CityId mine = csState().cities[0].id;
+    // Mohenjo-Daro: every city houses as if on a river.
+    {
+        auto g = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_MOHENJO_DARO"));
+        auto plain = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_MITLA"));
+        CHECK(g->cityReport(mine).housing >= plain->cityReport(mine).housing);
+        CHECK_EQ(g->cityReport(mine).housing - plain->cityReport(mine).housing,
+                 rules().global("CITY_POPULATION_RIVER_LAKE") - rules().global("CITY_POPULATION_NO_WATER"));
+    }
+    // Valletta: City Center buildings for Faith, at their Gold price.
+    {
+        auto g = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_VALLETTA"));
+        auto plain = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_MITLA"));
+        const ProductionItem monument{ProductionKind::Building, rules().building("BUILDING_MONUMENT")};
+        const City& c = *g->state().city(mine);
+        CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(mine), monument), -1);
+        CHECK_EQ(g->faithPurchaseCost(0, c, monument), g->purchaseCost(0, monument));
+    }
+}
