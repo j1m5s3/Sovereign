@@ -12,5 +12,13 @@ Specs: 01-map-and-terrain (Map sizes: natural wonders per size; Natural wonders)
 
 - Footprint: the first plot plus enough valid neighbours (any shape; Civ's exact shapes are not in the data).
 - Special effects (added after, `Game::nextToNaturalWonder`): the Dead Sea heals land units ending beside it fully; Lysefjord gives ships ending beside it a promotion's XP; the Giant's Causeway gives land units beside it +5; Ik-Kil +50% production toward a wonder built beside it; Païtiti +4 Gold on international routes from the city owning it; Pamukkale +1 amenity per natural wonder in its city's land.
-- Not modelled: the permanent unit abilities (Everest's hill movement, Fountain of Youth's healing, Bermuda's movement and teleport), discovery era score.
+- The permanent unit abilities and discovery rewards followed (see below). Still not modelled: the Bermuda Triangle's teleport (its destination rule is unverified).
+
+## Follow-up: abilities and discovery (2026-10-05)
+
+- **Save and storage.** `Unit::wonderAbilities` is a bitmask; save version 57.
+- **Everest.** A land unit that enters a plot beside it gains the ability for good: hills cost it as flat ground.
+- **Fountain of Youth.** A land unit that enters it heals +10 HP a turn for good.
+- **Bermuda Triangle.** A ship that enters it gains +1 movement for good.
+- **Discovery.** Seeing a natural wonder for the first time gives the spotting unit EXPERIENCE_REVEAL_NATURAL_WONDER (10) XP. The civ earns the "Discovery of a Natural Wonder" moment, or "First Discovery" if no other major has seen it, and the Astrology Eureka (`refreshVisibility`).
 - Found on the way: an early relic (now possible from tribal villages) won a Culture victory on turn 59 of an all-AI duel, because each visiting tourist also comes off the rival's domestic tourists (07, engine). Sovereign floor: a Culture victory also needs at least 5 visiting tourists per rival major (`cultureVictor`); the AI pace test and `test_eras` cover it.

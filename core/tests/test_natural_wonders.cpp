@@ -82,3 +82,41 @@ TEST(natural_wonder_effects) {
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK_EQ(h->cityReport(h->state().cities[0].id).amenities, amen + 2);
 }
+
+TEST(wonders_leave_permanent_marks_and_reward_their_discovery) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.majorsAtStart = 2;
+    addCity(s, 0, {2, 2}, true, 3);
+    addCity(s, 1, {18, 10}, true, 3);
+    // The Fountain of Youth at (8,6); Everest at (8,9) beside hills at (7,9).
+    s.plot({8, 6}).feature = rules().feature("FEATURE_FOUNTAIN_OF_YOUTH");
+    s.plot({8, 9}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    s.plot({8, 9}).feature = rules().feature("FEATURE_MOUNT_EVEREST");
+    s.plot({6, 9}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    const UnitId scout = sovtest::addUnit(s, "UNIT_SCOUT", 0, {5, 6});
+    const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {5, 9});
+    // The map known, but for the Fountain of Youth.
+    for (Player& p : s.players) {
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        p.visibility[static_cast<size_t>(s.grid.index({8, 6}))] = static_cast<uint8_t>(Visibility::Unrevealed);
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int score = g->state().players[0].eraScore;
+    g->stateMutForTests().units[0].xp = 0;
+    REQUIRE(g->submit(Command::move(0, scout, {6, 6})) == CommandError::Ok);  // now it sees the Fountain of Youth: the world's first discovery
+    CHECK(g->state().players[0].eraScore > score);
+    CHECK(g->state().players[0].techs.boosted[at(rules().tech("TECH_ASTROLOGY"))]);
+    CHECK_EQ(g->state().unit(scout)->xp, rules().globalInt("EXPERIENCE_REVEAL_NATURAL_WONDER"));
+    // Entering the Fountain: +10 HP healing for good. Beside Everest: hills cost as flat ground.
+    const auto before = g->moveCost(*g->state().unit(warrior), {5, 9}, {6, 9});
+    REQUIRE(g->submit(Command::move(0, scout, {8, 6}, true)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::move(0, warrior, {7, 9}, true)) == CommandError::Ok);
+    for (int i = 0; i < 3 && !(g->state().unit(warrior)->pos == Hex{7, 9} && g->state().unit(scout)->pos == Hex{8, 6}); ++i) sovtest::endTurns(*g, 2);
+    CHECK(g->state().unit(scout)->wonderAbilities & 2);
+    REQUIRE((g->state().unit(warrior)->pos == Hex{7, 9}));
+    CHECK(g->state().unit(warrior)->wonderAbilities & 1);
+    const auto after = g->moveCost(*g->state().unit(warrior), {7, 9}, {6, 9});
+    REQUIRE(before && after);
+    CHECK(*after < *before);
+}

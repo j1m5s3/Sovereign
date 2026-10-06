@@ -81,6 +81,16 @@ void Game::spawnCaptures() {
 
 void Game::enterPlot(Unit& unit) {
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    // Natural wonders' permanent abilities (01): land units beside Everest, land units entering the
+    // Fountain of Youth, ships entering the Bermuda Triangle.
+    {
+        const UnitType& ut = rules_->units[static_cast<size_t>(unit.type)];
+        const Plot& here = state_.plot(unit.pos);
+        const std::string& id = here.feature != kNone ? rules_->features[static_cast<size_t>(here.feature)].id : std::string();
+        if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_MOUNT_EVEREST")) unit.wonderAbilities |= 1;
+        if (ut.domain == Domain::Land && id == "FEATURE_FOUNTAIN_OF_YOUTH") unit.wonderAbilities |= 2;
+        if (ut.domain == Domain::Sea && id == "FEATURE_BERMUDA_TRIANGLE") unit.wonderAbilities |= 4;
+    }
     if (state_.plot(unit.pos).village && isMajorCiv(unit.owner)) {
         const UnitId id = unit.id;
         enterVillage(unit);

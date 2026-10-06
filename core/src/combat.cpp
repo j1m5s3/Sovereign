@@ -176,7 +176,8 @@ int Game::maxMoves(const Unit& unit) const {
         }
         return std::max(1, moves);
     }
-    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit);
+    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit) +
+                ((unit.wonderAbilities & 4) ? 1 : 0);  // the Bermuda Triangle (01)
     if (!isLeader(unit)) return moves;
     for (TypeIndex g : unit.gear) {
         if (g != kNone) moves += rules_->gear[static_cast<size_t>(g)].moves;  // mounts add, heavy armor subtracts
@@ -1345,6 +1346,7 @@ void Game::healAndFortify(PlayerId pid) {
             else if (p.owner != kNoPlayer && atWar(pid, p.owner))
                 heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_ENEMY" : "COMBAT_HEAL_LAND_ENEMY");
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL");
+            if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
             u.hp = std::min(maxHp, u.hp + heal);
         }
         // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.
