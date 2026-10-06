@@ -137,3 +137,30 @@ TEST(a_grievous_war_calls_a_military_aid_request_and_sessions_keep_their_distanc
     g->triggerEmergency(EmergencyKind::Military, 1, kNoCity, 0);
     CHECK(g->state().emergencies.empty());
 }
+
+TEST(train_athletes_scores_the_world_games_and_a_plant_can_be_decommissioned) {
+    GameState s = world("ERA_MODERN");
+    const TypeIndex coal = rules().building("BUILDING_COAL_POWER_PLANT");
+    s.cities[1].buildings.push_back(coal);
+    std::sort(s.cities[1].buildings.begin(), s.cities[1].buildings.end());
+    CityDistrict zone;
+    zone.type = rules().district("DISTRICT_INDUSTRIAL_ZONE");
+    zone.pos = {15, 7};
+    zone.complete = true;
+    s.cities[1].districts.push_back(zone);
+    auto g = Game::fromScenario(rules(), s);
+    const ProductionItem athletes{ProductionKind::Project, rules().project("PROJECT_TRAIN_ATHLETES")};
+    const ProductionItem decommission{ProductionKind::Project, rules().project("PROJECT_DECOMMISSION_COAL_POWER_PLANT")};
+    CHECK(rules().projects[at(athletes.type)].modelled);
+    CHECK(!g->canProduce(g->state().cities[1], athletes));  // no World Games running
+    CHECK(g->canProduce(g->state().cities[1], decommission));
+    CHECK(!g->canProduce(g->state().cities[0], decommission));  // no plant there
+    s.competitions.push_back(running(CompetitionKind::WorldGames, 60, 3));
+    auto h = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(h->canProduce(h->state().cities[1], athletes));
+    const int before = h->competitionStanding(h->state().competitions[0], 1);
+    h->completeProject(h->stateMutForTests().cities[1], athletes.type);
+    CHECK_EQ(h->competitionStanding(h->state().competitions[0], 1), before + 50);
+    h->completeProject(h->stateMutForTests().cities[1], decommission.type);
+    CHECK(!h->state().cities[1].has(coal));
+}

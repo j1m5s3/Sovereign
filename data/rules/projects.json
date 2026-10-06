@@ -34,7 +34,14 @@
    "cost": 200,
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
-   "modelled": false
+   "effects": [
+    {
+     "kind": "COMPETITION",
+     "competition": "WORLD_GAMES",
+     "amount": 50
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_RECOMMISSION_NUCLEAR_REACTOR",
@@ -273,7 +280,13 @@
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "DECOMMISSION",
+     "building": "BUILDING_COAL_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_DECOMMISSION_OIL_POWER_PLANT",
@@ -282,7 +295,13 @@
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "DECOMMISSION",
+     "building": "BUILDING_OIL_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_DECOMMISSION_NUCLEAR_POWER_PLANT",
@@ -291,7 +310,13 @@
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "DECOMMISSION",
+     "building": "BUILDING_NUCLEAR_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_TRAIN_ASTRONAUTS",
@@ -300,7 +325,14 @@
    "costProgression": "NO_PROGRESSION_MODEL",
    "costProgressionParam": 0,
    "district": "DISTRICT_SPACEPORT",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "COMPETITION",
+     "competition": "SPACE_STATION",
+     "amount": 30
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_LAUNCH_LAGRANGE_LASER_STATION",
@@ -435,8 +467,13 @@
    "costProgression": "GAME_PROGRESS",
    "costProgressionParam": 1500,
    "district": "DISTRICT_THEATER_SQUARE",
-   "modelled": false,
-   "text": "+50 Culture per surplus luxury (one-time); grant tourism per excess luxuries (Amount=50) (one-time)"
+   "effects": [
+    {
+     "kind": "FESTIVAL",
+     "amount": 50
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_BREAD_AND_CIRCUSES_WATER_PARK",

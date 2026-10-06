@@ -741,11 +741,12 @@ struct Modifier {
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).
-enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid };
+enum class ProjectEffectKind : uint8_t { RepairWalls = 0, Loyalty, Favor, RemoveCo2, RevealMap, CultureFromScience, ExpeditionSpeed, Wmd, Aid, Competition, Decommission, Festival };
 struct ProjectEffect {
     ProjectEffectKind kind = ProjectEffectKind::Loyalty;
     int amount = 0;
-    TypeIndex weapon = kNone;  // Wmd: Rules::wmds
+    TypeIndex weapon = kNone;  // Wmd: Rules::wmds; Decommission: the power plant (Rules::buildings);
+                               // Competition: the CompetitionKind it scores
 };
 // A weapon of mass destruction (05: Nuclear weapons; data: units.md, WMDs).
 struct WmdType {

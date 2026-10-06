@@ -562,6 +562,12 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
         // Repair Outer Defenses: only with walls that are down. Send Aid: only while another civ asks for aid.
         for (const ProjectEffect& e : pj.effects) {
             if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Competition) {
+                bool running = false;
+                for (const Competition& cp : state_.competitions) running = running || (!cp.settled && static_cast<TypeIndex>(cp.kind) == e.weapon);
+                if (!running) return fail(CommandError::CannotBuild);
+            }
+            if (e.kind == ProjectEffectKind::Decommission && (e.weapon == kNone || !c.has(e.weapon))) return fail(CommandError::CannotBuild);
             if (e.kind == ProjectEffectKind::Aid) {
                 const Competition* aid = runningAidRequest();
                 if (!aid || aid->beneficiary == c.owner || atWar(c.owner, aid->beneficiary)) return fail(CommandError::CannotBuild);
@@ -987,6 +993,24 @@ void Game::completeProject(City& city, TypeIndex project) {
                     competitionScore(city.owner, aid->kind, e.amount);
                 }
                 break;
+            case ProjectEffectKind::Competition: competitionScore(city.owner, static_cast<CompetitionKind>(e.weapon), e.amount); break;
+            case ProjectEffectKind::Decommission:
+                // The plant goes, and with it the city's burning of its fuel (09: Climate).
+                city.buildings.erase(std::remove(city.buildings.begin(), city.buildings.end(), e.weapon), city.buildings.end());
+                break;
+            case ProjectEffectKind::Festival: {
+                // Court Festival: Culture and tourism for each luxury copy beyond the first held.
+                int surplus = 0;
+                for (size_t r = 0; r < rules_->resources.size(); ++r) {
+                    if (rules_->resources[r].cls == ResourceClass::Luxury) surplus += std::max(0, luxuryCopies(city.owner, static_cast<TypeIndex>(r)) - 1);
+                }
+                p.civics.overflow += Fixed::fromInt(e.amount * surplus);
+                if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
+                for (const Player& o : state_.players) {
+                    if (o.id != city.owner && isMajorCiv(o.id)) p.tourismTo[static_cast<size_t>(o.id)] += e.amount * surplus;
+                }
+                break;
+            }
             case ProjectEffectKind::Wmd:
                 if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
                 if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;

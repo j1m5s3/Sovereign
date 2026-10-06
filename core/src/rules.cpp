@@ -1953,14 +1953,18 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"REPAIR_WALLS", ProjectEffectKind::RepairWalls}, {"LOYALTY", ProjectEffectKind::Loyalty}, {"FAVOR", ProjectEffectKind::Favor},
             {"REMOVE_CO2", ProjectEffectKind::RemoveCo2}, {"REVEAL_MAP", ProjectEffectKind::RevealMap},
             {"CULTURE_FROM_SCIENCE", ProjectEffectKind::CultureFromScience}, {"EXPEDITION_SPEED", ProjectEffectKind::ExpeditionSpeed},
-            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}};
+            {"WMD", ProjectEffectKind::Wmd}, {"AID", ProjectEffectKind::Aid}, {"COMPETITION", ProjectEffectKind::Competition},
+            {"DECOMMISSION", ProjectEffectKind::Decommission}, {"FESTIVAL", ProjectEffectKind::Festival}};
         bool known = true;
         for (const Json& e : j["effects"].items()) {
             bool found = false;
             for (const auto& [name, kind] : kinds) {
                 if (e["kind"].str() == name) {
-                    const TypeIndex weapon = e.has("weapon") ? wmd(e["weapon"].str()) : kNone;
-                    found = kind != ProjectEffectKind::Wmd || weapon != kNone;
+                    TypeIndex weapon = e.has("weapon") ? wmd(e["weapon"].str()) : kNone;
+                    if (kind == ProjectEffectKind::Decommission) weapon = building(e["building"].str());
+                    // CompetitionKind::WorldGames (1) and SpaceStation (6); state.h is out of reach here (checked in competitions.cpp).
+                    if (kind == ProjectEffectKind::Competition) weapon = e["competition"].str() == "WORLD_GAMES" ? 1 : e["competition"].str() == "SPACE_STATION" ? 6 : kNone;
+                    found = (kind != ProjectEffectKind::Wmd && kind != ProjectEffectKind::Decommission && kind != ProjectEffectKind::Competition) || weapon != kNone;
                     if (found) pj.effects.push_back({kind, static_cast<int>(e["amount"].integer(0)), weapon});
                 }
             }

@@ -1099,6 +1099,15 @@ def project_effects(name, text):
     effects, unmodelled = [], []
     if name == "Repair Outer Defenses":
         return [{"kind": "REPAIR_WALLS"}], []
+    # Competition projects score their competition (data: world-congress-emergencies, score sources:
+    # "world games score project" 50, "space station score project" 30).
+    if name == "Train Athletes":
+        return [{"kind": "COMPETITION", "competition": "WORLD_GAMES", "amount": 50}], []
+    if name == "Train Astronauts":
+        return [{"kind": "COMPETITION", "competition": "SPACE_STATION", "amount": 30}], []
+    m = re.fullmatch(r"Decommission (\w+) Power Plant", name)
+    if m:
+        return [{"kind": "DECOMMISSION", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Climate
     for part in [x.strip() for x in (text or "").split(";") if x.strip()]:
         m = re.fullmatch(r"\+(\d+) Loyalty \(one-time\)", part)
         if m:
@@ -1132,6 +1141,12 @@ def project_effects(name, text):
             if not any(e["kind"] == "AID" for e in effects):
                 effects.append({"kind": "AID", "amount": int(m.group(1))})  # 08: Aid Request
             continue
+        m = re.fullmatch(r"\+(\d+) Culture per surplus luxury \(one-time\)", part)
+        if m:
+            effects.append({"kind": "FESTIVAL", "amount": int(m.group(1))})  # Court Festival
+            continue
+        if part.startswith("grant tourism per excess luxuries"):
+            continue  # carried by FESTIVAL
         if part.startswith("adjust city required power"):
             continue  # power is not modelled; the station counts as powered
         unmodelled.append(part)
