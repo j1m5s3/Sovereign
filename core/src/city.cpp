@@ -350,16 +350,25 @@ CityReport Game::cityReport(CityId id) const {
     // without one of its own takes the yields and Amenities of the nearest in range, once per building type, and its
     // powered bonus while the holding city is powered.
     std::vector<TypeIndex> regional;
+    const bool vertical = cityGovernorHas(*c, "GOVERNOR_PROMOTION_VERTICAL_INTEGRATION");
     for (const City& o : state_.cities) {
         if (o.owner != c->owner || o.id == c->id) continue;
         const int d = state_.grid.distance(o.pos, c->pos);
         const bool powered = o.powerDemand > 0 && o.powerSupply >= o.powerDemand;
         for (TypeIndex bi : o.buildings) {
             const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
-            if (bt.regionalRange <= 0 || d > bt.regionalRange || c->has(bi) || std::find(regional.begin(), regional.end(), bi) != regional.end()) continue;
+            if (bt.regionalRange <= 0 || d > bt.regionalRange) continue;
             if (bt.districtType != kNone) {
                 const CityDistrict* home = o.district(bt.districtType, true);
                 if (home && home->pillagedTurns > 0) continue;
+            }
+            if (c->has(bi) || std::find(regional.begin(), regional.end(), bi) != regional.end()) {
+                // Vertical Integration (08: Magnus): the Production of every such building in range stacks.
+                if (vertical) {
+                    const size_t prod = idx(YieldType::Production);
+                    raw[prod] += bt.yields[prod] + (powered && bt.requiredPower > 0 ? bt.poweredYields[prod] : Fixed());
+                }
+                continue;
             }
             regional.push_back(bi);
             for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i] + (powered && bt.requiredPower > 0 ? bt.poweredYields[i] : Fixed());
@@ -773,7 +782,7 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
     if (!c) return out;
     for (size_t i = 0; i < rules_->units.size(); ++i) {
         ProductionItem it{ProductionKind::Unit, static_cast<TypeIndex>(i)};
-        if (!canProduce(*c, it) || !hasStrategicFor(c->owner, it.type)) continue;
+        if (!canProduce(*c, it) || !hasStrategicFor(c->owner, it.type, c)) continue;
         out.push_back(it);
         // The same unit trained as a Corps or an Army where the city can (05: Corps and Armies).
         for (uint8_t f = 1; f <= 2; ++f) {
@@ -877,7 +886,7 @@ CommandError Game::validateCity(const Command& c) const {
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
                 return why;
-            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
+            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
             if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder &&
                 std::none_of(city->wonders.begin(), city->wonders.end(), [&](const CityWonder& w) { return w.building == item.type; }) &&
                 !canPlaceWonder(*city, item.type, c.target))
@@ -889,7 +898,7 @@ CommandError Game::validateCity(const Command& c) const {
             if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
                 return why;
-            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
+            if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
             if (item.kind != ProductionKind::Unit &&
                 std::find(city->queue.begin(), city->queue.end(), item) != city->queue.end())
                 return CommandError::CannotBuild;
@@ -924,7 +933,7 @@ CommandError Game::validateCity(const Command& c) const {
             if (item.kind == ProductionKind::Unit) {
                 const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
                 if (city->population < u.minPopulation || !unitSpawnPlot(*city, item.type)) return CommandError::CannotBuild;
-                if (!hasStrategicFor(c.player, item.type)) return CommandError::NotEnoughResources;
+                if (!hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
             }
             if (state_.players[static_cast<size_t>(c.player)].gold < Fixed::fromInt(cost)) return CommandError::NotEnoughGold;
             return CommandError::Ok;
@@ -1008,6 +1017,7 @@ void Game::applyCity(const Command& c) {
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                     if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
+                    if (bought.id == "UNIT_APOSTLE" && cityGovernorHas(city, "GOVERNOR_PROMOTION_PATRON_SAINT")) grantApostlePromotion(u);  // Moksha (08)
                     if (bought.healCharges > 0) u.charges = bought.healCharges;  // a Guru's heals (06)
                     if (bought.spreadCharges > 0 && city.has(rules_->building("BUILDING_MOSQUE"))) ++u.charges;  // Mosque (03)
                     if (bought.spreadCharges > 0) {
@@ -1120,7 +1130,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
         if (city.population < u.minPopulation) return false;
         // Training waits while the strategic resource is short.
-        if (!hasStrategicFor(city.owner, item.type)) return false;
+        if (!hasStrategicFor(city.owner, item.type, &city)) return false;
         if (u.agent) {
             // Assassins become off-map agents, within the capacity (leader doc §6).
             if (u.spy ? spiesOf(city.owner) >= spyCapacity(city.owner) : agentsOf(city.owner) >= agentCapacity(city.owner)) return false;
@@ -1138,7 +1148,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         auto spot = unitSpawnPlot(city, item.type);
         if (!spot) return false;
         Player& p = state_.players[static_cast<size_t>(city.owner)];
-        if (u.strategicResource != kNone) p.stockpile[static_cast<size_t>(u.strategicResource)] -= u.strategicCost;
+        if (u.strategicResource != kNone) p.stockpile[static_cast<size_t>(u.strategicResource)] -= strategicCostIn(&city, item.type);
         if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
         ++p.unitsTrained[static_cast<size_t>(item.type)];
         // Provision: settlers trained under Magnus cost no population (08: Governors).

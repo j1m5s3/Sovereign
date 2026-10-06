@@ -276,7 +276,11 @@ public:
     // A finished district of the city that prevents droughts (or floods) on its plots [GS].
     bool cityPrevents(CityId city, bool floods) const;
     int luxuryAmenities(const City& city) const;
-    bool hasStrategicFor(PlayerId player, TypeIndex unitType) const;
+    bool hasStrategicFor(PlayerId player, TypeIndex unitType, const City* city = nullptr) const;
+    // Strategic resources to train the unit in the city (Black Marketeer: 80% less; 08).
+    int strategicCostIn(const City* city, TypeIndex unitType) const;
+    // Units of the city's owner in its territory, with the city's established governor holding the promotion.
+    bool territoryGovernorHas(Hex at, PlayerId owner, const char* promotionId) const;
     bool unitObsolete(PlayerId player, TypeIndex unitType) const;
     // Plots the player owns with this improvement (kNone: any), optionally only on a resource it works.
     int countImprovedPlots(PlayerId player, TypeIndex improvement, bool onResourceOnly) const;
@@ -302,7 +306,10 @@ public:
     int lowlandBand(Hex plot) const;
     bool inDrought(Hex plot) const;
     // Strikes a disaster at a plot (the world turn's roll picks both; tests call it directly).
-    void strikeDisaster(TypeIndex disaster, Hex center);
+    // `follow`: a storm moving on or a fire spreading, not a new disaster.
+    void strikeDisaster(TypeIndex disaster, Hex center, bool follow = false);
+    // Deforestation's effect on CO2 [GS] (09): -20% .. +50% by the share of the world's woods lost.
+    int deforestationPercent() const;
 
     // ---- grievances, favor and the World Congress (08 [GS])
     int grievances(PlayerId holder, PlayerId against) const;

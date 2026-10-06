@@ -599,6 +599,14 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(d.radius);
         w.i32(d.turnsLeft);
     }
+    w.u32(static_cast<uint32_t>(s.ongoing.size()));
+    for (const GameState::Ongoing& o : s.ongoing) {
+        w.i16(o.disaster);
+        writeHex(w, o.center);
+        w.i8(o.dir);
+        w.i32(o.turnsLeft);
+    }
+    w.i32(s.woodsAtStart);
     w.u32(static_cast<uint32_t>(s.emergencies.size()));
     for (const Emergency& e : s.emergencies) {
         w.u8(static_cast<uint8_t>(e.kind));
@@ -1111,6 +1119,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         d.radius = r.i32();
         d.turnsLeft = r.i32();
     }
+    uint32_t nongoing = r.u32();
+    if (!r.checkCount(nongoing, 64)) return false;
+    s.ongoing.resize(nongoing);
+    for (GameState::Ongoing& o : s.ongoing) {
+        o.disaster = r.i16();
+        o.center = readHex(r);
+        o.dir = r.i8();
+        o.turnsLeft = r.i32();
+    }
+    s.woodsAtStart = r.i32();
     uint32_t nemerg = r.u32();
     if (!r.checkCount(nemerg, 16)) return false;
     s.emergencies.resize(nemerg);

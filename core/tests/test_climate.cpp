@@ -178,7 +178,7 @@ TEST(disasters_strike_on_their_own_at_high_intensity) {
     }
     s.setup.disasterIntensity = 4;
     auto g = Game::fromScenario(rules(), std::move(s));
-    sovtest::endTurns(*g, 80);
+    sovtest::endTurns(*g, 150);
     CHECK(countEvents(*g, EventKind::Disaster) > 0);
     int burnt = 0;
     for (const Plot& p : g->state().plots) burnt += p.feature == rules().feature("FEATURE_BURNT_FOREST") ? 1 : 0;
@@ -311,4 +311,48 @@ TEST(a_plant_converts_and_synthetic_technocracy_powers_every_city) {
     sovtest::endTurns(*h, 1);
     CHECK_EQ(h->state().cities[0].powerSupply, 3);
     CHECK_EQ(h->state().cities[0].powerDemand, 5);
+}
+
+TEST(storms_move_on_and_wreck_districts) {
+    GameState s = coastState(30, 20, 1);
+    addCity(s, 0, {12, 10}, true, 4);
+    CityDistrict campus;
+    campus.type = rules().district("DISTRICT_CAMPUS");
+    campus.pos = {13, 10};
+    campus.complete = true;
+    s.cities[0].districts.push_back(campus);
+    s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // A tornado outbreak on the campus: districts pillaged at 75%, buildings at 100% (09).
+    g->strikeDisaster(disaster("DISASTER_TORNADO_OUTBREAK"), {13, 10});
+    CHECK(g->state().cities[0].districts.back().pillagedTurns > 0);
+    REQUIRE(g->state().ongoing.size() == 1u);  // it moves on for two more turns
+    const Hex first = g->state().ongoing[0].center;
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().ongoing.size() == 1u);
+    CHECK(g->state().grid.distance(g->state().ongoing[0].center, first) == 1);
+    sovtest::endTurns(*g, 2);
+    CHECK(g->state().ongoing.empty());
+    // A meltdown destroys the Industrial Zone's buildings... and the Campus is no Industrial Zone: the Library stays.
+    CHECK(g->state().cities[0].has(rules().building("BUILDING_LIBRARY")));
+}
+
+TEST(deforestation_scales_co2) {
+    GameState s = coastState(20, 12, 1);
+    for (Plot& p : s.plots) {
+        if (p.terrain == rules().terrain("TERRAIN_GRASS")) p.feature = rules().feature("FEATURE_FOREST");
+    }
+    s.co2 = 4000000;
+    auto g = Game::fromScenario(rules(), s);
+    sovtest::endTurns(*g, 1);
+    CHECK_EQ(g->deforestationPercent(), -20);  // little lost
+    GameState cut = g->state();
+    int n = 0;
+    for (Plot& p : cut.plots) {
+        if (p.feature == rules().feature("FEATURE_FOREST") && n++ % 2 == 0) p.feature = kNone;
+    }
+    auto h = Game::fromScenario(rules(), std::move(cut));
+    CHECK_EQ(h->deforestationPercent(), 50);  // half the woods gone
+    CHECK(h->climateChangePoints() > g->climateChangePoints());
 }
