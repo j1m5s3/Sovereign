@@ -709,6 +709,10 @@ enum class ReqType : uint8_t {
     CityHasBuilding,
     CityIsCapital,
     CityHasDistrict,     // a completed district of `ref`
+    CityHasGarrison,     // a military unit of the owner in the city center
+    CityHasGovernor,     // an established governor with at least `value` titles (0: any)
+    CityMinSpecialtyDistricts,  // at least `value` completed districts that count toward the population limit
+    CityOnCapitalContinent,     // on the same landmass as the owner's capital
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
@@ -744,7 +748,7 @@ struct Modifier {
     // UnitProductionPercent filters (empty/none/-1: any).
     std::string unitClass;
     TypeIndex unit = kNone;
-    int maxEra = -1;
+    int minEra = -1, maxEra = -1;
     TypeIndex ability = kNone;  // GrantAbility
     bool vsBarbarians = false;  // UnitStrength
     int per = 1;                // FounderYieldPerFollowers: followers per point

@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/modifiers.h"
 
 using namespace sov;
 using sovtest::capitalScenario;
@@ -419,5 +420,58 @@ TEST(dark_age_cards_do_what_their_text_says) {
         endTurns(*plain, 2);
         CHECK_EQ(g->state().players[0].grievances[0], 100);
         CHECK(plain->state().players[0].grievances[0] < 100);
+    }
+}
+
+TEST(generated_policy_cards_take_effect) {
+    const Rules& r = rules();
+    auto with = [](const char* card, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            s.players[0].policies[0] = policy(card);
+            edit(s);
+        });
+    };
+    auto none = [](GameState&) {};
+    // The generator turned the text into modifiers; hand-written cards keep theirs only.
+    size_t generated = 0;
+    for (const Modifier& m : r.modifiers) generated += m.source == "POLICY_FEUDAL_CONTRACT" ? 1 : 0;
+    CHECK(generated >= 3u);
+    for (const Modifier& m : r.modifiers) CHECK(m.source != "POLICY_AGOGE" || m.id.rfind("POLICY_", 0) != 0);
+    // Feudal Contract: +50% toward melee units of the Ancient to Renaissance eras, not later ones.
+    {
+        auto g = with("POLICY_FEUDAL_CONTRACT", none);
+        const City& c = g->state().cities[0];
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_MAN_AT_ARMS")), Fixed::fromInt(50));
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_INFANTRY")), Fixed());
+    }
+    // Retainers: +1 Amenity with a garrison.
+    {
+        auto bare = with("POLICY_RETAINERS", none);
+        auto guarded = with("POLICY_RETAINERS", [](GameState& s) { sovtest::addUnit(s, "UNIT_WARRIOR", 0, s.cities[0].pos); });
+        CHECK_EQ(guarded->cityReport(guarded->state().cities[0].id).amenities, bare->cityReport(bare->state().cities[0].id).amenities + 1);
+    }
+    // Insulae: +1 Housing with two specialty districts.
+    {
+        auto districts = [](GameState& s) {
+            for (const char* id : {"DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE"}) {
+                CityDistrict d;
+                d.type = rules().district(id);
+                d.pos = {static_cast<int>(s.cities[0].districts.size()) == 0 ? 7 : 5, 7};
+                d.complete = true;
+                s.cities[0].districts.push_back(d);
+            }
+        };
+        auto g = with("POLICY_INSULAE", districts);
+        auto plain = capitalWith([&](GameState& s) {
+            chiefdom(s);
+            districts(s);
+        });
+        CHECK_EQ(g->cityReport(g->state().cities[0].id).housing, plain->cityReport(plain->state().cities[0].id).housing + Fixed::fromInt(1));
+    }
+    // After Action Reports: +50% XP.
+    {
+        auto g = with("POLICY_AFTER_ACTION_REPORTS", none);
+        CHECK_EQ(sumUnitXpPercent(g->state(), r, g->state().players[0], "MELEE"), Fixed::fromInt(50));
     }
 }

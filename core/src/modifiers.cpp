@@ -23,6 +23,33 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         }
         case ReqType::CityHasBuilding: ok = c.city && (c.rules ? cityHasBuilding(*c.city, *c.rules, q.ref) : c.city->has(q.ref)); break;
         case ReqType::CityIsCapital: ok = c.city && c.city->capital; break;
+        case ReqType::CityHasGarrison: {
+            const Unit* g = c.city && c.state && c.rules ? c.state->unitAt(c.city->pos, UnitLayer::Military, *c.rules) : nullptr;
+            ok = g && g->owner == c.city->owner;
+            break;
+        }
+        case ReqType::CityHasGovernor:
+            ok = c.city && c.player && std::any_of(c.player->governors.begin(), c.player->governors.end(), [&](const Governor& g) {
+                     return g.city == c.city->id && g.establishTurns == 0 && static_cast<int>(g.promotions.size()) >= q.value;
+                 });
+            break;
+        case ReqType::CityMinSpecialtyDistricts: {
+            int n = 0;
+            if (c.city && c.rules) {
+                for (const CityDistrict& d : c.city->districts) n += d.complete && c.rules->districts[static_cast<size_t>(d.type)].needsPopulation ? 1 : 0;
+            }
+            ok = c.city && n >= q.value;
+            break;
+        }
+        case ReqType::CityOnCapitalContinent: {
+            ok = false;
+            if (c.city && c.state) {
+                for (const City& cap : c.state->cities) {
+                    if (cap.owner == c.city->owner && cap.capital) ok = c.state->plot(cap.pos).continent == c.state->plot(c.city->pos).continent;
+                }
+            }
+            break;
+        }
         case ReqType::CityHasDistrict:
             ok = c.city && std::any_of(c.city->districts.begin(), c.city->districts.end(), [&](const CityDistrict& d) { return d.complete && d.type == q.ref; });
             break;
@@ -161,6 +188,7 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
         if (!m.unitClass.empty() && m.unitClass != u.unitClass) return;
         if (m.unit != kNone && m.unit != unitType) return;
         if (m.maxEra >= 0 && u.era > m.maxEra) return;
+        if (m.minEra >= 0 && u.era < m.minEra) return;
         total += m.amount;
     });
     return total;

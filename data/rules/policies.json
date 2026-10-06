@@ -5,7 +5,18 @@
    "id": "POLICY_AFTER_ACTION_REPORTS",
    "name": "After Action Reports",
    "slot": "MILITARY",
-   "unlock": "CIVIC_RAPID_DEPLOYMENT"
+   "unlock": "CIVIC_RAPID_DEPLOYMENT",
+   "modifiers": [
+    {
+     "id": "POLICY_AFTER_ACTION_REPORTS_1",
+     "source": "POLICY_AFTER_ACTION_REPORTS",
+     "collection": "PLAYER",
+     "effect": "ADJUST_UNIT_XP_PERCENT",
+     "arguments": {
+      "amount": 50
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_AGOGE",
@@ -23,6 +34,10 @@
    "unlock": "CIVIC_DEFENSIVE_TACTICS",
    "obsoletedBy": [
     "POLICY_PUBLIC_WORKS"
+   ],
+   "untrackedEffects": [
+    "+6 wall (outer) defense in all your cities",
+    "+5 city ranged strikes per turn in all your cities"
    ]
   },
   {
@@ -32,6 +47,32 @@
    "unlock": "CIVIC_DIVINE_RIGHT",
    "obsoletedBy": [
     "POLICY_LIGHTNING_WARFARE"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_CHIVALRY_1",
+     "source": "POLICY_CHIVALRY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "HEAVY_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INDUSTRIAL"
+     }
+    },
+    {
+     "id": "POLICY_CHIVALRY_2",
+     "source": "POLICY_CHIVALRY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "LIGHT_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INDUSTRIAL"
+     }
+    }
    ]
   },
   {
@@ -65,13 +106,21 @@
    "id": "POLICY_DRILL_MANUALS",
    "name": "Drill Manuals",
    "slot": "MILITARY",
-   "unlock": "CIVIC_MERCANTILISM"
+   "unlock": "CIVIC_MERCANTILISM",
+   "untrackedEffects": [
+    "+1% Niter accumulation",
+    "+1% Coal accumulation"
+   ]
   },
   {
    "id": "POLICY_EQUESTRIAN_ORDERS",
    "name": "Equestrian Orders",
    "slot": "MILITARY",
-   "unlock": "CIVIC_MILITARY_TRAINING"
+   "unlock": "CIVIC_MILITARY_TRAINING",
+   "untrackedEffects": [
+    "+1% Horses accumulation",
+    "+1% Iron accumulation"
+   ]
   },
   {
    "id": "POLICY_FEUDAL_CONTRACT",
@@ -80,13 +129,67 @@
    "unlock": "CIVIC_FEUDALISM",
    "obsoletedBy": [
     "POLICY_GRANDE_ARM_E"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_FEUDAL_CONTRACT_1",
+     "source": "POLICY_FEUDAL_CONTRACT",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "ANTI_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_RENAISSANCE"
+     }
+    },
+    {
+     "id": "POLICY_FEUDAL_CONTRACT_2",
+     "source": "POLICY_FEUDAL_CONTRACT",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "MELEE",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_RENAISSANCE"
+     }
+    },
+    {
+     "id": "POLICY_FEUDAL_CONTRACT_3",
+     "source": "POLICY_FEUDAL_CONTRACT",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_ANCIENT"
+     }
+    },
+    {
+     "id": "POLICY_FEUDAL_CONTRACT_4",
+     "source": "POLICY_FEUDAL_CONTRACT",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_MEDIEVAL",
+      "maxEra": "ERA_RENAISSANCE"
+     }
+    }
    ]
   },
   {
    "id": "POLICY_FORCE_MODERNIZATION",
    "name": "Force Modernization",
    "slot": "MILITARY",
-   "unlock": "CIVIC_URBANIZATION"
+   "unlock": "CIVIC_URBANIZATION",
+   "untrackedEffects": [
+    "50% cheaper strategic resource cost to upgrade",
+    "50% cheaper unit upgrades"
+   ]
   },
   {
    "id": "POLICY_GRANDE_ARM_E",
@@ -95,31 +198,159 @@
    "unlock": "CIVIC_NATIONALISM",
    "obsoletedBy": [
     "POLICY_MILITARY_FIRST"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_GRANDE_ARM_E_1",
+     "source": "POLICY_GRANDE_ARM_E",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "ANTI_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_MODERN"
+     }
+    },
+    {
+     "id": "POLICY_GRANDE_ARM_E_2",
+     "source": "POLICY_GRANDE_ARM_E",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "MELEE",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_MODERN"
+     }
+    },
+    {
+     "id": "POLICY_GRANDE_ARM_E_3",
+     "source": "POLICY_GRANDE_ARM_E",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_ANCIENT"
+     }
+    },
+    {
+     "id": "POLICY_GRANDE_ARM_E_4",
+     "source": "POLICY_GRANDE_ARM_E",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_MEDIEVAL",
+      "maxEra": "ERA_MODERN"
+     }
+    }
    ]
   },
   {
    "id": "POLICY_INTEGRATED_SPACE_CELL",
    "name": "Integrated Space Cell",
    "slot": "MILITARY",
-   "unlock": "CIVIC_SPACE_RACE"
+   "unlock": "CIVIC_SPACE_RACE",
+   "untrackedEffects": [
+    "+15% Production toward space race projects in all your cities where city has Military Academy or city has Seaport"
+   ]
   },
   {
    "id": "POLICY_INTERNATIONAL_WATERS",
    "name": "International Waters",
    "slot": "MILITARY",
-   "unlock": "CIVIC_COLD_WAR"
+   "unlock": "CIVIC_COLD_WAR",
+   "modifiers": [
+    {
+     "id": "POLICY_INTERNATIONAL_WATERS_1",
+     "source": "POLICY_INTERNATIONAL_WATERS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_MELEE",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_INTERNATIONAL_WATERS_2",
+     "source": "POLICY_INTERNATIONAL_WATERS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_RAIDER",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_INTERNATIONAL_WATERS_3",
+     "source": "POLICY_INTERNATIONAL_WATERS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_RANGED",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_LEV_E_EN_MASSE",
    "name": "Levée en Masse",
    "slot": "MILITARY",
-   "unlock": "CIVIC_MOBILIZATION"
+   "unlock": "CIVIC_MOBILIZATION",
+   "modifiers": [
+    {
+     "id": "POLICY_LEV_E_EN_MASSE_1",
+     "source": "POLICY_LEV_E_EN_MASSE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_UNIT_MAINTENANCE_DISCOUNT",
+     "arguments": {
+      "amount": 2
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_LIGHTNING_WARFARE",
    "name": "Lightning Warfare",
    "slot": "MILITARY",
-   "unlock": "CIVIC_IDEOLOGY"
+   "unlock": "CIVIC_IDEOLOGY",
+   "modifiers": [
+    {
+     "id": "POLICY_LIGHTNING_WARFARE_1",
+     "source": "POLICY_LIGHTNING_WARFARE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "HEAVY_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_LIGHTNING_WARFARE_2",
+     "source": "POLICY_LIGHTNING_WARFARE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "LIGHT_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_LIMES",
@@ -128,19 +359,46 @@
    "unlock": "CIVIC_DEFENSIVE_TACTICS",
    "obsoletedBy": [
     "POLICY_LIGHTNING_WARFARE"
+   ],
+   "untrackedEffects": [
+    "+100% Production toward Medieval Walls in all your cities",
+    "+100% Production toward Ancient Walls in all your cities",
+    "+100% Production toward Renaissance Walls in all your cities",
+    "+100% Production toward Tsikhe in all your cities"
    ]
   },
   {
    "id": "POLICY_LIMITANEI",
    "name": "Limitanei",
    "slot": "MILITARY",
-   "unlock": "CIVIC_EARLY_EMPIRE"
+   "unlock": "CIVIC_EARLY_EMPIRE",
+   "modifiers": [
+    {
+     "id": "POLICY_LIMITANEI_1",
+     "source": "POLICY_LIMITANEI",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GARRISON"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_LOGISTICS",
    "name": "Logistics",
    "slot": "MILITARY",
-   "unlock": "CIVIC_MERCANTILISM"
+   "unlock": "CIVIC_MERCANTILISM",
+   "untrackedEffects": [
+    "+1 Movement when starting in friendly territory for your units"
+   ]
   },
   {
    "id": "POLICY_MANEUVER",
@@ -166,7 +424,57 @@
    "id": "POLICY_MILITARY_FIRST",
    "name": "Military First",
    "slot": "MILITARY",
-   "unlock": "CIVIC_RAPID_DEPLOYMENT"
+   "unlock": "CIVIC_RAPID_DEPLOYMENT",
+   "modifiers": [
+    {
+     "id": "POLICY_MILITARY_FIRST_1",
+     "source": "POLICY_MILITARY_FIRST",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "ANTI_CAVALRY",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_FIRST_2",
+     "source": "POLICY_MILITARY_FIRST",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "MELEE",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_FIRST_3",
+     "source": "POLICY_MILITARY_FIRST",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_ANCIENT"
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_FIRST_4",
+     "source": "POLICY_MILITARY_FIRST",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "RANGED",
+      "amount": 50,
+      "minEra": "ERA_MEDIEVAL",
+      "maxEra": "ERA_INFORMATION"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_MILITARY_RESEARCH",
@@ -175,19 +483,81 @@
    "unlock": "CIVIC_URBANIZATION",
    "obsoletedBy": [
     "POLICY_INTEGRATED_SPACE_CELL"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_MILITARY_RESEARCH_1",
+     "source": "POLICY_MILITARY_RESEARCH",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_RESEARCH_2",
+     "source": "POLICY_MILITARY_RESEARCH",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_SEAPORT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_RESEARCH_3",
+     "source": "POLICY_MILITARY_RESEARCH",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RENAISSANCE_WALLS"
+       }
+      ]
+     }
+    }
    ]
   },
   {
    "id": "POLICY_NATIONAL_IDENTITY",
    "name": "National Identity",
    "slot": "MILITARY",
-   "unlock": "CIVIC_NATIONALISM"
+   "unlock": "CIVIC_NATIONALISM",
+   "untrackedEffects": [
+    "50% of the normal strength loss from damage for your units"
+   ]
   },
   {
    "id": "POLICY_NATIVE_CONQUEST",
    "name": "Native Conquest",
    "slot": "MILITARY",
-   "unlock": "CIVIC_COLONIALISM"
+   "unlock": "CIVIC_COLONIALISM",
+   "untrackedEffects": [
+    "after killing a unit gain Gold = 50% of its Combat Strength in combat"
+   ]
   },
   {
    "id": "POLICY_PRESS_GANGS",
@@ -196,6 +566,44 @@
    "unlock": "CIVIC_EXPLORATION",
    "obsoletedBy": [
     "POLICY_INTERNATIONAL_WATERS"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_PRESS_GANGS_1",
+     "source": "POLICY_PRESS_GANGS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_MELEE",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INDUSTRIAL"
+     }
+    },
+    {
+     "id": "POLICY_PRESS_GANGS_2",
+     "source": "POLICY_PRESS_GANGS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_RAIDER",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INDUSTRIAL"
+     }
+    },
+    {
+     "id": "POLICY_PRESS_GANGS_3",
+     "source": "POLICY_PRESS_GANGS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_RANGED",
+      "amount": 100,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_INDUSTRIAL"
+     }
+    }
    ]
   },
   {
@@ -205,6 +613,9 @@
    "unlock": "CIVIC_MERCENARIES",
    "obsoletedBy": [
     "POLICY_FORCE_MODERNIZATION"
+   ],
+   "untrackedEffects": [
+    "50% cheaper unit upgrades"
    ]
   },
   {
@@ -220,13 +631,21 @@
    "unlock": "CIVIC_MILITARY_TRAINING",
    "obsoletedBy": [
     "POLICY_TOTAL_WAR"
+   ],
+   "untrackedEffects": [
+    "+50% pillage yield from improvements",
+    "+50% pillage yield from districts"
    ]
   },
   {
    "id": "POLICY_RESOURCE_MANAGEMENT",
    "name": "Resource Management",
    "slot": "MILITARY",
-   "unlock": "CIVIC_CONSERVATION"
+   "unlock": "CIVIC_CONSERVATION",
+   "untrackedEffects": [
+    "+1% Aluminum accumulation",
+    "+1% Oil accumulation"
+   ]
   },
   {
    "id": "POLICY_RETAINERS",
@@ -235,6 +654,24 @@
    "unlock": "CIVIC_CIVIL_SERVICE",
    "obsoletedBy": [
     "POLICY_PROPAGANDA"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_RETAINERS_1",
+     "source": "POLICY_RETAINERS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GARRISON"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -244,19 +681,63 @@
    "unlock": "CIVIC_MERCENARIES",
    "obsoletedBy": [
     "POLICY_FORCE_MODERNIZATION"
+   ],
+   "untrackedEffects": [
+    "50% cheaper strategic resource cost to upgrade"
    ]
   },
   {
    "id": "POLICY_SECOND_STRIKE_CAPABILITY",
    "name": "Second Strike Capability",
    "slot": "MILITARY",
-   "unlock": "CIVIC_COLD_WAR"
+   "unlock": "CIVIC_COLD_WAR",
+   "untrackedEffects": [
+    "+50% nuclear weapon maintenance"
+   ]
   },
   {
    "id": "POLICY_STRATEGIC_AIR_FORCE",
    "name": "Strategic Air Force",
    "slot": "MILITARY",
-   "unlock": "CIVIC_GLOBALIZATION"
+   "unlock": "CIVIC_GLOBALIZATION",
+   "modifiers": [
+    {
+     "id": "POLICY_STRATEGIC_AIR_FORCE_1",
+     "source": "POLICY_STRATEGIC_AIR_FORCE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "AIR_BOMBER",
+      "amount": 50,
+      "minEra": "ERA_INFORMATION",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_STRATEGIC_AIR_FORCE_2",
+     "source": "POLICY_STRATEGIC_AIR_FORCE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "AIR_FIGHTER",
+      "amount": 50,
+      "minEra": "ERA_INFORMATION",
+      "maxEra": "ERA_INFORMATION"
+     }
+    },
+    {
+     "id": "POLICY_STRATEGIC_AIR_FORCE_3",
+     "source": "POLICY_STRATEGIC_AIR_FORCE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unitClass": "NAVAL_CARRIER",
+      "amount": 50,
+      "minEra": "ERA_ATOMIC",
+      "maxEra": "ERA_INFORMATION"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_SURVEY",
@@ -272,25 +753,221 @@
    "name": "Third Alternative",
    "slot": "MILITARY",
    "unlock": "CIVIC_TOTALITARIANISM",
-   "government": "GOVERNMENT_FASCISM"
+   "government": "GOVERNMENT_FASCISM",
+   "modifiers": [
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_1",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_2",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RESEARCH_LAB"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_3",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NUCLEAR_POWER_PLANT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_4",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_5",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RESEARCH_LAB"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_6",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_COAL_POWER_PLANT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_7",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_OIL_POWER_PLANT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_8",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NUCLEAR_POWER_PLANT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_9",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_COAL_POWER_PLANT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_THIRD_ALTERNATIVE_10",
+     "source": "POLICY_THIRD_ALTERNATIVE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_OIL_POWER_PLANT"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_TOTAL_WAR",
    "name": "Total War",
    "slot": "MILITARY",
-   "unlock": "CIVIC_SCORCHED_EARTH"
+   "unlock": "CIVIC_SCORCHED_EARTH",
+   "untrackedEffects": [
+    "+50% pillage yield from districts",
+    "+50% pillage yield from improvements",
+    "+50% pillage/plunder yields for your units"
+   ]
   },
   {
    "id": "POLICY_VETERANCY",
    "name": "Veterancy",
    "slot": "MILITARY",
-   "unlock": "CIVIC_MILITARY_TRAINING"
+   "unlock": "CIVIC_MILITARY_TRAINING",
+   "untrackedEffects": [
+    "+30% Production toward Encampment in all your cities",
+    "+30% Production toward buildings in Encampment in all your cities",
+    "+30% Production toward Harbor in all your cities",
+    "+30% Production toward buildings in Harbor in all your cities"
+   ]
   },
   {
    "id": "POLICY_WARS_OF_RELIGION",
    "name": "Wars of Religion",
    "slot": "MILITARY",
-   "unlock": "CIVIC_REFORMED_CHURCH"
+   "unlock": "CIVIC_REFORMED_CHURCH",
+   "untrackedEffects": [
+    "+4 Combat Strength in combat where opponent is other religion for your units where NOT unit has tag Religious"
+   ]
   },
   {
    "id": "POLICY_AESTHETICS",
@@ -308,20 +985,63 @@
    "unlock": "CIVIC_FOREIGN_TRADE",
    "obsoletedBy": [
     "POLICY_TRIANGULAR_TRADE"
+   ],
+   "untrackedEffects": [
+    "trade routes +2 Gold"
    ]
   },
   {
    "id": "POLICY_CIVIL_PRESTIGE",
    "name": "Civil Prestige",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_CIVIL_SERVICE"
+   "unlock": "CIVIC_CIVIL_SERVICE",
+   "modifiers": [
+    {
+     "id": "POLICY_CIVIL_PRESTIGE_1",
+     "source": "POLICY_CIVIL_PRESTIGE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR",
+        "value": 2
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_CIVIL_PRESTIGE_2",
+     "source": "POLICY_CIVIL_PRESTIGE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR",
+        "value": 2
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_COLLECTIVIZATION",
    "name": "Collectivization",
    "slot": "ECONOMIC",
    "unlock": "CIVIC_CLASS_STRUGGLE",
-   "government": "GOVERNMENT_COMMUNISM"
+   "government": "GOVERNMENT_COMMUNISM",
+   "untrackedEffects": [
+    "domestic trade routes +4 Food",
+    "domestic trade routes +2 Production"
+   ]
   },
   {
    "id": "POLICY_COLONIZATION",
@@ -340,37 +1060,113 @@
    "obsoletedBy": [
     "POLICY_GOTHIC_ARCHITECTURE",
     "POLICY_SKYSCRAPERS"
+   ],
+   "untrackedEffects": [
+    "+15% Production toward wonders (Ancient Era to Classical Era) in all your cities"
    ]
   },
   {
    "id": "POLICY_ECOMMERCE",
    "name": "Ecommerce",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_GLOBALIZATION"
+   "unlock": "CIVIC_GLOBALIZATION",
+   "untrackedEffects": [
+    "trade routes +2 Production",
+    "trade routes +5 Gold"
+   ]
   },
   {
    "id": "POLICY_ECONOMIC_UNION",
    "name": "Economic Union",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_IDEOLOGY"
+   "unlock": "CIVIC_IDEOLOGY",
+   "modifiers": [
+    {
+     "id": "POLICY_ECONOMIC_UNION_1",
+     "source": "POLICY_ECONOMIC_UNION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_HARBOR",
+      "amount": 100
+     }
+    },
+    {
+     "id": "POLICY_ECONOMIC_UNION_2",
+     "source": "POLICY_ECONOMIC_UNION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_COMMERCIAL_HUB",
+      "amount": 100
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_EXPROPRIATION",
    "name": "Expropriation",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_SCORCHED_EARTH"
+   "unlock": "CIVIC_SCORCHED_EARTH",
+   "modifiers": [
+    {
+     "id": "POLICY_EXPROPRIATION_1",
+     "source": "POLICY_EXPROPRIATION",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unit": "UNIT_SETTLER",
+      "amount": 50
+     }
+    },
+    {
+     "id": "POLICY_EXPROPRIATION_2",
+     "source": "POLICY_EXPROPRIATION",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_PLOT_PURCHASE_COST_PERCENT",
+     "arguments": {
+      "amount": -20
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_FIVE_YEAR_PLAN",
    "name": "Five-Year Plan",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_IDEOLOGY"
+   "unlock": "CIVIC_IDEOLOGY",
+   "modifiers": [
+    {
+     "id": "POLICY_FIVE_YEAR_PLAN_1",
+     "source": "POLICY_FIVE_YEAR_PLAN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_CAMPUS",
+      "amount": 100
+     }
+    },
+    {
+     "id": "POLICY_FIVE_YEAR_PLAN_2",
+     "source": "POLICY_FIVE_YEAR_PLAN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_INDUSTRIAL_ZONE",
+      "amount": 100
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_FREE_MARKET",
    "name": "Free Market",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+   "unlock": "CIVIC_THE_ENLIGHTENMENT",
+   "untrackedEffects": [
+    "+50% Gold from buildings in Commercial Hub in all your cities where city has Commercial Hub with 4+ Gold adjacency",
+    "+50% Gold from buildings in Commercial Hub in all your cities where city population 15+"
+   ]
   },
   {
    "id": "POLICY_GOD_KING",
@@ -388,19 +1184,33 @@
    "unlock": "CIVIC_DIVINE_RIGHT",
    "obsoletedBy": [
     "POLICY_SKYSCRAPERS"
+   ],
+   "untrackedEffects": [
+    "+15% Production toward wonders (Ancient Era to Renaissance Era) in all your cities"
    ]
   },
   {
    "id": "POLICY_GRAND_OPERA",
    "name": "Grand Opera",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_OPERA_AND_BALLET"
+   "unlock": "CIVIC_OPERA_AND_BALLET",
+   "untrackedEffects": [
+    "+50% Culture from buildings in Theater Square in all your cities where city has Theater Square with 4+ Culture adjacency",
+    "+50% Culture from buildings in Theater Square in all your cities where city population 15+"
+   ]
   },
   {
    "id": "POLICY_HERITAGE_TOURISM",
    "name": "Heritage Tourism",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_CULTURAL_HERITAGE"
+   "unlock": "CIVIC_CULTURAL_HERITAGE",
+   "untrackedEffects": [
+    "Tourism from Sculpture scaled 200% in all your cities",
+    "Tourism from Portrait scaled 200% in all your cities",
+    "Tourism from Landscape scaled 200% in all your cities",
+    "Tourism from Religious scaled 200% in all your cities",
+    "Tourism from Artifact scaled 200% in all your cities"
+   ]
   },
   {
    "id": "POLICY_ILKUM",
@@ -418,6 +1228,25 @@
    "unlock": "CIVIC_GAMES_AND_RECREATION",
    "obsoletedBy": [
     "POLICY_MEDINA_QUARTER"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_INSULAE_1",
+     "source": "POLICY_INSULAE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 2
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -433,13 +1262,38 @@
    "id": "POLICY_LIBERALISM",
    "name": "Liberalism",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+   "unlock": "CIVIC_THE_ENLIGHTENMENT",
+   "modifiers": [
+    {
+     "id": "POLICY_LIBERALISM_1",
+     "source": "POLICY_LIBERALISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 2
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_MARKET_ECONOMY",
    "name": "Market Economy",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_CAPITALISM"
+   "unlock": "CIVIC_CAPITALISM",
+   "untrackedEffects": [
+    "international trade routes +2 Culture",
+    "international trade routes +2 Science",
+    "international routes +1 Gold per luxury at destination in all your cities",
+    "international routes +1 Gold per strategic at destination in all your cities"
+   ]
   },
   {
    "id": "POLICY_MEDINA_QUARTER",
@@ -448,6 +1302,25 @@
    "unlock": "CIVIC_MEDIEVAL_FAIRES",
    "obsoletedBy": [
     "POLICY_NEW_DEAL"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_MEDINA_QUARTER_1",
+     "source": "POLICY_MEDINA_QUARTER",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 3
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -466,6 +1339,18 @@
    "unlock": "CIVIC_NAVAL_TRADITION",
    "obsoletedBy": [
     "POLICY_ECONOMIC_UNION"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_NAVAL_INFRASTRUCTURE_1",
+     "source": "POLICY_NAVAL_INFRASTRUCTURE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_HARBOR",
+      "amount": 100
+     }
+    }
    ]
   },
   {
@@ -473,43 +1358,129 @@
    "name": "New Deal",
    "slot": "ECONOMIC",
    "unlock": "CIVIC_SUFFRAGE",
-   "government": "GOVERNMENT_DEMOCRACY"
+   "government": "GOVERNMENT_DEMOCRACY",
+   "modifiers": [
+    {
+     "id": "POLICY_NEW_DEAL_1",
+     "source": "POLICY_NEW_DEAL",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 3
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_NEW_DEAL_2",
+     "source": "POLICY_NEW_DEAL",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 3
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_ONLINE_COMMUNITIES",
    "name": "Online Communities",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_SOCIAL_MEDIA"
+   "unlock": "CIVIC_SOCIAL_MEDIA",
+   "untrackedEffects": [
+    "+50% Tourism to civs with your trade routes"
+   ]
   },
   {
    "id": "POLICY_PUBLIC_TRANSPORT",
    "name": "Public Transport",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_URBANIZATION"
+   "unlock": "CIVIC_URBANIZATION",
+   "untrackedEffects": [
+    "building Neighborhood grants 100 Gold",
+    "+1 Gold from the district for your districts where district is Neighborhood",
+    "+3 Food from the district for your districts where appeal at least 2 and district is Neighborhood",
+    "+1 Production from the district for your districts where appeal at least 2 and district is Neighborhood",
+    "+1 Food from the district for your districts where appeal at least 4 and district is Neighborhood",
+    "+1 Production from the district for your districts where appeal at least 4 and district is Neighborhood"
+   ]
   },
   {
    "id": "POLICY_PUBLIC_WORKS",
    "name": "Public Works",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_CIVIL_ENGINEERING"
+   "unlock": "CIVIC_CIVIL_ENGINEERING",
+   "modifiers": [
+    {
+     "id": "POLICY_PUBLIC_WORKS_1",
+     "source": "POLICY_PUBLIC_WORKS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unit": "UNIT_BUILDER",
+      "amount": 30
+     }
+    },
+    {
+     "id": "POLICY_PUBLIC_WORKS_2",
+     "source": "POLICY_PUBLIC_WORKS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_BUILDER_CHARGES",
+     "arguments": {
+      "amount": 2
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_RATIONALISM",
    "name": "Rationalism",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_THE_ENLIGHTENMENT"
+   "unlock": "CIVIC_THE_ENLIGHTENMENT",
+   "untrackedEffects": [
+    "+50% Science from buildings in Campus in all your cities where city has Campus with 4+ Science adjacency",
+    "+50% Science from buildings in Campus in all your cities where city population 15+"
+   ]
   },
   {
    "id": "POLICY_RELIGIOUS_ORDERS",
    "name": "Religious Orders",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_REFORMED_CHURCH"
+   "unlock": "CIVIC_REFORMED_CHURCH",
+   "modifiers": [
+    {
+     "id": "POLICY_RELIGIOUS_ORDERS_1",
+     "source": "POLICY_RELIGIOUS_ORDERS",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_RELIGIOUS_ORDERS_BUFF"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_SATELLITE_BROADCASTS",
    "name": "Satellite Broadcasts",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_SPACE_RACE"
+   "unlock": "CIVIC_SPACE_RACE",
+   "untrackedEffects": [
+    "Tourism from Music scaled 300% in all your cities"
+   ]
   },
   {
    "id": "POLICY_SCRIPTURE",
@@ -524,25 +1495,72 @@
    "unlock": "CIVIC_FEUDALISM",
    "obsoletedBy": [
     "POLICY_PUBLIC_WORKS"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_SERFDOM_1",
+     "source": "POLICY_SERFDOM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_BUILDER_CHARGES",
+     "arguments": {
+      "amount": 2
+     }
+    }
    ]
   },
   {
    "id": "POLICY_SIMULTANEUM",
    "name": "Simultaneum",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_REFORMED_CHURCH"
+   "unlock": "CIVIC_REFORMED_CHURCH",
+   "untrackedEffects": [
+    "+50% Faith from buildings in Holy Site in all your cities where city has Holy Site with 4+ Faith adjacency",
+    "+50% Faith from buildings in Holy Site in all your cities where city population 15+"
+   ]
   },
   {
    "id": "POLICY_SKYSCRAPERS",
    "name": "Skyscrapers",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_CIVIL_ENGINEERING"
+   "unlock": "CIVIC_CIVIL_ENGINEERING",
+   "untrackedEffects": [
+    "+15% Production toward wonders (Ancient Era to Future Era) in all your cities"
+   ]
   },
   {
    "id": "POLICY_SPORTS_MEDIA",
    "name": "Sports Media",
    "slot": "ECONOMIC",
-   "unlock": "CIVIC_PROFESSIONAL_SPORTS"
+   "unlock": "CIVIC_PROFESSIONAL_SPORTS",
+   "modifiers": [
+    {
+     "id": "POLICY_SPORTS_MEDIA_1",
+     "source": "POLICY_SPORTS_MEDIA",
+     "collection": "PLAYER",
+     "effect": "ADJUST_DISTRICT_ADJACENCY_PERCENT",
+     "arguments": {
+      "district": "DISTRICT_THEATER_SQUARE",
+      "amount": 100
+     }
+    },
+    {
+     "id": "POLICY_SPORTS_MEDIA_2",
+     "source": "POLICY_SPORTS_MEDIA",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_STADIUM"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_TOWN_CHARTERS",
@@ -560,6 +1578,10 @@
    "unlock": "CIVIC_MERCENARIES",
    "obsoletedBy": [
     "POLICY_MARKET_ECONOMY"
+   ],
+   "untrackedEffects": [
+    "international trade routes +1 Culture",
+    "international trade routes +1 Science"
    ]
   },
   {
@@ -569,6 +1591,10 @@
    "unlock": "CIVIC_MERCANTILISM",
    "obsoletedBy": [
     "POLICY_ECOMMERCE"
+   ],
+   "untrackedEffects": [
+    "trade routes +4 Gold",
+    "trade routes +1 Faith"
    ]
   },
   {
@@ -587,85 +1613,228 @@
    "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
    "obsoletedBy": [
     "POLICY_GUNBOAT_DIPLOMACY"
+   ],
+   "untrackedEffects": [
+    "+2 Influence points per turn"
    ]
   },
   {
    "id": "POLICY_COLLECTIVE_ACTIVISM",
    "name": "Collective Activism",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_SOCIAL_MEDIA"
+   "unlock": "CIVIC_SOCIAL_MEDIA",
+   "untrackedEffects": [
+    "+5% Culture per city-state you are suzerain of"
+   ]
   },
   {
    "id": "POLICY_COLONIAL_OFFICES",
    "name": "Colonial Offices",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_EXPLORATION"
+   "unlock": "CIVIC_EXPLORATION",
+   "modifiers": [
+    {
+     "id": "POLICY_COLONIAL_OFFICES_1",
+     "source": "POLICY_COLONIAL_OFFICES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GROWTH_PERCENT",
+     "arguments": {
+      "amount": 15
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_ON_CAPITAL_CONTINENT",
+        "negate": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_COLONIAL_OFFICES_2",
+     "source": "POLICY_COLONIAL_OFFICES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 3
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_ON_CAPITAL_CONTINENT",
+        "negate": true
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_COLONIAL_TAXES",
    "name": "Colonial Taxes",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_COLONIALISM"
+   "unlock": "CIVIC_COLONIALISM",
+   "modifiers": [
+    {
+     "id": "POLICY_COLONIAL_TAXES_1",
+     "source": "POLICY_COLONIAL_TAXES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 25
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_ON_CAPITAL_CONTINENT",
+        "negate": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_COLONIAL_TAXES_2",
+     "source": "POLICY_COLONIAL_TAXES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 10
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_ON_CAPITAL_CONTINENT",
+        "negate": true
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_COMMUNICATIONS_OFFICE",
    "name": "Communications Office",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_SOCIAL_MEDIA"
+   "unlock": "CIVIC_SOCIAL_MEDIA",
+   "untrackedEffects": [
+    "+1 Loyalty per governor title for your governors"
+   ]
   },
   {
    "id": "POLICY_CONTAINMENT",
    "name": "Containment",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_COLD_WAR"
+   "unlock": "CIVIC_COLD_WAR",
+   "untrackedEffects": [
+    "+1 extra Envoy when a rival is suzerain"
+   ]
   },
   {
    "id": "POLICY_CRYPTOGRAPHY",
    "name": "Cryptography",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_COLD_WAR"
+   "unlock": "CIVIC_COLD_WAR",
+   "untrackedEffects": [
+    "+1 spy level (offense)",
+    "+2 spy level"
+   ]
   },
   {
    "id": "POLICY_DIPLOMATIC_LEAGUE",
    "name": "Diplomatic League",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_POLITICAL_PHILOSOPHY"
+   "unlock": "CIVIC_POLITICAL_PHILOSOPHY",
+   "untrackedEffects": [
+    "first Envoy sent to a city-state counts +1 extra"
+   ]
   },
   {
    "id": "POLICY_GUNBOAT_DIPLOMACY",
    "name": "Gunboat Diplomacy",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_IDEOLOGY"
+   "unlock": "CIVIC_IDEOLOGY",
+   "untrackedEffects": [
+    "open borders with city-states you sent an Envoy to for all players where player is minor",
+    "+4 Influence points per turn"
+   ]
   },
   {
    "id": "POLICY_INTERNATIONAL_SPACE_AGENCY",
    "name": "International Space Agency",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_GLOBALIZATION"
+   "unlock": "CIVIC_GLOBALIZATION",
+   "untrackedEffects": [
+    "+5% Science per city-state you are suzerain of"
+   ]
   },
   {
    "id": "POLICY_MACHIAVELLIANISM",
    "name": "Machiavellianism",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_DIPLOMATIC_SERVICE"
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE",
+   "modifiers": [
+    {
+     "id": "POLICY_MACHIAVELLIANISM_1",
+     "source": "POLICY_MACHIAVELLIANISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unit": "UNIT_SPY",
+      "amount": 50
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "offensive spy ops 25% faster for your units where unit is Spy"
+   ]
   },
   {
    "id": "POLICY_MERCHANT_CONFEDERATION",
    "name": "Merchant Confederation",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_MEDIEVAL_FAIRES"
+   "unlock": "CIVIC_MEDIEVAL_FAIRES",
+   "untrackedEffects": [
+    "+1 Gold per Envoy sent"
+   ]
   },
   {
    "id": "POLICY_MUSIC_CENSORSHIP",
    "name": "Music Censorship",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_SPACE_RACE"
+   "unlock": "CIVIC_SPACE_RACE",
+   "modifiers": [
+    {
+     "id": "POLICY_MUSIC_CENSORSHIP_1",
+     "source": "POLICY_MUSIC_CENSORSHIP",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": -1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_POPULATION",
+        "value": 10
+       }
+      ]
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "Rock Band cannot enter your territory"
+   ]
   },
   {
    "id": "POLICY_NUCLEAR_ESPIONAGE",
    "name": "Nuclear Espionage",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_NUCLEAR_PROGRAM"
+   "unlock": "CIVIC_NUCLEAR_PROGRAM",
+   "untrackedEffects": [
+    "+1 tech boosts per Steal Tech Boost mission"
+   ]
   },
   {
    "id": "POLICY_PRAETORIUM",
@@ -674,19 +1843,55 @@
    "unlock": "CIVIC_RECORDED_HISTORY",
    "obsoletedBy": [
     "POLICY_COMMUNICATIONS_OFFICE"
+   ],
+   "modifiers": [
+    {
+     "id": "POLICY_PRAETORIUM_1",
+     "source": "POLICY_PRAETORIUM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_LOYALTY",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    }
    ]
   },
   {
    "id": "POLICY_RAJ",
    "name": "Raj",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_COLONIALISM"
+   "unlock": "CIVIC_COLONIALISM",
+   "untrackedEffects": [
+    "+2 Gold per city-state you are suzerain of",
+    "+2 Faith per city-state you are suzerain of",
+    "+2 Science per city-state you are suzerain of",
+    "+2 Culture per city-state you are suzerain of",
+    "routes to city-states +2 Gold"
+   ]
   },
   {
    "id": "POLICY_WISSELBANKEN",
    "name": "Wisselbanken",
    "slot": "DIPLOMATIC",
-   "unlock": "CIVIC_DIPLOMATIC_SERVICE"
+   "unlock": "CIVIC_DIPLOMATIC_SERVICE",
+   "untrackedEffects": [
+    "routes to allies +2 Food to destination",
+    "routes to city-states you are suzerain of +2 Food to destination",
+    "routes to allies +2 Production to destination",
+    "routes to allies +2 Food to origin",
+    "routes to allies +2 Production to origin",
+    "routes to city-states you are suzerain of +2 Production to destination",
+    "routes to city-states you are suzerain of +2 Food to origin",
+    "routes to city-states you are suzerain of +2 Production to origin",
+    "+1 alliance points per turn"
+   ]
   },
   {
    "id": "POLICY_AUTOMATED_WORKFORCE",
@@ -750,7 +1955,18 @@
    "name": "Their Finest Hour",
    "slot": "WILDCARD",
    "unlock": "CIVIC_SUFFRAGE",
-   "government": "GOVERNMENT_DEMOCRACY"
+   "government": "GOVERNMENT_DEMOCRACY",
+   "modifiers": [
+    {
+     "id": "POLICY_THEIR_FINEST_HOUR_1",
+     "source": "POLICY_THEIR_FINEST_HOUR",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_FINEST_HOUR_FRIENDLY_TERRITORY"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_FLOWER_POWER",
@@ -760,109 +1976,1155 @@
    "eras": [
     "ERA_ATOMIC",
     "ERA_FUTURE"
+   ],
+   "untrackedEffects": [
+    "100% cheaper to purchase Rock Band in all your cities",
+    "-100% cheaper to purchase All units in all your cities",
+    "-100% Production toward all units in all your cities",
+    "+50% concert Tourism when at peace for your units where unit is Rock Band"
    ]
   },
   {
    "id": "POLICY_SPACE_TOURISM",
    "name": "Space Tourism",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_EXODUS_IMPERATIVE"
+   "unlock": "CIVIC_EXODUS_IMPERATIVE",
+   "untrackedEffects": [
+    "Tourism reduced by 20%"
+   ]
   },
   {
    "id": "POLICY_RABBLEROUSING",
    "name": "Rabblerousing",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_INFORMATION_WARFARE"
+   "unlock": "CIVIC_INFORMATION_WARFARE",
+   "untrackedEffects": [
+    "50% Favor refund when your resolution passes",
+    "+1 Diplomatic Favor per turn"
+   ]
   },
   {
    "id": "POLICY_GLOBAL_COALITION",
    "name": "Global Coalition",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_SMART_POWER_DOCTRINE"
+   "unlock": "CIVIC_SMART_POWER_DOCTRINE",
+   "modifiers": [
+    {
+     "id": "POLICY_GLOBAL_COALITION_1",
+     "source": "POLICY_GLOBAL_COALITION",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_GLOBAL_COALITION_FRIENDLY_TERRITORY"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_NON_STATE_ACTORS",
    "name": "Non-State Actors",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_CULTURAL_HEGEMONY"
+   "unlock": "CIVIC_CULTURAL_HEGEMONY",
+   "untrackedEffects": [
+    "Spy may choose any promotion"
+   ]
   },
   {
    "id": "POLICY_HALLYU",
    "name": "Hallyu",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_CULTURAL_HEGEMONY"
+   "unlock": "CIVIC_CULTURAL_HEGEMONY",
+   "untrackedEffects": [
+    "Rock Band may choose any promotion"
+   ]
   },
   {
    "id": "POLICY_DIPLOMATIC_CAPITAL",
    "name": "Diplomatic Capital",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_SMART_POWER_DOCTRINE"
+   "unlock": "CIVIC_SMART_POWER_DOCTRINE",
+   "untrackedEffects": [
+    "+4 Diplomatic Favor per turn"
+   ]
   },
   {
    "id": "POLICY_INTEGRATED_ATTACK_LOGISTICS",
    "name": "Integrated Attack Logistics",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_INFORMATION_WARFARE"
+   "unlock": "CIVIC_INFORMATION_WARFARE",
+   "modifiers": [
+    {
+     "id": "POLICY_INTEGRATED_ATTACK_LOGISTICS_1",
+     "source": "POLICY_INTEGRATED_ATTACK_LOGISTICS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "unit": "UNIT_GIANT_DEATH_ROBOT",
+      "amount": 50
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+1 Movement when starting in enemy territory for your units"
+   ]
   },
   {
    "id": "POLICY_AEROSPACE_CONTRACTORS",
    "name": "Aerospace Contractors",
    "slot": "WILDCARD",
-   "unlock": "CIVIC_EXODUS_IMPERATIVE"
+   "unlock": "CIVIC_EXODUS_IMPERATIVE",
+   "untrackedEffects": [
+    "+3 Power (Free Power Source Misc) in all your cities where city has Spaceport",
+    "+3 Aluminum per turn in all your cities where city has Spaceport"
+   ]
   },
   {
    "id": "POLICY_AUTOCRATIC_LEGACY",
    "name": "Autocratic Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_1",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_2",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_3",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_4",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_5",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_6",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_7",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_8",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_9",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_10",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_11",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_12",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_13",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_14",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_15",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_16",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_17",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_18",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_19",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_20",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_21",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_22",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_23",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_24",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_25",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_26",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_27",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_28",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_29",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_30",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_31",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_32",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_33",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_34",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_35",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_AUTOCRATIC_LEGACY_36",
+     "source": "POLICY_AUTOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_REPUBLICAN_LEGACY",
    "name": "Republican Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_REPUBLICAN_LEGACY_1",
+     "source": "POLICY_REPUBLICAN_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_REPUBLICAN_LEGACY_2",
+     "source": "POLICY_REPUBLICAN_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 1
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_COMMUNIST_LEGACY",
    "name": "Communist Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_COMMUNIST_LEGACY_1",
+     "source": "POLICY_COMMUNIST_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PER_POP",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 0.6
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_DEMOCRATIC_LEGACY",
    "name": "Democratic Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "untrackedEffects": [
+    "routes to allies +4 Food to destination",
+    "routes to allies +4 Production to destination",
+    "routes to allies +4 Food to origin",
+    "routes to allies +4 Production to origin",
+    "routes to city-states you are suzerain of +4 Food to destination",
+    "routes to city-states you are suzerain of +4 Production to destination",
+    "routes to city-states you are suzerain of +4 Food to origin",
+    "routes to city-states you are suzerain of +4 Production to origin",
+    "+1 alliance points per turn"
+   ]
   },
   {
    "id": "POLICY_FASCIST_LEGACY",
    "name": "Fascist Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_FASCIST_LEGACY_1",
+     "source": "POLICY_FASCIST_LEGACY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_FASCISM_LEGACY_ATTACK_BUFF"
+     }
+    },
+    {
+     "id": "POLICY_FASCIST_LEGACY_2",
+     "source": "POLICY_FASCIST_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_WAR_WEARINESS_PERCENT",
+     "arguments": {
+      "amount": 20
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_MERCANTILE_LEGACY",
    "name": "Mercantile Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_MERCANTILE_LEGACY_1",
+     "source": "POLICY_MERCANTILE_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 10
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_MONARCHIC_LEGACY",
    "name": "Monarchic Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_MONARCHIC_LEGACY_1",
+     "source": "POLICY_MONARCHIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCIENT_WALLS"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MONARCHIC_LEGACY_2",
+     "source": "POLICY_MONARCHIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MEDIEVAL_WALLS"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MONARCHIC_LEGACY_3",
+     "source": "POLICY_MONARCHIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RENAISSANCE_WALLS"
+       }
+      ]
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+2 Diplomatic Favor per turn in all your cities where city has Renaissance Walls"
+   ]
   },
   {
    "id": "POLICY_OLIGARCHIC_LEGACY",
    "name": "Oligarchic Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_OLIGARCHIC_LEGACY_1",
+     "source": "POLICY_OLIGARCHIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_OLIGARCHY_LEGACY_MELEE_BUFF"
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_THEOCRATIC_LEGACY",
    "name": "Theocratic Legacy",
    "slot": "WILDCARD",
-   "legacy": true
+   "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_THEOCRATIC_LEGACY_1",
+     "source": "POLICY_THEOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_THEOCRACY_LEGACY_RELIGIOUS_BUFF"
+     }
+    },
+    {
+     "id": "POLICY_THEOCRATIC_LEGACY_2",
+     "source": "POLICY_THEOCRATIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PER_POP",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 0.5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "POLICY_INQUISITION",
@@ -882,6 +3144,12 @@
    "eras": [
     "ERA_CLASSICAL",
     "ERA_INDUSTRIAL"
+   ],
+   "untrackedEffects": [
+    "domestic trade routes +2 Food",
+    "domestic trade routes +2 Production",
+    "cannot found cities",
+    "cannot build Settler"
    ]
   },
   {
@@ -929,6 +3197,13 @@
    "eras": [
     "ERA_ATOMIC",
     "ERA_FUTURE"
+   ],
+   "untrackedEffects": [
+    "+50% Production toward Manhattan Project in all your cities",
+    "+50% Production toward Operation Ivy in all your cities",
+    "+50% Production toward Build Nuclear Device in all your cities",
+    "+50% Production toward Build Thermonuclear Device in all your cities",
+    "cannot earn Envoys"
    ]
   },
   {
@@ -945,7 +3220,11 @@
    "id": "POLICY_FRESCOES",
    "name": "Frescoes",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_HUMANISM"
+   "unlock": "CIVIC_HUMANISM",
+   "untrackedEffects": [
+    "+2 Great Artist points per turn",
+    "+2 Great Artist points per turn in all your cities where city has Art Museum"
+   ]
   },
   {
    "id": "POLICY_INSPIRATION",
@@ -954,43 +3233,83 @@
    "unlock": "CIVIC_MYSTICISM",
    "obsoletedBy": [
     "POLICY_SCIENCE_FOUNDATIONS"
+   ],
+   "untrackedEffects": [
+    "+2 Great Scientist points per turn"
    ]
   },
   {
    "id": "POLICY_INVENTION",
    "name": "Invention",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_HUMANISM"
+   "unlock": "CIVIC_HUMANISM",
+   "untrackedEffects": [
+    "+2 Great Engineer points per turn in all your cities where city has Workshop",
+    "+4 Great Engineer points per turn"
+   ]
   },
   {
    "id": "POLICY_LAISSEZ_FAIRE",
    "name": "Laissez-Faire",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_CAPITALISM"
+   "unlock": "CIVIC_CAPITALISM",
+   "untrackedEffects": [
+    "+2 Great Merchant points per turn in all your cities where city has Bank",
+    "+4 Great Merchant points per turn in all your cities where city has Stock Exchange",
+    "+2 Great Admiral points per turn in all your cities where city has Shipyard",
+    "+4 Great Admiral points per turn in all your cities where city has Seaport"
+   ]
   },
   {
    "id": "POLICY_LITERARY_TRADITION",
    "name": "Literary Tradition",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_DRAMA_AND_POETRY"
+   "unlock": "CIVIC_DRAMA_AND_POETRY",
+   "untrackedEffects": [
+    "+2 Great Writer points per turn"
+   ]
   },
   {
    "id": "POLICY_MILITARY_ORGANIZATION",
    "name": "Military Organization",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_SCORCHED_EARTH"
+   "unlock": "CIVIC_SCORCHED_EARTH",
+   "modifiers": [
+    {
+     "id": "POLICY_MILITARY_ORGANIZATION_1",
+     "source": "POLICY_MILITARY_ORGANIZATION",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_MILITARY_ORGANIZATION"
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+2 Great General points per turn in all your cities where city has Armory",
+    "+4 Great General points per turn in all your cities where city has Military Academy"
+   ]
   },
   {
    "id": "POLICY_NAVIGATION",
    "name": "Navigation",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_NAVAL_TRADITION"
+   "unlock": "CIVIC_NAVAL_TRADITION",
+   "untrackedEffects": [
+    "+2 Great Admiral points per turn"
+   ]
   },
   {
    "id": "POLICY_SCIENCE_FOUNDATIONS",
    "name": "Science Foundations",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_NUCLEAR_PROGRAM"
+   "unlock": "CIVIC_NUCLEAR_PROGRAM",
+   "untrackedEffects": [
+    "+2 Great Scientist points per turn in all your cities where city has University",
+    "+4 Great Scientist points per turn in all your cities where city has Research Lab",
+    "+2 Great Engineer points per turn in all your cities where city has Factory",
+    "+4 Great Engineer points per turn in all your cities where city has Nuclear Power Plant or city has Coal Power Plant or city has Oil Power Plant"
+   ]
   },
   {
    "id": "POLICY_REVELATION",
@@ -999,6 +3318,9 @@
    "unlock": "CIVIC_MYSTICISM",
    "obsoletedBy": [
     "POLICY_INVENTION"
+   ],
+   "untrackedEffects": [
+    "+2 Great Prophet points per turn"
    ]
   },
   {
@@ -1008,13 +3330,20 @@
    "unlock": "CIVIC_MILITARY_TRADITION",
    "obsoletedBy": [
     "POLICY_MILITARY_ORGANIZATION"
+   ],
+   "untrackedEffects": [
+    "+2 Great General points per turn"
    ]
   },
   {
    "id": "POLICY_SYMPHONIES",
    "name": "Symphonies",
    "slot": "GREAT_PERSON",
-   "unlock": "CIVIC_OPERA_AND_BALLET"
+   "unlock": "CIVIC_OPERA_AND_BALLET",
+   "untrackedEffects": [
+    "+4 Great Musician points per turn",
+    "+4 Great Musician points per turn in all your cities where city has Broadcast Center"
+   ]
   },
   {
    "id": "POLICY_TRAVELING_MERCHANTS",
@@ -1023,6 +3352,9 @@
    "unlock": "CIVIC_GUILDS",
    "obsoletedBy": [
     "POLICY_LAISSEZ_FAIRE"
+   ],
+   "untrackedEffects": [
+    "+2 Great Merchant points per turn"
    ]
   }
  ]
