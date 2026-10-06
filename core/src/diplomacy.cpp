@@ -950,6 +950,7 @@ int Game::accessLevel(PlayerId viewer, PlayerId target) const {
     }) ? 1 : 0;
     level += p.relations[at(target)].delegation > 0 ? 1 : 0;
     level += alliance(viewer, target) != AllianceType::None ? 1 : 0;
+    level += usedBy(viewer, Gp::Goddard) ? 1 : 0;  // Mary Katherine Goddard (07)
     int spy = 0;
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == viewer && a.travel == 0 ? state_.city(a.city) : nullptr;

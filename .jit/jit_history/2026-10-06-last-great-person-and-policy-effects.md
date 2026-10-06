@@ -34,8 +34,6 @@ Specs: 07-economy-trade-great-people (Great People), 04-tech-civics-government (
   - Shah Jahan's purchase;
   - Raffles's city transfer;
   - Medici's Bank slots;
-  - Goddard's diplomatic visibility;
-  - James Young's Oil visibility;
   - Magellan's and Colaeus's tile resource;
   - Limes (the Tsikhe belongs to no civ in the game).
 - Effects written "(one-time)" in the data that read as lasting (route yields, Amenities, Housing, healing) are kept while the great person's city or player stands.
@@ -43,3 +41,5 @@ Specs: 07-economy-trade-great-people (Great People), 04-tech-civics-government (
 ## Follow-up: the luxury corporations
 
 The product luxuries exist in the data (Toys, Cosmetics, Jeans, Perfume; no map frequency). John Spilsbury (1 Toys) and Helena Rubinstein, Levi Strauss and Estée Lauder (2 Cosmetics, Jeans or Perfume) add copies of their product to the player whose city they were used in (`luxuryCopies`). The copies give Amenities like any luxury and can be traded.
+
+Also since: James Young lets his player see Oil before its tech (`resourceVisible`), and Mary Katherine Goddard adds a level of diplomatic access with every civ (`accessLevel`).
