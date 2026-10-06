@@ -274,6 +274,16 @@ TEST(james_young_reveals_oil) {
     CHECK(g->resourceVisible(0, {8, 6}));
 }
 
+TEST(medici_opens_slots_in_banks) {
+    GameState s = cityState("DISTRICT_COMMERCIAL_HUB", {"BUILDING_MARKET", "BUILDING_BANK"});
+    const UnitId medici = addGreatPerson(s, "GREAT_PERSON_GIOVANNI_DE_MEDICI", {7, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int before = g->greatWorkSlots(g->state().cities[0], "PALACE");
+    REQUIRE(g->submit(Command::activateGreatPerson(0, medici)) == CommandError::Ok);
+    CHECK_EQ(g->greatWorkSlots(g->state().cities[0], "PALACE"), before + 2);
+    CHECK(g->freeGreatWorkSlot(g->state().cities[0], rules().greatWorkType("WRITING")) != kNone);
+}
+
 TEST(great_people_one_time_gifts) {
     // On the Commercial Hub: Irene of Athens (+1 governor title), Jakob Fugger (+2 envoys), Marco Polo (+1 trade route).
     GameState s = cityState("DISTRICT_COMMERCIAL_HUB");

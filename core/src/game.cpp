@@ -191,7 +191,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         "GREAT_PERSON_HILDEGARD_OF_BINGEN", "GREAT_PERSON_JOHN_ROEBLING", "GREAT_PERSON_JANE_DREW",       "GREAT_PERSON_ABU_AL_QASIM_AL_ZAHRAWI",
         "GREAT_PERSON_IBN_KHALDUN", "GREAT_PERSON_KENZO_TANGE",       "GREAT_PERSON_MARINA_RASKOVA",      "GREAT_PERSON_JOHN_SPILSBURY",
         "GREAT_PERSON_HELENA_RUBINSTEIN", "GREAT_PERSON_LEVI_STRAUSS", "GREAT_PERSON_EST_E_LAUDER",       "GREAT_PERSON_JAMES_YOUNG",
-        "GREAT_PERSON_MARY_KATHERINE_GODDARD"};
+        "GREAT_PERSON_MARY_KATHERINE_GODDARD", "GREAT_PERSON_GIOVANNI_DE_MEDICI"};
     static_assert(sizeof(kPeople) / sizeof(kPeople[0]) == static_cast<size_t>(Gp::Count), "one id per great person");
     for (size_t i = 0; i < static_cast<size_t>(Gp::Count); ++i) greatPeople_[i] = rules_->greatPerson(kPeople[i]);
     static const char* const kProducts[] = {"RESOURCE_TOYS", "RESOURCE_COSMETICS", "RESOURCE_JEANS", "RESOURCE_PERFUME"};

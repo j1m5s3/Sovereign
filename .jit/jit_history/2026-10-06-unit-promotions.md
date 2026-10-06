@@ -42,3 +42,11 @@ Specs: 05-units-and-combat (Promotions); data/promotions, data/units (Unit abili
   - Martyr: a Relic into a free slot if it falls in theological combat.
   - Chaplain: +20 healing for the owner's units next to it.
 - The one-time Pilgrim and Indulgence Vendor gifts are marked spent with bits 0x40 and 0x80 of `Unit::wonderAbilities`, so the save format does not change.
+
+## Follow-up: three more promotions
+
+- Religious Rock: a concert in a foreign city converts it to the band's religion (its pressure goes above every other).
+- Indie: a concert costs the venue 40 loyalty.
+- Disciples: a Warrior Monk's kill adds 100 pressure of its religion to every city within 4 plots.
+
+The Rock Band venue promotions need civ-unique districts that aren't in the game. Spy promotions are read from `espionage.json`.
