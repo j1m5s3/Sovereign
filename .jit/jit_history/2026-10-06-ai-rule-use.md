@@ -20,3 +20,12 @@ The strict rule kept: 7.7 cities, science 58.2, production 89.4, which is within
 ## Still unused by the AI
 
 Great Work moves (theming), Mountain Tunnels, razing, gear removal, locked plots, production queues.
+
+## Follow-up: treasuries
+
+An all-AI soak game (seed 12, 6 civs, Small, 350 turns) ended with the city-state Muscat at -1437 gold. It had taken two cities and kept 22 buildings, and with no trade routes it lost about 10 gold a turn from turn 200. Bankruptcy works as the spec says (Amenities lost, units disbanded), but the AI never reacted. Now:
+
+- a building whose upkeep the gold per turn cannot carry is valued at a quarter, unless it pays at least its upkeep in Gold;
+- in debt and still losing gold, the AI locks up to half of each city's citizens onto the plots that pay the most Gold (2+), and frees them once the treasury is above 100.
+
+Muscat now stays between -71 and +69 gold. The pace benchmark is unchanged (7.7 cities, science 58.3 at turn 200).

@@ -1492,6 +1492,7 @@ Hex districtSpot(const View& v, CityId cid, TypeIndex district) {
 void production(View& v) {
     const GameState& s = v.s();
     Game& g = v.game;
+    const Fixed goldPerTurn = g.goldPerTurn(v.me);
     for (CityId cid : g.citiesNeedingProduction(v.me)) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
@@ -1578,6 +1579,9 @@ void production(View& v) {
                 case ProductionKind::Building: {
                     const BuildingType& b = v.r.buildings[at(it.type)];
                     value = 30 + worth(v, b.yields) * 25;
+                    // Upkeep the treasury cannot carry (07): it waits while gold per turn would fall below zero, unless it pays its own way.
+                    if (b.maintenance > 0 && goldPerTurn < Fixed::fromInt(b.maintenance) && b.yields[static_cast<size_t>(YieldType::Gold)] < Fixed::fromInt(b.maintenance))
+                        value /= 4;
                     if (popRoom <= Fixed::fromInt(1)) value += static_cast<int>((b.housing * 30).round());
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
@@ -1815,6 +1819,35 @@ void purchases(View& v) {
             }
         }
         if (!best || g.submit(Command::purchase(v.me, best->first, best->second)) != CommandError::Ok) break;
+    }
+}
+
+// In debt and still losing gold (07: Treasury below 0): lock up to half of each city's citizens onto the plots that
+// pay the most Gold; free them once the treasury is healthy again.
+void solvency(View& v) {
+    Game& g = v.game;
+    const Player& p = v.s().players[at(v.me)];
+    const bool broke = p.gold < Fixed() && g.goldPerTurn(v.me) < Fixed();
+    for (CityId cid : v.cities) {
+        const City& c = *v.s().city(cid);
+        if (!broke) {
+            if (p.gold > Fixed::fromInt(100)) {
+                const std::vector<int32_t> locked = c.locked;
+                for (int32_t pi : locked) g.submit(Command::lockPlot(v.me, cid, v.s().grid.at(pi), false));
+            }
+            continue;
+        }
+        std::vector<std::pair<Fixed, Hex>> golden;
+        for (const Hex& h : g.workablePlots(c)) {
+            const Fixed gold = g.plotYields(h, c)[static_cast<size_t>(YieldType::Gold)];
+            if (gold >= Fixed::fromInt(2) && !std::binary_search(c.locked.begin(), c.locked.end(), v.s().grid.index(h))) golden.push_back({gold, h});
+        }
+        std::stable_sort(golden.begin(), golden.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+        for (const auto& [gold, h] : golden) {
+            const City& now = *v.s().city(cid);
+            if (static_cast<int>(now.locked.size()) * 2 >= now.population) break;
+            g.submit(Command::lockPlot(v.me, cid, h, true));
+        }
     }
 }
 
@@ -2460,6 +2493,7 @@ void playTurn(Game& game) {
     production(v);
     upgrades(v);
     purchases(v);
+    solvency(v);
     theme(v);
     dedicate(v);
     patronage(v);
