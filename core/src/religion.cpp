@@ -2,6 +2,7 @@
 // founding with a Great Prophet, beliefs, pressure and followers, religious units spreading
 // and fighting theologically, and the religious victory.
 #include <algorithm>
+#include <iterator>
 
 #include "sovereign/game.h"
 #include "sovereign/modifiers.h"
@@ -39,6 +40,7 @@ void fitPressure(City& c, size_t n) {
 bool Game::beliefModelled(TypeIndex belief) const {
     const BeliefType& b = rules_->beliefs[at(belief)];
     if (b.worshipBuilding != kNone || b.grantUnit != kNone) return true;
+    if (std::find(std::begin(beliefs_), std::end(beliefs_), belief) != std::end(beliefs_)) return true;  // effects in code
     return std::any_of(rules_->modifiers.begin(), rules_->modifiers.end(),
                        [&](const Modifier& m) { return m.sourceKind == ModSource::Belief && m.sourceIndex == belief; });
 }

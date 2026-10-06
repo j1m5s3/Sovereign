@@ -1905,9 +1905,34 @@ TypeIndex firstBelief(const View& v, BeliefClass cls) {
     return fallback;
 }
 
+// The pantheon worth most to us: each candidate tried on a copy of the game and scored by our cities' yields,
+// Amenities and Housing (effects outside the cities, such as healing, count for nothing here).
+TypeIndex bestPantheon(const View& v) {
+    TypeIndex best = kNone;
+    int64_t bestScore = INT64_MIN;
+    for (TypeIndex b : v.game.availableBeliefs(BeliefClass::Pantheon)) {
+        if (!v.game.beliefModelled(b)) continue;
+        GameState s = v.s();
+        s.players[at(v.me)].pantheon = b;
+        auto trial = Game::fromScenario(v.r, std::move(s));
+        int64_t score = 0;
+        for (CityId cid : v.cities) {
+            const CityReport r = trial->cityReport(cid);
+            score += worth(v, r.yields) + 3 * r.amenities + static_cast<int64_t>((r.housing * 2).round());
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            best = b;
+        }
+    }
+    return best != kNone ? best : firstBelief(v, BeliefClass::Pantheon);
+}
+
 void pantheon(View& v) {
     if (v.s().players[at(v.me)].pantheon != kNone) return;
-    const TypeIndex b = firstBelief(v, BeliefClass::Pantheon);
+    // Weigh the candidates only once one can be afforded.
+    if (const TypeIndex any = firstBelief(v, BeliefClass::Pantheon); any == kNone || !v.game.canFoundPantheon(v.me, any)) return;
+    const TypeIndex b = bestPantheon(v);
     if (b != kNone && v.game.canFoundPantheon(v.me, b)) v.game.submit(Command::foundPantheon(v.me, b));
 }
 
