@@ -330,3 +330,20 @@ TEST(a_fabricated_scandal_costs_the_suzerain_envoys) {
     }
     CHECK(false);  // never succeeded
 }
+
+// ---- the Intelligence Agency, the Chancery and Listening Posts (08: Espionage)
+
+TEST(an_intelligence_agency_adds_a_spy_and_a_listening_post_hears_all) {
+    GameState s = spyState();
+    const int before = Game::fromScenario(rules(), s)->spyCapacity(0);
+    s.cities[0].buildings.push_back(rules().building("BUILDING_INTELLIGENCE_AGENCY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    // A spy in a Listening Post in player 1's city.
+    s.agents[0].city = s.cities[1].id;
+    s.agents[0].mission = SpyMission::ListeningPost;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->spyCapacity(0), before + 1);
+    const GameEvent work{1, EventKind::SpyOperation, 1, kNoPlayer, 0};  // needs Top Secret otherwise
+    CHECK(g->accessLevel(0, 1) < 4);
+    CHECK(g->hearsOf(0, work));
+}

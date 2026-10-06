@@ -1634,6 +1634,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             BuildingType& b = buildings[i++];
             if (!readPoints(j["greatPersonPoints"], b.greatPersonPoints, "building " + id)) return false;
             for (const auto& [slot, v] : j["greatWorkSlots"].members()) b.greatWorkSlots.emplace_back(slot, static_cast<int>(v.integer(0)));
+        b.stockpileCap = static_cast<int>(j["stockpileCap"].integer(0));
         if (j.has("theming")) {
             const auto& t = j["theming"];
             BuildingType::Theming th;

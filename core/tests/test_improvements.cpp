@@ -194,9 +194,13 @@ TEST(builder_harvests_woods_and_bonus_resources) {
     }, base);
     const UnitId b = builderOf(*g);
     const Fixed overflow = g->state().cities[0].overflow;
+    // 20 at the start, scaled up with the share of the tech tree known (two techs here).
+    const int progress = static_cast<int>(2 * 100 / static_cast<int64_t>(rules().techs.size()));
+    const auto scaled = [&](int base) { return Fixed::fromInt(base) * (100 + 9 * progress) / 100; };
     REQUIRE(g->submit(Command::harvest(0, b)) == CommandError::Ok);
     CHECK_EQ(g->state().plot({7, 6}).feature, kNone);
-    CHECK_EQ(g->state().cities[0].overflow, overflow + Fixed::fromInt(20));
+    CHECK(progress > 0);
+    CHECK_EQ(g->state().cities[0].overflow, overflow + scaled(20));
     CHECK_EQ(g->state().unit(b)->charges, 2);
 
     GameState s = g->state();
@@ -206,7 +210,7 @@ TEST(builder_harvests_woods_and_bonus_resources) {
     const Fixed food = g2->state().cities[0].food;
     REQUIRE(g2->submit(Command::harvest(0, b)) == CommandError::Ok);
     CHECK_EQ(g2->state().plot({5, 6}).resource, kNone);
-    CHECK_EQ(g2->state().cities[0].food, food + Fixed::fromInt(20));
+    CHECK_EQ(g2->state().cities[0].food, food + scaled(20));
 }
 
 // ---- Military Engineers [GS]: railroads and Mountain Tunnels (01: Routes, Mountain tunnels)
@@ -352,4 +356,17 @@ TEST(ships_raid_the_coast) {
     CHECK(g->coastalRaidProblem(0, galley, {10, 6}) == CommandError::BadTarget);  // not adjacent (and a city)
     REQUIRE(g->submit(Command::coastalRaid(0, galley, {11, 6})) == CommandError::Ok);
     CHECK(g->state().plot({11, 6}).pillagedTurns > 0);
+}
+
+TEST(encampment_buildings_raise_the_stockpile_cap) {
+    GameState s = sovtest::flatState(16, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {6, 6}, true, 3);
+    const TypeIndex iron = rules().resource("RESOURCE_IRON");
+    auto plain = Game::fromScenario(rules(), s);
+    CHECK_EQ(plain->stockpileCap(0, iron), 50);
+    s.cities[0].buildings = {rules().building("BUILDING_BARRACKS"), rules().building("BUILDING_ARMORY")};
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->stockpileCap(0, iron), 70);
 }

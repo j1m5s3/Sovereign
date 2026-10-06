@@ -363,6 +363,7 @@ struct BuildingType {
     bool wallsCannotBeBypassed = false;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
+    int stockpileCap = 0;  // raises its owner's strategic resource stockpile caps (01: [GS] stockpile model)
     // Theming (07: Theming bonuses): with every slot full and the works matching, their yields and
     // tourism gain these percents.
     struct Theming {

@@ -582,6 +582,9 @@ def gen_buildings():
             b["purchasable"] = True
         if row["Purchase"] == "Faith":
             b["faithOnly"] = True  # worship buildings: bought with Faith, never built
+        m = re.search(r"\+(\d+) strategic resource stockpile cap", row["Modifiers"])
+        if m:
+            b["stockpileCap"] = int(m.group(1))  # 01: the [GS] stockpile model
         if "melee attacks cannot damage the walls" in row["Modifiers"]:
             b["meleeCannotDamageWalls"] = True
         if "walls cannot be bypassed" in row["Modifiers"]:

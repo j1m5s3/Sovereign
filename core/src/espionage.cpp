@@ -64,9 +64,18 @@ int Game::spyOperationLevels(const Agent& spy, SpyMission m) const {
     return n;
 }
 
+int Game::buildingsOwned(PlayerId pid, const char* buildingId) const {
+    const TypeIndex b = rules_->building(buildingId);
+    if (b == kNone) return 0;
+    int n = 0;
+    for (const City& c : state_.cities) n += c.owner == pid && c.has(b) ? 1 : 0;
+    return n;
+}
+
 int Game::spyCapacity(PlayerId pid) const {
     const Player& p = state_.players[at(pid)];
-    int n = 0;
+    // The Intelligence Agency (Government Plaza): one more spy (08: Espionage; data: buildings).
+    int n = buildingsOwned(pid, "BUILDING_INTELLIGENCE_AGENCY") > 0 ? 1 : 0;
     for (size_t i = 0; i < rules_->techs.size(); ++i) n += p.techs.has(static_cast<TypeIndex>(i)) ? rules_->techs[i].spies : 0;
     for (size_t i = 0; i < rules_->civics.size(); ++i) n += p.civics.has(static_cast<TypeIndex>(i)) ? rules_->civics[i].spies : 0;
     return n;
@@ -198,6 +207,10 @@ void Game::resolveSpyOperation(Agent& a) {
         if (escaped) {
             a.city = kNoCity;
         } else {
+            // The Chancery (Diplomatic Quarter): Science, 50 per level of the spy caught, toward current research.
+            Player& catcher = state_.players[at(victim)];
+            if (buildingsOwned(victim, "BUILDING_CHANCERY") > 0 && catcher.techs.current != kNone)
+                catcher.techs.progress[at(catcher.techs.current)] += Fixed::fromInt(50 * a.level);
             const int32_t gone = a.id;
             state_.agents.erase(std::remove_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& x) { return x.id == gone; }),
                                 state_.agents.end());

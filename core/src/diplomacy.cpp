@@ -889,7 +889,13 @@ bool Game::hearsOf(PlayerId viewer, const GameEvent& e) const {
     const int need = gossipLevel(e.kind);
     if (need > 4) return false;
     const PlayerId about = e.actor != kNoPlayer ? e.actor : e.target;
-    return about != kNoPlayer && isMajorCiv(about) && accessLevel(viewer, about) >= need;
+    if (about == kNoPlayer || !isMajorCiv(about)) return false;
+    // A spy running a Listening Post in one of its cities hears all its gossip (08: Espionage).
+    for (const Agent& a : state_.agents) {
+        const City* c = a.spy && a.owner == viewer && a.travel == 0 && a.mission == SpyMission::ListeningPost ? state_.city(a.city) : nullptr;
+        if (c && c->owner == about) return true;
+    }
+    return accessLevel(viewer, about) >= need;
 }
 
 // Casus belli (08: War types). Each needs its civic and its condition, and, except Protectorate,

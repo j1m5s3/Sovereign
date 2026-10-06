@@ -12,4 +12,4 @@ Specs: 02-cities (Citizens and specialists); 03-districts-buildings-wonders (Cit
 
 - Locked plots are kept; specialists are never locked (no manual specialist control yet).
 - A specialist eats like any citizen (food is per population), so the citizen score's food weight keeps cities growing; the AI pace test still passes, and a 6-AI Deity game now ends at turn 327 instead of about 370 (specialists' Science speeds the race to victory).
-- Not modelled: Great person points from specialists, per-specialist yield bonuses from policies and governors.
+- Nothing further to model here: Civ VI specialists earn no great person points, and no policy or governor in the data changes specialist yields.
