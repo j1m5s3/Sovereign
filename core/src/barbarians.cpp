@@ -75,6 +75,17 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
         ++kp.killsThisEra;
         if (const int pct = civAbility(killer->owner).killFaithPercent; pct > 0)
             kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat * pct / 100);
+        // Disciples (06): a Warrior Monk's victory presses its religion (+100) on the cities within 4 plots.
+        if (const Unit* k = state_.unit(killer->id); k && kp.religion >= 0 && static_cast<size_t>(kp.religion) < state_.religions.size()) {
+            const TypeIndex disciples = rules_->promotion("PROMOTION_DISCIPLES");
+            if (disciples != kNone && std::find(k->promotions.begin(), k->promotions.end(), disciples) != k->promotions.end()) {
+                for (City& c : state_.cities) {
+                    if (state_.grid.distance(c.pos, victim.pos) > 4) continue;
+                    if (c.pressure.size() < state_.religions.size()) c.pressure.resize(state_.religions.size(), 0);
+                    c.pressure[static_cast<size_t>(kp.religion)] += 100;
+                }
+            }
+        }
         // God of War (06): Faith of half the victim's strength for a victory next to one of the victor's Holy Sites.
         if (playerHasBelief(killer->owner, Bf::GodOfWar)) {
             const TypeIndex holy = rules_->district("DISTRICT_HOLY_SITE");

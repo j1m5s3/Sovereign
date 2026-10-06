@@ -801,7 +801,7 @@ private:
     // Great people whose effects are in code, looked up once (07: Great People).
     enum class Gp : uint8_t {
         ZhengHe, ZhangQian, MarcoPolo, IbnFadlan, RajaTodarMal, Rockefeller, MimarSinan, Crassus, Hildegard, Roebling, JaneDrew, Zahrawi,
-        IbnKhaldun, KenzoTange, Raskova, Spilsbury, Rubinstein, Strauss, Lauder, JamesYoung, Goddard, Count
+        IbnKhaldun, KenzoTange, Raskova, Spilsbury, Rubinstein, Strauss, Lauder, JamesYoung, Goddard, Medici, Count
     };
     TypeIndex oil_ = kNone;  // James Young reveals it (07)
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
@@ -809,6 +809,7 @@ private:
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;
+    int extraPalaceSlots(const City& city, TypeIndex building) const;  // Giovanni de' Medici: +2 in each Bank (07)
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
     uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings

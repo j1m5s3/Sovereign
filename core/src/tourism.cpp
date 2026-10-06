@@ -202,6 +202,20 @@ void Game::performConcert(UnitId id) {
     if (policyIs(u.owner, "POLICY_FLOWER_POWER") && std::none_of(state_.players.begin(), state_.players.end(), [&](const Player& o) { return atWar(u.owner, o.id); }))
         earned = earned * 3 / 2;
     owner.tourismTo[at(host)] += earned;
+    // Promotions acting on the city the concert is held in (07): Religious Rock converts it to the band's religion,
+    // Indie costs it 40 loyalty.
+    if (City* venue = state_.city(here.city); venue && venue->owner != u.owner) {
+        for (TypeIndex pr : u.promotions) {
+            const std::string& pid = rules_->promotions[at(pr)].id;
+            if (pid == "PROMOTION_RELIGIOUS_ROCK" && owner.religion >= 0 && static_cast<size_t>(owner.religion) < state_.religions.size()) {
+                if (venue->pressure.size() < state_.religions.size()) venue->pressure.resize(state_.religions.size(), 0);
+                int32_t top = 0;
+                for (int32_t pv : venue->pressure) top = std::max(top, pv);
+                venue->pressure[static_cast<size_t>(owner.religion)] = top + 100;
+            }
+            if (pid == "PROMOTION_INDIE") venue->loyalty = std::max(0, venue->loyalty - 40);
+        }
+    }
     if (r.gainsLevel && 1 + u.xp < rules_->globalInt("ROCK_BAND_MAX_LEVEL")) ++u.xp;
     if (r.extraPromotion) grantBandPromotion(u);
     u.movesLeft = Fixed();

@@ -148,18 +148,24 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     return total;
 }
 
+int Game::extraPalaceSlots(const City& city, TypeIndex building) const {
+    return rules_->buildings[at(building)].id == "BUILDING_BANK" && usedBy(city.owner, Gp::Medici) ? 2 : 0;
+}
+
 int Game::greatWorkSlots(const City& city, const std::string& slot) const {
     int n = 0;
     for (TypeIndex b : city.buildings) {
         for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) n += s == slot ? count : 0;
+        if (slot == "PALACE") n += extraPalaceSlots(city, b);
     }
     return n;
 }
 
 TypeIndex Game::freeGreatWorkSlot(const City& city, TypeIndex workType) const {
     const GreatWorkType& w = rules_->greatWorkTypes[at(workType)];
+    const bool palace = std::find(w.slots.begin(), w.slots.end(), "PALACE") != w.slots.end();
     for (TypeIndex b : city.buildings) {
-        int free = 0;
+        int free = palace ? extraPalaceSlots(city, b) : 0;
         for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) {
             if (std::find(w.slots.begin(), w.slots.end(), s) != w.slots.end()) free += count;
         }
