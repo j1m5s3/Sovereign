@@ -170,7 +170,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         // Warrior Monks wait for the beliefs and actions that open them.
         // Naturalists and Rock Bands are bought with Faith whatever the city follows (07).
         const bool secular = u.id == "UNIT_NATURALIST" || u.id == "UNIT_ROCK_BAND";
-        if (!secular && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE") return -1;
+        // Warrior Monks (06): bought where the city follows a religion with the belief.
+        const bool monk = u.id == "UNIT_WARRIOR_MONK" && cityFollows(city, Bf::WarriorMonks);
+        if (!secular && !monk && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE") return -1;
         if (!secular && majority < 0) return -1;
         const int copies = at(item.type) < p.unitsTrained.size() ? p.unitsTrained[at(item.type)] : 0;
         int cost = (u.cost + u.costProgression * copies) * speed / 100;
@@ -184,6 +186,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         const BuildingType& b = rules_->buildings[at(item.type)];
         // Valletta (08: suzerain): City Center buildings for Faith, at their Gold price.
         if (b.district == "DISTRICT_CITY_CENTER" && !b.wonder && suzerainBonus(player, "CITYSTATE_VALLETTA") && canProduce(city, item, nullptr, true))
+            return purchaseCost(player, item);
+        // Jesuit Education (06): Campus and Theater Square buildings for Faith, at their Gold price.
+        if ((b.district == "DISTRICT_CAMPUS" || b.district == "DISTRICT_THEATER_SQUARE") && !b.wonder && cityFollows(city, Bf::JesuitEducation) &&
+            canProduce(city, item, nullptr, true))
             return purchaseCost(player, item);
         // Leader ability: a district's buildings for Faith at their gold price (Golden Pilgrimage).
         if (const TypeIndex d = civAbility(player).faithPurchaseDistrict; d != kNone && b.districtType == d && !b.faithOnly && canProduce(city, item)) {
@@ -255,6 +261,14 @@ Yields Game::founderYields(PlayerId player) const {
             ++cities;
             following.push_back(&c);
         }
+    }
+    // Sacred Places (06): +2 Faith, Culture, Science and Gold for each following city with a world wonder.
+    if (religionHas(state_, p.religion, beliefs_[static_cast<size_t>(Bf::SacredPlaces)])) {
+        int withWonder = 0;
+        for (const City* c : following) {
+            withWonder += std::any_of(c->buildings.begin(), c->buildings.end(), [&](TypeIndex b) { return rules_->buildings[at(b)].wonder; }) ? 1 : 0;
+        }
+        for (YieldType y : {YieldType::Faith, YieldType::Culture, YieldType::Science, YieldType::Gold}) out[static_cast<size_t>(y)] += Fixed::fromInt(2 * withWonder);
     }
     for (const Modifier& m : rules_->modifiers) {
         if (m.sourceKind != ModSource::Belief || !religionHas(state_, p.religion, m.sourceIndex)) continue;
@@ -475,12 +489,24 @@ void Game::processReligion() {
         const int range = baseRange + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressureRange).toInt());
         sources.push_back({c.pos, maj, amount, range, c.owner});
     }
+    std::vector<std::pair<CityId, int>> before;  // city-states' cities and their religion before the pressure
+    for (const City& c : state_.cities) {
+        if (isCityState(c.owner)) before.push_back({c.id, cityMajorityReligion(c)});
+    }
     for (const Source& src : sources) {
         for (City& c : state_.cities) {
             if (c.pos == src.pos || state_.grid.distance(c.pos, src.pos) > src.range) continue;
             if (c.owner != src.owner && alliance(c.owner, src.owner) == AllianceType::Religious) continue;  // 08: no pressure between allies
             c.pressure[static_cast<size_t>(src.religion)] += src.amount / 10;
         }
+    }
+    // Religious Unity (06): converting a city-state awards its founder an envoy.
+    for (const auto& [id, was] : before) {
+        const City* c = state_.city(id);
+        const int now = c ? cityMajorityReligion(*c) : -1;
+        if (now < 0 || now == was) continue;
+        const PlayerId founder = state_.religions[static_cast<size_t>(now)].founder;
+        if (playerHasBelief(founder, Bf::ReligiousUnity) && !policyIs(founder, "POLICY_ROGUE_STATE")) ++state_.players[at(founder)].envoyTokens;
     }
 }
 

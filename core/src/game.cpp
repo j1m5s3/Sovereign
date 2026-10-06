@@ -178,8 +178,11 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
                                            "BUILDING_EIFFEL_TOWER",   "BUILDING_GOLDEN_GATE_BRIDGE",    "BUILDING_BIOSPH_RE",       "BUILDING_CRISTO_REDENTOR"};
     static_assert(sizeof(kWonders) / sizeof(kWonders[0]) == static_cast<size_t>(W::Count), "one id per wonder");
     for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) wonders_[i] = rules_->building(kWonders[i]);
-    static const char* const kBeliefs[] = {"BELIEF_DANCE_OF_THE_AURORA", "BELIEF_DESERT_FOLKLORE", "BELIEF_SACRED_PATH", "BELIEF_EARTH_GODDESS",
-                                           "BELIEF_GOD_OF_HEALING",      "BELIEF_GOD_OF_WAR",      "BELIEF_INITIATION_RITES", "BELIEF_HOLY_WATERS"};
+    static const char* const kBeliefs[] = {"BELIEF_DANCE_OF_THE_AURORA", "BELIEF_DESERT_FOLKLORE",   "BELIEF_SACRED_PATH",         "BELIEF_EARTH_GODDESS",
+                                           "BELIEF_GOD_OF_HEALING",      "BELIEF_GOD_OF_WAR",        "BELIEF_INITIATION_RITES",    "BELIEF_HOLY_WATERS",
+                                           "BELIEF_DIVINE_INSPIRATION",  "BELIEF_JESUIT_EDUCATION",  "BELIEF_RELIGIOUS_COMMUNITY", "BELIEF_RELIQUARIES",
+                                           "BELIEF_WARRIOR_MONKS",       "BELIEF_WORK_ETHIC",        "BELIEF_SACRED_PLACES",       "BELIEF_PAPAL_PRIMACY",
+                                           "BELIEF_RELIGIOUS_UNITY"};
     static_assert(sizeof(kBeliefs) / sizeof(kBeliefs[0]) == static_cast<size_t>(Bf::Count), "one id per belief");
     for (size_t i = 0; i < static_cast<size_t>(Bf::Count); ++i) beliefs_[i] = rules_->belief(kBeliefs[i]);
 }
@@ -979,6 +982,14 @@ void Game::apply(const Command& c) {
             if (p.envoys[static_cast<size_t>(c.arg)] == 0 && policyIs(c.player, "POLICY_DIPLOMATIC_LEAGUE")) ++sent;
             if (suzerain != kNoPlayer && suzerain != c.player && policyIs(c.player, "POLICY_CONTAINMENT")) ++sent;
             p.envoys[static_cast<size_t>(c.arg)] += sent;
+            // Papal Primacy (06): each envoy adds 200 pressure of the sender's religion in the city-state's cities.
+            if (p.religion >= 0 && playerHasBelief(c.player, Bf::PapalPrimacy)) {
+                for (City& city : state_.cities) {
+                    if (city.owner != static_cast<PlayerId>(c.arg)) continue;
+                    if (city.pressure.size() < state_.religions.size()) city.pressure.resize(state_.religions.size(), 0);
+                    city.pressure[static_cast<size_t>(p.religion)] += 200;
+                }
+            }
             // A city-state's first suzerain is a historic moment (09).
             Player& cs = state_.players[static_cast<size_t>(c.arg)];
             if (!cs.hadSuzerain && suzerainOf(cs.id) == c.player) {

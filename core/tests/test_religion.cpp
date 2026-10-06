@@ -48,6 +48,15 @@ std::unique_ptr<Game> withReligion(GameState s) {
     if (e != CommandError::Ok) std::printf("  foundReligion: %s\n", commandErrorName(e));
     return g;
 }
+
+// Player 0 founds Buddhism with Tithe and the given follower belief.
+std::unique_ptr<Game> withFollowerBelief(GameState s, const char* follower) {
+    const UnitId prophet = addProphet(s, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CommandError e = g->submit(Command::foundReligion(0, prophet, rules().religion("RELIGION_BUDDHISM"), belief("BELIEF_TITHE"), belief(follower)));
+    if (e != CommandError::Ok) std::printf("  foundReligion: %s\n", commandErrorName(e));
+    return g;
+}
 }  // namespace
 
 TEST(religion_rules_data) {
@@ -239,6 +248,35 @@ TEST(god_of_healing_heals_next_to_a_holy_site) {
         return g->state().unit(w)->hp;
     };
     CHECK_EQ(hpAfter(true), hpAfter(false) + 30);
+}
+
+TEST(follower_beliefs_take_effect) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+    s.cities[0].buildings.push_back(rules().building("BUILDING_PYRAMIDS"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    const size_t faith = static_cast<size_t>(YieldType::Faith);
+    // Divine Inspiration: +4 Faith per wonder in a following city.
+    auto plain = withFollowerBelief(s, "BELIEF_FEED_THE_WORLD");
+    auto inspired = withFollowerBelief(s, "BELIEF_DIVINE_INSPIRATION");
+    const CityId holy = plain->state().cities[0].id;
+    CHECK_EQ(inspired->cityReport(holy).yields[faith], plain->cityReport(holy).yields[faith] + Fixed::fromInt(4));
+    // Warrior Monks: bought with Faith only where the city follows a religion with the belief.
+    const ProductionItem monk{ProductionKind::Unit, rules().unit("UNIT_WARRIOR_MONK")};
+    auto monks = withFollowerBelief(s, "BELIEF_WARRIOR_MONKS");
+    CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(holy), monk), -1);
+    CHECK(monks->faithPurchaseCost(0, *monks->state().city(holy), monk) > 0);
+}
+
+TEST(sacred_places_pays_for_wonders_in_following_cities) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_PYRAMIDS"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    const UnitId prophet = addProphet(s, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::foundReligion(0, prophet, rules().religion("RELIGION_BUDDHISM"), belief("BELIEF_SACRED_PLACES"),
+                                             belief("BELIEF_FEED_THE_WORLD"))) == CommandError::Ok);
+    CHECK_EQ(g->founderYields(0)[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(2));  // the Holy City has the Pyramids
 }
 
 TEST(religion_survives_a_save) {

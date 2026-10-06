@@ -178,6 +178,15 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(1);
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(1);
     }
+    // Religious Community (06): international routes +2 Gold each for the origin's Holy Site, Shrine, Temple and worship building.
+    if (!domestic && cityFollows(origin, Bf::ReligiousCommunity)) {
+        int n = origin.district(rules_->district("DISTRICT_HOLY_SITE"), true) ? 1 : 0;
+        n += origin.has(rules_->building("BUILDING_SHRINE")) ? 1 : 0;
+        n += origin.has(rules_->building("BUILDING_TEMPLE")) ? 1 : 0;
+        bool worship = false;
+        for (const BeliefType& bt : rules_->beliefs) worship = worship || (bt.worshipBuilding != kNone && origin.has(bt.worshipBuilding));
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * (n + (worship ? 1 : 0)));
+    }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;

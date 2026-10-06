@@ -207,10 +207,11 @@ CityReport Game::cityReport(CityId id) const {
         }
     }
     // Great Works in the city's slots, and great people whose effects improve its buildings.
+    const bool reliquaries = !c->greatWorks.empty() && cityFollows(*c, Bf::Reliquaries);
     for (const GreatWork& w : c->greatWorks) {
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
         const int pct = themed(*c, w.building) ? 100 + rules_->buildings[static_cast<size_t>(w.building)].theming->yieldPercent : 100;  // 07: Theming
-        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100);
+        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100 * (gw.id == "RELIC" && reliquaries ? 3 : 1));  // Reliquaries (06)
         // Anshan (08: suzerain): +2 Science from writing, +1 from artifacts and relics.
         if (suzerainBonus(c->owner, "CITYSTATE_ANSHAN"))
             raw[idx(YieldType::Science)] += Fixed::fromInt(gw.id == "WRITING" ? 2 : (gw.id == "ARTIFACT" || gw.id == "RELIC") ? 1 : 0);
@@ -233,6 +234,12 @@ CityReport Game::cityReport(CityId id) const {
         if (inquiry && (kind == "DISTRICT_COMMERCIAL_HUB" || kind == "DISTRICT_HARBOR")) raw[idx(YieldType::Science)] += adj[idx(YieldType::Gold)];
         if (steam && kind == "DISTRICT_CAMPUS") raw[idx(YieldType::Production)] += adj[idx(YieldType::Science)];
         if (pen && kind != "DISTRICT_CITY_CENTER") raw[idx(YieldType::Culture)] += Fixed::fromInt(1);
+        // Work Ethic (06): the Holy Site's Faith adjacency as Production too.
+        if (kind == "DISTRICT_HOLY_SITE" && cityFollows(*c, Bf::WorkEthic)) raw[idx(YieldType::Production)] += adj[idx(YieldType::Faith)];
+    }
+    // Divine Inspiration (06): +4 Faith per wonder in the city.
+    if (cityFollows(*c, Bf::DivineInspiration)) {
+        for (TypeIndex b : c->buildings) raw[idx(YieldType::Faith)] += Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].wonder ? 4 : 0);
     }
     // Every citizen adds a little culture and science (CULTURE/SCIENCE_PERCENTAGE_YIELD_PER_POP).
     raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt("CULTURE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
@@ -1089,7 +1096,17 @@ bool Game::completeItem(City& city, ProductionItem item) {
         refreshVisibility(city.owner);
     } else if (item.kind == ProductionKind::District) {
         for (CityDistrict& d : city.districts) {
-            if (d.type == item.type) d.complete = true;
+            if (d.type != item.type) continue;
+            d.complete = true;
+            // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it.
+            if (rules_->districts[static_cast<size_t>(d.type)].id == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) {
+                for (const Hex& h : state_.grid.within(d.pos, 1)) {
+                    Plot& q = state_.plot(h);
+                    if (q.owner != kNoPlayer) continue;
+                    q.owner = city.owner;
+                    q.city = city.id;
+                }
+            }
         }
         questDone(city.owner, QuestKind::BuildDistrict, item.type);  // 08: Quests
     } else if (item.kind == ProductionKind::Project) {
