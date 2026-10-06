@@ -19,6 +19,46 @@ GameState eraState() {
     s.majorsAtStart = 2;
     return s;
 }
+
+// A 12-column world, nothing seen yet beyond each civ's capital (columns 5 +- the city's sight).
+GameState roundWorld(bool wrap) {
+    GameState s = flatState(12, 8, 2, wrap);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Unrevealed));
+    }
+    addCity(s, 0, {5, 3}, true, 1);
+    addCity(s, 1, {5, 6}, true, 1);
+    s.majorsAtStart = 2;
+    return s;
+}
+
+void reveal(GameState& s, PlayerId pid, int firstColumn, int lastColumn) {
+    for (int x = firstColumn; x <= lastColumn; ++x)
+        s.players[static_cast<size_t>(pid)].visibility[static_cast<size_t>(s.grid.index({x, 0}))] = static_cast<uint8_t>(Visibility::Revealed);
+}
+
+// Two of player 0's cities, at (4,6) and (10,6), with track on (5,6), (6,6), (8,6) and (9,6); a Military
+// Engineer on (7,6) and a Builder on (9,6).
+GameState railState(bool gap) {
+    GameState s = flatState(16, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    for (const char* t : {"TECH_STEAM_POWER", "TECH_CHEMISTRY"}) s.players[0].techs.done[at(rules().tech(t))] = 1;
+    for (const char* r : {"RESOURCE_IRON", "RESOURCE_COAL"}) s.players[0].stockpile[at(rules().resource(r))] = 3;
+    addCity(s, 0, {4, 6}, true, 1);
+    addCity(s, 0, {10, 6}, false, 1);
+    addCity(s, 1, {12, 1}, true, 1);
+    s.majorsAtStart = 2;
+    TypeIndex rr = kNone;
+    for (size_t i = 0; i < rules().routes.size() && rr == kNone; ++i) {
+        if (rules().routes[i].unitOnly) rr = static_cast<TypeIndex>(i);
+    }
+    for (const Hex h : {Hex{5, 6}, Hex{6, 6}, Hex{8, 6}, Hex{9, 6}}) s.plot(h).route = static_cast<int8_t>(rr);
+    s.plot({9, 6}).routePillaged = gap;
+    sovtest::addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {7, 6});
+    sovtest::addUnit(s, "UNIT_BUILDER", 0, {9, 6});
+    return s;
+}
 }  // namespace
 
 TEST(era_rules_data) {
@@ -191,4 +231,53 @@ TEST(to_arms_in_a_golden_age_opens_the_golden_age_war) {
     auto h = Game::fromScenario(rules(), std::move(s));
     CHECK(h->hasCasusBelli(0, 1, CasusBelli::GoldenAge));
     CHECK_EQ(h->casusBelliGrievancePercent(CasusBelli::GoldenAge), 25);
+}
+
+// Circumnavigation (09: Historic moments): a plot seen in every column of a world that wraps.
+TEST(seeing_every_column_of_a_round_world_is_a_circumnavigation) {
+    GameState s = roundWorld(true);
+    reveal(s, 0, 0, 10);  // all but the last column
+    auto g = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*g, 2);
+    CHECK(!sovtest::hasMoment(*g, 0, "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION"));
+    // The last column seen: the world's first, at the start of the civ's next turn.
+    GameState t = g->state();
+    reveal(t, 0, 11, 11);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*h, 2);
+    CHECK(sovtest::hasMoment(*h, 0, "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION"));
+    CHECK(!sovtest::hasMoment(*h, 0, "MOMENT_WORLD_CIRCUMNAVIGATED"));
+    // A later civ earns the ordinary moment, once.
+    GameState u = h->state();
+    reveal(u, 1, 0, 11);
+    auto k = Game::fromScenario(rules(), std::move(u));
+    sovtest::endTurns(*k, 1);
+    CHECK(sovtest::hasMoment(*k, 1, "MOMENT_WORLD_CIRCUMNAVIGATED"));
+    CHECK(!sovtest::hasMoment(*k, 1, "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION"));
+    const int later = k->state().players[1].eraScoreTotal;
+    sovtest::endTurns(*k, 2);
+    CHECK_EQ(k->state().players[1].eraScoreTotal, later);
+    CHECK(!sovtest::hasMoment(*k, 0, "MOMENT_WORLD_CIRCUMNAVIGATED"));  // the first civ is not counted again
+    // A world that does not wrap cannot be sailed round.
+    GameState flat = roundWorld(false);
+    reveal(flat, 0, 0, 11);
+    auto f = Game::fromScenario(rules(), std::move(flat));
+    sovtest::endTurns(*f, 2);
+    CHECK(!sovtest::hasMoment(*f, 0, "MOMENT_WORLD_S_FIRST_CIRCUMNAVIGATION"));
+}
+
+// A railroad connection (09: Historic moments): track joining two of the civ's cities.
+TEST(the_first_railroad_between_two_cities_is_a_moment) {
+    auto g = Game::fromScenario(rules(), railState(false));
+    const UnitId engineer = g->state().units[0].id;
+    const int before = g->state().players[0].eraScore;
+    REQUIRE(g->submit(Command::buildRailroad(0, engineer)) == CommandError::Ok);
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
+    CHECK_EQ(g->state().players[0].eraScore, before + score(rules(), "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
+    // A pillaged plot breaks the line until a Builder mends it.
+    auto h = Game::fromScenario(rules(), railState(true));
+    REQUIRE(h->submit(Command::buildRailroad(0, h->state().units[0].id)) == CommandError::Ok);
+    CHECK(!sovtest::hasMoment(*h, 0, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
+    REQUIRE(h->submit(Command::repairImprovement(0, h->state().units[1].id)) == CommandError::Ok);
+    CHECK(sovtest::hasMoment(*h, 0, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
 }

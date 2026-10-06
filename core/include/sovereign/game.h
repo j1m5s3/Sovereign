@@ -765,6 +765,8 @@ private:
     void awardMoment(PlayerId player, const char* moment);
     void awardFirst(PlayerId player, const char* worldMoment, const char* ownMoment, int key = 0);
     void awardOnce(PlayerId pid, const char* id);  // a moment a player earns only once
+    void circumnavigationMoment(PlayerId pid);     // a plot seen in every column of a map that wraps (09)
+    void railroadMoment(PlayerId pid, Hex laid);   // the track just laid or mended joins two of the player's cities (09)
     void unitMoments(PlayerId pid, TypeIndex unitType);  // moments for a unit trained or bought (09)
     void buildingMoments(City& city, TypeIndex building);  // moments for a building completed (09)
     void processEras();  // the world moves to the next era and every civ's age is set

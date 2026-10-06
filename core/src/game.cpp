@@ -909,6 +909,7 @@ void Game::apply(const Command& c) {
             u.movesLeft = Fixed();  // repairing takes the Builder's turn, not a charge
             u.moveTarget.reset();
             if (City* city = state_.city(state_.plot(u.pos).city)) assignCitizens(*city);
+            railroadMoment(c.player, u.pos);  // mended track can join two cities again
             break;
         }
         case CommandType::ContributeCharge: {
@@ -935,6 +936,7 @@ void Game::apply(const Command& c) {
             state_.plot(u.pos).routePillaged = false;
             u.movesLeft = Fixed();  // laying track takes the engineer's turn
             u.moveTarget.reset();
+            railroadMoment(c.player, u.pos);
             break;
         }
         case CommandType::PromoteSpy:
@@ -1256,6 +1258,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         processTrade(pid);
         processEnvoys(pid);
         processTourism(pid);
+        circumnavigationMoment(pid);
         processDiplomacy(pid);
         processGovernors(pid);
         processSpies(pid);
