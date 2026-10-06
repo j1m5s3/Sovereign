@@ -1,0 +1,42 @@
+# Plan: the AI's development planner (step 6, "everything else")
+
+Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-part-2.md`; the pace study it follows up: `jit_history/2026-10-06-ai-pace.md`. Chosen by Claude under James's standing consent.
+
+At turn 200 the AI is in era 2.4 (Medieval to Renaissance) against a target of the Industrial era. The pace study found that the core's rules match Civ VI and that weight tuning has stopped helping.
+
+A fresh diagnosis (seed 1, turn 150, 40 major cities) shows:
+- cities average population 4.8 against 5.6 housing, and 16 of 40 sit at their housing cap;
+- three of six civs have no Builders at all;
+- treasuries hold 180–350 Gold unspent;
+- science is 5.8 a city.
+
+## Method
+
+Every change is measured with `sovsim --bench 8 --players 6 --size MAPSIZE_SMALL --turns 200` against a build of main, and kept only if it gains. Noise is about ±0.4 cities and ±5 science.
+
+## Milestones (one PR, or a record of what was dropped)
+
+1. **Done (kept): Builders and housing:**
+   - a Builder floor that counts worked plots left unimproved;
+   - farms, Granaries, Water Mills and Aqueducts before a city reaches its housing cap, not after.
+2. **Done (kept): Gold that works:** the purchase reserve falls to 30 + 5 per city (was 60 + 15), so idle Gold buys Builders, Settlers and buildings sooner.
+   - Also kept: Builders choose the improvement worth most on the plot: the resource's own improvement first, then yields, and housing for a city near its cap.
+3. **City roles:**
+   - the cities with the most food and production train Settlers while free sites last;
+   - the rest build infrastructure (Campus, Library, Market) and their garrisons.
+4. **Opening build order:**
+   - the capital follows a fixed opening (Scout, Slinger or Warrior, Settler, Builder, Settler);
+   - then the planner takes over.
+
+## Results (8 seeds, turn 200)
+
+| Build | cities | pop | techs | civics | science | culture | prod | gold |
+|---|---|---|---|---|---|---|---|---|
+| main | 7.2 | 41.7 | 26.1 | 18.6 | 54.8 | 37.3 | 82.9 | 206 |
+| X1 Builders, housing | 7.5 | 44.0 | 26.1 | 18.6 | 55.0 | 36.8 | 89.9 | 218 |
+| X1 + X2 reserve | 7.4 | 43.9 | 26.3 | 19.0 | 59.9 | 38.4 | 89.0 | 170 |
+| X1 + X3 settler pumps (dropped) | 7.4 | 44.3 | 26.0 | 18.5 | 56.2 | 37.1 | 87.7 | 231 |
+| X1 + X5 improvement choice | 7.6 | 45.0 | 26.4 | 18.8 | 58.1 | 39.0 | 89.5 | 198 |
+| X1 + X2 + X5 (kept) | 7.6 | 44.6 | 26.8 | 19.1 | 61.1 | 40.0 | 93.5 | 156 |
+
+Science +11%, production +13% and population +7%, but era 2.6 stays.
