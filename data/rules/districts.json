@@ -438,7 +438,11 @@
    "adjacency": [],
    "appeal": 0,
    "aqueduct": true,
-   "preventsDrought": true
+   "preventsDrought": true,
+   "chargeProduction": {
+    "unit": "UNIT_MILITARY_ENGINEER",
+    "percent": 20
+   }
   },
   {
    "id": "DISTRICT_NEIGHBORHOOD",
@@ -555,7 +559,11 @@
    "appeal": 1,
    "floodplainsRiver": true,
    "preventsDrought": true,
-   "preventsFloods": true
+   "preventsFloods": true,
+   "chargeProduction": {
+    "unit": "UNIT_MILITARY_ENGINEER",
+    "percent": 20
+   }
   },
   {
    "id": "DISTRICT_PRESERVE",
@@ -718,7 +726,11 @@
     "TERRAIN_TUNDRA",
     "TERRAIN_SNOW",
     "TERRAIN_DESERT"
-   ]
+   ],
+   "chargeProduction": {
+    "unit": "UNIT_MILITARY_ENGINEER",
+    "percent": 20
+   }
   }
  ]
 }

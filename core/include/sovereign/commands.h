@@ -76,6 +76,7 @@ enum class CommandType : uint8_t {
     AskPromise = 59,            // arg = the civ asked, arg2 = PromiseKind; costs Diplomatic Favor [GS]
     DesignatePark = 63,         // id = Naturalist: a National Park of its plot and three beside it (07)
     PerformConcert = 64,        // id = Rock Band in a foreign city's district or wonder plot: tourism toward that civ [GS]
+    ContributeCharge = 66,      // id = Military Engineer on a district being built: a charge adds its share of the cost (03)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -229,6 +230,7 @@ struct Command {
     static Command coastalRaid(PlayerId p, UnitId unit, Hex at) { return {CommandType::Pillage, p, unit, at, 1, 0}; }
     static Command repairImprovement(PlayerId p, UnitId builder) { return {CommandType::RepairImprovement, p, builder, {}, 0, 0}; }
     static Command buildRailroad(PlayerId p, UnitId engineer) { return {CommandType::BuildRailroad, p, engineer, {}, 0, 0}; }
+    static Command contributeCharge(PlayerId p, UnitId engineer) { return {CommandType::ContributeCharge, p, engineer, {}, 0, 0}; }
     // A Mountain Tunnel is built on the neighbouring mountain `at` (BuildImprovement with a target).
     static Command buildTunnel(PlayerId p, UnitId engineer, TypeIndex tunnel, Hex at) { return {CommandType::BuildImprovement, p, engineer, at, tunnel, 0}; }
     static Command promoteSpy(PlayerId p, int32_t spy, TypeIndex promotion) { return {CommandType::PromoteSpy, p, spy, {}, promotion, 0}; }

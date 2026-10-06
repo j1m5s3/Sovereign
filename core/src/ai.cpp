@@ -1040,7 +1040,10 @@ void engineer(View& v, UnitId id) {
     const TypeIndex rr = v.game.railroad();
     const City* capital = nullptr;
     for (CityId c : v.cities) capital = s.city(c)->capital ? s.city(c) : capital;
-    if (!u || rr == kNone || !capital) return;
+    if (!u) return;
+    // A district of ours being built under it takes a charge first (03).
+    if (v.game.chargeProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::contributeCharge(v.me, id)) == CommandError::Ok) return;
+    if (rr == kNone || !capital) return;
     std::vector<Hex> line;
     for (CityId c : v.cities) {
         if (c == capital->id) continue;

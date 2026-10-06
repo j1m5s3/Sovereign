@@ -395,6 +395,7 @@ public:
     // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
     TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
+    CommandError chargeProblem(PlayerId player, UnitId engineer) const;  // spending a charge on the district it stands on (03)
     std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
 
     // ---- spy promotions (08: Espionage)

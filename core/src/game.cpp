@@ -265,6 +265,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
+        case CommandType::ContributeCharge: return chargeProblem(c.player, c.id);
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
@@ -852,6 +853,21 @@ void Game::apply(const Command& c) {
             u.movesLeft = Fixed();  // repairing takes the Builder's turn, not a charge
             u.moveTarget.reset();
             if (City* city = state_.city(state_.plot(u.pos).city)) assignCitizens(*city);
+            break;
+        }
+        case CommandType::ContributeCharge: {
+            // The district's share of its cost goes into the city's progress on it (03: Military Engineer).
+            Unit& u = *state_.unit(c.id);
+            City& city = *state_.city(state_.plot(u.pos).city);
+            const CityDistrict& d = *state_.districtAt(u.pos);
+            const ProductionItem item{ProductionKind::District, d.type};
+            const Fixed share = Fixed::fromInt(productionCost(c.player, item) * rules_->districts[static_cast<size_t>(d.type)].chargePercent / 100);
+            auto it = std::find_if(city.progress.begin(), city.progress.end(), [&](const ProductionProgress& pp) { return pp.item == item; });
+            if (it == city.progress.end()) city.progress.push_back({item, share});
+            else it->amount += share;
+            u.movesLeft = Fixed();
+            u.moveTarget.reset();
+            if (--u.charges <= 0) removeUnit(c.id);
             break;
         }
         case CommandType::BuildRailroad: {

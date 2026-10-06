@@ -1133,7 +1133,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Repair the improvement"), sov::Command::repairImprovement(Me(), U->id)});
 			}
-			// Military Engineers [GS]: a railroad here, a tunnel into a neighbouring mountain.
+			// Military Engineers [GS]: a charge toward the district here, a railroad here, a tunnel into a neighbouring mountain.
+			if (G.chargeProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Speed the district here (a charge)"), sov::Command::contributeCharge(Me(), U->id)});
+			}
 			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
 				Choices.Add({TEXT("Railroad (1 Iron, 1 Coal)"), sov::Command::buildRailroad(Me(), U->id)});

@@ -788,6 +788,7 @@ def gen_districts():
     extra = {row["District"]: row for row in table(SPEC / "districts.md", "District adjacency, placement, trade-route yields and modifiers")}
     names = ["City Center"] + PLACEABLE_DISTRICTS
     emitted = {"DISTRICT_" + snake(n) for n in names}
+    charge = {row["District"]: row for row in table(SPEC / "districts.md", "Districts that copy adjacency into other yields / build-charge production")}
     out = []
     for name in names:
         row = stats[name]
@@ -858,6 +859,9 @@ def gen_districts():
                 trade["international"][YIELD_WORDS[m.group(1)]] = int(m.group(4))
         if trade["domestic"] or trade["international"]:
             d["tradeYields"] = trade
+        # A unit's charge adds a share of the district's cost while it is built (Military Engineer, 20%).
+        if name in charge and charge[name].get("Unit") and charge[name].get("% production per charge"):
+            d["chargeProduction"] = {"unit": "UNIT_" + snake(charge[name]["Unit"]), "percent": num(charge[name]["% production per charge"])}
         out.append(d)
     return {"districts": out}
 
