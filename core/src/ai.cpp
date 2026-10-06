@@ -1710,8 +1710,18 @@ void purchases(View& v) {
         if (c.queue.empty()) continue;
         const ProductionItem& front = c.queue.front();
         const bool growth = front.kind == ProductionKind::Unit && (v.r.units[at(front.type)].foundCity || v.r.units[at(front.type)].buildCharges > 0);
-        const int cost = g.purchaseCost(v.me, front) + (growth ? 0 : reserve);
-        if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) {
+        // A placed district with Reyna's Contractor or Moksha's Divine Architect in the city (08: Governors).
+        if (front.kind == ProductionKind::District) {
+            const int faith = g.districtPurchaseCost(c, front.type, true);
+            if (faith > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(faith + 100)) {
+                g.submit(Command::purchaseWithFaith(v.me, cid, front));
+                continue;
+            }
+        }
+        const int base = front.kind == ProductionKind::District ? g.districtPurchaseCost(c, front.type, false) : g.purchaseCost(v.me, front);
+        if (base <= 0) continue;
+        const int cost = base + (growth ? 0 : reserve);
+        if (v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) {
             g.submit(Command::purchase(v.me, cid, c.queue.front()));
         }
     }

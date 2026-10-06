@@ -106,6 +106,9 @@ public:
     int productionCost(PlayerId player, ProductionItem item) const;
     // Gold price, or -1 when the item cannot be bought with gold.
     int purchaseCost(PlayerId player, ProductionItem item) const;
+    // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
+    // Divine Architect) (08: Governors); -1 when it cannot be.
+    int districtPurchaseCost(const City& city, TypeIndex district, bool faith) const;
     // Gold price of a plot, or -1 when this city cannot buy it.
     int plotPurchaseCost(CityId city, Hex plot) const;
     bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr) const;

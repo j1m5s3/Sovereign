@@ -428,6 +428,19 @@ int Game::purchaseCost(PlayerId player, ProductionItem item) const {
     return cost / 5 * 5;
 }
 
+// District purchase (08: Governors, Contractor and Divine Architect). Civ VI otherwise never sells
+// districts (02: Purchasing); the price is the usual 4x production cost, rounded down to a multiple of 5,
+// for Faith as for Gold (Sovereign reading). The district must already be placed.
+int Game::districtPurchaseCost(const City& city, TypeIndex district, bool faith) const {
+    if (district < 0 || static_cast<size_t>(district) >= rules_->districts.size()) return -1;
+    if (!cityGovernorHas(city, faith ? "GOVERNOR_PROMOTION_DIVINE_ARCHITECT" : "GOVERNOR_PROMOTION_CONTRACTOR")) return -1;
+    const CityDistrict* d = city.district(district, false);
+    if (!d || d->complete) return -1;
+    const ProductionItem item{ProductionKind::District, district};
+    int cost = productionCost(city.owner, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
+    return cost / 5 * 5;
+}
+
 int Game::plotPurchaseCost(CityId id, Hex at) const {
     const City* c = state_.city(id);
     auto h = state_.grid.normalize(at);
@@ -653,6 +666,14 @@ CommandError Game::validateCity(const Command& c) const {
             return CommandError::Ok;
         case CommandType::Purchase: {
             if (c.arg < 0 || c.arg > 3 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
+            if (item.kind == ProductionKind::District) {
+                const bool faith = c.target.x == 1;
+                const int cost = districtPurchaseCost(*city, item.type, faith);
+                if (cost < 0) return CommandError::CannotBuild;
+                const Player& buyer = state_.players[static_cast<size_t>(c.player)];
+                if ((faith ? buyer.faith : buyer.gold) < Fixed::fromInt(cost)) return faith ? CommandError::NotEnoughFaith : CommandError::NotEnoughGold;
+                return CommandError::Ok;
+            }
             if (c.target.x == 1) {
                 // Religious units and worship buildings, bought with Faith (06).
                 const int faith = faithPurchaseCost(c.player, *city, item);
@@ -719,6 +740,21 @@ void Game::applyCity(const Command& c) {
             else city.queue.push_back(item);
             break;
         case CommandType::Purchase:
+            if (item.kind == ProductionKind::District) {
+                const bool faith = c.target.x == 1;
+                (faith ? p.faith : p.gold) -= Fixed::fromInt(districtPurchaseCost(city, item.type, faith));
+                completeItem(city, item);
+                City& bought = *state_.city(c.id);
+                bought.queue.erase(std::remove(bought.queue.begin(), bought.queue.end(), item), bought.queue.end());
+                for (size_t i = 0; i < bought.progress.size(); ++i) {
+                    if (bought.progress[i].item == item) {
+                        bought.overflow += bought.progress[i].amount;
+                        bought.progress.erase(bought.progress.begin() + static_cast<long>(i));
+                        break;
+                    }
+                }
+                break;
+            }
             if (c.target.x == 1) {
                 p.faith -= Fixed::fromInt(faithPurchaseCost(c.player, city, item));
                 if (item.kind == ProductionKind::Building) {
