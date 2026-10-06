@@ -345,6 +345,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i8(static_cast<int8_t>(rel.alliance));
             w.i32(rel.allianceUntil);
             w.i32(rel.alliancePoints);
+            w.u8(rel.delegation);
         }
         w.u32(static_cast<uint32_t>(p.memories.size()));
         for (const OpinionMemory& m : p.memories) {
@@ -752,6 +753,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.alliance = static_cast<AllianceType>(alliance);
             rel.allianceUntil = r.i32();
             rel.alliancePoints = r.i32();
+            rel.delegation = r.u8();
+            if (rel.delegation > 2) return false;
         }
         uint32_t nmem = r.u32();
         if (!r.checkCount(nmem, 10)) return false;

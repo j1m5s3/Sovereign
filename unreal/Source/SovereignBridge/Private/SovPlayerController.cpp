@@ -743,6 +743,15 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					}
 				}
 				if (G.canMakePeace(Me(), O.id)) Choices.Add({FString::Printf(TEXT("Offer peace to %s"), *Who), sov::Command::makePeace(Me(), O.id)});
+				// Delegations and embassies (08): access levels.
+				for (const bool bEmbassy : {false, true})
+				{
+					const sov::Command Send = sov::Command::sendDelegation(Me(), O.id, bEmbassy);
+					if (G.validate(Send) == sov::CommandError::Ok)
+						Choices.Add({FString::Printf(TEXT("Send %s to %s (%d gold; access now %s)"), bEmbassy ? TEXT("a resident embassy") : TEXT("a delegation"), *Who,
+										 bEmbassy ? 50 : 25, UTF8_TO_TCHAR(sov::Game::accessName(G.accessLevel(Me(), O.id)))),
+							Send});
+				}
 				// Promises [GS] (30 favor each).
 				static const TCHAR* const Promises[] = {TEXT("not to settle near us"), TEXT("not to convert our cities"), TEXT("not to spy on us"), TEXT("not to dig in our lands")};
 				for (int32 K = 0; K < sov::kNumPromiseKinds; ++K)
@@ -1965,11 +1974,15 @@ void ASovPlayerController::OpenDiplomacy(sov::PlayerId Leader)
 	FSovDiplomacyTalk* T = Talk.Get();
 	DiplomacyPanel = SNew(SSovDiplomacyPanel)
 		.Talk(T)
-		.Header([T]() {
+		.Header([this, T]() {
 			const sov::diplomacy::Persona& P = T->GetPersona();
-			return FText::FromString(FString::Printf(TEXT("%s of %s, a %s. %s toward you (opinion %+d).\nAgenda, %s: %s"), *Str(P.leaderName),
-				*Str(P.civName), *Str(P.leaning), UTF8_TO_TCHAR(sov::relationshipName(P.relationship)), P.opinion, *Str(P.agendaName),
-				*Str(P.agendaText)));
+			// Their agenda shows from Open access (08: Access level).
+			const int32 Access = Subsystem()->GetGame().accessLevel(Me(), T->Leader());
+			const FString Agenda = Access >= 2 ? FString::Printf(TEXT("Agenda, %s: %s"), *Str(P.agendaName), *Str(P.agendaText))
+											   : FString(TEXT("Agenda: unknown (needs Open access: Printing, a delegation, a trade route, an alliance or a spy)"));
+			return FText::FromString(FString::Printf(TEXT("%s of %s, a %s. %s toward you (opinion %+d). Access: %s.\n%s"), *Str(P.leaderName),
+				*Str(P.civName), *Str(P.leaning), UTF8_TO_TCHAR(sov::relationshipName(P.relationship)), P.opinion,
+				UTF8_TO_TCHAR(sov::Game::accessName(Access)), *Agenda));
 		})
 		.Reasons([T]() {
 			const sov::diplomacy::Persona& P = T->GetPersona();

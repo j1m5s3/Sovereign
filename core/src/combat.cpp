@@ -790,6 +790,7 @@ void Game::applyCombat(const Command& c) {
                 r->war = true;
                 r->since = state_.turn;
                 r->peaceOffered = false;
+                r->delegation = 0;  // war sends delegations and embassies home (08)
             }
             return;
         }

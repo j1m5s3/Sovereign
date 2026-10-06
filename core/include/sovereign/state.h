@@ -348,6 +348,7 @@ struct Relation {
     AllianceType alliance = AllianceType::None;  // an alliance [R&F] running through allianceUntil (both sides)
     int32_t allianceUntil = 0;
     int32_t alliancePoints = 0;   // toward levels 2 and 3 (internal units, ALLIANCE_POINTS_MULTIPLIER a turn)
+    uint8_t delegation = 0;       // this player keeps 1 a delegation, 2 a resident embassy, with that one (08)
 };
 
 struct Player {

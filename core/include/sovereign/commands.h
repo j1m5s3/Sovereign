@@ -72,6 +72,7 @@ enum class CommandType : uint8_t {
     UpgradeUnit = 49,           // id = unit: becomes the next unit in its line for gold (05: Upgrades)
     RebaseUnit = 50,            // id = aircraft, target = a friendly air base with a free slot
     JoinEmergency = 52,         // arg = index into GameState::emergencies (running, the player eligible)
+    SendDelegation = 60,        // arg = the civ, arg2 = 1 a resident embassy (else a delegation); costs Gold (08)
     AskPromise = 59,            // arg = the civ asked, arg2 = PromiseKind; costs Diplomatic Favor [GS]
     Excavate = 58,              // id = Archaeologist on an antiquity site or shipwreck: an Artifact into a free slot
     FormUnit = 57,              // id = military unit, arg = a neighbouring unit of its type: a Corps/Fleet, or an Army/Armada
@@ -207,6 +208,7 @@ struct Command {
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
+    static Command sendDelegation(PlayerId p, PlayerId to, bool embassy) { return {CommandType::SendDelegation, p, -1, {}, to, embassy ? 1 : 0}; }
     static Command askPromise(PlayerId p, PlayerId of, PromiseKind kind) { return {CommandType::AskPromise, p, -1, {}, of, static_cast<int32_t>(kind)}; }
     static Command excavate(PlayerId p, UnitId archaeologist) { return {CommandType::Excavate, p, archaeologist, {}, 0, 0}; }
     static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }

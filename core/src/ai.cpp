@@ -521,6 +521,16 @@ void deals(View& v) {
             v.game.submit(Command::denounce(v.me, o.id));
             continue;
         }
+        // Delegations and embassies with every met major (08): access, and favor with a Diplomatic Quarter.
+        if (s.players[at(v.me)].gold >= Fixed::fromInt(150) && v.game.wouldReceive(o.id, v.me)) {
+            for (const bool embassy : {true, false}) {
+                const Command send = Command::sendDelegation(v.me, o.id, embassy);
+                if (v.game.validate(send) == CommandError::Ok) {
+                    v.game.submit(send);
+                    break;
+                }
+            }
+        }
         // A neighbour crowding our cities is asked to promise not to settle nearer (08 [GS]), with favor to spare.
         if (s.players[at(v.me)].favor >= 60) {
             bool crowding = false;
@@ -869,13 +879,21 @@ std::optional<Site> bestSite(const View& v, UnitId settler, Hex from) {
     return best;
 }
 
+// Settling here would break a promise not to settle near someone (08 [GS]).
+bool breaksSettlingPromise(const View& v, Hex plot) {
+    for (const City& c : v.s().cities) {
+        if (c.owner != v.me && v.s().grid.distance(c.pos, plot) <= 6 && v.game.promised(v.me, c.owner, PromiseKind::NoSettling)) return true;
+    }
+    return false;
+}
+
 void settle(View& v, UnitId id) {
     const Unit* u = v.s().unit(id);
     if (v.cities.empty() && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
         survey(v);
         return;
     }
-    if (u->moveTarget && v.game.canFoundCityAt(v.me, *u->moveTarget)) {
+    if (u->moveTarget && v.game.canFoundCityAt(v.me, *u->moveTarget) && !breaksSettlingPromise(v, *u->moveTarget)) {
         v.claimed.push_back(*u->moveTarget);
         return;  // still on its way
     }
@@ -893,7 +911,7 @@ void settle(View& v, UnitId id) {
         return;
     }
     // Nowhere good in reach: settle here if allowed, else wait.
-    if (!site && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
+    if (!site && !breaksSettlingPromise(v, u->pos) && v.game.submit(Command::foundCity(v.me, id)) == CommandError::Ok) {
         survey(v);
         return;
     }

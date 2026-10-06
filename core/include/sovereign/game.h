@@ -420,6 +420,15 @@ public:
     void triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim);
     void processEmergencies();               // goals met, expiry, rewards (the world turn)
 
+    // ---- delegations, embassies and diplomatic access (08: Access level, Diplomatic actions)
+    CommandError delegationProblem(PlayerId from, PlayerId to, bool embassy) const;
+    bool wouldReceive(PlayerId to, PlayerId from) const;  // an AI lets the delegation in
+    void sendDelegation(PlayerId from, PlayerId to, bool embassy);
+    int accessLevel(PlayerId viewer, PlayerId target) const;  // 0 None, 1 Limited, 2 Open, 3 Secret, 4 Top Secret
+    static const char* accessName(int level);
+    static int gossipLevel(EventKind kind);               // the access an outsider needs to hear of it
+    bool hearsOf(PlayerId viewer, const GameEvent& e) const;
+
     // ---- promises [GS] (08: Ask Promise)
     CommandError askPromiseProblem(PlayerId asker, PlayerId of, PromiseKind kind) const;
     bool wouldPromise(PlayerId of, PlayerId asker) const;            // an AI's answer

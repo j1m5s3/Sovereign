@@ -742,6 +742,99 @@ void Game::breakPromises(PlayerId by, PlayerId to, PromiseKind kind) {
     }
 }
 
+// Delegations and resident embassies (08: Diplomatic actions; data: DiplomaticActions). A Send Delegation
+// (25 Gold, until Diplomatic Service) or a Resident Embassy (50 Gold, from Diplomatic Service; it replaces
+// the delegation) goes to a met major at peace; an AI turns it away while it denounces or dislikes the
+// sender. It stays until war between them. Each is a Delegate source of access; with a Diplomatic Quarter
+// [GS] the sender gains 1 Favor a turn for each (favorPerTurn). The land path a delegation needs in
+// Civ VI is not checked (Sovereign reading).
+CommandError Game::delegationProblem(PlayerId from, PlayerId to, bool embassy) const {
+    if (from == to || !isMajorCiv(from) || !isMajorCiv(to) || !hasMet(from, to) || atWar(from, to)) return CommandError::CannotDeal;
+    const Player& p = state_.players[at(from)];
+    const TypeIndex service = rules_->civic("CIVIC_DIPLOMATIC_SERVICE");
+    const bool served = service != kNone && p.civics.has(service);
+    const uint8_t have = p.relations[at(to)].delegation;
+    if (embassy ? (!served || have >= 2) : (served || have >= 1)) return CommandError::CannotDeal;
+    if (p.relations[at(to)].lastProposal == state_.turn) return CommandError::CannotDeal;  // turned away this turn
+    if (p.gold < Fixed::fromInt(embassy ? 50 : 25)) return CommandError::NotEnoughGold;
+    return CommandError::Ok;
+}
+
+bool Game::wouldReceive(PlayerId to, PlayerId from) const {
+    if (state_.players[at(to)].human) return true;  // a human's leader receives every delegation (Sovereign reading)
+    return !denouncing(to, from) && opinionOf(to, from) > -20;
+}
+
+void Game::sendDelegation(PlayerId from, PlayerId to, bool embassy) {
+    Player& p = state_.players[at(from)];
+    if (!wouldReceive(to, from)) {
+        p.relations[at(to)].lastProposal = state_.turn;
+        pushEvent(EventKind::DealRejected, from, to, -1);
+        return;
+    }
+    p.gold -= Fixed::fromInt(embassy ? 50 : 25);
+    p.relations[at(to)].delegation = static_cast<uint8_t>(embassy ? 2 : 1);
+    if (!embassy) remember(to, from, MemoryKind::Gift, 3, 30);  // a delegation flatters (+opinion)
+}
+
+// Access level (08; data: Visibilities, DiplomaticVisibilitySources): met is Limited; each source adds one,
+// up to Top Secret: the Printing tech, a trade route to the civ, a delegation or embassy with it, an
+// alliance, and a spy in one of its cities (one more if the spy is level 3 or better).
+int Game::accessLevel(PlayerId viewer, PlayerId target) const {
+    if (viewer == target) return 4;
+    if (viewer < 0 || target < 0 || !hasMet(viewer, target)) return 0;
+    const Player& p = state_.players[at(viewer)];
+    int level = 1;
+    const TypeIndex printing = rules_->tech("TECH_PRINTING");
+    level += printing != kNone && p.techs.has(printing) ? 1 : 0;
+    level += std::any_of(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& t) {
+        const City* d = state_.city(t.destination);
+        return t.owner == viewer && d && d->owner == target;
+    }) ? 1 : 0;
+    level += p.relations[at(target)].delegation > 0 ? 1 : 0;
+    level += alliance(viewer, target) != AllianceType::None ? 1 : 0;
+    int spy = 0;
+    for (const Agent& a : state_.agents) {
+        const City* c = a.spy && a.owner == viewer && a.travel == 0 ? state_.city(a.city) : nullptr;
+        if (c && c->owner == target) spy = std::max(spy, a.level >= 3 ? 2 : 1);
+    }
+    return std::min(4, level + spy);
+}
+
+const char* Game::accessName(int level) {
+    static const char* const names[] = {"None", "Limited", "Open", "Secret", "Top Secret"};
+    return names[std::clamp(level, 0, 4)];
+}
+
+// Gossip (08: Access level): what outsiders hear of a civ's doings. Wars, peace, denunciations and
+// friendships are heard by all who have met it; deals and new ages from Open; great people and
+// historic moments from Secret; its spies' work only at Top Secret (Sovereign reading of the gossip tiers).
+int Game::gossipLevel(EventKind kind) {
+    switch (kind) {
+        case EventKind::WarDeclared:
+        case EventKind::PeaceMade:
+        case EventKind::Denounced:
+        case EventKind::FriendshipDeclared:
+        case EventKind::AssassinKilledLeader:
+        case EventKind::Rebellion: return 1;
+        case EventKind::DealAccepted:
+        case EventKind::DealBroken:
+        case EventKind::NewAge: return 2;
+        case EventKind::GreatPersonRecruited:
+        case EventKind::HistoricMoment: return 3;
+        case EventKind::SpyOperation: return 4;
+        default: return 99;  // private, or world news shown to all anyway
+    }
+}
+
+bool Game::hearsOf(PlayerId viewer, const GameEvent& e) const {
+    if (e.actor == viewer || e.target == viewer) return true;
+    const int need = gossipLevel(e.kind);
+    if (need > 4) return false;
+    const PlayerId about = e.actor != kNoPlayer ? e.actor : e.target;
+    return about != kNoPlayer && isMajorCiv(about) && accessLevel(viewer, about) >= need;
+}
+
 // Casus belli (08: War types). Each needs its civic and its condition, and, except Protectorate,
 // DIPLOMACY_DENOUNCE_WAR_DELAY turns of denouncement first; the declaration's grievances are the
 // formal war's times the war type's percent.

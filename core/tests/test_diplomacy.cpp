@@ -507,3 +507,65 @@ TEST(a_broken_promise_brings_grievances_and_a_war_of_retribution) {
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK(h->hasCasusBelli(0, 1, CasusBelli::Retribution));
 }
+
+// ---- delegations, embassies and access (08: Access level)
+
+TEST(delegations_and_spies_raise_access_and_bring_gossip) {
+    GameState s = diploState(3);
+    for (Player& p : s.players) p.relations.resize(3);
+    s.players[0].met[2] = 0;
+    s.players[2].met[0] = 0;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->accessLevel(0, 1), 1);  // met: Limited
+    CHECK_EQ(g->accessLevel(0, 2), 0);  // not met
+    CHECK(g->submit(Command::sendDelegation(0, 1, true)) != CommandError::Ok);  // no embassy before Diplomatic Service
+    REQUIRE(g->submit(Command::sendDelegation(0, 1, false)) == CommandError::Ok);
+    CHECK(g->state().players[0].gold == Fixed::fromInt(275));
+    CHECK_EQ(g->accessLevel(0, 1), 2);  // Open
+    CHECK(g->submit(Command::sendDelegation(0, 1, false)) != CommandError::Ok);  // one is enough
+    // Gossip: a war between 1 and 2 is heard at Limited; a great person of 1's needs Secret.
+    const GameEvent war{1, EventKind::WarDeclared, 1, 2, 0};
+    const GameEvent person{1, EventKind::GreatPersonRecruited, 1, kNoPlayer, 0};
+    CHECK(g->hearsOf(0, war));
+    CHECK(!g->hearsOf(0, person));
+    // A level-3 spy in 1's city adds two levels: Top Secret, which shows all its cities.
+    GameState t = g->state();
+    Agent spy;
+    spy.id = 1;
+    spy.owner = 0;
+    spy.spy = true;
+    spy.level = 3;
+    spy.city = t.cities[1].id;
+    t.agents.push_back(spy);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->accessLevel(0, 1), 4);
+    CHECK(h->hearsOf(0, person));
+    CHECK(Game::gossipLevel(EventKind::SpyOperation) == 4);
+    // War sends the delegation home.
+    GameState u = h->state();
+    u.agents.clear();
+    auto k = Game::fromScenario(rules(), std::move(u));
+    REQUIRE(k->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    CHECK_EQ(k->state().players[0].relations[1].delegation, 0);
+    CHECK_EQ(k->accessLevel(0, 1), 1);
+}
+
+TEST(an_embassy_follows_diplomatic_service_and_brings_favor_with_a_diplomatic_quarter) {
+    GameState s = diploState();
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_DIPLOMATIC_SERVICE"))] = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->submit(Command::sendDelegation(0, 1, false)) != CommandError::Ok);  // delegations are obsolete
+    const int before = g->favorPerTurn(0);
+    REQUIRE(g->submit(Command::sendDelegation(0, 1, true)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].relations[1].delegation, 2);
+    CHECK_EQ(g->favorPerTurn(0), before);  // no Diplomatic Quarter yet
+    GameState t = g->state();
+    CityDistrict dq;
+    dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
+    dq.pos = {5, 7};
+    dq.complete = true;
+    t.cities[0].districts.push_back(dq);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->favorPerTurn(0), before + 1);
+}

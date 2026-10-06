@@ -285,10 +285,16 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		Line(TEXT("The throne is empty. H: choose a successor"), 16, Y, FLinearColor(1.f, 0.4f, 0.3f));
 	}
 	// Assassination news involving us from the last two turns (leader doc §6).
+	int32 GossipShown = 0;
 	for (const sov::GameEvent& E : S.events)
 	{
 		const bool bWorldNews = E.kind == sov::EventKind::CongressSession || E.kind == sov::EventKind::ResolutionPassed || E.kind == sov::EventKind::ClimatePhase;
-		if (E.turn < S.turn - 1 || (E.actor != Me && E.target != Me && !bWorldNews))
+		// Others' doings reach us as gossip, as far as our access to them goes (08: Access level).
+		if (E.turn < S.turn - 1 || (!bWorldNews && !G.hearsOf(Me, E)))
+		{
+			continue;
+		}
+		if (E.actor != Me && E.target != Me && !bWorldNews && ++GossipShown > 6)
 		{
 			continue;
 		}
@@ -306,13 +312,14 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
 			case sov::EventKind::Rebellion: Text = FString::Printf(TEXT("Rebels rise against the iron fist of %s."), *CivOf(E.target)); break;
 			case sov::EventKind::HistoricMoment:
-				Text = FString::Printf(TEXT("Historic moment: %s (+%d era score)."), *Str(R.moments[static_cast<size_t>(E.value)].name),
+				Text = FString::Printf(TEXT("%s: %s (+%d era score)."), E.actor == Me ? TEXT("Historic moment") : *FString::Printf(TEXT("Word from %s"), *CivOf(E.actor)), *Str(R.moments[static_cast<size_t>(E.value)].name),
 					R.moments[static_cast<size_t>(E.value)].eraScore);
 				break;
 			case sov::EventKind::NewAge:
 			{
 				static const TCHAR* Ages[] = {TEXT("a Normal Age"), TEXT("a Golden Age"), TEXT("a Dark Age"), TEXT("a Heroic Age")};
-				Text = FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4]);
+				Text = E.actor == Me ? FString::Printf(TEXT("A new era dawns: %s begins."), Ages[static_cast<size_t>(E.value) % 4])
+									 : FString::Printf(TEXT("%s enters %s."), *CivOf(E.actor), Ages[static_cast<size_t>(E.value) % 4]);
 				break;
 			}
 			case sov::EventKind::CongressSession: Text = TEXT("The World Congress opens a session (, to vote)."); break;
@@ -334,7 +341,8 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 					TEXT("Steal Tech Boost"), TEXT("Sabotage Production"), TEXT("Neutralize Governor"), TEXT("Foment Unrest"),
 				TEXT("Great Work Heist"), TEXT("Recruit Partisans"), TEXT("Breach Dam"), TEXT("Disrupt Rocketry"), TEXT("Fabricate Scandal")};
 				Text = E.actor == Me ? FString::Printf(TEXT("Your spy succeeds: %s against %s."), Missions[E.value % sov::kNumSpyMissions], *CivOf(E.target))
-									 : FString::Printf(TEXT("Spies have struck in your lands: %s."), Missions[E.value % sov::kNumSpyMissions]);
+				   : E.target == Me ? FString::Printf(TEXT("Spies have struck in your lands: %s."), Missions[E.value % sov::kNumSpyMissions])
+									 : FString::Printf(TEXT("Rumour: spies from %s struck %s (%s)."), *CivOf(E.actor), *CivOf(E.target), Missions[E.value % sov::kNumSpyMissions]);
 				break;
 			}
 			case sov::EventKind::SpyCaught:
@@ -357,8 +365,12 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::PeaceMade: Text = FString::Printf(TEXT("%s and %s made peace."), *CivOf(E.actor), *CivOf(E.target)); break;
 			case sov::EventKind::DealBroken: Text = FString::Printf(TEXT("%s could not keep its deal with %s."), *CivOf(E.actor), *CivOf(E.target)); break;
 			case sov::EventKind::GreatPersonRecruited:
-				Text = FString::Printf(TEXT("%s joins you as a %s (Y: great people)."), *Str(R.greatPeople[static_cast<size_t>(E.value)].name),
-					*Str(R.greatPersonClasses[static_cast<size_t>(R.greatPeople[static_cast<size_t>(E.value)].cls)].name));
+			{
+				const FString Who = Str(R.greatPeople[static_cast<size_t>(E.value)].name);
+				const FString Cls = Str(R.greatPersonClasses[static_cast<size_t>(R.greatPeople[static_cast<size_t>(E.value)].cls)].name);
+				Text = E.actor == Me ? FString::Printf(TEXT("%s joins you as a %s (Y: great people)."), *Who, *Cls)
+									 : FString::Printf(TEXT("%s recruits %s, a %s."), *CivOf(E.actor), *Who, *Cls);
+			}
 				break;
 		}
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));

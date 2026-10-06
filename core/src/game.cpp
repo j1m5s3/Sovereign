@@ -268,6 +268,9 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::SendDelegation:
+            if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotDeal;
+            return delegationProblem(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0);
         case CommandType::AskPromise:
             if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size() || c.arg2 < 0 || c.arg2 >= kNumPromiseKinds) return CommandError::CannotDeal;
             return askPromiseProblem(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2));
@@ -649,6 +652,14 @@ void Game::refreshVisibility(PlayerId pid) {
         // An Encampment watches its strike range (Sovereign reading; 03: Defense).
         if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
+    // Diplomatic access (08): Secret shows a civ's capital, Top Secret all its cities.
+    for (const City& c : state_.cities) {
+        if (c.owner == pid || !isMajorCiv(c.owner)) continue;
+        const int access = accessLevel(pid, c.owner);
+        if (access >= 4 || (access >= 3 && c.capital)) {
+            for (const Hex& h : state_.grid.within(c.pos, 1)) p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
+        }
+    }
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;
         if (!c) continue;
@@ -752,6 +763,7 @@ void Game::apply(const Command& c) {
             else pillage(c.id);
             break;
         case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::SendDelegation: sendDelegation(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0); break;
         case CommandType::AskPromise: askPromise(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2)); break;
         case CommandType::FormUnit: {
             Unit& u = *state_.unit(c.id);
