@@ -597,6 +597,9 @@ private:
     void processBarbarians();
     void placeCamps(PlayerId barbarian);
     void releaseUnit(Camp& camp, PlayerId barbarian);
+    bool releaseScout(Camp& camp, PlayerId bp);  // false when no Scout can be placed
+    bool isBarbarianScout(const Unit& u) const;
+    void barbarianScoutAct(UnitId id);
     void barbarianAct(UnitId id);
     void afterAttack(Unit& unit);
     // A captured civilian changes hands as its capture type, or is destroyed.

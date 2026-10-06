@@ -557,6 +557,10 @@ struct Camp {
     int boldness = 0;
     int spawnTimer = 0;  // turns until it releases its next unit
     TypeIndex tribe = kNone;  // Rules::barbarianTribes
+    // Scouting (01: Barbarians): a new camp sends out a Scout; once it has seen a city and come home the
+    // camp is alerted and raids. Camps made outside placeCamps (scenarios, tests) start alerted.
+    bool alerted = true;
+    bool scoutSaw = false;  // its scout has seen a city and is on its way home
 };
 
 struct SOV_API GameState {

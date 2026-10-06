@@ -646,6 +646,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(k.boldness);
         w.i32(k.spawnTimer);
         w.i16(k.tribe);
+        w.boolean(k.alerted);
+        w.boolean(k.scoutSaw);
     }
     w.i32(s.nextCampId);
     w.i32(s.nextUnitId);
@@ -1166,6 +1168,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         k.boldness = r.i32();
         k.spawnTimer = r.i32();
         k.tribe = r.i16();
+        k.alerted = r.boolean();
+        k.scoutSaw = r.boolean();
     }
     s.nextCampId = r.i32();
     s.nextUnitId = r.i32();
