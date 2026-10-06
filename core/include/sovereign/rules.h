@@ -811,6 +811,18 @@ struct SpyOperationType {
     bool needsDistrict = false;  // a district is named (kNone then: one the core cannot place yet)
 };
 
+// A tribal village's reward (01: Tribal Villages; data: barbarians-goody-huts).
+enum class GoodyKind : uint8_t { Relic = 0, Inspiration, Eureka, GovernorTitle, Envoy, Favor, Faith, Gold, Xp, Heal, Strategic, Tech, Population, Unit };
+struct GoodyType {
+    std::string id, category;
+    int weight = 0;
+    GoodyKind kind = GoodyKind::Gold;
+    int amount = 0;
+    TypeIndex unit = kNone;  // Unit: what appears in the nearest city
+    int minTurn = 0;
+    bool needsCity = false;
+};
+
 // A spy promotion (08: Espionage; data: promotions.md, Espionage): one is chosen per level gained.
 struct SpyPromotionType {
     std::string id, name;
@@ -1000,6 +1012,7 @@ public:
     std::vector<GovernorType> governors;
     std::vector<SpyOperationType> spyOperations;
     std::vector<SpyPromotionType> spyPromotions;
+    std::vector<GoodyType> goodies;
     std::vector<ResolutionType> resolutions;
     std::vector<DisasterType> disasters;
     std::vector<ClimatePhaseType> climatePhases;

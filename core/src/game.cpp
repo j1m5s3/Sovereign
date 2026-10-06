@@ -53,6 +53,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
     placeCityStates(s, rules);
+    if (setup.tribalVillages) placeVillages(s, rules);
     if (setup.barbarians) {
         // The barbarians: one extra player, at war with all, who moves in the world turn.
         Player b;

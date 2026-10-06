@@ -73,6 +73,11 @@ void Game::spawnCaptures() {
 
 void Game::enterPlot(Unit& unit) {
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    if (state_.plot(unit.pos).village && isMajorCiv(unit.owner)) {
+        const UnitId id = unit.id;
+        enterVillage(unit);
+        if (!state_.unit(id)) return;
+    }
     if (owner.barbarian || rules_->units[static_cast<size_t>(unit.type)].layer != UnitLayer::Military) return;
     auto it = std::find_if(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.pos == unit.pos; });
     if (it == state_.camps.end()) return;

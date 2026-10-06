@@ -1463,6 +1463,29 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (op.needsDistrict) op.district = district(j["district"].str());
         spyOperations.push_back(std::move(op));
     }
+    for (const auto& [id, j] : m.tables["goodies"]) {
+        static const std::pair<const char*, GoodyKind> kinds[] = {
+            {"RELIC", GoodyKind::Relic}, {"INSPIRATION", GoodyKind::Inspiration}, {"EUREKA", GoodyKind::Eureka}, {"GOVERNOR_TITLE", GoodyKind::GovernorTitle},
+            {"ENVOY", GoodyKind::Envoy}, {"FAVOR", GoodyKind::Favor}, {"FAITH", GoodyKind::Faith}, {"GOLD", GoodyKind::Gold}, {"XP", GoodyKind::Xp},
+            {"HEAL", GoodyKind::Heal}, {"STRATEGIC", GoodyKind::Strategic}, {"TECH", GoodyKind::Tech}, {"POPULATION", GoodyKind::Population},
+            {"UNIT", GoodyKind::Unit}};
+        GoodyType g;
+        g.id = id;
+        g.category = j["category"].str();
+        g.weight = static_cast<int>(j["weight"].integer(0));
+        bool known = false;
+        for (const auto& [name, kind] : kinds) {
+            if (j["kind"].str() == name) {
+                g.kind = kind;
+                known = true;
+            }
+        }
+        g.amount = static_cast<int>(j["amount"].integer(0));
+        g.unit = j.has("unit") ? unit(j["unit"].str()) : kNone;
+        g.minTurn = static_cast<int>(j["minTurn"].integer(0));
+        g.needsCity = j["needsCity"].boolean(false);
+        if (known && (g.kind != GoodyKind::Unit || g.unit != kNone)) goodies.push_back(std::move(g));
+    }
     for (const auto& [id, j] : m.tables["spyPromotions"]) {
         SpyPromotionType sp;
         sp.id = id;

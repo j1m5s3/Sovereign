@@ -42,6 +42,7 @@ struct Plot {
     uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
+    bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -446,6 +447,7 @@ struct GameSetup {
     bool wrapX = true;
     std::vector<PlayerSetup> players;
     bool barbarians = true;
+    bool tribalVillages = true;    // 01: Tribal Villages
     // Victories (09-civs-eras-victory-climate.md, Victory conditions). With Domination
     // off, the last major civ standing wins instead (VICTORY_DEFAULT).
     bool dominationVictory = true;
@@ -525,6 +527,7 @@ enum class EventKind : uint8_t {
     ResolutionPassed,  // value: resolution; target: the candidate it applies to when that is a player
     Disaster,        // value: disaster type; target: the owner of the plot it struck (kNoPlayer: unowned)
     ClimatePhase,    // value: the phase the world entered
+    GoodyHut,        // actor entered a tribal village; value: the reward (Rules::goodies)
 };
 struct GameEvent {
     int32_t turn = 0;

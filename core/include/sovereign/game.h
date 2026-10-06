@@ -384,6 +384,9 @@ public:
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
 
+    // ---- tribal villages (01: Tribal Villages)
+    void enterVillage(Unit& unit);   // the reward: a category, then a reward in it, by weight
+
     // ---- city-state quests (08: Quests)
     void assignQuests();                                         // each city-state, each major that met it: one open quest
     void questDone(PlayerId major, QuestKind kind, int32_t arg);  // fulfils matching quests: an envoy in each

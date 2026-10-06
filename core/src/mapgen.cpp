@@ -129,6 +129,29 @@ bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {
     return true;
 }
 
+// Sovereign reading of the map script's density (unverified in the specs): one village per 25 land
+// plots, at least 4 plots from any start and 4 from each other, on unowned passable land with no
+// resource of note left unchecked (resources are kept).
+void placeVillages(GameState& state, const Rules& rules) {
+    Rng& rng = state.rng.get(RngStream::MapGen);
+    std::vector<Hex> land;
+    for (int i = 0; i < state.grid.size(); ++i) {
+        const Hex h = state.grid.at(i);
+        if (isLandPassable(state, rules, h) && state.plot(h).owner == kNoPlayer) land.push_back(h);
+    }
+    const size_t target = land.size() / 25;
+    std::vector<Hex> placed;
+    for (size_t tries = 0; tries < land.size() * 2 && placed.size() < target && !land.empty(); ++tries) {
+        const Hex h = land[rng.below(static_cast<uint32_t>(land.size()))];
+        bool ok = true;
+        for (const Player& p : state.players) ok = ok && state.grid.distance(p.startPos, h) >= 4;
+        for (const Hex& o : placed) ok = ok && state.grid.distance(o, h) >= 4;
+        if (!ok) continue;
+        state.plot(h).village = true;
+        placed.push_back(h);
+    }
+}
+
 void generateMap(GameState& state, const Rules& rules) {
     const HexGrid& g = state.grid;
     const int w = g.width(), h = g.height();

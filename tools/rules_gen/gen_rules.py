@@ -589,7 +589,39 @@ def gen_barbarians():
             t["resource"] = "RESOURCE_" + snake(row["Required resource"])
             t["resourceRange"] = num(row["Resource range"])
         out.append(t)
-    return {"barbarianTribes": out}
+    # Tribal village rewards (01: Tribal Villages; data: Tribal village rewards); the meteor site waits for meteors.
+    goodies = []
+    units = {"Recon": "UNIT_SCOUT", "Builder": "UNIT_BUILDER", "Trader": "UNIT_TRADER", "Settler": "UNIT_SETTLER"}
+    for row in table(SPEC / "barbarians-goody-huts.md", "Tribal village rewards"):
+        if row["Category"] == "Meteor Goodies" or not num(row["Weight"]):
+            continue
+        eff = row["Effect"]
+        g = {"id": "GOODY_" + snake(row["Reward"]), "category": row["Category"].replace("Goodyhut ", "").upper(), "weight": num(row["Weight"])}
+        rules = [(r"grants 1 Relic", ("RELIC", 1)), (r"\+(\d+) Inspiration", ("INSPIRATION", None)), (r"\+(\d+) Eureka", ("EUREKA", None)),
+                 (r"\+(\d+) Governor Title", ("GOVERNOR_TITLE", None)), (r"grants (\d+) Envoy", ("ENVOY", None)),
+                 (r"\+(\d+) Diplomatic Favor", ("FAVOR", None)), (r"grant of (\d+) Faith", ("FAITH", None)), (r"grant of (\d+) Gold", ("GOLD", None)),
+                 (r"grants (\d+) XP", ("XP", None)), (r"adjust unit heal \(Amount=(\d+)\)", ("HEAL", None)),
+                 (r"most advanced strategic resource count \(Amount=(\d+)", ("STRATEGIC", None)), (r"grants 1 random technology", ("TECH", 1)),
+                 (r"\+(\d+) Population", ("POPULATION", None))]
+        for pattern, (kind, fixed) in rules:
+            m = re.search(pattern, eff)
+            if m:
+                g["kind"] = kind
+                g["amount"] = fixed if fixed is not None else int(m.group(1))
+                break
+        m = re.search(r"grants (?:a |1 )(\w+)(?: unit)? in the nearest city", eff)
+        if m and m.group(1) in units:
+            g["kind"] = "UNIT"
+            g["unit"] = units[m.group(1)]
+            g["amount"] = 1
+        if "kind" not in g:
+            continue  # not carried (the unit upgrade)
+        if row["Min turn"]:
+            g["minTurn"] = num(row["Min turn"])
+        if row["Min one city"] == "yes":
+            g["needsCity"] = True
+        goodies.append(g)
+    return {"barbarianTribes": out, "goodies": goodies}
 
 
 # Districts the core places so far (MVP-5, the Harbor with naval play); the rest need

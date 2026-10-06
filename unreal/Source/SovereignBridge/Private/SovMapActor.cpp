@@ -275,6 +275,20 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		WonderPieces[i]->SetVisibility(false);
 	}
+	// Tribal villages (01): a small hut.
+	int32 VillageCount = 0;
+	for (const FIntPoint& V : Mirror.Villages)
+	{
+		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, CubeMesh.Get());
+		C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)) + FVector(0, 0, 10));
+		C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
+		C->SetRelativeScale3D(FVector(0.22, 0.22, 0.18));
+		C->SetMaterial(0, MaterialFor(FLinearColor(0.55f, 0.4f, 0.22f)));
+	}
+	for (int32 i = VillageCount; i < VillagePieces.Num(); ++i)
+	{
+		VillagePieces[i]->SetVisibility(false);
+	}
 
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{

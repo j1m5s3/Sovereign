@@ -319,6 +319,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::ClimatePhase:
 				Text = FString::Printf(TEXT("The climate warms: phase %d. The seas are rising."), E.value);
 				break;
+			case sov::EventKind::GoodyHut:
+				if (E.actor == Me && E.value >= 0 && static_cast<size_t>(E.value) < R.goodies.size())
+					Text = FString::Printf(TEXT("A tribal village welcomes us: %s."), *Str(R.goodies[static_cast<size_t>(E.value)].id).Replace(TEXT("GOODY_"), TEXT("")).Replace(TEXT("_"), TEXT(" ")).ToLower());
+				break;
 			case sov::EventKind::ResolutionPassed:
 				Text = FString::Printf(TEXT("The World Congress passes %s%s."), *Str(R.resolutions[static_cast<size_t>(E.value)].name),
 					E.target != sov::kNoPlayer ? *FString::Printf(TEXT(" for %s"), *CivOf(E.target)) : TEXT(""));

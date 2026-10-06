@@ -81,6 +81,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.diplomaticVictory);
     w.boolean(s.scienceVictory);
     w.i32(s.disasterIntensity);
+    w.boolean(s.tribalVillages);
     w.i32(s.difficulty);
     w.i32(s.turnLimit);
     w.boolean(s.regicide);
@@ -108,6 +109,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.diplomaticVictory = r.boolean();
     s.scienceVictory = r.boolean();
     s.disasterIntensity = r.i32();
+    s.tribalVillages = r.boolean();
     s.difficulty = r.i32();
     s.turnLimit = r.i32();
     s.regicide = r.boolean();
@@ -291,6 +293,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.u8(p.pillagedTurns);
         for (int8_t f : p.fertility) w.i8(f);
         w.u8(p.fallout);
+        w.boolean(p.village);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -665,6 +668,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.pillagedTurns = r.u8();
         for (int8_t& f : p.fertility) f = r.i8();
         p.fallout = r.u8();
+        p.village = r.boolean();
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;

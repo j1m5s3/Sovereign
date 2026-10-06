@@ -1104,6 +1104,16 @@ void rest(View& v, UnitId id) {
 bool explore(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
+    // A tribal village it knows of nearby comes first (01: Tribal Villages).
+    {
+        std::optional<Hex> village;
+        for (const Hex& h : s.grid.within(u->pos, 6)) {
+            if (s.plot(h).village && v.game.visibility(v.me, h) != Visibility::Unrevealed &&
+                (!village || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *village)))
+                village = h;
+        }
+        if (village && v.game.submit(Command::move(v.me, id, *village, true)) == CommandError::Ok) return true;
+    }
     std::vector<std::pair<int, Hex>> frontier;
     for (const Hex& h : s.grid.within(u->pos, 8)) {
         if (h == u->pos || v.game.visibility(v.me, h) == Visibility::Unrevealed || !isLandPassable(s, v.r, h)) continue;

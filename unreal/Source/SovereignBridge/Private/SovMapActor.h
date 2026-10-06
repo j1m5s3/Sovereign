@@ -60,6 +60,7 @@ private:
 	// Wonders: a temple when built, a monument while building.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> WonderPieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> VillagePieces;
 
 	// Road segments between plot centres.
 	UPROPERTY()

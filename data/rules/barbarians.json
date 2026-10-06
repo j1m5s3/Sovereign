@@ -28,5 +28,187 @@
    "attackBoldness": 25,
    "unitClass": "MELEE"
   }
+ ],
+ "goodies": [
+  {
+   "id": "GOODY_ONE_RELIC",
+   "category": "CULTURE",
+   "weight": 15,
+   "kind": "RELIC",
+   "amount": 1,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_TWO_CIVIC_BOOSTS",
+   "category": "CULTURE",
+   "weight": 30,
+   "kind": "INSPIRATION",
+   "amount": 2,
+   "minTurn": 30
+  },
+  {
+   "id": "GOODY_ONE_CIVIC_BOOST",
+   "category": "CULTURE",
+   "weight": 55,
+   "kind": "INSPIRATION",
+   "amount": 1
+  },
+  {
+   "id": "GOODY_GOVERNOR_TITLE",
+   "category": "DIPLOMACY",
+   "weight": 15,
+   "kind": "GOVERNOR_TITLE",
+   "amount": 1,
+   "minTurn": 30
+  },
+  {
+   "id": "GOODY_ENVOY",
+   "category": "DIPLOMACY",
+   "weight": 40,
+   "kind": "ENVOY",
+   "amount": 1
+  },
+  {
+   "id": "GOODY_FAVOR",
+   "category": "DIPLOMACY",
+   "weight": 45,
+   "kind": "FAVOR",
+   "amount": 20,
+   "minTurn": 30
+  },
+  {
+   "id": "GOODY_LARGE_FAITH",
+   "category": "FAITH",
+   "weight": 15,
+   "kind": "FAITH",
+   "amount": 100,
+   "minTurn": 60,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_MEDIUM_FAITH",
+   "category": "FAITH",
+   "weight": 30,
+   "kind": "FAITH",
+   "amount": 60,
+   "minTurn": 40,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_SMALL_FAITH",
+   "category": "FAITH",
+   "weight": 55,
+   "kind": "FAITH",
+   "amount": 20,
+   "minTurn": 20,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_LARGE_GOLD",
+   "category": "GOLD",
+   "weight": 15,
+   "kind": "GOLD",
+   "amount": 120,
+   "minTurn": 40,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_MEDIUM_GOLD",
+   "category": "GOLD",
+   "weight": 30,
+   "kind": "GOLD",
+   "amount": 75,
+   "minTurn": 20,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_SMALL_GOLD",
+   "category": "GOLD",
+   "weight": 55,
+   "kind": "GOLD",
+   "amount": 40,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_GRANT_SCOUT",
+   "category": "MILITARY",
+   "weight": 35,
+   "kind": "UNIT",
+   "unit": "UNIT_SCOUT",
+   "amount": 1,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_GRANT_EXPERIENCE",
+   "category": "MILITARY",
+   "weight": 20,
+   "kind": "XP",
+   "amount": 20
+  },
+  {
+   "id": "GOODY_HEAL",
+   "category": "MILITARY",
+   "weight": 25,
+   "kind": "HEAL",
+   "amount": 100
+  },
+  {
+   "id": "GOODY_RESOURCES",
+   "category": "MILITARY",
+   "weight": 20,
+   "kind": "STRATEGIC",
+   "amount": 20
+  },
+  {
+   "id": "GOODY_ONE_TECH",
+   "category": "SCIENCE",
+   "weight": 15,
+   "kind": "TECH",
+   "amount": 1,
+   "minTurn": 50,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_TWO_TECH_BOOSTS",
+   "category": "SCIENCE",
+   "weight": 30,
+   "kind": "EUREKA",
+   "amount": 2,
+   "minTurn": 30
+  },
+  {
+   "id": "GOODY_ONE_TECH_BOOST",
+   "category": "SCIENCE",
+   "weight": 55,
+   "kind": "EUREKA",
+   "amount": 1
+  },
+  {
+   "id": "GOODY_ADD_POP",
+   "category": "SURVIVORS",
+   "weight": 40,
+   "kind": "POPULATION",
+   "amount": 1,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_GRANT_BUILDER",
+   "category": "SURVIVORS",
+   "weight": 35,
+   "kind": "UNIT",
+   "unit": "UNIT_BUILDER",
+   "amount": 1,
+   "needsCity": true
+  },
+  {
+   "id": "GOODY_GRANT_TRADER",
+   "category": "SURVIVORS",
+   "weight": 25,
+   "kind": "UNIT",
+   "unit": "UNIT_TRADER",
+   "amount": 1,
+   "minTurn": 15,
+   "needsCity": true
+  }
  ]
 }
