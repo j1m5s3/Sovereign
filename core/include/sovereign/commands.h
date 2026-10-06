@@ -141,6 +141,8 @@ struct Command {
         return {CommandType::Promote, p, u, {}, promotion, 0};
     }
     static Command cityStrike(PlayerId p, CityId c, Hex at) { return {CommandType::CityStrike, p, c, at, 0, 0}; }
+    // The city's Encampment fires instead of its center (arg 1; 03: Defense).
+    static Command encampmentStrike(PlayerId p, CityId c, Hex at) { return {CommandType::CityStrike, p, c, at, 1, 0}; }
     static Command razeCity(PlayerId p, CityId c) { return {CommandType::RazeCity, p, c, {}, 0, 0}; }
     static Command equipGear(PlayerId p, UnitId leader, TypeIndex gear) {
         return {CommandType::EquipGear, p, leader, {}, gear, 0};

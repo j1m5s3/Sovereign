@@ -413,3 +413,36 @@ TEST(barbarian_camps_appear_out_of_sight_and_release_units) {
     REQUIRE(again);
     CHECK_EQ(again->stateHash(), g->stateHash());
 }
+
+// ---- the Encampment (03: Defense)
+
+TEST(an_encampment_strikes_and_holds_ground) {
+    UnitId foe = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+        CityDistrict camp;
+        camp.type = rules().district("DISTRICT_ENCAMPMENT");
+        camp.pos = {10, 5};
+        camp.complete = true;
+        s.cities[0].districts.push_back(camp);
+        s.plot({10, 5}).owner = 1;
+        s.plot({10, 5}).city = s.cities[0].id;
+        foe = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {12, 5});  // two from the Encampment, four from the city
+        for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+    });
+    REQUIRE(g->submit(Command::setActivity(0, foe, Activity::Skip)) == CommandError::Ok);
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().currentPlayer == 1);
+    const CityId cid = g->state().cities[0].id;
+    CHECK(!g->canCityStrike(cid, {12, 5}));
+    REQUIRE(g->canEncampmentStrike(cid, {12, 5}));
+    REQUIRE(g->submit(Command::encampmentStrike(1, cid, {12, 5})) == CommandError::Ok);
+    CHECK(g->state().unit(foe)->hp < 100);
+    CHECK(!g->canEncampmentStrike(cid, {12, 5}));  // once a turn
+    // Zone of control next to it, and +2 city strength.
+    CHECK(g->inEnemyZoc(*g->state().unit(foe), {11, 5}));
+    GameState s = g->state();
+    s.cities[0].districts.clear();
+    auto bare = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->cityStrength(g->state().cities[0]), bare->cityStrength(bare->state().cities[0]) + 2);
+}

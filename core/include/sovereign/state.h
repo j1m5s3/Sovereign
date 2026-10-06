@@ -267,6 +267,7 @@ struct SOV_API City {
     int wallHp = 0;          // outer defence hit points left
     int lastAttackedTurn = -100;
     bool struck = false;     // made its ranged strike this turn
+    bool encampmentStruck = false;  // its Encampment made its strike this turn (03: Defense)
     PlayerId originalOwner = kNoPlayer;
     bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)

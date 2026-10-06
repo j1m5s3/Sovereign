@@ -274,7 +274,9 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 	const bool bEnemyUnit = S.foreignUnitAt(Target, Me()) && G.visibility(Me(), Target) == sov::Visibility::Visible;
 	if (SelectedCity >= 0)
 	{
-		Send(sov::Command::cityStrike(Me(), SelectedCity, Target));
+		// Ctrl+right-click: the city's Encampment fires (03: Defense).
+		const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+		Send(bCtrl ? sov::Command::encampmentStrike(Me(), SelectedCity, Target) : sov::Command::cityStrike(Me(), SelectedCity, Target));
 		return;
 	}
 	const sov::Unit* U = S.unit(SelectedUnit);

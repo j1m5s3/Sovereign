@@ -639,6 +639,8 @@ void Game::refreshVisibility(PlayerId pid) {
     }
     for (const City& c : state_.cities) {
         if (shares(c.owner)) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
+        // An Encampment watches its strike range (Sovereign reading; 03: Defense).
+        if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
     for (const Agent& a : state_.agents) {
         const City* c = a.spy && a.owner == pid && a.travel == 0 ? state_.city(a.city) : nullptr;

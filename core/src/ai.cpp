@@ -1902,6 +1902,12 @@ void cityActions(View& v) {
         for (const Hex& h : v.s().grid.within(c->pos, 2)) {
             if (v.game.canCityStrike(cid, h) && v.game.submit(Command::cityStrike(v.me, cid, h)) == CommandError::Ok) break;
         }
+        // The Encampment fires too (03: Defense).
+        if (const CityDistrict* camp = v.game.encampmentOf(*c)) {
+            for (const Hex& h : v.s().grid.within(camp->pos, 2)) {
+                if (v.game.canEncampmentStrike(cid, h) && v.game.submit(Command::encampmentStrike(v.me, cid, h)) == CommandError::Ok) break;
+            }
+        }
     }
 }
 

@@ -446,6 +446,9 @@ public:
     // All six neighbours hold enemy units or lie in enemy ZOC: the city cannot heal.
     bool cityUnderSiege(const City& city) const;
     bool canCityStrike(CityId city, Hex target) const;
+    // The city's Encampment strikes from its own plot once the city has walls (03: Defense; range 2).
+    bool canEncampmentStrike(CityId city, Hex target) const;
+    const CityDistrict* encampmentOf(const City& city) const;  // complete and not pillaged
     bool canRazeCity(PlayerId player, CityId city) const;
     PlayerId barbarianPlayer() const;
     // Score line items (09: Score; ScoringLineItems): 3 per civic, 2 per tech, 5 per city,

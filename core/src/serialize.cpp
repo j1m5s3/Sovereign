@@ -446,6 +446,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.wallHp);
         w.i32(c.lastAttackedTurn);
         w.boolean(c.struck);
+        w.boolean(c.encampmentStruck);
         w.i8(c.originalOwner);
         w.boolean(c.originalCapital);
         w.i32(c.capturedTurn);
@@ -874,6 +875,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.wallHp = r.i32();
         c.lastAttackedTurn = r.i32();
         c.struck = r.boolean();
+        c.encampmentStruck = r.boolean();
         c.originalOwner = r.i8();
         c.originalCapital = r.boolean();
         c.capturedTurn = r.i32();
