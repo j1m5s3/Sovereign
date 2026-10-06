@@ -263,7 +263,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
-        case CommandType::Pillage: return pillageProblem(c.player, c.id);
+        case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::RepairImprovement: return repairProblem(c.player, c.id);
         case CommandType::PromoteSpy: {
@@ -740,7 +740,10 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::LaunchWmd: launchWmd(c); break;
-        case CommandType::Pillage: pillage(c.id); break;
+        case CommandType::Pillage:
+            if (c.arg == 1) pillage(c.id, c.target);
+            else pillage(c.id);
+            break;
         case CommandType::FormUnit: {
             Unit& u = *state_.unit(c.id);
             const Unit& w = *state_.unit(c.arg);

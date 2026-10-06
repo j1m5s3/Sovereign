@@ -334,3 +334,22 @@ TEST(a_pillaged_district_idles_then_recovers) {
     CHECK(g->state().city(cid)->districts[0].pillagedTurns > 0);
     CHECK(g->cityReport(cid).yields[static_cast<size_t>(YieldType::Science)] < science);
 }
+
+TEST(ships_raid_the_coast) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    for (int y = 0; y < 12; ++y) s.plot({12, y}).terrain = rules().terrain("TERRAIN_COAST");
+    sovtest::addCity(s, 1, {10, 6}, true, 4);
+    s.plot({11, 6}).improvement = improvement("IMPROVEMENT_FARM");
+    const UnitId galley = sovtest::addUnit(s, "UNIT_GALLEY", 0, {12, 6});
+    const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {9, 9});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->coastalRaidProblem(0, warrior, {9, 8}) == CommandError::BadUnit);  // land units pillage where they stand
+    CHECK(g->coastalRaidProblem(0, galley, {10, 6}) == CommandError::BadTarget);  // not adjacent (and a city)
+    REQUIRE(g->submit(Command::coastalRaid(0, galley, {11, 6})) == CommandError::Ok);
+    CHECK(g->state().plot({11, 6}).pillagedTurns > 0);
+}

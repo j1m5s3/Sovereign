@@ -224,6 +224,14 @@ void Game::barbarianAct(UnitId id) {
         u = state_.unit(id);
         if (!u || u->movesLeft <= Fixed()) return;
     }
+    // Barbarian ships raid the coast beside them (05: Coastal raid).
+    for (const Hex& h : state_.grid.within(u->pos, 1)) {
+        if (coastalRaidProblem(u->owner, id, h) != CommandError::Ok) continue;
+        pillage(id, h);
+        u = state_.unit(id);
+        if (!u || u->movesLeft <= Fixed()) return;
+        break;
+    }
     const Camp* camp = nullptr;
     for (const Camp& c : state_.camps) {
         if (c.id == u->camp) camp = &c;

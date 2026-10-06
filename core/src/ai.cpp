@@ -2120,6 +2120,18 @@ void playTurn(Game& game) {
         if (u.owner == v.me && game.pillageProblem(v.me, u.id) == CommandError::Ok) raiders.push_back(u.id);
     }
     for (UnitId uid : raiders) game.submit(Command::pillage(v.me, uid));
+    // Ships raid the enemy coast beside them (05: Coastal raid).
+    std::vector<std::pair<UnitId, Hex>> raids;
+    for (const Unit& u : game.state().units) {
+        if (u.owner != v.me || v.r.units[at(u.type)].domain != Domain::Sea) continue;
+        for (const Hex& h : game.state().grid.within(u.pos, 1)) {
+            if (game.coastalRaidProblem(v.me, u.id, h) == CommandError::Ok) {
+                raids.push_back({u.id, h});
+                break;
+            }
+        }
+    }
+    for (const auto& [uid, h] : raids) game.submit(Command::coastalRaid(v.me, uid, h));
     leader(v);
     production(v);
     upgrades(v);

@@ -948,6 +948,13 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Pillage"), sov::Command::pillage(Me(), U->id)});
 			}
+			for (const sov::Hex& Shore : G.state().grid.within(U->pos, 1))
+			{
+				if (G.coastalRaidProblem(Me(), U->id, Shore) == sov::CommandError::Ok)
+				{
+					Choices.Add({FString::Printf(TEXT("Coastal raid at %d,%d"), Shore.x, Shore.y), sov::Command::coastalRaid(Me(), U->id, Shore)});
+				}
+			}
 			if (G.repairProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
 				Choices.Add({TEXT("Repair the improvement"), sov::Command::repairImprovement(Me(), U->id)});

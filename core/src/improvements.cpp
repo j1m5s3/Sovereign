@@ -236,6 +236,21 @@ CommandError Game::pillageProblem(PlayerId player, UnitId unit) const {
     return improvement || district ? CommandError::Ok : CommandError::BadTarget;
 }
 
+CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) const {
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
+    if (ut.domain != Domain::Sea || (ut.unitClass != "NAVAL_MELEE" && ut.unitClass != "NAVAL_RAIDER") || u->movesLeft <= Fixed()) return CommandError::BadUnit;
+    const auto t = state_.grid.normalize(at);
+    if (!t || *t != at || state_.grid.distance(u->pos, at) != 1) return CommandError::BadTarget;
+    const Plot& p = state_.plot(at);
+    if (rules_->terrains[static_cast<size_t>(p.terrain)].water || p.owner == kNoPlayer || p.owner == player || !atWar(player, p.owner) || state_.cityAt(at))
+        return CommandError::BadTarget;
+    const bool improvement = p.improvement != kNone && p.pillagedTurns == 0;
+    const CityDistrict* d = state_.districtAt(at);
+    return improvement || (d && d->complete && d->pillagedTurns == 0) ? CommandError::Ok : CommandError::BadTarget;
+}
+
 CommandError Game::repairProblem(PlayerId player, UnitId builder) const {
     const Unit* u = state_.unit(builder);
     if (!u || u->owner != player) return CommandError::NotYourUnit;
@@ -244,9 +259,10 @@ CommandError Game::repairProblem(PlayerId player, UnitId builder) const {
     return p.owner == player && p.improvement != kNone && p.pillagedTurns > 0 ? CommandError::Ok : CommandError::CannotImprove;
 }
 
-void Game::pillage(UnitId id) {
+void Game::pillage(UnitId id, std::optional<Hex> at) {
     Unit& u = *state_.unit(id);
-    Plot& p = state_.plot(u.pos);
+    const Hex where = at ? *at : u.pos;
+    Plot& p = state_.plot(where);
     const PlayerId victim = p.owner;
     Plunder loot;
     if (p.improvement != kNone && p.pillagedTurns == 0) {
@@ -254,7 +270,7 @@ void Game::pillage(UnitId id) {
         p.pillagedTurns = 255;  // until a Builder repairs it (255 world turns at the most)
     } else if (City* home = state_.city(p.city)) {
         for (CityDistrict& d : home->districts) {
-            if (d.pos != u.pos) continue;
+            if (d.pos != where) continue;
             loot = rules_->districts[static_cast<size_t>(d.type)].plunder;
             // Sovereign reading: the city repairs a pillaged district itself in 10 turns.
             d.pillagedTurns = kPillagedDistrictTurns;

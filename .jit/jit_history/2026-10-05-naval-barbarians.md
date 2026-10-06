@@ -10,5 +10,5 @@ Specs: 01-map-and-terrain (Barbarians: "Coastal camps are naval tribes"; "Naval 
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
-- Coastal raids (naval units pillaging coastal improvements) and the scout that turns a camp aggressive are still not modelled; naval barbarians do not pillage (pillage needs a land unit).
+- Their ships raid the coast beside them (coastal raids, recorded in `jit_history/2026-10-05-pillage.md`). The scout that turns a camp aggressive is still not modelled.
 - A 6-AI Deity test game showed naval barbarians at sea (up to 6 at a time) and ran to its end at turn 359.

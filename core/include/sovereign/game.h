@@ -370,8 +370,9 @@ public:
 
     // ---- pillage and repair (05: Pillage)
     CommandError pillageProblem(PlayerId player, UnitId unit) const;
+    CommandError coastalRaidProblem(PlayerId player, UnitId unit, Hex at) const;  // naval melee or raider, a neighbouring plot
     CommandError repairProblem(PlayerId player, UnitId builder) const;
-    void pillage(UnitId unit);
+    void pillage(UnitId unit, std::optional<Hex> at = std::nullopt);  // its own plot, or the plot a coastal raid hits
     bool districtPillaged(Hex plot) const;   // a district there, pillaged
 
     // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)

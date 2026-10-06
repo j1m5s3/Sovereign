@@ -201,6 +201,8 @@ struct Command {
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
     static Command formUnit(PlayerId p, UnitId unit, UnitId with) { return {CommandType::FormUnit, p, unit, {}, with, 0}; }
     static Command pillage(PlayerId p, UnitId unit) { return {CommandType::Pillage, p, unit, {}, 0, 0}; }
+    // A coastal raid (05): a naval melee unit or raider pillages the neighbouring land plot `at` (arg 1).
+    static Command coastalRaid(PlayerId p, UnitId unit, Hex at) { return {CommandType::Pillage, p, unit, at, 1, 0}; }
     static Command repairImprovement(PlayerId p, UnitId builder) { return {CommandType::RepairImprovement, p, builder, {}, 0, 0}; }
     static Command buildRailroad(PlayerId p, UnitId engineer) { return {CommandType::BuildRailroad, p, engineer, {}, 0, 0}; }
     // A Mountain Tunnel is built on the neighbouring mountain `at` (BuildImprovement with a target).
