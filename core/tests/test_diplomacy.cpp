@@ -678,3 +678,77 @@ TEST(a_route_between_allies_pays_the_destination_too) {
     const CityId mine = g->state().cities[0].id;
     CHECK_EQ(g->cityReport(mine).yields[G], h->cityReport(mine).yields[G] + Fixed::fromInt(2));
 }
+
+namespace {
+// Player 0 (human) at war with player 1 since turn 0, now turn 30; player 1 holds a second city; player 0 has an army.
+GameState warState(bool army) {
+    GameState s = diploState(2);
+    addCity(s, 1, {20, 11}, false, 2);
+    for (PlayerId x : {0, 1}) s.players[static_cast<size_t>(x)].relations.resize(2);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    s.turn = 30;
+    if (army) {
+        for (int i = 0; i < 8; ++i) addUnit(s, "UNIT_SWORDSMAN", 0, {2 + i, 1});
+    }
+    return s;
+}
+}  // namespace
+
+TEST(a_peace_deal_can_cede_a_city) {
+    auto g = Game::fromScenario(rules(), warState(true));
+    const CityId capital = g->state().cities[1].id, town = g->state().cities[2].id;
+    // A capital is never ceded; a city only with peace.
+    CHECK(g->dealProblem({0, 0, 1, 30, {{DealItemKind::Peace, 0, 0, kNone}, {DealItemKind::City, 1, capital, kNone}}}) == CommandError::CannotDeal);
+    CHECK(g->dealProblem({0, 0, 1, 30, {{DealItemKind::City, 1, town, kNone}}}) == CommandError::CannotDeal);
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, {{DealItemKind::Peace, 0, 0, kNone}, {DealItemKind::City, 1, town, kNone}})) == CommandError::Ok);
+    CHECK(!g->atWar(0, 1));
+    CHECK_EQ(g->state().city(town)->owner, 0);
+}
+
+TEST(favor_trades_in_deals) {
+    GameState s = diploState(2);
+    s.players[1].favor = 100;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->dealProblem({0, 0, 1, 0, {{DealItemKind::Favor, 1, 150, kNone}}}) == CommandError::CannotDeal);  // more than it has
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, {{DealItemKind::Favor, 1, 50, kNone}, {DealItemKind::Gold, 0, 150, kNone}})) == CommandError::Ok);
+    CHECK_EQ(g->state().players[1].favor, 50);
+    CHECK_EQ(g->state().players[0].favor, 50);
+}
+
+TEST(a_strong_civ_can_make_demands) {
+    const auto demand = [](bool army) {
+        GameState s = warState(army);
+        s.players[0].relations[1].war = s.players[1].relations[0].war = false;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        g->submit(Command::proposeDeal(0, 1, {{DealItemKind::Gold, 1, 100, kNone}}));
+        return std::make_pair(g->state().players[0].gold.toInt(), reason(*g, 1, 0, OpinionReasonKind::Demanded));
+    };
+    const auto weak = demand(false), strong = demand(true);
+    CHECK_EQ(weak.first, 300);
+    CHECK_EQ(strong.first, 400);  // it gave in
+    CHECK(strong.second < 0);     // and resents it
+}
+
+TEST(city_states_join_their_suzerains_wars) {
+    GameState s = diploState(3);
+    s.players[2].civ = kNone;
+    s.players[2].cityState = 0;
+    for (Player& p : s.players) {
+        p.envoys.assign(3, 0);
+        p.relations.resize(3);
+    }
+    s.players[1].envoys[2] = 3;
+    s.majorsAtStart = 2;
+    for (int i = 0; i < 8; ++i) addUnit(s, "UNIT_SWORDSMAN", 0, {2 + i, 1});  // player 1 will want peace
+    s.turn = 30;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->suzerainOf(2) == 1);
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    CHECK(g->atWar(2, 0));  // the suzerain's city-state joins
+    GameState later = g->state();
+    later.turn += 20;
+    auto h = Game::fromScenario(rules(), std::move(later));
+    REQUIRE(h->submit(Command::proposeDeal(0, 1, {{DealItemKind::Peace, 0, 0, kNone}, {DealItemKind::Gold, 0, 300, kNone}})) == CommandError::Ok);
+    REQUIRE(!h->atWar(0, 1));
+    CHECK(!h->atWar(2, 0));  // and makes peace with it
+}

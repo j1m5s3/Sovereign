@@ -370,7 +370,7 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
             OpinionReasonKind::MadePeace,   OpinionReasonKind::Gifts,       OpinionReasonKind::Deals,
             OpinionReasonKind::BrokeDeal,   OpinionReasonKind::CapturedCity, OpinionReasonKind::Assassin,
             OpinionReasonKind::PlunderedTrader, OpinionReasonKind::Warmonger, OpinionReasonKind::SpyCaught,
-            OpinionReasonKind::UsedWmd,
+            OpinionReasonKind::UsedWmd, OpinionReasonKind::Demanded,
         };
         add(kinds[static_cast<size_t>(m.kind)], v);
     }
@@ -427,7 +427,7 @@ CommandError Game::dealProblem(const Deal& d) const {
     bool peace = false, friendship = false, alliance = false, jointWar = false;
     std::vector<int> openBorders(2, 0);
     std::vector<TypeIndex> luxuries;
-    int gold[2] = {0, 0}, perTurn[2] = {0, 0};
+    int gold[2] = {0, 0}, perTurn[2] = {0, 0}, favor[2] = {0, 0}, ceded[2] = {0, 0};
     for (const DealItem& i : d.items) {
         if (i.from != d.from && i.from != d.to) return CommandError::CannotDeal;
         const PlayerId other = i.from == d.from ? d.to : d.from;
@@ -527,6 +527,22 @@ CommandError Game::dealProblem(const Deal& d) const {
                 }
                 break;
             }
+            case DealItemKind::City: {
+                // A city ceded in a peace deal (08: Make Peace): not the giver's capital, nor its last city, once per deal.
+                const City* c = state_.city(static_cast<CityId>(i.amount));
+                if (!war || !c || c->owner != i.from || c->capital) return CommandError::CannotDeal;
+                for (const DealItem& j : d.items) {
+                    if (&j != &i && j.kind == DealItemKind::City && j.amount == i.amount) return CommandError::CannotDeal;
+                }
+                int owned = 0;
+                for (const City& o : state_.cities) owned += o.owner == i.from ? 1 : 0;
+                if (owned - ++ceded[side] < 1) return CommandError::CannotDeal;
+                break;
+            }
+            case DealItemKind::Favor:
+                favor[side] += i.amount;
+                if (i.amount <= 0 || favor[side] > giver.favor) return CommandError::CannotDeal;
+                break;
             case DealItemKind::Peace: {
                 if (peace || !war) return CommandError::CannotDeal;
                 const Relation& rel = state_.players[at(d.from)].relations[at(d.to)];
@@ -614,11 +630,21 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 value += gives ? -(20 + 20 * level) : 40 + 40 * level;
                 break;
             }
+            case DealItemKind::City: {
+                // By its size and districts; the giver parts with it dearly (Sovereign's values).
+                const City* c = state_.city(static_cast<CityId>(i.amount));
+                if (!c) break;
+                const int worth = 100 + 30 * c->population + 20 * static_cast<int>(c->districts.size());
+                value += gives ? -worth * 3 / 2 : worth;
+                break;
+            }
+            case DealItemKind::Favor: value += gives ? -2 * i.amount : 2 * i.amount; break;  // a point of favor is worth 2 Gold
             case DealItemKind::Peace: {
                 const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, other);
                 const int turns = state_.turn - state_.players[at(judge)].relations[at(other)].since;
                 int worth = 0;
-                if (mine * 100 < theirs * 90) worth = 200;            // losing
+                if (mine * 2 < theirs) worth = 400;                   // losing badly
+                else if (mine * 100 < theirs * 90) worth = 200;       // losing
                 else if (mine * 100 >= theirs * 150) worth = -200;    // winning
                 else worth = 25;
                 worth += std::min(100, std::max(0, turns - 20) * 5);  // the war drags on
@@ -633,6 +659,13 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
 bool Game::wouldAccept(PlayerId judge, const Deal& d) const {
     if (dealProblem(d) != CommandError::Ok) return false;
     const PlayerId other = judge == d.from ? d.to : d.from;
+    // Make Demand (08): a deal in which only the judge gives. It yields to a civ at least twice as strong when the
+    // price is bearable (Sovereign's values: 200 Gold of worth, +100 per further multiple of strength).
+    if (!atWar(judge, other) && std::all_of(d.items.begin(), d.items.end(), [&](const DealItem& i) { return i.from == judge; }) &&
+        std::none_of(d.items.begin(), d.items.end(), [](const DealItem& i) { return i.kind == DealItemKind::Friendship || i.kind == DealItemKind::Alliance; })) {
+        const int mine = std::max(1, ai::militaryStrength(*this, judge)), theirs = ai::militaryStrength(*this, other);
+        if (theirs >= 2 * mine && -dealValue(judge, d) <= 200 + 100 * (theirs / mine - 2)) return true;
+    }
     const int opinion = opinionOf(judge, other);
     // Liked civs get a little leeway; disliked ones must overpay.
     const int bar = opinion >= 0 ? -std::min(25, opinion) : std::min(150, -3 * opinion);
@@ -665,6 +698,10 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
         if (c.captor == from && c.spy.owner == to) tryItem({DealItemKind::Captive, from, c.spy.id, kNone});
     }
     for (const Player& t : state_.players) tryItem({DealItemKind::JointWar, from, t.id, kNone});
+    if (p.favor > 0) tryItem({DealItemKind::Favor, from, p.favor, kNone});
+    for (const City& c : state_.cities) {
+        if (c.owner == from) tryItem({DealItemKind::City, from, c.id, kNone});
+    }
     int works = 0;
     for (const City& c : state_.cities) {
         if (c.owner != from) continue;
@@ -831,6 +868,11 @@ void Game::executeDeal(const Deal& d) {
             case DealItemKind::Peace: onPeace(d.from, d.to); break;
             case DealItemKind::GreatWork: break;  // moved above
             case DealItemKind::JointWar: break;  // declared below, once the rest of the deal is done
+            case DealItemKind::City: break;      // ceded below
+            case DealItemKind::Favor:
+                giver.favor -= i.amount;
+                taker.favor += i.amount;
+                break;
             case DealItemKind::Captive: {
                 // The spy comes home, idle, keeping its level and promotions.
                 auto it = std::find_if(state_.capturedSpies.begin(), state_.capturedSpies.end(),
@@ -845,6 +887,12 @@ void Game::executeDeal(const Deal& d) {
             }
         }
     }
+    // Cities ceded change hands once peace is made (08: Make Peace).
+    for (const DealItem& i : d.items) {
+        if (i.kind != DealItemKind::City) continue;
+        const City* c = state_.city(static_cast<CityId>(i.amount));
+        if (c && c->owner == i.from) transferCity(c->id, i.from == d.from ? d.to : d.from, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_COMBAT"));
+    }
     // A Joint War: whichever of them is not yet at war with the target declares it, as a formal war.
     for (const DealItem& i : d.items) {
         if (i.kind != DealItemKind::JointWar) continue;
@@ -856,7 +904,9 @@ void Game::executeDeal(const Deal& d) {
     for (PlayerId judge : {d.from, d.to}) {
         const PlayerId other = judge == d.from ? d.to : d.from;
         const bool gift = std::all_of(d.items.begin(), d.items.end(), [&](const DealItem& i) { return i.from == other; });
-        if (gift) remember(judge, other, MemoryKind::Gift, std::min(15, std::max(1, dealValue(judge, d) / 10)), kDealTurns);
+        const bool demand = std::all_of(d.items.begin(), d.items.end(), [&](const DealItem& i) { return i.from == judge; }) && dealValue(judge, d) < 0;
+        if (demand && d.to == judge) remember(judge, other, MemoryKind::Demanded, -10, kDealTurns);  // gave in to a demand (08)
+        else if (gift) remember(judge, other, MemoryKind::Gift, std::min(15, std::max(1, dealValue(judge, d) / 10)), kDealTurns);
         else remember(judge, other, MemoryKind::Deal, 3, kDealTurns);
     }
     pushEvent(EventKind::DealAccepted, d.from, d.to, d.id);
@@ -1217,6 +1267,20 @@ void Game::onPeace(PlayerId a, PlayerId b) {
         r.since = state_.turn;
         r.peaceOffered = false;
     }
+    // City-states in a Suzerain War make peace with their suzerain (08).
+    if (isMajorCiv(a) && isMajorCiv(b)) {
+        for (const Player& cs : state_.players) {
+            if (cs.cityState == kNone || !cs.alive) continue;
+            const PlayerId suzerain = suzerainOf(cs.id);
+            const PlayerId foe = suzerain == a ? b : suzerain == b ? a : kNoPlayer;
+            if (foe == kNoPlayer || !atWar(cs.id, foe)) continue;
+            for (PlayerId x : {cs.id, foe}) {
+                Relation& r = state_.players[at(x)].relations[at(x == cs.id ? foe : cs.id)];
+                r.war = false;
+                r.since = state_.turn;
+            }
+        }
+    }
     remember(a, b, MemoryKind::MadePeace, 4, kDealTurns);
     remember(b, a, MemoryKind::MadePeace, 4, kDealTurns);
     // Peace lifts most of the weariness at once (WAR_WEARINESS_DECAY_PEACE_DECLARED).
@@ -1317,6 +1381,11 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
                    std::to_string(r.globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT")) + " turns";
         }
         case DealItemKind::Peace: return "peace";
+        case DealItemKind::City: {
+            const City* c = s.city(i.amount);
+            return who + " cedes " + (c ? c->name : std::string("a city"));
+        }
+        case DealItemKind::Favor: return who + " gives " + std::to_string(i.amount) + " Diplomatic Favor";
         case DealItemKind::GreatWork: {
             const City* c = s.city(i.amount);
             if (!c || i.resource < 0 || ti(i.resource) >= c->greatWorks.size()) return who + " gives a Great Work";
@@ -1383,6 +1452,7 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::SpyCaught: return "Caught spying on us";
         case OpinionReasonKind::Grievances: return "Grievances";
         case OpinionReasonKind::UsedWmd: return "Used nuclear weapons";
+        case OpinionReasonKind::Demanded: return "Made demands of us";
     }
     return "?";
 }

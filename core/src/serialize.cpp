@@ -853,7 +853,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (OpinionMemory& m : p.memories) {
             m.about = r.i8();
             const uint8_t kind = r.u8();
-            if (kind > static_cast<uint8_t>(MemoryKind::UsedWmd)) return false;
+            if (kind > static_cast<uint8_t>(MemoryKind::Demanded)) return false;
             m.kind = static_cast<MemoryKind>(kind);
             m.amount = r.i16();
             m.duration = r.i16();

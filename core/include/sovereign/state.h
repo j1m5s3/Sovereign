@@ -118,15 +118,16 @@ constexpr uint8_t kPillagedDistrictTurns = 10;
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
-enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork, Captive, JointWar };
-constexpr int kNumDealItemKinds = 10;
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork, Captive, JointWar, City, Favor };
+constexpr int kNumDealItemKinds = 12;
 // Alliance types [R&F] (08: Alliance); a DealItemKind::Alliance item carries one as its amount.
 enum class AllianceType : int8_t { None = -1, Research = 0, Military, Economic, Cultural, Religious };
 constexpr int kNumAllianceTypes = 5;
 struct DealItem {
     DealItemKind kind = DealItemKind::Gold;
     PlayerId from = kNoPlayer;
-    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it; Captive: the spy's id; JointWar: the target
+    int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it; Captive: the spy's id; JointWar: the target;
+                                // City: the city ceded (peace deals only); Favor: Diplomatic Favor [GS]
     TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource; GreatWork: its index in that city
 };
 // A deal one player put to another; it waits here only while a human must answer.
@@ -147,7 +148,7 @@ struct Agreement {
 // Something a civ remembers about another; its weight fades to nothing over `duration` turns.
 enum class MemoryKind : uint8_t {
     DeclaredWar = 0, SurpriseWar, Denounced, MadePeace, Gift, Deal, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, SpyCaught,
-    UsedWmd,
+    UsedWmd, Demanded,
 };
 struct OpinionMemory {
     PlayerId about = kNoPlayer;
@@ -160,7 +161,7 @@ struct OpinionMemory {
 enum class OpinionReasonKind : uint8_t {
     AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
     TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught, Grievances,
-    UsedWmd,
+    UsedWmd, Demanded,
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;

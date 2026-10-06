@@ -163,6 +163,21 @@ void Game::declareWarOn(PlayerId by, PlayerId target, CasusBelli why) {
         r->peaceOffered = false;
         r->delegation = 0;  // war sends delegations and embassies home (08)
     }
+    // Suzerain War (08): the city-states of either side's suzerainty join the war against the other.
+    if (isMajorCiv(by) && isMajorCiv(target)) {
+        for (const Player& cs : state_.players) {
+            if (cs.cityState == kNone || !cs.alive) continue;
+            const PlayerId suzerain = suzerainOf(cs.id);
+            const PlayerId foe = suzerain == by ? target : suzerain == target ? by : kNoPlayer;
+            if (foe == kNoPlayer || atWar(cs.id, foe)) continue;
+            for (PlayerId x : {cs.id, foe}) {
+                Relation& r = state_.players[static_cast<size_t>(x)].relations[static_cast<size_t>(x == cs.id ? foe : cs.id)];
+                r.war = true;
+                r.since = state_.turn;
+                r.peaceOffered = false;
+            }
+        }
+    }
 }
 
 bool Game::canMakePeace(PlayerId player, PlayerId target) const {
