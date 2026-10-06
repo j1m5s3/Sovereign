@@ -10,6 +10,7 @@
 #include <climits>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -362,6 +363,13 @@ struct BuildingType {
     bool wallsCannotBeBypassed = false;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
+    // Theming (07: Theming bonuses): with every slot full and the works matching, their yields and
+    // tourism gain these percents.
+    struct Theming {
+        bool uniquePerson = false, sameObject = false, uniqueCivs = false, sameEra = false;
+        int yieldPercent = 0, tourismPercent = 0;
+    };
+    std::optional<Theming> theming;
     int tradeCapacity = 0;                 // + trade route capacity
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
     // World wonders (03: Wonders): built once in the world, on a plot of their own.

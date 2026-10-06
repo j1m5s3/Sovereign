@@ -521,6 +521,15 @@ def gen_promotions():
 def gen_buildings():
     # The Spaceport's "rockets" are internal markers of launch art (cost 1, no effect), not buildings.
     rows = [r for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to") and r["District"] != "Spaceport"]
+    # Theming bonuses (07: Theming bonuses): "unique person / same object / unique civs / same eras" flags.
+    theming = {}
+    for r in table(SPEC / "buildings.md", "Great Work slots and theming"):
+        flags = r["Theming: unique person / same object / unique civs / same eras"].split("/")
+        pct = r["Theming yield x / tourism x"].split("/")
+        if any(f.strip() == "yes" for f in flags) and pct[0].strip() not in ("", "0"):
+            theming[r["Building"]] = {"uniquePerson": flags[0].strip() == "yes", "sameObject": flags[1].strip() == "yes",
+                                      "uniqueCivs": flags[2].strip() == "yes", "sameEra": flags[3].strip() == "yes",
+                                      "yieldPercent": int(pct[0]), "tourismPercent": int(pct[1])}
     ids = {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in rows}
     out = []
     for row in rows:
@@ -590,6 +599,8 @@ def gen_buildings():
             slots[m.group(2).upper()] = slots.get(m.group(2).upper(), 0) + int(m.group(1))
         if slots:
             b["greatWorkSlots"] = slots
+        if row["Building"] in theming:
+            b["theming"] = theming[row["Building"]]
         out.append(b)
     return {"buildings": out}
 

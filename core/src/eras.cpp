@@ -129,7 +129,10 @@ int Game::tourismPerTurn(PlayerId pid) const {
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
         const int curator = cityGovernorHas(c, "GOVERNOR_PROMOTION_CURATOR") ? 2 : 1;  // Pingala
-        for (const GreatWork& w : c.greatWorks) total += rules_->greatWorkTypes[at(w.type)].tourism * curator;
+        for (const GreatWork& w : c.greatWorks) {
+            const int pct = themed(c, w.building) ? 100 + rules_->buildings[at(w.building)].theming->tourismPercent : 100;  // 07: Theming
+            total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100;
+        }
         for (TypeIndex b : c.buildings) {
             const BuildingType& bt = rules_->buildings[at(b)];
             if (!bt.wonder) continue;

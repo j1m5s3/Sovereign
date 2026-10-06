@@ -1626,6 +1626,17 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             BuildingType& b = buildings[i++];
             if (!readPoints(j["greatPersonPoints"], b.greatPersonPoints, "building " + id)) return false;
             for (const auto& [slot, v] : j["greatWorkSlots"].members()) b.greatWorkSlots.emplace_back(slot, static_cast<int>(v.integer(0)));
+        if (j.has("theming")) {
+            const auto& t = j["theming"];
+            BuildingType::Theming th;
+            th.uniquePerson = t["uniquePerson"].boolean(false);
+            th.sameObject = t["sameObject"].boolean(false);
+            th.uniqueCivs = t["uniqueCivs"].boolean(false);
+            th.sameEra = t["sameEra"].boolean(false);
+            th.yieldPercent = static_cast<int>(t["yieldPercent"].integer(0));
+            th.tourismPercent = static_cast<int>(t["tourismPercent"].integer(0));
+            b.theming = th;
+        }
         }
         i = 0;
         for (const auto& [id, j] : m.tables["districts"]) {

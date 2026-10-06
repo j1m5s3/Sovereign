@@ -392,7 +392,8 @@ public:
     bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
 
     // ---- archaeology (07: Archaeology)
-    void noteBattle(Hex plot);              // remembered as a future site while the world is young enough
+    void noteBattle(Hex plot, PlayerId attacker);  // remembered as a future site while the world is young enough
+    bool themed(const City& city, TypeIndex building) const;  // its Great Works earn the theming bonus (07)
     void placeAntiquity();                  // once any civ has Natural History
     CommandError excavateProblem(PlayerId player, UnitId archaeologist) const;
     void excavate(UnitId archaeologist);

@@ -17,6 +17,7 @@ TEST(battles_become_antiquity_sites_and_archaeologists_dig_them) {
     addCity(s, 0, {4, 6}, true, 6);
     addCity(s, 1, {14, 6}, true, 6);
     s.battleSites = {s.grid.index({6, 6})};
+    s.battleHistory = {1 * 4096 + s.players[1].civ + 1};  // player 1 attacked here in the Classical era
     City& home = s.cities[0];
     home.buildings.push_back(rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM"));
     std::sort(home.buildings.begin(), home.buildings.end());
@@ -36,10 +37,47 @@ TEST(battles_become_antiquity_sites_and_archaeologists_dig_them) {
     const size_t works = g->state().cities[0].greatWorks.size();
     REQUIRE(g->submit(Command::excavate(0, dig)) == CommandError::Ok);
     CHECK_EQ(g->state().plot({6, 6}).antiquity, 0);
-    CHECK_EQ(g->state().cities[0].greatWorks.size(), works + 1);
+    REQUIRE(g->state().cities[0].greatWorks.size() == works + 1);
+    CHECK_EQ(g->state().cities[0].greatWorks.back().era, 1);
+    CHECK_EQ(g->state().cities[0].greatWorks.back().civ, g->state().players[1].civ);
     CHECK_EQ(g->state().unit(dig)->charges, 2);
     std::string err;
     auto loaded = loadGame(rules(), saveGame(*g), &err);
     REQUIRE(loaded);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+// ---- theming (07: Theming bonuses)
+
+TEST(a_themed_museum_doubles_its_works) {
+    GameState s = flatState(20, 12, 3);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.majorsAtStart = 3;
+    addCity(s, 0, {4, 6}, true, 6);
+    City& c = s.cities[0];
+    const TypeIndex art = rules().building("BUILDING_ART_MUSEUM"), dig = rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM");
+    c.buildings = {art, dig};
+    std::sort(c.buildings.begin(), c.buildings.end());
+    TypeIndex sculpture = kNone, portrait = kNone, artifact = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size(); ++w) {
+        const std::string& id = rules().greatWorkTypes[w].id;
+        if (id == "SCULPTURE") sculpture = static_cast<TypeIndex>(w);
+        if (id == "PORTRAIT") portrait = static_cast<TypeIndex>(w);
+        if (id == "ARTIFACT") artifact = static_cast<TypeIndex>(w);
+    }
+    REQUIRE(sculpture != kNone && portrait != kNone && artifact != kNone);
+    for (TypeIndex by : {TypeIndex{1}, TypeIndex{2}, TypeIndex{3}}) c.greatWorks.push_back({sculpture, art, by, -1, kNone});
+    for (int k = 0; k < 3; ++k) c.greatWorks.push_back({artifact, dig, kNone, 1, s.players[static_cast<size_t>(k)].civ});
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(g->themed(g->state().cities[0], art));
+    CHECK(g->themed(g->state().cities[0], dig));
+    const int themedTourism = g->tourismPerTurn(0);
+    // A portrait among the sculptures, and two artifacts of one civilization, break both themes.
+    s.cities[0].greatWorks[2].type = portrait;
+    s.cities[0].greatWorks[4].civ = s.cities[0].greatWorks[3].civ;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    CHECK(!h->themed(h->state().cities[0], art));
+    CHECK(!h->themed(h->state().cities[0], dig));
+    CHECK(h->tourismPerTurn(0) < themedTourism);
+    CHECK_EQ(themedTourism - h->tourismPerTurn(0), 2 * 3 * rules().greatWorkTypes[static_cast<size_t>(sculpture)].tourism / 2 + 3 * rules().greatWorkTypes[static_cast<size_t>(artifact)].tourism);
 }

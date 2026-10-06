@@ -478,6 +478,8 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i16(g.type);
             w.i16(g.building);
             w.i16(g.creator);
+            w.i8(g.era);
+            w.i16(g.civ);
         }
         writeI32s(w, c.pressure);
         w.u32(static_cast<uint32_t>(c.wonders.size()));
@@ -553,6 +555,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(cp.beneficiary);
     }
     writeI32s(w, s.battleSites);
+    writeI32s(w, s.battleHistory);
     w.u32(static_cast<uint32_t>(s.promises.size()));
     for (const Promise& pr : s.promises) {
         w.i8(pr.by);
@@ -936,6 +939,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
             g.type = r.i16();
             g.building = r.i16();
             g.creator = r.i16();
+            g.era = r.i8();
+            g.civ = r.i16();
         }
         if (!readI32s(r, c.pressure)) return false;
         uint32_t nw = r.u32();
@@ -1040,6 +1045,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         cp.beneficiary = r.i8();
     }
     if (!readI32s(r, s.battleSites)) return false;
+    if (!readI32s(r, s.battleHistory)) return false;
+    s.battleHistory.resize(s.battleSites.size(), 0);  // 0: no history known
     uint32_t npromise = r.u32();
     if (!r.checkCount(npromise, 11)) return false;
     s.promises.resize(npromise);

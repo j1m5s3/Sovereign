@@ -270,6 +270,8 @@ struct GreatWork {
     TypeIndex type = kNone;      // Rules::greatWorkTypes
     TypeIndex building = kNone;  // the building whose slot holds it
     TypeIndex creator = kNone;   // Rules::greatPeople
+    int8_t era = -1;             // an Artifact's era (Rules::eras) and civilization (Rules::civs) (07: Theming)
+    TypeIndex civ = kNone;
 };
 
 struct SOV_API City {
@@ -591,6 +593,7 @@ struct SOV_API GameState {
     std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
     std::vector<Quest> quests;              // open city-state quests, one per city-state and major (08)
     std::vector<int32_t> battleSites;       // plots fought over before ARCHAEOLOGY_MAX_ERA (07: Archaeology)
+    std::vector<int32_t> battleHistory;     // per battle site: era * 4096 + the attacker's civ + 1 (its Artifact's history)
     std::vector<Promise> promises;          // promises made, kept and broken (08 [GS])
     bool antiquityPlaced = false;           // the sites have appeared (once a civ has Natural History)
     int32_t nextDealId = 1;

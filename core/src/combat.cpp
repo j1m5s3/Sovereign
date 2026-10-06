@@ -1030,7 +1030,7 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     if (!attackerDied) gainXp(*a, baseA, baseD, ranged, true, defenderDied, barbD);
     if (!defenderDied) gainXp(*def, baseD, baseA, ranged, false, attackerDied, barbA);
     if (!attackerDied) afterAttack(*a);
-    noteBattle(target);  // 07: Archaeology
+    noteBattle(target, a->owner);  // 07: Archaeology
     // War weariness: fighting on ground that is not one's own, and units lost (08).
     {
         const PlayerId ground = state_.plot(target).owner;
