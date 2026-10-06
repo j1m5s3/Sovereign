@@ -49,6 +49,7 @@ int Game::tradeRouteCapacity(PlayerId player) const {
         }
         cap += city;
     }
+    cap += greatPersonEffectTotal(player, GreatPersonEffectKind::TradeRoutes);  // Zheng He, Marco Polo... (07)
     // Trade Policy (World Congress): its target gains a route (A) or loses them all (B).
     if (const PassedResolution* tp = passed(ResolutionKind::TradePolicy); tp && tp->target == player)
         cap = tp->option == 0 ? cap + 1 : 0;

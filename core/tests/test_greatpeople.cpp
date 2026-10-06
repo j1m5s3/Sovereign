@@ -226,3 +226,33 @@ TEST(a_great_person_leaves_lasting_effects_in_its_city_and_realm) {
     CHECK_EQ(loaded->state().cities[0].greatPeopleHere.size(), 3u);  // all three stood on its land
     CHECK_EQ(loaded->loyaltyPerTurn(cid), g->loyaltyPerTurn(cid));
 }
+
+TEST(great_people_one_time_gifts) {
+    // On the Commercial Hub: Irene of Athens (+1 governor title), Jakob Fugger (+2 envoys), Marco Polo (+1 trade route).
+    GameState s = cityState("DISTRICT_COMMERCIAL_HUB");
+    const UnitId irene = addGreatPerson(s, "GREAT_PERSON_IRENE_OF_ATHENS", {7, 6});
+    const UnitId fugger = addGreatPerson(s, "GREAT_PERSON_JAKOB_FUGGER", {7, 6});
+    const UnitId polo = addGreatPerson(s, "GREAT_PERSON_MARCO_POLO", {7, 6});
+    // Bi Sheng in the capital: one more district there. Grace Hopper anywhere: two techs.
+    const UnitId bisheng = addGreatPerson(s, "GREAT_PERSON_BI_SHENG", {6, 6});
+    const UnitId hopper = addGreatPerson(s, "GREAT_PERSON_GRACE_HOPPER", {5, 5});
+    // Timur with a Swordsman: the unit learns faster for good. El Cid makes it a Corps.
+    const UnitId sword = addUnit(s, "UNIT_SWORDSMAN", 0, {6, 7});
+    const UnitId timur = addGreatPerson(s, "GREAT_PERSON_TIMUR", {6, 7});
+    const UnitId cid = addGreatPerson(s, "GREAT_PERSON_EL_CID", {6, 7});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int titles = g->governorTitlesLeft(0);
+    const int tokens = g->state().players[0].envoyTokens;
+    const int routes = g->tradeRouteCapacity(0);
+    const int limit = g->districtLimit(g->state().cities[0]);
+    auto doneTechs = [&]() { return std::count(g->state().players[0].techs.done.begin(), g->state().players[0].techs.done.end(), uint8_t{1}); };
+    const auto techs = doneTechs();
+    for (UnitId id : {irene, fugger, polo, bisheng, hopper, timur, cid}) REQUIRE(g->submit(Command::activateGreatPerson(0, id)) == CommandError::Ok);
+    CHECK_EQ(g->governorTitlesLeft(0), titles + 1);
+    CHECK_EQ(g->state().players[0].envoyTokens, tokens + 2);
+    CHECK_EQ(g->tradeRouteCapacity(0), routes + 1);
+    CHECK_EQ(g->districtLimit(g->state().cities[0]), limit + 1);
+    CHECK_EQ(doneTechs(), techs + 2);
+    CHECK_EQ(g->state().unit(sword)->xpBonus, 25);
+    CHECK_EQ(static_cast<int>(g->state().unit(sword)->formation), 1);
+}

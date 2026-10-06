@@ -716,7 +716,7 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
     if (ut.promotionClass.empty() || owner.barbarian) return;  // barbarians never promote
     // Fights with barbarians cannot take a unit past level 2 (EXPERIENCE_MAX_BARB_LEVEL).
     if (vsBarbarian && unit.level() >= rules_->globalInt("EXPERIENCE_MAX_BARB_LEVEL")) return;
-    const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) +
+    const int percent = 100 + static_cast<int>(sumUnitXpPercent(state_, *rules_, owner, ut.unitClass).toInt()) + unit.xpBonus +
                         unitEffectTotal(unit, UnitEffectKind::XpPercent) +
                         (difficultyAi(unit.owner) ? difficulty().aiXpPercent : difficultyHuman(unit.owner) ? difficulty().humanXpPercent : 0) +
                         civAbility(unit.owner).unitXpPercent +

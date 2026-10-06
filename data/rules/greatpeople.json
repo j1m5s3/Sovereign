@@ -69,8 +69,10 @@
      "AdjacentBarbarianUnit"
     ]
    },
-   "untrackedEffects": [
-    "adjust unit owner (NewOwner=Player) for all units where within 1 tiles and unit is barbarian (one-time)"
+   "effects": [
+    {
+     "kind": "CONVERT_BARBARIANS"
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -208,8 +210,11 @@
      "UnitMilitaryFormation=Standard Military Formation"
     ]
    },
-   "untrackedEffects": [
-    "is formed as Corps Military Formation (one-time)"
+   "effects": [
+    {
+     "kind": "FORMATION",
+     "amount": 1
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -234,10 +239,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 25
     }
-   ],
-   "untrackedEffects": [
-    "ability Timur Bonus Experience [+25% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "LAND",
@@ -287,8 +293,11 @@
      "PlayerRelicSlot"
     ]
    },
-   "untrackedEffects": [
-    "grants 1 Relic(s) (one-time)"
+   "effects": [
+    {
+     "kind": "RELIC",
+     "amount": 1
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -307,8 +316,11 @@
    "class": "GREAT_PERSON_CLASS_GENERAL",
    "era": "ERA_RENAISSANCE",
    "charges": 1,
-   "untrackedEffects": [
-    "grants 1 Envoy(s) (one-time)"
+   "effects": [
+    {
+     "kind": "ENVOYS",
+     "amount": 1
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -333,8 +345,11 @@
      "UnitMilitaryFormation=Standard Military Formation"
     ]
    },
-   "untrackedEffects": [
-    "is formed as Army Military Formation (one-time)"
+   "effects": [
+    {
+     "kind": "FORMATION",
+     "amount": 2
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -443,10 +458,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 75
     }
-   ],
-   "untrackedEffects": [
-    "ability John Monash Bonus Experience [+75% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "LAND",
@@ -520,8 +536,11 @@
      "EnemyTerritory"
     ]
    },
-   "untrackedEffects": [
-    "grants a Musketman in each district (one-time)"
+   "effects": [
+    {
+     "kind": "UNITS_IN_DISTRICTS",
+     "ref": "UNIT_MUSKETMAN"
+    }
    ],
    "aura": {
     "domain": "LAND",
@@ -599,10 +618,12 @@
     {
      "kind": "UNIT",
      "ref": "UNIT_TANK"
+    },
+    {
+     "kind": "RESOURCE_PER_TURN",
+     "amount": 1,
+     "what": "RESOURCE_OIL"
     }
-   ],
-   "untrackedEffects": [
-    "+1 Oil per turn (one-time)"
    ],
    "aura": {
     "domain": "LAND",
@@ -685,10 +706,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 100
     }
-   ],
-   "untrackedEffects": [
-    "ability Vijaya Wimalaratne Bonus Experience [+100% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "LAND",
@@ -738,8 +760,11 @@
      "UnitMilitaryFormation=Standard Military Formation"
     ]
    },
-   "untrackedEffects": [
-    "is formed as Corps Military Formation (one-time)"
+   "effects": [
+    {
+     "kind": "FORMATION",
+     "amount": 1
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -799,8 +824,10 @@
    "requires": {
     "noMilitaryUnit": true
    },
-   "untrackedEffects": [
-    "grants a Naval Melee unit (one-time)"
+   "effects": [
+    {
+     "kind": "NAVAL_MELEE_UNIT"
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -821,12 +848,12 @@
    "charges": 1,
    "effects": [
     {
+     "kind": "OCEAN"
+    },
+    {
      "kind": "ABILITY",
      "ref": "ABILITY_LEIF_ERIKSON"
     }
-   ],
-   "untrackedEffects": [
-    "can enter Ocean for your units where Sea unit"
    ],
    "aura": {
     "domain": "SEA",
@@ -874,12 +901,15 @@
    },
    "effects": [
     {
+     "kind": "TRADE_ROUTES",
+     "amount": 1
+    },
+    {
      "kind": "UNIT",
      "ref": "UNIT_TRADER"
     }
    ],
    "untrackedEffects": [
-    "+1 Trade Route capacity (one-time)",
     "+2 Gold for each trade route other civs send here (one-time)",
     "trade routes from other civs give them +2 Gold (one-time)"
    ],
@@ -906,10 +936,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 25
     }
-   ],
-   "untrackedEffects": [
-    "ability Himerios Bonus Experience [+25% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -964,8 +995,11 @@
      "UnitMilitaryFormation=Standard Military Formation"
     ]
    },
-   "untrackedEffects": [
-    "is formed as Army Military Formation (one-time)"
+   "effects": [
+    {
+     "kind": "FORMATION",
+     "amount": 2
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -989,12 +1023,14 @@
    },
    "effects": [
     {
+     "kind": "RESOURCE_PER_TURN",
+     "amount": 1,
+     "what": "RESOURCE_COAL"
+    },
+    {
      "kind": "UNIT",
      "ref": "UNIT_IRONCLAD"
     }
-   ],
-   "untrackedEffects": [
-    "+1 Coal per turn (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1116,10 +1152,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 50
     }
-   ],
-   "untrackedEffects": [
-    "ability Laskarina Bouboulina Bonus Experience [+50% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1145,10 +1182,12 @@
     {
      "kind": "UNIT",
      "ref": "UNIT_BATTLESHIP"
+    },
+    {
+     "kind": "RESOURCE_PER_TURN",
+     "amount": 1,
+     "what": "RESOURCE_COAL"
     }
-   ],
-   "untrackedEffects": [
-    "+1 Coal per turn (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1232,8 +1271,10 @@
      "CityStateTerritory"
     ]
    },
-   "untrackedEffects": [
-    "become city suzerain (RemoveOthers=yes) (one-time)"
+   "effects": [
+    {
+     "kind": "SUZERAIN"
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -1259,6 +1300,11 @@
     {
      "kind": "UNIT",
      "ref": "UNIT_SUBMARINE"
+    },
+    {
+     "kind": "RESOURCE_PER_TURN",
+     "amount": 1,
+     "what": "RESOURCE_OIL"
     }
    ],
    "modifiers": [
@@ -1272,9 +1318,6 @@
       "military": true
      }
     }
-   ],
-   "untrackedEffects": [
-    "+1 Oil per turn (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1293,8 +1336,11 @@
    "class": "GREAT_PERSON_CLASS_ADMIRAL",
    "era": "ERA_ATOMIC",
    "charges": 1,
-   "untrackedEffects": [
-    "grants 2 random technology (one-time)"
+   "effects": [
+    {
+     "kind": "RANDOM_TECHS",
+     "count": 2
+    }
    ],
    "aura": {
     "domain": "SEA",
@@ -1319,10 +1365,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 100
     }
-   ],
-   "untrackedEffects": [
-    "ability Sergey Gorshkov Bonus Experience [+100% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1347,10 +1394,11 @@
    "effects": [
     {
      "kind": "PROMOTION_XP"
+    },
+    {
+     "kind": "UNIT_XP",
+     "amount": 200
     }
-   ],
-   "untrackedEffects": [
-    "ability Clancy Fernando Bonus Experience [+200% combat XP] (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1375,13 +1423,14 @@
    },
    "effects": [
     {
+     "kind": "DISTRICT_CAPACITY",
+     "amount": 1
+    },
+    {
      "kind": "BOOST",
      "ref": "TECH_PRINTING",
      "orComplete": false
     }
-   ],
-   "untrackedEffects": [
-    "+1 district capacity (one-time)"
    ]
   },
   {
@@ -1437,9 +1486,14 @@
      "IncompleteWonder"
     ]
    },
-   "untrackedEffects": [
-    "one-time 350 (x game speed) Production where plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time)",
-    "one-time 175 (x game speed) Production where NOT plot wonder is era (EarliestEra=Ancient Era, LatestEra=Classical Era) (one-time)"
+   "effects": [
+    {
+     "kind": "WONDER_PRODUCTION",
+     "amount": 350,
+     "count": 175,
+     "minEra": "ERA_ANCIENT",
+     "maxEra": "ERA_CLASSICAL"
+    }
    ]
   },
   {
@@ -1516,10 +1570,11 @@
      "kind": "BOOST",
      "ref": "TECH_COMPUTERS",
      "orComplete": false
+    },
+    {
+     "kind": "DISTRICT_CAPACITY",
+     "amount": 1
     }
-   ],
-   "untrackedEffects": [
-    "+1 district capacity (one-time)"
    ]
   },
   {
@@ -1835,8 +1890,13 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "effects": [
+    {
+     "kind": "TRADE_ROUTES",
+     "amount": 1
+    }
+   ],
    "untrackedEffects": [
-    "+1 Trade Route capacity (one-time)",
     "+2 Gold for each trade route other civs send here (one-time)",
     "trade routes from other civs give them +2 Gold (one-time)"
    ]
@@ -1853,12 +1913,15 @@
    },
    "effects": [
     {
+     "kind": "TRADE_ROUTES",
+     "amount": 1
+    },
+    {
      "kind": "UNIT",
      "ref": "UNIT_TRADER"
     }
    ],
    "untrackedEffects": [
-    "+1 Trade Route capacity (one-time)",
     "+2 Gold for each trade route other civs send here (one-time)",
     "trade routes from other civs give them +2 Gold (one-time)"
    ]
@@ -1879,10 +1942,11 @@
      "yield": "GOLD",
      "amount": 200,
      "scaled": true
+    },
+    {
+     "kind": "ENVOYS",
+     "amount": 1
     }
-   ],
-   "untrackedEffects": [
-    "grants 1 Envoy(s) (one-time)"
    ]
   },
   {
@@ -1895,8 +1959,11 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
-   "untrackedEffects": [
-    "+1 Governor Title(s) (one-time)"
+   "effects": [
+    {
+     "kind": "GOVERNOR_TITLES",
+     "amount": 1
+    }
    ]
   },
   {
@@ -1909,9 +1976,14 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "effects": [
+    {
+     "kind": "TRADE_ROUTES",
+     "amount": 1
+    }
+   ],
    "untrackedEffects": [
-    "routes to city-states +2 Faith (one-time)",
-    "+1 Trade Route capacity (one-time)"
+    "routes to city-states +2 Faith (one-time)"
    ]
   },
   {
@@ -1954,10 +2026,11 @@
      "yield": "GOLD",
      "amount": 200,
      "scaled": true
+    },
+    {
+     "kind": "ENVOYS",
+     "amount": 2
     }
-   ],
-   "untrackedEffects": [
-    "grants 2 Envoy(s) (one-time)"
    ]
   },
   {
@@ -1970,9 +2043,14 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "effects": [
+    {
+     "kind": "ENVOYS",
+     "amount": 1
+    }
+   ],
    "untrackedEffects": [
-    "domestic routes +0.5 Gold per specialty district at destination (one-time)",
-    "grants 1 Envoy(s) (one-time)"
+    "domestic routes +0.5 Gold per specialty district at destination (one-time)"
    ]
   },
   {
@@ -1987,8 +2065,11 @@
      "NonHostileTerritory"
     ]
    },
-   "untrackedEffects": [
-    "grant free envoys here (Amount=3) (one-time)"
+   "effects": [
+    {
+     "kind": "ENVOYS_HERE",
+     "amount": 3
+    }
    ]
   },
   {
@@ -2007,10 +2088,11 @@
      "yield": "GOLD",
      "amount": 500,
      "scaled": true
+    },
+    {
+     "kind": "GOVERNOR_TITLES",
+     "amount": 1
     }
-   ],
-   "untrackedEffects": [
-    "+1 Governor Title(s) (one-time)"
    ]
   },
   {
@@ -2043,10 +2125,11 @@
      "yield": "GOLD",
      "amount": 500,
      "scaled": true
+    },
+    {
+     "kind": "ENVOYS",
+     "amount": 2
     }
-   ],
-   "untrackedEffects": [
-    "grants 2 Envoy(s) (one-time)"
    ]
   },
   {
@@ -2073,9 +2156,15 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "effects": [
+    {
+     "kind": "RESOURCE_PER_TURN",
+     "amount": 3,
+     "what": "RESOURCE_OIL"
+    }
+   ],
    "untrackedEffects": [
     "adjust city trade route yield per destination strategic resource for domestic (YieldType=Gold, Amount=2) in all your cities",
-    "+3 Oil per turn (one-time)",
     "international routes +2 Gold per strategic at destination in all your cities"
    ]
   },
@@ -2140,6 +2229,12 @@
     "ownedTile": true,
     "district": "DISTRICT_COMMERCIAL_HUB"
    },
+   "effects": [
+    {
+     "kind": "TRADE_ROUTES",
+     "amount": 1
+    }
+   ],
    "modifiers": [
     {
      "id": "GREAT_PERSON_MELITTA_BENTZ_1",
@@ -2150,9 +2245,6 @@
       "amount": 25
      }
     }
-   ],
-   "untrackedEffects": [
-    "+1 Trade Route capacity (one-time)"
    ]
   },
   {
@@ -2564,8 +2656,12 @@
      "AdjacentMountain"
     ]
    },
-   "untrackedEffects": [
-    "250 (x game speed) Science on adjacent Mountain (one-time)"
+   "effects": [
+    {
+     "kind": "SCIENCE_ADJACENT",
+     "amount": 250,
+     "what": "MOUNTAIN"
+    }
    ]
   },
   {
@@ -2692,8 +2788,11 @@
      "OnOrAdjacentNaturalWonder"
     ]
    },
-   "untrackedEffects": [
-    "grant unit yield adjacent natural wonders (YieldType=Science, Amount=500 (x game speed)) (one-time)"
+   "effects": [
+    {
+     "kind": "SCIENCE_NEAR_WONDER",
+     "amount": 500
+    }
    ]
   },
   {
@@ -2807,8 +2906,12 @@
      "OnOrAdjacentFeatureType=Rainforest"
     ]
    },
-   "untrackedEffects": [
-    "400 (x game speed) Science on adjacent Rainforest (one-time)"
+   "effects": [
+    {
+     "kind": "SCIENCE_ADJACENT",
+     "amount": 400,
+     "what": "FEATURE_JUNGLE"
+    }
    ]
   },
   {
@@ -2824,9 +2927,15 @@
      "CityGreatWorkObjectType=Artifact"
     ]
    },
-   "untrackedEffects": [
-    "350 (x game speed) Science per Artifact in the city (one-time)",
-    "Tourism from Artifact scaled 300% in all your cities"
+   "effects": [
+    {
+     "kind": "SCIENCE_PER_ARTIFACT",
+     "amount": 350
+    },
+    {
+     "kind": "ARTIFACT_TOURISM",
+     "amount": 300
+    }
    ]
   },
   {
