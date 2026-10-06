@@ -17,8 +17,6 @@ size_t at(TypeIndex i) { return static_cast<size_t>(i); }
 
 int speedPercent(const GameState& s, const Rules& r) { return r.speeds[at(r.speed(s.setup.speed))].costPercent; }
 
-bool isMajor(const Player& p) { return p.alive && !p.barbarian && !p.freeCity; }
-
 // The city a Trader starts from: the one it stands in, or (when another civilian holds the
 // city plot) the one whose land it stands on next to the center. Sovereign convenience.
 const City* originOf(const GameState& s, const Unit& u) {
