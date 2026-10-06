@@ -181,14 +181,6 @@ void Game::processEras() {
     }
 }
 
-int Game::ageLoyalty(const City& city) const {
-    // Golden Ages raise and Dark Ages lower citizen loyalty pressure by 0.5 per citizen
-    // (GOLDEN_AGE_CITY_IDENTITY / DARK_AGE_CITY_IDENTITY), applied here to the city's own loyalty.
-    const Age age = state_.players[at(city.owner)].age;
-    if (age == Age::Golden || age == Age::Heroic) return city.population / 2;
-    if (age == Age::Dark) return -(city.population / 2);
-    return 0;
-}
 
 int Game::tourismPerTurn(PlayerId pid) const {
     int total = tourismBase(pid);

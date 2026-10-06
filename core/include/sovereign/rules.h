@@ -161,6 +161,9 @@ enum class UnitEffectKind : uint8_t {
     HeathenConversion,  // spreading turns the barbarians next to it (Heathen Conversion)
     Martyr,             // a Relic if it dies in theological combat
     HealAura,           // + healing for the owner's units next to it (Chaplain)
+    OpenGroundMoves,    // + movement when its turn starts on flat ground with no feature (Heavy Chariot)
+    ObservedRange,      // + range while a friendly Observation unit stands next to it (Observation Balloon, Drone)
+    FightEmbarked,      // may attack while embarked (Giant Death Robot)
 };
 
 enum class CombatAtom : uint8_t {
@@ -187,6 +190,7 @@ enum class CombatAtom : uint8_t {
     OpponentMinor,      // the opponent belongs to a city-state
     OpponentFreeCity,   // the opponent belongs to the Free Cities
     NearOwnTerritory,   // this unit is in or next to its owner's territory
+    NextToFriendlyClass, // a unit of the owner's of class `value` stands next to it (a Drone)
 };
 
 struct CombatCondition {

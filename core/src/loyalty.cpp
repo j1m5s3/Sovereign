@@ -13,7 +13,10 @@ Fixed pressureFrom(const GameState& s, const Rules& r, const City& from, Hex at)
     const int cutoff = r.globalInt("CITIZEN_IDENTITY_PRESSURE_RADIUS_CUTOFF");
     const int d = s.grid.distance(from.pos, at);
     if (d >= cutoff) return Fixed();
-    Fixed p = Fixed::fromInt(from.population * (cutoff - d));
+    // Each civ's citizens press by its age (02: Loyalty): x1.5 in a Golden or Heroic Age, x0.5 in a Dark Age.
+    const Age age = s.players[static_cast<size_t>(from.owner)].age;
+    const Fixed factor = age == Age::Golden || age == Age::Heroic ? Fixed::ratio(3, 2) : age == Age::Dark ? Fixed::ratio(1, 2) : Fixed::fromInt(1);
+    Fixed p = Fixed::fromInt(from.population * (cutoff - d)) * factor;
     if (from.capital) p += Fixed::fromInt(from.population * (cutoff - d));  // capitals count twice (age factor 1)
     return p;
 }
@@ -77,7 +80,6 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
         if (founder == c->owner) change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_RELIGION_MATCHING_FOUNDED"));
         else if (founder != kNoPlayer) change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_RELIGION_MISMATCHING_FOUNDED"));
     }
-    change += Fixed::fromInt(ageLoyalty(*c));  // Golden and Dark Ages (09)
     const CityReport rep = cityReport(id);
     if (!rules_->happiness.empty()) change += Fixed::fromInt(rules_->happiness[static_cast<size_t>(rep.happiness)].loyaltyPerTurn);
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)

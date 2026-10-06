@@ -468,6 +468,8 @@ def condition_atom(text):
         a["atom"] = "TILE_FORT"
     elif text == "plot unit city has any district":
         a["atom"] = "DISTRICT_TILE"
+    elif re.fullmatch(r"adjacent to a friendly (\w+) unit", text):  # Drone (05: Support units)
+        a.update(atom="NEXT_TO_FRIENDLY_CLASS", value=snake(re.fullmatch(r"adjacent to a friendly (\w+) unit", text).group(1)))
     elif text == "on a coastal tile":
         a["atom"] = "COASTAL_TILE"
     elif text == "on home continent":
@@ -543,7 +545,18 @@ def unit_effects(text):
             "ignores All movement costs": "IGNORE_TERRAIN", "no movement cost to embark/disembark": "FREE_EMBARK",
             "sees through features": "SEES_THROUGH_FEATURES", "can coastal raid": "COASTAL_RAID",
             "converts defeated barbarians": "HEATHEN_CONVERSION", "creates a Relic when killed in theological combat": "MARTYR",
+            "adjust unit fight while embarked (CanFight=yes)": "FIGHT_EMBARKED",
         }
+        # Abilities with a condition the core reads in code (05): naval units' movement (Great Lighthouse), open ground
+        # (Heavy Chariot), range next to an Observation unit (Observation Balloon, Drone).
+        special = {
+            "+1 Movement for naval units": {"kind": "MOVES", "amount": 1},
+            "+1 Movement when starting on open terrain": {"kind": "OPEN_GROUND_MOVES", "amount": 1},
+            "+1 range where adjacent to a friendly Observation unit": {"kind": "OBSERVED_RANGE", "amount": 1},
+        }
+        if part in special:
+            out.append(dict(special[part]))
+            continue
         kill = re.fullmatch(r"after killing a unit gain (Gold|Faith|Culture) = (\d+)% of its Combat Strength in combat(?: where vs (Sea|Land) units)?", part)
         if kill:
             e = {"kind": "KILL_YIELD", "amount": int(kill.group(2)), "at": YIELD_WORDS[kill.group(1)]}
