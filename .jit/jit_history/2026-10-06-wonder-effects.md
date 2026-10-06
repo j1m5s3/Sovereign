@@ -45,3 +45,7 @@ Not planned:
 - Wonder policy slots come after the government's in `Player::policies`; a save may hold more slots than the government has. When a wonder is lost, the slots are resized at its old owner's next turn and cards in slots of the wrong type come out.
 - Wonders read in hot paths are looked up once per `Game` (`Game::W`, `wonderType`, `holdsWonder`); string lookups of long ids allocate.
 - The generator drops accented letters from ids (`BUILDING_ORSZ_GH_Z`, `BUILDING_TORRE_DE_BEL_M`); code uses the ids as generated.
+
+## Follow-up: the AI values wonders by their effects
+
+The AI scored a wonder only by its yields, its completion effects and trade capacity, so an all-AI game (seed 7, 6 civs, Small, 200 turns) completed 2 wonders; now 3 (and 6 with seed 3). It now also counts the wonder's modifiers (`BuildingType::modifierCount`, counted at load), policy slots and spread charges. In the pace benchmark (`sovsim --bench 4`, 6 civs, Small, 200 turns) cities, science and culture stay level or rise. Waiving the long-build penalty for wonders as well cost about 10% of cities, so that was dropped.

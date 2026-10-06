@@ -1962,6 +1962,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             mod.sourceKind = ModSource::Everyone;
         } else if ((mod.sourceIndex = building(mod.source)) != kNone) {
             mod.sourceKind = ModSource::Building;
+            ++buildings[static_cast<size_t>(mod.sourceIndex)].modifierCount;
         } else if ((mod.sourceIndex = civ(mod.source)) != kNone) {
             mod.sourceKind = ModSource::Civ;
         } else if ((mod.sourceIndex = policy(mod.source)) != kNone) {
