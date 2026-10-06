@@ -1143,6 +1143,9 @@ def project_effects(name, text):
         return [{"kind": "COMPETITION", "competition": "SPACE_STATION", "amount": 30}], []
     if text and text.strip() == "city recommission reactor":
         return [{"kind": "RECOMMISSION"}], []  # 09: a nuclear plant's risk starts over
+    m = re.fullmatch(r"Convert to (\w+) Power", name)
+    if m:
+        return [{"kind": "CONVERT", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Power
     m = re.fullmatch(r"Decommission (\w+) Power Plant", name)
     if m:
         return [{"kind": "DECOMMISSION", "building": "BUILDING_" + snake(m.group(1)) + "_POWER_PLANT"}], []  # 09: Climate

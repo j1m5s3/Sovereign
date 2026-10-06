@@ -287,6 +287,7 @@ public:
     // ---- espionage (08: Espionage)
     int spyCapacity(PlayerId player) const;   // from civics and techs
     int buildingsOwned(PlayerId pid, const char* buildingId) const;  // in all its cities
+    bool governmentIs(PlayerId pid, const char* governmentId) const;  // in force (not in anarchy)
     int stockpileCap(PlayerId pid, TypeIndex resource) const;        // the resource's cap plus its buildings' raises (01)
     int spiesOf(PlayerId player) const;
     const SpyOperationType* spyOperationFor(SpyMission mission) const;

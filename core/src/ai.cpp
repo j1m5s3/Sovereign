@@ -1660,6 +1660,7 @@ void production(View& v) {
                             case ProjectEffectKind::Aid: value = std::max(value, 150); break;  // Diplomatic Victory points
                             case ProjectEffectKind::Competition: value = std::max(value, 120); break;  // a competition's first place
                             case ProjectEffectKind::Decommission: break;  // the AI keeps its plants
+                            case ProjectEffectKind::Convert: break;  // the AI keeps the plant it built
                             case ProjectEffectKind::Recommission:
                                 // A reactor old enough for a meltdown is renewed.
                                 value = std::max(value, s.turn - c.reactorSince >= 30 ? 200 : 0);

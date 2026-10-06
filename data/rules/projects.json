@@ -235,7 +235,13 @@
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
    "unlock": "TECH_INDUSTRIALIZATION",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "CONVERT",
+     "building": "BUILDING_COAL_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_CONVERT_TO_OIL_POWER",
@@ -245,7 +251,13 @@
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
    "unlock": "TECH_ELECTRICITY",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "CONVERT",
+     "building": "BUILDING_OIL_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_CARBON_RECAPTURE",
@@ -275,7 +287,13 @@
    "costProgressionParam": 0,
    "district": "DISTRICT_INDUSTRIAL_ZONE",
    "unlock": "TECH_NUCLEAR_FISSION",
-   "modelled": false
+   "effects": [
+    {
+     "kind": "CONVERT",
+     "building": "BUILDING_NUCLEAR_POWER_PLANT"
+    }
+   ],
+   "modelled": true
   },
   {
    "id": "PROJECT_DECOMMISSION_COAL_POWER_PLANT",

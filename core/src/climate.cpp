@@ -91,6 +91,15 @@ void Game::unitCo2(PlayerId pid, size_t resource, int burned) {
 void Game::burnPower(PlayerId pid) {
     Player& p = state_.players[at(pid)];
     constexpr int kPlantRange = 6;  // Buildings.RegionalRange
+    // Free power (data): Synthetic Technocracy +3 in every city; Cardiff's suzerain +2 per Lighthouse, Shipyard
+    // and Seaport, while at peace with it.
+    const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
+    bool cardiff = false;
+    for (const Player& cs : state_.players) {
+        cardiff = cardiff || (cs.cityState != kNone && cs.alive && rules_->cityStates[at(cs.cityState)].id == "CITYSTATE_CARDIFF" && suzerainOf(cs.id) == pid &&
+                              !atWar(pid, cs.id));
+    }
+    const TypeIndex harborBuildings[] = {rules_->building("BUILDING_LIGHTHOUSE"), rules_->building("BUILDING_SHIPYARD"), rules_->building("BUILDING_SEAPORT")};
     std::vector<City*> mine;
     for (City& c : state_.cities) {
         if (c.owner != pid) continue;
@@ -100,6 +109,8 @@ void Game::burnPower(PlayerId pid) {
             c.powerDemand += bt.requiredPower;
             c.powerSupply += bt.powerProvided;
         }
+        if (technocracy) c.powerSupply += 3;
+        for (TypeIndex b : harborBuildings) c.powerSupply += cardiff && b != kNone && c.has(b) ? 2 : 0;
         for (const Hex& h : state_.grid.within(c.pos, 3)) {
             const Plot& pl = state_.plot(h);
             if (pl.city == c.id && pl.improvement != kNone && pl.pillagedTurns == 0) c.powerSupply += rules_->improvements[at(pl.improvement)].powerProvided;

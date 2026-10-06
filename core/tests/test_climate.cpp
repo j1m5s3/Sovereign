@@ -278,3 +278,35 @@ TEST(an_old_reactor_can_melt_down_and_recommissioning_renews_it) {
     h->completeProject(h->stateMutForTests().cities[0], renew.type);
     CHECK_EQ(h->state().cities[0].reactorSince, 100);
 }
+
+TEST(a_plant_converts_and_synthetic_technocracy_powers_every_city) {
+    GameState s = flatState(20, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    s.turn = 50;
+    addCity(s, 0, {6, 6}, true, 6);
+    City& c = s.cities[0];
+    CityDistrict zone;
+    zone.type = rules().district("DISTRICT_INDUSTRIAL_ZONE");
+    zone.pos = {7, 6};
+    zone.complete = true;
+    c.districts.push_back(zone);
+    const TypeIndex coal = rules().building("BUILDING_COAL_POWER_PLANT"), nuclear = rules().building("BUILDING_NUCLEAR_POWER_PLANT");
+    c.buildings = {coal};
+    s.players[0].techs.done[at(rules().tech("TECH_NUCLEAR_FISSION"))] = 1;
+    auto g = Game::fromScenario(rules(), s);
+    const ProductionItem convert{ProductionKind::Project, rules().project("PROJECT_CONVERT_TO_NUCLEAR_POWER")};
+    REQUIRE(rules().projects[at(convert.type)].modelled);
+    REQUIRE(g->canProduce(g->state().cities[0], convert));
+    g->completeProject(g->stateMutForTests().cities[0], convert.type);
+    CHECK(!g->state().cities[0].has(coal));
+    CHECK(g->state().cities[0].has(nuclear));
+    CHECK_EQ(g->state().cities[0].reactorSince, 50);
+    CHECK(!g->canProduce(g->state().cities[0], convert));  // already nuclear
+    // Synthetic Technocracy: +3 Power in every city.
+    s.players[0].government = rules().government("GOVERNMENT_SYNTHETIC_TECHNOCRACY");
+    s.cities[0].buildings.clear();
+    auto h = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(h->governmentIs(0, "GOVERNMENT_SYNTHETIC_TECHNOCRACY"));
+    sovtest::endTurns(*h, 1);
+    CHECK_EQ(h->state().cities[0].powerSupply, 3);
+}

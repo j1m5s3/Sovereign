@@ -569,6 +569,12 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             }
             if (e.kind == ProjectEffectKind::Decommission && (e.weapon == kNone || !c.has(e.weapon))) return fail(CommandError::CannotBuild);
             if (e.kind == ProjectEffectKind::Recommission && !c.has(rules_->building("BUILDING_NUCLEAR_POWER_PLANT"))) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::Convert) {
+                // A city with another kind of power plant converts it (09: Power).
+                bool other = false;
+                for (TypeIndex b : c.buildings) other = other || (b != e.weapon && rules_->buildings[static_cast<size_t>(b)].burnsResource != kNone);
+                if (e.weapon == kNone || c.has(e.weapon) || !other) return fail(CommandError::CannotBuild);
+            }
             if (e.kind == ProjectEffectKind::Aid) {
                 const Competition* aid = runningAidRequest();
                 if (!aid || aid->beneficiary == c.owner || atWar(c.owner, aid->beneficiary)) return fail(CommandError::CannotBuild);
@@ -998,6 +1004,13 @@ void Game::completeProject(City& city, TypeIndex project) {
                 }
                 break;
             case ProjectEffectKind::Recommission: city.reactorSince = state_.turn; break;
+            case ProjectEffectKind::Convert:
+                city.buildings.erase(std::remove_if(city.buildings.begin(), city.buildings.end(),
+                                                    [&](TypeIndex b) { return rules_->buildings[static_cast<size_t>(b)].burnsResource != kNone; }),
+                                     city.buildings.end());
+                city.buildings.insert(std::lower_bound(city.buildings.begin(), city.buildings.end(), e.weapon), e.weapon);
+                if (rules_->buildings[static_cast<size_t>(e.weapon)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
+                break;
             case ProjectEffectKind::Competition: competitionScore(city.owner, static_cast<CompetitionKind>(e.weapon), e.amount); break;
             case ProjectEffectKind::Decommission:
                 // The plant goes, and with it the city's burning of its fuel (09: Climate).
@@ -1224,6 +1237,7 @@ void Game::processCities(PlayerId pid) {
                 int pct = 100;
                 if (nuclear && cityGovernorHas(city, "GOVERNOR_PROMOTION_ARMS_RACE_PROPONENT")) pct += 30;
                 if (pj.spaceRace && cityGovernorHas(city, "GOVERNOR_PROMOTION_SPACE_INITIATIVE")) pct += 30;
+                if (governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY")) pct += 30;  // 04: Synthetic Technocracy
                 prod = prod * pct / 100;
             }
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)

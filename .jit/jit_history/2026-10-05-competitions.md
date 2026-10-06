@@ -23,4 +23,5 @@ Specs: 08-diplomacy-city-states-governors (Scored Competitions, Diplomatic Victo
 - **Nuclear accidents.** The generator now also produces Radioactive Steam Venting, Major Radiation Leak and Nuclear Meltdown (kind NUCLEAR, with `minTurnAtRisk` 10/20/30 and `fallout` 2/10/20 from the data).
   - They can strike the Industrial Zone of a city whose Nuclear Power Plant is at least that old (`City::reactorSince`, set when the plant is built; save version 60).
   - Fallout covers the zone and one more ring per severity (Sovereign reading).
+- **Convert to Coal, Oil or Nuclear Power** (CONVERT) replaces the city's power plant with that kind (a new reactor starts its age).
 - **Recommission Nuclear Reactor** (RECOMMISSION, needs the plant) resets the reactor's age. The AI renews a reactor 30 turns old.
