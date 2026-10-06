@@ -1936,6 +1936,43 @@ void pantheon(View& v) {
     if (b != kNone && v.game.canFoundPantheon(v.me, b)) v.game.submit(Command::foundPantheon(v.me, b));
 }
 
+// A religion founded on a copy of the game with these beliefs, scored by our cities' yields, Amenities and
+// Housing and the founder's own yields.
+int64_t religionScore(const View& v, UnitId prophetId, TypeIndex religion, TypeIndex founder, TypeIndex follower) {
+    auto trial = Game::fromScenario(v.r, v.s());
+    if (trial->submit(Command::foundReligion(v.me, prophetId, religion, founder, follower)) != CommandError::Ok) return INT64_MIN;
+    int64_t score = worth(v, trial->founderYields(v.me));
+    for (CityId cid : v.cities) {
+        const CityReport r = trial->cityReport(cid);
+        score += worth(v, r.yields) + 3 * r.amenities + static_cast<int64_t>((r.housing * 2).round());
+    }
+    return score;
+}
+
+// The best follower belief with the first founder belief, then the best founder belief with that follower.
+std::pair<TypeIndex, TypeIndex> bestReligionBeliefs(const View& v, UnitId prophetId, TypeIndex religion) {
+    TypeIndex founder = firstBelief(v, BeliefClass::Founder), follower = firstBelief(v, BeliefClass::Follower);
+    if (religion == kNone || founder == kNone || follower == kNone || !v.game.canFoundReligion(prophetId, religion, founder, follower))
+        return {founder, follower};
+    int64_t best = INT64_MIN;
+    for (TypeIndex f : v.game.availableBeliefs(BeliefClass::Follower)) {
+        if (!v.game.beliefModelled(f)) continue;
+        if (const int64_t s = religionScore(v, prophetId, religion, founder, f); s > best) {
+            best = s;
+            follower = f;
+        }
+    }
+    best = INT64_MIN;
+    for (TypeIndex f : v.game.availableBeliefs(BeliefClass::Founder)) {
+        if (!v.game.beliefModelled(f)) continue;
+        if (const int64_t s = religionScore(v, prophetId, religion, f, follower); s > best) {
+            best = s;
+            founder = f;
+        }
+    }
+    return {founder, follower};
+}
+
 void prophet(View& v, UnitId id) {
     Game& g = v.game;
     const Unit* u = v.s().unit(id);
@@ -1945,7 +1982,7 @@ void prophet(View& v, UnitId id) {
         for (const FoundedReligion& f : v.s().religions) taken |= f.type == static_cast<TypeIndex>(r);
         if (!taken) religion = static_cast<TypeIndex>(r);
     }
-    const TypeIndex founder = firstBelief(v, BeliefClass::Founder), follower = firstBelief(v, BeliefClass::Follower);
+    const auto [founder, follower] = bestReligionBeliefs(v, id, religion);
     if (g.canFoundReligion(id, religion, founder, follower)) {
         g.submit(Command::foundReligion(v.me, id, religion, founder, follower));
         return;
