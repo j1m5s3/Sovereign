@@ -196,6 +196,7 @@ int Game::religiousStrength(const Unit& unit, bool defending) const {
     for (TypeIndex pr : unit.promotions) {
         for (const UnitEffect& e : rules_->promotions[at(pr)].effects) add(e);
     }
+    if (bestAllianceLevel(unit.owner, AllianceType::Religious) >= 2) s += 10;  // a Religious alliance at level 2 (08)
     if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
     const FoundedReligion& r = state_.religions[static_cast<size_t>(unit.religion)];
@@ -424,7 +425,7 @@ void Game::processReligion() {
     const TypeIndex holySite = rules_->district("DISTRICT_HOLY_SITE");
     // Every city with a majority religion presses its neighbours within 10 tiles: x2 with a Holy
     // Site, x4 as the Holy City (06: Passive pressure). Sources are read before anything changes.
-    struct Source { Hex pos; int religion; int amount; int range; };
+    struct Source { Hex pos; int religion; int amount; int range; PlayerId owner; };
     std::vector<Source> sources;
     for (City& c : state_.cities) {
         fitPressure(c, n);
@@ -437,11 +438,12 @@ void Game::processReligion() {
         amount = amount * (100 + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressurePercent).toInt())) / 100;
         amount = amount * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityReligionPressurePercent).toInt())) / 100;  // Bishop
         const int range = baseRange + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressureRange).toInt());
-        sources.push_back({c.pos, maj, amount, range});
+        sources.push_back({c.pos, maj, amount, range, c.owner});
     }
     for (const Source& src : sources) {
         for (City& c : state_.cities) {
             if (c.pos == src.pos || state_.grid.distance(c.pos, src.pos) > src.range) continue;
+            if (c.owner != src.owner && alliance(c.owner, src.owner) == AllianceType::Religious) continue;  // 08: no pressure between allies
             c.pressure[static_cast<size_t>(src.religion)] += src.amount / 10;
         }
     }

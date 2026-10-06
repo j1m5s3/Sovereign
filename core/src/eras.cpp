@@ -189,6 +189,15 @@ int Game::ageLoyalty(const City& city) const {
 }
 
 int Game::tourismPerTurn(PlayerId pid) const {
+    int total = tourismBase(pid);
+    // A Cultural alliance at level 3 (08): 20% of the ally's tourism.
+    for (const Player& ally : state_.players) {
+        if (alliance(pid, ally.id) == AllianceType::Cultural && allianceLevel(pid, ally.id) >= 3) total += tourismBase(ally.id) / 5;
+    }
+    return total;
+}
+
+int Game::tourismBase(PlayerId pid) const {
     const Player& p = state_.players[at(pid)];
     if (!isMajor(p)) return 0;
     int total = 0;

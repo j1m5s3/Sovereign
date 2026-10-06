@@ -825,6 +825,7 @@ struct Modifier {
     TypeIndex gpClass = kNone;   // GreatPersonPoints, CityGreatPersonPoints
     std::string scope;           // TradeRouteYield, ItemProductionPercent
     bool military = false;       // UnitProductionPercent: military units only
+    bool toDestination = false;  // TradeRouteYield: paid to the destination city instead of the origin
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).

@@ -1636,9 +1636,12 @@ def policy_modifiers(pid, text, ids):
             add("PLAYER", "ADJUST_TRADE_ROUTE_YIELD", {"yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(2)), "scope": scope})
             continue
         m = re.fullmatch(r"routes to (allies|city-states you are suzerain of|city-states) \+(\d+) (\w+)(?: to (origin|destination))?", body)
-        if m and m.group(3) in YIELD_WORDS and m.group(4) != "destination":
+        if m and m.group(3) in YIELD_WORDS:
             scope = {"allies": "ALLY", "city-states": "CITY_STATE", "city-states you are suzerain of": "SUZERAIN"}[m.group(1)]
-            add("PLAYER", "ADJUST_TRADE_ROUTE_YIELD", {"yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(2)), "scope": scope})
+            args = {"yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(2)), "scope": scope}
+            if m.group(4) == "destination":
+                args["toDestination"] = True  # paid to the partner's city
+            add("PLAYER", "ADJUST_TRADE_ROUTE_YIELD", args)
             continue
         # Production toward wonders of some eras, buildings, districts and their buildings, space race projects.
         m = re.fullmatch(r"\+(\d+)% Production toward wonders \((\w+) Era to (\w+) Era\) in all your cities", body)

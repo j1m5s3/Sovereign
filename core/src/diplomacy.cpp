@@ -92,6 +92,17 @@ int Game::allianceLevel(PlayerId a, PlayerId b) const {
     return points >= rules_->globalInt("ALLIANCE_LEVEL_TWO_XP") ? 2 : 1;
 }
 
+bool Game::militaryAllianceAtWar(PlayerId player) const {
+    // A Military alliance at level 2 (08): +15% military production while it or the ally is at war.
+    for (const Player& ally : state_.players) {
+        if (alliance(player, ally.id) != AllianceType::Military || allianceLevel(player, ally.id) < 2) continue;
+        for (const Player& o : state_.players) {
+            if (isMajorCiv(o.id) && (atWar(player, o.id) || atWar(ally.id, o.id))) return true;
+        }
+    }
+    return false;
+}
+
 int Game::bestAllianceLevel(PlayerId player, AllianceType type) const {
     int best = 0;
     for (const Player& o : state_.players) {

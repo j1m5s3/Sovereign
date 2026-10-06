@@ -93,9 +93,15 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
         int city = 0;
+        // A Cultural alliance at level 2 (08): +1 from each district in a city with a route to the ally.
+        bool toAlly = false;
+        for (const TradeRoute& r : state_.tradeRoutes) {
+            const City* dest = state_.city(r.destination);
+            toAlly = toAlly || (r.origin == c.id && dest && alliance(player, dest->owner) == AllianceType::Cultural && allianceLevel(player, dest->owner) >= 2);
+        }
         for (const CityDistrict& d : c.districts) {
             if (!d.complete) continue;
-            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v : 0;
+            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v + (toAlly ? 1 : 0) : 0;
         }
         for (TypeIndex b : c.buildings) {
             for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;

@@ -2158,11 +2158,47 @@
      "arguments": {
       "yield": "FOOD",
       "amount": 2,
-      "scope": "ALLY"
+      "scope": "ALLY",
+      "toDestination": true
      }
     },
     {
      "id": "POLICY_WISSELBANKEN_2",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 2,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_3",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "ALLY",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_4",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 2,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_5",
      "source": "POLICY_WISSELBANKEN",
      "collection": "PLAYER",
      "effect": "ADJUST_TRADE_ROUTE_YIELD",
@@ -2173,7 +2209,19 @@
      }
     },
     {
-     "id": "POLICY_WISSELBANKEN_3",
+     "id": "POLICY_WISSELBANKEN_6",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_7",
      "source": "POLICY_WISSELBANKEN",
      "collection": "PLAYER",
      "effect": "ADJUST_TRADE_ROUTE_YIELD",
@@ -2184,7 +2232,7 @@
      }
     },
     {
-     "id": "POLICY_WISSELBANKEN_4",
+     "id": "POLICY_WISSELBANKEN_8",
      "source": "POLICY_WISSELBANKEN",
      "collection": "PLAYER",
      "effect": "ADJUST_TRADE_ROUTE_YIELD",
@@ -2196,10 +2244,6 @@
     }
    ],
    "untrackedEffects": [
-    "routes to allies +2 Food to destination",
-    "routes to city-states you are suzerain of +2 Food to destination",
-    "routes to allies +2 Production to destination",
-    "routes to city-states you are suzerain of +2 Production to destination",
     "+1 alliance points per turn"
    ]
   },
@@ -3287,7 +3331,8 @@
      "arguments": {
       "yield": "FOOD",
       "amount": 4,
-      "scope": "ALLY"
+      "scope": "ALLY",
+      "toDestination": true
      }
     },
     {
@@ -3298,7 +3343,8 @@
      "arguments": {
       "yield": "PRODUCTION",
       "amount": 4,
-      "scope": "ALLY"
+      "scope": "ALLY",
+      "toDestination": true
      }
     },
     {
@@ -3309,11 +3355,57 @@
      "arguments": {
       "yield": "FOOD",
       "amount": 4,
-      "scope": "SUZERAIN"
+      "scope": "ALLY"
      }
     },
     {
      "id": "POLICY_DEMOCRATIC_LEGACY_4",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_5",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_6",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_7",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "SUZERAIN"
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_8",
      "source": "POLICY_DEMOCRATIC_LEGACY",
      "collection": "PLAYER",
      "effect": "ADJUST_TRADE_ROUTE_YIELD",
@@ -3325,10 +3417,6 @@
     }
    ],
    "untrackedEffects": [
-    "routes to allies +4 Food to destination",
-    "routes to allies +4 Production to destination",
-    "routes to city-states you are suzerain of +4 Food to destination",
-    "routes to city-states you are suzerain of +4 Production to destination",
     "+1 alliance points per turn"
    ]
   },

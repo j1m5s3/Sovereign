@@ -63,7 +63,7 @@ SOV_API Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const
 SOV_API Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass);
 SOV_API Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, const Player& player, TypeIndex gpClass);
 SOV_API Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
-                                        bool suzerain);
+                                        bool suzerain, bool toDestination = false);
 
 // Tourism from each of the player's completed districts of this type (Masaru Ibuka, Jamsetji Tata).
 SOV_API int districtTourism(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
