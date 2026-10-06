@@ -310,6 +310,7 @@ void Game::processClimate() {
                     break;
                 case DisasterKind::Drought: ok = !t.water && p.owner != kNoPlayer && !inDrought(h) && !cityPrevents(p.city, false); break;
                 case DisasterKind::Fire: ok = feat == "FEATURE_FOREST" || feat == "FEATURE_JUNGLE"; break;
+                case DisasterKind::Meteor: ok = !t.water && !t.impassable && !state_.cityAt(h); break;  // a meteor shower: any open land
                 case DisasterKind::Nuclear: {
                     // The Industrial Zone of a city whose reactor is old enough (09: nuclear accidents).
                     const CityDistrict* zone = state_.districtAt(h);
@@ -376,7 +377,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     const TypeIndex forest = rules_->feature("FEATURE_FOREST"), jungle = rules_->feature("FEATURE_JUNGLE");
     const TypeIndex burntForest = rules_->feature("FEATURE_BURNT_FOREST"), burntJungle = rules_->feature("FEATURE_BURNT_JUNGLE");
     // From phase IV storms and floods leave no fertility; from phase V storms and droughts may wash earlier fertility away.
-    const bool weather = dt.kind != DisasterKind::Eruption && dt.kind != DisasterKind::Fire;
+    const bool weather = dt.kind != DisasterKind::Eruption && dt.kind != DisasterKind::Fire && dt.kind != DisasterKind::Meteor;
     const int removal = state_.climatePhase > 0 && at(state_.climatePhase - 1) < rules_->climatePhases.size()
                             ? rules_->climatePhases[at(state_.climatePhase - 1)].fertilityRemoval
                             : 0;

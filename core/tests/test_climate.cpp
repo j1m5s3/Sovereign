@@ -39,7 +39,7 @@ GameState coastState(int w, int h, int players) {
 
 TEST(climate_rules_data) {
     const Rules& r = rules();
-    CHECK_EQ(r.disasters.size(), 20u);  // 17 natural disasters and 3 nuclear accidents
+    CHECK_EQ(r.disasters.size(), 21u);  // 18 natural disasters (meteor showers too) and 3 nuclear accidents
     CHECK_EQ(r.climatePhases.size(), 7u);
     CHECK_EQ(r.disasterIntensities.size(), 5u);
     CHECK_EQ(r.climatePhases[6].points, 8);
@@ -355,4 +355,34 @@ TEST(deforestation_scales_co2) {
     auto h = Game::fromScenario(rules(), std::move(cut));
     CHECK_EQ(h->deforestationPercent(), 50);  // half the woods gone
     CHECK(h->climateChangePoints() > g->climateChangePoints());
+}
+
+TEST(a_meteor_shower_pillages_its_plot) {
+    GameState s = coastState(16, 12, 1);
+    addCity(s, 0, {8, 6}, true, 3);
+    s.plot({9, 6}).improvement = rules().improvement("IMPROVEMENT_FARM");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {9, 6});
+    CHECK(g->state().plot({9, 6}).pillagedTurns > 0);
+    CHECK(g->state().plot({10, 6}).pillagedTurns == 0);  // one plot only
+}
+
+TEST(a_flood_barrier_costs_more_with_more_lowland) {
+    GameState s = coastState(12, 24, 1);
+    auto probe = Game::fromScenario(rules(), s);
+    Hex low{-1, -1};
+    for (int y = 1; y < 23 && low.x < 0; ++y) {
+        if (probe->lowlandBand({1, y}) == 1) low = {1, y};
+    }
+    REQUIRE(low.x == 1);
+    addCity(s, 0, {2, low.y}, true, 3);
+    addCity(s, 0, {8, 12}, false, 3);  // inland
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const ProductionItem barrier{ProductionKind::Building, rules().building("BUILDING_FLOOD_BARRIER")};
+    const int base = g->productionCost(0, barrier);
+    CHECK_EQ(g->productionCost(0, barrier, &g->state().cities[1]), base);  // no lowland: the base cost
+    int lowland = 0;  // x its lowland plots
+    for (const Hex& h : g->state().grid.within(g->state().cities[0].pos, 3)) lowland += g->state().plot(h).city == g->state().cities[0].id && g->lowlandBand(h) > 0 ? 1 : 0;
+    REQUIRE(lowland >= 1);
+    CHECK_EQ(g->productionCost(0, barrier, &g->state().cities[0]), base * lowland);
 }

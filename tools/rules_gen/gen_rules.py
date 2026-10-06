@@ -925,8 +925,10 @@ def gen_improvements():
             resources[r["Resource"]] = "RESOURCE_" + snake(r["Resource"])
     # City-states' unique improvements: built by the Builders of whoever enjoys the city-state's suzerain bonus (08).
     city_states = {r["City-state"]: "CITYSTATE_" + snake(r["City-state"]) for r in table(SPEC / "city-states.md", "City-states and suzerain bonuses")}
+    # "Civilization No Player" marks improvements a governor opens (Liang's Fishery and City Park; 08).
     rows = [r for r in table(SPEC / "improvements.md", "Improvements")
-            if r["Built by"] in ("Builder", "Military Engineer") and (not r["Unique to"] or r["Unique to"] in city_states)]
+            if r["Built by"] in ("Builder", "Military Engineer") and (not r["Unique to"] or r["Unique to"] in city_states
+                                                                     or r["Unique to"] == "Civilization No Player")]
     ids = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in rows}
     districts = {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats") if not r.get("Unique to")}
     adjacent_kinds = {"district": ("district", "ANY"), "Bonus resource": ("resourceClass", "BONUS"), "Luxury resource": ("resourceClass", "LUXURY"),
@@ -934,7 +936,14 @@ def gen_improvements():
     out = []
     for row in rows:
         i = {"id": ids[row["Improvement"]], "name": row["Improvement"], "yields": yields(row["Base yields"])}
-        if row["Unique to"]:
+        if row["Unique to"] == "Civilization No Player":
+            # Built only in a city whose governor holds the promotion, which also adds its yield there.
+            m = re.search(r"\+(\d+) (\w+) on this tile where city has governor with (.+?)(?:;|$)", row["Modifiers"] or "")
+            i["governorPromotion"] = "GOVERNOR_PROMOTION_" + snake(m.group(3))
+            i["governorYields"] = {YIELD_WORDS[m.group(2)]: int(m.group(1))}
+            if "+1 Amenity where plot adjacent to coast" in (row["Modifiers"] or ""):
+                i["waterAmenity"] = 1  # the City Park: +1 Amenity beside the coast, a lake or a river
+        elif row["Unique to"]:
             i["cityState"] = city_states[row["Unique to"]]
         if row["Unlock"]:
             i["unlock"] = unlock_id(row["Unlock"])
@@ -1137,13 +1146,15 @@ def era_turns(row):
 
 DISASTER_KINDS = [("Flood", "FLOOD"), ("Eruption", "ERUPTION"), ("Blizzard", "BLIZZARD"), ("Dust Storm", "DUST_STORM"),
                   ("Tornado", "TORNADO"), ("Hurricane", "HURRICANE"), ("Drought", "DROUGHT"), ("Forest Fire", "FIRE"),
-                  ("Radioactive Steam Venting", "NUCLEAR"), ("Major Radiation Leak", "NUCLEAR"), ("Nuclear Meltdown", "NUCLEAR")]
+                  ("Radioactive Steam Venting", "NUCLEAR"), ("Major Radiation Leak", "NUCLEAR"), ("Nuclear Meltdown", "NUCLEAR"),
+                  ("Meteor Shower", "METEOR")]
 
 
 def gen_disasters():
     """Natural disasters the core runs (09: Climate and Disasters [GS]; data: climate-disasters.md):
     frequency per game by Disaster Intensity, damage, fertility afterwards; the climate phases;
-    intensity settings; nuclear accidents at aging reactors. Natural-wonder eruptions and meteors are left out."""
+    intensity settings; nuclear accidents at aging reactors; meteor showers (their meteor sites are left out). Natural-wonder
+    eruptions are left out."""
     path = SPEC / "climate-disasters.md"
     # Storm rows name Ice as their feature: the engine's stand-in for any affected land tile.
     storm_kinds = {"BLIZZARD", "DUST_STORM", "TORNADO", "HURRICANE"}

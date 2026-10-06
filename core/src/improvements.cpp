@@ -47,6 +47,10 @@ bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
     // City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
     if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState)) return false;
+    if (im.governorPromotion != kNone) {
+        const City* home = state_.plot(at).city == kNoCity ? nullptr : state_.city(state_.plot(at).city);
+        if (!home || !cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str())) return false;
+    }
     if (im.needsRiver && !isRiverAdjacent(state_, at)) return false;
     if (p.park) return false;  // a National Park keeps its land as it is (07)
     if (im.minAppeal > -100 && plotAppeal(at) < im.minAppeal) return false;  // Seaside Resort: Breathtaking (07)
@@ -95,6 +99,11 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
     y = im.yields;
     for (const ImprovementBonus& b : im.bonuses) {
         if (hasUnlocked(owner, b.unlock)) y[static_cast<size_t>(b.yield)] += b.amount;
+    }
+    if (im.governorPromotion != kNone && p.city != kNoCity) {
+        const City* home = state_.city(p.city);
+        if (home && cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str()))
+            for (size_t k = 0; k < kNumYields; ++k) y[k] += im.governorYields[k];
     }
     for (const ImprovementAdjacency& a : im.adjacency) {
         if (!a.needs.none() && !hasUnlocked(owner, a.needs)) continue;

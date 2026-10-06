@@ -1110,6 +1110,23 @@ void Game::applyFoundCity(const Command& c) {
         if (base == "DESERT") awardMoment(owner, "MOMENT_DESERT_CITY");
         else if (base == "SNOW") awardMoment(owner, "MOMENT_SNOW_CITY");
         else if (base == "TUNDRA") awardMoment(owner, "MOMENT_TUNDRA_CITY");
+        // Bold settlements (09; Sovereign readings of the distances): beside a volcano or floodplains, near a rival's
+        // city, or on a continent where it has no city yet.
+        bool volcano = false, flood = false, rival = false, newContinent = true;
+        for (const Hex& h : state_.grid.within(at, 2)) {
+            const TypeIndex f = state_.plot(h).feature;
+            const std::string fid = f == kNone ? std::string() : rules_->features[static_cast<size_t>(f)].id;
+            volcano = volcano || fid == "FEATURE_VOLCANO";
+            flood = flood || (state_.grid.distance(h, at) <= 1 && fid.rfind("FEATURE_FLOODPLAINS", 0) == 0);
+        }
+        for (const City& o : state_.cities) {
+            rival = rival || (o.owner != owner && isMajorCiv(o.owner) && state_.grid.distance(o.pos, at) <= 6);
+            newContinent = newContinent && !(o.owner == owner && state_.plot(o.pos).continent == center.continent);
+        }
+        if (volcano) awardMoment(owner, "MOMENT_CITY_NEAR_VOLCANO");
+        if (flood) awardMoment(owner, "MOMENT_CITY_NEAR_FLOODABLE_RIVER");
+        if (rival) awardMoment(owner, "MOMENT_AGGRESSIVE_CITY_PLACEMENT");
+        if (newContinent) awardMoment(owner, "MOMENT_CITY_ON_NEW_CONTINENT");
     }
     // A city stands on a road of its founder's era (01: Routes).
     if (const TypeIndex road = roadFor(owner); road != kNone) {
