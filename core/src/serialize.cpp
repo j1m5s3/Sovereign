@@ -380,6 +380,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(p.firstMetBy);
         w.boolean(p.hadSuzerain);
         w.i32(p.eraScore);
+        w.i32(p.eraScoreTotal);
         w.u8(static_cast<uint8_t>(p.age));
         w.i32(p.pastGoldenAges);
         w.i32(p.pastDarkAges);
@@ -823,6 +824,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.firstMetBy = r.i8();
         p.hadSuzerain = r.boolean();
         p.eraScore = r.i32();
+        p.eraScoreTotal = r.i32();
         p.age = static_cast<Age>(r.u8());
         p.pastGoldenAges = r.i32();
         p.pastDarkAges = r.i32();

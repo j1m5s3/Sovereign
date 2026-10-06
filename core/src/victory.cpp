@@ -26,7 +26,7 @@ int Game::score(PlayerId player) const {
     // Great people and a founded religion (09: Score).
     for (int n : p.greatPeopleRecruited) total += 5 * n;
     if (p.religion >= 0) total += 5;
-    return total;
+    return total + p.eraScoreTotal;  // era score, a point each (data: LINE_ITEM_ERA_SCORE)
 }
 
 void Game::checkVictory() {

@@ -44,9 +44,15 @@ CommandError Game::airliftProblem(UnitId id, Hex to) const {
 bool Game::unitVisibleTo(PlayerId viewer, const Unit& unit) const {
     if (unit.owner == viewer) return true;
     if (visibility(viewer, unit.pos) != Visibility::Visible) return false;
-    const TypeIndex stealth = rules_->ability("ABILITY_STEALTH");
-    const std::vector<TypeIndex>& own = rules_->units[static_cast<size_t>(unit.type)].abilities;
-    if (stealth == kNone || std::find(own.begin(), own.end(), stealth) == own.end()) return true;
+    // Hidden units (05): stealthy ships by their ability; Camouflage (recon) and Twilight Veil (Warrior Monks) by promotion.
+    bool hidden = false;
+    for (TypeIndex a : rules_->units[static_cast<size_t>(unit.type)].abilities) {
+        for (const UnitEffect& e : rules_->abilities[static_cast<size_t>(a)].effects) hidden = hidden || e.kind == UnitEffectKind::Hidden;
+    }
+    for (TypeIndex p : unit.promotions) {
+        for (const UnitEffect& e : rules_->promotions[static_cast<size_t>(p)].effects) hidden = hidden || e.kind == UnitEffectKind::Hidden;
+    }
+    if (!hidden) return true;
     for (const City& c : state_.cities) {
         if (c.owner == viewer && state_.grid.distance(c.pos, unit.pos) <= 1) return true;
     }

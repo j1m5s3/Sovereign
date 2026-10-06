@@ -43,6 +43,22 @@ TEST(moments_score_the_first_civ_more) {
     CHECK_EQ(g->state().players[1].eraScore, score(rules(), "MOMENT_PANTHEON_FOUNDED"));
 }
 
+TEST(era_score_counts_in_the_score_across_eras) {
+    GameState s = eraState();
+    s.players[0].faith = Fixed::fromInt(30);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int before = g->score(0);
+    REQUIRE(g->submit(Command::foundPantheon(0, rules().belief("BELIEF_STONE_CIRCLES"))) == CommandError::Ok);
+    const int moment = score(rules(), "MOMENT_WORLD_S_FIRST_PANTHEON");
+    REQUIRE(moment > 0);
+    CHECK_EQ(g->state().players[0].eraScoreTotal, moment);
+    CHECK_EQ(g->score(0), before + moment);  // a point of score per point of era score (00: Score)
+    GameState next = g->state();
+    next.players[0].eraScore = 0;  // a new era starts the era's count again; the total stays
+    auto later = Game::fromScenario(rules(), std::move(next));
+    CHECK_EQ(later->score(0), before + moment);
+}
+
 TEST(the_world_era_sets_each_civs_age) {
     GameState s = eraState();
     s.players[0].eraScore = 100;  // far above the Golden threshold
@@ -98,6 +114,7 @@ TEST(visitors_beyond_every_rivals_home_tourists_win) {
 TEST(eras_survive_a_save) {
     GameState s = eraState();
     s.players[0].eraScore = 7;
+    s.players[0].eraScoreTotal = 19;
     s.players[0].age = Age::Golden;
     s.gameEra = 1;
     auto g = Game::fromScenario(rules(), std::move(s));
@@ -105,6 +122,7 @@ TEST(eras_survive_a_save) {
     auto loaded = loadGame(rules(), saveGame(*g), &err);
     REQUIRE(loaded);
     CHECK_EQ(loaded->state().players[0].eraScore, 7);
+    CHECK_EQ(loaded->state().players[0].eraScoreTotal, 19);
     CHECK(loaded->state().players[0].age == Age::Golden);
     CHECK_EQ(loaded->state().gameEra, 1);
     CHECK_EQ(loaded->stateHash(), g->stateHash());

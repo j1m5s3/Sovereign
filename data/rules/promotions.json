@@ -1182,8 +1182,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "hidden (only visible when adjacent)"
+     "kind": "HIDDEN"
     }
    ]
   },
@@ -2155,8 +2154,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "hidden (only visible when adjacent)"
+     "kind": "HIDDEN"
     }
    ]
   },
@@ -6025,8 +6023,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "hidden (only visible when adjacent)"
+     "kind": "HIDDEN"
     }
    ]
   },

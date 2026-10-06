@@ -719,7 +719,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"CONVERT_GOLD", UnitEffectKind::ConvertGold}, {"HEATHEN_CONVERSION", UnitEffectKind::HeathenConversion},
             {"MARTYR", UnitEffectKind::Martyr}, {"HEAL_AURA", UnitEffectKind::HealAura},
             {"OPEN_GROUND_MOVES", UnitEffectKind::OpenGroundMoves}, {"OBSERVED_RANGE", UnitEffectKind::ObservedRange},
-            {"FIGHT_EMBARKED", UnitEffectKind::FightEmbarked},
+            {"FIGHT_EMBARKED", UnitEffectKind::FightEmbarked}, {"HIDDEN", UnitEffectKind::Hidden},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
