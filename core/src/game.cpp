@@ -1020,6 +1020,13 @@ void Game::applyFoundCity(const Command& c) {
         if (ab.foundBuilding != kNone && !made.has(ab.foundBuilding))
             made.buildings.insert(std::lower_bound(made.buildings.begin(), made.buildings.end(), ab.foundBuilding), ab.foundBuilding);
     }
+    // Ancestral Hall (03): a Builder in every city it founds.
+    if (buildingsOwned(owner, "BUILDING_ANCESTRAL_HALL") > 0) {
+        const TypeIndex builder = rules_->unit("UNIT_BUILDER");
+        if (builder != kNone) {
+            if (const auto spot = unitSpawnPlot(*state_.city(newId), builder)) spawnUnit(builder, owner, *spot);
+        }
+    }
     assignCitizens(*state_.city(newId));
 
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),

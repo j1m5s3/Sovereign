@@ -764,6 +764,7 @@ enum class ModEffect : uint8_t {
     RouteTourismPercent,           // player: + % tourism toward civs it runs a trade route to
     DistrictTourism,               // player: + tourism from each of its completed `district`
     CityAppeal,                    // city: + appeal on its plots
+    CityTourism,                   // city: + tourism (Shopping Mall, Ferris Wheel)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -776,6 +777,7 @@ enum class ReqType : uint8_t {
     CityHasGovernor,     // an established governor with at least `value` titles (0: any)
     CityMinSpecialtyDistricts,  // at least `value` completed districts that count toward the population limit
     CityOnCapitalContinent,     // on the same landmass as the owner's capital
+    CityCaptured,               // founded by another civ
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)

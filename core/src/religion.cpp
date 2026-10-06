@@ -127,6 +127,11 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
     if (item.kind == ProductionKind::Unit) {
         if (item.type < 0 || at(item.type) >= rules_->units.size()) return -1;
         const UnitType& u = rules_->units[at(item.type)];
+        // Grand Master's Chapel (03): land combat units for Faith, at their Gold price.
+        static const char* const kChapel[] = {"RECON", "MELEE", "RANGED", "SIEGE", "HEAVY_CAVALRY", "LIGHT_CAVALRY", "RANGED_CAVALRY", "ANTI_CAVALRY"};
+        if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && buildingsOwned(player, "BUILDING_GRAND_MASTER_S_CHAPEL") > 0 &&
+            std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
+            return purchaseCost(player, item);
         if (u.purchaseYield != "FAITH" || !hasUnlocked(player, u.unlock)) return -1;
         if (!u.needsBuilding.empty() && std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return city.has(b); }))
             return -1;

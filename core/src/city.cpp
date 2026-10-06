@@ -870,6 +870,7 @@ void Game::applyCity(const Command& c) {
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                     if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
+                    if (bought.spreadCharges > 0 && city.has(rules_->building("BUILDING_MOSQUE"))) ++u.charges;  // Mosque (03)
                 }
                 break;
             }

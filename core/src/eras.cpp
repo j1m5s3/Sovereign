@@ -221,6 +221,7 @@ int Game::tourismPerTurn(PlayerId pid) const {
         for (const CityDistrict& d : c.districts) {
             if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
         }
+        total += static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityTourism).toInt());  // Shopping Mall, Ferris Wheel
         // Wish You Were Here (Golden Age): +50% tourism from cities with an established governor.
         PlayerId holder = kNoPlayer;
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;

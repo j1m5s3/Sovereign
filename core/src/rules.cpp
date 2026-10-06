@@ -112,7 +112,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         q.negate = r["negate"].boolean(false);
         q.value = static_cast<int>(r["value"].integer(0));
         const std::string& ref = r["ref"].str();
-        if (type == "PLOT_HAS_RESOURCE") { q.type = ReqType::PlotHasResource; q.ref = rules.resource(ref); }
+        if (type == "PLOT_HAS_RESOURCE") { q.type = ReqType::PlotHasResource; q.ref = ref.empty() ? kNone : rules.resource(ref); }
         else if (type == "PLOT_HAS_FEATURE") { q.type = ReqType::PlotHasFeature; q.ref = ref.empty() ? kNone : rules.feature(ref); }
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
         else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
@@ -124,13 +124,14 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "CITY_HAS_GOVERNOR") { q.type = ReqType::CityHasGovernor; }
         else if (type == "CITY_MIN_SPECIALTY_DISTRICTS") { q.type = ReqType::CityMinSpecialtyDistricts; }
         else if (type == "CITY_ON_CAPITAL_CONTINENT") { q.type = ReqType::CityOnCapitalContinent; }
+        else if (type == "CITY_CAPTURED") { q.type = ReqType::CityCaptured; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
         else {
             *error = "unknown requirement type " + type;
             return false;
         }
-        bool needsRef = q.type == ReqType::PlotHasResource || (q.type == ReqType::PlotHasFeature && !ref.empty()) ||
+        bool needsRef = (q.type == ReqType::PlotHasResource && !ref.empty()) || (q.type == ReqType::PlotHasFeature && !ref.empty()) ||
                         q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding || q.type == ReqType::CityHasDistrict;
         if (needsRef && q.ref == kNone) {
             *error = "requirement " + type + " refers to unknown " + ref;
@@ -190,6 +191,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_ROUTE_TOURISM_PERCENT", ModEffect::RouteTourismPercent},
         {"ADJUST_DISTRICT_TOURISM", ModEffect::DistrictTourism},
         {"ADJUST_CITY_APPEAL", ModEffect::CityAppeal},
+        {"ADJUST_CITY_TOURISM", ModEffect::CityTourism},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();

@@ -611,3 +611,33 @@ TEST(policy_cards_in_code_tourism_and_diplomacy) {
         CHECK_EQ(g->goldPerTurn(0), plain->goldPerTurn(0) + Fixed::fromInt(3));
     }
 }
+
+TEST(left_out_building_effects) {
+    auto with = [](std::vector<const char*> buildings, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            for (const char* b : buildings) s.cities[0].buildings.push_back(rules().building(b));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+            edit(s);
+        });
+    };
+    auto none = [](GameState&) {};
+    auto plain = with({}, none);
+    const CityId pc = plain->state().cities[0].id;
+    // Pagoda: +1 Favor. Shopping Mall: +4 Tourism. Audience Chamber: -2 Loyalty in a city without a governor.
+    {
+        auto g = with({"BUILDING_PAGODA"}, none);
+        CHECK_EQ(g->favorPerTurn(0), plain->favorPerTurn(0) + 1);
+        auto m = with({"BUILDING_SHOPPING_MALL"}, none);
+        CHECK_EQ(m->tourismPerTurn(0), plain->tourismPerTurn(0) + 4);
+        auto a = with({"BUILDING_AUDIENCE_CHAMBER"}, none);
+        CHECK_EQ(a->loyaltyPerTurn(a->state().cities[0].id), plain->loyaltyPerTurn(pc) - Fixed::fromInt(2));
+    }
+    // Zoo: +1 Science on its rainforest.
+    {
+        auto jungle = [](GameState& s) { s.plot({7, 6}).feature = rules().feature("FEATURE_JUNGLE"); };
+        auto g = with({"BUILDING_ZOO"}, jungle);
+        auto bare = with({}, jungle);
+        CHECK_EQ(g->plotYields({7, 6}, g->state().cities[0])[S], bare->plotYields({7, 6}, bare->state().cities[0])[S] + Fixed::fromInt(1));
+    }
+}
