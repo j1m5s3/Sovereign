@@ -46,6 +46,8 @@ PlayerId Game::ensureFreeCityPlayer() {
 Fixed Game::loyaltyPressure(const City& city) const {
     Fixed domestic, foreign;
     for (const City& o : state_.cities) {
+        // A Cultural alliance (08): no loyalty pressure between the allies.
+        if (o.owner != city.owner && alliance(o.owner, city.owner) == AllianceType::Cultural) continue;
         const Fixed p = pressureFrom(state_, *rules_, o, city.pos);
         if (o.owner == city.owner) domestic += p;
         else foreign += p;

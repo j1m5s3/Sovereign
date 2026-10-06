@@ -154,6 +154,10 @@ void Game::processEnvoys(PlayerId pid) {
     if (p.government != kNone && p.anarchyTurns == 0) {
         const GovernmentType& gov = rules_->governments[at(p.government)];
         p.influence += gov.influencePerTurn + static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::InfluencePerTurn).toInt());  // + Charismatic Leader...
+        // An Economic alliance at level 2 (08): +1 for each city-state the ally is suzerain of.
+        for (const Player& ally : state_.players) {
+            if (alliance(pid, ally.id) == AllianceType::Economic && allianceLevel(pid, ally.id) >= 2) p.influence += suzeraintiesOf(ally.id);
+        }
         if (gov.influenceThreshold > 0 && p.influence >= gov.influenceThreshold) {
             p.influence -= gov.influenceThreshold;
             if (!policyIs(p.id, "POLICY_ROGUE_STATE")) p.envoyTokens += gov.envoysPerThreshold;  // Rogue State: no envoys (09)

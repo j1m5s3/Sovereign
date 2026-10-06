@@ -608,3 +608,73 @@ TEST(a_joint_war_is_agreed_and_declared_together) {
     REQUIRE(h->submit(Command::proposeDeal(0, 1, terms)) == CommandError::Ok);
     CHECK(h->atWar(0, 2));
 }
+
+TEST(alliance_levels_bring_their_effects) {
+    auto allied = [](AllianceType type, int points) {
+        GameState s = diploState(3);
+        for (Player& p : s.players) p.relations.resize(3);
+        for (auto [a, b] : {std::pair<int, int>{0, 1}, {1, 0}}) {
+            Relation& r = s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(b)];
+            r.alliance = type;
+            r.allianceUntil = 1000;
+            r.alliancePoints = points;
+            r.friendsUntil = 1000;
+        }
+        return s;
+    };
+    // Military, level 2 with a war on: +15% toward military units; level 3: trained units have a promotion's XP.
+    {
+        GameState s = allied(AllianceType::Military, 960);
+        s.players[1].relations[2].war = s.players[2].relations[1].war = true;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK(g->militaryAllianceAtWar(0));
+        CHECK_EQ(g->bestAllianceLevel(0, AllianceType::Military), 3);
+    }
+    // Religious, level 2: +10 religious strength.
+    {
+        GameState s = allied(AllianceType::Religious, 320);
+        const UnitId m = addUnit(s, "UNIT_MISSIONARY", 0, {4, 7});
+        GameState plain = diploState(3);
+        const UnitId m2 = addUnit(plain, "UNIT_MISSIONARY", 0, {4, 7});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        auto h = Game::fromScenario(rules(), std::move(plain));
+        CHECK_EQ(g->religiousStrength(*g->state().unit(m), false), h->religiousStrength(*h->state().unit(m2), false) + 10);
+    }
+    // Cultural, level 3: a fifth of the ally's tourism.
+    {
+        GameState s = allied(AllianceType::Cultural, 960);
+        s.players[1].religion = -1;
+        GreatWork w;
+        w.type = rules().greatWorkType("SCULPTURE");
+        s.cities[1].buildings.push_back(rules().building("BUILDING_AMPHITHEATER"));
+        std::sort(s.cities[1].buildings.begin(), s.cities[1].buildings.end());
+        w.building = rules().building("BUILDING_AMPHITHEATER");
+        for (int i = 0; i < 5; ++i) s.cities[1].greatWorks.push_back(w);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->tourismBase(1) >= 5);
+        CHECK_EQ(g->tourismPerTurn(0), g->tourismBase(0) + g->tourismBase(1) / 5);
+    }
+}
+
+TEST(a_route_between_allies_pays_the_destination_too) {
+    GameState s = diploState(2);
+    for (Player& p : s.players) p.relations.resize(2);
+    for (auto [a, b] : {std::pair<int, int>{0, 1}, {1, 0}}) {
+        Relation& r = s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(b)];
+        r.alliance = AllianceType::Economic;
+        r.allianceUntil = 1000;
+        r.friendsUntil = 1000;
+    }
+    GameState plain = s;
+    TradeRoute route;
+    route.owner = 1;
+    route.origin = s.cities[1].id;
+    route.destination = s.cities[0].id;
+    route.turnsLeft = 10;
+    s.tradeRoutes.push_back(route);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    auto h = Game::fromScenario(rules(), std::move(plain));
+    constexpr size_t G = static_cast<size_t>(YieldType::Gold);
+    const CityId mine = g->state().cities[0].id;
+    CHECK_EQ(g->cityReport(mine).yields[G], h->cityReport(mine).yields[G] + Fixed::fromInt(2));
+}

@@ -247,6 +247,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     mod.scope = args["scope"].str();
     mod.military = args["military"].boolean(false);
+    mod.toDestination = args["toDestination"].boolean(false);
     if (args.has("building") && (mod.building = rules.building(args["building"].str())) == kNone) {
         *error = "unknown building " + args["building"].str();
         return false;

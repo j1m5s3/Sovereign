@@ -185,6 +185,7 @@ public:
     int tradeRoutesOf(PlayerId player) const;
     // What a route from origin to destination pays its origin each turn.
     Yields tradeRouteYields(const City& origin, const City& destination) const;
+    Yields tradeRouteDestinationYields(const City& origin, const City& destination) const;  // what the destination city gets
     // The plots a Trader would follow to a destination, within range (15 tiles, 30 when it sails); empty: out of reach.
     std::vector<Hex> tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const;
     bool canStartTradeRoute(UnitId trader, CityId destination) const;
@@ -498,6 +499,8 @@ public:
     int allianceLevel(PlayerId a, PlayerId b) const;      // 0 not allied, else 1..3 by alliance points
     // The highest level of an alliance of this type the player holds with anyone (0: none).
     int bestAllianceLevel(PlayerId player, AllianceType type) const;
+    bool militaryAllianceAtWar(PlayerId player) const;  // a level-2 Military ally, and a war on either side
+    int tourismBase(PlayerId player) const;              // its own tourism, before an ally's share
     Fixed allianceShare(PlayerId player, YieldType yield) const;  // Research/Cultural level 3: 10% of the ally's yield
     int warWeariness(PlayerId player) const;            // points against every opponent together
     int warWearinessAmenities(PlayerId player) const;   // amenities each of its cities loses (1 per 400 points)

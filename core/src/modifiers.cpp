@@ -310,9 +310,10 @@ Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, const Playe
 }
 
 Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
-                                bool suzerain) {
+                                bool suzerain, bool toDestination) {
     Yields out{};
     forEachPlayerModifier(s, r, owner, ModEffect::TradeRouteYield, [&](const Modifier& m) {
+        if (m.toDestination != toDestination) return;
         const bool hit = m.scope == "ALL" || (m.scope == "DOMESTIC" && domestic) || (m.scope == "INTERNATIONAL" && !domestic) ||
                          (m.scope == "ALLY" && ally) || (m.scope == "CITY_STATE" && cityState) || (m.scope == "SUZERAIN" && suzerain);
         if (hit) out[static_cast<size_t>(m.yield)] += m.amount;

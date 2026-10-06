@@ -65,6 +65,24 @@ int Game::tradeRoutesOf(PlayerId player) const {
     return static_cast<int>(std::count_if(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& r) { return r.owner == player; }));
 }
 
+Yields Game::tradeRouteDestinationYields(const City& origin, const City& destination) const {
+    Yields out{};
+    if (origin.owner == destination.owner) return out;
+    // Alliances at level 1 (08): the destination's share of an ally's route.
+    static const std::pair<AllianceType, YieldType> kShare[] = {{AllianceType::Research, YieldType::Science}, {AllianceType::Economic, YieldType::Gold},
+                                                                {AllianceType::Cultural, YieldType::Culture}, {AllianceType::Religious, YieldType::Faith}};
+    const AllianceType type = alliance(origin.owner, destination.owner);
+    for (const auto& [a, y] : kShare) {
+        if (type == a) out[static_cast<size_t>(y)] += Fixed::fromInt(a == AllianceType::Economic ? 2 : 1);
+    }
+    // Policy cards (04): Wisselbanken, Democratic Legacy.
+    const bool cs = isCityState(destination.owner);
+    const Yields extra = tradeRouteModifierYields(state_, *rules_, state_.players[at(origin.owner)], false, type != AllianceType::None, cs,
+                                                  cs && suzerainOf(destination.owner) == origin.owner, true);
+    for (size_t i = 0; i < kNumYields; ++i) out[i] += extra[i];
+    return out;
+}
+
 Yields Game::tradeRouteYields(const City& origin, const City& destination) const {
     Yields out{};
     const bool domestic = origin.owner == destination.owner;

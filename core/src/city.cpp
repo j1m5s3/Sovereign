@@ -189,12 +189,19 @@ CityReport Game::cityReport(CityId id) const {
         const Yields ey = envoyYields(*c);
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += ey[i];
     }
-    // Trade routes from this city pay by the districts at their destinations (07).
+    // Trade routes from this city pay by the districts at their destinations (07); routes to it may
+    // pay it too (allies, Wisselbanken).
     for (const TradeRoute& tr : state_.tradeRoutes) {
-        if (tr.origin != c->id) continue;
-        if (const City* dest = state_.city(tr.destination)) {
-            const Yields ty = tradeRouteYields(*c, *dest);
-            for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
+        if (tr.origin == c->id) {
+            if (const City* dest = state_.city(tr.destination)) {
+                const Yields ty = tradeRouteYields(*c, *dest);
+                for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
+            }
+        } else if (tr.destination == c->id) {
+            if (const City* from = state_.city(tr.origin)) {
+                const Yields ty = tradeRouteDestinationYields(*from, *c);
+                for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
+            }
         }
     }
     // Great Works in the city's slots, and great people whose effects improve its buildings.
@@ -384,6 +391,11 @@ CityReport Game::cityReport(CityId id) const {
             int suzerain = 0;
             for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == c->owner ? 1 : 0;
             rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.culturePerSuzerainty * suzerain);
+        }
+        // A Religious alliance at level 3 (08): +1 Faith per follower of the ally's religion here.
+        for (const Player& ally : state_.players) {
+            if (alliance(c->owner, ally.id) != AllianceType::Religious || allianceLevel(c->owner, ally.id) < 3 || ally.religion < 0) continue;
+            rep.yields[idx(YieldType::Faith)] += Fixed::fromInt(cityFollowers(*c, ally.religion));
         }
         // Raj (04): +2 Gold, Faith, Science and Culture in the capital per suzerainty.
         if (c->capital && policyIs(c->owner, "POLICY_RAJ")) {
@@ -1002,6 +1014,9 @@ bool Game::completeItem(City& city, ProductionItem item) {
             if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
         }
         if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
+        // A Military alliance at level 3 (08): units trained have a promotion's XP.
+        if (!u.promotionClass.empty() && u.layer == UnitLayer::Military && bestAllianceLevel(city.owner, AllianceType::Military) >= 3)
+            made.xp = std::max(made.xp, xpForNextLevel(made));
         questDone(city.owner, QuestKind::TrainUnit, item.type);  // 08: Quests
         if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
                                               (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
@@ -1254,7 +1269,8 @@ void Game::processCities(PlayerId pid) {
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt()) +
                                 civAbility(pid).domainProductionPercent[static_cast<size_t>(rules_->units[static_cast<size_t>(item.type)].domain)] +
                                 (item.formation > 0 ? 25 : 0) +  // the Military Academy or Seaport that trains it (05)
-                                (goldenDedication(pid, "DEDICATION_TO_ARMS") && rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military ? 15 : 0);  // 09
+                                (goldenDedication(pid, "DEDICATION_TO_ARMS") && rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military ? 15 : 0) +  // 09
+                                (rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military && militaryAllianceAtWar(pid) ? 15 : 0);  // 08
                 prod = prod * std::max(0, pct) / 100;
             } else if (item.kind == ProductionKind::Building && !rules_->buildings[static_cast<size_t>(item.type)].wonder) {
                 // Leader abilities: City Center buildings (City of Marble), walls (Standardization).
