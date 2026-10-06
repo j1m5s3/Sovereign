@@ -357,9 +357,16 @@ void Game::applyBuilder(const Command& c) {
             p.resource = kNone;
             p.resourceAmount = 0;
         }
-        // Base amounts scaled by game speed; Civ also scales them with tree
-        // progress (unverified, see 01-map-and-terrain.md).
-        int pct = speedPercent(state_, *rules_);
+        // Base amounts scaled by game speed and by game progress: from the base at the start to 10x with
+        // the whole tech or civic tree known, whichever is further (01: Harvest; the engine's curve is
+        // unverified, Sovereign reads it as linear).
+        const Player& harvester = state_.players[static_cast<size_t>(c.player)];
+        const auto share = [](const TreeProgress& t) {
+            const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
+            return t.done.empty() ? 0 : static_cast<int>(done * 100 / static_cast<int64_t>(t.done.size()));
+        };
+        const int progress = std::max(share(harvester.techs), share(harvester.civics));
+        int pct = speedPercent(state_, *rules_) * (100 + 9 * progress) / 100;
         City* city = state_.city(cityId);
         // Groundbreaker: harvests in the city yield more (08: Governors).
         if (city) pct = pct * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, *city, ModEffect::CityHarvestPercent).toInt())) / 100;
@@ -396,9 +403,22 @@ void Game::accumulateStrategics(PlayerId pid) {
         player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
     }
     for (size_t r = 0; r < rules_->resources.size(); ++r) {
-        const int cap = rules_->resources[r].stockpileCap;
+        const int cap = stockpileCap(pid, static_cast<TypeIndex>(r));
         if (cap > 0) player.stockpile[r] = std::min(player.stockpile[r], cap);
     }
+}
+
+// The [GS] stockpile cap (01): 50 per resource, +10 for each Barracks, Stable, Armory and Military Academy
+// the player owns (generated stockpileCap on buildings).
+int Game::stockpileCap(PlayerId pid, TypeIndex resource) const {
+    const int base = rules_->resources[static_cast<size_t>(resource)].stockpileCap;
+    if (base <= 0) return 0;
+    int raise = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != pid) continue;
+        for (TypeIndex b : c.buildings) raise += rules_->buildings[static_cast<size_t>(b)].stockpileCap;
+    }
+    return base + raise;
 }
 
 }  // namespace sov

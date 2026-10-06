@@ -111,7 +111,7 @@ Build the engine-independent C++ rules core (`core/`) through MVP-7 of `specs/ci
 - Influence, loyalty, great person, wonder and specialty-district policy effects (Charismatic Leader, Classical Republic...) have no modifiers yet; they arrive with those systems. Discipline is in (step 6).
 - 95 of 205 promotion/ability effects and 42 conditions are UNTRACKED (movement-cost, healing, plunder, adjacency auras...); fill them in as their systems arrive.
 - No naval movement or embarkation yet, so naval combat, amphibious penalties and naval healing are untested.
-- Strategic unit maintenance per turn, stockpile cap bonuses from Barracks/Stable/Armory/Military Academy, and harvest scaling with tree progress are not modelled yet.
+- Strategic unit maintenance per turn is modelled (`UnitType::resourceMaintenance`, `Player::fuelShort`). Stockpile cap raises (+10 for each Barracks, Stable, Armory and Military Academy, generated `stockpileCap`; `Game::stockpileCap`) and harvest scaling with game progress (linear from the base to 10x with the whole tech or civic tree known) followed on 2026-10-05.
 - The GS world-era tech/civic cost adjustment (±20%) waits for world eras.
 - Districts: Encampment combat (HP 100, strike, ZOC), city strength +2 per district (CityStrengthModifier is not in the reference tables), citizen slots and specialists, great person points, pillage, Harbor/Aqueduct/Neighborhood/Entertainment/other districts, unique districts and wonders are not modelled yet.
 - Barbarian scouts, attack forces, coastal camps, Bronze Working camp boost and era score are not modelled; barbarian behaviour is a placeholder until MVP-6.
