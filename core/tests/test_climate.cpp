@@ -305,8 +305,10 @@ TEST(a_plant_converts_and_synthetic_technocracy_powers_every_city) {
     // Synthetic Technocracy: +3 Power in every city.
     s.players[0].government = rules().government("GOVERNMENT_SYNTHETIC_TECHNOCRACY");
     s.cities[0].buildings.clear();
+    s.cities[0].laserStations = 1;  // a Terrestrial Laser Station wants 5 Power
     auto h = Game::fromScenario(rules(), std::move(s));
     REQUIRE(h->governmentIs(0, "GOVERNMENT_SYNTHETIC_TECHNOCRACY"));
     sovtest::endTurns(*h, 1);
     CHECK_EQ(h->state().cities[0].powerSupply, 3);
+    CHECK_EQ(h->state().cities[0].powerDemand, 5);
 }

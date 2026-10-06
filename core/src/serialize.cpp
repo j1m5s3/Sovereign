@@ -479,6 +479,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(c.fearUntil);
         w.i32(c.fearAfterUntil);
         w.i32(c.reactorSince);
+        w.i32(c.laserStations);
         w.u32(static_cast<uint32_t>(c.greatWorks.size()));
         for (const GreatWork& g : c.greatWorks) {
             w.i16(g.type);
@@ -944,6 +945,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         c.fearUntil = r.i32();
         c.fearAfterUntil = r.i32();
         c.reactorSince = r.i32();
+        c.laserStations = r.i32();
         uint32_t ngw = r.u32();
         if (!r.checkCount(ngw, 6)) return false;
         c.greatWorks.resize(ngw);
