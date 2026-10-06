@@ -375,6 +375,13 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
 	}
+	// Dedications (09): this era's, and a reminder while one is still to choose.
+	{
+		FString Text;
+		for (const sov::TypeIndex D : P.dedications) Text += (Text.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.dedications[static_cast<size_t>(D)].name);
+		if (!G.availableDedications(Me).empty()) Text += FString::Printf(TEXT("%sF2: choose %d dedication(s)"), Text.IsEmpty() ? TEXT("") : TEXT("   "), P.dedicationsPending);
+		if (!Text.IsEmpty()) Line(TEXT("Dedications: ") + Text, 16, Y, FLinearColor(1.f, 0.85f, 0.5f));
+	}
 	// Reputation (leader doc §8.1).
 	{
 		const TCHAR* Standing = G.beloved(Me) ? TEXT("Beloved") : G.feared(Me) ? TEXT("Feared") : TEXT("Neither loved nor feared");

@@ -1334,6 +1334,14 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         mo.obsoleteEra = j.has("obsoleteEra") ? era(j["obsoleteEra"].str()) : -1;
         moments.push_back(std::move(mo));
     }
+    for (const auto& [id, j] : m.tables["dedications"]) {
+        DedicationType d;
+        d.id = id;
+        d.name = j["name"].str(id);
+        d.eraMin = j.has("eraMin") ? era(j["eraMin"].str()) : 0;
+        d.eraMax = j.has("eraMax") ? era(j["eraMax"].str()) : -1;
+        dedications.push_back(std::move(d));
+    }
     // Governors and their promotion trees (08: Governors).
     for (const auto& [id, j] : m.tables["governors"]) {
         GovernorType g;
@@ -2051,6 +2059,7 @@ TypeIndex Rules::belief(const std::string& id) const { return findIn(beliefs, id
 TypeIndex Rules::religion(const std::string& id) const { return findIn(religions, id); }
 TypeIndex Rules::moment(const std::string& id) const { return findIn(moments, id); }
 TypeIndex Rules::governor(const std::string& id) const { return findIn(governors, id); }
+TypeIndex Rules::dedication(const std::string& id) const { return findIn(dedications, id); }
 TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOperations, id); }
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }

@@ -530,6 +530,12 @@ struct MomentType {
     int obsoleteEra = -1;  // stops counting once the world reaches this era (-1: never)
 };
 
+// A dedication [R&F] (09: Dedications): chosen at a new era within its era window.
+struct DedicationType {
+    std::string id, name;
+    int eraMin = 0, eraMax = -1;  // Rules::eras (-1: no end)
+};
+
 // Roads (01: Routes): movement cost along them, and whether they bridge rivers.
 struct RouteType {
     std::string id, name;
@@ -1036,6 +1042,7 @@ public:
     std::vector<GovernorPromotionType> governorPromotions;
     std::vector<std::pair<TypeIndex, int>> governorTitleCivics;  // civic, titles it grants
     std::vector<MomentType> moments;
+    std::vector<DedicationType> dedications;
     std::vector<EnvoyBonus> envoyBonuses;
     std::vector<ReligionType> religions;
     TypeIndex leaderUnit = kNone;  // the unit every major civ's leader is (layer Leader)
@@ -1065,6 +1072,7 @@ public:
     TypeIndex religion(const std::string& id) const;
     TypeIndex moment(const std::string& id) const;
     TypeIndex governor(const std::string& id) const;
+    TypeIndex dedication(const std::string& id) const;
     TypeIndex spyOperation(const std::string& id) const;
     TypeIndex resolution(const std::string& id) const;
     TypeIndex project(const std::string& id) const;

@@ -82,6 +82,12 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         const CivAbility& ab = civAbility(origin.owner);
         for (size_t i = 0; i < kNumYields; ++i) out[i] += ab.internationalRouteYields[i];
         if (state_.plot(origin.pos).continent != state_.plot(destination.pos).continent) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(ab.intercontinentalRouteGold);
+        // Reform the Coinage (Golden Age, 09): +3 Gold per specialty district at the destination.
+        if (goldenDedication(origin.owner, "DEDICATION_REFORM_THE_COINAGE")) {
+            for (const CityDistrict& d : destination.districts) {
+                if (d.complete && rules_->districts[static_cast<size_t>(d.type)].id != "DISTRICT_CITY_CENTER") out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(3);
+            }
+        }
     }
     // Alliances [R&F], level 1: routes to an ally of the type carry its yield (08: alliance levels).
     if (!domestic) {
@@ -217,8 +223,9 @@ void Game::processTrade(PlayerId pid) {
         const City* dest = state_.city(r.destination);
         bool home = true;  // whether the Trader comes back
         bool cut = !origin || !dest || origin->owner != pid || atWar(pid, dest->owner);
-        // A raider at war with the owner on the road plunders it (07: Plunder).
-        if (!cut) {
+        // A raider at war with the owner on the road plunders it (07: Plunder), unless the owner is in a
+        // Golden Age with Reform the Coinage (09).
+        if (!cut && !goldenDedication(pid, "DEDICATION_REFORM_THE_COINAGE")) {
             for (int32_t pi : r.path) {
                 const Hex h = state_.grid.at(pi);
                 const Unit* m = state_.unitAt(h, UnitLayer::Military, *rules_);
@@ -243,6 +250,7 @@ void Game::processTrade(PlayerId pid) {
                 d.pressure[static_cast<size_t>(maj)] += static_cast<int32_t>(rules_->global("RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_DESTINATION").round());
             }
             if (--r.turnsLeft > 0) continue;
+            dedicationScore(pid, "DEDICATION_REFORM_THE_COINAGE", 1);  // 09: a route completed
         }
         ended.push_back(r.id);
         if (home && origin && origin->owner == pid) {

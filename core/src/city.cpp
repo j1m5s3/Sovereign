@@ -179,10 +179,18 @@ CityReport Game::cityReport(CityId id) const {
         }
     }
     // Finished districts add their adjacency yields to the city.
+    const bool inquiry = goldenDedication(c->owner, "DEDICATION_FREE_INQUIRY"), steam = goldenDedication(c->owner, "DEDICATION_HEARTBEAT_OF_STEAM"),
+               pen = goldenDedication(c->owner, "DEDICATION_PEN_BRUSH_AND_VOICE");
     for (const CityDistrict& d : c->districts) {
         if (!d.complete) continue;
         Yields adj = districtAdjacency(c->owner, d.type, d.pos);
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += adj[i];
+        // Dedications in a Golden Age (09): Commercial Hubs and Harbors add their Gold adjacency as Science (Free
+        // Inquiry); Campuses their Science adjacency as Production (Heartbeat of Steam); +1 Culture per district (Pen).
+        const std::string& kind = rules_->districts[static_cast<size_t>(d.type)].id;
+        if (inquiry && (kind == "DISTRICT_COMMERCIAL_HUB" || kind == "DISTRICT_HARBOR")) raw[idx(YieldType::Science)] += adj[idx(YieldType::Gold)];
+        if (steam && kind == "DISTRICT_CAMPUS") raw[idx(YieldType::Production)] += adj[idx(YieldType::Science)];
+        if (pen && kind != "DISTRICT_CITY_CENTER") raw[idx(YieldType::Culture)] += Fixed::fromInt(1);
     }
     // Every citizen adds a little culture and science (CULTURE/SCIENCE_PERCENTAGE_YIELD_PER_POP).
     raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt("CULTURE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
@@ -429,6 +437,10 @@ int Game::purchaseCost(PlayerId player, ProductionItem item) const {
     }
     int cost = productionCost(player, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") *
                std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
+    if (item.kind == ProductionKind::Unit && goldenDedication(player, "DEDICATION_MONUMENTALITY")) {
+        const std::string& id = rules_->units[static_cast<size_t>(item.type)].id;
+        if (id == "UNIT_BUILDER" || id == "UNIT_SETTLER") cost = cost * 70 / 100;  // 09: Monumentality
+    }
     return cost / 5 * 5;
 }
 
@@ -789,7 +801,8 @@ void Game::applyCity(const Command& c) {
                     ++p.unitsTrained[static_cast<size_t>(item.type)];
                     Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
                     u.religion = static_cast<int16_t>(religion);
-                    u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges;
+                    u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
+                                (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                 }
                 break;
             }
@@ -870,6 +883,15 @@ void Game::assignCitizens(City& city) {
 }
 
 bool Game::completeItem(City& city, ProductionItem item) {
+    // Dedications (09): era score for science, culture, Industrial Zone and Aerodrome buildings, and districts.
+    if (item.kind == ProductionKind::Building) {
+        const std::string& d = rules_->buildings[static_cast<size_t>(item.type)].district;
+        if (d == "DISTRICT_CAMPUS") dedicationScore(city.owner, "DEDICATION_FREE_INQUIRY", 1);
+        if (d == "DISTRICT_THEATER") dedicationScore(city.owner, "DEDICATION_PEN_BRUSH_AND_VOICE", 1);
+        if (d == "DISTRICT_INDUSTRIAL_ZONE") dedicationScore(city.owner, "DEDICATION_HEARTBEAT_OF_STEAM", 1);
+        if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
+    }
+    if (item.kind == ProductionKind::District) dedicationScore(city.owner, "DEDICATION_MONUMENTALITY", 1);
     if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))
         state_.players[static_cast<size_t>(city.owner)].faith += Fixed::fromInt(productionCost(city.owner, item) / 4);  // Moksha
     if (item.kind == ProductionKind::Unit) {
@@ -1128,7 +1150,8 @@ void Game::processCities(PlayerId pid) {
                 // Policies such as Agoge speed production toward some units; a leader's domain (Sea Dogs).
                 const int pct = 100 + static_cast<int>(sumUnitProductionPercent(state_, *rules_, city, item.type).toInt()) +
                                 civAbility(pid).domainProductionPercent[static_cast<size_t>(rules_->units[static_cast<size_t>(item.type)].domain)] +
-                                (item.formation > 0 ? 25 : 0);  // the Military Academy or Seaport that trains it (05)
+                                (item.formation > 0 ? 25 : 0) +  // the Military Academy or Seaport that trains it (05)
+                                (goldenDedication(pid, "DEDICATION_TO_ARMS") && rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military ? 15 : 0);  // 09
                 prod = prod * std::max(0, pct) / 100;
             } else if (item.kind == ProductionKind::Building && !rules_->buildings[static_cast<size_t>(item.type)].wonder) {
                 // Leader abilities: City Center buildings (City of Marble), walls (Standardization).
@@ -1144,6 +1167,7 @@ void Game::processCities(PlayerId pid) {
                 const Unlock& u = rules_->buildings[static_cast<size_t>(item.type)].unlock;
                 const int era = u.none() ? 0 : (u.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(u.index)].era;
                 if (ab.wonderProductionPercent > 0 && era >= ab.wonderEraMin && era <= ab.wonderEraMax) prod = prod * (100 + ab.wonderProductionPercent) / 100;
+                if (goldenDedication(pid, "DEDICATION_HEARTBEAT_OF_STEAM") && era >= rules_->era("ERA_INDUSTRIAL")) prod = prod * 110 / 100;  // 09
                 // Natural wonders (01): +50% toward a wonder built beside Ik-Kil.
                 for (const CityWonder& w : city.wonders) {
                     if (w.building == item.type && nextToNaturalWonder(w.pos, "FEATURE_IK_KIL")) prod = prod * 150 / 100;

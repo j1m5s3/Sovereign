@@ -350,6 +350,9 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i32(rel.alliancePoints);
             w.u8(rel.delegation);
         }
+        w.u8(static_cast<uint8_t>(p.dedications.size()));
+        for (TypeIndex d : p.dedications) w.i16(d);
+        w.i8(static_cast<int8_t>(p.dedicationsPending));
         w.u32(static_cast<uint32_t>(p.memories.size()));
         for (const OpinionMemory& m : p.memories) {
             w.i8(m.about);
@@ -766,6 +769,9 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.delegation = r.u8();
             if (rel.delegation > 2) return false;
         }
+        p.dedications.resize(r.u8());
+        for (TypeIndex& d : p.dedications) d = r.i16();
+        p.dedicationsPending = r.i8();
         uint32_t nmem = r.u32();
         if (!r.checkCount(nmem, 10)) return false;
         p.memories.resize(nmem);

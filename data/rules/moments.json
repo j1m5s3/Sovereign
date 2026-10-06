@@ -771,5 +771,75 @@
    "name": "Ship Sunk",
    "eraScore": 0
   }
+ ],
+ "dedications": [
+  {
+   "id": "DEDICATION_FREE_INQUIRY",
+   "name": "Free Inquiry",
+   "eraMin": "ERA_CLASSICAL",
+   "eraMax": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "DEDICATION_PEN_BRUSH_AND_VOICE",
+   "name": "Pen, Brush, and Voice",
+   "eraMin": "ERA_CLASSICAL",
+   "eraMax": "ERA_MEDIEVAL"
+  },
+  {
+   "id": "DEDICATION_MONUMENTALITY",
+   "name": "Monumentality",
+   "eraMin": "ERA_CLASSICAL",
+   "eraMax": "ERA_RENAISSANCE"
+  },
+  {
+   "id": "DEDICATION_EXODUS_OF_THE_EVANGELISTS",
+   "name": "Exodus of the Evangelists",
+   "eraMin": "ERA_CLASSICAL",
+   "eraMax": "ERA_RENAISSANCE"
+  },
+  {
+   "id": "DEDICATION_HIC_SUNT_DRACONES",
+   "name": "Hic Sunt Dracones",
+   "eraMin": "ERA_RENAISSANCE",
+   "eraMax": "ERA_MODERN"
+  },
+  {
+   "id": "DEDICATION_REFORM_THE_COINAGE",
+   "name": "Reform the Coinage",
+   "eraMin": "ERA_RENAISSANCE",
+   "eraMax": "ERA_MODERN"
+  },
+  {
+   "id": "DEDICATION_HEARTBEAT_OF_STEAM",
+   "name": "Heartbeat of Steam",
+   "eraMin": "ERA_INDUSTRIAL",
+   "eraMax": "ERA_ATOMIC"
+  },
+  {
+   "id": "DEDICATION_TO_ARMS",
+   "name": "To Arms!",
+   "eraMin": "ERA_INDUSTRIAL",
+   "eraMax": "ERA_ATOMIC"
+  },
+  {
+   "id": "DEDICATION_WISH_YOU_WERE_HERE",
+   "name": "Wish You Were Here",
+   "eraMin": "ERA_ATOMIC"
+  },
+  {
+   "id": "DEDICATION_SKY_AND_STARS",
+   "name": "Sky and Stars",
+   "eraMin": "ERA_INFORMATION"
+  },
+  {
+   "id": "DEDICATION_BODYGUARD_OF_LIES",
+   "name": "Bodyguard of Lies",
+   "eraMin": "ERA_ATOMIC"
+  },
+  {
+   "id": "DEDICATION_AUTOMATON_WARFARE",
+   "name": "Automaton Warfare",
+   "eraMin": "ERA_INFORMATION"
+  }
  ]
 }

@@ -28,6 +28,60 @@ void Game::awardMoment(PlayerId pid, const char* id) {
     pushEvent(EventKind::HistoricMoment, pid, kNoPlayer, m);
 }
 
+// Dedications [R&F] (09: Dedications; data: CommemorationTypes' era windows). At each new era a civ chooses
+// one (three in a Heroic Age) among those whose window holds the world's new era. Outside a Golden Age a
+// dedication earns era score for its deeds (dedicationScore); in one, its bonus applies (goldenDedication).
+std::vector<TypeIndex> Game::availableDedications(PlayerId player) const {
+    std::vector<TypeIndex> out;
+    const Player& p = state_.players[at(player)];
+    if (!isMajor(p) || p.dedicationsPending <= 0) return out;
+    for (size_t d = 0; d < rules_->dedications.size(); ++d) {
+        const DedicationType& dt = rules_->dedications[d];
+        if (state_.gameEra < dt.eraMin || (dt.eraMax >= 0 && state_.gameEra > dt.eraMax)) continue;
+        if (std::find(p.dedications.begin(), p.dedications.end(), static_cast<TypeIndex>(d)) != p.dedications.end()) continue;
+        out.push_back(static_cast<TypeIndex>(d));
+    }
+    return out;
+}
+
+CommandError Game::dedicationProblem(PlayerId player, TypeIndex dedication) const {
+    const std::vector<TypeIndex> open = availableDedications(player);
+    return std::find(open.begin(), open.end(), dedication) != open.end() ? CommandError::Ok : CommandError::BadTarget;
+}
+
+void Game::chooseDedication(PlayerId player, TypeIndex dedication) {
+    Player& p = state_.players[at(player)];
+    p.dedications.push_back(dedication);
+    --p.dedicationsPending;
+    // Automaton Warfare in a Golden Age: one Giant Death Robot in the capital.
+    if (goldenDedication(player, "DEDICATION_AUTOMATON_WARFARE")) {
+        const TypeIndex gdr = rules_->unit("UNIT_GIANT_DEATH_ROBOT");
+        for (const City& c : state_.cities) {
+            if (c.owner != player || !c.capital || gdr == kNone) continue;
+            if (auto spot = unitSpawnPlot(c, gdr)) spawnUnit(gdr, player, *spot);
+            break;
+        }
+    }
+}
+
+bool Game::dedicated(PlayerId player, const char* id) const {
+    if (player < 0 || at(player) >= state_.players.size()) return false;
+    const TypeIndex d = rules_->dedication(id);
+    const std::vector<TypeIndex>& mine = state_.players[at(player)].dedications;
+    return d != kNone && std::find(mine.begin(), mine.end(), d) != mine.end();
+}
+
+bool Game::goldenDedication(PlayerId player, const char* id) const {
+    if (!dedicated(player, id)) return false;
+    const Age a = state_.players[at(player)].age;
+    return a == Age::Golden || a == Age::Heroic;
+}
+
+void Game::dedicationScore(PlayerId player, const char* id, int amount) {
+    if (!dedicated(player, id) || goldenDedication(player, id)) return;
+    state_.players[at(player)].eraScore += amount;
+}
+
 void Game::awardFirst(PlayerId pid, const char* worldId, const char* ownId, int key) {
     const Player& p = state_.players[at(pid)];
     if (!isMajor(p)) return;
@@ -87,6 +141,9 @@ void Game::processEras() {
             p.age = Age::Normal;
         }
         p.eraScore = 0;
+        // Dedications for the new era: one, or three in a Heroic Age (COMMEMORATE_*).
+        p.dedications.clear();
+        p.dedicationsPending = rules_->globalInt(p.age == Age::Heroic ? "COMMEMORATE_OPTIONS_MAX" : "COMMEMORATE_BASE_CHOICES_ALLOWED");
         pushEvent(EventKind::NewAge, p.id, kNoPlayer, static_cast<int>(p.age));
     }
     ++state_.gameEra;
@@ -126,8 +183,10 @@ int Game::tourismPerTurn(PlayerId pid) const {
     if (!isMajor(p)) return 0;
     int total = 0;
     const int era = playerEra(pid);
+    const bool wish = goldenDedication(pid, "DEDICATION_WISH_YOU_WERE_HERE");
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
+        const int before = total;
         const int curator = cityGovernorHas(c, "GOVERNOR_PROMOTION_CURATOR") ? 2 : 1;  // Pingala
         for (const GreatWork& w : c.greatWorks) {
             const int pct = themed(c, w.building) ? 100 + rules_->buildings[at(w.building)].theming->tourismPercent : 100;  // 07: Theming
@@ -140,6 +199,9 @@ int Game::tourismPerTurn(PlayerId pid) const {
             total += rules_->globalInt("TOURISM_BASE_FROM_WONDER") + rules_->globalInt("TOURISM_ADVANCED_ERA_WONDER") * std::max(0, era - wonderEra);
         }
         if (p.religion >= 0 && state_.religions[static_cast<size_t>(p.religion)].holyCity == c.id) total += rules_->globalInt("TOURISM_FROM_HOLY_CITY");
+        // Wish You Were Here (Golden Age): +50% tourism from cities with an established governor.
+        PlayerId holder = kNoPlayer;
+        if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;
     }
     return total;
 }

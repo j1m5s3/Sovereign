@@ -391,6 +391,14 @@ public:
     // ---- natural wonders (01: Natural wonders)
     bool nextToNaturalWonder(Hex plot, const char* featureId) const;  // a neighbouring plot holds it
 
+    // ---- dedications [R&F] (09: Dedications)
+    std::vector<TypeIndex> availableDedications(PlayerId player) const;
+    CommandError dedicationProblem(PlayerId player, TypeIndex dedication) const;
+    void chooseDedication(PlayerId player, TypeIndex dedication);
+    bool dedicated(PlayerId player, const char* id) const;        // chosen this era
+    bool goldenDedication(PlayerId player, const char* id) const; // chosen, and in a Golden (or Heroic) Age: its bonus
+    void dedicationScore(PlayerId player, const char* id, int amount);  // its era score, outside a Golden Age
+
     // ---- archaeology (07: Archaeology)
     void noteBattle(Hex plot, PlayerId attacker);  // remembered as a future site while the world is young enough
     bool themed(const City& city, TypeIndex building) const;  // its Great Works earn the theming bonus (07)
