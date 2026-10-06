@@ -446,3 +446,32 @@ TEST(an_encampment_strikes_and_holds_ground) {
     auto bare = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->cityStrength(g->state().cities[0]), bare->cityStrength(bare->state().cities[0]) + 2);
 }
+
+TEST(a_coastal_camp_puts_ships_to_sea) {
+    auto g = withBarbarians([](GameState& s) {
+        for (int y = 0; y < 12; ++y) s.plot({12, y}).terrain = rules().terrain("TERRAIN_COAST");
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.techs.done[at(rules().tech("TECH_SAILING"))] = 1;
+        }
+        TypeIndex naval = kNone;
+        for (size_t t = 0; t < rules().barbarianTribes.size(); ++t) {
+            if (rules().barbarianTribes[t].coastal) naval = static_cast<TypeIndex>(t);
+        }
+        Camp camp;
+        camp.id = s.nextCampId++;
+        camp.pos = {11, 5};
+        camp.tribe = naval;
+        camp.spawnTimer = 1;
+        s.camps.push_back(camp);
+    });
+    REQUIRE(g->state().camps.size() == 1u);
+    sovtest::endTurns(*g, 2);  // both majors end their turns: the world turn follows
+    const Unit* ship = nullptr;
+    for (const Unit& u : g->state().units) {
+        if (u.camp == g->state().camps[0].id) ship = &u;
+    }
+    REQUIRE(ship);
+    CHECK(g->rules().units[at(ship->type)].domain == Domain::Sea);
+    CHECK(g->rules().terrains[at(g->state().plot(ship->pos).terrain)].shallowWater);
+}

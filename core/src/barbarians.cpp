@@ -144,11 +144,17 @@ void Game::placeCamps(PlayerId bp) {
         spots.erase(std::remove_if(spots.begin(), spots.end(),
                                    [&](const Hex& h) { return state_.grid.distance(h, at) < campGap; }),
                     spots.end());
-        // Tribe: the first land tribe whose resource (if any) lies near the camp.
+        // Tribe: a naval tribe at a coastal camp (01: Barbarians), else the first land tribe whose
+        // resource (if any) lies near the camp.
+        bool coast = false;
+        for (const Hex& h : state_.grid.within(at, 1)) coast = coast || rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater;
         TypeIndex tribe = kNone;
+        for (size_t t = 0; t < rules_->barbarianTribes.size() && tribe == kNone && coast; ++t) {
+            if (rules_->barbarianTribes[t].coastal) tribe = static_cast<TypeIndex>(t);
+        }
         for (size_t t = 0; t < rules_->barbarianTribes.size() && tribe == kNone; ++t) {
             const BarbarianTribe& bt = rules_->barbarianTribes[t];
-            if (bt.coastal) continue;  // naval tribes wait for naval movement
+            if (bt.coastal) continue;
             bool fits = bt.resource == kNone;
             for (const Hex& h : state_.grid.within(at, bt.resourceRange)) {
                 if (fits) break;
@@ -174,6 +180,7 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
     Rng& rng = state_.rng.get(RngStream::Gameplay);
     const bool ranged = rng.chance(static_cast<uint32_t>(tribe.rangedPercent));
+    const Domain domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
     // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT).
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
@@ -181,7 +188,7 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
         for (const Player& p : state_.players) majors += p.alive && !p.barbarian ? 1 : 0;
         for (size_t i = 0; i < rules_->units.size(); ++i) {
             const UnitType& ut = rules_->units[i];
-            if (ut.unitClass != cls || ut.domain != Domain::Land || ut.layer != UnitLayer::Military) continue;
+            if (ut.unitClass != cls || ut.domain != domain || ut.layer != UnitLayer::Military) continue;
             int knowing = 0;
             for (const Player& p : state_.players) {
                 if (p.alive && !p.barbarian && hasUnlocked(p.id, ut.unlock)) ++knowing;
@@ -193,15 +200,15 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
         }
         return pick;
     };
-    TypeIndex type = best(ranged ? "RANGED" : tribe.unitClass);
-    if (type == kNone && !ranged) type = best("MELEE");
+    TypeIndex type = best(ranged ? (tribe.coastal ? "NAVAL_RANGED" : "RANGED") : tribe.unitClass);
+    if (type == kNone && !ranged) type = best(tribe.coastal ? "NAVAL_MELEE" : "MELEE");
+    if (type == kNone && ranged) type = best(tribe.unitClass);
     if (type == kNone) return;
     std::optional<Hex> spot;
     for (const Hex& h : state_.grid.within(camp.pos, 1)) {
         if (spot) break;
-        if (isLandPassable(state_, *rules_, h) && !state_.unitAt(h, UnitLayer::Military, *rules_) &&
-            !state_.foreignUnitAt(h, bp) && !state_.cityAt(h))
-            spot = h;
+        const bool fits = tribe.coastal ? rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)].shallowWater : isLandPassable(state_, *rules_, h);
+        if (fits && !state_.unitAt(h, UnitLayer::Military, *rules_) && !state_.foreignUnitAt(h, bp) && !state_.cityAt(h)) spot = h;
     }
     if (!spot) return;
     Unit& u = spawnUnit(type, bp, *spot);
