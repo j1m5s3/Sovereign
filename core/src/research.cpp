@@ -222,6 +222,8 @@ bool Game::policyAvailable(PlayerId player, TypeIndex policy) const {
     if (!inRange(policy, rules_->policies.size())) return false;
     const Player& p = state_.players[static_cast<size_t>(player)];
     const PolicyType& pt = rules_->policies[static_cast<size_t>(policy)];
+    // Dark Age cards (09: Ages): in a Dark Age, while the world is in their era window.
+    if (pt.darkAge) return p.age == Age::Dark && state_.gameEra >= pt.minEra && state_.gameEra <= pt.maxEra;
     if (pt.unlock.none() || !hasUnlocked(player, pt.unlock)) return false;
     for (TypeIndex replacement : pt.obsoletedBy) {
         const Unlock& u = rules_->policies[static_cast<size_t>(replacement)].unlock;

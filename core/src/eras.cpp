@@ -141,12 +141,21 @@ void Game::processEras() {
             p.age = Age::Normal;
         }
         p.eraScore = 0;
-        // Dedications for the new era: one, or three in a Heroic Age (COMMEMORATE_*).
-        p.dedications.clear();
-        p.dedicationsPending = rules_->globalInt(p.age == Age::Heroic ? "COMMEMORATE_OPTIONS_MAX" : "COMMEMORATE_BASE_CHOICES_ALLOWED");
         pushEvent(EventKind::NewAge, p.id, kNoPlayer, static_cast<int>(p.age));
     }
     ++state_.gameEra;
+    // Dark Age cards leave their slots once the age, or their era window, is over (09: Ages).
+    for (Player& p : state_.players) {
+        for (TypeIndex& pol : p.policies) {
+            if (pol != kNone && rules_->policies[at(pol)].darkAge && !policyAvailable(p.id, pol)) pol = kNone;
+        }
+    }
+    for (Player& p : state_.players) {
+        if (!isMajor(p)) continue;
+        // Dedications for the new era: one, or three in a Heroic Age (COMMEMORATE_*).
+        p.dedications.clear();
+        p.dedicationsPending = rules_->globalInt(p.age == Age::Heroic ? "COMMEMORATE_OPTIONS_MAX" : "COMMEMORATE_BASE_CHOICES_ALLOWED");
+    }
     state_.gameEraStart = state_.turn;
     for (Player& p : state_.players) p.killsThisEra = 0;
     // Difficulty: AI civs at Immortal and Deity get free Eurekas and Inspirations in the new era's trees.

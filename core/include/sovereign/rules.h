@@ -656,6 +656,9 @@ struct PolicyType {
     Unlock unlock;                        // none: not adoptable yet (legacy and Dark Age cards)
     std::vector<TypeIndex> obsoletedBy;   // replacement cards: once one is unlocked this card retires
     TypeIndex government = kNone;         // only under this government
+    // A Dark Age card [R&F] (09: Ages): only in a Dark Age, while the world era is in [minEra, maxEra].
+    bool darkAge = false;
+    int minEra = 0, maxEra = 0;
 };
 
 enum class ModCollection : uint8_t { OwnerCity = 0, OwnerCityPlots, PlayerCities, PlayerCapital, PlayerCityPlots, Player };
@@ -704,6 +707,7 @@ enum class ReqType : uint8_t {
     PlotHasTerrain,
     CityHasBuilding,
     CityIsCapital,
+    CityHasDistrict,     // a completed district of `ref`
     CityMinPopulation,
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)

@@ -23,6 +23,9 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         }
         case ReqType::CityHasBuilding: ok = c.city && (c.rules ? cityHasBuilding(*c.city, *c.rules, q.ref) : c.city->has(q.ref)); break;
         case ReqType::CityIsCapital: ok = c.city && c.city->capital; break;
+        case ReqType::CityHasDistrict:
+            ok = c.city && std::any_of(c.city->districts.begin(), c.city->districts.end(), [&](const CityDistrict& d) { return d.complete && d.type == q.ref; });
+            break;
         case ReqType::CityMinPopulation: ok = c.city && c.city->population >= q.value; break;
         case ReqType::PlayerIsHuman: ok = c.player && c.player->human; break;
     }

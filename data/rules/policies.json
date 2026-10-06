@@ -692,19 +692,31 @@
    "id": "POLICY_AUTOMATED_WORKFORCE",
    "name": "Automated Workforce",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Information Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_INFORMATION",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_COLLECTIVISM",
    "name": "Collectivism",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Modern Era-Atomic Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_MODERN",
+    "ERA_ATOMIC"
+   ]
   },
   {
    "id": "POLICY_CYBER_WARFARE",
    "name": "Cyber Warfare",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Information Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_INFORMATION",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_DEFENSE_OF_THE_MOTHERLAND",
@@ -717,13 +729,21 @@
    "id": "POLICY_DISINFORMATION_CAMPAIGN",
    "name": "Disinformation Campaign",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Information Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_INFORMATION",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_ELITE_FORCES",
    "name": "Elite Forces",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Industrial Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_INDUSTRIAL",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_THEIR_FINEST_HOUR",
@@ -736,7 +756,11 @@
    "id": "POLICY_FLOWER_POWER",
    "name": "Flower Power",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Atomic Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_ATOMIC",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_SPACE_TOURISM",
@@ -844,19 +868,31 @@
    "id": "POLICY_INQUISITION",
    "name": "Inquisition",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Classical Era-Renaissance Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_CLASSICAL",
+    "ERA_RENAISSANCE"
+   ]
   },
   {
    "id": "POLICY_ISOLATIONISM",
    "name": "Isolationism",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Classical Era-Industrial Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_CLASSICAL",
+    "ERA_INDUSTRIAL"
+   ]
   },
   {
    "id": "POLICY_LETTERS_OF_MARQUE",
    "name": "Letters of Marque",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Renaissance Era-Modern Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_RENAISSANCE",
+    "ERA_MODERN"
+   ]
   },
   {
    "id": "POLICY_MARTIAL_LAW",
@@ -869,25 +905,41 @@
    "id": "POLICY_MONASTICISM",
    "name": "Monasticism",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Classical Era-Medieval Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_CLASSICAL",
+    "ERA_MEDIEVAL"
+   ]
   },
   {
    "id": "POLICY_ROBBER_BARONS",
    "name": "Robber Barons",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Industrial Era-Atomic Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_INDUSTRIAL",
+    "ERA_ATOMIC"
+   ]
   },
   {
    "id": "POLICY_ROGUE_STATE",
    "name": "Rogue State",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Atomic Era-Future Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_ATOMIC",
+    "ERA_FUTURE"
+   ]
   },
   {
    "id": "POLICY_TWILIGHT_VALOR",
    "name": "Twilight Valor",
    "slot": "WILDCARD",
-   "ageRequirement": "Dark Age Classical Era-Renaissance Era"
+   "darkAge": true,
+   "eras": [
+    "ERA_CLASSICAL",
+    "ERA_RENAISSANCE"
+   ]
   },
   {
    "id": "POLICY_FRESCOES",

@@ -293,3 +293,53 @@ TEST(policy_effects_and_obsolescence) {
     CHECK_EQ(g3->state().players[0].policies[0], kNone);
     CHECK(!g3->policyAvailable(0, policy("POLICY_AGOGE")));
 }
+
+TEST(dark_age_cards_come_with_a_dark_age_and_go_with_it) {
+    // Classical Republic (one Wildcard slot), the world in the Classical era, a Holy Site in the capital.
+    auto setup = [](GameState& s) {
+        chiefdom(s);
+        Player& p = s.players[0];
+        p.government = gov("GOVERNMENT_CLASSICAL_REPUBLIC");
+        p.governmentUses[at(p.government)] = 1;
+        p.policies.assign(static_cast<size_t>(rules().governments[at(p.government)].totalSlots()), kNone);
+        p.age = Age::Dark;
+        s.gameEra = 1;
+        CityDistrict holy;
+        holy.type = rules().district("DISTRICT_HOLY_SITE");
+        holy.pos = {9, 7};
+        holy.complete = true;
+        s.cities[0].districts.push_back(holy);
+    };
+    auto g = capitalWith(setup);
+    const TypeIndex monasticism = policy("POLICY_MONASTICISM");
+    REQUIRE(monasticism != kNone);
+    CHECK(rules().policies[at(monasticism)].darkAge);
+    CHECK(g->policyAvailable(0, monasticism));
+    CHECK(!g->policyAvailable(0, policy("POLICY_ROBBER_BARONS")));  // Industrial to Atomic
+    int wild = -1;
+    const GovernmentType& republic = rules().governments[at(gov("GOVERNMENT_CLASSICAL_REPUBLIC"))];
+    for (int slot = 0; slot < static_cast<int>(g->state().players[0].policies.size()); ++slot) {
+        if (Game::slotType(republic, slot) == PolicySlot::Wildcard) wild = slot;
+    }
+    REQUIRE(wild >= 0);
+    const CityId city = g->state().cities[0].id;
+    const Fixed science = g->cityReport(city).yields[S];
+    REQUIRE(g->submit(Command::setPolicy(0, wild, monasticism)) == CommandError::Ok);
+    CHECK(g->cityReport(city).yields[S] > science);  // +75% Science with a Holy Site
+    // Not outside a Dark Age.
+    {
+        GameState s = g->state();
+        s.players[0].age = Age::Normal;
+        auto normal = Game::fromScenario(rules(), std::move(s));
+        CHECK(!normal->policyAvailable(0, monasticism));
+    }
+    // The world moves on with a Golden Age for us: the card leaves its slot.
+    GameState s = g->state();
+    s.players[0].eraScore = 200;
+    s.gameEraStart = s.turn - 1000;
+    auto later = Game::fromScenario(rules(), std::move(s));
+    endTurns(*later, 1);
+    REQUIRE(later->state().gameEra == 2);
+    CHECK(later->state().players[0].age != Age::Dark);
+    CHECK(later->state().players[0].policies[static_cast<size_t>(wild)] == kNone);
+}

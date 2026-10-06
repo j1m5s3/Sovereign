@@ -4010,8 +4010,15 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+35 Combat Strength in friendly territory"
+     "kind": "STRENGTH",
+     "amount": 35,
+     "when": [
+      [
+       {
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
     }
    ]
   },
@@ -4720,8 +4727,15 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+15 Combat Strength in friendly territory"
+     "kind": "STRENGTH",
+     "amount": 15,
+     "when": [
+      [
+       {
+        "atom": "OWN_TERRITORY"
+       }
+      ]
+     ]
     }
    ]
   },

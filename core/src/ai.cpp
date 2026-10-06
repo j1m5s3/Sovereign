@@ -827,7 +827,8 @@ int policyValue(const View& v, TypeIndex policy) {
     const PolicyType& p = v.r.policies[at(policy)];
     int value = 1;
     for (const Modifier& m : v.r.modifiers) {
-        if (m.source == p.id) value += 3;
+        // A Dark Age card pairs bonuses with penalties (09: Ages): its negative modifiers count against it.
+        if (m.source == p.id) value += p.darkAge && m.amount < Fixed() ? -2 : 3;
     }
     if (p.slot == PolicySlot::Military && !v.enemies.empty()) value += 2;
     return value;

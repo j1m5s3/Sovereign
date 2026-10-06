@@ -167,7 +167,19 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
 
 int Game::religiousStrength(const Unit& unit, bool defending) const {
     int s = rules_->units[at(unit.type)].religiousStrength;
-    if (s <= 0 || !defending || unit.religion < 0) return s;
+    if (s <= 0) return s;
+    // Abilities that strengthen religious units in their own territory (Inquisitor; the Inquisition card).
+    const PlayerId owner = state_.plot(unit.pos).owner;
+    if (owner == unit.owner) {
+        for (TypeIndex a : unitAbilities(unit)) {
+            for (const UnitEffect& e : rules_->abilities[at(a)].effects) {
+                const bool territory = e.kind == UnitEffectKind::Strength && e.when.size() == 1 && e.when[0].size() == 1 &&
+                                       e.when[0][0].atom == CombatAtom::OwnTerritory && !e.when[0][0].negate;
+                if (territory) s += e.amount;
+            }
+        }
+    }
+    if (!defending || unit.religion < 0) return s;
     // Defending near its own Holy City, or in a city that follows its religion (06: Theological combat).
     const FoundedReligion& r = state_.religions[static_cast<size_t>(unit.religion)];
     const City* holy = state_.city(r.holyCity);

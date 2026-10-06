@@ -119,6 +119,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "PLOT_NEXT_TO_RIVER") q.type = ReqType::PlotNextToRiver;
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
+        else if (type == "CITY_HAS_DISTRICT") { q.type = ReqType::CityHasDistrict; q.ref = rules.district(ref); }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
         else {
@@ -126,7 +127,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
             return false;
         }
         bool needsRef = q.type == ReqType::PlotHasResource || (q.type == ReqType::PlotHasFeature && !ref.empty()) ||
-                        q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding;
+                        q.type == ReqType::PlotHasTerrain || q.type == ReqType::CityHasBuilding || q.type == ReqType::CityHasDistrict;
         if (needsRef && q.ref == kNone) {
             *error = "requirement " + type + " refers to unknown " + ref;
             return false;
@@ -1178,6 +1179,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (!gov.empty() && (p.government = government(gov)) == kNone) {
             *error = "policy " + id + ": unknown government " + gov;
             return false;
+        }
+        p.darkAge = j["darkAge"].boolean(false);
+        if (p.darkAge) {
+            const std::vector<Json>& window = j["eras"].items();
+            if (window.size() != 2 || era(window[0].str()) == kNone || era(window[1].str()) == kNone) {
+                *error = "policy " + id + ": a Dark Age card needs an era window";
+                return false;
+            }
+            p.minEra = era(window[0].str());
+            p.maxEra = era(window[1].str());
         }
         policies.push_back(std::move(p));
     }
