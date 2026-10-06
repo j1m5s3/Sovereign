@@ -575,6 +575,13 @@ void deals(View& v) {
                 ideas.insert(ideas.begin(), {{DealItemKind::GreatWork, o.id, c.id, static_cast<TypeIndex>(w)}, {DealItemKind::Gold, v.me, std::min(purse, price * 2), kNone}});
             }
         }
+        // Its own spies they caught, bought back (08: Captive deal item).
+        for (const CapturedSpy& c : s.capturedSpies) {
+            if (c.captor != o.id || c.spy.owner != v.me) continue;
+            const int price = 30 + 30 * c.spy.level;
+            if (s.players[at(v.me)].gold < Fixed::fromInt(price)) continue;
+            ideas.insert(ideas.begin(), {{DealItemKind::Captive, o.id, c.spy.id, kNone}, {DealItemKind::Gold, v.me, price, kNone}});
+        }
         for (const std::vector<DealItem>& idea : ideas) {
             const Deal d{0, v.me, o.id, s.turn, idea};
             if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;

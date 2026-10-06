@@ -421,6 +421,7 @@ public:
     // The work would give the player a museum's theme it cannot reach without it (07; for trading).
     bool workCompletesTheme(PlayerId player, const GreatWork& work) const;
     const GreatWork* dealWork(const DealItem& item) const;  // the Great Work a GreatWork deal item names
+    const CapturedSpy* dealCaptive(const DealItem& item) const;  // the spy a Captive deal item names, held by its giver
     int freeSlotsFor(const City& city, TypeIndex building, TypeIndex workType) const;
     CommandError moveGreatWorkProblem(PlayerId player, CityId from, int index, CityId to, TypeIndex building) const;
     void moveGreatWork(CityId from, int index, CityId to, TypeIndex building);

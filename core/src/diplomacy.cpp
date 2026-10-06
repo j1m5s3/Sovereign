@@ -386,6 +386,13 @@ bool Game::canDenounce(PlayerId by, PlayerId target) const {
            !friends(by, target) && !atWar(by, target);
 }
 
+const CapturedSpy* Game::dealCaptive(const DealItem& item) const {
+    for (const CapturedSpy& c : state_.capturedSpies) {
+        if (c.spy.id == item.amount && c.captor == item.from) return &c;
+    }
+    return nullptr;
+}
+
 CommandError Game::dealProblem(const Deal& d) const {
     if (d.from == d.to || !isMajorCiv(d.from) || !isMajorCiv(d.to) || !hasMet(d.from, d.to)) return CommandError::CannotDeal;
     if (d.items.empty() || d.items.size() > static_cast<size_t>(kMaxItems)) return CommandError::CannotDeal;
@@ -465,6 +472,15 @@ CommandError Game::dealProblem(const Deal& d) const {
                 if (!room) return CommandError::CannotDeal;
                 break;
             }
+            case DealItemKind::Captive: {
+                // A spy of the other side's that the giver holds, once per deal.
+                const CapturedSpy* c = dealCaptive(i);
+                if (!c || c->spy.owner != other) return CommandError::CannotDeal;
+                for (const DealItem& j : d.items) {
+                    if (&j != &i && j.kind == DealItemKind::Captive && j.amount == i.amount) return CommandError::CannotDeal;
+                }
+                break;
+            }
             case DealItemKind::Peace: {
                 if (peace || !war) return CommandError::CannotDeal;
                 const Relation& rel = state_.players[at(d.from)].relations[at(d.to)];
@@ -534,6 +550,13 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 }
                 break;
             }
+            case DealItemKind::Captive: {
+                // Its own spy back is worth more to it than a caught one is to the catcher (Sovereign's values).
+                const CapturedSpy* c = dealCaptive(i);
+                const int level = c ? c->spy.level : 1;
+                value += gives ? -(20 + 20 * level) : 40 + 40 * level;
+                break;
+            }
             case DealItemKind::Peace: {
                 const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, other);
                 const int turns = state_.turn - state_.players[at(judge)].relations[at(other)].since;
@@ -581,6 +604,9 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
     tryItem({DealItemKind::Friendship, from, 0, kNone});
     for (int t = 0; t < kNumAllianceTypes; ++t) tryItem({DealItemKind::Alliance, from, t, kNone});
     tryItem({DealItemKind::Peace, from, 0, kNone});
+    for (const CapturedSpy& c : state_.capturedSpies) {
+        if (c.captor == from && c.spy.owner == to) tryItem({DealItemKind::Captive, from, c.spy.id, kNone});
+    }
     int works = 0;
     for (const City& c : state_.cities) {
         if (c.owner != from) continue;
@@ -745,6 +771,18 @@ void Game::executeDeal(const Deal& d) {
                 break;
             case DealItemKind::Peace: onPeace(d.from, d.to); break;
             case DealItemKind::GreatWork: break;  // moved above
+            case DealItemKind::Captive: {
+                // The spy comes home, idle, keeping its level and promotions.
+                auto it = std::find_if(state_.capturedSpies.begin(), state_.capturedSpies.end(),
+                                       [&](const CapturedSpy& c) { return c.spy.id == i.amount && c.captor == i.from; });
+                if (it == state_.capturedSpies.end()) break;
+                const Agent back = it->spy;
+                state_.capturedSpies.erase(it);
+                const auto slot = std::lower_bound(state_.agents.begin(), state_.agents.end(), back.id,
+                                                 [](const Agent& a, int32_t id) { return a.id < id; });
+                state_.agents.insert(slot, back);
+                break;
+            }
         }
     }
     // Both remember a deal kept; a deal that only gives is a gift.
@@ -1206,6 +1244,12 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
             std::transform(kind.begin(), kind.end(), kind.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
             const std::string by = w.creator >= 0 && ti(w.creator) < r.greatPeople.size() ? " by " + r.greatPeople[ti(w.creator)].name : "";
             return who + " gives a Great Work (" + kind + by + ")";
+        }
+        case DealItemKind::Captive: {
+            for (const CapturedSpy& c : s.capturedSpies) {
+                if (c.spy.id == i.amount) return who + " returns a captured spy (level " + std::to_string(c.spy.level) + ")";
+            }
+            return who + " returns a captured spy";
         }
     }
     return "?";

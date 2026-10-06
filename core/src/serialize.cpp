@@ -30,6 +30,42 @@ bool readI32s(ByteReader& r, std::vector<int32_t>& v) {
     for (int32_t& x : v) x = r.i32();
     return true;
 }
+void writeAgent(ByteWriter& w, const Agent& a) {
+    w.i32(a.id);
+    w.i8(a.owner);
+    w.i32(a.level);
+    w.i8(a.target);
+    w.i32(a.travel);
+    w.boolean(a.spy);
+    w.i32(a.city);
+    w.u8(static_cast<uint8_t>(a.mission));
+    w.i32(a.missionTurns);
+    w.i32(a.sourcesCity);
+    w.i32(a.sourcesUntil);
+    writeI32s(w, std::vector<int32_t>(a.promotions.begin(), a.promotions.end()));
+    w.i32(a.promotionsPending);
+}
+bool readAgent(ByteReader& r, Agent& a) {
+    a.id = r.i32();
+    a.owner = r.i8();
+    a.level = r.i32();
+    a.target = r.i8();
+    a.travel = r.i32();
+    a.spy = r.boolean();
+    a.city = r.i32();
+    const uint8_t mission = r.u8();
+    if (mission >= kNumSpyMissions) return false;
+    a.mission = static_cast<SpyMission>(mission);
+    a.missionTurns = r.i32();
+    a.sourcesCity = r.i32();
+    a.sourcesUntil = r.i32();
+    std::vector<int32_t> promos;
+    if (!readI32s(r, promos)) return false;
+    a.promotions.clear();
+    for (int32_t v : promos) a.promotions.push_back(static_cast<TypeIndex>(v));
+    a.promotionsPending = r.i32();
+    return true;
+}
 void writeFixed(ByteWriter& w, Fixed f) { w.i64(f.raw()); }
 Fixed readFixed(ByteReader& r) { return Fixed::fromRaw(r.i64()); }
 void writeItem(ByteWriter& w, ProductionItem it) {
@@ -266,6 +302,10 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         if (a.owner < 0 || static_cast<size_t>(a.owner) >= s.players.size()) return false;
         if (a.target != kNoPlayer && (a.target < 0 || static_cast<size_t>(a.target) >= s.players.size())) return false;
         if (a.level < 1 || a.travel < 0) return false;
+    }
+    for (const CapturedSpy& c : s.capturedSpies) {
+        if (c.spy.owner < 0 || static_cast<size_t>(c.spy.owner) >= s.players.size()) return false;
+        if (c.captor < 0 || static_cast<size_t>(c.captor) >= s.players.size() || c.captor == c.spy.owner) return false;
     }
     return true;
 }
@@ -622,22 +662,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(rel.beliefs.begin(), rel.beliefs.end()));
     }
     w.u32(static_cast<uint32_t>(s.agents.size()));
-    for (const Agent& a : s.agents) {
-        w.i32(a.id);
-        w.i8(a.owner);
-        w.i32(a.level);
-        w.i8(a.target);
-        w.i32(a.travel);
-        w.boolean(a.spy);
-        w.i32(a.city);
-        w.u8(static_cast<uint8_t>(a.mission));
-        w.i32(a.missionTurns);
-        w.i32(a.sourcesCity);
-        w.i32(a.sourcesUntil);
-        writeI32s(w, std::vector<int32_t>(a.promotions.begin(), a.promotions.end()));
-        w.i32(a.promotionsPending);
-    }
+    for (const Agent& a : s.agents) writeAgent(w, a);
     w.i32(s.nextAgentId);
+    w.u32(static_cast<uint32_t>(s.capturedSpies.size()));
+    for (const CapturedSpy& c : s.capturedSpies) {
+        writeAgent(w, c.spy);
+        w.i8(c.captor);
+    }
     const PendingBattle& pb = s.pendingBattle;
     w.boolean(pb.active);
     w.i32(pb.attacker);
@@ -1151,26 +1182,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
     if (!r.checkCount(na, 14)) return false;
     s.agents.resize(na);
     for (Agent& a : s.agents) {
-        a.id = r.i32();
-        a.owner = r.i8();
-        a.level = r.i32();
-        a.target = r.i8();
-        a.travel = r.i32();
-        a.spy = r.boolean();
-        a.city = r.i32();
-        const uint8_t mission = r.u8();
-        if (mission >= kNumSpyMissions) return false;
-        a.mission = static_cast<SpyMission>(mission);
-        a.missionTurns = r.i32();
-        a.sourcesCity = r.i32();
-        a.sourcesUntil = r.i32();
-        std::vector<int32_t> promos;
-        if (!readI32s(r, promos)) return false;
-        a.promotions.clear();
-        for (int32_t v : promos) a.promotions.push_back(static_cast<TypeIndex>(v));
-        a.promotionsPending = r.i32();
+        if (!readAgent(r, a)) return false;
     }
     s.nextAgentId = r.i32();
+    uint32_t ncaught = r.u32();
+    if (!r.checkCount(ncaught, 15)) return false;
+    s.capturedSpies.resize(ncaught);
+    for (CapturedSpy& c : s.capturedSpies) {
+        if (!readAgent(r, c.spy)) return false;
+        c.captor = r.i8();
+    }
     PendingBattle& pb = s.pendingBattle;
     pb.active = r.boolean();
     pb.attacker = r.i32();

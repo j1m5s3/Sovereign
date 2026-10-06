@@ -216,6 +216,16 @@ void Game::resolveSpyOperation(Agent& a) {
             Player& catcher = state_.players[at(victim)];
             if (buildingsOwned(victim, "BUILDING_CHANCERY") > 0 && catcher.techs.current != kNone)
                 catcher.techs.progress[at(catcher.techs.current)] += Fixed::fromInt(50 * a.level);
+            // Held by the catcher until it is traded back (Captive deal item).
+            CapturedSpy held;
+            held.spy = a;
+            held.spy.city = kNoCity;
+            held.spy.mission = SpyMission::None;
+            held.spy.missionTurns = 0;
+            held.spy.travel = 0;
+            held.spy.sourcesCity = kNoCity;
+            held.captor = victim;
+            state_.capturedSpies.push_back(held);
             const int32_t gone = a.id;
             state_.agents.erase(std::remove_if(state_.agents.begin(), state_.agents.end(), [&](const Agent& x) { return x.id == gone; }),
                                 state_.agents.end());
