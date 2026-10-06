@@ -933,6 +933,16 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
 			}
+			// Military Engineers [GS]: a railroad here, a tunnel into a neighbouring mountain.
+			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Railroad (1 Iron, 1 Coal)"), sov::Command::buildRailroad(Me(), U->id)});
+			}
+			const sov::TypeIndex Tunnel = R.improvement("IMPROVEMENT_MOUNTAIN_TUNNEL");
+			for (const sov::Hex& Site : G.tunnelSites(Me(), U->id))
+			{
+				Choices.Add({FString::Printf(TEXT("Mountain Tunnel at %d,%d"), Site.x, Site.y), sov::Command::buildTunnel(Me(), U->id, Tunnel, Site)});
+			}
 			break;
 		}
 		default: break;

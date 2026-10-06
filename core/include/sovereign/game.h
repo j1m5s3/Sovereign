@@ -299,6 +299,8 @@ public:
     // Envoys a player's Amani adds at this city-state (2, doubled by Puppeteer).
     int governorEnvoys(PlayerId player, PlayerId cityState) const;
     bool governorHasPromotion(const Governor& g, const char* promotionId) const;
+    // The city's own established governor holds this promotion.
+    bool cityGovernorHas(const City& city, const char* promotionId) const;
 
     // ---- diplomacy (08-diplomacy-city-states-governors.md; leader doc §10). Rules decide
     // every outcome; the dialogue layer only turns words into these deals.
@@ -355,9 +357,20 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
+    TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
+    CommandError railroadProblem(PlayerId player, UnitId engineer) const;
+    std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
+
     // ---- spy promotions (08: Espionage)
     int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
     int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
+
+    // ---- scored competitions [GS] (08: Scored Competitions)
+    void startCompetition();                                       // at a World Congress session
+    void competitionScore(PlayerId player, CompetitionKind kind, int amount);
+    int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)
+    void processCompetitions();                                    // settles the ones whose time is up (the world turn)
 
     // ---- emergencies [R&F/GS] (08: Emergencies)
     // Whether the player may join this running emergency: a living major civ that has met the target,

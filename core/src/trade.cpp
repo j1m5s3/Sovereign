@@ -174,7 +174,7 @@ TypeIndex Game::roadFor(PlayerId player) const {
     const int era = playerEra(player);
     TypeIndex best = kNone;
     for (size_t i = 0; i < rules_->routes.size(); ++i) {
-        if (rules_->routes[i].era <= era) best = static_cast<TypeIndex>(i);
+        if (rules_->routes[i].era <= era && !rules_->routes[i].unitOnly) best = static_cast<TypeIndex>(i);  // the railroad is laid by hand
     }
     return best;
 }

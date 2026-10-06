@@ -494,6 +494,12 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         rt.moveCost = j["moveCost"].fixed();
         rt.bridges = j["bridges"].boolean(false);
         rt.era = j.has("era") ? era(j["era"].str()) : 0;
+        rt.unitOnly = j["unitOnly"].boolean(false);
+        if (j.has("tech") && (rt.tech = tech(j["tech"].str())) == kNone) {
+            *error = "route " + id + ": unknown tech";
+            return false;
+        }
+        for (const auto& [res, n] : j["resourceCost"].members()) rt.resourceCostIds.push_back({res, static_cast<int>(n.integer(0))});
         if (rt.era == kNone || rt.moveCost <= Fixed()) {
             *error = "route " + id + ": bad era or cost";
             return false;
@@ -743,6 +749,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.halvesFloods = j["halvesFloods"].boolean(false);
             im.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
             im.airSlots = static_cast<int>(j["airSlots"].integer(0));
+            im.tunnel = j["tunnel"].boolean(false);
             im.builtById = j["builtBy"].str();
             const Json& adj = j["adjacentImprovementYield"];
             if (adj.isObject()) {
@@ -1897,6 +1904,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         if (!b.adjacentImprovementId.empty() && (b.adjacentImprovement = improvement(b.adjacentImprovementId)) == kNone) {
             *error = "building " + b.id + ": unknown improvement " + b.adjacentImprovementId;
             return false;
+        }
+    }
+    for (RouteType& rt : routes) {
+        for (const auto& [res, n] : rt.resourceCostIds) {
+            const TypeIndex r = resource(res);
+            if (r == kNone) {
+                *error = "route " + rt.id + ": unknown resource " + res;
+                return false;
+            }
+            rt.resourceCost.push_back({r, n});
         }
     }
     for (ImprovementType& im : improvements) {

@@ -107,6 +107,7 @@ std::string Game::candidateName(const CongressItem& item, int candidate) const {
 }
 
 void Game::openCongressSession() {
+    startCompetition();
     std::vector<TypeIndex> pool;
     for (size_t i = 0; i < rules_->resolutions.size(); ++i) {
         const ResolutionType& r = rules_->resolutions[i];

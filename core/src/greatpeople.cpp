@@ -142,9 +142,13 @@ void Game::processGreatPeople(PlayerId pid) {
     Player& p = state_.players[at(pid)];
     if (!isMajor(p) || rules_->greatPersonClasses.empty()) return;
     fitPlayerToRules(p, *rules_);
+    int earned = 0;
     for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
-        p.greatPersonPoints[c] += greatPersonPointsPerTurn(pid, static_cast<TypeIndex>(c));
+        const int points = greatPersonPointsPerTurn(pid, static_cast<TypeIndex>(c));
+        p.greatPersonPoints[c] += points;
+        if (rules_->greatPersonClasses[c].id != "GREAT_PERSON_CLASS_PROPHET") earned += points;
     }
+    competitionScore(pid, CompetitionKind::WorldsFair, earned);  // great person points of the eight secular classes
     for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
         const TypeIndex person = currentGreatPerson(static_cast<TypeIndex>(c));
         if (person == kNone) continue;
@@ -175,6 +179,11 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
     if (state_.greatPeopleClaimed.size() < rules_->greatPeople.size()) state_.greatPeopleClaimed.resize(rules_->greatPeople.size(), 0);
     state_.greatPeopleClaimed[at(person)] = 1;
     ++p.greatPeopleRecruited[at(g.cls)];
+    // The Nobel prizes count great people of their classes (08 [GS]).
+    if (cls.id == "GREAT_PERSON_CLASS_WRITER" || cls.id == "GREAT_PERSON_CLASS_ARTIST" || cls.id == "GREAT_PERSON_CLASS_MUSICIAN")
+        competitionScore(pid, CompetitionKind::NobelLiterature, 1);
+    if (cls.id == "GREAT_PERSON_CLASS_SCIENTIST" || cls.id == "GREAT_PERSON_CLASS_ENGINEER" || cls.id == "GREAT_PERSON_CLASS_MERCHANT")
+        competitionScore(pid, CompetitionKind::NobelPhysics, 1);
     pushEvent(EventKind::GreatPersonRecruited, pid, kNoPlayer, person);
     if (!spot) return;  // no city to appear in: the great person is lost
     Unit& u = spawnUnit(cls.unit, pid, *spot);

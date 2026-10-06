@@ -54,6 +54,12 @@ const Governor* Game::establishedGovernor(const City& city, PlayerId* owner) con
     return nullptr;
 }
 
+bool Game::cityGovernorHas(const City& city, const char* promotionId) const {
+    PlayerId holder = kNoPlayer;
+    const Governor* g = establishedGovernor(city, &holder);
+    return g && holder == city.owner && governorHasPromotion(*g, promotionId);
+}
+
 bool Game::governorHasPromotion(const Governor& g, const char* promotionId) const {
     const TypeIndex p = rules_->governorPromotion(promotionId);
     return p != kNone && std::find(g.promotions.begin(), g.promotions.end(), p) != g.promotions.end();

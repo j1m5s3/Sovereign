@@ -142,3 +142,65 @@ TEST(the_ai_appoints_and_places_governors) {
     CHECK(p.governors[0].city != kNoCity);
     CHECK_EQ(g->governorTitlesLeft(0), 0);
 }
+
+// ---- the later promotions the core carries (08: Governors)
+
+namespace {
+// Player 0's capital with an established governor holding the given promotion.
+GameState withPromotion(const char* governor, const char* promotion) {
+    GameState s = govState();
+    Governor g;
+    g.type = gov(governor);
+    g.city = s.cities[0].id;
+    g.promotions.push_back(rules().governors[at(g.type)].promotions.front());
+    g.promotions.push_back(promo(promotion));
+    s.players[0].governors.push_back(g);
+    return s;
+}
+}  // namespace
+
+TEST(liang_water_works_and_pingala_curator) {
+    GameState base = govState();
+    CityDistrict hood;
+    hood.type = rules().district("DISTRICT_NEIGHBORHOOD");
+    hood.pos = {5, 7};
+    hood.complete = true;
+    base.cities[0].districts.push_back(hood);
+    auto plain = Game::fromScenario(rules(), base);
+    GameState s = withPromotion("GOVERNOR_LIANG", "GOVERNOR_PROMOTION_WATER_WORKS");
+    s.cities[0].districts.push_back(hood);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->districtHousing(g->state().cities[0]) == plain->districtHousing(plain->state().cities[0]) + Fixed::fromInt(2));
+
+    // Curator: Great Works' tourism doubled.
+    GameState t = withPromotion("GOVERNOR_PINGALA", "GOVERNOR_PROMOTION_CURATOR");
+    auto probe = Game::fromScenario(rules(), t);
+    TypeIndex work = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size() && work == kNone; ++w) {
+        if (rules().greatWorkTypes[w].tourism > 0 && probe->freeGreatWorkSlot(probe->state().cities[0], static_cast<TypeIndex>(w)) != kNone) work = static_cast<TypeIndex>(w);
+    }
+    REQUIRE(work != kNone);
+    GreatWork gw;
+    gw.type = work;
+    gw.building = probe->freeGreatWorkSlot(probe->state().cities[0], work);
+    t.cities[0].greatWorks.push_back(gw);
+    GameState u = govState();
+    u.cities[0].greatWorks.push_back(gw);
+    auto curated = Game::fromScenario(rules(), std::move(t));
+    auto uncurated = Game::fromScenario(rules(), std::move(u));
+    CHECK_EQ(curated->tourismPerTurn(0) - uncurated->tourismPerTurn(0), rules().greatWorkTypes[at(work)].tourism);
+}
+
+TEST(victor_embrasure_trains_veterans) {
+    GameState s = withPromotion("GOVERNOR_VICTOR", "GOVERNOR_PROMOTION_EMBRASURE");
+    s.cities[0].queue = {{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")}};
+    s.cities[0].progress.push_back({s.cities[0].queue.front(), Fixed::fromInt(1000)});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*g, 2);
+    const Unit* trained = nullptr;
+    for (const Unit& u : g->state().units) {
+        if (u.owner == 0 && g->rules().units[at(u.type)].id == "UNIT_WARRIOR") trained = &u;
+    }
+    REQUIRE(trained);
+    CHECK(trained->xp >= g->xpForNextLevel(*trained));
+}

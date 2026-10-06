@@ -218,6 +218,18 @@ struct Emergency {
     uint8_t outcome = 0;            // 0 running, 1 members succeeded, 2 failed (target rewarded)
 };
 
+// A scored competition [GS] (08: Scored Competitions; data: world-congress-emergencies), called at a
+// World Congress session; every major civ takes part.
+enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation };
+constexpr int kNumCompetitionKinds = 7;
+struct Competition {
+    CompetitionKind kind = CompetitionKind::WorldsFair;
+    int32_t endTurn = 0;
+    std::vector<int32_t> scores;    // per player
+    std::vector<int64_t> baseline;  // per player: favor (Peace) or CO2 (Climate Accords) when it began
+    bool settled = false;
+};
+
 // A wonder's plot: reserved when its production starts, its own tile once built.
 struct CityWonder {
     TypeIndex building = kNone;
@@ -539,6 +551,7 @@ struct SOV_API GameState {
     std::vector<Deal> deals;            // proposals waiting for a human's answer
     std::vector<Agreement> agreements;  // running deal terms
     std::vector<Emergency> emergencies; // hostile emergencies, running and settled (08: Emergencies)
+    std::vector<Competition> competitions;  // scored competitions, running and settled (08 [GS])
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]

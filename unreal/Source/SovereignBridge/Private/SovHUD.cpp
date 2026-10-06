@@ -152,6 +152,26 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		}
 		if (!Allies.IsEmpty()) Line(TEXT("Alliances:") + Allies, 16, Y, FLinearColor(0.6f, 1.f, 0.7f));
 	}
+	// Scored competitions (08 [GS]): the one running, with our standing and the leader's.
+	for (const sov::Competition& C : S.competitions)
+	{
+		if (C.settled) continue;
+		static const TCHAR* const Kinds[] = {TEXT("World's Fair"), TEXT("World Games"), TEXT("Nobel Prize in Literature"), TEXT("Nobel Peace Prize"),
+			TEXT("Nobel Prize in Physics"), TEXT("Climate Accords"), TEXT("International Space Station")};
+		int32 Best = INT32_MIN;
+		sov::PlayerId Leader = sov::kNoPlayer;
+		for (const sov::Player& O : S.players)
+		{
+			if (!G.isMajorCiv(O.id) || !O.alive) continue;
+			const int32 Score = G.competitionStanding(C, O.id);
+			if (Score > Best) { Best = Score; Leader = O.id; }
+		}
+		const sov::Player* LP = Leader == sov::kNoPlayer ? nullptr : &S.players[static_cast<size_t>(Leader)];
+		const FString Who = Leader == Me ? FString(TEXT("us")) : (!LP || LP->civ == sov::kNone ? FString(TEXT("-")) : Str(R.civs[static_cast<size_t>(LP->civ)].name));
+		Line(FString::Printf(TEXT("%s: %d turns left; our score %d, leading %s (%d)"), Kinds[static_cast<int32>(C.kind)], C.endTurn - S.turn,
+				 G.competitionStanding(C, Me), *Who, Best),
+			16, Y, FLinearColor(0.85f, 0.8f, 1.f));
+	}
 	// Emergencies (08): the running ones, and whether we are in them (join from the , chooser).
 	{
 		static const TCHAR* const Kinds[] = {TEXT("Military"), TEXT("City-State"), TEXT("Religious"), TEXT("Nuclear"), TEXT("Betrayal")};

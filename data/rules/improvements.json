@@ -291,6 +291,23 @@
    "builtBy": "UNIT_MILITARY_ENGINEER"
   },
   {
+   "id": "IMPROVEMENT_MOUNTAIN_TUNNEL",
+   "name": "Mountain Tunnel",
+   "yields": {},
+   "unlock": "TECH_CHEMISTRY",
+   "validTerrains": [
+    "TERRAIN_GRASS_MOUNTAIN",
+    "TERRAIN_PLAINS_MOUNTAIN",
+    "TERRAIN_DESERT_MOUNTAIN",
+    "TERRAIN_TUNDRA_MOUNTAIN",
+    "TERRAIN_SNOW_MOUNTAIN"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "builtBy": "UNIT_MILITARY_ENGINEER",
+   "tunnel": true
+  },
+  {
    "id": "IMPROVEMENT_OFFSHORE_OIL_RIG",
    "name": "Offshore Oil Rig",
    "yields": {

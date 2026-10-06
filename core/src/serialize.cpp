@@ -530,6 +530,15 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.bytes(e.members);
         w.u8(e.outcome);
     }
+    w.u32(static_cast<uint32_t>(s.competitions.size()));
+    for (const Competition& cp : s.competitions) {
+        w.u8(static_cast<uint8_t>(cp.kind));
+        w.i32(cp.endTurn);
+        writeI32s(w, cp.scores);
+        w.u32(static_cast<uint32_t>(cp.baseline.size()));
+        for (int64_t b : cp.baseline) w.i64(b);
+        w.boolean(cp.settled);
+    }
     w.i32(s.nextCongressTurn);
     w.i32(s.congressOpenedTurn);
     w.u32(static_cast<uint32_t>(s.congress.size()));
@@ -971,6 +980,21 @@ bool deserializeState(ByteReader& r, GameState& s) {
         e.members = r.bytes();
         e.outcome = r.u8();
         if (e.outcome > 2) return false;
+    }
+    uint32_t ncomp = r.u32();
+    if (!r.checkCount(ncomp, 16)) return false;
+    s.competitions.resize(ncomp);
+    for (Competition& cp : s.competitions) {
+        const uint8_t kind = r.u8();
+        if (kind >= kNumCompetitionKinds) return false;
+        cp.kind = static_cast<CompetitionKind>(kind);
+        cp.endTurn = r.i32();
+        if (!readI32s(r, cp.scores)) return false;
+        const uint32_t nb = r.u32();
+        if (!r.checkCount(nb, 8)) return false;
+        cp.baseline.resize(nb);
+        for (int64_t& b : cp.baseline) b = r.i64();
+        cp.settled = r.boolean();
     }
     s.nextCongressTurn = r.i32();
     s.congressOpenedTurn = r.i32();

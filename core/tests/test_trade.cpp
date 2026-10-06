@@ -53,7 +53,10 @@ TEST(trade_rules_data) {
     const DistrictType& center = r.districts[at(r.district("DISTRICT_CITY_CENTER"))];
     CHECK_EQ(center.tradeDomestic[yi(YieldType::Food)], Fixed::fromInt(1));
     CHECK_EQ(center.tradeInternational[yi(YieldType::Gold)], Fixed::fromInt(3));
-    REQUIRE(r.routes.size() == 4u);
+    REQUIRE(r.routes.size() == 5u);  // four roads by era, then the railroad
+    CHECK(r.routes[4].unitOnly);
+    CHECK_EQ(r.routes[4].moveCost, Fixed::ratio(1, 4));
+    CHECK_EQ(r.routes[4].resourceCost.size(), 2u);
     CHECK(!r.routes[0].bridges);
     CHECK(r.routes[1].bridges);
     CHECK_EQ(r.routes[3].moveCost, Fixed::ratio(1, 2));
