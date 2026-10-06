@@ -466,6 +466,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed())
         return Fixed::fromInt(fromWater ? embarkCost + 1 : 1);
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
+    if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
     if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
     if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
@@ -636,18 +637,36 @@ void Game::refreshVisibility(PlayerId pid) {
     for (uint8_t& v : p.visibility) {
         if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
     }
+    std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
+    Unit* finder = nullptr;
     auto see = [&](Hex from, int range) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
         for (const Hex& target : state_.grid.within(from, range)) {
-            if (lineOfSight(from, target))
-                p.visibility[static_cast<size_t>(state_.grid.index(target))] = static_cast<uint8_t>(Visibility::Visible);
+            if (!lineOfSight(from, target)) continue;
+            uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
+            const TypeIndex f = state_.plot(target).feature;
+            if (v == static_cast<uint8_t>(Visibility::Unrevealed) && f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder &&
+                std::find(discovered.begin(), discovered.end(), f) == discovered.end()) {
+                bool known = false;
+                for (int i = 0; i < state_.grid.size() && !known; ++i) {
+                    known = state_.plots[static_cast<size_t>(i)].feature == f && p.visibility[static_cast<size_t>(i)] != static_cast<uint8_t>(Visibility::Unrevealed);
+                }
+                if (!known) {
+                    discovered.push_back(f);
+                    if (finder && !typeOf(*rules_, *finder).promotionClass.empty()) finder->xp += rules_->globalInt("EXPERIENCE_REVEAL_NATURAL_WONDER");
+                }
+            }
+            v = static_cast<uint8_t>(Visibility::Visible);
         }
     };
     // Military alliance, level 2: allies see what each other sees (08: alliance levels).
     const auto shares = [&](PlayerId o) { return o == pid || (alliance(pid, o) == AllianceType::Military && allianceLevel(pid, o) >= 2); };
-    for (const Unit& u : state_.units) {
-        if (shares(u.owner)) see(u.pos, unitSight(u));
+    for (Unit& u : state_.units) {
+        if (!shares(u.owner)) continue;
+        finder = u.owner == pid ? &u : nullptr;
+        see(u.pos, unitSight(u));
     }
+    finder = nullptr;
     for (const City& c : state_.cities) {
         if (shares(c.owner)) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
         // An Encampment watches its strike range (Sovereign reading; 03: Defense).
@@ -666,6 +685,25 @@ void Game::refreshVisibility(PlayerId pid) {
         if (!c) continue;
         for (const Hex& h : state_.grid.within(c->pos, a.mission == SpyMission::ListeningPost ? 2 : 1))
             p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
+    }
+    // A natural wonder discovered (01; 09: historic moments): era score (more for the world's first), and
+    // the Astrology Eureka.
+    for (TypeIndex f : discovered) {
+        bool first = true;
+        for (const Player& o : state_.players) {
+            if (o.id == pid || !isMajorCiv(o.id)) continue;
+            for (size_t i = 0; i < state_.plots.size() && first; ++i) {
+                first = !(state_.plots[i].feature == f && i < o.visibility.size() && o.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed));
+            }
+        }
+        awardMoment(pid, first ? "MOMENT_FIRST_DISCOVERY_OF_A_NATURAL_WONDER" : "MOMENT_DISCOVERY_OF_A_NATURAL_WONDER");
+        const TypeIndex astrology = rules_->tech("TECH_ASTROLOGY");
+        TreeProgress& t = p.techs;
+        if (astrology != kNone && static_cast<size_t>(astrology) < t.done.size() && !t.done[static_cast<size_t>(astrology)] && !t.boosted[static_cast<size_t>(astrology)]) {
+            const int pct = rules_->techs[static_cast<size_t>(astrology)].boost.percent > 0 ? rules_->techs[static_cast<size_t>(astrology)].boost.percent : 40;
+            t.boosted[static_cast<size_t>(astrology)] = 1;
+            t.progress[static_cast<size_t>(astrology)] += Fixed::fromInt(techCost(astrology)) * pct / 100;
+        }
     }
 }
 
