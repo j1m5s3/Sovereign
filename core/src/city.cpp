@@ -906,6 +906,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
             a.id = state_.nextAgentId++;
             a.owner = city.owner;
             a.spy = u.spy;
+            if (a.spy && buildingsOwned(city.owner, "BUILDING_INTELLIGENCE_AGENCY") > 0) a.level = 2;  // trained a level up (08)
             state_.agents.push_back(a);
             Player& owner = state_.players[static_cast<size_t>(city.owner)];
             if (owner.unitsTrained.size() < rules_->units.size()) owner.unitsTrained.resize(rules_->units.size(), 0);

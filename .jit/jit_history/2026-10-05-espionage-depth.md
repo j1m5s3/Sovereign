@@ -14,4 +14,10 @@ Specs: 08-diplomacy-city-states-governors (Espionage); data/diplomacy-espionage 
 - Spy promotions (`spyPromotions` in espionage.json, generated from data/promotions.md's Espionage table; `Agent::promotions`, `promotionsPending`; save version 42; command `PromoteSpy` 53): every level gained (to ESPIONAGE_MAX_LEVEL 4) gives a promotion to choose, each once. Carried: +2 levels on named operations (Cat Burglar, Demolitions, Con Artist, Guerrilla Leader, Rocket Scientist, Smear Campaign, Covert Action, License to Kill, Satchel Charges, Seduction on six), +1 level on all (Quartermaster, Polygraph; also when counterspying), Ace Driver's escape (+4 off the 3d6 need), Disguise's establishing 100% faster (travel halved), Linguist's operations 25% faster, Surveillance's +1 counterspy level. The Technologist is not in the data.
 - AI: spends pending promotions in a fixed order (Seduction, Quartermaster, Polygraph, Con Artist, Ace Driver, Linguist, then the first it lacks); adds Disrupt Rocketry (worth most against a city building space race projects), Great Work Heist (only with a free slot at home), and, at war with a major, Recruit Partisans and Breach Dam to its operation choices.
 - Unreal: the operation names cover all thirteen; the spy's operation chooser lists its pending promotions first.
-- Still not modelled: Listening Post's gossip, trading captured spies back, the Intelligence Agency, Police State and Chancery effects.
+- Still not modelled: trading captured spies back, and Police State (not in the extracted policies).
+
+## Follow-up (2026-10-05)
+
+- **Listening Post.** A spy running one in a civ's city hears all that civ's gossip (`hearsOf`).
+- **Intelligence Agency.** One more spy (`spyCapacity`), and spies trained by its owner start at level 2.
+- **Chancery.** Catching an enemy spy gives Science toward current research: 50 per level of the spy caught (`Game::buildingsOwned` helps count buildings).
