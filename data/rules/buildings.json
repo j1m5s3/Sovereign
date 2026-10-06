@@ -413,6 +413,7 @@
    "yields": {},
    "unlock": "CIVIC_NATURAL_HISTORY",
    "amenities": 1,
+   "regionalRange": 6,
    "requires": [
     "BUILDING_ARENA"
    ],
@@ -427,6 +428,7 @@
    "yields": {},
    "unlock": "CIVIC_PROFESSIONAL_SPORTS",
    "amenities": 1,
+   "regionalRange": 6,
    "requires": [
     "BUILDING_ZOO"
    ],
@@ -833,6 +835,7 @@
    "maintenance": 3,
    "yields": {},
    "unlock": "TECH_INDUSTRIALIZATION",
+   "regionalRange": 6,
    "citizenSlots": 1,
    "specialistYields": {
     "PRODUCTION": 1
@@ -859,6 +862,7 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_INDUSTRIALIZATION",
+   "regionalRange": 6,
    "citizenSlots": 1,
    "requires": [
     "BUILDING_WORKSHOP"
@@ -882,6 +886,7 @@
     "PRODUCTION": 3
    },
    "unlock": "TECH_ELECTRICITY",
+   "regionalRange": 6,
    "citizenSlots": 1,
    "specialistYields": {
     "PRODUCTION": 1
@@ -909,6 +914,7 @@
     "SCIENCE": 3
    },
    "unlock": "TECH_NUCLEAR_FISSION",
+   "regionalRange": 6,
    "citizenSlots": 1,
    "specialistYields": {
     "PRODUCTION": 1
@@ -1113,6 +1119,7 @@
    "yields": {},
    "unlock": "CIVIC_NATURAL_HISTORY",
    "amenities": 1,
+   "regionalRange": 9,
    "requires": [
     "BUILDING_FERRIS_WHEEL"
    ],
@@ -1127,6 +1134,7 @@
    "yields": {},
    "unlock": "CIVIC_PROFESSIONAL_SPORTS",
    "amenities": 1,
+   "regionalRange": 9,
    "requires": [
     "BUILDING_AQUARIUM"
    ],
