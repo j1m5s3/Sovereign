@@ -21,10 +21,40 @@ bool Game::seesAntiquity(PlayerId player) const {
     return nh != kNone && player >= 0 && state_.players[at(player)].civics.has(nh);
 }
 
-void Game::noteBattle(Hex plot) {
+void Game::noteBattle(Hex plot, PlayerId attacker) {
     if (state_.antiquityPlaced || state_.gameEra > rules_->globalInt("ARCHAEOLOGY_MAX_ERA") || state_.battleSites.size() >= 400) return;
     const int32_t i = state_.grid.index(plot);
-    if (std::find(state_.battleSites.begin(), state_.battleSites.end(), i) == state_.battleSites.end()) state_.battleSites.push_back(i);
+    if (std::find(state_.battleSites.begin(), state_.battleSites.end(), i) != state_.battleSites.end()) return;
+    state_.battleSites.push_back(i);
+    // The Artifact found here later belongs to the attacker's civilization and the era of the fight.
+    const TypeIndex civ = attacker >= 0 ? state_.players[at(attacker)].civ : kNone;
+    state_.battleHistory.push_back(state_.gameEra * 4096 + civ + 1);
+}
+
+// Theming (07: Theming bonuses; data: buildings' theming flags): every slot of the building full, and its
+// works by different people and of one object type (Art Museum), or of one era and from different
+// civilizations (Archaeological Museum).
+bool Game::themed(const City& city, TypeIndex building) const {
+    const BuildingType& b = rules_->buildings[at(building)];
+    if (!b.theming) return false;
+    int slots = 0;
+    for (const auto& [slot, n] : b.greatWorkSlots) slots += n;
+    std::vector<const GreatWork*> works;
+    for (const GreatWork& w : city.greatWorks) {
+        if (w.building == building) works.push_back(&w);
+    }
+    if (slots <= 1 || static_cast<int>(works.size()) < slots) return false;
+    for (size_t i = 0; i < works.size(); ++i) {
+        for (size_t k = i + 1; k < works.size(); ++k) {
+            const GreatWork& x = *works[i];
+            const GreatWork& y = *works[k];
+            if (b.theming->sameObject && x.type != y.type) return false;
+            if (b.theming->uniquePerson && (x.creator == kNone || x.creator == y.creator)) return false;
+            if (b.theming->sameEra && (x.era < 0 || x.era != y.era)) return false;
+            if (b.theming->uniqueCivs && (x.civ == kNone || x.civ == y.civ)) return false;
+        }
+    }
+    return true;
 }
 
 void Game::placeAntiquity() {
@@ -88,6 +118,25 @@ void Game::excavate(UnitId id) {
     state_.plot(u.pos).antiquity = 0;
     TypeIndex artifact = kNone;
     for (size_t w = 0; w < rules_->greatWorkTypes.size(); ++w) artifact = rules_->greatWorkTypes[w].id == "ARTIFACT" ? static_cast<TypeIndex>(w) : artifact;
+    // Its history: the battle fought here, or (a site placed on open ground) a civilization in the game and an
+    // era before the present one, drawn at random.
+    int8_t era = -1;
+    TypeIndex civ = kNone;
+    const int32_t here = state_.grid.index(u.pos);
+    for (size_t i = 0; i < state_.battleSites.size() && i < state_.battleHistory.size(); ++i) {
+        if (state_.battleSites[i] != here) continue;
+        era = static_cast<int8_t>(state_.battleHistory[i] / 4096);
+        civ = static_cast<TypeIndex>(state_.battleHistory[i] % 4096 - 1);
+    }
+    if (civ == kNone) {
+        Rng& rng = state_.rng.get(RngStream::Gameplay);
+        std::vector<TypeIndex> civs;
+        for (const Player& p : state_.players) {
+            if (isMajorCiv(p.id) && p.civ != kNone) civs.push_back(p.civ);
+        }
+        if (!civs.empty()) civ = civs[rng.below(static_cast<uint32_t>(civs.size()))];
+        era = static_cast<int8_t>(rng.below(static_cast<uint32_t>(std::max(1, std::min(state_.gameEra, rules_->globalInt("ARCHAEOLOGY_MAX_ERA") + 1)))));
+    }
     for (City& c : state_.cities) {
         if (c.owner != u.owner) continue;
         const TypeIndex slot = freeGreatWorkSlot(c, artifact);
@@ -95,6 +144,8 @@ void Game::excavate(UnitId id) {
         GreatWork gw;
         gw.type = artifact;
         gw.building = slot;
+        gw.era = era;
+        gw.civ = civ;
         c.greatWorks.push_back(gw);
         break;
     }

@@ -1015,6 +1015,14 @@
    },
    "greatWorkSlots": {
     "ART": 3
+   },
+   "theming": {
+    "uniquePerson": true,
+    "sameObject": true,
+    "uniqueCivs": false,
+    "sameEra": false,
+    "yieldPercent": 100,
+    "tourismPercent": 100
    }
   },
   {
@@ -1038,6 +1046,14 @@
    },
    "greatWorkSlots": {
     "ARTIFACT": 3
+   },
+   "theming": {
+    "uniquePerson": false,
+    "sameObject": false,
+    "uniqueCivs": true,
+    "sameEra": true,
+    "yieldPercent": 100,
+    "tourismPercent": 100
    }
   },
   {

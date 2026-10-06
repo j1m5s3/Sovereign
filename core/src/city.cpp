@@ -170,7 +170,8 @@ CityReport Game::cityReport(CityId id) const {
     // Great Works in the city's slots, and great people whose effects improve its buildings.
     for (const GreatWork& w : c->greatWorks) {
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
-        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount);
+        const int pct = themed(*c, w.building) ? 100 + rules_->buildings[static_cast<size_t>(w.building)].theming->yieldPercent : 100;  // 07: Theming
+        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100);
     }
     for (TypeIndex person : owner.greatPeopleActivated) {
         for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {

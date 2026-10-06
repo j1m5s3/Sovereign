@@ -10,4 +10,4 @@ Specs: 07-great-people-great-works-tourism (Great Works slots, Archaeology); dat
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 
-- Not modelled: Landmarks (no data rows), artifacts' eras and civilizations (and so the Archaeological Museum's theming bonus), the 400-production cost's gold purchase rules beyond the usual.
+- Not modelled: Landmarks (no data rows), the 400-production cost's gold purchase rules beyond the usual. Artifacts' eras and civilizations, and theming, followed in `2026-10-05-theming.md`.
