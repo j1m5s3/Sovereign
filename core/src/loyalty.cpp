@@ -203,6 +203,22 @@ void Game::processLoyalty(PlayerId pid) {
             transferCity(ids[i], ensureFreeCityPlayer(), rules_->globalInt("LOYALTY_START") / 2);
             continue;
         }
+        // Unhappiness (02: Amenities): rebellion points by the city's mood, each a REBELLION_CHANCE_PER_POINT% chance a
+        // turn of rebels rising beside it, then REBELLION_COOLDOWN_TURNS of quiet.
+        if (!rules_->happiness.empty()) {
+            const CityReport rep = cityReport(c->id);
+            c->rebellion = std::max(0, c->rebellion + rules_->happiness[static_cast<size_t>(rep.happiness)].rebellionPoints);
+            if (c->rebellion > 0 && state_.turn >= c->rebellionCooldown) {
+                const int chance = static_cast<int>(rules_->global("REBELLION_CHANCE_PER_POINT").toInt()) * c->rebellion;
+                if (static_cast<int>(state_.rng.get(RngStream::Gameplay).below(100)) < chance) {
+                    c->rebellion = 0;
+                    c->rebellionCooldown = state_.turn + rules_->globalInt("REBELLION_COOLDOWN_TURNS");
+                    rebellion(*c);
+                    c = state_.city(ids[i]);
+                    if (!c || c->owner != pid) continue;
+                }
+            }
+        }
         // Too much iron fist: a Feared ruler's city in Unrest, once Fear has worn off, may rebel (§8.2).
         const bool unrest = !rules_->loyaltyLevels.empty() && c->loyalty < rules_->loyaltyLevels[1].minLoyalty;
         if (unrest && feared(pid) && !fearActive(*c) &&

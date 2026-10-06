@@ -311,6 +311,8 @@ struct SOV_API City {
     PlayerId originalOwner = kNoPlayer;
     bool originalCapital = false;  // founded as its owner's capital (cannot be razed)
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
+    int rebellion = 0;             // rebellion points from unhappiness (02: Amenities); each gives a chance of rebels a turn
+    int rebellionCooldown = 0;     // no rebels before this turn
     std::vector<CityDistrict> districts;  // in placement order
     int loyalty = 100;             // 0..LOYALTY_MAXIMUM [R&F]; at 0 the city revolts to the Free Cities
     // The leader's citizen stances (leader doc §4): turns until which each effect lasts.

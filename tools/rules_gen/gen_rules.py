@@ -886,7 +886,7 @@ def gen_happiness():
     for row in table(SPEC / "eras-moments-loyalty.md", "Amenities (happiness levels)"):
         h = {"id": "HAPPINESS_" + snake(row["Level"]),
              "growthPercent": int(num(row["Growth %"])), "yieldPercent": int(num(row["Non-food yield %"])),
-             "loyaltyPerTurn": int(num(row["Loyalty/turn [R&F]"]))}
+             "loyaltyPerTurn": int(num(row["Loyalty/turn [R&F]"])), "rebellionPoints": int(num(row["Rebellion points"]))}
         if row["Min amenity balance"]:
             h["minBalance"] = num(row["Min amenity balance"])
         out.append(h)

@@ -1,5 +1,7 @@
 // Rules found missing by an audit of the specs (01, 02, 03, 05): city spacing across water, occupied cities,
 // Theocracy's Faith purchases, the Heavy Chariot, Observation units, the Giant Death Robot.
+#include <algorithm>
+
 #include "helpers.h"
 
 using namespace sov;
@@ -84,4 +86,60 @@ TEST(a_captured_city_can_be_liberated) {
     CHECK_EQ(g->state().city(freed)->loyalty, rules().globalInt("LOYALTY_AFTER_TRANSFERRED_BY_LIBERATION"));
     CHECK_EQ(g->state().players[0].favor, rules().globalInt("FAVOR_FOR_LIBERATE_PLAYER_CITY"));
     CHECK(!g->canLiberateCity(2, freed));  // its own now
+}
+
+TEST(unhappy_cities_breed_rebels) {
+    GameState s = flatState(20, 12, 2);
+    s.players[1].barbarian = true;
+    s.players[1].civ = kNone;
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const CityId c = addCity(s, 0, {8, 6}, true, 4);
+    s.city(c)->rebellion = 60;  // past 50 points a rising is certain (2% each)
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const size_t units = g->state().units.size();
+    sovtest::endTurns(*g, 1);
+    CHECK(g->state().units.size() > units);  // the rebels
+    CHECK_EQ(g->state().city(c)->rebellion, 0);
+    CHECK(g->state().city(c)->rebellionCooldown > g->state().turn);
+}
+
+TEST(airlift_between_airports_and_paradrop) {
+    GameState s = flatState(24, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    const CityId a = addCity(s, 0, {4, 5}, true, 4);
+    const CityId b = addCity(s, 0, {16, 5}, false, 4);
+    for (const Hex& h : s.grid.within({4, 5}, 2)) s.plot(h).owner = 0, s.plot(h).city = a;
+    for (const Hex& h : s.grid.within({16, 5}, 2)) s.plot(h).owner = 0, s.plot(h).city = b;
+    const TypeIndex aerodrome = rules().district("DISTRICT_AERODROME");
+    const TypeIndex airport = rules().building("BUILDING_AIRPORT");
+    for (auto [id, pos] : {std::pair<CityId, Hex>{a, Hex{5, 5}}, {b, Hex{17, 5}}}) {
+        City& c = *s.city(id);
+        c.districts.push_back({aerodrome, pos, true});
+        c.buildings.push_back(airport);
+        std::sort(c.buildings.begin(), c.buildings.end());
+    }
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_RAPID_DEPLOYMENT"))] = 1;
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId soldier = addUnit(s, "UNIT_INFANTRY", 0, {5, 5});
+    const UnitId commando = addUnit(s, "UNIT_SPEC_OPS", 0, {4, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::airlift(0, soldier, {17, 5})) == CommandError::Ok);
+    CHECK((g->state().unit(soldier)->pos == Hex{17, 5}));
+    CHECK_EQ(g->validate(Command::paradrop(0, commando, {4, 10})), CommandError::BadTarget);  // four plots away
+    REQUIRE(g->submit(Command::paradrop(0, commando, {6, 8})) == CommandError::Ok);
+    CHECK((g->state().unit(commando)->pos == Hex{6, 8}));
+}
+
+TEST(submarines_hide_until_found) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    for (Plot& p : s.plots) p.terrain = rules().terrain("TERRAIN_COAST");
+    s.players[1].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+    const UnitId sub = addUnit(s, "UNIT_SUBMARINE", 0, {10, 6});
+    auto unseen = Game::fromScenario(rules(), s);
+    CHECK(!unseen->unitVisibleTo(1, *unseen->state().unit(sub)));
+    CHECK(unseen->unitVisibleTo(0, *unseen->state().unit(sub)));  // its owner
+    addUnit(s, "UNIT_DESTROYER", 1, {12, 6});  // two plots away, within its sight
+    auto found = Game::fromScenario(rules(), std::move(s));
+    CHECK(found->unitVisibleTo(1, *found->state().unit(sub)));
 }

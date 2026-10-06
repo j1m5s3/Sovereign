@@ -1,6 +1,6 @@
 # Plan: rules the spec audit found missing (step 6, "everything else")
 
-Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-ai-pace.md`. Two read-only audits compared specs/civ6 01, 02, 03 and 05 against the core and confirmed 22 gaps by grep. Chosen by Claude under James's standing consent.
+Status: done, 2026-10-06. Previous: `jit_history/2026-10-06-ai-pace.md`. Two read-only audits compared specs/civ6 01, 02, 03 and 05 against the core and confirmed 22 gaps by grep. Chosen by Claude under James's standing consent.
 
 ## Milestones (one PR each)
 
@@ -23,7 +23,13 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-ai-pace.md`. Two r
      - The Unreal production chooser offers it beside razing.
      - The AI returns captured cities that belonged to city-states.
    - **Wonder prerequisites:** the extractor's wonder table gains a Requires column (BuildingPrereqs, read from the local Civ VI install). The generator emits `requiresAny`, and `canPlaceWonder` asks for one of those buildings in the city. 14 wonders have one, e.g. the Great Library needs a Library, and Alhambra and Terracotta Army need a Barracks or Stable.
-3. **Then: stealth** (naval raiders hidden unless adjacent; `ABILITY_STEALTH`, `ABILITY_REVEAL_STEALTH`), **paradrop** (Spec Ops), **airlift** (Rapid Deployment between Airports) **and amenity rebellion** (`REBELLION_*`).
+3. **Done: stealth, paradrop, airlift and amenity rebellion:**
+   - **Stealth** (`unitVisibleTo`): Privateers, Submarines and Nuclear Submarines are seen only next to the viewer's units or cities, or within sight of one of its units that reveals stealth (Scouts, Destroyers, Submarines...). Attacks need the target seen, the AI's view of enemy armies uses it, and so does the Unreal mirror.
+   - **Paradrop** (`Paradrop`): a Spec Ops unit with its full moves, in its own territory, drops to a revealed land plot within 3.
+   - **Airlift** (`Airlift`): after Rapid Deployment, a land military unit with its full moves flies between two of the player's Aerodromes that have an Airport.
+   - Unreal: right-clicking a valid target airlifts or paradrops the selected unit.
+   - **Amenity rebellion:** each turn a city gains its mood's rebellion points (data: Revolt +4, Unrest +1, Displeased and better −1; floored at 0). Each point is a 2% chance a turn of rebels rising beside it (the leader doc's `rebellion`), followed by 20 turns of quiet (`REBELLION_*`; save version 70).
+   - The AI does not airlift or paradrop yet.
 
 ## Not planned
 

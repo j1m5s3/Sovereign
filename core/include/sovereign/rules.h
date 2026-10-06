@@ -592,6 +592,7 @@ struct HappinessLevel {
     int growthPercent = 0;
     int yieldPercent = 0;  // non-food yields
     int loyaltyPerTurn = 0;  // [R&F]
+    int rebellionPoints = 0;  // added each turn (negative: removed) toward rebels rising (02: Amenities)
 };
 
 // Loyalty levels [R&F] (02-cities.md, Loyalty): yield and growth scaling by loyalty.
