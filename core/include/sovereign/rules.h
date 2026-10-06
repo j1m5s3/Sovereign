@@ -141,6 +141,17 @@ enum class UnitEffectKind : uint8_t {
     BandBurst,          // +amount tourism from a concert at `at`
     PlunderPercent,     // +amount% to what it gains by pillaging or plundering (07: Plunder)
     CheapPillage,       // pillaging costs PILLAGE_ADVANCED_MOVEMENT_COST (05: Pillage)
+    // Movement, sight, healing and kills (05: promotions):
+    IgnoreHills,        // hills cost 1 movement
+    IgnoreForest,       // woods cost no extra movement
+    IgnoreTerrain,      // every land plot costs 1 movement
+    FreeEmbark,         // embarking and disembarking cost no extra movement
+    SeesThroughFeatures,  // woods and rainforest do not block its sight
+    CoastalRaid,        // may raid the coast like a naval raider
+    HealNeutral,        // + HP healing in neutral territory
+    HealEnemy,          // + HP healing in enemy territory
+    AirSlots,           // + aircraft it can carry
+    KillYield,          // `amount`% of a killed unit's strength as yield `at` (GOLD, FAITH, CULTURE)
 };
 
 enum class CombatAtom : uint8_t {
@@ -160,6 +171,13 @@ enum class CombatAtom : uint8_t {
     AdjacentSameUnit,   // a friendly unit of the same type stands next to it
     OpponentTileBase,   // the opponent stands on terrain of this climate (value: e.g. "DESERT")
     OpponentMinEra,     // the opponent unit is of this era or later (ref: Rules::eras)
+    InFormation,        // this unit is a Corps or Army
+    TileFort,           // this unit's plot has an improvement with a defense bonus (a Fort)
+    CoastalTile,        // this unit's plot is land next to water
+    HomeContinent,      // this unit is on its owner's capital's landmass
+    OpponentMinor,      // the opponent belongs to a city-state
+    OpponentFreeCity,   // the opponent belongs to the Free Cities
+    NearOwnTerritory,   // this unit is in or next to its owner's territory
 };
 
 struct CombatCondition {

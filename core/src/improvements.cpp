@@ -244,7 +244,8 @@ CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) cons
     const Unit* u = state_.unit(unit);
     if (!u || u->owner != player) return CommandError::NotYourUnit;
     const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
-    if (ut.domain != Domain::Sea || (ut.unitClass != "NAVAL_MELEE" && ut.unitClass != "NAVAL_RAIDER") || u->movesLeft <= Fixed()) return CommandError::BadUnit;
+    const bool raider = ut.unitClass == "NAVAL_MELEE" || ut.unitClass == "NAVAL_RAIDER" || unitHas(*u, UnitEffectKind::CoastalRaid);
+    if (ut.domain != Domain::Sea || !raider || u->movesLeft <= Fixed()) return CommandError::BadUnit;
     const auto t = state_.grid.normalize(at);
     if (!t || *t != at || state_.grid.distance(u->pos, at) != 1) return CommandError::BadTarget;
     const Plot& p = state_.plot(at);

@@ -416,3 +416,35 @@ TEST(a_military_academy_trains_corps_and_armies_whole) {
     REQUIRE(back);
     CHECK(back->state().city(city)->queue.front() == corps);
 }
+
+TEST(recon_naval_and_melee_promotions_take_effect) {
+    UnitId scout = kNoUnit, plain = kNoUnit, raider = kNoUnit, victim = kNoUnit, carrier = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        s.plot({5, 5}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+        s.plot({5, 6}).feature = rules().feature("FEATURE_FOREST");
+        scout = addUnit(s, "UNIT_SCOUT", 0, {4, 5});
+        s.units.back().promotions = {promotion("PROMOTION_ALPINE"), promotion("PROMOTION_RANGER")};
+        plain = addUnit(s, "UNIT_SCOUT", 0, {4, 6});
+        for (int y = 0; y < 12; ++y) s.plot({12, y}).terrain = s.plot({13, y}).terrain = rules().terrain("TERRAIN_COAST");
+        raider = addUnit(s, "UNIT_PRIVATEER", 0, {12, 5});
+        s.units.back().promotions = {promotion("PROMOTION_BOARDING")};
+        victim = addUnit(s, "UNIT_GALLEY", 1, {13, 5});
+        s.units.back().hp = 1;
+        carrier = addUnit(s, "UNIT_AIRCRAFT_CARRIER", 0, {12, 9});
+        s.units.back().promotions = {promotion("PROMOTION_FLIGHT_DECK")};
+    });
+    // Alpine and Ranger: hills and woods cost a single move.
+    CHECK(*g->moveCost(unit(*g, scout), {4, 5}, {5, 5}) == Fixed::fromInt(1));
+    CHECK(*g->moveCost(unit(*g, plain), {4, 5}, {5, 5}) > Fixed::fromInt(1));
+    CHECK(*g->moveCost(unit(*g, scout), {4, 6}, {5, 6}) == Fixed::fromInt(1));
+    CHECK(*g->moveCost(unit(*g, plain), {4, 6}, {5, 6}) > Fixed::fromInt(1));
+    // Flight Deck: one more aircraft aboard.
+    CHECK_EQ(g->airSlots(0, {12, 9}), rules().units[at(rules().unit("UNIT_AIRCRAFT_CARRIER"))].airSlots + 1);
+    // Boarding: Gold from a ship it sinks.
+    const Fixed gold = g->state().players[0].gold;
+    const CommandError boarded = g->submit(Command::rangedAttack(0, raider, {13, 5}));
+    REQUIRE(boarded == CommandError::Ok);
+    REQUIRE(g->state().unit(victim) == nullptr);
+    CHECK(g->state().players[0].gold > gold);
+}

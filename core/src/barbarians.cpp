@@ -41,6 +41,19 @@ void Game::linkBarbarians() {
     }
 }
 
+void Game::killReward(Player& to, const UnitEffect& e, const UnitType& victim) {
+    if (e.kind != UnitEffectKind::KillYield) return;
+    for (const auto& group : e.when) {
+        for (const CombatCondition& c : group) {
+            if (c.atom == CombatAtom::VsDomain && static_cast<int>(victim.domain) != c.arg) return;
+        }
+    }
+    const Fixed amount = Fixed::fromInt(victim.combat * e.amount / 100);
+    if (e.at == "GOLD") to.gold += amount;
+    else if (e.at == "FAITH") to.faith += amount;
+    else if (e.at == "CULTURE" && to.civics.current != kNone) to.civics.progress[static_cast<size_t>(to.civics.current)] += amount;
+}
+
 void Game::noteKill(const Unit& victim, const Unit* killer) {
     // Civ uniques: a kill heals (Scara) or brings the loser in as a Builder (Jaguar Warrior).
     if (killer && killer->owner != victim.owner) {
@@ -49,6 +62,16 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
         ++kp.killsThisEra;
         if (const int pct = civAbility(killer->owner).killFaithPercent; pct > 0)
             kp.faith += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat * pct / 100);
+        // Kill rewards of its promotions and abilities (Boarding: Gold from ships it sinks).
+        if (const Unit* k = state_.unit(killer->id)) {
+            const UnitType& vt = rules_->units[static_cast<size_t>(victim.type)];
+            for (TypeIndex a : unitAbilities(*k)) {
+                for (const UnitEffect& e : rules_->abilities[static_cast<size_t>(a)].effects) killReward(kp, e, vt);
+            }
+            for (TypeIndex pr : k->promotions) {
+                for (const UnitEffect& e : rules_->promotions[static_cast<size_t>(pr)].effects) killReward(kp, e, vt);
+            }
+        }
         // Native Conquest (04): gold of half the victim's strength.
         if (policyIs(killer->owner, "POLICY_NATIVE_CONQUEST")) kp.gold += Fixed::fromInt(rules_->units[static_cast<size_t>(victim.type)].combat / 2);
         if (Unit* k = state_.unit(killer->id)) {

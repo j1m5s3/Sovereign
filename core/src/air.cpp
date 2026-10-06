@@ -20,7 +20,10 @@ bool Game::isAircraft(const Unit& unit) const { return rules_->units[at(unit.typ
 int Game::airSlots(PlayerId player, Hex base) const {
     // Carriers on the plot and an Airstrip in the player's land add to any city or Aerodrome slots.
     int carried = 0;
-    for (const Unit& u : state_.units) carried += u.pos == base && u.owner == player ? rules_->units[at(u.type)].airSlots : 0;
+    for (const Unit& u : state_.units) {
+        // Flight Deck, Hangar Deck, Folding Wings (05): +1 each.
+        if (u.pos == base && u.owner == player && rules_->units[at(u.type)].airSlots > 0) carried += rules_->units[at(u.type)].airSlots + unitEffectTotal(u, UnitEffectKind::AirSlots);
+    }
     const Plot& here = state_.plot(base);
     if (here.improvement != kNone && here.owner == player && here.pillagedTurns == 0) carried += rules_->improvements[at(here.improvement)].airSlots;
     return carried + baseAirSlots(player, base);

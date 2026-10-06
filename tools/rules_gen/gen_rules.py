@@ -460,6 +460,24 @@ def condition_atom(text):
         a["atom"] = "DISTRICT_TILE"
     elif text == "in own territory":
         a["atom"] = "OWN_TERRITORY"
+    elif text == "unit damage minimum (MinimumAmount=1)":
+        a["atom"] = "OPPONENT_WOUNDED"
+    elif text == "unit in formation":
+        a["atom"] = "IN_FORMATION"
+    elif text == "attacker plot improvement defense strength (Amount=1)":
+        a["atom"] = "TILE_FORT"
+    elif text == "plot unit city has any district":
+        a["atom"] = "DISTRICT_TILE"
+    elif text == "on a coastal tile":
+        a["atom"] = "COASTAL_TILE"
+    elif text == "on home continent":
+        a["atom"] = "HOME_CONTINENT"
+    elif text == "opponent is minor civ":
+        a["atom"] = "OPPONENT_MINOR"
+    elif text == "opponent is free city":
+        a["atom"] = "OPPONENT_FREE_CITY"
+    elif text in ("unit adjacent to owner territory", "next to friendly territory", "in or next to friendly territory"):
+        a["atom"] = "NEAR_OWN_TERRITORY"
     elif re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text):
         era = re.fullmatch(r"opponent era at least \(MinimumEraType=(\w+) Era\)", text).group(1)
         a.update(atom="OPPONENT_MIN_ERA", value="ERA_" + era.upper())
@@ -506,6 +524,8 @@ def unit_effects(text):
             (r"\+(\d+) attack\(s\) per turn", "ATTACKS"), (r"\+(\d+)% combat XP", "XP_PERCENT"),
             (r"(\d+)% flanking bonus(?: where (?:Land|Sea) unit)?", "FLANKING_PERCENT"), (r"(\d+)% support bonus", "SUPPORT_PERCENT"),
             (r"\+(\d+)% pillage/plunder yields", "PLUNDER_PERCENT"),
+            (r"\+(\d+) HP healing \(Neutral\)", "HEAL_NEUTRAL"), (r"\+(\d+) HP healing \(Enemy\)", "HEAL_ENEMY"),
+            (r"\+(\d+) air slots", "AIR_SLOTS"),
         ]
         flags = {
             "can move after attacking": "MOVE_AFTER_ATTACK", "can attack after moving": "ATTACK_AFTER_MOVE",
@@ -514,7 +534,17 @@ def unit_effects(text):
             "can heal after moving/attacking": "HEAL_AFTER_ACTION", "can enter foreign territory": "IGNORE_BORDERS",
             "Melee units deal full damage to walls": "WALL_FULL_DAMAGE", "Melee units bypass walls": "BYPASS_WALLS",
             "pillaging costs only 1 movement": "CHEAP_PILLAGE",
+            "ignores Hills movement costs": "IGNORE_HILLS", "ignores Forest movement costs": "IGNORE_FOREST",
+            "ignores All movement costs": "IGNORE_TERRAIN", "no movement cost to embark/disembark": "FREE_EMBARK",
+            "sees through features": "SEES_THROUGH_FEATURES", "can coastal raid": "COASTAL_RAID",
         }
+        kill = re.fullmatch(r"after killing a unit gain (Gold|Faith|Culture) = (\d+)% of its Combat Strength in combat(?: where vs (Sea|Land) units)?", part)
+        if kill:
+            e = {"kind": "KILL_YIELD", "amount": int(kill.group(2)), "at": YIELD_WORDS[kill.group(1)]}
+            if kill.group(3):
+                e["when"] = [[{"atom": "VS_DOMAIN", "value": kill.group(3).upper()}]]
+            out.append(e)
+            continue
         band = band_effect(part)
         if band:
             out.append(band)

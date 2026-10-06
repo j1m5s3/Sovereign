@@ -775,8 +775,7 @@
       ],
       [
        {
-        "atom": "UNTRACKED",
-        "value": "unit damage minimum (MinimumAmount=1)"
+        "atom": "OPPONENT_WOUNDED"
        }
       ]
      ]
@@ -1090,8 +1089,7 @@
      "kind": "NO_RIVER_PENALTY"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "no movement cost to embark/disembark"
+     "kind": "FREE_EMBARK"
     }
    ]
   },
@@ -1281,8 +1279,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 air slots"
+     "kind": "AIR_SLOTS",
+     "amount": 1
     }
    ]
   },
@@ -1308,8 +1306,8 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 air slots"
+     "kind": "AIR_SLOTS",
+     "amount": 1
     }
    ]
   },
@@ -1339,8 +1337,8 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+1 air slots"
+     "kind": "AIR_SLOTS",
+     "amount": 1
     }
    ]
   },
@@ -1370,12 +1368,12 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+10 HP healing (Neutral)"
+     "kind": "HEAL_NEUTRAL",
+     "amount": 10
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+5 HP healing (Enemy)"
+     "kind": "HEAL_ENEMY",
+     "amount": 5
     }
    ]
   },
@@ -1466,12 +1464,12 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+10 HP healing (Neutral)"
+     "kind": "HEAL_NEUTRAL",
+     "amount": 10
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+5 HP healing (Enemy)"
+     "kind": "HEAL_ENEMY",
+     "amount": 5
     }
    ]
   },
@@ -1491,8 +1489,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "unit in formation"
+        "atom": "IN_FORMATION"
        }
       ]
      ]
@@ -1530,8 +1527,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "can coastal raid"
+     "kind": "COASTAL_RAID"
     }
    ]
   },
@@ -1542,8 +1538,17 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "after killing a unit gain Gold = 100% of its Combat Strength in combat where vs Sea units"
+     "kind": "KILL_YIELD",
+     "amount": 100,
+     "at": "GOLD",
+     "when": [
+      [
+       {
+        "atom": "VS_DOMAIN",
+        "value": "SEA"
+       }
+      ]
+     ]
     }
    ]
   },
@@ -1747,12 +1752,12 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+10 HP healing (Neutral)"
+     "kind": "HEAL_NEUTRAL",
+     "amount": 10
     },
     {
-     "kind": "UNTRACKED",
-     "text": "+5 HP healing (Enemy)"
+     "kind": "HEAL_ENEMY",
+     "amount": 5
     }
    ]
   },
@@ -1829,8 +1834,9 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "after killing a unit gain Faith = 50% of its Combat Strength in combat"
+     "kind": "KILL_YIELD",
+     "amount": 50,
+     "at": "FAITH"
     }
    ]
   },
@@ -1926,12 +1932,10 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "attacker plot improvement defense strength (Amount=1)"
+        "atom": "TILE_FORT"
        },
        {
-        "atom": "UNTRACKED",
-        "value": "plot unit city has any district"
+        "atom": "DISTRICT_TILE"
        }
       ]
      ]
@@ -2067,8 +2071,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Forest movement costs"
+     "kind": "IGNORE_FOREST"
     }
    ]
   },
@@ -2079,8 +2082,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Hills movement costs"
+     "kind": "IGNORE_HILLS"
     }
    ]
   },
@@ -2095,8 +2097,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "sees through features"
+     "kind": "SEES_THROUGH_FEATURES"
     }
    ]
   },
@@ -2859,8 +2860,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Hills movement costs"
+     "kind": "IGNORE_HILLS"
     },
     {
      "kind": "STRENGTH",
@@ -2884,8 +2884,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Hills movement costs"
+     "kind": "IGNORE_HILLS"
     }
    ]
   },
@@ -3043,8 +3042,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "opponent is minor civ"
+        "atom": "OPPONENT_MINOR"
        }
       ]
      ]
@@ -3347,8 +3345,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "can coastal raid"
+     "kind": "COASTAL_RAID"
     }
    ]
   },
@@ -3561,8 +3558,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "unit adjacent to owner territory"
+        "atom": "NEAR_OWN_TERRITORY"
        },
        {
         "atom": "OWN_TERRITORY"
@@ -3636,8 +3632,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "on a coastal tile"
+        "atom": "COASTAL_TILE"
        }
       ]
      ]
@@ -3844,8 +3839,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Hills movement costs"
+     "kind": "IGNORE_HILLS"
     }
    ]
   },
@@ -3960,8 +3954,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "unit adjacent to owner territory"
+        "atom": "NEAR_OWN_TERRITORY"
        },
        {
         "atom": "OWN_TERRITORY"
@@ -4071,8 +4064,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "on home continent"
+        "atom": "HOME_CONTINENT"
        }
       ]
      ]
@@ -4124,8 +4116,7 @@
      ]
     },
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Hills movement costs"
+     "kind": "IGNORE_HILLS"
     }
    ]
   },
@@ -4194,8 +4185,7 @@
         "value": "in"
        },
        {
-        "atom": "UNTRACKED",
-        "value": "next to friendly territory"
+        "atom": "NEAR_OWN_TERRITORY"
        }
       ]
      ]
@@ -4464,8 +4454,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+10 HP healing (Neutral)"
+     "kind": "HEAL_NEUTRAL",
+     "amount": 10
     }
    ]
   },
@@ -4548,8 +4538,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "on a coastal tile"
+        "atom": "COASTAL_TILE"
        }
       ]
      ]
@@ -4573,8 +4562,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "on a coastal tile"
+        "atom": "COASTAL_TILE"
        }
       ]
      ]
@@ -4696,8 +4684,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores All movement costs"
+     "kind": "IGNORE_TERRAIN"
     }
    ]
   },
@@ -4772,8 +4759,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "unit in formation"
+        "atom": "IN_FORMATION"
        }
       ]
      ]
@@ -4795,8 +4781,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "no movement cost to embark/disembark"
+     "kind": "FREE_EMBARK"
     }
    ]
   },
@@ -4826,16 +4811,18 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "after killing a unit gain Faith = 50% of its Combat Strength in combat"
+     "kind": "KILL_YIELD",
+     "amount": 50,
+     "at": "FAITH"
     },
     {
      "kind": "UNTRACKED",
      "text": "after killing a unit gain Science = 50% of its Combat Strength in combat"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "after killing a unit gain Culture = 50% of its Combat Strength in combat"
+     "kind": "KILL_YIELD",
+     "amount": 50,
+     "at": "CULTURE"
     }
    ]
   },
@@ -4958,8 +4945,9 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "after killing a unit gain Gold = 100% of its Combat Strength in combat"
+     "kind": "KILL_YIELD",
+     "amount": 100,
+     "at": "GOLD"
     },
     {
      "kind": "UNTRACKED",
@@ -4984,8 +4972,7 @@
         "value": "in"
        },
        {
-        "atom": "UNTRACKED",
-        "value": "next to friendly territory"
+        "atom": "NEAR_OWN_TERRITORY"
        }
       ]
      ]
@@ -5031,8 +5018,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "no movement cost to embark/disembark"
+     "kind": "FREE_EMBARK"
     },
     {
      "kind": "UNTRACKED",
@@ -5053,8 +5039,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "can coastal raid"
+     "kind": "COASTAL_RAID"
     }
    ]
   },
@@ -5284,12 +5269,10 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "sees through features"
+     "kind": "SEES_THROUGH_FEATURES"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "ignores Forest movement costs"
+     "kind": "IGNORE_FOREST"
     },
     {
      "kind": "STRENGTH",
@@ -5664,15 +5647,13 @@
       [
        {
         "not": true,
-        "atom": "UNTRACKED",
-        "value": "on home continent"
+        "atom": "HOME_CONTINENT"
        }
       ]
      ]
     },
     {
-     "kind": "UNTRACKED",
-     "text": "no movement cost to embark/disembark"
+     "kind": "FREE_EMBARK"
     }
    ]
   },
@@ -5710,8 +5691,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "ignores All movement costs"
+     "kind": "IGNORE_TERRAIN"
     },
     {
      "kind": "NO_RIVER_PENALTY"
@@ -5779,8 +5759,7 @@
      "when": [
       [
        {
-        "atom": "UNTRACKED",
-        "value": "on home continent"
+        "atom": "HOME_CONTINENT"
        }
       ]
      ]
@@ -6077,15 +6056,13 @@
       [
        {
         "not": true,
-        "atom": "UNTRACKED",
-        "value": "opponent is minor civ"
+        "atom": "OPPONENT_MINOR"
        }
       ],
       [
        {
         "not": true,
-        "atom": "UNTRACKED",
-        "value": "opponent is free city"
+        "atom": "OPPONENT_FREE_CITY"
        }
       ],
       [
@@ -6348,8 +6325,7 @@
         "value": "opponent era age matches (Type=Golden)"
        },
        {
-        "atom": "UNTRACKED",
-        "value": "opponent is free city"
+        "atom": "OPPONENT_FREE_CITY"
        }
       ]
      ]
@@ -6631,8 +6607,7 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "sees through features"
+     "kind": "SEES_THROUGH_FEATURES"
     },
     {
      "kind": "UNTRACKED",

@@ -50,7 +50,7 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
         case CombatAtom::OpponentWounded:
             ok = x.opponent ? x.opponent->hp < x.r->globalInt("COMBAT_MAX_HIT_POINTS") : x.city && x.city->hp < x.cityMaxHp;
             break;
-        case CombatAtom::DistrictTile: ok = x.s->cityAt(x.unit->pos) != nullptr; break;
+        case CombatAtom::DistrictTile: ok = x.s->cityAt(x.unit->pos) != nullptr || x.s->districtAt(x.unit->pos) != nullptr; break;
         case CombatAtom::OwnTerritory: ok = plot.owner == x.unit->owner; break;
         case CombatAtom::AdjacentSameUnit:
             for (const Unit& o : x.s->units) {
@@ -62,6 +62,32 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
             break;
         case CombatAtom::OpponentMinEra:
             ok = x.opponent && x.r->units[static_cast<size_t>(x.opponent->type)].era >= c.ref;
+            break;
+        case CombatAtom::InFormation: ok = x.unit->formation > 0; break;
+        case CombatAtom::TileFort:
+            ok = plot.improvement != kNone && plot.pillagedTurns == 0 && x.r->improvements[static_cast<size_t>(plot.improvement)].defense > 0;
+            break;
+        case CombatAtom::CoastalTile:
+            for (const Hex& h : x.s->grid.within(x.unit->pos, 1)) ok = ok || x.r->terrains[static_cast<size_t>(x.s->plot(h).terrain)].water;
+            ok = ok && !x.r->terrains[static_cast<size_t>(plot.terrain)].water;
+            break;
+        case CombatAtom::HomeContinent:
+            for (const City& c2 : x.s->cities) {
+                if (c2.owner == x.unit->owner && c2.capital) ok = x.s->plot(c2.pos).continent == plot.continent;
+            }
+            break;
+        case CombatAtom::OpponentMinor: {
+            const PlayerId o = x.opponent ? x.opponent->owner : x.city ? x.city->owner : kNoPlayer;
+            ok = o != kNoPlayer && x.s->players[static_cast<size_t>(o)].cityState != kNone;
+            break;
+        }
+        case CombatAtom::OpponentFreeCity: {
+            const PlayerId o = x.opponent ? x.opponent->owner : x.city ? x.city->owner : kNoPlayer;
+            ok = o != kNoPlayer && x.s->players[static_cast<size_t>(o)].freeCity;
+            break;
+        }
+        case CombatAtom::NearOwnTerritory:
+            for (const Hex& h : x.s->grid.within(x.unit->pos, 1)) ok = ok || x.s->plot(h).owner == x.unit->owner;
             break;
     }
     return c.negate ? !ok : ok;
@@ -1516,8 +1542,8 @@ void Game::healAndFortify(PlayerId pid) {
             if (c && c->owner == pid) heal = rules_->globalInt("COMBAT_HEAL_CITY_GARRISON");
             else if (p.owner == pid) heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_FRIENDLY" : "COMBAT_HEAL_LAND_FRIENDLY");
             else if (p.owner != kNoPlayer && atWar(pid, p.owner))
-                heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_ENEMY" : "COMBAT_HEAL_LAND_ENEMY");
-            else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL");
+                heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_ENEMY" : "COMBAT_HEAL_LAND_ENEMY") + unitEffectTotal(u, UnitEffectKind::HealEnemy);
+            else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL") + unitEffectTotal(u, UnitEffectKind::HealNeutral);
             if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
             u.hp = std::min(maxHp, u.hp + heal);
         }
