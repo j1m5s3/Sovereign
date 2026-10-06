@@ -310,6 +310,28 @@ enum class GreatPersonEffectKind : uint8_t {
     BuildingYield,      // permanent: + yield from a building in all the player's cities
     GreatPersonPoints,  // points toward every class
     Ability,            // permanent: an ability for the player's units of its classes
+    // One-time (07: Great People):
+    Envoys,             // `amount` envoys to send
+    EnvoysHere,         // `amount` envoys at the city-state it stands in
+    GovernorTitles,     // `amount` governor titles
+    Relic,              // `amount` relics into free slots
+    RandomTechs,        // `count` random available techs, completed
+    Formation,          // the military unit here becomes a Corps (1) or Army (2)
+    UnitsInDistricts,   // a `ref` unit in each of this city's districts
+    NavalMeleeUnit,     // the player's best naval melee unit, here
+    ScienceAdjacent,    // `amount` Science per adjacent plot of `what` (MOUNTAIN or a feature id)
+    SciencePerArtifact, // `amount` Science per artifact in this city
+    ScienceNearWonder,  // `amount` Science when next to a natural wonder
+    WonderProduction,   // `amount` toward a wonder of [minEra, maxEra] built here, else `count`
+    UnitXp,             // the military unit here gains +`amount`% combat XP for good
+    ConvertBarbarians,  // barbarian units next to it join the player
+    Suzerain,           // the player becomes suzerain of the city-state it stands in, others' envoys removed
+    // Lasting, read from greatPeopleActivated (or the city's greatPeopleHere):
+    TradeRoutes,        // + `amount` trade route capacity
+    ResourcePerTurn,    // + `amount` of resource `ref` a turn
+    DistrictCapacity,   // + `amount` districts in the city where it was used
+    Ocean,              // the player's ships may enter Ocean
+    ArtifactTourism,    // artifacts give `amount`% of their tourism
 };
 
 struct GreatPersonEffect {
@@ -322,6 +344,7 @@ struct GreatPersonEffect {
     TypeIndex ref = kNone;    // tech, civic, building or unit
     int count = 0;
     int minEra = 0, maxEra = 0;
+    std::string what;  // ScienceAdjacent: MOUNTAIN or a feature id
 };
 
 // Where a wonder may stand (03: Wonders; data: wonders.md, Placement).

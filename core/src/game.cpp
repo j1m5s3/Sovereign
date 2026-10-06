@@ -422,7 +422,7 @@ bool Game::canEnterOcean(PlayerId player) const {
     for (size_t i = 0; i < rules_->techs.size(); ++i) {
         if (rules_->techs[i].ocean && p.techs.has(static_cast<TypeIndex>(i))) return true;
     }
-    return false;
+    return greatPersonEffectTotal(player, GreatPersonEffectKind::Ocean) > 0;  // Leif Erikson (07)
 }
 
 bool Game::isEmbarked(const Unit& unit) const {

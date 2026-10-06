@@ -470,6 +470,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(u.camp);
         w.u8(u.formation);
         w.u8(u.wonderAbilities);
+        w.i16(u.xpBonus);
         for (TypeIndex g : u.gear) w.i32(g);
         w.i32(u.escorting);
     }
@@ -922,6 +923,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         u.formation = r.u8();
         if (u.formation > 2) return false;
         u.wonderAbilities = r.u8();
+        u.xpBonus = r.i16();
         for (TypeIndex& g : u.gear) g = static_cast<TypeIndex>(r.i32());
         u.escorting = r.i32();
     }

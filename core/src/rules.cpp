@@ -1824,8 +1824,39 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 fx.kind = GreatPersonEffectKind::GreatPersonPoints;
                 fx.ref = 0;
             } else {
-                *error = where + ": unknown effect kind " + kind;
-                return false;
+                static const std::pair<const char*, GreatPersonEffectKind> kMore[] = {
+                    {"ENVOYS", GreatPersonEffectKind::Envoys}, {"ENVOYS_HERE", GreatPersonEffectKind::EnvoysHere},
+                    {"GOVERNOR_TITLES", GreatPersonEffectKind::GovernorTitles}, {"RELIC", GreatPersonEffectKind::Relic},
+                    {"RANDOM_TECHS", GreatPersonEffectKind::RandomTechs}, {"FORMATION", GreatPersonEffectKind::Formation},
+                    {"UNITS_IN_DISTRICTS", GreatPersonEffectKind::UnitsInDistricts}, {"NAVAL_MELEE_UNIT", GreatPersonEffectKind::NavalMeleeUnit},
+                    {"SCIENCE_ADJACENT", GreatPersonEffectKind::ScienceAdjacent}, {"SCIENCE_PER_ARTIFACT", GreatPersonEffectKind::SciencePerArtifact},
+                    {"SCIENCE_NEAR_WONDER", GreatPersonEffectKind::ScienceNearWonder}, {"WONDER_PRODUCTION", GreatPersonEffectKind::WonderProduction},
+                    {"UNIT_XP", GreatPersonEffectKind::UnitXp}, {"CONVERT_BARBARIANS", GreatPersonEffectKind::ConvertBarbarians},
+                    {"SUZERAIN", GreatPersonEffectKind::Suzerain}, {"TRADE_ROUTES", GreatPersonEffectKind::TradeRoutes},
+                    {"RESOURCE_PER_TURN", GreatPersonEffectKind::ResourcePerTurn}, {"DISTRICT_CAPACITY", GreatPersonEffectKind::DistrictCapacity},
+                    {"OCEAN", GreatPersonEffectKind::Ocean}, {"ARTIFACT_TOURISM", GreatPersonEffectKind::ArtifactTourism},
+                };
+                bool known = false;
+                for (const auto& [name, k] : kMore) {
+                    if (kind == name) {
+                        fx.kind = k;
+                        known = true;
+                    }
+                }
+                if (!known) {
+                    *error = where + ": unknown effect kind " + kind;
+                    return false;
+                }
+                fx.what = ej["what"].str();
+                fx.ref = 0;
+                if (fx.kind == GreatPersonEffectKind::UnitsInDistricts) fx.ref = unit(ref);
+                if (fx.kind == GreatPersonEffectKind::ResourcePerTurn) fx.ref = resource(fx.what);
+                if (fx.kind == GreatPersonEffectKind::ScienceAdjacent && fx.what != "MOUNTAIN" && feature(fx.what) == kNone) fx.ref = kNone;
+                if (fx.kind == GreatPersonEffectKind::WonderProduction) {
+                    fx.minEra = era(ej["minEra"].str());
+                    fx.maxEra = era(ej["maxEra"].str());
+                    if (fx.minEra == kNone || fx.maxEra == kNone) fx.ref = kNone;
+                }
             }
             if (fx.ref == kNone && fx.kind != GreatPersonEffectKind::Yield && fx.kind != GreatPersonEffectKind::Production) {
                 *error = where + ": effect " + kind + " refers to unknown " + ref;

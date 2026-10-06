@@ -422,6 +422,9 @@ void Game::accumulateStrategics(PlayerId pid) {
         for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
         player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
     }
+    // Great people (07): resources a turn (Douglas MacArthur, Yi Sun-sin, John Rockefeller...).
+    for (size_t r = 0; r < rules_->resources.size() && r < player.stockpile.size(); ++r)
+        player.stockpile[r] += greatPersonEffectTotal(pid, GreatPersonEffectKind::ResourcePerTurn, static_cast<TypeIndex>(r));
     // Aerospace Contractors (04): +3 Aluminum a turn in each city with a Spaceport.
     if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS")) {
         const TypeIndex aluminum = rules_->resource("RESOURCE_ALUMINUM"), spaceport = rules_->district("DISTRICT_SPACEPORT");

@@ -512,6 +512,9 @@ public:
     bool difficultyHuman(PlayerId player) const;  // a human-run major civ
     // Unit upgrades (05: Upgrades): gold to turn the unit into the next in its line, -1 when it has none.
     int upgradeCost(const Unit& unit) const;
+    // Lasting great person effects of a kind: the player's (those it used), or a city's (those used there).
+    int greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, TypeIndex ref = kNone) const;
+    int cityGreatPersonEffectTotal(const City& city, GreatPersonEffectKind kind) const;
     int upgradeResourceCost(const Unit& unit) const;  // strategic resources the upgrade spends
     TypeIndex upgradeTarget(const Unit& unit) const;  // the next unit in its line (the civ's unique if it has one)
     CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now

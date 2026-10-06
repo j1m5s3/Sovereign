@@ -1864,8 +1864,81 @@ def gp_effects(text, ids):
         if m:
             effects.append({"kind": "GREAT_PERSON_POINTS", "amount": int(m.group(1))})
             continue
+        typed = gp_more_effects(t, ids)
+        if typed is not None:
+            effects += typed
+            continue
         untracked.append(part)
     return effects, untracked
+
+
+STRATEGIC_WORDS = {"Horses", "Iron", "Niter", "Coal", "Oil", "Aluminum", "Uranium"}
+
+
+def gp_more_effects(t, ids):
+    """The one-time and lasting activation effects the core runs in code (07: Great People).
+    Returns the typed effects ([] to drop a line another one covers), or None if unread."""
+    m = re.fullmatch(r"grants (\d+) Envoy\(s\)", t)
+    if m:
+        return [{"kind": "ENVOYS", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"grant free envoys here \(Amount=(\d+)\)", t)
+    if m:
+        return [{"kind": "ENVOYS_HERE", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"\+(\d+) Governor Title\(s\)", t)
+    if m:
+        return [{"kind": "GOVERNOR_TITLES", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"\+(\d+) Trade Route capacity", t)
+    if m:
+        return [{"kind": "TRADE_ROUTES", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"grants (\d+) Relic\(s\)", t)
+    if m:
+        return [{"kind": "RELIC", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"grants (\d+) random technology", t)
+    if m:
+        return [{"kind": "RANDOM_TECHS", "count": int(m.group(1))}]
+    m = re.fullmatch(r"is formed as (Corps|Army) Military Formation", t)
+    if m:
+        return [{"kind": "FORMATION", "amount": 1 if m.group(1) == "Corps" else 2}]
+    m = re.fullmatch(r"grants a (.+?) in each district", t)
+    if m and m.group(1) in ids["units"]:
+        return [{"kind": "UNITS_IN_DISTRICTS", "ref": ids["units"][m.group(1)]}]
+    if t == "grants a Naval Melee unit":
+        return [{"kind": "NAVAL_MELEE_UNIT"}]
+    m = re.fullmatch(r"(\d+) \(x game speed\) Science on adjacent (Mountain|Rainforest)", t)
+    if m:
+        return [{"kind": "SCIENCE_ADJACENT", "amount": int(m.group(1)), "what": "MOUNTAIN" if m.group(2) == "Mountain" else "FEATURE_JUNGLE"}]
+    m = re.fullmatch(r"(\d+) \(x game speed\) Science per Artifact in the city", t)
+    if m:
+        return [{"kind": "SCIENCE_PER_ARTIFACT", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"grant unit yield adjacent natural wonders \(YieldType=Science, Amount=(\d+) \(x game speed\)\)", t)
+    if m:
+        return [{"kind": "SCIENCE_NEAR_WONDER", "amount": int(m.group(1))}]
+    # Imhotep: 350 toward an Ancient or Classical wonder being built here, else 175 (two lines; the second is read with the first).
+    m = re.fullmatch(r"one-time (\d+) \(x game speed\) Production where (NOT )?plot wonder is era \(EarliestEra=(\w+) Era, LatestEra=(\w+) Era\)", t)
+    if m:
+        if m.group(2):
+            return []
+        return [{"kind": "WONDER_PRODUCTION", "amount": int(m.group(1)), "count": int(m.group(1)) // 2,
+                 "minEra": "ERA_" + m.group(3).upper(), "maxEra": "ERA_" + m.group(4).upper()}]
+    m = re.fullmatch(r"ability .+? Bonus Experience \[\+(\d+)% combat XP\]", t)
+    if m:
+        return [{"kind": "UNIT_XP", "amount": int(m.group(1))}]
+    if t == "adjust unit owner (NewOwner=Player) for all units where within 1 tiles and unit is barbarian":
+        return [{"kind": "CONVERT_BARBARIANS"}]
+    if t == "become city suzerain (RemoveOthers=yes)":
+        return [{"kind": "SUZERAIN"}]
+    m = re.fullmatch(r"\+(\d+) (\w+) per turn", t)
+    if m and m.group(2) in STRATEGIC_WORDS:
+        return [{"kind": "RESOURCE_PER_TURN", "amount": int(m.group(1)), "what": "RESOURCE_" + m.group(2).upper()}]
+    m = re.fullmatch(r"\+(\d+) district capacity", t)
+    if m:
+        return [{"kind": "DISTRICT_CAPACITY", "amount": int(m.group(1))}]
+    if t == "can enter Ocean for your units where Sea unit":
+        return [{"kind": "OCEAN"}]
+    m = re.fullmatch(r"Tourism from Artifact scaled (\d+)% in all your cities", t)
+    if m:
+        return [{"kind": "ARTIFACT_TOURISM", "amount": int(m.group(1))}]
+    return None
 
 
 def gen_great_people():

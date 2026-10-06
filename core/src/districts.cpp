@@ -25,7 +25,8 @@ bool onRiver(const GameState& s, Hex h) {
 
 int Game::districtLimit(const City& city) const {
     const int per = std::max(1, rules_->globalInt("DISTRICT_POPULATION_REQUIRED_PER"));
-    return 1 + std::max(0, city.population - 1) / per;
+    // Bi Sheng, Ada Lovelace (07): more districts in the city where they were used.
+    return 1 + std::max(0, city.population - 1) / per + cityGreatPersonEffectTotal(city, GreatPersonEffectKind::DistrictCapacity);
 }
 
 int Game::districtCost(PlayerId player, TypeIndex type) const {

@@ -68,6 +68,26 @@ int Game::patronageCost(PlayerId player, TypeIndex cls, bool faith) const {
     return faith ? 150 + 10 * missing : 200 + 15 * missing;
 }
 
+int Game::greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, TypeIndex ref) const {
+    int total = 0;
+    for (TypeIndex person : state_.players[at(player)].greatPeopleActivated) {
+        for (const GreatPersonEffect& fx : rules_->greatPeople[at(person)].effects) {
+            if (fx.kind == kind && (ref == kNone || fx.ref == ref)) total += std::max(1, fx.amount);
+        }
+    }
+    return total;
+}
+
+int Game::cityGreatPersonEffectTotal(const City& city, GreatPersonEffectKind kind) const {
+    int total = 0;
+    for (TypeIndex person : city.greatPeopleHere) {
+        for (const GreatPersonEffect& fx : rules_->greatPeople[at(person)].effects) {
+            if (fx.kind == kind) total += std::max(1, fx.amount);
+        }
+    }
+    return total;
+}
+
 int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     int total = 0;
     for (const City& c : state_.cities) {
@@ -390,7 +410,155 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::BuildingYield:
-        case GreatPersonEffectKind::Ability: break;  // permanent: read from greatPeopleActivated
+        case GreatPersonEffectKind::Ability:
+        case GreatPersonEffectKind::TradeRoutes:
+        case GreatPersonEffectKind::ResourcePerTurn:
+        case GreatPersonEffectKind::DistrictCapacity:
+        case GreatPersonEffectKind::Ocean:
+        case GreatPersonEffectKind::ArtifactTourism: break;  // lasting: read from greatPeopleActivated or greatPeopleHere
+        case GreatPersonEffectKind::Envoys:
+            if (!policyIs(pid, "POLICY_ROGUE_STATE")) p.envoyTokens += fx.amount;  // Rogue State: no envoys (09)
+            break;
+        case GreatPersonEffectKind::EnvoysHere: {
+            const PlayerId cs = state_.plot(here).owner;
+            if (cs == kNoPlayer || !isCityState(cs) || policyIs(pid, "POLICY_ROGUE_STATE")) break;
+            if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
+            p.envoys[at(cs)] += fx.amount;
+            break;
+        }
+        case GreatPersonEffectKind::GovernorTitles: p.governorTitlesSpent -= fx.amount; break;
+        case GreatPersonEffectKind::Relic: {
+            const TypeIndex relic = rules_->greatWorkType("RELIC");
+            for (int k = 0; k < fx.amount && relic != kNone; ++k) {
+                for (City& c : state_.cities) {
+                    if (c.owner != pid) continue;
+                    const TypeIndex slot = freeGreatWorkSlot(c, relic);
+                    if (slot == kNone) continue;
+                    GreatWork w;
+                    w.type = relic;
+                    w.building = slot;
+                    c.greatWorks.push_back(w);
+                    break;
+                }
+            }
+            break;
+        }
+        case GreatPersonEffectKind::RandomTechs: {
+            Rng& rng = state_.rng.get(RngStream::Gameplay);
+            for (int k = 0; k < fx.count; ++k) {
+                const std::vector<TypeIndex> open = availableTechs(pid);
+                if (open.empty()) break;
+                const TypeIndex t = open[rng.below(static_cast<uint32_t>(open.size()))];
+                p.techs.progress[at(t)] = Fixed::fromInt(techCost(t));
+                completeNode(pid, false, t);
+            }
+            break;
+        }
+        case GreatPersonEffectKind::Formation: {
+            Unit* m = nullptr;
+            for (Unit& o : state_.units) {
+                if (o.pos == here && o.owner == pid && rules_->units[at(o.type)].layer == UnitLayer::Military) m = &o;
+            }
+            if (m) m->formation = static_cast<uint8_t>(std::max<int>(m->formation, fx.amount));
+            break;
+        }
+        case GreatPersonEffectKind::UnitsInDistricts: {
+            if (!city) break;
+            std::vector<Hex> spots;
+            for (const CityDistrict& d : city->districts) {
+                if (d.complete) spots.push_back(d.pos);
+            }
+            for (const Hex& h : spots) {
+                if (!state_.unitAt(h, rules_->units[at(fx.ref)].layer, *rules_)) spawnUnit(fx.ref, pid, h);
+            }
+            break;
+        }
+        case GreatPersonEffectKind::NavalMeleeUnit: {
+            // The most advanced naval melee unit the player can train (its civ's unique one where it has it).
+            TypeIndex best = kNone;
+            for (size_t i = 0; i < rules_->units.size(); ++i) {
+                const UnitType& ut = rules_->units[i];
+                if (ut.unitClass != "NAVAL_MELEE" || !ut.trainable || !hasUnlocked(pid, ut.unlock)) continue;
+                if (ut.uniqueTo != kNone && ut.uniqueTo != p.civ) continue;
+                if (rules_->uniqueUnitFor(p.civ, static_cast<TypeIndex>(i)) != kNone) continue;
+                if (best == kNone || ut.era > rules_->units[at(best)].era) best = static_cast<TypeIndex>(i);
+            }
+            if (best == kNone) break;
+            std::optional<Hex> spot;
+            if (city) spot = unitSpawnPlot(*city, best);
+            if (spot) spawnUnit(best, pid, *spot);
+            break;
+        }
+        case GreatPersonEffectKind::ScienceAdjacent: {
+            int n = 0;
+            for (const Hex& h : state_.grid.within(here, 1)) {
+                if (h == here) continue;
+                const Plot& pl = state_.plot(h);
+                if (fx.what == "MOUNTAIN") n += rules_->terrains[at(pl.terrain)].relief == Relief::Mountain ? 1 : 0;
+                else n += pl.feature != kNone && rules_->features[at(pl.feature)].id == fx.what ? 1 : 0;
+            }
+            processResearch(pid, Fixed::fromInt(fx.amount * speed / 100 * n), Fixed());
+            break;
+        }
+        case GreatPersonEffectKind::SciencePerArtifact: {
+            if (!city) break;
+            const TypeIndex artifact = rules_->greatWorkType("ARTIFACT");
+            const int n = static_cast<int>(std::count_if(city->greatWorks.begin(), city->greatWorks.end(), [&](const GreatWork& w) { return w.type == artifact; }));
+            processResearch(pid, Fixed::fromInt(fx.amount * speed / 100 * n), Fixed());
+            break;
+        }
+        case GreatPersonEffectKind::ScienceNearWonder: {
+            bool near = false;
+            for (const Hex& h : state_.grid.within(here, 1)) {
+                const Plot& pl = state_.plot(h);
+                near = near || (pl.feature != kNone && rules_->features[at(pl.feature)].naturalWonder);
+            }
+            if (near) processResearch(pid, Fixed::fromInt(fx.amount * speed / 100), Fixed());
+            break;
+        }
+        case GreatPersonEffectKind::WonderProduction: {
+            if (!city || city->queue.empty()) break;
+            const ProductionItem item = city->queue.front();
+            if (item.kind != ProductionKind::Building || !rules_->buildings[at(item.type)].wonder) break;
+            const BuildingType& b = rules_->buildings[at(item.type)];
+            const int era = b.unlock.none() ? 0 : (b.unlock.civic ? rules_->civics : rules_->techs)[at(b.unlock.index)].era;
+            const int amount = (era >= fx.minEra && era <= fx.maxEra ? fx.amount : fx.count) * speed / 100;
+            bool found = false;
+            for (ProductionProgress& pr : city->progress) {
+                if (pr.item == item) {
+                    pr.amount += Fixed::fromInt(amount);
+                    found = true;
+                }
+            }
+            if (!found) city->progress.push_back({item, Fixed::fromInt(amount)});
+            break;
+        }
+        case GreatPersonEffectKind::UnitXp: {
+            for (Unit& o : state_.units) {
+                if (o.pos == here && o.owner == pid && rules_->units[at(o.type)].layer == UnitLayer::Military) {
+                    o.xpBonus = static_cast<int16_t>(o.xpBonus + fx.amount);
+                    break;
+                }
+            }
+            break;
+        }
+        case GreatPersonEffectKind::ConvertBarbarians: {
+            for (Unit& o : state_.units) {
+                if (o.owner != pid && state_.players[at(o.owner)].barbarian && state_.grid.distance(o.pos, here) <= 1) o.owner = pid;
+            }
+            refreshVisibility(pid);
+            break;
+        }
+        case GreatPersonEffectKind::Suzerain: {
+            const PlayerId cs = state_.plot(here).owner;
+            if (cs == kNoPlayer || !isCityState(cs)) break;
+            for (Player& o : state_.players) {
+                if (o.id != pid && at(cs) < o.envoys.size()) o.envoys[at(cs)] = 0;
+            }
+            if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
+            p.envoys[at(cs)] = std::max(p.envoys[at(cs)], rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN"));
+            break;
+        }
         case GreatPersonEffectKind::GreatPersonPoints: {
             for (int& pts : p.greatPersonPoints) pts += fx.amount * speed / 100;
             break;
