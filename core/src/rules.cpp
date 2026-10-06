@@ -1036,6 +1036,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         // Second pass: building references may point forward.
         auto findBuilding = [this](const std::string& bid) { return building(bid); };
         for (size_t i = 0; i < rows.size(); ++i) {
+            if (!resolveList(rows[i].second["requiresAny"], findBuilding, buildings[i].prereqsAny, "building " + rows[i].first, error)) return false;
             if (!resolveList(rows[i].second["requires"], findBuilding, buildings[i].prereqs, "building " + rows[i].first, error))
                 return false;
         }

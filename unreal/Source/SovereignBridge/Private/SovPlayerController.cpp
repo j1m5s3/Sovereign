@@ -533,6 +533,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
 			}
 			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
+			if (G.canLiberateCity(Me(), City->id)) Choices.Add({TEXT("Liberate this city (back to its original owner, +100 Diplomatic Favor)"), sov::Command::liberateCity(Me(), City->id)});
 			// Theming (07): gather our Great Works into a museum here that they can theme.
 			for (const sov::TypeIndex B : City->buildings)
 			{

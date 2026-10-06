@@ -229,3 +229,17 @@ TEST(wonder_sites_survive_a_save) {
     CHECK_EQ(loaded->state().cities[0].wonders.size(), 1u);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(a_wonder_needs_its_building_first) {
+    // The Great Library: next to a Campus, in a city with a Library (03: BuildingPrereqs).
+    GameState s = wonderState();
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {6, 6}, true});
+    auto without = Game::fromScenario(rules(), s);
+    const TypeIndex library = wonder("BUILDING_GREAT_LIBRARY");
+    REQUIRE(!rules().buildings[at(library)].prereqsAny.empty());
+    CHECK(!without->canPlaceWonder(without->state().cities[0], library, {7, 6}));
+    s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto with = Game::fromScenario(rules(), std::move(s));
+    CHECK(with->canPlaceWonder(with->state().cities[0], library, {7, 6}));
+}

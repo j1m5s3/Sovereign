@@ -251,6 +251,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Promote:
         case CommandType::CityStrike:
         case CommandType::RazeCity:
+        case CommandType::LiberateCity:
             return validateCombat(c);
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
@@ -824,7 +825,8 @@ void Game::apply(const Command& c) {
         case CommandType::RangedAttack:
         case CommandType::Promote:
         case CommandType::CityStrike:
-        case CommandType::RazeCity: applyCombat(c); break;
+        case CommandType::RazeCity:
+        case CommandType::LiberateCity: applyCombat(c); break;
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:

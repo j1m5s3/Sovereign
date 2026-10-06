@@ -17,7 +17,12 @@ Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-ai-pace.md`. Two r
      - Drone: +5 bombard strength beside one (the `NEXT_TO_FRIENDLY_CLASS` condition).
      - Helicopters: no river-crossing cost.
      - Giant Death Robot: may attack while embarked.
-2. **Next: Liberating a captured city** (back to its original owner, +100 Diplomatic Favor [GS]), **and wonders' building prerequisites** (the Great Library needs a Library...; the extractor, generator, loader and `canPlaceWonder`).
+2. **Done: Liberating cities and wonders' building prerequisites:**
+   - **Liberation** (`LiberateCity`, `canLiberateCity`): on the turn of capture, a city goes back to its original owner if that civ is alive and at peace with the player.
+     - The city arrives at 100 loyalty, and the liberator gains 100 Diplomatic Favor (`FAVOR_FOR_LIBERATE_*`) and a good memory with the liberated civ.
+     - The Unreal production chooser offers it beside razing.
+     - The AI returns captured cities that belonged to city-states.
+   - **Wonder prerequisites:** the extractor's wonder table gains a Requires column (BuildingPrereqs, read from the local Civ VI install). The generator emits `requiresAny`, and `canPlaceWonder` asks for one of those buildings in the city. 14 wonders have one, e.g. the Great Library needs a Library, and Alhambra and Terracotta Army need a Barracks or Stable.
 3. **Then: stealth** (naval raiders hidden unless adjacent; `ABILITY_STEALTH`, `ABILITY_REVEAL_STEALTH`), **paradrop** (Spec Ops), **airlift** (Rapid Deployment between Airports) **and amenity rebellion** (`REBELLION_*`).
 
 ## Not planned

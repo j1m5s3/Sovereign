@@ -61,6 +61,9 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
         (w.nextToCapital && !capital))
         return false;
     if (w.nextToDistrict != kNone && !district) return false;
+    // A building the city needs first, any one of them (03: BuildingPrereqs).
+    const std::vector<TypeIndex>& any = rules_->buildings[at(building)].prereqsAny;
+    if (!any.empty() && std::none_of(any.begin(), any.end(), [&](TypeIndex b) { return city.has(b); })) return false;
     if (w.nextToResource != kNone && !resource) return false;
     if (w.nextToImprovement != kNone && !improvement) return false;
     return true;

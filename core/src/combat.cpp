@@ -617,6 +617,15 @@ bool Game::canEncampmentStrike(CityId id, Hex target) const {
     return visibility(c->owner, *t) == Visibility::Visible && lineOfSight(camp->pos, *t);
 }
 
+bool Game::canLiberateCity(PlayerId player, CityId id) const {
+    const City* c = state_.city(id);
+    if (!c || c->owner != player || c->capturedTurn != state_.turn) return false;
+    const PlayerId to = c->originalOwner;
+    if (to == kNoPlayer || to == player || static_cast<size_t>(to) >= state_.players.size()) return false;
+    const Player& o = state_.players[static_cast<size_t>(to)];
+    return o.alive && !o.barbarian && !atWar(player, to);
+}
+
 bool Game::canRazeCity(PlayerId player, CityId id) const {
     const City* c = state_.city(id);
     if (!c || c->owner != player || c->capturedTurn != state_.turn) return false;
@@ -804,6 +813,7 @@ CommandError Game::validateCombat(const Command& c) const {
             if (c.arg == 1) return canEncampmentStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
             return c.arg == 0 && canCityStrike(c.id, c.target) ? CommandError::Ok : CommandError::CannotStrike;
         }
+        case CommandType::LiberateCity: return canLiberateCity(c.player, c.id) ? CommandError::Ok : CommandError::CannotRaze;
         case CommandType::RazeCity: {
             const City* city = state_.city(c.id);
             if (!city) return CommandError::BadCity;
@@ -997,6 +1007,19 @@ void Game::applyCombat(const Command& c) {
                 removeUnit(target->id);
             }
             refreshVisibility(them);
+            return;
+        }
+        case CommandType::LiberateCity: {
+            // Liberation (02: Captured cities): the city goes home loyal, the liberator earns Diplomatic Favor [GS]
+            // and the liberated civ's gratitude.
+            const PlayerId to = state_.city(c.id)->originalOwner;
+            const bool minor = isCityState(to);
+            state_.players[static_cast<size_t>(c.player)].favor +=
+                rules_->globalInt(minor ? "FAVOR_FOR_LIBERATE_CITY_STATE" : "FAVOR_FOR_LIBERATE_PLAYER_CITY");
+            remember(to, c.player, MemoryKind::Gift, 30, 60);
+            transferCity(c.id, to, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_LIBERATION"));
+            refreshVisibility(c.player);
+            refreshVisibility(to);
             return;
         }
         case CommandType::RazeCity: {

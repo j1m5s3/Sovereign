@@ -2154,6 +2154,9 @@ def gen_wonders():
             w["housing"] = num(row["Housing"])
         if row["Amenity"]:
             w["amenities"] = num(row["Amenity"])
+        # A building the city needs first, any one of them (03: BuildingPrereqs: the Great Library needs a Library).
+        if row.get("Requires"):
+            w["requiresAny"] = ["BUILDING_" + snake(b.strip()) for b in row["Requires"].split(" or ")]
         points = gpp(row["GPP"])
         if points:
             w["greatPersonPoints"] = points

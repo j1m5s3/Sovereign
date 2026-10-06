@@ -2537,7 +2537,11 @@ void playTurn(Game& game) {
     buyReligion(v);
     buyCulture(v);
     for (UnitId id : game.unitsNeedingOrders(v.me)) game.submit(Command::setActivity(v.me, id, Activity::Skip));
-    // Captured cities are kept (never razed).
+    // Captured cities are kept (never razed); one that belonged to a city-state at peace with us goes back to it (02: Liberation).
+    for (CityId cid : std::vector<CityId>(v.cities)) {
+        const City* c = game.state().city(cid);
+        if (c && game.isCityState(c->originalOwner) && game.canLiberateCity(v.me, cid)) game.submit(Command::liberateCity(v.me, cid));
+    }
     if (game.submit(Command::endTurn(v.me)) == CommandError::Ok) return;
     // Something still blocks the turn: fill whatever is missing with the first option.
     for (CityId cid : game.citiesNeedingProduction(v.me)) {
