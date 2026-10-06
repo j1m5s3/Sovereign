@@ -3,9 +3,9 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--clans]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--clans] [--monopolies]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
 //          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none; --difficulty N: 0 Settler .. 3 Prince .. 7 Deity;
-//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns; --clans: the Barbarian Clans mode).
+//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns; --clans: the Barbarian Clans mode; --monopolies: the Monopolies and Corporations mode).
 //          Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
@@ -121,6 +121,7 @@ int main(int argc, char** argv) {
         else if (a == "--turn-limit") setup.turnLimit = std::atoi(next().c_str());
         else if (a == "--disasters") setup.disasterIntensity = std::atoi(next().c_str());
         else if (a == "--clans") setup.barbarianClans = true;
+        else if (a == "--monopolies") setup.monopolies = true;
         else if (a == "--difficulty") setup.difficulty = std::atoi(next().c_str());
         else if (a == "--bench") bench = std::atoi(next().c_str());
         else {
@@ -256,6 +257,15 @@ int main(int argc, char** argv) {
                     "razed %ld, players eliminated %ld, barbarian camps %ld standing / %ld cleared\n",
                     wars, attacks, promotions, strikes, captured, capitals, razed, eliminated, camps,
                     static_cast<long>(game->state().nextCampId - 1) - camps);
+        if (game->state().setup.monopolies) {
+            long industries = 0, corporations = 0, monopolies = 0;
+            for (const Plot& pl : game->state().plots) {
+                industries += pl.industry == 1;
+                corporations += pl.industry == 2;
+            }
+            for (const Player& p : game->state().players) monopolies += game->monopolySources(p.id);
+            std::printf("monopolies: %ld industries, %ld corporations, %ld luxury sources under a monopoly\n", industries, corporations, monopolies);
+        }
         if (game->state().setup.barbarianClans) {
             long fromClans = 0;
             for (const Player& p : game->state().players) fromClans += p.cityState != kNone && p.startPos != Hex{} && p.id > game->barbarianPlayer() ? 1 : 0;

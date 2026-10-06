@@ -205,6 +205,7 @@ int Game::tourismBase(PlayerId pid) const {
     int total = 0;
     const int era = playerEra(pid);
     const bool wish = goldenDedication(pid, "DEDICATION_WISH_YOU_WERE_HERE");
+    total += 2 * monopolySources(pid);  // 07: Monopolies
     // 07: resorts, improvements after Flight, National Parks; the Golden Gate Bridge (03) doubles them.
     total += (improvementTourism(pid) + parkTourism(pid)) * (holdsWonder(pid, W::GoldenGate) ? 2 : 1);
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");

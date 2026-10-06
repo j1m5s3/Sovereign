@@ -79,7 +79,8 @@ enum class CommandType : uint8_t {
     ContributeCharge = 66,      // id = Military Engineer on a district being built: a charge adds its share of the cost (03)
     BribeCamp = 67,             // id = a camp (Barbarian Clans mode): its units leave the player alone for a while (01)
     HireFromCamp = 68,          // id = a camp (Barbarian Clans mode): its best unit joins the player, next to the camp (01)
-    InciteCamp = 69,            // id = a camp, arg = a civ (Barbarian Clans mode): the camp raids that civ for a while (01)
+    InciteCamp = 69,
+    BuildIndustry = 70,         // id = Builder on an improved luxury (Monopolies mode): an Industry, or a Corporation of one (07)            // id = a camp, arg = a civ (Barbarian Clans mode): the camp raids that civ for a while (01)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -205,6 +206,7 @@ struct Command {
     static Command bribeCamp(PlayerId p, int32_t camp) { return {CommandType::BribeCamp, p, camp, {}, 0, 0}; }
     static Command hireFromCamp(PlayerId p, int32_t camp) { return {CommandType::HireFromCamp, p, camp, {}, 0, 0}; }
     static Command inciteCamp(PlayerId p, int32_t camp, PlayerId against) { return {CommandType::InciteCamp, p, camp, {}, against, 0}; }
+    static Command buildIndustry(PlayerId p, UnitId builder) { return {CommandType::BuildIndustry, p, builder, {}, 0, 0}; }
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }

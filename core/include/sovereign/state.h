@@ -46,6 +46,7 @@ struct Plot {
     bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
     uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
     bool park = false;     // part of a National Park (07: National Parks)
+    uint8_t industry = 0;  // Monopolies and Corporations mode (07): 1 an Industry, 2 a Corporation on its luxury
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -499,6 +500,7 @@ struct GameSetup {
     bool liveBattles = false;
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
     bool barbarianClans = false;  // optional mode: camps can be bribed, hired, incited, and become city-states (01: Barbarians)
+    bool monopolies = false;      // optional mode: Industries, Corporations and Monopolies on luxuries (07)
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };

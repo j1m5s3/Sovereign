@@ -373,6 +373,10 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::BuildImprovement:
         case CommandType::Harvest:
             return validateBuilder(c);
+        case CommandType::BuildIndustry: {
+            if (u->charges <= 0 || rules_->units[static_cast<size_t>(u->type)].buildCharges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+            return industryProblem(c.player, u->pos);
+        }
         case CommandType::SetActivity: {
             if (c.arg < 0 || c.arg > static_cast<int32_t>(Activity::Skip)) return CommandError::BadActivity;
             auto a = static_cast<Activity>(c.arg);
@@ -811,6 +815,7 @@ void Game::apply(const Command& c) {
         case CommandType::SetPolicy: applyResearch(c); break;
         case CommandType::BuildImprovement:
         case CommandType::Harvest: applyBuilder(c); break;
+        case CommandType::BuildIndustry: applyIndustry(c); break;
         case CommandType::DeclareWar:
         case CommandType::MakePeace:
         case CommandType::Attack:
