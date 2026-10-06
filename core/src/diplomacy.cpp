@@ -139,6 +139,14 @@ const Deal* Game::deal(int32_t id) const {
 
 int Game::luxuryCopies(PlayerId player, TypeIndex resource) const {
     int n = 0;
+    // Luxury corporations (07): John Spilsbury's Toys (1), Helena Rubinstein's Cosmetics, Levi Strauss's Jeans, Estée Lauder's Perfume (2 each).
+    static const std::pair<Gp, int> kCorporations[] = {{Gp::Spilsbury, 1}, {Gp::Rubinstein, 2}, {Gp::Strauss, 2}, {Gp::Lauder, 2}};
+    for (size_t i = 0; i < 4; ++i) {
+        if (resource != products_[i] || resource == kNone) continue;
+        for (const City& c : state_.cities) {
+            if (c.owner == player && !c.greatPeopleHere.empty()) n += kCorporations[i].second * usedHere(c, kCorporations[i].first);
+        }
+    }
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         const Plot& p = state_.plots[i];
         if (p.owner != player || p.resource != resource) continue;
