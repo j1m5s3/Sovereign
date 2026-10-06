@@ -81,3 +81,33 @@ TEST(a_themed_museum_doubles_its_works) {
     CHECK(h->tourismPerTurn(0) < themedTourism);
     CHECK_EQ(themedTourism - h->tourismPerTurn(0), 2 * 3 * rules().greatWorkTypes[static_cast<size_t>(sculpture)].tourism / 2 + 3 * rules().greatWorkTypes[static_cast<size_t>(artifact)].tourism);
 }
+
+TEST(works_move_between_slots_to_theme_a_museum) {
+    GameState s = flatState(24, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.majorsAtStart = 2;
+    addCity(s, 0, {4, 6}, true, 6);
+    addCity(s, 0, {12, 6}, false, 6);
+    const TypeIndex art = rules().building("BUILDING_ART_MUSEUM");
+    TypeIndex sculpture = kNone, portrait = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size(); ++w) {
+        if (rules().greatWorkTypes[w].id == "SCULPTURE") sculpture = static_cast<TypeIndex>(w);
+        if (rules().greatWorkTypes[w].id == "PORTRAIT") portrait = static_cast<TypeIndex>(w);
+    }
+    for (City& c : s.cities) c.buildings = {art};
+    s.cities[0].greatWorks = {{portrait, art, 1, -1, kNone}, {sculpture, art, 2, -1, kNone}};
+    s.cities[1].greatWorks = {{sculpture, art, 3, -1, kNone}, {sculpture, art, 4, -1, kNone}};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId a = g->state().cities[0].id, b = g->state().cities[1].id;
+    CHECK(!g->themed(g->state().cities[0], art));
+    // A single move straight in needs a free slot.
+    CHECK(g->submit(Command::moveGreatWork(0, b, 0, a, art)) == CommandError::Ok);
+    CHECK(g->submit(Command::moveGreatWork(0, b, 0, a, art)) == CommandError::BadTarget);  // now full
+    REQUIRE(g->submit(Command::moveGreatWork(0, a, 2, b, art)) == CommandError::Ok);      // and back
+    const std::vector<Command> moves = g->themingMoves(0, a, art);
+    REQUIRE(!moves.empty());
+    for (const Command& m : moves) REQUIRE(g->submit(m) == CommandError::Ok);
+    CHECK(g->themed(*g->state().city(a), art));
+    CHECK(g->state().city(b)->greatWorks.size() == 1u);  // the portrait went over
+    CHECK(g->themingMoves(0, a, art).empty());           // nothing left to do
+}

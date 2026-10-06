@@ -1749,6 +1749,21 @@ void purchases(View& v) {
     }
 }
 
+// Theming (07): gather works into museums that can be themed from what the civ holds.
+void theme(View& v) {
+    for (CityId cid : v.cities) {
+        const City* c = v.s().city(cid);
+        if (!c) continue;
+        const std::vector<TypeIndex> buildings = c->buildings;
+        for (TypeIndex b : buildings) {
+            if (!v.r.buildings[at(b)].theming) continue;
+            for (const Command& m : v.game.themingMoves(v.me, cid, b)) {
+                if (v.game.submit(m) != CommandError::Ok) break;
+            }
+        }
+    }
+}
+
 // Upgrades (05: Upgrades): the biggest strength gain per gold first, keeping a reserve.
 void upgrades(View& v) {
     if (v.skill <= 1) return;  // Settler and Chieftain AIs leave their units as they are
@@ -2227,6 +2242,7 @@ void playTurn(Game& game) {
     production(v);
     upgrades(v);
     purchases(v);
+    theme(v);
     patronage(v);
     envoys(v);
     pantheon(v);

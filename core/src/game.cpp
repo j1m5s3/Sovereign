@@ -268,6 +268,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
         case CommandType::Excavate: return excavateProblem(c.player, c.id);
+        case CommandType::MoveGreatWork: return moveGreatWorkProblem(c.player, c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x));
         case CommandType::SendDelegation:
             if (c.arg < 0 || static_cast<size_t>(c.arg) >= state_.players.size()) return CommandError::CannotDeal;
             return delegationProblem(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0);
@@ -763,6 +764,7 @@ void Game::apply(const Command& c) {
             else pillage(c.id);
             break;
         case CommandType::Excavate: excavate(c.id); break;
+        case CommandType::MoveGreatWork: moveGreatWork(c.id, c.arg, c.arg2, static_cast<TypeIndex>(c.target.x)); break;
         case CommandType::SendDelegation: sendDelegation(c.player, static_cast<PlayerId>(c.arg), c.arg2 != 0); break;
         case CommandType::AskPromise: askPromise(c.player, static_cast<PlayerId>(c.arg), static_cast<PromiseKind>(c.arg2)); break;
         case CommandType::FormUnit: {

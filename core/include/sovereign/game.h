@@ -394,6 +394,12 @@ public:
     // ---- archaeology (07: Archaeology)
     void noteBattle(Hex plot, PlayerId attacker);  // remembered as a future site while the world is young enough
     bool themed(const City& city, TypeIndex building) const;  // its Great Works earn the theming bonus (07)
+    int freeSlotsFor(const City& city, TypeIndex building, TypeIndex workType) const;
+    CommandError moveGreatWorkProblem(PlayerId player, CityId from, int index, CityId to, TypeIndex building) const;
+    void moveGreatWork(CityId from, int index, CityId to, TypeIndex building);
+    // Moves that gather the player's works into a theming building (07): empty when it cannot be themed
+    // from works the player has outside other themed buildings.
+    std::vector<Command> themingMoves(PlayerId player, CityId city, TypeIndex building) const;
     void placeAntiquity();                  // once any civ has Natural History
     CommandError excavateProblem(PlayerId player, UnitId archaeologist) const;
     void excavate(UnitId archaeologist);

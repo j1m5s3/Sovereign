@@ -57,6 +57,131 @@ bool Game::themed(const City& city, TypeIndex building) const {
     return true;
 }
 
+// Moving Great Works (07: Great Works): any of a civ's works to a free, compatible slot in any of its cities.
+int Game::freeSlotsFor(const City& city, TypeIndex building, TypeIndex workType) const {
+    if (building < 0 || static_cast<size_t>(building) >= rules_->buildings.size() || !city.has(building)) return 0;
+    const GreatWorkType& w = rules_->greatWorkTypes[at(workType)];
+    int free = 0;
+    for (const auto& [slot, count] : rules_->buildings[at(building)].greatWorkSlots) {
+        if (std::find(w.slots.begin(), w.slots.end(), slot) != w.slots.end()) free += count;
+    }
+    for (const GreatWork& g : city.greatWorks) free -= g.building == building ? 1 : 0;
+    return std::max(0, free);
+}
+
+CommandError Game::moveGreatWorkProblem(PlayerId player, CityId from, int index, CityId to, TypeIndex building) const {
+    const City* a = state_.city(from);
+    const City* b = state_.city(to);
+    if (!a || !b || a->owner != player || b->owner != player) return CommandError::NotYourCity;
+    if (index < 0 || static_cast<size_t>(index) >= a->greatWorks.size()) return CommandError::BadTarget;
+    const GreatWork& w = a->greatWorks[static_cast<size_t>(index)];
+    if (from == to && w.building == building) return CommandError::BadTarget;
+    return freeSlotsFor(*b, building, w.type) > 0 ? CommandError::Ok : CommandError::BadTarget;
+}
+
+void Game::moveGreatWork(CityId from, int index, CityId to, TypeIndex building) {
+    City& a = *state_.city(from);
+    GreatWork w = a.greatWorks[static_cast<size_t>(index)];
+    a.greatWorks.erase(a.greatWorks.begin() + index);
+    w.building = building;
+    state_.city(to)->greatWorks.push_back(w);
+}
+
+std::vector<Command> Game::themingMoves(PlayerId player, CityId cityId, TypeIndex building) const {
+    std::vector<Command> moves;
+    const City* city = state_.city(cityId);
+    if (!city || city->owner != player || building < 0 || !city->has(building) || themed(*city, building)) return moves;
+    const BuildingType& b = rules_->buildings[at(building)];
+    if (!b.theming) return moves;
+    int slots = 0;
+    for (const auto& [slot, n] : b.greatWorkSlots) slots += n;
+    // Every work the player could put here: in this building, or elsewhere outside a themed building.
+    struct Cand { CityId city; int index; const GreatWork* work; };
+    std::vector<Cand> cands;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (size_t i = 0; i < c.greatWorks.size(); ++i) {
+            const GreatWork& w = c.greatWorks[i];
+            const bool here = c.id == cityId && w.building == building;
+            if (!here && themed(c, w.building)) continue;
+            const GreatWorkType& t = rules_->greatWorkTypes[at(w.type)];
+            bool fits = false;
+            for (const auto& [slot, n] : b.greatWorkSlots) fits = fits || std::find(t.slots.begin(), t.slots.end(), slot) != t.slots.end();
+            if (fits) cands.push_back({c.id, static_cast<int>(i), &w});
+        }
+    }
+    // The theme: one object type (by distinct people) or one era (from distinct civilizations).
+    const bool byObject = b.theming->sameObject || b.theming->uniquePerson;
+    const auto key = [&](const GreatWork& w) { return byObject ? static_cast<int>(w.type) : static_cast<int>(w.era); };
+    const auto who = [&](const GreatWork& w) { return byObject ? static_cast<int>(w.creator) : static_cast<int>(w.civ); };
+    std::vector<int> keys;
+    for (const Cand& c : cands) {
+        if (std::find(keys.begin(), keys.end(), key(*c.work)) == keys.end()) keys.push_back(key(*c.work));
+    }
+    for (int k : keys) {
+        if (k < 0) continue;
+        // Distinct people (or civilizations) of this key, preferring works already in place.
+        std::vector<const Cand*> pick;
+        std::vector<int> seen;
+        for (int pass = 0; pass < 2; ++pass) {
+            for (const Cand& c : cands) {
+                const bool here = c.city == cityId && c.work->building == building;
+                if ((pass == 0) != here || key(*c.work) != k || who(*c.work) < 0) continue;
+                if (std::find(seen.begin(), seen.end(), who(*c.work)) != seen.end()) continue;
+                seen.push_back(who(*c.work));
+                if (static_cast<int>(pick.size()) < slots) pick.push_back(&c);
+            }
+        }
+        if (static_cast<int>(pick.size()) < slots) continue;
+        // Works in the building that are not picked must leave first, to any free compatible slot elsewhere;
+        // then the picked works come in. Moves are planned by work, and turned into indices by replaying them.
+        struct Planned { CityId from; const GreatWork* work; CityId to; TypeIndex into; };
+        std::vector<Planned> plan;
+        std::vector<std::pair<CityId, TypeIndex>> used;
+        bool ok = true;
+        for (const GreatWork& w : city->greatWorks) {
+            if (w.building != building || std::any_of(pick.begin(), pick.end(), [&](const Cand* p) { return p->work == &w; })) continue;
+            bool placed = false;
+            for (const City& c : state_.cities) {
+                if (c.owner != player || placed) continue;
+                for (TypeIndex other : c.buildings) {
+                    if (other == building && c.id == cityId) continue;
+                    const int taken = static_cast<int>(std::count(used.begin(), used.end(), std::make_pair(c.id, other)));
+                    if (freeSlotsFor(c, other, w.type) - taken <= 0) continue;
+                    used.push_back({c.id, other});
+                    plan.push_back({cityId, &w, c.id, other});
+                    placed = true;
+                    break;
+                }
+            }
+            ok = ok && placed;
+        }
+        if (!ok) continue;
+        for (const Cand* p : pick) {
+            if (!(p->city == cityId && p->work->building == building)) plan.push_back({p->city, p->work, cityId, building});
+        }
+        std::vector<std::pair<CityId, std::vector<const GreatWork*>>> order;
+        const auto listOf = [&](CityId id) -> std::vector<const GreatWork*>& {
+            for (auto& [cid, list] : order) {
+                if (cid == id) return list;
+            }
+            std::vector<const GreatWork*> list;
+            for (const GreatWork& w : state_.city(id)->greatWorks) list.push_back(&w);
+            order.emplace_back(id, std::move(list));
+            return order.back().second;
+        };
+        for (const Planned& m : plan) {
+            std::vector<const GreatWork*>& src = listOf(m.from);
+            const auto it = std::find(src.begin(), src.end(), m.work);
+            moves.push_back(Command::moveGreatWork(player, m.from, static_cast<int>(it - src.begin()), m.to, m.into));
+            src.erase(it);
+            listOf(m.to).push_back(m.work);
+        }
+        return moves;
+    }
+    return {};
+}
+
 void Game::placeAntiquity() {
     if (state_.antiquityPlaced) return;
     bool known = false;

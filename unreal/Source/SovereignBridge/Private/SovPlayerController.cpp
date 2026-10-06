@@ -494,6 +494,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
 			}
 			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
+			// Theming (07): gather our Great Works into a museum here that they can theme.
+			for (const sov::TypeIndex B : City->buildings)
+			{
+				const std::vector<sov::Command> Moves = G.themingMoves(Me(), City->id, B);
+				if (!Moves.empty())
+					Choices.Add({FString::Printf(TEXT("Theme the %s (%d moves)"), *Str(R.buildings[static_cast<size_t>(B)].name), static_cast<int32>(Moves.size())), Moves.front(),
+						std::vector<sov::Command>(Moves.begin() + 1, Moves.end())});
+			}
 			break;
 		}
 		case EChooser::Research:
@@ -1098,7 +1106,19 @@ void ASovPlayerController::Pick(int32 Index)
 	}
 	const EChooser Was = Chooser;
 	const sov::Command Command = Choices[I].Command;
+	const std::vector<sov::Command> Then = Choices[I].Then;
 	Chooser = EChooser::None;
+	if (!Then.empty())
+	{
+		if (Send(Command))
+		{
+			for (const sov::Command& Next : Then)
+			{
+				if (!Send(Next)) break;
+			}
+		}
+		return;
+	}
 	if (Was == EChooser::Assassins && Command.type == sov::CommandType::SpyMission && Command.arg == -1)
 	{
 		SpyAgent = Command.id;  // a spy: choose its operation

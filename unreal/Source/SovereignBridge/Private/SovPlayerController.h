@@ -85,6 +85,7 @@ protected:
 	{
 		FString Label;
 		sov::Command Command;
+		std::vector<sov::Command> Then;  // sent after Command, in order (e.g. the rest of a theming)
 	};
 
 	USovGameSubsystem* Subsystem() const;
