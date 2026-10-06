@@ -23,7 +23,9 @@ int speedPercent(const GameState& s, const Rules& r) {
 
 bool Game::resourceVisible(PlayerId player, Hex at) const {
     const Plot& p = state_.plot(at);
-    return p.resource != kNone && hasUnlocked(player, rules_->resources[static_cast<size_t>(p.resource)].reveal);
+    if (p.resource == kNone) return false;
+    if (p.resource == oil_ && usedBy(player, Gp::JamesYoung)) return true;  // James Young (07): Oil seen early
+    return hasUnlocked(player, rules_->resources[static_cast<size_t>(p.resource)].reveal);
 }
 
 bool Game::resourceImproved(Hex at) const {

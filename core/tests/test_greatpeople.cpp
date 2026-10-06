@@ -264,6 +264,16 @@ TEST(luxury_corporations_supply_their_products) {
     CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, amenities + 1);
 }
 
+TEST(james_young_reveals_oil) {
+    GameState s = cityState("DISTRICT_CAMPUS");
+    s.plot({8, 6}).resource = rules().resource("RESOURCE_OIL");
+    const UnitId young = addGreatPerson(s, "GREAT_PERSON_JAMES_YOUNG", {7, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(!g->resourceVisible(0, {8, 6}));
+    REQUIRE(g->submit(Command::activateGreatPerson(0, young)) == CommandError::Ok);
+    CHECK(g->resourceVisible(0, {8, 6}));
+}
+
 TEST(great_people_one_time_gifts) {
     // On the Commercial Hub: Irene of Athens (+1 governor title), Jakob Fugger (+2 envoys), Marco Polo (+1 trade route).
     GameState s = cityState("DISTRICT_COMMERCIAL_HUB");
