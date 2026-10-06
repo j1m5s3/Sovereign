@@ -700,11 +700,106 @@ void Game::executeDeal(const Deal& d) {
     pushEvent(EventKind::DealAccepted, d.from, d.to, d.id);
 }
 
-void Game::onWarDeclared(PlayerId by, PlayerId target) {
+// Casus belli (08: War types). Each needs its civic and its condition, and, except Protectorate,
+// DIPLOMACY_DENOUNCE_WAR_DELAY turns of denouncement first; the declaration's grievances are the
+// formal war's times the war type's percent.
+bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const {
+    if (why == CasusBelli::None || !isMajorCiv(player) || !isMajorCiv(target)) return false;
+    const Player& p = state_.players[at(player)];
+    const auto has = [&](const char* civic) { const TypeIndex c = rules_->civic(civic); return c != kNone && p.civics.has(c); };
+    const Relation& rel = p.relations[at(target)];
+    const bool denounced = denouncing(player, target) && state_.turn - rel.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    switch (why) {
+        case CasusBelli::HolyWar: {
+            // They converted one of our cities.
+            if (!has("CIVIC_DIPLOMATIC_SERVICE") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                const int maj = c.owner == player ? cityMajorityReligion(c) : -1;
+                if (maj >= 0 && static_cast<size_t>(maj) < state_.religions.size() && state_.religions[static_cast<size_t>(maj)].founder == target && p.religion != maj) return true;
+            }
+            return false;
+        }
+        case CasusBelli::Liberation:
+            // They hold a city of a friend or ally of ours.
+            if (!has("CIVIC_DIPLOMATIC_SERVICE") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                if (c.owner == target && c.originalOwner != target && c.originalOwner != player &&
+                    (friends(player, c.originalOwner) || alliance(player, c.originalOwner) != AllianceType::None))
+                    return true;
+            }
+            return false;
+        case CasusBelli::Reconquest:
+            // They hold a city we used to own.
+            if (!has("CIVIC_DEFENSIVE_TACTICS") || !denounced) return false;
+            for (const City& c : state_.cities) {
+                if (c.owner == target && c.originalOwner == player) return true;
+            }
+            return false;
+        case CasusBelli::Protectorate:
+            // They are at war with a city-state we are suzerain of (no denouncement needed).
+            if (!has("CIVIC_DEFENSIVE_TACTICS")) return false;
+            for (const Player& cs : state_.players) {
+                if (isCityState(cs.id) && cs.alive && suzerainOf(cs.id) == player && atWar(target, cs.id)) return true;
+            }
+            return false;
+        case CasusBelli::Colonial:
+            return has("CIVIC_NATIONALISM") && denounced && playerEra(player) - playerEra(target) >= 2;
+        case CasusBelli::TerritorialExpansion: {
+            // Two of our cities within range of two of theirs (DIPLOMACY_ADJACENT_EMPIRE_*).
+            if (!has("CIVIC_MOBILIZATION") || !denounced) return false;
+            const int range = rules_->globalInt("DIPLOMACY_ADJACENT_EMPIRE_RANGE"), need = rules_->globalInt("DIPLOMACY_ADJACENT_EMPIRE_CITIES_REQUIRED");
+            int mine = 0, theirs = 0;
+            for (const City& a : state_.cities) {
+                if (a.owner != player && a.owner != target) continue;
+                bool near = false;
+                for (const City& b : state_.cities) {
+                    if (b.owner == (a.owner == player ? target : player) && state_.grid.distance(a.pos, b.pos) <= range) near = true;
+                }
+                if (near) (a.owner == player ? mine : theirs)++;
+            }
+            return mine >= need && theirs >= need;
+        }
+        case CasusBelli::Ideological: {
+            // Both in tier-3-or-later governments, and different ones.
+            if (!has("CIVIC_IDEOLOGY") || !denounced) return false;
+            const Player& t = state_.players[at(target)];
+            if (p.government == kNone || t.government == kNone || p.government == t.government) return false;
+            return rules_->governments[static_cast<size_t>(p.government)].tier >= 3 && rules_->governments[static_cast<size_t>(t.government)].tier >= 3;
+        }
+        case CasusBelli::None: break;
+    }
+    return false;
+}
+
+int Game::casusBelliGrievancePercent(CasusBelli why) const {
+    switch (why) {
+        case CasusBelli::HolyWar: return 50;
+        case CasusBelli::Liberation: return 0;
+        case CasusBelli::Reconquest: return 0;
+        case CasusBelli::Protectorate: return 0;
+        case CasusBelli::Colonial: return 50;
+        case CasusBelli::TerritorialExpansion: return 75;
+        case CasusBelli::Ideological: return 50;
+        case CasusBelli::None: break;
+    }
+    return 100;
+}
+
+CasusBelli Game::bestCasusBelli(PlayerId player, PlayerId target) const {
+    CasusBelli best = CasusBelli::None;
+    for (int w = 1; w < kNumCasusBelli; ++w) {
+        const CasusBelli why = static_cast<CasusBelli>(w);
+        if (hasCasusBelli(player, target, why) && (best == CasusBelli::None || casusBelliGrievancePercent(why) < casusBelliGrievancePercent(best))) best = why;
+    }
+    return best;
+}
+
+void Game::onWarDeclared(PlayerId by, PlayerId target, CasusBelli why) {
     Player& p = state_.players[at(by)];
     Relation& mine = p.relations[at(target)];
-    // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation; anything else is a surprise.
-    const bool formal = denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    // A formal war follows DIPLOMACY_DENOUNCE_WAR_DELAY turns of denunciation, or has a casus belli; anything else is a surprise.
+    const bool justified = why != CasusBelli::None;
+    const bool formal = justified || (denouncing(by, target) && state_.turn - mine.denouncedOn >= rules_->globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY"));
     // Betrayal [GS]: war on a declared friend or an ally (08: Emergencies).
     if (isMajorCiv(by) && isMajorCiv(target) && (friends(by, target) || alliance(by, target) != AllianceType::None))
         triggerEmergency(EmergencyKind::Betrayal, by, kNoCity, target);
@@ -717,7 +812,8 @@ void Game::onWarDeclared(PlayerId by, PlayerId target) {
     remember(target, by, formal ? MemoryKind::DeclaredWar : MemoryKind::SurpriseWar, formal ? -12 : -24, formal ? 60 : 80);
     // Grievances [GS]: 100 for a formal war (Sovereign's base; the engine value is unverified), 150%
     // for a surprise; declared friends of the target share 25% (SHARE_WAR_GRIEVANCES_DECLARED_FRIENDS).
-    const int base = emergencyWar ? 0 : formal ? 100 : 150;
+    // A casus belli scales the grievances (08: War types).
+    const int base = emergencyWar ? 0 : justified ? casusBelliGrievancePercent(why) : formal ? 100 : 150;
     addGrievance(target, by, base);
     for (const Player& o : state_.players) {
         if (o.id == by || o.id == target) continue;

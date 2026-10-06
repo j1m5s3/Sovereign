@@ -489,6 +489,13 @@ void diplomacy(View& v) {
     const Relation& rel = s.players[at(v.me)].relations[at(pick)];
     const bool ready = v.game.denouncing(v.me, pick) && s.turn - rel.denouncedOn >= v.r.globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
     const bool overwhelming = mine >= 2 * pickStrength;
+    // The cheapest casus belli it holds goes first (08: War types); Protectorate needs no denouncement.
+    const CasusBelli why = v.game.bestCasusBelli(v.me, pick);
+    if (why != CasusBelli::None && v.game.submit(Command::declareWarFor(v.me, pick, why)) == CommandError::Ok) {
+        v.target = pick;
+        survey(v);
+        return;
+    }
     if (!ready && !overwhelming) {
         if (v.game.canDenounce(v.me, pick)) {
             v.game.submit(Command::denounce(v.me, pick));

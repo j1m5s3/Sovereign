@@ -628,8 +628,10 @@ CommandError Game::validateCombat(const Command& c) const {
     const bool playerArg = c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size();
     switch (c.type) {
         case CommandType::DeclareWar:
-            return playerArg && canDeclareWar(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
-                                                                                     : CommandError::CannotDeclareWar;
+            if (c.arg2 < 0 || c.arg2 >= kNumCasusBelli) return CommandError::CannotDeclareWar;
+            if (!playerArg || !canDeclareWar(c.player, static_cast<PlayerId>(c.arg))) return CommandError::CannotDeclareWar;
+            return c.arg2 == 0 || hasCasusBelli(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2)) ? CommandError::Ok
+                                                                                                                            : CommandError::CannotDeclareWar;
         case CommandType::MakePeace:
             return playerArg && canMakePeace(c.player, static_cast<PlayerId>(c.arg)) ? CommandError::Ok
                                                                                     : CommandError::CannotMakePeace;
@@ -783,7 +785,7 @@ void Game::applyCombat(const Command& c) {
         case CommandType::DeclareWar: {
             Relation& mine = state_.players[static_cast<size_t>(c.player)].relations[static_cast<size_t>(c.arg)];
             Relation& theirs = state_.players[static_cast<size_t>(c.arg)].relations[static_cast<size_t>(c.player)];
-            onWarDeclared(c.player, static_cast<PlayerId>(c.arg));
+            onWarDeclared(c.player, static_cast<PlayerId>(c.arg), static_cast<CasusBelli>(c.arg2));
             for (Relation* r : {&mine, &theirs}) {
                 r->war = true;
                 r->since = state_.turn;

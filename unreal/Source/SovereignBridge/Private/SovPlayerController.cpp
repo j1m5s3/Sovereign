@@ -707,6 +707,28 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 								 UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer),
 					sov::Command::denounce(Me(), O.id)});  // only arg is used: Pick opens the screen
 			}
+			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
+			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
+				TEXT("Colonial War"), TEXT("War of Territorial Expansion"), TEXT("Ideological War")};
+			for (const sov::Player& O : G.state().players)
+			{
+				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;
+				const FString Who = Str(R.civs[static_cast<size_t>(O.civ)].name);
+				if (G.canDeclareWar(Me(), O.id))
+				{
+					const bool bFormal = G.denouncing(Me(), O.id);
+					Choices.Add({FString::Printf(TEXT("Declare %s war on %s"), bFormal ? TEXT("a formal") : TEXT("a surprise"), *Who), sov::Command::declareWar(Me(), O.id)});
+					for (int32 W = 1; W < sov::kNumCasusBelli; ++W)
+					{
+						if (G.hasCasusBelli(Me(), O.id, static_cast<sov::CasusBelli>(W)))
+						{
+							Choices.Add({FString::Printf(TEXT("Declare a %s on %s (%d%% grievances)"), Reasons[W], *Who, G.casusBelliGrievancePercent(static_cast<sov::CasusBelli>(W))),
+								sov::Command::declareWarFor(Me(), O.id, static_cast<sov::CasusBelli>(W))});
+						}
+					}
+				}
+				if (G.canMakePeace(Me(), O.id)) Choices.Add({FString::Printf(TEXT("Offer peace to %s"), *Who), sov::Command::makePeace(Me(), O.id)});
+			}
 			break;
 		}
 		case EChooser::TradeRoute:
@@ -1010,7 +1032,7 @@ void ASovPlayerController::Pick(int32 Index)
 		}
 		return;
 	}
-	if (Was == EChooser::Diplomacy)
+	if (Was == EChooser::Diplomacy && Command.type == sov::CommandType::Denounce)
 	{
 		OpenDiplomacy(static_cast<sov::PlayerId>(Command.arg));  // the civ to talk to, not a command to send
 		return;

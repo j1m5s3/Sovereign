@@ -448,3 +448,31 @@ TEST(alliances_survive_a_save) {
     CHECK(loaded->alliance(0, 1) == AllianceType::Cultural);
     CHECK_EQ(loaded->state().players[0].relations[1].alliancePoints, 44);
 }
+
+// ---- casus belli (08: War types)
+
+TEST(a_reconquest_war_costs_no_grievances) {
+    GameState s = diploState();
+    s.turn = 40;
+    for (Player& p : s.players) p.relations.resize(2);
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_DEFENSIVE_TACTICS"))] = 1;
+    s.cities[1].originalOwner = 0;  // player 1 holds a city player 0 founded
+    auto noDenounce = Game::fromScenario(rules(), s);
+    CHECK(!noDenounce->hasCasusBelli(0, 1, CasusBelli::Reconquest));  // denouncement first
+    s.players[0].relations[1].denouncedOn = 30;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->denouncing(0, 1));
+    REQUIRE(g->hasCasusBelli(0, 1, CasusBelli::Reconquest));
+    CHECK(g->bestCasusBelli(0, 1) == CasusBelli::Reconquest);
+    CHECK(!g->hasCasusBelli(0, 1, CasusBelli::Colonial));
+    const int before = g->grievances(1, 0);
+    REQUIRE(g->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::Ok);
+    CHECK_EQ(g->grievances(1, 0), before);  // 0%
+    CHECK(g->atWar(0, 1));
+    // A casus belli it does not hold is refused.
+    GameState t = diploState();
+    t.turn = 40;
+    for (Player& p : t.players) p.relations.resize(2);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK(h->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::CannotDeclareWar);
+}

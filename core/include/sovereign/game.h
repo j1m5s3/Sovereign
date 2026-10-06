@@ -411,6 +411,11 @@ public:
     void triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim);
     void processEmergencies();               // goals met, expiry, rewards (the world turn)
 
+    // ---- casus belli (08: War types)
+    bool hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const;  // civic and condition met
+    int casusBelliGrievancePercent(CasusBelli why) const;                        // of a formal war's grievances
+    CasusBelli bestCasusBelli(PlayerId player, PlayerId target) const;          // the cheapest it holds (None: none)
+
     // ---- alliances [R&F] (08: Alliance)
     AllianceType alliance(PlayerId a, PlayerId b) const;  // None when not allied
     int allianceLevel(PlayerId a, PlayerId b) const;      // 0 not allied, else 1..3 by alliance points
@@ -608,7 +613,7 @@ private:
     // `holder` remembers something `about` did (no-op unless both are major civs).
     void remember(PlayerId holder, PlayerId about, MemoryKind kind, int amount, int duration);
     // War is declared: memories, deeds, friendships and running deals end.
-    void onWarDeclared(PlayerId by, PlayerId target);
+    void onWarDeclared(PlayerId by, PlayerId target, CasusBelli why = CasusBelli::None);
     void onPeace(PlayerId a, PlayerId b);
     void processDiplomacy(PlayerId player);  // running deals pay, expire or break; old memories fade
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn

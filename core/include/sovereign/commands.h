@@ -81,6 +81,10 @@ enum class CommandType : uint8_t {
                                 // or -1 with data = {x, y} of the player's Missile Silo
 };
 
+// Casus belli (08: War types): the reason a war is declared for, each scaling the declaration's grievances.
+enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological };
+constexpr int kNumCasusBelli = 8;
+
 // Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
 // or a regent when neither exists (a stand-in until governors and Great Generals exist).
 enum class Succession : int32_t { Heir = 0, Unit = 1, Regent = 2 };
@@ -134,6 +138,8 @@ struct Command {
     }
     static Command harvest(PlayerId p, UnitId u) { return {CommandType::Harvest, p, u, {}, 0, 0}; }
     static Command declareWar(PlayerId p, PlayerId target) { return {CommandType::DeclareWar, p, -1, {}, target, 0}; }
+    // A war with a casus belli (08: War types; arg2 = CasusBelli), its grievances scaled down.
+    static Command declareWarFor(PlayerId p, PlayerId target, CasusBelli why) { return {CommandType::DeclareWar, p, -1, {}, target, static_cast<int32_t>(why)}; }
     static Command makePeace(PlayerId p, PlayerId target) { return {CommandType::MakePeace, p, -1, {}, target, 0}; }
     static Command attack(PlayerId p, UnitId u, Hex at) { return {CommandType::Attack, p, u, at, 0, 0}; }
     static Command rangedAttack(PlayerId p, UnitId u, Hex at) { return {CommandType::RangedAttack, p, u, at, 0, 0}; }
