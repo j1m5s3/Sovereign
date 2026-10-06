@@ -320,3 +320,48 @@ TEST(each_new_apostle_gets_a_promotion) {
     auto o = Game::fromScenario(rules(), std::move(t));
     CHECK_EQ(o->unitEffectTotal(o->state().units.back(), UnitEffectKind::SpreadCharges), 2);
 }
+
+TEST(an_apostle_launches_the_inquisition) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].faith = Fixed::fromInt(2000);
+    auto g = withReligion(std::move(s));
+    const CityId holy = g->state().cities[0].id;
+    const ProductionItem apostle{ProductionKind::Unit, rules().unit("UNIT_APOSTLE")};
+    const ProductionItem inquisitor{ProductionKind::Unit, rules().unit("UNIT_INQUISITOR")};
+    CHECK_EQ(g->faithPurchaseCost(0, *g->state().city(holy), inquisitor), -1);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
+    const UnitId a = g->state().units.back().id;
+    const int before = g->religiousStrength(*g->state().unit(a), false);
+    REQUIRE(g->canLaunchInquisition(a));
+    REQUIRE(g->submit(Command::launchInquisition(0, a)) == CommandError::Ok);
+    CHECK(!g->state().unit(a));  // spent
+    CHECK(g->state().players[0].inquisition);
+    CHECK_EQ(g->faithPurchaseCost(0, *g->state().city(holy), inquisitor), 75);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
+    CHECK(!g->canLaunchInquisition(g->state().units.back().id));  // once
+    CHECK_EQ(g->religiousStrength(g->state().units.back(), false), before + 15);  // at home, after the Inquisition
+}
+
+TEST(a_guru_heals_religious_units_beside_it) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].faith = Fixed::fromInt(2000);
+    auto g = withReligion(std::move(s));
+    const CityId holy = g->state().cities[0].id;
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, {ProductionKind::Unit, rules().unit("UNIT_APOSTLE")})) == CommandError::Ok);
+    const UnitId a = g->state().units.back().id;
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, {ProductionKind::Unit, rules().unit("UNIT_GURU")})) == CommandError::Ok);
+    const UnitId guru = g->state().units.back().id;
+    CHECK_EQ(g->state().unit(guru)->charges, 3);
+    CHECK(!g->canHealReligious(guru));  // nobody hurt
+    GameState hurt = g->state();
+    hurt.unit(a)->hp = 30;
+    hurt.unit(a)->pos = hurt.unit(guru)->pos;
+    auto h = Game::fromScenario(rules(), std::move(hurt));
+    REQUIRE(h->submit(Command::healReligious(0, guru)) == CommandError::Ok);
+    CHECK_EQ(h->state().unit(a)->hp, 70);  // COMBAT_HEAL_RELIGIOUS_CHARGE
+    CHECK_EQ(h->state().unit(guru)->charges, 2);
+}

@@ -19,7 +19,7 @@ int Game::governorTitles(PlayerId pid) const {
     for (const auto& [civic, titles] : rules_->governorTitleCivics) n += p.civics.has(civic) ? titles : 0;
     const TypeIndex extra = civAbility(pid).extraGovernorTitleCivic;  // Persia
     if (extra != kNone && p.civics.has(extra)) ++n;
-    return n;
+    return n + p.futureCivics;  // a title per Future Civic [GS] (04)
 }
 
 int Game::governorTitlesLeft(PlayerId pid) const {

@@ -320,6 +320,20 @@ bool Game::canSetPolicy(PlayerId player, int slot, TypeIndex policy, CommandErro
     return true;
 }
 
+// Out of a civic's free window, changes cost Gold, rising with the civics done (04). The formula is a Sovereign
+// reading of the unverified globals: BASE + (INCREASE x civics)^1.5, rounded down to VISIBLE_DIVISOR.
+int Game::policyChangeCost(PlayerId player) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    int64_t done = 0;
+    for (uint8_t d : p.civics.done) done += d ? 1 : 0;
+    const int64_t x = rules_->globalInt("POLICY_COST_INCREASE_TO_BE_EXPONENTED") * done;
+    int64_t root = 0;
+    while ((root + 1) * (root + 1) <= x) ++root;
+    const int64_t cost = rules_->globalInt("POLICY_COST_BASE") + x * root;  // x^1.5, with the root rounded down
+    const int64_t div = std::max(1, rules_->globalInt("POLICY_COST_VISIBLE_DIVISOR"));
+    return static_cast<int>(cost / div * div);
+}
+
 // ---------------------------------------------------------------- commands
 
 CommandError Game::validateResearch(const Command& c) const {
@@ -344,6 +358,10 @@ CommandError Game::validateResearch(const Command& c) const {
             if (c.arg != -1 && !inRange(c.arg, rules_->policies.size())) return CommandError::CannotSetPolicy;
             canSetPolicy(c.player, c.id, static_cast<TypeIndex>(c.arg), &why);
             return why;
+        case CommandType::BuyPolicyChanges:
+            if (p.government == kNone || p.anarchyTurns > 0 || p.interregnumTurns > 0 || p.freeChanges) return CommandError::ChangesLocked;
+            if (p.gold < Fixed::fromInt(policyChangeCost(c.player))) return CommandError::NotEnoughGold;
+            return CommandError::Ok;
         default: break;
     }
     return CommandError::BadTarget;
@@ -376,6 +394,10 @@ void Game::applyResearch(const Command& c) {
         case CommandType::SetPolicy:
             p.policies[static_cast<size_t>(c.id)] = static_cast<TypeIndex>(c.arg);
             break;
+        case CommandType::BuyPolicyChanges:
+            p.gold -= Fixed::fromInt(policyChangeCost(c.player));
+            p.freeChanges = true;
+            break;
         default: break;
     }
 }
@@ -385,6 +407,20 @@ void Game::applyResearch(const Command& c) {
 void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
     Player& p = state_.players[static_cast<size_t>(pid)];
     TreeProgress& tree = civic ? p.civics : p.techs;
+    // Future Tech and Future Civic repeat [GS] (04): +5% toward projects each time; +50 Diplomatic Favor and a
+    // Governor title each time.
+    if ((civic ? rules_->civics : rules_->techs)[static_cast<size_t>(node)].id == (civic ? "CIVIC_FUTURE_CIVIC" : "TECH_FUTURE_TECH")) {
+        tree.progress[static_cast<size_t>(node)] = Fixed();
+        if (tree.current == node) tree.current = kNone;
+        if (civic) {
+            ++p.futureCivics;
+            p.favor += 50;
+            p.freeChanges = true;
+        } else {
+            ++p.futureTechs;
+        }
+        return;
+    }
     {
         // The first tech or civic of a new era is a moment, a world's first for the first civ (09).
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;

@@ -219,6 +219,9 @@ public:
     bool canFoundReligion(UnitId prophet, TypeIndex religion, TypeIndex founder, TypeIndex follower, CommandError* why = nullptr) const;
     bool canEvangelize(UnitId apostle, TypeIndex belief) const;
     bool canSpreadReligion(UnitId unit) const;
+    // Launch Inquisition (an unused Apostle of the player's own religion, once) and a Guru's heal (06).
+    bool canLaunchInquisition(UnitId apostle) const;
+    bool canHealReligious(UnitId guru) const;
     int cityMajorityReligion(const City& city) const;
     int civReligion(PlayerId player) const;  // the religion it founded, else its capital's (-1: none)
     int cityFollowers(const City& city, int religion) const;
@@ -247,6 +250,8 @@ public:
     // Policy may be slotted under the player's government (unlocked, not obsolete, allowed).
     bool policyAvailable(PlayerId player, TypeIndex policy) const;
     bool canSetPolicy(PlayerId player, int slot, TypeIndex policy, CommandError* why = nullptr) const;
+    // Gold to open government and policy changes on a turn without a new civic (04: POLICY_COST_*).
+    int policyChangeCost(PlayerId player) const;
     // Slot type of slot `slot` of a government: Military slots first, then
     // Economic, Diplomatic and Wildcard.
     static PolicySlot slotType(const GovernmentType& government, int slot);

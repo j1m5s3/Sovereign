@@ -203,6 +203,12 @@ CityReport Game::cityReport(CityId id) const {
             if (const City* dest = state_.city(tr.destination)) {
                 const Yields ty = tradeRouteYields(*c, *dest);
                 for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
+                // Each of the owner's Trading Posts the route passes in foreign cities pays (07: TRADING_POST_GOLD_*).
+                for (int32_t pi : tr.path) {
+                    const City* on = state_.cityAt(state_.grid.at(pi));
+                    if (!on || !on->hasTradingPost(c->owner)) continue;
+                    raw[idx(YieldType::Gold)] += Fixed::fromInt(rules_->globalInt(on->owner == c->owner ? "TRADING_POST_GOLD_IN_OWN_CITY" : "TRADING_POST_GOLD_IN_FOREIGN_CITY"));
+                }
             }
         } else if (tr.destination == c->id) {
             if (const City* from = state_.city(tr.origin)) {
@@ -1002,6 +1008,7 @@ void Game::applyCity(const Command& c) {
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
                     if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
+                    if (bought.healCharges > 0) u.charges = bought.healCharges;  // a Guru's heals (06)
                     if (bought.spreadCharges > 0 && city.has(rules_->building("BUILDING_MOSQUE"))) ++u.charges;  // Mosque (03)
                     if (bought.spreadCharges > 0) {
                         for (const City& o : state_.cities) {
@@ -1462,6 +1469,7 @@ void Game::processCities(PlayerId pid) {
                 // Dark Age cards (09): Rogue State (nuclear projects), Automated Workforce (all projects).
                 if (nuclear && policyIs(pid, "POLICY_ROGUE_STATE")) pct += 50;
                 if (policyIs(pid, "POLICY_AUTOMATED_WORKFORCE")) pct += 20;
+                pct += 5 * state_.players[static_cast<size_t>(pid)].futureTechs;  // Future Tech [GS] (04)
                 prod = prod * pct / 100;
             }
             // Kilwa Kisiwani (03: Wonders): units by Militaristic suzerainties, buildings and districts by Industrial ones.

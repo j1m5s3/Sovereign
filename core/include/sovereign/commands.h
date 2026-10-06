@@ -79,11 +79,14 @@ enum class CommandType : uint8_t {
     ContributeCharge = 66,      // id = Military Engineer on a district being built: a charge adds its share of the cost (03)
     BribeCamp = 67,             // id = a camp (Barbarian Clans mode): its units leave the player alone for a while (01)
     HireFromCamp = 68,          // id = a camp (Barbarian Clans mode): its best unit joins the player, next to the camp (01)
-    InciteCamp = 69,
-    BuildIndustry = 70,
-    LiberateCity = 71,
+    InciteCamp = 69,            // id = a camp, arg = a civ (Barbarian Clans mode): the camp raids that civ for a while (01)
+    BuildIndustry = 70,         // id = Builder on an improved luxury (Monopolies mode): an Industry, or a Corporation of one (07)
+    LiberateCity = 71,          // id = city captured this turn: back to its original owner (02: Captured cities)
     Airlift = 72,               // id = land unit on an Aerodrome with an Airport, target = another of the player's (Rapid Deployment; 05)
-    Paradrop = 73,              // id = Spec Ops in the player's territory, target = a land plot within 3 (05)          // id = city captured this turn: back to its original owner (02: Captured cities)         // id = Builder on an improved luxury (Monopolies mode): an Industry, or a Corporation of one (07)            // id = a camp, arg = a civ (Barbarian Clans mode): the camp raids that civ for a while (01)
+    Paradrop = 73,              // id = Spec Ops in the player's territory, target = a land plot within 3 (05)
+    BuyPolicyChanges = 74,      // pays Gold to change government and policies this turn (04)
+    LaunchInquisition = 75,     // id = an unused Apostle of the player's religion: Inquisitors may be bought (06)
+    HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -169,6 +172,9 @@ struct Command {
     static Command liberateCity(PlayerId p, CityId c) { return {CommandType::LiberateCity, p, c, {}, 0, 0}; }
     static Command airlift(PlayerId p, UnitId unit, Hex to) { return {CommandType::Airlift, p, unit, to, 0, 0}; }
     static Command paradrop(PlayerId p, UnitId unit, Hex to) { return {CommandType::Paradrop, p, unit, to, 0, 0}; }
+    static Command buyPolicyChanges(PlayerId p) { return {CommandType::BuyPolicyChanges, p, 0, {}, 0, 0}; }
+    static Command launchInquisition(PlayerId p, UnitId apostle) { return {CommandType::LaunchInquisition, p, apostle, {}, 0, 0}; }
+    static Command healReligious(PlayerId p, UnitId guru) { return {CommandType::HealReligious, p, guru, {}, 0, 0}; }
     static Command equipGear(PlayerId p, UnitId leader, TypeIndex gear) {
         return {CommandType::EquipGear, p, leader, {}, gear, 0};
     }

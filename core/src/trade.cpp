@@ -232,34 +232,49 @@ std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const Ci
     const bool sails = canEmbark(player, traderType);
     const bool ocean = canEnterOcean(player);
     // Breadth-first over plots: land, then water too once Traders may embark (07: Range).
+    // Range refuels in the player's own cities and in cities holding its Trading Post (07: Trading Posts):
+    // a plot is searched again when reached with more range left. Each arrival is its own entry, so the
+    // way back is the walk that reached the goal.
+    const int n = state_.grid.size();
+    std::vector<uint8_t> refuel(static_cast<size_t>(n), 0);
+    for (const City& c : state_.cities) {
+        if (c.owner == player || c.hasTradingPost(player)) refuel[static_cast<size_t>(state_.grid.index(c.pos))] = 1;
+    }
     auto search = [&](bool water, int range) -> std::vector<Hex> {
-        const int n = state_.grid.size();
-        std::vector<int> prev(static_cast<size_t>(n), -2), depth(static_cast<size_t>(n), 0);
+        struct Entry { int plot, parent, fuel; };
+        std::vector<Entry> entries;
+        std::vector<int> best(static_cast<size_t>(n), -1);
         std::queue<int> open;
         const int start = state_.grid.index(origin.pos), goal = state_.grid.index(destination.pos);
-        prev[static_cast<size_t>(start)] = -1;
-        open.push(start);
-        while (!open.empty()) {
-            const int cur = open.front();
+        entries.push_back({start, -1, range});
+        best[static_cast<size_t>(start)] = range;
+        open.push(0);
+        int found = -1;
+        while (!open.empty() && found < 0) {
+            const Entry cur = entries[static_cast<size_t>(open.front())];
+            const int curIndex = open.front();
             open.pop();
-            if (cur == goal) break;
-            if (depth[static_cast<size_t>(cur)] >= range) continue;
+            if (cur.fuel <= 0) continue;
             for (int d = 0; d < kNumDirs; ++d) {
-                auto nh = state_.grid.neighbor(state_.grid.at(cur), static_cast<Dir>(d));
+                auto nh = state_.grid.neighbor(state_.grid.at(cur.plot), static_cast<Dir>(d));
                 if (!nh) continue;
                 const int ni = state_.grid.index(*nh);
-                if (prev[static_cast<size_t>(ni)] != -2) continue;
                 const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
                 const bool ok = ni == goal || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
                 if (!ok) continue;
-                prev[static_cast<size_t>(ni)] = cur;
-                depth[static_cast<size_t>(ni)] = depth[static_cast<size_t>(cur)] + 1;
-                open.push(ni);
+                const int left = refuel[static_cast<size_t>(ni)] ? range : cur.fuel - 1;
+                if (left <= best[static_cast<size_t>(ni)]) continue;
+                best[static_cast<size_t>(ni)] = left;
+                entries.push_back({ni, curIndex, left});
+                if (ni == goal) {
+                    found = static_cast<int>(entries.size()) - 1;
+                    break;
+                }
+                open.push(static_cast<int>(entries.size()) - 1);
             }
         }
         std::vector<Hex> path;
-        if (prev[static_cast<size_t>(goal)] == -2) return path;
-        for (int i = goal; i != -1; i = prev[static_cast<size_t>(i)]) path.push_back(state_.grid.at(i));
+        for (int e = found; e != -1; e = entries[static_cast<size_t>(e)].parent) path.push_back(state_.grid.at(entries[static_cast<size_t>(e)].plot));
         std::reverse(path.begin(), path.end());
         return path;
     };
@@ -275,7 +290,8 @@ bool Game::canStartTradeRoute(UnitId traderId, CityId destinationId) const {
     const City* dest = state_.city(destinationId);
     if (!origin || !dest || dest->id == origin->id) return false;
     const Player& them = state_.players[at(dest->owner)];
-    if (!isMajor(them) || atWar(u->owner, dest->owner)) return false;
+    // Routes go to major civs and city-states (07).
+    if (!them.alive || them.barbarian || them.freeCity || atWar(u->owner, dest->owner)) return false;
     if (tradeRoutesOf(u->owner) >= tradeRouteCapacity(u->owner)) return false;
     if (visibility(u->owner, dest->pos) == Visibility::Unrevealed) return false;
     return !tradePath(u->owner, u->type, *origin, *dest).empty();
@@ -366,6 +382,10 @@ void Game::processTrade(PlayerId pid) {
             }
             if (--r.turnsLeft > 0) continue;
             dedicationScore(pid, "DEDICATION_REFORM_THE_COINAGE", 1);  // 09: a route completed
+            // A completed route leaves the owner a Trading Post at its destination (07).
+            City& d = *state_.city(r.destination);
+            if (d.tradingPosts.size() < state_.players.size()) d.tradingPosts.resize(state_.players.size(), 0);
+            d.tradingPosts[at(pid)] = 1;
         }
         ended.push_back(r.id);
         if (home && origin && origin->owner == pid) {

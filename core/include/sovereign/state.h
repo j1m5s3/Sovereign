@@ -314,6 +314,8 @@ struct SOV_API City {
     int capturedTurn = -1;         // turn it last changed hands (raze is allowed that turn)
     int rebellion = 0;             // rebellion points from unhappiness (02: Amenities); each gives a chance of rebels a turn
     int rebellionCooldown = 0;     // no rebels before this turn
+    std::vector<uint8_t> tradingPosts;  // per player: 1 when it holds a Trading Post here (07)
+    bool hasTradingPost(PlayerId p) const { return p >= 0 && static_cast<size_t>(p) < tradingPosts.size() && tradingPosts[static_cast<size_t>(p)]; }
     std::vector<CityDistrict> districts;  // in placement order
     int loyalty = 100;             // 0..LOYALTY_MAXIMUM [R&F]; at 0 the city revolts to the Free Cities
     // The leader's citizen stances (leader doc §4): turns until which each effect lasts.
@@ -419,6 +421,9 @@ struct Player {
     Fixed lifetimeCulture;
     std::vector<int32_t> tourismTo;  // per player: lifetime tourism toward that civ
     int16_t religion = -1;        // the religion it founded (GameState::religions index)
+    bool inquisition = false;     // Launch Inquisition done: Inquisitors may be bought (06)
+    int16_t futureTechs = 0;      // Future Tech and Future Civic completions: they repeat [GS] (04)
+    int16_t futureCivics = 0;
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
     std::vector<OpinionMemory> memories;  // what this player remembers of others (diplomacy)

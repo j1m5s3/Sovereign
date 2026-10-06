@@ -201,6 +201,9 @@ std::string describe(const Command& c) {
         case CommandType::BuildIndustry: return s + "BuildIndustry u" + std::to_string(c.id);
         case CommandType::LiberateCity: return s + "LiberateCity city" + std::to_string(c.id);
         case CommandType::Airlift: return s + "Airlift " + std::to_string(c.id) + " -> " + std::to_string(c.target.x) + "," + std::to_string(c.target.y);
+        case CommandType::BuyPolicyChanges: return s + "BuyPolicyChanges";
+        case CommandType::LaunchInquisition: return s + "LaunchInquisition u" + std::to_string(c.id);
+        case CommandType::HealReligious: return s + "HealReligious u" + std::to_string(c.id);
         case CommandType::Paradrop: return s + "Paradrop " + std::to_string(c.id) + " -> " + std::to_string(c.target.x) + "," + std::to_string(c.target.y);
         case CommandType::InciteCamp: return s + "InciteCamp camp" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
         case CommandType::ProposeDeal: return s + "ProposeDeal -> p" + std::to_string(c.arg) + " (" + std::to_string(c.data.size() / 4) + " items)";

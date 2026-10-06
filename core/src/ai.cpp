@@ -2093,9 +2093,29 @@ void prophet(View& v, UnitId id) {
         g.submit(Command::setActivity(v.me, id, Activity::Sleep));
 }
 
+// One of our cities following another religion (06: the Inquisition's work).
+bool heresyAtHome(const View& v) {
+    const Player& p = v.s().players[at(v.me)];
+    for (CityId cid : v.cities) {
+        const int maj = v.game.cityMajorityReligion(*v.s().city(cid));
+        if (maj >= 0 && maj != p.religion) return true;
+    }
+    return false;
+}
+
 void religiousUnit(View& v, UnitId id) {
     Game& g = v.game;
     const Unit* u = v.s().unit(id);
+    // Heresy in our cities: an unused Apostle launches the Inquisition (06).
+    if (heresyAtHome(v) && g.canLaunchInquisition(id)) {
+        g.submit(Command::launchInquisition(v.me, id));
+        return;
+    }
+    if (g.canHealReligious(id)) {
+        g.submit(Command::healReligious(v.me, id));
+        return;
+    }
+    const bool inquisitor = v.r.units[at(u->type)].id == "UNIT_INQUISITOR";
     for (int cls = static_cast<int>(BeliefClass::Follower); cls < kNumBeliefClasses; ++cls) {
         const TypeIndex b = firstBelief(v, static_cast<BeliefClass>(cls));
         if (b != kNone && g.canEvangelize(id, b)) {
@@ -2114,6 +2134,7 @@ void religiousUnit(View& v, UnitId id) {
     int bestScore = INT_MAX;
     for (const City& c : v.s().cities) {
         if (g.cityMajorityReligion(c) == u->religion || promisedNot(c.owner) || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
+        if (inquisitor && c.owner != v.me) continue;  // Inquisitors work at home
         const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6);
         if (score < bestScore) {
             bestScore = score;
@@ -2139,7 +2160,8 @@ void buyReligion(View& v) {
             if (cost > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(cost + 50)) g.submit(Command::purchaseWithFaith(v.me, cid, item));
         }
         if (missionaries >= 3) continue;
-        for (const char* type : {"UNIT_APOSTLE", "UNIT_MISSIONARY"}) {
+        for (const char* type : {"UNIT_INQUISITOR", "UNIT_APOSTLE", "UNIT_MISSIONARY"}) {
+            if (std::string(type) == "UNIT_INQUISITOR" && !heresyAtHome(v)) continue;
             const ProductionItem item{ProductionKind::Unit, v.r.unit(type)};
             const int cost = g.faithPurchaseCost(v.me, c, item);
             if (cost > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(cost + 25) &&

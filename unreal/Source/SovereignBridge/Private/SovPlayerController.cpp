@@ -956,6 +956,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add({FString::Printf(TEXT("Adopt %s"), *Str(R.governments[g].name)), sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(g))});
 			}
 			static const TCHAR* const SlotNames[] = {TEXT("Military"), TEXT("Economic"), TEXT("Diplomatic"), TEXT("Wildcard"), TEXT("Great Person")};
+			if (const sov::Command Buy = sov::Command::buyPolicyChanges(Me()); G.validate(Buy) == sov::CommandError::Ok)
+				Choices.Add({FString::Printf(TEXT("Open government and policy changes this turn (%d gold)"), G.policyChangeCost(Me())), Buy});
 			if (Current != sov::kNone)
 			{
 				for (int32 Slot = 0; Slot < static_cast<int32>(P.policies.size()); ++Slot)
