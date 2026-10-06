@@ -103,6 +103,37 @@ bool Game::canEvangelize(UnitId apostle, TypeIndex belief) const {
     return true;
 }
 
+bool Game::beliefInPlay(Bf which) const {
+    const TypeIndex b = beliefs_[static_cast<size_t>(which)];
+    if (b == kNone) return false;
+    for (const Player& p : state_.players) {
+        if (p.pantheon == b) return true;
+    }
+    for (size_t i = 0; i < state_.religions.size(); ++i) {
+        if (religionHas(state_, static_cast<int>(i), b)) return true;
+    }
+    return false;
+}
+
+bool Game::cityFollows(const City& city, Bf which) const {
+    const TypeIndex b = beliefs_[static_cast<size_t>(which)];
+    if (b == kNone) return false;
+    // Cheap checks first: this runs for every plot's yields (Earth Goddess).
+    const bool pantheon = state_.players[at(city.owner)].pantheon == b;
+    bool religion = false;
+    for (size_t i = 0; i < state_.religions.size() && !religion; ++i) religion = religionHas(state_, static_cast<int>(i), b);
+    if (!pantheon && !religion) return false;
+    const int maj = cityMajorityReligion(city);
+    if (maj >= 0) return religionHas(state_, maj, b);
+    return pantheon;
+}
+
+bool Game::playerHasBelief(PlayerId player, Bf which) const {
+    const TypeIndex b = beliefs_[static_cast<size_t>(which)];
+    const Player& p = state_.players[at(player)];
+    return b != kNone && (p.pantheon == b || (p.religion >= 0 && religionHas(state_, p.religion, b)));
+}
+
 int Game::cityMajorityReligion(const City& city) const { return majorityReligion(state_, *rules_, city); }
 
 int Game::cityFollowers(const City& city, int religion) const { return religionFollowers(state_, *rules_, city, religion); }

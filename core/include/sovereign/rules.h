@@ -798,6 +798,8 @@ enum class ReqType : uint8_t {
     CityCaptured,               // founded by another civ
     CityHasImprovedResource,    // a plot of the city holds resource `ref` under a working improvement
     CityMinTerrainTiles,        // at least `value` of the city's plots on terrain `ref` or its hills (Amundsen-Scott)
+    PlotHasResourceClass,       // the plot holds a resource of class `value` (ResourceClass)
+    CityDistrictNextToRiver,    // the city's completed district `ref` lies next to a river (River Goddess)
     PlayerAtPeace,              // the owner is at war with no major civ
     WorldMinEra,                // the world era is at least `value`
     CityMinPopulation,

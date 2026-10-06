@@ -315,6 +315,28 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.per));
     }
+    // Pantheons (06): a Holy Site's Faith from adjacent Tundra (Dance of the Aurora), Desert (Desert Folklore) or Rainforest (Sacred Path).
+    if (d.id == "DISTRICT_HOLY_SITE") {
+        const City* follower = state_.city(state_.plot(plot).city);
+        if (follower) {
+            const bool aurora = cityFollows(*follower, Bf::DanceOfTheAurora), folklore = cityFollows(*follower, Bf::DesertFolklore),
+                       path = cityFollows(*follower, Bf::SacredPath);
+            if (aurora || folklore || path) {
+                int n = 0;
+                for (const Hex& h : state_.grid.within(plot, 1)) {
+                    if (h == plot) continue;
+                    const Plot& q = state_.plot(h);
+                    const TerrainType& t = rules_->terrains[static_cast<size_t>(q.terrain)];
+                    const bool flatOrHills = t.relief != Relief::Mountain;
+                    n += (aurora && flatOrHills && t.base == "TUNDRA") || (folklore && flatOrHills && t.base == "DESERT") ||
+                                 (path && q.feature != kNone && rules_->features[static_cast<size_t>(q.feature)].id == "FEATURE_JUNGLE")
+                             ? 1
+                             : 0;
+                }
+                out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(n);
+            }
+        }
+    }
     // Machu Picchu (03: Wonders): +1 per adjacent Mountain for Commercial Hubs, Industrial Zones and Theater Squares.
     const YieldType mountainYield = d.id == "DISTRICT_COMMERCIAL_HUB" ? YieldType::Gold
                                     : d.id == "DISTRICT_INDUSTRIAL_ZONE" ? YieldType::Production

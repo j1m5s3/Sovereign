@@ -1539,6 +1539,19 @@ void Game::healAndFortify(PlayerId pid) {
             if (const int extra = unitEffectTotal(o, UnitEffectKind::HealAura); extra > 0) chaplains.push_back({o.pos, extra});
         }
     }
+    // Pantheon and religion (06): extra healing in and next to the player's Holy Sites.
+    std::vector<std::pair<Hex, int>> holySites;
+    const bool healing = playerHasBelief(pid, Bf::GodOfHealing);
+    if (healing || beliefInPlay(Bf::HolyWaters)) {
+        const TypeIndex holy = rules_->district("DISTRICT_HOLY_SITE");
+        for (const City& c : state_.cities) {
+            if (c.owner != pid) continue;
+            const int waters = cityFollows(c, Bf::HolyWaters) ? 10 : 0;
+            for (const CityDistrict& d : c.districts) {
+                if (d.complete && d.type == holy && (healing || waters > 0)) holySites.push_back({d.pos, (healing ? 30 : 0) + waters});
+            }
+        }
+    }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         const UnitType& ut = typeOf(*rules_, u);
@@ -1560,7 +1573,9 @@ void Game::healAndFortify(PlayerId pid) {
             if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
             // Chaplain (06): a friendly Apostle next to it.
             for (const auto& [pos, extra] : chaplains) heal += state_.grid.distance(pos, u.pos) <= 1 ? extra : 0;
-            u.hp = std::min(maxHp, u.hp + heal);
+            int holyExtra = 0;
+            for (const auto& [pos, extra] : holySites) holyExtra = std::max(holyExtra, state_.grid.distance(pos, u.pos) <= 1 ? extra : 0);
+            u.hp = std::min(maxHp, u.hp + heal + holyExtra);
         }
         // Natural wonders (01): the Dead Sea heals land units beside it fully; Lysefjord gives ships beside it a promotion's XP.
         if (ut.domain == Domain::Land && nextToNaturalWonder(u.pos, "FEATURE_DEAD_SEA")) u.hp = maxHp;

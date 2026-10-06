@@ -776,6 +776,12 @@ private:
     TypeIndex wonders_[static_cast<size_t>(W::Count)] = {};
     TypeIndex wonderType(W w) const { return wonders_[static_cast<size_t>(w)]; }
     bool holdsWonder(PlayerId player, W w) const;  // one of the player's cities has it
+    // Beliefs read in hot paths, looked up once (06: Religion).
+    enum class Bf : uint8_t { DanceOfTheAurora, DesertFolklore, SacredPath, EarthGoddess, GodOfHealing, GodOfWar, InitiationRites, HolyWaters, Count };
+    TypeIndex beliefs_[static_cast<size_t>(Bf::Count)] = {};
+    bool beliefInPlay(Bf b) const;                      // some pantheon or religion has it
+    bool cityFollows(const City& city, Bf b) const;     // the city's majority religion has it, or its owner's pantheon while it has none
+    bool playerHasBelief(PlayerId player, Bf b) const;  // the player's pantheon or founded religion has it
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
     uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings

@@ -199,6 +199,48 @@ TEST(a_religion_followed_across_every_civ_wins) {
     CHECK(g->state().victory == Victory::Religious);
 }
 
+TEST(pantheon_beliefs_take_effect) {
+    // Desert Folklore: the Holy Site gains +1 Faith per adjacent Desert.
+    GameState s = religionState();
+    for (const Hex& h : s.grid.within({6, 6}, 1)) {
+        if (h != Hex{6, 6} && h != Hex{5, 6}) s.plot(h).terrain = rules().terrain("TERRAIN_DESERT");
+    }
+    const TypeIndex holy = rules().district("DISTRICT_HOLY_SITE");
+    const size_t faith = static_cast<size_t>(YieldType::Faith);
+    auto plain = Game::fromScenario(rules(), s);
+    GameState t = s;
+    t.players[0].pantheon = belief("BELIEF_DESERT_FOLKLORE");
+    auto g = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(g->districtAdjacency(0, holy, {6, 6})[faith], plain->districtAdjacency(0, holy, {6, 6})[faith] + Fixed::fromInt(5));
+    // God of the Forge: +25% toward military units in all the player's cities; City Patron Goddess: +25% toward
+    // districts in a city with no specialty district yet.
+    GameState u = s;
+    u.players[0].pantheon = belief("BELIEF_GOD_OF_THE_FORGE");
+    auto forge = Game::fromScenario(rules(), std::move(u));
+    const TypeIndex warrior = rules().unit("UNIT_WARRIOR");
+    CHECK_EQ(sumUnitProductionPercent(forge->state(), rules(), forge->state().cities[1], warrior), Fixed::fromInt(25));
+    CHECK_EQ(sumUnitProductionPercent(forge->state(), rules(), forge->state().cities[2], warrior), Fixed());
+    GameState v = s;
+    v.players[0].pantheon = belief("BELIEF_CITY_PATRON_GODDESS");
+    auto patron = Game::fromScenario(rules(), std::move(v));
+    CHECK_EQ(sumCityModifiers(patron->state(), rules(), patron->state().cities[1], ModEffect::CityDistrictProductionPercent), Fixed::fromInt(25));
+    CHECK_EQ(sumCityModifiers(patron->state(), rules(), patron->state().cities[0], ModEffect::CityDistrictProductionPercent), Fixed());
+}
+
+TEST(god_of_healing_heals_next_to_a_holy_site) {
+    auto hpAfter = [](bool healing) {
+        GameState s = religionState();
+        if (healing) s.players[0].pantheon = belief("BELIEF_GOD_OF_HEALING");
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {7, 6});
+        s.units.back().hp = 40;
+        s.units.back().activity = Activity::Sleep;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 2);
+        return g->state().unit(w)->hp;
+    };
+    CHECK_EQ(hpAfter(true), hpAfter(false) + 30);
+}
+
 TEST(religion_survives_a_save) {
     GameState s = religionState();
     s.players[0].pantheon = belief("BELIEF_STONE_CIRCLES");
