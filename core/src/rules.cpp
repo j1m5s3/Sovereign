@@ -566,6 +566,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
             {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
+            {"PLUNDER_PERCENT", UnitEffectKind::PlunderPercent},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -1769,6 +1770,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                     *error = where + ": bad effect yield";
                     return false;
                 }
+            } else if (kind == "ABILITY") {
+                fx.kind = GreatPersonEffectKind::Ability;
+                fx.ref = ability(ref);
             } else if (kind == "GREAT_PERSON_POINTS") {
                 fx.kind = GreatPersonEffectKind::GreatPersonPoints;
                 fx.ref = 0;

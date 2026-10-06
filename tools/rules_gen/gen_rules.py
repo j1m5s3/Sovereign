@@ -496,7 +496,8 @@ def unit_effects(text):
         simple = [
             (r"\+(\d+) Movement", "MOVES"), (r"\+(\d+) range", "RANGE"), (r"\+(\d+) sight", "SIGHT"),
             (r"\+(\d+) attack\(s\) per turn", "ATTACKS"), (r"\+(\d+)% combat XP", "XP_PERCENT"),
-            (r"(\d+)% flanking bonus", "FLANKING_PERCENT"), (r"(\d+)% support bonus", "SUPPORT_PERCENT"),
+            (r"(\d+)% flanking bonus(?: where (?:Land|Sea) unit)?", "FLANKING_PERCENT"), (r"(\d+)% support bonus", "SUPPORT_PERCENT"),
+            (r"\+(\d+)% pillage/plunder yields", "PLUNDER_PERCENT"),
         ]
         flags = {
             "can move after attacking": "MOVE_AFTER_ATTACK", "can attack after moving": "ATTACK_AFTER_MOVE",
@@ -1564,6 +1565,10 @@ def gp_effects(text, ids):
             effects.append({"kind": "BUILDING_YIELD", "building": ids["buildings"][m.group(3)], "yield": YIELD_WORDS[m.group(2)],
                             "amount": int(m.group(1))})
             continue
+        m = re.fullmatch(r"ability (.+?) \[.*\] for your units(?: where .+)?", t)
+        if m and m.group(1) in ids["abilities"]:
+            effects.append({"kind": "ABILITY", "ref": ids["abilities"][m.group(1)]})
+            continue
         m = re.fullmatch(r"(\d+) \(x game speed\) points toward every Great Person class", t)
         if m:
             effects.append({"kind": "GREAT_PERSON_POINTS", "amount": int(m.group(1))})
@@ -1587,6 +1592,7 @@ def gen_great_people():
         "nodes": node_names(),
         "buildings": {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")},
         "units": {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")},
+        "abilities": {r["Ability"]: "ABILITY_" + snake(r["Ability"]) for r in table(SPEC / "units.md", "Unit abilities")},
     }
     districts = {"DISTRICT_" + snake(n) for n in ["City Center"] + PLACEABLE_DISTRICTS}
     people = []

@@ -139,6 +139,7 @@ enum class UnitEffectKind : uint8_t {
     // Rock Band promotions [GS] (07: Rock Bands).
     BandLevel,          // +amount levels for a concert at `at`
     BandBurst,          // +amount tourism from a concert at `at`
+    PlunderPercent,     // +amount% to what it gains by pillaging or plundering (07: Plunder)
 };
 
 enum class CombatAtom : uint8_t {
@@ -306,6 +307,7 @@ enum class GreatPersonEffectKind : uint8_t {
     Unit,               // a free unit here
     BuildingYield,      // permanent: + yield from a building in all the player's cities
     GreatPersonPoints,  // points toward every class
+    Ability,            // permanent: an ability for the player's units of its classes
 };
 
 struct GreatPersonEffect {

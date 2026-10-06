@@ -1,4 +1,6 @@
 // Great people and Great Works (07-economy-trade-great-people.md).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/serialize.h"
 
@@ -168,4 +170,28 @@ TEST(great_people_survive_a_save) {
     CHECK_EQ(loaded->state().cities[0].greatWorks.size(), 1u);
     CHECK_EQ(loaded->state().units.back().greatPerson, person("GREAT_PERSON_HOMER"));
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+TEST(a_retired_great_person_gives_the_civs_units_an_ability) {
+    GameState s = cityState();
+    const UnitId zhukov = addGreatPerson(s, "GREAT_PERSON_GEORGY_ZHUKOV", {9, 6});
+    const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {10, 6});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {10, 7});
+    const UnitId theirs = addUnit(s, "UNIT_WARRIOR", 1, {14, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex flanking = rules().ability("ABILITY_GEORGY_ZHUKOV_FLANKING_BONUS");
+    const auto has = [&](UnitId id) {
+        const std::vector<TypeIndex> a = g->unitAbilities(*g->state().unit(id));
+        return std::find(a.begin(), a.end(), flanking) != a.end();
+    };
+    CHECK(!has(warrior));
+    REQUIRE(g->submit(Command::activateGreatPerson(0, zhukov)) == CommandError::Ok);
+    CHECK(has(warrior));
+    CHECK(!has(builder));  // not a class it applies to
+    CHECK(!has(theirs));
+    CHECK_EQ(g->unitEffectTotal(*g->state().unit(warrior), UnitEffectKind::FlankingPercent), 50);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->unitEffectTotal(*loaded->state().unit(warrior), UnitEffectKind::FlankingPercent), 50);
 }

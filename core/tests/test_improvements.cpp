@@ -370,3 +370,21 @@ TEST(encampment_buildings_raise_the_stockpile_cap) {
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->stockpileCap(0, iron), 70);
 }
+
+TEST(francis_drake_raises_plunder) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    for (int y = 0; y < 12; ++y) s.plot({12, y}).terrain = rules().terrain("TERRAIN_COAST");
+    sovtest::addCity(s, 1, {10, 6}, true, 4);
+    s.plot({11, 6}).improvement = improvement("IMPROVEMENT_MINE");
+    const UnitId galley = sovtest::addUnit(s, "UNIT_GALLEY", 0, {12, 6});
+    s.players[0].greatPeopleActivated.push_back(rules().greatPerson("GREAT_PERSON_FRANCIS_DRAKE"));
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Fixed gold = g->state().players[0].gold;
+    REQUIRE(g->submit(Command::coastalRaid(0, galley, {11, 6})) == CommandError::Ok);
+    CHECK(g->state().players[0].gold == gold + Fixed::fromInt(75));  // a mine's 50 Gold, +50%
+}
