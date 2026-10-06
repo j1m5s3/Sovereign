@@ -208,8 +208,8 @@
     "kind": "GOLD",
     "amount": 25
    },
-   "builtBy": "UNIT_MILITARY_ENGINEER",
-   "defense": 4
+   "defense": 4,
+   "builtBy": "UNIT_MILITARY_ENGINEER"
   },
   {
    "id": "IMPROVEMENT_GEOTHERMAL_PLANT",
@@ -675,6 +675,369 @@
     "amount": 25
    },
    "powerProvided": 2
+  },
+  {
+   "id": "IMPROVEMENT_ALC_ZAR",
+   "name": "Alcázar",
+   "yields": {
+    "CULTURE": 2
+   },
+   "cityState": "CITYSTATE_GRANADA",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
+   "defense": 4,
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
+   }
+  },
+  {
+   "id": "IMPROVEMENT_BATEY",
+   "name": "Batey",
+   "yields": {
+    "CULTURE": 1
+   },
+   "cityState": "CITYSTATE_CAGUANA",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_SNOW",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "per": 1,
+     "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "obsoleteWith": "CIVIC_EXPLORATION"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 2,
+     "per": 1,
+     "district": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "needs": "CIVIC_EXPLORATION"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "per": 1,
+     "resourceClass": "BONUS",
+     "obsoleteWith": "CIVIC_EXPLORATION"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 2,
+     "per": 1,
+     "resourceClass": "BONUS",
+     "needs": "CIVIC_EXPLORATION"
+    }
+   ],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
+   }
+  },
+  {
+   "id": "IMPROVEMENT_COLOSSAL_HEAD",
+   "name": "Colossal Head",
+   "yields": {
+    "FAITH": 2
+   },
+   "cityState": "CITYSTATE_LA_VENTA",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 2,
+     "feature": "FEATURE_FOREST",
+     "obsoleteWith": "CIVIC_HUMANISM"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 2,
+     "feature": "FEATURE_JUNGLE",
+     "obsoleteWith": "CIVIC_HUMANISM"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 1,
+     "feature": "FEATURE_FOREST",
+     "needs": "CIVIC_HUMANISM"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 1,
+     "feature": "FEATURE_JUNGLE",
+     "needs": "CIVIC_HUMANISM"
+    }
+   ],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
+   "tourism": {
+    "source": "FAITH",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
+   }
+  },
+  {
+   "id": "IMPROVEMENT_MAHAVIHARA",
+   "name": "Mahavihara",
+   "yields": {
+    "SCIENCE": 2
+   },
+   "cityState": "CITYSTATE_NALANDA",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_SNOW",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "SCIENCE",
+     "amount": 1,
+     "per": 1,
+     "district": "DISTRICT_CAMPUS",
+     "obsoleteWith": "TECH_SCIENTIFIC_THEORY"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 2,
+     "per": 1,
+     "district": "DISTRICT_CAMPUS",
+     "needs": "TECH_SCIENTIFIC_THEORY"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 1,
+     "district": "DISTRICT_HOLY_SITE"
+    }
+   ],
+   "housing": 1.0,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
+  },
+  {
+   "id": "IMPROVEMENT_MOAI",
+   "name": "Moai",
+   "yields": {
+    "CULTURE": 1
+   },
+   "cityState": "CITYSTATE_RAPA_NUI",
+   "validTerrains": [
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS"
+   ],
+   "validFeatures": [
+    "FEATURE_VOLCANIC_SOIL"
+   ],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "per": 2,
+     "improvement": "IMPROVEMENT_MOAI",
+     "obsoleteWith": "CIVIC_MEDIEVAL_FAIRES"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "per": 1,
+     "improvement": "IMPROVEMENT_MOAI",
+     "needs": "CIVIC_MEDIEVAL_FAIRES"
+    }
+   ],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   },
+   "tourism": {
+    "source": "CULTURE",
+    "percent": 100,
+    "after": "TECH_FLIGHT"
+   }
+  },
+  {
+   "id": "IMPROVEMENT_MONASTERY",
+   "name": "Monastery",
+   "yields": {
+    "FAITH": 2
+   },
+   "cityState": "CITYSTATE_ARMAGH",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "per": 2,
+     "district": "ANY"
+    }
+   ],
+   "housing": 1.0,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
+  },
+  {
+   "id": "IMPROVEMENT_CAHOKIA_MOUNDS",
+   "name": "Cahokia Mounds",
+   "yields": {
+    "GOLD": 3
+   },
+   "cityState": "CITYSTATE_CAHOKIA",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_GRASS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_TUNDRA"
+   ],
+   "validFeatures": [
+    "FEATURE_FLOODPLAINS",
+    "FEATURE_FLOODPLAINS_GRASSLAND",
+    "FEATURE_FLOODPLAINS_PLAINS"
+   ],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "per": 2,
+     "district": "ANY",
+     "needs": "CIVIC_FEUDALISM",
+     "obsoleteWith": "TECH_REPLACEABLE_PARTS"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "per": 1,
+     "district": "ANY",
+     "needs": "TECH_REPLACEABLE_PARTS"
+    }
+   ],
+   "housing": 1.0,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
+  },
+  {
+   "id": "IMPROVEMENT_NAZCA_LINE",
+   "name": "Nazca Line",
+   "yields": {},
+   "cityState": "CITYSTATE_NAZCA",
+   "validTerrains": [
+    "TERRAIN_DESERT"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "appeal": 1,
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
+  },
+  {
+   "id": "IMPROVEMENT_TRADING_DOME",
+   "name": "Trading Dome",
+   "yields": {
+    "GOLD": 2
+   },
+   "cityState": "CITYSTATE_SAMARKAND",
+   "validTerrains": [
+    "TERRAIN_DESERT",
+    "TERRAIN_DESERT_HILLS",
+    "TERRAIN_GRASS",
+    "TERRAIN_GRASS_HILLS",
+    "TERRAIN_PLAINS",
+    "TERRAIN_PLAINS_HILLS",
+    "TERRAIN_SNOW",
+    "TERRAIN_SNOW_HILLS",
+    "TERRAIN_TUNDRA",
+    "TERRAIN_TUNDRA_HILLS"
+   ],
+   "validFeatures": [],
+   "validResources": [],
+   "adjacency": [
+    {
+     "yield": "GOLD",
+     "amount": 1,
+     "per": 1,
+     "resourceClass": "LUXURY"
+    }
+   ],
+   "plunder": {
+    "kind": "GOLD",
+    "amount": 25
+   }
   }
  ]
 }

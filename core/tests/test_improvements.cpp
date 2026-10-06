@@ -45,7 +45,7 @@ void know(GameState& s, const char* id) { s.players[0].techs.done[at(tech(id))] 
 
 TEST(improvement_data_from_civ_tables) {
     const Rules& r = rules();
-    CHECK_EQ(r.improvements.size(), 24u);  // 17 from the Civ tables, 4 Military Engineer ones, 3 civ uniques
+    CHECK_EQ(r.improvements.size(), 33u);  // 17 from the Civ tables, 4 Military Engineer ones, 9 city-states', 3 civ uniques
     const ImprovementType& farm = r.improvements[at(improvement("IMPROVEMENT_FARM"))];
     CHECK(farm.unlock.none());
     CHECK_EQ(farm.yields[F], Fixed::fromInt(1));
@@ -465,4 +465,34 @@ TEST(military_engineers_speed_an_aqueduct) {
     t.cities[0].districts.push_back(aqueduct);
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK(h->chargeProblem(0, h->state().units.front().id) != CommandError::Ok);
+}
+
+TEST(a_city_states_improvement_for_its_suzerain) {
+    // La Venta's Colossal Head: +2 Faith, +1 per two neighbouring woods; only while we hold its suzerain bonus.
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.envoys.assign(2, 0);
+        p.relations.resize(2);
+    }
+    s.players[1].civ = kNone;
+    s.players[1].cityState = rules().cityState("CITYSTATE_LA_VENTA");
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    sovtest::addCity(s, 1, {14, 6}, true, 2);
+    s.plot({6, 6}).owner = 0;
+    s.plot({6, 6}).city = s.cities[0].id;
+    s.plot({7, 6}).feature = s.plot({6, 7}).feature = rules().feature("FEATURE_FOREST");
+    const TypeIndex head = improvement("IMPROVEMENT_COLOSSAL_HEAD");
+    REQUIRE(head != kNone);
+    {
+        auto g = Game::fromScenario(rules(), s);
+        CHECK(!g->canImproveAt(0, {6, 6}, head));  // not its suzerain
+    }
+    s.players[0].envoys[1] = 3;
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(g->canImproveAt(0, {6, 6}, head));
+    GameState t = s;
+    t.plot({6, 6}).improvement = head;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->improvementYields({6, 6}, 0)[static_cast<size_t>(YieldType::Faith)], Fixed::fromInt(3));  // 2, and 1 for two woods
 }

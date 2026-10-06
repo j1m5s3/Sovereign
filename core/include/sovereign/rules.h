@@ -286,6 +286,10 @@ struct ImprovementAdjacency {
     Fixed amount;
     int per = 1;                     // amount per this many adjacent improvements
     TypeIndex improvement = kNone;
+    // ...or what else it counts next to it: a district (`district`: an id, or ANY), a feature, or a resource class.
+    std::string district;
+    TypeIndex feature = kNone;
+    int resourceClass = -1;          // ResourceClass, -1: none
     Unlock needs, obsoleteWith;
 };
 
@@ -307,6 +311,9 @@ struct ImprovementType {
     // Civ unique improvements (leaders-and-art-style).
     TypeIndex uniqueTo = kNone;
     std::string uniqueToId;  // (loading only)
+    // City-states' unique improvements (08): for players enjoying that city-state's suzerain bonus.
+    TypeIndex cityState = kNone;
+    std::string cityStateId;  // (loading only)
     int amenities = 0;       // to its city
     int defense = 0;         // combat strength for units defending on it
     int sight = 0;           // extra sight for units on it

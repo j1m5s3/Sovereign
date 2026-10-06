@@ -43,6 +43,8 @@ bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
     if (!hasUnlocked(player, im.unlock)) return false;
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
+    // City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
+    if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState)) return false;
     if (im.needsRiver && !isRiverAdjacent(state_, at)) return false;
     if (p.park) return false;  // a National Park keeps its land as it is (07)
     if (im.minAppeal > -100 && plotAppeal(at) < im.minAppeal) return false;  // Seaside Resort: Breathtaking (07)
@@ -96,7 +98,18 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
         if (!a.obsoleteWith.none() && hasUnlocked(owner, a.obsoleteWith)) continue;
         int n = 0;
         for (const Hex& h : state_.grid.within(at, 1)) {
-            if (h != at && state_.plot(h).improvement == a.improvement) ++n;
+            if (h == at) continue;
+            const Plot& q = state_.plot(h);
+            if (a.improvement != kNone) n += q.improvement == a.improvement ? 1 : 0;
+            else if (!a.district.empty()) {
+                const CityDistrict* d = state_.districtAt(h);
+                const bool center = state_.cityAt(h) != nullptr;
+                n += (d && d->complete && (a.district == "ANY" || rules_->districts[static_cast<size_t>(d->type)].id == a.district)) ||
+                             (center && (a.district == "ANY" || a.district == "DISTRICT_CITY_CENTER"))
+                         ? 1
+                         : 0;
+            } else if (a.feature != kNone) n += q.feature == a.feature ? 1 : 0;
+            else if (a.resourceClass >= 0) n += q.resource != kNone && static_cast<int>(rules_->resources[static_cast<size_t>(q.resource)].cls) == a.resourceClass ? 1 : 0;
         }
         y[static_cast<size_t>(a.yield)] += a.amount * (n / a.per);
     }
