@@ -627,7 +627,7 @@ private:
     CommandError validateCombat(const Command& c) const;
     void applyCombat(const Command& c);
     std::optional<Fixed> terrainCost(const Unit& unit, Hex from, Hex to) const;
-    bool lineOfSight(Hex from, Hex to) const;
+    bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
     int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;
@@ -649,6 +649,7 @@ private:
     void healCities(PlayerId p);
     // Barbarian bookkeeping before a unit dies in combat: camp boldness.
     void noteKill(const Unit& victim, const Unit* killer);
+    void killReward(Player& to, const UnitEffect& effect, const UnitType& victim);  // a KillYield effect's reward
     // A military unit entered this plot: clears a barbarian camp there.
     void enterPlot(Unit& unit);
     void linkBarbarians();

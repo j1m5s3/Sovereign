@@ -466,9 +466,11 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
     }
     if (ut.domain != Domain::Land) return std::nullopt;  // air units arrive later
     const int embarkCost = rules_->globalInt("MOVEMENT_EMBARK_COST");
+    // Amphibious (05): embarking and disembarking cost nothing extra.
+    const bool freeEmbark = (tt.water || fromWater) && unitHas(unit, UnitEffectKind::FreeEmbark);
     if (tt.water) {
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
-        return Fixed::fromInt(fromWater ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
+        return Fixed::fromInt(fromWater || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
     }
     if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
     // Missionary Zeal: religious units ignore terrain (06).
@@ -477,8 +479,14 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         return Fixed::fromInt(fromWater ? embarkCost + 1 : 1);
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
-    if (p.feature != kNone) cost += rules_->features[static_cast<size_t>(p.feature)].moveChange;
-    if (fromWater) return Fixed::fromInt(embarkCost + std::max(cost, 1));  // disembarking
+    if (tt.relief == Relief::Hills && cost > 1 && unitHas(unit, UnitEffectKind::IgnoreHills)) cost = 1;  // Alpine (05)
+    if (p.feature != kNone) {
+        const FeatureType& ft = rules_->features[static_cast<size_t>(p.feature)];
+        // Ranger (05): woods cost nothing extra.
+        if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && unitHas(unit, UnitEffectKind::IgnoreForest))) cost += ft.moveChange;
+    }
+    if (cost > 1 && unitHas(unit, UnitEffectKind::IgnoreTerrain)) cost = 1;
+    if (fromWater) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
@@ -649,10 +657,10 @@ void Game::refreshVisibility(PlayerId pid) {
     }
     std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
     Unit* finder = nullptr;
-    auto see = [&](Hex from, int range) {
+    auto see = [&](Hex from, int range, bool throughFeatures = false) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
         for (const Hex& target : state_.grid.within(from, range)) {
-            if (!lineOfSight(from, target)) continue;
+            if (!lineOfSight(from, target, throughFeatures)) continue;
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
             const TypeIndex f = state_.plot(target).feature;
             if (v == static_cast<uint8_t>(Visibility::Unrevealed) && f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder &&
@@ -674,7 +682,7 @@ void Game::refreshVisibility(PlayerId pid) {
     for (Unit& u : state_.units) {
         if (!shares(u.owner)) continue;
         finder = u.owner == pid ? &u : nullptr;
-        see(u.pos, unitSight(u));
+        see(u.pos, unitSight(u), unitHas(u, UnitEffectKind::SeesThroughFeatures));  // Sentry (05)
     }
     finder = nullptr;
     for (const City& c : state_.cities) {
@@ -719,13 +727,13 @@ void Game::refreshVisibility(PlayerId pid) {
 }
 
 // Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
-bool Game::lineOfSight(Hex from, Hex to) const {
+bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
     const int viewerHeight = terrainOf(*rules_, state_.plot(from)).sightThrough;
     std::vector<Hex> line = state_.grid.line(from, to);
     for (size_t i = 1; i + 1 < line.size(); ++i) {
         const Plot& op = state_.plot(line[i]);
         int obstacle = terrainOf(*rules_, op).sightThrough;
-        if (op.feature != kNone) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
+        if (op.feature != kNone && !throughFeatures) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
         if (obstacle > viewerHeight) return false;
     }
     return true;

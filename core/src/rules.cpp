@@ -599,6 +599,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
             {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
             {"PLUNDER_PERCENT", UnitEffectKind::PlunderPercent}, {"CHEAP_PILLAGE", UnitEffectKind::CheapPillage},
+            {"IGNORE_HILLS", UnitEffectKind::IgnoreHills}, {"IGNORE_FOREST", UnitEffectKind::IgnoreForest},
+            {"IGNORE_TERRAIN", UnitEffectKind::IgnoreTerrain}, {"FREE_EMBARK", UnitEffectKind::FreeEmbark},
+            {"SEES_THROUGH_FEATURES", UnitEffectKind::SeesThroughFeatures}, {"COASTAL_RAID", UnitEffectKind::CoastalRaid},
+            {"HEAL_NEUTRAL", UnitEffectKind::HealNeutral}, {"HEAL_ENEMY", UnitEffectKind::HealEnemy},
+            {"AIR_SLOTS", UnitEffectKind::AirSlots}, {"KILL_YIELD", UnitEffectKind::KillYield},
         };
         static const std::pair<const char*, CombatAtom> atoms[] = {
             {"UNTRACKED", CombatAtom::Untracked},       {"ATTACKING", CombatAtom::Attacking},
@@ -610,6 +615,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"OWN_TERRITORY", CombatAtom::OwnTerritory},
             {"ADJACENT_SAME_UNIT", CombatAtom::AdjacentSameUnit}, {"OPPONENT_TILE_BASE", CombatAtom::OpponentTileBase},
             {"OPPONENT_MIN_ERA", CombatAtom::OpponentMinEra},
+            {"IN_FORMATION", CombatAtom::InFormation},           {"TILE_FORT", CombatAtom::TileFort},
+            {"COASTAL_TILE", CombatAtom::CoastalTile},           {"HOME_CONTINENT", CombatAtom::HomeContinent},
+            {"OPPONENT_MINOR", CombatAtom::OpponentMinor},       {"OPPONENT_FREE_CITY", CombatAtom::OpponentFreeCity},
+            {"NEAR_OWN_TERRITORY", CombatAtom::NearOwnTerritory},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;
