@@ -170,7 +170,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	{
 		if (C.settled) continue;
 		static const TCHAR* const Kinds[] = {TEXT("World's Fair"), TEXT("World Games"), TEXT("Nobel Prize in Literature"), TEXT("Nobel Peace Prize"),
-			TEXT("Nobel Prize in Physics"), TEXT("Climate Accords"), TEXT("International Space Station"), TEXT("Aid Request")};
+			TEXT("Nobel Prize in Physics"), TEXT("Climate Accords"), TEXT("International Space Station"), TEXT("Aid Request"), TEXT("Military Aid Request")};
 		int32 Best = INT32_MIN;
 		sov::PlayerId Leader = sov::kNoPlayer;
 		for (const sov::Player& O : S.players)

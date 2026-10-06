@@ -47,7 +47,14 @@ FString ItemName(const sov::Rules& R, sov::ProductionItem Item)
 	const size_t T = static_cast<size_t>(Item.type);
 	switch (Item.kind)
 	{
-		case sov::ProductionKind::Unit: return Str(R.units[T].name);
+		case sov::ProductionKind::Unit:
+		{
+			// Trained whole as a Corps/Fleet or an Army/Armada (05).
+			const bool bSea = R.units[T].domain == sov::Domain::Sea;
+			if (Item.formation == 1) return Str(R.units[T].name) + (bSea ? TEXT(" Fleet") : TEXT(" Corps"));
+			if (Item.formation == 2) return Str(R.units[T].name) + (bSea ? TEXT(" Armada") : TEXT(" Army"));
+			return Str(R.units[T].name);
+		}
 		case sov::ProductionKind::Building: return Str(R.buildings[T].name);
 		case sov::ProductionKind::District: return Str(R.districts[T].name);
 		case sov::ProductionKind::Project: return Str(R.projects[T].name);

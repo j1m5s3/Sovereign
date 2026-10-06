@@ -116,13 +116,13 @@ struct Command {
     }
     static Command endTurn(PlayerId p) { return {CommandType::EndTurn, p, -1, {}, 0, 0}; }
     static Command setProduction(PlayerId p, CityId c, ProductionItem item, Hex at = {}) {
-        return {CommandType::SetProduction, p, c, at, static_cast<int32_t>(item.kind), item.type};
+        return {CommandType::SetProduction, p, c, at, item.packedKind(), item.type};
     }
     static Command queueProduction(PlayerId p, CityId c, ProductionItem item, Hex at = {}) {
-        return {CommandType::QueueProduction, p, c, at, static_cast<int32_t>(item.kind), item.type};
+        return {CommandType::QueueProduction, p, c, at, item.packedKind(), item.type};
     }
     static Command purchase(PlayerId p, CityId c, ProductionItem item) {
-        return {CommandType::Purchase, p, c, {}, static_cast<int32_t>(item.kind), item.type};
+        return {CommandType::Purchase, p, c, {}, item.packedKind(), item.type};
     }
     static Command buyPlot(PlayerId p, CityId c, Hex plot) { return {CommandType::BuyPlot, p, c, plot, 0, 0}; }
     static Command lockPlot(PlayerId p, CityId c, Hex plot, bool lock) {
@@ -237,7 +237,7 @@ struct Command {
     }
     // Buy a religious unit or a worship building with Faith (target.x = 1 marks a Faith purchase).
     static Command purchaseWithFaith(PlayerId p, CityId c, ProductionItem item) {
-        return {CommandType::Purchase, p, c, Hex{1, 0}, static_cast<int32_t>(item.kind), item.type};
+        return {CommandType::Purchase, p, c, Hex{1, 0}, item.packedKind(), item.type};
     }
 };
 

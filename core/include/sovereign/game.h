@@ -106,6 +106,7 @@ public:
     int productionCost(PlayerId player, ProductionItem item) const;
     // Gold price, or -1 when the item cannot be bought with gold.
     int purchaseCost(PlayerId player, ProductionItem item) const;
+    bool canTrainFormation(const City& city, TypeIndex unit, int formation) const;  // a Corps (1) or Army (2) whole (05)
     // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
     // Divine Architect) (08: Governors); -1 when it cannot be.
     int districtPurchaseCost(const City& city, TypeIndex district, bool faith) const;
@@ -409,7 +410,9 @@ public:
 
     // ---- scored competitions [GS] (08: Scored Competitions)
     void startCompetition();                                       // at a World Congress session
-    void requestAid(PlayerId victim);                              // a disaster cost it population: an Aid Request
+    void requestAid(PlayerId victim, bool military = false);       // a disaster (or, military, a grievous war): an Aid Request
+    bool specialSessionDue() const;                                // WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS since the last
+    void checkMilitaryAid();                                       // the world turn: a civ at war with one it holds grievances against
     const Competition* runningAidRequest() const;
     void competitionScore(PlayerId player, CompetitionKind kind, int amount);
     int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)

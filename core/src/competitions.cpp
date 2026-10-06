@@ -55,16 +55,24 @@ void Game::startCompetition() {
     state_.competitions.push_back(std::move(c));
 }
 
-// Aid Request [GS] (08: Scored Competitions; data: Aid Request rewards and score sources): a disaster
-// that costs a major civ population opens one when no competition runs; for 30 turns the others may run
-// the Send Aid project in their cities, each completion sending the struck civ 200 Gold and scoring 200.
-void Game::requestAid(PlayerId victim) {
-    if (!isMajorCiv(victim)) return;
+// Aid Request and Military Aid Request [GS] (08: Scored Competitions, Special sessions; data: their rewards
+// and score sources). A disaster that costs a major civ population, or a war against a civ it holds at
+// least WORLD_CONGRESS_REQUEST_FOR_MILITARY_AID_GRIEVANCES_MIN grievances against, calls a special session
+// when no competition runs and WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS have passed since the last;
+// for 30 turns the others may run the Send Aid project in their cities, each completion sending the civ
+// 200 Gold and scoring 200 (a civ at war with it may not send aid).
+bool Game::specialSessionDue() const {
+    return state_.lastSpecialSession == 0 || state_.turn - state_.lastSpecialSession >= rules_->globalInt("WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS");
+}
+
+void Game::requestAid(PlayerId victim, bool military) {
+    if (!isMajorCiv(victim) || !specialSessionDue()) return;
     for (const Competition& c : state_.competitions) {
         if (!c.settled) return;
     }
+    state_.lastSpecialSession = state_.turn;
     Competition c;
-    c.kind = CompetitionKind::AidRequest;
+    c.kind = military ? CompetitionKind::MilitaryAidRequest : CompetitionKind::AidRequest;
     c.endTurn = state_.turn + 30;
     c.scores.assign(state_.players.size(), 0);
     c.baseline.assign(state_.players.size(), 0);
@@ -74,9 +82,22 @@ void Game::requestAid(PlayerId victim) {
 
 const Competition* Game::runningAidRequest() const {
     for (const Competition& c : state_.competitions) {
-        if (!c.settled && c.kind == CompetitionKind::AidRequest) return &c;
+        if (!c.settled && (c.kind == CompetitionKind::AidRequest || c.kind == CompetitionKind::MilitaryAidRequest)) return &c;
     }
     return nullptr;
+}
+
+void Game::checkMilitaryAid() {
+    const int need = rules_->globalInt("WORLD_CONGRESS_REQUEST_FOR_MILITARY_AID_GRIEVANCES_MIN");
+    for (const Player& p : state_.players) {
+        if (!isMajorCiv(p.id) || !p.alive) continue;
+        for (const Player& o : state_.players) {
+            if (o.id != p.id && isMajorCiv(o.id) && atWar(p.id, o.id) && grievances(p.id, o.id) >= need) {
+                requestAid(p.id, true);
+                return;
+            }
+        }
+    }
 }
 
 void Game::competitionScore(PlayerId player, CompetitionKind kind, int amount) {
@@ -137,7 +158,8 @@ void Game::processCompetitions() {
                     case CompetitionKind::NobelPeace:
                     case CompetitionKind::SpaceStation: dvp = 1; break;
                     case CompetitionKind::ClimateAccords:
-                    case CompetitionKind::AidRequest: dvp = 2; break;
+                    case CompetitionKind::AidRequest:
+                    case CompetitionKind::MilitaryAidRequest: dvp = 2; break;
                     default: break;
                 }
                 p.diplomaticVictoryPoints += dvp;
@@ -146,7 +168,7 @@ void Game::processCompetitions() {
                 }
             }
             const bool high = rank < topHalf;
-            const bool aid = c.kind == CompetitionKind::AidRequest;
+            const bool aid = c.kind == CompetitionKind::AidRequest || c.kind == CompetitionKind::MilitaryAidRequest;
             if (high && c.kind != CompetitionKind::NobelLiterature && c.kind != CompetitionKind::NobelPhysics) p.favor += climate || aid ? 100 : 50;
             if (!high && (climate || aid)) p.favor += 50;
             if (c.kind == CompetitionKind::NobelPhysics) {

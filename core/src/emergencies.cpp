@@ -36,6 +36,9 @@ bool Game::inEmergencyAgainst(PlayerId member, PlayerId target) const {
 
 void Game::triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, PlayerId victim) {
     if (!isMajorCiv(target)) return;
+    // An emergency is a special session of the World Congress, at most one per
+    // WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS turns (08: Special sessions).
+    if (!specialSessionDue()) return;
     // One running emergency of a kind against a target at a time.
     for (const Emergency& e : state_.emergencies) {
         if (e.outcome == 0 && e.kind == kind && e.target == target) return;
@@ -53,6 +56,7 @@ void Game::triggerEmergency(EmergencyKind kind, PlayerId target, CityId city, Pl
     }
     if (victim != kNoPlayer && victim != target && isMajorCiv(victim)) e.members[at(victim)] = 1;
     state_.emergencies.push_back(std::move(e));
+    state_.lastSpecialSession = state_.turn;
 }
 
 void Game::processEmergencies() {

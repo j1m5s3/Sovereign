@@ -82,7 +82,10 @@ enum class ProductionKind : uint8_t { Unit = 0, Building = 1, District = 2, Proj
 struct ProductionItem {
     ProductionKind kind = ProductionKind::Unit;
     TypeIndex type = kNone;
-    bool operator==(const ProductionItem& o) const { return kind == o.kind && type == o.type; }
+    uint8_t formation = 0;  // a unit trained as a Corps/Fleet (1) or an Army/Armada (2) (05: Corps and Armies)
+    bool operator==(const ProductionItem& o) const { return kind == o.kind && type == o.type && formation == o.formation; }
+    // Commands carry the kind and the formation together in one argument.
+    int32_t packedKind() const { return static_cast<int32_t>(kind) | (static_cast<int32_t>(formation) << 4); }
 };
 
 // Production already put into an item; kept when the player switches away.
@@ -245,8 +248,8 @@ struct Quest {
 
 // A scored competition [GS] (08: Scored Competitions; data: world-congress-emergencies), called at a
 // World Congress session; every major civ takes part.
-enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation, AidRequest };
-constexpr int kNumCompetitionKinds = 8;
+enum class CompetitionKind : uint8_t { WorldsFair = 0, WorldGames, NobelLiterature, NobelPeace, NobelPhysics, ClimateAccords, SpaceStation, AidRequest, MilitaryAidRequest };
+constexpr int kNumCompetitionKinds = 9;
 struct Competition {
     CompetitionKind kind = CompetitionKind::WorldsFair;
     int32_t endTurn = 0;
@@ -602,6 +605,7 @@ struct SOV_API GameState {
     std::vector<Drought> droughts;      // -1 Food on their plots while they last
     std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
+    int32_t lastSpecialSession = 0;     // the turn the last special session (an emergency or an aid request) was called
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)
     std::vector<CongressItem> congress; // the resolutions in session
     std::vector<PassedResolution> passedResolutions;  // in force until the next session
