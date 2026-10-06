@@ -95,6 +95,17 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             break;
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
+        case ReqType::CityMinTerrainTiles:
+            if (c.city && c.state && c.rules && q.ref != kNone) {
+                const std::string& base = c.rules->terrains[static_cast<size_t>(q.ref)].base;
+                int n = 0;
+                for (const Hex& h : c.state->grid.within(c.city->pos, 3)) {
+                    const Plot& p = c.state->plot(h);
+                    n += p.city == c.city->id && c.rules->terrains[static_cast<size_t>(p.terrain)].base == base ? 1 : 0;
+                }
+                ok = n >= q.value;
+            }
+            break;
         case ReqType::CityHasImprovedResource:
             if (c.city && c.state) {
                 for (size_t i = 0; i < c.state->plots.size() && !ok; ++i) {

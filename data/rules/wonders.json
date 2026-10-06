@@ -215,10 +215,7 @@
      "FEATURE_FLOODPLAINS"
     ]
    },
-   "text": "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains",
-   "untrackedEffects": [
-    "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains"
-   ]
+   "text": "+2 Food, +2 Gold, +1 Production on this city's tiles where tile is Desert Class and NOT tile is Desert Floodplains"
   },
   {
    "id": "BUILDING_COLOSSEUM",
@@ -417,8 +414,7 @@
    },
    "text": "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer); +1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake",
    "untrackedEffects": [
-    "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer)",
-    "+1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake"
+    "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer)"
    ]
   },
   {
@@ -1113,11 +1109,7 @@
    "text": "+20% Science in all your cities; +10% Production in all your cities; +20% Science in all your cities where city has 5+ Snow tiles; +10% Production in all your cities where city has 5+ Snow tiles",
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 5
-   },
-   "untrackedEffects": [
-    "+20% Science in all your cities where city has 5+ Snow tiles",
-    "+10% Production in all your cities where city has 5+ Snow tiles"
-   ]
+   }
   },
   {
    "id": "BUILDING_EST_DIO_DO_MARACAN",
@@ -1356,6 +1348,144 @@
    }
   },
   {
+   "id": "BUILDING_PETRA_PLOTS_FOOD_0",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FOOD",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_PETRA_PLOTS_FOOD_1",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FOOD",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT_HILLS"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_PETRA_PLOTS_GOLD_0",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "GOLD",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_PETRA_PLOTS_GOLD_1",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "GOLD",
+    "amount": 2
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT_HILLS"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_PETRA_PLOTS_PRODUCTION_0",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_PETRA_PLOTS_PRODUCTION_1",
+   "source": "BUILDING_PETRA",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_DESERT_HILLS"
+     },
+     {
+      "type": "PLOT_HAS_FEATURE",
+      "ref": "FEATURE_FLOODPLAINS",
+      "negate": true
+     }
+    ]
+   }
+  },
+  {
    "id": "BUILDING_TERRACOTTA_ARMY_1",
    "source": "BUILDING_TERRACOTTA_ARMY",
    "collection": "PLAYER",
@@ -1372,6 +1502,60 @@
    "arguments": {
     "unitClass": "ANTI_CAVALRY",
     "amount": 50
+   }
+  },
+  {
+   "id": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS_PLOTS_SCIENCE_0",
+   "source": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_COAST"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS_PLOTS_FAITH_0",
+   "source": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FAITH",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_COAST"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS_PLOTS_CULTURE_0",
+   "source": "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
+   "collection": "OWNER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "CULTURE",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_HAS_TERRAIN",
+      "ref": "TERRAIN_COAST"
+     }
+    ]
    }
   },
   {
@@ -1720,6 +1904,44 @@
    "arguments": {
     "yield": "PRODUCTION",
     "amount": 10
+   }
+  },
+  {
+   "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION_3",
+   "source": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "SCIENCE",
+    "amount": 20
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "CITY_MIN_TERRAIN_TILES",
+      "ref": "TERRAIN_SNOW",
+      "value": 5
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION_4",
+   "source": "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION",
+   "collection": "PLAYER_CITIES",
+   "effect": "ADJUST_CITY_YIELD_PERCENT",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 10
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "CITY_MIN_TERRAIN_TILES",
+      "ref": "TERRAIN_SNOW",
+      "value": 5
+     }
+    ]
    }
   }
  ]

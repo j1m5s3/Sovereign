@@ -82,6 +82,39 @@ bool Game::holdsWonder(PlayerId player, W w) const {
     return std::any_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.owner == player && c.has(b); });
 }
 
+uint32_t Game::heldWonders(PlayerId player) const {
+    uint32_t held = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) {
+            if (wonders_[i] != kNone && c.has(wonders_[i])) held |= 1u << i;
+        }
+    }
+    return held;
+}
+
+void Game::grantTorreBuildings(PlayerId player) {
+    // Each of the player's cities off the capital's continent gets the cheapest building it could build in each of its districts.
+    int home = -1;
+    for (const City& c : state_.cities) {
+        if (c.owner == player && c.capital) home = state_.plot(c.pos).continent;
+    }
+    for (City& c : state_.cities) {
+        if (c.owner != player || state_.plot(c.pos).continent == home) continue;
+        for (const CityDistrict& d : c.districts) {
+            if (!d.complete) continue;
+            const std::string& district = rules_->districts[at(d.type)].id;
+            TypeIndex best = kNone;
+            for (size_t b = 0; b < rules_->buildings.size(); ++b) {
+                const BuildingType& bt = rules_->buildings[b];
+                if (bt.wonder || bt.district != district || !canProduce(c, {ProductionKind::Building, static_cast<TypeIndex>(b)})) continue;
+                if (best == kNone || bt.cost < rules_->buildings[at(best)].cost) best = static_cast<TypeIndex>(b);
+            }
+            if (best != kNone) c.buildings.insert(std::lower_bound(c.buildings.begin(), c.buildings.end(), best), best);
+        }
+    }
+}
+
 bool Game::nearOwnWonder(const City& city, TypeIndex b, int range) const {
     if (b == kNone) return false;
     for (const City& o : state_.cities) {
@@ -130,6 +163,7 @@ void Game::completeWonder(City& city, TypeIndex building) {
             applyEffectAt(city.owner, &city, city.pos, fx);
         }
     }
+    if (building == wonderType(W::Torre)) grantTorreBuildings(city.owner);
     syncPolicySlots(city.owner);  // Alhambra, Forbidden City, Potala Palace, Big Ben
     // Apadana: +2 envoys for each wonder completed in its city, itself included.
     if (city.has(rules_->building("BUILDING_APADANA")) && !policyIs(city.owner, "POLICY_ROGUE_STATE"))

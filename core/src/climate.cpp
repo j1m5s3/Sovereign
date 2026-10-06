@@ -331,6 +331,9 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center) {
                 sheltered = sheltered || (ni != kNone && rules_->improvements[static_cast<size_t>(ni)].halvesFloods);
             }
         }
+        // The Great Bath (03): +1 Faith to its owner for each of their plots a flood reaches.
+        if (dt.kind == DisasterKind::Flood && p.owner != kNoPlayer && buildingsOwned(p.owner, "BUILDING_GREAT_BATH") > 0)
+            state_.players[at(p.owner)].faith += Fixed::fromInt(1);
         // Damage (none where Liang's Reinforced Materials guards the city).
         const City* guarded = p.city == kNoCity ? nullptr : state_.city(p.city);
         const bool reinforced = guarded && cityGovernorHas(*guarded, "GOVERNOR_PROMOTION_REINFORCED_MATERIALS");

@@ -235,6 +235,8 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
     Unit& u = spawnUnit(cls.unit, pid, *spot);
     u.greatPerson = person;
     u.charges = g.greatWorkCount > 0 ? g.greatWorkCount : g.charges;
+    // Mausoleum at Halicarnassus (03): Great Engineers have a charge more.
+    if (cls.id == "GREAT_PERSON_CLASS_ENGINEER" && g.greatWorkCount == 0 && buildingsOwned(pid, "BUILDING_MAUSOLEUM_AT_HALICARNASSUS") > 0) ++u.charges;
 }
 
 bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {

@@ -1,6 +1,6 @@
 # Plan: world wonder effects (step 6, "everything else")
 
-Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-suzerain-bonuses.md`. Chosen by Claude under James's standing consent: of the 52 world wonders, only a handful applied their effects (free units, Eurekas, Hanging Gardens, Etemenanki, trade capacity); the rest were text (`text` in `wonders.json`). James can redirect at any point.
+Status: done, 2026-10-06. Previous: `jit_history/2026-10-06-suzerain-bonuses.md`. Chosen by Claude under James's standing consent: of the 52 world wonders, only a handful applied their effects (free units, Eurekas, Hanging Gardens, Etemenanki, trade capacity); the rest were text (`text` in `wonders.json`). James can redirect at any point.
 
 Specs: 03-districts-buildings-wonders (Wonders); data/wonders ("Effects (modifiers)").
 
@@ -22,10 +22,20 @@ Specs: 03-districts-buildings-wonders (Wonders); data/wonders ("Effects (modifie
    - Great Zimbabwe: +2 Gold per bonus resource of the origin; Torre de Belém: +2 Gold per luxury at an international destination;
    - Oracle: +2 points per district, Faith patronage 25% cheaper; Meenakshi Temple: Gurus 30% cheaper;
    - Apadana: +2 envoys per wonder completed in its city; Országház: double favor from suzerainties.
-4. **Next: Terrain and tourism wonders:**
-   - Great Bath, Petra, Huey Teocalli, Mausoleum, Amundsen-Scott;
-   - Cristo Redentor, St. Basil's, Golden Gate Bridge, Biosphère;
-   - Torre de Belém's free buildings.
+4. **Done: Terrain and tourism wonders:**
+   - generated: Petra (desert and its hills, not floodplains), Mausoleum (Coast), Amundsen-Scott (`CITY_MIN_TERRAIN_TILES`);
+   - in code: Mausoleum's extra Great Engineer charge, the Great Bath (+1 Faith per flooded plot), Torre de Belém's free buildings (`grantTorreBuildings`);
+   - tourism and Appeal: the Golden Gate Bridge doubles tourism from improvements and parks, Cristo Redentor doubles Seaside Resorts, and Biosphère gives Rainforest and Marsh +1 Appeal;
+   - a fix: Appeal modifiers (Eiffel Tower, Golden Gate Bridge) were read only in cities with great people (`plotAppeal`'s guard), and now apply.
+
+Not planned:
+- Huey Teocalli's lake effects: the map has no lakes apart from Coast.
+- St. Basil's "Tourism from scaled 200%" (the source is unnamed).
+- Cristo Redentor's religious tourism: there is no decay to prevent.
+- Golden Gate Bridge's roads and cliffs.
+- Biosphère's power and green-energy tourism.
+- The Great Library's boosts from Great Scientists.
+- Stonehenge's Apostle.
 
 ## Decisions (Claude's recommendations; James gave standing consent)
 

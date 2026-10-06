@@ -194,6 +194,21 @@ TEST(wonders_of_great_people_trade_and_envoys) {
              before->tradeRouteYields(before->state().cities[0], before->state().cities[1])[sci] + Fixed::fromInt(1));
 }
 
+TEST(terrain_and_tourism_wonders) {
+    // The Eiffel Tower's Appeal reaches the owner's plots; Petra adds Food on desert.
+    GameState s = wonderState();
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(wonder("BUILDING_EIFFEL_TOWER"));
+    s.cities[0].buildings.push_back(wonder("BUILDING_PETRA"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->plotAppeal({6, 6}), plain->plotAppeal({6, 6}) + 2);
+    CHECK_EQ(g->plotAppeal({16, 6}), plain->plotAppeal({16, 6}));  // not ours
+    const size_t food = static_cast<size_t>(YieldType::Food);
+    const City& mine = g->state().cities[0];
+    CHECK_EQ(g->plotYields({6, 6}, mine)[food], plain->plotYields({6, 6}, plain->state().cities[0])[food] + Fixed::fromInt(2));
+}
+
 TEST(jebel_barkal_gives_iron_while_it_stands) {
     GameState s = wonderState();
     s.cities[0].buildings.push_back(wonder("BUILDING_JEBEL_BARKAL"));
