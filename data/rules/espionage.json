@@ -134,5 +134,127 @@
    "enemyChange": 0,
    "enemyLevelChange": 0
   }
+ ],
+ "spyPromotions": [
+  {
+   "id": "SPY_PROMOTION_TECHNOLOGIST",
+   "name": "Technologist",
+   "levels": {
+    "SPYOP_STEAL_TECH_BOOST": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_CAT_BURGLAR",
+   "name": "Cat Burglar",
+   "levels": {
+    "SPYOP_GREAT_WORK_HEIST": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_DEMOLITIONS",
+   "name": "Demolitions",
+   "levels": {
+    "SPYOP_SABOTAGE_PRODUCTION": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_CON_ARTIST",
+   "name": "Con Artist",
+   "levels": {
+    "SPYOP_SIPHON_FUNDS": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_GUERRILLA_LEADER",
+   "name": "Guerrilla Leader",
+   "levels": {
+    "SPYOP_RECRUIT_PARTISANS": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_ROCKET_SCIENTIST",
+   "name": "Rocket Scientist",
+   "levels": {
+    "SPYOP_DISRUPT_ROCKETRY": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_SEDUCTION",
+   "name": "Seduction",
+   "levels": {
+    "SPYOP_DISRUPT_ROCKETRY": 2,
+    "SPYOP_GREAT_WORK_HEIST": 2,
+    "SPYOP_RECRUIT_PARTISANS": 2,
+    "SPYOP_SABOTAGE_PRODUCTION": 2,
+    "SPYOP_SIPHON_FUNDS": 2,
+    "SPYOP_STEAL_TECH_BOOST": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_DISGUISE",
+   "name": "Disguise",
+   "travelFaster": 100
+  },
+  {
+   "id": "SPY_PROMOTION_LINGUIST",
+   "name": "Linguist",
+   "faster": {
+    "SPYOP_DISRUPT_ROCKETRY": 25,
+    "SPYOP_GAIN_SOURCES": 25,
+    "SPYOP_GREAT_WORK_HEIST": 25,
+    "SPYOP_RECRUIT_PARTISANS": 25,
+    "SPYOP_SABOTAGE_PRODUCTION": 25,
+    "SPYOP_SIPHON_FUNDS": 25,
+    "SPYOP_STEAL_TECH_BOOST": 25
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_QUARTERMASTER",
+   "name": "Quartermaster",
+   "allLevels": 1
+  },
+  {
+   "id": "SPY_PROMOTION_ACE_DRIVER",
+   "name": "Ace Driver",
+   "escape": 4
+  },
+  {
+   "id": "SPY_PROMOTION_SMEAR_CAMPAIGN",
+   "name": "Smear Campaign",
+   "levels": {
+    "SPYOP_FABRICATE_SCANDAL": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_COVERT_ACTION",
+   "name": "Covert Action",
+   "levels": {
+    "SPYOP_FOMENT_UNREST": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_LICENSE_TO_KILL",
+   "name": "License to Kill",
+   "levels": {
+    "SPYOP_NEUTRALIZE_GOVERNOR": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_SATCHEL_CHARGES",
+   "name": "Satchel Charges",
+   "levels": {
+    "SPYOP_BREACH_DAM": 2
+   }
+  },
+  {
+   "id": "SPY_PROMOTION_SURVEILLANCE",
+   "name": "Surveillance",
+   "counterspyLevels": 1
+  },
+  {
+   "id": "SPY_PROMOTION_POLYGRAPH",
+   "name": "Polygraph",
+   "allLevels": 1
+  }
  ]
 }

@@ -565,6 +565,26 @@ void spies(View& v) {
             }
         }
     }
+    // Promotions as levels come: the first offered that helps its usual work (stealing tech, then
+    // siphoning, then all levels), else the first it lacks.
+    std::vector<std::pair<int32_t, TypeIndex>> promote;
+    for (const Agent& a : s.agents) {
+        if (!a.spy || a.owner != v.me || a.promotionsPending <= 0) continue;
+        TypeIndex pick = kNone;
+        static const char* const order[] = {"SPY_PROMOTION_SEDUCTION", "SPY_PROMOTION_QUARTERMASTER", "SPY_PROMOTION_POLYGRAPH", "SPY_PROMOTION_CON_ARTIST",
+                                            "SPY_PROMOTION_ACE_DRIVER", "SPY_PROMOTION_LINGUIST"};
+        for (const char* id : order) {
+            for (size_t i = 0; i < v.r.spyPromotions.size() && pick == kNone; ++i) {
+                if (v.r.spyPromotions[i].id == id && std::find(a.promotions.begin(), a.promotions.end(), static_cast<TypeIndex>(i)) == a.promotions.end())
+                    pick = static_cast<TypeIndex>(i);
+            }
+        }
+        for (size_t i = 0; i < v.r.spyPromotions.size() && pick == kNone; ++i) {
+            if (std::find(a.promotions.begin(), a.promotions.end(), static_cast<TypeIndex>(i)) == a.promotions.end()) pick = static_cast<TypeIndex>(i);
+        }
+        if (pick != kNone) promote.push_back({a.id, pick});
+    }
+    for (const auto& [id, pick] : promote) v.game.submit(Command::promoteSpy(v.me, id, pick));
     for (const Agent& a : s.agents) {
         if (!a.spy || a.owner != v.me || a.mission != SpyMission::None || a.travel > 0) continue;
         int32_t bestCity = kNoCity;
@@ -572,9 +592,23 @@ void spies(View& v) {
         int bestValue = 0;
         for (const City& c : s.cities) {
             if (rival == kNoPlayer || c.owner != rival || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
-            static const std::pair<SpyMission, int> tries[] = {
-                {SpyMission::StealTechBoost, 30}, {SpyMission::SiphonFunds, 25}, {SpyMission::SabotageProduction, 20}, {SpyMission::FomentUnrest, 10}};
+            // Disrupting a rival's rocketry is worth most once its expedition is near; a Great Work
+            // only with a free slot at home (canSpyMission does not check that).
+            bool spaceRace = false;
+            for (const ProductionItem& q : c.queue) spaceRace = spaceRace || (q.kind == ProductionKind::Project && v.r.projects[at(q.type)].spaceRace);
+            const std::pair<SpyMission, int> tries[] = {{SpyMission::DisruptRocketry, spaceRace ? 60 : 0}, {SpyMission::StealTechBoost, 30},
+                                                        {SpyMission::SiphonFunds, 25},      {SpyMission::GreatWorkHeist, 22},
+                                                        {SpyMission::SabotageProduction, 20}, {SpyMission::RecruitPartisans, v.majorWar ? 18 : 0},
+                                                        {SpyMission::BreachDam, v.majorWar ? 15 : 0}, {SpyMission::FomentUnrest, 10}};
             for (const auto& [m, worth] : tries) {
+                if (worth <= 0) continue;
+                if (m == SpyMission::GreatWorkHeist) {
+                    bool room = false;
+                    for (const GreatWork& w : c.greatWorks) {
+                        for (CityId home : v.cities) room = room || v.game.freeGreatWorkSlot(*s.city(home), w.type) != kNone;
+                    }
+                    if (!room) continue;
+                }
                 if (!v.game.canSpyMission(v.me, a.id, m, c.id)) continue;
                 const int value = worth * v.game.spySuccessPercent(a.id, m, c.id) / 100 + (c.capital ? 0 : 2);
                 if (value > bestValue) {

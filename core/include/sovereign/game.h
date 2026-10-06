@@ -355,6 +355,10 @@ public:
     int wmdsHeld(PlayerId player) const;     // devices of every kind
 
     // ---- war weariness (08: War weariness)
+    // ---- spy promotions (08: Espionage)
+    int spyPromotionTotal(const Agent& spy, int SpyPromotionType::*field) const;  // summed over its promotions
+    int spyOperationLevels(const Agent& spy, SpyMission m) const;                 // extra levels its promotions give
+
     // ---- emergencies [R&F/GS] (08: Emergencies)
     // Whether the player may join this running emergency: a living major civ that has met the target,
     // is not the target, its ally or its declared friend, and has not joined yet.
