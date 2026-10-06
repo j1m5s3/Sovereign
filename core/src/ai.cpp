@@ -825,11 +825,15 @@ TypeIndex pickNode(const View& v, const std::vector<TypeIndex>& options, const T
 
 int policyValue(const View& v, TypeIndex policy) {
     const PolicyType& p = v.r.policies[at(policy)];
-    int value = 1;
+    int value = 1, gains = 0;
     for (const Modifier& m : v.r.modifiers) {
         // A Dark Age card pairs bonuses with penalties (09: Ages): its negative modifiers count against it.
-        if (m.source == p.id) value += p.darkAge && m.amount < Fixed() ? -2 : 3;
+        if (m.source != p.id) continue;
+        if (p.darkAge && m.amount < Fixed()) value -= 2;
+        else ++gains;
     }
+    // A card's text splits into many modifiers (one per building or era); five or more count alike.
+    value += 3 * std::min(gains, 5);
     if (p.slot == PolicySlot::Military && !v.enemies.empty()) value += 2;
     return value;
 }

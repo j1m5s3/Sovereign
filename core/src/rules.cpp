@@ -120,6 +120,10 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
         else if (type == "CITY_HAS_DISTRICT") { q.type = ReqType::CityHasDistrict; q.ref = rules.district(ref); }
+        else if (type == "CITY_HAS_GARRISON") { q.type = ReqType::CityHasGarrison; }
+        else if (type == "CITY_HAS_GOVERNOR") { q.type = ReqType::CityHasGovernor; }
+        else if (type == "CITY_MIN_SPECIALTY_DISTRICTS") { q.type = ReqType::CityMinSpecialtyDistricts; }
+        else if (type == "CITY_ON_CAPITAL_CONTINENT") { q.type = ReqType::CityOnCapitalContinent; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
         else {
@@ -194,6 +198,10 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     mod.unitClass = args["unitClass"].str();
     if (args.has("unit") && (mod.unit = rules.unit(args["unit"].str())) == kNone) {
         *error = "unknown unit " + args["unit"].str();
+        return false;
+    }
+    if (args.has("minEra") && (mod.minEra = rules.era(args["minEra"].str())) == kNone) {
+        *error = "unknown era " + args["minEra"].str();
         return false;
     }
     if (args.has("maxEra") && (mod.maxEra = rules.era(args["maxEra"].str())) == kNone) {
@@ -1892,6 +1900,21 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
         modifiers.push_back(std::move(mod));
+    }
+    // Policy cards' generated modifiers (04: Policies; policies.json, each card's `modifiers`).
+    for (const auto& [pid, pj] : m.tables["policies"]) {
+        for (const Json& j : pj["modifiers"].items()) {
+            Modifier mod;
+            mod.id = j["id"].str();
+            mod.source = pid;
+            if (!parseModifier(j, mod, *this, error)) {
+                *error = "policy " + pid + " modifier " + mod.id + ": " + *error;
+                return false;
+            }
+            mod.sourceKind = ModSource::Policy;
+            mod.sourceIndex = policy(pid);
+            modifiers.push_back(std::move(mod));
+        }
     }
     for (const auto& [id, j] : m.tables["mapSizes"]) {
         MapSizeType s;

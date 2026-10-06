@@ -1438,8 +1438,177 @@ def gen_governments():
     return {"governments": out}
 
 
+UNIT_CLASS_WORDS = {
+    "Melee": "MELEE", "Anti Cavalry": "ANTI_CAVALRY", "Ranged": "RANGED", "Heavy Cavalry": "HEAVY_CAVALRY",
+    "Light Cavalry": "LIGHT_CAVALRY", "Siege": "SIEGE", "Recon": "RECON", "Support": "SUPPORT",
+    "Naval Melee": "NAVAL_MELEE", "Naval Ranged": "NAVAL_RANGED", "Naval Raider": "NAVAL_RAIDER",
+    "Naval Carrier": "NAVAL_CARRIER", "Air Fighter": "AIR_FIGHTER", "Air Bomber": "AIR_BOMBER",
+}
+
+
+def policy_refs():
+    """Names -> ids for what a policy's effect text refers to."""
+    return {
+        "buildings": {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings")},
+        "units": {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")},
+        "abilities": {r["Ability"]: "ABILITY_" + snake(r["Ability"]) for r in table(SPEC / "units.md", "Unit abilities")},
+        "districts": {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats")},
+        "eras": {e: i for i, e in enumerate(ERAS)},
+    }
+
+
+def policy_requirement(text, ids):
+    """A card's 'where ...' condition on a city -> (requirements, any) or None if unreadable."""
+    def one(t):
+        t = t.strip()
+        if t.startswith("NOT "):
+            r = one(t[4:])
+            return dict(r, negate=True) if r else None
+        if t == "city on capital's continent":
+            return {"type": "CITY_ON_CAPITAL_CONTINENT"}
+        if t == "city has a garrison":
+            return {"type": "CITY_HAS_GARRISON"}
+        if t == "city has a governor":
+            return {"type": "CITY_HAS_GOVERNOR"}
+        m = re.fullmatch(r"city has governor with x titles \(Established=yes, Amount=(\d+)\)", t)
+        if m:
+            return {"type": "CITY_HAS_GOVERNOR", "value": int(m.group(1))}
+        m = re.fullmatch(r"city has (\d+)\+ specialty districts", t)
+        if m:
+            return {"type": "CITY_MIN_SPECIALTY_DISTRICTS", "value": int(m.group(1))}
+        m = re.fullmatch(r"city population (\d+)\+", t)
+        if m:
+            return {"type": "CITY_MIN_POPULATION", "value": int(m.group(1))}
+        m = re.fullmatch(r"city has (.+)", t)
+        if m and m.group(1) in ids["buildings"]:
+            return {"type": "CITY_HAS_BUILDING", "ref": ids["buildings"][m.group(1)]}
+        return None
+    parts = [one(t) for t in text.split(" or ")]
+    if any(p is None for p in parts):
+        return None
+    return parts, len(parts) > 1
+
+
+def policy_modifiers(pid, text, ids):
+    """A card's effect text -> (modifiers in the modifiers.json shape, effects left as text)."""
+    mods, untracked = [], []
+    unit_eras = {}  # (class, amount) -> era indexes, merged into one modifier per class
+
+    def add(collection, effect, args, where=None):
+        m = {"id": "%s_%d" % (pid, len(mods) + 1), "source": pid, "collection": collection, "effect": effect, "arguments": args}
+        if where:
+            reqs, any_ = where
+            m["subjectRequirements"] = {"any" if any_ else "all": reqs}
+        mods.append(m)
+
+    for part in [p.strip() for p in (text or "").split(";") if p.strip()]:
+        where, body = None, part
+        m = re.fullmatch(r"(.+?) in all your cities where (.+)", part)
+        if m and "for your" not in m.group(1):
+            where = policy_requirement(m.group(2), ids)
+            if where is None:
+                untracked.append(part)
+                continue
+            body = m.group(1) + " in all your cities"
+        m = re.fullmatch(r"\+(\d+)% Production toward (.+?) units of (\w+) Era in all your cities", body)
+        if m and m.group(2) in UNIT_CLASS_WORDS and m.group(3) in ids["eras"] and not where:
+            unit_eras.setdefault((UNIT_CLASS_WORDS[m.group(2)], int(m.group(1))), []).append(ids["eras"][m.group(3)])
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward (.+?)(?: in all your cities)?", body)
+        if m and m.group(2) in ids["units"]:
+            add("PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT", {"unit": ids["units"][m.group(2)], "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+)% combat XP for your units(?: where unit is (.+))?", body)
+        if m and (not m.group(2) or m.group(2) in UNIT_CLASS_WORDS):
+            args = {"amount": int(m.group(1))}
+            if m.group(2):
+                args["unitClass"] = UNIT_CLASS_WORDS[m.group(2)]
+            add("PLAYER", "ADJUST_UNIT_XP_PERCENT", args)
+            continue
+        m = re.fullmatch(r"(\d+) Gold unit maintenance discount", body)
+        if m:
+            add("PLAYER", "ADJUST_UNIT_MAINTENANCE_DISCOUNT", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% to the district's (\w+) \(adjacency\) yield for your districts where district is (.+)", body)
+        if m and m.group(3) in ids["districts"]:
+            add("PLAYER", "ADJUST_DISTRICT_ADJACENCY_PERCENT", {"district": ids["districts"][m.group(3)], "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Combat Strength vs barbarians for your units", body)
+        if m:
+            add("PLAYER", "ADJUST_UNIT_STRENGTH", {"amount": int(m.group(1)), "vsBarbarians": True})
+            continue
+        m = re.fullmatch(r"\+(\d+) (\w+) from (.+?) in all your cities", body)
+        if m and m.group(2) in YIELD_WORDS and m.group(3) in ids["buildings"] and not where:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))},
+                ([{"type": "CITY_HAS_BUILDING", "ref": ids["buildings"][m.group(3)]}], False))
+            continue
+        m = re.fullmatch(r"([+-]\d+) (Amenity|Housing) in all your cities", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_CITY_AMENITIES" if m.group(2) == "Amenity" else "ADJUST_CITY_HOUSING", {"amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"([+-]\d+) Loyalty per turn in all your cities", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_CITY_LOYALTY", {"amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+)% growth in all your cities", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_CITY_GROWTH_PERCENT", {"amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"-(\d+)% tile purchase cost in all your cities", body)
+        if m and not where:
+            add("PLAYER_CITIES", "ADJUST_PLOT_PURCHASE_COST_PERCENT", {"amount": -int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) (\w+) in (all your cities|your capital)", body)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES" if m.group(3) == "all your cities" else "PLAYER_CAPITAL", "ADJUST_CITY_YIELD",
+                {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+) to all yields in all your cities", body)
+        if m and where:
+            for y in YIELD_WORDS.values():
+                add("PLAYER_CITIES", "ADJUST_CITY_YIELD", {"yield": y, "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"([+-]\d+)% (\w+) in all your cities", body)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD_PERCENT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+([\d.]+) (\w+) per Citizen in all your cities", body)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD_PER_POP", {"yield": YIELD_WORDS[m.group(2)], "amount": float(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"ability (.+?) \[.*\] for your units(?: where .+)?", body)
+        if m and m.group(1) in ids["abilities"]:
+            add("PLAYER", "GRANT_ABILITY", {"ability": ids["abilities"][m.group(1)]})
+            continue
+        m = re.fullmatch(r"\+(\d+) build charge\(s\) for units you train where unit is Builder", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_BUILDER_CHARGES", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"([+-]\d+)% war weariness", body)
+        if m:
+            add("PLAYER", "ADJUST_WAR_WEARINESS_PERCENT", {"amount": int(m.group(1))})
+            continue
+        untracked.append(part)
+    for (cls, amount), eras in sorted(unit_eras.items()):
+        eras.sort()
+        # One modifier per unbroken run of eras.
+        start = prev = eras[0]
+        for e in eras[1:] + [None]:
+            if e is not None and e == prev + 1:
+                prev = e
+                continue
+            add("PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT",
+                {"unitClass": cls, "amount": amount, "minEra": "ERA_" + ERAS[start].upper(), "maxEra": "ERA_" + ERAS[prev].upper()})
+            if e is not None:
+                start = prev = e
+    return mods, untracked
+
+
 def gen_policies():
     ids = node_names()
+    pids = policy_refs()
+    # Cards with hand-written modifiers keep them (Ancient and Classical cards, Dark Age cards).
+    handwritten = {m["source"] for m in json.loads((OUT / "modifiers.json").read_text(encoding="utf-8"))["modifiers"]}
     govs = {r["Government"]: "GOVERNMENT_" + snake(r["Government"])
             for r in table(SPEC / "governments-policies.md", "Governments")}
     policy_ids = {}
@@ -1470,6 +1639,12 @@ def gen_policies():
                 p["ageRequirement"] = row["Age requirement [R&F]"]
             if row["Government-exclusive [GS]"]:
                 p["government"] = govs[row["Government-exclusive [GS]"]]
+            if p["id"] not in handwritten:
+                mods, untracked = policy_modifiers(p["id"], row["Effects"], pids)
+                if mods:
+                    p["modifiers"] = mods
+                if untracked:
+                    p["untrackedEffects"] = untracked
             out.append(p)
     return {"policies": out}
 
