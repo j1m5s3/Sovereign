@@ -106,6 +106,9 @@ public:
     int productionCost(PlayerId player, ProductionItem item) const;
     // Gold price, or -1 when the item cannot be bought with gold.
     int purchaseCost(PlayerId player, ProductionItem item) const;
+    // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
+    // Divine Architect) (08: Governors); -1 when it cannot be.
+    int districtPurchaseCost(const City& city, TypeIndex district, bool faith) const;
     // Gold price of a plot, or -1 when this city cannot buy it.
     int plotPurchaseCost(CityId city, Hex plot) const;
     bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr) const;
@@ -597,6 +600,9 @@ private:
     void processBarbarians();
     void placeCamps(PlayerId barbarian);
     void releaseUnit(Camp& camp, PlayerId barbarian);
+    bool releaseScout(Camp& camp, PlayerId bp);  // false when no Scout can be placed
+    bool isBarbarianScout(const Unit& u) const;
+    void barbarianScoutAct(UnitId id);
     void barbarianAct(UnitId id);
     void afterAttack(Unit& unit);
     // A captured civilian changes hands as its capture type, or is destroyed.

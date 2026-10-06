@@ -398,9 +398,12 @@ TEST(barbarian_camps_appear_out_of_sight_and_release_units) {
             if (u.camp != c.id) continue;
             ++released;
             CHECK_EQ(u.owner, bp);
-            CHECK(g->state().grid.distance(u.pos, c.pos) <= 1);
+            // Each new camp first sends out a Scout (01: Barbarians), which ranges up to 10 plots.
+            CHECK(g->rules().units[static_cast<size_t>(u.type)].id == "UNIT_SCOUT");
+            CHECK(g->state().grid.distance(u.pos, c.pos) <= 11);
         }
         CHECK_EQ(released, 1);
+        CHECK(!c.alerted);
     }
     for (size_t i = 0; i < camps.size(); ++i) {
         for (size_t j = i + 1; j < camps.size(); ++j)
@@ -474,4 +477,31 @@ TEST(a_coastal_camp_puts_ships_to_sea) {
     REQUIRE(ship);
     CHECK(g->rules().units[at(ship->type)].domain == Domain::Sea);
     CHECK(g->rules().terrains[at(g->state().plot(ship->pos).terrain)].shallowWater);
+}
+
+TEST(a_camp_raids_only_once_its_scout_brings_word_of_a_city) {
+    UnitId scout = kNoUnit, raider = kNoUnit;
+    auto g = withBarbarians([&](GameState& s) {
+        addCity(s, 0, {3, 5}, true, 3);
+        Camp camp;
+        camp.id = s.nextCampId++;
+        camp.pos = {11, 5};
+        camp.tribe = 0;
+        camp.spawnTimer = 99;
+        camp.alerted = false;
+        camp.boldness = 500;  // bold enough for anything, once alerted
+        s.camps.push_back(camp);
+        scout = addUnit(s, "UNIT_SCOUT", 2, {5, 5});  // within sight of the city
+        s.units.back().camp = camp.id;
+        raider = addUnit(s, "UNIT_WARRIOR", 2, {10, 5});
+        s.units.back().camp = camp.id;
+    });
+    REQUIRE(!g->state().camps[0].alerted);
+    sovtest::endTurns(*g, 2);  // the world turn: the Scout sees the city and heads home
+    CHECK(g->state().camps[0].scoutSaw || g->state().camps[0].alerted);
+    CHECK(g->state().grid.distance(g->state().unit(raider)->pos, {10, 5}) <= 1);  // no raid yet
+    for (int i = 0; i < 6 && !g->state().camps[0].alerted; ++i) sovtest::endTurns(*g, 2);
+    CHECK(g->state().camps[0].alerted);
+    REQUIRE(g->state().unit(scout));
+    CHECK(g->state().grid.distance(g->state().unit(scout)->pos, {11, 5}) <= 1);
 }

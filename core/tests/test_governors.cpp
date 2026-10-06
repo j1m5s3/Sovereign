@@ -204,3 +204,41 @@ TEST(victor_embrasure_trains_veterans) {
     REQUIRE(trained);
     CHECK(trained->xp >= g->xpForNextLevel(*trained));
 }
+
+// ---- district purchase (Contractor, Divine Architect)
+
+TEST(contractor_buys_a_placed_district_with_gold_and_divine_architect_with_faith) {
+    GameState s = govState();
+    s.players[0].gold = Fixed::fromInt(5000);
+    s.players[0].faith = Fixed::fromInt(5000);
+    const TypeIndex campus = rules().district("DISTRICT_CAMPUS");
+    s.players[0].techs.done[at(rules().tech("TECH_WRITING"))] = 1;
+    Governor reyna;
+    reyna.type = gov("GOVERNOR_REYNA");
+    reyna.city = s.cities[0].id;
+    reyna.promotions = {promo("GOVERNOR_PROMOTION_LAND_ACQUISITION")};
+    s.players[0].governors.push_back(reyna);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const CityId city = g->state().cities[0].id;
+    const ProductionItem item{ProductionKind::District, campus};
+    // Place the Campus by putting it into production.
+    std::optional<Hex> spot;
+    for (const Hex& h : g->state().grid.within({4, 6}, 3)) {
+        if (!spot && g->canPlaceDistrict(*g->state().city(city), campus, h)) spot = h;
+    }
+    REQUIRE(spot);
+    REQUIRE(g->submit(Command::setProduction(0, city, item, *spot)) == CommandError::Ok);
+    CHECK(g->submit(Command::purchase(0, city, item)) == CommandError::CannotBuild);  // no Contractor yet
+    GameState t = g->state();
+    t.players[0].governors[0].promotions.push_back(promo("GOVERNOR_PROMOTION_CONTRACTOR"));
+    auto h = Game::fromScenario(rules(), std::move(t));
+    const int cost = h->districtPurchaseCost(*h->state().city(city), campus, false);
+    REQUIRE(cost > 0);
+    CHECK_EQ(cost % 5, 0);
+    CHECK(h->districtPurchaseCost(*h->state().city(city), campus, true) < 0);  // Faith needs Moksha
+    REQUIRE(h->submit(Command::purchase(0, city, item)) == CommandError::Ok);
+    CHECK(h->state().players[0].gold == Fixed::fromInt(5000 - cost));
+    REQUIRE(h->state().city(city)->district(campus, true));
+    CHECK(h->state().city(city)->queue.empty() || !(h->state().city(city)->queue.front() == item));
+    CHECK(h->submit(Command::purchase(0, city, item)) == CommandError::CannotBuild);  // already complete
+}

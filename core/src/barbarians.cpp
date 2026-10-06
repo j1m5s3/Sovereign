@@ -5,7 +5,9 @@
 // replays it exactly. Its behaviour is deliberately simple until the real AI
 // (MVP-6): camps appear out of sight, release units, and those units attack
 // when the odds look good, raid nearby players once bold enough, and
-// otherwise stay near their camp.
+// otherwise stay near their camp. A new camp first sends out a Scout (01: Barbarians): only once the
+// Scout has seen a city and made it home does the camp raid or attack cities; killing the Scout first
+// keeps it quiet until the next one goes out.
 #include <algorithm>
 
 #include "sovereign/game.h"
@@ -54,10 +56,16 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
                 captures_.push_back({k->owner, victim.pos});
         }
     }
-    // Camp boldness: +15 per kill, -10 per unit lost (BARBARIAN_BOLDNESS_PER_*).
+    // Camp boldness: +15 per kill, -10 per unit lost, -5 per scout lost (BARBARIAN_BOLDNESS_PER_*).
     for (Camp& c : state_.camps) {
         if (killer && killer->camp == c.id) c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_KILL");
-        if (victim.camp == c.id) c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_UNIT_LOST");
+        if (victim.camp != c.id) continue;
+        if (isBarbarianScout(victim)) {
+            c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_SCOUT_LOST");
+            c.scoutSaw = false;  // its news dies with it
+        } else {
+            c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_UNIT_LOST");
+        }
     }
 }
 
@@ -102,7 +110,10 @@ void Game::processBarbarians() {
     for (Camp& c : state_.camps) {
         c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_TURN");
         if (--c.spawnTimer <= 0) {
-            releaseUnit(c, bp);
+            // An unalerted camp replaces a lost Scout before anything else.
+            bool scouting = c.alerted;
+            for (const Unit& u : state_.units) scouting = scouting || (u.camp == c.id && isBarbarianScout(u));
+            if (scouting || !releaseScout(c, bp)) releaseUnit(c, bp);
             c.spawnTimer = rules_->barbarianTribes[static_cast<size_t>(c.tribe)].spawnTurns;
         }
     }
@@ -175,8 +186,12 @@ void Game::placeCamps(PlayerId bp) {
         camp.pos = at;
         camp.tribe = tribe;
         camp.spawnTimer = rules_->barbarianTribes[static_cast<size_t>(tribe)].spawnTurns;
+        camp.alerted = false;
         state_.camps.push_back(camp);  // ids only grow, so the vector stays sorted
-        releaseUnit(state_.camps.back(), bp);
+        if (!releaseScout(state_.camps.back(), bp)) {
+            state_.camps.back().alerted = true;  // nowhere to scout from: it knows its neighbours already
+            releaseUnit(state_.camps.back(), bp);
+        }
     }
 }
 
@@ -228,9 +243,74 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
     u.camp = camp.id;
 }
 
+bool Game::isBarbarianScout(const Unit& u) const {
+    return u.camp != 0 && state_.players[static_cast<size_t>(u.owner)].barbarian && rules_->units[static_cast<size_t>(u.type)].id == "UNIT_SCOUT";
+}
+
+bool Game::releaseScout(Camp& camp, PlayerId bp) {
+    const TypeIndex scout = rules_->unit("UNIT_SCOUT");
+    if (scout == kNone) return false;
+    for (const Hex& h : state_.grid.within(camp.pos, 1)) {
+        if (!isLandPassable(state_, *rules_, h) || state_.unitAt(h, UnitLayer::Military, *rules_) || state_.foreignUnitAt(h, bp) || state_.cityAt(h)) continue;
+        Unit& u = spawnUnit(scout, bp, h);
+        u.camp = camp.id;
+        return true;
+    }
+    return false;
+}
+
+// The Scout wanders within 10 plots of its camp until a city comes within its sight, then goes home with
+// the news; reaching its camp (or next to it) alerts the camp.
+void Game::barbarianScoutAct(UnitId id) {
+    Unit* u = state_.unit(id);
+    Camp* camp = nullptr;
+    for (Camp& c : state_.camps) camp = c.id == u->camp ? &c : camp;
+    if (!camp) {
+        u->activity = Activity::Fortify;
+        return;
+    }
+    if (!camp->scoutSaw) {
+        for (const City& c : state_.cities) {
+            if (!state_.players[static_cast<size_t>(c.owner)].barbarian && state_.grid.distance(u->pos, c.pos) <= unitSight(*u) && lineOfSight(u->pos, c.pos))
+                camp->scoutSaw = true;
+        }
+    }
+    if (camp->scoutSaw && state_.grid.distance(u->pos, camp->pos) <= 1) {
+        camp->alerted = true;
+        camp->scoutSaw = false;
+    }
+    if (camp->alerted) {
+        u->moveTarget.reset();
+        return;  // its work is done; it keeps watch at home
+    }
+    std::optional<Hex> goal = camp->scoutSaw ? std::optional<Hex>(camp->pos) : u->moveTarget;
+    if (!goal || *goal == u->pos || !findPath(id, *goal)) {
+        goal.reset();
+        Rng& rng = state_.rng.get(RngStream::Gameplay);
+        const std::vector<Hex> around = state_.grid.within(camp->pos, 10);
+        for (int tries = 0; tries < 12 && !goal; ++tries) {
+            const Hex h = around[rng.below(static_cast<uint32_t>(around.size()))];
+            if (h != u->pos && isLandPassable(state_, *rules_, h) && !state_.cityAt(h) && findPath(id, h)) goal = h;
+        }
+    }
+    if (!goal) return;
+    u->moveTarget = *goal;
+    u->activity = Activity::Awake;
+    advanceUnit(id);
+    if (Unit* after = state_.unit(id); after && camp->scoutSaw && state_.grid.distance(after->pos, camp->pos) <= 1) {
+        camp->alerted = true;
+        camp->scoutSaw = false;
+        after->moveTarget.reset();
+    }
+}
+
 void Game::barbarianAct(UnitId id) {
     const Unit* u = state_.unit(id);
     if (!u) return;
+    if (isBarbarianScout(*u)) {
+        barbarianScoutAct(id);
+        return;
+    }
     // Barbarians pillage what they stand on (01: Barbarians; 05: Pillage), then act with what moves remain.
     if (pillageProblem(u->owner, id) == CommandError::Ok) {
         pillage(id);
@@ -251,6 +331,7 @@ void Game::barbarianAct(UnitId id) {
     }
     // Units whose camp is gone roam at full boldness.
     const int bold = camp ? camp->boldness : 100;
+    const bool alerted = !camp || camp->alerted;  // a camp whose scout has not come home stays put
     const BarbarianTribe* tribe = camp ? &rules_->barbarianTribes[static_cast<size_t>(camp->tribe)] : nullptr;
     const int raidAt = tribe ? tribe->raidBoldness : 0;
     const int cityAt = tribe ? tribe->attackBoldness : 0;
@@ -263,7 +344,7 @@ void Game::barbarianAct(UnitId id) {
         for (const Hex& h : state_.grid.within(self->pos, std::max(1, unitRange(*self)))) {
             CombatPreview pv = previewAttack(id, h, ranged);
             if (!pv.valid) continue;
-            if (pv.city != kNoCity ? bold < cityAt : !pv.capture && pv.damageToAttackerMax > pv.damageToDefenderMax) continue;
+            if (pv.city != kNoCity ? bold < cityAt || !alerted : !pv.capture && pv.damageToAttackerMax > pv.damageToDefenderMax) continue;
             applyCombat(ranged ? Command::rangedAttack(me, id, h) : Command::attack(me, id, h));
             return true;
         }
@@ -275,7 +356,7 @@ void Game::barbarianAct(UnitId id) {
     u = state_.unit(id);
     std::optional<Hex> goal;
     int bestDist = 9;
-    if (bold >= raidAt) {
+    if (bold >= raidAt && alerted) {
         for (const Unit& e : state_.units) {
             const int d = state_.grid.distance(u->pos, e.pos);
             if (atWar(me, e.owner) && d < bestDist) {

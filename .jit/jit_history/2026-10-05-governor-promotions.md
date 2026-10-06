@@ -17,5 +17,5 @@ Specs: 08-diplomacy-city-states-governors (Governors); data/governors.
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - Embrasure's extra city attack, Defense Logistics' siege protection, Citadel of God's immunity to religious pressure and combat, and Industrialist's resource power are read as stated above; the first three are not modelled.
-- Still not carried: Air Defense Initiative, Foreign Investor, Grand Inquisitor, Laying On Of Hands, Patron Saint, Divine Architect, Black Marketeer, Vertical Integration, Aquaculture, Parks and Recreation (no Fishery or City Park improvements), Land Acquisition's trade-route gold, Contractor (no district purchase).
+- Still not carried: Air Defense Initiative, Foreign Investor, Grand Inquisitor, Laying On Of Hands, Patron Saint, Black Marketeer, Vertical Integration, Aquaculture, Parks and Recreation (no Fishery or City Park improvements), Land Acquisition's trade-route gold. Contractor and Divine Architect (district purchase) followed in `2026-10-05-district-purchase.md`.
 - AI: unchanged; its governor placement already promotes along the trees, and these promotions now pay where it puts them.
