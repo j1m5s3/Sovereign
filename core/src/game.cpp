@@ -1010,6 +1010,7 @@ void Game::beginGlobalTurn() {
     processClimate();
     processFallout();
     processEmergencies();
+    checkMilitaryAid();  // 08: Military Aid Request
     processCompetitions();
     checkQuests();
     assignQuests();

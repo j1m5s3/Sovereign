@@ -113,3 +113,27 @@ TEST(an_aid_request_opens_the_send_aid_project) {
     h->processCompetitions();
     CHECK_EQ(h->state().players[1].diplomaticVictoryPoints, dvp + 2);
 }
+
+TEST(a_grievous_war_calls_a_military_aid_request_and_sessions_keep_their_distance) {
+    GameState s = world("ERA_MEDIEVAL");
+    s.turn = 40;
+    for (Player& p : s.players) p.relations.resize(3);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    s.players[0].grievances.assign(3, 0);
+    s.players[1].grievances.assign(3, 0);
+    s.players[0].grievances[1] = 250;  // player 0 holds 250 grievances against player 1
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->grievances(0, 1) >= 200);
+    g->checkMilitaryAid();
+    const Competition* aid = g->runningAidRequest();
+    REQUIRE(aid);
+    CHECK(aid->kind == CompetitionKind::MilitaryAidRequest);
+    CHECK_EQ(aid->beneficiary, 0);
+    const ProductionItem send{ProductionKind::Project, rules().project("PROJECT_SEND_AID")};
+    CHECK(g->canProduce(g->state().cities[2], send));
+    CHECK(!g->canProduce(g->state().cities[1], send));  // at war with the civ asking
+    // Another special session must wait WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS turns.
+    CHECK(!g->specialSessionDue());
+    g->triggerEmergency(EmergencyKind::Military, 1, kNoCity, 0);
+    CHECK(g->state().emergencies.empty());
+}

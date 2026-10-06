@@ -570,6 +570,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(q.arg);
     }
     w.i32(s.nextCongressTurn);
+    w.i32(s.lastSpecialSession);
     w.i32(s.congressOpenedTurn);
     w.u32(static_cast<uint32_t>(s.congress.size()));
     for (const CongressItem& it : s.congress) {
@@ -1064,6 +1065,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         q.arg = r.i32();
     }
     s.nextCongressTurn = r.i32();
+    s.lastSpecialSession = r.i32();
     s.congressOpenedTurn = r.i32();
     uint32_t ncong = r.u32();
     if (!r.checkCount(ncong, 10)) return false;

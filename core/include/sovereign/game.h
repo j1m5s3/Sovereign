@@ -410,7 +410,9 @@ public:
 
     // ---- scored competitions [GS] (08: Scored Competitions)
     void startCompetition();                                       // at a World Congress session
-    void requestAid(PlayerId victim);                              // a disaster cost it population: an Aid Request
+    void requestAid(PlayerId victim, bool military = false);       // a disaster (or, military, a grievous war): an Aid Request
+    bool specialSessionDue() const;                                // WORLD_CONGRESS_MIN_TIME_BETWEEN_SPECIAL_SESSIONS since the last
+    void checkMilitaryAid();                                       // the world turn: a civ at war with one it holds grievances against
     const Competition* runningAidRequest() const;
     void competitionScore(PlayerId player, CompetitionKind kind, int amount);
     int competitionStanding(const Competition& c, PlayerId player) const;  // its score now (state-based ones counted live)

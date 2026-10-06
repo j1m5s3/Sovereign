@@ -550,7 +550,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why) con
             if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
             if (e.kind == ProjectEffectKind::Aid) {
                 const Competition* aid = runningAidRequest();
-                if (!aid || aid->beneficiary == c.owner) return fail(CommandError::CannotBuild);
+                if (!aid || aid->beneficiary == c.owner || atWar(c.owner, aid->beneficiary)) return fail(CommandError::CannotBuild);
             }
         }
     } else {
@@ -957,7 +957,7 @@ void Game::completeProject(City& city, TypeIndex project) {
             case ProjectEffectKind::Aid:
                 if (const Competition* aid = runningAidRequest(); aid && aid->beneficiary != kNoPlayer) {
                     state_.players[static_cast<size_t>(aid->beneficiary)].gold += Fixed::fromInt(e.amount);
-                    competitionScore(city.owner, CompetitionKind::AidRequest, e.amount);
+                    competitionScore(city.owner, aid->kind, e.amount);
                 }
                 break;
             case ProjectEffectKind::Wmd:
