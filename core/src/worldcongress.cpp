@@ -200,6 +200,11 @@ void Game::closeCongressSession() {
             }
         }
         PassedResolution passedRes{item.resolution, option, item.candidates[at(best)]};
+        // Rabblerousing (04): half the favor spent on extra votes for the outcome that passed comes back.
+        for (const CongressVote& v : item.votes) {
+            if (v.option == option && v.target == best && v.votes > 1 && policyIs(v.player, "POLICY_RABBLEROUSING"))
+                state_.players[at(v.player)].favor += extraVoteCost(v.votes - 1) / 2;
+        }
         const ResolutionType& rt = rules_->resolutions[at(item.resolution)];
         if (rt.kind == ResolutionKind::DiplomaticVictory) {
             // A one-time change, not a standing effect.

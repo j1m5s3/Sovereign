@@ -414,8 +414,20 @@ void Game::accumulateStrategics(PlayerId pid) {
         const Hex h = state_.grid.at(static_cast<int>(i));
         if (!resourceVisible(pid, h) || !resourceImproved(h)) continue;
         const City* home = p.city == kNoCity ? nullptr : state_.city(p.city);
-        const int extra = home && cityGovernorHas(*home, "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS") ? 1 : 0;  // Victor
+        int extra = home && cityGovernorHas(*home, "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS") ? 1 : 0;  // Victor
+        // Drill Manuals, Equestrian Orders, Resource Management (04): +1 a source of their resources.
+        static const std::pair<const char*, const char*> kCards[] = {
+            {"POLICY_DRILL_MANUALS", "RESOURCE_NITER"}, {"POLICY_DRILL_MANUALS", "RESOURCE_COAL"}, {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_HORSES"},
+            {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_IRON"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_ALUMINUM"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_OIL"}};
+        for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
         player.stockpile[static_cast<size_t>(p.resource)] += r.accumulation + extra;
+    }
+    // Aerospace Contractors (04): +3 Aluminum a turn in each city with a Spaceport.
+    if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS")) {
+        const TypeIndex aluminum = rules_->resource("RESOURCE_ALUMINUM"), spaceport = rules_->district("DISTRICT_SPACEPORT");
+        for (const City& c : state_.cities) {
+            if (aluminum != kNone && c.owner == pid && c.district(spaceport, true)) player.stockpile[static_cast<size_t>(aluminum)] += 3;
+        }
     }
     for (size_t r = 0; r < rules_->resources.size(); ++r) {
         const int cap = stockpileCap(pid, static_cast<TypeIndex>(r));

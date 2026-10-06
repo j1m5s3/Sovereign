@@ -1,6 +1,7 @@
 // City rules (specs/civ6/02-cities.md): yields, citizens, growth, housing,
 // amenities, border growth, production, purchases, gold and maintenance.
 #include <algorithm>
+#include <tuple>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -147,6 +148,35 @@ CityReport Game::cityReport(CityId id) const {
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i];
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
+        // Free Market, Grand Opera, Rationalism, Simultaneum (04): +50% of the district's yield from its buildings
+        // with an adjacency of 4 or more for it, and +50% more in a city of 15 or more.
+        static const std::array<std::tuple<const char*, const char*, YieldType>, 4> kCards = {{
+            {"POLICY_FREE_MARKET", "DISTRICT_COMMERCIAL_HUB", YieldType::Gold}, {"POLICY_GRAND_OPERA", "DISTRICT_THEATER", YieldType::Culture},
+            {"POLICY_RATIONALISM", "DISTRICT_CAMPUS", YieldType::Science}, {"POLICY_SIMULTANEUM", "DISTRICT_HOLY_SITE", YieldType::Faith}}};
+        for (const auto& [card, district, yield] : kCards) {
+            if (bt.district != district || !policyIs(c->owner, card)) continue;
+            const CityDistrict* home = c->district(bt.districtType, true);
+            int pct = c->population >= 15 ? 50 : 0;
+            if (home && districtAdjacency(c->owner, home->type, home->pos)[idx(yield)] >= Fixed::fromInt(4)) pct += 50;
+            raw[idx(yield)] += bt.yields[idx(yield)] * pct / 100;
+        }
+    }
+    // Public Transport (04): a Neighborhood yields +1 Gold; +3 Food and +1 Production on ground of
+    // appeal 2 or more, and +1 Food and +1 Production more at appeal 4 or more.
+    if (policyIs(c->owner, "POLICY_PUBLIC_TRANSPORT")) {
+        for (const CityDistrict& d : c->districts) {
+            if (!d.complete || d.pillagedTurns > 0 || rules_->districts[static_cast<size_t>(d.type)].id != "DISTRICT_NEIGHBORHOOD") continue;
+            const int appeal = plotAppeal(d.pos);
+            raw[idx(YieldType::Gold)] += Fixed::fromInt(1);
+            if (appeal >= 2) {
+                raw[idx(YieldType::Food)] += Fixed::fromInt(3);
+                raw[idx(YieldType::Production)] += Fixed::fromInt(1);
+            }
+            if (appeal >= 4) {
+                raw[idx(YieldType::Food)] += Fixed::fromInt(1);
+                raw[idx(YieldType::Production)] += Fixed::fromInt(1);
+            }
+        }
     }
     // Specialists (02): each earns its district's specialist yield plus its buildings' extras.
     for (const CityDistrict& d : c->districts) {
@@ -294,6 +324,10 @@ CityReport Game::cityReport(CityId id) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
                                                           static_cast<YieldType>(i)).toInt());
+        // Collective Activism, International Space Agency (04): +5% Culture or Science per suzerainty.
+        if ((i == idx(YieldType::Culture) && policyIs(c->owner, "POLICY_COLLECTIVE_ACTIVISM")) ||
+            (i == idx(YieldType::Science) && policyIs(c->owner, "POLICY_INTERNATIONAL_SPACE_AGENCY")))
+            pct += 5 * suzeraintiesOf(c->owner);
         // A city short of power loses production, up to POWER_MAX_PRODUCTION_MODIFIER_PENALTY (09: Power).
         if (i == idx(YieldType::Production) && c->powerDemand > c->powerSupply)
             pct += rules_->globalInt("POWER_MAX_PRODUCTION_MODIFIER_PENALTY") * (c->powerDemand - c->powerSupply) / c->powerDemand;
@@ -350,6 +384,11 @@ CityReport Game::cityReport(CityId id) const {
             int suzerain = 0;
             for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == c->owner ? 1 : 0;
             rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.culturePerSuzerainty * suzerain);
+        }
+        // Raj (04): +2 Gold, Faith, Science and Culture in the capital per suzerainty.
+        if (c->capital && policyIs(c->owner, "POLICY_RAJ")) {
+            const int n = suzeraintiesOf(c->owner);
+            for (YieldType y : {YieldType::Gold, YieldType::Faith, YieldType::Science, YieldType::Culture}) rep.yields[idx(y)] += Fixed::fromInt(2 * n);
         }
         if (c->capital) {
             const int titles = governorTitles(c->owner);
@@ -643,6 +682,10 @@ Fixed Game::goldPerTurn(PlayerId player) const {
             if (d.complete) net -= Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].maintenance);
         }
     }
+    // Merchant Confederation (04): +1 Gold per envoy placed.
+    if (p.anarchyTurns == 0 && policyIs(player, "POLICY_MERCHANT_CONFEDERATION")) {
+        for (int32_t e : p.envoys) net += Fixed::fromInt(e);
+    }
     const Fixed discount = sumPlayerModifiers(state_, *rules_, p, ModEffect::UnitMaintenanceDiscount);
     for (const Unit& u : state_.units) {
         if (u.owner != player) continue;
@@ -915,6 +958,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
     }
     if (item.kind == ProductionKind::District) dedicationScore(city.owner, "DEDICATION_MONUMENTALITY", 1);
+    // Public Transport (04): a new Neighborhood brings 100 Gold.
+    if (item.kind == ProductionKind::District && rules_->districts[static_cast<size_t>(item.type)].id == "DISTRICT_NEIGHBORHOOD" &&
+        policyIs(city.owner, "POLICY_PUBLIC_TRANSPORT"))
+        state_.players[static_cast<size_t>(city.owner)].gold += Fixed::fromInt(100);
     // A new reactor starts its age (09: nuclear accidents).
     if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_NUCLEAR_POWER_PLANT") city.reactorSince = state_.turn;
     if (item.kind == ProductionKind::Building && cityGovernorHas(city, "GOVERNOR_PROMOTION_CITADEL_OF_GOD"))

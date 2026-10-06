@@ -113,6 +113,17 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
                                                       cs && suzerainOf(destination.owner) == origin.owner);
         for (size_t i = 0; i < kNumYields; ++i) out[i] += extra[i];
     }
+    // Market Economy (04): international routes +1 Gold per luxury and per strategic resource at the destination.
+    if (!domestic && policyIs(origin.owner, "POLICY_MARKET_ECONOMY")) {
+        int goods = 0;
+        for (const Hex& h : state_.grid.within(destination.pos, 3)) {
+            const Plot& p = state_.plot(h);
+            if (p.city != destination.id || p.resource == kNone || !resourceImproved(h)) continue;
+            const ResourceClass rc = rules_->resources[at(p.resource)].cls;
+            goods += rc == ResourceClass::Luxury || rc == ResourceClass::Strategic ? 1 : 0;
+        }
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(goods);
+    }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;

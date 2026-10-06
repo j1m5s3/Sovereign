@@ -165,6 +165,15 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
     return -1;
 }
 
+int Game::civReligion(PlayerId player) const {
+    const Player& p = state_.players[at(player)];
+    if (p.religion >= 0) return p.religion;
+    for (const City& c : state_.cities) {
+        if (c.owner == player && c.capital) return cityMajorityReligion(c);
+    }
+    return -1;
+}
+
 int Game::religiousStrength(const Unit& unit, bool defending) const {
     int s = rules_->units[at(unit.type)].religiousStrength;
     if (s <= 0) return s;

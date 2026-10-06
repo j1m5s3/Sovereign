@@ -385,6 +385,10 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // attacks and captures are their own commands
     const City* c = state_.cityAt(to);
     if (c && c->owner != unit.owner) return std::nullopt;
+    // Music Censorship (04): no foreign Rock Band enters the territory.
+    if (const PlayerId land = state_.plot(to).owner; land != kNoPlayer && land != unit.owner && typeOf(*rules_, unit).id == "UNIT_ROCK_BAND" &&
+        policyIs(land, "POLICY_MUSIC_CENSORSHIP"))
+        return std::nullopt;
     // Nor an enemy Encampment that still stands (05: City combat).
     if (const City* camp = encampmentTargetAt(to); camp && atWar(unit.owner, camp->owner)) return std::nullopt;
     // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
@@ -866,7 +870,7 @@ void Game::apply(const Command& c) {
             p.gold -= Fixed::fromInt(upgradeCost(u));
             const TypeIndex to = upgradeTarget(u);
             const UnitType& up = rules_->units[static_cast<size_t>(to)];
-            if (up.strategicResource != kNone && up.strategicCost > 0) p.stockpile[static_cast<size_t>(up.strategicResource)] -= up.strategicCost;
+            if (up.strategicResource != kNone) p.stockpile[static_cast<size_t>(up.strategicResource)] -= upgradeResourceCost(u);
             u.type = to;  // keeps its health, experience and promotions; the upgrade takes its turn
             u.movesLeft = Fixed();
             u.activity = Activity::Awake;
@@ -900,6 +904,7 @@ void Game::apply(const Command& c) {
                     int faster = 0;
                     for (TypeIndex pr : a.promotions) faster += opIndex == kNone ? 0 : rules_->spyPromotions[static_cast<size_t>(pr)].faster[static_cast<size_t>(opIndex)];
                     if (m != SpyMission::Counterspy && m != SpyMission::ListeningPost && goldenDedication(c.player, "DEDICATION_BODYGUARD_OF_LIES")) faster += 25;  // 09
+                    if (m != SpyMission::Counterspy && m != SpyMission::ListeningPost && policyIs(c.player, "POLICY_MACHIAVELLIANISM")) faster += 25;  // 04
                     a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100 * (100 - std::min(75, faster)) / 100);
                 }
                 a.mission = m;
@@ -910,7 +915,12 @@ void Game::apply(const Command& c) {
             Player& p = state_.players[static_cast<size_t>(c.player)];
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
             --p.envoyTokens;
-            ++p.envoys[static_cast<size_t>(c.arg)];
+            // Diplomatic League (04): the first envoy to a city-state counts twice. Containment: one more where a rival is suzerain.
+            const PlayerId suzerain = suzerainOf(static_cast<PlayerId>(c.arg));
+            int sent = 1;
+            if (p.envoys[static_cast<size_t>(c.arg)] == 0 && policyIs(c.player, "POLICY_DIPLOMATIC_LEAGUE")) ++sent;
+            if (suzerain != kNoPlayer && suzerain != c.player && policyIs(c.player, "POLICY_CONTAINMENT")) ++sent;
+            p.envoys[static_cast<size_t>(c.arg)] += sent;
             // A city-state's first suzerain is a historic moment (09).
             Player& cs = state_.players[static_cast<size_t>(c.arg)];
             if (!cs.hadSuzerain && suzerainOf(cs.id) == c.player) {
@@ -1113,6 +1123,10 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
         u.movesLeft = Fixed::fromInt(maxMoves(u));
+        // Logistics (04): +1 starting the turn in its own territory; Integrated Attack Logistics: in an enemy's.
+        const PlayerId land = state_.plot(u.pos).owner;
+        if (land == pid && policyIs(pid, "POLICY_LOGISTICS")) u.movesLeft += Fixed::fromInt(1);
+        if (land != kNoPlayer && land != pid && atWar(pid, land) && policyIs(pid, "POLICY_INTEGRATED_ATTACK_LOGISTICS")) u.movesLeft += Fixed::fromInt(1);
         if (u.activity == Activity::Skip) u.activity = Activity::Awake;
     }
     std::vector<UnitId> moving;

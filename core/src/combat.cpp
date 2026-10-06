@@ -193,7 +193,8 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
 
 int Game::plunderPercent(const Unit& unit) const {
     // Abilities and promotions (Francis Drake...), and Letters of Marque (09: +100% for all units).
-    return unitEffectTotal(unit, UnitEffectKind::PlunderPercent) + (policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE") ? 100 : 0);
+    return unitEffectTotal(unit, UnitEffectKind::PlunderPercent) + (policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE") ? 100 : 0) +
+           (policyIs(unit.owner, "POLICY_RAID") || policyIs(unit.owner, "POLICY_TOTAL_WAR") ? 50 : 0);  // Raid, Total War (04)
 }
 
 int Game::maxMoves(const Unit& unit) const {
@@ -423,8 +424,15 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
 
     // Wounded: round(10 - hp/10) at 100 max HP (COMBAT_WOUNDED_DAMAGE_MULTIPLIER).
     const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
-    if (!noWounded && unit.hp < maxHp)
-        s -= roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER")) * (maxHp - unit.hp), maxHp);
+    if (!noWounded && unit.hp < maxHp) {
+        const int wound = roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER")) * (maxHp - unit.hp), maxHp);
+        s -= policyIs(unit.owner, "POLICY_NATIONAL_IDENTITY") ? wound / 2 : wound;  // National Identity (04): half the loss
+    }
+    // Wars of Religion (04): +4 against the units of a civ of another religion, for all but religious units.
+    if (oppUnit && ut.religiousStrength <= 0 && ut.spreadCharges <= 0 && policyIs(unit.owner, "POLICY_WARS_OF_RELIGION")) {
+        const int mine = civReligion(unit.owner), theirs = civReligion(oppUnit->owner);
+        if (mine >= 0 && theirs >= 0 && mine != theirs) s += 4;
+    }
 
     // Unpaid strategic maintenance [GS].
     if (ut.resourceMaintenance > 0 && ut.strategicResource != kNone &&
@@ -455,6 +463,7 @@ int Game::cityStrength(const City& city) const {
     if (garrison && garrison->owner == city.owner) s = std::max(s, typeOf(*rules_, *garrison).combat);
     for (TypeIndex b : city.buildings) s += rules_->buildings[static_cast<size_t>(b)].defense;
     s += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDefense).toInt());
+    if (policyIs(city.owner, "POLICY_BASTIONS")) s += 6;  // Bastions (04)
     // CityStrengthModifier 2 (03: Defense; not in the extracted tables): Encampment, Government Plaza, Diplomatic Quarter.
     for (const CityDistrict& d : city.districts) {
         const std::string& id = rules_->districts[static_cast<size_t>(d.type)].id;
@@ -826,7 +835,18 @@ int Game::upgradeCost(const Unit& unit) const {
     const int diff = std::max(0, to.cost - from.cost) * rules_->globalInt("UPGRADE_NET_PRODUCTION_PERCENT_COST") / 100;
     const int cost = std::max(rules_->globalInt("UPGRADE_MINIMUM_COST"), rules_->globalInt("UPGRADE_BASE_COST") + diff);
     const int speed = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
-    return std::max(1, cost * speed / 100);
+    // Professional Army, Force Modernization (04): half the gold.
+    const bool cheap = policyIs(unit.owner, "POLICY_PROFESSIONAL_ARMY") || policyIs(unit.owner, "POLICY_FORCE_MODERNIZATION");
+    return std::max(1, cost * speed / 100 / (cheap ? 2 : 1));
+}
+
+int Game::upgradeResourceCost(const Unit& unit) const {
+    const TypeIndex target = upgradeTarget(unit);
+    if (target == kNone) return 0;
+    const int n = rules_->units[static_cast<size_t>(target)].strategicCost;
+    // Retinues, Force Modernization (04): half the strategic resources, rounded up.
+    const bool cheap = policyIs(unit.owner, "POLICY_RETINUES") || policyIs(unit.owner, "POLICY_FORCE_MODERNIZATION");
+    return cheap ? (n + 1) / 2 : n;
 }
 
 CommandError Game::upgradeProblem(UnitId id) const {
@@ -837,7 +857,9 @@ CommandError Game::upgradeProblem(UnitId id) const {
     const UnitType& to = rules_->units[static_cast<size_t>(target)];
     // In its owner's territory with moves left, the new unit known, gold and its strategic resource on hand.
     if (state_.plot(u->pos).owner != u->owner || u->movesLeft <= Fixed() || isEmbarked(*u)) return CommandError::CannotUpgrade;
-    if (!hasUnlocked(u->owner, to.unlock) || !hasStrategicFor(u->owner, target)) return CommandError::CannotUpgrade;
+    if (!hasUnlocked(u->owner, to.unlock)) return CommandError::CannotUpgrade;
+    if (to.strategicResource != kNone && state_.players[static_cast<size_t>(u->owner)].stockpile[static_cast<size_t>(to.strategicResource)] < upgradeResourceCost(*u))
+        return CommandError::CannotUpgrade;
     if (state_.players[static_cast<size_t>(u->owner)].gold < Fixed::fromInt(upgradeCost(*u))) return CommandError::NotEnoughGold;
     return CommandError::Ok;
 }
@@ -904,7 +926,8 @@ void Game::applyCombat(const Command& c) {
             City& city = *state_.city(c.id);
             Unit* target = state_.unit(defenderAt(c.target)->id);
             const PlayerId them = target->owner;
-            const int sa = std::max(rules_->globalInt("COMBAT_MINIMUM_CITY_STRIKE_STRENGTH"), cityStrength(city));
+            const int sa = std::max(rules_->globalInt("COMBAT_MINIMUM_CITY_STRIKE_STRENGTH"), cityStrength(city)) +
+                           (policyIs(city.owner, "POLICY_BASTIONS") ? 5 : 0);  // Bastions (04): +5 to strikes
             const int sd = combatStrengthVsCity(*target, city, false, true);
             const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
             target->hp -= combatDamage(sa - sd, roll);
