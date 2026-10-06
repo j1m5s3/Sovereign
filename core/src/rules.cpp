@@ -180,6 +180,13 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"RELIGIOUS_UNITS_IGNORE_TERRAIN", ModEffect::ReligiousUnitsIgnoreTerrain},
         {"NO_COMBAT_PRESSURE_LOSS", ModEffect::NoCombatPressureLoss},
         {"RELIGION_COLONIZES", ModEffect::ReligionColonizes},
+        {"ADJUST_TRADE_ROUTE_YIELD", ModEffect::TradeRouteYield},
+        {"ADJUST_ITEM_PRODUCTION_PERCENT", ModEffect::ItemProductionPercent},
+        {"ADJUST_GREAT_PERSON_POINTS", ModEffect::GreatPersonPoints},
+        {"ADJUST_CITY_GREAT_PERSON_POINTS", ModEffect::CityGreatPersonPoints},
+        {"ADJUST_FAVOR_PER_TURN", ModEffect::FavorPerTurn},
+        {"ADJUST_CITY_FAVOR_PER_TURN", ModEffect::CityFavorPerTurn},
+        {"ADJUST_INFLUENCE_PER_TURN", ModEffect::InfluencePerTurn},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -228,8 +235,19 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
     const bool playerEffect = mod.effect == ModEffect::UnitMaintenanceDiscount || mod.effect == ModEffect::WarWearinessPercent ||
                               mod.effect == ModEffect::GrantAbility || mod.effect == ModEffect::UnitXpPercent ||
                               mod.effect == ModEffect::UnitStrength || mod.effect == ModEffect::DistrictAdjacencyPercent ||
+                              mod.effect == ModEffect::TradeRouteYield || mod.effect == ModEffect::GreatPersonPoints ||
+                              mod.effect == ModEffect::FavorPerTurn || mod.effect == ModEffect::InfluencePerTurn ||
                               (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
+    mod.scope = args["scope"].str();
+    if (args.has("building") && (mod.building = rules.building(args["building"].str())) == kNone) {
+        *error = "unknown building " + args["building"].str();
+        return false;
+    }
+    if (args.has("class") && (mod.gpClass = rules.greatPersonClass(args["class"].str())) == kNone) {
+        *error = "unknown great person class " + args["class"].str();
+        return false;
+    }
     mod.per = std::max(1, static_cast<int>(args["per"].integer(1)));
     mod.foreign = args["foreign"].boolean(false);
     if (mod.effect == ModEffect::FounderYieldPerDistrict && mod.district == kNone) {

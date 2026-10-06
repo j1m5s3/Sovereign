@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 #include "sovereign/mapgen.h"
 
 namespace sov {
@@ -102,7 +103,7 @@ void Game::processEnvoys(PlayerId pid) {
     // Influence from the government, in batches of envoys (08: Influence Points).
     if (p.government != kNone && p.anarchyTurns == 0) {
         const GovernmentType& gov = rules_->governments[at(p.government)];
-        p.influence += gov.influencePerTurn;
+        p.influence += gov.influencePerTurn + static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::InfluencePerTurn).toInt());  // + Charismatic Leader...
         if (gov.influenceThreshold > 0 && p.influence >= gov.influenceThreshold) {
             p.influence -= gov.influenceThreshold;
             if (!policyIs(p.id, "POLICY_ROGUE_STATE")) p.envoyTokens += gov.envoysPerThreshold;  // Rogue State: no envoys (09)

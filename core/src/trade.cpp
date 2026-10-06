@@ -105,11 +105,15 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         for (const Hex& h : state_.grid.within(origin.pos, 3)) owns = owns || (paititi != kNone && state_.plot(h).feature == paititi && state_.plot(h).city == origin.id);
         if (owns) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(4);
     }
-    // Dark Age cards (09): Isolationism (+2 Food and Production on domestic routes); Letters of Marque halves route yields.
-    if (domestic && policyIs(origin.owner, "POLICY_ISOLATIONISM")) {
-        out[static_cast<size_t>(YieldType::Food)] += Fixed::fromInt(2);
-        out[static_cast<size_t>(YieldType::Production)] += Fixed::fromInt(2);
+    // Policy cards (04): Caravansaries, Market Economy, Raj... by the kind of route.
+    {
+        const bool cs = isCityState(destination.owner);
+        const bool ally = !domestic && alliance(origin.owner, destination.owner) != AllianceType::None;
+        const Yields extra = tradeRouteModifierYields(state_, *rules_, state_.players[at(origin.owner)], domestic, ally, cs,
+                                                      cs && suzerainOf(destination.owner) == origin.owner);
+        for (size_t i = 0; i < kNumYields; ++i) out[i] += extra[i];
     }
+    // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;
     }

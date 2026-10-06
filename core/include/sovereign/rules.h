@@ -701,6 +701,14 @@ enum class ModEffect : uint8_t {
     SettlerNoPopCost,              // flag: settlers trained here cost no population
     BuilderExtraCharges,           // + build charges for builders trained here
     WarWearinessPercent,           // player: + % war weariness gained (Propaganda -25, Fascism +20)
+    // Policy cards (04: Policies; generated in policies.json):
+    TradeRouteYield,               // player: + `yield` on the player's trade routes of `scope` (ALL, DOMESTIC, INTERNATIONAL, ALLY, CITY_STATE, SUZERAIN)
+    ItemProductionPercent,         // city: + % production toward `scope` (WONDERS in [minEra, maxEra], BUILDING, DISTRICT, DISTRICT_BUILDINGS, SPACE_RACE)
+    GreatPersonPoints,             // player: + points a turn toward `gpClass`
+    CityGreatPersonPoints,         // city: + points a turn toward `gpClass`
+    FavorPerTurn,                  // player: + Diplomatic Favor a turn
+    CityFavorPerTurn,              // city: + Diplomatic Favor a turn
+    InfluencePerTurn,              // player: + influence points a turn toward envoys
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -753,7 +761,10 @@ struct Modifier {
     bool vsBarbarians = false;  // UnitStrength
     int per = 1;                // FounderYieldPerFollowers: followers per point
     bool foreign = false;       // UnitStrengthNearFollowingCity: foreign cities only (Crusade)
-    TypeIndex district = kNone;  // DistrictAdjacencyPercent
+    TypeIndex district = kNone;  // DistrictAdjacencyPercent, ItemProductionPercent
+    TypeIndex building = kNone;  // ItemProductionPercent
+    TypeIndex gpClass = kNone;   // GreatPersonPoints, CityGreatPersonPoints
+    std::string scope;           // TradeRouteYield, ItemProductionPercent
 };
 
 // City projects (03-districts-buildings-wonders.md, Projects; data: projects.md).

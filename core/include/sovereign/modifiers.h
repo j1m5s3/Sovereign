@@ -56,6 +56,15 @@ int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, co
 // Adjacency bonus percent for the player's districts of this type (Natural Philosophy...).
 SOV_API int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
 
+// Policy cards (04: Policies): production toward a building, district or project in the city; great
+// person points of a class from the city and from the player; extra yields on a trade route of the
+// player's (`ally`: to an ally; `cityState`: to a city-state; `suzerain`: one the player is suzerain of).
+SOV_API Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& city, ProductionItem item);
+SOV_API Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass);
+SOV_API Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, const Player& player, TypeIndex gpClass);
+SOV_API Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
+                                        bool suzerain);
+
 // Combat XP bonus percent for the player's units of this class.
 SOV_API Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 
