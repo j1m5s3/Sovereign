@@ -1251,6 +1251,9 @@ void Game::processCities(PlayerId pid) {
                 if (policyIs(pid, "POLICY_AUTOMATED_WORKFORCE")) pct += 20;
                 prod = prod * pct / 100;
             }
+            // Policy cards (04): wonders by era, walls, districts and their buildings, space race projects.
+            if (item.kind != ProductionKind::Unit)
+                prod = prod * std::max<int64_t>(0, 100 + sumItemProductionPercent(state_, *rules_, city, item).toInt()) / 100;
             prod += Fixed::fromInt(envoyProduction(city, item));  // Industrial and Militaristic city-states (08)
             prod += city.overflow;
             city.overflow = Fixed();

@@ -80,9 +80,11 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
         for (TypeIndex b : c.buildings) {
             for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;
         }
+        city += static_cast<int>(sumCityGreatPersonPoints(state_, *rules_, c, cls).toInt());  // policy cards (04)
         // Grants: more points from the city (08: Governors).
         total += city * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityGreatPersonPercent).toInt())) / 100;
     }
+    total += static_cast<int>(sumPlayerGreatPersonPoints(state_, *rules_, state_.players[at(player)], cls).toInt());  // policy cards (04)
     // Leader ability: more points of a class (Sea Dogs: Great Admirals).
     for (const auto& [k, pct] : civAbility(player).greatPersonPercent) total = k == cls ? total * (100 + pct) / 100 : total;
     // Patronage (World Congress): double (A) or no (B) points for its class.

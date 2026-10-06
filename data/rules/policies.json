@@ -255,8 +255,29 @@
    "name": "Integrated Space Cell",
    "slot": "MILITARY",
    "unlock": "CIVIC_SPACE_RACE",
-   "untrackedEffects": [
-    "+15% Production toward space race projects in all your cities where city has Military Academy or city has Seaport"
+   "modifiers": [
+    {
+     "id": "POLICY_INTEGRATED_SPACE_CELL_1",
+     "source": "POLICY_INTEGRATED_SPACE_CELL",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "SPACE_RACE",
+      "amount": 15
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_SEAPORT"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -360,10 +381,42 @@
    "obsoletedBy": [
     "POLICY_LIGHTNING_WARFARE"
    ],
+   "modifiers": [
+    {
+     "id": "POLICY_LIMES_1",
+     "source": "POLICY_LIMES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "BUILDING",
+      "building": "BUILDING_MEDIEVAL_WALLS",
+      "amount": 100
+     }
+    },
+    {
+     "id": "POLICY_LIMES_2",
+     "source": "POLICY_LIMES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "BUILDING",
+      "building": "BUILDING_ANCIENT_WALLS",
+      "amount": 100
+     }
+    },
+    {
+     "id": "POLICY_LIMES_3",
+     "source": "POLICY_LIMES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "BUILDING",
+      "building": "BUILDING_RENAISSANCE_WALLS",
+      "amount": 100
+     }
+    }
+   ],
    "untrackedEffects": [
-    "+100% Production toward Medieval Walls in all your cities",
-    "+100% Production toward Ancient Walls in all your cities",
-    "+100% Production toward Renaissance Walls in all your cities",
     "+100% Production toward Tsikhe in all your cities"
    ]
   },
@@ -953,11 +1006,51 @@
    "name": "Veterancy",
    "slot": "MILITARY",
    "unlock": "CIVIC_MILITARY_TRAINING",
-   "untrackedEffects": [
-    "+30% Production toward Encampment in all your cities",
-    "+30% Production toward buildings in Encampment in all your cities",
-    "+30% Production toward Harbor in all your cities",
-    "+30% Production toward buildings in Harbor in all your cities"
+   "modifiers": [
+    {
+     "id": "POLICY_VETERANCY_1",
+     "source": "POLICY_VETERANCY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "DISTRICT",
+      "district": "DISTRICT_ENCAMPMENT",
+      "amount": 30
+     }
+    },
+    {
+     "id": "POLICY_VETERANCY_2",
+     "source": "POLICY_VETERANCY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "DISTRICT_BUILDINGS",
+      "district": "DISTRICT_ENCAMPMENT",
+      "amount": 30
+     }
+    },
+    {
+     "id": "POLICY_VETERANCY_3",
+     "source": "POLICY_VETERANCY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "DISTRICT",
+      "district": "DISTRICT_HARBOR",
+      "amount": 30
+     }
+    },
+    {
+     "id": "POLICY_VETERANCY_4",
+     "source": "POLICY_VETERANCY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "DISTRICT_BUILDINGS",
+      "district": "DISTRICT_HARBOR",
+      "amount": 30
+     }
+    }
    ]
   },
   {
@@ -986,8 +1079,18 @@
    "obsoletedBy": [
     "POLICY_TRIANGULAR_TRADE"
    ],
-   "untrackedEffects": [
-    "trade routes +2 Gold"
+   "modifiers": [
+    {
+     "id": "POLICY_CARAVANSARIES_1",
+     "source": "POLICY_CARAVANSARIES",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 2,
+      "scope": "ALL"
+     }
+    }
    ]
   },
   {
@@ -1038,9 +1141,29 @@
    "slot": "ECONOMIC",
    "unlock": "CIVIC_CLASS_STRUGGLE",
    "government": "GOVERNMENT_COMMUNISM",
-   "untrackedEffects": [
-    "domestic trade routes +4 Food",
-    "domestic trade routes +2 Production"
+   "modifiers": [
+    {
+     "id": "POLICY_COLLECTIVIZATION_1",
+     "source": "POLICY_COLLECTIVIZATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "DOMESTIC"
+     }
+    },
+    {
+     "id": "POLICY_COLLECTIVIZATION_2",
+     "source": "POLICY_COLLECTIVIZATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "DOMESTIC"
+     }
+    }
    ]
   },
   {
@@ -1061,8 +1184,19 @@
     "POLICY_GOTHIC_ARCHITECTURE",
     "POLICY_SKYSCRAPERS"
    ],
-   "untrackedEffects": [
-    "+15% Production toward wonders (Ancient Era to Classical Era) in all your cities"
+   "modifiers": [
+    {
+     "id": "POLICY_CORV_E_1",
+     "source": "POLICY_CORV_E",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "WONDERS",
+      "amount": 15,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_CLASSICAL"
+     }
+    }
    ]
   },
   {
@@ -1070,9 +1204,29 @@
    "name": "Ecommerce",
    "slot": "ECONOMIC",
    "unlock": "CIVIC_GLOBALIZATION",
-   "untrackedEffects": [
-    "trade routes +2 Production",
-    "trade routes +5 Gold"
+   "modifiers": [
+    {
+     "id": "POLICY_ECOMMERCE_1",
+     "source": "POLICY_ECOMMERCE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "ALL"
+     }
+    },
+    {
+     "id": "POLICY_ECOMMERCE_2",
+     "source": "POLICY_ECOMMERCE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 5,
+      "scope": "ALL"
+     }
+    }
    ]
   },
   {
@@ -1185,8 +1339,19 @@
    "obsoletedBy": [
     "POLICY_SKYSCRAPERS"
    ],
-   "untrackedEffects": [
-    "+15% Production toward wonders (Ancient Era to Renaissance Era) in all your cities"
+   "modifiers": [
+    {
+     "id": "POLICY_GOTHIC_ARCHITECTURE_1",
+     "source": "POLICY_GOTHIC_ARCHITECTURE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "WONDERS",
+      "amount": 15,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_RENAISSANCE"
+     }
+    }
    ]
   },
   {
@@ -1288,9 +1453,31 @@
    "name": "Market Economy",
    "slot": "ECONOMIC",
    "unlock": "CIVIC_CAPITALISM",
+   "modifiers": [
+    {
+     "id": "POLICY_MARKET_ECONOMY_1",
+     "source": "POLICY_MARKET_ECONOMY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2,
+      "scope": "INTERNATIONAL"
+     }
+    },
+    {
+     "id": "POLICY_MARKET_ECONOMY_2",
+     "source": "POLICY_MARKET_ECONOMY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 2,
+      "scope": "INTERNATIONAL"
+     }
+    }
+   ],
    "untrackedEffects": [
-    "international trade routes +2 Culture",
-    "international trade routes +2 Science",
     "international routes +1 Gold per luxury at destination in all your cities",
     "international routes +1 Gold per strategic at destination in all your cities"
    ]
@@ -1523,8 +1710,19 @@
    "name": "Skyscrapers",
    "slot": "ECONOMIC",
    "unlock": "CIVIC_CIVIL_ENGINEERING",
-   "untrackedEffects": [
-    "+15% Production toward wonders (Ancient Era to Future Era) in all your cities"
+   "modifiers": [
+    {
+     "id": "POLICY_SKYSCRAPERS_1",
+     "source": "POLICY_SKYSCRAPERS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "WONDERS",
+      "amount": 15,
+      "minEra": "ERA_ANCIENT",
+      "maxEra": "ERA_FUTURE"
+     }
+    }
    ]
   },
   {
@@ -1579,9 +1777,29 @@
    "obsoletedBy": [
     "POLICY_MARKET_ECONOMY"
    ],
-   "untrackedEffects": [
-    "international trade routes +1 Culture",
-    "international trade routes +1 Science"
+   "modifiers": [
+    {
+     "id": "POLICY_TRADE_CONFEDERATION_1",
+     "source": "POLICY_TRADE_CONFEDERATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1,
+      "scope": "INTERNATIONAL"
+     }
+    },
+    {
+     "id": "POLICY_TRADE_CONFEDERATION_2",
+     "source": "POLICY_TRADE_CONFEDERATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1,
+      "scope": "INTERNATIONAL"
+     }
+    }
    ]
   },
   {
@@ -1592,9 +1810,29 @@
    "obsoletedBy": [
     "POLICY_ECOMMERCE"
    ],
-   "untrackedEffects": [
-    "trade routes +4 Gold",
-    "trade routes +1 Faith"
+   "modifiers": [
+    {
+     "id": "POLICY_TRIANGULAR_TRADE_1",
+     "source": "POLICY_TRIANGULAR_TRADE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 4,
+      "scope": "ALL"
+     }
+    },
+    {
+     "id": "POLICY_TRIANGULAR_TRADE_2",
+     "source": "POLICY_TRIANGULAR_TRADE",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1,
+      "scope": "ALL"
+     }
+    }
    ]
   },
   {
@@ -1614,8 +1852,16 @@
    "obsoletedBy": [
     "POLICY_GUNBOAT_DIPLOMACY"
    ],
-   "untrackedEffects": [
-    "+2 Influence points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_CHARISMATIC_LEADER_1",
+     "source": "POLICY_CHARISMATIC_LEADER",
+     "collection": "PLAYER",
+     "effect": "ADJUST_INFLUENCE_PER_TURN",
+     "arguments": {
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -1755,9 +2001,19 @@
    "name": "Gunboat Diplomacy",
    "slot": "DIPLOMATIC",
    "unlock": "CIVIC_IDEOLOGY",
+   "modifiers": [
+    {
+     "id": "POLICY_GUNBOAT_DIPLOMACY_1",
+     "source": "POLICY_GUNBOAT_DIPLOMACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_INFLUENCE_PER_TURN",
+     "arguments": {
+      "amount": 4
+     }
+    }
+   ],
    "untrackedEffects": [
-    "open borders with city-states you sent an Envoy to for all players where player is minor",
-    "+4 Influence points per turn"
+    "open borders with city-states you sent an Envoy to for all players where player is minor"
    ]
   },
   {
@@ -1868,12 +2124,24 @@
    "name": "Raj",
    "slot": "DIPLOMATIC",
    "unlock": "CIVIC_COLONIALISM",
+   "modifiers": [
+    {
+     "id": "POLICY_RAJ_1",
+     "source": "POLICY_RAJ",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 2,
+      "scope": "CITY_STATE"
+     }
+    }
+   ],
    "untrackedEffects": [
     "+2 Gold per city-state you are suzerain of",
     "+2 Faith per city-state you are suzerain of",
     "+2 Science per city-state you are suzerain of",
-    "+2 Culture per city-state you are suzerain of",
-    "routes to city-states +2 Gold"
+    "+2 Culture per city-state you are suzerain of"
    ]
   },
   {
@@ -1881,15 +2149,57 @@
    "name": "Wisselbanken",
    "slot": "DIPLOMATIC",
    "unlock": "CIVIC_DIPLOMATIC_SERVICE",
+   "modifiers": [
+    {
+     "id": "POLICY_WISSELBANKEN_1",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 2,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_2",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_3",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 2,
+      "scope": "SUZERAIN"
+     }
+    },
+    {
+     "id": "POLICY_WISSELBANKEN_4",
+     "source": "POLICY_WISSELBANKEN",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "SUZERAIN"
+     }
+    }
+   ],
    "untrackedEffects": [
     "routes to allies +2 Food to destination",
     "routes to city-states you are suzerain of +2 Food to destination",
     "routes to allies +2 Production to destination",
-    "routes to allies +2 Food to origin",
-    "routes to allies +2 Production to origin",
     "routes to city-states you are suzerain of +2 Production to destination",
-    "routes to city-states you are suzerain of +2 Food to origin",
-    "routes to city-states you are suzerain of +2 Production to origin",
     "+1 alliance points per turn"
    ]
   },
@@ -1998,9 +2308,19 @@
    "name": "Rabblerousing",
    "slot": "WILDCARD",
    "unlock": "CIVIC_INFORMATION_WARFARE",
+   "modifiers": [
+    {
+     "id": "POLICY_RABBLEROUSING_1",
+     "source": "POLICY_RABBLEROUSING",
+     "collection": "PLAYER",
+     "effect": "ADJUST_FAVOR_PER_TURN",
+     "arguments": {
+      "amount": 1
+     }
+    }
+   ],
    "untrackedEffects": [
-    "50% Favor refund when your resolution passes",
-    "+1 Diplomatic Favor per turn"
+    "50% Favor refund when your resolution passes"
    ]
   },
   {
@@ -2043,8 +2363,16 @@
    "name": "Diplomatic Capital",
    "slot": "WILDCARD",
    "unlock": "CIVIC_SMART_POWER_DOCTRINE",
-   "untrackedEffects": [
-    "+4 Diplomatic Favor per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_DIPLOMATIC_CAPITAL_1",
+     "source": "POLICY_DIPLOMATIC_CAPITAL",
+     "collection": "PLAYER",
+     "effect": "ADJUST_FAVOR_PER_TURN",
+     "arguments": {
+      "amount": 4
+     }
+    }
    ]
   },
   {
@@ -2950,15 +3278,57 @@
    "name": "Democratic Legacy",
    "slot": "WILDCARD",
    "legacy": true,
+   "modifiers": [
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_1",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_2",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_3",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "SUZERAIN"
+     }
+    },
+    {
+     "id": "POLICY_DEMOCRATIC_LEGACY_4",
+     "source": "POLICY_DEMOCRATIC_LEGACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "SUZERAIN"
+     }
+    }
+   ],
    "untrackedEffects": [
     "routes to allies +4 Food to destination",
     "routes to allies +4 Production to destination",
-    "routes to allies +4 Food to origin",
-    "routes to allies +4 Production to origin",
     "routes to city-states you are suzerain of +4 Food to destination",
     "routes to city-states you are suzerain of +4 Production to destination",
-    "routes to city-states you are suzerain of +4 Food to origin",
-    "routes to city-states you are suzerain of +4 Production to origin",
     "+1 alliance points per turn"
    ]
   },
@@ -3069,10 +3439,24 @@
        }
       ]
      }
+    },
+    {
+     "id": "POLICY_MONARCHIC_LEGACY_4",
+     "source": "POLICY_MONARCHIC_LEGACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_FAVOR_PER_TURN",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RENAISSANCE_WALLS"
+       }
+      ]
+     }
     }
-   ],
-   "untrackedEffects": [
-    "+2 Diplomatic Favor per turn in all your cities where city has Renaissance Walls"
    ]
   },
   {
@@ -3145,9 +3529,31 @@
     "ERA_CLASSICAL",
     "ERA_INDUSTRIAL"
    ],
+   "modifiers": [
+    {
+     "id": "POLICY_ISOLATIONISM_1",
+     "source": "POLICY_ISOLATIONISM",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 2,
+      "scope": "DOMESTIC"
+     }
+    },
+    {
+     "id": "POLICY_ISOLATIONISM_2",
+     "source": "POLICY_ISOLATIONISM",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 2,
+      "scope": "DOMESTIC"
+     }
+    }
+   ],
    "untrackedEffects": [
-    "domestic trade routes +2 Food",
-    "domestic trade routes +2 Production",
     "cannot found cities",
     "cannot build Settler"
    ]
@@ -3221,9 +3627,35 @@
    "name": "Frescoes",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_HUMANISM",
-   "untrackedEffects": [
-    "+2 Great Artist points per turn",
-    "+2 Great Artist points per turn in all your cities where city has Art Museum"
+   "modifiers": [
+    {
+     "id": "POLICY_FRESCOES_1",
+     "source": "POLICY_FRESCOES",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ARTIST",
+      "amount": 2
+     }
+    },
+    {
+     "id": "POLICY_FRESCOES_2",
+     "source": "POLICY_FRESCOES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ARTIST",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ART_MUSEUM"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -3234,8 +3666,17 @@
    "obsoletedBy": [
     "POLICY_SCIENCE_FOUNDATIONS"
    ],
-   "untrackedEffects": [
-    "+2 Great Scientist points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_INSPIRATION_1",
+     "source": "POLICY_INSPIRATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_SCIENTIST",
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -3243,9 +3684,35 @@
    "name": "Invention",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_HUMANISM",
-   "untrackedEffects": [
-    "+2 Great Engineer points per turn in all your cities where city has Workshop",
-    "+4 Great Engineer points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_INVENTION_1",
+     "source": "POLICY_INVENTION",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ENGINEER",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WORKSHOP"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_INVENTION_2",
+     "source": "POLICY_INVENTION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ENGINEER",
+      "amount": 4
+     }
+    }
    ]
   },
   {
@@ -3253,11 +3720,79 @@
    "name": "Laissez-Faire",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_CAPITALISM",
-   "untrackedEffects": [
-    "+2 Great Merchant points per turn in all your cities where city has Bank",
-    "+4 Great Merchant points per turn in all your cities where city has Stock Exchange",
-    "+2 Great Admiral points per turn in all your cities where city has Shipyard",
-    "+4 Great Admiral points per turn in all your cities where city has Seaport"
+   "modifiers": [
+    {
+     "id": "POLICY_LAISSEZ_FAIRE_1",
+     "source": "POLICY_LAISSEZ_FAIRE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MERCHANT",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_BANK"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_LAISSEZ_FAIRE_2",
+     "source": "POLICY_LAISSEZ_FAIRE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MERCHANT",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_STOCK_EXCHANGE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_LAISSEZ_FAIRE_3",
+     "source": "POLICY_LAISSEZ_FAIRE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ADMIRAL",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_SHIPYARD"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_LAISSEZ_FAIRE_4",
+     "source": "POLICY_LAISSEZ_FAIRE",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ADMIRAL",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_SEAPORT"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -3265,8 +3800,17 @@
    "name": "Literary Tradition",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_DRAMA_AND_POETRY",
-   "untrackedEffects": [
-    "+2 Great Writer points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_LITERARY_TRADITION_1",
+     "source": "POLICY_LITERARY_TRADITION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_WRITER",
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -3278,16 +3822,48 @@
     {
      "id": "POLICY_MILITARY_ORGANIZATION_1",
      "source": "POLICY_MILITARY_ORGANIZATION",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_GENERAL",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ARMORY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_ORGANIZATION_2",
+     "source": "POLICY_MILITARY_ORGANIZATION",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_GENERAL",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MILITARY_ACADEMY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_MILITARY_ORGANIZATION_3",
+     "source": "POLICY_MILITARY_ORGANIZATION",
      "collection": "PLAYER",
      "effect": "GRANT_ABILITY",
      "arguments": {
       "ability": "ABILITY_MILITARY_ORGANIZATION"
      }
     }
-   ],
-   "untrackedEffects": [
-    "+2 Great General points per turn in all your cities where city has Armory",
-    "+4 Great General points per turn in all your cities where city has Military Academy"
    ]
   },
   {
@@ -3295,8 +3871,17 @@
    "name": "Navigation",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_NAVAL_TRADITION",
-   "untrackedEffects": [
-    "+2 Great Admiral points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_NAVIGATION_1",
+     "source": "POLICY_NAVIGATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ADMIRAL",
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -3304,11 +3889,87 @@
    "name": "Science Foundations",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_NUCLEAR_PROGRAM",
-   "untrackedEffects": [
-    "+2 Great Scientist points per turn in all your cities where city has University",
-    "+4 Great Scientist points per turn in all your cities where city has Research Lab",
-    "+2 Great Engineer points per turn in all your cities where city has Factory",
-    "+4 Great Engineer points per turn in all your cities where city has Nuclear Power Plant or city has Coal Power Plant or city has Oil Power Plant"
+   "modifiers": [
+    {
+     "id": "POLICY_SCIENCE_FOUNDATIONS_1",
+     "source": "POLICY_SCIENCE_FOUNDATIONS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_SCIENTIST",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_UNIVERSITY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_SCIENCE_FOUNDATIONS_2",
+     "source": "POLICY_SCIENCE_FOUNDATIONS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_SCIENTIST",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RESEARCH_LAB"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_SCIENCE_FOUNDATIONS_3",
+     "source": "POLICY_SCIENCE_FOUNDATIONS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ENGINEER",
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FACTORY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "POLICY_SCIENCE_FOUNDATIONS_4",
+     "source": "POLICY_SCIENCE_FOUNDATIONS",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_ENGINEER",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NUCLEAR_POWER_PLANT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_COAL_POWER_PLANT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_OIL_POWER_PLANT"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -3319,8 +3980,17 @@
    "obsoletedBy": [
     "POLICY_INVENTION"
    ],
-   "untrackedEffects": [
-    "+2 Great Prophet points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_REVELATION_1",
+     "source": "POLICY_REVELATION",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_PROPHET",
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -3331,8 +4001,17 @@
    "obsoletedBy": [
     "POLICY_MILITARY_ORGANIZATION"
    ],
-   "untrackedEffects": [
-    "+2 Great General points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_STRATEGOS_1",
+     "source": "POLICY_STRATEGOS",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_GENERAL",
+      "amount": 2
+     }
+    }
    ]
   },
   {
@@ -3340,9 +4019,35 @@
    "name": "Symphonies",
    "slot": "GREAT_PERSON",
    "unlock": "CIVIC_OPERA_AND_BALLET",
-   "untrackedEffects": [
-    "+4 Great Musician points per turn",
-    "+4 Great Musician points per turn in all your cities where city has Broadcast Center"
+   "modifiers": [
+    {
+     "id": "POLICY_SYMPHONIES_1",
+     "source": "POLICY_SYMPHONIES",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MUSICIAN",
+      "amount": 4
+     }
+    },
+    {
+     "id": "POLICY_SYMPHONIES_2",
+     "source": "POLICY_SYMPHONIES",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MUSICIAN",
+      "amount": 4
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_BROADCAST_CENTER"
+       }
+      ]
+     }
+    }
    ]
   },
   {
@@ -3353,8 +4058,17 @@
    "obsoletedBy": [
     "POLICY_LAISSEZ_FAIRE"
    ],
-   "untrackedEffects": [
-    "+2 Great Merchant points per turn"
+   "modifiers": [
+    {
+     "id": "POLICY_TRAVELING_MERCHANTS_1",
+     "source": "POLICY_TRAVELING_MERCHANTS",
+     "collection": "PLAYER",
+     "effect": "ADJUST_GREAT_PERSON_POINTS",
+     "arguments": {
+      "class": "GREAT_PERSON_CLASS_MERCHANT",
+      "amount": 2
+     }
+    }
    ]
   }
  ]

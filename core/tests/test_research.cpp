@@ -475,3 +475,49 @@ TEST(generated_policy_cards_take_effect) {
         CHECK_EQ(sumUnitXpPercent(g->state(), r, g->state().players[0], "MELEE"), Fixed::fromInt(50));
     }
 }
+
+TEST(policy_cards_reach_routes_production_great_people_and_favor) {
+    const Rules& r = rules();
+    auto with = [](const char* card) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            s.players[0].policies[0] = policy(card);
+        });
+    };
+    auto plain = capitalWith([](GameState& s) { chiefdom(s); });
+    const City& pc = plain->state().cities[0];
+    constexpr size_t G = static_cast<size_t>(YieldType::Gold);
+    // Caravansaries: +2 Gold on every route.
+    {
+        auto g = with("POLICY_CARAVANSARIES");
+        const City& c = g->state().cities[0];
+        CHECK_EQ(g->tradeRouteYields(c, c)[G], plain->tradeRouteYields(pc, pc)[G] + Fixed::fromInt(2));
+    }
+    // Corvée: +15% toward Ancient and Classical wonders; Veterancy: +30% toward Encampment buildings.
+    {
+        auto g = with("POLICY_CORV_E");
+        const City& c = g->state().cities[0];
+        CHECK_EQ(sumItemProductionPercent(g->state(), r, c, {ProductionKind::Building, r.building("BUILDING_PYRAMIDS")}), Fixed::fromInt(15));
+        CHECK_EQ(sumItemProductionPercent(g->state(), r, c, {ProductionKind::Building, r.building("BUILDING_MONUMENT")}), Fixed());
+        auto v = with("POLICY_VETERANCY");
+        CHECK_EQ(sumItemProductionPercent(v->state(), r, v->state().cities[0], {ProductionKind::Building, r.building("BUILDING_BARRACKS")}), Fixed::fromInt(30));
+        CHECK_EQ(sumItemProductionPercent(v->state(), r, v->state().cities[0], {ProductionKind::District, r.district("DISTRICT_ENCAMPMENT")}), Fixed::fromInt(30));
+    }
+    // Inspiration: +2 Great Scientist points a turn.
+    {
+        auto g = with("POLICY_INSPIRATION");
+        const TypeIndex sci = r.greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
+        CHECK_EQ(g->greatPersonPointsPerTurn(0, sci), plain->greatPersonPointsPerTurn(0, sci) + 2);
+    }
+    // Diplomatic Capital: +4 Favor a turn. Charismatic Leader: +2 influence a turn.
+    {
+        auto g = with("POLICY_DIPLOMATIC_CAPITAL");
+        CHECK_EQ(g->favorPerTurn(0), plain->favorPerTurn(0) + 4);
+        auto h = with("POLICY_CHARISMATIC_LEADER");
+        const int before = h->state().players[0].influence;
+        auto p = plain->state().players[0].influence;
+        endTurns(*h, 1);
+        endTurns(*plain, 1);
+        CHECK_EQ(h->state().players[0].influence - before, plain->state().players[0].influence - p + 2);
+    }
+}

@@ -1449,10 +1449,11 @@ UNIT_CLASS_WORDS = {
 def policy_refs():
     """Names -> ids for what a policy's effect text refers to."""
     return {
-        "buildings": {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings")},
+        "buildings": {r["Building"]: "BUILDING_" + snake(r["Building"]) for r in table(SPEC / "buildings.md", "Buildings")
+                      if not r.get("Unique to") and r["District"] != "Spaceport"},
         "units": {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")},
         "abilities": {r["Ability"]: "ABILITY_" + snake(r["Ability"]) for r in table(SPEC / "units.md", "Unit abilities")},
-        "districts": {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats")},
+        "districts": {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats") if not r.get("Unique to")},
         "eras": {e: i for i, e in enumerate(ERAS)},
     }
 
@@ -1587,6 +1588,60 @@ def policy_modifiers(pid, text, ids):
         m = re.fullmatch(r"([+-]\d+)% war weariness", body)
         if m:
             add("PLAYER", "ADJUST_WAR_WEARINESS_PERCENT", {"amount": int(m.group(1))})
+            continue
+        # Trade routes by kind; yields "to destination" (the partner's) are not modelled.
+        m = re.fullmatch(r"(domestic |international )?trade routes \+(\d+) (\w+)", body)
+        if m and m.group(3) in YIELD_WORDS:
+            scope = {"domestic ": "DOMESTIC", "international ": "INTERNATIONAL"}.get(m.group(1), "ALL")
+            add("PLAYER", "ADJUST_TRADE_ROUTE_YIELD", {"yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(2)), "scope": scope})
+            continue
+        m = re.fullmatch(r"routes to (allies|city-states you are suzerain of|city-states) \+(\d+) (\w+)(?: to (origin|destination))?", body)
+        if m and m.group(3) in YIELD_WORDS and m.group(4) != "destination":
+            scope = {"allies": "ALLY", "city-states": "CITY_STATE", "city-states you are suzerain of": "SUZERAIN"}[m.group(1)]
+            add("PLAYER", "ADJUST_TRADE_ROUTE_YIELD", {"yield": YIELD_WORDS[m.group(3)], "amount": int(m.group(2)), "scope": scope})
+            continue
+        # Production toward wonders of some eras, buildings, districts and their buildings, space race projects.
+        m = re.fullmatch(r"\+(\d+)% Production toward wonders \((\w+) Era to (\w+) Era\) in all your cities", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "WONDERS", "amount": int(m.group(1)),
+                "minEra": "ERA_" + m.group(2).upper(), "maxEra": "ERA_" + m.group(3).upper()}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward buildings in (.+?) in all your cities", body)
+        if m and m.group(2) in ids["districts"]:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "DISTRICT_BUILDINGS", "district": ids["districts"][m.group(2)],
+                "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward space race projects in all your cities", body)
+        if m:
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "SPACE_RACE", "amount": int(m.group(1))}, where)
+            continue
+        m = re.fullmatch(r"\+(\d+)% Production toward (.+?) in all your cities", body)
+        if m and (m.group(2) in ids["buildings"] or m.group(2) in ids["districts"]):
+            if m.group(2) in ids["buildings"]:
+                args = {"scope": "BUILDING", "building": ids["buildings"][m.group(2)], "amount": int(m.group(1))}
+            else:
+                args = {"scope": "DISTRICT", "district": ids["districts"][m.group(2)], "amount": int(m.group(1))}
+            add("PLAYER_CITIES", "ADJUST_ITEM_PRODUCTION_PERCENT", args, where)
+            continue
+        # Great person points, Diplomatic Favor and influence points a turn.
+        m = re.fullmatch(r"\+(\d+) Great (\w+) points per turn( in all your cities)?", body)
+        if m:
+            cls = "GREAT_PERSON_CLASS_" + m.group(2).upper()
+            if m.group(3):
+                add("PLAYER_CITIES", "ADJUST_CITY_GREAT_PERSON_POINTS", {"class": cls, "amount": int(m.group(1))}, where)
+            else:
+                add("PLAYER", "ADJUST_GREAT_PERSON_POINTS", {"class": cls, "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Diplomatic Favor per turn( in all your cities)?", body)
+        if m:
+            if m.group(2):
+                add("PLAYER_CITIES", "ADJUST_CITY_FAVOR_PER_TURN", {"amount": int(m.group(1))}, where)
+            else:
+                add("PLAYER", "ADJUST_FAVOR_PER_TURN", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) Influence points per turn", body)
+        if m:
+            add("PLAYER", "ADJUST_INFLUENCE_PER_TURN", {"amount": int(m.group(1))})
             continue
         untracked.append(part)
     for (cls, amount), eras in sorted(unit_eras.items()):

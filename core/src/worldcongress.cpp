@@ -10,6 +10,7 @@
 #include <map>
 
 #include "sovereign/game.h"
+#include "sovereign/modifiers.h"
 
 namespace sov {
 
@@ -60,6 +61,11 @@ int Game::favorPerTurn(PlayerId pid) const {
     int favor = rules_->globalInt("WORLD_CONGRESS_BASELINE_FAVOR_PER_TURN");
     if (p.government != kNone && p.anarchyTurns == 0) favor += rules_->governments[at(p.government)].favor;
     if (policyIs(pid, "POLICY_DISINFORMATION_CAMPAIGN")) favor += 3 * buildingsOwned(pid, "BUILDING_BROADCAST_CENTER");  // 09
+    // Policy cards (04): Diplomatic Capital, Rabblerousing; Monarchic Legacy per walled city.
+    favor += static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::FavorPerTurn).toInt());
+    for (const City& c : state_.cities) {
+        if (c.owner == pid) favor += static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityFavorPerTurn).toInt());
+    }
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN");
         if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");

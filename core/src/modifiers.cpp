@@ -259,6 +259,56 @@ int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player
     return static_cast<int>(total.toInt());
 }
 
+Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& city, ProductionItem item) {
+    Fixed total;
+    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
+        if (m.effect != ModEffect::ItemProductionPercent) return;
+        bool hit = false;
+        if (item.kind == ProductionKind::Building && item.type >= 0 && static_cast<size_t>(item.type) < r.buildings.size()) {
+            const BuildingType& b = r.buildings[static_cast<size_t>(item.type)];
+            if (m.scope == "BUILDING") hit = m.building == item.type;
+            if (m.scope == "DISTRICT_BUILDINGS") hit = m.district != kNone && !b.wonder && b.district == r.districts[static_cast<size_t>(m.district)].id;
+            if (m.scope == "WONDERS" && b.wonder) {
+                const int era = b.unlock.none() ? 0 : (b.unlock.civic ? r.civics : r.techs)[static_cast<size_t>(b.unlock.index)].era;
+                hit = (m.minEra < 0 || era >= m.minEra) && (m.maxEra < 0 || era <= m.maxEra);
+            }
+        } else if (item.kind == ProductionKind::District) {
+            hit = m.scope == "DISTRICT" && m.district == item.type;
+        } else if (item.kind == ProductionKind::Project && item.type >= 0 && static_cast<size_t>(item.type) < r.projects.size()) {
+            hit = m.scope == "SPACE_RACE" && r.projects[static_cast<size_t>(item.type)].spaceRace;
+        }
+        if (hit) total += m.amount;
+    });
+    return total;
+}
+
+Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass) {
+    Fixed total;
+    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
+        if (m.effect == ModEffect::CityGreatPersonPoints && m.gpClass == gpClass) total += m.amount;
+    });
+    return total;
+}
+
+Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, const Player& player, TypeIndex gpClass) {
+    Fixed total;
+    forEachPlayerModifier(s, r, player, ModEffect::GreatPersonPoints, [&](const Modifier& m) {
+        if (m.gpClass == gpClass) total += m.amount;
+    });
+    return total;
+}
+
+Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
+                                bool suzerain) {
+    Yields out{};
+    forEachPlayerModifier(s, r, owner, ModEffect::TradeRouteYield, [&](const Modifier& m) {
+        const bool hit = m.scope == "ALL" || (m.scope == "DOMESTIC" && domestic) || (m.scope == "INTERNATIONAL" && !domestic) ||
+                         (m.scope == "ALLY" && ally) || (m.scope == "CITY_STATE" && cityState) || (m.scope == "SUZERAIN" && suzerain);
+        if (hit) out[static_cast<size_t>(m.yield)] += m.amount;
+    });
+    return out;
+}
+
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
     Fixed total;
     forEachPlayerModifier(s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) {
