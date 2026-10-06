@@ -529,6 +529,13 @@ struct Agent {
     int promotionsPending = 0;          // levels gained and not yet spent on a promotion
 };
 
+// A city-state's military units serving its suzerain until a turn (08: Levy Military).
+struct Levy {
+    PlayerId player = kNoPlayer, cityState = kNoPlayer;
+    int32_t until = 0;
+    std::vector<UnitId> units;
+};
+
 // A spy caught at work, held by the civ that caught it until it is traded back (08: Outcomes; Captive deal item).
 struct CapturedSpy {
     Agent spy;
@@ -618,6 +625,7 @@ struct SOV_API GameState {
     std::vector<int32_t> battleSites;       // plots fought over before ARCHAEOLOGY_MAX_ERA (07: Archaeology)
     std::vector<int32_t> battleHistory;     // per battle site: era * 4096 + the attacker's civ + 1 (its Artifact's history)
     std::vector<Promise> promises;          // promises made, kept and broken (08 [GS])
+    std::vector<Levy> levies;               // city-state armies serving a suzerain (08: Levy Military)
     bool antiquityPlaced = false;           // the sites have appeared (once a civ has Natural History)
     int32_t nextDealId = 1;
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first

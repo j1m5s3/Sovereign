@@ -96,6 +96,50 @@ bool Game::canSendEnvoy(PlayerId player, PlayerId cs) const {
     return false;
 }
 
+int Game::levyCost(PlayerId player, PlayerId cityState) const {
+    if (!isCityState(cityState) || !state_.players[at(cityState)].alive || suzerainOf(cityState) != player || atWar(player, cityState)) return -1;
+    for (const Levy& lv : state_.levies) {
+        if (lv.cityState == cityState) return -1;  // already serving
+    }
+    int cost = 0, units = 0;
+    for (const Unit& u : state_.units) {
+        const UnitType& ut = rules_->units[at(u.type)];
+        if (u.owner != cityState || ut.layer != UnitLayer::Military) continue;
+        ++units;
+        cost += std::max(0, purchaseCost(player, {ProductionKind::Unit, u.type})) * rules_->globalInt("LEVY_MILITARY_PERCENT_OF_UNIT_PURCHASE_COST") / 100;
+    }
+    if (units == 0) return -1;
+    if (buildingsOwned(player, "BUILDING_FOREIGN_MINISTRY") > 0) cost /= 2;  // Foreign Ministry (03): half price
+    return cost;
+}
+
+bool Game::levied(const Unit& unit) const {
+    for (const Levy& lv : state_.levies) {
+        if (lv.player == unit.owner && std::find(lv.units.begin(), lv.units.end(), unit.id) != lv.units.end()) return true;
+    }
+    return false;
+}
+
+void Game::processLevies(PlayerId player) {
+    for (const Levy& lv : state_.levies) {
+        if (lv.player != player || state_.turn < lv.until) continue;
+        const bool home = state_.players[at(lv.cityState)].alive;
+        std::vector<UnitId> disband;
+        for (UnitId id : lv.units) {
+            Unit* u = state_.unit(id);
+            if (!u || u->owner != player) continue;
+            if (home) u->owner = lv.cityState;
+            else disband.push_back(id);  // nowhere to go back to
+        }
+        for (UnitId id : disband) removeUnit(id);
+        if (home) refreshVisibility(lv.cityState);
+    }
+    state_.levies.erase(std::remove_if(state_.levies.begin(), state_.levies.end(),
+                                       [&](const Levy& lv) { return lv.player == player && state_.turn >= lv.until; }),
+                        state_.levies.end());
+    refreshVisibility(player);
+}
+
 int Game::suzeraintiesOf(PlayerId player) const {
     int n = 0;
     for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player ? 1 : 0;

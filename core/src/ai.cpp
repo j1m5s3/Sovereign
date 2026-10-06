@@ -2084,6 +2084,13 @@ void trader(View& v, UnitId id) {
 // then the nearest one we have met.
 void envoys(View& v) {
     Game& g = v.game;
+    // At war, a city-state's army is levied while Gold allows (08: Levy Military).
+    if (!v.enemies.empty()) {
+        for (const Player& cs : v.s().players) {
+            const int cost = g.levyCost(v.me, cs.id);
+            if (cost >= 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost + 100)) g.submit(Command::levyMilitary(v.me, cs.id));
+        }
+    }
     for (int guard = 0; guard < 8 && v.s().players[at(v.me)].envoyTokens > 0; ++guard) {
         PlayerId best = kNoPlayer;
         int bestScore = INT_MIN;

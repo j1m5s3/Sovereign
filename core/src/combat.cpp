@@ -454,6 +454,8 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         const int wound = roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER")) * (maxHp - unit.hp), maxHp);
         s -= policyIs(unit.owner, "POLICY_NATIONAL_IDENTITY") ? wound / 2 : wound;  // National Identity (04): half the loss
     }
+    // Foreign Ministry (03): levied units +4.
+    if (buildingsOwned(unit.owner, "BUILDING_FOREIGN_MINISTRY") > 0 && levied(unit)) s += 4;
     // Wars of Religion (04): +4 against the units of a civ of another religion, for all but religious units.
     if (oppUnit && ut.religiousStrength <= 0 && ut.spreadCharges <= 0 && policyIs(unit.owner, "POLICY_WARS_OF_RELIGION")) {
         const int mine = civReligion(unit.owner), theirs = civReligion(oppUnit->owner);

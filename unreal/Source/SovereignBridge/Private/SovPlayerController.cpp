@@ -731,6 +731,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				Choices.Add({FString::Printf(TEXT("%s (%s): your envoys %d, suzerain %s"), *Str(T.name), Kinds[static_cast<size_t>(T.kind) % 6],
 								 G.envoysAt(Me(), Cs.id), *SuzName),
 					sov::Command::sendEnvoy(Me(), Cs.id)});
+				// Levy Military (08): its army serves us for a while, as its suzerain.
+				if (const int32 Cost = G.levyCost(Me(), Cs.id); Cost >= 0)
+				{
+					Choices.Add({FString::Printf(TEXT("  Levy %s's military for %d Gold"), *Str(T.name), Cost), sov::Command::levyMilitary(Me(), Cs.id)});
+				}
 			}
 			break;
 		}
