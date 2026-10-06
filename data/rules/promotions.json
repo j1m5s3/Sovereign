@@ -502,8 +502,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+2 spread charge(s)"
+     "kind": "SPREAD_CHARGES",
+     "amount": 2
     }
    ]
   },
@@ -514,8 +514,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "removes 50% of other religions"
+     "kind": "EVICT_PERCENT",
+     "amount": 50
     }
    ]
   },
@@ -526,8 +526,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit foreign spread modifier (Amount=200)"
+     "kind": "FOREIGN_SPREAD_PERCENT",
+     "amount": 200
     }
    ]
   },
@@ -538,8 +538,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "adjust unit natural wonder deferred charges (Amount=3)"
+     "kind": "WONDER_CHARGES",
+     "amount": 3
     }
    ]
   },
@@ -550,8 +550,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+100 Gold when a unit is trained/bought"
+     "kind": "CONVERT_GOLD",
+     "amount": 100
     }
    ]
   },
@@ -562,8 +562,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "converts defeated barbarians"
+     "kind": "HEATHEN_CONVERSION"
     }
    ]
   },
@@ -586,8 +585,7 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "creates a Relic when killed in theological combat"
+     "kind": "MARTYR"
     }
    ]
   },
@@ -598,8 +596,8 @@
    "tier": 1,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+20 HP healing (All) for your units where within tiles"
+     "kind": "HEAL_AURA",
+     "amount": 20
     }
    ]
   },
@@ -4991,8 +4989,7 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "creates a Relic when killed in theological combat"
+     "kind": "MARTYR"
     }
    ]
   },
@@ -5004,8 +5001,8 @@
    ],
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+20 HP healing (All) for your units where within tiles"
+     "kind": "HEAL_AURA",
+     "amount": 20
     }
    ]
   },
@@ -5565,8 +5562,7 @@
      "text": "religious units bought here +1 spread charge(s)"
     },
     {
-     "kind": "UNTRACKED",
-     "text": "converts defeated barbarians"
+     "kind": "HEATHEN_CONVERSION"
     }
    ]
   },

@@ -210,3 +210,26 @@ TEST(religion_survives_a_save) {
     CHECK_EQ(loaded->state().players[0].pantheon, belief("BELIEF_STONE_CIRCLES"));
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(each_new_apostle_gets_a_promotion) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].faith = Fixed::fromInt(5000);
+    auto g = withReligion(std::move(s));
+    const CityId holy = g->state().cities[0].id;
+    const ProductionItem apostle{ProductionKind::Unit, rules().unit("UNIT_APOSTLE")};
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
+    const Unit& a = g->state().units.back();
+    REQUIRE(a.promotions.size() == 1u);
+    CHECK_EQ(rules().promotions[static_cast<size_t>(a.promotions[0])].promotionClass, std::string("PROMOTION_CLASS_RELIGIOUS_APOSTLE"));
+    // Orator: two more charges; Debater: +20 theological strength.
+    GameState t = g->state();
+    t.units.back().promotions = {rules().promotion("PROMOTION_DEBATER")};
+    auto h = Game::fromScenario(rules(), t);
+    const int base = rules().units[static_cast<size_t>(rules().unit("UNIT_APOSTLE"))].religiousStrength;
+    CHECK(h->religiousStrength(h->state().units.back(), false) >= base + 20);
+    t.units.back().promotions = {rules().promotion("PROMOTION_ORATOR")};
+    auto o = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(o->unitEffectTotal(o->state().units.back(), UnitEffectKind::SpreadCharges), 2);
+}

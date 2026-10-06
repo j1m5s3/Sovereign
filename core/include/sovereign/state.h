@@ -77,7 +77,7 @@ struct Unit {
     uint8_t formation = 0;       // 0 single, 1 Corps/Fleet, 2 Army/Armada (05: Formations)
     // Permanent abilities from natural wonders (01): bit 0 Everest (hills cost as flat ground), bit 1
     // Fountain of Youth (+10 HP healing a turn), bit 2 Bermuda Triangle (+1 movement).
-    uint8_t wonderAbilities = 0;
+    uint8_t wonderAbilities = 0;  // natural wonder gifts (1 Everest, 2 Fountain of Youth, 4 Bermuda); 0x40 Pilgrim and 0x80 Indulgence Vendor spent
     int16_t xpBonus = 0;  // + % combat XP for good (a great general's or admiral's gift, 07)
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }

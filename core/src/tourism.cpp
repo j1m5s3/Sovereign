@@ -134,6 +134,17 @@ CommandError Game::concertProblem(PlayerId player, UnitId id) const {
     return CommandError::Ok;
 }
 
+void Game::grantApostlePromotion(Unit& apostle) {
+    std::vector<TypeIndex> open;
+    for (size_t i = 0; i < rules_->promotions.size(); ++i) {
+        if (rules_->promotions[i].promotionClass == "PROMOTION_CLASS_RELIGIOUS_APOSTLE") open.push_back(static_cast<TypeIndex>(i));
+    }
+    if (open.empty()) return;
+    const TypeIndex pick = open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))];
+    apostle.promotions.push_back(pick);
+    apostle.charges += unitEffectTotal(apostle, UnitEffectKind::SpreadCharges);  // Orator
+}
+
 void Game::grantBandPromotion(Unit& band) {
     std::vector<TypeIndex> open;
     for (size_t i = 0; i < rules_->promotions.size(); ++i) {

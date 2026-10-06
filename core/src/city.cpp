@@ -869,6 +869,7 @@ void Game::applyCity(const Command& c) {
                     if (bought.id == "UNIT_ROCK_BAND") grantBandPromotion(u);  // every band starts with one (07)
                     u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
                                 (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
+                    if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
                 }
                 break;
             }
