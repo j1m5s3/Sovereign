@@ -201,6 +201,18 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         for (const BeliefType& bt : rules_->beliefs) worship = worship || (bt.worshipBuilding != kNone && origin.has(bt.worshipBuilding));
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * (n + (worship ? 1 : 0)));
     }
+    // Routes to a city-state bring the sender a bonus by its type (07: MINOR_CIV_*_SEND_TRADE_ROUTE_BONUS).
+    if (isCityState(destination.owner)) {
+        const TypeIndex cst = state_.players[at(destination.owner)].cityState;
+        switch (rules_->cityStates[at(cst)].kind) {
+            case CityStateKind::Scientific: out[static_cast<size_t>(YieldType::Science)] += Fixed::fromInt(1); break;
+            case CityStateKind::Cultural: out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(1); break;
+            case CityStateKind::Religious: out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(1); break;
+            case CityStateKind::Industrial:
+            case CityStateKind::Militaristic: out[static_cast<size_t>(YieldType::Production)] += Fixed::fromInt(1); break;
+            case CityStateKind::Trade: out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2); break;
+        }
+    }
     // Letters of Marque (09) halves route yields; Isolationism's domestic bonus is a generated modifier above.
     if (policyIs(origin.owner, "POLICY_LETTERS_OF_MARQUE")) {
         for (Fixed& y : out) y = y / 2;

@@ -284,6 +284,7 @@ struct GreatWork {
     TypeIndex creator = kNone;   // Rules::greatPeople
     int8_t era = -1;             // an Artifact's era (Rules::eras) and civilization (Rules::civs) (07: Theming)
     TypeIndex civ = kNone;
+    int32_t lockedUntil = 0;     // art moved or traded stays put until this turn (07: GREATWORK_ART_LOCK_TIME)
 };
 
 struct SOV_API City {

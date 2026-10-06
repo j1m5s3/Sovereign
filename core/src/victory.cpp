@@ -21,7 +21,11 @@ int Game::score(PlayerId player) const {
         if (c.owner != player) continue;
         total += 5 + c.population;
         for (const CityDistrict& d : c.districts) total += d.complete ? 2 : 0;
+        for (TypeIndex b : c.buildings) total += rules_->buildings[static_cast<size_t>(b)].wonder ? 15 : 0;  // wonders
     }
+    // Great people and a founded religion (09: Score).
+    for (int n : p.greatPeopleRecruited) total += 5 * n;
+    if (p.religion >= 0) total += 5;
     return total;
 }
 

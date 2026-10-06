@@ -145,7 +145,8 @@ void Game::processEnvoys(PlayerId pid) {
         }
         if (gov.influenceThreshold > 0 && p.influence >= gov.influenceThreshold) {
             p.influence -= gov.influenceThreshold;
-            if (!policyIs(p.id, "POLICY_ROGUE_STATE")) p.envoyTokens += gov.envoysPerThreshold;  // Rogue State: no envoys (09)
+            // Monarchy (08): +50% envoys. Rogue State: no envoys (09).
+            if (!policyIs(p.id, "POLICY_ROGUE_STATE")) p.envoyTokens += gov.envoysPerThreshold * (governmentIs(p.id, "GOVERNMENT_MONARCHY") ? 3 : 2) / 2;
         }
     }
     // The first major civ to meet a city-state gets an envoy there (INFLUENCE_TOKENS_FREE_FOR_FIRST_PLAYER_MEET).

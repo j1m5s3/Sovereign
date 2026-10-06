@@ -159,11 +159,12 @@ TEST(research_boosts_fire_from_state) {
     const Player& q = g->state().players[0];
     CHECK_EQ(q.civics.boosted[at(civic("CIVIC_EARLY_EMPIRE"))], 1);
     CHECK_EQ(q.civics.progress[at(civic("CIVIC_EARLY_EMPIRE"))], Fixed::fromInt(28));
-    CHECK_EQ(q.techs.progress[at(tech("TECH_CONSTRUCTION"))], Fixed::fromInt(80));
+    // 40% of its cost, a Classical tech 20% dearer while the world is Ancient (04: [GS] world era).
+    CHECK_EQ(q.techs.progress[at(tech("TECH_CONSTRUCTION"))], Fixed::fromInt(g->techCost(tech("TECH_CONSTRUCTION"))) * 40 / 100);
     CHECK_EQ(q.techs.boosted[at(tech("TECH_SAILING"))], 0);  // inland
     // A boost is earned once.
     endTurns(*g, 1);
-    CHECK_EQ(g->state().players[0].techs.progress[at(tech("TECH_CONSTRUCTION"))], Fixed::fromInt(80));
+    CHECK_EQ(g->state().players[0].techs.progress[at(tech("TECH_CONSTRUCTION"))], Fixed::fromInt(g->techCost(tech("TECH_CONSTRUCTION"))) * 40 / 100);
 }
 
 TEST(research_unlocks_units_buildings_and_resources) {

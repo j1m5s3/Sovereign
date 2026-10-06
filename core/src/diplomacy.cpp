@@ -166,6 +166,10 @@ int Game::luxuryCopiesTraded(PlayerId player, TypeIndex resource) const {
 
 bool Game::hasLuxury(PlayerId player, TypeIndex resource) const {
     if (luxuryCopies(player, resource) - luxuryCopiesTraded(player, resource) > 0) return true;
+    // The suzerain gets its city-states' luxuries (08: Suzerain).
+    for (const Player& cs : state_.players) {
+        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player && luxuryCopies(cs.id, resource) > 0) return true;
+    }
     // Affluence: Amani in a city-state we are suzerain of copies its luxuries (08: Governors).
     for (const Governor& g : state_.players[at(player)].governors) {
         const City* c = state_.city(g.city);
@@ -784,6 +788,7 @@ void Game::executeDeal(const Deal& d) {
             if (slot == kNone) continue;
             from.greatWorks.erase(from.greatWorks.begin() + i.resource);
             w.building = slot;
+            lockArt(w);
             c.greatWorks.push_back(w);
             break;
         }
@@ -1127,6 +1132,15 @@ void Game::onWarDeclared(PlayerId by, PlayerId target, CasusBelli why) {
     // A casus belli scales the grievances (08: War types).
     const int base = emergencyWar ? 0 : justified ? casusBelliGrievancePercent(why) : formal ? 100 : 150;
     addGrievance(target, by, base);
+    // War on a city-state angers the civs with envoys there, and its suzerain more (08: GRIEVANCES_*_CITY_STATE_DOW).
+    if (isCityState(target)) {
+        const PlayerId suzerain = suzerainOf(target);
+        for (const Player& o : state_.players) {
+            if (o.id == by || !isMajorCiv(o.id)) continue;
+            if (o.id == suzerain) addGrievance(o.id, by, rules_->globalInt("GRIEVANCES_SUZERAIN_CITY_STATE_DOW"));
+            else if (envoysAt(o.id, target) > 0) addGrievance(o.id, by, rules_->globalInt("GRIEVANCES_HAVE_ENVOYS_CITY_STATE_DOW"));
+        }
+    }
     for (const Player& o : state_.players) {
         if (o.id == by || o.id == target) continue;
         if (alliance(o.id, target) != AllianceType::None) addGrievance(o.id, by, base * rules_->globalInt("SHARE_WAR_GRIEVANCES_ALLY") / 100);
