@@ -3,7 +3,7 @@
 // each device held costs its maintenance. A bomber delivers one within its strike range, a Nuclear
 // Submarine or the player's Missile Silo within the device's ICBM range. The blast destroys every
 // unit in its radius (the Giant Death Robot resists; Sovereign: a leader survives, badly wounded),
-// strips city walls, pillages improvements and kills a citizen of a city for each of its plots it
+// strips city walls, pillages improvements and districts and kills a citizen of a city for each of its plots it
 // covers (Sovereign's reading of "citizens working affected tiles"). The ground stays contaminated
 // for the fallout turns: not worked, and units on it take PLOT_CONTAMINATION_DAMAGE_BASE a turn.
 // A launch only against civs at war with the launcher; victims and onlookers remember it.
@@ -100,6 +100,11 @@ void Game::launchWmd(const Command& c) {
                 city.wallHp = 0;
                 city.hp = 1;
             }
+        }
+        // Its districts in the blast are pillaged, their buildings idle, until the fallout clears (05).
+        for (CityDistrict& d : city.districts) {
+            if (!d.complete || d.pos == city.pos || std::find(blast.begin(), blast.end(), d.pos) == blast.end()) continue;
+            d.pillagedTurns = static_cast<uint8_t>(std::max<int>({d.pillagedTurns, kPillagedDistrictTurns, std::min(255, w.falloutTurns)}));
         }
         if (covered > 0) city.population = std::max(1, city.population - covered);
     }

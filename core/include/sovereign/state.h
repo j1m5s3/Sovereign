@@ -108,6 +108,9 @@ struct CityDistrict {
     uint8_t specialists = 0;    // citizens working here as specialists (02: Citizens and specialists)
 };
 
+// Sovereign reading: a city repairs a pillaged district itself in this many turns.
+constexpr uint8_t kPillagedDistrictTurns = 10;
+
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
 enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork };

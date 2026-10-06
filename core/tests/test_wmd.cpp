@@ -1,4 +1,6 @@
 // Nuclear weapons (05-units-and-combat.md: Nuclear weapons; data: units.md, WMDs).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/ai.h"
 #include "sovereign/serialize.h"
@@ -159,4 +161,16 @@ TEST(the_ai_answers_a_nuclear_strike_in_kind) {
     s.players[1].memories.push_back({0, MemoryKind::UsedWmd, -40, 100, s.turn});
     auto g = playOne(s);
     CHECK_EQ(g->state().players[1].wmdsLaunched, 1);
+}
+
+TEST(a_blast_pillages_the_districts_in_it) {
+    GameState s = armed();
+    s.cities[1].districts.push_back({rules().district("DISTRICT_CAMPUS"), {12, 6}, true});
+    s.cities[1].districts.push_back({rules().district("DISTRICT_THEATER_SQUARE"), {14, 6}, true});  // outside the blast
+    const UnitId bomber = addUnit(s, "UNIT_BOMBER", 0, {4, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::launchWmd(0, bomber, nuke(), {11, 6})) == CommandError::Ok);
+    const City& c = *g->state().cityAt({11, 6});
+    CHECK_EQ(static_cast<int>(c.districts[0].pillagedTurns), std::max<int>(kPillagedDistrictTurns, rules().wmds[at(nuke())].falloutTurns));
+    CHECK_EQ(static_cast<int>(c.districts[1].pillagedTurns), 0);
 }

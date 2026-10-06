@@ -7,7 +7,7 @@ Specs: 05-units-and-combat (Pillage; Nuclear weapons), 03-districts-buildings-wo
 ## Milestones (one PR each)
 
 1. **Done: Plunder bonuses and great people's unit abilities.** The generator types `+N% pillage/plunder yields` (`PLUNDER_PERCENT`) and the great people's `ability X [...] for your units` activation effects (`ABILITY`: Georgy Zhukov, Leif Erikson, Rajendra Chola, Francis Drake, Ching Shih, Horatio Nelson). A retired great person's ability applies to the civ's units of its classes, read from `Player::greatPeopleActivated` (no save change). Plunder bonuses raise pillage and coastal-raid yields (not the Heal) and the Gold from plundering a trade route.
-2. **Nuclear blasts pillage districts.** Every district in the blast but the City Center is pillaged for the fallout turns (or the usual repair time if longer).
+2. **Done: Nuclear blasts pillage districts.** Every finished district in the blast but the City Center is pillaged (its buildings idle) for the fallout turns or the usual 10-turn repair, whichever is longer (`kPillagedDistrictTurns`, now in `state.h`).
 3. **Pillaging routes.** A military unit at war pillages the road or railroad on an enemy plot that has no improvement or district left to pillage; a pillaged route gives no movement until a Builder or Military Engineer repairs it (no charge). Promotions with the advanced pillage cost (1 move) if the data has them.
 
 ## Decisions (Claude's recommendations; James gave standing consent)
