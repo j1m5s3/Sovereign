@@ -1983,8 +1983,9 @@ void upgrades(View& v) {
     }
 }
 
-// Great people: used where they stand when they can be, otherwise walked to the nearest of
-// our plots that suits them (a city with a free Great Work slot, their district, a luxury, a city).
+// Great people: used where they stand when they can be, otherwise walked to the best of the plots
+// that suit them (a city with a free Great Work slot, their district, a wonder being built, a luxury,
+// the most Mountains or Rainforest beside it, a city-state's land, a city), the nearest among equals.
 void greatPerson(View& v, UnitId id) {
     Game& g = v.game;
     const Unit* u = v.s().unit(id);
@@ -1997,33 +1998,75 @@ void greatPerson(View& v, UnitId id) {
         g.submit(Command::setActivity(v.me, id, Activity::Sleep));  // a general's aura, kept at home
         return;
     }
+    const bool afloat = v.r.units[at(u->type)].domain == Domain::Sea;
     std::optional<Hex> best;
-    int bestDist = INT_MAX;
+    int bestValue = 0, bestDist = INT_MAX;
+    const std::vector<uint8_t>& seen = v.s().players[at(v.me)].visibility;
+    auto consider = [&](Hex h, int value) {
+        const int d = v.s().grid.distance(u->pos, h);
+        if (h == u->pos || value <= 0 || (value == bestValue && d >= bestDist) || value < bestValue || v.s().foreignUnitAt(h, v.me) ||
+            seen[static_cast<size_t>(v.s().grid.index(h))] == static_cast<uint8_t>(Visibility::Unrevealed))
+            return;
+        bestValue = value;
+        bestDist = d;
+        best = h;
+    };
+    // Galileo, Janaki Ammal, Darwin: their Science grows with the Mountains or Rainforest beside the plot.
+    auto beside = [&](Hex h) {
+        int mountains = 0, features = 0;
+        bool wonder = false;
+        for (const Hex& n : v.s().grid.within(h, 1)) {
+            const Plot& q = v.s().plot(n);
+            mountains += n != h && v.r.terrains[at(q.terrain)].relief == Relief::Mountain ? 1 : 0;
+            features += n != h && gp.featureNear != kNone && q.feature == gp.featureNear ? 1 : 0;
+            wonder = wonder || (q.feature != kNone && v.r.features[at(q.feature)].naturalWonder);
+        }
+        return gp.mountainBeside ? mountains : gp.featureNear != kNone ? features : wonder ? 1 : 0;
+    };
+    auto standable = [&](const Plot& pl) {
+        const TerrainType& t = v.r.terrains[at(pl.terrain)];
+        return !t.impassable && t.water == afloat && (pl.feature == kNone || !v.r.features[at(pl.feature)].impassable);
+    };
     for (CityId cid : v.cities) {
         const City& c = *v.s().city(cid);
-        std::vector<Hex> spots;
         if (gp.greatWorkCount > 0) {
-            if (g.freeGreatWorkSlot(c, gp.greatWorkType) != kNone) spots.push_back(c.pos);
+            if (g.freeGreatWorkSlot(c, gp.greatWorkType) != kNone) consider(c.pos, 1);
+        } else if (gp.incompleteWonder) {
+            for (const CityWonder& w : c.wonders) {
+                if (!c.has(w.building)) consider(w.pos, 1);
+            }
         } else if (gp.district != kNone && v.r.districts[at(gp.district)].id != "DISTRICT_CITY_CENTER") {
+            // Mary Leakey: only where the city holds an Artifact.
             const CityDistrict* d = c.district(gp.district, true);
-            if (d) spots.push_back(d->pos);
+            const bool holds = gp.cityGreatWork == kNone ||
+                               std::any_of(c.greatWorks.begin(), c.greatWorks.end(), [&](const GreatWork& w) { return w.type == gp.cityGreatWork; });
+            if (d && holds) consider(d->pos, 1);
         } else if (gp.luxuryHere) {
             // Magellan, Colaeus: a luxury we can see on this city's land, on water for an Admiral.
-            const bool afloat = v.r.units[at(u->type)].domain == Domain::Sea;
             for (const Hex& h : v.s().grid.within(c.pos, 3)) {
                 const Plot& pl = v.s().plot(h);
                 if (pl.city == cid && pl.resource != kNone && v.r.resources[at(pl.resource)].cls == ResourceClass::Luxury &&
                     v.r.terrains[at(pl.terrain)].water == afloat && g.resourceVisible(v.me, h))
-                    spots.push_back(h);
+                    consider(h, 1);
             }
-        } else if (gp.unitDomain < 0) {
-            spots.push_back(c.pos);
+        } else if (gp.mountainBeside || gp.featureNear != kNone || gp.naturalWonderNear) {
+            for (const Hex& h : v.s().grid.within(c.pos, 3)) {
+                const Plot& pl = v.s().plot(h);
+                if (pl.city == cid && standable(pl)) consider(h, beside(h));
+            }
+        } else if (gp.unitDomain < 0 && !gp.cityStateTerritory) {
+            consider(c.pos, 1);
         }
-        for (const Hex& h : spots) {
-            const int d = v.s().grid.distance(u->pos, h);
-            if (h != u->pos && d < bestDist) {
-                bestDist = d;
-                best = h;
+    }
+    // Matthew Perry, Zhou Daguan: the land (or, for an Admiral, the water) of a city-state we have met and are
+    // at peace with; Perry only where we are not its suzerain yet.
+    if (gp.cityStateTerritory) {
+        const bool suzerainty = std::any_of(gp.effects.begin(), gp.effects.end(), [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::Suzerain; });
+        for (const City& c : v.s().cities) {
+            if (!g.isCityState(c.owner) || !g.hasMet(v.me, c.owner) || v.hostile(c.owner) || (suzerainty && g.suzerainOf(c.owner) == v.me)) continue;
+            for (const Hex& h : v.s().grid.within(c.pos, 2)) {
+                const Plot& pl = v.s().plot(h);
+                if (h != c.pos && pl.owner == c.owner && standable(pl)) consider(h, 1);
             }
         }
     }

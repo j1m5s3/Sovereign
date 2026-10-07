@@ -341,3 +341,152 @@ TEST(great_people_one_time_gifts) {
     CHECK_EQ(g->state().unit(sword)->xpBonus, 25);
     CHECK_EQ(static_cast<int>(g->state().unit(sword)->formation), 1);
 }
+
+TEST(great_people_are_used_only_where_their_effect_applies) {
+    // The plots beside (7,6) other than the capital's.
+    const auto besideOf = [](const GameState& s, Hex h) {
+        std::vector<Hex> out;
+        for (const Hex& n : s.grid.within(h, 1)) {
+            if (n != h && n != Hex{6, 6}) out.push_back(n);
+        }
+        return out;
+    };
+    const auto usable = [](const GameState& s, UnitId id) { return Game::fromScenario(rules(), s)->canActivateGreatPerson(id); };
+    const auto built = [](GameState& s, const char* building) {
+        s.cities[0].buildings.push_back(rules().building(building));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    };
+    // Galileo beside Mountains, Janaki Ammal beside Rainforest, Darwin by a natural wonder: Science.
+    {
+        GameState s = cityState();
+        const std::vector<Hex> around = besideOf(s, {7, 6});
+        const UnitId galileo = addGreatPerson(s, "GREAT_PERSON_GALILEO_GALILEI", {7, 6});
+        const UnitId janaki = addGreatPerson(s, "GREAT_PERSON_JANAKI_AMMAL", {7, 6});
+        const UnitId darwin = addGreatPerson(s, "GREAT_PERSON_CHARLES_DARWIN", {7, 6});
+        CHECK(!usable(s, galileo));
+        CHECK(!usable(s, janaki));
+        CHECK(!usable(s, darwin));
+        GameState peak = s;
+        peak.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        CHECK(!usable(peak, galileo));  // on a Mountain is not beside one
+        s.plot(around[0]).terrain = s.plot(around[1]).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        s.plot(around[2]).feature = rules().feature("FEATURE_JUNGLE");
+        s.plot(around[3]).feature = rules().feature("FEATURE_CRATER_LAKE");
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const auto science = [&] { return g->state().players[0].techs.overflow; };
+        REQUIRE(g->submit(Command::activateGreatPerson(0, galileo)) == CommandError::Ok);
+        CHECK_EQ(science(), Fixed::fromInt(500));  // 250 for each Mountain
+        REQUIRE(g->submit(Command::activateGreatPerson(0, janaki)) == CommandError::Ok);
+        CHECK_EQ(science(), Fixed::fromInt(900));
+        REQUIRE(g->submit(Command::activateGreatPerson(0, darwin)) == CommandError::Ok);
+        CHECK_EQ(science(), Fixed::fromInt(1400));
+    }
+    // Isidore of Miletus and Imhotep on the plot of a wonder their city is building: the Production goes into the
+    // wonder, whatever the city works on now; not once it is built.
+    {
+        GameState s = cityState();
+        const Hex site = besideOf(s, {7, 6})[0];
+        const TypeIndex pyramids = rules().building("BUILDING_PYRAMIDS");
+        s.cities[0].wonders.push_back({pyramids, site});  // being built; the city works on a Monument now
+        GameState t = s;
+        const auto progressOf = [](const Game& g, const char* building) {
+            for (const ProductionProgress& p : g.state().cities[0].progress) {
+                if (p.item.kind == ProductionKind::Building && p.item.type == rules().building(building)) return p.amount;
+            }
+            return Fixed();
+        };
+        const UnitId isidore = addGreatPerson(s, "GREAT_PERSON_ISIDORE_OF_MILETUS", {7, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK(!g->canActivateGreatPerson(isidore));
+        REQUIRE(g->submit(Command::move(0, isidore, site)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::activateGreatPerson(0, isidore)) == CommandError::Ok);
+        CHECK_EQ(progressOf(*g, "BUILDING_PYRAMIDS"), Fixed::fromInt(215));
+        CHECK_EQ(progressOf(*g, "BUILDING_MONUMENT"), Fixed());
+        const UnitId imhotep = addGreatPerson(t, "GREAT_PERSON_IMHOTEP", site);
+        auto h = Game::fromScenario(rules(), t);
+        REQUIRE(h->submit(Command::activateGreatPerson(0, imhotep)) == CommandError::Ok);
+        CHECK_EQ(progressOf(*h, "BUILDING_PYRAMIDS"), Fixed::fromInt(350));  // an Ancient wonder
+        built(t, "BUILDING_PYRAMIDS");
+        CHECK(!usable(t, imhotep));
+    }
+    // Sergei Korolev on a Spaceport whose city builds a space race project.
+    {
+        GameState s = cityState("DISTRICT_SPACEPORT");
+        const UnitId korolev = addGreatPerson(s, "GREAT_PERSON_SERGEI_KOROLEV", {7, 6});
+        CHECK(!usable(s, korolev));  // a Monument
+        s.cities[0].queue = {{ProductionKind::Project, rules().project("PROJECT_LAUNCH_EARTH_SATELLITE")}};
+        CHECK(usable(s, korolev));
+    }
+    // Mary Leakey on a Theater Square whose city holds an Artifact.
+    {
+        GameState s = cityState("DISTRICT_THEATER_SQUARE", {"BUILDING_AMPHITHEATER", "BUILDING_ARCHAEOLOGICAL_MUSEUM"});
+        const UnitId leakey = addGreatPerson(s, "GREAT_PERSON_MARY_LEAKEY", {7, 6});
+        CHECK(!usable(s, leakey));
+        GreatWork artifact;
+        artifact.type = rules().greatWorkType("ARTIFACT");
+        artifact.building = rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM");
+        s.cities[0].greatWorks.push_back(artifact);
+        CHECK(usable(s, leakey));
+    }
+    // Jeanne d'Arc while some city has room for her Relic; El Cid on a unit that is not a Corps yet.
+    {
+        GameState s = cityState();
+        s.cities[0].buildings.clear();  // no Palace, whose slot takes any Great Work
+        const UnitId jeanne = addGreatPerson(s, "GREAT_PERSON_JEANNE_D_ARC", {7, 6});
+        const UnitId sword = addUnit(s, "UNIT_SWORDSMAN", 0, {5, 6});
+        s.units.back().formation = 1;
+        const UnitId cid = addGreatPerson(s, "GREAT_PERSON_EL_CID", {5, 6});
+        CHECK(!usable(s, jeanne));
+        CHECK(!usable(s, cid));
+        built(s, "BUILDING_TEMPLE");
+        for (Unit& u : s.units) u.formation = u.id == sword ? 0 : u.formation;
+        CHECK(usable(s, jeanne));
+        CHECK(usable(s, cid));
+    }
+    // Zhou Daguan in the land of a city-state at peace with the player.
+    {
+        GameState s = cityState();
+        s.players[1].civ = kNone;
+        s.players[1].cityState = rules().cityState("CITYSTATE_MITLA");
+        for (Player& p : s.players) {
+            p.envoys.assign(2, 0);
+            p.relations.resize(2);
+        }
+        REQUIRE(s.plot({14, 6}).owner == 1);
+        const UnitId zhou = addGreatPerson(s, "GREAT_PERSON_ZHOU_DAGUAN", {7, 6});
+        CHECK(!usable(s, zhou));  // at home
+        s.units.back().pos = {14, 6};
+        CHECK(usable(s, zhou));
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        CHECK(!usable(s, zhou));
+    }
+    // Tupac Amaru in an enemy's land: a Musketman of his in each finished district of that city.
+    {
+        GameState s = cityState();
+        s.cities[1].districts.push_back({rules().district("DISTRICT_CAMPUS"), {16, 6}, true});
+        for (Player& p : s.players) p.relations.resize(2);
+        const UnitId tupac = addGreatPerson(s, "GREAT_PERSON_TUPAC_AMARU", {14, 6});
+        CHECK(!usable(s, tupac));  // at peace
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::activateGreatPerson(0, tupac)) == CommandError::Ok);
+        const Unit* rebel = g->state().unitAt({16, 6}, UnitLayer::Military, rules());
+        REQUIRE(rebel);
+        CHECK_EQ(rebel->owner, 0);
+        CHECK_EQ(rebel->type, rules().unit("UNIT_MUSKETMAN"));
+    }
+    // Boudica beside barbarians: they join her.
+    {
+        GameState s = flatState(20, 14, 3);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        s.players[2].barbarian = true;
+        s.players[2].civ = kNone;
+        addCity(s, 0, {6, 6}, true, 4);
+        const UnitId boudica = addGreatPerson(s, "GREAT_PERSON_BOUDICA", {7, 6});
+        CHECK(!usable(s, boudica));
+        const UnitId raider = addUnit(s, "UNIT_WARRIOR", 2, besideOf(s, {7, 6})[0]);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::activateGreatPerson(0, boudica)) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(raider)->owner, 0);
+    }
+}

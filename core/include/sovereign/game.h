@@ -784,6 +784,7 @@ private:
     void recruitGreatPerson(PlayerId player, TypeIndex person, const City* in = nullptr);  // appears in `in`, else the capital
     void wonderProphet(City& city, TypeIndex prophet);  // Stonehenge's Great Prophet, or an Apostle (03)
     void greatLibraryEurekas(PlayerId recruiter);         // a random Eureka for each other civ with the Great Library (03)
+    TypeIndex unfinishedWonderAt(const City& city, Hex plot) const;  // the wonder the city is building on the plot (03), or kNone
     void applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx);
     // A one-time effect for a player at a plot (city: the player's city there, or null).
     void applyEffectAt(PlayerId player, City* city, Hex at, const GreatPersonEffect& fx);
