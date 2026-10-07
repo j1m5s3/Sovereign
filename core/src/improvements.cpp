@@ -133,6 +133,7 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
                          : 0;
             } else if (a.feature != kNone) n += q.feature == a.feature ? 1 : 0;
             else if (a.resourceClass >= 0) n += q.resource != kNone && static_cast<int>(rules_->resources[static_cast<size_t>(q.resource)].cls) == a.resourceClass ? 1 : 0;
+            else if (a.seaResource) n += rules_->terrains[static_cast<size_t>(q.terrain)].water && resourceVisible(owner, h) ? 1 : 0;
         }
         y[static_cast<size_t>(a.yield)] += a.amount * (n / a.per);
     }

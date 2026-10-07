@@ -682,3 +682,31 @@ TEST(builder_charges_and_harvests_are_for_builders) {
     CHECK(g->validate(Command::harvest(0, engineer)) == CommandError::CannotHarvest);
     CHECK(g->validate(Command::harvest(0, woodsman)) == CommandError::Ok);
 }
+
+TEST(seasteads_count_reefs_and_fisheries_count_sea_resources) {
+    // An improvement on the coast at (8,6), beside the coast at (9,6) and (8,5) and the land at (7,6).
+    GameState s = flatState(20, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    for (Hex h : {Hex{8, 6}, Hex{9, 6}, Hex{8, 5}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+    const auto yieldsOf = [](GameState t, const char* id) {
+        t.plot({8, 6}).improvement = improvement(id);
+        return Game::fromScenario(rules(), std::move(t))->improvementYields({8, 6}, 0);
+    };
+    // The Seastead: +1 Culture per adjacent Reef.
+    const size_t C = static_cast<size_t>(YieldType::Culture);
+    CHECK_EQ(yieldsOf(s, "IMPROVEMENT_SEASTEAD")[C], Fixed::fromInt(0));
+    GameState reefs = s;
+    reefs.plot({9, 6}).feature = rules().feature("FEATURE_REEF");
+    reefs.plot({8, 5}).feature = rules().feature("FEATURE_REEF");
+    CHECK_EQ(yieldsOf(reefs, "IMPROVEMENT_SEASTEAD")[C], Fixed::fromInt(2));
+    // The Fishery: 1 Food, +1 per adjacent resource on water its owner can see; one on land doesn't count.
+    CHECK_EQ(yieldsOf(s, "IMPROVEMENT_FISHERY")[F], Fixed::fromInt(1));
+    GameState sea = s;
+    sea.plot({9, 6}).resource = rules().resource("RESOURCE_FISH");
+    sea.plot({8, 5}).resource = rules().resource("RESOURCE_OIL");  // hidden until Refining
+    sea.plot({7, 6}).resource = rules().resource("RESOURCE_WHEAT");
+    CHECK_EQ(yieldsOf(sea, "IMPROVEMENT_FISHERY")[F], Fixed::fromInt(2));
+    know(sea, "TECH_REFINING");
+    CHECK_EQ(yieldsOf(sea, "IMPROVEMENT_FISHERY")[F], Fixed::fromInt(3));
+}

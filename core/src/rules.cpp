@@ -1009,7 +1009,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 adj.feature = a.has("feature") ? feature(a["feature"].str()) : kNone;
                 const std::string& rc = a["resourceClass"].str();
                 adj.resourceClass = rc == "BONUS" ? static_cast<int>(ResourceClass::Bonus) : rc == "LUXURY" ? static_cast<int>(ResourceClass::Luxury) : -1;
-                if (adj.improvement == kNone && adj.district.empty() && adj.feature == kNone && adj.resourceClass < 0) {
+                adj.seaResource = a["seaResource"].boolean(false);
+                if (adj.improvement == kNone && adj.district.empty() && adj.feature == kNone && adj.resourceClass < 0 && !adj.seaResource) {
                     *error = where + ": adjacency to nothing known";
                     return false;
                 }
