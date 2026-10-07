@@ -159,7 +159,7 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
 
 Fixed Game::improvementHousing(const City& city) const {
     Fixed total;
-    for (const Hex& h : state_.grid.within(city.pos, 3)) {
+    state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
         const Plot& p = state_.plot(h);
         if (p.city == city.id && p.improvement != kNone) {
             total += rules_->improvements[static_cast<size_t>(p.improvement)].housing;
@@ -168,7 +168,7 @@ Fixed Game::improvementHousing(const City& city) const {
                 (isRiverAdjacent(state_, h) || isLakeAdjacent(state_, *rules_, h)))
                 total += civAbility(city.owner).freshWaterFarmHousing;
         }
-    }
+    });
     return total;
 }
 

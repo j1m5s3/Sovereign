@@ -89,24 +89,9 @@ std::vector<Hex> HexGrid::within(Hex center, int radius) const {
     out.reserve(static_cast<size_t>(std::min<int64_t>(3 * static_cast<int64_t>(radius) * (radius + 1) + 1, size())));
     // A row spans 2 * radius + 1 hexes, so only a map narrower than that can wrap onto itself.
     const bool mayRepeat = wrap_ && w_ <= 2 * static_cast<int64_t>(radius);
-    const Axial c = toAxial(center);
-    for (int dr = -radius; dr <= radius; ++dr) {
-        const int32_t y = c.r + dr;
-        if (y < 0 || y >= h_) continue;  // off the top or bottom of the map
-        const int qMin = std::max(-radius, -dr - radius);
-        const int qMax = std::min(radius, -dr + radius);
-        // Along a row the axial q and the offset column rise together, one plot a step.
-        const int32_t first = toOffset(Axial{c.q + qMin, y}).x;
-        for (int32_t x = first; x <= first + (qMax - qMin); ++x) {
-            Hex h{x, y};
-            if (x < 0 || x >= w_) {
-                if (!wrap_) continue;
-                h.x = static_cast<int32_t>(((x % w_) + w_) % w_);
-            }
-            if (mayRepeat && std::find(out.begin(), out.end(), h) != out.end()) continue;
-            out.push_back(h);
-        }
-    }
+    walkWithin(center, radius, [&](Hex h) {
+        if (!mayRepeat || std::find(out.begin(), out.end(), h) == out.end()) out.push_back(h);
+    });
     return out;
 }
 

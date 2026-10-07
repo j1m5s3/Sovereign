@@ -148,12 +148,12 @@ TEST(hex_between_walks_the_inside_of_the_line) {
     CHECK_EQ(seen, 3);
 }
 
-// neighbor(), within() and distance() against their definitions in axial coordinates, on and off the map, with
-// and without wrapping, and on maps narrower than the areas asked for.
+// neighbor(), within(), forEachWithin() and distance() against their definitions in axial coordinates, on and off
+// the map, with and without wrapping, and on maps narrower than the areas asked for.
 TEST(hex_grid_matches_its_axial_definitions) {
     const Axial steps[kNumDirs] = {{1, -1}, {1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}};
     int differ = 0;
-    for (const HexGrid& g : {HexGrid(12, 9, true), HexGrid(12, 9, false), HexGrid(5, 7, true), HexGrid(5, 7, false)}) {
+    for (const HexGrid& g : {HexGrid(12, 9, true), HexGrid(12, 9, false), HexGrid(5, 7, true), HexGrid(5, 7, false), HexGrid(6, 7, true)}) {
         for (int32_t y = -1; y <= g.height(); ++y)
             for (int32_t x = -1; x <= g.width(); ++x) {
                 const Hex h{x, y};
@@ -172,6 +172,9 @@ TEST(hex_grid_matches_its_axial_definitions) {
                             if (n && std::find(want.begin(), want.end(), *n) == want.end()) want.push_back(*n);
                         }
                     if (g.within(h, radius) != want) ++differ;
+                    std::vector<Hex> walked;
+                    g.forEachWithin(h, radius, [&](Hex n) { walked.push_back(n); });
+                    if (walked != want) ++differ;
                 }
                 for (int32_t by = 0; by < g.height(); ++by)
                     for (int32_t bx = 0; bx < g.width(); ++bx) {

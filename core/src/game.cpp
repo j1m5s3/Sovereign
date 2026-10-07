@@ -805,10 +805,10 @@ void Game::refreshVisibility(PlayerId pid) {
     Unit* finder = nullptr;
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
-        for (const Hex& target : state_.grid.within(from, range)) {
+        state_.grid.forEachWithin(from, range, [&](Hex target) {
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
-            if (v == static_cast<uint8_t>(Visibility::Visible)) continue;  // already seen in this refresh: nothing more to learn
-            if (!lineOfSight(from, target, throughFeatures)) continue;
+            if (v == static_cast<uint8_t>(Visibility::Visible)) return;  // already seen in this refresh: nothing more to learn
+            if (!lineOfSight(from, target, throughFeatures)) return;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
                     for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
@@ -837,7 +837,7 @@ void Game::refreshVisibility(PlayerId pid) {
                 }
             }
             v = static_cast<uint8_t>(Visibility::Visible);
-        }
+        });
     };
     // Military alliance, level 2: allies see what each other sees (08: alliance levels).
     std::vector<uint8_t> sharing(state_.players.size(), 0);  // by player, worked out once for the refresh
