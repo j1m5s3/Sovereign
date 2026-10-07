@@ -279,6 +279,10 @@ void Game::processClimate() {
         const DisasterType& dt = rules_->disasters[d];
         const int freq = dt.frequencyTenths[at(intensity)];
         if (freq <= 0) continue;
+        // A volcano natural wonder's eruption is rolled only on a map that has the wonder.
+        if (dt.naturalWonder != kNone &&
+            std::none_of(state_.plots.begin(), state_.plots.end(), [&](const Plot& p) { return p.feature == dt.naturalWonder; }))
+            continue;
         // Occurrences per game spread over the turns, raised chancePerDegree % per degree.
         const int64_t odds = static_cast<int64_t>(freq) * (1000 + temp * dt.chancePerDegree);
         const int64_t scale = static_cast<int64_t>(limit) * 10 * 1000;
@@ -295,7 +299,9 @@ void Game::processClimate() {
             switch (dt.kind) {
                 case DisasterKind::Flood: ok = feat.rfind("FEATURE_FLOODPLAINS", 0) == 0 && !cityPrevents(p.city, true); break;
                 case DisasterKind::Eruption:
-                    ok = feat == "FEATURE_VOLCANO" && setting && static_cast<int>(plotHash(i, 0xE5u) % 100) < setting->activeVolcanoes;
+                    // An active volcano, or the volcano natural wonder the eruption belongs to (always active).
+                    ok = dt.naturalWonder != kNone ? p.feature == dt.naturalWonder
+                                                   : feat == "FEATURE_VOLCANO" && setting && static_cast<int>(plotHash(i, 0xE5u) % 100) < setting->activeVolcanoes;
                     break;
                 case DisasterKind::Blizzard: ok = !t.water && (t.base == "TUNDRA" || t.base == "SNOW"); break;
                 case DisasterKind::DustStorm: ok = !t.water && t.base == "DESERT"; break;

@@ -1655,6 +1655,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.chancePerDegree = static_cast<int>(j["chancePerDegree"].integer(0));
         d.minTurnAtRisk = static_cast<int>(j["minTurnAtRisk"].integer(0));
         d.fallout = static_cast<int>(j["fallout"].integer(0));
+        if (j.has("naturalWonder")) {
+            d.naturalWonder = feature(j["naturalWonder"].str());
+            if (d.naturalWonder == kNone) {
+                if (error) *error = "disaster " + id + ": unknown natural wonder " + j["naturalWonder"].str();
+                return false;
+            }
+        }
         static const char* const levels[] = {"MINIMAL", "LIGHT", "MODERATE", "HEAVY", "HYPERREAL"};
         for (int i = 0; i < kNumDisasterIntensities; ++i) d.frequencyTenths[static_cast<size_t>(i)] = static_cast<int>((j["frequency"][levels[i]].fixed() * 10).toInt());
         static const std::pair<const char*, DisasterDamageType> damages[] = {
