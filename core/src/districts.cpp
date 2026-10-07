@@ -288,16 +288,17 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
             for (const Hex& n : state_.grid.within(plot, 1)) {
                 if (n == plot) continue;
                 const Plot& np = state_.plot(n);
-                const CityDistrict* nd = state_.districtAt(n);
                 bool hit = false;
                 switch (a.kind) {
                     case DistrictAdjacencyKind::Mountain:
                         hit = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain;
                         break;
-                    case DistrictAdjacencyKind::AnyDistrict: hit = nd || state_.cityAt(n); break;  // city centers count
-                    case DistrictAdjacencyKind::District:
+                    case DistrictAdjacencyKind::AnyDistrict: hit = state_.districtAt(n) || state_.cityAt(n); break;  // city centers count
+                    case DistrictAdjacencyKind::District: {
+                        const CityDistrict* nd = state_.districtAt(n);
                         hit = (nd && nd->type == a.ref) || (a.ref == cityCenter && state_.cityAt(n));
                         break;
+                    }
                     case DistrictAdjacencyKind::SeaResource:
                         hit = rules_->terrains[static_cast<size_t>(np.terrain)].water && resourceVisible(player, n);
                         break;

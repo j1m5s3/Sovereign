@@ -62,6 +62,9 @@ TEST(wonders_need_their_ground) {
     CHECK(!g->canPlaceWonder(c, gardens, {4, 6}));  // dry land
     CHECK(!g->canPlaceWonder(c, gardens, {5, 6}));  // the city itself
     CHECK(g->canPlaceWonder(c, wonder("BUILDING_PYRAMIDS"), {4, 6}));  // desert
+    const TypeIndex apadana = wonder("BUILDING_APADANA");
+    CHECK(g->canPlaceWonder(c, apadana, {4, 6}));   // beside the capital
+    CHECK(!g->canPlaceWonder(c, apadana, {3, 6}));  // two plots away
 }
 
 TEST(a_wonder_is_built_once_and_rivals_keep_half) {
