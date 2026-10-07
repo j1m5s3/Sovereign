@@ -83,10 +83,16 @@ TEST(city_housing_from_water) {
     setRiver(s, {6, 6}, Dir::E);
     auto river = capitalScenario(std::move(s));
     CHECK_EQ(river.game->cityReport(river.city).housing, Fixed::fromInt(6));  // fresh water 5 + Palace
+    // The sea: a body of water larger than LAKE_MAX_AREA_SIZE (9 plots).
     GameState s2 = flatState(20, 14, 1);
-    s2.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    for (int y = 0; y < 14; ++y) s2.plot({7, y}).terrain = rules().terrain("TERRAIN_COAST");
     auto coast = capitalScenario(std::move(s2));
     CHECK_EQ(coast.game->cityReport(coast.city).housing, Fixed::fromInt(4));  // coastal 3 + Palace
+    // A lake is fresh water (01: Lake).
+    GameState s3 = flatState(20, 14, 1);
+    s3.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    auto lake = capitalScenario(std::move(s3));
+    CHECK_EQ(lake.game->cityReport(lake.city).housing, Fixed::fromInt(6));  // fresh water 5 + Palace
 }
 
 TEST(city_needs_production_and_grows) {

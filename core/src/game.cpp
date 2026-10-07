@@ -175,7 +175,8 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     : rules_(&rules), state_(std::move(state)), log_(std::move(log)) {
     static const char* const kWonders[] = {"BUILDING_KILWA_KISIWANI", "BUILDING_UNIVERSITY_OF_SANKORE", "BUILDING_ORACLE",          "BUILDING_MACHU_PICCHU",
                                            "BUILDING_COLOSSEUM",      "BUILDING_STATUE_OF_LIBERTY",     "BUILDING_GREAT_ZIMBABWE",  "BUILDING_TORRE_DE_BEL_M",
-                                           "BUILDING_EIFFEL_TOWER",   "BUILDING_GOLDEN_GATE_BRIDGE",    "BUILDING_BIOSPH_RE",       "BUILDING_CRISTO_REDENTOR"};
+                                           "BUILDING_EIFFEL_TOWER",   "BUILDING_GOLDEN_GATE_BRIDGE",    "BUILDING_BIOSPH_RE",       "BUILDING_CRISTO_REDENTOR",
+                                           "BUILDING_HUEY_TEOCALLI"};
     static_assert(sizeof(kWonders) / sizeof(kWonders[0]) == static_cast<size_t>(W::Count), "one id per wonder");
     for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) wonders_[i] = rules_->building(kWonders[i]);
     static const char* const kBeliefs[] = {"BELIEF_DANCE_OF_THE_AURORA", "BELIEF_DESERT_FOLKLORE",   "BELIEF_SACRED_PATH",         "BELIEF_EARTH_GODDESS",

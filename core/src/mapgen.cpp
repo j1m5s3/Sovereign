@@ -119,6 +119,40 @@ bool isRiverAdjacent(const GameState& state, Hex h) {
     return false;
 }
 
+bool isLake(const GameState& state, const Rules& rules, Hex h) {
+    const auto water = [&](Hex x) { return rules.terrains[static_cast<size_t>(state.plot(x).terrain)].water; };
+    if (!water(h)) return false;
+    static const std::string kLimit = "LAKE_MAX_AREA_SIZE";
+    const size_t limit = static_cast<size_t>(std::max(0, rules.globalInt(kLimit)));
+    std::vector<Hex> body{h};
+    for (size_t i = 0; i < body.size(); ++i) {
+        for (int d = 0; d < kNumDirs; ++d) {
+            const auto n = state.grid.neighbor(body[i], static_cast<Dir>(d));
+            if (!n || !water(*n) || std::find(body.begin(), body.end(), *n) != body.end()) continue;
+            if (body.size() >= limit) return false;  // one plot too many: the sea or an inland sea
+            body.push_back(*n);
+        }
+    }
+    return true;
+}
+
+bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h) {
+    for (int d = 0; d < kNumDirs; ++d) {
+        const auto n = state.grid.neighbor(h, static_cast<Dir>(d));
+        if (n && isLake(state, rules, *n)) return true;
+    }
+    return false;
+}
+
+bool hasFreshWater(const GameState& state, const Rules& rules, Hex h) {
+    if (isRiverAdjacent(state, h)) return true;
+    for (const Hex& n : state.grid.within(h, 1)) {
+        const Plot& p = state.plot(n);
+        if (p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].freshWater) return true;
+    }
+    return isLakeAdjacent(state, rules, h);
+}
+
 bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {
     const Plot& p = state.plot(h);
     const TerrainType& t = rules.terrains[static_cast<size_t>(p.terrain)];
@@ -321,6 +355,31 @@ void generateMap(GameState& state, const Rules& rules) {
         }
     }
 
+    // 3b. Lakes (01: lakes in basins). One flat inland plot in LAKE_PLOT_RANDOM, off the rivers and away from any
+    //     water, becomes a lake, and each such plot beside it joins the lake one time in four, then five, six...
+    //     (Sovereign reading of Civ VI's map scripts, which grow some lakes past one plot). A lake never touches
+    //     other water, so each stays a body of at most seven plots.
+    const int lakeOdds = rules.globalInt("LAKE_PLOT_RANDOM");
+    auto inland = [&](Hex hx) {
+        const TerrainType& t = rules.terrains[static_cast<size_t>(state.plot(hx).terrain)];
+        if (t.water || t.relief != Relief::Flat || isRiverAdjacent(state, hx)) return false;
+        for (int d = 0; d < kNumDirs; ++d) {
+            const auto n = g.neighbor(hx, static_cast<Dir>(d));
+            if (!n || isWater(*n)) return false;
+        }
+        return true;
+    };
+    for (int i = 0; i < g.size() && lakeOdds > 0; ++i) {
+        const Hex hx = g.at(i);
+        if (!inland(hx) || rng.below(static_cast<uint32_t>(lakeOdds)) != 0) continue;
+        std::vector<Hex> lake{hx};
+        for (int d = 0; d < kNumDirs; ++d) {
+            const auto n = g.neighbor(hx, static_cast<Dir>(d));
+            if (n && inland(*n) && rng.below(static_cast<uint32_t>(3 + lake.size())) == 0) lake.push_back(*n);
+        }
+        for (const Hex& l : lake) state.plot(l).terrain = coast;
+    }
+
     // 4. Features by climate.
     auto featureId = [&](const char* id) { return rules.feature(id); };
     const TypeIndex woods = featureId("FEATURE_FOREST"), jungle = featureId("FEATURE_JUNGLE"),
@@ -446,7 +505,7 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
             score += static_cast<int>((y[0] * 3 + y[1] * 2 + y[2]).toInt());
         }
         for (const Hex& n : g.within(hx, 3)) score += isLandPassable(state, rules, n) ? 2 : 0;
-        if (isRiverAdjacent(state, hx)) score += 15;
+        if (hasFreshWater(state, rules, hx)) score += 15;
         if (coastal) score += 6;
         cands.push_back({i, score});
     }

@@ -32,4 +32,12 @@ SOV_API bool hasRiver(const GameState& state, Hex h, Dir d);
 SOV_API void setRiver(GameState& state, Hex h, Dir d);
 SOV_API bool isRiverAdjacent(const GameState& state, Hex h);
 
+// Lakes (01: Lake): water in a body of at most LAKE_MAX_AREA_SIZE plots. They are Coast
+// terrain; the size of the body they belong to tells them apart from the sea.
+SOV_API bool isLake(const GameState& state, const Rules& rules, Hex h);
+SOV_API bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h);  // a lake plot beside h
+// Fresh water for a city or district on h (01): a river along it, or a lake or a fresh-water
+// feature (Oasis, some natural wonders) beside it.
+SOV_API bool hasFreshWater(const GameState& state, const Rules& rules, Hex h);
+
 }  // namespace sov

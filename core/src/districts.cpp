@@ -114,7 +114,7 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
         }
     }
     if (d.aqueduct) {
-        // Next to the City Center and to a River, Lake (fresh-water feature), Oasis or Mountain.
+        // Next to the City Center and to a River, Lake, Oasis (fresh-water features) or Mountain.
         if (state_.grid.distance(city.pos, plot) != 1) return fail(CommandError::BadTarget);
         bool water = onRiver(state_, plot);
         for (int dir = 0; dir < kNumDirs && !water; ++dir) {
@@ -122,7 +122,7 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
             if (!n) continue;
             const Plot& np = state_.plot(*n);
             water = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain ||
-                    (np.feature != kNone && rules_->features[static_cast<size_t>(np.feature)].freshWater);
+                    (np.feature != kNone && rules_->features[static_cast<size_t>(np.feature)].freshWater) || isLake(state_, *rules_, *n);
         }
         if (!water) return fail(CommandError::BadTarget);
     }
@@ -150,7 +150,7 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
 }
 
 int Game::plotAppeal(Hex plot) const {
-    int appeal = onRiver(state_, plot) ? 1 : 0;  // +1 once next to a river
+    int appeal = onRiver(state_, plot) || isLakeAdjacent(state_, *rules_, plot) ? 1 : 0;  // +1 once next to a river or lake
     const City* home = state_.city(state_.plot(plot).city);
     const uint32_t held = home ? heldWonders(home->owner) : 0;
     const bool biosphere = (held & bit(W::Biosphere)) != 0;  // Biosphère (03): Rainforest and Marsh +1 Appeal
@@ -193,11 +193,10 @@ Fixed Game::districtHousing(const City& city) const {
         }
         if (d.aqueduct) {
             // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
-            bool fresh = isRiverAdjacent(state_, city.pos), coastal = false;
+            const bool fresh = hasFreshWater(state_, *rules_, city.pos);
+            bool coastal = false;
             for (const Hex& n : state_.grid.within(city.pos, 1)) {
-                const Plot& p = state_.plot(n);
-                if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].freshWater) fresh = true;
-                if (n != city.pos && rules_->terrains[static_cast<size_t>(p.terrain)].shallowWater) coastal = true;
+                if (n != city.pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
             }
             if (fresh) {
                 total += rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");

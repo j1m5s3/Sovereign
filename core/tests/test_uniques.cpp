@@ -456,3 +456,24 @@ TEST(qins_builders_lay_roads_for_no_charge) {
     CHECK_EQ(g->state().unit(builder)->charges, 1);
     CHECK(g->validate(Command::buildRoad(0, builder)) == CommandError::CannotImprove);
 }
+
+TEST(chinampas_farms_beside_lakes) {
+    // Farms next to a lake or river: +1 Food and +0.5 Housing (Aztec Chinampas).
+    auto scene = [](bool lake) {
+        GameState s = pair("CIVILIZATION_AZTEC", "CIVILIZATION_GREECE", {});
+        for (const Hex& h : s.grid.within({4, 6}, 3)) {
+            s.plot(h).owner = 0;
+            s.plot(h).city = s.cities[0].id;
+        }
+        s.plot({6, 6}).improvement = rules().improvement("IMPROVEMENT_FARM");
+        s.plot({2, 6}).improvement = rules().improvement("IMPROVEMENT_FARM");
+        if (lake) s.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    auto dry = scene(false), wet = scene(true);
+    const size_t food = static_cast<size_t>(YieldType::Food);
+    const City& c = wet->state().cities[0];
+    CHECK_EQ(wet->plotYields({6, 6}, c)[food], dry->plotYields({6, 6}, dry->state().cities[0])[food] + Fixed::fromInt(1));
+    CHECK_EQ(wet->plotYields({2, 6}, c)[food], dry->plotYields({2, 6}, dry->state().cities[0])[food]);
+    CHECK_EQ(wet->improvementHousing(c), dry->improvementHousing(dry->state().cities[0]) + Fixed::fromInt(1) / 2);
+}

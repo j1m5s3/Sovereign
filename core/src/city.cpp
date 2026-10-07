@@ -314,11 +314,9 @@ CityReport Game::cityReport(CityId id) const {
     }
 
     // Housing from water access, then buildings and modifiers.
-    bool fresh = isRiverAdjacent(state_, c->pos), coastal = false;
+    bool fresh = hasFreshWater(state_, *rules_, c->pos), coastal = false;
     for (const Hex& n : state_.grid.within(c->pos, 1)) {
-        const Plot& p = state_.plot(n);
-        if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].freshWater) fresh = true;
-        if (n != c->pos && rules_->terrains[static_cast<size_t>(p.terrain)].shallowWater) coastal = true;
+        if (n != c->pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
     }
     if (suzerainBonus(c->owner, "CITYSTATE_MOHENJO_DARO")) fresh = true;  // Mohenjo-Daro (08: suzerain): every city as if on a river
     const char* water = fresh ? "CITY_POPULATION_RIVER_LAKE" : coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER";
@@ -401,6 +399,16 @@ CityReport Game::cityReport(CityId id) const {
         }
         PlayerId holder = kNoPlayer;
         if (ab.governorAmenity > 0 && establishedGovernor(*c, &holder) && holder == c->owner) rep.amenities += ab.governorAmenity;
+        // Huey Teocalli (03): +1 Amenity for each lake plot beside it.
+        if (const TypeIndex huey = wonderType(W::Huey); huey != kNone && c->has(huey)) {
+            for (const CityWonder& cw : c->wonders) {
+                if (cw.building != huey) continue;
+                for (int d = 0; d < kNumDirs; ++d) {
+                    const auto n = state_.grid.neighbor(cw.pos, static_cast<Dir>(d));
+                    if (n && isLake(state_, *rules_, *n)) ++rep.amenities;
+                }
+            }
+        }
         const int religion = state_.players[static_cast<size_t>(c->owner)].religion;
         const int majority = cityMajorityReligion(*c);
         if (ab.foreignReligionAmenity > 0 && majority >= 0 && majority != religion) rep.amenities += ab.foreignReligionAmenity;

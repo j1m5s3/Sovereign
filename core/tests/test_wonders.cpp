@@ -211,6 +211,64 @@ TEST(terrain_and_tourism_wonders) {
     CHECK_EQ(g->plotYields({6, 6}, mine)[food], plain->plotYields({6, 6}, plain->state().cities[0])[food] + Fixed::fromInt(2));
 }
 
+namespace {
+// The first player's city with a lake of two plots east of it and the sea along column 2; a second city of
+// theirs with a lake of its own, and a lake in the rival's land.
+GameState lakeState() {
+    GameState s = wonderState();
+    const TypeIndex coast = rules().terrain("TERRAIN_COAST");
+    s.plot({7, 6}).terrain = coast;
+    s.plot({8, 6}).terrain = coast;
+    for (int y = 0; y < 14; ++y) s.plot({2, y}).terrain = coast;
+    const CityId second = addCity(s, 0, {9, 11}, false, 1);
+    for (const Hex& h : s.grid.within({9, 11}, 1)) s.plot(h).city = second, s.plot(h).owner = 0;
+    s.plot({10, 11}).terrain = coast;
+    s.plot({17, 6}).terrain = coast;
+    return s;
+}
+}  // namespace
+
+TEST(huey_teocalli_and_the_lakes) {
+    GameState s = lakeState();
+    auto plain = Game::fromScenario(rules(), s);
+    const TypeIndex huey = wonder("BUILDING_HUEY_TEOCALLI"), bridge = wonder("BUILDING_GOLDEN_GATE_BRIDGE");
+    // Huey Teocalli on a lake; the Golden Gate Bridge, like the harbour wonders, on the sea (01: Lake).
+    const City& a = plain->state().cities[0];
+    CHECK(plain->canPlaceWonder(a, huey, {7, 6}));
+    CHECK(!plain->canPlaceWonder(a, huey, {2, 6}));
+    CHECK(plain->canPlaceWonder(a, bridge, {2, 6}));
+    CHECK(!plain->canPlaceWonder(a, bridge, {7, 6}));
+    // Built: +1 Amenity for the lake plot beside it, +1 Food and +1 Production on lakes in all the owner's cities.
+    s.cities[0].buildings.push_back(huey);
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.cities[0].wonders.push_back({huey, {7, 6}});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const GameState& gs = g->state();
+    const GameState& ps = plain->state();
+    CHECK_EQ(g->cityReport(gs.cities[0].id).amenities, plain->cityReport(ps.cities[0].id).amenities + 1);
+    const size_t food = static_cast<size_t>(YieldType::Food), prod = static_cast<size_t>(YieldType::Production);
+    for (const auto& [plot, city] : {std::pair<Hex, size_t>{{8, 6}, 0}, {{10, 11}, 2}}) {
+        CHECK_EQ(g->plotYields(plot, gs.cities[city])[food], plain->plotYields(plot, ps.cities[city])[food] + Fixed::fromInt(1));
+        CHECK_EQ(g->plotYields(plot, gs.cities[city])[prod], plain->plotYields(plot, ps.cities[city])[prod] + Fixed::fromInt(1));
+    }
+    CHECK_EQ(g->plotYields({2, 6}, gs.cities[0])[food], plain->plotYields({2, 6}, ps.cities[0])[food]);    // the sea
+    CHECK_EQ(g->plotYields({6, 5}, gs.cities[0])[food], plain->plotYields({6, 5}, ps.cities[0])[food]);    // land by the lake
+    CHECK_EQ(g->plotYields({17, 6}, gs.cities[1])[food], plain->plotYields({17, 6}, ps.cities[1])[food]);  // a rival's lake
+}
+
+TEST(the_mausoleum_reaches_the_sea_not_lakes) {
+    GameState s = lakeState();
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(wonder("BUILDING_MAUSOLEUM_AT_HALICARNASSUS"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const size_t science = static_cast<size_t>(YieldType::Science);
+    const City& mine = g->state().cities[0];
+    const City& before = plain->state().cities[0];
+    CHECK_EQ(g->plotYields({2, 6}, mine)[science], plain->plotYields({2, 6}, before)[science] + Fixed::fromInt(1));
+    CHECK_EQ(g->plotYields({8, 6}, mine)[science], plain->plotYields({8, 6}, before)[science]);
+}
+
 TEST(jebel_barkal_gives_iron_while_it_stands) {
     GameState s = wonderState();
     s.cities[0].buildings.push_back(wonder("BUILDING_JEBEL_BARKAL"));

@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/modifiers.h"
 
 namespace sov {
@@ -76,10 +77,10 @@ int Game::lowlandBand(Hex h) const {
     const TerrainType& t = rules_->terrains[at(p.terrain)];
     if (t.water || t.relief != Relief::Flat || p.feature == rules_->feature("FEATURE_VOLCANO")) return 0;
     if (state_.cityAt(h) || state_.districtAt(h) || state_.wonderAt(h) != kNone) return 0;
-    bool coastal = false;
+    bool coastal = false;  // on the sea: rising water does not reach lakes (01: Lake)
     for (int d = 0; d < 6 && !coastal; ++d) {
         const auto n = state_.grid.neighbor(h, static_cast<Dir>(d));
-        coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water;
+        coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water && !isLake(state_, *rules_, *n);
     }
     if (!coastal) return 0;
     if (static_cast<int>(plotHash(i, 0x10A1A9D5u) % 100) >= rules_->globalInt("CLIMATE_CHANGE_PERCENT_COASTAL_LOWLANDS")) return 0;
