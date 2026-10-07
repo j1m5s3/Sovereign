@@ -118,6 +118,24 @@ TEST(a_city_at_zero_loyalty_revolts_to_the_free_cities) {
     CHECK(g->barbarianPlayer() != fc);
 }
 
+// A city's rebellion points count the luxuries its civ still has, after an earlier city revolted the same turn.
+TEST(rebellion_counts_the_luxuries_left_after_a_revolt) {
+    CityId small = kNoCity, home = kNoCity;
+    auto g = world([&](GameState& s) {
+        small = addCity(s, 0, {5, 7}, false, 1);  // processed first: it revolts and takes its Wine with it
+        cityRef(s, small).loyalty = 1;
+        s.plot({5, 7}).resource = rules().resource("RESOURCE_WINE");
+        addCity(s, 1, {8, 7}, true, 8);
+        home = addCity(s, 0, {20, 7}, true, 16);  // its size needs 7 Amenities
+        cityRef(s, home).rebellionCooldown = 1000;  // no rebels, only the points
+    });
+    REQUIRE(g->cityReport(home).amenities == 3);  // the Palace's 2 and the Wine
+    pass(*g, 2);
+    REQUIRE(g->state().city(small)->owner != 0);
+    CHECK_EQ(g->cityReport(home).amenities, 2);
+    CHECK_EQ(g->state().city(home)->rebellion, 1);  // Unrest (2 - 7): +1; Unhappy, as with the Wine, would add none
+}
+
 TEST(free_cities_join_the_strongest_neighbour) {
     CityId fcity = kNoCity;
     auto g = world([&](GameState& s) {

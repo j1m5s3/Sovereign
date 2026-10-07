@@ -550,12 +550,19 @@ void deals(View& v) {
             else if (v.posture.has(Strategy::ReligiousVictory)) type = AllianceType::Religious;
             ideas.insert(ideas.begin(), {{DealItemKind::Alliance, v.me, static_cast<int32_t>(type), kNone}});
         }
+        // A luxury swap: each gives a luxury it has two spare copies of and the other lacks. Copies are counted once per side.
+        const std::vector<int> myCopies = v.game.resourceCopies(v.me), theirCopies = v.game.resourceCopies(o.id);
+        std::optional<std::vector<uint8_t>> myLuxuries, theirLuxuries;
+        auto holds = [&](std::optional<std::vector<uint8_t>>& held, PlayerId who, size_t lux) {
+            if (!held) held = v.game.luxuriesHeld(who);
+            return (*held)[lux] != 0;
+        };
         TypeIndex give = kNone, get = kNone;
         for (size_t r = 0; r < v.r.resources.size(); ++r) {
             if (v.r.resources[r].cls != ResourceClass::Luxury) continue;
             const TypeIndex res = static_cast<TypeIndex>(r);
-            if (give == kNone && v.game.luxuryCopies(v.me, res) - v.game.luxuryCopiesTraded(v.me, res) >= 2 && !v.game.hasLuxury(o.id, res)) give = res;
-            if (get == kNone && v.game.luxuryCopies(o.id, res) - v.game.luxuryCopiesTraded(o.id, res) >= 2 && !v.game.hasLuxury(v.me, res)) get = res;
+            if (give == kNone && myCopies[r] - v.game.luxuryCopiesTraded(v.me, res) >= 2 && !holds(theirLuxuries, o.id, r)) give = res;
+            if (get == kNone && theirCopies[r] - v.game.luxuryCopiesTraded(o.id, res) >= 2 && !holds(myLuxuries, v.me, r)) get = res;
         }
         if (give != kNone && get != kNone) ideas.push_back({{DealItemKind::Resource, v.me, 1, give}, {DealItemKind::Resource, o.id, 1, get}});
         if (opinion >= 0 && !distrusted) ideas.push_back({{DealItemKind::OpenBorders, v.me, 0, kNone}, {DealItemKind::OpenBorders, o.id, 0, kNone}});
