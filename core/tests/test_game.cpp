@@ -256,6 +256,21 @@ TEST(observation_balloon_sees_through_woods) {
     CHECK(g->visibility(0, {7, 8}) == Visibility::Visible);
 }
 
+// Units on one plot each see their own way: a Sentry Scout beside a Warrior sees through the woods the Warrior does
+// not, and a Settler (sight 3) a plot further than both.
+TEST(units_on_one_plot_each_see_their_own_way) {
+    GameState s = flatState(24, 16, 1);
+    setFeature(s, {5, 8}, "FEATURE_FOREST");
+    addUnit(s, "UNIT_WARRIOR", 0, {4, 8});
+    const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {4, 8});
+    s.unit(scout)->promotions = {rules().promotion("PROMOTION_SENTRY")};
+    addUnit(s, "UNIT_SETTLER", 0, {4, 8});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->visibility(0, {6, 8}) == Visibility::Visible);  // behind the woods
+    CHECK(g->visibility(0, {1, 8}) == Visibility::Visible);  // three plots west
+    CHECK(g->visibility(0, {0, 8}) == Visibility::Unrevealed);
+}
+
 TEST(game_replay_reproduces_state) {
     std::string err;
     GameSetup setup = sovtest::duelSetup(77);

@@ -85,6 +85,19 @@ TEST(map_river_edges_are_shared) {
     CHECK(!isRiverAdjacent(s, {6, 6}));
 }
 
+// A river on any one of a plot's six edges makes it and the plot across that edge river-adjacent, and no other.
+TEST(map_a_river_on_any_edge_is_adjacent) {
+    for (int d = 0; d < kNumDirs; ++d) {
+        GameState s = sovtest::flatState(8, 8, 1);
+        setRiver(s, {3, 3}, static_cast<Dir>(d));
+        int adjacent = 0;
+        for (int i = 0; i < s.grid.size(); ++i) adjacent += isRiverAdjacent(s, s.grid.at(i)) ? 1 : 0;
+        CHECK_EQ(adjacent, 2);
+        CHECK(isRiverAdjacent(s, {3, 3}));
+        CHECK(isRiverAdjacent(s, *s.grid.neighbor({3, 3}, static_cast<Dir>(d))));
+    }
+}
+
 namespace {
 // lakeMap marks the plots isLake finds, and the checks given it answer as they do without it.
 bool lakeMapAgrees(const GameState& s, const Rules& r) {

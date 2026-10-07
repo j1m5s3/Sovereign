@@ -383,13 +383,12 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     rep.amenities += parkAmenities(*c, shared);  // 07: National Parks
     // Natural wonders (01): the city owning Pamukkale gains an amenity per natural wonder in its land.
     {
-        const TypeIndex pamukkale = rules_->feature("FEATURE_PAMUKKALE");
         bool owns = false;
         std::vector<TypeIndex> wonders;
         state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& pl = state_.plot(h);
             if (pl.city != c->id || pl.feature == kNone || !rules_->features[static_cast<size_t>(pl.feature)].naturalWonder) return;
-            owns = owns || pl.feature == pamukkale;
+            owns = owns || pl.feature == pamukkale_;
             if (std::find(wonders.begin(), wonders.end(), pl.feature) == wonders.end()) wonders.push_back(pl.feature);
         });
         if (owns) rep.amenities += static_cast<int>(wonders.size());
@@ -404,8 +403,6 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     const bool vertical = cityGovernorHas(*c, "GOVERNOR_PROMOTION_VERTICAL_INTEGRATION");
     // Mexico City (08: suzerain): Industrial Zone, Entertainment Complex and Water Park buildings reach 3 tiles farther.
     const bool mexico = suzerainBonus(c->owner, Cs::MexicoCity);
-    const TypeIndex fartherFrom[] = {rules_->district("DISTRICT_INDUSTRIAL_ZONE"), rules_->district("DISTRICT_ENTERTAINMENT_COMPLEX"),
-                                     rules_->district("DISTRICT_WATER_PARK")};
     // Tesla and Paxton (07): a district they were used on gives each city its regional buildings reach a bonus, once.
     std::vector<std::pair<CityId, TypeIndex>> bonusFrom;
     const auto districtBonus = [&](const City& o, TypeIndex district) {
@@ -426,7 +423,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         for (TypeIndex bi : o.buildings) {
             const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
             if (bt.regionalRange <= 0) continue;
-            const bool farther = mexico && bt.districtType != kNone && std::find(std::begin(fartherFrom), std::end(fartherFrom), bt.districtType) != std::end(fartherFrom);
+            const bool farther = mexico && bt.districtType != kNone && std::find(std::begin(fartherDistricts_), std::end(fartherDistricts_), bt.districtType) != std::end(fartherDistricts_);
             // A wonder reaches from its own plot (03: the Colosseum and Jebel Barkal; the Estadio do Maracana everywhere).
             int from = d;
             for (const CityWonder& cw : o.wonders) from = bt.wonder && cw.building == bi ? state_.grid.distance(cw.pos, c->pos) : from;
@@ -552,6 +549,8 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         khaldun = mood == "HAPPINESS_ECSTATIC" ? 4 : mood == "HAPPINESS_HAPPY" ? 2 : 0;
     }
     const Yields percents = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPercent);
+    const CivAbility& peaceAbility = civAbility(c->owner);
+    const DifficultyType* aiDifficulty = difficultyAi(c->owner) ? &difficulty() : nullptr;  // AI cities at Immortal and Deity
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(percents[i].toInt());
         if (i != idx(YieldType::Food)) pct += khaldun;
@@ -576,16 +575,16 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (i == idx(YieldType::Production) && c->powerDemand > c->powerSupply)
             pct += rules_->globalInt("POWER_MAX_PRODUCTION_MODIFIER_PENALTY") * (c->powerDemand - c->powerSupply) / c->powerDemand;
         // Leader ability: while at peace with every major civ (Edo Peace).
-        if (civAbility(c->owner).peaceYieldPercent[i] > Fixed()) {
+        if (peaceAbility.peaceYieldPercent[i] > Fixed()) {
             bool peace = true;
             for (const Player& o : state_.players) peace = peace && !(o.id != c->owner && isMajorCiv(o.id) && atWar(c->owner, o.id));
-            if (peace) pct += static_cast<int>(civAbility(c->owner).peaceYieldPercent[i].toInt());
+            if (peace) pct += static_cast<int>(peaceAbility.peaceYieldPercent[i].toInt());
         }
         // Difficulty: AI cities at Immortal and Deity (00-overview: Difficulty levels).
-        if (difficultyAi(c->owner)) {
+        if (aiDifficulty) {
             const bool sciCulFaith = i == idx(YieldType::Science) || i == idx(YieldType::Culture) || i == idx(YieldType::Faith);
             const bool prodGold = i == idx(YieldType::Production) || i == idx(YieldType::Gold);
-            pct += sciCulFaith ? difficulty().aiYieldPercent : prodGold ? difficulty().aiProductionGoldPercent : 0;
+            pct += sciCulFaith ? aiDifficulty->aiYieldPercent : prodGold ? aiDifficulty->aiProductionGoldPercent : 0;
         }
         if (i != idx(YieldType::Food)) pct += moodYield;
         pct += loyaltyYield;
@@ -631,7 +630,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         }
         // A Religious alliance at level 3 (08): +1 Faith per follower of the ally's religion here.
         for (const Player& ally : state_.players) {
-            if (alliance(c->owner, ally.id) != AllianceType::Religious || allianceLevel(c->owner, ally.id) < 3 || ally.religion < 0) continue;
+            if (ally.religion < 0 || alliance(c->owner, ally.id) != AllianceType::Religious || allianceLevel(c->owner, ally.id) < 3) continue;
             rep.yields[idx(YieldType::Faith)] += Fixed::fromInt(cityFollowers(*c, ally.religion));
         }
         // Raj (04): +2 Gold, Faith, Science and Culture in the capital per suzerainty.
@@ -804,9 +803,9 @@ bool Game::canTrainFormation(const City& c, TypeIndex unit, int formation) const
     const UnitType& u = rules_->units[static_cast<size_t>(unit)];
     if (formation < 1 || formation > 2 || u.layer != UnitLayer::Military || (u.domain != Domain::Land && u.domain != Domain::Sea) || u.agent) return false;
     if (u.combat <= 0 && u.ranged <= 0) return false;
-    const TypeIndex civic = rules_->civic(formation == 1 ? "CIVIC_NATIONALISM" : "CIVIC_MOBILIZATION");
+    const TypeIndex civic = formationCivics_[formation - 1];
     if (civic == kNone || !state_.players[static_cast<size_t>(c.owner)].civics.has(civic)) return false;
-    const TypeIndex school = rules_->building(u.domain == Domain::Land ? "BUILDING_MILITARY_ACADEMY" : "BUILDING_SEAPORT");
+    const TypeIndex school = formationSchools_[u.domain == Domain::Land ? 0 : 1];
     return school != kNone && cityHasBuilding(c, *rules_, school);
 }
 
@@ -844,9 +843,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         // Civ uniques: only their civ builds them, and for it they replace their base building.
         const TypeIndex civ = state_.players[static_cast<size_t>(c.owner)].civ;
         if (b.uniqueTo != kNone && b.uniqueTo != civ) return fail(CommandError::CannotBuild);
-        for (const BuildingType& u : rules_->buildings) {
-            if (u.uniqueTo == civ && civ != kNone && u.replaces == item.type) return fail(CommandError::CannotBuild);
-        }
+        if (rules_->uniqueBuildingFor(civ, item.type) != kNone) return fail(CommandError::CannotBuild);
         if (b.replaces != kNone && c.has(b.replaces)) return fail(CommandError::CannotBuild);
         if (b.wonder) {
             // Once in the world, on a plot of its own (03: Wonders).

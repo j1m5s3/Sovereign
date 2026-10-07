@@ -808,6 +808,42 @@ TEST(dark_age_cards_do_what_their_text_says) {
     }
 }
 
+// A policy's city effects count once however many slots hold it, and not at all in anarchy (Feudal Contract: +50%
+// toward a Man-at-Arms).
+TEST(a_policy_counts_once_and_not_in_anarchy) {
+    const Rules& r = rules();
+    const auto percent = [&](int slots, int anarchy) {
+        auto g = capitalWith([&](GameState& s) {
+            chiefdom(s);
+            for (int i = 0; i < slots; ++i) s.players[0].policies[static_cast<size_t>(i)] = policy("POLICY_FEUDAL_CONTRACT");
+            s.players[0].anarchyTurns = anarchy;
+        });
+        return sumUnitProductionPercent(g->state(), r, g->state().cities[0], r.unit("UNIT_MAN_AT_ARMS"));
+    };
+    CHECK_EQ(percent(0, 0), Fixed());
+    CHECK_EQ(percent(1, 0), Fixed::fromInt(50));
+    CHECK_EQ(percent(2, 0), Fixed::fromInt(50));
+    CHECK_EQ(percent(1, 2), Fixed());
+}
+
+// A boost worth nothing is never earned: Sailing's, made 0%, stays unearned in a coastal capital.
+TEST(a_boost_worth_nothing_is_never_earned) {
+    Rules zero = rules();
+    zero.techs[at(tech("TECH_SAILING"))].boost.percent = 0;
+    GameState coast = flatState(20, 14, 1);
+    coast.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    GameState s = capitalScenario(std::move(coast)).game->state();
+    s.players[0].techs.boosted[at(tech("TECH_SAILING"))] = 0;
+    s.players[0].techs.current = tech("TECH_POTTERY");
+    s.players[0].civics.current = civic("CIVIC_CODE_OF_LAWS");
+    s.cities[0].queue = {warrior()};
+    for (const bool worthless : {false, true}) {
+        auto g = Game::fromScenario(worthless ? zero : rules(), GameState(s));
+        endTurns(*g, 1);
+        CHECK_EQ(g->state().players[0].techs.boosted[at(tech("TECH_SAILING"))], worthless ? 0 : 1);
+    }
+}
+
 TEST(generated_policy_cards_take_effect) {
     const Rules& r = rules();
     auto with = [](const char* card, auto&& edit) {

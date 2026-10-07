@@ -182,9 +182,7 @@ void Game::buildingMoments(City& city, TypeIndex building) {
     for (size_t i = 0; i < rules_->buildings.size(); ++i) {
         const BuildingType& o = rules_->buildings[i];
         if (o.districtType != b.districtType || o.wonder || o.faithOnly || o.granted || (o.uniqueTo != kNone && o.uniqueTo != civ)) continue;
-        bool replaced = false;  // a civ's unique building stands in for the one it replaces
-        for (const BuildingType& u : rules_->buildings) replaced = replaced || (u.uniqueTo == civ && civ != kNone && u.replaces == static_cast<TypeIndex>(i));
-        if (replaced) continue;
+        if (rules_->uniqueBuildingFor(civ, static_cast<TypeIndex>(i)) != kNone) continue;  // a civ's unique building stands in for the one it replaces
         if (!city.has(static_cast<TypeIndex>(i))) return;
     }
     static const std::pair<const char*, const char*> kDeveloped[] = {

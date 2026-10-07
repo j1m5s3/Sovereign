@@ -123,6 +123,75 @@ TEST(unique_buildings_replace_their_base) {
     CHECK_EQ(rules().buildings[at(rules().building("BUILDING_ROYAL_ABBEY"))].yields[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(1));
 }
 
+// The uniques replacing each building and unit are listed when the rules load, as a search of them all finds them. A
+// unique added after (the lists not made again) is found by that search, and counts as its base.
+TEST(uniques_are_listed_under_what_they_replace) {
+    const Rules& r = rules();
+    const auto unlisted = [](const auto& all, auto replacing) {
+        int wrong = 0;
+        for (size_t base = 0; base < all.size(); ++base) {
+            std::vector<TypeIndex> found;
+            for (size_t u = 0; u < all.size(); ++u) {
+                if (all[u].replaces == static_cast<TypeIndex>(base)) found.push_back(static_cast<TypeIndex>(u));
+            }
+            const std::vector<TypeIndex>* listed = replacing(static_cast<TypeIndex>(base));
+            wrong += listed && *listed == found ? 0 : 1;
+        }
+        return wrong;
+    };
+    CHECK_EQ(unlisted(r.buildings, [&](TypeIndex b) { return r.buildingsReplacing(b); }), 0);
+    CHECK_EQ(unlisted(r.units, [&](TypeIndex u) { return r.unitsReplacing(u); }), 0);
+    REQUIRE(r.buildingsReplacing(r.building("BUILDING_TEMPLE")) != nullptr);
+    CHECK_EQ(r.buildingsReplacing(r.building("BUILDING_TEMPLE"))->size(), 2u);  // the Royal Abbey and the Sahel Mosque
+    CHECK(r.buildingsReplacing(kNone) == nullptr);
+    CHECK(r.buildingsReplacing(static_cast<TypeIndex>(r.buildings.size())) == nullptr);
+    CHECK(r.unitsReplacing(static_cast<TypeIndex>(r.units.size())) == nullptr);
+    CHECK_EQ(r.uniqueBuildingFor(civ("CIVILIZATION_MALI"), r.building("BUILDING_TEMPLE")), r.building("BUILDING_SAHEL_MOSQUE"));
+    CHECK_EQ(r.uniqueBuildingFor(civ("CIVILIZATION_INCA"), r.building("BUILDING_TEMPLE")), kNone);
+    // A Monument for France and a Warrior for England, added to a copy of the rules.
+    Rules more = r;
+    const TypeIndex monument = r.building("BUILDING_MONUMENT"), warrior = r.unit("UNIT_WARRIOR");
+    REQUIRE(r.buildingsReplacing(monument) != nullptr && r.buildingsReplacing(monument)->empty());
+    BuildingType building = r.buildings[at(monument)];
+    building.id = "BUILDING_TEST_MONUMENT";
+    building.uniqueTo = civ("CIVILIZATION_FRANCE");
+    building.replaces = monument;
+    more.buildings.push_back(building);
+    UnitType unitType = r.units[at(warrior)];
+    unitType.id = "UNIT_TEST_WARRIOR";
+    unitType.uniqueTo = civ("CIVILIZATION_ENGLAND");
+    unitType.replaces = warrior;
+    more.units.push_back(unitType);
+    const TypeIndex newBuilding = static_cast<TypeIndex>(more.buildings.size() - 1), newUnit = static_cast<TypeIndex>(more.units.size() - 1);
+    City c;
+    c.buildings = {newBuilding};
+    for (const bool indexed : {false, true}) {
+        if (indexed) more.indexUniques();
+        CHECK_EQ(more.buildingsReplacing(monument) != nullptr, indexed);  // until then the lists do not fit the rules
+        CHECK_EQ(more.uniqueBuildingFor(civ("CIVILIZATION_FRANCE"), monument), newBuilding);
+        CHECK_EQ(more.uniqueBuildingFor(civ("CIVILIZATION_ENGLAND"), monument), kNone);
+        CHECK_EQ(more.uniqueUnitFor(civ("CIVILIZATION_ENGLAND"), warrior), newUnit);
+        CHECK_EQ(more.uniqueUnitFor(civ("CIVILIZATION_FRANCE"), warrior), kNone);
+        CHECK(cityHasBuilding(c, more, monument));
+    }
+}
+
+// A civ's unique building stands in for the one it replaces in a district with every building: an Aztec Campus with
+// a Calmecac (their Library), a University and a Research Lab is a Splendid Campus; another civ's needs the Library.
+TEST(a_unique_building_completes_a_splendid_district) {
+    for (const bool aztec : {true, false}) {
+        GameState s = pair(aztec ? "CIVILIZATION_AZTEC" : "CIVILIZATION_INCA", "CIVILIZATION_GREECE", {});
+        City& c = s.cities[0];
+        c.districts.push_back({rules().district("DISTRICT_CAMPUS"), {5, 6}, true});
+        c.buildings.push_back(rules().building("BUILDING_CALMECAC"));
+        c.buildings.push_back(rules().building("BUILDING_UNIVERSITY"));
+        std::sort(c.buildings.begin(), c.buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::Building, rules().building("BUILDING_RESEARCH_LAB")}));
+        CHECK_EQ(sovtest::hasMoment(*g, 0, "MOMENT_SPLENDID_CAMPUS_COMPLETED"), aztec);
+    }
+}
+
 TEST(qullqa_odeon_and_forum_effects) {
     GameState s = pair("CIVILIZATION_INCA", "CIVILIZATION_GREECE", {});
     s.plot({5, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");

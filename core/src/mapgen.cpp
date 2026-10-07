@@ -113,8 +113,10 @@ void setRiver(GameState& state, Hex h, Dir d) {
 }
 
 bool isRiverAdjacent(const GameState& state, Hex h) {
-    for (int d = 0; d < kNumDirs; ++d) {
-        if (hasRiver(state, h, static_cast<Dir>(d))) return true;
+    // The plot's own E, SE and SW edges at once, then the edges it shares with the neighbours that hold them.
+    if (state.plot(h).riverEdges & (kRiverE | kRiverSE | kRiverSW)) return true;
+    for (const Dir d : {Dir::NE, Dir::W, Dir::NW}) {
+        if (hasRiver(state, h, d)) return true;
     }
     return false;
 }
