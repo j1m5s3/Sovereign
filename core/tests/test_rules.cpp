@@ -94,6 +94,18 @@ TEST(rules_find_every_named_constant) {
     CHECK_EQ(wrong, 0);
 }
 
+// Each constant read on a hot path is the one of its name, and that name is in the data.
+TEST(rules_read_hot_constants_as_their_names) {
+    const Rules& r = rules();
+    for (size_t i = 0; i < static_cast<size_t>(HotGlobal::Count); ++i) {
+        const HotGlobal g = static_cast<HotGlobal>(i);
+        CHECK(r.hasGlobal(Rules::hotGlobalName(g)));
+        CHECK(r.global(g) == r.global(Rules::hotGlobalName(g)));
+    }
+    CHECK_EQ(r.globalInt(HotGlobal::CityMinRange), 3);
+    CHECK_EQ(r.globalInt(HotGlobal::MovementRiverCost), 2);
+}
+
 // Each plot yield modifier is listed once in the plot index, and one listed under a plot property needs it.
 TEST(rules_index_plot_yield_modifiers_by_what_they_need) {
     auto misplaced = [](const Rules& r) {
@@ -181,6 +193,8 @@ TEST(rules_mod_layers_override_by_id) {
     CHECK(modded.unit("UNIT_SCOUT") == kNone);
     CHECK(modded.unit("UNIT_LEADER") != kNone);
     CHECK_EQ(modded.globalInt("CITY_MIN_RANGE"), 4);
+    CHECK_EQ(modded.globalInt(HotGlobal::CityMinRange), 4);
+    CHECK_EQ(plain.globalInt(HotGlobal::CityMinRange), 3);
     // Names shorter than, as long as and longer than eight bytes.
     CHECK_EQ(modded.globalInt("A"), 1);
     CHECK_EQ(modded.globalInt("SEVEN_7"), 7);

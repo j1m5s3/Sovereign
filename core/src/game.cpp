@@ -232,7 +232,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     for (size_t i = 0; i < rules_->civics.size(); ++i) {
         if (rules_->civics[i].enforceBorders) borderCivics_.push_back(static_cast<TypeIndex>(i));
     }
-    suzerainEnvoys_ = rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN");
+    suzerainEnvoys_ = rules_->globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain);
     touristTourism_ = rules_->globalInt("TOURISM_TOURISM_TO_MOVE_CITIZEN");
     touristCulture_ = rules_->globalInt("TOURISM_CULTURE_PER_CITIZEN");
     abilityGrants_.resize(rules_->units.size());
@@ -483,7 +483,7 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     const Plot& p = state_.plot(at);
     if (p.owner != kNoPlayer && p.owner != player) return set(CommandError::CannotFoundHere);
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
-    const int minRange = rules_->globalInt("CITY_MIN_RANGE");
+    const int minRange = rules_->globalInt(HotGlobal::CityMinRange);
     for (const City& c : state_.cities) {
         // A city more rows away than the range is farther than it (rows do not wrap).
         if (std::abs(c.pos.y - at.y) > minRange) continue;
@@ -631,15 +631,15 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     // The Golden Gate Bridge (03): land units cross its plot dry, along its road.
     const bool bridge = tt.water && p.route >= 0;
     const bool fromAfloat = fromWater && !bridgeAt(from);
-    auto embarkCost = [&] { return rules_->globalInt("MOVEMENT_EMBARK_COST"); };  // looked up only on the steps that embark or land
+    const int embarkCost = rules_->globalInt(HotGlobal::MovementEmbarkCost);
     // Amphibious (05): embarking and disembarking cost nothing extra.
     const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && traits.freeEmbark;
     if (tt.water && !bridge) {
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
-        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost() + 1);  // embarking: 2 plus the water tile
+        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
     }
     if (!bridge && !isLandPassable(*rules_, p)) return std::nullopt;
-    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost() + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
+    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
     if (tt.relief == Relief::Hills && cost > 1 && traits.ignoreHills) cost = 1;  // Alpine (05)
@@ -649,16 +649,16 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
         if (!(traits.ignoreForest && ft.moveChange > 0 && ft.id == "FEATURE_FOREST")) cost += ft.moveChange;
     }
     if (cost > 1 && traits.ignoreTerrain) cost = 1;
-    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost()) + std::max(cost, 1));  // disembarking
+    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
         const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
         Fixed rc = slow.moveCost;
-        if (!slow.bridges && riverBetween(fp, p, dir)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
+        if (!slow.bridges && riverBetween(fp, p, dir)) rc += Fixed::fromInt(rules_->globalInt(HotGlobal::MovementRiverCost));
         return rc;
     }
-    if (riverBetween(fp, p, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
+    if (riverBetween(fp, p, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt(HotGlobal::MovementRiverCost);  // helicopters fly over (05)
     return Fixed::fromInt(std::max(cost, 1));
 }
 
@@ -909,7 +909,7 @@ void Game::refreshVisibility(PlayerId pid) {
     }
     finder = nullptr;
     for (const City& c : state_.cities) {
-        if (shares(c.owner)) see(c.pos, rules_->globalInt("CITY_SIGHT_RANGE"));
+        if (shares(c.owner)) see(c.pos, rules_->globalInt(HotGlobal::CitySightRange));
         // An Encampment watches its strike range (Sovereign reading; 03: Defense).
         if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
@@ -1339,7 +1339,7 @@ void Game::applyFoundCity(const Command& c) {
     // Religious Colonization: new cities start following the founder's religion (06).
     city.pressure.assign(state_.religions.size(), 0);
     if (p.religion >= 0 && sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligionColonizes) > Fixed())
-        city.pressure[static_cast<size_t>(p.religion)] = rules_->globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP") * 2;
+        city.pressure[static_cast<size_t>(p.religion)] = rules_->globalInt(HotGlobal::ReligionSpreadAtheismPressurePerPop) * 2;
     state_.cities.push_back(std::move(city));
     {
         City& made = state_.cities.back();

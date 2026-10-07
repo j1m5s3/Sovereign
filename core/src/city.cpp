@@ -85,9 +85,9 @@ Yields Game::plotYields(Hex at, const City& city) const {
         }
     }
     if (at == city.pos) {
-        y[idx(YieldType::Food)] = std::max(y[idx(YieldType::Food)], rules_->global("YIELD_FOOD_CITY_TERRAIN_REPLACE"));
+        y[idx(YieldType::Food)] = std::max(y[idx(YieldType::Food)], rules_->global(HotGlobal::YieldFoodCityTerrainReplace));
         y[idx(YieldType::Production)] =
-            std::max(y[idx(YieldType::Production)], rules_->global("YIELD_PRODUCTION_CITY_TERRAIN_REPLACE"));
+            std::max(y[idx(YieldType::Production)], rules_->global(HotGlobal::YieldProductionCityTerrainReplace));
     }
     // Civ unique buildings: a yield on adjacent improvements of a type next to its district (Mill Town).
     if (p.improvement != kNone && p.pillagedTurns == 0) {
@@ -243,7 +243,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
                 for (int32_t pi : tr.path) {
                     const City* on = state_.cityAt(state_.grid.at(pi));
                     if (!on || !on->hasTradingPost(c->owner)) continue;
-                    raw[idx(YieldType::Gold)] += Fixed::fromInt(rules_->globalInt(on->owner == c->owner ? "TRADING_POST_GOLD_IN_OWN_CITY" : "TRADING_POST_GOLD_IN_FOREIGN_CITY") +
+                    raw[idx(YieldType::Gold)] += Fixed::fromInt(rules_->globalInt(on->owner == c->owner ? HotGlobal::TradingPostGoldInOwnCity : HotGlobal::TradingPostGoldInForeignCity) +
                                                                 (brunei && on->owner != c->owner ? 1 : 0));
                 }
             }
@@ -304,8 +304,8 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         for (TypeIndex b : c->buildings) raw[idx(YieldType::Faith)] += Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].wonder ? 4 : 0);
     }
     // Every citizen adds a little culture and science (CULTURE/SCIENCE_PERCENTAGE_YIELD_PER_POP).
-    raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt("CULTURE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
-    raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt("SCIENCE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
+    raw[idx(YieldType::Culture)] += Fixed::ratio(rules_->globalInt(HotGlobal::CulturePercentageYieldPerPop), 100) * c->population;
+    raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt(HotGlobal::SciencePercentageYieldPerPop), 100) * c->population;
     int districtsDone = 0;
     for (const CityDistrict& d : c->districts) districtsDone += d.complete ? 1 : 0;
     const Yields flat = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYield);
@@ -360,7 +360,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (n != c->pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
     });
     if (suzerainBonus(c->owner, "CITYSTATE_MOHENJO_DARO")) fresh = true;  // Mohenjo-Daro (08: suzerain): every city as if on a river
-    const char* water = fresh ? "CITY_POPULATION_RIVER_LAKE" : coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER";
+    const HotGlobal water = fresh ? HotGlobal::CityPopulationRiverLake : coastal ? HotGlobal::CityPopulationCoast : HotGlobal::CityPopulationNoWater;
     rep.housing += rules_->global(water);
     rep.housing += improvementHousing(*c);
     rep.housing += districtHousing(*c);
@@ -665,7 +665,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const ProjectType& pj = rules_->projects[static_cast<size_t>(c->queue.front().type)];
         if (pj.converts) rep.yields[idx(pj.conversionYield)] += rep.yields[idx(YieldType::Production)] * pj.conversionPercent / 100;
     }
-    rep.foodConsumption = rules_->global("CITY_FOOD_CONSUMPTION_PER_POPULATION") * c->population;
+    rep.foodConsumption = rules_->global(HotGlobal::CityFoodConsumptionPerPopulation) * c->population;
     rep.defense = static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityDefense).toInt());
     return rep;
 }

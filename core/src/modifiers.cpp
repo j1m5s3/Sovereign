@@ -43,7 +43,7 @@ PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
             tie = true;
         }
     }
-    return !tie && most >= r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") ? best : kNoPlayer;
+    return !tie && most >= r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) ? best : kNoPlayer;
 }
 
 bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type) {
@@ -62,7 +62,7 @@ bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, Ty
             return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
         };
         // Too few envoys to be suzerain and no such alliance: no need to find the suzerain.
-        if (envoysAt(s, r, player, cs.id) < r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") && std::none_of(rels.begin(), rels.end(), shares)) return false;
+        if (envoysAt(s, r, player, cs.id) < r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) && std::none_of(rels.begin(), rels.end(), shares)) return false;
         const PlayerId suz = suzerainOf(s, r, cs.id);
         if (suz == player) return true;
         if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
@@ -280,7 +280,7 @@ bool anyModifier(const Modifier&) { return true; }
 namespace {
 // All the pressure in a city, atheism included: the share each religion's followers are counted from.
 int64_t totalPressure(const Rules& r, const City& city) {
-    int64_t total = static_cast<int64_t>(r.globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP")) * city.population;
+    int64_t total = static_cast<int64_t>(r.globalInt(HotGlobal::ReligionSpreadAtheismPressurePerPop)) * city.population;
     for (int32_t p : city.pressure) total += std::max<int32_t>(0, p);
     return total;
 }

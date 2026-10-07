@@ -357,11 +357,11 @@ int Game::benevolenceCost(const City& city) const {
 bool Game::fearActive(const City& city) const { return state_.turn < city.fearUntil; }
 
 bool Game::beloved(PlayerId player) const {
-    return state_.players[static_cast<size_t>(player)].reputation >= rules_->globalInt("REPUTATION_THRESHOLD");
+    return state_.players[static_cast<size_t>(player)].reputation >= rules_->globalInt(HotGlobal::ReputationThreshold);
 }
 
 bool Game::feared(PlayerId player) const {
-    return state_.players[static_cast<size_t>(player)].reputation <= -rules_->globalInt("REPUTATION_THRESHOLD");
+    return state_.players[static_cast<size_t>(player)].reputation <= -rules_->globalInt(HotGlobal::ReputationThreshold);
 }
 
 bool Game::canTakeStance(PlayerId player, CityId cityId, Stance stance, CommandError* why) const {

@@ -809,7 +809,7 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
                 if (o.id != pid && at(cs) < o.envoys.size()) o.envoys[at(cs)] = 0;
             }
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
-            p.envoys[at(cs)] = std::max(p.envoys[at(cs)], rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN"));
+            p.envoys[at(cs)] = std::max(p.envoys[at(cs)], rules_->globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain));
             break;
         }
         case GreatPersonEffectKind::GreatPersonPoints: {

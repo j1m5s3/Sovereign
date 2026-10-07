@@ -365,7 +365,7 @@ std::pair<int, bool> Game::unitSightAndSentry(const Unit& unit) const {
 }
 
 int Game::maxAttacks(const Unit& unit) const {
-    return rules_->globalInt("COMBAT_MAX_NUM_ATTACKS") + unitEffectTotal(unit, UnitEffectKind::Attacks);
+    return rules_->globalInt(HotGlobal::CombatMaxNumAttacks) + unitEffectTotal(unit, UnitEffectKind::Attacks);
 }
 
 bool Game::inEnemyZoc(const Unit& mover, Hex plot) const {
