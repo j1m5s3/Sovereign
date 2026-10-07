@@ -263,7 +263,8 @@ public:
     bool resourceVisible(PlayerId player, Hex plot) const;
     // The plot's resource is worked by a matching improvement or a city center.
     bool resourceImproved(Hex plot) const;
-    bool canImproveAt(PlayerId player, Hex plot, TypeIndex improvement) const;
+    // ownUnit: built by a unit's own ability (the Legionary's Fort), which needs no unlock.
+    bool canImproveAt(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit = false) const;
     std::vector<TypeIndex> improvementsAt(PlayerId player, Hex plot) const;
     bool canHarvestAt(PlayerId player, Hex plot) const;
     // Yields the plot's improvement adds for its owner (base, tech bonuses, adjacency).
@@ -435,6 +436,7 @@ public:
     // ---- Military Engineers [GS] (01: Routes, Mountain tunnels)
     TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
+    CommandError roadProblem(PlayerId player, UnitId unit) const;  // a road by hand for a charge (01: Routes)
     CommandError chargeProblem(PlayerId player, UnitId engineer) const;  // spending a charge on the district it stands on (03)
     std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
 

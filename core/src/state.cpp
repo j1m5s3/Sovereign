@@ -228,6 +228,7 @@ std::string describe(const Command& c) {
         case CommandType::Pillage: return s + "Pillage " + std::to_string(c.id);
         case CommandType::RepairImprovement: return s + "RepairImprovement " + std::to_string(c.id);
         case CommandType::BuildRailroad: return s + "BuildRailroad " + std::to_string(c.id);
+        case CommandType::BuildRoad: return s + "BuildRoad " + std::to_string(c.id);
         case CommandType::ContributeCharge: return s + "ContributeCharge " + std::to_string(c.id);
         case CommandType::PromoteSpy: return s + "PromoteSpy " + std::to_string(c.id) + " " + std::to_string(c.arg);
         case CommandType::JoinEmergency: return s + "JoinEmergency " + std::to_string(c.arg);

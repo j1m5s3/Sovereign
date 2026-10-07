@@ -117,8 +117,8 @@ void survey(View& v) {
                 v.ranged += t.range > 0;
             }
             v.settlers += t.foundCity;
-            v.builders += t.buildCharges > 0;
-            if (u.moveTarget && (t.foundCity || t.buildCharges > 0)) v.claimed.push_back(*u.moveTarget);
+            v.builders += isBuilder(t);  // not Military Engineers or Legionaries
+            if (u.moveTarget && (t.foundCity || isBuilder(t))) v.claimed.push_back(*u.moveTarget);
             continue;
         }
         if (!v.hostile(u.owner) || !isArmy(t) || !v.game.unitVisibleTo(v.me, u)) continue;
@@ -1602,7 +1602,7 @@ void production(View& v) {
                         value = sites > 0 && diggers == 0 ? 200 : 0;
                     }
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
-                    else if (t.buildCharges > 0) value = wantBuilder ? 160 + 40 * std::min(unimproved, 6) : 0;
+                    else if (isBuilder(t)) value = wantBuilder ? 160 + 40 * std::min(unimproved, 6) : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
                     else if (t.domain == Domain::Air) {
                         int aircraft = 0, fighters = 0;
@@ -1777,7 +1777,7 @@ void production(View& v) {
         if (best->kind == ProductionKind::Unit) {
             const UnitType& t = v.r.units[at(best->type)];
             v.settlers += t.foundCity;
-            v.builders += t.buildCharges > 0;
+            v.builders += isBuilder(t);
             v.military += isArmy(t);
         }
     }
@@ -1800,7 +1800,7 @@ void purchases(View& v) {
         const City& c = *v.s().city(cid);
         if (c.queue.empty()) continue;
         const ProductionItem& front = c.queue.front();
-        const bool growth = front.kind == ProductionKind::Unit && (v.r.units[at(front.type)].foundCity || v.r.units[at(front.type)].buildCharges > 0);
+        const bool growth = front.kind == ProductionKind::Unit && (v.r.units[at(front.type)].foundCity || isBuilder(v.r.units[at(front.type)]));
         // A placed district with Reyna's Contractor or Moksha's Divine Architect in the city (08: Governors).
         if (front.kind == ProductionKind::District) {
             const int faith = g.districtPurchaseCost(c, front.type, true);

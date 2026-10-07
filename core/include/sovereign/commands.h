@@ -87,6 +87,7 @@ enum class CommandType : uint8_t {
     BuyPolicyChanges = 74,      // pays Gold to change government and policies this turn (04)
     LaunchInquisition = 75,     // id = an unused Apostle of the player's religion: Inquisitors may be bought (06)
     HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
+    BuildRoad = 77,             // id = Military Engineer (until railroads) or Legionary: a road on its plot for a charge (01: Routes)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -250,6 +251,7 @@ struct Command {
     static Command coastalRaid(PlayerId p, UnitId unit, Hex at) { return {CommandType::Pillage, p, unit, at, 1, 0}; }
     static Command repairImprovement(PlayerId p, UnitId builder) { return {CommandType::RepairImprovement, p, builder, {}, 0, 0}; }
     static Command buildRailroad(PlayerId p, UnitId engineer) { return {CommandType::BuildRailroad, p, engineer, {}, 0, 0}; }
+    static Command buildRoad(PlayerId p, UnitId unit) { return {CommandType::BuildRoad, p, unit, {}, 0, 0}; }
     static Command contributeCharge(PlayerId p, UnitId engineer) { return {CommandType::ContributeCharge, p, engineer, {}, 0, 0}; }
     // A Mountain Tunnel is built on the neighbouring mountain `at` (BuildImprovement with a target).
     static Command buildTunnel(PlayerId p, UnitId engineer, TypeIndex tunnel, Hex at) { return {CommandType::BuildImprovement, p, engineer, at, tunnel, 0}; }

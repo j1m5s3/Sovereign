@@ -840,6 +840,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.zoneOfControl = j["zoneOfControl"].boolean(false);
         u.foundCity = j["foundCity"].boolean(false);
         u.buildCharges = static_cast<int>(j["buildCharges"].integer(0));
+        u.buildsRoads = j["buildsRoads"].boolean(false);
         u.costProgression = static_cast<int>(j["costProgression"].integer(0));
         u.popCost = static_cast<int>(j["popCost"].integer(0));
         u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
@@ -1013,6 +1014,12 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                     return false;
                 improvements[i].adjacency.push_back(adj);
             }
+        }
+        // Units whose charges build their own improvements (the Legionary's Fort).
+        auto findImprovement = [this](const std::string& iid) { return improvement(iid); };
+        size_t k = 0;
+        for (const auto& [uid, j] : m.tables["units"]) {
+            if (!resolveList(j["builds"], findImprovement, units[k++].builds, "unit " + uid, error)) return false;
         }
     }
     {

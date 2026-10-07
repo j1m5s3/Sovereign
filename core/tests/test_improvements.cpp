@@ -595,3 +595,90 @@ TEST(nalandas_first_mahavihara_grants_a_technology) {
     REQUIRE(loaded);
     CHECK(loaded->state().players[0].improvementGrants == std::vector<TypeIndex>{vihara});
 }
+
+TEST(military_engineers_lay_roads_until_railroads) {
+    GameState s = flatState(18, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(2);
+    }
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    sovtest::addCity(s, 1, {13, 6}, true, 4);
+    for (const Hex& h : {Hex{6, 6}, Hex{6, 8}}) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    s.plot({6, 8}).route = 0;  // an Ancient Road already
+    const UnitId eng = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {6, 6});
+    const UnitId wild = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {9, 2});    // no one's land
+    const UnitId abroad = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {13, 7}); // a neighbour's land, at peace
+    const UnitId paved = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {6, 8});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {4, 6});
+    const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {9, 4});
+    s.plot({13, 7}).owner = 1;
+    for (Unit& u : s.units) {
+        if (u.id == wild) u.charges = 1;
+    }
+    auto g = Game::fromScenario(rules(), s);
+    const TypeIndex road = g->roadFor(0);
+    REQUIRE(road != kNone);
+    REQUIRE(g->submit(Command::buildRoad(0, eng)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({6, 6}).route, road);
+    CHECK_EQ(g->state().unit(eng)->charges, 1);  // a charge each
+    CHECK(g->state().unit(eng)->movesLeft == Fixed());
+    REQUIRE(g->submit(Command::buildRoad(0, wild)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({9, 2}).route, road);
+    CHECK(g->state().unit(wild) == nullptr);  // its last charge
+    CHECK(g->submit(Command::buildRoad(0, abroad)) == CommandError::CannotImprove);
+    CHECK(g->submit(Command::buildRoad(0, paved)) == CommandError::CannotImprove);
+    CHECK(g->submit(Command::buildRoad(0, builder)) == CommandError::CannotImprove);
+    CHECK(g->submit(Command::buildRoad(0, warrior)) == CommandError::CannotImprove);
+    // A pillaged road is laid again.
+    s.plot({6, 8}).routePillaged = true;
+    auto p = Game::fromScenario(rules(), s);
+    CHECK(p->submit(Command::buildRoad(0, paved)) == CommandError::Ok);
+    CHECK(!p->state().plot({6, 8}).routePillaged);
+    // With Steam Power railroads replace its roads [GS].
+    s.players[0].techs.done[at(rules().tech("TECH_STEAM_POWER"))] = 1;
+    auto rail = Game::fromScenario(rules(), std::move(s));
+    CHECK(rail->submit(Command::buildRoad(0, eng)) == CommandError::CannotImprove);
+}
+
+TEST(builder_charges_and_harvests_are_for_builders) {
+    GameState s = flatState(16, 12, 1);
+    s.players[0].civ = rules().civ("CIVILIZATION_CHINA");
+    Game::fitPlayerToRules(s.players[0], rules());
+    s.players[0].techs.done[at(rules().tech("TECH_MINING"))] = 1;
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    s.plot({6, 6}).owner = 0;
+    s.plot({6, 6}).city = s.cities[0].id;
+    s.plot({6, 6}).feature = rules().feature("FEATURE_FOREST");
+    const UnitId woodsman = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+    const UnitId engineer = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {6, 6});
+    s.plot({6, 8}).owner = 0;
+    s.plot({6, 8}).city = s.cities[0].id;
+    const UnitId farmer = addUnit(s, "UNIT_BUILDER", 0, {6, 8});
+    const UnitId digger = addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {6, 8});
+    const UnitId sapper = addUnit(s, "UNIT_MILITARY_ENGINEER", 0, {6, 8});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // Only a Builder builds a farm (an Archaeologist's charges are digs).
+    const TypeIndex farm = rules().improvement("IMPROVEMENT_FARM");
+    CHECK(g->validate(Command::buildImprovement(0, farmer, farm)) == CommandError::Ok);
+    CHECK(g->validate(Command::buildImprovement(0, digger, farm)) == CommandError::CannotImprove);
+    CHECK(g->validate(Command::buildImprovement(0, sapper, farm)) == CommandError::CannotImprove);
+    // Qin's +1 charge goes to Builders, not to Military Engineers.
+    City& city = g->stateMutForTests().cities[0];
+    REQUIRE(g->completeItem(city, {ProductionKind::Unit, rules().unit("UNIT_BUILDER")}));
+    REQUIRE(g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::Unit, rules().unit("UNIT_MILITARY_ENGINEER")}));
+    int builderCharges = -1, engineerCharges = -1;
+    for (const Unit& u : g->state().units) {
+        if (u.id == woodsman || u.id == engineer || u.id == farmer || u.id == sapper) continue;
+        if (u.type == rules().unit("UNIT_BUILDER")) builderCharges = u.charges;
+        if (u.type == rules().unit("UNIT_MILITARY_ENGINEER")) engineerCharges = u.charges;
+    }
+    CHECK_EQ(builderCharges, rules().units[at(rules().unit("UNIT_BUILDER"))].buildCharges + 1);
+    CHECK_EQ(engineerCharges, rules().units[at(rules().unit("UNIT_MILITARY_ENGINEER"))].buildCharges);
+    // Only a Builder harvests the woods.
+    CHECK(g->validate(Command::harvest(0, engineer)) == CommandError::CannotHarvest);
+    CHECK(g->validate(Command::harvest(0, woodsman)) == CommandError::Ok);
+}

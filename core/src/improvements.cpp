@@ -38,13 +38,13 @@ bool Game::resourceImproved(Hex at) const {
            contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource);
 }
 
-bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement) const {
+bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
     if (improvement < 0 || static_cast<size_t>(improvement) >= rules_->improvements.size()) return false;
     const Plot& p = state_.plot(at);
     if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || state_.districtAt(at) || state_.wonderAt(at) != kNone || p.improvement == improvement)
         return false;
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(improvement)];
-    if (!hasUnlocked(player, im.unlock)) return false;
+    if (!ownUnit && !hasUnlocked(player, im.unlock)) return false;
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
     // City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
@@ -234,25 +234,27 @@ int Game::countImprovedPlots(PlayerId player, TypeIndex improvement, bool onReso
 
 CommandError Game::validateBuilder(const Command& c) const {
     const Unit& u = *state_.unit(c.id);
+    const UnitType& ut = rules_->units[static_cast<size_t>(u.type)];
     if (u.charges <= 0 || u.movesLeft <= Fixed()) {
         return c.type == CommandType::Harvest ? CommandError::CannotHarvest : CommandError::CannotImprove;
     }
     if (c.type == CommandType::Harvest) {
-        return canHarvestAt(c.player, u.pos) ? CommandError::Ok : CommandError::CannotHarvest;
+        return isBuilder(ut) && canHarvestAt(c.player, u.pos) ? CommandError::Ok : CommandError::CannotHarvest;
     }
     if (c.arg < 0 || c.arg > INT16_MAX) return CommandError::CannotImprove;
-    // Military Engineers build their own improvements (Fort, Airstrip, Missile Silo); Builders the rest.
+    // Military Engineers build their own improvements (Fort, Airstrip, Missile Silo), a Legionary its Fort; Builders the rest.
+    bool own = false;
     if (static_cast<size_t>(c.arg) < rules_->improvements.size()) {
         const TypeIndex by = rules_->improvements[static_cast<size_t>(c.arg)].builtBy;
-        const bool engineer = rules_->units[static_cast<size_t>(u.type)].id == "UNIT_MILITARY_ENGINEER";
-        if (by != kNone ? u.type != by : engineer) return CommandError::CannotImprove;
+        own = contains(ut.builds, static_cast<TypeIndex>(c.arg));
+        if (!ut.builds.empty() ? !own : by != kNone ? u.type != by : !isBuilder(ut)) return CommandError::CannotImprove;
     }
     // A Mountain Tunnel goes on a neighbouring mountain, named as the target.
     if (static_cast<size_t>(c.arg) < rules_->improvements.size() && rules_->improvements[static_cast<size_t>(c.arg)].tunnel) {
         const std::vector<Hex> sites = tunnelSites(c.player, c.id);
         return std::find(sites.begin(), sites.end(), c.target) != sites.end() ? CommandError::Ok : CommandError::CannotImprove;
     }
-    return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotImprove;
+    return canImproveAt(c.player, u.pos, static_cast<TypeIndex>(c.arg), own) ? CommandError::Ok : CommandError::CannotImprove;
 }
 
 // ---------------------------------------------------------------- formations (05: Corps and Armies)
@@ -401,6 +403,25 @@ CommandError Game::railroadProblem(PlayerId player, UnitId engineer) const {
     return CommandError::Ok;
 }
 
+// A road by hand (01: Routes): a Military Engineer, until railroads replace its roads [GS], or a Legionary
+// (leaders-and-art-style) spends a charge on a road of the owner's era on its plot.
+CommandError Game::roadProblem(PlayerId player, UnitId unit) const {
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
+    const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
+    const TypeIndex road = roadFor(player);
+    if (!ut.buildsRoads || u->charges <= 0 || u->movesLeft <= Fixed() || road == kNone) return CommandError::CannotImprove;
+    if (const TypeIndex rr = railroad(); rr != kNone && ut.id == "UNIT_MILITARY_ENGINEER") {
+        const TypeIndex tech = rules_->routes[static_cast<size_t>(rr)].tech;
+        if (tech != kNone && state_.players[static_cast<size_t>(player)].techs.has(tech)) return CommandError::CannotImprove;
+    }
+    const Plot& here = state_.plot(u->pos);
+    if (!isLandPassable(state_, *rules_, u->pos) || (here.route >= road && !here.routePillaged) ||
+        (here.owner != kNoPlayer && here.owner != player && !atWar(player, here.owner)))
+        return CommandError::CannotImprove;
+    return CommandError::Ok;
+}
+
 std::vector<Hex> Game::tunnelSites(PlayerId player, UnitId engineer) const {
     std::vector<Hex> out;
     const Unit* u = state_.unit(engineer);
@@ -478,7 +499,7 @@ void Game::applyBuilder(const Command& c) {
     }
     u.movesLeft = Fixed();
     u.moveTarget.reset();
-    if (--u.charges <= 0) {
+    if (--u.charges <= 0 && rules_->units[static_cast<size_t>(u.type)].layer != UnitLayer::Military) {  // a Legionary stays, its charge spent
         const UnitId gone = u.id;
         state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
                                           [&](const Unit& x) { return x.id == gone; }),
