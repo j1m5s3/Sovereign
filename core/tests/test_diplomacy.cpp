@@ -1,6 +1,8 @@
 // Diplomacy: opinions and agendas, deals, denouncing, friendship, open borders and peace
 // (08-diplomacy-city-states-governors.md; leaders-and-art-style.md, the twelve agendas).
 #include <algorithm>
+#include <tuple>
+#include <utility>
 
 #include "helpers.h"
 #include "sovereign/ai.h"
@@ -261,6 +263,43 @@ TEST(an_ai_offers_friendship_to_a_civ_it_likes) {
     CHECK(d.items[0].kind == DealItemKind::Friendship);
     REQUIRE(g->submit(Command::answerDeal(0, d.id, true)) == CommandError::Ok);
     CHECK(g->friends(0, 1));
+}
+
+TEST(an_ai_offers_a_luxury_swap) {
+    const TypeIndex wine = rules().resource("RESOURCE_WINE"), silk = rules().resource("RESOURCE_SILK"),
+                    sugar = rules().resource("RESOURCE_SUGAR");
+    // The AI's Wine: one copy on its city center, the rest granted. The human has two copies of Silk.
+    auto turn = [&](int aiWine, int humanWine, int aiSilk, int humanSugar) {
+        GameState s = diploState();
+        s.plot({14, 6}).resource = wine;
+        for (int i = 1; i < aiWine; ++i) s.players[1].luxuryGrants.push_back(wine);
+        s.plot({4, 6}).resource = silk;
+        s.players[0].luxuryGrants.push_back(silk);
+        for (int i = 0; i < humanWine; ++i) s.players[0].luxuryGrants.push_back(wine);
+        for (int i = 0; i < aiSilk; ++i) s.players[1].luxuryGrants.push_back(silk);
+        for (int i = 0; i < humanSugar; ++i) s.players[0].luxuryGrants.push_back(sugar);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        ai::playTurn(*g);
+        return g;
+    };
+    auto swapOf = [](const Game& g) {
+        REQUIRE(g.state().deals.size() == 1u);
+        const std::vector<DealItem>& items = g.state().deals[0].items;
+        REQUIRE(items.size() == 2u);
+        CHECK(items[0].kind == DealItemKind::Resource && items[0].from == 1);
+        CHECK(items[1].kind == DealItemKind::Resource && items[1].from == 0);
+        return std::pair{items[0].resource, items[1].resource};
+    };
+    CHECK((swapOf(*turn(2, 0, 0, 0)) == std::pair{wine, silk}));
+    CHECK((swapOf(*turn(2, 0, 1, 2)) == std::pair{wine, sugar}));  // it has Silk: it asks for the Sugar
+    // No swap when it would give its last copy, when the human has Wine already, or when it has the only luxury the human spares.
+    for (const auto& [aiWine, humanWine, aiSilk] : {std::tuple{1, 0, 0}, std::tuple{2, 1, 0}, std::tuple{2, 0, 1}}) {
+        auto none = turn(aiWine, humanWine, aiSilk, 0);
+        for (const Deal& d : none->state().deals) {
+            for (const DealItem& i : d.items) CHECK(i.kind != DealItemKind::Resource);
+        }
+    }
 }
 
 TEST(conversation_summaries_are_recorded_and_capped) {
