@@ -87,6 +87,16 @@ TEST(districts_and_buildings_earn_points_and_recruit) {
     CHECK(g->currentGreatPerson(sci) != first);                     // the next one is offered
 }
 
+// Masaru Ibuka, once used: +10 Tourism from Industrial Zones, and none from other districts (07).
+TEST(a_used_great_person_adds_tourism_to_its_own_district) {
+    GameState s = cityState();
+    s.players[0].greatPeopleActivated.push_back(person("GREAT_PERSON_MASARU_IBUKA"));
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Player& p = g->state().players[0];
+    CHECK_EQ(districtTourism(g->state(), rules(), p, rules().district("DISTRICT_INDUSTRIAL_ZONE")), 10);
+    CHECK_EQ(districtTourism(g->state(), rules(), p, rules().district("DISTRICT_CAMPUS")), 0);
+}
+
 TEST(patronage_buys_the_current_person) {
     GameState s = cityState();
     s.players[0].gold = Fixed::fromInt(2000);

@@ -228,23 +228,31 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
     return nullptr;
 }
 
-template <typename Fn>
+// Calls fn for each city modifier with this effect that reaches the city. `pre` passes over modifiers on what they
+// say alone (a yield, a unit class) before the costlier look for the city holding the modifier. A plot's own
+// requirements (its terrain, feature, improvement...) are cheap and go before that look too; a city's can scan the
+// map, so they go after it.
+template <typename Pre, typename Fn>
 void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
-                     Fn&& fn) {
+                     Pre&& pre, Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     int majority = kUnknownReligion;
+    const ReqContext subjectCtx{&s, &r, &owner, &city, plot};
     for (uint32_t i : r.cityModifiers(effect)) {
         const Modifier& m = r.modifiers[i];
-        if (isPlotCollection(m.collection) != plotEffect) continue;
+        if (isPlotCollection(m.collection) != plotEffect || !pre(m)) continue;
+        if (plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
         const City* holder = holderFor(m, s, r, city, owner, majority);
         if (!holder) continue;
         ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
         if (!testRequirements(m.ownerReqs, ownerCtx)) continue;
-        ReqContext subjectCtx{&s, &r, &owner, &city, plot};
-        if (!testRequirements(m.subjectReqs, subjectCtx)) continue;
+        if (!plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
         fn(m);
     }
 }
+
+// The pre filter that passes every modifier.
+bool anyModifier(const Modifier&) { return true; }
 }  // namespace
 
 namespace {
@@ -296,17 +304,16 @@ bool testRequirements(const RequirementSet& set, const ReqContext& ctx) {
 Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, ModEffect effect,
                        std::optional<YieldType> yield) {
     Fixed total;
-    forEachApplying(s, r, city, effect, false, nullptr, [&](const Modifier& m) {
-        if (yield && m.yield != *yield) return;
-        total += m.amount;
-    });
+    forEachApplying(
+        s, r, city, effect, false, nullptr, [&](const Modifier& m) { return !yield || m.yield == *yield; },
+        [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot) {
     Yields total{};
     const Plot& p = s.plot(plot);
-    forEachApplying(s, r, city, ModEffect::PlotYield, true, &p, [&](const Modifier& m) {
+    forEachApplying(s, r, city, ModEffect::PlotYield, true, &p, anyModifier, [&](const Modifier& m) {
         if (static_cast<size_t>(m.yield) < kNumYields) total[static_cast<size_t>(m.yield)] += m.amount;
     });
     return total;
@@ -315,23 +322,22 @@ Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, He
 Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& city, TypeIndex unitType) {
     const UnitType& u = r.units[static_cast<size_t>(unitType)];
     Fixed total;
-    forEachApplying(s, r, city, ModEffect::UnitProductionPercent, false, nullptr, [&](const Modifier& m) {
-        if (!m.unitClass.empty() && m.unitClass != u.unitClass) return;
-        if (m.unit != kNone && m.unit != unitType) return;
-        if (m.maxEra >= 0 && u.era > m.maxEra) return;
-        if (m.minEra >= 0 && u.era < m.minEra) return;
-        if (m.military && u.layer != UnitLayer::Military) return;
-        total += m.amount;
-    });
+    auto forUnit = [&](const Modifier& m) {
+        return (m.unitClass.empty() || m.unitClass == u.unitClass) && (m.unit == kNone || m.unit == unitType) && (m.maxEra < 0 || u.era <= m.maxEra) &&
+               (m.minEra < 0 || u.era >= m.minEra) && (!m.military || u.layer == UnitLayer::Military);
+    };
+    forEachApplying(s, r, city, ModEffect::UnitProductionPercent, false, nullptr, forUnit, [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 namespace {
-// Calls fn for every player-collection modifier with this effect that applies to the player.
-template <typename Fn>
-void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Fn&& fn) {
+// Calls fn for every player-collection modifier with this effect that applies to the player. `pre` passes over
+// modifiers on what they say alone, before the look at whether the player has their source.
+template <typename Pre, typename Fn>
+void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Pre&& pre, Fn&& fn) {
     for (uint32_t i : r.playerModifiers(effect)) {
         const Modifier& m = r.modifiers[i];
+        if (!pre(m)) continue;
         const City* holder = nullptr;
         bool applies = false;
         switch (m.sourceKind) {
@@ -368,36 +374,40 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
 
 Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, effect, [&](const Modifier& m) { total += m.amount; });
+    forEachPlayerModifier(s, r, player, effect, anyModifier, [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
-std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player) {
+std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
     std::vector<TypeIndex> out;
-    forEachPlayerModifier(s, r, player, ModEffect::GrantAbility, [&](const Modifier& m) { out.push_back(m.ability); });
+    auto forClass = [&](const Modifier& m) {
+        const std::vector<std::string>& classes = r.abilities[static_cast<size_t>(m.ability)].classes;
+        return std::find(classes.begin(), classes.end(), unitClass) != classes.end();
+    };
+    forEachPlayerModifier(s, r, player, ModEffect::GrantAbility, forClass, [&](const Modifier& m) { out.push_back(m.ability); });
     return out;
 }
 
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,
                     bool vsBarbarian) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, ModEffect::UnitStrength, [&](const Modifier& m) {
-        if ((m.unitClass.empty() || m.unitClass == unitClass) && (!m.vsBarbarians || vsBarbarian)) total += m.amount;
-    });
+    forEachPlayerModifier(
+        s, r, player, ModEffect::UnitStrength, [&](const Modifier& m) { return (m.unitClass.empty() || m.unitClass == unitClass) && (!m.vsBarbarians || vsBarbarian); },
+        [&](const Modifier& m) { total += m.amount; });
     return static_cast<int>(total.toInt());
 }
 
 int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player& player, TypeIndex district) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, ModEffect::DistrictAdjacencyPercent, [&](const Modifier& m) {
-        if (m.district == district) total += m.amount;
-    });
+    forEachPlayerModifier(
+        s, r, player, ModEffect::DistrictAdjacencyPercent, [&](const Modifier& m) { return m.district == district; },
+        [&](const Modifier& m) { total += m.amount; });
     return static_cast<int>(total.toInt());
 }
 
 Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& city, ProductionItem item) {
     Fixed total;
-    forEachApplying(s, r, city, ModEffect::ItemProductionPercent, false, nullptr, [&](const Modifier& m) {
+    auto forItem = [&](const Modifier& m) {
         bool hit = false;
         if (item.kind == ProductionKind::Building && item.type >= 0 && static_cast<size_t>(item.type) < r.buildings.size()) {
             const BuildingType& b = r.buildings[static_cast<size_t>(item.type)];
@@ -412,52 +422,53 @@ Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& c
         } else if (item.kind == ProductionKind::Project && item.type >= 0 && static_cast<size_t>(item.type) < r.projects.size()) {
             hit = (m.scope == "SPACE_RACE" && r.projects[static_cast<size_t>(item.type)].spaceRace) || m.scope == "PROJECTS";
         }
-        if (hit) total += m.amount;
-    });
+        return hit;
+    };
+    forEachApplying(s, r, city, ModEffect::ItemProductionPercent, false, nullptr, forItem, [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass) {
     Fixed total;
-    forEachApplying(s, r, city, ModEffect::CityGreatPersonPoints, false, nullptr, [&](const Modifier& m) {
-        if (m.gpClass == gpClass) total += m.amount;
-    });
+    forEachApplying(
+        s, r, city, ModEffect::CityGreatPersonPoints, false, nullptr, [&](const Modifier& m) { return m.gpClass == gpClass; },
+        [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 Fixed sumPlayerGreatPersonPoints(const GameState& s, const Rules& r, const Player& player, TypeIndex gpClass) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, ModEffect::GreatPersonPoints, [&](const Modifier& m) {
-        if (m.gpClass == gpClass) total += m.amount;
-    });
+    forEachPlayerModifier(
+        s, r, player, ModEffect::GreatPersonPoints, [&](const Modifier& m) { return m.gpClass == gpClass; },
+        [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 Yields tradeRouteModifierYields(const GameState& s, const Rules& r, const Player& owner, bool domestic, bool ally, bool cityState,
                                 bool suzerain, bool toDestination) {
     Yields out{};
-    forEachPlayerModifier(s, r, owner, ModEffect::TradeRouteYield, [&](const Modifier& m) {
-        if (m.toDestination != toDestination) return;
-        const bool hit = m.scope == "ALL" || (m.scope == "DOMESTIC" && domestic) || (m.scope == "INTERNATIONAL" && !domestic) ||
-                         (m.scope == "ALLY" && ally) || (m.scope == "CITY_STATE" && cityState) || (m.scope == "SUZERAIN" && suzerain);
-        if (hit) out[static_cast<size_t>(m.yield)] += m.amount;
-    });
+    auto forRoute = [&](const Modifier& m) {
+        return m.toDestination == toDestination &&
+               (m.scope == "ALL" || (m.scope == "DOMESTIC" && domestic) || (m.scope == "INTERNATIONAL" && !domestic) || (m.scope == "ALLY" && ally) ||
+                (m.scope == "CITY_STATE" && cityState) || (m.scope == "SUZERAIN" && suzerain));
+    };
+    forEachPlayerModifier(s, r, owner, ModEffect::TradeRouteYield, forRoute, [&](const Modifier& m) { out[static_cast<size_t>(m.yield)] += m.amount; });
     return out;
 }
 
 int districtTourism(const GameState& s, const Rules& r, const Player& player, TypeIndex district) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, ModEffect::DistrictTourism, [&](const Modifier& m) {
-        if (m.district == district) total += m.amount;
-    });
+    forEachPlayerModifier(
+        s, r, player, ModEffect::DistrictTourism, [&](const Modifier& m) { return m.district == district; },
+        [&](const Modifier& m) { total += m.amount; });
     return static_cast<int>(total.toInt());
 }
 
 Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
     Fixed total;
-    forEachPlayerModifier(s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) {
-        if (m.unitClass.empty() || m.unitClass == unitClass) total += m.amount;
-    });
+    forEachPlayerModifier(
+        s, r, player, ModEffect::UnitXpPercent, [&](const Modifier& m) { return m.unitClass.empty() || m.unitClass == unitClass; },
+        [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 

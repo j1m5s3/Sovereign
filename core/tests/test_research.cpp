@@ -792,6 +792,16 @@ TEST(generated_policy_cards_take_effect) {
         const City& c = g->state().cities[0];
         CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_MAN_AT_ARMS")), Fixed::fromInt(50));
         CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_INFANTRY")), Fixed());
+        // Ranged units have one line for the Ancient era and one from the Medieval: each unit gets one of them.
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_ARCHER")), Fixed::fromInt(50));
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_CROSSBOWMAN")), Fixed::fromInt(50));
+    }
+    // Ilkum: +30% toward Builders, not other units.
+    {
+        auto g = with("POLICY_ILKUM", none);
+        const City& c = g->state().cities[0];
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_BUILDER")), Fixed::fromInt(30));
+        CHECK_EQ(sumUnitProductionPercent(g->state(), r, c, r.unit("UNIT_SETTLER")), Fixed());
     }
     // Retainers: +1 Amenity with a garrison.
     {
@@ -821,6 +831,36 @@ TEST(generated_policy_cards_take_effect) {
     {
         auto g = with("POLICY_AFTER_ACTION_REPORTS", none);
         CHECK_EQ(sumUnitXpPercent(g->state(), r, g->state().players[0], "MELEE"), Fixed::fromInt(50));
+    }
+    // Survey: +100% XP for recon units only.
+    {
+        auto g = with("POLICY_SURVEY", none);
+        CHECK_EQ(sumUnitXpPercent(g->state(), r, g->state().players[0], "RECON"), Fixed::fromInt(100));
+        CHECK_EQ(sumUnitXpPercent(g->state(), r, g->state().players[0], "MELEE"), Fixed());
+    }
+    // Invention: Great Engineer points, +2 in a city with a Workshop and +4 for the civ, and none for other classes.
+    {
+        auto g = with("POLICY_INVENTION", [](GameState& s) {
+            std::vector<TypeIndex>& b = s.cities[0].buildings;
+            b.push_back(rules().building("BUILDING_WORKSHOP"));
+            std::sort(b.begin(), b.end());
+        });
+        const TypeIndex engineer = r.greatPersonClass("GREAT_PERSON_CLASS_ENGINEER"), scientist = r.greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
+        const City& c = g->state().cities[0];
+        const Player& p = g->state().players[0];
+        CHECK_EQ(sumCityGreatPersonPoints(g->state(), r, c, engineer), Fixed::fromInt(2));
+        CHECK_EQ(sumCityGreatPersonPoints(g->state(), r, c, scientist), Fixed());
+        CHECK_EQ(sumPlayerGreatPersonPoints(g->state(), r, p, engineer), Fixed::fromInt(4));
+        CHECK_EQ(sumPlayerGreatPersonPoints(g->state(), r, p, scientist), Fixed());
+    }
+    // Wisselbanken: a route to an ally gives +2 Food and +2 Production to its origin, and as much again to its destination.
+    {
+        auto g = with("POLICY_WISSELBANKEN", none);
+        for (const bool toDestination : {false, true}) {
+            const Yields y = tradeRouteModifierYields(g->state(), r, g->state().players[0], false, true, false, false, toDestination);
+            CHECK_EQ(y[static_cast<size_t>(YieldType::Food)], Fixed::fromInt(2));
+            CHECK_EQ(y[static_cast<size_t>(YieldType::Production)], Fixed::fromInt(2));
+        }
     }
 }
 
