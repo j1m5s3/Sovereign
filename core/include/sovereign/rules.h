@@ -1322,6 +1322,14 @@ public:
     // Built when the rules load; call indexModifiers() again after changing `modifiers`.
     const std::vector<uint32_t>& playerModifiers(ModEffect effect) const;
     const std::vector<uint32_t>& cityModifiers(ModEffect effect) const;
+    // The city modifiers of plot yields, each listed once: under the improvement, resource, feature or terrain (in
+    // that order of preference) its subject requirements all need, or as unkeyed when they need none of those. Only a
+    // plot's own lists and the unkeyed one can hold modifiers that apply to it. Built by indexModifiers().
+    struct PlotModifiers {
+        std::vector<uint32_t> unkeyed;
+        std::vector<std::vector<uint32_t>> byImprovement, byResource, byFeature, byTerrain;
+    };
+    const PlotModifiers& plotYieldModifiers() const { return plotYieldMods_; }
     void indexModifiers();
     TypeIndex civ(const std::string& id) const;
     TypeIndex gearType(const std::string& id) const;
@@ -1373,6 +1381,7 @@ private:
     const Global* findGlobal(std::string_view name) const;
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
+    PlotModifiers plotYieldMods_;
 };
 
 SOV_API uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);

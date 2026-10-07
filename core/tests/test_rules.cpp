@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -91,6 +92,54 @@ TEST(rules_find_every_named_constant) {
     CHECK(j["globals"].size() > 400u);
     CHECK_EQ(missing, 0);
     CHECK_EQ(wrong, 0);
+}
+
+// Each plot yield modifier is listed once in the plot index, and one listed under a plot property needs it.
+TEST(rules_index_plot_yield_modifiers_by_what_they_need) {
+    auto misplaced = [](const Rules& r) {
+        const Rules::PlotModifiers& mods = r.plotYieldModifiers();
+        int wrong = 0;
+        std::vector<int> listed(r.modifiers.size(), 0);
+        for (uint32_t i : mods.unkeyed) ++listed[i];
+        auto check = [&](const std::vector<std::vector<uint32_t>>& by, ReqType type) {
+            for (size_t k = 0; k < by.size(); ++k) {
+                for (uint32_t i : by[k]) {
+                    ++listed[i];
+                    const RequirementSet& reqs = r.modifiers[i].subjectReqs;
+                    const bool needs = !reqs.any && std::any_of(reqs.reqs.begin(), reqs.reqs.end(), [&](const Requirement& q) {
+                        return q.type == type && !q.negate && q.ref == static_cast<TypeIndex>(k);
+                    });
+                    wrong += needs ? 0 : 1;
+                }
+            }
+        };
+        check(mods.byImprovement, ReqType::PlotHasImprovement);
+        check(mods.byResource, ReqType::PlotHasResource);
+        check(mods.byFeature, ReqType::PlotHasFeature);
+        check(mods.byTerrain, ReqType::PlotHasTerrain);
+        for (size_t i = 0; i < r.modifiers.size(); ++i) {
+            const bool plotYield = r.modifiers[i].effect == ModEffect::PlotYield && r.modifiers[i].collection != ModCollection::Player;
+            wrong += listed[i] == (plotYield ? 1 : 0) ? 0 : 1;
+        }
+        return wrong;
+    };
+    const Rules& r = rules();
+    CHECK_EQ(misplaced(r), 0);
+    CHECK(r.plotYieldModifiers().unkeyed.size() < r.cityModifiers(ModEffect::PlotYield).size() / 4);  // most are keyed
+    // An any-of set, or a requirement that the plot lacks something, names nothing the plot must have: both
+    // stay unkeyed.
+    Rules again = r;
+    for (const bool anyOf : {true, false}) {
+        Modifier m;
+        m.collection = ModCollection::OwnerCityPlots;
+        m.effect = ModEffect::PlotYield;
+        m.subjectReqs.any = anyOf;
+        m.subjectReqs.reqs = {{ReqType::PlotHasFeature, 0, 0, !anyOf}, {ReqType::PlotHasTerrain, 0, 0, !anyOf}};
+        again.modifiers.push_back(m);
+    }
+    again.indexModifiers();
+    CHECK_EQ(misplaced(again), 0);
+    CHECK_EQ(again.plotYieldModifiers().unkeyed.size(), r.plotYieldModifiers().unkeyed.size() + 2);
 }
 
 TEST(rules_mod_layers_override_by_id) {

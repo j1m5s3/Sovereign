@@ -2488,6 +2488,30 @@ void Rules::indexModifiers() {
         if (byEffect.size() <= e) byEffect.resize(e + 1);
         byEffect[e].push_back(static_cast<uint32_t>(i));
     }
+    plotYieldMods_ = PlotModifiers{};
+    plotYieldMods_.byImprovement.resize(improvements.size());
+    plotYieldMods_.byResource.resize(resources.size());
+    plotYieldMods_.byFeature.resize(features.size());
+    plotYieldMods_.byTerrain.resize(terrains.size());
+    for (uint32_t i : cityModifiers(ModEffect::PlotYield)) {
+        const RequirementSet& reqs = modifiers[i].subjectReqs;
+        std::vector<uint32_t>* list = &plotYieldMods_.unkeyed;
+        // A requirement of an all-of set, not negated, naming one plot property: the modifier needs it to apply.
+        auto keyBy = [&](ReqType type, std::vector<std::vector<uint32_t>>& by) {
+            if (list != &plotYieldMods_.unkeyed || reqs.any) return;
+            for (const Requirement& q : reqs.reqs) {
+                if (q.type == type && !q.negate && q.ref >= 0 && static_cast<size_t>(q.ref) < by.size()) {
+                    list = &by[static_cast<size_t>(q.ref)];
+                    return;
+                }
+            }
+        };
+        keyBy(ReqType::PlotHasImprovement, plotYieldMods_.byImprovement);
+        keyBy(ReqType::PlotHasResource, plotYieldMods_.byResource);
+        keyBy(ReqType::PlotHasFeature, plotYieldMods_.byFeature);
+        keyBy(ReqType::PlotHasTerrain, plotYieldMods_.byTerrain);
+        list->push_back(i);
+    }
 }
 TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
 TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id); }
