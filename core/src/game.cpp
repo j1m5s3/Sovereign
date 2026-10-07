@@ -250,6 +250,10 @@ Visibility Game::visibility(PlayerId player, Hex h) const {
 // ---------------------------------------------------------------- validation
 
 CommandError Game::validate(const Command& c) const {
+    return validate(c, nullptr);
+}
+
+CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePath) const {
     if (c.player < 0 || static_cast<size_t>(c.player) >= state_.players.size()) return CommandError::BadPlayer;
     if (!state_.players[static_cast<size_t>(c.player)].alive) return CommandError::BadPlayer;
     // A pending live battle stops the world until it is settled, whoever's turn it is (leader doc §9).
@@ -410,7 +414,10 @@ CommandError Game::validate(const Command& c) const {
             if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
-            return findPath(u->id, *t, c.arg == 1) ? CommandError::Ok : CommandError::NoPath;
+            std::optional<std::vector<PathStep>> path = findPath(u->id, *t, c.arg == 1);
+            if (!path) return CommandError::NoPath;
+            if (movePath) *movePath = CheckedPath{u->id, std::move(*path)};
+            return CommandError::Ok;
         }
         case CommandType::FoundCity: {
             if (!typeOf(*rules_, *u).foundCity) return CommandError::NotASettler;
@@ -709,7 +716,12 @@ void Game::advanceUnit(UnitId id) {
             u->moveTarget.reset();
             return;
         }
-        auto path = findPath(id, *u->moveTarget, u->moveOverland);
+        // A move just checked by submit takes the path its check found for this unit: the unit's orders and activity,
+        // all that changed since, do not enter the search.
+        std::optional<std::vector<PathStep>> path;
+        if (checkedPath_ && checkedPath_->unit == id) path = std::move(checkedPath_->steps);
+        else path = findPath(id, *u->moveTarget, u->moveOverland);
+        checkedPath_.reset();
         if (!path || path->size() < 2) {
             u->moveTarget.reset();
             return;
@@ -914,10 +926,13 @@ bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
 // ------------------------------------------------------------------ applying
 
 CommandError Game::submit(const Command& c) {
-    CommandError e = validate(c);
+    std::optional<CheckedPath> movePath;
+    CommandError e = validate(c, &movePath);
     if (e != CommandError::Ok) return e;
     log_.push_back(c);
+    checkedPath_ = std::move(movePath);  // a move's first step sees what the check saw
     apply(c);
+    checkedPath_.reset();
     spawnCaptures();
     checkAirBases();
     updateBoosts(c.player);
