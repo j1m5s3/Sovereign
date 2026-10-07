@@ -59,6 +59,40 @@ GameState railState(bool gap) {
     sovtest::addUnit(s, "UNIT_BUILDER", 0, {9, 6});
     return s;
 }
+
+// Two landmasses, columns 0-10 and 12-23, with sea in column 11. The capitals of players 0 and 1 stand on the
+// first; player 2 is a city-state. Everyone has seen the first landmass and the sea, nobody the second.
+GameState continentState() {
+    GameState s = flatState(24, 14, 3);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    s.players[2].cityState = 0;
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const int x = s.grid.at(i).x;
+        Plot& plot = s.plots[static_cast<size_t>(i)];
+        if (x == 11) plot.terrain = rules().terrain("TERRAIN_COAST");
+        plot.continent = static_cast<int16_t>(x < 11 ? 0 : x > 11 ? 1 : -1);
+        if (x > 11) {
+            for (Player& p : s.players) p.visibility[static_cast<size_t>(i)] = static_cast<uint8_t>(Visibility::Unrevealed);
+        }
+    }
+    addCity(s, 0, {3, 4}, true, 1);
+    addCity(s, 1, {3, 10}, true, 1);
+    s.majorsAtStart = 2;
+    return s;
+}
+
+// Player 0's era score after a Warrior walks from (8,5) to the shore at (10,5) and sees the second landmass.
+int eraScoreAfterLandfall(GameState s, bool* moment) {
+    const UnitId w = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int before = g->state().players[0].eraScore;
+    if (g->submit(Command::move(0, w, {10, 5})) != CommandError::Ok || !(g->state().unit(w)->pos == Hex{10, 5})) return -100;
+    *moment = sovtest::hasMoment(*g, 0, "MOMENT_FIRST_DISCOVERY_OF_A_NEW_CONTINENT");
+    return g->state().players[0].eraScore - before;
+}
 }  // namespace
 
 TEST(era_rules_data) {
@@ -280,4 +314,89 @@ TEST(the_first_railroad_between_two_cities_is_a_moment) {
     CHECK(!sovtest::hasMoment(*h, 0, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
     REQUIRE(h->submit(Command::repairImprovement(0, h->state().units[1].id)) == CommandError::Ok);
     CHECK(sovtest::hasMoment(*h, 0, "MOMENT_FIRST_RAILROAD_CONNECTION_IN_WORLD"));
+}
+
+// A new continent (09: historic moments; Sovereign: every landmass is one): the world's first civ to see it
+// earns First Discovery of a New Continent; Hic Sunt Dracones adds +3 for each one a civ sees.
+TEST(the_first_civ_to_see_a_new_continent_earns_a_moment) {
+    const int moment = score(rules(), "MOMENT_FIRST_DISCOVERY_OF_A_NEW_CONTINENT");
+    bool earned = false;
+    CHECK_EQ(eraScoreAfterLandfall(continentState(), &earned), moment);
+    CHECK(earned);
+    // With Hic Sunt Dracones in a Normal Age: +3 more.
+    GameState s = continentState();
+    s.players[0].dedications = {rules().dedication("DEDICATION_HIC_SUNT_DRACONES")};
+    CHECK_EQ(eraScoreAfterLandfall(s, &earned), moment + 3);
+    // A city-state that has seen it first does not count...
+    GameState t = continentState();
+    t.players[2].visibility[static_cast<size_t>(t.grid.index({20, 2}))] = static_cast<uint8_t>(Visibility::Revealed);
+    CHECK_EQ(eraScoreAfterLandfall(t, &earned), moment);
+    CHECK(earned);
+    // ...but another civ does: then only the dedication scores.
+    GameState u = continentState();
+    u.players[0].dedications = {rules().dedication("DEDICATION_HIC_SUNT_DRACONES")};
+    u.players[1].visibility[static_cast<size_t>(u.grid.index({20, 2}))] = static_cast<uint8_t>(Visibility::Revealed);
+    CHECK_EQ(eraScoreAfterLandfall(u, &earned), 3);
+    CHECK(!earned);
+    // A landmass the civ has seen before is nothing new.
+    GameState v = continentState();
+    v.players[0].dedications = {rules().dedication("DEDICATION_HIC_SUNT_DRACONES")};
+    v.players[0].visibility[static_cast<size_t>(v.grid.index({20, 2}))] = static_cast<uint8_t>(Visibility::Revealed);
+    CHECK_EQ(eraScoreAfterLandfall(v, &earned), 0);
+    CHECK(!earned);
+    // Nor does anything count before the civ has a capital.
+    GameState w = continentState();
+    w.cities[0].capital = false;
+    CHECK_EQ(eraScoreAfterLandfall(w, &earned), 0);
+    CHECK(!earned);
+}
+
+// Hic Sunt Dracones in a Golden Age (09): cities founded off the capital's continent start with +3 Population,
+// and cities there gain +2 Loyalty a turn.
+TEST(hic_sunt_dracones_in_a_golden_age_favours_cities_overseas) {
+    // Player 0 in the given age, with or without the dedication, and with a town overseas listed before its capital.
+    const auto state = [](bool golden, bool dedicated) {
+        GameState s = continentState();
+        s.players[0].age = golden ? Age::Golden : Age::Normal;
+        if (dedicated) s.players[0].dedications = {rules().dedication("DEDICATION_HIC_SUNT_DRACONES")};
+        addCity(s, 0, {20, 10}, false, 1);
+        std::rotate(s.cities.begin(), s.cities.end() - 1, s.cities.end());
+        return s;
+    };
+    const auto founded = [&](bool golden, bool dedicated, Hex at) {
+        GameState s = state(golden, dedicated);
+        const UnitId settler = sovtest::addUnit(s, "UNIT_SETTLER", 0, at);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        if (g->submit(Command::foundCity(0, settler)) != CommandError::Ok) return -1;
+        return g->state().cities.back().population;
+    };
+    const int overseas = founded(false, true, {17, 6});
+    REQUIRE(overseas > 0);
+    CHECK_EQ(founded(true, true, {17, 6}), overseas + 3);
+    CHECK_EQ(founded(true, false, {17, 6}), overseas);  // no dedication
+    CHECK_EQ(founded(true, true, {8, 6}), founded(false, true, {8, 6}));  // the capital's continent
+
+    const auto loyalty = [&](bool golden, bool dedicated, Hex at) {
+        GameState s = state(golden, dedicated);
+        const CityId c = addCity(s, 0, at, false, 2);
+        return Game::fromScenario(rules(), std::move(s))->loyaltyPerTurn(c);
+    };
+    CHECK(loyalty(true, true, {17, 6}) == loyalty(true, false, {17, 6}) + Fixed::fromInt(2));
+    CHECK(loyalty(false, true, {17, 6}) == loyalty(false, false, {17, 6}));  // a Normal Age
+    CHECK(loyalty(true, true, {8, 6}) == loyalty(true, false, {8, 6}));       // the capital's continent
+}
+
+// City of Awe (09: historic moments; Sovereign reading): a city founded within 2 tiles of a natural wonder.
+TEST(a_city_founded_beside_a_natural_wonder_is_a_city_of_awe) {
+    const auto awe = [](Hex at, const char* feature) {
+        GameState s = continentState();
+        s.plot(at).feature = rules().feature(feature);
+        if (rules().features[static_cast<size_t>(s.plot(at).feature)].naturalWonder) s.plot(at).terrain = rules().terrain("TERRAIN_DESERT");
+        const UnitId settler = sovtest::addUnit(s, "UNIT_SETTLER", 0, {8, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->submit(Command::foundCity(0, settler)) == CommandError::Ok && sovtest::hasMoment(*g, 0, "MOMENT_CITY_OF_AWE");
+    };
+    CHECK(awe({10, 6}, "FEATURE_ULURU"));
+    CHECK(!awe({8, 9}, "FEATURE_ULURU"));   // 3 tiles away
+    CHECK(!awe({10, 6}, "FEATURE_FOREST"));  // not a natural wonder
 }
