@@ -1111,6 +1111,7 @@ struct CivAbility {
     int foreignReligionAmenity = 0;     // in its cities following another religion
     int nearFollowingCityStrength = 0, nearFollowingCityRange = 0;
     int extraBuilderCharges = 0;
+    bool builderRoads = false;          // its Builders lay roads by hand for no charge
     Yields peaceYieldPercent{};         // while at peace with every major civ
     int wonderCulture = 0;              // per wonder in the city
     TypeIndex faithPurchaseDistrict = kNone;  // that district's buildings can be bought with Faith
