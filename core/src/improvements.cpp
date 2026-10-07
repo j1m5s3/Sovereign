@@ -601,9 +601,9 @@ void Game::applyIndustry(const Command& c) {
 bool Game::hasMonopoly(PlayerId player, TypeIndex luxury) const {
     if (!state_.setup.monopolies || luxury == kNone) return false;
     int mine = 0, all = 0;
-    for (size_t i = 0; i < state_.plots.size(); ++i) {
-        const Plot& p = state_.plots[i];
-        if (p.resource != luxury || p.owner == kNoPlayer || !resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+    for (const int32_t i : resourcePlots_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
+        if (p.resource != luxury || p.owner == kNoPlayer || !resourceImproved(state_.grid.at(i))) continue;
         ++all;
         mine += p.owner == player ? 1 : 0;
     }
@@ -613,10 +613,10 @@ bool Game::hasMonopoly(PlayerId player, TypeIndex luxury) const {
 int Game::monopolySources(PlayerId player) const {
     if (!state_.setup.monopolies) return 0;
     std::vector<int> mine(rules_->resources.size(), 0), all(rules_->resources.size(), 0);
-    for (size_t i = 0; i < state_.plots.size(); ++i) {
-        const Plot& p = state_.plots[i];
+    for (const int32_t i : resourcePlots_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.resource == kNone || p.owner == kNoPlayer || rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Luxury) continue;
-        if (!resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+        if (!resourceImproved(state_.grid.at(i))) continue;
         ++all[static_cast<size_t>(p.resource)];
         mine[static_cast<size_t>(p.resource)] += p.owner == player ? 1 : 0;
     }
@@ -634,12 +634,12 @@ void Game::accumulateStrategics(PlayerId pid) {
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id)) holders.push_back(cs.id);
     }
-    const Plot* const first = state_.plots.data();
-    for (const Plot& p : state_.plots) {  // a range loop, as in improvedPlots
+    for (const int32_t i : resourcePlots_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
         const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
         if (r.accumulation <= 0) continue;
-        const Hex h = state_.grid.at(static_cast<int>(&p - first));
+        const Hex h = state_.grid.at(i);
         if (!resourceVisible(pid, h) || !resourceImproved(h)) continue;
         const City* home = p.city == kNoCity ? nullptr : state_.city(p.city);
         int extra = home && cityGovernorHas(*home, "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS") ? 1 : 0;  // Victor
@@ -663,9 +663,10 @@ void Game::accumulateStrategics(PlayerId pid) {
             const ResourceType& rt = rules_->resources[r];
             if (rt.cls != ResourceClass::Strategic || !hasUnlocked(pid, rt.reveal)) continue;
             bool improved = false;
-            for (size_t i = 0; i < state_.plots.size() && !improved; ++i) {
-                const Plot& p = state_.plots[i];
-                improved = p.owner == pid && p.resource == static_cast<TypeIndex>(r) && resourceImproved(state_.grid.at(static_cast<int>(i)));
+            for (size_t j = 0; j < resourcePlots_.size() && !improved; ++j) {
+                const int32_t i = resourcePlots_[j];
+                const Plot& p = state_.plots[static_cast<size_t>(i)];
+                improved = p.owner == pid && p.resource == static_cast<TypeIndex>(r) && resourceImproved(state_.grid.at(i));
             }
             if (!improved) player.stockpile[r] += 2;
         }
