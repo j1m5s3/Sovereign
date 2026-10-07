@@ -1229,6 +1229,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 else if (kind == "ANY_DISTRICT") adj.kind = DistrictAdjacencyKind::AnyDistrict;
                 else if (kind == "STRATEGIC_RESOURCE") adj.kind = DistrictAdjacencyKind::StrategicResource;
                 else if (kind == "SEA_RESOURCE") adj.kind = DistrictAdjacencyKind::SeaResource;
+                else if (kind == "WONDER") adj.kind = DistrictAdjacencyKind::Wonder;
+                else if (kind == "NATURAL_WONDER") adj.kind = DistrictAdjacencyKind::NaturalWonder;
                 else if (kind == "DISTRICT") {
                     adj.kind = DistrictAdjacencyKind::District;
                     adj.ref = district(ref);

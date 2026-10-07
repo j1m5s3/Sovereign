@@ -15,6 +15,16 @@ int speedPercent(const GameState& s, const Rules& r) {
     return r.speeds[static_cast<size_t>(r.speed(s.setup.speed))].costPercent;
 }
 
+// A finished world wonder stands on the plot (one still being built does not count yet).
+bool finishedWonderAt(const GameState& s, Hex h) {
+    for (const City& c : s.cities) {
+        for (const CityWonder& w : c.wonders) {
+            if (w.pos == h && c.has(w.building)) return true;
+        }
+    }
+    return false;
+}
+
 bool onRiver(const GameState& s, Hex h) {
     for (int d = 0; d < kNumDirs; ++d) {
         if (hasRiver(s, h, static_cast<Dir>(d))) return true;
@@ -291,6 +301,10 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
                     case DistrictAdjacencyKind::StrategicResource:
                         hit = resourceVisible(player, n) &&
                               rules_->resources[static_cast<size_t>(np.resource)].cls == ResourceClass::Strategic;
+                        break;
+                    case DistrictAdjacencyKind::Wonder: hit = finishedWonderAt(state_, n); break;
+                    case DistrictAdjacencyKind::NaturalWonder:
+                        hit = np.feature != kNone && rules_->features[static_cast<size_t>(np.feature)].naturalWonder;
                         break;
                     case DistrictAdjacencyKind::River: break;
                 }

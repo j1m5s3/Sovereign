@@ -54,6 +54,12 @@
     },
     {
      "yield": "SCIENCE",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_GREAT_BARRIER_REEF"
+    },
+    {
+     "yield": "SCIENCE",
      "amount": 1,
      "kind": "DISTRICT",
      "ref": "DISTRICT_GOVERNMENT_PLAZA"
@@ -69,6 +75,12 @@
      "amount": 2,
      "kind": "FEATURE",
      "ref": "FEATURE_REEF"
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_PAMUKKALE"
     }
    ],
    "greatPersonPoints": {
@@ -103,6 +115,11 @@
    "adjacency": [
     {
      "yield": "FAITH",
+     "amount": 2,
+     "kind": "NATURAL_WONDER"
+    },
+    {
+     "yield": "FAITH",
      "amount": 1,
      "kind": "MOUNTAIN"
     },
@@ -124,6 +141,12 @@
      "amount": 1,
      "kind": "DISTRICT",
      "ref": "DISTRICT_GOVERNMENT_PLAZA"
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "kind": "FEATURE",
+     "ref": "FEATURE_PAMUKKALE"
     }
    ],
    "greatPersonPoints": {
@@ -178,6 +201,12 @@
      "amount": 1,
      "kind": "DISTRICT",
      "ref": "DISTRICT_GOVERNMENT_PLAZA"
+    },
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_PAMUKKALE"
     }
    ],
    "greatPersonPoints": {
@@ -242,6 +271,11 @@
    "adjacency": [
     {
      "yield": "CULTURE",
+     "amount": 2,
+     "kind": "WONDER"
+    },
+    {
+     "yield": "CULTURE",
      "amount": 1,
      "tilesRequired": 2,
      "kind": "ANY_DISTRICT"
@@ -263,6 +297,12 @@
      "amount": 2,
      "kind": "DISTRICT",
      "ref": "DISTRICT_WATER_PARK"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 2,
+     "kind": "FEATURE",
+     "ref": "FEATURE_PAMUKKALE"
     }
    ],
    "greatPersonPoints": {
