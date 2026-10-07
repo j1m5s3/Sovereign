@@ -73,6 +73,30 @@ TEST(an_established_governor_steadies_and_improves_its_city) {
     CHECK(g->cityReport(capital).yields[static_cast<size_t>(YieldType::Science)] > science + Fixed::fromInt(5));
 }
 
+// Moksha's Bishop (08): +2 Faith for each finished district of the city he serves, by district and not by citizen.
+TEST(moksha_brings_faith_for_each_finished_district) {
+    const auto faith = [](GameState t) {
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->cityReport(g->state().cities[0].id).yields[static_cast<size_t>(YieldType::Faith)];
+    };
+    GameState s = govState();
+    CityDistrict campus;
+    campus.type = rules().district("DISTRICT_CAMPUS");
+    campus.pos = {5, 7};
+    campus.complete = true;
+    s.cities[0].districts.push_back(campus);
+    int done = 0;
+    for (const CityDistrict& d : s.cities[0].districts) done += d.complete ? 1 : 0;
+    REQUIRE(done > 0 && done != s.cities[0].population);
+    GameState with = s;
+    Governor moksha;
+    moksha.type = gov("GOVERNOR_MOKSHA");
+    moksha.city = with.cities[0].id;
+    moksha.promotions = {promo("GOVERNOR_PROMOTION_BISHOP")};
+    with.players[0].governors.push_back(moksha);
+    CHECK_EQ(faith(with), faith(s) + Fixed::fromInt(2 * done));
+}
+
 TEST(victor_establishes_faster_and_defends) {
     auto g = Game::fromScenario(rules(), govState());
     const TypeIndex victor = gov("GOVERNOR_VICTOR");
