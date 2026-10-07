@@ -790,6 +790,7 @@ int unlockValue(const View& v, Unlock node) {
     }
     for (const BuildingType& b : r.buildings) {
         if (is(b.unlock)) value += 3 + worth(v, b.yields) / 2 + b.outerDefenseHp / 50;
+        if (is(b.unlock) && b.yields[static_cast<size_t>(YieldType::Science)] > Fixed()) value += 8;  // science compounds
     }
     for (const DistrictType& d : r.districts) {
         if (is(d.unlock)) value += 6 * districtPercent(v, d) / 100;
@@ -1621,6 +1622,8 @@ void production(View& v) {
                 case ProductionKind::Building: {
                     const BuildingType& b = v.r.buildings[at(it.type)];
                     value = 30 + worth(v, b.yields) * 25;
+                    // Science cities: a city of 4 or more builds up its Campus (pace benchmark: +22% science by turn 200).
+                    if (c.population >= 4 && b.districtType != kNone && v.r.districts[at(b.districtType)].id == "DISTRICT_CAMPUS") value += 100;
                     // Upkeep the treasury cannot carry (07): it waits while gold per turn would fall below zero, unless it pays its own way.
                     if (b.maintenance > 0 && goldPerTurn < Fixed::fromInt(b.maintenance) && b.yields[static_cast<size_t>(YieldType::Gold)] < Fixed::fromInt(b.maintenance))
                         value /= 4;
@@ -1682,6 +1685,7 @@ void production(View& v) {
                     } else {
                         where = districtSpot(v, cid, it.type);
                         value = 100 + 40 * gpp + worth(v, g.districtAdjacency(v.me, it.type, where)) * 25;
+                        if (c.population >= 4 && d.id == "DISTRICT_CAMPUS") value += 150;  // science cities
                         // The first Holy Site while religions remain to be founded (06): the race for a Prophet.
                         if (d.id == "DISTRICT_HOLY_SITE" && s.players[at(v.me)].religion < 0 &&
                             static_cast<int>(s.religions.size()) < g.maxReligions() &&
