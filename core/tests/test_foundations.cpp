@@ -171,8 +171,8 @@ TEST(hex_between_walks_the_inside_of_the_line) {
     CHECK_EQ(seen, 3);
 }
 
-// neighbor(), within(), forEachWithin() and distance() against their definitions in axial coordinates, on and off
-// the map, with and without wrapping, and on maps narrower than the areas asked for.
+// neighbor(), within(), forEachWithin(), forEachWithinStep() and distance() against their definitions in axial
+// coordinates, on and off the map, with and without wrapping, and on maps narrower than the areas asked for.
 TEST(hex_grid_matches_its_axial_definitions) {
     const Axial steps[kNumDirs] = {{1, -1}, {1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}};
     int differ = 0;
@@ -198,6 +198,22 @@ TEST(hex_grid_matches_its_axial_definitions) {
                     std::vector<Hex> walked;
                     g.forEachWithin(h, radius, [&](Hex n) { walked.push_back(n); });
                     if (walked != want) ++differ;
+                    // With the step to the plot's copy nearest the center: the plot itself on a tie, else the copy a
+                    // map's width west before the one east.
+                    std::vector<Hex> stepped;
+                    g.forEachWithinStep(h, radius, [&](Hex n, Axial step) {
+                        stepped.push_back(n);
+                        const Axial plain = toAxial(n);
+                        Axial nearest = plain;
+                        if (g.wrapX()) {
+                            for (const int32_t shift : {-g.width(), g.width()}) {
+                                const Axial copy{plain.q + shift, plain.r};
+                                if (axialDistance(a, copy) < axialDistance(a, nearest)) nearest = copy;
+                            }
+                        }
+                        if (step.q != nearest.q - a.q || step.r != nearest.r - a.r) ++differ;
+                    });
+                    if (stepped != want) ++differ;
                 }
                 for (int32_t by = 0; by < g.height(); ++by)
                     for (int32_t bx = 0; bx < g.width(); ++bx) {
