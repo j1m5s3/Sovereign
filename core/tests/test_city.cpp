@@ -272,6 +272,29 @@ TEST(city_modifier_from_building_reaches_plots) {
     CHECK_EQ(g->plotYields({5, 6}, after)[F], Fixed::fromInt(2));  // plain grassland unaffected
 }
 
+// A building's plot modifiers reach the city's plots of the feature or terrain they name, and no others:
+// Chichen Itza on rainforest, the Lighthouse on Coast (03).
+TEST(city_modifiers_reach_plots_by_feature_and_terrain) {
+    GameState s = flatState(20, 14, 1);
+    s.plot({7, 6}).feature = rules().feature("FEATURE_JUNGLE");
+    s.plot({5, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    auto sc = capitalScenario(std::move(s));
+    GameState st = sc.game->state();
+    const City& before = *st.city(sc.city);
+    const Yields jungle = sc.game->plotYields({7, 6}, before), coast = sc.game->plotYields({5, 6}, before);
+    const Yields grass = sc.game->plotYields({6, 7}, before);
+    for (const char* b : {"BUILDING_CHICHEN_ITZA", "BUILDING_LIGHTHOUSE"}) st.cities[0].buildings.push_back(rules().building(b));
+    std::sort(st.cities[0].buildings.begin(), st.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), st);
+    const City& after = *g->state().city(sc.city);
+    CHECK_EQ(g->plotYields({7, 6}, after)[C], jungle[C] + Fixed::fromInt(2));
+    CHECK_EQ(g->plotYields({7, 6}, after)[P], jungle[P] + Fixed::fromInt(1));
+    CHECK_EQ(g->plotYields({7, 6}, after)[F], jungle[F]);
+    CHECK_EQ(g->plotYields({5, 6}, after)[F], coast[F] + Fixed::fromInt(1));
+    CHECK_EQ(g->plotYields({5, 6}, after)[C], coast[C]);
+    CHECK(g->plotYields({6, 7}, after) == grass);
+}
+
 TEST(city_bankruptcy_disbands_units) {
     auto sc = capitalScenario();
     GameState s = sc.game->state();

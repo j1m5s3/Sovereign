@@ -1,6 +1,7 @@
 #include "sovereign/modifiers.h"
 
 #include <algorithm>
+#include <initializer_list>
 
 #include "sovereign/mapgen.h"
 
@@ -228,27 +229,37 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
     return nullptr;
 }
 
-// Calls fn for each city modifier with this effect that reaches the city. `pre` passes over modifiers on what they
-// say alone (a yield, a unit class) before the costlier look for the city holding the modifier. A plot's own
-// requirements (its terrain, feature, improvement...) are cheap and go before that look too; a city's can scan the
-// map, so they go after it.
+// Calls fn for each city modifier in these lists (a null list is skipped), list by list, that reaches the city.
+// `pre` passes over modifiers on what they say alone (a yield, a unit class) before the costlier look for the city
+// holding the modifier. A plot's own requirements (its terrain, feature, improvement...) are cheap and go before
+// that look too; a city's can scan the map, so they go after it.
 template <typename Pre, typename Fn>
-void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
-                     Pre&& pre, Fn&& fn) {
+void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists, const GameState& s, const Rules& r, const City& city,
+                       bool plotEffect, const Plot* plot, Pre&& pre, Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     int majority = kUnknownReligion;
     const ReqContext subjectCtx{&s, &r, &owner, &city, plot};
-    for (uint32_t i : r.cityModifiers(effect)) {
-        const Modifier& m = r.modifiers[i];
-        if (isPlotCollection(m.collection) != plotEffect || !pre(m)) continue;
-        if (plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
-        const City* holder = holderFor(m, s, r, city, owner, majority);
-        if (!holder) continue;
-        ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
-        if (!testRequirements(m.ownerReqs, ownerCtx)) continue;
-        if (!plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
-        fn(m);
+    for (const std::vector<uint32_t>* list : lists) {
+        if (!list) continue;
+        for (uint32_t i : *list) {
+            const Modifier& m = r.modifiers[i];
+            if (isPlotCollection(m.collection) != plotEffect || !pre(m)) continue;
+            if (plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
+            const City* holder = holderFor(m, s, r, city, owner, majority);
+            if (!holder) continue;
+            ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
+            if (!testRequirements(m.ownerReqs, ownerCtx)) continue;
+            if (!plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
+            fn(m);
+        }
     }
+}
+
+// forEachApplyingIn over every city modifier with this effect.
+template <typename Pre, typename Fn>
+void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
+                     Pre&& pre, Fn&& fn) {
+    forEachApplyingIn({&r.cityModifiers(effect)}, s, r, city, plotEffect, plot, pre, fn);
 }
 
 // The pre filter that passes every modifier.
@@ -313,9 +324,17 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
 Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot) {
     Yields total{};
     const Plot& p = s.plot(plot);
-    forEachApplying(s, r, city, ModEffect::PlotYield, true, &p, anyModifier, [&](const Modifier& m) {
-        if (static_cast<size_t>(m.yield) < kNumYields) total[static_cast<size_t>(m.yield)] += m.amount;
-    });
+    // Only the modifiers listed under this plot's own improvement, resource, feature and terrain, and the unkeyed
+    // ones, can apply here; the sum does not depend on the order they are added in.
+    const Rules::PlotModifiers& mods = r.plotYieldModifiers();
+    auto under = [](const std::vector<std::vector<uint32_t>>& by, TypeIndex k) {
+        return k >= 0 && static_cast<size_t>(k) < by.size() ? &by[static_cast<size_t>(k)] : nullptr;
+    };
+    forEachApplyingIn({&mods.unkeyed, under(mods.byImprovement, p.improvement), under(mods.byResource, p.resource),
+                       under(mods.byFeature, p.feature), under(mods.byTerrain, p.terrain)},
+                      s, r, city, true, &p, anyModifier, [&](const Modifier& m) {
+                          if (static_cast<size_t>(m.yield) < kNumYields) total[static_cast<size_t>(m.yield)] += m.amount;
+                      });
     return total;
 }
 

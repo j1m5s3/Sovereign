@@ -1322,6 +1322,14 @@ public:
     // Built when the rules load; call indexModifiers() again after changing `modifiers`.
     const std::vector<uint32_t>& playerModifiers(ModEffect effect) const;
     const std::vector<uint32_t>& cityModifiers(ModEffect effect) const;
+    // The city modifiers of plot yields, each listed once: under the improvement, resource, feature or terrain (in
+    // that order of preference) its subject requirements all need, or as unkeyed when they need none of those. Only a
+    // plot's own lists and the unkeyed one can hold modifiers that apply to it. Built by indexModifiers().
+    struct PlotModifiers {
+        std::vector<uint32_t> unkeyed;
+        std::vector<std::vector<uint32_t>> byImprovement, byResource, byFeature, byTerrain;
+    };
+    const PlotModifiers& plotYieldModifiers() const { return plotYieldMods_; }
     void indexModifiers();
     TypeIndex civ(const std::string& id) const;
     TypeIndex gearType(const std::string& id) const;
@@ -1361,17 +1369,19 @@ public:
     static const std::vector<std::string>& fileNames();
 
 private:
-    // The named constants, sorted by the hash of their names: a lookup hashes the name once and compares one name,
-    // where a tree of names compares strings at every level.
+    // The named constants, found through a table of their names' hashes: a lookup hashes the name once and compares
+    // one name, where a tree of names compares strings at every level.
     struct Global {
-        size_t hash;
+        uint64_t hash;
         std::string name;
         Fixed value;
     };
     std::vector<Global> globals_;
+    std::vector<uint32_t> globalSlots_;  // open addressing, a power of two in size and at most half full: 1 + an index in globals_, 0 empty
     const Global* findGlobal(std::string_view name) const;
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
+    PlotModifiers plotYieldMods_;
 };
 
 SOV_API uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);

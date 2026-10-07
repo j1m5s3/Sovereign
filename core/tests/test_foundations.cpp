@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <cstdlib>
+
 #include "helpers.h"
 #include "sovereign/fixed.h"
 #include "sovereign/hex.h"
@@ -143,6 +146,45 @@ TEST(hex_between_walks_the_inside_of_the_line) {
     int seen = 0;
     CHECK(!g.between({2, 3}, {11, 15}, [&](Hex) { return ++seen < 3; }));
     CHECK_EQ(seen, 3);
+}
+
+// neighbor(), within() and distance() against their definitions in axial coordinates, on and off the map, with
+// and without wrapping, and on maps narrower than the areas asked for.
+TEST(hex_grid_matches_its_axial_definitions) {
+    const Axial steps[kNumDirs] = {{1, -1}, {1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}};
+    int differ = 0;
+    for (const HexGrid& g : {HexGrid(12, 9, true), HexGrid(12, 9, false), HexGrid(5, 7, true), HexGrid(5, 7, false)}) {
+        for (int32_t y = -1; y <= g.height(); ++y)
+            for (int32_t x = -1; x <= g.width(); ++x) {
+                const Hex h{x, y};
+                const Axial a = toAxial(h);
+                for (int d = 0; d < kNumDirs; ++d) {
+                    if (g.neighbor(h, static_cast<Dir>(d)) != g.normalize(toOffset({a.q + steps[d].q, a.r + steps[d].r}))) ++differ;
+                }
+                if (!g.valid(h)) continue;
+                for (int radius = 0; radius <= 4; ++radius) {
+                    // Rows north to south, each west to east, each plot once.
+                    std::vector<Hex> want;
+                    for (int dr = -radius; dr <= radius; ++dr)
+                        for (int dq = -radius; dq <= radius; ++dq) {
+                            if (std::abs(dq + dr) > radius) continue;
+                            const std::optional<Hex> n = g.normalize(toOffset({a.q + dq, a.r + dr}));
+                            if (n && std::find(want.begin(), want.end(), *n) == want.end()) want.push_back(*n);
+                        }
+                    if (g.within(h, radius) != want) ++differ;
+                }
+                for (int32_t by = 0; by < g.height(); ++by)
+                    for (int32_t bx = 0; bx < g.width(); ++bx) {
+                        // To the nearest of b and, on a wrapping map, its copies a map's width east and west.
+                        int want = axialDistance(a, toAxial({bx, by}));
+                        if (g.wrapX()) {
+                            for (const int32_t shift : {-g.width(), g.width()}) want = std::min(want, axialDistance(a, toAxial({bx + shift, by})));
+                        }
+                        if (g.distance(h, {bx, by}) != want) ++differ;
+                    }
+            }
+    }
+    CHECK_EQ(differ, 0);
 }
 
 TEST(json_parses_rules_shapes) {

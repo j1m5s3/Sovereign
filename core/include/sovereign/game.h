@@ -731,6 +731,10 @@ private:
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
+    // A unit's sight given its Sight effects' total (unitSight); and its sight with whether it sees through woods
+    // (Sentry, 05), from one look at its abilities.
+    int sightFrom(const Unit& unit, int sightEffects) const;
+    std::pair<int, bool> unitSightAndSentry(const Unit& unit) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
     int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;
@@ -893,6 +897,10 @@ private:
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
+    TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
+    std::vector<TypeIndex> oceanTechs_;       // the techs that open the Ocean (Cartography)
+    std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
+    std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and

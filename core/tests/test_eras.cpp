@@ -155,6 +155,17 @@ TEST(the_world_era_sets_each_civs_age) {
     CHECK(g2->state().players[1].age == Age::Heroic);
 }
 
+// A civ's era is the latest of its techs and civics: a Medieval civic counts as much as a Medieval tech.
+TEST(a_civs_era_is_its_latest_tech_or_civic) {
+    GameState s = eraState();
+    s.players[0].techs.done[at(rules().tech("TECH_SHIPBUILDING"))] = 1;  // Classical
+    s.players[1].techs.done[at(rules().tech("TECH_SHIPBUILDING"))] = 1;
+    s.players[1].civics.done[at(rules().civic("CIVIC_FEUDALISM"))] = 1;  // Medieval
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->playerEra(0), 1);
+    CHECK_EQ(g->playerEra(1), 2);
+}
+
 TEST(wonders_and_holy_cities_bring_tourism) {
     GameState s = eraState();
     s.cities[0].buildings.push_back(rules().building("BUILDING_PYRAMIDS"));

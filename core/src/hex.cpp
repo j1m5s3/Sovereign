@@ -6,14 +6,11 @@
 namespace sov {
 
 namespace {
-constexpr std::array<Axial, 6> kAxialDirs = {{
-    {1, -1},  // NE
-    {1, 0},   // E
-    {0, 1},   // SE
-    {-1, 1},  // SW
-    {-1, 0},  // W
-    {0, -1},  // NW
-}};
+// A step in each direction (NE, E, SE, SW, W, NW) in offset coordinates. The column step depends on the row's
+// parity, odd rows sitting half a hex east: the axial steps (1,-1) (1,0) (0,1) (-1,1) (-1,0) (0,-1) carried
+// through toAxial and toOffset.
+constexpr int8_t kStepX[2][kNumDirs] = {{0, 1, 0, -1, -1, -1}, {1, 1, 1, 0, -1, 0}};
+constexpr int8_t kStepY[kNumDirs] = {-1, 0, 1, 1, 0, -1};
 
 int64_t floorDiv(int64_t a, int64_t b) {
     int64_t q = a / b;
@@ -51,9 +48,8 @@ std::optional<Hex> HexGrid::normalize(Hex h) const {
 }
 
 std::optional<Hex> HexGrid::neighbor(Hex h, Dir d) const {
-    Axial a = toAxial(h);
-    const Axial& o = kAxialDirs[static_cast<int>(d)];
-    return normalize(toOffset(Axial{a.q + o.q, a.r + o.r}));
+    const int i = static_cast<int>(d);
+    return normalize(Hex{h.x + kStepX[h.y & 1][i], h.y + kStepY[i]});
 }
 
 std::optional<Dir> HexGrid::directionTo(Hex a, Hex b) const {
@@ -81,7 +77,11 @@ Axial HexGrid::nearestAxial(Hex a, Hex b) const {
 }
 
 int HexGrid::distance(Hex a, Hex b) const {
-    return axialDistance(toAxial(a), nearestAxial(a, b));
+    // The nearest of b and, on a wrapping map, its copies a map's width to the east and west (nearestAxial's choice).
+    const Axial aa = toAxial(a), bb = toAxial(b);
+    const int d = axialDistance(aa, bb);
+    if (!wrap_) return d;
+    return std::min({d, axialDistance(aa, Axial{bb.q - w_, bb.r}), axialDistance(aa, Axial{bb.q + w_, bb.r})});
 }
 
 std::vector<Hex> HexGrid::within(Hex center, int radius) const {
@@ -89,15 +89,22 @@ std::vector<Hex> HexGrid::within(Hex center, int radius) const {
     out.reserve(static_cast<size_t>(std::min<int64_t>(3 * static_cast<int64_t>(radius) * (radius + 1) + 1, size())));
     // A row spans 2 * radius + 1 hexes, so only a map narrower than that can wrap onto itself.
     const bool mayRepeat = wrap_ && w_ <= 2 * static_cast<int64_t>(radius);
-    Axial c = toAxial(center);
+    const Axial c = toAxial(center);
     for (int dr = -radius; dr <= radius; ++dr) {
-        int qMin = std::max(-radius, -dr - radius);
-        int qMax = std::min(radius, -dr + radius);
-        for (int dq = qMin; dq <= qMax; ++dq) {
-            auto h = normalize(toOffset(Axial{c.q + dq, c.r + dr}));
-            if (!h) continue;
-            if (mayRepeat && std::find(out.begin(), out.end(), *h) != out.end()) continue;
-            out.push_back(*h);
+        const int32_t y = c.r + dr;
+        if (y < 0 || y >= h_) continue;  // off the top or bottom of the map
+        const int qMin = std::max(-radius, -dr - radius);
+        const int qMax = std::min(radius, -dr + radius);
+        // Along a row the axial q and the offset column rise together, one plot a step.
+        const int32_t first = toOffset(Axial{c.q + qMin, y}).x;
+        for (int32_t x = first; x <= first + (qMax - qMin); ++x) {
+            Hex h{x, y};
+            if (x < 0 || x >= w_) {
+                if (!wrap_) continue;
+                h.x = static_cast<int32_t>(((x % w_) + w_) % w_);
+            }
+            if (mayRepeat && std::find(out.begin(), out.end(), h) != out.end()) continue;
+            out.push_back(h);
         }
     }
     return out;

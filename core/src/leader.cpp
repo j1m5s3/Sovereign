@@ -415,14 +415,15 @@ void Game::rebellion(City& city) {
 
 int Game::playerEra(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
-    int era = 0;
-    for (size_t i = 0; i < rules_->techs.size(); ++i) {
-        if (p.techs.has(static_cast<TypeIndex>(i))) era = std::max(era, static_cast<int>(rules_->techs[i].era));
-    }
-    for (size_t i = 0; i < rules_->civics.size(); ++i) {
-        if (p.civics.has(static_cast<TypeIndex>(i))) era = std::max(era, static_cast<int>(rules_->civics[i].era));
-    }
-    return era;
+    // The latest era of a tech or civic researched, read off compact lists of their eras.
+    auto latest = [](const std::vector<uint8_t>& done, const std::vector<int>& eras, int era) {
+        const size_t n = std::min(done.size(), eras.size());
+        for (size_t i = 0; i < n; ++i) {
+            if (done[i] != 0 && eras[i] > era) era = eras[i];
+        }
+        return era;
+    };
+    return latest(p.civics.done, civicEras_, latest(p.techs.done, techEras_, 0));
 }
 
 int Game::agentCapacity(PlayerId player) const {
