@@ -39,7 +39,7 @@ GameState coastState(int w, int h, int players) {
 
 TEST(climate_rules_data) {
     const Rules& r = rules();
-    CHECK_EQ(r.disasters.size(), 21u);  // 18 natural disasters (meteor showers too) and 3 nuclear accidents
+    CHECK_EQ(r.disasters.size(), 26u);  // 18 natural disasters (meteor showers too), 3 nuclear accidents, 5 natural-wonder eruptions
     CHECK_EQ(r.climatePhases.size(), 7u);
     CHECK_EQ(r.disasterIntensities.size(), 5u);
     CHECK_EQ(r.climatePhases[6].points, 8);
@@ -426,4 +426,53 @@ TEST(a_flood_barrier_costs_more_with_more_lowland) {
     for (const Hex& h : g->state().grid.within(g->state().cities[0].pos, 3)) lowland += g->state().plot(h).city == g->state().cities[0].id && g->lowlandBand(h) > 0 ? 1 : 0;
     REQUIRE(lowland >= 1);
     CHECK_EQ(g->productionCost(0, barrier, &g->state().cities[0]), base * lowland);
+}
+
+TEST(volcano_natural_wonders_erupt_with_their_own_numbers) {
+    // The data lists each volcano natural wonder's eruptions apart from any volcano's (09 [GS]).
+    const Rules& r = rules();
+    const auto loss = [&](const DisasterType& d) {
+        for (const DisasterDamage& dd : d.damage) {
+            if (dd.type == DisasterDamageType::PopulationLoss) return dd.percent;
+        }
+        return -1;
+    };
+    const auto culture = [&](const DisasterType& d) {
+        return std::any_of(d.fertility.begin(), d.fertility.end(), [](const DisasterFertility& f) { return f.yield == YieldType::Culture; });
+    };
+    const DisasterType& any = r.disasters[at(disaster("DISASTER_MEGACOLOSSAL_ERUPTION"))];
+    const DisasterType& vesuvius = r.disasters[at(disaster("DISASTER_MEGACOLOSSAL_ERUPTION_MOUNT_VESUVIUS"))];
+    CHECK(any.naturalWonder == kNone);
+    CHECK_EQ(any.frequencyTenths[0], 5);  // 0.5 a game at Minimal
+    CHECK_EQ(loss(any), 35);
+    CHECK(!culture(any));
+    CHECK(vesuvius.naturalWonder == r.feature("FEATURE_MOUNT_VESUVIUS"));
+    CHECK_EQ(vesuvius.frequencyTenths[0], 30);
+    CHECK_EQ(loss(vesuvius), 100);
+    CHECK(culture(vesuvius));
+    CHECK_EQ(loss(r.disasters[at(disaster("DISASTER_CATASTROPHIC_ERUPTION"))]), 20);
+    CHECK_EQ(loss(r.disasters[at(disaster("DISASTER_CATASTROPHIC_ERUPTION_EYJAFJALLAJOKULL"))]), 30);
+    CHECK(disaster("DISASTER_GENTLE_ERUPTION_MOUNT_KILIMANJARO") != kNone);
+
+    // Mount Vesuvius erupts on its own, with no volcano on the map; Kilimanjaro, not on the map, never does.
+    GameState s = coastState(24, 16, 1);
+    const Hex mountain{12, 8};
+    s.plot(mountain).feature = r.feature("FEATURE_MOUNT_VESUVIUS");
+    s.setup.disasterIntensity = 4;
+    s.setup.turnLimit = 10;
+    s.setup.scoreVictory = false;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*g, 6);
+    int fromVesuvius = 0, fromKilimanjaro = 0;
+    for (const GameEvent& e : g->state().events) {
+        if (e.kind != EventKind::Disaster) continue;
+        fromVesuvius += e.value == disaster("DISASTER_MEGACOLOSSAL_ERUPTION_MOUNT_VESUVIUS") ? 1 : 0;
+        fromKilimanjaro += e.value == disaster("DISASTER_GENTLE_ERUPTION_MOUNT_KILIMANJARO") ? 1 : 0;
+    }
+    CHECK(fromVesuvius > 0);
+    CHECK_EQ(fromKilimanjaro, 0);
+    int soil = 0;
+    for (const Hex& h : g->state().grid.within(mountain, 1)) soil += g->state().plot(h).feature == r.feature("FEATURE_VOLCANIC_SOIL") ? 1 : 0;
+    CHECK(soil > 0);
+    CHECK(g->state().plot(mountain).feature == r.feature("FEATURE_MOUNT_VESUVIUS"));
 }

@@ -341,11 +341,11 @@
    "duration": 0,
    "chancePerDegree": 0,
    "frequency": {
-    "MINIMAL": 2.0,
-    "LIGHT": 3.0,
-    "MODERATE": 4.0,
-    "HEAVY": 6.0,
-    "HYPERREAL": 6.0
+    "MINIMAL": 1.0,
+    "LIGHT": 2.0,
+    "MODERATE": 2.5,
+    "HEAVY": 4.0,
+    "HYPERREAL": 4.0
    },
    "damage": [
     {
@@ -374,13 +374,13 @@
     },
     {
      "type": "POPULATION_LOSS",
-     "percent": 30,
+     "percent": 20,
      "minHp": 0,
      "maxHp": 0
     },
     {
      "type": "UNIT_KILLED_CIVILIAN",
-     "percent": 30,
+     "percent": 20,
      "minHp": 0,
      "maxHp": 0
     },
@@ -436,11 +436,11 @@
    "duration": 0,
    "chancePerDegree": 0,
    "frequency": {
-    "MINIMAL": 1.0,
-    "LIGHT": 2.0,
-    "MODERATE": 2.5,
-    "HEAVY": 4.0,
-    "HYPERREAL": 4.0
+    "MINIMAL": 0.5,
+    "LIGHT": 1.0,
+    "MODERATE": 1.5,
+    "HEAVY": 2.0,
+    "HYPERREAL": 6.0
    },
    "damage": [
     {
@@ -469,13 +469,13 @@
     },
     {
      "type": "POPULATION_LOSS",
-     "percent": 40,
+     "percent": 35,
      "minHp": 0,
      "maxHp": 0
     },
     {
      "type": "UNIT_KILLED_CIVILIAN",
-     "percent": 40,
+     "percent": 35,
      "minHp": 0,
      "maxHp": 0
     },
@@ -517,13 +517,6 @@
      "yield": "SCIENCE",
      "feature": "FEATURE_VOLCANIC_SOIL",
      "percent": 15,
-     "amount": 1,
-     "replaceFeature": true
-    },
-    {
-     "yield": "CULTURE",
-     "feature": "FEATURE_VOLCANIC_SOIL",
-     "percent": 50,
      "amount": 1,
      "replaceFeature": true
     }
@@ -1406,6 +1399,444 @@
      "replaceFeature": true
     }
    ]
+  },
+  {
+   "id": "DISASTER_GENTLE_ERUPTION_MOUNT_KILIMANJARO",
+   "name": "Gentle Eruption",
+   "kind": "ERUPTION",
+   "severity": 0,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 3.0,
+    "MODERATE": 4.0,
+    "HEAVY": 6.0,
+    "HYPERREAL": 4.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ],
+   "naturalWonder": "FEATURE_MOUNT_KILIMANJARO"
+  },
+  {
+   "id": "DISASTER_CATASTROPHIC_ERUPTION_MOUNT_KILIMANJARO",
+   "name": "Catastrophic Eruption",
+   "kind": "ERUPTION",
+   "severity": 1,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 1.0,
+    "LIGHT": 2.0,
+    "MODERATE": 2.5,
+    "HEAVY": 4.0,
+    "HYPERREAL": 6.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 20,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 35,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ],
+   "naturalWonder": "FEATURE_MOUNT_KILIMANJARO"
+  },
+  {
+   "id": "DISASTER_MEGACOLOSSAL_ERUPTION_MOUNT_VESUVIUS",
+   "name": "Megacolossal Eruption",
+   "kind": "ERUPTION",
+   "severity": 2,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 3.0,
+    "LIGHT": 5.0,
+    "MODERATE": 7.0,
+    "HEAVY": 9.0,
+    "HYPERREAL": 9.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 70,
+     "maxHp": 90
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 70,
+     "maxHp": 90
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 70,
+     "maxHp": 90
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "CULTURE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ],
+   "naturalWonder": "FEATURE_MOUNT_VESUVIUS"
+  },
+  {
+   "id": "DISASTER_CATASTROPHIC_ERUPTION_EYJAFJALLAJOKULL",
+   "name": "Catastrophic Eruption",
+   "kind": "ERUPTION",
+   "severity": 1,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 2.0,
+    "LIGHT": 3.0,
+    "MODERATE": 4.0,
+    "HEAVY": 6.0,
+    "HYPERREAL": 6.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 75,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 30,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 30,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 40,
+     "maxHp": 60
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 50,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 25,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 10,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ],
+   "naturalWonder": "FEATURE_EYJAFJALLAJOKULL"
+  },
+  {
+   "id": "DISASTER_MEGACOLOSSAL_ERUPTION_EYJAFJALLAJOKULL",
+   "name": "Megacolossal Eruption",
+   "kind": "ERUPTION",
+   "severity": 2,
+   "hexes": 0,
+   "duration": 0,
+   "chancePerDegree": 0,
+   "frequency": {
+    "MINIMAL": 1.0,
+    "LIGHT": 2.0,
+    "MODERATE": 2.5,
+    "HEAVY": 4.0,
+    "HYPERREAL": 4.0
+   },
+   "damage": [
+    {
+     "type": "IMPROVEMENT_DESTROYED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "IMPROVEMENT_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "DISTRICT_PILLAGED",
+     "percent": 80,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "BUILDING_PILLAGED",
+     "percent": 100,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "POPULATION_LOSS",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_KILLED_CIVILIAN",
+     "percent": 40,
+     "minHp": 0,
+     "maxHp": 0
+    },
+    {
+     "type": "UNIT_DAMAGE_LAND",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    },
+    {
+     "type": "CITY_GARRISON",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    },
+    {
+     "type": "CITY_WALLS",
+     "percent": 100,
+     "minHp": 60,
+     "maxHp": 80
+    }
+   ],
+   "fertility": [
+    {
+     "yield": "FOOD",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 75,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "PRODUCTION",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 35,
+     "amount": 1,
+     "replaceFeature": true
+    },
+    {
+     "yield": "SCIENCE",
+     "feature": "FEATURE_VOLCANIC_SOIL",
+     "percent": 15,
+     "amount": 1,
+     "replaceFeature": true
+    }
+   ],
+   "naturalWonder": "FEATURE_EYJAFJALLAJOKULL"
   }
  ],
  "climatePhases": [

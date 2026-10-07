@@ -1205,15 +1205,24 @@ DISASTER_KINDS = [("Flood", "FLOOD"), ("Eruption", "ERUPTION"), ("Blizzard", "BL
                   ("Meteor Shower", "METEOR")]
 
 
+# The volcano natural wonders the disaster table names by the game's ids, where ours differ.
+NATURAL_WONDER_EVENT_FEATURES = {"FEATURE_KILIMANJARO": "FEATURE_MOUNT_KILIMANJARO", "FEATURE_VESUVIUS": "FEATURE_MOUNT_VESUVIUS"}
+
+
 def gen_disasters():
     """Natural disasters the core runs (09: Climate and Disasters [GS]; data: climate-disasters.md):
     frequency per game by Disaster Intensity, damage, fertility afterwards; the climate phases;
-    intensity settings; nuclear accidents at aging reactors; meteor showers (their meteor sites are left out). Natural-wonder
-    eruptions are left out."""
+    intensity settings; nuclear accidents at aging reactors; meteor showers (their meteor sites are left out);
+    the eruptions of the volcano natural wonders (Mount Kilimanjaro, Mount Vesuvius, Eyjafjallajökull), each its
+    own event at that wonder, listed after the others."""
     path = SPEC / "climate-disasters.md"
     # Storm rows name Ice as their feature: the engine's stand-in for any affected land tile.
     storm_kinds = {"BLIZZARD", "DUST_STORM", "TORNADO", "HURRICANE"}
-    events, phases, seen = [], [], set()
+    events, wonder_events, phases = [], [], []
+    # The later tables give an event name's rows in one run per event row of that name, in the same order
+    # (Kilimanjaro's or Vesuvius' eruption, then any volcano's, then Eyjafjallajokull's), so each event row
+    # keeps its own run. A second ordinary row of a name (the jungle's Forest Fire) adds nothing.
+    variants = {}
     for r in table(path, "Random events (disasters)"):
         name = r["RandomEventType"]
         if name.startswith("Climate Change Phase"):
@@ -1221,42 +1230,67 @@ def gen_disasters():
                            "iceLoss": num(r["IceLoss"]), "fertilityRemoval": num(r["FertilityRemovalChance"])})
             continue
         kind = next((k for word, k in DISASTER_KINDS if word in name), None)
-        if not kind or r["NaturalWonder"] or name in seen:
+        slot = variants.setdefault(name, [])
+        if not kind or (not r["NaturalWonder"] and any(e and "naturalWonder" not in e for e in slot)):
+            slot.append(None)
             continue
-        seen.add(name)
-        events.append({"id": "DISASTER_" + snake(name), "name": name, "kind": kind, "severity": num(r["Severity"]),
-                       "hexes": num(r["Hexes"]), "duration": num(r["Duration"]), "chancePerDegree": num(r["ChanceIncreasePerDegree"]),
-                       "frequency": {}, "damage": [], "fertility": []})
+        e = {"id": "DISASTER_" + snake(name), "name": name, "kind": kind, "severity": num(r["Severity"]),
+             "hexes": num(r["Hexes"]), "duration": num(r["Duration"]), "chancePerDegree": num(r["ChanceIncreasePerDegree"]),
+             "frequency": {}, "damage": [], "fertility": []}
         if kind == "NUCLEAR":
-            events[-1]["minTurnAtRisk"] = num(r["MinTurnAtRisk"])
-    by_name = {e["name"]: e for e in events}
-    # Later rows for a repeated event name are the ordinary (not natural-wonder) variant.
+            e["minTurnAtRisk"] = num(r["MinTurnAtRisk"])
+        if r["NaturalWonder"]:
+            feature = NATURAL_WONDER_EVENT_FEATURES.get(r["NaturalWonder"], r["NaturalWonder"])
+            e["id"] += "_" + feature[len("FEATURE_"):]
+            e["naturalWonder"] = feature
+            wonder_events.append(e)
+        else:
+            events.append(e)
+        slot.append(e)
+
+    def runs(rows):
+        """(the event row a table row belongs to, the row): the k-th run of a name's rows is its k-th event row."""
+        count, last = {}, None
+        for r in rows:
+            if r["Event"] != last:
+                count[r["Event"]] = count.get(r["Event"], -1) + 1
+                last = r["Event"]
+            slot = variants.get(r["Event"], [])
+            yield (slot[count[r["Event"]]] if count[r["Event"]] < len(slot) else None), r
+
+    # Frequencies list every event once per intensity, so there the k-th row of a name and intensity is its k-th event row.
+    seen = {}
     for r in table(path, "Event frequencies by disaster intensity"):
-        e = by_name.get(r["Event"])
+        key = (r["Event"], r["Realism setting"])
+        k = seen.get(key, 0)
+        seen[key] = k + 1
+        slot = variants.get(r["Event"], [])
+        e = slot[k] if k < len(slot) else None
         if e:
             e["frequency"][r["Realism setting"].upper()] = num(r["Occurrences per game"])
     damage = {}
-    for r in table(path, "Event damage"):
-        if r["Event"] in by_name and r["Damage type"] == "radiation leaked":
-            by_name[r["Event"]]["fallout"] = num(r["Fallout turns"])  # nuclear accidents (09)
-        if r["Event"] in by_name:
-            damage.setdefault(r["Event"], {})[r["Damage type"]] = {"type": snake(r["Damage type"]), "percent": num(r["%"]),
-                                                                     "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
-    for name, rows in damage.items():
-        by_name[name]["damage"] = list(rows.values())
+    for e, r in runs(table(path, "Event damage")):
+        if not e:
+            continue
+        if r["Damage type"] == "radiation leaked":
+            e["fallout"] = num(r["Fallout turns"])  # nuclear accidents (09)
+        damage.setdefault(e["id"], {})[r["Damage type"]] = {"type": snake(r["Damage type"]), "percent": num(r["%"]),
+                                                             "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
     fert = {}
-    for r in table(path, "Event yield changes (fertility)"):
-        if r["Event"] in by_name:
-            key = (r["Yield"], r["Feature"])
-            fert.setdefault(r["Event"], {})[key] = {"yield": YIELD_WORDS.get(r["Yield"], r["Yield"].upper()),
-                                                     "feature": "" if by_name[r["Event"]]["kind"] in storm_kinds else FEATURE_IDS[r["Feature"]],
-                                                     "percent": num(r["% of tiles"]), "amount": num(r["Amount"]),
-                                                     "replaceFeature": r["Replace feature"] == "1"}
-    for name, rows in fert.items():
-        by_name[name]["fertility"] = list(rows.values())
+    for e, r in runs(table(path, "Event yield changes (fertility)")):
+        if not e:
+            continue
+        key = (r["Yield"], r["Feature"])
+        fert.setdefault(e["id"], {})[key] = {"yield": YIELD_WORDS.get(r["Yield"], r["Yield"].upper()),
+                                              "feature": "" if e["kind"] in storm_kinds else FEATURE_IDS[r["Feature"]],
+                                              "percent": num(r["% of tiles"]), "amount": num(r["Amount"]),
+                                              "replaceFeature": r["Replace feature"] == "1"}
+    for e in events + wonder_events:
+        e["damage"] = list(damage.get(e["id"], {}).values())
+        e["fertility"] = list(fert.get(e["id"], {}).values())
     intensities = [{"id": "DISASTERS_" + r["Setting"].upper(), "name": r["Setting"], "activeVolcanoes": num(r["% volcanoes active"]),
                     "extraRange": num(r["Extra range"])} for r in table(path, "Disaster intensity settings")]
-    return {"disasters": events, "climatePhases": phases, "disasterIntensities": intensities}
+    return {"disasters": events + wonder_events, "climatePhases": phases, "disasterIntensities": intensities}
 
 
 def plunder(text):

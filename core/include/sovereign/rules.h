@@ -991,6 +991,7 @@ struct DisasterType {
     DisasterKind kind = DisasterKind::Flood;
     int severity = 0, hexes = 0, duration = 0, chancePerDegree = 0;
     int minTurnAtRisk = 0, fallout = 0;  // Nuclear: a reactor's age before it is at risk; fallout turns
+    TypeIndex naturalWonder = kNone;     // Eruption: only this volcano natural wonder erupts (Mount Vesuvius...)
     std::array<int, kNumDisasterIntensities> frequencyTenths{};  // expected occurrences per game, x10
     std::vector<DisasterDamage> damage;
     std::vector<DisasterFertility> fertility;
