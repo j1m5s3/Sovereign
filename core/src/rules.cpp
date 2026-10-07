@@ -139,6 +139,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "WORLD_MIN_ERA") { q.type = ReqType::WorldMinEra; }
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
+        else if (type == "CITY_FULL_LOYALTY") { q.type = ReqType::CityFullLoyalty; }
         else {
             *error = "unknown requirement type " + type;
             return false;
