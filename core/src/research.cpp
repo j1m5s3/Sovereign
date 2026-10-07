@@ -343,9 +343,12 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
         case BoostKind::Continents: {
             // Land of this many continents revealed (Sovereign: every landmass is one).
             std::vector<int16_t> seen;
+            // Both arrays through local pointers, so the loop need not reload them after the push below (which cannot move them).
+            const Plot* const plotAt = state_.plots.data();
+            const uint8_t* const visibilityAt = p.visibility.data();
             for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
-                const int16_t k = state_.plots[i].continent;
-                if (k < 0 || p.visibility[i] == static_cast<uint8_t>(Visibility::Unrevealed) || std::find(seen.begin(), seen.end(), k) != seen.end()) continue;
+                const int16_t k = plotAt[i].continent;
+                if (k < 0 || visibilityAt[i] == static_cast<uint8_t>(Visibility::Unrevealed) || std::find(seen.begin(), seen.end(), k) != seen.end()) continue;
                 seen.push_back(k);
                 if (static_cast<int>(seen.size()) >= b.count) return true;
             }

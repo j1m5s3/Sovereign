@@ -835,6 +835,9 @@ bool Game::canPromote(UnitId id, TypeIndex promotion) const {
 
 std::vector<TypeIndex> Game::availablePromotions(UnitId id) const {
     std::vector<TypeIndex> out;
+    // A unit short of its next level's experience, or out of moves, can take none (canPromote's own test, made once).
+    const Unit* u = state_.unit(id);
+    if (!u || u->xp < xpForNextLevel(*u) || u->movesLeft <= Fixed()) return out;
     for (size_t i = 0; i < rules_->promotions.size(); ++i) {
         if (canPromote(id, static_cast<TypeIndex>(i))) out.push_back(static_cast<TypeIndex>(i));
     }

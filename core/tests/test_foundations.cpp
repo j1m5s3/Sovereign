@@ -120,25 +120,48 @@ TEST(hex_line_is_contiguous) {
     CHECK_EQ(seam.size(), 4u);
 }
 
-// between() visits the hexes of line() strictly between its ends, in order, and stops when told to.
+// distance() takes the nearest of b and its copies a map's width to the east and west, and line() runs that far:
+// every pair of plots on wrapping maps of an even, an odd and a narrow width, against the three copies.
+TEST(hex_distance_and_line_take_the_nearest_copy) {
+    int wrong = 0;
+    for (const int32_t width : {12, 11, 5}) {
+        const HexGrid g(width, 7, true);
+        for (int32_t ay = 0; ay < 7; ++ay)
+            for (int32_t ax = 0; ax < width; ++ax)
+                for (int32_t by = 0; by < 7; ++by)
+                    for (int32_t bx = 0; bx < width; ++bx) {
+                        const Hex a{ax, ay}, b{bx, by};
+                        const Axial aa = toAxial(a), bb = toAxial(b);
+                        int want = axialDistance(aa, bb);
+                        for (const int32_t shift : {-width, width}) want = std::min(want, axialDistance(aa, Axial{bb.q + shift, bb.r}));
+                        if (g.distance(a, b) != want || static_cast<int>(g.line(a, b).size()) != want + 1) ++wrong;
+                    }
+    }
+    CHECK_EQ(wrong, 0);
+}
+
+// between() visits the hexes of line() strictly between its ends, in order, and stops when told to: lines short
+// enough for its table of steps and longer ones, from even and odd rows, on maps of an even and an odd width.
 TEST(hex_between_walks_the_inside_of_the_line) {
     int differ = 0;
     for (const bool wrap : {true, false}) {
-        const HexGrid g(12, 9, wrap);
-        for (int32_t ay = 0; ay < 9; ++ay)
-            for (int32_t ax = 0; ax < 12; ++ax)
-                for (int32_t by = 0; by < 9; ++by)
-                    for (int32_t bx = 0; bx < 12; ++bx) {
-                        const Hex a{ax, ay}, b{bx, by};
-                        const std::vector<Hex> line = g.line(a, b);
-                        const std::vector<Hex> want = line.size() < 2 ? std::vector<Hex>() : std::vector<Hex>(line.begin() + 1, line.end() - 1);
-                        std::vector<Hex> inside;
-                        const bool ran = g.between(a, b, [&](Hex h) {
-                            inside.push_back(h);
-                            return true;
-                        });
-                        if (!ran || inside != want) ++differ;
-                    }
+        for (const int32_t width : {12, 11}) {
+            const HexGrid g(width, 9, wrap);
+            for (int32_t ay = 0; ay < 9; ++ay)
+                for (int32_t ax = 0; ax < width; ++ax)
+                    for (int32_t by = 0; by < 9; ++by)
+                        for (int32_t bx = 0; bx < width; ++bx) {
+                            const Hex a{ax, ay}, b{bx, by};
+                            const std::vector<Hex> line = g.line(a, b);
+                            const std::vector<Hex> want = line.size() < 2 ? std::vector<Hex>() : std::vector<Hex>(line.begin() + 1, line.end() - 1);
+                            std::vector<Hex> inside;
+                            const bool ran = g.between(a, b, [&](Hex h) {
+                                inside.push_back(h);
+                                return true;
+                            });
+                            if (!ran || inside != want) ++differ;
+                        }
+        }
     }
     CHECK_EQ(differ, 0);
     // A false from the callback ends the walk.
