@@ -436,26 +436,49 @@ std::vector<UnitId> Game::unitsNeedingOrders(PlayerId player) const {
 
 // ------------------------------------------------------------------ movement
 
-std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const { return moveCost(unit, moveTraits(unit), from, to); }
+std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
+    const MoveTraits traits = moveTraits(unit);
+    return moveCost(unit, traits, moveLimits(unit, traits), from, to);
+}
 
-std::optional<Fixed> Game::moveCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const {
-    if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // attacks and captures are their own commands
-    const City* c = state_.cityAt(to);
-    if (c && c->owner != unit.owner) return std::nullopt;
-    // Music Censorship (04): no foreign Rock Band enters the territory.
-    if (const PlayerId land = state_.plot(to).owner; land != kNoPlayer && land != unit.owner && typeOf(*rules_, unit).id == "UNIT_ROCK_BAND" &&
-        policyIs(land, "POLICY_MUSIC_CENSORSHIP"))
-        return std::nullopt;
-    // Nor an enemy Encampment that still stands (05: City combat).
-    if (const City* camp = encampmentTargetAt(to); camp && atWar(unit.owner, camp->owner)) return std::nullopt;
-    // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
-    const PlayerId owner = state_.plot(to).owner;
-    if (owner != kNoPlayer && owner != unit.owner && state_.plot(from).owner != owner && !atWar(unit.owner, owner) &&
-        !grantsOpenBorders(owner, unit.owner)) {
-        const Player& op = state_.players[static_cast<size_t>(owner)];
+Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) const {
+    MoveLimits limits;
+    limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
+    auto block = [&](Hex h) {
+        if (state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
+    };
+    for (const Unit& u : state_.units) {
+        if (u.owner != unit.owner) block(u.pos);  // attacks and captures are their own commands
+    }
+    for (const City& c : state_.cities) {
+        if (c.owner != unit.owner) block(c.pos);
+        // Nor an enemy Encampment that still stands (05: City combat).
+        const CityDistrict* camp = atWar(unit.owner, c.owner) ? encampmentOf(c) : nullptr;
+        if (camp && state_.grid.normalize(camp->pos) == camp->pos && state_.plot(camp->pos).city == c.id) block(camp->pos);
+    }
+    limits.closed.assign(state_.players.size(), 0);
+    for (const Player& p : state_.players) {
+        if (p.id == unit.owner) continue;
+        uint8_t& closed = limits.closed[static_cast<size_t>(p.id)];
+        // Music Censorship (04): no foreign Rock Band enters the territory.
+        if (traits.rockBand && policyIs(p.id, "POLICY_MUSIC_CENSORSHIP")) closed |= 2;
+        // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
+        if (traits.ignoreBorders || atWar(unit.owner, p.id) || grantsOpenBorders(p.id, unit.owner)) continue;
         for (size_t i = 0; i < rules_->civics.size(); ++i) {
-            if (rules_->civics[i].enforceBorders && op.civics.has(static_cast<TypeIndex>(i)) && !traits.ignoreBorders) return std::nullopt;
+            if (rules_->civics[i].enforceBorders && p.civics.has(static_cast<TypeIndex>(i))) {
+                closed |= 1;
+                break;
+            }
         }
+    }
+    return limits;
+}
+
+std::optional<Fixed> Game::moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to) const {
+    if (limits.blocked[static_cast<size_t>(state_.grid.index(to))]) return std::nullopt;
+    if (const PlayerId land = state_.plot(to).owner; land != kNoPlayer) {
+        const uint8_t closed = limits.closed[static_cast<size_t>(land)];
+        if ((closed & 2) || ((closed & 1) && state_.plot(from).owner != land)) return std::nullopt;
     }
     return terrainCost(unit, traits, from, to);
 }
@@ -576,6 +599,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     const std::vector<uint8_t> zoc = zocMap(*u);
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
+    const MoveLimits limits = moveLimits(*u, traits);
 
     struct Node { int turn = INT32_MAX; Fixed moves; int prev = -1; };
     std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
@@ -602,7 +626,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
             if (!n || !known(*n)) continue;
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
-            auto cost = moveCost(*u, traits, from, *n);
+            auto cost = moveCost(*u, traits, limits, from, *n);
             if (!cost) continue;
             int turn = cur.turn;
             Fixed mp = cur.moves;
