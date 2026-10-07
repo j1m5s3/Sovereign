@@ -98,11 +98,19 @@ int Game::parkTourism(PlayerId player) const {
 // Amenities (07; data: NATIONAL_PARK_AMENITIES_OWNING_CITY, NATIONAL_PARK_NUM_OTHER_AMENITY_CITIES): each park
 // gives its city 2, and 1 to each of that civ's NUM_OTHER nearest other cities (Sovereign reading of "nearby").
 int Game::parkAmenities(const City& city) const {
-    // Park plots by the city they belong to, in one pass over the map.
-    std::map<CityId, int> plots;
-    for (int i = 0; i < state_.grid.size(); ++i) {
-        if (state_.plots[at(i)].park) ++plots[state_.plots[at(i)].city];
+    ReportShare shared;
+    return parkAmenities(city, shared);
+}
+
+int Game::parkAmenities(const City& city, ReportShare& shared) const {
+    // Park plots by the city they belong to, in one pass over the map for a run of city reports.
+    if (!shared.parkPlots) {
+        std::map<CityId, int>& counted = shared.parkPlots.emplace();
+        for (int i = 0; i < state_.grid.size(); ++i) {
+            if (state_.plots[at(i)].park) ++counted[state_.plots[at(i)].city];
+        }
     }
+    const std::map<CityId, int>& plots = *shared.parkPlots;
     if (plots.empty()) return 0;
     int total = 0;
     for (const City& holder : state_.cities) {
