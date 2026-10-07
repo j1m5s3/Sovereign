@@ -157,10 +157,10 @@ void Game::addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const
             if (counts(r)) ++n[ti(r)];
         }
     }
-    const Plot* const first = state_.plots.data();
-    for (const Plot& p : state_.plots) {  // a range loop, as in improvedPlots
+    for (const int32_t i : resourcePlots_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.owner != player || !counts(p.resource)) continue;
-        const Hex h = state_.grid.at(static_cast<int>(&p - first));
+        const Hex h = state_.grid.at(i);
         if (resourceVisible(player, h) && resourceImproved(h)) ++n[ti(p.resource)];
     }
 }

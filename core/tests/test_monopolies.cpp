@@ -78,3 +78,13 @@ TEST(a_monopoly_pays_gold_and_tourism) {
     CHECK_EQ(g->goldPerTurn(0), plain->goldPerTurn(0) + Fixed::fromInt(6));
     CHECK_EQ(plain->monopolySources(0), 0);
 }
+
+TEST(only_improved_sources_count_toward_a_monopoly) {
+    GameState s = monopolyState(true, true);
+    // Two more of the luxury on player 1's land, neither improved: player 0 still holds two of the world's three
+    // improved sources.
+    for (const Hex& h : {Hex{14, 5}, Hex{15, 6}}) s.plot(h).resource = luxury();
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->hasMonopoly(0, luxury()));
+    CHECK_EQ(g->monopolySources(0), 2);
+}

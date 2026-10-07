@@ -25,12 +25,25 @@ const T* findById(const std::vector<T>& v, Id id) {
     auto it = std::lower_bound(v.begin(), v.end(), id, [](const T& a, Id b) { return a.id < b; });
     return (it != v.end() && it->id == id) ? &*it : nullptr;
 }
+// The city's place in the list when it lies as far past the first city as its id is past the first's, where
+// lower_bound finds it too; else the list's size. Ids rise along the list and cities are seldom lost, so it mostly does.
+size_t cityGuess(const std::vector<City>& v, CityId id) {
+    if (v.empty() || id < v.front().id) return v.size();
+    const size_t at = static_cast<size_t>(std::min<int64_t>(static_cast<int64_t>(id) - v.front().id, static_cast<int64_t>(v.size()) - 1));
+    return v[at].id == id && (at == 0 || v[at - 1].id < id) ? at : v.size();
+}
 }  // namespace
 
 Unit* GameState::unit(UnitId id) { return findById(units, id); }
 const Unit* GameState::unit(UnitId id) const { return findById(units, id); }
-City* GameState::city(CityId id) { return findById(cities, id); }
-const City* GameState::city(CityId id) const { return findById(cities, id); }
+City* GameState::city(CityId id) {
+    const size_t at = cityGuess(cities, id);
+    return at < cities.size() ? &cities[at] : findById(cities, id);
+}
+const City* GameState::city(CityId id) const {
+    const size_t at = cityGuess(cities, id);
+    return at < cities.size() ? &cities[at] : findById(cities, id);
+}
 
 const City* GameState::cityAt(Hex h) const {
     for (const City& c : cities) {

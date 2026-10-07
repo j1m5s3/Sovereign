@@ -40,7 +40,7 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     }
     if (!w.needsFeature.empty() && std::find(w.needsFeature.begin(), w.needsFeature.end(), p.feature) == w.needsFeature.end()) return false;
     if (w.river && !isRiverAdjacent(state_, plot)) return false;
-    if ((w.lake || w.notLake) && isLake(state_, *rules_, plot) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
+    if ((w.lake || w.notLake) && isLake(state_, *rules_, plot, &lakes_) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
     bool land = false, coast = false, capital = false, mountain = false, center = false, district = false, resource = false, improvement = false;
     for (int d = 0; d < kNumDirs; ++d) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(d));

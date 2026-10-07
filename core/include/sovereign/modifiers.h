@@ -21,6 +21,7 @@ struct ReqContext {
     const Player* player = nullptr;
     const City* city = nullptr;
     const Plot* plot = nullptr;
+    const std::vector<uint8_t>* lakes = nullptr;  // a lakeMap of the state, for the lake requirements when given
 };
 
 SOV_API bool testRequirements(const RequirementSet& set, const ReqContext& ctx);
@@ -40,7 +41,8 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
 Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& city, ModEffect effect);
 
 // Total flat plot-yield modifiers for a plot worked by this city, each yield from one pass over the modifiers.
-SOV_API Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot);
+// `lakes`, when given, is a lakeMap of the state.
+SOV_API Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, const std::vector<uint8_t>* lakes = nullptr);
 
 // Percentage bonus to production toward this unit type in the city.
 SOV_API Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& city, TypeIndex unitType);

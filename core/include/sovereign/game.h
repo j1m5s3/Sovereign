@@ -922,6 +922,15 @@ private:
     // landmass after another in the order they first appear: landmass i is landPlots_[landFirst_[i]] up to
     // landPlots_[landFirst_[i + 1]].
     std::vector<int32_t> landFirst_, landPlots_;
+    // The plots that had a resource when the game was built, in map order. Play only takes resources away (a harvest,
+    // a district, a submerged coast), never adds one, so every plot with a resource is among them.
+    std::vector<int32_t> resourcePlots_;
+    // isLake for each plot (a lakeMap). Only the sea's rise changes terrain once the map is made, and it marks them again.
+    std::vector<uint8_t> lakes_;
+    // The plots that have had an improvement since the game was built, in the order they first had one, and a mark
+    // on each of them. Once the map is made only a Builder's work adds an improvement, and it lists the plot.
+    std::vector<int32_t> improvedOnce_;
+    std::vector<uint8_t> improvedOnceAt_;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;

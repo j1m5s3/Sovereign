@@ -162,6 +162,26 @@ TEST(resources_take_only_their_improvement_and_fire_boosts) {
     CHECK_EQ(g->state().players[0].stockpile[at(rules().resource("RESOURCE_IRON"))], 2);
 }
 
+TEST(a_plot_improved_over_again_counts_as_one_improved_tile) {
+    GameState base = flatState(20, 14, 1);
+    base.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    auto g = builderGame([](GameState& s) { know(s, "TECH_MINING"); }, base);
+    const size_t crafts = at(rules().civic("CIVIC_CRAFTSMANSHIP"));  // its Inspiration: improve 3 tiles
+    const UnitId b = builderOf(*g);
+    // A farm, a mine in its place, then a farm again: three builds on one tile.
+    for (const char* im : {"IMPROVEMENT_FARM", "IMPROVEMENT_MINE", "IMPROVEMENT_FARM"}) {
+        REQUIRE(g->submit(Command::buildImprovement(0, b, improvement(im))) == CommandError::Ok);
+        endTurns(*g, 1);
+    }
+    CHECK_EQ(g->state().players[0].civics.boosted[crafts], 0);
+    // Two more tiles already improved when the game is built make three.
+    GameState s = g->state();
+    for (Hex h : {Hex{6, 7}, Hex{6, 5}}) s.plot(h).improvement = improvement("IMPROVEMENT_FARM");
+    auto more = Game::fromScenario(rules(), std::move(s));
+    endTurns(*more, 1);
+    CHECK_EQ(more->state().players[0].civics.boosted[crafts], 1);
+}
+
 TEST(strategic_cost_and_obsolete_units) {
     auto g = builderGame([](GameState& s) {
         know(s, "TECH_MINING");

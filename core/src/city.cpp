@@ -109,7 +109,7 @@ Yields Game::plotYields(Hex at, const City& city) const {
         const Yields imp = improvementYields(at, city.owner);
         for (size_t i = 0; i < kNumYields; ++i) y[i] += imp[i];
     }
-    const Yields mods = sumPlotModifiers(state_, *rules_, city, at);
+    const Yields mods = sumPlotModifiers(state_, *rules_, city, at, &lakes_);
     for (size_t i = 0; i < kNumYields; ++i) y[i] += mods[i];
     // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), and an
     // improvement that feeds its owner's plots beside it (the Nazca Line; 08).
@@ -355,7 +355,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     }
 
     // Housing from water access, then buildings and modifiers.
-    bool fresh = hasFreshWater(state_, *rules_, c->pos), coastal = false;
+    bool fresh = hasFreshWater(state_, *rules_, c->pos, &lakes_), coastal = false;
     state_.grid.forEachWithin(c->pos, 1, [&](Hex n) {
         if (n != c->pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
     });
@@ -465,7 +465,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
                 if (cw.building != huey) continue;
                 for (int d = 0; d < kNumDirs; ++d) {
                     const auto n = state_.grid.neighbor(cw.pos, static_cast<Dir>(d));
-                    if (n && isLake(state_, *rules_, *n)) ++rep.amenities;
+                    if (n && isLake(state_, *rules_, *n, &lakes_)) ++rep.amenities;
                 }
             }
         }

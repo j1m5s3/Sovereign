@@ -41,11 +41,14 @@ SOV_API void setRiver(GameState& state, Hex h, Dir d);
 SOV_API bool isRiverAdjacent(const GameState& state, Hex h);
 
 // Lakes (01: Lake): water in a body of at most LAKE_MAX_AREA_SIZE plots. They are Coast
-// terrain; the size of the body they belong to tells them apart from the sea.
-SOV_API bool isLake(const GameState& state, const Rules& rules, Hex h);
-SOV_API bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h);  // a lake plot beside h
+// terrain; the size of the body they belong to tells them apart from the sea. Given `lakes`,
+// a lakeMap of this state, these read it instead of measuring the water around h.
+SOV_API bool isLake(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes = nullptr);
+SOV_API bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes = nullptr);  // a lake plot beside h
+// isLake for every plot, by plot index, from one look at each body of water.
+SOV_API std::vector<uint8_t> lakeMap(const GameState& state, const Rules& rules);
 // Fresh water for a city or district on h (01): a river along it, or a lake or a fresh-water
 // feature (Oasis, some natural wonders) beside it.
-SOV_API bool hasFreshWater(const GameState& state, const Rules& rules, Hex h);
+SOV_API bool hasFreshWater(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes = nullptr);
 
 }  // namespace sov

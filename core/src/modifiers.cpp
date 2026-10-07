@@ -88,7 +88,7 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             if (c.plot && c.state && c.plot >= c.state->plots.data() && c.plot < c.state->plots.data() + c.state->plots.size()) {
                 const Hex h = c.state->grid.at(static_cast<int32_t>(c.plot - c.state->plots.data()));
                 if (q.type == ReqType::PlotNextToRiver) ok = isRiverAdjacent(*c.state, h);
-                else if (c.rules) ok = q.type == ReqType::PlotIsLake ? isLake(*c.state, *c.rules, h) : isLakeAdjacent(*c.state, *c.rules, h);
+                else if (c.rules) ok = q.type == ReqType::PlotIsLake ? isLake(*c.state, *c.rules, h, c.lakes) : isLakeAdjacent(*c.state, *c.rules, h, c.lakes);
             }
             break;
         }
@@ -233,13 +233,13 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
 // Calls fn for each city modifier in these lists (a null list is skipped), list by list, that reaches the city.
 // `pre` passes over modifiers on what they say alone (a yield, a unit class) before the costlier look for the city
 // holding the modifier. A plot's own requirements (its terrain, feature, improvement...) are cheap and go before
-// that look too; a city's can scan the map, so they go after it.
+// that look too; a city's can scan the map, so they go after it. `lakes` (a lakeMap, or null) goes to the plot's.
 template <typename Pre, typename Fn>
 void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists, const GameState& s, const Rules& r, const City& city,
-                       bool plotEffect, const Plot* plot, Pre&& pre, Fn&& fn) {
+                       bool plotEffect, const Plot* plot, const std::vector<uint8_t>* lakes, Pre&& pre, Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     int majority = kUnknownReligion;
-    const ReqContext subjectCtx{&s, &r, &owner, &city, plot};
+    const ReqContext subjectCtx{&s, &r, &owner, &city, plot, lakes};
     for (const std::vector<uint32_t>* list : lists) {
         if (!list) continue;
         for (uint32_t i : *list) {
@@ -260,7 +260,7 @@ void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists
 template <typename Pre, typename Fn>
 void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
                      Pre&& pre, Fn&& fn) {
-    forEachApplyingIn({&r.cityModifiers(effect)}, s, r, city, plotEffect, plot, pre, fn);
+    forEachApplyingIn({&r.cityModifiers(effect)}, s, r, city, plotEffect, plot, nullptr, pre, fn);
 }
 
 // The pre filter that passes every modifier.
@@ -330,7 +330,7 @@ Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& c
     return total;
 }
 
-Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot) {
+Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, const std::vector<uint8_t>* lakes) {
     Yields total{};
     const Plot& p = s.plot(plot);
     // Only the modifiers listed under this plot's own improvement, resource, feature and terrain, and the unkeyed
@@ -341,7 +341,7 @@ Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, He
     };
     forEachApplyingIn({&mods.unkeyed, under(mods.byImprovement, p.improvement), under(mods.byResource, p.resource),
                        under(mods.byFeature, p.feature), under(mods.byTerrain, p.terrain)},
-                      s, r, city, true, &p, anyModifier, [&](const Modifier& m) {
+                      s, r, city, true, &p, lakes, anyModifier, [&](const Modifier& m) {
                           if (static_cast<size_t>(m.yield) < kNumYields) total[static_cast<size_t>(m.yield)] += m.amount;
                       });
     return total;
