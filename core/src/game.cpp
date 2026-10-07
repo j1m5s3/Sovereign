@@ -235,6 +235,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
             if (std::find(classes.begin(), classes.end(), rules_->units[t].unitClass) != classes.end()) abilityGrants_[t].push_back(i);
         }
     }
+    parks_ = std::any_of(state_.plots.begin(), state_.plots.end(), [](const Plot& p) { return p.park; });
 }
 
 uint64_t Game::stateHash() const {
