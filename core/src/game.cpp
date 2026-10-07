@@ -751,8 +751,9 @@ void Game::refreshVisibility(PlayerId pid) {
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
         for (const Hex& target : state_.grid.within(from, range)) {
-            if (!lineOfSight(from, target, throughFeatures)) continue;
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
+            if (v == static_cast<uint8_t>(Visibility::Visible)) continue;  // already seen in this refresh: nothing more to learn
+            if (!lineOfSight(from, target, throughFeatures)) continue;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
                     for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
