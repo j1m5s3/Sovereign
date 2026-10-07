@@ -239,13 +239,13 @@ Game::ImprovedPlots Game::improvedPlots(PlayerId player) const {
     n.byImprovement.assign(rules_->improvements.size(), 0);
     n.onResource.assign(rules_->improvements.size(), 0);
     n.byResource.assign(rules_->resources.size(), 0);
-    // A range loop: its bounds stay in registers across the calls below, so a plot that is not the player's costs a compare.
-    const Plot* const first = state_.plots.data();
-    for (const Plot& p : state_.plots) {
+    // Only plots that have had an improvement can have one now; the counts do not depend on the order they are made in.
+    for (const int32_t i : improvedOnce_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.owner != player || p.improvement == kNone) continue;
         ++n.total;
         ++n.byImprovement[static_cast<size_t>(p.improvement)];
-        if (!resourceImproved(state_.grid.at(static_cast<int>(&p - first)))) continue;
+        if (!resourceImproved(state_.grid.at(i))) continue;
         ++n.onResource[static_cast<size_t>(p.improvement)];
         ++n.byResource[static_cast<size_t>(p.resource)];
     }
@@ -500,6 +500,10 @@ void Game::applyBuilder(const Command& c) {
     const CityId cityId = p.city;
     if (c.type == CommandType::BuildImprovement) {
         p.improvement = static_cast<TypeIndex>(c.arg);
+        if (const size_t i = static_cast<size_t>(state_.grid.index(at)); !improvedOnceAt_[i]) {
+            improvedOnceAt_[i] = 1;
+            improvedOnce_.push_back(static_cast<int32_t>(i));
+        }
         // Historic moments (09): a unique improvement, a tunnel, a resort, a green improvement.
         const ImprovementType& built = rules_->improvements[static_cast<size_t>(c.arg)];
         if (built.uniqueTo != kNone) awardOnce(c.player, "MOMENT_UNIQUE_TILE_IMPROVEMENT_BUILT");
