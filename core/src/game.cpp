@@ -200,6 +200,12 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     oil_ = rules_->resource("RESOURCE_OIL");
     spices_[0] = rules_->resource("RESOURCE_CINNAMON");
     spices_[1] = rules_->resource("RESOURCE_CLOVES");
+    oceanTerrain_ = rules_->terrain("TERRAIN_OCEAN");
+    for (size_t i = 0; i < rules_->techs.size(); ++i) {
+        const TreeNode& t = rules_->techs[i];
+        if (t.ocean) oceanTechs_.push_back(static_cast<TypeIndex>(i));
+        if (t.embarkAll || t.embarkUnit != kNone) embarkTechs_.push_back(static_cast<TypeIndex>(i));
+    }
 }
 
 uint64_t Game::stateHash() const {
@@ -489,9 +495,9 @@ bool Game::canEmbark(PlayerId player, TypeIndex unitType) const {
     if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return false;
     const Player& p = state_.players[static_cast<size_t>(player)];
     if (rules_->units[static_cast<size_t>(unitType)].domain != Domain::Land) return false;
-    for (size_t i = 0; i < rules_->techs.size(); ++i) {
-        const TreeNode& t = rules_->techs[i];
-        if ((t.embarkAll || t.embarkUnit == unitType) && p.techs.has(static_cast<TypeIndex>(i))) return true;
+    for (TypeIndex i : embarkTechs_) {
+        const TreeNode& t = rules_->techs[static_cast<size_t>(i)];
+        if ((t.embarkAll || t.embarkUnit == unitType) && p.techs.has(i)) return true;
     }
     return false;
 }
@@ -499,8 +505,8 @@ bool Game::canEmbark(PlayerId player, TypeIndex unitType) const {
 bool Game::canEnterOcean(PlayerId player) const {
     if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return false;
     const Player& p = state_.players[static_cast<size_t>(player)];
-    for (size_t i = 0; i < rules_->techs.size(); ++i) {
-        if (rules_->techs[i].ocean && p.techs.has(static_cast<TypeIndex>(i))) return true;
+    for (TypeIndex i : oceanTechs_) {
+        if (p.techs.has(i)) return true;
     }
     return greatPersonEffectTotal(player, GreatPersonEffectKind::Ocean) > 0;  // Leif Erikson (07)
 }
@@ -542,7 +548,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     auto sailable = [&] {
         if (!tt.water || tt.impassable) return false;
         if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) return false;
-        return tt.id != "TERRAIN_OCEAN" || canEnterOcean(unit.owner);
+        return p.terrain != oceanTerrain_ || canEnterOcean(unit.owner);
     };
     if (ut.domain == Domain::Sea) {
         if (tt.water) return sailable() ? std::optional<Fixed>(Fixed::fromInt(1)) : std::nullopt;
