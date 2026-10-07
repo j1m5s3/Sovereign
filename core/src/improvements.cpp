@@ -343,7 +343,7 @@ void Game::pillage(UnitId id, std::optional<Hex> at) {
     Plunder loot;
     if (p.improvement != kNone && p.pillagedTurns == 0) {
         loot = rules_->improvements[static_cast<size_t>(p.improvement)].plunder;
-        p.pillagedTurns = 255;  // until a Builder repairs it (255 world turns at the most)
+        p.pillagedTurns = kPillagedUntilRepaired;
     } else {
         bool district = false;
         if (City* home = state_.city(p.city)) {

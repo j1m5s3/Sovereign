@@ -102,8 +102,10 @@ TEST(a_bomber_delivers_a_nuclear_device) {
 TEST(fallout_poisons_the_ground) {
     GameState s = armed();
     const UnitId bomber = addUnit(s, "UNIT_BOMBER", 0, {4, 6});
+    s.plot({10, 8}).improvement = rules().improvement("IMPROVEMENT_FARM");
     auto g = Game::fromScenario(rules(), std::move(s));
     REQUIRE(g->submit(Command::launchWmd(0, bomber, nuke(), {10, 8})) == CommandError::Ok);
+    CHECK(g->state().plot({10, 8}).pillagedTurns == kPillagedUntilRepaired);  // pillaged until a Builder repairs it (05)
     const City& c = *g->state().cityAt({11, 6});
     const Yields y = g->plotYields({10, 8}, c);
     for (size_t i = 0; i < kNumYields; ++i) CHECK(y[i] == Fixed());

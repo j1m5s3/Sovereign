@@ -7,8 +7,8 @@
 // turn from RANDOM_EVENT_START_TURN: each event's occurrences per game at the chosen intensity,
 // spread over the turn limit and raised by warming. A disaster strikes an area, pillages or
 // destroys improvements, hurts units, people and cities, and leaves fertile ground behind.
-// Simplifications: districts and buildings are not pillaged (the core has no district
-// pillage); pillaged improvements repair themselves after five turns; fires do not spread.
+// A pillaged improvement waits for a Builder, as one pillaged in war does (05: Pillage); a
+// pillaged district repairs itself (kPillagedDistrictTurns, a Sovereign reading).
 #include <algorithm>
 #include <optional>
 
@@ -21,7 +21,6 @@ namespace sov {
 namespace {
 size_t at(int i) { return static_cast<size_t>(i); }
 const UnitType& typeOf(const Rules& r, const Unit& u) { return r.units[at(u.type)]; }
-constexpr int kPillagedTurns = 5;
 
 // A stable per-plot number, so lowland bands and active volcanoes never move.
 uint32_t plotHash(int32_t index, uint64_t salt) {
@@ -209,10 +208,7 @@ void Game::processClimate() {
             if (o.turnsLeft > 0) state_.ongoing.push_back(o);
         }
     }
-    // Repairs and droughts run down.
-    for (Plot& p : state_.plots) {
-        if (p.pillagedTurns > 0) --p.pillagedTurns;
-    }
+    // Droughts run down.
     for (GameState::Drought& d : state_.droughts) --d.turnsLeft;
     state_.droughts.erase(std::remove_if(state_.droughts.begin(), state_.droughts.end(),
                                          [](const GameState::Drought& d) { return d.turnsLeft <= 0; }),
@@ -245,7 +241,7 @@ void Game::processClimate() {
             const City* owner = p.city == kNoCity ? nullptr : state_.city(p.city);
             if (owner && barrier != kNone && owner->has(barrier)) continue;
             if (band == floods[phase]) {
-                if (p.improvement != kNone) p.pillagedTurns = kPillagedTurns;
+                if (p.improvement != kNone) p.pillagedTurns = kPillagedUntilRepaired;
                 continue;
             }
             if (coast == kNone) continue;
@@ -415,7 +411,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
                     }
                     break;
                 case DisasterDamageType::ImprovementPillaged:
-                    if (p.improvement != kNone && rng.chance(static_cast<uint32_t>(dd.percent))) p.pillagedTurns = kPillagedTurns;
+                    if (p.improvement != kNone && rng.chance(static_cast<uint32_t>(dd.percent))) p.pillagedTurns = kPillagedUntilRepaired;
                     break;
                 case DisasterDamageType::PopulationLoss:
                     if (city && city->population > 1) {

@@ -101,14 +101,17 @@ TEST(lake_shores_are_not_coastal_lowlands) {
 
 TEST(climate_phases_warm_the_world_and_the_sea_takes_lowlands) {
     GameState s = coastState(12, 24, 1);
-    // Find a 1 m lowland in the first land column.
+    // Find a 1 m and a 2 m lowland in the first land column.
     auto probe = Game::fromScenario(rules(), s);
-    Hex low{-1, -1};
-    for (int y = 0; y < 24 && low.x < 0; ++y) {
-        if (probe->lowlandBand({1, y}) == 1) low = {1, y};
+    Hex low{-1, -1}, flooded{-1, -1};
+    for (int y = 0; y < 24; ++y) {
+        if (low.x < 0 && probe->lowlandBand({1, y}) == 1) low = {1, y};
+        if (flooded.x < 0 && probe->lowlandBand({1, y}) == 2) flooded = {1, y};
     }
     REQUIRE(low.x == 1);
+    REQUIRE(flooded.x == 1);
     s.plot(low).improvement = rules().improvement("IMPROVEMENT_FARM");
+    s.plot(flooded).improvement = rules().improvement("IMPROVEMENT_FARM");
     addUnit(s, "UNIT_WARRIOR", 0, low);
     s.units.back().activity = Activity::Sleep;
     s.co2 = 3500000;  // 14 points on a Duel map: phases I to IV
@@ -124,6 +127,9 @@ TEST(climate_phases_warm_the_world_and_the_sea_takes_lowlands) {
     bool unitLeft = false;
     for (const Unit& u : g->state().units) unitLeft |= u.pos == low;
     CHECK(!unitLeft);
+    // The 2 m band flooded in phase III: its farm is pillaged until a Builder repairs it.
+    CHECK(g->state().plot(flooded).improvement == rules().improvement("IMPROVEMENT_FARM"));
+    CHECK(g->state().plot(flooded).pillagedTurns == kPillagedUntilRepaired);
 }
 
 TEST(a_flood_barrier_holds_back_the_sea) {
@@ -380,6 +386,26 @@ TEST(a_meteor_shower_pillages_its_plot) {
     g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {9, 6});
     CHECK(g->state().plot({9, 6}).pillagedTurns > 0);
     CHECK(g->state().plot({10, 6}).pillagedTurns == 0);  // one plot only
+}
+
+TEST(disaster_damage_waits_for_a_builder) {
+    // A plot a disaster pillaged stays so until a Builder repairs it, as in war (05: Pillage).
+    GameState s = coastState(16, 12, 1);
+    addCity(s, 0, {8, 6}, true, 3);
+    s.plot({9, 6}).improvement = rules().improvement("IMPROVEMENT_FARM");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {9, 6});
+    REQUIRE(g->state().plot({9, 6}).pillagedTurns > 0);
+    const City& c = g->state().cities[0];
+    const Yields pillaged = g->plotYields({9, 6}, c);
+    sovtest::endTurns(*g, 8);
+    CHECK(g->state().plot({9, 6}).pillagedTurns == kPillagedUntilRepaired);
+    GameState t = g->state();
+    const UnitId builder = addUnit(t, "UNIT_BUILDER", 0, {9, 6});
+    auto h = Game::fromScenario(rules(), std::move(t));
+    REQUIRE(h->submit(Command::repairImprovement(0, builder)) == CommandError::Ok);
+    CHECK_EQ(h->state().plot({9, 6}).pillagedTurns, 0);
+    CHECK(h->plotYields({9, 6}, h->state().cities[0])[static_cast<size_t>(YieldType::Food)] > pillaged[static_cast<size_t>(YieldType::Food)]);
 }
 
 TEST(a_flood_barrier_costs_more_with_more_lowland) {

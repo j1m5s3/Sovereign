@@ -89,7 +89,7 @@ void Game::launchWmd(const Command& c) {
         Plot& pl = state_.plot(h);
         hit(pl.owner);
         pl.fallout = static_cast<uint8_t>(std::min(255, w.falloutTurns));
-        if (pl.improvement != kNone) pl.pillagedTurns = static_cast<uint8_t>(std::max<int>(pl.pillagedTurns, std::min(255, w.falloutTurns)));
+        if (pl.improvement != kNone) pl.pillagedTurns = kPillagedUntilRepaired;  // until a Builder repairs it (05: Pillage)
     }
     for (UnitId id : lost) removeUnit(id);
     for (City& city : state_.cities) {
