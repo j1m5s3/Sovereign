@@ -753,7 +753,17 @@ enum class BoostKind : uint8_t {
     UnitAndImprovement,      // a unit `ref` (or its unique) and a plot with improvement `improvement` (on `resource`, if set)
     AirBaseAbroad,           // an Aerodrome or Airstrip off your capital's continent
     Continents,              // land of `count` continents revealed
-    NotTracked,       // combat and other events (later milestones)
+    BarbarianKills,          // `count` barbarian units killed
+    // Earned by an event as it happens (Game::eventBoost), never read from the state:
+    KillWith,                // a unit `ref` (or its unique) kills a unit
+    KillUnit,                // a unit `ref` (or its unique) killed
+    ClearCamp,               // a barbarian camp cleared
+    WarDeclaredOn,           // the target of a declaration of war
+    CasusBelliWar,           // war declared with a casus belli
+    Artifact,                // an artifact extracted
+    NationalPark,            // a National Park designated
+    NaturalWonder,           // a natural wonder discovered
+    NotTracked,              // a condition the rules core cannot read
 };
 
 struct Boost {

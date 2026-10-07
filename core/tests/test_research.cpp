@@ -3,6 +3,7 @@
 
 #include "helpers.h"
 #include "sovereign/modifiers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::capitalScenario;
@@ -73,19 +74,20 @@ TEST(research_data_from_civ_tables) {
     CHECK_EQ(steel.ref, r.unit("UNIT_IRONCLAD"));
     CHECK_EQ(steel.improvement, r.improvement("IMPROVEMENT_MINE"));
     CHECK_EQ(steel.resource, r.resource("RESOURCE_COAL"));
-    // Every boost with a condition can fire, but for the ones earned by events (combat, war, archaeology, parks)
-    // and the Astrology Eureka the natural wonder discovery grants itself.
+    const Boost& archery = r.techs[at(tech("TECH_ARCHERY"))].boost;  // events: a kill with a Slinger
+    CHECK(archery.kind == BoostKind::KillWith);
+    CHECK_EQ(archery.ref, r.unit("UNIT_SLINGER"));
+    const Boost& guidance = r.techs[at(tech("TECH_GUIDANCE_SYSTEMS"))].boost;  // a Fighter killed
+    CHECK(guidance.kind == BoostKind::KillUnit);
+    CHECK_EQ(guidance.ref, r.unit("UNIT_FIGHTER"));
+    // Every boost with a condition can fire.
     std::vector<std::string> untracked;
     for (const auto* tree : {&r.techs, &r.civics}) {
         for (const TreeNode& n : *tree) {
             if (n.boost.percent > 0 && n.boost.kind == BoostKind::NotTracked) untracked.push_back(n.id);
         }
     }
-    const std::vector<std::string> events = {
-        "TECH_ASTROLOGY", "TECH_ARCHERY", "TECH_BRONZE_WORKING", "TECH_MILITARY_TACTICS", "TECH_SQUARE_RIGGING",
-        "TECH_MILITARY_SCIENCE", "TECH_RADIO", "TECH_COMBUSTION", "TECH_GUIDANCE_SYSTEMS", "CIVIC_MILITARY_TRADITION",
-        "CIVIC_DEFENSIVE_TACTICS", "CIVIC_NAVAL_TRADITION", "CIVIC_NATIONALISM"};
-    CHECK(untracked == events);
+    CHECK(untracked.empty());
     const Boost& empire = r.civics[at(civic("CIVIC_EARLY_EMPIRE"))].boost;
     CHECK(empire.kind == BoostKind::TotalPopulation);
     CHECK_EQ(empire.count, 6);
@@ -406,6 +408,84 @@ TEST(boosts_from_wonders_places_and_continents) {
     t.players[0].visibility.assign(t.plots.size(), static_cast<uint8_t>(Visibility::Unrevealed));
     t.players[0].visibility[static_cast<size_t>(t.grid.index(island))] = static_cast<uint8_t>(Visibility::Revealed);
     CHECK(boostIn(t, civicBoost("CIVIC_FOREIGN_TRADE")));
+}
+
+TEST(boosts_from_kills_and_cleared_camps) {
+    // 04: Archery (a kill with a Slinger), Military Tactics (with a Spearman; Greece's Hoplite stands in), Bronze Working
+    // (3 barbarians killed), Military Tradition (a barbarian camp cleared).
+    GameState s = flatState(16, 12, 3);
+    s.players[2].barbarian = true;
+    s.players[2].civ = kNone;
+    const auto weak = [&](PlayerId owner, Hex at) { sovtest::addUnit(s, "UNIT_WARRIOR", owner, at), s.units.back().hp = 1; };
+    const UnitId slinger = sovtest::addUnit(s, "UNIT_SLINGER", 0, {4, 5});
+    weak(1, {5, 5});  // a rival's
+    const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {8, 2});
+    weak(2, {9, 2});
+    const UnitId hoplite = sovtest::addUnit(s, "UNIT_HOPLITE", 0, {4, 8});
+    weak(2, {5, 8});
+    const UnitId third = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {8, 10});
+    weak(2, {9, 10});
+    const UnitId raider = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {12, 8});
+    Camp camp;
+    camp.id = s.nextCampId++;
+    camp.pos = {13, 8};
+    camp.tribe = static_cast<TypeIndex>(rules().barbarianTribes.size() - 1);
+    camp.spawnTimer = 99;
+    s.camps.push_back(camp);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const auto boosted = [&](const char* id) {
+        const Player& p = g->state().players[0];
+        return id[0] == 'T' ? p.techs.boosted[at(tech(id))] != 0 : p.civics.boosted[at(civic(id))] != 0;
+    };
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::rangedAttack(0, slinger, {5, 5})) == CommandError::Ok);
+    CHECK(boosted("TECH_ARCHERY"));
+    CHECK_EQ(g->state().players[0].barbarianKills, 0);
+    REQUIRE(g->submit(Command::attack(0, warrior, {9, 2})) == CommandError::Ok);
+    CHECK(!boosted("TECH_MILITARY_TACTICS"));  // a Warrior is no Spearman
+    REQUIRE(g->submit(Command::attack(0, hoplite, {5, 8})) == CommandError::Ok);
+    CHECK(boosted("TECH_MILITARY_TACTICS"));
+    CHECK(!boosted("TECH_BRONZE_WORKING"));  // two barbarians
+    REQUIRE(g->submit(Command::attack(0, third, {9, 10})) == CommandError::Ok);
+    CHECK(boosted("TECH_BRONZE_WORKING"));
+    CHECK(!boosted("CIVIC_MILITARY_TRADITION"));
+    REQUIRE(g->submit(Command::move(0, raider, {13, 8})) == CommandError::Ok);
+    REQUIRE(g->state().camps.empty());
+    CHECK(boosted("CIVIC_MILITARY_TRADITION"));
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().players[0].barbarianKills, 3);
+    CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+TEST(boosts_from_declarations_of_war) {
+    // 04: Defensive Tactics (the target of a declaration of war), Nationalism (war declared with a casus belli).
+    GameState s = flatState(24, 12, 3);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.relations.resize(s.players.size());
+    }
+    s.turn = 40;
+    sovtest::addCity(s, 0, {3, 5}, true, 3);
+    sovtest::addCity(s, 1, {12, 5}, true, 3);
+    sovtest::addCity(s, 1, {20, 5}, false, 3);
+    s.cities.back().originalOwner = 0;  // founded by player 0: Reconquest
+    sovtest::addCity(s, 2, {12, 10}, true, 3);
+    Player& p = s.players[0];
+    p.civics.done[at(civic("CIVIC_DEFENSIVE_TACTICS"))] = 1;
+    p.relations[1].denouncedOn = s.turn - rules().globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
+    const size_t defensive = at(civic("CIVIC_DEFENSIVE_TACTICS")), nationalism = at(civic("CIVIC_NATIONALISM"));
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->submit(Command::declareWarFor(0, 1, CasusBelli::Reconquest)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[1].civics.boosted[defensive], 1);
+    CHECK_EQ(g->state().players[0].civics.boosted[nationalism], 1);
+    CHECK_EQ(g->state().players[2].civics.boosted[defensive], 0);
+    // A surprise war: the target earns its Inspiration, the aggressor nothing.
+    auto h = Game::fromScenario(rules(), s);
+    REQUIRE(h->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    CHECK_EQ(h->state().players[2].civics.boosted[defensive], 1);
+    CHECK_EQ(h->state().players[0].civics.boosted[nationalism], 0);
 }
 
 TEST(research_unlocks_units_buildings_and_resources) {

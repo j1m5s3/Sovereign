@@ -293,6 +293,7 @@ void Game::excavate(UnitId id) {
     const PlayerId landOwner = state_.plot(u.pos).owner;
     if (landOwner != kNoPlayer && landOwner != u.owner) breakPromises(u.owner, landOwner, PromiseKind::NoDigging);  // 08 [GS]
     dedicationScore(u.owner, "DEDICATION_WISH_YOU_WERE_HERE", 1);  // 09: an artifact extracted
+    eventBoost(u.owner, BoostKind::Artifact);                         // 04: Combustion
     if (rules_->terrains[at(state_.plot(u.pos).terrain)].water)
         awardFirst(u.owner, "MOMENT_WORLD_S_FIRST_SHIPWRECK_EXCAVATED", "MOMENT_FIRST_SHIPWRECK_EXCAVATED", 0);
     else

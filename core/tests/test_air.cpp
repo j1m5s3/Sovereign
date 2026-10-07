@@ -95,6 +95,23 @@ TEST(air_strikes_and_interception) {
     CHECK(g4->interception(*g4->state().unit(plane), {8, 7}).first > 0);
 }
 
+TEST(bringing_down_a_fighter_earns_guidance_systems) {
+    // 04: Guidance Systems' Eureka, a Fighter killed: an anti-air gun brings down a crippled one striking beside it.
+    GameState s = skies();
+    const UnitId plane = addUnit(s, "UNIT_FIGHTER", 0, {5, 7});
+    s.units.back().hp = 1;
+    addUnit(s, "UNIT_INFANTRY", 1, {8, 7});
+    addUnit(s, "UNIT_ANTI_AIR_GUN", 1, {9, 7});
+    addUnit(s, "UNIT_SCOUT", 0, {7, 8});
+    auto g = Game::fromScenario(rules(), s);
+    const size_t guidance = at(rules().tech("TECH_GUIDANCE_SYSTEMS"));
+    CHECK_EQ(g->state().players[1].techs.boosted[guidance], 0);
+    REQUIRE(g->submit(Command::rangedAttack(0, plane, {8, 7})) == CommandError::Ok);
+    CHECK(g->state().unit(plane) == nullptr);
+    CHECK_EQ(g->state().players[1].techs.boosted[guidance], 1);
+    CHECK_EQ(g->state().players[0].techs.boosted[guidance], 0);
+}
+
 TEST(aircraft_are_lost_with_their_base) {
     GameState s = skies();
     const UnitId plane = addUnit(s, "UNIT_BIPLANE", 0, {5, 7});

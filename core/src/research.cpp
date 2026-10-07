@@ -165,7 +165,16 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
     switch (b.kind) {
         case BoostKind::None:
         case BoostKind::NotTracked:
-            return false;
+        case BoostKind::KillWith:
+        case BoostKind::KillUnit:
+        case BoostKind::ClearCamp:
+        case BoostKind::WarDeclaredOn:
+        case BoostKind::CasusBelliWar:
+        case BoostKind::Artifact:
+        case BoostKind::NationalPark:
+        case BoostKind::NaturalWonder:
+            return false;  // events: Game::eventBoost
+        case BoostKind::BarbarianKills: return p.barbarianKills >= b.count;
         case BoostKind::CoastalCity:
             return countCities([&](const City& c) { return isCoastal(state_, *rules_, c); }) > 0;
         case BoostKind::Building:
@@ -611,21 +620,42 @@ void Game::processResearch(PlayerId pid, Fixed science, Fixed culture) {
 void Game::updateBoosts(PlayerId pid) {
     for (int civic = 0; civic < 2; ++civic) {
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+        const TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics : state_.players[static_cast<size_t>(pid)].techs;
         for (size_t i = 0; i < nodes.size(); ++i) {
             const Boost& b = nodes[i].boost;
             if (b.percent <= 0 || b.kind == BoostKind::None || b.kind == BoostKind::NotTracked) continue;
-            TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics
-                                    : state_.players[static_cast<size_t>(pid)].techs;
             if (t.done[i] || t.boosted[i] || !boostMet(pid, b)) continue;
-            const int cost = civic ? civicCost(static_cast<TypeIndex>(i)) : techCost(static_cast<TypeIndex>(i));
-            // Dedications (09): Free Inquiry (Eurekas) and Pen, Brush and Voice (Inspirations): +10 points in a
-            // Golden Age, +1 era score otherwise.
-            const char* const ded = civic ? "DEDICATION_PEN_BRUSH_AND_VOICE" : "DEDICATION_FREE_INQUIRY";
-            const int pct = b.percent + (goldenDedication(pid, ded) ? 10 : 0);
-            t.boosted[i] = 1;
-            t.progress[i] += Fixed::fromInt(cost) * pct / 100;
-            dedicationScore(pid, ded, 1);
-            questDone(pid, civic ? QuestKind::Inspiration : QuestKind::Eureka, static_cast<int32_t>(i));  // 08: Quests
+            grantBoost(pid, civic != 0, i);
+        }
+    }
+}
+
+void Game::grantBoost(PlayerId pid, bool civic, size_t node) {
+    TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics : state_.players[static_cast<size_t>(pid)].techs;
+    if (node >= t.done.size() || t.done[node] || t.boosted[node]) return;
+    const Boost& b = (civic ? rules_->civics : rules_->techs)[node].boost;
+    const int cost = civic ? civicCost(static_cast<TypeIndex>(node)) : techCost(static_cast<TypeIndex>(node));
+    // Dedications (09): Free Inquiry (Eurekas) and Pen, Brush and Voice (Inspirations): +10 points in a
+    // Golden Age, +1 era score otherwise.
+    const char* const ded = civic ? "DEDICATION_PEN_BRUSH_AND_VOICE" : "DEDICATION_FREE_INQUIRY";
+    const int pct = (b.percent > 0 ? b.percent : 40) + (goldenDedication(pid, ded) ? 10 : 0);
+    t.boosted[node] = 1;
+    t.progress[node] += Fixed::fromInt(cost) * pct / 100;
+    dedicationScore(pid, ded, 1);
+    questDone(pid, civic ? QuestKind::Inspiration : QuestKind::Eureka, static_cast<int32_t>(node));  // 08: Quests
+}
+
+// Boosts earned by an event as it happens (04): a kill with or of a unit type (its civ uniques stand in), a camp
+// cleared, a war declared, an artifact, a National Park, a natural wonder.
+void Game::eventBoost(PlayerId pid, BoostKind kind, TypeIndex ref) {
+    if (!inRange(pid, state_.players.size())) return;
+    const bool unitRef = kind == BoostKind::KillWith || kind == BoostKind::KillUnit;
+    const TypeIndex base = unitRef && inRange(ref, rules_->units.size()) ? rules_->units[static_cast<size_t>(ref)].replaces : kNone;
+    for (int civic = 0; civic < 2; ++civic) {
+        const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            const Boost& b = nodes[i].boost;
+            if (b.percent > 0 && b.kind == kind && (!unitRef || b.ref == ref || (base != kNone && b.ref == base))) grantBoost(pid, civic != 0, i);
         }
     }
 }

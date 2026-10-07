@@ -58,9 +58,12 @@ TEST(a_national_park_draws_tourism_and_cheers_its_city) {
     REQUIRE(plots);
     const int amenities = g->cityReport(g->state().cities[0].id).amenities;
     const int tourism = g->tourismPerTurn(0);
+    const size_t radio = at(rules().tech("TECH_RADIO"));
+    CHECK_EQ(g->state().players[0].techs.boosted[radio], 0);
     REQUIRE(g->submit(Command::designatePark(0, naturalist)) == CommandError::Ok);
     CHECK(!g->state().unit(naturalist));
     CHECK(sovtest::hasMoment(*g, 0, "MOMENT_WORLD_S_FIRST_NATIONAL_PARK"));  // 09
+    CHECK_EQ(g->state().players[0].techs.boosted[radio], 1);                 // 04: Radio's Eureka
     int appeal = 0;
     for (const Hex& h : *plots) {
         CHECK(g->state().plot(h).park);

@@ -161,6 +161,14 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
             c.boldness += rules_->globalInt("BARBARIAN_BOLDNESS_PER_UNIT_LOST");
         }
     }
+    // Boosts (04): a kill with a unit type (Archery's Slinger...) or of one (Guidance Systems' Fighter), and the
+    // barbarians killed (Bronze Working).
+    if (killer && killer->owner != victim.owner) {
+        const Player& loser = state_.players[static_cast<size_t>(victim.owner)];
+        if (loser.barbarian && !loser.freeCity) ++state_.players[static_cast<size_t>(killer->owner)].barbarianKills;
+        eventBoost(killer->owner, BoostKind::KillWith, killer->type);
+        eventBoost(killer->owner, BoostKind::KillUnit, victim.type);
+    }
 }
 
 void Game::spawnCaptures() {
@@ -210,6 +218,7 @@ void Game::enterPlot(Unit& unit) {
     const int32_t cleared = it->id;
     state_.camps.erase(it);
     questDone(unit.owner, QuestKind::ClearCamp, cleared);  // 08: Quests
+    eventBoost(unit.owner, BoostKind::ClearCamp);           // 04: Military Tradition
     const int pct = 100 + (difficultyHuman(unit.owner) ? difficulty().humanCampGoldPercent : 0);  // 00-overview: Difficulty levels
     state_.players[static_cast<size_t>(unit.owner)].gold += Fixed::fromInt(rules_->globalInt("BARBARIAN_CAMP_CLEAR_GOLD") * pct / 100);
     // Initiation Rites (06): +50 Faith, and the unit that cleared it heals fully.
