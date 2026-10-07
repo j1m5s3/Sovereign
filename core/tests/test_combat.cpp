@@ -236,6 +236,27 @@ TEST(zone_of_control_stops_movement) {
     CHECK_EQ(unit(*p, w).movesLeft, Fixed::fromInt(1));
 }
 
+// Path planning ends the turn on each of the six plots around an enemy at war: a Warrior two plots away plans the
+// step next to it with no moves left, on whichever side it comes from.
+TEST(zone_of_control_ends_planned_moves_on_every_side) {
+    const Hex enemy{8, 6};
+    std::vector<UnitId> ours;
+    auto g = duel([&](GameState& s) {
+        addUnit(s, "UNIT_WARRIOR", 1, enemy);
+        for (int d = 0; d < kNumDirs; ++d) {
+            const Hex side = *s.grid.neighbor(enemy, static_cast<Dir>(d));
+            ours.push_back(addUnit(s, "UNIT_WARRIOR", 0, *s.grid.neighbor(side, static_cast<Dir>(d))));
+        }
+    });
+    for (int d = 0; d < kNumDirs; ++d) {
+        const Hex side = *g->state().grid.neighbor(enemy, static_cast<Dir>(d));
+        const auto path = g->findPath(ours[static_cast<size_t>(d)], side);
+        REQUIRE(path && path->size() == 2u);
+        CHECK_EQ(path->back().turn, 0);
+        CHECK_EQ(path->back().movesLeft, Fixed());
+    }
+}
+
 TEST(promotion_and_healing) {
     const Rules& r = rules();
     UnitId w = kNoUnit;

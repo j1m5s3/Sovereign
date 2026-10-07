@@ -705,7 +705,13 @@ private:
         std::vector<int> byResource;                 // per resource: plots an improvement works it on
     };
     ImprovedPlots improvedPlots(PlayerId player) const;
-    bool boostMet(PlayerId player, const Boost& boost, std::optional<ImprovedPlots>& improved) const;  // counts them on first need
+    // What one civ's Eureka and Inspiration checks share, each part gathered on first need: its improved plots and
+    // the indices of its cities and units.
+    struct BoostScan {
+        std::optional<ImprovedPlots> improved;
+        std::optional<std::vector<size_t>> cities, units;
+    };
+    bool boostMet(PlayerId player, const Boost& boost, BoostScan& scan) const;
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
     void eventBoost(PlayerId p, BoostKind kind, TypeIndex ref = kNone);  // boosts of this event kind (a kill, a camp...)
     CommandError validateBuilder(const Command& c) const;
@@ -901,6 +907,7 @@ private:
     std::vector<TypeIndex> oceanTechs_;       // the techs that open the Ocean (Cartography)
     std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
     std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
+    std::vector<TypeIndex> borderCivics_;     // the civics that close a civ's borders (Early Empire)
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and

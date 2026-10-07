@@ -124,7 +124,9 @@ bool isLake(const GameState& state, const Rules& rules, Hex h) {
     if (!water(h)) return false;
     static const std::string kLimit = "LAKE_MAX_AREA_SIZE";
     const size_t limit = static_cast<size_t>(std::max(0, rules.globalInt(kLimit)));
-    std::vector<Hex> body{h};
+    std::vector<Hex> body;
+    body.reserve(std::max<size_t>(limit, 1));  // it never holds more than the limit, so it is allocated once
+    body.push_back(h);
     for (size_t i = 0; i < body.size(); ++i) {
         for (int d = 0; d < kNumDirs; ++d) {
             const auto n = state.grid.neighbor(body[i], static_cast<Dir>(d));

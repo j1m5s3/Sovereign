@@ -239,7 +239,7 @@ Game::ImprovedPlots Game::improvedPlots(PlayerId player) const {
     n.byImprovement.assign(rules_->improvements.size(), 0);
     n.onResource.assign(rules_->improvements.size(), 0);
     n.byResource.assign(rules_->resources.size(), 0);
-    for (size_t i = 0; i < state_.plots.size(); ++i) {
+    for (size_t i = 0, plotCount = state_.plots.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[i];
         if (p.owner != player || p.improvement == kNone) continue;
         ++n.total;
@@ -633,7 +633,7 @@ void Game::accumulateStrategics(PlayerId pid) {
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) holders.push_back(cs.id);
     }
-    for (size_t i = 0; i < state_.plots.size(); ++i) {
+    for (size_t i = 0, plotCount = state_.plots.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[i];
         if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
         const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];

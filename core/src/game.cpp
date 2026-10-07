@@ -208,6 +208,9 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     }
     for (const TreeNode& t : rules_->techs) techEras_.push_back(t.era);
     for (const TreeNode& t : rules_->civics) civicEras_.push_back(t.era);
+    for (size_t i = 0; i < rules_->civics.size(); ++i) {
+        if (rules_->civics[i].enforceBorders) borderCivics_.push_back(static_cast<TypeIndex>(i));
+    }
 }
 
 uint64_t Game::stateHash() const {
@@ -474,8 +477,8 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) co
         if (traits.rockBand && policyIs(p.id, "POLICY_MUSIC_CENSORSHIP")) closed |= 2;
         // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
         if (traits.ignoreBorders || atWar(unit.owner, p.id) || grantsOpenBorders(p.id, unit.owner)) continue;
-        for (size_t i = 0; i < rules_->civics.size(); ++i) {
-            if (rules_->civics[i].enforceBorders && p.civics.has(static_cast<TypeIndex>(i))) {
+        for (TypeIndex i : borderCivics_) {
+            if (p.civics.has(i)) {
                 closed |= 1;
                 break;
             }
@@ -612,9 +615,13 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     const MoveTraits traits = moveTraits(*u);
     const MoveLimits limits = moveLimits(*u, traits);
 
-    struct Node { int turn = INT32_MAX; Fixed moves; int prev = -1; };
+    // The best arrival found at each plot: its turn and the plot it came from are kept one higher, so a plot not
+    // reached yet is all zeros and the table starts as a plain zero fill.
+    struct Node { int turn1; int prev1; int64_t moves; };
     std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
-    auto better = [](int t1, Fixed m1, int t2, Fixed m2) { return t1 != t2 ? t1 < t2 : m1 > m2; };
+    auto better = [](int turn, Fixed moves, const Node& than) {
+        return than.turn1 == 0 || (turn + 1 != than.turn1 ? turn + 1 < than.turn1 : moves.raw() > than.moves);
+    };
     struct QItem { int turn; int64_t negMoves; int index; };
     auto cmp = [](const QItem& a, const QItem& b) {
         if (a.turn != b.turn) return a.turn > b.turn;
@@ -623,14 +630,14 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     };
     std::priority_queue<QItem, std::vector<QItem>, decltype(cmp)> open(cmp);
     const int start = state_.grid.index(u->pos);
-    best[static_cast<size_t>(start)] = {0, u->movesLeft, -1};
+    best[static_cast<size_t>(start)] = {1, 0, u->movesLeft.raw()};
     open.push({0, -u->movesLeft.raw(), start});
     const int goal = state_.grid.index(*t);
     while (!open.empty()) {
         QItem q = open.top();
         open.pop();
         const Node cur = best[static_cast<size_t>(q.index)];
-        if (cur.turn != q.turn || -cur.moves.raw() != q.negMoves) continue;  // stale
+        if (cur.turn1 - 1 != q.turn || -cur.moves != q.negMoves) continue;  // stale
         if (q.index == goal) break;
         Hex from = state_.grid.at(q.index);
         for (int d = 0; d < kNumDirs; ++d) {
@@ -639,8 +646,8 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
             auto cost = moveCost(*u, traits, limits, from, *n, static_cast<Dir>(d));
             if (!cost) continue;
-            int turn = cur.turn;
-            Fixed mp = cur.moves;
+            int turn = cur.turn1 - 1;
+            Fixed mp = Fixed::fromRaw(cur.moves);
             if (mp <= Fixed()) {
                 ++turn;
                 mp = fullMoves;
@@ -651,18 +658,20 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
                 mp = fullMoves;
             }
             mp = mp >= *cost ? mp - *cost : Fixed();
-            if (!zoc.empty() && zoc[static_cast<size_t>(state_.grid.index(*n))]) mp = Fixed();  // entering enemy ZOC ends the move
-            Node& nb = best[static_cast<size_t>(state_.grid.index(*n))];
-            if (better(turn, mp, nb.turn, nb.moves)) {
-                nb = {turn, mp, q.index};
-                open.push({turn, -mp.raw(), state_.grid.index(*n)});
+            const int next = state_.grid.index(*n);
+            if (!zoc.empty() && zoc[static_cast<size_t>(next)]) mp = Fixed();  // entering enemy ZOC ends the move
+            Node& nb = best[static_cast<size_t>(next)];
+            if (better(turn, mp, nb)) {
+                nb = {turn + 1, q.index + 1, mp.raw()};
+                open.push({turn, -mp.raw(), next});
             }
         }
     }
-    if (best[static_cast<size_t>(goal)].turn == INT32_MAX) return std::nullopt;
+    if (best[static_cast<size_t>(goal)].turn1 == 0) return std::nullopt;
     std::vector<PathStep> path;
-    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev) {
-        path.push_back({state_.grid.at(i), best[static_cast<size_t>(i)].turn, best[static_cast<size_t>(i)].moves});
+    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev1 - 1) {
+        const Node& n = best[static_cast<size_t>(i)];
+        path.push_back({state_.grid.at(i), n.turn1 - 1, Fixed::fromRaw(n.moves)});
     }
     std::reverse(path.begin(), path.end());
     return path;
@@ -751,9 +760,8 @@ void Game::refreshVisibility(PlayerId pid) {
         std::fill(p.visibility.begin(), p.visibility.end(), static_cast<uint8_t>(Visibility::Visible));
         return;
     }
-    for (uint8_t& v : p.visibility) {
-        if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
-    }
+    // Written as a select rather than a conditional store so the compiler can do many plots at once.
+    for (uint8_t& v : p.visibility) v = v == static_cast<uint8_t>(Visibility::Visible) ? static_cast<uint8_t>(Visibility::Revealed) : v;
     std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
     std::vector<int16_t> landfalls;     // landmasses it sees for the first time (09: a new continent)
     std::vector<int16_t> knownLand;     // landmasses it had seen before, gathered at the first new land plot
@@ -767,7 +775,7 @@ void Game::refreshVisibility(PlayerId pid) {
             if (!lineOfSight(from, target, throughFeatures)) continue;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
-                    for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
+                    for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
                         const int16_t seen = state_.plots[i].continent;
                         if (seen >= 0 && p.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed) &&
                             std::find(knownLand.begin(), knownLand.end(), seen) == knownLand.end())
@@ -796,7 +804,12 @@ void Game::refreshVisibility(PlayerId pid) {
         }
     };
     // Military alliance, level 2: allies see what each other sees (08: alliance levels).
-    const auto shares = [&](PlayerId o) { return o == pid || (alliance(pid, o) == AllianceType::Military && allianceLevel(pid, o) >= 2); };
+    std::vector<uint8_t> sharing(state_.players.size(), 0);  // by player, worked out once for the refresh
+    for (size_t o = 0; o < sharing.size(); ++o) {
+        const PlayerId other = static_cast<PlayerId>(o);
+        sharing[o] = other == pid || (alliance(pid, other) == AllianceType::Military && allianceLevel(pid, other) >= 2) ? 1 : 0;
+    }
+    const auto shares = [&](PlayerId o) { return o == pid || (o >= 0 && static_cast<size_t>(o) < sharing.size() && sharing[static_cast<size_t>(o)] != 0); };
     for (Unit& u : state_.units) {
         if (!shares(u.owner)) continue;
         finder = u.owner == pid ? &u : nullptr;
