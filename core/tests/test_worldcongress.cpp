@@ -1,6 +1,8 @@
 // Grievances, Diplomatic Favor and the World Congress (08 [GS]): where grievances come from and
 // how they fade, favor per turn, convening, voting with favor, resolutions in force, the
 // Diplomatic Victory, saves.
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/serialize.h"
 
@@ -45,7 +47,8 @@ TEST(congress_rules_data) {
     const Rules& r = rules();
     int supported = 0;
     for (const ResolutionType& res : r.resolutions) supported += res.kind != ResolutionKind::Unsupported ? 1 : 0;
-    CHECK_EQ(supported, 17);  // all but Mercenary Companies and Arms Control
+    CHECK_EQ(supported, static_cast<int>(r.resolutions.size()));  // every one, Mercenary Companies and Arms Control included
+    CHECK(r.resolutions[at(r.resolution("RESOLUTION_MERCENARY_COMPANIES"))].target == ResolutionTarget::Yield);
     CHECK_EQ(r.resolutions[at(r.resolution("RESOLUTION_DIPLOMATIC_VICTORY"))].minEra, r.era("ERA_MODERN"));
     CHECK_EQ(r.eras[0].grievanceDecay, 10);
     CHECK_EQ(r.governments[at(r.government("GOVERNMENT_MONARCHY"))].favor, 2);
@@ -219,4 +222,110 @@ TEST(luxury_policy_and_deforestation_treaty) {
     auto noChop = withResolution("RESOLUTION_DEFORESTATION_TREATY", 0, forest, w);
     CHECK(chop->canHarvestAt(0, {5, 6}));
     CHECK(!noChop->canHarvestAt(0, {5, 6}));
+}
+
+// Mercenary Companies (Civilopedia): "+100% cost when producing or purchasing military units using this currency type"
+// (A), "-50% cost" (B); the target is Production, Gold or Faith.
+TEST(mercenary_companies_change_what_military_units_cost) {
+    const ProductionItem warrior{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")};
+    const ProductionItem builder{ProductionKind::Unit, rules().unit("UNIT_BUILDER")};
+    const int32_t production = static_cast<int32_t>(YieldType::Production), gold = static_cast<int32_t>(YieldType::Gold),
+                  faith = static_cast<int32_t>(YieldType::Faith);
+    GameState s = wcState();
+    s.cities[0].queue = {warrior};
+    s.players[0].government = rules().government("GOVERNMENT_THEOCRACY");  // land combat units for Faith
+    auto plain = Game::fromScenario(rules(), s);
+    // Gold.
+    const int price = plain->purchaseCost(0, warrior);
+    REQUIRE(price > 0 && price % 10 == 0);
+    CHECK_EQ(withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, s)->purchaseCost(0, warrior), 2 * price);
+    CHECK_EQ(withResolution("RESOLUTION_MERCENARY_COMPANIES", 1, gold, s)->purchaseCost(0, warrior), price / 2 / 5 * 5);
+    CHECK_EQ(withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, s)->purchaseCost(0, builder), plain->purchaseCost(0, builder));
+    CHECK_EQ(withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, production, s)->purchaseCost(0, warrior), price);
+    // Faith, at Theocracy's price: twice as dear, the Gold price untouched.
+    auto devout = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, faith, s);
+    const int faithPrice = plain->faithPurchaseCost(0, plain->state().cities[0], warrior);
+    REQUIRE(faithPrice > 0);
+    CHECK_EQ(devout->faithPurchaseCost(0, devout->state().cities[0], warrior), 2 * faithPrice);
+    CHECK_EQ(devout->purchaseCost(0, warrior), price);
+    // Grand Master's Chapel: land combat units for Faith at their Gold price, which only Faith's resolution changes.
+    GameState chapel = s;
+    chapel.cities[0].buildings.push_back(rules().building("BUILDING_GRAND_MASTER_S_CHAPEL"));
+    std::sort(chapel.cities[0].buildings.begin(), chapel.cities[0].buildings.end());
+    auto chapelFaith = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, faith, chapel);
+    auto chapelGold = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, chapel);
+    CHECK_EQ(chapelFaith->faithPurchaseCost(0, chapelFaith->state().cities[0], warrior), 2 * price);
+    CHECK_EQ(chapelGold->faithPurchaseCost(0, chapelGold->state().cities[0], warrior), price);
+    // Production: the Warrior comes at half speed (A) or twice (B); Gold chosen leaves it alone.
+    const auto progress = [&](Game& g) {
+        sovtest::endTurns(g, 2);
+        for (const ProductionProgress& p : g.state().cities[0].progress) {
+            if (p.item == warrior) return p.amount;
+        }
+        return Fixed();
+    };
+    const Fixed made = progress(*plain);
+    REQUIRE(made > Fixed());
+    CHECK_EQ(progress(*withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, production, s)), made / 2);
+    CHECK_EQ(progress(*withResolution("RESOLUTION_MERCENARY_COMPANIES", 1, production, s)), made * 2);
+    CHECK_EQ(progress(*withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, s)), made);
+    // Every major civ's military units, support units and aircraft included; not religious units, Rock Bands or spies
+    // (all in the military layer), and not city-states'.
+    auto dear = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, s);
+    CHECK_EQ(dear->mercenaryPercent(0, rules().unit("UNIT_BATTERING_RAM"), YieldType::Gold), 200);
+    CHECK_EQ(dear->mercenaryPercent(1, rules().unit("UNIT_BIPLANE"), YieldType::Gold), 200);
+    CHECK_EQ(dear->mercenaryPercent(0, rules().unit("UNIT_WARRIOR_MONK"), YieldType::Gold), 200);
+    for (const char* id : {"UNIT_SPY", "UNIT_APOSTLE", "UNIT_INQUISITOR", "UNIT_ROCK_BAND", "UNIT_SETTLER", "UNIT_SOVEREIGN"})
+        CHECK_EQ(dear->mercenaryPercent(0, rules().unit(id), YieldType::Gold), 100);
+    dear->stateMutForTests().players[1].cityState = 0;
+    CHECK_EQ(dear->mercenaryPercent(1, rules().unit("UNIT_WARRIOR"), YieldType::Gold), 100);
+}
+
+// The AI's votes: Mercenary Companies on Production, -50% while at war with a major civ and +100% in peace; Arms Control
+// B on the rival holding the most devices, else A on itself.
+TEST(ai_votes_on_mercenary_companies_and_arms_control) {
+    // A session that can only draw this resolution; returns the AI's (player 1's) vote on it.
+    const auto aiVote = [](const char* resolution, GameState s) {
+        Rules only = rules();
+        for (ResolutionType& res : only.resolutions) {
+            if (res.id != resolution) res.kind = ResolutionKind::Unsupported;
+        }
+        s.gameEra = rules().era("ERA_ATOMIC");
+        s.nextCongressTurn = s.turn;
+        auto g = Game::fromScenario(only, std::move(s));
+        sovtest::endTurns(*g, 2);
+        CongressVote out;
+        out.player = kNoPlayer;
+        for (const CongressItem& item : g->state().congress) {
+            for (const CongressVote& v : item.votes) {
+                if (v.player == 1) {
+                    out = v;
+                    out.target = item.candidates[static_cast<size_t>(v.target)];  // the candidate itself
+                }
+            }
+        }
+        return out;
+    };
+    const int32_t production = static_cast<int32_t>(YieldType::Production);
+    GameState s = wcState();
+    const CongressVote peace = aiVote("RESOLUTION_MERCENARY_COMPANIES", s);
+    REQUIRE(peace.player == 1);
+    CHECK_EQ(static_cast<int>(peace.option), 0);
+    CHECK_EQ(peace.target, production);
+    s.players[0].relations.resize(2);
+    s.players[1].relations.resize(2);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    const CongressVote war = aiVote("RESOLUTION_MERCENARY_COMPANIES", s);
+    CHECK_EQ(static_cast<int>(war.option), 1);
+    CHECK_EQ(war.target, production);
+
+    GameState n = wcState();
+    const CongressVote unarmed = aiVote("RESOLUTION_ARMS_CONTROL", n);
+    REQUIRE(unarmed.player == 1);
+    CHECK_EQ(static_cast<int>(unarmed.option), 0);
+    CHECK_EQ(unarmed.target, 1);
+    n.players[0].wmds[at(rules().wmd("WMD_NUCLEAR_DEVICE"))] = 2;
+    const CongressVote armed = aiVote("RESOLUTION_ARMS_CONTROL", n);
+    CHECK_EQ(static_cast<int>(armed.option), 1);
+    CHECK_EQ(armed.target, 0);
 }

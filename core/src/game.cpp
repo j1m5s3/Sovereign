@@ -1316,6 +1316,7 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
         burnPower(pid);
         processWarWeariness(pid);
         processLevies(pid);
+        armsControl(pid);  // the World Congress's cap follows the target's devices
         // Pillaged districts are repaired over their owner's turns (Sovereign reading of the repair).
         for (City& city : state_.cities) {
             if (city.owner != pid) continue;

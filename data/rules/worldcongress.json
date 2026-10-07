@@ -35,15 +35,15 @@
    "id": "RESOLUTION_MERCENARY_COMPANIES",
    "name": "Mercenary Companies",
    "target": "YIELD",
-   "optionA": "-100% unit production for all major civs",
-   "optionB": "+50% unit production for all major civs"
+   "optionA": "+100% cost when producing or purchasing military units using this currency type",
+   "optionB": "-50% cost when producing or purchasing military units using this currency type"
   },
   {
    "id": "RESOLUTION_ARMS_CONTROL",
    "name": "Arms Control",
    "target": "PLAYER",
-   "optionA": "? nuclear stockpile",
-   "optionB": "+0% nuclear stockpile",
+   "optionA": "All players have their Weapons of Mass Destruction cut to the target player's number",
+   "optionB": "Target player loses all of their Weapons of Mass Destruction",
    "minEra": "ERA_ATOMIC"
   },
   {

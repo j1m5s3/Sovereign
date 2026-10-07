@@ -296,7 +296,11 @@ TEST(follower_beliefs_take_effect) {
     const ProductionItem monk{ProductionKind::Unit, rules().unit("UNIT_WARRIOR_MONK")};
     auto monks = withFollowerBelief(s, "BELIEF_WARRIOR_MONKS");
     CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(holy), monk), -1);
-    CHECK(monks->faithPurchaseCost(0, *monks->state().city(holy), monk) > 0);
+    const int monkPrice = monks->faithPurchaseCost(0, *monks->state().city(holy), monk);
+    CHECK(monkPrice > 0);
+    // Mercenary Companies on Faith (World Congress): twice the Faith.
+    monks->stateMutForTests().passedResolutions.push_back({rules().resolution("RESOLUTION_MERCENARY_COMPANIES"), 0, static_cast<int32_t>(YieldType::Faith)});
+    CHECK_EQ(monks->faithPurchaseCost(0, *monks->state().city(holy), monk), 2 * monkPrice);
 }
 
 TEST(sacred_places_pays_for_wonders_in_following_cities) {

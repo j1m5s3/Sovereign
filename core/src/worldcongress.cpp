@@ -144,6 +144,10 @@ std::string Game::candidateName(const CongressItem& item, int candidate) const {
             const SpyOperationType* op = spyOperationFor(static_cast<SpyMission>(c));
             return op ? op->name : "?";
         }
+        case ResolutionTarget::Yield: {
+            static const char* const kNames[] = {"Food", "Production", "Gold", "Science", "Culture", "Faith"};
+            return c >= 0 && c < static_cast<int32_t>(kNumYields) ? kNames[c] : "?";
+        }
         case ResolutionTarget::Other: break;
     }
     return "?";
@@ -234,6 +238,10 @@ void Game::openCongressSession() {
             case ResolutionTarget::SpyOperation:
                 for (int m = static_cast<int>(SpyMission::ListeningPost); m < kNumSpyMissions; ++m) item.candidates.push_back(m);
                 break;
+            case ResolutionTarget::Yield:
+                // The currencies units are produced or bought with (Mercenary Companies).
+                for (YieldType y : {YieldType::Production, YieldType::Gold, YieldType::Faith}) item.candidates.push_back(static_cast<int32_t>(y));
+                break;
             case ResolutionTarget::Other: break;
         }
     }
@@ -288,6 +296,40 @@ void Game::closeCongressSession() {
     state_.congressOpenedTurn = 0;
     for (const Player& p : state_.players) {
         if (isMajor(p)) syncPolicySlots(p.id);  // World Ideology changes the Wildcard slots
+        armsControl(p.id);
+    }
+}
+
+// Mercenary Companies (08: World Congress; Civilopedia: "+100% cost when producing or purchasing military units using
+// this currency type" (A), "-50% cost" (B)), for every major civ.
+int Game::mercenaryPercent(PlayerId player, TypeIndex unit, YieldType currency) const {
+    const PassedResolution* mc = passed(ResolutionKind::MercenaryCompanies);
+    if (!mc || mc->target != static_cast<int32_t>(currency) || !isMajorCiv(player) || unit < 0 || at(unit) >= rules_->units.size()) return 100;
+    // Military units: combat units (aircraft and the Warrior Monk included) and support units; not religious units, Rock
+    // Bands, spies or the leader, which have no combat strength of their own, whatever layer they stand in.
+    const UnitType& u = rules_->units[at(unit)];
+    const bool military = u.layer == UnitLayer::Support || u.combat > 0;
+    return !military ? 100 : mc->option == 0 ? 200 : 50;
+}
+
+// Arms Control (08: World Congress; Civilopedia: "All players have their Weapons of Mass Destruction set equal to target
+// player's" (A), "Target player loses all of their Weapons of Mass Destruction" (B)). Sovereign reads A as a cap, so no
+// one gains devices from it; both hold while the resolution stands.
+int Game::wmdCap(PlayerId player, TypeIndex weapon) const {
+    const PassedResolution* ac = passed(ResolutionKind::ArmsControl);
+    if (!ac || ac->target < 0 || at(ac->target) >= state_.players.size() || weapon < 0) return -1;
+    const PlayerId target = static_cast<PlayerId>(ac->target);
+    if (ac->option == 1) return player == target ? 0 : -1;  // B: the target holds none
+    if (player == target) return -1;                        // A: the others hold no more than the target
+    const std::vector<int32_t>& held = state_.players[at(target)].wmds;
+    return at(weapon) < held.size() ? held[at(weapon)] : 0;
+}
+
+void Game::armsControl(PlayerId player) {
+    Player& p = state_.players[at(player)];
+    for (size_t w = 0; w < p.wmds.size(); ++w) {
+        const int cap = wmdCap(player, static_cast<TypeIndex>(w));
+        if (cap >= 0) p.wmds[w] = std::min(p.wmds[w], cap);
     }
 }
 
@@ -421,6 +463,34 @@ void Game::aiCongressVotes(PlayerId me) {
                     if (d && isCityState(d->owner)) ++counts[static_cast<int>(rules_->cityStates[at(state_.players[at(d->owner)].cityState)].kind)];
                 }
                 target = static_cast<int32_t>(std::max_element(counts, counts + 6) - counts);
+                break;
+            }
+            case ResolutionKind::MercenaryCompanies: {
+                // Cheaper armies while at war with a major civ, dearer ones for everyone in peace; Production is what it
+                // trains with.
+                bool war = false;
+                for (const Player& p : state_.players) war = war || (isMajor(p) && p.id != me && atWar(me, p.id));
+                option = war ? 1 : 0;
+                target = indexOf(item, static_cast<int32_t>(YieldType::Production));
+                break;
+            }
+            case ResolutionKind::ArmsControl: {
+                // Disarm the rival holding the most devices; with none about, cap the others at its own (A on itself).
+                PlayerId armed = kNoPlayer;
+                int most = 0;
+                for (const Player& p : state_.players) {
+                    if (!isMajor(p) || p.id == me) continue;
+                    int n = 0;
+                    for (int32_t w : p.wmds) n += w;
+                    if (n > most) {
+                        most = n;
+                        armed = p.id;
+                    }
+                }
+                if (armed != kNoPlayer) {
+                    option = 1;
+                    target = indexOf(item, armed);
+                }
                 break;
             }
             case ResolutionKind::BorderControl:
