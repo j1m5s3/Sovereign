@@ -129,13 +129,14 @@ void Game::processLevies(PlayerId player) {
 }
 
 bool Game::suzerainBonus(PlayerId player, const char* cityStateId) const {
-    // Rules::cityState's search, without making a string of the name.
+    // Only a living city-state of the kind gives its bonus, so the kind is looked for among the game's city-states
+    // rather than among all the rules' kinds (a rules table holds each id once: a later row replaces the earlier).
     const std::string_view id(cityStateId);
-    TypeIndex type = kNone;
-    for (size_t i = 0; i < rules_->cityStates.size() && type == kNone; ++i) {
-        if (rules_->cityStates[i].id == id) type = static_cast<TypeIndex>(i);
+    for (const Player& cs : state_.players) {
+        if (cs.cityState < 0 || !cs.alive || static_cast<size_t>(cs.cityState) >= rules_->cityStates.size()) continue;
+        if (rules_->cityStates[static_cast<size_t>(cs.cityState)].id == id) return enjoysSuzerainBonus(state_, *rules_, player, cs.cityState);
     }
-    return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
+    return false;
 }
 
 int Game::suzeraintiesOf(PlayerId player) const {
