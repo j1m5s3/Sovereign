@@ -760,9 +760,8 @@ void Game::refreshVisibility(PlayerId pid) {
         std::fill(p.visibility.begin(), p.visibility.end(), static_cast<uint8_t>(Visibility::Visible));
         return;
     }
-    for (uint8_t& v : p.visibility) {
-        if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
-    }
+    // Written as a select rather than a conditional store so the compiler can do many plots at once.
+    for (uint8_t& v : p.visibility) v = v == static_cast<uint8_t>(Visibility::Visible) ? static_cast<uint8_t>(Visibility::Revealed) : v;
     std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
     std::vector<int16_t> landfalls;     // landmasses it sees for the first time (09: a new continent)
     std::vector<int16_t> knownLand;     // landmasses it had seen before, gathered at the first new land plot
@@ -805,7 +804,12 @@ void Game::refreshVisibility(PlayerId pid) {
         }
     };
     // Military alliance, level 2: allies see what each other sees (08: alliance levels).
-    const auto shares = [&](PlayerId o) { return o == pid || (alliance(pid, o) == AllianceType::Military && allianceLevel(pid, o) >= 2); };
+    std::vector<uint8_t> sharing(state_.players.size(), 0);  // by player, worked out once for the refresh
+    for (size_t o = 0; o < sharing.size(); ++o) {
+        const PlayerId other = static_cast<PlayerId>(o);
+        sharing[o] = other == pid || (alliance(pid, other) == AllianceType::Military && allianceLevel(pid, other) >= 2) ? 1 : 0;
+    }
+    const auto shares = [&](PlayerId o) { return o == pid || (o >= 0 && static_cast<size_t>(o) < sharing.size() && sharing[static_cast<size_t>(o)] != 0); };
     for (Unit& u : state_.units) {
         if (!shares(u.owner)) continue;
         finder = u.owner == pid ? &u : nullptr;
