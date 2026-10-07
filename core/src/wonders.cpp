@@ -95,12 +95,12 @@ bool Game::holdsWonder(PlayerId player, W w) const {
     return std::any_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.owner == player && c.has(b); });
 }
 
-uint32_t Game::heldWonders(PlayerId player) const {
+uint32_t Game::heldWonders(PlayerId player, uint32_t which) const {
     uint32_t held = 0;
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
         for (size_t i = 0; i < static_cast<size_t>(W::Count); ++i) {
-            if (wonders_[i] != kNone && c.has(wonders_[i])) held |= 1u << i;
+            if ((which >> i & 1u) != 0 && wonders_[i] != kNone && c.has(wonders_[i])) held |= 1u << i;
         }
     }
     return held;

@@ -947,7 +947,7 @@ private:
     bool codedGreatPerson(TypeIndex person) const;
     int extraPalaceSlots(const City& city, TypeIndex building) const;  // Giovanni de' Medici: +2 in each Bank (07)
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
-    uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
+    uint32_t heldWonders(PlayerId player, uint32_t which) const;  // bit(w) for each of the wonders in `which` the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings
     void bridgeRoads(const City& city, TypeIndex building);  // the Golden Gate Bridge's roads (03)
     GameState state_;
