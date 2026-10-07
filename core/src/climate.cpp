@@ -123,23 +123,17 @@ void Game::burnPower(PlayerId pid) {
                               enjoysSuzerainBonus(state_, *rules_, pid, cs.cityState));
     }
     const TypeIndex harborBuildings[] = {rules_->building("BUILDING_LIGHTHOUSE"), rules_->building("BUILDING_SHIPYARD"), rules_->building("BUILDING_SEAPORT")};
+    const int renewable = holdsWonder(pid, W::Biosphere) ? 3 : 1;  // the Biosphère (03): renewable Power +200%
     std::vector<City*> mine;
     for (City& c : state_.cities) {
         if (c.owner != pid) continue;
-        c.powerDemand = c.powerSupply = 0;
-        for (TypeIndex b : c.buildings) {
-            const BuildingType& bt = rules_->buildings[at(b)];
-            c.powerDemand += bt.requiredPower;
-            c.powerSupply += bt.powerProvided;
-        }
+        c.powerDemand = 0;
+        for (TypeIndex b : c.buildings) c.powerDemand += rules_->buildings[at(b)].requiredPower;
+        c.powerSupply = renewablePower(c) * renewable;
         if (technocracy) c.powerSupply += 3;
         if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS") && c.district(rules_->district("DISTRICT_SPACEPORT"), true)) c.powerSupply += 3;  // 04
         c.powerDemand += 5 * c.laserStations;  // each Terrestrial Laser Station (09: Power)
         for (TypeIndex b : harborBuildings) c.powerSupply += cardiff && b != kNone && c.has(b) ? 2 : 0;
-        for (const Hex& h : state_.grid.within(c.pos, 3)) {
-            const Plot& pl = state_.plot(h);
-            if (pl.city == c.id && pl.improvement != kNone && pl.pillagedTurns == 0) c.powerSupply += rules_->improvements[at(pl.improvement)].powerProvided;
-        }
         mine.push_back(&c);
     }
     for (City* c : mine) {
@@ -170,6 +164,18 @@ void Game::burnPower(PlayerId pid) {
             }
         }
     }
+}
+
+// Renewable power [GS] (09: Power): the city's Hydroelectric Dam and its renewable improvements (Solar,
+// Wind and Offshore Wind Farms, Geothermal Plants) unpillaged on its plots.
+int Game::renewablePower(const City& city) const {
+    int power = 0;
+    for (TypeIndex b : city.buildings) power += rules_->buildings[at(b)].powerProvided;
+    for (const Hex& h : state_.grid.within(city.pos, 3)) {
+        const Plot& pl = state_.plot(h);
+        if (pl.city == city.id && pl.improvement != kNone && pl.pillagedTurns == 0) power += rules_->improvements[at(pl.improvement)].powerProvided;
+    }
+    return power;
 }
 
 // ------------------------------------------------------------------ the world turn

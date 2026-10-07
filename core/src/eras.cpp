@@ -297,6 +297,7 @@ int Game::tourismBase(PlayerId pid) const {
     // 07: resorts, improvements after Flight, National Parks; the Golden Gate Bridge (03) doubles them.
     total += (improvementTourism(pid) + parkTourism(pid)) * (holdsWonder(pid, W::GoldenGate) ? 2 : 1);
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
+    const bool biosphere = holdsWonder(pid, W::Biosphere);
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
         const int before = total;
@@ -323,6 +324,7 @@ int Game::tourismBase(PlayerId pid) const {
             total += rules_->globalInt("TOURISM_BASE_FROM_WONDER") + rules_->globalInt("TOURISM_ADVANCED_ERA_WONDER") * std::max(0, era - wonderEra);
         }
         total += religiousTourism(c);
+        if (biosphere) total += renewablePower(c) * 3;  // the Biosphère (03): tourism from its tripled renewable Power
         for (const CityDistrict& d : c.districts) {
             if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
         }
