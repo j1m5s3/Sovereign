@@ -366,3 +366,35 @@ TEST(a_guru_heals_religious_units_beside_it) {
     CHECK_EQ(h->state().unit(a)->hp, 70);  // COMBAT_HEAL_RELIGIOUS_CHARGE
     CHECK_EQ(h->state().unit(guru)->charges, 2);
 }
+
+// Stonehenge (03; data: its two grants): the civ's next Great Prophet while it can still earn one, which
+// is its one Prophet; once it cannot, an Apostle of its religion.
+TEST(stonehenge_grants_the_civs_prophet_or_else_an_apostle) {
+    const TypeIndex stonehenge = rules().building("BUILDING_STONEHENGE");
+    const TypeIndex prophets = rules().greatPersonClass("GREAT_PERSON_CLASS_PROPHET");
+    auto g = Game::fromScenario(rules(), religionState());
+    const size_t before = g->state().units.size();
+    g->wonderCompleted(g->state().cities[0].id, stonehenge);
+    REQUIRE(g->state().units.size() == before + 1);
+    const Unit& prophet = g->state().units.back();
+    CHECK_EQ(prophet.type, rules().unit("UNIT_GREAT_PROPHET"));
+    CHECK(prophet.greatPerson != kNone);  // a named Prophet from the pool
+    CHECK_EQ(g->state().players[0].greatPeopleRecruited[at(prophets)], 1);
+    // Points earn no second one.
+    GameState s = g->state();
+    s.players[0].greatPersonPoints[at(prophets)] = 10000;
+    for (Unit& u : s.units) u.activity = Activity::Sleep;  // the Prophet waits
+    auto h = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*h, 2);
+    int count = 0;
+    for (const Unit& u : h->state().units) count += u.owner == 0 && u.type == rules().unit("UNIT_GREAT_PROPHET") ? 1 : 0;
+    CHECK_EQ(count, 1);
+    // A civ with a religion gets an Apostle of it instead.
+    auto k = withReligion(religionState());
+    REQUIRE(k->state().players[0].religion >= 0);
+    k->wonderCompleted(k->state().cities[0].id, stonehenge);
+    const Unit& apostle = k->state().units.back();
+    CHECK_EQ(apostle.type, rules().unit("UNIT_APOSTLE"));
+    CHECK_EQ(apostle.religion, k->state().players[0].religion);
+    CHECK(apostle.charges > 0);
+}

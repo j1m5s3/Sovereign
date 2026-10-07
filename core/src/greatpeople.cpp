@@ -228,12 +228,12 @@ void Game::processGreatPeople(PlayerId pid) {
     }
 }
 
-void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
+void Game::recruitGreatPerson(PlayerId pid, TypeIndex person, const City* in) {
     const GreatPersonType& g = rules_->greatPeople[at(person)];
     const GreatPersonClass& cls = rules_->greatPersonClasses[at(g.cls)];
     Player& p = state_.players[at(pid)];
-    // The great person appears in the capital (or any city when the capital is full).
-    std::optional<Hex> spot;
+    // The great person appears in the capital (or any city when the capital is full), or in the city given.
+    std::optional<Hex> spot = in ? unitSpawnPlot(*in, cls.unit) : std::nullopt;
     for (int pass = 0; pass < 2 && !spot; ++pass) {
         for (const City& c : state_.cities) {
             if (c.owner != pid || (pass == 0 && !c.capital)) continue;
@@ -258,6 +258,35 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person) {
     u.charges = g.greatWorkCount > 0 ? g.greatWorkCount : g.charges;
     // Mausoleum at Halicarnassus (03): Great Engineers have a charge more.
     if (cls.id == "GREAT_PERSON_CLASS_ENGINEER" && g.greatWorkCount == 0 && buildingsOwned(pid, "BUILDING_MAUSOLEUM_AT_HALICARNASSUS") > 0) ++u.charges;
+}
+
+// Stonehenge (03; data: its two grants): the civ's next Great Prophet, its one, while it can still earn one
+// (Prophets remain, it has founded no religion and has not had its Prophet); otherwise an Apostle of its
+// religion, or of the city's.
+void Game::wonderProphet(City& city, TypeIndex prophet) {
+    Player& p = state_.players[at(city.owner)];
+    fitPlayerToRules(p, *rules_);
+    TypeIndex cls = kNone;
+    for (size_t c = 0; c < rules_->greatPersonClasses.size() && cls == kNone; ++c) {
+        if (rules_->greatPersonClasses[c].unit == prophet) cls = static_cast<TypeIndex>(c);
+    }
+    const TypeIndex person = cls != kNone ? currentGreatPerson(cls) : kNone;
+    if (person != kNone && p.religion < 0) {
+        const int most = rules_->greatPersonClasses[at(cls)].maxPerPlayer;
+        if (most <= 0 || p.greatPeopleRecruited[at(cls)] < most) {
+            recruitGreatPerson(city.owner, person, &city);
+            return;
+        }
+    }
+    const TypeIndex apostle = rules_->unit("UNIT_APOSTLE");
+    const int religion = p.religion >= 0 ? p.religion : cityMajorityReligion(city);
+    if (apostle == kNone || religion < 0) return;
+    const std::optional<Hex> spot = unitSpawnPlot(city, apostle);
+    if (!spot) return;
+    Unit& u = spawnUnit(apostle, city.owner, *spot);
+    u.religion = static_cast<int16_t>(religion);
+    u.charges = rules_->units[at(apostle)].spreadCharges;
+    grantApostlePromotion(u);  // each new Apostle gets one (06)
 }
 
 bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
