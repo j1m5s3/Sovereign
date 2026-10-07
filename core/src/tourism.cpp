@@ -1,6 +1,7 @@
 // Tourism from the land (07-great-people-great-works-tourism.md: Tourism sources, National Parks, Seaside
 // Resorts and Ski Resorts, Rock Bands; data: Improvement_Tourism, NATIONAL_PARK_*, Rock Band results).
 #include <algorithm>
+#include <map>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -97,12 +98,17 @@ int Game::parkTourism(PlayerId player) const {
 // Amenities (07; data: NATIONAL_PARK_AMENITIES_OWNING_CITY, NATIONAL_PARK_NUM_OTHER_AMENITY_CITIES): each park
 // gives its city 2, and 1 to each of that civ's NUM_OTHER nearest other cities (Sovereign reading of "nearby").
 int Game::parkAmenities(const City& city) const {
+    // Park plots by the city they belong to, in one pass over the map.
+    std::map<CityId, int> plots;
+    for (int i = 0; i < state_.grid.size(); ++i) {
+        if (state_.plots[at(i)].park) ++plots[state_.plots[at(i)].city];
+    }
+    if (plots.empty()) return 0;
     int total = 0;
     for (const City& holder : state_.cities) {
         if (holder.owner != city.owner) continue;
-        int plots = 0;
-        for (int i = 0; i < state_.grid.size(); ++i) plots += state_.plots[at(i)].park && state_.plots[at(i)].city == holder.id ? 1 : 0;
-        const int parks = plots / 4;
+        const auto found = plots.find(holder.id);
+        const int parks = found == plots.end() ? 0 : found->second / 4;
         if (parks == 0) continue;
         if (holder.id == city.id) {
             total += parks * rules_->globalInt("NATIONAL_PARK_AMENITIES_OWNING_CITY");
