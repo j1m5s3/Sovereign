@@ -2381,6 +2381,20 @@ def wonder_placement(text, districts, resources, improvements):
     return place
 
 
+# Wonders whose effect lines the parser cannot read are applied by the rules core's own code (03: Wonders; #161,
+# #162): those lines go to `codeEffects`. Lines matching WONDER_LINES_TO_COME, and the lines of any wonder not
+# listed here, stay in `untrackedEffects`: no system for them yet (the Golden Gate Bridge's cliffs: the map has none).
+WONDERS_IN_CODE = {
+    "BUILDING_STONEHENGE", "BUILDING_GREAT_BATH", "BUILDING_ORACLE", "BUILDING_GREAT_LIGHTHOUSE", "BUILDING_COLOSSEUM",
+    "BUILDING_GREAT_LIBRARY", "BUILDING_MACHU_PICCHU", "BUILDING_APADANA", "BUILDING_MAUSOLEUM_AT_HALICARNASSUS",
+    "BUILDING_MONT_ST_MICHEL", "BUILDING_MEENAKSHI_TEMPLE", "BUILDING_UNIVERSITY_OF_SANKORE", "BUILDING_HUEY_TEOCALLI",
+    "BUILDING_KILWA_KISIWANI", "BUILDING_VENETIAN_ARSENAL", "BUILDING_GREAT_ZIMBABWE", "BUILDING_ORSZ_GH_Z",
+    "BUILDING_ST_BASIL_S_CATHEDRAL", "BUILDING_TAJ_MAHAL", "BUILDING_TORRE_DE_BEL_M", "BUILDING_STATUE_OF_LIBERTY",
+    "BUILDING_CRISTO_REDENTOR", "BUILDING_GOLDEN_GATE_BRIDGE", "BUILDING_BIOSPH_RE",
+}
+WONDER_LINES_TO_COME = (r"map remove cliffs .*",)
+
+
 def gen_wonders():
     """World wonders the core can place (03: Wonders): built once in the world on their own plot.
     Effects that fit the core become typed effects or modifiers; the text is kept for the rest."""
@@ -2461,11 +2475,18 @@ def gen_wonders():
         # The rest through the policy card parser (in all your cities, conditions...).
         more, untracked = policy_modifiers(wid, "; ".join(rest), refs)
         modifiers += more
+        if wid in WONDERS_IN_CODE:
+            in_code = [u for u in untracked if not any(re.fullmatch(p, u) for p in WONDER_LINES_TO_COME)]
+            if in_code:
+                w["codeEffects"] = in_code
+            untracked = [u for u in untracked if u not in in_code]
         if untracked:
-            w["untrackedEffects"] = untracked  # in code, or still to come
+            w["untrackedEffects"] = untracked
         if effects:
             w["effects"] = effects
         wonders.append(w)
+    stale = WONDERS_IN_CODE - {w["id"] for w in wonders if "codeEffects" in w}
+    assert not stale, "WONDERS_IN_CODE lists wonders with no unparsed effect lines: %s" % sorted(stale)
     return {"wonders": wonders, "modifiers": modifiers}
 
 
