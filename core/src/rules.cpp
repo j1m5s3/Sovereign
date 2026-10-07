@@ -1055,6 +1055,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             b.goldPerTradeRoute = static_cast<int>(j["goldPerTradeRoute"].integer(0));
             b.envoysOnBuild = static_cast<int>(j["envoysOnBuild"].integer(0));
             b.trainedXpPercent = static_cast<int>(j["trainedXpPercent"].integer(0));
+            if (j.has("trainedAbility") && (b.trainedAbility = ability(j["trainedAbility"].str())) == kNone) {
+                if (error) *error = "building " + id + ": unknown ability " + j["trainedAbility"].str();
+                return false;
+            }
             b.foodPerAdjacentMountain = static_cast<int>(j["foodPerAdjacentMountain"].integer(0));
             b.requiredPower = static_cast<int>(j["requiredPower"].integer(0));
             b.poweredYields = readYields(j["poweredYields"]);

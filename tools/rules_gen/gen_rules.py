@@ -656,6 +656,10 @@ def gen_buildings():
         m = re.search(r"\+(\d+) air slots", row["Modifiers"] or "")
         if m:
             b["airSlots"] = int(m.group(1))  # Hangar, Airport (05: air units)
+        # The ability units trained in its city keep: the Barracks' +25% combat XP for melee, ranged and anti-cavalry (03).
+        m = re.search(r"ability ([^\[;]+?) \[\+\d+% combat XP\] for units trained in this city", row["Modifiers"] or "")
+        if m:
+            b["trainedAbility"] = "ABILITY_" + snake(m.group(1))
         # Power [GS] (09: Power): what it needs, what it gains when powered, what it burns or gives.
         power = row["Power [GS]"] or ""
         m = re.search(r"needs (\d+) power", power)
