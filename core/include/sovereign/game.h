@@ -575,6 +575,8 @@ public:
     // Lasting great person effects of a kind: the player's (those it used), or a city's (those used there).
     int greatPersonEffectTotal(PlayerId player, GreatPersonEffectKind kind, TypeIndex ref = kNone) const;
     int cityGreatPersonEffectTotal(const City& city, GreatPersonEffectKind kind) const;
+    // Tesla, Paxton (07): their lasting bonus to the regional buildings of this city's district of that type.
+    int regionalBonus(const City& city, TypeIndex district, GreatPersonEffectKind kind, YieldType yield = YieldType::Production) const;
     int upgradeResourceCost(const Unit& unit) const;  // strategic resources the upgrade spends
     TypeIndex upgradeTarget(const Unit& unit) const;  // the next unit in its line (the civ's unique if it has one)
     CommandError upgradeProblem(UnitId unit) const;  // Ok when the upgrade can be bought now

@@ -116,6 +116,20 @@ int Game::cityGreatPersonEffectTotal(const City& city, GreatPersonEffectKind kin
     return total;
 }
 
+// Tesla and Paxton (07; 03: regional buildings): what the great people used on this city's district of that type add
+// to its regional buildings: tiles of reach, or a yield or Amenities for each city they reach.
+int Game::regionalBonus(const City& city, TypeIndex district, GreatPersonEffectKind kind, YieldType yield) const {
+    int total = 0;
+    for (TypeIndex person : city.greatPeopleHere) {
+        const GreatPersonType& gp = rules_->greatPeople[at(person)];
+        if (district == kNone || gp.district != district) continue;
+        for (const GreatPersonEffect& fx : gp.effects) {
+            if (fx.kind == kind && (kind != GreatPersonEffectKind::RegionalYield || fx.yield == yield)) total += fx.amount;
+        }
+    }
+    return total;
+}
+
 int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     int total = 0;
     for (const City& c : state_.cities) {
@@ -572,7 +586,10 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
         case GreatPersonEffectKind::ResourcePerTurn:
         case GreatPersonEffectKind::DistrictCapacity:
         case GreatPersonEffectKind::Ocean:
-        case GreatPersonEffectKind::ArtifactTourism: break;  // lasting: read from greatPeopleActivated or greatPeopleHere
+        case GreatPersonEffectKind::ArtifactTourism:
+        case GreatPersonEffectKind::RegionalRange:
+        case GreatPersonEffectKind::RegionalYield:
+        case GreatPersonEffectKind::RegionalAmenity: break;  // lasting: read from greatPeopleActivated or greatPeopleHere
         case GreatPersonEffectKind::Envoys:
             if (!policyIs(pid, "POLICY_ROGUE_STATE")) p.envoyTokens += fx.amount;  // Rogue State: no envoys (09)
             break;

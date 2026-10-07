@@ -2241,6 +2241,16 @@ def gp_more_effects(t, ids):
     m = re.fullmatch(r"Tourism from Artifact scaled (\d+)% in all your cities", t)
     if m:
         return [{"kind": "ARTIFACT_TOURISM", "amount": int(m.group(1))}]
+    # Tesla, Paxton (03: regional buildings): the district they are used on reaches farther and gives more.
+    m = re.fullmatch(r"adjust district extra regional yield \(Amount=(\d+), YieldType=(\w+)\)", t)
+    if m and m.group(2) in YIELD_WORDS:
+        return [{"kind": "REGIONAL_YIELD", "yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}]
+    m = re.fullmatch(r"adjust district extra regional entertainment \(Amount=(\d+)\)", t)
+    if m:
+        return [{"kind": "REGIONAL_AMENITY", "amount": int(m.group(1))}]
+    m = re.fullmatch(r"\+(\d+) regional range", t)
+    if m:
+        return [{"kind": "REGIONAL_RANGE", "amount": int(m.group(1))}]
     return None
 
 
