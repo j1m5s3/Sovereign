@@ -225,6 +225,22 @@ bool boostIn(const GameState& s, const Boost& b) { return Game::fromScenario(rul
 const Boost& techBoost(const char* id) { return rules().techs[at(tech(id))].boost; }
 const Boost& civicBoost(const char* id) { return rules().civics[at(civic(id))].boost; }
 
+TEST(a_city_counts_once_toward_a_building_boost) {
+    // Guilds: two Markets. A city with both a Market and Rome's Forum (its Market) is one city; a rival's Market is not
+    // the player's.
+    GameState s = boostState();
+    const auto build = [&](size_t city, const char* b) {
+        s.cities[city].buildings.push_back(rules().building(b));
+        std::sort(s.cities[city].buildings.begin(), s.cities[city].buildings.end());
+    };
+    build(0, "BUILDING_MARKET");
+    build(0, "BUILDING_FORUM");
+    build(2, "BUILDING_MARKET");
+    CHECK(!boostIn(s, civicBoost("CIVIC_GUILDS")));
+    build(1, "BUILDING_FORUM");
+    CHECK(boostIn(s, civicBoost("CIVIC_GUILDS")));
+}
+
 TEST(a_civ_s_unique_unit_counts_toward_boosts) {
     // Metal Casting: two Crossbowmen; China's Repeating Crossbow is its Crossbowman.
     GameState s = boostState();

@@ -16,7 +16,9 @@ bool Game::wonderBuilt(TypeIndex building) const {
     return std::any_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.has(building); });
 }
 
-bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const {
+bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const { return canPlaceWonder(city, building, plot, nullptr); }
+
+bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot, BuiltNear* built) const {
     if (building < 0 || at(building) >= rules_->buildings.size()) return false;
     const BuildingType& b = rules_->buildings[at(building)];
     if (!b.wonder) return false;
@@ -41,7 +43,7 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     if (w.river && !isRiverAdjacent(state_, plot)) return false;
     if ((w.lake || w.notLake) && isLake(state_, *rules_, plot, &lakes_) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
     // Nothing built on it yet: looked for once the plot's own land has passed, as these look through every city.
-    if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return false;
+    if ((built ? builtOn(*built, plot) : state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone) || campAt(plot)) return false;
     bool land = false, coast = false, capital = false, mountain = false, center = false, district = false, resource = false, improvement = false;
     for (int d = 0; d < kNumDirs; ++d) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(d));
@@ -77,9 +79,10 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     std::vector<Hex> out;
     const City* c = state_.city(id);
     if (!c) return out;
-    for (const Hex& h : state_.grid.within(c->pos, 3)) {
-        if (canPlaceWonder(*c, building, h)) out.push_back(h);
-    }
+    BuiltNear built(c->pos);
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
+        if (canPlaceWonder(*c, building, h, &built)) out.push_back(h);
+    });
     return out;
 }
 
@@ -92,8 +95,9 @@ bool Game::anyWonderPlot(CityId id, TypeIndex building) const {
         const std::vector<TypeIndex>& needs = rules_->buildings[at(building)].prereqsAny;
         if (!needs.empty() && std::none_of(needs.begin(), needs.end(), [&](TypeIndex pre) { return cityHasBuilding(*c, *rules_, pre); })) return false;
     }
+    BuiltNear built(c->pos);
     bool any = false;
-    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || (state_.plot(h).city == c->id && canPlaceWonder(*c, building, h)); });
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || (state_.plot(h).city == c->id && canPlaceWonder(*c, building, h, &built)); });
     return any;
 }
 

@@ -119,7 +119,8 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     if (!domestic) {
         const TypeIndex paititi = rules_->feature("FEATURE_PAITITI");
         bool owns = false;
-        for (const Hex& h : state_.grid.within(origin.pos, 3)) owns = owns || (paititi != kNone && state_.plot(h).feature == paititi && state_.plot(h).city == origin.id);
+        if (paititi != kNone)
+            state_.grid.forEachWithin(origin.pos, 3, [&](Hex h) { owns = owns || (state_.plot(h).feature == paititi && state_.plot(h).city == origin.id); });
         if (owns) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(4);
     }
     // Policy cards (04): Caravansaries, Market Economy, Raj... by the kind of route.
@@ -133,32 +134,32 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     // Market Economy (04): international routes +1 Gold per luxury and per strategic resource at the destination.
     if (!domestic && policyIs(origin.owner, "POLICY_MARKET_ECONOMY")) {
         int goods = 0;
-        for (const Hex& h : state_.grid.within(destination.pos, 3)) {
+        state_.grid.forEachWithin(destination.pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
-            if (p.city != destination.id || p.resource == kNone || !resourceImproved(h)) continue;
+            if (p.city != destination.id || p.resource == kNone || !resourceImproved(h)) return;
             const ResourceClass rc = rules_->resources[at(p.resource)].cls;
             goods += rc == ResourceClass::Luxury || rc == ResourceClass::Strategic ? 1 : 0;
-        }
+        });
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(goods);
     }
     // City-state suzerains (08): Venice (+1 Gold per luxury at an international destination), Hunza (+0.2 Gold
     // per plot of the way), Kumasi (+2 Culture and +1 Gold per district on routes to city-states).
     if (!domestic && suzerainBonus(origin.owner, Cs::Venice)) {
         int luxuries = 0;
-        for (const Hex& h : state_.grid.within(destination.pos, 3)) {
+        state_.grid.forEachWithin(destination.pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
             luxuries += p.city == destination.id && p.resource != kNone && rules_->resources[at(p.resource)].cls == ResourceClass::Luxury && resourceImproved(h) ? 1 : 0;
-        }
+        });
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(luxuries);
     }
     // Samarkand (08): international routes +1 Gold per Trading Dome of the origin.
     if (!domestic && suzerainBonus(origin.owner, Cs::Samarkand)) {
         const TypeIndex dome = rules_->improvement("IMPROVEMENT_TRADING_DOME");
         int domes = 0;
-        for (const Hex& h : state_.grid.within(origin.pos, 3)) {
+        state_.grid.forEachWithin(origin.pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
             domes += dome != kNone && p.city == origin.id && p.improvement == dome && p.pillagedTurns == 0 ? 1 : 0;
-        }
+        });
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(domes);
     }
     // Chinguetti (08): +1 Faith per follower of the player's founded (or majority) religion in the origin city.
@@ -176,10 +177,10 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     // international destination), University of Sankore (+1 Science and +1 Gold on other civs' routes to it).
     auto goods = [&](const City& city, ResourceClass cls) {
         int n = 0;
-        for (const Hex& h : state_.grid.within(city.pos, 3)) {
+        state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
             n += p.city == city.id && p.resource != kNone && rules_->resources[at(p.resource)].cls == cls && resourceImproved(h) ? 1 : 0;
-        }
+        });
         return n;
     };
     if (origin.has(wonderType(W::Zimbabwe))) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * goods(origin, ResourceClass::Bonus));

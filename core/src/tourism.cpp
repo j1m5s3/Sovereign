@@ -56,16 +56,24 @@ std::optional<std::array<Hex, 4>> Game::parkPlotsAt(PlayerId player, Hex here) c
     };
     const CityId city = state_.plot(here).city;
     if (!fits(here, city)) return std::nullopt;
+    // Whether the neighbour in each direction fits, worked out on first need: each is tried as a and again as b.
+    std::array<int8_t, kNumDirs> fitting;
+    fitting.fill(-1);
+    const auto fitsBeside = [&](int d, Hex h) {
+        int8_t& f = fitting[static_cast<size_t>(d)];
+        if (f < 0) f = fits(h, city) ? 1 : 0;
+        return f != 0;
+    };
     for (int d = 0; d < kNumDirs; ++d) {
         const auto a = state_.grid.neighbor(here, static_cast<Dir>(d));
         const auto b = state_.grid.neighbor(here, static_cast<Dir>((d + 1) % kNumDirs));
         if (!a || !b) continue;
         // The fourth plot touches both a and b, away from the Naturalist's plot.
         std::optional<Hex> c;
-        for (const Hex& n : state_.grid.within(*a, 1)) {
+        state_.grid.forEachWithin(*a, 1, [&](Hex n) {
             if (n != here && n != *a && n != *b && state_.grid.distance(n, *b) == 1) c = n;
-        }
-        if (c && fits(*a, city) && fits(*b, city) && fits(*c, city)) return std::array<Hex, 4>{here, *a, *b, *c};
+        });
+        if (c && fitsBeside(d, *a) && fitsBeside((d + 1) % kNumDirs, *b) && fits(*c, city)) return std::array<Hex, 4>{here, *a, *b, *c};
     }
     return std::nullopt;
 }

@@ -224,6 +224,22 @@ TEST(luxury_gives_amenities) {
     CHECK_EQ(g->cityReport(city).amenities, before + 1);
 }
 
+TEST(a_luxury_reaches_the_largest_cities_first_then_the_oldest) {
+    // Wine gives an Amenity to four cities: the largest first, and of those as large the first founded.
+    const auto amenities = [](int lastPopulation) {
+        GameState s = flatState(50, 14, 1);
+        Game::fitPlayerToRules(s.players[0], rules());
+        for (int i = 0; i < 5; ++i) sovtest::addCity(s, 0, {4 + 9 * i, 6}, i == 0, i == 4 ? lastPopulation : 3);
+        s.plot({4, 6}).resource = rules().resource("RESOURCE_WINE");  // on the capital's center: improved
+        auto g = Game::fromScenario(rules(), std::move(s));
+        std::vector<int> out;
+        for (const City& c : g->state().cities) out.push_back(g->luxuryAmenities(c));
+        return out;
+    };
+    CHECK(amenities(3) == (std::vector<int>{1, 1, 1, 1, 0}));
+    CHECK(amenities(4) == (std::vector<int>{1, 1, 1, 0, 1}));
+}
+
 TEST(builder_harvests_woods_and_bonus_resources) {
     GameState base = flatState(20, 14, 1);
     base.plot({7, 6}).feature = rules().feature("FEATURE_FOREST");

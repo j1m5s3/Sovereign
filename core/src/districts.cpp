@@ -79,25 +79,49 @@ int Game::districtCost(PlayerId player, TypeIndex type) const {
     return std::max(1, static_cast<int>(cost.toInt()));
 }
 
+bool Game::districtOpenIn(const City& city, TypeIndex type) const {
+    const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    if (d.cost <= 0 || !hasUnlocked(city.owner, d.unlock) || city.district(type, false)) return false;
+    if (d.needsPopulation) {
+        int used = 0;
+        for (const CityDistrict& cd : city.districts) used += rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
+        if (used >= districtLimit(city)) return false;
+    }
+    return true;
+}
+
+bool Game::districtUnblockedIn(const City& city, TypeIndex type) const {
+    const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
+    for (TypeIndex other : d.exclusiveWith) {
+        if (city.district(other, false)) return false;
+    }
+    if (d.onePerPlayer) {
+        for (const City& c : state_.cities) {
+            if (c.owner == city.owner && c.district(type, false)) return false;
+        }
+    }
+    return true;
+}
+
 bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why) const {
+    return canPlaceDistrict(city, type, plot, why, nullptr, true);
+}
+
+bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, BuiltNear* built, bool cityChecks) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
         return false;
     };
     if (type < 0 || static_cast<size_t>(type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
-    if (d.cost <= 0 || !hasUnlocked(city.owner, d.unlock) || city.district(type, false)) return fail(CommandError::CannotBuild);
-    if (d.needsPopulation) {
-        int used = 0;
-        for (const CityDistrict& cd : city.districts) used += rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
-        if (used >= districtLimit(city)) return fail(CommandError::CannotBuild);
-    }
+    if (cityChecks && !districtOpenIn(city, type)) return fail(CommandError::CannotBuild);
     auto h = state_.grid.normalize(plot);
     if (!h || *h != plot) return fail(CommandError::BadTarget);
     // Owned by this city, within 3, open land, no visible luxury or strategic resource.
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return fail(CommandError::BadTarget);
-    if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return fail(CommandError::BadTarget);
+    if ((built ? builtOn(*built, plot) : state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone) || campAt(plot))
+        return fail(CommandError::BadTarget);
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return fail(CommandError::BadTarget);  // 01: natural wonders
     if (d.water) {
         // Harbor: Coast or Lake (not Ocean) next to land.
@@ -118,14 +142,7 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
     if (d.notAdjacentToCityCenter && state_.grid.distance(city.pos, plot) == 1) return fail(CommandError::BadTarget);
     if (!d.validTerrains.empty() && std::find(d.validTerrains.begin(), d.validTerrains.end(), p.terrain) == d.validTerrains.end())
         return fail(CommandError::BadTarget);
-    for (TypeIndex other : d.exclusiveWith) {
-        if (city.district(other, false)) return fail(CommandError::CannotBuild);
-    }
-    if (d.onePerPlayer) {
-        for (const City& c : state_.cities) {
-            if (c.owner == city.owner && c.district(type, false)) return fail(CommandError::CannotBuild);
-        }
-    }
+    if (cityChecks && !districtUnblockedIn(city, type)) return fail(CommandError::CannotBuild);
     if (d.aqueduct) {
         // Next to the City Center and to a River, Lake, Oasis (fresh-water features) or Mountain.
         if (state_.grid.distance(city.pos, plot) != 1) return fail(CommandError::BadTarget);
@@ -227,9 +244,9 @@ Fixed Game::districtHousing(const City& city) const {
             // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
             const bool fresh = hasFreshWater(state_, *rules_, city.pos, &lakes_);
             bool coastal = false;
-            for (const Hex& n : state_.grid.within(city.pos, 1)) {
+            state_.grid.forEachWithin(city.pos, 1, [&](Hex n) {
                 if (n != city.pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
-            }
+            });
             if (fresh) {
                 total += rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
             } else {
@@ -272,17 +289,45 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
     std::vector<Hex> out;
     const City* c = state_.city(id);
     if (!c) return out;
-    for (const Hex& h : state_.grid.within(c->pos, 3)) {
-        if (canPlaceDistrict(*c, type, h)) out.push_back(h);
-    }
+    BuiltNear built(c->pos);
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
+        if (canPlaceDistrict(*c, type, h, nullptr, &built, true)) out.push_back(h);
+    });
     return out;
 }
 
 bool Game::anyDistrictPlot(CityId id, TypeIndex type) const {
     const City* c = state_.city(id);
+    if (!c) return false;
+    // canPlaceDistrict on each plot, with what does not depend on the plot looked at once, and only the city's own
+    // plots looked at.
+    if (type < 0 || static_cast<size_t>(type) >= rules_->districts.size() || !districtOpenIn(*c, type) || !districtUnblockedIn(*c, type)) return false;
+    BuiltNear built(c->pos);
     bool any = false;
-    if (c) state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || canPlaceDistrict(*c, type, h); });
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
+        any = any || (h != c->pos && state_.plot(h).city == c->id && canPlaceDistrict(*c, type, h, nullptr, &built, false));
+    });
     return any;
+}
+
+bool Game::builtOn(BuiltNear& built, Hex plot) const {
+    if (!built.listed) {
+        built.listed = true;
+        const auto inRows = [&](Hex h) { return std::abs(h.y - built.center.y) <= 3; };  // as every plot within 3 is
+        std::vector<Hex> wonders;  // plots whose first wonder in the lists was met: wonderAt goes by that one
+        for (const City& c : state_.cities) {
+            if (inRows(c.pos)) built.plots.push_back(c.pos);
+            for (const CityDistrict& d : c.districts) {
+                if (inRows(d.pos)) built.plots.push_back(d.pos);
+            }
+            for (const CityWonder& w : c.wonders) {
+                if (!inRows(w.pos) || std::find(wonders.begin(), wonders.end(), w.pos) != wonders.end()) continue;
+                wonders.push_back(w.pos);
+                if (w.building != kNone) built.plots.push_back(w.pos);
+            }
+        }
+    }
+    return std::find(built.plots.begin(), built.plots.end(), plot) != built.plots.end();
 }
 
 int Game::specialistSlots(const City& city, const CityDistrict& district) const {

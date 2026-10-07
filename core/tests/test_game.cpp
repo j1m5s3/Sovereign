@@ -81,6 +81,25 @@ TEST(game_movement_costs) {
     CHECK_EQ(*g->moveCost(u, {4, 6}, {3, 6}), Fixed::fromInt(3));   // either direction
 }
 
+// A pillaged road counts for nothing at either end of a step until it is repaired (01: Routes).
+TEST(game_a_pillaged_road_counts_for_nothing) {
+    GameState s = flatState(16, 12, 1);
+    setTerrain(s, {5, 4}, "TERRAIN_GRASS_HILLS");
+    for (const Hex& h : {Hex{4, 4}, Hex{5, 4}}) s.plot(h).route = 0;  // an Ancient Road
+    const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 4});
+    auto g = Game::fromScenario(rules(), s);
+    const Fixed road = rules().routes[0].moveCost;
+    REQUIRE(road < Fixed::fromInt(2));
+    CHECK_EQ(*g->moveCost(*g->state().unit(w), {4, 4}, {5, 4}), road);
+    for (const Hex& h : {Hex{4, 4}, Hex{5, 4}}) {
+        GameState t = s;
+        t.plot(h).routePillaged = true;
+        auto p = Game::fromScenario(rules(), t);
+        CHECK_EQ(*p->moveCost(*p->state().unit(w), {4, 4}, {5, 4}), Fixed::fromInt(2));  // up the hills
+        CHECK_EQ(*p->moveCost(*p->state().unit(w), {5, 4}, {4, 4}), Fixed::fromInt(1));  // down onto flat ground
+    }
+}
+
 // A river on any of a plot's six edges costs its crossing both ways, and only across that edge; an Ancient Road
 // pays it too, a Classical Road bridges it (01: Routes).
 TEST(game_river_crossings_in_every_direction) {

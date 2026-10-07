@@ -33,9 +33,8 @@ bool Game::resourceVisible(PlayerId player, Hex at) const {
 bool Game::resourceImproved(Hex at) const {
     const Plot& p = state_.plot(at);
     if (p.resource == kNone) return false;
-    if (state_.cityAt(at)) return true;  // a city center counts as improving its resource
-    return p.improvement != kNone &&
-           contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource);
+    if (p.improvement != kNone && contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource)) return true;
+    return state_.cityAt(at) != nullptr;  // a city center counts as improving its resource (looked for last: it looks through every city)
 }
 
 bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
@@ -120,18 +119,18 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
     // Its plot qualifies (08): the Moai beside the coast, or on or beside Volcanic Soil.
     for (const ImprovementTileYield& t : im.tileYields) {
         bool fits = false;
-        for (const Hex& h : state_.grid.within(at, 1)) {
+        state_.grid.forEachWithin(at, 1, [&](Hex h) {
             const Plot& q = state_.plot(h);
             fits = fits || (t.nextToCoast && rules_->terrains[static_cast<size_t>(q.terrain)].shallowWater) || (t.nearFeature != kNone && q.feature == t.nearFeature);
-        }
+        });
         if (fits) y[static_cast<size_t>(t.yield)] += t.amount;
     }
     for (const ImprovementAdjacency& a : im.adjacency) {
         if (!a.needs.none() && !hasUnlocked(owner, a.needs)) continue;
         if (!a.obsoleteWith.none() && hasUnlocked(owner, a.obsoleteWith)) continue;
         int n = 0;
-        for (const Hex& h : state_.grid.within(at, 1)) {
-            if (h == at) continue;
+        state_.grid.forEachWithin(at, 1, [&](Hex h) {
+            if (h == at) return;
             const Plot& q = state_.plot(h);
             if (a.improvement != kNone) n += q.improvement == a.improvement ? 1 : 0;
             else if (!a.district.empty()) {
@@ -144,16 +143,16 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
             } else if (a.feature != kNone) n += q.feature == a.feature ? 1 : 0;
             else if (a.resourceClass >= 0) n += q.resource != kNone && static_cast<int>(rules_->resources[static_cast<size_t>(q.resource)].cls) == a.resourceClass ? 1 : 0;
             else if (a.seaResource) n += rules_->terrains[static_cast<size_t>(q.terrain)].water && resourceVisible(owner, h) ? 1 : 0;
-        }
+        });
         y[static_cast<size_t>(a.yield)] += a.amount * (n / a.per);
     }
     // A neighbouring unique improvement that feeds this one (Nilometer: adjacent Farms +1 Food).
-    for (const Hex& h : state_.grid.within(at, 1)) {
+    state_.grid.forEachWithin(at, 1, [&](Hex h) {
         const TypeIndex ni = state_.plot(h).improvement;
-        if (h == at || ni == kNone) continue;
+        if (h == at || ni == kNone) return;
         const ImprovementType& n = rules_->improvements[static_cast<size_t>(ni)];
         if (n.adjacentImprovement == p.improvement) y[static_cast<size_t>(n.adjacentYield)] += Fixed::fromInt(n.adjacentAmount);
-    }
+    });
     return y;
 }
 
@@ -182,12 +181,20 @@ int Game::luxuryAmenities(const City& city, ReportShare& shared) const {
     // `amenityCities` cities. Sovereign reading: the largest cities get them
     // first (ties: oldest city); Civ gives them to the cities needing them most.
     const PlayerId owner = city.owner;
-    std::vector<const City*> mine;
+    // Its place in that order, counted in one pass: the owner's cities larger than it and those as large listed
+    // before it; past the last when it is not in the list.
+    int rank = 0, cities = 0;
+    bool listed = false;
     for (const City& c : state_.cities) {
-        if (c.owner == owner) mine.push_back(&c);
+        if (c.owner != owner) continue;
+        ++cities;
+        if (&c == &city) {
+            listed = true;
+        } else if (c.population > city.population || (c.population == city.population && !listed)) {
+            ++rank;
+        }
     }
-    std::stable_sort(mine.begin(), mine.end(), [](const City* a, const City* b) { return a->population > b->population; });
-    const int rank = static_cast<int>(std::find(mine.begin(), mine.end(), &city) - mine.begin());
+    if (!listed) rank = cities;
     // Access after deals: copies traded away are lost, copies traded in count (08: Trade Deal).
     if (!shared.luxuries) shared.luxuries = luxuriesHeld(owner);
     const std::vector<uint8_t>& have = *shared.luxuries;

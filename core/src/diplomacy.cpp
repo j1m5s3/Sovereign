@@ -137,14 +137,16 @@ const Deal* Game::deal(int32_t id) const {
 
 // ------------------------------------------------------------------ luxuries
 
-void Game::addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const {
+void Game::addCopiesOffMap(PlayerId player, TypeIndex only, std::vector<int>& n) const {
     auto counts = [&](TypeIndex r) { return r != kNone && ti(r) < n.size() && (only == kNone || r == only); };
     // Luxury corporations (07): John Spilsbury's Toys (1), Helena Rubinstein's Cosmetics, Levi Strauss's Jeans, Estée Lauder's Perfume (2 each).
     static const std::pair<Gp, int> kCorporations[] = {{Gp::Spilsbury, 1}, {Gp::Rubinstein, 2}, {Gp::Strauss, 2}, {Gp::Lauder, 2}};
-    for (size_t i = 0; i < 4; ++i) {
-        if (!counts(products_[i])) continue;
+    if (counts(products_[0]) || counts(products_[1]) || counts(products_[2]) || counts(products_[3])) {
         for (const City& c : state_.cities) {
-            if (c.owner == player && !c.greatPeopleHere.empty()) n[ti(products_[i])] += kCorporations[i].second * usedHere(c, kCorporations[i].first);
+            if (c.owner != player || c.greatPeopleHere.empty()) continue;
+            for (size_t i = 0; i < 4; ++i) {
+                if (counts(products_[i])) n[ti(products_[i])] += kCorporations[i].second * usedHere(c, kCorporations[i].first);
+            }
         }
     }
     // Magellan, Colaeus (07): a copy of the luxury each stood on, for good.
@@ -157,9 +159,14 @@ void Game::addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const
             if (counts(r)) ++n[ti(r)];
         }
     }
+}
+
+void Game::addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const {
+    addCopiesOffMap(player, only, n);
+    // And the improved resources on its land.
     for (const int32_t i : resourcePlots_) {
         const Plot& p = state_.plots[static_cast<size_t>(i)];
-        if (p.owner != player || !counts(p.resource)) continue;
+        if (p.owner != player || p.resource == kNone || ti(p.resource) >= n.size() || (only != kNone && p.resource != only)) continue;
         const Hex h = state_.grid.at(i);
         if (resourceVisible(player, h) && resourceImproved(h)) ++n[ti(p.resource)];
     }
@@ -194,26 +201,50 @@ bool Game::hasLuxury(PlayerId player, TypeIndex resource) const {
 std::vector<uint8_t> Game::luxuriesHeld(PlayerId player) const {
     const size_t count = rules_->resources.size();
     auto active = [&](const Agreement& a) { return a.kind == DealItemKind::Resource && a.resource >= 0 && ti(a.resource) < count && a.until >= state_.turn; };
-    // Its own copies, less those traded away (08: Trade Deal).
-    std::vector<int> own = resourceCopies(player);
-    for (const Agreement& a : state_.agreements) {
-        if (active(a) && a.from == player) --own[ti(a.resource)];
-    }
-    std::vector<uint8_t> held(count, 0);
-    for (size_t r = 0; r < count; ++r) held[r] = own[r] > 0 ? 1 : 0;
-    auto addFrom = [&](PlayerId cityState) {
-        const std::vector<int> theirs = resourceCopies(cityState);
-        for (size_t r = 0; r < count; ++r) held[r] = held[r] != 0 || theirs[r] > 0 ? 1 : 0;
+    // Its resourceCopies and those of each city-state it gets luxuries from, the map's resources looked over once for
+    // all of them: `slot` holds each player's place in `copies` (-1: not counted).
+    std::vector<int> slot(state_.players.size(), -1);
+    std::vector<std::vector<int>> copies;
+    auto take = [&](PlayerId who) {
+        if (slot[at(who)] >= 0) return;
+        slot[at(who)] = static_cast<int>(copies.size());
+        copies.emplace_back(count, 0);
+        addCopiesOffMap(who, kNone, copies.back());
     };
+    take(player);
+    std::vector<PlayerId> from;
     // The suzerain gets its city-states' luxuries (08: Suzerain).
     for (const Player& cs : state_.players) {
-        if (cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id)) addFrom(cs.id);
+        if (cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id)) from.push_back(cs.id);
     }
     // Affluence: Amani in a city-state we are suzerain of copies its luxuries (08: Governors).
     for (const Governor& g : state_.players[at(player)].governors) {
         const City* c = state_.city(g.city);
         if (!c || g.establishTurns > 0 || !governorHasPromotion(g, "GOVERNOR_PROMOTION_AFFLUENCE")) continue;
-        if (state_.players[at(c->owner)].cityState != kNone && isSuzerain(player, c->owner)) addFrom(c->owner);
+        if (state_.players[at(c->owner)].cityState != kNone && isSuzerain(player, c->owner)) from.push_back(c->owner);
+    }
+    for (const PlayerId cs : from) take(cs);
+    // The players counted as bits by id, to pass over other players' plots with one test (when every id fits).
+    const bool masked = slot.size() <= 64;
+    uint64_t counted = 0;
+    for (size_t id = 0; id < slot.size() && masked; ++id) counted |= slot[id] >= 0 ? uint64_t{1} << id : 0;
+    for (const int32_t i : resourcePlots_) {
+        const Plot& p = state_.plots[static_cast<size_t>(i)];
+        if (p.owner < 0 || (masked && (p.owner >= 64 || ((counted >> static_cast<unsigned>(p.owner)) & 1u) == 0))) continue;
+        if (at(p.owner) >= slot.size() || slot[at(p.owner)] < 0 || p.resource == kNone || ti(p.resource) >= count) continue;
+        const Hex h = state_.grid.at(i);
+        if (resourceVisible(p.owner, h) && resourceImproved(h)) ++copies[static_cast<size_t>(slot[at(p.owner)])][ti(p.resource)];
+    }
+    // Its own copies, less those traded away (08: Trade Deal).
+    std::vector<int> own = copies[0];
+    for (const Agreement& a : state_.agreements) {
+        if (active(a) && a.from == player) --own[ti(a.resource)];
+    }
+    std::vector<uint8_t> held(count, 0);
+    for (size_t r = 0; r < count; ++r) held[r] = own[r] > 0 ? 1 : 0;
+    for (const PlayerId cs : from) {
+        const std::vector<int>& theirs = copies[static_cast<size_t>(slot[at(cs)])];
+        for (size_t r = 0; r < count; ++r) held[r] = held[r] != 0 || theirs[r] > 0 ? 1 : 0;
     }
     // And copies traded to it.
     for (const Agreement& a : state_.agreements) {

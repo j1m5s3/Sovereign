@@ -150,16 +150,16 @@ Yields Game::plotYields(Hex at, const City& city) const {
 
 std::vector<Hex> Game::workablePlots(const City& city) const {
     std::vector<Hex> out;
-    for (const Hex& h : state_.grid.within(city.pos, 3)) {
-        if (h == city.pos) continue;
+    state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
+        if (h == city.pos) return;
         const Plot& p = state_.plot(h);
-        if (p.city != city.id || state_.districtAt(h) || state_.wonderAt(h) != kNone) continue;  // district and wonder plots are not worked
+        if (p.city != city.id || state_.districtAt(h) || state_.wonderAt(h) != kNone) return;  // district and wonder plots are not worked
         const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];
         // Mountains can be worked by a civ whose ability allows it (Inca).
-        if (t.impassable && !(t.relief == Relief::Mountain && civAbility(city.owner).mountainProduction > 0)) continue;
-        if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) continue;
+        if (t.impassable && !(t.relief == Relief::Mountain && civAbility(city.owner).mountainProduction > 0)) return;
+        if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) return;
         out.push_back(h);
-    }
+    });
     return out;
 }
 
@@ -292,8 +292,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     if (suzerainBonus(c->owner, Cs::NanMadol)) {
         const TypeIndex coast = rules_->terrain("TERRAIN_COAST");
         const auto byCoast = [&](Hex h) {
-            const std::vector<Hex> near = state_.grid.within(h, 1);
-            return std::any_of(near.begin(), near.end(), [&](const Hex& n) { return state_.plot(n).terrain == coast; });
+            bool by = false;
+            state_.grid.forEachWithin(h, 1, [&](Hex n) { by = by || state_.plot(n).terrain == coast; });
+            return by;
         };
         int districts = byCoast(c->pos) ? 1 : 0;
         for (const CityDistrict& d : c->districts) districts += d.complete && d.pillagedTurns == 0 && byCoast(d.pos) ? 1 : 0;
@@ -333,10 +334,10 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     // Johannesburg (08: suzerain): +1 Production per kind of improved resource here, +1 more after Industrialization.
     if (suzerainBonus(c->owner, Cs::Johannesburg)) {
         std::vector<TypeIndex> kinds;
-        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+        state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
             if (p.city == c->id && p.resource != kNone && resourceImproved(h) && std::find(kinds.begin(), kinds.end(), p.resource) == kinds.end()) kinds.push_back(p.resource);
-        }
+        });
         const TypeIndex industry = rules_->tech("TECH_INDUSTRIALIZATION");
         const bool industrial = industry != kNone && owner.techs.has(industry);
         raw[idx(YieldType::Production)] += Fixed::fromInt(static_cast<int>(kinds.size()) * (industrial ? 2 : 1));
@@ -366,7 +367,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     rep.housing += districtHousing(*c);
     if (const int mh = civAbility(c->owner).mountainCityHousing; mh > 0) {
         bool mountain = false;
-        for (const Hex& n : state_.grid.within(c->pos, 1)) mountain = mountain || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain;
+        state_.grid.forEachWithin(c->pos, 1, [&](Hex n) { mountain = mountain || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain; });
         if (mountain) rep.housing += Fixed::fromInt(mh);
     }
     rep.housing += sumCityModifiers(state_, *rules_, *c, ModEffect::CityHousing);
@@ -479,7 +480,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
             rep.amenities += it.amenities;
             if (it.waterAmenity > 0) {
                 bool wet = isRiverAdjacent(state_, h);
-                for (const Hex& n : state_.grid.within(h, 1)) wet = wet || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].water;
+                state_.grid.forEachWithin(h, 1, [&](Hex n) { wet = wet || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].water; });
                 if (wet) rep.amenities += it.waterAmenity;  // the City Park (08)
             }
         }
@@ -498,12 +499,12 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
             for (const CityWonder& cw : o.wonders) {
                 auto w = std::find_if(nearWonders.begin(), nearWonders.end(), [&](const auto& n) { return n.first == cw.building; });
                 if (w == nearWonders.end() || !o.has(cw.building)) continue;
-                for (const Hex& h : state_.grid.within(cw.pos, w->second)) {
+                state_.grid.forEachWithin(cw.pos, w->second, [&](Hex h) {
                     const Plot& ip = state_.plot(h);
-                    if (ip.city != c->id || ip.improvement == kNone || ip.pillagedTurns > 0) continue;
+                    if (ip.city != c->id || ip.improvement == kNone || ip.pillagedTurns > 0) return;
                     const ImprovementType& it = rules_->improvements[static_cast<size_t>(ip.improvement)];
                     if (it.nearWonder == cw.building && state_.grid.distance(h, cw.pos) <= it.nearWonderRange) rep.amenities += it.nearWonderAmenities;
-                }
+                });
             }
         }
     }
@@ -537,10 +538,10 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     const bool kilwa = holdsWonder(c->owner, W::Kilwa);
     int industries = 0;
     if (state_.setup.monopolies) {
-        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+        state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& q = state_.plot(h);
             industries += q.city == c->id && q.pillagedTurns == 0 ? 10 * q.industry : 0;
-        }
+        });
     }
     // Ibn Khaldun (07): +4% (Ecstatic) or +2% (Happy) to every yield but Food.
     int khaldun = 0;
@@ -600,9 +601,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         }
         if (b.foodPerAdjacentMountain > 0) {
             int mountains = 0;
-            for (const Hex& n : state_.grid.within(c->pos, 1)) {
+            state_.grid.forEachWithin(c->pos, 1, [&](Hex n) {
                 mountains += rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain ? 1 : 0;
-            }
+            });
             rep.yields[idx(YieldType::Food)] += Fixed::fromInt(b.foodPerAdjacentMountain * std::min(2, mountains));
         }
     }
@@ -1474,12 +1475,12 @@ bool Game::growBorders(City& city) {
     const int maxDist = rules_->globalInt("PLOT_INFLUENCE_MAX_ACQUIRE_DISTANCE");
     std::optional<Hex> best;
     int64_t bestScore = 0;
-    for (const Hex& h : state_.grid.within(city.pos, maxDist)) {
+    state_.grid.forEachWithin(city.pos, maxDist, [&](Hex h) {
         const Plot& p = state_.plot(h);
-        if (p.owner != kNoPlayer) continue;
+        if (p.owner != kNoPlayer) return;
         bool touches = false;
-        for (const Hex& n : state_.grid.within(h, 1)) touches = touches || state_.plot(n).city == city.id;
-        if (!touches) continue;
+        state_.grid.forEachWithin(h, 1, [&](Hex n) { touches = touches || state_.plot(n).city == city.id; });
+        if (!touches) return;
         // Lower is better (PLOT_INFLUENCE_*; 02-cities.md, Border growth).
         int64_t score = int64_t(rules_->globalInt("PLOT_INFLUENCE_RING_COST")) * state_.grid.distance(city.pos, h);
         const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];
@@ -1493,7 +1494,7 @@ bool Game::growBorders(City& city) {
             best = h;
             bestScore = score;
         }
-    }
+    });
     if (!best) return false;
     Plot& p = state_.plot(*best);
     p.owner = city.owner;

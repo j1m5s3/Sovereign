@@ -715,6 +715,10 @@ private:
     struct BoostScan {
         std::optional<ImprovedPlots> improved;
         std::optional<std::vector<size_t>> cities, units;
+        // By building, district and unit type: how many of its cities have the building (a civ's unique counting as
+        // the one it replaces) or the finished district, and how many of its units are of the type (a civ's unique
+        // counting as the unit it replaces).
+        std::optional<std::vector<int>> buildingCities, districtCities, unitsOfType;
     };
     bool boostMet(PlayerId player, const Boost& boost, BoostScan& scan) const;
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
@@ -750,6 +754,40 @@ private:
     // A step's cost: `dir` is the direction from `from` to its neighbour `to`, `limits` the whole map's (no `only`).
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
+    // terrainCost in three parts, so that a path search reads each plot once however many of its steps end there:
+    // what a step's cost reads of the unit (the same for every step), of the plot it ends on, and of the plot it
+    // starts from.
+    struct StepUnit {
+        const Unit* unit = nullptr;
+        const MoveTraits* traits = nullptr;
+        Domain domain = Domain::Land;
+        bool heli = false;  // a helicopter flies over rivers (05)
+        int embarkCost = 0, riverCost = 0;
+        int8_t embark = -1, ocean = -1;  // canEmbark and canEnterOcean, asked on first need (-1: not yet)
+    };
+    // How a step into the plot is costed: not at all; 1 (sailing, a canal); 1 from the water (a ship into a city);
+    // embarking; a religious unit under Missionary Zeal; on land (or a land bridge) by its terrain.
+    enum class StepKind : uint8_t { None, Sail, Port, Embark, Zeal, Land };
+    // Plain data (a path search keeps one per plot, set as it reaches the plot): StepInto{} is StepKind::None. Its
+    // first fields are those of a StepFrom read off the same plot.
+    struct StepInto {
+        StepKind kind;
+        bool water;
+        bool afloat;         // water with no land bridge
+        int8_t road;         // its route, -1 with none or a pillaged one
+        uint8_t riverEdges;  // Plot::riverEdges
+        int32_t cost;        // Land: the terrain's cost, before roads, rivers and disembarking
+    };
+    struct StepFrom {
+        bool water, afloat;
+        int8_t road;
+        uint8_t riverEdges;
+    };
+    StepUnit stepUnit(const Unit& unit, const MoveTraits& traits) const;
+    StepInto stepInto(StepUnit& su, Hex to) const;
+    StepFrom stepFrom(Hex from) const;
+    // The step's cost: `dir` is the direction from the step's start to its end.
+    std::optional<Fixed> stepCost(const StepUnit& su, const StepInto& to, const StepFrom& from, Dir dir) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
     // A unit's sight given its Sight effects' total (unitSight); and its sight with whether it sees through woods
     // (Sentry, 05), from one look at its abilities.
@@ -963,11 +1001,32 @@ private:
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
+    // The plots within 3 of a city that hold a city, a district or a wonder (as cityAt, districtAt and wonderAt find
+    // them), listed on first need for a run of placement checks around the city, so that each plot's check need not
+    // look through every city. It lists those in the rows within 3 of the city's, which hold all of them.
+    struct BuiltNear {
+        explicit BuiltNear(Hex around) : center(around) {}
+        Hex center;
+        bool listed = false;
+        std::vector<Hex> plots;
+    };
+    bool builtOn(BuiltNear& built, Hex plot) const;  // for a plot within 3 of built.center
+    // canPlaceWonder and canPlaceDistrict looking up the built plots in a run's list. With `cityChecks` false, the
+    // district's checks that do not depend on the plot (districtOpenIn, districtUnblockedIn) are taken as passed.
+    bool canPlaceWonder(const City& city, TypeIndex building, Hex plot, BuiltNear* built) const;
+    bool canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, BuiltNear* built, bool cityChecks) const;
+    // canPlaceDistrict's checks that do not depend on the plot: those it makes before the plot's (the district is
+    // unlocked, not yet placed here, and the city's population allows another) and after them (no district it
+    // excludes here, and none of a one-per-civ kind anywhere).
+    bool districtOpenIn(const City& city, TypeIndex type) const;
+    bool districtUnblockedIn(const City& city, TypeIndex type) const;
     // currentGreatPerson and greatPersonCost with the world era already worked out.
     TypeIndex currentGreatPerson(TypeIndex cls, int world) const;
     int greatPersonCost(TypeIndex person, int world) const;
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
+    // The part of them not counted off its land: corporations' products, luxuries granted, Zanzibar's spices.
+    void addCopiesOffMap(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
     // the National Park plots of each city. Valid while no city changes hands.
     struct ReportShare {

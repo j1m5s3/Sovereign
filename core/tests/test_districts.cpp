@@ -324,6 +324,41 @@ TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
     CHECK(!g3->canPlaceDistrict(c, district("DISTRICT_WATER_PARK"), {6, 9}));  // exclusive with the Entertainment Complex
 }
 
+TEST(no_district_goes_on_a_plot_already_built_on) {
+    // A district or a wonder on a plot three rows from the city's takes the plot, as one on any plot within 3 does.
+    const Hex holy{6, 9}, wonder{5, 9}, open{7, 9};
+    auto g = town(7, [&](GameState& s) {
+        s.cities[0].districts.push_back({district("DISTRICT_HOLY_SITE"), holy, true});
+        s.cities[0].wonders.push_back({rules().building("BUILDING_PYRAMIDS"), wonder});
+    });
+    REQUIRE(g->state().grid.distance(kCenter, holy) == 3);
+    REQUIRE(g->state().grid.distance(kCenter, wonder) == 3);
+    const std::vector<Hex> plots = g->districtPlots(1, district("DISTRICT_CAMPUS"));
+    CHECK(std::find(plots.begin(), plots.end(), open) != plots.end());
+    CHECK(std::find(plots.begin(), plots.end(), holy) == plots.end());
+    CHECK(std::find(plots.begin(), plots.end(), wonder) == plots.end());
+}
+
+TEST(one_per_civ_and_exclusive_districts_leave_the_build_list) {
+    // A Government Plaza is one per civ; a Water Park keeps an Entertainment Complex out of its city (03).
+    const auto lists = [](bool plaza, const char* districtId) {
+        auto g = town(7, [&](GameState& s) {
+            const CityId second = addCity(s, 0, {14, 6}, false, 7);
+            Player& p = s.players[0];
+            p.civics.resize(rules().civics.size());
+            for (const char* c : {"CIVIC_STATE_WORKFORCE", "CIVIC_GAMES_AND_RECREATION", "CIVIC_NATURAL_HISTORY"}) p.civics.done[at(rules().civic(c))] = 1;
+            if (plaza) s.cities[0].districts.push_back({district("DISTRICT_GOVERNMENT_PLAZA"), {5, 4}, true});
+            s.city(second)->districts.push_back({district("DISTRICT_WATER_PARK"), {14, 7}, true});
+        });
+        const std::vector<ProductionItem> items = g->buildableItems(g->state().cities[1].id);
+        return std::find(items.begin(), items.end(), item(districtId)) != items.end();
+    };
+    CHECK(lists(false, "DISTRICT_GOVERNMENT_PLAZA"));
+    CHECK(!lists(true, "DISTRICT_GOVERNMENT_PLAZA"));
+    CHECK(!lists(false, "DISTRICT_ENTERTAINMENT_COMPLEX"));
+    CHECK(lists(false, "DISTRICT_CAMPUS"));
+}
+
 TEST(a_canal_links_two_waters_and_lets_ships_through) {
     // Water west at (3,8) and east at (5,8) around a land plot (4,8) next to the city's ring.
     auto g = town(6, [](GameState& s) {

@@ -333,6 +333,7 @@ TEST(follower_beliefs_take_effect) {
 TEST(missionary_zeal_lets_religious_units_ignore_terrain) {
     GameState s = religionState();
     s.plot({8, 9}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    s.plot({9, 9}).terrain = rules().terrain("TERRAIN_COAST");
     const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, {7, 9});
     auto g = withReligion(std::move(s));
     const int religion = g->state().players[0].religion;
@@ -340,6 +341,9 @@ TEST(missionary_zeal_lets_religious_units_ignore_terrain) {
     CHECK_EQ(g->moveCost(*g->state().unit(missionary), {7, 9}, {8, 9}).value_or(Fixed()), Fixed::fromInt(2));  // hills
     g->stateMutForTests().religions[static_cast<size_t>(religion)].beliefs.push_back(belief("BELIEF_MISSIONARY_ZEAL"));
     CHECK_EQ(g->moveCost(*g->state().unit(missionary), {7, 9}, {8, 9}).value_or(Fixed()), Fixed::fromInt(1));
+    // Stepping ashore still costs what disembarking costs.
+    const int ashore = rules().globalInt("MOVEMENT_EMBARK_COST") + 1;
+    CHECK_EQ(g->moveCost(*g->state().unit(missionary), {9, 9}, {8, 9}).value_or(Fixed()), Fixed::fromInt(ashore));
 }
 
 TEST(sacred_places_pays_for_wonders_in_following_cities) {

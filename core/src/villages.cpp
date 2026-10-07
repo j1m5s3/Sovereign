@@ -14,12 +14,19 @@ size_t at(int i) { return static_cast<size_t>(i); }
 }  // namespace
 
 bool Game::nextToNaturalWonder(Hex plot, const char* featureId) const {
-    const TypeIndex f = rules_->feature(featureId);
-    if (f == kNone) return false;
-    for (const Hex& n : state_.grid.within(plot, 1)) {
-        if (n != plot && state_.plot(n).feature == f) return true;
-    }
-    return false;
+    // The feature is looked up by name only once a neighbour has a feature at all.
+    TypeIndex f = kNone;
+    bool named = false, next = false;
+    state_.grid.forEachWithin(plot, 1, [&](Hex n) {
+        const TypeIndex here = state_.plot(n).feature;
+        if (next || n == plot || here == kNone) return;
+        if (!named) {
+            named = true;
+            f = rules_->feature(featureId);
+        }
+        next = f != kNone && here == f;
+    });
+    return next;
 }
 
 void Game::enterVillage(Unit& unit) {
