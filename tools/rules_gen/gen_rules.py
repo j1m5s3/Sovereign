@@ -2251,6 +2251,9 @@ def gp_more_effects(t, ids):
     m = re.fullmatch(r"\+(\d+) regional range", t)
     if m:
         return [{"kind": "REGIONAL_RANGE", "amount": int(m.group(1))}]
+    # Shah Jahan (07): Production toward the wonder, bought with Gold (the price is in code, from the Civilopedia).
+    if t == "purchase production in city":
+        return [{"kind": "WONDER_PURCHASE"}]
     return None
 
 

@@ -571,3 +571,42 @@ TEST(tesla_and_paxton_strengthen_regional_buildings) {
     REQUIRE(g->submit(Command::activateGreatPerson(0, t)) == CommandError::Ok);
     CHECK_EQ(g->cityReport(far).yields[prod], tesla->cityReport(far).yields[prod]);
 }
+
+// Shah Jahan (07; Civilopedia): on the plot of a wonder his city is building, Production toward it, capped at half the
+// treasury, for twice as much Gold.
+TEST(shah_jahan_buys_a_wonder_with_gold) {
+    const TypeIndex pyramids = rules().building("BUILDING_PYRAMIDS");
+    const ProductionItem item{ProductionKind::Building, pyramids, 0};
+    const auto use = [&](int gold, int done, Hex where = {7, 7}) {
+        GameState s = cityState();
+        s.cities[0].wonders.push_back({pyramids, {7, 7}});  // being built; the city works on something else now
+        if (done > 0) s.cities[0].progress.push_back({item, Fixed::fromInt(done)});
+        s.players[0].gold = Fixed::fromInt(gold);
+        const UnitId shah = addGreatPerson(s, "GREAT_PERSON_SHAH_JAH_N", where);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const CommandError expected = where == Hex{7, 7} ? CommandError::Ok : CommandError::CannotActivate;
+        CHECK_EQ(g->submit(Command::activateGreatPerson(0, shah)), expected);
+        return g;
+    };
+    const auto progress = [&](const Game& g) {
+        Fixed amount;
+        for (const ProductionProgress& p : g.state().cities[0].progress) amount += p.item == item ? p.amount : Fixed();
+        return amount;
+    };
+    const auto rich = use(10000, 100);
+    const int cost = rich->productionCost(0, item, &rich->state().cities[0]);
+    REQUIRE(cost > 150);
+    CHECK_EQ(progress(*rich), Fixed::fromInt(cost));  // the rest, no more
+    CHECK_EQ(rich->state().players[0].gold, Fixed::fromInt(10000 - 2 * (cost - 100)));
+    CHECK(rich->state().city(rich->state().cities[0].id)->progress.size() == 1);
+    const auto poor = use(101, 0);  // half the treasury: 50
+    CHECK_EQ(progress(*poor), Fixed::fromInt(50));
+    CHECK_EQ(poor->state().players[0].gold, Fixed::fromInt(1));
+    for (int gold : {0, -40}) {  // nothing to spend: nothing bought, and he is used up
+        const auto broke = use(gold, 0);
+        CHECK(broke->state().cities[0].progress.empty());
+        CHECK_EQ(broke->state().players[0].gold, Fixed::fromInt(gold));
+        CHECK(std::none_of(broke->state().units.begin(), broke->state().units.end(), [](const Unit& u) { return u.greatPerson != kNone; }));
+    }
+    use(10000, 0, {5, 6});  // not on the wonder's plot
+}

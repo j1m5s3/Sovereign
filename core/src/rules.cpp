@@ -505,6 +505,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"POPULATION", GreatPersonEffectKind::Population}, {"PROMOTE_ALL", GreatPersonEffectKind::PromoteAll},
                 {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent}, {"LUXURY_HERE", GreatPersonEffectKind::LuxuryHere},
                 {"REGIONAL_RANGE", GreatPersonEffectKind::RegionalRange}, {"REGIONAL_AMENITY", GreatPersonEffectKind::RegionalAmenity},
+                {"WONDER_PURCHASE", GreatPersonEffectKind::WonderPurchase},
             };
             bool known = false;
             for (const auto& [name, k] : kMore) {

@@ -1682,8 +1682,10 @@
     "ownedTile": true,
     "incompleteWonder": true
    },
-   "untrackedEffects": [
-    "purchase production in city (one-time)"
+   "effects": [
+    {
+     "kind": "WONDER_PURCHASE"
+    }
    ]
   },
   {

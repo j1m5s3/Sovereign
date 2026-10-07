@@ -743,6 +743,29 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             if (!found) city->progress.push_back({item, Fixed::fromInt(amount)});
             break;
         }
+        case GreatPersonEffectKind::WonderPurchase: {
+            // Shah Jahan (07; Civilopedia: "Grants Production towards wonder construction, capped at half your current
+            // treasury, then reduces your Gold twice the amount of purchased Production"): the rest of the wonder here.
+            if (!city) break;
+            const TypeIndex wonder = unfinishedWonderAt(*city, here);
+            if (wonder == kNone) break;
+            const ProductionItem item{ProductionKind::Building, wonder, 0};
+            Fixed done;
+            for (const ProductionProgress& pr : city->progress) done = pr.item == item ? pr.amount : done;
+            const Fixed rest = Fixed::fromInt(productionCost(pid, item, city)) - done;
+            const Fixed bought = std::min(rest, Fixed::fromInt(p.gold.toInt() / 2));  // none when in debt
+            if (bought <= Fixed()) break;
+            p.gold -= bought * 2;
+            bool found = false;
+            for (ProductionProgress& pr : city->progress) {
+                if (pr.item == item) {
+                    pr.amount += bought;
+                    found = true;
+                }
+            }
+            if (!found) city->progress.push_back({item, bought});
+            break;
+        }
         case GreatPersonEffectKind::UnitXp: {
             for (Unit& o : state_.units) {
                 if (o.pos == here && o.owner == pid && rules_->units[at(o.type)].layer == UnitLayer::Military) {

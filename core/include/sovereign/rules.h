@@ -424,6 +424,7 @@ enum class GreatPersonEffectKind : uint8_t {
     RegionalRange,      // the district's regional buildings reach `amount` tiles farther
     RegionalYield,      // + `amount` `yield` to each city the district's regional buildings reach
     RegionalAmenity,    // + `amount` Amenity to each city the district's regional buildings reach
+    WonderPurchase,     // the rest of the wonder built on this plot, at 2 Gold per Production, up to half the treasury
 };
 
 struct GreatPersonEffect {
