@@ -610,7 +610,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
         return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost() + 1);  // embarking: 2 plus the water tile
     }
-    if (!bridge && !isLandPassable(state_, *rules_, to)) return std::nullopt;
+    if (!bridge && !isLandPassable(*rules_, p)) return std::nullopt;
     if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost() + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground

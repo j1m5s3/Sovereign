@@ -22,6 +22,14 @@ SOV_API bool chooseStartPositions(GameState& state, const Rules& rules, std::str
 
 // True if a land unit can stand on this plot.
 SOV_API bool isLandPassable(const GameState& state, const Rules& rules, Hex h);
+// The same for a plot already in hand.
+inline bool isLandPassable(const Rules& rules, const Plot& p) {
+    const TerrainType& t = rules.terrains[static_cast<size_t>(p.terrain)];
+    if (t.water) return false;
+    // A Mountain Tunnel [GS] opens its mountain (01: Mountain tunnels).
+    if (t.impassable && !(p.improvement != kNone && rules.improvements[static_cast<size_t>(p.improvement)].tunnel)) return false;
+    return p.feature == kNone || !rules.features[static_cast<size_t>(p.feature)].impassable;
+}
 // Places the map size's natural wonders on clusters of valid plots away from every start (01).
 SOV_API void placeNaturalWonders(GameState& state, const Rules& rules);
 // Scatters tribal villages over open land away from every start (01: Tribal Villages).
