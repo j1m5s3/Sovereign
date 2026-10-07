@@ -1352,7 +1352,7 @@ public:
     // when required through requireGlobals().
     Fixed global(std::string_view name) const;
     int globalInt(std::string_view name) const { return static_cast<int>(global(name).toInt()); }
-    bool hasGlobal(std::string_view name) const { return globals_.find(name) != globals_.end(); }
+    bool hasGlobal(std::string_view name) const { return findGlobal(name) != nullptr; }
 
     // Checksum of the loaded rules; saves and multiplayer peers must match.
     uint64_t checksum() const { return checksum_; }
@@ -1361,7 +1361,15 @@ public:
     static const std::vector<std::string>& fileNames();
 
 private:
-    std::map<std::string, Fixed, std::less<>> globals_;  // looked up by string_view without a copy
+    // The named constants, sorted by the hash of their names: a lookup hashes the name once and compares one name,
+    // where a tree of names compares strings at every level.
+    struct Global {
+        size_t hash;
+        std::string name;
+        Fixed value;
+    };
+    std::vector<Global> globals_;
+    const Global* findGlobal(std::string_view name) const;
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
 };
