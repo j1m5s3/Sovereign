@@ -282,6 +282,31 @@ TEST(lakes_feed_aqueducts_and_raise_appeal) {
     CHECK(watered->cityReport(watered->state().cities[0].id).housing == lakeside->cityReport(lakeside->state().cities[0].id).housing + Fixed::fromInt(2));
 }
 
+// Appeal (03): each district beside a plot adds its own Appeal (Holy Site and Theater Square +1, Industrial Zone -1)
+// and each wonder +1, on the rows beside the plot as on its own; the Biosphère's holder gets +1 from a Marsh beside it.
+TEST(districts_wonders_and_the_biosphere_beside_a_plot_change_its_appeal) {
+    const Hex plot{6, 8};  // beside it: (6, 7) and (5, 7) above, (5, 8) and (7, 8) on its row, (6, 9) and (5, 9) below
+    auto plain = town(3, [](GameState&) {});
+    auto built = town(3, [](GameState& s) {
+        City& c = s.cities[0];
+        c.districts.push_back({district("DISTRICT_HOLY_SITE"), {6, 7}, true});
+        c.districts.push_back({district("DISTRICT_THEATER_SQUARE"), {5, 9}, true});
+        c.districts.push_back({district("DISTRICT_INDUSTRIAL_ZONE"), {5, 8}, true});
+        c.wonders.push_back({rules().building("BUILDING_STONEHENGE"), {6, 9}});
+    });
+    CHECK_EQ(built->plotAppeal(plot), plain->plotAppeal(plot) + 2);
+    auto marsh = [](bool biosphere) {
+        return town(3, [&](GameState& s) {
+            s.plot({7, 8}).feature = rules().feature("FEATURE_MARSH");
+            if (!biosphere) return;
+            s.cities[0].buildings.push_back(rules().building("BUILDING_BIOSPH_RE"));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        });
+    };
+    CHECK_EQ(marsh(false)->plotAppeal(plot), plain->plotAppeal(plot) - 1);
+    CHECK_EQ(marsh(true)->plotAppeal(plot), plain->plotAppeal(plot));
+}
+
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
     auto g = town(7, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
     GameState s = g->state();
