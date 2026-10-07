@@ -227,3 +227,61 @@ TEST(ai_gathers_before_assaulting_walls) {
         if (u) CHECK(g->state().grid.distance(u->pos, {20, 6}) >= 3);
     }
 }
+
+TEST(ai_walks_great_people_to_where_they_work) {
+    // Galileo goes beside the most Mountains on the city's land, Zhou Daguan into a known city-state's land and
+    // Isidore of Miletus onto the plot of the wonder the city is building.
+    GameState s = flatState(24, 14, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.players[1].civ = kNone;
+    s.players[1].cityState = rules().cityState("CITYSTATE_MITLA");
+    for (Player& p : s.players) {
+        p.envoys.assign(2, 0);
+        p.met.assign(2, 0);
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    s.players[0].met[1] = s.players[1].met[0] = 1;
+    const CityId capital = addCity(s, 0, {6, 6}, true, 4);
+    addCity(s, 1, {16, 6}, true, 2);
+    for (const Hex& h : s.grid.within({6, 6}, 3)) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = capital;
+    }
+    // Two Mountains on the edge of the city's land, both beside (9,6).
+    std::vector<Hex> peaks;
+    for (const Hex& h : s.grid.within({9, 6}, 1)) {
+        if (h != Hex{9, 6} && s.grid.distance(h, {6, 6}) == 3 && peaks.size() < 2) peaks.push_back(h);
+    }
+    REQUIRE(peaks.size() == 2u);
+    for (const Hex& h : peaks) s.plot(h).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    auto spawn = [&](const char* who) {
+        const TypeIndex gp = rules().greatPerson(who);
+        const UnitId id = addUnit(s, rules().units[at(rules().greatPersonClasses[at(rules().greatPeople[at(gp)].cls)].unit)].id.c_str(), 0, {6, 6});
+        s.units.back().greatPerson = gp;
+        s.units.back().charges = 1;
+        return id;
+    };
+    const UnitId galileo = spawn("GREAT_PERSON_GALILEO_GALILEI");
+    const UnitId zhou = spawn("GREAT_PERSON_ZHOU_DAGUAN");
+    const UnitId isidore = spawn("GREAT_PERSON_ISIDORE_OF_MILETUS");
+    const TypeIndex pyramids = rules().building("BUILDING_PYRAMIDS");
+    s.cities[0].wonders.push_back({pyramids, {4, 5}});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    Hex used = {6, 6};  // where Galileo was when he was used
+    for (int i = 0; i < 16 && (g->state().unit(galileo) || g->state().unit(zhou) || g->state().unit(isidore)); ++i) {
+        if (const Unit* gal = g->state().unit(galileo)) used = gal->pos;
+        ai::playTurn(*g);  // both players' turns
+    }
+    CHECK(!g->state().unit(galileo));
+    for (const Hex& h : peaks) CHECK_EQ(g->state().grid.distance(used, h), 1);
+    CHECK(!g->state().unit(zhou));
+    const std::vector<TypeIndex>& done = g->state().players[0].greatPeopleActivated;
+    CHECK(std::count(done.begin(), done.end(), rules().greatPerson("GREAT_PERSON_GALILEO_GALILEI")) == 1);
+    CHECK(std::count(done.begin(), done.end(), rules().greatPerson("GREAT_PERSON_ZHOU_DAGUAN")) == 1);
+    CHECK(g->state().players[0].envoys[1] >= 3);
+    CHECK(std::count(done.begin(), done.end(), rules().greatPerson("GREAT_PERSON_ISIDORE_OF_MILETUS")) >= 1);
+    const City& home = g->state().cities[0];
+    CHECK(home.has(pyramids) || std::any_of(home.progress.begin(), home.progress.end(), [&](const ProductionProgress& p) {
+              return p.item.kind == ProductionKind::Building && p.item.type == pyramids && p.amount >= Fixed::fromInt(215);
+          }));
+}

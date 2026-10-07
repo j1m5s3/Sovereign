@@ -307,6 +307,13 @@ void Game::greatLibraryEurekas(PlayerId recruiter) {
     }
 }
 
+TypeIndex Game::unfinishedWonderAt(const City& city, Hex plot) const {
+    for (const CityWonder& w : city.wonders) {
+        if (w.pos == plot && !city.has(w.building)) return w.building;
+    }
+    return kNone;
+}
+
 bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
@@ -343,13 +350,44 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
     if (g.noMilitaryUnit && state_.unitAt(u->pos, UnitLayer::Military, *rules_)) return fail(CommandError::CannotActivate);
     if (g.unitDomain >= 0) {
         const Unit* m = state_.unitAt(u->pos, UnitLayer::Military, *rules_);
-        if (!m || m->owner != u->owner || static_cast<int>(rules_->units[at(m->type)].domain) != g.unitDomain)
+        if (!m || m->owner != u->owner || static_cast<int>(rules_->units[at(m->type)].domain) != g.unitDomain || (g.standardFormation && m->formation != 0))
             return fail(CommandError::CannotActivate);
     }
     if (g.missingBuilding != kNone && (!city || city->has(g.missingBuilding))) return fail(CommandError::CannotActivate);
     // Magellan, Colaeus (07): on a luxury the player can see.
     if (g.luxuryHere && (plot.resource == kNone || rules_->resources[at(plot.resource)].cls != ResourceClass::Luxury || !resourceVisible(u->owner, u->pos)))
         return fail(CommandError::CannotActivate);
+    // Whose land it is (Tupac Amaru in an enemy's, Perry and Zhou Daguan in a city-state's, not a foe's).
+    if (g.enemyTerritory && (plot.owner == kNoPlayer || !atWar(u->owner, plot.owner))) return fail(CommandError::CannotActivate);
+    if (g.cityStateTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner))) return fail(CommandError::CannotActivate);
+    if (g.nonHostileTerritory && plot.owner != kNoPlayer && atWar(u->owner, plot.owner)) return fail(CommandError::CannotActivate);
+    // What lies beside it: a barbarian (Boudica), a Mountain (Galileo), a natural wonder (Darwin), Rainforest (Janaki Ammal).
+    if (g.barbarianBeside || g.mountainBeside || g.naturalWonderNear || g.featureNear != kNone) {
+        bool barbarian = false, mountain = false, wonder = false, feature = false;
+        for (const Hex& h : state_.grid.within(u->pos, 1)) {
+            const Plot& q = state_.plot(h);
+            mountain = mountain || (h != u->pos && rules_->terrains[at(q.terrain)].relief == Relief::Mountain);
+            wonder = wonder || (q.feature != kNone && rules_->features[at(q.feature)].naturalWonder);
+            feature = feature || (g.featureNear != kNone && q.feature == g.featureNear);
+        }
+        for (const Unit& o : state_.units) barbarian = barbarian || (state_.players[at(o.owner)].barbarian && state_.grid.distance(o.pos, u->pos) <= 1);
+        if ((g.barbarianBeside && !barbarian) || (g.mountainBeside && !mountain) || (g.naturalWonderNear && !wonder) || (g.featureNear != kNone && !feature))
+            return fail(CommandError::CannotActivate);
+    }
+    // The Great Engineers: on the plot of a wonder its city is building. Korolev, Sagan: its city is building a space race project.
+    if (g.incompleteWonder && (!city || unfinishedWonderAt(*city, u->pos) == kNone)) return fail(CommandError::CannotActivate);
+    if (g.spaceRaceProject && (!city || city->queue.empty() || city->queue.front().kind != ProductionKind::Project ||
+                               !rules_->projects[at(city->queue.front().type)].spaceRace))
+        return fail(CommandError::CannotActivate);
+    // Mary Leakey: its city holds an Artifact. Jeanne d'Arc: some city of the player has room for a Relic.
+    if (g.cityGreatWork != kNone &&
+        (!city || std::none_of(city->greatWorks.begin(), city->greatWorks.end(), [&](const GreatWork& w) { return w.type == g.cityGreatWork; })))
+        return fail(CommandError::CannotActivate);
+    if (g.relicSlot) {
+        const TypeIndex relic = rules_->greatWorkType("RELIC");
+        if (relic == kNone || std::none_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) { return c.owner == u->owner && freeGreatWorkSlot(c, relic) != kNone; }))
+            return fail(CommandError::CannotActivate);
+    }
     // Effects that need a city (buildings, production) need one here.
     for (const GreatPersonEffect& fx : g.effects) {
         if ((fx.kind == GreatPersonEffectKind::Building || fx.kind == GreatPersonEffectKind::Production) && !city)
@@ -453,8 +491,11 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::Production: {
-            if (!city || city->queue.empty()) break;
-            const ProductionItem item = city->queue.front();
+            // Into the wonder being built on this plot (the Great Engineers), else what the city builds now.
+            if (!city) break;
+            const TypeIndex wonder = unfinishedWonderAt(*city, here);
+            if (wonder == kNone && city->queue.empty()) break;
+            const ProductionItem item = wonder != kNone ? ProductionItem{ProductionKind::Building, wonder, 0} : city->queue.front();
             bool found = false;
             for (ProductionProgress& pr : city->progress) {
                 if (pr.item.kind == item.kind && pr.item.type == item.type) {
@@ -608,9 +649,11 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::UnitsInDistricts: {
-            if (!city) break;
+            // Tupac Amaru (07): in each finished district of the city whose land he stands on, an enemy's.
+            City* target = state_.plot(here).city != kNoCity ? state_.city(state_.plot(here).city) : nullptr;
+            if (!target) break;
             std::vector<Hex> spots;
-            for (const CityDistrict& d : city->districts) {
+            for (const CityDistrict& d : target->districts) {
                 if (d.complete) spots.push_back(d.pos);
             }
             for (const Hex& h : spots) {
@@ -662,8 +705,11 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         }
         case GreatPersonEffectKind::WonderProduction: {
-            if (!city || city->queue.empty()) break;
-            const ProductionItem item = city->queue.front();
+            // Imhotep (07): into the wonder being built on this plot, else the wonder the city builds now.
+            if (!city) break;
+            const TypeIndex wonder = unfinishedWonderAt(*city, here);
+            if (wonder == kNone && city->queue.empty()) break;
+            const ProductionItem item = wonder != kNone ? ProductionItem{ProductionKind::Building, wonder, 0} : city->queue.front();
             if (item.kind != ProductionKind::Building || !rules_->buildings[at(item.type)].wonder) break;
             const BuildingType& b = rules_->buildings[at(item.type)];
             const int era = b.unlock.none() ? 0 : (b.unlock.civic ? rules_->civics : rules_->techs)[at(b.unlock.index)].era;

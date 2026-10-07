@@ -65,9 +65,7 @@
    "era": "ERA_CLASSICAL",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "AdjacentBarbarianUnit"
-    ]
+    "barbarianBeside": true
    },
    "effects": [
     {
@@ -206,9 +204,7 @@
    "charges": 1,
    "requires": {
     "unitDomain": "LAND",
-    "untracked": [
-     "UnitMilitaryFormation=Standard Military Formation"
-    ]
+    "standardFormation": true
    },
    "effects": [
     {
@@ -289,9 +285,7 @@
    "era": "ERA_RENAISSANCE",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "PlayerRelicSlot"
-    ]
+    "relicSlot": true
    },
    "effects": [
     {
@@ -341,9 +335,7 @@
    "charges": 1,
    "requires": {
     "unitDomain": "LAND",
-    "untracked": [
-     "UnitMilitaryFormation=Standard Military Formation"
-    ]
+    "standardFormation": true
    },
    "effects": [
     {
@@ -532,9 +524,7 @@
    "era": "ERA_MODERN",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "EnemyTerritory"
-    ]
+    "enemyTerritory": true
    },
    "effects": [
     {
@@ -756,9 +746,7 @@
    "charges": 1,
    "requires": {
     "unitDomain": "SEA",
-    "untracked": [
-     "UnitMilitaryFormation=Standard Military Formation"
-    ]
+    "standardFormation": true
    },
    "effects": [
     {
@@ -991,9 +979,7 @@
    "charges": 1,
    "requires": {
     "unitDomain": "SEA",
-    "untracked": [
-     "UnitMilitaryFormation=Standard Military Formation"
-    ]
+    "standardFormation": true
    },
    "effects": [
     {
@@ -1266,9 +1252,7 @@
    "era": "ERA_MODERN",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "CityStateTerritory"
-    ]
+    "cityStateTerritory": true
    },
    "effects": [
     {
@@ -1440,9 +1424,7 @@
    "charges": 2,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "IncompleteWonder"
-    ]
+    "incompleteWonder": true
    },
    "effects": [
     {
@@ -1481,9 +1463,7 @@
    "charges": 2,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "IncompleteWonder"
-    ]
+    "incompleteWonder": true
    },
    "effects": [
     {
@@ -1503,9 +1483,7 @@
    "charges": 2,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "IncompleteWonder"
-    ]
+    "incompleteWonder": true
    },
    "effects": [
     {
@@ -1584,9 +1562,7 @@
    "charges": 2,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "IncompleteWonder"
-    ]
+    "incompleteWonder": true
    },
    "effects": [
     {
@@ -1697,9 +1673,7 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "untracked": [
-     "IncompleteWonder"
-    ]
+    "incompleteWonder": true
    },
    "untrackedEffects": [
     "purchase production in city (one-time)"
@@ -1743,10 +1717,8 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "district": "DISTRICT_SPACEPORT",
-    "untracked": [
-     "IncompleteSpaceRaceProject"
-    ]
+    "spaceRaceProject": true,
+    "district": "DISTRICT_SPACEPORT"
    },
    "effects": [
     {
@@ -2058,10 +2030,8 @@
    "era": "ERA_RENAISSANCE",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "CityStateTerritory",
-     "NonHostileTerritory"
-    ]
+    "cityStateTerritory": true,
+    "nonHostileTerritory": true
    },
    "effects": [
     {
@@ -2650,9 +2620,7 @@
    "era": "ERA_RENAISSANCE",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "AdjacentMountain"
-    ]
+    "mountainBeside": true
    },
    "effects": [
     {
@@ -2782,9 +2750,7 @@
    "era": "ERA_INDUSTRIAL",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "OnOrAdjacentNaturalWonder"
-    ]
+    "naturalWonderNear": true
    },
    "effects": [
     {
@@ -2900,9 +2866,7 @@
    "era": "ERA_ATOMIC",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "OnOrAdjacentFeatureType=Rainforest"
-    ]
+    "featureNear": "FEATURE_JUNGLE"
    },
    "effects": [
     {
@@ -2920,10 +2884,8 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "district": "DISTRICT_THEATER_SQUARE",
-    "untracked": [
-     "CityGreatWorkObjectType=Artifact"
-    ]
+    "cityGreatWork": "ARTIFACT",
+    "district": "DISTRICT_THEATER_SQUARE"
    },
    "effects": [
     {
@@ -2964,9 +2926,7 @@
    "charges": 1,
    "requires": {
     "district": "DISTRICT_CAMPUS",
-    "untracked": [
-     "NonHostileTerritory"
-    ]
+    "nonHostileTerritory": true
    },
    "effects": [
     {
@@ -3011,10 +2971,8 @@
    "charges": 1,
    "requires": {
     "ownedTile": true,
-    "district": "DISTRICT_SPACEPORT",
-    "untracked": [
-     "IncompleteSpaceRaceProject"
-    ]
+    "spaceRaceProject": true,
+    "district": "DISTRICT_SPACEPORT"
    },
    "effects": [
     {

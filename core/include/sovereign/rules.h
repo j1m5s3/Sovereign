@@ -538,6 +538,18 @@ struct GreatPersonType {
     int unitDomain = -1;         // a military unit of this Domain must share the plot
     TypeIndex missingBuilding = kNone;
     bool luxuryHere = false;     // a luxury the player can see must lie on the plot (Magellan, Colaeus)
+    bool barbarianBeside = false;     // a barbarian unit beside it (Boudica)
+    bool standardFormation = false;   // the military unit here is not a Corps or Army yet (El Cid, Napoleon)
+    bool relicSlot = false;           // one of the player's cities has a free Relic slot (Jeanne d'Arc)
+    bool enemyTerritory = false;      // on the land of a civ at war with the player (Tupac Amaru)
+    bool cityStateTerritory = false;  // on a city-state's land (Matthew Perry, Zhou Daguan)
+    bool nonHostileTerritory = false; // not on the land of anyone at war with the player
+    bool incompleteWonder = false;    // on the plot of a wonder its city is building (the Great Engineers)
+    bool spaceRaceProject = false;    // its city is building a space race project (Korolev, Sagan)
+    bool mountainBeside = false;      // a Mountain beside it (Galileo)
+    bool naturalWonderNear = false;   // a natural wonder on or beside it (Darwin)
+    TypeIndex featureNear = kNone;    // this feature on or beside it (Janaki Ammal: Rainforest)
+    TypeIndex cityGreatWork = kNone;  // its city holds a Great Work of this type (Mary Leakey: an Artifact)
     std::vector<GreatPersonEffect> effects;
     std::vector<std::string> untrackedEffects;  // effects of systems not built yet (shown, not applied)
     bool hasModifiers = false;                   // lasting effects as modifiers (Rules::modifiers, source = its id)

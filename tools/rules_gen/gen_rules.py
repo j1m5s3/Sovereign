@@ -1940,6 +1940,30 @@ def gp_requirements(text, districts):
             req["missingBuilding"] = "BUILDING_" + snake(value)
         elif key == "VisibleLuxury":
             req["luxuryHere"] = True  # a luxury resource the player can see on the plot (Magellan, Colaeus)
+        elif key == "AdjacentBarbarianUnit":
+            req["barbarianBeside"] = True  # Boudica
+        elif key == "UnitMilitaryFormation" and value == "Standard Military Formation":
+            req["standardFormation"] = True  # the unit here is not a Corps or Army yet (El Cid, Napoleon)
+        elif key == "PlayerRelicSlot":
+            req["relicSlot"] = True  # Jeanne d'Arc
+        elif key == "EnemyTerritory":
+            req["enemyTerritory"] = True  # Tupac Amaru
+        elif key == "CityStateTerritory":
+            req["cityStateTerritory"] = True  # Matthew Perry, Zhou Daguan
+        elif key == "NonHostileTerritory":
+            req["nonHostileTerritory"] = True
+        elif key == "IncompleteWonder":
+            req["incompleteWonder"] = True  # on the plot of a wonder being built (the Great Engineers)
+        elif key == "IncompleteSpaceRaceProject":
+            req["spaceRaceProject"] = True  # Korolev, Sagan
+        elif key == "AdjacentMountain":
+            req["mountainBeside"] = True  # Galileo
+        elif key == "OnOrAdjacentNaturalWonder":
+            req["naturalWonderNear"] = True  # Darwin
+        elif key == "OnOrAdjacentFeatureType" and value in FEATURE_IDS:
+            req["featureNear"] = FEATURE_IDS[value]  # Janaki Ammal
+        elif key == "CityGreatWorkObjectType":
+            req["cityGreatWork"] = value.upper()  # Mary Leakey: an Artifact in the city
         else:
             untracked.append(atom)
     if untracked:

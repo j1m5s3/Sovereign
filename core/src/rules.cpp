@@ -1943,6 +1943,24 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         if (rq.has("missingBuilding")) g.missingBuilding = building(rq["missingBuilding"].str());
         g.luxuryHere = rq["luxuryHere"].boolean(false);
+        g.barbarianBeside = rq["barbarianBeside"].boolean(false);
+        g.standardFormation = rq["standardFormation"].boolean(false);
+        g.relicSlot = rq["relicSlot"].boolean(false);
+        g.enemyTerritory = rq["enemyTerritory"].boolean(false);
+        g.cityStateTerritory = rq["cityStateTerritory"].boolean(false);
+        g.nonHostileTerritory = rq["nonHostileTerritory"].boolean(false);
+        g.incompleteWonder = rq["incompleteWonder"].boolean(false);
+        g.spaceRaceProject = rq["spaceRaceProject"].boolean(false);
+        g.mountainBeside = rq["mountainBeside"].boolean(false);
+        g.naturalWonderNear = rq["naturalWonderNear"].boolean(false);
+        if (rq.has("featureNear") && (g.featureNear = feature(rq["featureNear"].str())) == kNone) {
+            *error = where + ": unknown feature " + rq["featureNear"].str();
+            return false;
+        }
+        if (rq.has("cityGreatWork") && (g.cityGreatWork = greatWorkType(rq["cityGreatWork"].str())) == kNone) {
+            *error = where + ": unknown great work type " + rq["cityGreatWork"].str();
+            return false;
+        }
         for (const Json& ej : j["effects"].items()) {
             GreatPersonEffect fx;
             if (!parseEffect(ej, where, fx)) return false;
