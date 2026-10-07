@@ -610,3 +610,46 @@ TEST(shah_jahan_buys_a_wonder_with_gold) {
     }
     use(10000, 0, {5, 6});  // not on the wonder's plot
 }
+
+// Stamford Raffles (07; Civilopedia: "Absorbs this City-state into your empire. Grants you +10 Loyalty per turn in the
+// city"): used in the land of a city-state the player is suzerain of and at peace with.
+TEST(raffles_absorbs_a_city_state) {
+    GameState s = cityState();  // player 1, made a city-state, holds (15,6)
+    s.players[1].civ = kNone;
+    s.players[1].cityState = rules().cityState("CITYSTATE_MITLA");
+    for (Player& p : s.players) {
+        p.envoys.assign(2, 0);
+        p.relations.resize(2);
+    }
+    s.players[0].envoys[1] = 3;
+    const UnitId garrison = addUnit(s, "UNIT_WARRIOR", 1, {15, 6});
+    const UnitId raffles = addGreatPerson(s, "GREAT_PERSON_STAMFORD_RAFFLES", {7, 6});
+    const CityId town = s.cities[1].id;
+    const auto usable = [](const GameState& t, UnitId id) { return Game::fromScenario(rules(), t)->canActivateGreatPerson(id); };
+    CHECK(!usable(s, raffles));  // at home
+    s.units.back().pos = {14, 6};
+    CHECK(usable(s, raffles));
+    s.players[0].envoys[1] = 2;  // not its suzerain
+    CHECK(!usable(s, raffles));
+    s.players[0].envoys[1] = 3;
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    CHECK(!usable(s, raffles));
+    s.players[0].relations[1].war = s.players[1].relations[0].war = false;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::activateGreatPerson(0, raffles)) == CommandError::Ok);
+    const City& city = *g->state().city(town);
+    CHECK_EQ(city.owner, 0);
+    CHECK(!city.capital);
+    CHECK(g->state().cities[0].capital);
+    CHECK_EQ(g->state().cities[0].queue.size(), 1u);  // the player's own cities are untouched
+    CHECK(!g->state().players[1].alive);
+    CHECK_EQ(g->state().plot({14, 6}).owner, 0);
+    REQUIRE(g->state().unit(garrison));
+    CHECK_EQ(g->state().unit(garrison)->owner, 0);
+    CHECK(!g->state().unit(raffles));
+    // +10 Loyalty a turn there, from Raffles.
+    REQUIRE(std::count(city.greatPeopleHere.begin(), city.greatPeopleHere.end(), person("GREAT_PERSON_STAMFORD_RAFFLES")) == 1);
+    GameState without = g->state();
+    without.city(town)->greatPeopleHere.clear();
+    CHECK_EQ(g->loyaltyPerTurn(town), Game::fromScenario(rules(), std::move(without))->loyaltyPerTurn(town) + Fixed::fromInt(10));
+}

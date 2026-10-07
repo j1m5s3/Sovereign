@@ -374,6 +374,8 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
     // Whose land it is (Tupac Amaru in an enemy's, Perry and Zhou Daguan in a city-state's, not a foe's).
     if (g.enemyTerritory && (plot.owner == kNoPlayer || !atWar(u->owner, plot.owner))) return fail(CommandError::CannotActivate);
     if (g.cityStateTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner))) return fail(CommandError::CannotActivate);
+    if (g.suzerainTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner) || suzerainOf(plot.owner) != u->owner || atWar(u->owner, plot.owner)))
+        return fail(CommandError::CannotActivate);
     if (g.nonHostileTerritory && plot.owner != kNoPlayer && atWar(u->owner, plot.owner)) return fail(CommandError::CannotActivate);
     // What lies beside it: a barbarian (Boudica), a Mountain (Galileo), a natural wonder (Darwin), Rainforest (Janaki Ammal).
     if (g.barbarianBeside || g.mountainBeside || g.naturalWonderNear || g.featureNear != kNone) {
@@ -764,6 +766,18 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
                 }
             }
             if (!found) city->progress.push_back({item, bought});
+            break;
+        }
+        case GreatPersonEffectKind::AbsorbCityState: {
+            // Stamford Raffles (07; Civilopedia: "Absorbs this City-state into your empire"): its cities become the
+            // player's as they stand, with their units; the Loyalty is read from the city's greatPeopleHere.
+            const PlayerId cs = state_.plot(here).owner;
+            if (cs == kNoPlayer || !isCityState(cs)) break;
+            std::vector<CityId> ids;
+            for (const City& c : state_.cities) {
+                if (c.owner == cs) ids.push_back(c.id);
+            }
+            for (CityId id : ids) transferCity(id, pid, state_.city(id)->loyalty);
             break;
         }
         case GreatPersonEffectKind::UnitXp: {

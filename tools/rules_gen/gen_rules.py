@@ -2092,6 +2092,8 @@ def gp_requirements(text, districts):
             req["enemyTerritory"] = True  # Tupac Amaru
         elif key == "CityStateTerritory":
             req["cityStateTerritory"] = True  # Matthew Perry, Zhou Daguan
+        elif key == "SuzerainTerritory":
+            req["suzerainTerritory"] = True  # Stamford Raffles: a city-state the player is suzerain of
         elif key == "NonHostileTerritory":
             req["nonHostileTerritory"] = True
         elif key == "IncompleteWonder":
@@ -2254,6 +2256,10 @@ def gp_more_effects(t, ids):
     # Shah Jahan (07): Production toward the wonder, bought with Gold (the price is in code, from the Civilopedia).
     if t == "purchase production in city":
         return [{"kind": "WONDER_PURCHASE"}]
+    # Stamford Raffles (07): the city-state joins the empire, and its city gains +10 Loyalty a turn (the Civilopedia's
+    # amount: the attached modifier's value is not extracted).
+    if t == "unit transfer city as gift and apply modifier (ModifierId=Greatperson City State Absorb Expansions Loyalty Attachment)":
+        return [{"kind": "ABSORB_CITY_STATE", "amount": 10}]
     return None
 
 
