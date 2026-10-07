@@ -684,6 +684,9 @@ public:
 
 private:
     void apply(const Command& c);
+    // canImproveAt in two parts: the plot takes any improvement of the player's, and this one fits it.
+    bool improvablePlot(PlayerId player, Hex plot) const;
+    bool improvementFits(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit) const;
     CommandError validateCity(const Command& c) const;
     void applyCity(const Command& c);
     void processCities(PlayerId p);
