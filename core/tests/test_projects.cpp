@@ -133,3 +133,72 @@ TEST(the_space_race_and_the_science_victory) {
     CHECK(g->state().victory == Victory::Science);
     CHECK_EQ(g->state().winner, 0);
 }
+
+// The Royal Society (03; data: each charge completes 2% of a project): a Builder's charge speeds the project its city
+// is building, from the project's district, or from the City Center for a project that needs none.
+TEST(builders_speed_projects_with_the_royal_society) {
+    const ProductionItem grants = project("PROJECT_CAMPUS_RESEARCH_GRANTS"), manhattan = project("PROJECT_MANHATTAN_PROJECT");
+    const TypeIndex society = rules().building("BUILDING_ROYAL_SOCIETY");
+    auto town = [&](bool withSociety, ProductionItem item, Hex where, const char* unit, bool campusDone = true) {
+        GameState s = campusTown();
+        City& c = s.cities[0];
+        if (withSociety) {
+            c.buildings.push_back(society);
+            std::sort(c.buildings.begin(), c.buildings.end());
+        }
+        c.districts[0].complete = campusDone;
+        c.queue = {item};
+        const UnitId u = sovtest::addUnit(s, unit, 0, where);
+        return std::make_pair(Game::fromScenario(rules(), std::move(s)), u);
+    };
+    // Each project's share: 2% of its cost, a charge spent, the turn's moves gone.
+    for (const auto& [which, where] : {std::pair<ProductionItem, Hex>{grants, {7, 6}}, {manhattan, {6, 6}}}) {
+        const ProductionItem item = which;
+        auto [g, builder] = town(true, item, where, "UNIT_BUILDER");
+        const int charges = g->state().unit(builder)->charges;
+        REQUIRE(g->chargeProblem(0, builder) == CommandError::Ok);
+        REQUIRE(g->submit(Command::contributeCharge(0, builder)) == CommandError::Ok);
+        const City& c = g->state().cities[0];
+        auto it = std::find_if(c.progress.begin(), c.progress.end(), [&](const ProductionProgress& pp) { return pp.item == item; });
+        REQUIRE(it != c.progress.end());
+        CHECK(it->amount == Fixed::fromInt(g->productionCost(0, item, &c)) * 2 / 100);
+        CHECK(it->amount > Fixed());
+        CHECK_EQ(g->state().unit(builder)->charges, charges - 1);
+        CHECK(g->state().unit(builder)->movesLeft == Fixed());
+    }
+    // Not without the Royal Society, away from where the project runs, on an unfinished Campus, while the city
+    // builds something else, or with a Military Engineer.
+    const auto refused = [&](bool withSociety, ProductionItem item, Hex where, const char* unit, bool campusDone = true) {
+        auto [g, u] = town(withSociety, item, where, unit, campusDone);
+        return g->chargeProblem(0, u) != CommandError::Ok;
+    };
+    CHECK(refused(false, grants, {7, 6}, "UNIT_BUILDER"));
+    CHECK(refused(true, grants, {6, 6}, "UNIT_BUILDER"));   // the City Center, for a Campus project
+    CHECK(refused(true, grants, {5, 6}, "UNIT_BUILDER"));   // another district
+    CHECK(refused(true, manhattan, {7, 6}, "UNIT_BUILDER"));
+    CHECK(refused(true, grants, {7, 6}, "UNIT_BUILDER", false));
+    CHECK(refused(true, {ProductionKind::Building, rules().building("BUILDING_LIBRARY")}, {6, 6}, "UNIT_BUILDER"));
+    CHECK(refused(true, grants, {7, 6}, "UNIT_MILITARY_ENGINEER"));
+    // Nor with another civ's Royal Society, nor in another civ's city.
+    for (const PlayerId holder : {PlayerId{0}, PlayerId{1}}) {
+        GameState s = flatState(24, 14, 2);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        for (const PlayerId p : {PlayerId{0}, PlayerId{1}}) {
+            const Hex center{static_cast<int16_t>(4 + 10 * p), 6}, campus{static_cast<int16_t>(5 + 10 * p), 6};
+            addCity(s, p, center, true, 6);
+            City& c = s.cities.back();
+            c.districts.push_back({rules().district("DISTRICT_CAMPUS"), campus, true});
+            s.plot(campus).owner = p;
+            s.plot(campus).city = c.id;
+            c.queue = {grants};
+            if (p == holder) {
+                c.buildings.push_back(society);
+                std::sort(c.buildings.begin(), c.buildings.end());
+            }
+        }
+        // Player 0's Builder: on its own Campus when player 1 holds the Royal Society, on player 1's when it does.
+        const UnitId u = sovtest::addUnit(s, "UNIT_BUILDER", 0, {static_cast<int16_t>(holder == 1 ? 5 : 15), 6});
+        auto f = Game::fromScenario(rules(), std::move(s));
+        CHECK(f->chargeProblem(0, u) != CommandError::Ok);
+    }
+}

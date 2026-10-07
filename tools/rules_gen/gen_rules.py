@@ -680,6 +680,9 @@ def gen_buildings():
         m = re.search(r"\+(\d+) Power \(Free Power Source", row["Modifiers"] or "")
         if m:
             b["powerProvided"] = int(m.group(1))  # Hydroelectric Dam
+        m = re.search(r"each charge completes (\d+)% of a project", row["Modifiers"] or "")
+        if m:
+            b["projectChargePercent"] = int(m.group(1))  # Royal Society (03): a Builder's charge toward a project
         if row["Placement"] == "river":
             b["needsRiver"] = True
         if row["Purchase"] == "Gold":

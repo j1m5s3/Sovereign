@@ -960,12 +960,15 @@ void Game::apply(const Command& c) {
             break;
         }
         case CommandType::ContributeCharge: {
-            // The district's share of its cost goes into the city's progress on it (03: Military Engineer).
+            // The district's share of its cost goes into the city's progress on it (03: Military Engineer); with the
+            // Royal Society, a Builder's share of a project goes into the project (03).
             Unit& u = *state_.unit(c.id);
             City& city = *state_.city(state_.plot(u.pos).city);
-            const CityDistrict& d = *state_.districtAt(u.pos);
-            const ProductionItem item{ProductionKind::District, d.type};
-            const Fixed share = Fixed::fromInt(productionCost(c.player, item) * rules_->districts[static_cast<size_t>(d.type)].chargePercent / 100);
+            const std::optional<ProductionItem> project = chargedProject(u);
+            const CityDistrict* d = project ? nullptr : state_.districtAt(u.pos);
+            const ProductionItem item = project ? *project : ProductionItem{ProductionKind::District, d->type};
+            const Fixed share = project ? Fixed::fromInt(productionCost(c.player, item, &city)) * projectChargePercent(c.player) / 100
+                                        : Fixed::fromInt(productionCost(c.player, item) * rules_->districts[static_cast<size_t>(d->type)].chargePercent / 100);
             auto it = std::find_if(city.progress.begin(), city.progress.end(), [&](const ProductionProgress& pp) { return pp.item == item; });
             if (it == city.progress.end()) city.progress.push_back({item, share});
             else it->amount += share;

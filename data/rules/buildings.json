@@ -589,7 +589,8 @@
    "exclusiveWith": [
     "BUILDING_WAR_DEPARTMENT",
     "BUILDING_NATIONAL_HISTORY_MUSEUM"
-   ]
+   ],
+   "projectChargePercent": 2
   },
   {
    "id": "BUILDING_LIGHTHOUSE",

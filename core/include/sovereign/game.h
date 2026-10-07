@@ -440,7 +440,11 @@ public:
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
     CommandError roadProblem(PlayerId player, UnitId unit) const;  // a road by hand for a charge (01: Routes)
     bool freeRoad(PlayerId player, UnitId unit) const;  // a Builder of Qin's laying one for no charge (Standardization)
-    CommandError chargeProblem(PlayerId player, UnitId engineer) const;  // spending a charge on the district it stands on (03)
+    // Spending a charge (03): a Military Engineer's on the district it stands on, or, with the Royal Society, a Builder's
+    // on the project its city is building, standing where the project runs (its district, or the City Center).
+    CommandError chargeProblem(PlayerId player, UnitId unit) const;
+    std::optional<ProductionItem> chargedProject(const Unit& builder) const;  // that project (Royal Society)
+    int projectChargePercent(PlayerId player) const;  // the share of a project each charge completes (Royal Society)
     std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
 
     // ---- spy promotions (08: Espionage)
