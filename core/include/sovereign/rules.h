@@ -1060,11 +1060,11 @@ struct DisasterIntensityType {
 enum class ResolutionKind : uint8_t {
     Unsupported = 0, DiplomaticVictory, TradePolicy, Patronage, MigrationTreaty, PublicRelations, MilitaryAdvisory, UrbanDevelopment,
     LuxuryPolicy, WorldReligion, HeritageOrganization, WorldIdeology, BorderControl, PublicWorks, GlobalEnergy, Sovereignty,
-    DeforestationTreaty, EspionagePact,
+    DeforestationTreaty, EspionagePact, MercenaryCompanies, ArmsControl,
 };
 enum class ResolutionTarget : uint8_t {
     Player = 0, GreatPersonClass, District, PromotionClass, Resource, Religion, GreatWorkObject, Government, Project, Building,
-    CityStateKind, Feature, SpyOperation, Other,
+    CityStateKind, Feature, SpyOperation, Yield, Other,
 };
 struct ResolutionType {
     std::string id, name, optionA, optionB;

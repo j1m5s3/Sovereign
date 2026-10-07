@@ -1517,10 +1517,19 @@ def gen_world_congress():
     """World Congress resolutions with their target kind, the eras they can be proposed in, and
     the two options as text; the core carries the effects of the ones it can (08: Diplomatic
     Favor and World Congress [GS])."""
+    # Options whose data text is garbled, as the Civilopedia words them (08: World Congress). Arms Control A says "set
+    # equal to target player's"; Sovereign reads it as a cap, so no one gains devices from a vote.
+    civilopedia = {
+        "Mercenary Companies": ("+100% cost when producing or purchasing military units using this currency type",
+                                "-50% cost when producing or purchasing military units using this currency type"),
+        "Arms Control": ("All players have their Weapons of Mass Destruction cut to the target player's number",
+                         "Target player loses all of their Weapons of Mass Destruction"),
+    }
     out = []
     for r in table(SPEC / "world-congress-emergencies.md", "World Congress resolutions [GS]"):
+        a, b = civilopedia.get(r["Resolution"], (r["Option A"], r["Option B"]))
         res = {"id": "RESOLUTION_" + snake(r["Resolution"]), "name": r["Resolution"], "target": r["Target kind"].upper(),
-               "optionA": r["Option A"], "optionB": r["Option B"]}
+               "optionA": a, "optionB": b}
         lo, _, hi = r["Eras"].partition("-")
         if lo.strip():
             res["minEra"] = "ERA_" + lo.strip().replace(" Era", "").upper()

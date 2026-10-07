@@ -1789,6 +1789,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"RESOLUTION_BORDER_CONTROL_TREATY", ResolutionKind::BorderControl},  {"RESOLUTION_PUBLIC_WORKS_PROGRAM", ResolutionKind::PublicWorks},
             {"RESOLUTION_GLOBAL_ENERGY_TREATY", ResolutionKind::GlobalEnergy},    {"RESOLUTION_SOVEREIGNTY", ResolutionKind::Sovereignty},
             {"RESOLUTION_DEFORESTATION_TREATY", ResolutionKind::DeforestationTreaty}, {"RESOLUTION_ESPIONAGE_PACT", ResolutionKind::EspionagePact},
+            {"RESOLUTION_MERCENARY_COMPANIES", ResolutionKind::MercenaryCompanies}, {"RESOLUTION_ARMS_CONTROL", ResolutionKind::ArmsControl},
         };
         for (const auto& [rid, k] : kinds) {
             if (id == rid) rs.kind = k;
@@ -1799,7 +1800,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"UNITPROMOTIONCLASS", ResolutionTarget::PromotionClass}, {"RESOURCE", ResolutionTarget::Resource}, {"RELIGION", ResolutionTarget::Religion},
             {"GREATWORKOBJECT", ResolutionTarget::GreatWorkObject}, {"GOVERNMENT", ResolutionTarget::Government}, {"PROJECT", ResolutionTarget::Project},
             {"BUILDING", ResolutionTarget::Building},   {"MINORCIVBONUS", ResolutionTarget::CityStateKind}, {"FEATURE", ResolutionTarget::Feature},
-            {"UNITOPERATION", ResolutionTarget::SpyOperation}};
+            {"UNITOPERATION", ResolutionTarget::SpyOperation}, {"YIELD", ResolutionTarget::Yield}};
         rs.target = ResolutionTarget::Other;
         for (const auto& [name, tt] : targets) {
             if (t == name) rs.target = tt;

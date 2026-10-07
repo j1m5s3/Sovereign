@@ -176,3 +176,57 @@ TEST(a_blast_pillages_the_districts_in_it) {
     CHECK_EQ(static_cast<int>(c.districts[0].pillagedTurns), std::max<int>(kPillagedDistrictTurns, rules().wmds[at(nuke())].falloutTurns));
     CHECK_EQ(static_cast<int>(c.districts[1].pillagedTurns), 0);
 }
+
+// Arms Control (World Congress; Civilopedia): B leaves the target with no devices while it stands; A cuts every other
+// civ's to the target's number (Sovereign reads it as a cap: no one gains any).
+TEST(arms_control_cuts_nuclear_stockpiles) {
+    const TypeIndex control = rules().resolution("RESOLUTION_ARMS_CONTROL");
+    const auto held = [](const Game& g, size_t p) { return g.state().players[p].wmds[at(nuke())]; };
+    const auto ready = [](GameState s) {
+        s.players[0].stockpile[at(rules().resource("RESOURCE_URANIUM"))] = 20;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        g->completeProject(g->stateMutForTests().cities[0], rules().project("PROJECT_MANHATTAN_PROJECT"));
+        return g;
+    };
+    // B on player 0: its devices go at its next turn, and it may build none.
+    GameState s = armed();
+    s.players[0].wmds[at(nuke())] = 3;
+    s.players[1].wmds[at(nuke())] = 1;
+    s.passedResolutions.push_back({control, 1, 0});
+    auto b = ready(s);
+    CHECK(!b->canProduce(b->state().cities[0], project("PROJECT_BUILD_NUCLEAR_DEVICE")));
+    sovtest::endTurns(*b, 3);
+    CHECK_EQ(held(*b, 0), 0);
+    CHECK_EQ(held(*b, 1), 1);
+    // A on player 1: player 0 is cut to 1, builds none past it, and loses one finished past it; player 1 keeps its own.
+    s.passedResolutions = {{control, 0, 1}};
+    auto a = ready(s);
+    sovtest::endTurns(*a, 3);
+    CHECK_EQ(held(*a, 0), 1);
+    CHECK_EQ(held(*a, 1), 1);
+    CHECK(!a->canProduce(a->state().cities[0], project("PROJECT_BUILD_NUCLEAR_DEVICE")));
+    a->completeProject(a->stateMutForTests().cities[0], rules().project("PROJECT_BUILD_NUCLEAR_DEVICE"));
+    CHECK_EQ(held(*a, 0), 1);
+    Player& target = a->stateMutForTests().players[1];  // the target itself builds as many as it likes
+    target.stockpile[at(rules().resource("RESOURCE_URANIUM"))] = 20;
+    target.projectsDone[at(rules().project("PROJECT_MANHATTAN_PROJECT"))] = 1;
+    CHECK(a->canProduce(a->state().cities[1], project("PROJECT_BUILD_NUCLEAR_DEVICE")));
+    s.players[0].wmds[at(nuke())] = 1;
+    s.players[1].wmds[at(nuke())] = 2;
+    auto room = ready(s);
+    CHECK(room->canProduce(room->state().cities[0], project("PROJECT_BUILD_NUCLEAR_DEVICE")));
+    // Passed by the Congress: the cap takes hold at once, before player 1's own turn.
+    GameState v = armed();
+    v.players[1].wmds[at(nuke())] = 3;
+    CongressItem item;
+    item.resolution = control;
+    item.candidates = {0, 1, 2};
+    item.votes.push_back({0, 0, 0, 1});  // A on player 0, who holds 1
+    v.congress.push_back(item);
+    v.congressOpenedTurn = v.turn;
+    v.nextCongressTurn = v.turn + 30;
+    auto vote = Game::fromScenario(rules(), std::move(v));
+    sovtest::endTurns(*vote, 3);
+    REQUIRE(vote->passed(ResolutionKind::ArmsControl));
+    CHECK_EQ(held(*vote, 1), 1);
+}

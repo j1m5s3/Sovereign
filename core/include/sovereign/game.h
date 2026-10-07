@@ -108,8 +108,9 @@ public:
     int borderGrowthCost(int plotsAcquired) const;
     // `city`: where it is built, for costs that depend on it (the Flood Barrier; 09).
     int productionCost(PlayerId player, ProductionItem item, const City* city = nullptr) const;
-    // Gold price, or -1 when the item cannot be bought with gold; `city`: where it is bought (Ngazargamu, 08).
-    int purchaseCost(PlayerId player, ProductionItem item, const City* city = nullptr) const;
+    // Gold price, or -1 when the item cannot be bought with gold; `city`: where it is bought (Ngazargamu, 08);
+    // `currency`: what pays that price, for the World Congress's Mercenary Companies (Faith buys some units at it).
+    int purchaseCost(PlayerId player, ProductionItem item, const City* city = nullptr, YieldType currency = YieldType::Gold) const;
     bool canTrainFormation(const City& city, TypeIndex unit, int formation) const;  // a Corps (1) or Army (2) whole (05)
     // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
     // Divine Architect) (08: Governors); -1 when it cannot be.
@@ -327,6 +328,10 @@ public:
     // A passed resolution of this kind with this option and target (World Congress [GS]).
     bool resolutionHits(ResolutionKind kind, uint8_t option, int32_t target) const;
     std::string candidateName(const CongressItem& item, int candidate) const;
+    // Mercenary Companies: the % of the usual cost a military unit has in this currency (Production, Gold or Faith).
+    int mercenaryPercent(PlayerId player, TypeIndex unit, YieldType currency) const;
+    // Arms Control: the most devices of this weapon the player may hold, or -1 for no limit.
+    int wmdCap(PlayerId player, TypeIndex weapon) const;
 
     // ---- espionage (08: Espionage)
     int spyCapacity(PlayerId player) const;   // from civics and techs
@@ -761,6 +766,7 @@ private:
     void openCongressSession();
     void closeCongressSession();
     void aiCongressVotes(PlayerId player);
+    void armsControl(PlayerId player);  // Arms Control: devices over the cap are lost
     void resolveSpyOperation(Agent& spy);
     CommandError validateGovernor(const Command& c) const;
     void applyGovernor(const Command& c);

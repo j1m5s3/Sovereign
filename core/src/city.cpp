@@ -717,7 +717,7 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
 
-int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city) const {
+int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city, YieldType currency) const {
     if (item.kind == ProductionKind::District || item.kind == ProductionKind::Project) return -1;  // built, never bought
     if (item.kind == ProductionKind::Unit) {
         if (rules_->units[static_cast<size_t>(item.type)].purchaseYield != "GOLD") return -1;
@@ -748,6 +748,7 @@ int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city) c
     // Flower Power (09): units cost twice as much to buy, Rock Bands excepted.
     if (item.kind == ProductionKind::Unit && policyIs(player, "POLICY_FLOWER_POWER") && rules_->units[static_cast<size_t>(item.type)].id != "UNIT_ROCK_BAND")
         cost *= 2;
+    if (item.kind == ProductionKind::Unit) cost = cost * mercenaryPercent(player, item.type, currency) / 100;  // Mercenary Companies (World Congress)
     return cost / 5 * 5;
 }
 
@@ -889,6 +890,12 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
                 if (!running) return fail(CommandError::CannotBuild);
             }
             if (e.kind == ProjectEffectKind::Decommission && (e.weapon == kNone || !c.has(e.weapon))) return fail(CommandError::CannotBuild);
+            // Arms Control (World Congress): no device past the cap.
+            if (e.kind == ProjectEffectKind::Wmd && e.weapon != kNone) {
+                const int cap = wmdCap(c.owner, e.weapon);
+                const int held = static_cast<size_t>(e.weapon) < p.wmds.size() ? p.wmds[static_cast<size_t>(e.weapon)] : 0;
+                if (cap >= 0 && held + e.amount > cap) return fail(CommandError::CannotBuild);
+            }
             if (e.kind == ProjectEffectKind::Recommission && !c.has(rules_->building("BUILDING_NUCLEAR_POWER_PLANT"))) return fail(CommandError::CannotBuild);
             if (e.kind == ProjectEffectKind::Convert) {
                 // A city with another kind of power plant converts it (09: Power).
@@ -1420,6 +1427,7 @@ void Game::completeProject(City& city, TypeIndex project) {
             case ProjectEffectKind::Wmd:
                 if (p.wmds.size() < rules_->wmds.size()) p.wmds.resize(rules_->wmds.size(), 0);
                 if (e.weapon != kNone) p.wmds[static_cast<size_t>(e.weapon)] += e.amount;
+                armsControl(city.owner);  // one already under way when the resolution passed
                 break;
         }
     }
@@ -1591,6 +1599,7 @@ void Game::processCities(PlayerId pid) {
                                 (goldenDedication(pid, "DEDICATION_TO_ARMS") && rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military ? 15 : 0) +  // 09
                                 (rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Military && militaryAllianceAtWar(pid) ? 15 : 0);  // 08
                 prod = prod * std::max(0, pct) / 100;
+                prod = prod * 100 / mercenaryPercent(pid, item.type, YieldType::Production);  // Mercenary Companies (World Congress)
             } else if (item.kind == ProductionKind::Building && !rules_->buildings[static_cast<size_t>(item.type)].wonder) {
                 // Leader abilities: City Center buildings (City of Marble), walls (Standardization).
                 const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];
