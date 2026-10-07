@@ -151,7 +151,7 @@ int Game::luxuryCopies(PlayerId player, TypeIndex resource) const {
     for (TypeIndex lux : state_.players[at(player)].luxuryGrants) n += lux == resource ? 1 : 0;
     // Zanzibar (08: suzerain): Cinnamon and Cloves, found nowhere else.
     if (resource != kNone) {
-        const std::string& id = rules_->resources[at(resource)].id;
+        const std::string& id = rules_->resources[ti(resource)].id;
         if ((id == "RESOURCE_CINNAMON" || id == "RESOURCE_CLOVES") && suzerainBonus(player, "CITYSTATE_ZANZIBAR")) ++n;
     }
     for (size_t i = 0; i < state_.plots.size(); ++i) {
