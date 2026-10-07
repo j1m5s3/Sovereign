@@ -143,7 +143,7 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     }
     // City-state suzerains (08): Venice (+1 Gold per luxury at an international destination), Hunza (+0.2 Gold
     // per plot of the way), Kumasi (+2 Culture and +1 Gold per district on routes to city-states).
-    if (!domestic && suzerainBonus(origin.owner, "CITYSTATE_VENICE")) {
+    if (!domestic && suzerainBonus(origin.owner, Cs::Venice)) {
         int luxuries = 0;
         for (const Hex& h : state_.grid.within(destination.pos, 3)) {
             const Plot& p = state_.plot(h);
@@ -152,7 +152,7 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(luxuries);
     }
     // Samarkand (08): international routes +1 Gold per Trading Dome of the origin.
-    if (!domestic && suzerainBonus(origin.owner, "CITYSTATE_SAMARKAND")) {
+    if (!domestic && suzerainBonus(origin.owner, Cs::Samarkand)) {
         const TypeIndex dome = rules_->improvement("IMPROVEMENT_TRADING_DOME");
         int domes = 0;
         for (const Hex& h : state_.grid.within(origin.pos, 3)) {
@@ -162,11 +162,11 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(domes);
     }
     // Chinguetti (08): +1 Faith per follower of the player's founded (or majority) religion in the origin city.
-    if (suzerainBonus(origin.owner, "CITYSTATE_CHINGUETTI"))
+    if (suzerainBonus(origin.owner, Cs::Chinguetti))
         out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(cityFollowers(origin, civReligion(origin.owner)));
-    if (suzerainBonus(origin.owner, "CITYSTATE_HUNZA"))
+    if (suzerainBonus(origin.owner, Cs::Hunza))
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::ratio(state_.grid.distance(origin.pos, destination.pos), 5);
-    if (isCityState(destination.owner) && suzerainBonus(origin.owner, "CITYSTATE_KUMASI")) {
+    if (isCityState(destination.owner) && suzerainBonus(origin.owner, Cs::Kumasi)) {
         int districts = 0;
         for (const CityDistrict& d : destination.districts) districts += d.complete ? 1 : 0;
         out[static_cast<size_t>(YieldType::Culture)] += Fixed::fromInt(2 * districts);
@@ -369,7 +369,7 @@ void Game::processTrade(PlayerId pid) {
         // A raider at war with the owner on the road plunders it (07: Plunder), unless the owner is in a
         // Golden Age with Reform the Coinage (09).
         if (!cut && !goldenDedication(pid, "DEDICATION_REFORM_THE_COINAGE")) {
-            const bool safeAtSea = suzerainBonus(pid, "CITYSTATE_MOGADISHU");  // Mogadishu (08): no plunder on water
+            const bool safeAtSea = suzerainBonus(pid, Cs::Mogadishu);  // Mogadishu (08): no plunder on water
             for (int32_t pi : r.path) {
                 const Hex h = state_.grid.at(pi);
                 if (safeAtSea && rules_->terrains[at(state_.plot(h).terrain)].water) continue;

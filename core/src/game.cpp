@@ -16,15 +16,12 @@ const TerrainType& terrainOf(const Rules& r, const Plot& p) { return r.terrains[
 // hasRiver(from, d) where `to` is from's neighbour in direction d: a plot keeps the rivers on its E, SE and SW edges,
 // so the edge toward the other three directions is the neighbour's, facing back.
 bool riverBetween(const Plot& from, const Plot& to, Dir d) {
-    switch (d) {
-        case Dir::E: return (from.riverEdges & kRiverE) != 0;
-        case Dir::SE: return (from.riverEdges & kRiverSE) != 0;
-        case Dir::SW: return (from.riverEdges & kRiverSW) != 0;
-        case Dir::W: return (to.riverEdges & kRiverE) != 0;
-        case Dir::NW: return (to.riverEdges & kRiverSE) != 0;
-        case Dir::NE: return (to.riverEdges & kRiverSW) != 0;
-    }
-    return false;
+    // Looked up rather than switched on: a path search's steps run every way in turn, which a jump mispredicts.
+    static constexpr uint8_t kEdge[kNumDirs] = {kRiverSW, kRiverE, kRiverSE, kRiverSW, kRiverE, kRiverSE};  // NE, E, SE, SW, W, NW
+    const unsigned i = static_cast<unsigned>(d);
+    if (i >= static_cast<unsigned>(kNumDirs)) return false;
+    const bool own = i - 1 < 3u;  // E, SE, SW
+    return ((own ? from : to).riverEdges & kEdge[i]) != 0;
 }
 const UnitType& typeOf(const Rules& r, const Unit& u) { return r.units[static_cast<size_t>(u.type)]; }
 // How high a plot stands in the way of sight (01: Visibility): its terrain, and its feature unless seen through.
@@ -216,6 +213,14 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         "GREAT_PERSON_MARY_KATHERINE_GODDARD", "GREAT_PERSON_GIOVANNI_DE_MEDICI"};
     static_assert(sizeof(kPeople) / sizeof(kPeople[0]) == static_cast<size_t>(Gp::Count), "one id per great person");
     for (size_t i = 0; i < static_cast<size_t>(Gp::Count); ++i) greatPeople_[i] = rules_->greatPerson(kPeople[i]);
+    static const char* const kCityStates[] = {
+        "CITYSTATE_AKKAD",      "CITYSTATE_ANSHAN",       "CITYSTATE_ANTANANARIVO", "CITYSTATE_AYUTTHAYA",    "CITYSTATE_BANDAR_BRUNEI", "CITYSTATE_BUENOS_AIRES",
+        "CITYSTATE_CHINGUETTI", "CITYSTATE_FEZ",          "CITYSTATE_HATTUSA",      "CITYSTATE_HUNZA",        "CITYSTATE_JERUSALEM",     "CITYSTATE_JOHANNESBURG",
+        "CITYSTATE_KABUL",      "CITYSTATE_KANDY",        "CITYSTATE_KUMASI",       "CITYSTATE_MEXICO_CITY",  "CITYSTATE_MOGADISHU",     "CITYSTATE_MOHENJO_DARO",
+        "CITYSTATE_NALANDA",    "CITYSTATE_NAN_MADOL",    "CITYSTATE_NGAZARGAMU",   "CITYSTATE_SAMARKAND",    "CITYSTATE_SINGAPORE",     "CITYSTATE_VALLETTA",
+        "CITYSTATE_VATICAN_CITY", "CITYSTATE_VENICE",     "CITYSTATE_VILNIUS",      "CITYSTATE_WOLIN",        "CITYSTATE_YEREVAN",       "CITYSTATE_ZANZIBAR"};
+    static_assert(sizeof(kCityStates) / sizeof(kCityStates[0]) == static_cast<size_t>(Cs::Count), "one id per city-state");
+    for (size_t i = 0; i < static_cast<size_t>(Cs::Count); ++i) cityStates_[i] = rules_->cityState(kCityStates[i]);
     static const char* const kProducts[] = {"RESOURCE_TOYS", "RESOURCE_COSMETICS", "RESOURCE_JEANS", "RESOURCE_PERFUME"};
     for (size_t i = 0; i < 4; ++i) products_[i] = rules_->resource(kProducts[i]);
     oil_ = rules_->resource("RESOURCE_OIL");
@@ -518,20 +523,32 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     const std::optional<Dir> d = state_.grid.directionTo(from, to);
     if (!d) return std::nullopt;
     const MoveTraits traits = moveTraits(unit);
-    return moveCost(unit, traits, moveLimits(unit, traits, to), from, to, *d);  // `to` is on the grid: a neighbour of `from`
+    // Just the step's limits (`to` is on the grid: a neighbour of `from`), read as the path search's moveCost reads a
+    // whole map's.
+    const MoveLimits limits = moveLimits(unit, traits, to);
+    if (limits.onlyBlocked) return std::nullopt;
+    if (const PlayerId land = state_.plot(to).owner; land != kNoPlayer) {
+        const uint8_t closed = limits.closed[static_cast<size_t>(land)];
+        if ((closed & 2) || ((closed & 1) && state_.plot(from).owner != land)) return std::nullopt;
+    }
+    return terrainCost(unit, traits, from, to, *d);
 }
 
 Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only) const {
     MoveLimits limits;
-    limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
+    if (!only) limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
     auto block = [&](Hex h) {
-        if ((!only || h == *only) && state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
+        if (only) limits.onlyBlocked = limits.onlyBlocked || (h == *only && state_.grid.normalize(h) == h);
+        else if (state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
     };
     for (const Unit& u : state_.units) {
         if (u.owner != unit.owner) block(u.pos);  // attacks and captures are their own commands
     }
+    // An Encampment counts only on its own city's plot (below), so with `only` just that plot's city's can block it.
+    const CityId onlyCity = only ? state_.plot(*only).city : kNoCity;
     for (const City& c : state_.cities) {
         if (c.owner != unit.owner) block(c.pos);
+        if (only && c.id != onlyCity) continue;
         // Nor an enemy Encampment that still stands (05: City combat).
         const CityDistrict* camp = atWar(unit.owner, c.owner) ? encampmentOf(c) : nullptr;
         if (camp && state_.grid.normalize(camp->pos) == camp->pos && state_.plot(camp->pos).city == c.id) block(camp->pos);
@@ -918,10 +935,13 @@ void Game::refreshVisibility(PlayerId pid) {
         // An Encampment watches its strike range (Sovereign reading; 03: Defense).
         if (const CityDistrict* camp = shares(c.owner) ? encampmentOf(c) : nullptr) see(camp->pos, rules_->districts[static_cast<size_t>(camp->type)].attackRange);
     }
-    // Diplomatic access (08): Secret shows a civ's capital, Top Secret all its cities.
+    // Diplomatic access (08): Secret shows a civ's capital, Top Secret all its cities. Worked out at a civ's first
+    // city and kept for the rest (none of it changes here), 0 for one that is not a major civ.
+    std::vector<int8_t> accessTo(state_.players.size(), -1);
     for (const City& c : state_.cities) {
-        if (c.owner == pid || !isMajorCiv(c.owner)) continue;
-        const int access = accessLevel(pid, c.owner);
+        if (c.owner == pid || c.owner < 0 || static_cast<size_t>(c.owner) >= accessTo.size()) continue;
+        int8_t& access = accessTo[static_cast<size_t>(c.owner)];
+        if (access < 0) access = static_cast<int8_t>(isMajorCiv(c.owner) ? accessLevel(pid, c.owner) : 0);
         if (access >= 4 || (access >= 3 && c.capital)) {
             for (const Hex& h : state_.grid.within(c.pos, 1)) p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
         }
@@ -945,7 +965,7 @@ void Game::refreshVisibility(PlayerId pid) {
         awardMoment(pid, first ? "MOMENT_FIRST_DISCOVERY_OF_A_NATURAL_WONDER" : "MOMENT_DISCOVERY_OF_A_NATURAL_WONDER");
         dedicationScore(pid, "DEDICATION_HIC_SUNT_DRACONES", 3);
         // Kandy (08: suzerain): a Relic, in a free slot, for each natural wonder its suzerain discovers.
-        if (suzerainBonus(pid, "CITYSTATE_KANDY")) {
+        if (suzerainBonus(pid, Cs::Kandy)) {
             GreatPersonEffect relic;
             relic.kind = GreatPersonEffectKind::Relic;
             relic.amount = 1;

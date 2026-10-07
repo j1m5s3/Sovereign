@@ -201,7 +201,7 @@ int Game::luxuryAmenities(const City& city, ReportShare& shared) const {
         if (rank < reach) ++amenities;
     }
     // Buenos Aires (08: suzerain): each kind of improved bonus resource is an Amenity too, for as many cities as a luxury's.
-    if (rank < kBonusAmenityCities && suzerainBonus(owner, "CITYSTATE_BUENOS_AIRES")) {
+    if (rank < kBonusAmenityCities && suzerainBonus(owner, Cs::BuenosAires)) {
         const std::vector<int> copies = resourceCopies(owner);
         for (size_t r = 0; r < rules_->resources.size(); ++r) {
             if (rules_->resources[r].cls == ResourceClass::Bonus && copies[r] > 0) ++amenities;
@@ -282,9 +282,11 @@ CommandError Game::validateBuilder(const Command& c) const {
 // ---------------------------------------------------------------- formations (05: Corps and Armies)
 
 CommandError Game::formationProblem(PlayerId player, UnitId unit, UnitId with) const {
-    const Unit* u = state_.unit(unit);
+    // The partner looked up first: one tried with every unit in turn (as the AI does) mostly finds it is someone else's.
     const Unit* w = state_.unit(with);
-    if (!u || !w || u->owner != player || w->owner != player || u->id == w->id) return CommandError::NotYourUnit;
+    if (!w || w->owner != player || unit == with) return CommandError::NotYourUnit;
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player) return CommandError::NotYourUnit;
     const UnitType& t = rules_->units[static_cast<size_t>(u->type)];
     if (u->type != w->type || t.layer != UnitLayer::Military || (t.domain != Domain::Land && t.domain != Domain::Sea) || isLeader(*u)) return CommandError::BadUnit;
     if (u->movesLeft <= Fixed() || w->movesLeft <= Fixed() || state_.grid.distance(u->pos, w->pos) > 1) return CommandError::BadTarget;
@@ -513,7 +515,7 @@ void Game::applyBuilder(const Command& c) {
             awardFirst(c.player, "MOMENT_FIRST_GREEN_IMPROVEMENT_IN_WORLD", "MOMENT_FIRST_GREEN_IMPROVEMENT", 0);
         // Nalanda (08): a player's first Mahavihara grants a random technology.
         Player& builder = state_.players[static_cast<size_t>(c.player)];
-        if (built.id == "IMPROVEMENT_MAHAVIHARA" && suzerainBonus(c.player, "CITYSTATE_NALANDA") && !contains(builder.improvementGrants, p.improvement)) {
+        if (built.id == "IMPROVEMENT_MAHAVIHARA" && suzerainBonus(c.player, Cs::Nalanda) && !contains(builder.improvementGrants, p.improvement)) {
             builder.improvementGrants.push_back(p.improvement);
             GreatPersonEffect gift;
             gift.kind = GreatPersonEffectKind::RandomTechs;
@@ -662,7 +664,7 @@ void Game::accumulateStrategics(PlayerId pid) {
         player.stockpile[static_cast<size_t>(p.resource)] += (r.accumulation + extra) * copies;
     }
     // Hattusa (08: suzerain): +2 a turn of each strategic resource revealed but not yet improved.
-    if (suzerainBonus(pid, "CITYSTATE_HATTUSA")) {
+    if (suzerainBonus(pid, Cs::Hattusa)) {
         for (size_t r = 0; r < rules_->resources.size() && r < player.stockpile.size(); ++r) {
             const ResourceType& rt = rules_->resources[r];
             if (rt.cls != ResourceClass::Strategic || !hasUnlocked(pid, rt.reveal)) continue;

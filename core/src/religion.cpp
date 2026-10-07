@@ -213,7 +213,7 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (item.type < 0 || at(item.type) >= rules_->buildings.size()) return -1;
         const BuildingType& b = rules_->buildings[at(item.type)];
         // Valletta (08: suzerain): City Center and Encampment buildings for Faith, at their Gold price.
-        if ((b.district == "DISTRICT_CITY_CENTER" || b.district == "DISTRICT_ENCAMPMENT") && !b.wonder && suzerainBonus(player, "CITYSTATE_VALLETTA") &&
+        if ((b.district == "DISTRICT_CITY_CENTER" || b.district == "DISTRICT_ENCAMPMENT") && !b.wonder && suzerainBonus(player, Cs::Valletta) &&
             canProduce(city, item, nullptr, true))
             return purchaseCost(player, item);
         // Jesuit Education (06): Campus and Theater Square buildings for Faith, at their Gold price.
@@ -470,7 +470,7 @@ void Game::applyReligion(const Command& c) {
                 std::vector<CityId>& converted = state_.players[at(u.owner)].convertedCities;
                 if (std::find(converted.begin(), converted.end(), city.id) == converted.end()) {
                     converted.push_back(city.id);
-                    if (suzerainBonus(u.owner, "CITYSTATE_FEZ"))
+                    if (suzerainBonus(u.owner, Cs::Fez))
                         processResearch(u.owner, Fixed::fromInt(20 * city.population * speedPercent(state_, *rules_) / 100), Fixed());
                 }
                 // Indulgence Vendor: Gold the first time it turns a city (bit 0x80 of wonderAbilities marks it spent).
@@ -562,7 +562,7 @@ void Game::processReligion() {
         int amount = base * 10;  // tenths, so percentage beliefs keep their precision
         if (holySite != kNone && c.district(holySite, true)) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_SITE_PRESSURE_MULTIPLIER");
         // Jerusalem (08: suzerain): its suzerain's cities with a Holy Site press as if they were Holy Cities.
-        const bool asHoly = holySite != kNone && c.district(holySite, true) && suzerainBonus(c.owner, "CITYSTATE_JERUSALEM");
+        const bool asHoly = holySite != kNone && c.district(holySite, true) && suzerainBonus(c.owner, Cs::Jerusalem);
         if (state_.religions[static_cast<size_t>(maj)].holyCity == c.id || asHoly) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_CITY_PRESSURE_MULTIPLIER");
         amount = amount * (100 + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressurePercent).toInt())) / 100;
         amount = amount * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityReligionPressurePercent).toInt())) / 100;  // Bishop

@@ -152,7 +152,7 @@ void Game::addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const
         if (counts(lux)) ++n[ti(lux)];
     }
     // Zanzibar (08: suzerain): Cinnamon and Cloves, found nowhere else.
-    if ((counts(spices_[0]) || counts(spices_[1])) && suzerainBonus(player, "CITYSTATE_ZANZIBAR")) {
+    if ((counts(spices_[0]) || counts(spices_[1])) && suzerainBonus(player, Cs::Zanzibar)) {
         for (TypeIndex r : spices_) {
             if (counts(r)) ++n[ti(r)];
         }

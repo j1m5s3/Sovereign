@@ -155,6 +155,32 @@ TEST(medieval_walls_rams_and_siege_towers) {
     CHECK_EQ(cityAt(*towered, kCity).wallHp, 200);
 }
 
+// Akkad (08: suzerain): its suzerain's melee and anti-cavalry units hit walls in full, as beside a Battering Ram.
+TEST(akkads_suzerain_hits_walls_in_full) {
+    const auto full = [](const char* cityState, const char* attacker) {
+        UnitId u = kNoUnit;
+        auto g = siege([&](GameState& s) {
+            addBuilding(s, 1, "BUILDING_ANCIENT_WALLS");
+            u = addUnit(s, attacker, 0, {7, 5});
+            s.players[2].civ = kNone;
+            s.players[2].cityState = rules().cityState(cityState);
+            addCity(s, 2, {2, 10}, true);
+            for (Player& p : s.players) {
+                Game::fitPlayerToRules(p, rules());
+                p.envoys.assign(s.players.size(), 0);
+            }
+            s.players[0].envoys[2] = 3;
+        }, true, 3);
+        const CombatPreview pv = g->previewAttack(u, kCity, false);
+        REQUIRE(pv.hitsWalls);
+        return pv.damageToDefenderMin == g->combatDamage(pv.attackerStrength - pv.defenderStrength, 0);
+    };
+    CHECK(full("CITYSTATE_AKKAD", "UNIT_WARRIOR"));
+    CHECK(full("CITYSTATE_AKKAD", "UNIT_SPEARMAN"));
+    CHECK(!full("CITYSTATE_AKKAD", "UNIT_HORSEMAN"));  // light cavalry: the usual 15%
+    CHECK(!full("CITYSTATE_NAZCA", "UNIT_WARRIOR"));
+}
+
 TEST(melee_takes_a_beaten_city) {
     UnitId warrior = kNoUnit;
     CityId second = kNoCity;

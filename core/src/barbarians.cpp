@@ -121,7 +121,7 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
         }
         // Wolin (08: suzerain): a land victory over a civ's or a city-state's unit earns Great General points, a naval one
         // Great Admiral points, of a quarter of the beaten unit's strength.
-        if (!state_.players[static_cast<size_t>(victim.owner)].barbarian && suzerainBonus(killer->owner, "CITYSTATE_WOLIN")) {
+        if (!state_.players[static_cast<size_t>(victim.owner)].barbarian && suzerainBonus(killer->owner, Cs::Wolin)) {
             if (const Unit* k = state_.unit(killer->id)) {
                 const std::vector<TypeIndex> abilities = unitAbilities(*k);
                 const auto has = [&](const char* id) { return std::find(abilities.begin(), abilities.end(), rules_->ability(id)) != abilities.end(); };

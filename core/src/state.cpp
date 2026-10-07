@@ -15,15 +15,29 @@ bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building) {
 }
 
 namespace {
+// The place of the element with this id in a list sorted by id, or the list's size: lower_bound, with each halving
+// picked by a select rather than a branch (a lookup's halvings go either way at random, which a branch mispredicts).
+template <typename T, typename Id>
+size_t indexById(const std::vector<T>& v, Id id) {
+    if (v.empty()) return 0;
+    const T* base = v.data();
+    for (size_t n = v.size(); n > 1;) {
+        const size_t half = n / 2;
+        base = base[half].id < id ? base + half : base;
+        n -= half;
+    }
+    const size_t at = static_cast<size_t>(base - v.data()) + (base->id < id ? size_t{1} : size_t{0});
+    return at < v.size() && v[at].id == id ? at : v.size();
+}
 template <typename T, typename Id>
 T* findById(std::vector<T>& v, Id id) {
-    auto it = std::lower_bound(v.begin(), v.end(), id, [](const T& a, Id b) { return a.id < b; });
-    return (it != v.end() && it->id == id) ? &*it : nullptr;
+    const size_t at = indexById(v, id);
+    return at < v.size() ? &v[at] : nullptr;
 }
 template <typename T, typename Id>
 const T* findById(const std::vector<T>& v, Id id) {
-    auto it = std::lower_bound(v.begin(), v.end(), id, [](const T& a, Id b) { return a.id < b; });
-    return (it != v.end() && it->id == id) ? &*it : nullptr;
+    const size_t at = indexById(v, id);
+    return at < v.size() ? &v[at] : nullptr;
 }
 // The city's place in the list when it lies as far past the first city as its id is past the first's, where
 // lower_bound finds it too; else the list's size. Ids rise along the list and cities are seldom lost, so it mostly does.

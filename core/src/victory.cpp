@@ -47,16 +47,19 @@ void Game::checkVictory() {
     }
     if (state_.setup.dominationVictory) {
         // Domination: hold the original capital of every other major civ (alive or not;
-        // one that never founded a city is skipped once it is out).
+        // one that never founded a city is skipped once it is out). Each civ's original capital is
+        // looked up once: the last city in the list founded as its capital.
+        std::vector<const City*> originalCapital(state_.players.size(), nullptr);  // by player id
+        for (const City& c : state_.cities) {
+            if (c.originalCapital && c.originalOwner >= 0 && static_cast<size_t>(c.originalOwner) < originalCapital.size())
+                originalCapital[static_cast<size_t>(c.originalOwner)] = &c;
+        }
         for (const Player& p : state_.players) {
             if (p.barbarian || p.cityState != kNone || !p.alive) continue;
             bool all = true, any = false;
             for (const Player& q : state_.players) {
                 if (q.barbarian || q.cityState != kNone || q.id == p.id) continue;
-                const City* capital = nullptr;
-                for (const City& c : state_.cities) {
-                    if (c.originalCapital && c.originalOwner == q.id) capital = &c;
-                }
+                const City* capital = q.id >= 0 && static_cast<size_t>(q.id) < originalCapital.size() ? originalCapital[static_cast<size_t>(q.id)] : nullptr;
                 if (!capital) {
                     if (q.alive) all = false;
                     continue;
