@@ -109,7 +109,9 @@
   {
    "id": "MOMENT_THREATENING_CAMP_DESTROYED",
    "name": "Threatening Camp Destroyed",
-   "eraScore": 3
+   "eraScore": 3,
+   "eraMin": "ERA_ANCIENT",
+   "eraMax": "ERA_MEDIEVAL"
   },
   {
    "id": "MOMENT_RELIGION_ADOPTS_ALL_BELIEFS",
@@ -315,7 +317,9 @@
   {
    "id": "MOMENT_BARBARIAN_CAMP_DESTROYED",
    "name": "Barbarian Camp Destroyed",
-   "eraScore": 2
+   "eraScore": 2,
+   "eraMin": "ERA_ANCIENT",
+   "eraMax": "ERA_MEDIEVAL"
   },
   {
    "id": "MOMENT_CITY_ON_NEW_CONTINENT",
@@ -642,7 +646,9 @@
   {
    "id": "MOMENT_TRIBAL_VILLAGE_CONTACTED",
    "name": "Tribal Village Contacted",
-   "eraScore": 1
+   "eraScore": 1,
+   "eraMin": "ERA_ANCIENT",
+   "eraMax": "ERA_ANCIENT"
   },
   {
    "id": "MOMENT_ALL_GOVERNORS_APPOINTED",

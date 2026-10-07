@@ -661,6 +661,7 @@ struct MomentType {
     std::string id, name;
     int eraScore = 0;
     int obsoleteEra = -1;  // stops counting once the world reaches this era (-1: never)
+    int eraMin = -1, eraMax = -1;  // counts only while the world's era is in this window (-1: open)
 };
 
 // A Rock Band concert's outcome [GS] (07: Rock Bands).
