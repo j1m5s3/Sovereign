@@ -776,7 +776,7 @@ void Game::refreshVisibility(PlayerId pid) {
             if (!lineOfSight(from, target, throughFeatures)) continue;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
-                    for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
+                    for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
                         const int16_t seen = state_.plots[i].continent;
                         if (seen >= 0 && p.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed) &&
                             std::find(knownLand.begin(), knownLand.end(), seen) == knownLand.end())

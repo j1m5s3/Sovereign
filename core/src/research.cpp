@@ -322,6 +322,11 @@ bool Game::boostMet(PlayerId player, const Boost& b, std::optional<ImprovedPlots
                     if (d.complete && rules_->districts[static_cast<size_t>(d.type)].airSlots > 0 && state_.plot(d.pos).continent != home) return true;
                 }
             }
+            // The map is searched only once the player's improved plots include one with air slots (an Airstrip).
+            bool airstrips = false;
+            for (size_t k = 0; k < rules_->improvements.size() && !airstrips; ++k)
+                airstrips = rules_->improvements[k].airSlots > 0 && count(plots().byImprovement, static_cast<TypeIndex>(k)) > 0;
+            if (!airstrips) return false;
             for (const Plot& pl : state_.plots) {
                 if (pl.owner == player && pl.improvement != kNone && rules_->improvements[static_cast<size_t>(pl.improvement)].airSlots > 0 &&
                     pl.continent != home)
@@ -332,7 +337,7 @@ bool Game::boostMet(PlayerId player, const Boost& b, std::optional<ImprovedPlots
         case BoostKind::Continents: {
             // Land of this many continents revealed (Sovereign: every landmass is one).
             std::vector<int16_t> seen;
-            for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
+            for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
                 const int16_t k = state_.plots[i].continent;
                 if (k < 0 || p.visibility[i] == static_cast<uint8_t>(Visibility::Unrevealed) || std::find(seen.begin(), seen.end(), k) != seen.end()) continue;
                 seen.push_back(k);

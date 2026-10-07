@@ -17,7 +17,7 @@ size_t at(int i) { return static_cast<size_t>(i); }
 int Game::improvementTourism(PlayerId player) const {
     int total = 0;
     const bool cristo = holdsWonder(player, W::Cristo);  // Cristo Redentor (03): Seaside Resorts double
-    for (int i = 0; i < state_.grid.size(); ++i) {
+    for (int i = 0, plotCount = state_.grid.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[at(i)];
         if (p.owner != player || p.improvement == kNone || p.pillagedTurns > 0 || p.city == kNoCity) continue;
         const ImprovementType& im = rules_->improvements[at(p.improvement)];
@@ -88,7 +88,7 @@ void Game::designatePark(UnitId id) {
 // Tourism equal to the appeal of its plots (07).
 int Game::parkTourism(PlayerId player) const {
     int total = 0;
-    for (int i = 0; i < state_.grid.size(); ++i) {
+    for (int i = 0, plotCount = state_.grid.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[at(i)];
         if (p.park && p.owner == player) total += std::max(0, plotAppeal(state_.grid.at(i)));
     }
@@ -106,7 +106,7 @@ int Game::parkAmenities(const City& city, ReportShare& shared) const {
     // Park plots by the city they belong to, in one pass over the map for a run of city reports.
     if (!shared.parkPlots) {
         std::map<CityId, int>& counted = shared.parkPlots.emplace();
-        for (int i = 0; i < state_.grid.size(); ++i) {
+        for (int i = 0, plotCount = state_.grid.size(); i < plotCount; ++i) {
             if (state_.plots[at(i)].park) ++counted[state_.plots[at(i)].city];
         }
     }
