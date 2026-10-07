@@ -24,7 +24,6 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     if (!h || *h != plot) return false;
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return false;
-    if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return false;
     if (resourceVisible(city.owner, plot)) return false;  // not on resources
     if (p.feature != kNone && rules_->features[at(p.feature)].naturalWonder) return false;  // nor on natural wonders
     const WonderPlacement& w = b.placement;
@@ -41,6 +40,8 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     if (!w.needsFeature.empty() && std::find(w.needsFeature.begin(), w.needsFeature.end(), p.feature) == w.needsFeature.end()) return false;
     if (w.river && !isRiverAdjacent(state_, plot)) return false;
     if ((w.lake || w.notLake) && isLake(state_, *rules_, plot, &lakes_) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
+    // Nothing built on it yet: looked for once the plot's own land has passed, as these look through every city.
+    if (state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return false;
     bool land = false, coast = false, capital = false, mountain = false, center = false, district = false, resource = false, improvement = false;
     for (int d = 0; d < kNumDirs; ++d) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(d));

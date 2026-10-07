@@ -720,6 +720,13 @@ private:
     void accumulateStrategics(PlayerId p);
     CommandError validateCombat(const Command& c) const;
     void applyCombat(const Command& c);
+    // A bit for a kind of unit effect; kinds 64 apart share one, so a mask of them may only let in more abilities.
+    static constexpr uint64_t effectBit(UnitEffectKind k) { return uint64_t{1} << (static_cast<unsigned>(k) % 64); }
+    // unitAbilities, keeping only those with an effect of a kind in `kinds` (effectBits): the others add nothing to the
+    // effects of those kinds, so the grants of none of them need a look.
+    std::vector<TypeIndex> abilitiesWithEffects(const Unit& unit, uint64_t kinds) const;
+    template <typename Want>
+    std::vector<TypeIndex> abilitiesWhere(const Unit& unit, Want&& want) const;
     std::optional<Fixed> terrainCost(const Unit& unit, Hex from, Hex to) const;
     // What a unit's abilities, promotions and policies change about its movement: the same for every step of a path.
     struct MoveTraits {
@@ -915,6 +922,7 @@ private:
     int touristCulture_ = 0;                  // TOURISM_CULTURE_PER_CITIZEN (domesticTourists)
     // By unit type: the GrantAbility player modifiers whose ability covers its class, in modifier order (unitAbilities).
     std::vector<std::vector<uint32_t>> abilityGrants_;
+    std::vector<uint64_t> abilityKinds_;  // by ability: the effectBits of its effects' kinds (abilitiesWithEffects)
     // Whether any plot is a National Park: a game starts with those its state has, designatePark makes the others and
     // none is ever lost, so while this is false the park scans have nothing to find.
     bool parks_ = false;

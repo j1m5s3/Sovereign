@@ -546,7 +546,7 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
         return a.score != b.score ? a.score > b.score : a.index < b.index;
     });
     const size_t need = state.players.size();
-    const int minAllowed = rules.globalInt("CITY_MIN_RANGE") + 1;
+    const int minAllowed = rules.globalInt(HotGlobal::CityMinRange) + 1;
     for (int minDist = rules.globalInt("START_DISTANCE_MAJOR_CIVILIZATION"); minDist >= minAllowed; --minDist) {
         std::vector<Hex> chosen;
         for (const Cand& c : cands) {

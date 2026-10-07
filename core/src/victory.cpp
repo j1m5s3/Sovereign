@@ -73,7 +73,7 @@ void Game::checkVictory() {
         // The exoplanet expedition arrives (SCIENCE_VICTORY_POINTS_REQUIRED light-years).
         const PlayerId arrived = [&] {
             PlayerId best = kNoPlayer;
-            const int required = rules_->globalInt("SCIENCE_VICTORY_POINTS_REQUIRED");
+            const int required = rules_->globalInt(HotGlobal::ScienceVictoryPointsRequired);
             for (const Player& p : state_.players) {
                 if (p.alive && p.lightYears >= required &&
                     (best == kNoPlayer || p.lightYears > state_.players[static_cast<size_t>(best)].lightYears))
@@ -84,7 +84,7 @@ void Game::checkVictory() {
         if (arrived != kNoPlayer) return win(arrived, Victory::Science);
     }
     if (state_.setup.diplomaticVictory) {
-        const int required = rules_->globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED");
+        const int required = rules_->globalInt(HotGlobal::DiplomaticVictoryPointsRequired);
         for (const Player& p : state_.players) {
             if (p.alive && p.diplomaticVictoryPoints >= required) return win(p.id, Victory::Diplomatic);
         }

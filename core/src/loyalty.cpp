@@ -10,7 +10,7 @@ namespace sov {
 namespace {
 // Pressure a city exerts on a plot: population x (cutoff - distance), within the cutoff.
 Fixed pressureFrom(const GameState& s, const Rules& r, const City& from, Hex at) {
-    const int cutoff = r.globalInt("CITIZEN_IDENTITY_PRESSURE_RADIUS_CUTOFF");
+    const int cutoff = r.globalInt(HotGlobal::CitizenIdentityPressureRadiusCutoff);
     const int d = s.grid.distance(from.pos, at);
     if (d >= cutoff) return Fixed();
     // Each civ's citizens press by its age (02: Loyalty): x1.5 in a Golden or Heroic Age, x0.5 in a Dark Age.

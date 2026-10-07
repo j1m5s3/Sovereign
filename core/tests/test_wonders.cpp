@@ -67,6 +67,19 @@ TEST(wonders_need_their_ground) {
     CHECK(!g->canPlaceWonder(c, apadana, {3, 6}));  // two plots away
 }
 
+// A plot holding a district or another wonder, finished or not, takes no wonder.
+TEST(wonders_need_a_plot_with_nothing_built) {
+    GameState s = wonderState();
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {4, 6}, true});
+    s.cities[0].wonders.push_back({wonder("BUILDING_APADANA"), {6, 6}});  // being built
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const City& c = g->state().cities[0];
+    const TypeIndex pyramids = wonder("BUILDING_PYRAMIDS");
+    CHECK(g->canPlaceWonder(c, pyramids, {4, 7}));   // open desert
+    CHECK(!g->canPlaceWonder(c, pyramids, {4, 6}));  // the Campus
+    CHECK(!g->canPlaceWonder(c, pyramids, {6, 6}));  // the Apadana's plot
+}
+
 TEST(a_wonder_is_built_once_and_rivals_keep_half) {
     GameState s = wonderState();
     auto g = Game::fromScenario(rules(), std::move(s));

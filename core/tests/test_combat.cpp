@@ -315,6 +315,27 @@ TEST(oligarchy_and_unpaid_fuel_change_strength) {
     CHECK_EQ(unit(*g, tank).hp, 50);  // and the tank cannot heal
 }
 
+// An ability a unit already has counts once when a modifier grants it too (Oligarchy's +4, made the Warrior's own here).
+TEST(a_granted_ability_the_unit_already_has_counts_once) {
+    Rules r = rules();
+    r.units[at(r.unit("UNIT_WARRIOR"))].abilities.push_back(r.ability("ABILITY_OLIGARCHY_MELEE_BUFF"));
+    const auto strength = [&](bool oligarchy) {
+        GameState s = flatState(16, 12, 2);
+        if (oligarchy) {
+            Game::fitPlayerToRules(s.players[0], r);
+            const TypeIndex government = r.government("GOVERNMENT_OLIGARCHY");
+            s.players[0].government = government;
+            s.players[0].policies.assign(static_cast<size_t>(r.governments[at(government)].totalSlots()), kNone);
+        }
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+        const UnitId foe = addUnit(s, "UNIT_WARRIOR", 1, {6, 5});
+        auto g = Game::fromScenario(r, std::move(s));
+        return g->combatStrength(unit(*g, w), unit(*g, foe), true, false);
+    };
+    CHECK_EQ(strength(false), 24);  // 20 and its own +4
+    CHECK_EQ(strength(true), 24);
+}
+
 TEST(closed_borders_block_units_not_at_war) {
     const Rules& r = rules();
     UnitId w = kNoUnit;

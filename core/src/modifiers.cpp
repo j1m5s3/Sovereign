@@ -43,7 +43,7 @@ PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
             tie = true;
         }
     }
-    return !tie && most >= r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") ? best : kNoPlayer;
+    return !tie && most >= r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) ? best : kNoPlayer;
 }
 
 bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type) {
@@ -62,7 +62,7 @@ bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, Ty
             return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
         };
         // Too few envoys to be suzerain and no such alliance: no need to find the suzerain.
-        if (envoysAt(s, r, player, cs.id) < r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") && std::none_of(rels.begin(), rels.end(), shares)) return false;
+        if (envoysAt(s, r, player, cs.id) < r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) && std::none_of(rels.begin(), rels.end(), shares)) return false;
         const PlayerId suz = suzerainOf(s, r, cs.id);
         if (suz == player) return true;
         if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
@@ -179,14 +179,11 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
     return std::find(owner.policies.begin(), owner.policies.end(), m.sourceIndex) != owner.policies.end();
 }
 
-// The city that "holds" a modifier for this subject city, or nullptr if the
-// modifier does not reach it. For player-wide sources the subject's player
-// must carry the source. `majority` is the subject's majority religion, worked
-// out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
+// holderFor for the sources that take more than a look at the subject's player: buildings, beliefs, great people,
+// city-states and governors.
 constexpr int kUnknownReligion = -2;
-const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
     const bool ownerOnly = m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots;
-    if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
         case ModSource::Building:
             // A civ's unique building carries the modifiers of the building it replaces.
@@ -196,13 +193,10 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             }
             return nullptr;
         case ModSource::Civ:
-            return owner.civ == m.sourceIndex ? &subject : nullptr;
         case ModSource::Everyone:
-            return &subject;
         case ModSource::Policy:
-            return playerHasSource(m, owner) ? &subject : nullptr;
         case ModSource::Government:
-            return playerHasSource(m, owner) ? &subject : nullptr;
+            break;  // holderFor's own
         case ModSource::Belief: {
             // Player-wide collections: the beliefs of the owner's pantheon and founded religion (God of the Forge...).
             if (!ownerOnly) return owner.pantheon == m.sourceIndex || (owner.religion >= 0 && religionHas(s, owner.religion, m.sourceIndex)) ? &subject : nullptr;
@@ -228,6 +222,22 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             return nullptr;
     }
     return nullptr;
+}
+
+// The city that "holds" a modifier for this subject city, or nullptr if the
+// modifier does not reach it. For player-wide sources the subject's player
+// must carry the source. `majority` is the subject's majority religion, worked
+// out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
+// The sources settled by a look at the player alone are answered here, where the pass is.
+inline const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+    if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
+    switch (m.sourceKind) {
+        case ModSource::Civ: return owner.civ == m.sourceIndex ? &subject : nullptr;
+        case ModSource::Everyone: return &subject;
+        case ModSource::Policy:
+        case ModSource::Government: return playerHasSource(m, owner) ? &subject : nullptr;
+        default: return holderBeyondPlayer(m, s, r, subject, owner, majority);
+    }
 }
 
 // Calls fn for each city modifier in these lists (a null list is skipped), list by list, that reaches the city.
@@ -270,7 +280,7 @@ bool anyModifier(const Modifier&) { return true; }
 namespace {
 // All the pressure in a city, atheism included: the share each religion's followers are counted from.
 int64_t totalPressure(const Rules& r, const City& city) {
-    int64_t total = static_cast<int64_t>(r.globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP")) * city.population;
+    int64_t total = static_cast<int64_t>(r.globalInt(HotGlobal::ReligionSpreadAtheismPressurePerPop)) * city.population;
     for (int32_t p : city.pressure) total += std::max<int32_t>(0, p);
     return total;
 }
@@ -359,43 +369,46 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
 }
 
 namespace {
+// Whether a player-collection modifier applies to the player: the player holds its source and its requirements hold.
+inline bool appliesToPlayer(const Modifier& m, const GameState& s, const Rules& r, const Player& player) {
+    const City* holder = nullptr;
+    bool applies = false;
+    switch (m.sourceKind) {
+        case ModSource::Building:
+            for (const City& c : s.cities) {
+                if (c.owner == player.id && c.has(m.sourceIndex)) {
+                    holder = &c;
+                    break;
+                }
+            }
+            applies = holder != nullptr;
+            break;
+        case ModSource::Civ: applies = player.civ == m.sourceIndex; break;
+        case ModSource::Everyone: applies = true; break;
+        case ModSource::Policy:
+        case ModSource::Government: applies = playerHasSource(m, player); break;
+        case ModSource::Governor: applies = false; break;  // city effects only
+        case ModSource::GreatPerson:
+            applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
+            break;
+        case ModSource::CityState: applies = enjoysSuzerainBonus(s, r, player.id, m.sourceIndex); break;
+        case ModSource::Belief:
+            applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
+            break;
+    }
+    if (!applies) return false;
+    ReqContext ownerCtx{&s, &r, &player, holder, nullptr};
+    ReqContext subjectCtx{&s, &r, &player, nullptr, nullptr};
+    return testRequirements(m.ownerReqs, ownerCtx) && testRequirements(m.subjectReqs, subjectCtx);
+}
+
 // Calls fn for every player-collection modifier of the list (indices into Rules::modifiers) that applies to the
 // player. `pre` passes over modifiers on what they say alone, before the look at whether the player has their source.
 template <typename Pre, typename Fn>
 void forEachPlayerModifierIn(const std::vector<uint32_t>& list, const GameState& s, const Rules& r, const Player& player, Pre&& pre, Fn&& fn) {
     for (uint32_t i : list) {
         const Modifier& m = r.modifiers[i];
-        if (!pre(m)) continue;
-        const City* holder = nullptr;
-        bool applies = false;
-        switch (m.sourceKind) {
-            case ModSource::Building:
-                for (const City& c : s.cities) {
-                    if (c.owner == player.id && c.has(m.sourceIndex)) {
-                        holder = &c;
-                        break;
-                    }
-                }
-                applies = holder != nullptr;
-                break;
-            case ModSource::Civ: applies = player.civ == m.sourceIndex; break;
-            case ModSource::Everyone: applies = true; break;
-            case ModSource::Policy:
-            case ModSource::Government: applies = playerHasSource(m, player); break;
-            case ModSource::Governor: applies = false; break;  // city effects only
-            case ModSource::GreatPerson:
-                applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
-                break;
-            case ModSource::CityState: applies = enjoysSuzerainBonus(s, r, player.id, m.sourceIndex); break;
-            case ModSource::Belief:
-                applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
-                break;
-        }
-        if (!applies) continue;
-        ReqContext ownerCtx{&s, &r, &player, holder, nullptr};
-        ReqContext subjectCtx{&s, &r, &player, nullptr, nullptr};
-        if (!testRequirements(m.ownerReqs, ownerCtx) || !testRequirements(m.subjectReqs, subjectCtx)) continue;
-        fn(m);
+        if (pre(m) && appliesToPlayer(m, s, r, player)) fn(m);
     }
 }
 
@@ -412,10 +425,8 @@ Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& playe
     return total;
 }
 
-std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::vector<uint32_t>& grants) {
-    std::vector<TypeIndex> out;
-    forEachPlayerModifierIn(grants, s, r, player, anyModifier, [&](const Modifier& m) { out.push_back(m.ability); });
-    return out;
+bool playerModifierApplies(const GameState& s, const Rules& r, const Player& player, const Modifier& m) {
+    return appliesToPlayer(m, s, r, player);
 }
 
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,

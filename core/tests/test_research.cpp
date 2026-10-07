@@ -567,6 +567,43 @@ TEST(government_adoption_and_policy_slots) {
     CHECK_EQ(g->submit(Command::setPolicy(0, 1, kNone)), CommandError::ChangesLocked);
 }
 
+// God King: +1 Gold and +1 Faith in the capital alone (a PLAYER_CAPITAL modifier).
+TEST(god_king_reaches_only_the_capital) {
+    auto g = capitalWith([](GameState& s) {
+        chiefdom(s);
+        sovtest::addCity(s, 0, {13, 6}, false, 2);
+    });
+    const CityId capital = g->state().cities[0].id, town = g->state().cities[1].id;
+    constexpr size_t F = static_cast<size_t>(YieldType::Faith);
+    const Fixed capitalFaith = g->cityReport(capital).yields[F], townFaith = g->cityReport(town).yields[F];
+    REQUIRE(g->submit(Command::setPolicy(0, 1, policy("POLICY_GOD_KING"))) == CommandError::Ok);
+    CHECK_EQ(g->cityReport(capital).yields[F], capitalFaith + Fixed::fromInt(1));
+    CHECK_EQ(g->cityReport(town).yields[F], townFaith);
+}
+
+// A player modifier applies only while its requirements hold, those on the player as owner and as subject alike
+// (Diplomatic Capital's +4 Favor, here also asking for a war).
+TEST(player_modifiers_need_their_requirements) {
+    auto g = capitalWith([](GameState& s) {
+        chiefdom(s);
+        s.players[0].policies[0] = policy("POLICY_DIPLOMATIC_CAPITAL");
+    });
+    const GameState& base = g->state();
+    const auto favor = [&](bool owner, bool subject) {
+        Rules r = rules();
+        const Requirement atWar{ReqType::PlayerAtPeace, kNone, 0, true};
+        for (Modifier& m : r.modifiers) {
+            if (m.id != "POLICY_DIPLOMATIC_CAPITAL_1") continue;
+            if (owner) m.ownerReqs.reqs.push_back(atWar);
+            if (subject) m.subjectReqs.reqs.push_back(atWar);
+        }
+        return Game::fromScenario(r, GameState(base))->favorPerTurn(0);
+    };
+    const int plain = favor(false, false);
+    CHECK_EQ(favor(true, false), plain - 4);
+    CHECK_EQ(favor(false, true), plain - 4);
+}
+
 TEST(government_bonus_and_anarchy) {
     auto g = capitalWith([](GameState& s) {
         chiefdom(s);

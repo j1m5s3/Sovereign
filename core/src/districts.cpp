@@ -37,7 +37,7 @@ bool onRiver(const GameState& s, Hex h) {
 }  // namespace
 
 int Game::districtLimit(const City& city) const {
-    const int per = std::max(1, rules_->globalInt("DISTRICT_POPULATION_REQUIRED_PER"));
+    const int per = std::max(1, rules_->globalInt(HotGlobal::DistrictPopulationRequiredPer));
     // Bi Sheng, Ada Lovelace (07): more districts in the city where they were used.
     return 1 + std::max(0, city.population - 1) / per + cityGreatPersonEffectTotal(city, GreatPersonEffectKind::DistrictCapacity);
 }
@@ -233,7 +233,7 @@ Fixed Game::districtHousing(const City& city) const {
             if (fresh) {
                 total += rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
             } else {
-                const Fixed base = rules_->global(coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER");
+                const Fixed base = rules_->global(coastal ? HotGlobal::CityPopulationCoast : HotGlobal::CityPopulationNoWater);
                 total += std::max(Fixed(), rules_->global("CITY_POPULATION_AQUEDUCT_MIN") - base);
             }
         }

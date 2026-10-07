@@ -1243,6 +1243,34 @@ struct GameSpeedType {
     int turns = 500;
 };
 
+// Named constants read on hot paths (Rules::global(HotGlobal)), each the one of the same name in capitals.
+enum class HotGlobal : uint8_t {
+    CitizenIdentityPressureRadiusCutoff = 0,
+    CityFoodConsumptionPerPopulation,
+    CityMinRange,
+    CityPopulationCoast,
+    CityPopulationNoWater,
+    CityPopulationRiverLake,
+    CitySightRange,
+    CombatMaxNumAttacks,
+    CulturePercentageYieldPerPop,
+    DiplomaticVictoryPointsRequired,
+    DistrictPopulationRequiredPer,
+    InfluenceTokensMinimumForSuzerain,
+    MovementEmbarkCost,
+    MovementRiverCost,
+    ReligionSpreadAtheismPressurePerPop,
+    ReputationThreshold,
+    SciencePercentageYieldPerPop,
+    ScienceVictoryPointsRequired,
+    TradingPostGoldInForeignCity,
+    TradingPostGoldInOwnCity,
+    WarWearinessPointsForAmenityLoss,
+    YieldFoodCityTerrainReplace,
+    YieldProductionCityTerrainReplace,
+    Count
+};
+
 class SOV_API Rules {
 public:
     // Loads every rules file from each directory in order; rows in later
@@ -1361,6 +1389,11 @@ public:
     Fixed global(std::string_view name) const;
     int globalInt(std::string_view name) const { return static_cast<int>(global(name).toInt()); }
     bool hasGlobal(std::string_view name) const { return findGlobal(name) != nullptr; }
+    // The same for a constant read on a hot path, found by its name once at load rather than at every call.
+    Fixed global(HotGlobal g) const { return hotGlobals_[static_cast<size_t>(g)]; }
+    int globalInt(HotGlobal g) const { return static_cast<int>(global(g).toInt()); }
+    // Its name, as global(name) takes it.
+    static std::string_view hotGlobalName(HotGlobal g);
 
     // Checksum of the loaded rules; saves and multiplayer peers must match.
     uint64_t checksum() const { return checksum_; }
@@ -1379,6 +1412,7 @@ private:
     std::vector<Global> globals_;
     std::vector<uint32_t> globalSlots_;  // open addressing, a power of two in size and at most half full: 1 + an index in globals_, 0 empty
     const Global* findGlobal(std::string_view name) const;
+    std::array<Fixed, static_cast<size_t>(HotGlobal::Count)> hotGlobals_{};  // by HotGlobal: global(hotGlobalName(g))
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
     PlotModifiers plotYieldMods_;

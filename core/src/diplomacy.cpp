@@ -1273,7 +1273,7 @@ int Game::warWeariness(PlayerId player) const {
 }
 
 int Game::warWearinessAmenities(PlayerId player) const {
-    return warWeariness(player) / std::max(1, rules_->globalInt("WAR_WEARINESS_POINTS_FOR_AMENITY_LOSS"));
+    return warWeariness(player) / std::max(1, rules_->globalInt(HotGlobal::WarWearinessPointsForAmenityLoss));
 }
 
 void Game::addWarWeariness(PlayerId player, PlayerId against, int points) {

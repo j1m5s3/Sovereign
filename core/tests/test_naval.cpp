@@ -89,6 +89,18 @@ TEST(amphibious_units_embark_and_land_without_the_extra_cost) {
     CHECK_EQ(g->moveCost(unit(*g, marine), {8, 7}, {7, 7}).value_or(Fixed()), Fixed::fromInt(1));
 }
 
+// A unit ability can waive it too (Global Army's free embark, given here to the Warrior).
+TEST(an_ability_waives_the_embark_cost) {
+    Rules r = rules();
+    r.units[at(r.unit("UNIT_WARRIOR"))].abilities.push_back(r.ability("ABILITY_GLOBAL_ARMY"));
+    GameState s = seaState();
+    giveTech(s, 0, "TECH_SHIPBUILDING");
+    const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+    auto g = Game::fromScenario(r, std::move(s));
+    CHECK_EQ(g->moveCost(unit(*g, w), {7, 5}, {8, 5}).value_or(Fixed()), Fixed::fromInt(1));
+    CHECK_EQ(g->moveCost(unit(*g, w), {8, 5}, {7, 5}).value_or(Fixed()), Fixed::fromInt(1));
+}
+
 TEST(builders_embark_after_sailing) {
     GameState s = seaState();
     giveTech(s, 0, "TECH_SAILING");

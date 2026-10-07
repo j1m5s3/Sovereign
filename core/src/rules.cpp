@@ -38,6 +38,45 @@ uint64_t nameHash(std::string_view name) {
     return h;
 }
 
+// The names of the constants read on hot paths (Rules::global(HotGlobal)), each listed with its key.
+struct HotGlobalName {
+    HotGlobal key;
+    const char* name;
+};
+constexpr HotGlobalName kHotGlobalNames[] = {
+    {HotGlobal::CitizenIdentityPressureRadiusCutoff, "CITIZEN_IDENTITY_PRESSURE_RADIUS_CUTOFF"},
+    {HotGlobal::CityFoodConsumptionPerPopulation, "CITY_FOOD_CONSUMPTION_PER_POPULATION"},
+    {HotGlobal::CityMinRange, "CITY_MIN_RANGE"},
+    {HotGlobal::CityPopulationCoast, "CITY_POPULATION_COAST"},
+    {HotGlobal::CityPopulationNoWater, "CITY_POPULATION_NO_WATER"},
+    {HotGlobal::CityPopulationRiverLake, "CITY_POPULATION_RIVER_LAKE"},
+    {HotGlobal::CitySightRange, "CITY_SIGHT_RANGE"},
+    {HotGlobal::CombatMaxNumAttacks, "COMBAT_MAX_NUM_ATTACKS"},
+    {HotGlobal::CulturePercentageYieldPerPop, "CULTURE_PERCENTAGE_YIELD_PER_POP"},
+    {HotGlobal::DiplomaticVictoryPointsRequired, "DIPLOMATIC_VICTORY_POINTS_REQUIRED"},
+    {HotGlobal::DistrictPopulationRequiredPer, "DISTRICT_POPULATION_REQUIRED_PER"},
+    {HotGlobal::InfluenceTokensMinimumForSuzerain, "INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN"},
+    {HotGlobal::MovementEmbarkCost, "MOVEMENT_EMBARK_COST"},
+    {HotGlobal::MovementRiverCost, "MOVEMENT_RIVER_COST"},
+    {HotGlobal::ReligionSpreadAtheismPressurePerPop, "RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP"},
+    {HotGlobal::ReputationThreshold, "REPUTATION_THRESHOLD"},
+    {HotGlobal::SciencePercentageYieldPerPop, "SCIENCE_PERCENTAGE_YIELD_PER_POP"},
+    {HotGlobal::ScienceVictoryPointsRequired, "SCIENCE_VICTORY_POINTS_REQUIRED"},
+    {HotGlobal::TradingPostGoldInForeignCity, "TRADING_POST_GOLD_IN_FOREIGN_CITY"},
+    {HotGlobal::TradingPostGoldInOwnCity, "TRADING_POST_GOLD_IN_OWN_CITY"},
+    {HotGlobal::WarWearinessPointsForAmenityLoss, "WAR_WEARINESS_POINTS_FOR_AMENITY_LOSS"},
+    {HotGlobal::YieldFoodCityTerrainReplace, "YIELD_FOOD_CITY_TERRAIN_REPLACE"},
+    {HotGlobal::YieldProductionCityTerrainReplace, "YIELD_PRODUCTION_CITY_TERRAIN_REPLACE"},
+};
+constexpr bool hotGlobalsInKeyOrder() {
+    size_t i = 0;
+    for (const HotGlobalName& n : kHotGlobalNames) {
+        if (n.key != static_cast<HotGlobal>(i++)) return false;
+    }
+    return i == static_cast<size_t>(HotGlobal::Count);
+}
+static_assert(hotGlobalsInKeyOrder(), "kHotGlobalNames lists every HotGlobal once, in key order");
+
 using Table = std::vector<std::pair<std::string, Json>>;
 
 struct Merged {
@@ -590,6 +629,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         while (globalSlots_[slot] != 0) slot = (slot + 1) & (tableSize - 1);
         globalSlots_[slot] = static_cast<uint32_t>(i + 1);
     }
+    for (size_t i = 0; i < hotGlobals_.size(); ++i) hotGlobals_[i] = global(kHotGlobalNames[i].name);
 
     // Eras and research trees first: everything else may be unlocked by them.
     for (const auto& [id, j] : m.tables["eras"]) {
@@ -2572,6 +2612,10 @@ const Rules::Global* Rules::findGlobal(std::string_view name) const {
 Fixed Rules::global(std::string_view name) const {
     const Global* g = findGlobal(name);
     return g ? g->value : Fixed();
+}
+
+std::string_view Rules::hotGlobalName(HotGlobal g) {
+    return kHotGlobalNames[static_cast<size_t>(g)].name;
 }
 
 }  // namespace sov
