@@ -1715,6 +1715,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         for (const Json& pj : j["promotions"].items()) {
             GovernorPromotionType p;
             p.id = pj["id"].str();
+            if (governorPromotion(p.id) != kNone) {  // Game::governorHasPromotion matches a promotion by its id alone
+                *error = "governor promotion " + p.id + " is listed twice";
+                return false;
+            }
             p.name = pj["name"].str(p.id);
             p.effects = pj["effects"].str();
             p.governor = gi;

@@ -142,8 +142,10 @@ TEST(rules_index_plot_yield_modifiers_by_what_they_need) {
     CHECK_EQ(again.plotYieldModifiers().unkeyed.size(), r.plotYieldModifiers().unkeyed.size() + 2);
 }
 
-TEST(rules_mod_layers_override_by_id) {
-    std::map<std::string, std::string> base = {
+namespace {
+// The smallest set of rules files that loads.
+std::map<std::string, std::string> minimalRules() {
+    return {
         {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 3, "START_DISTANCE_MAJOR_CIVILIZATION": 12,
             "MOVEMENT_RIVER_COST": 2, "CITY_SIGHT_RANGE": 2, "COMBAT_MAX_HIT_POINTS": 100,
             "CITY_FOOD_CONSUMPTION_PER_POPULATION": 2, "CITY_GROWTH_THRESHOLD": 15, "CITY_GROWTH_MULTIPLIER": 8,
@@ -160,6 +162,11 @@ TEST(rules_mod_layers_override_by_id) {
         {"setup.json", R"({"mapSizes": [{"id": "M", "width": 10, "height": 10}],
             "gameSpeeds": [{"id": "S"}], "startingUnits": []})"},
     };
+}
+}  // namespace
+
+TEST(rules_mod_layers_override_by_id) {
+    const std::map<std::string, std::string> base = minimalRules();
     std::map<std::string, std::string> mod = {
         {"units.json", R"({"units": [{"id": "UNIT_WARRIOR", "combat": 25}, {"id": "UNIT_SCOUT", "delete": true},
                                      {"id": "UNIT_LEADER", "combat": 15}]})"},
@@ -192,6 +199,22 @@ TEST(rules_reject_bad_data) {
     CHECK(!r.loadFromText({{{"resources.json", R"({"resources": [{"id": "R", "validTerrains": ["NOPE"]}]})"}}}, &err));
     // Missing required globals.
     CHECK(!r.loadFromText({{{"terrain.json", R"({"terrains": [{"id": "T"}]})"}}}, &err));
+}
+
+// A governor's promotion is found by its id alone (Game::governorHasPromotion), so two may not share one.
+TEST(rules_reject_a_governor_promotion_listed_twice) {
+    const auto withPromotions = [](const std::string& second) {
+        std::map<std::string, std::string> docs = minimalRules();
+        docs["governors.json"] = R"({"governors": [{"id": "GOVERNOR_A", "promotions": [{"id": "PROMOTION_A", "base": true}]},
+            {"id": "GOVERNOR_B", "promotions": [{"id": ")" + second + R"(", "base": true}]}]})";
+        return docs;
+    };
+    Rules apart, twice;
+    std::string err;
+    REQUIRE(apart.loadFromText({withPromotions("PROMOTION_B")}, &err));
+    CHECK_EQ(apart.governorPromotions.size(), 2u);
+    CHECK(!twice.loadFromText({withPromotions("PROMOTION_A")}, &err));
+    CHECK(err.find("PROMOTION_A") != std::string::npos);
 }
 
 TEST(rules_checksum_ignores_line_endings) {

@@ -250,6 +250,10 @@ Visibility Game::visibility(PlayerId player, Hex h) const {
 // ---------------------------------------------------------------- validation
 
 CommandError Game::validate(const Command& c) const {
+    return validate(c, nullptr);
+}
+
+CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePath) const {
     if (c.player < 0 || static_cast<size_t>(c.player) >= state_.players.size()) return CommandError::BadPlayer;
     if (!state_.players[static_cast<size_t>(c.player)].alive) return CommandError::BadPlayer;
     // A pending live battle stops the world until it is settled, whoever's turn it is (leader doc §9).
@@ -410,7 +414,10 @@ CommandError Game::validate(const Command& c) const {
             if (u->attacked && !unitHas(*u, UnitEffectKind::MoveAfterAttack)) return CommandError::BadTarget;
             const Unit* own = state_.unitAt(*t, typeOf(*rules_, *u).layer, *rules_);
             if (own && own->owner == c.player) return CommandError::BadTarget;
-            return findPath(u->id, *t, c.arg == 1) ? CommandError::Ok : CommandError::NoPath;
+            std::optional<std::vector<PathStep>> path = findPath(u->id, *t, c.arg == 1);
+            if (!path) return CommandError::NoPath;
+            if (movePath) *movePath = CheckedPath{u->id, std::move(*path)};
+            return CommandError::Ok;
         }
         case CommandType::FoundCity: {
             if (!typeOf(*rules_, *u).foundCity) return CommandError::NotASettler;
@@ -709,7 +716,12 @@ void Game::advanceUnit(UnitId id) {
             u->moveTarget.reset();
             return;
         }
-        auto path = findPath(id, *u->moveTarget, u->moveOverland);
+        // A move just checked by submit takes the path its check found for this unit: the unit's orders and activity,
+        // all that changed since, do not enter the search.
+        std::optional<std::vector<PathStep>> path;
+        if (checkedPath_ && checkedPath_->unit == id) path = std::move(checkedPath_->steps);
+        else path = findPath(id, *u->moveTarget, u->moveOverland);
+        checkedPath_.reset();
         if (!path || path->size() < 2) {
             u->moveTarget.reset();
             return;
@@ -793,10 +805,10 @@ void Game::refreshVisibility(PlayerId pid) {
     Unit* finder = nullptr;
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
-        for (const Hex& target : state_.grid.within(from, range)) {
+        state_.grid.forEachWithin(from, range, [&](Hex target) {
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
-            if (v == static_cast<uint8_t>(Visibility::Visible)) continue;  // already seen in this refresh: nothing more to learn
-            if (!lineOfSight(from, target, throughFeatures)) continue;
+            if (v == static_cast<uint8_t>(Visibility::Visible)) return;  // already seen in this refresh: nothing more to learn
+            if (!lineOfSight(from, target, throughFeatures)) return;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
                     for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
@@ -825,7 +837,7 @@ void Game::refreshVisibility(PlayerId pid) {
                 }
             }
             v = static_cast<uint8_t>(Visibility::Visible);
-        }
+        });
     };
     // Military alliance, level 2: allies see what each other sees (08: alliance levels).
     std::vector<uint8_t> sharing(state_.players.size(), 0);  // by player, worked out once for the refresh
@@ -914,10 +926,13 @@ bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
 // ------------------------------------------------------------------ applying
 
 CommandError Game::submit(const Command& c) {
-    CommandError e = validate(c);
+    std::optional<CheckedPath> movePath;
+    CommandError e = validate(c, &movePath);
     if (e != CommandError::Ok) return e;
     log_.push_back(c);
+    checkedPath_ = std::move(movePath);  // a move's first step sees what the check saw
     apply(c);
+    checkedPath_.reset();
     spawnCaptures();
     checkAirBases();
     updateBoosts(c.player);

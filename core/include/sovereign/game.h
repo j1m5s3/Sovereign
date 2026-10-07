@@ -940,6 +940,15 @@ private:
     std::vector<Command> log_;
     std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command
     void spawnCaptures();
+    // The path a MoveUnit command's check found, and the unit it was found for (an escort's order plans for its leader).
+    struct CheckedPath {
+        UnitId unit = kNoUnit;
+        std::vector<PathStep> steps;
+    };
+    // validate, also handing back the path a MoveUnit command's check found.
+    CommandError validate(const Command& c, std::optional<CheckedPath>* movePath) const;
+    // That path while submit applies the move: the unit's first step takes it rather than search again (advanceUnit).
+    std::optional<CheckedPath> checkedPath_;
 };
 
 // Plain-English deal terms ("England gives 100 Gold; France gives Wine for 30 turns"), for the

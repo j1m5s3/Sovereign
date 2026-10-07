@@ -285,8 +285,8 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         if (a.kind == DistrictAdjacencyKind::River) {
             matches = onRiver(state_, plot) ? 1 : 0;
         } else {
-            for (const Hex& n : state_.grid.within(plot, 1)) {
-                if (n == plot) continue;
+            state_.grid.forEachWithin(plot, 1, [&](Hex n) {
+                if (n == plot) return;
                 const Plot& np = state_.plot(n);
                 bool hit = false;
                 switch (a.kind) {
@@ -315,7 +315,7 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
                     case DistrictAdjacencyKind::River: break;
                 }
                 matches += hit ? 1 : 0;
-            }
+            });
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.tilesRequired));  // each "per 2" row floored
     }

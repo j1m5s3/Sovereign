@@ -113,8 +113,8 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) y[i] += mods[i];
     // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), and an
     // improvement that feeds its owner's plots beside it (the Nazca Line; 08).
-    for (const Hex& n : state_.grid.within(at, 1)) {
-        if (n == at) continue;
+    state_.grid.forEachWithin(at, 1, [&](Hex n) {
+        if (n == at) return;
         const Plot& np = state_.plot(n);
         if (np.improvement != kNone && np.pillagedTurns == 0 && np.owner == city.owner && p.owner == city.owner) {
             for (const ImprovementNeighbourYield& f : rules_->improvements[static_cast<size_t>(np.improvement)].neighbourYields) {
@@ -125,15 +125,15 @@ Yields Game::plotYields(Hex at, const City& city) const {
                 y[idx(f.yield)] += f.amount;
             }
         }
-        if (np.feature == kNone || np.feature == p.feature) continue;
+        if (np.feature == kNone || np.feature == p.feature) return;
         const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
-        if (!nw.naturalWonder) continue;
+        if (!nw.naturalWonder) return;
         for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
         if (nw.doublesAdjacentTerrain) {
             const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
             for (size_t i = 0; i < kNumYields; ++i) y[i] += ty[i];
         }
-    }
+    });
     if (p.improvement != kNone && p.pillagedTurns == 0 && rules_->improvements[static_cast<size_t>(p.improvement)].powerProvided > 0 &&
         cityGovernorHas(city, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER"))
         y[idx(YieldType::Gold)] += Fixed::fromInt(2);  // Reyna
@@ -308,11 +308,13 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt("SCIENCE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
     int districtsDone = 0;
     for (const CityDistrict& d : c->districts) districtsDone += d.complete ? 1 : 0;
+    const Yields flat = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYield);
+    const Yields perPop = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerPop);            // Tax Collector, Researcher
+    const Yields perDistrict = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerDistrict);  // Bishop
     for (size_t i = 0; i < kNumYields; ++i) {
-        const YieldType y = static_cast<YieldType>(i);
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYield, y);
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerPop, y) * c->population;  // Tax Collector, Researcher
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerDistrict, y) * districtsDone;  // Bishop
+        raw[i] += flat[i];
+        raw[i] += perPop[i] * c->population;
+        raw[i] += perDistrict[i] * districtsDone;
     }
     if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
         raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
@@ -354,9 +356,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
 
     // Housing from water access, then buildings and modifiers.
     bool fresh = hasFreshWater(state_, *rules_, c->pos), coastal = false;
-    for (const Hex& n : state_.grid.within(c->pos, 1)) {
+    state_.grid.forEachWithin(c->pos, 1, [&](Hex n) {
         if (n != c->pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
-    }
+    });
     if (suzerainBonus(c->owner, "CITYSTATE_MOHENJO_DARO")) fresh = true;  // Mohenjo-Daro (08: suzerain): every city as if on a river
     const char* water = fresh ? "CITY_POPULATION_RIVER_LAKE" : coastal ? "CITY_POPULATION_COAST" : "CITY_POPULATION_NO_WATER";
     rep.housing += rules_->global(water);
@@ -384,12 +386,12 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const TypeIndex pamukkale = rules_->feature("FEATURE_PAMUKKALE");
         bool owns = false;
         std::vector<TypeIndex> wonders;
-        for (const Hex& h : state_.grid.within(c->pos, 3)) {
+        state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& pl = state_.plot(h);
-            if (pl.city != c->id || pl.feature == kNone || !rules_->features[static_cast<size_t>(pl.feature)].naturalWonder) continue;
+            if (pl.city != c->id || pl.feature == kNone || !rules_->features[static_cast<size_t>(pl.feature)].naturalWonder) return;
             owns = owns || pl.feature == pamukkale;
             if (std::find(wonders.begin(), wonders.end(), pl.feature) == wonders.end()) wonders.push_back(pl.feature);
-        }
+        });
         if (owns) rep.amenities += static_cast<int>(wonders.size());
     }
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
@@ -473,7 +475,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (c->capital && ab.capitalAmenityPerKills > 0)
             rep.amenities += std::min(ab.capitalAmenityMax, state_.players[static_cast<size_t>(c->owner)].killsThisEra / ab.capitalAmenityPerKills);
     }
-    for (const Hex& h : state_.grid.within(c->pos, 3)) {
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
         const Plot& ip = state_.plot(h);
         if (ip.city == c->id && ip.improvement != kNone && ip.pillagedTurns == 0) {
             const ImprovementType& it = rules_->improvements[static_cast<size_t>(ip.improvement)];
@@ -484,7 +486,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
                 if (wet) rep.amenities += it.waterAmenity;  // the City Park (08)
             }
         }
-    }
+    });
     // Improvements near a wonder (03: the Temple of Artemis): each Camp, Pasture and Plantation within 4 tiles of it gives
     // +1 Amenity to the city whose land it is on, whoever built the wonder (the data checks only the distance).
     {
@@ -549,9 +551,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const std::string& mood = rules_->happiness[static_cast<size_t>(rep.happiness)].id;
         khaldun = mood == "HAPPINESS_ECSTATIC" ? 4 : mood == "HAPPINESS_HAPPY" ? 2 : 0;
     }
+    const Yields percents = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPercent);
     for (size_t i = 0; i < kNumYields; ++i) {
-        int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
-                                                          static_cast<YieldType>(i)).toInt());
+        int pct = 100 + static_cast<int>(percents[i].toInt());
         if (i != idx(YieldType::Food)) pct += khaldun;
         if (i == idx(YieldType::Gold)) pct += industries;  // 07: +10% per Industry, +20% per Corporation in the city
         // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.

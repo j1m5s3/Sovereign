@@ -3,6 +3,7 @@
 // envoys (meeting one first, civics, influence from their government) and send them for the
 // tier bonuses of each city-state's type; the player with the most envoys (3+) is suzerain.
 #include <algorithm>
+#include <string_view>
 
 #include "sovereign/game.h"
 #include "sovereign/modifiers.h"
@@ -128,7 +129,12 @@ void Game::processLevies(PlayerId player) {
 }
 
 bool Game::suzerainBonus(PlayerId player, const char* cityStateId) const {
-    const TypeIndex type = rules_->cityState(cityStateId);
+    // Rules::cityState's search, without making a string of the name.
+    const std::string_view id(cityStateId);
+    TypeIndex type = kNone;
+    for (size_t i = 0; i < rules_->cityStates.size() && type == kNone; ++i) {
+        if (rules_->cityStates[i].id == id) type = static_cast<TypeIndex>(i);
+    }
     return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
 }
 

@@ -5,6 +5,7 @@
 
 #include "sovereign/api.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -55,6 +56,15 @@ public:
     int distance(Hex a, Hex b) const;
     // All valid hexes with distance <= radius, in a fixed order.
     std::vector<Hex> within(Hex center, int radius) const;
+    // Calls fn(hex) for each hex of within(center, radius), in the same order, without building the list.
+    template <typename Fn>
+    void forEachWithin(Hex center, int radius, Fn&& fn) const {
+        if (wrap_ && w_ <= 2 * static_cast<int64_t>(radius)) {  // a row wraps onto itself: within() drops the repeats
+            for (const Hex& h : within(center, radius)) fn(h);
+            return;
+        }
+        walkWithin(center, radius, fn);
+    }
     // Hexes from a to b inclusive (cube line, deterministic tie-breaking).
     std::vector<Hex> line(Hex a, Hex b) const;
     // The hexes of line(a, b) strictly between a and b, in order and without building the list: calls fn(hex) for
@@ -71,6 +81,28 @@ public:
     }
 
 private:
+    // The hexes within radius of center row by row, north to south and west to east, to fn: on a map narrow enough
+    // for a row to wrap onto itself, some more than once.
+    template <typename Fn>
+    void walkWithin(Hex center, int radius, Fn&& fn) const {
+        const Axial c = toAxial(center);
+        for (int dr = -radius; dr <= radius; ++dr) {
+            const int32_t y = c.r + dr;
+            if (y < 0 || y >= h_) continue;  // off the top or bottom of the map
+            const int qMin = std::max(-radius, -dr - radius);
+            const int qMax = std::min(radius, -dr + radius);
+            // Along a row the axial q and the offset column rise together, one plot a step.
+            const int32_t first = toOffset(Axial{c.q + qMin, y}).x;
+            for (int32_t x = first; x <= first + (qMax - qMin); ++x) {
+                Hex h{x, y};
+                if (x < 0 || x >= w_) {
+                    if (!wrap_) continue;
+                    h.x = static_cast<int32_t>(((x % w_) + w_) % w_);
+                }
+                fn(h);
+            }
+        }
+    }
     // Axial position of b shifted by a multiple of the width to sit nearest a.
     Axial nearestAxial(Hex a, Hex b) const;
     // Point i of the n + 1 points of the line from aa to bb (n their distance); nullopt when off the map.

@@ -36,6 +36,8 @@ SOV_API bool religionHas(const GameState& s, int religion, TypeIndex belief);
 // city; `yield` filters yield effects.
 Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, ModEffect effect,
                        std::optional<YieldType> yield = std::nullopt);
+// sumCityModifiers of a yield effect for every yield, from one pass over its modifiers.
+Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& city, ModEffect effect);
 
 // Total flat plot-yield modifiers for a plot worked by this city, each yield from one pass over the modifiers.
 SOV_API Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot);

@@ -322,6 +322,14 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
     return total;
 }
 
+Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& city, ModEffect effect) {
+    Yields total{};
+    forEachApplying(
+        s, r, city, effect, false, nullptr, [](const Modifier& m) { return static_cast<size_t>(m.yield) < kNumYields; },
+        [&](const Modifier& m) { total[static_cast<size_t>(m.yield)] += m.amount; });
+    return total;
+}
+
 Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot) {
     Yields total{};
     const Plot& p = s.plot(plot);
