@@ -222,11 +222,11 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
 }
 
 template <typename Fn>
-void forEachApplying(const GameState& s, const Rules& r, const City& city, bool plotEffect, const Plot* plot,
+void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
                      Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
-    for (const Modifier& m : r.modifiers) {
-        if (m.collection == ModCollection::Player) continue;
+    for (uint32_t i : r.cityModifiers(effect)) {
+        const Modifier& m = r.modifiers[i];
         if (isPlotCollection(m.collection) != plotEffect) continue;
         const City* holder = holderFor(m, s, r, city, owner);
         if (!holder) continue;
@@ -274,8 +274,7 @@ bool testRequirements(const RequirementSet& set, const ReqContext& ctx) {
 Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, ModEffect effect,
                        std::optional<YieldType> yield) {
     Fixed total;
-    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
-        if (m.effect != effect) return;
+    forEachApplying(s, r, city, effect, false, nullptr, [&](const Modifier& m) {
         if (yield && m.yield != *yield) return;
         total += m.amount;
     });
@@ -285,8 +284,8 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
 Fixed sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, YieldType yield) {
     Fixed total;
     const Plot& p = s.plot(plot);
-    forEachApplying(s, r, city, true, &p, [&](const Modifier& m) {
-        if (m.effect == ModEffect::PlotYield && m.yield == yield) total += m.amount;
+    forEachApplying(s, r, city, ModEffect::PlotYield, true, &p, [&](const Modifier& m) {
+        if (m.yield == yield) total += m.amount;
     });
     return total;
 }
@@ -294,8 +293,7 @@ Fixed sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex
 Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& city, TypeIndex unitType) {
     const UnitType& u = r.units[static_cast<size_t>(unitType)];
     Fixed total;
-    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
-        if (m.effect != ModEffect::UnitProductionPercent) return;
+    forEachApplying(s, r, city, ModEffect::UnitProductionPercent, false, nullptr, [&](const Modifier& m) {
         if (!m.unitClass.empty() && m.unitClass != u.unitClass) return;
         if (m.unit != kNone && m.unit != unitType) return;
         if (m.maxEra >= 0 && u.era > m.maxEra) return;
@@ -310,8 +308,8 @@ namespace {
 // Calls fn for every player-collection modifier with this effect that applies to the player.
 template <typename Fn>
 void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Fn&& fn) {
-    for (const Modifier& m : r.modifiers) {
-        if (m.collection != ModCollection::Player || m.effect != effect) continue;
+    for (uint32_t i : r.playerModifiers(effect)) {
+        const Modifier& m = r.modifiers[i];
         const City* holder = nullptr;
         bool applies = false;
         switch (m.sourceKind) {
@@ -377,8 +375,7 @@ int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player
 
 Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& city, ProductionItem item) {
     Fixed total;
-    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
-        if (m.effect != ModEffect::ItemProductionPercent) return;
+    forEachApplying(s, r, city, ModEffect::ItemProductionPercent, false, nullptr, [&](const Modifier& m) {
         bool hit = false;
         if (item.kind == ProductionKind::Building && item.type >= 0 && static_cast<size_t>(item.type) < r.buildings.size()) {
             const BuildingType& b = r.buildings[static_cast<size_t>(item.type)];
@@ -400,8 +397,8 @@ Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& c
 
 Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass) {
     Fixed total;
-    forEachApplying(s, r, city, false, nullptr, [&](const Modifier& m) {
-        if (m.effect == ModEffect::CityGreatPersonPoints && m.gpClass == gpClass) total += m.amount;
+    forEachApplying(s, r, city, ModEffect::CityGreatPersonPoints, false, nullptr, [&](const Modifier& m) {
+        if (m.gpClass == gpClass) total += m.amount;
     });
     return total;
 }

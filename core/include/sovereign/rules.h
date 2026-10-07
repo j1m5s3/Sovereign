@@ -1317,6 +1317,11 @@ public:
     TypeIndex policy(const std::string& id) const;
     // Modifiers whose source is this id, in load order.
     std::vector<const Modifier*> modifiersFrom(const std::string& source) const;
+    // Indices into `modifiers` with this effect, in load order: the player-collection ones, and the city and plot ones.
+    // Built when the rules load; call indexModifiers() again after changing `modifiers`.
+    const std::vector<uint32_t>& playerModifiers(ModEffect effect) const;
+    const std::vector<uint32_t>& cityModifiers(ModEffect effect) const;
+    void indexModifiers();
     TypeIndex civ(const std::string& id) const;
     TypeIndex gearType(const std::string& id) const;
     TypeIndex greatPersonClass(const std::string& id) const;
@@ -1357,6 +1362,7 @@ public:
 private:
     std::map<std::string, Fixed> globals_;
     uint64_t checksum_ = 0;
+    std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
 };
 
 SOV_API uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);
