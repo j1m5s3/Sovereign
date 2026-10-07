@@ -306,3 +306,18 @@ TEST(a_player_whose_last_city_revolts_hands_the_turn_on) {
     CHECK_EQ(g->state().currentPlayer, 1);
     CHECK_EQ(g->submit(Command::endTurn(1)), CommandError::Ok);
 }
+
+TEST(a_monument_adds_culture_while_loyalty_is_full) {
+    CityId c = kNoCity;
+    auto g = world([&](GameState& s) {
+        c = addCity(s, 0, {5, 7}, true, 3);
+        cityRef(s, c).buildings.push_back(rules().building("BUILDING_MONUMENT"));
+        std::sort(cityRef(s, c).buildings.begin(), cityRef(s, c).buildings.end());
+    });
+    const size_t C = static_cast<size_t>(YieldType::Culture);
+    REQUIRE(g->state().city(c)->loyalty == rules().globalInt("LOYALTY_MAXIMUM"));
+    GameState s = g->state();
+    cityRef(s, c).loyalty -= 1;  // still Loyal, so no yield change from the loyalty level
+    auto shaken = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->cityReport(c).yields[C], shaken->cityReport(c).yields[C] + Fixed::fromInt(1));
+}

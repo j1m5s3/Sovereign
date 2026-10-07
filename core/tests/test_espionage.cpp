@@ -435,3 +435,41 @@ TEST(a_diplomatic_quarter_shields_the_districts_beside_it) {
     CHECK_EQ(odds({16, 7}, true, SpyMission::FomentUnrest), 25);    // beside the City Center
     CHECK_EQ(odds(far, true, SpyMission::FomentUnrest), 50);
 }
+
+TEST(a_consulate_lowers_foreign_spies_in_its_city_and_encampment_cities) {
+    // [GS] Foreign spies work a level lower in the Consulate's city and in its owner's cities with an Encampment.
+    // Their capital at (16,6) and a second city at (24,6) each have a Commercial Hub.
+    const auto odds = [](bool consulate, bool camp, bool atCapital) {
+        GameState s = spyState();
+        CityDistrict dq;
+        dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
+        dq.pos = {16, 10};  // too far to shield the Commercial Hub itself
+        dq.complete = true;
+        s.cities[1].districts.push_back(dq);
+        if (consulate) {
+            s.cities[1].buildings.push_back(rules().building("BUILDING_CONSULATE"));
+            std::sort(s.cities[1].buildings.begin(), s.cities[1].buildings.end());
+        }
+        const CityId other = addCity(s, 1, {24, 6}, false, 8);
+        City& c = *s.city(other);
+        CityDistrict hub;
+        hub.type = rules().district("DISTRICT_COMMERCIAL_HUB");
+        hub.pos = {25, 6};
+        hub.complete = true;
+        c.districts.push_back(hub);
+        if (camp) {
+            CityDistrict e;
+            e.type = rules().district("DISTRICT_ENCAMPMENT");
+            e.pos = {24, 8};
+            e.complete = true;
+            c.districts.push_back(e);
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->spySuccessPercent(g->state().agents[0].id, SpyMission::SiphonFunds, atCapital ? theirCity(*g) : other);
+    };
+    CHECK_EQ(odds(false, false, true), 50);
+    CHECK_EQ(odds(true, false, true), 37);   // the Consulate's city: a step down
+    CHECK_EQ(odds(true, false, false), 50);  // another city without an Encampment
+    CHECK_EQ(odds(true, true, false), 37);   // another city with one
+    CHECK_EQ(odds(false, true, false), 50);  // no Consulate anywhere
+}

@@ -877,6 +877,7 @@ enum class ReqType : uint8_t {
     PlotNextToRiver,
     PlotIsLake,      // 01: Lake (Huey Teocalli, Mausoleum)
     PlotNextToLake,  // a lake plot beside it (Aztec Chinampas)
+    CityFullLoyalty,  // the city's loyalty is at LOYALTY_MAXIMUM (the Monument [R&F])
 };
 
 struct Requirement {

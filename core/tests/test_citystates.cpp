@@ -665,3 +665,24 @@ TEST(vilnius_raises_theater_squares_with_each_alliance_level) {
     CHECK(adjacency("CITYSTATE_VILNIUS", rules().globalInt("ALLIANCE_LEVEL_TWO_XP")) == base * 2);
     CHECK(adjacency("CITYSTATE_VILNIUS", rules().globalInt("ALLIANCE_LEVEL_THREE_XP")) == base * 5 / 2);
 }
+
+TEST(the_consulate_and_the_chancery_add_influence) {
+    // [GS] Consulate +2 Influence points a turn, Chancery +3 more.
+    const auto influence = [](std::initializer_list<const char*> buildings) {
+        GameState s = csState();
+        s.players[0].government = rules().government("GOVERNMENT_CHIEFDOM");
+        CityDistrict dq;
+        dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
+        dq.pos = {5, 6};
+        dq.complete = true;
+        s.cities[0].districts.push_back(dq);
+        for (const char* b : buildings) s.cities[0].buildings.push_back(rules().building(b));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 3);  // round to player 0's next turn
+        return g->state().players[0].influence;
+    };
+    const int none = influence({});
+    CHECK_EQ(influence({"BUILDING_CONSULATE"}), none + 2);
+    CHECK_EQ(influence({"BUILDING_CONSULATE", "BUILDING_CHANCERY"}), none + 5);
+}

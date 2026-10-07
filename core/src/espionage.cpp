@@ -155,6 +155,11 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
         }
     }
     need += shield * op->levelChange;
+    // A Consulate [GS]: foreign spies a level lower in its city and in its owner's cities with an Encampment.
+    const TypeIndex consulate = rules_->building("BUILDING_CONSULATE"), camp = rules_->district("DISTRICT_ENCAMPMENT");
+    if (consulate != kNone && buildingsOwned(c->owner, "BUILDING_CONSULATE") > 0 &&
+        (cityHasBuilding(*c, *rules_, consulate) || (camp != kNone && c->district(camp, true))))
+        need += op->levelChange;
     // The city's best counterspy, and Amani's Local Informants (+3 levels), defend.
     int defender = 0;
     for (const Agent& o : state_.agents) {

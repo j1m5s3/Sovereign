@@ -106,6 +106,7 @@ bool testOne(const Requirement& q, const ReqContext& c) {
             break;
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
+        case ReqType::CityFullLoyalty: ok = c.city && c.rules && c.city->loyalty >= c.rules->globalInt("LOYALTY_MAXIMUM"); break;
         case ReqType::PlotHasResourceClass:
             ok = c.plot && c.rules && c.plot->resource != kNone && static_cast<int>(c.rules->resources[static_cast<size_t>(c.plot->resource)].cls) == q.value;
             break;
