@@ -400,3 +400,30 @@ TEST(calmecac_trains_units_that_learn_faster) {
     CHECK_EQ(aztec->xp, 0);
     CHECK_EQ(malian->xpBonus, 0);
 }
+
+TEST(legionaries_lay_a_road_or_a_fort_and_march_on) {
+    GameState s = pair("CIVILIZATION_ROME", "CIVILIZATION_GREECE", {});
+    for (const Hex& h : {Hex{6, 6}, Hex{6, 8}, Hex{6, 4}}) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    const UnitId roadMaker = addUnit(s, "UNIT_LEGIONARY", 0, {6, 6});
+    const UnitId fortMaker = addUnit(s, "UNIT_LEGIONARY", 0, {6, 8});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 4});
+    const TypeIndex fort = rules().improvement("IMPROVEMENT_FORT");
+    const TypeIndex farm = rules().improvement("IMPROVEMENT_FARM");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // Its charge builds a Fort, without Siege Tactics, but no farm; a Builder the other way round.
+    CHECK(g->validate(Command::buildImprovement(0, fortMaker, farm)) == CommandError::CannotImprove);
+    CHECK(g->validate(Command::buildImprovement(0, builder, fort)) == CommandError::CannotImprove);
+    CHECK(g->validate(Command::buildImprovement(0, builder, farm)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::buildImprovement(0, fortMaker, fort)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({6, 8}).improvement, fort);
+    // Or a road; either way the Legionary marches on with its charge spent.
+    REQUIRE(g->submit(Command::buildRoad(0, roadMaker)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({6, 6}).route, g->roadFor(0));
+    for (UnitId id : {roadMaker, fortMaker}) {
+        REQUIRE(g->state().unit(id) != nullptr);
+        CHECK_EQ(g->state().unit(id)->charges, 0);
+    }
+}

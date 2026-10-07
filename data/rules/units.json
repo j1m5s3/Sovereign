@@ -1510,6 +1510,7 @@
    "moves": 2,
    "sight": 2,
    "buildCharges": 2,
+   "buildsRoads": true,
    "needsBuilding": [
     "BUILDING_ARMORY"
    ],

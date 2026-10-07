@@ -322,6 +322,8 @@ def gen_units():
         m = re.search(r"charges (\d+)", special)
         if m and "heal charges" not in special:
             u["buildCharges"] = int(m.group(1))
+        if row["Unit"] == "Military Engineer":
+            u["buildsRoads"] = True  # 01: Routes, a road by hand for a charge (until railroads [GS])
         prog = row["Cost progression"].split()
         if len(prog) == 2 and prog[0] == "PREVIOUS_COPIES":
             u["costProgression"] = int(prog[1])

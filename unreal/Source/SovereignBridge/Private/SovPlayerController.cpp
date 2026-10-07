@@ -1135,18 +1135,24 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				break;
 			}
 			ChooserTitle = TEXT("Build improvement");
-			for (sov::TypeIndex T : G.improvementsAt(Me(), U->pos))
+			for (size_t I = 0; I < R.improvements.size(); ++I)
 			{
-				// Only what this unit builds (Military Engineers: Fort, Airstrip, Missile Silo).
-				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, T);
+				// Only what this unit builds (Military Engineers: Fort, Airstrip, Missile Silo; a Legionary: its Fort).
+				// Tunnels go into a neighbouring mountain and are listed below.
+				if (R.improvements[I].tunnel)
+				{
+					continue;
+				}
+				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, static_cast<sov::TypeIndex>(I));
 				if (G.validate(Build) == sov::CommandError::Ok)
 				{
-					Choices.Add({Str(R.improvements[static_cast<size_t>(T)].name), Build});
+					Choices.Add({Str(R.improvements[I].name), Build});
 				}
 			}
-			if (G.canHarvestAt(Me(), U->pos))
+			const sov::Command Harvest = sov::Command::harvest(Me(), U->id);
+			if (G.validate(Harvest) == sov::CommandError::Ok)
 			{
-				Choices.Add({TEXT("Harvest"), sov::Command::harvest(Me(), U->id)});
+				Choices.Add({TEXT("Harvest"), Harvest});
 			}
 			// Monopolies and Corporations mode (07): an Industry on the luxury, or a Corporation of one.
 			const sov::Command Industry = sov::Command::buildIndustry(Me(), U->id);
@@ -1200,6 +1206,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
 				Choices.Add({TEXT("Railroad (1 Iron, 1 Coal)"), sov::Command::buildRailroad(Me(), U->id)});
+			}
+			// A road by hand (01: Routes): Military Engineers before railroads, and the Legionary.
+			if (G.roadProblem(Me(), U->id) == sov::CommandError::Ok)
+			{
+				Choices.Add({TEXT("Road (a charge)"), sov::Command::buildRoad(Me(), U->id)});
 			}
 			const sov::TypeIndex Tunnel = R.improvement("IMPROVEMENT_MOUNTAIN_TUNNEL");
 			for (const sov::Hex& Site : G.tunnelSites(Me(), U->id))

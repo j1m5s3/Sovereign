@@ -300,6 +300,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::LaunchWmd: return wmdProblem(c);
         case CommandType::JoinEmergency: return canJoinEmergency(c.player, c.arg) ? CommandError::Ok : CommandError::CannotDeal;
         case CommandType::BuildRailroad: return railroadProblem(c.player, c.id);
+        case CommandType::BuildRoad: return roadProblem(c.player, c.id);
         case CommandType::ContributeCharge: return chargeProblem(c.player, c.id);
         case CommandType::Pillage: return c.arg == 1 ? coastalRaidProblem(c.player, c.id, c.target) : c.arg == 0 ? pillageProblem(c.player, c.id) : CommandError::BadTarget;
         case CommandType::FormUnit: return formationProblem(c.player, c.id, c.arg);
@@ -384,7 +385,7 @@ CommandError Game::validate(const Command& c) const {
         case CommandType::Harvest:
             return validateBuilder(c);
         case CommandType::BuildIndustry: {
-            if (u->charges <= 0 || rules_->units[static_cast<size_t>(u->type)].buildCharges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+            if (u->charges <= 0 || !isBuilder(rules_->units[static_cast<size_t>(u->type)]) || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
             return industryProblem(c.player, u->pos);
         }
         case CommandType::SetActivity: {
@@ -937,6 +938,15 @@ void Game::apply(const Command& c) {
             u.movesLeft = Fixed();  // laying track takes the engineer's turn
             u.moveTarget.reset();
             railroadMoment(c.player, u.pos);
+            break;
+        }
+        case CommandType::BuildRoad: {
+            Unit& u = *state_.unit(c.id);
+            state_.plot(u.pos).route = static_cast<int8_t>(roadFor(c.player));
+            state_.plot(u.pos).routePillaged = false;
+            u.movesLeft = Fixed();  // laying a road takes the unit's turn
+            u.moveTarget.reset();
+            if (--u.charges <= 0 && rules_->units[static_cast<size_t>(u.type)].layer != UnitLayer::Military) removeUnit(c.id);  // a Legionary stays
             break;
         }
         case CommandType::PromoteSpy:

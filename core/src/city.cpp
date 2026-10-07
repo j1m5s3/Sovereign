@@ -1200,8 +1200,9 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (!u.promotionClass.empty() && u.layer == UnitLayer::Military && bestAllianceLevel(city.owner, AllianceType::Military) >= 3)
             made.xp = std::max(made.xp, xpForNextLevel(made));
         questDone(city.owner, QuestKind::TrainUnit, item.type);  // 08: Quests
-        if (made.charges > 0) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
-                                              (u.buildCharges > 0 && !u.foundCity ? civAbility(city.owner).extraBuilderCharges : 0);
+        // Builder charges (the Pyramids, Serfdom, Public Works, Liang, Qin): Builders only, not Military Engineers or Archaeologists.
+        if (isBuilder(u)) made.charges += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::BuilderExtraCharges).toInt()) +
+                                          civAbility(city.owner).extraBuilderCharges;
         // Venetian Arsenal (03: Wonders): a second naval melee, ranged or carrier unit (`made` is not used after this).
         if ((u.unitClass == "NAVAL_MELEE" || u.unitClass == "NAVAL_RANGED" || u.unitClass == "NAVAL_CARRIER") &&
             buildingsOwned(city.owner, "BUILDING_VENETIAN_ARSENAL") > 0) {

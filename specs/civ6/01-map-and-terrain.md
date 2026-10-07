@@ -151,6 +151,6 @@ Full table: [data/barbarians-goody-huts.md](data/barbarians-goody-huts.md).
 
 ## Routes
 Data: Routes, Routes_XP2, Route_ResourceCosts.
-- Roads are created automatically along Traders' routes; Military Engineers can build them manually (1 charge). The road tier follows the owner's era: Ancient road 1 MP/tile without bridges, Classical road 1 MP/tile with bridges, Industrial road 0.75 MP/tile, Modern road 0.5 MP/tile.
+- Roads are created automatically along Traders' routes; Military Engineers can build them manually (1 charge), until Steam Power [GS], after which they lay railroads instead. The road tier follows the owner's era: Ancient road 1 MP/tile without bridges, Classical road 1 MP/tile with bridges, Industrial road 0.75 MP/tile, Modern road 0.5 MP/tile.
 - Railroads [GS]: built only by Military Engineers after Steam Power; cost 1 Iron and 1 Coal per tile (no charge), 0.25 MP/tile, no tile yields of their own.
 - Mountain tunnels [GS]: built by Military Engineers after Chemistry; make the mountain tile passable for units.

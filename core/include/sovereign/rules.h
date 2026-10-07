@@ -248,6 +248,8 @@ struct UnitType {
     bool zoneOfControl = false;
     bool foundCity = false;
     int buildCharges = 0;
+    bool buildsRoads = false;       // spends a charge on a road (01: Routes; Military Engineers, the Legionary)
+    std::vector<TypeIndex> builds;  // its charges build only these, unlocked by the unit itself (the Legionary's Fort)
     int costProgression = 0;  // PREVIOUS_COPIES: extra cost per copy already trained
     int popCost = 0;          // population removed when trained (Settler)
     int minPopulation = 0;    // city population needed to train
@@ -281,6 +283,9 @@ struct UnitType {
     bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
     TypeIndex needsDistrict = kNone;  // the training city must have this district finished
 };
+
+// A Builder (01, 02): its charges improve and harvest tiles, and the Builder bonuses (Pyramids, Serfdom...) are its.
+inline bool isBuilder(const UnitType& t) { return t.buildCharges > 0 && t.layer == UnitLayer::Civilian; }
 
 // Tile improvements built by Builders (02-cities.md, 01-map-and-terrain.md; data: improvements.md).
 struct ImprovementBonus {
