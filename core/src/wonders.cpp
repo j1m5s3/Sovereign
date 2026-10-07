@@ -143,6 +143,24 @@ int Game::kilwaPercent(const City& city, CityStateKind kind) const {
     return (city.has(kilwa) && n >= 1 ? 15 : 0) + (n >= 2 ? 15 : 0);
 }
 
+// The Golden Gate Bridge (03; data: roads within 1 tile): its plot becomes a land bridge carrying the owner's
+// road, and the land beside it gets that road too.
+void Game::bridgeRoads(const City& city, TypeIndex building) {
+    const TypeIndex road = roadFor(city.owner);
+    if (road == kNone) return;
+    for (const CityWonder& w : city.wonders) {
+        if (w.building != building) continue;
+        for (const Hex& h : state_.grid.within(w.pos, 1)) {
+            Plot& p = state_.plot(h);
+            if (h != w.pos && !isLandPassable(state_, *rules_, h)) continue;
+            if (p.route < road) {
+                p.route = static_cast<int8_t>(road);
+                p.routePillaged = false;
+            }
+        }
+    }
+}
+
 void Game::wonderCompleted(CityId id, TypeIndex building) {
     City* c = state_.city(id);
     if (!c || building < 0 || static_cast<size_t>(building) >= rules_->buildings.size()) return;
@@ -171,6 +189,7 @@ void Game::completeWonder(City& city, TypeIndex building) {
         }
     }
     if (building == wonderType(W::Torre)) grantTorreBuildings(city.owner);
+    if (building == wonderType(W::GoldenGate)) bridgeRoads(city, building);
     syncPolicySlots(city.owner);  // Alhambra, Forbidden City, Potala Palace, Big Ben
     // Apadana: +2 envoys for each wonder completed in its city, itself included.
     if (city.has(rules_->building("BUILDING_APADANA")) && !policyIs(city.owner, "POLICY_ROGUE_STATE"))

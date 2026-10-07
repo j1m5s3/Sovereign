@@ -85,7 +85,9 @@ public:
     // ---- naval play and embarkation (05-units-and-combat.md, Embarkation)
     bool canEmbark(PlayerId player, TypeIndex unitType) const;
     bool canEnterOcean(PlayerId player) const;
-    // A land unit standing on water.
+    // A water plot carrying a road: the Golden Gate Bridge (03), a land bridge that land units cross dry.
+    bool bridgeAt(Hex plot) const;
+    // A land unit standing on water (not on a land bridge).
     bool isEmbarked(const Unit& unit) const;
     // Embarking or disembarking: allowed with any movement left, which it then uses up.
     bool isEmbarkTransition(const Unit& unit, Hex from, Hex to) const;
@@ -852,6 +854,7 @@ private:
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
     uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings
+    void bridgeRoads(const City& city, TypeIndex building);  // the Golden Gate Bridge's roads (03)
     GameState state_;
     std::vector<Command> log_;
     std::vector<std::pair<PlayerId, Hex>> captures_;  // Builders owed by Jaguar-style kills this command
