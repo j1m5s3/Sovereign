@@ -733,7 +733,8 @@ private:
         std::vector<uint8_t> blocked;  // per plot: another player's unit, a foreign city or a standing enemy Encampment
         std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
     };
-    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits) const;
+    // With `only` (a plot on the grid), just the entries a step into it reads: its own and its owner's.
+    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt) const;
     // A step's cost: `dir` is the direction from `from` to its neighbour `to`.
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
@@ -917,6 +918,10 @@ private:
     // Whether any plot is a National Park: a game starts with those its state has, designatePark makes the others and
     // none is ever lost, so while this is false the park scans have nothing to find.
     bool parks_ = false;
+    // The plots of each landmass (a continent id k >= 0; only map generation and loading set them), in map order, one
+    // landmass after another in the order they first appear: landmass i is landPlots_[landFirst_[i]] up to
+    // landPlots_[landFirst_[i + 1]].
+    std::vector<int32_t> landFirst_, landPlots_;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
@@ -942,7 +947,7 @@ private:
     bool codedGreatPerson(TypeIndex person) const;
     int extraPalaceSlots(const City& city, TypeIndex building) const;  // Giovanni de' Medici: +2 in each Bank (07)
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
-    uint32_t heldWonders(PlayerId player) const;  // bit(w) for each of these wonders the player holds
+    uint32_t heldWonders(PlayerId player, uint32_t which) const;  // bit(w) for each of the wonders in `which` the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings
     void bridgeRoads(const City& city, TypeIndex building);  // the Golden Gate Bridge's roads (03)
     GameState state_;

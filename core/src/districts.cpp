@@ -3,6 +3,9 @@
 // Encampment combat, citizen slots, great person points and pillaging arrive
 // with their systems.
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <optional>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -162,21 +165,40 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
 int Game::plotAppeal(Hex plot) const {
     int appeal = onRiver(state_, plot) || isLakeAdjacent(state_, *rules_, plot) ? 1 : 0;  // +1 once next to a river or lake
     const City* home = state_.city(state_.plot(plot).city);
-    const uint32_t held = home ? heldWonders(home->owner) : 0;
+    const uint32_t held = home ? heldWonders(home->owner, bit(W::Biosphere) | bit(W::Eiffel) | bit(W::GoldenGate)) : 0;
     const bool biosphere = (held & bit(W::Biosphere)) != 0;  // Biosphère (03): Rainforest and Marsh +1 Appeal
-    for (int dir = 0; dir < kNumDirs; ++dir) {
-        auto n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
-        if (!n) continue;
-        const Plot& np = state_.plot(*n);
+    std::array<std::optional<Hex>, kNumDirs> around;
+    for (int dir = 0; dir < kNumDirs; ++dir) around[static_cast<size_t>(dir)] = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+    // The district and the wonder on each neighbour, the first of each in the cities' lists as districtAt and wonderAt
+    // find them, from one pass over the cities. Neighbours lie on the plot's own row and the rows beside it.
+    std::array<const CityDistrict*, kNumDirs> district{};
+    std::array<const CityWonder*, kNumDirs> wonder{};
+    for (const City& c : state_.cities) {
+        for (const CityDistrict& d : c.districts) {
+            if (std::abs(d.pos.y - plot.y) > 1) continue;
+            for (size_t dir = 0; dir < kNumDirs; ++dir) {
+                if (!district[dir] && around[dir] == d.pos) district[dir] = &d;
+            }
+        }
+        for (const CityWonder& w : c.wonders) {
+            if (std::abs(w.pos.y - plot.y) > 1) continue;
+            for (size_t dir = 0; dir < kNumDirs; ++dir) {
+                if (!wonder[dir] && around[dir] == w.pos) wonder[dir] = &w;
+            }
+        }
+    }
+    for (size_t dir = 0; dir < kNumDirs; ++dir) {
+        if (!around[dir]) continue;
+        const Plot& np = state_.plot(*around[dir]);
         appeal += rules_->terrains[static_cast<size_t>(np.terrain)].appeal;
         if (np.feature != kNone) {
             const FeatureType& f = rules_->features[static_cast<size_t>(np.feature)];
             appeal += f.appeal + (biosphere && (f.id == "FEATURE_JUNGLE" || f.id == "FEATURE_MARSH") ? 1 : 0);
         }
         if (np.improvement != kNone) appeal += np.pillagedTurns > 0 ? -1 : rules_->improvements[static_cast<size_t>(np.improvement)].appeal;
-        if (const CityDistrict* cd = state_.districtAt(*n)) appeal += rules_->districts[static_cast<size_t>(cd->type)].appeal;
-        if (state_.wonderAt(*n) != kNone) appeal += 1;
-        if (campAt(*n)) appeal -= 1;
+        if (district[dir]) appeal += rules_->districts[static_cast<size_t>(district[dir]->type)].appeal;
+        if (wonder[dir] && wonder[dir]->building != kNone) appeal += 1;
+        if (campAt(*around[dir])) appeal -= 1;
     }
     // Alvar Aalto, Charles Correa (07): appeal across the city where they were used; Eiffel Tower, Golden Gate Bridge (03) in all.
     if (home && (!home->greatPeopleHere.empty() || (held & (bit(W::Eiffel) | bit(W::GoldenGate))) != 0))

@@ -236,6 +236,17 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         }
     }
     parks_ = std::any_of(state_.plots.begin(), state_.plots.end(), [](const Plot& p) { return p.park; });
+    std::vector<int16_t> landmasses;
+    for (const Plot& p : state_.plots) {
+        if (p.continent >= 0 && std::find(landmasses.begin(), landmasses.end(), p.continent) == landmasses.end()) landmasses.push_back(p.continent);
+    }
+    landFirst_.push_back(0);
+    for (const int16_t k : landmasses) {
+        for (size_t i = 0; i < state_.plots.size(); ++i) {
+            if (state_.plots[i].continent == k) landPlots_.push_back(static_cast<int32_t>(i));
+        }
+        landFirst_.push_back(static_cast<int32_t>(landPlots_.size()));
+    }
 }
 
 uint64_t Game::stateHash() const {
@@ -485,14 +496,14 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     const std::optional<Dir> d = state_.grid.directionTo(from, to);
     if (!d) return std::nullopt;
     const MoveTraits traits = moveTraits(unit);
-    return moveCost(unit, traits, moveLimits(unit, traits), from, to, *d);
+    return moveCost(unit, traits, moveLimits(unit, traits, to), from, to, *d);  // `to` is on the grid: a neighbour of `from`
 }
 
-Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) const {
+Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only) const {
     MoveLimits limits;
     limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
     auto block = [&](Hex h) {
-        if (state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
+        if ((!only || h == *only) && state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
     };
     for (const Unit& u : state_.units) {
         if (u.owner != unit.owner) block(u.pos);  // attacks and captures are their own commands
@@ -504,8 +515,9 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) co
         if (camp && state_.grid.normalize(camp->pos) == camp->pos && state_.plot(camp->pos).city == c.id) block(camp->pos);
     }
     limits.closed.assign(state_.players.size(), 0);
+    const PlayerId onlyOwner = only ? state_.plot(*only).owner : kNoPlayer;
     for (const Player& p : state_.players) {
-        if (p.id == unit.owner) continue;
+        if (p.id == unit.owner || (only && p.id != onlyOwner)) continue;
         uint8_t& closed = limits.closed[static_cast<size_t>(p.id)];
         // Music Censorship (04): no foreign Rock Band enters the territory.
         if (traits.rockBand && policyIs(p.id, "POLICY_MUSIC_CENSORSHIP")) closed |= 2;
@@ -609,7 +621,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
         return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost() + 1);  // embarking: 2 plus the water tile
     }
-    if (!bridge && !isLandPassable(state_, *rules_, to)) return std::nullopt;
+    if (!bridge && !isLandPassable(*rules_, p)) return std::nullopt;
     if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost() + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
@@ -643,18 +655,33 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         return owner.visibility[static_cast<size_t>(state_.grid.index(h))] != static_cast<uint8_t>(Visibility::Unrevealed);
     };
     if (!known(*t)) return std::nullopt;
-    const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
-    const std::vector<uint8_t> zoc = zocMap(*u);
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
     const MoveLimits limits = moveLimits(*u, traits);
+    const int start = state_.grid.index(u->pos);
+    const int goal = state_.grid.index(*t);
+    if (goal != start) {
+        // A goal no step can enter is out of reach, which the search would only learn by visiting every plot it can
+        // reach. The steps into it are those from its neighbours, each the opposite way to the one the neighbour lies.
+        if (keepDry && terrainOf(*rules_, state_.plot(*t)).water && !bridgeAt(*t)) return std::nullopt;
+        bool enterable = false;
+        for (int d = 0; d < kNumDirs && !enterable; ++d) {
+            const std::optional<Hex> from = state_.grid.neighbor(*t, static_cast<Dir>(d));
+            enterable = from && moveCost(*u, traits, limits, *from, *t, opposite(static_cast<Dir>(d)));
+        }
+        if (!enterable) return std::nullopt;
+    }
+    const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
+    const std::vector<uint8_t> zoc = zocMap(*u);
 
-    // The best arrival found at each plot: its turn and the plot it came from are kept one higher, so a plot not
-    // reached yet is all zeros and the table starts as a plain zero fill.
-    struct Node { int turn1; int prev1; int64_t moves; };
-    std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
+    // The best arrival found at each plot, read only where reached is set: its turn, the plot it came from (-1 for the
+    // start) and the moves left.
+    struct Node { int turn; int prev; int64_t moves; };
+    const size_t plots = static_cast<size_t>(state_.grid.size());
+    const std::unique_ptr<Node[]> best(new Node[plots]);
+    std::vector<uint8_t> reached(plots, 0);
     auto better = [](int turn, Fixed moves, const Node& than) {
-        return than.turn1 == 0 || (turn + 1 != than.turn1 ? turn + 1 < than.turn1 : moves.raw() > than.moves);
+        return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
     };
     struct QItem { int turn; int64_t negMoves; int index; };
     auto cmp = [](const QItem& a, const QItem& b) {
@@ -663,15 +690,14 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         return a.index > b.index;
     };
     std::priority_queue<QItem, std::vector<QItem>, decltype(cmp)> open(cmp);
-    const int start = state_.grid.index(u->pos);
-    best[static_cast<size_t>(start)] = {1, 0, u->movesLeft.raw()};
+    best[static_cast<size_t>(start)] = {0, -1, u->movesLeft.raw()};
+    reached[static_cast<size_t>(start)] = 1;
     open.push({0, -u->movesLeft.raw(), start});
-    const int goal = state_.grid.index(*t);
     while (!open.empty()) {
         QItem q = open.top();
         open.pop();
         const Node cur = best[static_cast<size_t>(q.index)];
-        if (cur.turn1 - 1 != q.turn || -cur.moves != q.negMoves) continue;  // stale
+        if (cur.turn != q.turn || -cur.moves != q.negMoves) continue;  // stale
         if (q.index == goal) break;
         Hex from = state_.grid.at(q.index);
         for (int d = 0; d < kNumDirs; ++d) {
@@ -680,7 +706,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
             auto cost = moveCost(*u, traits, limits, from, *n, static_cast<Dir>(d));
             if (!cost) continue;
-            int turn = cur.turn1 - 1;
+            int turn = cur.turn;
             Fixed mp = Fixed::fromRaw(cur.moves);
             if (mp <= Fixed()) {
                 ++turn;
@@ -695,17 +721,19 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             const int next = state_.grid.index(*n);
             if (!zoc.empty() && zoc[static_cast<size_t>(next)]) mp = Fixed();  // entering enemy ZOC ends the move
             Node& nb = best[static_cast<size_t>(next)];
-            if (better(turn, mp, nb)) {
-                nb = {turn + 1, q.index + 1, mp.raw()};
+            uint8_t& seen = reached[static_cast<size_t>(next)];
+            if (!seen || better(turn, mp, nb)) {
+                nb = {turn, q.index, mp.raw()};
+                seen = 1;
                 open.push({turn, -mp.raw(), next});
             }
         }
     }
-    if (best[static_cast<size_t>(goal)].turn1 == 0) return std::nullopt;
+    if (!reached[static_cast<size_t>(goal)]) return std::nullopt;
     std::vector<PathStep> path;
-    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev1 - 1) {
+    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev) {
         const Node& n = best[static_cast<size_t>(i)];
-        path.push_back({state_.grid.at(i), n.turn1 - 1, Fixed::fromRaw(n.moves)});
+        path.push_back({state_.grid.at(i), n.turn, Fixed::fromRaw(n.moves)});
     }
     std::reverse(path.begin(), path.end());
     return path;
@@ -814,11 +842,15 @@ void Game::refreshVisibility(PlayerId pid) {
             if (!lineOfSight(from, target, throughFeatures)) return;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
-                    for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
-                        const int16_t seen = state_.plots[i].continent;
-                        if (seen >= 0 && p.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed) &&
-                            std::find(knownLand.begin(), knownLand.end(), seen) == knownLand.end())
-                            knownLand.push_back(seen);
+                    // Each landmass with a plot revealed, looked for until its first.
+                    for (size_t i = 0; i + 1 < landFirst_.size(); ++i) {
+                        for (int32_t j = landFirst_[i]; j < landFirst_[i + 1]; ++j) {
+                            const size_t at = static_cast<size_t>(landPlots_[static_cast<size_t>(j)]);
+                            if (at >= p.visibility.size()) break;  // the rest lie further on
+                            if (p.visibility[at] == static_cast<uint8_t>(Visibility::Unrevealed)) continue;
+                            knownLand.push_back(state_.plots[at].continent);
+                            break;
+                        }
                     }
                     landGathered = true;
                 }

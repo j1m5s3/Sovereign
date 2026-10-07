@@ -350,6 +350,7 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
                 p.government = r.government("GOVERNMENT_CHIEFDOM");
                 p.policies.assign(static_cast<size_t>(r.governments[at(p.government)].totalSlots()), kNone);
                 p.policies[0] = r.policy("POLICY_MUSIC_CENSORSHIP");
+                s.plot({8, 4}).owner = 1;  // the band's own plot too
             }
             w = addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
             band = addUnit(s, "UNIT_ROCK_BAND", 0, {8, 4});
@@ -368,6 +369,9 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
     CHECK(!censored->moveCost(unit(*censored, band), {8, 5}, {9, 5}));         // no foreign Rock Band enters
     CHECK(!censored->moveCost(unit(*censored, band), {9, 5}, {10, 4}));        // nor moves on inside
     CHECK(censored->moveCost(unit(*censored, w), {8, 5}, {9, 5}).has_value()); // other units do
+    const auto stay = censored->findPath(band, {8, 4});  // a band already inside may stay where it is
+    REQUIRE(stay.has_value());
+    CHECK_EQ(stay->size(), 1u);
     auto closed = setup(Case::ClosedBorders);
     CHECK(!closed->moveCost(unit(*closed, w), {8, 5}, {9, 5}));                 // closed borders
     CHECK(closed->moveCost(unit(*closed, w), {9, 5}, {10, 4}).has_value());     // a unit already inside moves on

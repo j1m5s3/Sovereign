@@ -6,12 +6,6 @@
 namespace sov {
 
 namespace {
-// A step in each direction (NE, E, SE, SW, W, NW) in offset coordinates. The column step depends on the row's
-// parity, odd rows sitting half a hex east: the axial steps (1,-1) (1,0) (0,1) (-1,1) (-1,0) (0,-1) carried
-// through toAxial and toOffset.
-constexpr int8_t kStepX[2][kNumDirs] = {{0, 1, 0, -1, -1, -1}, {1, 1, 1, 0, -1, 0}};
-constexpr int8_t kStepY[kNumDirs] = {-1, 0, 1, 1, 0, -1};
-
 int64_t floorDiv(int64_t a, int64_t b) {
     int64_t q = a / b;
     if ((a % b != 0) && ((a < 0) != (b < 0))) --q;
@@ -55,11 +49,6 @@ Hex toOffset(Axial a) {
 int axialDistance(Axial a, Axial b) {
     int dq = a.q - b.q, dr = a.r - b.r;
     return (std::abs(dq) + std::abs(dr) + std::abs(dq + dr)) / 2;
-}
-
-std::optional<Hex> HexGrid::neighbor(Hex h, Dir d) const {
-    const int i = static_cast<int>(d);
-    return normalize(Hex{h.x + kStepX[h.y & 1][i], h.y + kStepY[i]});
 }
 
 std::optional<Dir> HexGrid::directionTo(Hex a, Hex b) const {

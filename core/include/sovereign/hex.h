@@ -34,6 +34,12 @@ SOV_API Axial toAxial(Hex h);
 SOV_API Hex toOffset(Axial a);
 SOV_API int axialDistance(Axial a, Axial b);
 
+// A step in each direction (NE, E, SE, SW, W, NW) in offset coordinates. The column step depends on the row's
+// parity, odd rows sitting half a hex east: the axial steps (1,-1) (1,0) (0,1) (-1,1) (-1,0) (0,-1) carried
+// through toAxial and toOffset.
+inline constexpr int8_t kHexStepX[2][kNumDirs] = {{0, 1, 0, -1, -1, -1}, {1, 1, 1, 0, -1, 0}};
+inline constexpr int8_t kHexStepY[kNumDirs] = {-1, 0, 1, 1, 0, -1};
+
 class SOV_API HexGrid {
 public:
     HexGrid() = default;
@@ -57,7 +63,10 @@ public:
     int32_t index(Hex h) const { return h.y * w_ + h.x; }
     Hex at(int32_t index) const { return Hex{index % w_, index / w_}; }
 
-    std::optional<Hex> neighbor(Hex h, Dir d) const;
+    std::optional<Hex> neighbor(Hex h, Dir d) const {
+        const int i = static_cast<int>(d);
+        return normalize(Hex{h.x + kHexStepX[h.y & 1][i], h.y + kHexStepY[i]});
+    }
     // Direction from a to an adjacent b, if adjacent.
     std::optional<Dir> directionTo(Hex a, Hex b) const;
     int distance(Hex a, Hex b) const;
