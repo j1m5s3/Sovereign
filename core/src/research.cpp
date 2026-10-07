@@ -145,32 +145,38 @@ Game::Output Game::outputPerTurn(PlayerId player) const {
 }
 
 bool Game::boostMet(PlayerId player, const Boost& b) const {
-    std::optional<ImprovedPlots> improved;
-    return boostMet(player, b, improved);
+    BoostScan scan;
+    return boostMet(player, b, scan);
 }
 
-bool Game::boostMet(PlayerId player, const Boost& b, std::optional<ImprovedPlots>& improved) const {
+bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
+    // The player's cities and units, listed on first need; how many of them pass a test.
+    auto mine = [&](std::optional<std::vector<size_t>>& list, const auto& all) -> const std::vector<size_t>& {
+        if (!list) {
+            list.emplace();
+            for (size_t i = 0; i < all.size(); ++i) {
+                if (all[i].owner == player) list->push_back(i);
+            }
+        }
+        return *list;
+    };
     auto countCities = [&](auto pred) {
         int n = 0;
-        for (const City& c : state_.cities) {
-            if (c.owner == player && pred(c)) ++n;
-        }
+        for (size_t i : mine(scan.cities, state_.cities)) n += pred(state_.cities[i]) ? 1 : 0;
         return n;
     };
     auto countUnits = [&](auto pred) {
         int n = 0;
-        for (const Unit& u : state_.units) {
-            if (u.owner == player && pred(u)) ++n;
-        }
+        for (size_t i : mine(scan.units, state_.units)) n += pred(state_.units[i]) ? 1 : 0;
         return n;
     };
     // A civ's unique unit stands in for the unit it replaces.
     auto unitIs = [&](TypeIndex type, TypeIndex ref) { return type == ref || rules_->units[static_cast<size_t>(type)].replaces == ref; };
     // The player's improved plots, counted on first need; a count from one of their lists.
     auto plots = [&]() -> const ImprovedPlots& {
-        if (!improved) improved = improvedPlots(player);
-        return *improved;
+        if (!scan.improved) scan.improved = improvedPlots(player);
+        return *scan.improved;
     };
     auto count = [](const std::vector<int>& by, TypeIndex k) { return k >= 0 && static_cast<size_t>(k) < by.size() ? by[static_cast<size_t>(k)] : 0; };
     auto wonderEra = [&](const BuildingType& bt) {
@@ -653,15 +659,16 @@ void Game::allianceEurekas(PlayerId pid) {
 }
 
 void Game::updateBoosts(PlayerId pid) {
-    std::optional<ImprovedPlots> improved;  // the player's improved plots, counted for the first boost that needs them
+    BoostScan scan;  // the player's improved plots, cities and units, gathered for the first boost that needs them
     for (int civic = 0; civic < 2; ++civic) {
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
         const TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics : state_.players[static_cast<size_t>(pid)].techs;
         for (size_t i = 0; i < nodes.size(); ++i) {
             const Boost& b = nodes[i].boost;
             if (b.percent <= 0 || b.kind == BoostKind::None || b.kind == BoostKind::NotTracked) continue;
-            if (t.done[i] || t.boosted[i] || !boostMet(pid, b, improved)) continue;
+            if (t.done[i] || t.boosted[i] || !boostMet(pid, b, scan)) continue;
             grantBoost(pid, civic != 0, i);
+            scan = BoostScan{};  // a grant changes none of these; gathering them again keeps later checks from relying on it
         }
     }
 }

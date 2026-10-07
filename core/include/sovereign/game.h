@@ -705,7 +705,13 @@ private:
         std::vector<int> byResource;                 // per resource: plots an improvement works it on
     };
     ImprovedPlots improvedPlots(PlayerId player) const;
-    bool boostMet(PlayerId player, const Boost& boost, std::optional<ImprovedPlots>& improved) const;  // counts them on first need
+    // What one civ's Eureka and Inspiration checks share, each part gathered on first need: its improved plots and
+    // the indices of its cities and units.
+    struct BoostScan {
+        std::optional<ImprovedPlots> improved;
+        std::optional<std::vector<size_t>> cities, units;
+    };
+    bool boostMet(PlayerId player, const Boost& boost, BoostScan& scan) const;
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
     void eventBoost(PlayerId p, BoostKind kind, TypeIndex ref = kNone);  // boosts of this event kind (a kill, a camp...)
     CommandError validateBuilder(const Command& c) const;
