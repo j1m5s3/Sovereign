@@ -21,9 +21,9 @@ Every change is measured with `sovsim --bench 8 --players 6 --size MAPSIZE_SMALL
    - farms, Granaries, Water Mills and Aqueducts before a city reaches its housing cap, not after.
 2. **Done (kept): Gold that works:** the purchase reserve falls to 30 + 5 per city (was 60 + 15), so idle Gold buys Builders, Settlers and buildings sooner.
    - Also kept: Builders choose the improvement worth most on the plot: the resource's own improvement first, then yields, and housing for a city near its cap.
-3. **City roles:**
-   - the cities with the most food and production train Settlers while free sites last;
-   - the rest build infrastructure (Campus, Library, Market) and their garrisons.
+3. **Done (kept): science cities.** Settler pumps (X3) were dropped earlier as neutral.
+   - A city of population 4 or more weighs its Campus +150 and the Campus's buildings +100.
+   - Research weighs +8 the techs that open a science building.
 4. **Opening build order:**
    - the capital follows a fixed opening (Scout, Slinger or Warrior, Settler, Builder, Settler);
    - then the planner takes over.
@@ -40,3 +40,14 @@ Every change is measured with `sovsim --bench 8 --players 6 --size MAPSIZE_SMALL
 | X1 + X2 + X5 (kept) | 7.6 | 44.6 | 26.8 | 19.1 | 61.1 | 40.0 | 93.5 | 156 |
 
 Science +11%, production +13% and population +7%, but era 2.6 stays.
+
+Against the new main (after #195; 8 seeds, turn 200):
+
+| Build | cities | pop | techs | civics | era | science | culture | prod | gold |
+|---|---|---|---|---|---|---|---|---|---|
+| main | 7.5 | 44.5 | 27.7 | 20.7 | 2.7 | 56.8 | 49.2 | 95.2 | 174 |
+| R1 Campus in cities of 4+ | 7.6 | 44.5 | 28.8 | 20.6 | 2.8 | 65.8 | 47.8 | 94.3 | 161 |
+| R2 research toward science buildings | 7.2 | 43.7 | 28.0 | 20.6 | 2.7 | 57.7 | 48.7 | 97.3 | 175 |
+| R1 + R2 (kept) | 7.7 | 45.6 | 28.9 | 20.7 | 2.9 | 69.2 | 49.7 | 95.8 | 171 |
+| R1 from population 3, + R2 | 7.1 | 43.3 | 29.1 | 20.7 | 2.9 | 68.4 | 48.9 | 92.3 | 157 |
+| R1 doubled, + R2 | 7.2 | 42.8 | 28.9 | 20.4 | 2.9 | 69.2 | 43.8 | 88.6 | 163 |
