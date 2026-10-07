@@ -20,7 +20,7 @@
     ]
    },
    "text": "grants 1 Great Prophet where player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time); grants 1 Apostle where NOT player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time)",
-   "untrackedEffects": [
+   "codeEffects": [
     "grants 1 Apostle where NOT player can ever earn great person class (GreatPersonClass=Great Prophet) (one-time)"
    ],
    "effects": [
@@ -58,7 +58,7 @@
    "text": "adjust city yield per flood (YieldType=Faith, Amount=1)",
    "housing": 3,
    "amenities": 1,
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust city yield per flood (YieldType=Faith, Amount=1)"
    ]
   },
@@ -137,7 +137,7 @@
     ]
    },
    "text": "+2 Great General points from the district for this city's districts where district is Encampment; +2 Great Admiral points from the district for this city's districts where district is Harbor; +2 Great Engineer points from the district for this city's districts where district is Industrial Zone; +2 Great Merchant points from the district for this city's districts where district is Commercial Hub; +2 Great Prophet points from the district for this city's districts where district is Holy Site; +2 Great Scientist points from the district for this city's districts where district is Campus; +2 Great Writer points from the district for this city's districts where district is Theater Square; 25% cheaper Great Person patronage with Faith",
-   "untrackedEffects": [
+   "codeEffects": [
     "+2 Great General points from the district for this city's districts where district is Encampment",
     "+2 Great Admiral points from the district for this city's districts where district is Harbor",
     "+2 Great Engineer points from the district for this city's districts where district is Industrial Zone",
@@ -171,7 +171,7 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "ability Great Lighthouse Embarked Movement for your units"
    ]
   },
@@ -243,7 +243,7 @@
    "requiresAny": [
     "BUILDING_ARENA"
    ],
-   "untrackedEffects": [
+   "codeEffects": [
     "+2 Loyalty per turn in all your cities where within 6 tiles of Colosseum"
    ]
   },
@@ -276,7 +276,7 @@
    "greatWorkSlots": {
     "WRITING": 2
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "boost from Great Scientist"
    ],
    "effects": [
@@ -360,7 +360,7 @@
     ]
    },
    "text": "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities; Industrial Zone gets +1 Production per adjacent Mountain in all your cities; Theater Square gets +1 Culture per adjacent Mountain in all your cities",
-   "untrackedEffects": [
+   "codeEffects": [
     "Commercial Hub gets +1 Gold per adjacent Mountain in all your cities",
     "Industrial Zone gets +1 Production per adjacent Mountain in all your cities",
     "Theater Square gets +1 Culture per adjacent Mountain in all your cities"
@@ -418,7 +418,7 @@
    "greatWorkSlots": {
     "PALACE": 2
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "grant city owner influence token wonder (Amount=2) in all cities where city has Apadana"
    ]
   },
@@ -432,7 +432,7 @@
     "nextToDistrict": "DISTRICT_HARBOR"
    },
    "text": "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer); +1 Science, +1 Faith, +1 Culture on this city's tiles where tile is Coast and Lake and NOT tile is a lake",
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust unit great person charges (Amount=1) for your units where great person type matches (GreatPersonClassType=Great Engineer)"
    ]
   },
@@ -538,7 +538,7 @@
    "greatWorkSlots": {
     "RELIC": 2
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "grants promotion Martyr for your units"
    ]
   },
@@ -554,7 +554,7 @@
     "nextToDistrict": "DISTRICT_HOLY_SITE"
    },
    "text": "grants 2 Guru (one-time); ability Guide [ability Guru Movement Area of Effect [+1 Movement where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; ability Sage [ability Guru Sage Area of Effect [+5 Combat Strength in combat where adjacent to a friendly Guru unit] for your units where adjacent to a friendly Religious All unit] for your units; 30% cheaper to purchase Guru in all your cities",
-   "untrackedEffects": [
+   "codeEffects": [
     "30% cheaper to purchase Guru in all your cities"
    ],
    "effects": [
@@ -588,7 +588,7 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_SCIENTIST": 2
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "trade routes from other civs give them +1 Science",
     "trade routes from other civs give them +1 Gold",
     "+2 Science for each trade route other civs send here",
@@ -610,7 +610,7 @@
     ]
    },
    "text": "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time); +1 Food on this city's tiles where tile is a lake in all cities where player owns object; +1 Production on this city's tiles where tile is a lake in all cities where player owns object",
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time)"
    ]
   },
@@ -631,7 +631,7 @@
     ]
    },
    "text": "+15% Science where suzerain of a Minor Civ Scientific city-state (x1); +15% Faith where suzerain of a Minor Civ Religious city-state (x1); +15% Gold where suzerain of a Minor Civ Trade city-state (x1); +15% Culture where suzerain of a Minor Civ Cultural city-state (x1); +15% Production toward all units where suzerain of a Minor Civ Militaristic city-state (x1); adjust all building production modifier (Amount=15) where suzerain of a Minor Civ Industrial city-state (x1); +15% Production toward districts where suzerain of a Minor Civ Industrial city-state (x1); +15% Science in all your cities where suzerain of a Minor Civ Scientific city-state (x2); +15% Faith in all your cities where suzerain of a Minor Civ Religious city-state (x2); +15% Gold in all your cities where suzerain of a Minor Civ Trade city-state (x2); +15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2); +15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2); adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2); +15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2); grants 3 Envoy(s) (one-time)",
-   "untrackedEffects": [
+   "codeEffects": [
     "+15% Science where suzerain of a Minor Civ Scientific city-state (x1)",
     "+15% Faith where suzerain of a Minor Civ Religious city-state (x1)",
     "+15% Gold where suzerain of a Minor Civ Trade city-state (x1)",
@@ -707,7 +707,7 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ENGINEER": 2
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "+1 extra copy of Naval Melee units when trained in all your cities",
     "+1 extra copy of Naval Ranged units when trained in all your cities",
     "+1 extra copy of Naval Carrier units when trained in all your cities"
@@ -733,7 +733,7 @@
     "GREAT_PERSON_CLASS_MERCHANT": 2
    },
    "tradeCapacity": 1,
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust city trade route yield per local bonus resource for domestic (YieldType=Gold, Amount=2)",
     "international routes +2 Gold per bonus resource in origin"
    ]
@@ -773,7 +773,7 @@
     "river": true
    },
    "text": "adjust player suzerain favor multiplier (Amount=100)",
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust player suzerain favor multiplier (Amount=100)"
    ]
   },
@@ -810,7 +810,7 @@
    "greatWorkSlots": {
     "RELIC": 3
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "Tourism from scaled 200%"
    ]
   },
@@ -824,7 +824,7 @@
     "river": true
    },
    "text": "adjust player era score per pride moment (Amount=1, MinScore=2)",
-   "untrackedEffects": [
+   "codeEffects": [
     "adjust player era score per pride moment (Amount=1, MinScore=2)"
    ]
   },
@@ -848,7 +848,7 @@
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
    },
-   "untrackedEffects": [
+   "codeEffects": [
     "international routes +2 Gold per luxury at destination",
     "grants the cheapest building of the district in all your cities where NOT city on capital's continent (one-time)"
    ]
@@ -975,7 +975,7 @@
     ]
    },
    "text": "city is always loyal in all your cities where within 6 tiles of Statue of Liberty; +4 Diplomatic Victory Points (one-time)",
-   "untrackedEffects": [
+   "codeEffects": [
     "city is always loyal in all your cities where within 6 tiles of Statue of Liberty"
    ],
    "effects": [
@@ -1102,7 +1102,7 @@
     ]
    },
    "text": "Tourism from Seaside Resort scaled 200% in all your cities; religious Tourism is never reduced",
-   "untrackedEffects": [
+   "codeEffects": [
     "Tourism from Seaside Resort scaled 200% in all your cities",
     "religious Tourism is never reduced"
    ]
@@ -1122,10 +1122,12 @@
    },
    "text": "+4 Appeal; roads within 1 tiles; +100% Tourism from improvements; +100% Tourism from National Parks; map remove cliffs in direction (Radius=1)",
    "amenities": 3,
-   "untrackedEffects": [
+   "codeEffects": [
     "roads within 1 tiles",
     "+100% Tourism from improvements",
-    "+100% Tourism from National Parks",
+    "+100% Tourism from National Parks"
+   ],
+   "untrackedEffects": [
     "map remove cliffs in direction (Radius=1)"
    ]
   },
@@ -1186,7 +1188,7 @@
     "nextToDistrict": "DISTRICT_NEIGHBORHOOD"
    },
    "text": "Rainforest +1 Appeal in all your cities; Marsh +1 Appeal in all your cities; adjust modified free power in city (Amount=200) in all your cities; adjust city green energy tourism (Amount=100) in all your cities",
-   "untrackedEffects": [
+   "codeEffects": [
     "Rainforest +1 Appeal in all your cities",
     "Marsh +1 Appeal in all your cities",
     "adjust modified free power in city (Amount=200) in all your cities",
