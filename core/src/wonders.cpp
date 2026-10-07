@@ -85,8 +85,15 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
 
 bool Game::anyWonderPlot(CityId id, TypeIndex building) const {
     const City* c = state_.city(id);
+    if (!c) return false;
+    // canPlaceWonder on each plot, with what does not depend on the plot looked at once: the buildings the city needs
+    // first, and that the plot is the city's own.
+    if (building >= 0 && at(building) < rules_->buildings.size()) {
+        const std::vector<TypeIndex>& needs = rules_->buildings[at(building)].prereqsAny;
+        if (!needs.empty() && std::none_of(needs.begin(), needs.end(), [&](TypeIndex pre) { return cityHasBuilding(*c, *rules_, pre); })) return false;
+    }
     bool any = false;
-    if (c) state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || canPlaceWonder(*c, building, h); });
+    state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || (state_.plot(h).city == c->id && canPlaceWonder(*c, building, h)); });
     return any;
 }
 

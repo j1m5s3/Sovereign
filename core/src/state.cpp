@@ -8,6 +8,9 @@ namespace sov {
 
 bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building) {
     if (city.has(building)) return true;
+    // Or a civ unique replacing it, looked for only when it has one (or the rules lack it).
+    const std::vector<TypeIndex>* uniques = rules.buildingsReplacing(building);
+    if (uniques && uniques->empty()) return false;
     for (TypeIndex b : city.buildings) {
         if (rules.buildings[static_cast<size_t>(b)].replaces == building) return true;
     }

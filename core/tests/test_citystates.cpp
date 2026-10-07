@@ -483,6 +483,28 @@ TEST(mexico_city_extends_regional_reach) {
     CHECK(g->state().city(far)->powerSupply >= 3);  // the Coal Power Plant
 }
 
+// Mexico City reaches farther from Industrial Zone and Water Park buildings too: a Factory's Production 8 tiles away,
+// an Aquarium's Amenity 11 tiles away.
+TEST(mexico_city_extends_industrial_and_water_park_reach) {
+    const auto setup = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        addCity(s, 0, {12, 6}, false, 3);
+        addCity(s, 0, {12, 11}, false, 3);
+        City& capital = s.cities[0];
+        for (const char* b : {"BUILDING_FACTORY", "BUILDING_AQUARIUM"}) capital.buildings.push_back(rules().building(b));
+        std::sort(capital.buildings.begin(), capital.buildings.end());
+        return s;
+    };
+    auto plain = Game::fromScenario(rules(), setup("CITYSTATE_MITLA"));
+    auto g = Game::fromScenario(rules(), setup("CITYSTATE_MEXICO_CITY"));
+    const CityId eight = g->state().cities[3].id, eleven = g->state().cities[4].id;
+    REQUIRE(g->state().grid.distance(g->state().cities[0].pos, g->state().city(eight)->pos) == 8);
+    REQUIRE(g->state().grid.distance(g->state().cities[0].pos, g->state().city(eleven)->pos) == 11);
+    const size_t production = static_cast<size_t>(YieldType::Production);
+    CHECK_EQ(g->cityReport(eight).yields[production], plain->cityReport(eight).yields[production] + Fixed::fromInt(3));  // the Factory
+    CHECK_EQ(g->cityReport(eleven).amenities, plain->cityReport(eleven).amenities + 1);  // the Aquarium
+}
+
 TEST(bandar_brunei_and_mogadishu_help_traders) {
     // A route from player 0's capital to the city-state, through player 1's city where player 0 has a Trading Post.
     const auto withRoute = [](const char* cityState, bool post = true) {

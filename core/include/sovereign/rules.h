@@ -1350,6 +1350,11 @@ public:
     // Built when the rules load; call indexModifiers() again after changing `modifiers`.
     const std::vector<uint32_t>& playerModifiers(ModEffect effect) const;
     const std::vector<uint32_t>& cityModifiers(ModEffect effect) const;
+    // The same city modifiers split by whether a policy brings them: those no policy brings, by effect, and each
+    // policy's, of every effect (null for an index the rules lack). A pass over a city's modifiers looks at a policy's
+    // only when the city's owner has slotted it. Built by indexModifiers().
+    const std::vector<uint32_t>& cityModifiersBesidePolicies(ModEffect effect) const;
+    const std::vector<uint32_t>* policyCityModifiers(TypeIndex policy) const;
     // The city modifiers of plot yields, each listed once: under the improvement, resource, feature or terrain (in
     // that order of preference) its subject requirements all need, or as unkeyed when they need none of those. Only a
     // plot's own lists and the unkeyed one can hold modifiers that apply to it. Built by indexModifiers().
@@ -1378,8 +1383,14 @@ public:
     // The civ's dynasty, or null when it has none.
     const Dynasty* dynastyOf(TypeIndex civ) const;
     TypeIndex mapSize(const std::string& id) const;
-    // The civ's unique unit replacing `base` (kNone: none, `base` itself stays).
+    // The civ's unique unit or building replacing `base` (kNone: none, `base` itself stays).
     TypeIndex uniqueUnitFor(TypeIndex civ, TypeIndex base) const;
+    TypeIndex uniqueBuildingFor(TypeIndex civ, TypeIndex base) const;
+    // The civ uniques replacing this building or unit (those whose `replaces` it is), in index order; null for an
+    // index the rules lack. Built when the rules load; call indexUniques() again after changing a `replaces`.
+    const std::vector<TypeIndex>* buildingsReplacing(TypeIndex building) const { return replacing(buildingsReplacing_, buildings.size(), building); }
+    const std::vector<TypeIndex>* unitsReplacing(TypeIndex unit) const { return replacing(unitsReplacing_, units.size(), unit); }
+    void indexUniques();
     TypeIndex speed(const std::string& id) const;
     // Terrain with this climate base and relief, or kNone.
     TypeIndex terrainFor(const std::string& base, Relief relief) const;
@@ -1415,7 +1426,13 @@ private:
     std::array<Fixed, static_cast<size_t>(HotGlobal::Count)> hotGlobals_{};  // by HotGlobal: global(hotGlobalName(g))
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
+    std::vector<std::vector<uint32_t>> cityModsBesidePolicies_;                  // by ModEffect (indexModifiers)
+    std::vector<std::vector<uint32_t>> policyCityMods_;                          // by policy (indexModifiers)
     PlotModifiers plotYieldMods_;
+    std::vector<std::vector<TypeIndex>> buildingsReplacing_, unitsReplacing_;  // by building and unit (indexUniques)
+    static const std::vector<TypeIndex>* replacing(const std::vector<std::vector<TypeIndex>>& by, size_t count, TypeIndex i) {
+        return by.size() == count && i >= 0 && static_cast<size_t>(i) < count ? &by[static_cast<size_t>(i)] : nullptr;
+    }
 };
 
 SOV_API uint64_t fnv1a(const void* data, size_t size, uint64_t h = 0xCBF29CE484222325ull);

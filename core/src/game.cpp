@@ -240,6 +240,15 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     suzerainEnvoys_ = rules_->globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain);
     touristTourism_ = rules_->globalInt("TOURISM_TOURISM_TO_MOVE_CITIZEN");
     touristCulture_ = rules_->globalInt("TOURISM_CULTURE_PER_CITIZEN");
+    listWatchedBoosts();
+    pamukkale_ = rules_->feature("FEATURE_PAMUKKALE");
+    fartherDistricts_[0] = rules_->district("DISTRICT_INDUSTRIAL_ZONE");
+    fartherDistricts_[1] = rules_->district("DISTRICT_ENTERTAINMENT_COMPLEX");
+    fartherDistricts_[2] = rules_->district("DISTRICT_WATER_PARK");
+    formationCivics_[0] = rules_->civic("CIVIC_NATIONALISM");
+    formationCivics_[1] = rules_->civic("CIVIC_MOBILIZATION");
+    formationSchools_[0] = rules_->building("BUILDING_MILITARY_ACADEMY");
+    formationSchools_[1] = rules_->building("BUILDING_SEAPORT");
     abilityGrants_.resize(rules_->units.size());
     for (uint32_t i : rules_->playerModifiers(ModEffect::GrantAbility)) {
         const std::vector<std::string>& classes = rules_->abilities[static_cast<size_t>(rules_->modifiers[i].ability)].classes;
@@ -873,7 +882,52 @@ void Game::refreshVisibility(PlayerId pid) {
     std::vector<int16_t> knownLand;     // landmasses it had seen before, gathered at the first new land plot
     bool landGathered = false;
     Unit* finder = nullptr;
+    // A plot seen for the first time: the landmass or natural wonder on it may be new to the player.
+    const auto firstSight = [&](Hex target) {
+        if (const int16_t k = state_.plot(target).continent; k >= 0) {
+            if (!landGathered) {
+                // Each landmass with a plot revealed, looked for until its first.
+                for (size_t i = 0; i + 1 < landFirst_.size(); ++i) {
+                    for (int32_t j = landFirst_[i]; j < landFirst_[i + 1]; ++j) {
+                        const size_t at = static_cast<size_t>(landPlots_[static_cast<size_t>(j)]);
+                        if (at >= p.visibility.size()) break;  // the rest lie further on
+                        if (p.visibility[at] == static_cast<uint8_t>(Visibility::Unrevealed)) continue;
+                        knownLand.push_back(state_.plots[at].continent);
+                        break;
+                    }
+                }
+                landGathered = true;
+            }
+            if (std::find(knownLand.begin(), knownLand.end(), k) == knownLand.end()) {
+                knownLand.push_back(k);
+                landfalls.push_back(k);
+            }
+        }
+        const TypeIndex f = state_.plot(target).feature;
+        if (f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder && std::find(discovered.begin(), discovered.end(), f) == discovered.end()) {
+            bool known = false;
+            for (int i = 0; i < state_.grid.size() && !known; ++i) {
+                known = state_.plots[static_cast<size_t>(i)].feature == f && p.visibility[static_cast<size_t>(i)] != static_cast<uint8_t>(Visibility::Unrevealed);
+            }
+            if (!known) {
+                discovered.push_back(f);
+                if (finder && !typeOf(*rules_, *finder).promotionClass.empty()) finder->xp += rules_->globalInt("EXPERIENCE_REVEAL_NATURAL_WONDER");
+            }
+        }
+    };
+    // Where each look so far was from, how far it reached and whether it saw through features: a later look from the
+    // same plot, reaching no further the same way, sees nothing the earlier one did not, and is skipped.
+    struct Look {
+        Hex from;
+        int range;
+        bool throughFeatures;
+    };
+    std::vector<Look> looks;
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
+        for (const Look& l : looks) {
+            if (l.from == from && l.throughFeatures == throughFeatures && l.range >= range) return;
+        }
+        looks.push_back({from, range, throughFeatures});
         const TerrainType& viewer = terrainOf(*rules_, state_.plot(from));
         range += viewer.sightModifier;
         // lineOfSight(from, target), with the step to the target known from the walk.
@@ -882,37 +936,7 @@ void Game::refreshVisibility(PlayerId pid) {
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
             if (v == static_cast<uint8_t>(Visibility::Visible)) return;  // already seen in this refresh: nothing more to learn
             if (!state_.grid.betweenStep(from, step, clear)) return;
-            if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
-                if (!landGathered) {
-                    // Each landmass with a plot revealed, looked for until its first.
-                    for (size_t i = 0; i + 1 < landFirst_.size(); ++i) {
-                        for (int32_t j = landFirst_[i]; j < landFirst_[i + 1]; ++j) {
-                            const size_t at = static_cast<size_t>(landPlots_[static_cast<size_t>(j)]);
-                            if (at >= p.visibility.size()) break;  // the rest lie further on
-                            if (p.visibility[at] == static_cast<uint8_t>(Visibility::Unrevealed)) continue;
-                            knownLand.push_back(state_.plots[at].continent);
-                            break;
-                        }
-                    }
-                    landGathered = true;
-                }
-                if (std::find(knownLand.begin(), knownLand.end(), k) == knownLand.end()) {
-                    knownLand.push_back(k);
-                    landfalls.push_back(k);
-                }
-            }
-            const TypeIndex f = state_.plot(target).feature;
-            if (v == static_cast<uint8_t>(Visibility::Unrevealed) && f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder &&
-                std::find(discovered.begin(), discovered.end(), f) == discovered.end()) {
-                bool known = false;
-                for (int i = 0; i < state_.grid.size() && !known; ++i) {
-                    known = state_.plots[static_cast<size_t>(i)].feature == f && p.visibility[static_cast<size_t>(i)] != static_cast<uint8_t>(Visibility::Unrevealed);
-                }
-                if (!known) {
-                    discovered.push_back(f);
-                    if (finder && !typeOf(*rules_, *finder).promotionClass.empty()) finder->xp += rules_->globalInt("EXPERIENCE_REVEAL_NATURAL_WONDER");
-                }
-            }
+            if (v == static_cast<uint8_t>(Visibility::Unrevealed)) firstSight(target);
             v = static_cast<uint8_t>(Visibility::Visible);
         });
     };

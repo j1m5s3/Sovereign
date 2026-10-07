@@ -699,6 +699,10 @@ private:
     void processResearch(PlayerId p, Fixed science, Fixed culture);
     void completeNode(PlayerId p, bool civic, TypeIndex node);
     void updateBoosts(PlayerId p);
+    // The techs (0) and civics (1) whose boost updateBoosts looks for, by index in order: those with a percent and a
+    // condition it can see (an event's boost comes as the event happens, eventBoost). Listed when the game is made.
+    std::vector<uint32_t> watchedBoosts_[2];
+    void listWatchedBoosts();
     // The plots a player owns with an improvement, counted in one pass for all the boosts checked together.
     struct ImprovedPlots {
         int total = 0;
@@ -929,6 +933,14 @@ private:
     int suzerainEnvoys_ = 0;                  // INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN (isSuzerain)
     int touristTourism_ = 0;                  // TOURISM_TOURISM_TO_MOVE_CITIZEN (visitingTourists)
     int touristCulture_ = 0;                  // TOURISM_CULTURE_PER_CITIZEN (domesticTourists)
+    TypeIndex pamukkale_ = kNone;             // FEATURE_PAMUKKALE: an amenity per natural wonder in its city's land (cityReport)
+    // The districts whose buildings Mexico City's suzerain reaches farther from: Industrial Zone, Entertainment Complex
+    // and Water Park (cityReport).
+    TypeIndex fartherDistricts_[3] = {kNone, kNone, kNone};
+    // Corps and Armies trained whole (canTrainFormation): the civics for each (Nationalism, Mobilization), and the
+    // buildings land units and ships need (Military Academy, Seaport).
+    TypeIndex formationCivics_[2] = {kNone, kNone};
+    TypeIndex formationSchools_[2] = {kNone, kNone};
     // By unit type: the GrantAbility player modifiers whose ability covers its class, in modifier order (unitAbilities).
     std::vector<std::vector<uint32_t>> abilityGrants_;
     std::vector<uint64_t> abilityKinds_;  // by ability: the effectBits of its effects' kinds (abilitiesWithEffects)

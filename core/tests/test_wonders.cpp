@@ -310,20 +310,25 @@ TEST(a_wonder_needs_its_building_first) {
     // The Great Library: next to a Campus, in a city with a Library (03: BuildingPrereqs).
     GameState s = wonderState();
     s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {6, 6}, true});
+    s.players[0].civics.done[at(rules().civic("CIVIC_RECORDED_HISTORY"))] = 1;
     auto without = Game::fromScenario(rules(), s);
     const TypeIndex library = wonder("BUILDING_GREAT_LIBRARY");
+    const ProductionItem item{ProductionKind::Building, library};
     REQUIRE(!rules().buildings[at(library)].prereqsAny.empty());
     CHECK(!without->canPlaceWonder(without->state().cities[0], library, {7, 6}));
+    CHECK(!without->canProduce(without->state().cities[0], item));
     s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
     std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
     auto with = Game::fromScenario(rules(), std::move(s));
     CHECK(with->canPlaceWonder(with->state().cities[0], library, {7, 6}));
+    CHECK(with->canProduce(with->state().cities[0], item));
     // A civ's unique building counts as the one it replaces: the Aztecs' Calmecac is their Library.
     GameState t = without->state();
     t.cities[0].buildings.push_back(rules().building("BUILDING_CALMECAC"));
     std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
     auto aztec = Game::fromScenario(rules(), std::move(t));
     CHECK(aztec->canPlaceWonder(aztec->state().cities[0], library, {7, 6}));
+    CHECK(aztec->canProduce(aztec->state().cities[0], item));
 }
 
 TEST(the_great_library_gives_a_eureka_when_a_rival_recruits_a_great_scientist) {

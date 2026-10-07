@@ -2486,6 +2486,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         return false;
     }
     indexModifiers();
+    indexUniques();
     return true;
 }
 
@@ -2522,15 +2523,32 @@ const std::vector<uint32_t>& modsWith(const std::vector<std::vector<uint32_t>>& 
 
 const std::vector<uint32_t>& Rules::playerModifiers(ModEffect effect) const { return modsWith(playerModsByEffect_, effect); }
 const std::vector<uint32_t>& Rules::cityModifiers(ModEffect effect) const { return modsWith(cityModsByEffect_, effect); }
+const std::vector<uint32_t>& Rules::cityModifiersBesidePolicies(ModEffect effect) const { return modsWith(cityModsBesidePolicies_, effect); }
+const std::vector<uint32_t>* Rules::policyCityModifiers(TypeIndex policy) const {
+    return policy >= 0 && static_cast<size_t>(policy) < policyCityMods_.size() ? &policyCityMods_[static_cast<size_t>(policy)] : nullptr;
+}
 
 void Rules::indexModifiers() {
     playerModsByEffect_.clear();
     cityModsByEffect_.clear();
+    cityModsBesidePolicies_.clear();
+    policyCityMods_.assign(policies.size(), {});
     for (size_t i = 0; i < modifiers.size(); ++i) {
-        auto& byEffect = modifiers[i].collection == ModCollection::Player ? playerModsByEffect_ : cityModsByEffect_;
-        const size_t e = static_cast<size_t>(modifiers[i].effect);
-        if (byEffect.size() <= e) byEffect.resize(e + 1);
-        byEffect[e].push_back(static_cast<uint32_t>(i));
+        const Modifier& m = modifiers[i];
+        const auto add = [&](std::vector<std::vector<uint32_t>>& byEffect) {
+            const size_t e = static_cast<size_t>(m.effect);
+            if (byEffect.size() <= e) byEffect.resize(e + 1);
+            byEffect[e].push_back(static_cast<uint32_t>(i));
+        };
+        if (m.collection == ModCollection::Player) {
+            add(playerModsByEffect_);
+            continue;
+        }
+        add(cityModsByEffect_);
+        if (m.sourceKind == ModSource::Policy && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < policyCityMods_.size())
+            policyCityMods_[static_cast<size_t>(m.sourceIndex)].push_back(static_cast<uint32_t>(i));
+        else
+            add(cityModsBesidePolicies_);
     }
     plotYieldMods_ = PlotModifiers{};
     plotYieldMods_.byImprovement.resize(improvements.size());
@@ -2572,12 +2590,38 @@ TypeIndex Rules::spyOperation(const std::string& id) const { return findIn(spyOp
 TypeIndex Rules::resolution(const std::string& id) const { return findIn(resolutions, id); }
 TypeIndex Rules::project(const std::string& id) const { return findIn(projects, id); }
 TypeIndex Rules::wmd(const std::string& id) const { return findIn(wmds, id); }
-TypeIndex Rules::uniqueUnitFor(TypeIndex civ, TypeIndex base) const {
+namespace {
+// The first of `all` unique to the civ and replacing `base`: among the uniques replacing it, or by a search of them all
+// when the rules lack it.
+template <typename T>
+TypeIndex uniqueFor(const std::vector<T>& all, const std::vector<TypeIndex>* uniques, TypeIndex civ, TypeIndex base) {
     if (civ == kNone || base == kNone) return kNone;
-    for (size_t i = 0; i < units.size(); ++i) {
-        if (units[i].uniqueTo == civ && units[i].replaces == base) return static_cast<TypeIndex>(i);
+    if (uniques) {
+        for (TypeIndex u : *uniques) {
+            if (all[static_cast<size_t>(u)].uniqueTo == civ) return u;
+        }
+        return kNone;
+    }
+    for (size_t i = 0; i < all.size(); ++i) {
+        if (all[i].uniqueTo == civ && all[i].replaces == base) return static_cast<TypeIndex>(i);
     }
     return kNone;
+}
+}  // namespace
+
+TypeIndex Rules::uniqueUnitFor(TypeIndex civ, TypeIndex base) const { return uniqueFor(units, unitsReplacing(base), civ, base); }
+TypeIndex Rules::uniqueBuildingFor(TypeIndex civ, TypeIndex base) const { return uniqueFor(buildings, buildingsReplacing(base), civ, base); }
+
+void Rules::indexUniques() {
+    const auto index = [](std::vector<std::vector<TypeIndex>>& by, const auto& all) {
+        by.assign(all.size(), {});
+        for (size_t i = 0; i < all.size(); ++i) {
+            const TypeIndex base = all[i].replaces;
+            if (base >= 0 && static_cast<size_t>(base) < all.size()) by[static_cast<size_t>(base)].push_back(static_cast<TypeIndex>(i));
+        }
+    };
+    index(buildingsReplacing_, buildings);
+    index(unitsReplacing_, units);
 }
 TypeIndex Rules::governorPromotion(const std::string& id) const { return findIn(governorPromotions, id); }
 

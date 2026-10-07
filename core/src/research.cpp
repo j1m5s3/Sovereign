@@ -662,15 +662,37 @@ void Game::allianceEurekas(PlayerId pid) {
     }
 }
 
+void Game::listWatchedBoosts() {
+    for (int civic = 0; civic < 2; ++civic) {
+        const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+        watchedBoosts_[civic].clear();
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            const Boost& b = nodes[i].boost;
+            if (b.percent <= 0) continue;
+            switch (b.kind) {
+                case BoostKind::None:
+                case BoostKind::NotTracked:
+                case BoostKind::KillWith:
+                case BoostKind::KillUnit:
+                case BoostKind::ClearCamp:
+                case BoostKind::WarDeclaredOn:
+                case BoostKind::CasusBelliWar:
+                case BoostKind::Artifact:
+                case BoostKind::NationalPark:
+                case BoostKind::NaturalWonder: break;  // boostMet: never met; events come through eventBoost
+                default: watchedBoosts_[civic].push_back(static_cast<uint32_t>(i));
+            }
+        }
+    }
+}
+
 void Game::updateBoosts(PlayerId pid) {
     BoostScan scan;  // the player's improved plots, cities and units, gathered for the first boost that needs them
     for (int civic = 0; civic < 2; ++civic) {
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
         const TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics : state_.players[static_cast<size_t>(pid)].techs;
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            const Boost& b = nodes[i].boost;
-            if (b.percent <= 0 || b.kind == BoostKind::None || b.kind == BoostKind::NotTracked) continue;
-            if (t.done[i] || t.boosted[i] || !boostMet(pid, b, scan)) continue;
+        for (const uint32_t i : watchedBoosts_[civic]) {
+            if (t.done[i] || t.boosted[i] || !boostMet(pid, nodes[i].boost, scan)) continue;
             grantBoost(pid, civic != 0, i);
             scan = BoostScan{};  // a grant changes none of these; gathering them again keeps later checks from relying on it
         }

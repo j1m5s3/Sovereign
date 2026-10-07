@@ -267,6 +267,33 @@ TEST(pantheon_beliefs_take_effect) {
     CHECK_EQ(sumCityModifiers(patron->state(), rules(), patron->state().cities[0], ModEffect::CityDistrictProductionPercent), Fixed());
 }
 
+// God of Craftsmen (+1 Production and Faith on improved strategic resources) and Religious Idols (+2 Faith on mines
+// over bonus and luxury resources) reach a plot by its resource's class.
+TEST(pantheons_reach_plots_by_resource_class) {
+    GameState s = religionState();
+    const Hex plots[] = {{4, 6}, {4, 7}, {4, 5}, {5, 7}};  // mined Iron, Copper and Diamonds; Iron unimproved
+    const char* resources[] = {"RESOURCE_IRON", "RESOURCE_COPPER", "RESOURCE_DIAMONDS", "RESOURCE_IRON"};
+    for (size_t i = 0; i < 4; ++i) {
+        s.plot(plots[i]).resource = rules().resource(resources[i]);
+        s.plot(plots[i]).improvement = i < 3 ? rules().improvement("IMPROVEMENT_MINE") : kNone;
+    }
+    auto plain = Game::fromScenario(rules(), s);
+    // The Production and Faith the pantheon adds on each plot, in turn.
+    const auto added = [&](const char* pantheon) {
+        GameState t = s;
+        t.players[0].pantheon = belief(pantheon);
+        auto g = Game::fromScenario(rules(), std::move(t));
+        std::vector<int> out;
+        for (const Hex& h : plots) {
+            const Yields a = g->plotYields(h, g->state().cities[0]), b = plain->plotYields(h, plain->state().cities[0]);
+            for (const size_t y : {static_cast<size_t>(YieldType::Production), static_cast<size_t>(YieldType::Faith)}) out.push_back(static_cast<int>((a[y] - b[y]).toInt()));
+        }
+        return out;
+    };
+    CHECK(added("BELIEF_GOD_OF_CRAFTSMEN") == std::vector<int>({1, 1, 0, 0, 0, 0, 0, 0}));
+    CHECK(added("BELIEF_RELIGIOUS_IDOLS") == std::vector<int>({0, 0, 0, 2, 0, 2, 0, 0}));
+}
+
 TEST(god_of_healing_heals_next_to_a_holy_site) {
     auto hpAfter = [](bool healing) {
         GameState s = religionState();

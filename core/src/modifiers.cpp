@@ -73,13 +73,31 @@ bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, Ty
 
 namespace {
 
+// A requirement on the plot's own resource, feature, terrain or improvement, the kind a plot pass tests most: sets
+// `ok` (before any negation) and returns true, cheaply enough for testRequirements to make it without a call to
+// testOne; returns false for any other kind.
+inline bool plotOwnReq(const Requirement& q, const ReqContext& c, bool& ok) {
+    const Plot* p = c.plot;
+    switch (q.type) {
+        case ReqType::PlotHasResource: ok = p && (q.ref == kNone ? p->resource != kNone : p->resource == q.ref); return true;  // no ref: any
+        case ReqType::PlotHasFeature: ok = p && (q.ref == kNone ? p->feature != kNone : p->feature == q.ref); return true;
+        case ReqType::PlotHasTerrain: ok = p && p->terrain == q.ref; return true;
+        case ReqType::PlotHasImprovement: ok = p && (q.ref == kNone ? p->improvement != kNone : p->improvement == q.ref); return true;
+        case ReqType::PlotHasResourceClass:
+            ok = p && c.rules && p->resource != kNone && static_cast<int>(c.rules->resources[static_cast<size_t>(p->resource)].cls) == q.value;
+            return true;
+        default: return false;
+    }
+}
+
 bool testOne(const Requirement& q, const ReqContext& c) {
     bool ok = false;
     switch (q.type) {
-        case ReqType::PlotHasResource: ok = c.plot && (q.ref == kNone ? c.plot->resource != kNone : c.plot->resource == q.ref); break;  // no ref: any
-        case ReqType::PlotHasFeature: ok = c.plot && (q.ref == kNone ? c.plot->feature != kNone : c.plot->feature == q.ref); break;
-        case ReqType::PlotHasTerrain: ok = c.plot && c.plot->terrain == q.ref; break;
-        case ReqType::PlotHasImprovement: ok = c.plot && (q.ref == kNone ? c.plot->improvement != kNone : c.plot->improvement == q.ref); break;
+        case ReqType::PlotHasResource:
+        case ReqType::PlotHasFeature:
+        case ReqType::PlotHasTerrain:
+        case ReqType::PlotHasImprovement:
+        case ReqType::PlotHasResourceClass: plotOwnReq(q, c, ok); break;  // testRequirements makes these itself
         case ReqType::PlotNextToRiver:
         case ReqType::PlotIsLake:
         case ReqType::PlotNextToLake: {
@@ -114,9 +132,6 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
         case ReqType::CityFullLoyalty: ok = c.city && c.rules && c.city->loyalty >= c.rules->globalInt("LOYALTY_MAXIMUM"); break;
-        case ReqType::PlotHasResourceClass:
-            ok = c.plot && c.rules && c.plot->resource != kNone && static_cast<int>(c.rules->resources[static_cast<size_t>(c.plot->resource)].cls) == q.value;
-            break;
         case ReqType::CityDistrictNextToRiver:
             if (c.city && c.state) {
                 for (const CityDistrict& d : c.city->districts) ok = ok || (d.complete && d.type == q.ref && isRiverAdjacent(*c.state, d.pos));
@@ -224,53 +239,82 @@ const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rule
     return nullptr;
 }
 
+// The holder holderBeyondPlayer found last in a pass, with the modifier it was for: it depends only on the
+// modifier's collection and source, and the modifiers of one source come together in the lists.
+struct HolderMemo {
+    const Modifier* of = nullptr;
+    const City* holder = nullptr;
+};
+
+// Whether holderFor settles a modifier from this source with a look at the subject's player alone.
+inline bool settledByPlayer(ModSource source) {
+    return source == ModSource::Civ || source == ModSource::Everyone || source == ModSource::Policy || source == ModSource::Government;
+}
+
 // The city that "holds" a modifier for this subject city, or nullptr if the
 // modifier does not reach it. For player-wide sources the subject's player
 // must carry the source. `majority` is the subject's majority religion, worked
 // out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
-// The sources settled by a look at the player alone are answered here, where the pass is.
-inline const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+// The sources settled by a look at the player alone are answered here, where the pass is; the rest through `memo`.
+inline const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority,
+                             HolderMemo& memo) {
     if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
         case ModSource::Civ: return owner.civ == m.sourceIndex ? &subject : nullptr;
         case ModSource::Everyone: return &subject;
         case ModSource::Policy:
         case ModSource::Government: return playerHasSource(m, owner) ? &subject : nullptr;
-        default: return holderBeyondPlayer(m, s, r, subject, owner, majority);
+        default:
+            if (!memo.of || memo.of->collection != m.collection || memo.of->sourceKind != m.sourceKind || memo.of->sourceIndex != m.sourceIndex) {
+                memo.holder = holderBeyondPlayer(m, s, r, subject, owner, majority);
+                memo.of = &m;
+            }
+            return memo.holder;
     }
 }
 
 // Calls fn for each city modifier in these lists (a null list is skipped), list by list, that reaches the city.
 // `pre` passes over modifiers on what they say alone (a yield, a unit class) before the costlier look for the city
 // holding the modifier. A plot's own requirements (its terrain, feature, improvement...) are cheap and go before
-// that look too; a city's can scan the map, so they go after it. `lakes` (a lakeMap, or null) goes to the plot's.
+// that look too, unless a look at the city's player settles it; a city's can scan the map, so they go after it.
+// `lakes` (a lakeMap, or null) goes to the plot's.
 template <typename Pre, typename Fn>
 void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists, const GameState& s, const Rules& r, const City& city,
                        bool plotEffect, const Plot* plot, const std::vector<uint8_t>* lakes, Pre&& pre, Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     int majority = kUnknownReligion;
+    HolderMemo memo;
     const ReqContext subjectCtx{&s, &r, &owner, &city, plot, lakes};
     for (const std::vector<uint32_t>* list : lists) {
         if (!list) continue;
         for (uint32_t i : *list) {
             const Modifier& m = r.modifiers[i];
             if (isPlotCollection(m.collection) != plotEffect || !pre(m)) continue;
-            if (plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
-            const City* holder = holderFor(m, s, r, city, owner, majority);
+            const bool plotFirst = plotEffect && !settledByPlayer(m.sourceKind);
+            if (plotFirst && !testRequirements(m.subjectReqs, subjectCtx)) continue;
+            const City* holder = holderFor(m, s, r, city, owner, majority, memo);
             if (!holder) continue;
             ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
             if (!testRequirements(m.ownerReqs, ownerCtx)) continue;
-            if (!plotEffect && !testRequirements(m.subjectReqs, subjectCtx)) continue;
+            if (!plotFirst && !testRequirements(m.subjectReqs, subjectCtx)) continue;
             fn(m);
         }
     }
 }
 
-// forEachApplyingIn over every city modifier with this effect.
+// forEachApplyingIn over every city (not plot) modifier with this effect: those no policy brings, then those of each
+// policy the city's owner has slotted (each policy once; none in anarchy, when no policy is in force).
 template <typename Pre, typename Fn>
-void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
-                     Pre&& pre, Fn&& fn) {
-    forEachApplyingIn({&r.cityModifiers(effect)}, s, r, city, plotEffect, plot, nullptr, pre, fn);
+void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, Pre&& pre, Fn&& fn) {
+    forEachApplyingIn({&r.cityModifiersBesidePolicies(effect)}, s, r, city, false, nullptr, nullptr, pre, fn);
+    const Player& owner = s.players[static_cast<size_t>(city.owner)];
+    if (owner.anarchyTurns > 0) return;
+    const auto ofEffect = [&](const Modifier& m) { return m.effect == effect && pre(m); };
+    for (auto slot = owner.policies.begin(); slot != owner.policies.end(); ++slot) {
+        const std::vector<uint32_t>* mods = r.policyCityModifiers(*slot);
+        if (mods && !mods->empty() && std::find(owner.policies.begin(), slot, *slot) == slot)
+            forEachApplyingIn({mods}, s, r, city, false, nullptr, nullptr, ofEffect, fn);
+    }
 }
 
 // The pre filter that passes every modifier.
@@ -316,7 +360,9 @@ bool religionHas(const GameState& s, int religion, TypeIndex belief) {
 bool testRequirements(const RequirementSet& set, const ReqContext& ctx) {
     if (set.reqs.empty()) return true;
     for (const Requirement& q : set.reqs) {
-        bool ok = testOne(q, ctx);
+        bool ok = false;
+        if (plotOwnReq(q, ctx, ok)) ok = q.negate ? !ok : ok;
+        else ok = testOne(q, ctx);
         if (set.any && ok) return true;
         if (!set.any && !ok) return false;
     }
@@ -327,7 +373,7 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
                        std::optional<YieldType> yield) {
     Fixed total;
     forEachApplying(
-        s, r, city, effect, false, nullptr, [&](const Modifier& m) { return !yield || m.yield == *yield; },
+        s, r, city, effect, [&](const Modifier& m) { return !yield || m.yield == *yield; },
         [&](const Modifier& m) { total += m.amount; });
     return total;
 }
@@ -335,7 +381,7 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
 Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& city, ModEffect effect) {
     Yields total{};
     forEachApplying(
-        s, r, city, effect, false, nullptr, [](const Modifier& m) { return static_cast<size_t>(m.yield) < kNumYields; },
+        s, r, city, effect, [](const Modifier& m) { return static_cast<size_t>(m.yield) < kNumYields; },
         [&](const Modifier& m) { total[static_cast<size_t>(m.yield)] += m.amount; });
     return total;
 }
@@ -364,7 +410,7 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
         return (m.unitClass.empty() || m.unitClass == u.unitClass) && (m.unit == kNone || m.unit == unitType) && (m.maxEra < 0 || u.era <= m.maxEra) &&
                (m.minEra < 0 || u.era >= m.minEra) && (!m.military || u.layer == UnitLayer::Military);
     };
-    forEachApplying(s, r, city, ModEffect::UnitProductionPercent, false, nullptr, forUnit, [&](const Modifier& m) { total += m.amount; });
+    forEachApplying(s, r, city, ModEffect::UnitProductionPercent, forUnit, [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
@@ -465,14 +511,14 @@ Fixed sumItemProductionPercent(const GameState& s, const Rules& r, const City& c
         }
         return hit;
     };
-    forEachApplying(s, r, city, ModEffect::ItemProductionPercent, false, nullptr, forItem, [&](const Modifier& m) { total += m.amount; });
+    forEachApplying(s, r, city, ModEffect::ItemProductionPercent, forItem, [&](const Modifier& m) { total += m.amount; });
     return total;
 }
 
 Fixed sumCityGreatPersonPoints(const GameState& s, const Rules& r, const City& city, TypeIndex gpClass) {
     Fixed total;
     forEachApplying(
-        s, r, city, ModEffect::CityGreatPersonPoints, false, nullptr, [&](const Modifier& m) { return m.gpClass == gpClass; },
+        s, r, city, ModEffect::CityGreatPersonPoints, [&](const Modifier& m) { return m.gpClass == gpClass; },
         [&](const Modifier& m) { total += m.amount; });
     return total;
 }

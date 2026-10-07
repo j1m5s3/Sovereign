@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 #include "sovereign/json.h"
+#include "sovereign/modifiers.h"
 
 using namespace sov;
 using sovtest::rules;
@@ -73,6 +74,101 @@ TEST(rules_index_every_modifier_by_effect) {
     Rules again = rules();
     again.indexModifiers();
     CHECK_EQ(misplaced(again), 0);
+}
+
+// The city modifiers no policy brings, by effect, and each policy's own: between them each city modifier once, in
+// load order, a policy's under the policy that brings it.
+TEST(rules_index_city_modifiers_by_policy) {
+    auto misplaced = [](const Rules& r) {
+        int wrong = 0;
+        std::vector<int> listed(r.modifiers.size(), 0);
+        const auto ofPolicy = [&](const Modifier& m) {
+            return m.sourceKind == ModSource::Policy && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < r.policies.size();
+        };
+        const auto inOrder = [&](const std::vector<uint32_t>& list) {
+            for (size_t k = 1; k < list.size(); ++k) wrong += list[k - 1] < list[k] ? 0 : 1;
+        };
+        for (int e = 0; e < 256; ++e) {
+            const ModEffect effect = static_cast<ModEffect>(e);
+            const std::vector<uint32_t>& list = r.cityModifiersBesidePolicies(effect);
+            inOrder(list);
+            for (uint32_t i : list) {
+                const Modifier& m = r.modifiers[i];
+                wrong += m.effect == effect && m.collection != ModCollection::Player && !ofPolicy(m) ? 0 : 1;
+                ++listed[i];
+            }
+        }
+        for (size_t p = 0; p < r.policies.size(); ++p) {
+            const std::vector<uint32_t>* list = r.policyCityModifiers(static_cast<TypeIndex>(p));
+            if (!list) {
+                ++wrong;
+                continue;
+            }
+            inOrder(*list);
+            for (uint32_t i : *list) {
+                const Modifier& m = r.modifiers[i];
+                wrong += m.collection != ModCollection::Player && ofPolicy(m) && m.sourceIndex == static_cast<TypeIndex>(p) ? 0 : 1;
+                ++listed[i];
+            }
+        }
+        for (size_t i = 0; i < r.modifiers.size(); ++i) wrong += listed[i] == (r.modifiers[i].collection == ModCollection::Player ? 0 : 1) ? 0 : 1;
+        return wrong;
+    };
+    const Rules& r = rules();
+    const TypeIndex feudal = r.policy("POLICY_FEUDAL_CONTRACT");
+    REQUIRE(feudal != kNone);
+    CHECK_EQ(misplaced(r), 0);
+    REQUIRE(r.policyCityModifiers(feudal) != nullptr);
+    CHECK(!r.policyCityModifiers(feudal)->empty());
+    CHECK(r.policyCityModifiers(kNone) == nullptr);
+    CHECK(r.policyCityModifiers(static_cast<TypeIndex>(r.policies.size())) == nullptr);
+    // A policy's modifier added later is listed under it once the modifiers are indexed again.
+    Rules again = r;
+    Modifier m;
+    m.collection = ModCollection::PlayerCities;
+    m.effect = ModEffect::CityYield;
+    m.sourceKind = ModSource::Policy;
+    m.sourceIndex = feudal;
+    again.modifiers.push_back(m);
+    again.indexModifiers();
+    CHECK_EQ(misplaced(again), 0);
+    const std::vector<uint32_t>* listed = again.policyCityModifiers(feudal);
+    REQUIRE(listed && !listed->empty());
+    CHECK_EQ(listed->back(), static_cast<uint32_t>(again.modifiers.size() - 1));
+}
+
+// A pass over a city's modifiers looks once for the city holding modifiers of one source in a row; a modifier of
+// another collection, kind of source or source looks again.
+TEST(modifiers_of_each_source_find_their_own_holder) {
+    const Rules& r = rules();
+    const TypeIndex granary = r.building("BUILDING_GRANARY"), mill = r.building("BUILDING_WATER_MILL");
+    Rules more = r;
+    const auto add = [&](ModSource kind, TypeIndex source, ModCollection collection, int gold) {
+        Modifier m;
+        m.sourceKind = kind;
+        m.sourceIndex = source;
+        m.collection = collection;
+        m.effect = ModEffect::CityYield;
+        m.yield = YieldType::Gold;
+        m.amount = Fixed::fromInt(gold);
+        more.modifiers.push_back(m);
+    };
+    add(ModSource::Building, granary, ModCollection::OwnerCity, 1);        // the Granary's own city
+    add(ModSource::Building, granary, ModCollection::PlayerCities, 10);    // each city of a civ with a Granary
+    add(ModSource::Building, mill, ModCollection::PlayerCities, 100);      // ... with a Water Mill, which none has
+    add(ModSource::GreatPerson, mill, ModCollection::PlayerCities, 1000);  // a great person of that index, used by the civ
+    more.indexModifiers();
+    GameState s = sovtest::flatState(16, 10, 1);
+    sovtest::addCity(s, 0, {3, 4}, true);
+    sovtest::addCity(s, 0, {10, 4}, false);
+    s.cities[0].buildings.push_back(granary);
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].greatPeopleActivated.push_back(mill);
+    const auto gold = [&](const Rules& with, const City& c) {
+        return sumCityModifiersByYield(s, with, c, ModEffect::CityYield)[static_cast<size_t>(YieldType::Gold)];
+    };
+    CHECK_EQ(gold(more, s.cities[0]) - gold(r, s.cities[0]), Fixed::fromInt(1011));
+    CHECK_EQ(gold(more, s.cities[1]) - gold(r, s.cities[1]), Fixed::fromInt(1010));
 }
 
 // Every named constant in the data is found by its name, with its value.

@@ -519,6 +519,27 @@ TEST(a_military_academy_trains_corps_and_armies_whole) {
     CHECK(back->state().city(city)->queue.front() == corps);
 }
 
+// Fleets and Armadas, the naval Corps and Armies, need a Seaport where land units need a Military Academy.
+TEST(a_seaport_trains_fleets_and_armadas_whole) {
+    GameState s = flatState(16, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {4, 5}, true, 8);
+    for (const char* c : {"CIVIC_NATIONALISM", "CIVIC_MOBILIZATION"}) s.players[0].civics.done[at(rules().civic(c))] = 1;
+    const TypeIndex galley = rules().unit("UNIT_GALLEY"), spear = rules().unit("UNIT_SPEARMAN");
+    const auto trains = [&](const char* building, TypeIndex unit, int formation) {
+        GameState t = s;
+        t.cities[0].buildings.push_back(rules().building(building));
+        std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->canTrainFormation(g->state().cities[0], unit, formation);
+    };
+    CHECK(trains("BUILDING_SEAPORT", galley, 1));
+    CHECK(trains("BUILDING_SEAPORT", galley, 2));
+    CHECK(!trains("BUILDING_MILITARY_ACADEMY", galley, 1));
+    CHECK(!trains("BUILDING_SEAPORT", spear, 1));
+    CHECK(trains("BUILDING_MILITARY_ACADEMY", spear, 2));
+}
+
 TEST(units_trained_in_a_city_keep_its_buildings_combat_xp) {
     // 03: each Encampment, Harbor and Aerodrome building gives units of its classes trained in its city
     // +25% combat XP for good (the Airport +50%); a pillaged district's buildings give none.
