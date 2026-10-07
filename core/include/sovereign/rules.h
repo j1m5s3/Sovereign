@@ -733,13 +733,34 @@ enum class BoostKind : uint8_t {
     ImprovementOnResource,   // `count` plots with improvement `ref` on a resource it improves
     ImproveResource,         // a plot with resource `ref` improved
     ImprovedTiles,           // `count` improved plots
-    NotTracked,       // districts, improvements, combat, religion... (later milestones)
+    District,                // `count` of your cities have a finished district `ref`
+    SpecialtyDistricts,      // finished specialty districts (those counting toward the population limit) of `count` types
+    TradeRoutes,             // `count` trade routes running
+    MetCivs,                 // met `count` other major civs
+    MetCityStates,           // met `count` city-states
+    Pantheon,                // founded a pantheon
+    Religion,                // founded a religion
+    FollowingCities,         // `count` cities in the world follow the religion you founded
+    Alliance,                // an alliance of level `count` or higher
+    GreatPeople,             // earned `count` great people
+    Corps,                   // `count` Corps or Fleets
+    Armies,                  // `count` Armies or Armadas
+    DistrictAppeal,          // a finished district `ref` on a plot of appeal `count` or more
+    ThemedBuildings,         // `count` buildings with themed Great Works
+    BuildingNextToMountain,  // building `ref` in a city whose district for it stands next to a Mountain
+    Wonders,                 // `count` world wonders finished in your cities
+    WonderFromEra,           // a world wonder of era `count` or later finished in one of your cities
+    UnitAndImprovement,      // a unit `ref` (or its unique) and a plot with improvement `improvement` (on `resource`, if set)
+    AirBaseAbroad,           // an Aerodrome or Airstrip off your capital's continent
+    Continents,              // land of `count` continents revealed
+    NotTracked,       // combat and other events (later milestones)
 };
 
 struct Boost {
     int percent = 0;  // 0: the node has no boost
     BoostKind kind = BoostKind::None;
     TypeIndex ref = kNone;
+    TypeIndex improvement = kNone, resource = kNone;  // UnitAndImprovement
     int count = 1;
     std::string type, text;  // as in the data
 };

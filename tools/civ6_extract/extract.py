@@ -735,7 +735,7 @@ def boost_text(c: Ctx, b) -> str:
         "BOOST_TRIGGER_HAVE_GOVERNMENT_TIER": f"adopt a {c.n(b['GovernmentTierType'])} government",
         "BOOST_TRIGGER_HAVE_BUILDING_MOUNTAIN": f"build a {bld} next to a mountain",
         "BOOST_TRIGGER_HAVE_WONDER_PAST_X_ERA": "build a wonder of a later era",
-        "BOOST_TRIGGER_HAVE_UNIT_AND_IMPROVEMENT": f"have a {u1} and a {imp}",
+        "BOOST_TRIGGER_HAVE_UNIT_AND_IMPROVEMENT": f"have a {u1} and a {imp}" + (f" on {res}" if res else ""),
         "BOOST_TRIGGER_CREATED_NATIONAL_PARK": "create a National Park",
         "BOOST_TRIGGER_ARTIFACT_EXTRACTED": "extract an artifact",
         "BOOST_TRIGGER_NONE_LATE_GAME_CRITICAL_TECH": "none (only via Great Scientist / spy / effects)",

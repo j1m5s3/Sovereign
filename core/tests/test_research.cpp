@@ -64,7 +64,28 @@ TEST(research_data_from_civ_tables) {
     const Boost& construction = r.techs[at(tech("TECH_CONSTRUCTION"))].boost;
     CHECK(construction.kind == BoostKind::Building);
     CHECK_EQ(construction.ref, r.building("BUILDING_WATER_MILL"));
-    CHECK(r.techs[at(tech("TECH_WRITING"))].boost.kind == BoostKind::NotTracked);  // meet a civ: diplomacy
+    CHECK(r.techs[at(tech("TECH_WRITING"))].boost.kind == BoostKind::MetCivs);
+    const Boost& buttress = r.techs[at(tech("TECH_BUTTRESS"))].boost;  // a wonder of the era before its own or later
+    CHECK(buttress.kind == BoostKind::WonderFromEra);
+    CHECK_EQ(buttress.count, static_cast<int>(r.era("ERA_CLASSICAL")));
+    const Boost& steel = r.techs[at(tech("TECH_STEEL"))].boost;  // an Ironclad and a Coal Mine
+    CHECK(steel.kind == BoostKind::UnitAndImprovement);
+    CHECK_EQ(steel.ref, r.unit("UNIT_IRONCLAD"));
+    CHECK_EQ(steel.improvement, r.improvement("IMPROVEMENT_MINE"));
+    CHECK_EQ(steel.resource, r.resource("RESOURCE_COAL"));
+    // Every boost with a condition can fire, but for the ones earned by events (combat, war, archaeology, parks)
+    // and the Astrology Eureka the natural wonder discovery grants itself.
+    std::vector<std::string> untracked;
+    for (const auto* tree : {&r.techs, &r.civics}) {
+        for (const TreeNode& n : *tree) {
+            if (n.boost.percent > 0 && n.boost.kind == BoostKind::NotTracked) untracked.push_back(n.id);
+        }
+    }
+    const std::vector<std::string> events = {
+        "TECH_ASTROLOGY", "TECH_ARCHERY", "TECH_BRONZE_WORKING", "TECH_MILITARY_TACTICS", "TECH_SQUARE_RIGGING",
+        "TECH_MILITARY_SCIENCE", "TECH_RADIO", "TECH_COMBUSTION", "TECH_GUIDANCE_SYSTEMS", "CIVIC_MILITARY_TRADITION",
+        "CIVIC_DEFENSIVE_TACTICS", "CIVIC_NAVAL_TRADITION", "CIVIC_NATIONALISM"};
+    CHECK(untracked == events);
     const Boost& empire = r.civics[at(civic("CIVIC_EARLY_EMPIRE"))].boost;
     CHECK(empire.kind == BoostKind::TotalPopulation);
     CHECK_EQ(empire.count, 6);
@@ -180,6 +201,211 @@ TEST(a_civ_s_unique_building_counts_toward_boosts) {
     };
     CHECK(!met(1));
     CHECK(met(2));
+}
+
+// Two cities of player 0, one of player 1, and three city-states (players 2-4) that own nothing.
+GameState boostState() {
+    GameState s = flatState(30, 14, 5);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.met.assign(s.players.size(), 0);
+        p.relations.resize(s.players.size());
+    }
+    for (PlayerId cs = 2; cs < 5; ++cs) s.players[at(cs)].cityState = static_cast<TypeIndex>(cs - 2);
+    for (Plot& p : s.plots) p.continent = 0;
+    sovtest::addCity(s, 0, {4, 5}, true, 3);
+    sovtest::addCity(s, 0, {12, 5}, false, 3);
+    sovtest::addCity(s, 1, {22, 5}, true, 3);
+    return s;
+}
+
+bool boostIn(const GameState& s, const Boost& b) { return Game::fromScenario(rules(), s)->boostMet(0, b); }
+const Boost& techBoost(const char* id) { return rules().techs[at(tech(id))].boost; }
+const Boost& civicBoost(const char* id) { return rules().civics[at(civic(id))].boost; }
+
+TEST(a_civ_s_unique_unit_counts_toward_boosts) {
+    // Metal Casting: two Crossbowmen; China's Repeating Crossbow is its Crossbowman.
+    GameState s = boostState();
+    sovtest::addUnit(s, "UNIT_CROSSBOWMAN", 0, {6, 8});
+    CHECK(!boostIn(s, techBoost("TECH_METAL_CASTING")));
+    sovtest::addUnit(s, "UNIT_REPEATING_CROSSBOW", 0, {7, 8});
+    CHECK(boostIn(s, techBoost("TECH_METAL_CASTING")));
+}
+
+TEST(boosts_from_districts_trade_routes_and_meetings) {
+    // 04: Cartography (2 Harbors), Mathematics (3 different specialty districts), Currency and Medieval Faires (1 and 4
+    // trade routes), Writing (another civ met), Political Philosophy (3 city-states met).
+    GameState s = boostState();
+    const TypeIndex harbor = rules().district("DISTRICT_HARBOR");
+    s.cities[0].districts.push_back({harbor, {5, 6}, true});
+    s.cities[1].districts.push_back({harbor, {13, 6}, false});
+    CHECK(!boostIn(s, techBoost("TECH_CARTOGRAPHY")));  // the second is still being built
+    s.cities[1].districts.back().complete = true;
+    CHECK(boostIn(s, techBoost("TECH_CARTOGRAPHY")));
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {3, 6}, true});
+    s.cities[1].districts.push_back({rules().district("DISTRICT_AQUEDUCT"), {11, 6}, true});  // not a specialty district
+    CHECK(!boostIn(s, techBoost("TECH_MATHEMATICS")));  // two Harbors and a Campus: two types
+    s.cities[1].districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {12, 6}, true});
+    CHECK(boostIn(s, techBoost("TECH_MATHEMATICS")));
+    CHECK(boostIn(s, techBoost("TECH_MILITARY_ENGINEERING")));  // the Aqueduct
+
+    TradeRoute route;
+    route.turnsLeft = 10;
+    route.owner = 1;
+    route.origin = s.cities[2].id;
+    route.destination = s.cities[0].id;
+    s.tradeRoutes.push_back(route);
+    CHECK(!boostIn(s, techBoost("TECH_CURRENCY")));  // a rival's
+    route.origin = s.cities[0].id;
+    route.destination = s.cities[1].id;
+    for (int32_t id = 2; id <= 4; ++id) {
+        route.id = id;
+        route.owner = 0;
+        s.tradeRoutes.push_back(route);
+    }
+    CHECK(boostIn(s, techBoost("TECH_CURRENCY")));
+    CHECK(!boostIn(s, civicBoost("CIVIC_MEDIEVAL_FAIRES")));
+    route.id = 5;
+    s.tradeRoutes.push_back(route);
+    CHECK(boostIn(s, civicBoost("CIVIC_MEDIEVAL_FAIRES")));
+
+    Player& p = s.players[0];
+    p.met[2] = p.met[3] = 1;
+    CHECK(!boostIn(s, techBoost("TECH_WRITING")));  // city-states are not civilizations
+    CHECK(!boostIn(s, civicBoost("CIVIC_POLITICAL_PHILOSOPHY")));
+    p.met[1] = p.met[4] = 1;
+    CHECK(boostIn(s, techBoost("TECH_WRITING")));
+    CHECK(boostIn(s, civicBoost("CIVIC_POLITICAL_PHILOSOPHY")));
+}
+
+TEST(boosts_from_religion_alliances_great_people_and_formations) {
+    // 04: Mysticism (a pantheon), Theology (a religion), Reformed Church (6 cities anywhere follow it), Diplomatic
+    // Service and Chemistry (an alliance, one of level 2), The Enlightenment (3 Great People), Mobilization and
+    // Combined Arms (3 Corps, 3 Armies).
+    GameState s = boostState();
+    CHECK(!boostIn(s, civicBoost("CIVIC_MYSTICISM")));
+    s.players[0].pantheon = 0;
+    CHECK(boostIn(s, civicBoost("CIVIC_MYSTICISM")));
+    CHECK(!boostIn(s, civicBoost("CIVIC_THEOLOGY")));
+    FoundedReligion faith;
+    faith.type = 0;
+    faith.founder = 0;
+    faith.holyCity = s.cities[0].id;
+    s.religions.push_back(faith);
+    s.players[0].religion = 0;
+    CHECK(boostIn(s, civicBoost("CIVIC_THEOLOGY")));
+    sovtest::addCity(s, 1, {28, 5}, false, 3);
+    sovtest::addCity(s, 0, {4, 11}, false, 3);
+    for (City& c : s.cities) c.pressure = {100000};  // five cities, two of them player 1's, follow it
+    CHECK(!boostIn(s, civicBoost("CIVIC_REFORMED_CHURCH")));
+    sovtest::addCity(s, 1, {12, 11}, false, 3);
+    s.cities.back().pressure = {100000};
+    CHECK(boostIn(s, civicBoost("CIVIC_REFORMED_CHURCH")));
+
+    Relation& ally = s.players[0].relations[1];
+    ally.alliance = AllianceType::Research;
+    ally.allianceUntil = 50;
+    CHECK(boostIn(s, civicBoost("CIVIC_DIPLOMATIC_SERVICE")));
+    CHECK(!boostIn(s, techBoost("TECH_CHEMISTRY")));
+    ally.alliancePoints = rules().globalInt("ALLIANCE_LEVEL_TWO_XP");
+    CHECK(boostIn(s, techBoost("TECH_CHEMISTRY")));
+
+    std::vector<int>& recruited = s.players[0].greatPeopleRecruited;
+    recruited.assign(rules().greatPersonClasses.size(), 0);
+    recruited[0] = 2;
+    CHECK(!boostIn(s, civicBoost("CIVIC_THE_ENLIGHTENMENT")));
+    recruited[1] = 1;
+    CHECK(boostIn(s, civicBoost("CIVIC_THE_ENLIGHTENMENT")));
+
+    for (int i = 0; i < 3; ++i) {
+        s.unit(sovtest::addUnit(s, "UNIT_SWORDSMAN", 0, {6 + i, 8}))->formation = 1;
+        s.unit(sovtest::addUnit(s, "UNIT_SWORDSMAN", 0, {6 + i, 9}))->formation = i < 2 ? 2 : 1;
+    }
+    CHECK(boostIn(s, civicBoost("CIVIC_MOBILIZATION")));  // four Corps
+    CHECK(!boostIn(s, techBoost("TECH_COMBINED_ARMS")));  // two Armies
+    s.unit(sovtest::addUnit(s, "UNIT_SWORDSMAN", 0, {9, 8}))->formation = 2;
+    CHECK(boostIn(s, techBoost("TECH_COMBINED_ARMS")));
+}
+
+TEST(boosts_from_wonders_places_and_continents) {
+    // 04: Drama and Poetry (a wonder), Buttress and Flight (a wonder of the era before theirs or later), Astronomy (a
+    // University whose Campus touches a Mountain), Conservation (a Neighborhood of appeal 4+), Cultural Heritage (a
+    // themed building), Steel (an Ironclad and a Coal Mine), Rapid Deployment (an Aerodrome or Airstrip off the
+    // capital's continent), Foreign Trade (land of a second continent revealed).
+    GameState s = boostState();
+    const auto addBuilding = [&](size_t city, const char* id) {
+        s.cities[city].buildings.push_back(rules().building(id));
+        std::sort(s.cities[city].buildings.begin(), s.cities[city].buildings.end());
+    };
+    CHECK(!boostIn(s, civicBoost("CIVIC_DRAMA_AND_POETRY")));
+    addBuilding(1, "BUILDING_PYRAMIDS");  // Ancient
+    CHECK(boostIn(s, civicBoost("CIVIC_DRAMA_AND_POETRY")));
+    CHECK(!boostIn(s, techBoost("TECH_BUTTRESS")));
+    addBuilding(0, "BUILDING_COLOSSEUM");  // Classical
+    CHECK(boostIn(s, techBoost("TECH_BUTTRESS")));
+    CHECK(!boostIn(s, techBoost("TECH_FLIGHT")));
+    addBuilding(0, "BUILDING_BIG_BEN");  // Industrial
+    CHECK(boostIn(s, techBoost("TECH_FLIGHT")));
+
+    const Hex campus = {5, 7};
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), campus, true});
+    addBuilding(0, "BUILDING_UNIVERSITY");
+    CHECK(!boostIn(s, techBoost("TECH_ASTRONOMY")));
+    Hex peak = campus;  // beside the Campus, away from the city
+    for (const Hex& h : s.grid.within(campus, 1)) peak = s.grid.distance(h, s.cities[0].pos) > s.grid.distance(peak, s.cities[0].pos) ? h : peak;
+    s.plot(peak).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    CHECK(boostIn(s, techBoost("TECH_ASTRONOMY")));
+
+    const Hex home = {13, 7};
+    s.cities[1].districts.push_back({rules().district("DISTRICT_NEIGHBORHOOD"), home, true});
+    CHECK(!boostIn(s, civicBoost("CIVIC_CONSERVATION")));
+    for (const Hex& h : s.grid.within(home, 1)) {
+        if (h != home && h != s.cities[1].pos) s.plot(h).feature = rules().feature("FEATURE_FOREST");
+    }
+    CHECK(boostIn(s, civicBoost("CIVIC_CONSERVATION")));  // Woods all round: Breathtaking
+
+    CHECK(!boostIn(s, civicBoost("CIVIC_CULTURAL_HERITAGE")));
+    const TypeIndex dig = rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM");
+    addBuilding(0, "BUILDING_ARCHAEOLOGICAL_MUSEUM");
+    TypeIndex artifact = kNone;
+    for (size_t w = 0; w < rules().greatWorkTypes.size(); ++w) artifact = rules().greatWorkTypes[w].id == "ARTIFACT" ? static_cast<TypeIndex>(w) : artifact;
+    for (size_t k = 0; k < 3; ++k) s.cities[0].greatWorks.push_back({artifact, dig, kNone, 1, s.players[k].civ});
+    s.cities[0].greatWorks[1].civ = s.cities[0].greatWorks[0].civ;
+    CHECK(!boostIn(s, civicBoost("CIVIC_CULTURAL_HERITAGE")));  // two artifacts of one civilization: no theme
+    s.cities[0].greatWorks[1].civ = s.players[1].civ;
+    CHECK(boostIn(s, civicBoost("CIVIC_CULTURAL_HERITAGE")));
+
+    Plot& coal = s.plot({3, 4});
+    coal.owner = 0;
+    coal.resource = rules().resource("RESOURCE_IRON");
+    coal.improvement = rules().improvement("IMPROVEMENT_MINE");
+    sovtest::addUnit(s, "UNIT_IRONCLAD", 0, {9, 9});
+    CHECK(!boostIn(s, techBoost("TECH_STEEL")));  // an Iron Mine
+    coal.resource = rules().resource("RESOURCE_COAL");
+    CHECK(boostIn(s, techBoost("TECH_STEEL")));
+    s.units.clear();
+    CHECK(!boostIn(s, techBoost("TECH_STEEL")));  // no Ironclad
+
+    const Hex field = {13, 4};
+    s.cities[1].districts.push_back({rules().district("DISTRICT_AERODROME"), field, true});
+    CHECK(!boostIn(s, civicBoost("CIVIC_RAPID_DEPLOYMENT")));  // on the capital's continent
+    s.plot(field).continent = 1;
+    CHECK(boostIn(s, civicBoost("CIVIC_RAPID_DEPLOYMENT")));
+    s.plot(field).continent = 0;
+    Plot& strip = s.plot({11, 3});
+    strip.owner = 0;
+    strip.improvement = rules().improvement("IMPROVEMENT_AIRSTRIP");
+    CHECK(!boostIn(s, civicBoost("CIVIC_RAPID_DEPLOYMENT")));
+    strip.continent = 1;
+    CHECK(boostIn(s, civicBoost("CIVIC_RAPID_DEPLOYMENT")));
+
+    GameState t = boostState();
+    const Hex island = {29, 13};
+    t.plot(island).continent = 1;
+    CHECK(!boostIn(t, civicBoost("CIVIC_FOREIGN_TRADE")));  // player 0 sees only its own land
+    t.players[0].visibility.assign(t.plots.size(), static_cast<uint8_t>(Visibility::Unrevealed));
+    t.players[0].visibility[static_cast<size_t>(t.grid.index(island))] = static_cast<uint8_t>(Visibility::Revealed);
+    CHECK(boostIn(t, civicBoost("CIVIC_FOREIGN_TRADE")));
 }
 
 TEST(research_unlocks_units_buildings_and_resources) {

@@ -315,6 +315,8 @@ TEST(the_great_library_gives_a_eureka_when_a_rival_recruits_a_great_scientist) {
     const TypeIndex scientist = rules().greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
     GameState s = wonderState();
     s.players[1].greatPersonPoints[at(scientist)] = 10000;
+    // The Great Library is itself a Classical wonder, which earns Buttress's Eureka (04): count only its gift.
+    for (Player& p : s.players) p.techs.boosted[at(rules().tech("TECH_BUTTRESS"))] = 1;
     auto withLibrary = [&](size_t city) {
         GameState t = s;
         t.cities[city].buildings.push_back(wonder("BUILDING_GREAT_LIBRARY"));

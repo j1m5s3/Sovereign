@@ -69,7 +69,8 @@
    "boost": {
     "percent": 40,
     "text": "meet another civilization",
-    "type": "UNTRACKED"
+    "type": "MET_CIVS",
+    "count": 1
    }
   },
   {
@@ -161,7 +162,8 @@
    "boost": {
     "percent": 40,
     "text": "have a trade route",
-    "type": "UNTRACKED"
+    "type": "TRADE_ROUTES",
+    "count": 1
    }
   },
   {
@@ -274,7 +276,8 @@
    "boost": {
     "percent": 40,
     "text": "build a wonder of a later era",
-    "type": "UNTRACKED"
+    "type": "WONDER_FROM_ERA",
+    "era": "ERA_CLASSICAL"
    }
   },
   {
@@ -502,7 +505,8 @@
    "boost": {
     "percent": 40,
     "text": "build a University next to a mountain",
-    "type": "UNTRACKED"
+    "type": "BUILDING_NEXT_TO_MOUNTAIN",
+    "ref": "BUILDING_UNIVERSITY"
    }
   },
   {
@@ -679,7 +683,8 @@
    "boost": {
     "percent": 40,
     "text": "build a wonder of a later era",
-    "type": "UNTRACKED"
+    "type": "WONDER_FROM_ERA",
+    "era": "ERA_INDUSTRIAL"
    }
   },
   {
@@ -709,7 +714,10 @@
    "boost": {
     "percent": 40,
     "text": "have a Ironclad and a Mine",
-    "type": "UNTRACKED"
+    "type": "UNIT_AND_IMPROVEMENT",
+    "ref": "UNIT_IRONCLAD",
+    "improvement": "IMPROVEMENT_MINE",
+    "resource": "RESOURCE_COAL"
    }
   },
   {
@@ -771,7 +779,8 @@
    "boost": {
     "percent": 40,
     "text": "have a level 2 alliance",
-    "type": "UNTRACKED"
+    "type": "ALLIANCE",
+    "count": 2
    }
   },
   {
@@ -850,7 +859,8 @@
    "boost": {
     "percent": 40,
     "text": "have 3 armies",
-    "type": "UNTRACKED"
+    "type": "ARMIES",
+    "count": 3
    }
   },
   {
