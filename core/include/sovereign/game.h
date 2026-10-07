@@ -287,8 +287,6 @@ public:
     // Units of the city's owner in its territory, with the city's established governor holding the promotion.
     bool territoryGovernorHas(Hex at, PlayerId owner, const char* promotionId) const;
     bool unitObsolete(PlayerId player, TypeIndex unitType) const;
-    // Plots the player owns with this improvement (kNone: any), optionally only on a resource it works.
-    int countImprovedPlots(PlayerId player, TypeIndex improvement, bool onResourceOnly) const;
 
     // ---- war and combat (05-units-and-combat.md)
     bool atWar(PlayerId a, PlayerId b) const;
@@ -690,6 +688,14 @@ private:
     void processResearch(PlayerId p, Fixed science, Fixed culture);
     void completeNode(PlayerId p, bool civic, TypeIndex node);
     void updateBoosts(PlayerId p);
+    // The plots a player owns with an improvement, counted in one pass for all the boosts checked together.
+    struct ImprovedPlots {
+        int total = 0;
+        std::vector<int> byImprovement, onResource;  // per improvement; onResource: those working the plot's resource
+        std::vector<int> byResource;                 // per resource: plots an improvement works it on
+    };
+    ImprovedPlots improvedPlots(PlayerId player) const;
+    bool boostMet(PlayerId player, const Boost& boost, std::optional<ImprovedPlots>& improved) const;  // counts them on first need
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
     void eventBoost(PlayerId p, BoostKind kind, TypeIndex ref = kNone);  // boosts of this event kind (a kill, a camp...)
     CommandError validateBuilder(const Command& c) const;
