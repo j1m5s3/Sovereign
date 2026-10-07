@@ -798,7 +798,8 @@ void Game::refreshVisibility(PlayerId pid) {
     for (Unit& u : state_.units) {
         if (!shares(u.owner)) continue;
         finder = u.owner == pid ? &u : nullptr;
-        see(u.pos, unitSight(u), unitHas(u, UnitEffectKind::SeesThroughFeatures));  // Sentry (05)
+        const std::pair<int, bool> sight = unitSightAndSentry(u);
+        see(u.pos, sight.first, sight.second);  // Sentry (05)
     }
     finder = nullptr;
     for (const City& c : state_.cities) {

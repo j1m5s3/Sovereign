@@ -207,6 +207,21 @@ TEST(game_hills_see_over_woods) {
     CHECK(g2->visibility(0, {6, 8}) == Visibility::Unrevealed);
 }
 
+// Recon promotions (05): Sentry sees through woods, Spyglass a plot further.
+TEST(sentry_sees_through_woods_and_spyglass_a_plot_further) {
+    GameState s = flatState(24, 16, 1);
+    setFeature(s, {5, 8}, "FEATURE_FOREST");
+    const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {4, 8});
+    auto plain = Game::fromScenario(rules(), GameState(s));
+    CHECK(plain->visibility(0, {6, 8}) == Visibility::Unrevealed);  // behind the woods
+    CHECK(plain->visibility(0, {1, 8}) == Visibility::Unrevealed);  // three plots west, past sight 2
+    s.unit(scout)->promotions = {rules().promotion("PROMOTION_SENTRY"), rules().promotion("PROMOTION_SPYGLASS")};
+    auto promoted = Game::fromScenario(rules(), std::move(s));
+    CHECK(promoted->visibility(0, {6, 8}) == Visibility::Visible);
+    CHECK(promoted->visibility(0, {1, 8}) == Visibility::Visible);
+    CHECK_EQ(promoted->unitSight(*promoted->state().unit(scout)), 3);
+}
+
 TEST(game_replay_reproduces_state) {
     std::string err;
     GameSetup setup = sovtest::duelSetup(77);

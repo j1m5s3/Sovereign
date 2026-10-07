@@ -731,6 +731,10 @@ private:
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
+    // A unit's sight given its Sight effects' total (unitSight); and its sight with whether it sees through woods
+    // (Sentry, 05), from one look at its abilities.
+    int sightFrom(const Unit& unit, int sightEffects) const;
+    std::pair<int, bool> unitSightAndSentry(const Unit& unit) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
     int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;

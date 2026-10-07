@@ -345,10 +345,22 @@ int Game::unitRange(const Unit& unit) const {
     return range;
 }
 
-int Game::unitSight(const Unit& unit) const {
+int Game::unitSight(const Unit& unit) const { return sightFrom(unit, unitEffectTotal(unit, UnitEffectKind::Sight)); }
+
+int Game::sightFrom(const Unit& unit, int sightEffects) const {
     const TypeIndex im = state_.plot(unit.pos).improvement;
     const int tower = im == kNone ? 0 : rules_->improvements[static_cast<size_t>(im)].sight;  // Beacon Tower
-    return typeOf(*rules_, unit).sight + unitEffectTotal(unit, UnitEffectKind::Sight) + tower;
+    return typeOf(*rules_, unit).sight + sightEffects + tower;
+}
+
+std::pair<int, bool> Game::unitSightAndSentry(const Unit& unit) const {
+    int sight = 0, sentry = 0;
+    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+        const int n = e.amount != 0 ? e.amount : 1;
+        if (e.kind == UnitEffectKind::Sight) sight += n;
+        if (e.kind == UnitEffectKind::SeesThroughFeatures) sentry += n;
+    });
+    return {sightFrom(unit, sight), sentry > 0};
 }
 
 int Game::maxAttacks(const Unit& unit) const {
