@@ -165,7 +165,7 @@ Fixed Game::improvementHousing(const City& city) const {
             total += rules_->improvements[static_cast<size_t>(p.improvement)].housing;
             // Civ ability: farms next to a river or lake add housing (Aztec Chinampas).
             if (rules_->improvements[static_cast<size_t>(p.improvement)].id == "IMPROVEMENT_FARM" &&
-                (isRiverAdjacent(state_, h) || isLakeAdjacent(state_, *rules_, h)))
+                (isRiverAdjacent(state_, h) || isLakeAdjacent(state_, *rules_, h, &lakes_)))
                 total += civAbility(city.owner).freshWaterFarmHousing;
         }
     });

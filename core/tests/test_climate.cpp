@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -130,6 +131,31 @@ TEST(climate_phases_warm_the_world_and_the_sea_takes_lowlands) {
     // The 2 m band flooded in phase III: its farm is pillaged until a Builder repairs it.
     CHECK(g->state().plot(flooded).improvement == rules().improvement("IMPROVEMENT_FARM"));
     CHECK(g->state().plot(flooded).pillagedTurns == kPillagedUntilRepaired);
+}
+
+// The sea taking a lowland between it and a lake joins the lake to the sea (01: Lake), and the game sees the lake
+// gone at once: every plot's appeal (+1 beside a lake) is what a game made afresh from the drowned map finds.
+TEST(the_sea_taking_a_lowland_can_join_a_lake_to_it) {
+    GameState s = coastState(12, 24, 1);
+    auto probe = Game::fromScenario(rules(), s);
+    Hex low{-1, -1};
+    for (int y = 1; y < 23 && low.x < 0; ++y) {
+        if (probe->lowlandBand({1, y}) == 1) low = {1, y};
+    }
+    REQUIRE(low.x == 1);
+    const Hex lake{2, low.y};
+    s.plot(lake).terrain = rules().terrain("TERRAIN_COAST");
+    s.co2 = 3500000;  // phases I to IV: the 1 m band drowns in phase IV
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->lowlandBand(low) == 1);
+    REQUIRE(isLake(g->state(), rules(), lake));
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().plot(low).terrain == rules().terrain("TERRAIN_COAST"));
+    CHECK(!isLake(g->state(), rules(), lake));
+    auto fresh = Game::fromScenario(rules(), g->state());
+    bool same = true;
+    for (int i = 0; i < g->state().grid.size(); ++i) same = same && g->plotAppeal(g->state().grid.at(i)) == fresh->plotAppeal(g->state().grid.at(i));
+    CHECK(same);
 }
 
 TEST(a_flood_barrier_holds_back_the_sea) {

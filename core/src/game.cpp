@@ -250,6 +250,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         if (state_.plots[i].resource != kNone) resourcePlots_.push_back(static_cast<int32_t>(i));
     }
+    lakes_ = lakeMap(state_, *rules_);
 }
 
 uint64_t Game::stateHash() const {

@@ -85,12 +85,29 @@ TEST(map_river_edges_are_shared) {
     CHECK(!isRiverAdjacent(s, {6, 6}));
 }
 
+namespace {
+// lakeMap marks the plots isLake finds, and the checks given it answer as they do without it.
+bool lakeMapAgrees(const GameState& s, const Rules& r) {
+    const std::vector<uint8_t> lakes = lakeMap(s, r);
+    if (lakes.size() != s.plots.size()) return false;
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const Hex h = s.grid.at(i);
+        if ((lakes[static_cast<size_t>(i)] != 0) != isLake(s, r, h) || isLake(s, r, h, &lakes) != isLake(s, r, h) ||
+            isLakeAdjacent(s, r, h, &lakes) != isLakeAdjacent(s, r, h) || hasFreshWater(s, r, h, &lakes) != hasFreshWater(s, r, h))
+            return false;
+    }
+    return true;
+}
+}  // namespace
+
 TEST(lakes_are_small_bodies_of_water) {
     GameState s = sovtest::flatState(16, 16, 1);
     const Rules& r = rules();
     const TypeIndex coast = r.terrain("TERRAIN_COAST");
+    CHECK(lakeMapAgrees(s, r));
     // One plot of water inside the land: a lake, fresh water for the plots beside it (01: Lake).
     s.plot({4, 4}).terrain = coast;
+    CHECK(lakeMapAgrees(s, r));
     CHECK(isLake(s, r, {4, 4}));
     CHECK(!isLake(s, r, {5, 4}));
     CHECK(isLakeAdjacent(s, r, {5, 4}));
@@ -99,9 +116,11 @@ TEST(lakes_are_small_bodies_of_water) {
     CHECK(!hasFreshWater(s, r, {7, 4}));
     // Nine plots of water are still a lake; a tenth makes them a sea (LAKE_MAX_AREA_SIZE).
     for (int x = 4; x <= 12; ++x) s.plot({x, 10}).terrain = coast;
+    CHECK(lakeMapAgrees(s, r));
     CHECK(isLake(s, r, {4, 10}));
     CHECK(hasFreshWater(s, r, {4, 11}));
     s.plot({13, 10}).terrain = coast;
+    CHECK(lakeMapAgrees(s, r));
     CHECK(!isLake(s, r, {4, 10}));
     CHECK(!isLake(s, r, {13, 10}));
     CHECK(!isLakeAdjacent(s, r, {4, 11}));
@@ -122,6 +141,7 @@ TEST(maps_have_lakes) {
         auto g = Game::create(r, sovtest::duelSetup(seed), &err);
         REQUIRE(g);
         const GameState& s = g->state();
+        CHECK(lakeMapAgrees(s, r));
         for (int i = 0; i < s.grid.size(); ++i) {
             if (!isLake(s, r, s.grid.at(i))) continue;
             ++lakes;

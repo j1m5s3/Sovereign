@@ -925,6 +925,8 @@ private:
     // The plots that had a resource when the game was built, in map order. Play only takes resources away (a harvest,
     // a district, a submerged coast), never adds one, so every plot with a resource is among them.
     std::vector<int32_t> resourcePlots_;
+    // isLake for each plot (a lakeMap). Only the sea's rise changes terrain once the map is made, and it marks them again.
+    std::vector<uint8_t> lakes_;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;

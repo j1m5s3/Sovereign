@@ -79,7 +79,7 @@ int Game::lowlandBand(Hex h) const {
     bool coastal = false;  // on the sea: rising water does not reach lakes (01: Lake)
     for (int d = 0; d < 6 && !coastal; ++d) {
         const auto n = state_.grid.neighbor(h, static_cast<Dir>(d));
-        coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water && !isLake(state_, *rules_, *n);
+        coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water && !isLake(state_, *rules_, *n, &lakes_);
     }
     if (!coastal) return 0;
     if (static_cast<int>(plotHash(i, 0x10A1A9D5u) % 100) >= rules_->globalInt("CLIMATE_CHANGE_PERCENT_COASTAL_LOWLANDS")) return 0;
@@ -252,6 +252,7 @@ void Game::processClimate() {
             }
             if (coast == kNone) continue;
             p.terrain = coast;
+            lakes_ = lakeMap(state_, *rules_);  // the next plots' lowland checks see this one drowned
             p.feature = kNone;
             p.improvement = kNone;
             p.resource = kNone;

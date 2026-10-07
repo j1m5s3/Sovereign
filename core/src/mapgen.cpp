@@ -119,7 +119,8 @@ bool isRiverAdjacent(const GameState& state, Hex h) {
     return false;
 }
 
-bool isLake(const GameState& state, const Rules& rules, Hex h) {
+bool isLake(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes) {
+    if (lakes) return (*lakes)[static_cast<size_t>(state.grid.index(h))] != 0;
     const auto water = [&](Hex x) { return rules.terrains[static_cast<size_t>(state.plot(x).terrain)].water; };
     if (!water(h)) return false;
     static const std::string kLimit = "LAKE_MAX_AREA_SIZE";
@@ -138,21 +139,57 @@ bool isLake(const GameState& state, const Rules& rules, Hex h) {
     return true;
 }
 
-bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h) {
+bool isLakeAdjacent(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes) {
     for (int d = 0; d < kNumDirs; ++d) {
         const auto n = state.grid.neighbor(h, static_cast<Dir>(d));
-        if (n && isLake(state, rules, *n)) return true;
+        if (n && isLake(state, rules, *n, lakes)) return true;
     }
     return false;
 }
 
-bool hasFreshWater(const GameState& state, const Rules& rules, Hex h) {
+std::vector<uint8_t> lakeMap(const GameState& state, const Rules& rules) {
+    // isLake keeps a plot's body of water while it is no larger than the limit, and so finds a lake exactly when the
+    // body has at most that many plots, or is the plot alone. Here a body is gathered until it proves too big, by its
+    // size or by reaching water already found too big (the same body), and the rest of such a body is found too big
+    // as soon as it is reached; a body gathered whole within the limit is a lake.
+    constexpr uint8_t kLand = 0, kOpen = 1, kBody = 2, kBig = 3, kLake = 4;
+    const size_t limit = static_cast<size_t>(std::max(1, rules.globalInt("LAKE_MAX_AREA_SIZE")));
+    const size_t plots = state.plots.size();
+    std::vector<uint8_t> mark(plots);
+    for (size_t i = 0; i < plots; ++i) mark[i] = rules.terrains[static_cast<size_t>(state.plots[i].terrain)].water ? kOpen : kLand;
+    std::vector<int32_t> body;
+    for (size_t i = 0; i < plots; ++i) {
+        if (mark[i] != kOpen) continue;
+        mark[i] = kBody;
+        body.assign(1, static_cast<int32_t>(i));
+        bool big = false;
+        for (size_t k = 0; k < body.size() && !big; ++k) {
+            const Hex h = state.grid.at(body[k]);
+            for (int d = 0; d < kNumDirs && !big; ++d) {
+                const auto n = state.grid.neighbor(h, static_cast<Dir>(d));
+                if (!n) continue;
+                uint8_t& m = mark[static_cast<size_t>(state.grid.index(*n))];
+                if (m == kBig || (m == kOpen && body.size() >= limit)) {
+                    big = true;
+                } else if (m == kOpen) {
+                    m = kBody;
+                    body.push_back(state.grid.index(*n));
+                }
+            }
+        }
+        for (const int32_t j : body) mark[static_cast<size_t>(j)] = big ? kBig : kLake;
+    }
+    for (uint8_t& m : mark) m = static_cast<uint8_t>(m == kLake ? 1 : 0);
+    return mark;
+}
+
+bool hasFreshWater(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes) {
     if (isRiverAdjacent(state, h)) return true;
     for (const Hex& n : state.grid.within(h, 1)) {
         const Plot& p = state.plot(n);
         if (p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].freshWater) return true;
     }
-    return isLakeAdjacent(state, rules, h);
+    return isLakeAdjacent(state, rules, h, lakes);
 }
 
 bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {
