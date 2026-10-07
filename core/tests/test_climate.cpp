@@ -268,6 +268,24 @@ TEST(renewables_give_free_power) {
     CHECK_EQ(g->state().co2, 0);
 }
 
+// The Biosphère (03): renewable Power +200% in its holder's cities, and as much tourism.
+TEST(the_biosphere_triples_renewable_power_and_draws_tourism_from_it) {
+    const auto play = [](bool biosphere, bool farm) {
+        GameState s = coastState(24, 12, 1);
+        addCity(s, 0, {6, 6}, true, 8);
+        s.cities[0].buildings.push_back(rules().building("BUILDING_FOOD_MARKET"));  // needs 1
+        if (biosphere) s.cities[0].buildings.push_back(rules().building("BUILDING_BIOSPH_RE"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        if (farm) s.plot({7, 6}).improvement = rules().improvement("IMPROVEMENT_SOLAR_FARM");
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        return g;
+    };
+    CHECK_EQ(play(true, true)->state().cities[0].powerSupply, 6);
+    CHECK_EQ(play(true, true)->tourismPerTurn(0) - play(true, false)->tourismPerTurn(0), 6);
+    CHECK_EQ(play(false, true)->tourismPerTurn(0) - play(false, false)->tourismPerTurn(0), 0);
+}
+
 // ---- nuclear accidents (09: Climate and disasters)
 
 TEST(an_old_reactor_can_melt_down_and_recommissioning_renews_it) {

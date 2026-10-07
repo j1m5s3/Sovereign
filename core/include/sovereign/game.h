@@ -747,6 +747,7 @@ private:
     void processProfiles();            // world turn: update every major civ's play profile
     void processSpaceRace();           // world turn: exoplanet expeditions travel
     void burnPower(PlayerId player);   // power [GS]: each city's demand met by free sources, then by plants burning fuel (CO2)
+    int renewablePower(const City& city) const;  // from its Hydroelectric Dam and renewable improvements, before the Biosphère
     void addCo2(PlayerId player, int64_t amount);
     void unitCo2(PlayerId player, size_t resource, int burned);  // units emit CLIMATE_CO2_PERCENT_FROM_UNITS of the CO2
     void openCongressSession();

@@ -128,7 +128,7 @@ Wonder list (unlock, era from data; full effects, costs and placement in [wonder
 | Golden Gate Bridge [GS] | Combustion (Modern) | coast tile spanning two opposite land tiles | land bridge with a modern road; +3 Amenity, +4 Appeal in the city; +100% Tourism from improvements and National Parks in the city |
 | Amundsen-Scott Research Station [R&F] | Cold War (Atomic) | Snow, next to Campus with Research Lab | +5 Scientist points; +20% Science and +10% Production in all cities, doubled in cities with 5+ Snow tiles |
 | Estádio do Maracanã | Professional Sports (Atomic) | flat, next to Entertainment Complex with Stadium | +6 Culture and +2 Amenity in all your cities (a regional wonder: RegionalRange 100000; https://civilization.fandom.com/wiki/Est%C3%A1dio_do_Maracan%C3%A3_(Civ6): empire-wide bonuses like the Colosseum's) |
-| Biosphère [GS] | Synthetic Materials (Atomic) | river, next to Neighborhood | +1 Appeal next to Rainforest and Marsh; renewable Power output +200% and +100% Tourism from it in all cities |
+| Biosphère [GS] | Synthetic Materials (Atomic) | river, next to Neighborhood | +1 Appeal next to Rainforest and Marsh; renewable Power output (Hydroelectric Dam, Solar, Wind and Offshore Wind Farms, Geothermal Plants) +200% and +100% Tourism from it in all cities (data: green energy tourism 100; Sovereign reads it as Tourism equal to that tripled Power) |
 | Sydney Opera House | Cultural Heritage (Atomic) | coast, next to Harbor | +8 Culture, +5 Musician points; 3 Music slots |
 
 [DLC] = civ/leader pack content that is part of the installed ruleset. All wonder data must stay tunable.
