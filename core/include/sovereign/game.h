@@ -714,10 +714,17 @@ private:
     // What a unit's abilities, promotions and policies change about its movement: the same for every step of a path.
     struct MoveTraits {
         bool freeEmbark = false, ignoreHills = false, ignoreForest = false, ignoreTerrain = false, ignoreBorders = false;
-        bool zeal = false;  // a religious unit under Missionary Zeal
+        bool zeal = false;      // a religious unit under Missionary Zeal
+        bool rockBand = false;  // kept out by Music Censorship
     };
     MoveTraits moveTraits(const Unit& unit) const;
-    std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const;
+    // What keeps a unit out of plots, the same for every step of a path.
+    struct MoveLimits {
+        std::vector<uint8_t> blocked;  // per plot: another player's unit, a foreign city or a standing enemy Encampment
+        std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
+    };
+    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits) const;
+    std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);

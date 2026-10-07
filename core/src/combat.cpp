@@ -276,6 +276,7 @@ Game::MoveTraits Game::moveTraits(const Unit& unit) const {
     // Missionary Zeal: religious units ignore terrain (06).
     t.zeal = typeOf(*rules_, unit).religiousStrength > 0 &&
              sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed();
+    t.rockBand = typeOf(*rules_, unit).id == "UNIT_ROCK_BAND";
     return t;
 }
 

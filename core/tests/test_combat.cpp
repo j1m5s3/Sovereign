@@ -311,6 +311,47 @@ TEST(closed_borders_block_units_not_at_war) {
     CHECK_EQ(war->submit(Command::move(0, w, {7, 5})), CommandError::Ok);
 }
 
+// Another player's units and cities keep a unit out, and so do a standing Encampment it is at war with, closed
+// borders unless it is already inside them, and Music Censorship for a foreign Rock Band (04, 05).
+TEST(what_keeps_a_unit_out_of_a_plot) {
+    const Rules& r = rules();
+    enum class Case { Peace, War, CampLost, Censorship, ClosedBorders };
+    UnitId w = kNoUnit, band = kNoUnit;
+    auto setup = [&](Case c) {
+        return duel([&](GameState& s) {
+            Game::fitPlayerToRules(s.players[1], r);
+            sovtest::addCity(s, 1, {10, 5}, true);  // its land: (9, 5), (11, 5), (10, 4), (11, 4), (10, 6), (11, 6)
+            s.cities[0].districts.push_back({r.district("DISTRICT_ENCAMPMENT"), {11, 5}, true});  // with no one in it
+            if (c == Case::CampLost) s.plot({11, 5}).city = kNoCity;  // the city no longer holds the plot
+            if (c == Case::ClosedBorders) s.players[1].civics.done[at(r.civic("CIVIC_EARLY_EMPIRE"))] = 1;
+            if (c == Case::Censorship) {
+                Player& p = s.players[1];
+                p.government = r.government("GOVERNMENT_CHIEFDOM");
+                p.policies.assign(static_cast<size_t>(r.governments[at(p.government)].totalSlots()), kNone);
+                p.policies[0] = r.policy("POLICY_MUSIC_CENSORSHIP");
+            }
+            w = addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
+            band = addUnit(s, "UNIT_ROCK_BAND", 0, {8, 4});
+        }, c == Case::War || c == Case::CampLost);
+    };
+    auto peace = setup(Case::Peace);
+    CHECK(!peace->moveCost(unit(*peace, w), {9, 5}, {10, 5}));                // their city
+    CHECK(peace->moveCost(unit(*peace, w), {12, 5}, {11, 5}).has_value());    // their Encampment, at peace
+    CHECK(peace->moveCost(unit(*peace, band), {8, 5}, {9, 5}).has_value());   // their land
+    auto war = setup(Case::War);
+    CHECK(!war->moveCost(unit(*war, w), {12, 5}, {11, 5}));                    // a standing enemy Encampment
+    CHECK(!war->moveCost(unit(*war, w), {9, 5}, {10, 5}));
+    auto lost = setup(Case::CampLost);
+    CHECK(lost->moveCost(unit(*lost, w), {12, 5}, {11, 5}).has_value());      // no Encampment of the city's there now
+    auto censored = setup(Case::Censorship);
+    CHECK(!censored->moveCost(unit(*censored, band), {8, 5}, {9, 5}));         // no foreign Rock Band enters
+    CHECK(!censored->moveCost(unit(*censored, band), {9, 5}, {10, 4}));        // nor moves on inside
+    CHECK(censored->moveCost(unit(*censored, w), {8, 5}, {9, 5}).has_value()); // other units do
+    auto closed = setup(Case::ClosedBorders);
+    CHECK(!closed->moveCost(unit(*closed, w), {8, 5}, {9, 5}));                 // closed borders
+    CHECK(closed->moveCost(unit(*closed, w), {9, 5}, {10, 4}).has_value());     // a unit already inside moves on
+}
+
 TEST(units_upgrade_for_gold_in_their_territory) {
     GameState s = flatState(20, 14, 1);
     const UnitId id = addUnit(s, "UNIT_SLINGER", 0, {6, 6});
