@@ -853,14 +853,12 @@ void Game::refreshVisibility(PlayerId pid) {
 // Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
 bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
     const int viewerHeight = terrainOf(*rules_, state_.plot(from)).sightThrough;
-    std::vector<Hex> line = state_.grid.line(from, to);
-    for (size_t i = 1; i + 1 < line.size(); ++i) {
-        const Plot& op = state_.plot(line[i]);
+    return state_.grid.between(from, to, [&](Hex h) {
+        const Plot& op = state_.plot(h);
         int obstacle = terrainOf(*rules_, op).sightThrough;
         if (op.feature != kNone && !throughFeatures) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
-        if (obstacle > viewerHeight) return false;
-    }
-    return true;
+        return obstacle <= viewerHeight;
+    });
 }
 
 // ------------------------------------------------------------------ applying

@@ -117,6 +117,34 @@ TEST(hex_line_is_contiguous) {
     CHECK_EQ(seam.size(), 4u);
 }
 
+// between() visits the hexes of line() strictly between its ends, in order, and stops when told to.
+TEST(hex_between_walks_the_inside_of_the_line) {
+    int differ = 0;
+    for (const bool wrap : {true, false}) {
+        const HexGrid g(12, 9, wrap);
+        for (int32_t ay = 0; ay < 9; ++ay)
+            for (int32_t ax = 0; ax < 12; ++ax)
+                for (int32_t by = 0; by < 9; ++by)
+                    for (int32_t bx = 0; bx < 12; ++bx) {
+                        const Hex a{ax, ay}, b{bx, by};
+                        const std::vector<Hex> line = g.line(a, b);
+                        const std::vector<Hex> want = line.size() < 2 ? std::vector<Hex>() : std::vector<Hex>(line.begin() + 1, line.end() - 1);
+                        std::vector<Hex> inside;
+                        const bool ran = g.between(a, b, [&](Hex h) {
+                            inside.push_back(h);
+                            return true;
+                        });
+                        if (!ran || inside != want) ++differ;
+                    }
+    }
+    CHECK_EQ(differ, 0);
+    // A false from the callback ends the walk.
+    const HexGrid g(30, 20, true);
+    int seen = 0;
+    CHECK(!g.between({2, 3}, {11, 15}, [&](Hex) { return ++seen < 3; }));
+    CHECK_EQ(seen, 3);
+}
+
 TEST(json_parses_rules_shapes) {
     std::string err;
     Json j = Json::parse(R"({"a": [1, 2.5, -3], "b": {"c": "x\"y"}, "t": true, "n": null} // trailing comment)", &err);
