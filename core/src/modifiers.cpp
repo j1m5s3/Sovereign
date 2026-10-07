@@ -179,14 +179,11 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
     return std::find(owner.policies.begin(), owner.policies.end(), m.sourceIndex) != owner.policies.end();
 }
 
-// The city that "holds" a modifier for this subject city, or nullptr if the
-// modifier does not reach it. For player-wide sources the subject's player
-// must carry the source. `majority` is the subject's majority religion, worked
-// out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
+// holderFor for the sources that take more than a look at the subject's player: buildings, beliefs, great people,
+// city-states and governors.
 constexpr int kUnknownReligion = -2;
-const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
     const bool ownerOnly = m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots;
-    if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
         case ModSource::Building:
             // A civ's unique building carries the modifiers of the building it replaces.
@@ -196,13 +193,10 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             }
             return nullptr;
         case ModSource::Civ:
-            return owner.civ == m.sourceIndex ? &subject : nullptr;
         case ModSource::Everyone:
-            return &subject;
         case ModSource::Policy:
-            return playerHasSource(m, owner) ? &subject : nullptr;
         case ModSource::Government:
-            return playerHasSource(m, owner) ? &subject : nullptr;
+            break;  // holderFor's own
         case ModSource::Belief: {
             // Player-wide collections: the beliefs of the owner's pantheon and founded religion (God of the Forge...).
             if (!ownerOnly) return owner.pantheon == m.sourceIndex || (owner.religion >= 0 && religionHas(s, owner.religion, m.sourceIndex)) ? &subject : nullptr;
@@ -228,6 +222,22 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             return nullptr;
     }
     return nullptr;
+}
+
+// The city that "holds" a modifier for this subject city, or nullptr if the
+// modifier does not reach it. For player-wide sources the subject's player
+// must carry the source. `majority` is the subject's majority religion, worked
+// out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
+// The sources settled by a look at the player alone are answered here, where the pass is.
+inline const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+    if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
+    switch (m.sourceKind) {
+        case ModSource::Civ: return owner.civ == m.sourceIndex ? &subject : nullptr;
+        case ModSource::Everyone: return &subject;
+        case ModSource::Policy:
+        case ModSource::Government: return playerHasSource(m, owner) ? &subject : nullptr;
+        default: return holderBeyondPlayer(m, s, r, subject, owner, majority);
+    }
 }
 
 // Calls fn for each city modifier in these lists (a null list is skipped), list by list, that reaches the city.
