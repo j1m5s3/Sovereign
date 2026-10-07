@@ -485,14 +485,14 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     const std::optional<Dir> d = state_.grid.directionTo(from, to);
     if (!d) return std::nullopt;
     const MoveTraits traits = moveTraits(unit);
-    return moveCost(unit, traits, moveLimits(unit, traits), from, to, *d);
+    return moveCost(unit, traits, moveLimits(unit, traits, to), from, to, *d);  // `to` is on the grid: a neighbour of `from`
 }
 
-Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) const {
+Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only) const {
     MoveLimits limits;
     limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
     auto block = [&](Hex h) {
-        if (state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
+        if ((!only || h == *only) && state_.grid.normalize(h) == h) limits.blocked[static_cast<size_t>(state_.grid.index(h))] = 1;
     };
     for (const Unit& u : state_.units) {
         if (u.owner != unit.owner) block(u.pos);  // attacks and captures are their own commands
@@ -504,8 +504,9 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) co
         if (camp && state_.grid.normalize(camp->pos) == camp->pos && state_.plot(camp->pos).city == c.id) block(camp->pos);
     }
     limits.closed.assign(state_.players.size(), 0);
+    const PlayerId onlyOwner = only ? state_.plot(*only).owner : kNoPlayer;
     for (const Player& p : state_.players) {
-        if (p.id == unit.owner) continue;
+        if (p.id == unit.owner || (only && p.id != onlyOwner)) continue;
         uint8_t& closed = limits.closed[static_cast<size_t>(p.id)];
         // Music Censorship (04): no foreign Rock Band enters the territory.
         if (traits.rockBand && policyIs(p.id, "POLICY_MUSIC_CENSORSHIP")) closed |= 2;

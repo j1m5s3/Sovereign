@@ -733,7 +733,8 @@ private:
         std::vector<uint8_t> blocked;  // per plot: another player's unit, a foreign city or a standing enemy Encampment
         std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
     };
-    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits) const;
+    // With `only` (a plot on the grid), just the entries a step into it reads: its own and its owner's.
+    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt) const;
     // A step's cost: `dir` is the direction from `from` to its neighbour `to`.
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
