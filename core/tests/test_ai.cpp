@@ -228,6 +228,32 @@ TEST(ai_gathers_before_assaulting_walls) {
     }
 }
 
+TEST(ai_uses_raffles_on_a_city_state_it_leads) {
+    // Stamford Raffles walks into the land of a city-state the AI is suzerain of and absorbs it.
+    GameState s = flatState(24, 14, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.players[1].civ = kNone;
+    s.players[1].cityState = rules().cityState("CITYSTATE_MITLA");
+    for (Player& p : s.players) {
+        p.envoys.assign(2, 0);
+        p.met.assign(2, 0);
+        p.relations.resize(2);
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    s.players[0].met[1] = s.players[1].met[0] = 1;
+    s.players[0].envoys[1] = 3;
+    addCity(s, 0, {6, 6}, true, 4);
+    const CityId town = addCity(s, 1, {12, 6}, true, 2);
+    const TypeIndex gp = rules().greatPerson("GREAT_PERSON_STAMFORD_RAFFLES");
+    const UnitId raffles = addUnit(s, rules().units[at(rules().greatPersonClasses[at(rules().greatPeople[at(gp)].cls)].unit)].id.c_str(), 0, {6, 6});
+    s.units.back().greatPerson = gp;
+    s.units.back().charges = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    for (int i = 0; i < 12 && g->state().unit(raffles); ++i) ai::playTurn(*g);
+    CHECK(!g->state().unit(raffles));
+    CHECK_EQ(g->state().city(town)->owner, 0);
+}
+
 TEST(ai_walks_great_people_to_where_they_work) {
     // Galileo goes beside the most Mountains on the city's land, Zhou Daguan into a known city-state's land and
     // Isidore of Miletus onto the plot of the wonder the city is building.

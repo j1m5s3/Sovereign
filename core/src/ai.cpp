@@ -2054,7 +2054,7 @@ void greatPerson(View& v, UnitId id) {
                 const Plot& pl = v.s().plot(h);
                 if (pl.city == cid && standable(pl)) consider(h, beside(h));
             }
-        } else if (gp.unitDomain < 0 && !gp.cityStateTerritory) {
+        } else if (gp.unitDomain < 0 && !gp.cityStateTerritory && !gp.suzerainTerritory) {
             consider(c.pos, 1);
         }
     }
@@ -2064,6 +2064,16 @@ void greatPerson(View& v, UnitId id) {
         const bool suzerainty = std::any_of(gp.effects.begin(), gp.effects.end(), [](const GreatPersonEffect& fx) { return fx.kind == GreatPersonEffectKind::Suzerain; });
         for (const City& c : v.s().cities) {
             if (!g.isCityState(c.owner) || !g.hasMet(v.me, c.owner) || v.hostile(c.owner) || (suzerainty && g.suzerainOf(c.owner) == v.me)) continue;
+            for (const Hex& h : v.s().grid.within(c.pos, 2)) {
+                const Plot& pl = v.s().plot(h);
+                if (h != c.pos && pl.owner == c.owner && standable(pl)) consider(h, 1);
+            }
+        }
+    }
+    // Stamford Raffles: the land of a city-state we are suzerain of, which he absorbs.
+    if (gp.suzerainTerritory) {
+        for (const City& c : v.s().cities) {
+            if (!g.isCityState(c.owner) || g.suzerainOf(c.owner) != v.me || v.hostile(c.owner)) continue;
             for (const Hex& h : v.s().grid.within(c.pos, 2)) {
                 const Plot& pl = v.s().plot(h);
                 if (h != c.pos && pl.owner == c.owner && standable(pl)) consider(h, 1);

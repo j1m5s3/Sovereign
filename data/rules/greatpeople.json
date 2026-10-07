@@ -2180,12 +2180,13 @@
    "era": "ERA_MODERN",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "SuzerainTerritory"
-    ]
+    "suzerainTerritory": true
    },
-   "untrackedEffects": [
-    "unit transfer city as gift and apply modifier (ModifierId=Greatperson City State Absorb Expansions Loyalty Attachment) (one-time)"
+   "effects": [
+    {
+     "kind": "ABSORB_CITY_STATE",
+     "amount": 10
+    }
    ]
   },
   {

@@ -425,6 +425,7 @@ enum class GreatPersonEffectKind : uint8_t {
     RegionalYield,      // + `amount` `yield` to each city the district's regional buildings reach
     RegionalAmenity,    // + `amount` Amenity to each city the district's regional buildings reach
     WonderPurchase,     // the rest of the wonder built on this plot, at 2 Gold per Production, up to half the treasury
+    AbsorbCityState,    // the city-state whose land this is joins the player; + `amount` Loyalty a turn in this city
 };
 
 struct GreatPersonEffect {
@@ -566,6 +567,7 @@ struct GreatPersonType {
     bool relicSlot = false;           // one of the player's cities has a free Relic slot (Jeanne d'Arc)
     bool enemyTerritory = false;      // on the land of a civ at war with the player (Tupac Amaru)
     bool cityStateTerritory = false;  // on a city-state's land (Matthew Perry, Zhou Daguan)
+    bool suzerainTerritory = false;   // on the land of a city-state the player is suzerain of (Stamford Raffles)
     bool nonHostileTerritory = false; // not on the land of anyone at war with the player
     bool incompleteWonder = false;    // on the plot of a wonder its city is building (the Great Engineers)
     bool spaceRaceProject = false;    // its city is building a space race project (Korolev, Sagan)

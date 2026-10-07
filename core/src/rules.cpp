@@ -505,7 +505,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"POPULATION", GreatPersonEffectKind::Population}, {"PROMOTE_ALL", GreatPersonEffectKind::PromoteAll},
                 {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent}, {"LUXURY_HERE", GreatPersonEffectKind::LuxuryHere},
                 {"REGIONAL_RANGE", GreatPersonEffectKind::RegionalRange}, {"REGIONAL_AMENITY", GreatPersonEffectKind::RegionalAmenity},
-                {"WONDER_PURCHASE", GreatPersonEffectKind::WonderPurchase},
+                {"WONDER_PURCHASE", GreatPersonEffectKind::WonderPurchase}, {"ABSORB_CITY_STATE", GreatPersonEffectKind::AbsorbCityState},
             };
             bool known = false;
             for (const auto& [name, k] : kMore) {
@@ -2054,6 +2054,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         g.relicSlot = rq["relicSlot"].boolean(false);
         g.enemyTerritory = rq["enemyTerritory"].boolean(false);
         g.cityStateTerritory = rq["cityStateTerritory"].boolean(false);
+        g.suzerainTerritory = rq["suzerainTerritory"].boolean(false);
         g.nonHostileTerritory = rq["nonHostileTerritory"].boolean(false);
         g.incompleteWonder = rq["incompleteWonder"].boolean(false);
         g.spaceRaceProject = rq["spaceRaceProject"].boolean(false);

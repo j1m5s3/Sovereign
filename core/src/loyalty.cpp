@@ -85,6 +85,8 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)
         change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_STARVATION"));
     change += sumCityModifiers(state_, *rules_, *c, ModEffect::CityLoyalty);
+    // Stamford Raffles (07): + 10 a turn in the city-state city he absorbed.
+    if (!c->greatPeopleHere.empty()) change += Fixed::fromInt(cityGreatPersonEffectTotal(*c, GreatPersonEffectKind::AbsorbCityState));
     // Districts (02): the Government Plaza steadies its city while it stands unpillaged.
     for (const CityDistrict& d : c->districts) {
         if (d.complete && d.pillagedTurns == 0) change += Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].loyalty);
