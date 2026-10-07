@@ -71,6 +71,13 @@ TEST(capacity_from_foreign_trade_markets_and_lighthouses) {
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->tradeRouteCapacity(0), 3);  // civic + Market + Lighthouse without a Market
     CHECK_EQ(g->tradeRouteCapacity(1), 0);
+    // Rome's Forum is its Market: a Lighthouse beside it adds nothing either.
+    GameState t = tradeState();
+    t.cities[0].buildings.push_back(rules().building("BUILDING_FORUM"));
+    t.cities[0].buildings.push_back(rules().building("BUILDING_LIGHTHOUSE"));
+    std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+    auto rome = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(rome->tradeRouteCapacity(0), 2);  // civic + Forum
 }
 
 TEST(route_yields_follow_the_destination_districts) {

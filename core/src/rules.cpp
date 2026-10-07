@@ -1092,6 +1092,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             if (!resolveList(rows[i].second["requiresAny"], findBuilding, buildings[i].prereqsAny, "building " + rows[i].first, error)) return false;
             if (!resolveList(rows[i].second["requires"], findBuilding, buildings[i].prereqs, "building " + rows[i].first, error))
                 return false;
+            if (!resolveList(rows[i].second["exclusiveWith"], findBuilding, buildings[i].exclusiveWith, "building " + rows[i].first, error))
+                return false;
         }
         size_t k = 0;
         for (const auto& [uid, j] : m.tables["units"]) {

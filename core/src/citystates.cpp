@@ -174,7 +174,8 @@ Yields Game::envoyYields(const City& city) const {
         const CityStateKind kind = rules_->cityStates[at(cs.cityState)].kind;
         for (const EnvoyBonus& b : rules_->envoyBonuses) {
             if (b.kind != kind || n < b.envoys || b.amount <= 0) continue;
-            if ((b.capital && city.capital) || (b.building != kNone && city.has(b.building)))
+            // A civ's unique building counts as the one it replaces (the Aztec Calmecac as a Library).
+            if ((b.capital && city.capital) || (b.building != kNone && cityHasBuilding(city, *rules_, b.building)))
                 out[static_cast<size_t>(b.yield)] += Fixed::fromInt(b.amount);
         }
     }
@@ -196,7 +197,7 @@ int Game::envoyProduction(const City& city, ProductionItem item) const {
         for (const EnvoyBonus& b : rules_->envoyBonuses) {
             if (b.kind != kind || n < b.envoys || b.production <= 0 || b.toward != toward) continue;
             const bool here = (b.capital && city.capital) ||
-                              std::any_of(b.buildings.begin(), b.buildings.end(), [&](TypeIndex x) { return city.has(x); });
+                              std::any_of(b.buildings.begin(), b.buildings.end(), [&](TypeIndex x) { return cityHasBuilding(city, *rules_, x); });
             if (here) total += b.production;
         }
     }

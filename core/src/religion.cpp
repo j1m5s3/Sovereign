@@ -187,7 +187,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
             std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
             return std::max(1, purchaseCost(player, item, &city) * 85 / 100);
         if (u.purchaseYield != "FAITH" || !hasUnlocked(player, u.unlock)) return -1;
-        if (!u.needsBuilding.empty() && std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return city.has(b); }))
+        // A civ's unique building counts as the one it replaces (Mali's Sahel Mosque as the Temple an Apostle needs).
+        if (!u.needsBuilding.empty() &&
+            std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return cityHasBuilding(city, *rules_, b); }))
             return -1;
         // Missionaries and Apostles carry the city's majority religion; Inquisitors, Gurus and
         // Warrior Monks wait for the beliefs and actions that open them.
@@ -229,9 +231,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
             if (rules_->beliefs[i].worshipBuilding == item.type && religionHas(state_, majority, static_cast<TypeIndex>(i))) belief = true;
         }
         if (!belief || b.districtType == kNone || !city.district(b.districtType, true)) return -1;
-        for (TypeIndex req : b.prereqs) {
-            if (!city.has(req)) return -1;
-        }
+        if (!b.prereqs.empty() &&
+            std::none_of(b.prereqs.begin(), b.prereqs.end(), [&](TypeIndex req) { return cityHasBuilding(city, *rules_, req); }))
+            return -1;
         return std::max(1, b.cost * speed / 100);
     }
     return -1;

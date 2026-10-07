@@ -177,6 +177,35 @@ TEST(worship_buildings_need_their_belief_and_faith) {
     CHECK(g->state().city(holy)->has(cathedral.type));
 }
 
+TEST(a_temple_s_replacement_buys_apostles_and_worship_buildings) {
+    // Mali's Sahel Mosque counts as the Temple an Apostle and a worship building need (leaders-and-art-style; 06).
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_SAHEL_MOSQUE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.players[0].faith = Fixed::fromInt(1000);
+    auto g = withReligion(std::move(s));
+    const CityId holy = g->state().cities[0].id;
+    const ProductionItem apostle{ProductionKind::Unit, rules().unit("UNIT_APOSTLE")};
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
+    const UnitId a = g->state().units.back().id;
+    REQUIRE(g->submit(Command::evangelizeBelief(0, a, belief("BELIEF_CATHEDRAL"))) == CommandError::Ok);
+    const ProductionItem cathedral{ProductionKind::Building, rules().building("BUILDING_CATHEDRAL")};
+    CHECK_EQ(g->faithPurchaseCost(0, *g->state().city(holy), cathedral), 190);
+}
+
+TEST(religious_community_counts_a_temple_s_replacement) {
+    // Religious Community (06): international routes +2 Gold for the origin's Temple; Mali's Sahel Mosque is its Temple.
+    const auto gold = [](const char* temple) {
+        GameState s = religionState();
+        if (temple) s.cities[0].buildings.push_back(rules().building(temple));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        auto g = withFollowerBelief(std::move(s), "BELIEF_RELIGIOUS_COMMUNITY");
+        return g->tradeRouteYields(g->state().cities[0], g->state().cities[2])[static_cast<size_t>(YieldType::Gold)];
+    };
+    CHECK_EQ(gold("BUILDING_TEMPLE") - gold(nullptr), Fixed::fromInt(2));
+    CHECK_EQ(gold("BUILDING_SAHEL_MOSQUE") - gold(nullptr), Fixed::fromInt(2));
+}
+
 TEST(theological_combat_needs_no_war) {
     GameState s = religionState();
     s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});

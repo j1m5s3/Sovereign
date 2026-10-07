@@ -809,9 +809,12 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         // Buildings outside the City Center need their finished district.
         if (b.district != "DISTRICT_CITY_CENTER" && (b.districtType == kNone || !c.district(b.districtType, true)))
             return fail(CommandError::CannotBuild);
-        for (TypeIndex req : b.prereqs) {
-            if (!cityHasBuilding(c, *rules_, req)) return fail(CommandError::CannotBuild);
-        }
+        // Any one of the buildings it needs first will do (the Armory: a Barracks or a Stable), and none it excludes
+        // may stand in the city (the Barracks and the Stable; one Government Plaza building a tier, 03). A civ's
+        // unique building counts as the one it replaces.
+        const auto inCity = [&](TypeIndex x) { return cityHasBuilding(c, *rules_, x); };
+        if (!b.prereqs.empty() && std::none_of(b.prereqs.begin(), b.prereqs.end(), inCity)) return fail(CommandError::CannotBuild);
+        if (std::any_of(b.exclusiveWith.begin(), b.exclusiveWith.end(), inCity)) return fail(CommandError::CannotBuild);
         if (b.needsRiver && !isRiverAdjacent(state_, c.pos)) return fail(CommandError::CannotBuild);
     } else if (item.kind == ProductionKind::District) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);

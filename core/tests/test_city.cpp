@@ -285,6 +285,51 @@ TEST(city_bankruptcy_disbands_units) {
     CHECK(g->state().unit(spear) == nullptr);
 }
 
+TEST(exclusive_buildings_and_either_prerequisite) {
+    // 03: a city holds the Barracks or the Stable, never both, and the Armory needs either; one Government Plaza
+    // building a tier, and the next tier after any one of the last; one power plant. A civ's unique building
+    // counts as the one it replaces (Rome's Forum as the Market a Bank needs).
+    GameState s = flatState(16, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {4, 5}, true, 8);
+    for (const char* t : {"TECH_BRONZE_WORKING", "TECH_HORSEBACK_RIDING", "TECH_MILITARY_ENGINEERING", "TECH_INDUSTRIALIZATION", "TECH_ELECTRICITY",
+                          "TECH_BANKING"})
+        s.players[0].techs.done[static_cast<size_t>(rules().tech(t))] = 1;
+    s.cities[0].districts.push_back({rules().district("DISTRICT_ENCAMPMENT"), {6, 5}, true});
+    s.cities[0].districts.push_back({rules().district("DISTRICT_GOVERNMENT_PLAZA"), {3, 3}, true});
+    s.cities[0].districts.push_back({rules().district("DISTRICT_INDUSTRIAL_ZONE"), {5, 7}, true});
+    s.cities[0].districts.push_back({rules().district("DISTRICT_COMMERCIAL_HUB"), {3, 7}, true});
+    const auto can = [&](std::vector<const char*> buildings, const char* b) {
+        GameState t = s;
+        for (const char* x : buildings) t.cities[0].buildings.push_back(rules().building(x));
+        std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->canProduce(g->state().cities[0], buildingItem(b));
+    };
+    CHECK(can({}, "BUILDING_BARRACKS"));
+    CHECK(can({}, "BUILDING_STABLE"));
+    CHECK(!can({}, "BUILDING_ARMORY"));
+    CHECK(!can({"BUILDING_BARRACKS"}, "BUILDING_STABLE"));
+    CHECK(!can({"BUILDING_STABLE"}, "BUILDING_BARRACKS"));
+    CHECK(can({"BUILDING_BARRACKS"}, "BUILDING_ARMORY"));
+    CHECK(can({"BUILDING_STABLE"}, "BUILDING_ARMORY"));
+    CHECK(can({}, "BUILDING_AUDIENCE_CHAMBER"));
+    CHECK(!can({}, "BUILDING_FOREIGN_MINISTRY"));
+    CHECK(!can({"BUILDING_ANCESTRAL_HALL"}, "BUILDING_AUDIENCE_CHAMBER"));
+    CHECK(!can({"BUILDING_ANCESTRAL_HALL"}, "BUILDING_WARLORD_S_THRONE"));
+    CHECK(can({"BUILDING_ANCESTRAL_HALL"}, "BUILDING_FOREIGN_MINISTRY"));
+    CHECK(can({"BUILDING_ANCESTRAL_HALL"}, "BUILDING_GRAND_MASTER_S_CHAPEL"));
+    CHECK(!can({"BUILDING_ANCESTRAL_HALL", "BUILDING_INTELLIGENCE_AGENCY"}, "BUILDING_FOREIGN_MINISTRY"));
+    CHECK(can({"BUILDING_ANCESTRAL_HALL", "BUILDING_INTELLIGENCE_AGENCY"}, "BUILDING_WAR_DEPARTMENT"));
+    CHECK(!can({"BUILDING_ANCESTRAL_HALL", "BUILDING_INTELLIGENCE_AGENCY", "BUILDING_WAR_DEPARTMENT"}, "BUILDING_ROYAL_SOCIETY"));
+    CHECK(can({"BUILDING_WORKSHOP", "BUILDING_FACTORY"}, "BUILDING_COAL_POWER_PLANT"));
+    CHECK(can({"BUILDING_WORKSHOP", "BUILDING_FACTORY"}, "BUILDING_OIL_POWER_PLANT"));
+    CHECK(!can({"BUILDING_WORKSHOP", "BUILDING_FACTORY", "BUILDING_COAL_POWER_PLANT"}, "BUILDING_OIL_POWER_PLANT"));
+    CHECK(!can({}, "BUILDING_BANK"));
+    CHECK(can({"BUILDING_MARKET"}, "BUILDING_BANK"));
+    CHECK(can({"BUILDING_FORUM"}, "BUILDING_BANK"));
+}
+
 TEST(regional_buildings_reach_the_owners_cities_in_range) {
     // A Factory (regional 6) in one city: a second city 4 plots away takes its +3 Production; one 10 away does not.
     GameState s = flatState(30, 12, 1);

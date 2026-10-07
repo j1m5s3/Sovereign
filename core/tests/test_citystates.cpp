@@ -118,6 +118,37 @@ TEST(envoys_make_a_suzerain_and_pay_tier_bonuses) {
     CHECK_EQ(g->cityReport(capital).yields[yi(YieldType::Science)], before);
 }
 
+TEST(a_civ_s_unique_building_earns_its_base_s_envoy_bonus) {
+    // One envoy at a Scientific city-state: +1 Science in the capital and +1 per Library; the Aztecs' Calmecac is their Library.
+    const auto science = [](const char* building) {
+        GameState s = csState();
+        s.players[0].envoyTokens = 1;
+        if (building) s.cities[0].buildings.push_back(rules().building(building));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const CityId capital = g->state().cities[0].id;
+        const Fixed before = g->cityReport(capital).yields[yi(YieldType::Science)];
+        REQUIRE(g->submit(Command::sendEnvoy(0, 2)) == CommandError::Ok);
+        return g->cityReport(capital).yields[yi(YieldType::Science)] - before;
+    };
+    CHECK_EQ(science(nullptr), Fixed::fromInt(1));
+    CHECK_EQ(science("BUILDING_LIBRARY"), Fixed::fromInt(2));
+    CHECK_EQ(science("BUILDING_CALMECAC"), Fixed::fromInt(2));
+    // Three envoys at an Industrial city-state: +2 Production toward buildings in a city with a Factory; England's
+    // Mill Town is its Factory.
+    const auto production = [](const char* building) {
+        GameState s = csState();
+        s.players[2].cityState = cityStateOf(CityStateKind::Industrial);
+        s.players[0].envoys[2] = 3;
+        if (building) s.cities[0].buildings.push_back(rules().building(building));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->envoyProduction(g->state().cities[0], ProductionItem{ProductionKind::Building, rules().building("BUILDING_MONUMENT")});
+    };
+    CHECK_EQ(production("BUILDING_FACTORY") - production(nullptr), 2);
+    CHECK_EQ(production("BUILDING_MILL_TOWN") - production(nullptr), 2);
+}
+
 TEST(city_states_never_win_or_score) {
     GameState s = csState();
     auto g = Game::fromScenario(rules(), std::move(s));
