@@ -68,8 +68,10 @@ bool Game::territoryGovernorHas(Hex at, PlayerId owner, const char* promotionId)
 }
 
 bool Game::governorHasPromotion(const Governor& g, const char* promotionId) const {
-    const TypeIndex p = rules_->governorPromotion(promotionId);
-    return p != kNone && std::find(g.promotions.begin(), g.promotions.end(), p) != g.promotions.end();
+    // One of its promotions has that name (ids are unique), found without a search of them all.
+    return std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex p) {
+        return p >= 0 && at(p) < rules_->governorPromotions.size() && rules_->governorPromotions[at(p)].id == promotionId;
+    });
 }
 
 int Game::governorEstablishTurns(TypeIndex type) const {

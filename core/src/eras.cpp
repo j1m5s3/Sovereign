@@ -71,9 +71,9 @@ void Game::chooseDedication(PlayerId player, TypeIndex dedication) {
 
 bool Game::dedicated(PlayerId player, const char* id) const {
     if (player < 0 || at(player) >= state_.players.size()) return false;
-    const TypeIndex d = rules_->dedication(id);
+    // One of the player's few dedications has that name (ids are unique), found without a search of them all.
     const std::vector<TypeIndex>& mine = state_.players[at(player)].dedications;
-    return d != kNone && std::find(mine.begin(), mine.end(), d) != mine.end();
+    return std::any_of(mine.begin(), mine.end(), [&](TypeIndex d) { return d >= 0 && at(d) < rules_->dedications.size() && rules_->dedications[at(d)].id == id; });
 }
 
 bool Game::goldenDedication(PlayerId player, const char* id) const {
