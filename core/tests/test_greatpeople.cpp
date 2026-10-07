@@ -70,6 +70,15 @@ TEST(each_class_offers_one_person_at_a_rising_cost) {
     CHECK_EQ(g->greatPersonCost(sci), 78);          // 60, +30% for one era ahead of the world
     // No Engineers before the Medieval era's people.
     CHECK_EQ(rules().greatPeople[at(g->currentGreatPerson(cls("GREAT_PERSON_CLASS_ENGINEER")))].era, 2);
+    // Once the world reaches the Classical era, a Classical scientist is still offered, at that era's own cost.
+    GameState s = cityState();
+    for (Player& p : s.players) p.techs.done[at(rules().tech("TECH_CURRENCY"))] = 1;  // Classical
+    auto classical = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(classical->worldEra() == 1);
+    const TypeIndex now = classical->currentGreatPerson(cls("GREAT_PERSON_CLASS_SCIENTIST"));
+    REQUIRE(now != kNone);
+    CHECK_EQ(rules().greatPeople[at(now)].era, 1);
+    CHECK_EQ(classical->greatPersonCost(now), 60);
 }
 
 TEST(districts_and_buildings_earn_points_and_recruit) {

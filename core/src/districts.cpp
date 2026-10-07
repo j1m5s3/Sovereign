@@ -256,6 +256,13 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
     return out;
 }
 
+bool Game::anyDistrictPlot(CityId id, TypeIndex type) const {
+    const City* c = state_.city(id);
+    bool any = false;
+    if (c) state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || canPlaceDistrict(*c, type, h); });
+    return any;
+}
+
 int Game::specialistSlots(const City& city, const CityDistrict& district) const {
     int slots = 0;
     for (TypeIndex b : city.buildings) {

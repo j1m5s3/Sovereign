@@ -72,6 +72,10 @@ TEST(a_national_park_draws_tourism_and_cheers_its_city) {
     CHECK_EQ(g->tourismPerTurn(0), tourism + appeal);
     CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, amenities + rules().globalInt("NATIONAL_PARK_AMENITIES_OWNING_CITY"));
     CHECK(!g->canImproveAt(0, (*plots)[1], rules().improvement("IMPROVEMENT_FARM")));  // the park stays as it is
+    // A game made from a state that has the park already (a scenario, a saved game) counts it the same.
+    auto again = Game::fromScenario(rules(), g->state());
+    CHECK_EQ(again->tourismPerTurn(0), tourism + appeal);
+    CHECK_EQ(again->cityReport(again->state().cities[0].id).amenities, amenities + rules().globalInt("NATIONAL_PARK_AMENITIES_OWNING_CITY"));
 }
 
 TEST(a_national_park_cheers_its_civs_nearest_other_cities) {

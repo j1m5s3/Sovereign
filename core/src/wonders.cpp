@@ -82,6 +82,13 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     return out;
 }
 
+bool Game::anyWonderPlot(CityId id, TypeIndex building) const {
+    const City* c = state_.city(id);
+    bool any = false;
+    if (c) state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || canPlaceWonder(*c, building, h); });
+    return any;
+}
+
 bool Game::holdsWonder(PlayerId player, W w) const {
     const TypeIndex b = wonderType(w);
     if (b == kNone) return false;

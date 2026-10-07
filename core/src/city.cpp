@@ -852,7 +852,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
             // Once in the world, on a plot of its own (03: Wonders).
             if (wonderBuilt(item.type)) return fail(CommandError::CannotBuild);
             const bool sited = std::any_of(c.wonders.begin(), c.wonders.end(), [&](const CityWonder& w) { return w.building == item.type; });
-            if (!sited && wonderPlots(c.id, item.type).empty()) return fail(CommandError::CannotBuild);
+            if (!sited && !anyWonderPlot(c.id, item.type)) return fail(CommandError::CannotBuild);
             if (why) *why = CommandError::Ok;
             return true;
         }
@@ -944,7 +944,7 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
     for (size_t i = 0; i < rules_->districts.size(); ++i) {
         ProductionItem it{ProductionKind::District, static_cast<TypeIndex>(i)};
         if (!canProduce(*c, it) || std::find(c->queue.begin(), c->queue.end(), it) != c->queue.end()) continue;
-        if (c->district(it.type, false) || !districtPlots(id, it.type).empty()) out.push_back(it);
+        if (c->district(it.type, false) || anyDistrictPlot(id, it.type)) out.push_back(it);
     }
     for (size_t i = 0; i < rules_->projects.size(); ++i) {
         ProductionItem it{ProductionKind::Project, static_cast<TypeIndex>(i)};

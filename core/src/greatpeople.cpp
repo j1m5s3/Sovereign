@@ -33,12 +33,13 @@ int Game::worldEra() const {
     return eras[(eras.size() + 1) / 2 - 1];  // reached by at least half of them
 }
 
-TypeIndex Game::currentGreatPerson(TypeIndex cls) const {
+TypeIndex Game::currentGreatPerson(TypeIndex cls) const { return currentGreatPerson(cls, worldEra()); }
+
+TypeIndex Game::currentGreatPerson(TypeIndex cls, int world) const {
     // Great Prophets stop once every religion the map allows is founded (06: Founding a religion).
     if (rules_->units[at(rules_->greatPersonClasses[at(cls)].unit)].foundReligion &&
         static_cast<int>(state_.religions.size()) >= maxReligions())
         return kNone;
-    const int world = worldEra();
     TypeIndex best = kNone;
     for (size_t i = 0; i < rules_->greatPeople.size(); ++i) {
         const GreatPersonType& g = rules_->greatPeople[i];
@@ -48,9 +49,11 @@ TypeIndex Game::currentGreatPerson(TypeIndex cls) const {
     return best;
 }
 
-int Game::greatPersonCost(TypeIndex person) const {
+int Game::greatPersonCost(TypeIndex person) const { return greatPersonCost(person, worldEra()); }
+
+int Game::greatPersonCost(TypeIndex person, int world) const {
     const GreatPersonType& g = rules_->greatPeople[at(person)];
-    const int ahead = std::max(0, g.era - worldEra());
+    const int ahead = std::max(0, g.era - world);
     const int base = rules_->eras[at(static_cast<TypeIndex>(g.era))].greatPersonBaseCost * (100 + 30 * ahead) / 100;
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
@@ -58,12 +61,13 @@ int Game::greatPersonCost(TypeIndex person) const {
 int Game::patronageCost(PlayerId player, TypeIndex cls, bool faith) const {
     if (cls < 0 || at(cls) >= rules_->greatPersonClasses.size()) return -1;
     const Player& p = state_.players[at(player)];
-    const TypeIndex person = currentGreatPerson(cls);
+    const int world = worldEra();
+    const TypeIndex person = currentGreatPerson(cls, world);
     if (person == kNone) return -1;
     const GreatPersonClass& c = rules_->greatPersonClasses[at(cls)];
     if (c.maxPerPlayer > 0 && at(cls) < p.greatPeopleRecruited.size() && p.greatPeopleRecruited[at(cls)] >= c.maxPerPlayer) return -1;
     const int have = at(cls) < p.greatPersonPoints.size() ? p.greatPersonPoints[at(cls)] : 0;
-    const int missing = std::max(0, greatPersonCost(person) - have);
+    const int missing = std::max(0, greatPersonCost(person, world) - have);
     // The fixed part does not scale with game speed (07: Patronage).
     // The Oracle (03: Wonders): patronage with Faith 25% cheaper.
     if (faith) return (150 + 10 * missing) * (buildingsOwned(player, "BUILDING_ORACLE") > 0 ? 75 : 100) / 100;
@@ -228,17 +232,19 @@ void Game::processGreatPeople(PlayerId pid) {
         if (rules_->greatPersonClasses[c].id != "GREAT_PERSON_CLASS_PROPHET") earned += points;
     }
     competitionScore(pid, CompetitionKind::WorldsFair, earned);  // great person points of the eight secular classes
+    int world = worldEra();  // worked out again after each recruit
     for (size_t c = 0; c < rules_->greatPersonClasses.size(); ++c) {
-        const TypeIndex person = currentGreatPerson(static_cast<TypeIndex>(c));
+        const TypeIndex person = currentGreatPerson(static_cast<TypeIndex>(c), world);
         if (person == kNone) continue;
         if (std::find(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end(), person) != p.greatPeoplePassed.end()) continue;
         const GreatPersonClass& cls = rules_->greatPersonClasses[c];
         if (cls.maxPerPlayer > 0 && p.greatPeopleRecruited[c] >= cls.maxPerPlayer) continue;
-        const int cost = greatPersonCost(person);
+        const int cost = greatPersonCost(person, world);
         if (p.greatPersonPoints[c] < cost) continue;
         p.greatPersonPoints[c] -= cost;
         recruitGreatPerson(pid, person);
         awardMoment(pid, rules_->greatPeople[at(person)].era < state_.gameEra ? "MOMENT_OLD_GREAT_PERSON_RECRUITED" : "MOMENT_GREAT_PERSON_RECRUITED");
+        world = worldEra();
     }
 }
 

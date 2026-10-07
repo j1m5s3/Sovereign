@@ -81,12 +81,16 @@ void Game::designatePark(UnitId id) {
     const auto plots = parkPlots(id);
     awardFirst(state_.unit(id)->owner, "MOMENT_WORLD_S_FIRST_NATIONAL_PARK", "MOMENT_NATIONAL_PARK_FOUNDED", 0);
     eventBoost(state_.unit(id)->owner, BoostKind::NationalPark);  // 04: Radio
-    if (plots) for (const Hex& h : *plots) state_.plot(h).park = true;
+    if (plots) {
+        for (const Hex& h : *plots) state_.plot(h).park = true;
+        parks_ = true;
+    }
     removeUnit(id);
 }
 
 // Tourism equal to the appeal of its plots (07).
 int Game::parkTourism(PlayerId player) const {
+    if (!parks_) return 0;
     int total = 0;
     for (int i = 0, plotCount = state_.grid.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[at(i)];
@@ -103,6 +107,7 @@ int Game::parkAmenities(const City& city) const {
 }
 
 int Game::parkAmenities(const City& city, ReportShare& shared) const {
+    if (!parks_) return 0;
     // Park plots by the city they belong to, in one pass over the map for a run of city reports.
     if (!shared.parkPlots) {
         std::map<CityId, int>& counted = shared.parkPlots.emplace();

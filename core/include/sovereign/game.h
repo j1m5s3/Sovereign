@@ -914,6 +914,15 @@ private:
     int touristCulture_ = 0;                  // TOURISM_CULTURE_PER_CITIZEN (domesticTourists)
     // By unit type: the GrantAbility player modifiers whose ability covers its class, in modifier order (unitAbilities).
     std::vector<std::vector<uint32_t>> abilityGrants_;
+    // Whether any plot is a National Park: a game starts with those its state has, designatePark makes the others and
+    // none is ever lost, so while this is false the park scans have nothing to find.
+    bool parks_ = false;
+    // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
+    bool anyWonderPlot(CityId city, TypeIndex building) const;
+    bool anyDistrictPlot(CityId city, TypeIndex district) const;
+    // currentGreatPerson and greatPersonCost with the world era already worked out.
+    TypeIndex currentGreatPerson(TypeIndex cls, int world) const;
+    int greatPersonCost(TypeIndex person, int world) const;
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
