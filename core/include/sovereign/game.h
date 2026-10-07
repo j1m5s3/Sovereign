@@ -920,6 +920,9 @@ private:
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
+    // currentGreatPerson and greatPersonCost with the world era already worked out.
+    TypeIndex currentGreatPerson(TypeIndex cls, int world) const;
+    int greatPersonCost(TypeIndex person, int world) const;
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
