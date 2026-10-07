@@ -420,6 +420,10 @@ enum class GreatPersonEffectKind : uint8_t {
     Population,         // + `amount` population in each of the player's cities
     PromoteAll,         // every military unit of the player gains enough XP for a promotion
     TreasuryPercent,    // + `amount`% of the player's gold
+    // Lasting, on the district it was used on (03: regional buildings; Tesla, Paxton):
+    RegionalRange,      // the district's regional buildings reach `amount` tiles farther
+    RegionalYield,      // + `amount` `yield` to each city the district's regional buildings reach
+    RegionalAmenity,    // + `amount` Amenity to each city the district's regional buildings reach
 };
 
 struct GreatPersonEffect {

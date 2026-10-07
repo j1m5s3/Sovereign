@@ -476,6 +476,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 *error = where + ": bad effect yield";
                 return false;
             }
+        } else if (kind == "REGIONAL_YIELD") {
+            fx.kind = GreatPersonEffectKind::RegionalYield;
+            fx.ref = 0;
+            if (!parseYieldName(ej["yield"].str(), fx.yield)) {
+                *error = where + ": bad effect yield";
+                return false;
+            }
         } else if (kind == "ABILITY") {
             fx.kind = GreatPersonEffectKind::Ability;
             fx.ref = ability(ref);
@@ -497,6 +504,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"RANDOM_CIVICS", GreatPersonEffectKind::RandomCivics}, {"DIPLOMATIC_VP", GreatPersonEffectKind::DiplomaticVp},
                 {"POPULATION", GreatPersonEffectKind::Population}, {"PROMOTE_ALL", GreatPersonEffectKind::PromoteAll},
                 {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent}, {"LUXURY_HERE", GreatPersonEffectKind::LuxuryHere},
+                {"REGIONAL_RANGE", GreatPersonEffectKind::RegionalRange}, {"REGIONAL_AMENITY", GreatPersonEffectKind::RegionalAmenity},
             };
             bool known = false;
             for (const auto& [name, k] : kMore) {

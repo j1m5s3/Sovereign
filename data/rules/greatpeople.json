@@ -1630,9 +1630,16 @@
     "ownedTile": true,
     "district": "DISTRICT_INDUSTRIAL_ZONE"
    },
-   "untrackedEffects": [
-    "adjust district extra regional yield (Amount=2, YieldType=Production) (one-time)",
-    "+3 regional range (one-time)"
+   "effects": [
+    {
+     "kind": "REGIONAL_YIELD",
+     "yield": "PRODUCTION",
+     "amount": 2
+    },
+    {
+     "kind": "REGIONAL_RANGE",
+     "amount": 3
+    }
    ]
   },
   {
@@ -1759,9 +1766,15 @@
     "ownedTile": true,
     "district": "DISTRICT_ENTERTAINMENT_COMPLEX"
    },
-   "untrackedEffects": [
-    "adjust district extra regional entertainment (Amount=1) (one-time)",
-    "+3 regional range (one-time)"
+   "effects": [
+    {
+     "kind": "REGIONAL_AMENITY",
+     "amount": 1
+    },
+    {
+     "kind": "REGIONAL_RANGE",
+     "amount": 3
+    }
    ]
   },
   {

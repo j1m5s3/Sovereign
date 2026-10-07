@@ -490,3 +490,84 @@ TEST(great_people_are_used_only_where_their_effect_applies) {
         CHECK_EQ(g->state().unit(raider)->owner, 0);
     }
 }
+
+// Nikola Tesla and Joseph Paxton (07; data: adjust district extra regional yield / entertainment, +3 regional range):
+// the Industrial Zone or Entertainment Complex they are used on reaches 3 tiles farther, and each city its regional
+// buildings reach, its own included, gets +2 Production (Tesla) or +1 Amenity (Paxton), once.
+TEST(tesla_and_paxton_strengthen_regional_buildings) {
+    const size_t prod = static_cast<size_t>(YieldType::Production);
+    // A capital with an Industrial Zone (Workshop, Factory, Coal Power Plant: two regional buildings) and an
+    // Entertainment Complex (Arena, Zoo); towns 4 and 8 tiles away.
+    const auto setup = [&](const char* who, bool pillaged = false) {
+        GameState s = flatState(30, 12, 1);
+        Game::fitPlayerToRules(s.players[0], rules());
+        const CityId a = addCity(s, 0, {5, 5}, true, 3);
+        addCity(s, 0, {9, 5}, false, 3);
+        addCity(s, 0, {13, 5}, false, 3);
+        City& host = *s.city(a);
+        host.districts.push_back({rules().district("DISTRICT_INDUSTRIAL_ZONE"), {5, 6}, true});
+        host.districts.push_back({rules().district("DISTRICT_ENTERTAINMENT_COMPLEX"), {4, 5}, true});
+        host.districts[0].pillagedTurns = pillaged ? 5 : 0;
+        for (const char* b : {"BUILDING_WORKSHOP", "BUILDING_FACTORY", "BUILDING_COAL_POWER_PLANT", "BUILDING_ARENA", "BUILDING_ZOO"})
+            host.buildings.push_back(rules().building(b));
+        std::sort(host.buildings.begin(), host.buildings.end());
+        for (const Hex& h : s.grid.within({5, 5}, 2)) {
+            s.plot(h).owner = 0;
+            s.plot(h).city = a;
+        }
+        if (who) host.greatPeopleHere.push_back(person(who));
+        return s;
+    };
+    auto plain = Game::fromScenario(rules(), setup(nullptr));
+    auto tesla = Game::fromScenario(rules(), setup("GREAT_PERSON_NIKOLA_TESLA"));
+    auto paxton = Game::fromScenario(rules(), setup("GREAT_PERSON_JOSEPH_PAXTON"));
+    const CityId host = plain->state().cities[0].id, near = plain->state().cities[1].id, far = plain->state().cities[2].id;
+    REQUIRE(plain->state().grid.distance(plain->state().city(host)->pos, plain->state().city(far)->pos) == 8);
+    // The report's Production carries the city's mood percentage, which Tesla leaves alone.
+    const auto more = [&](const Game& with, const Game& without, CityId c, int amount) {
+        REQUIRE(with.cityReport(c).happiness == without.cityReport(c).happiness);
+        const int pct = 100 + rules().happiness[static_cast<size_t>(without.cityReport(c).happiness)].yieldPercent;
+        return without.cityReport(c).yields[prod] + Fixed::fromInt(amount) * pct / 100;
+    };
+    // Tesla: +2 Production wherever the Factory reaches, and the town 8 tiles away comes into reach (+3, and +2).
+    CHECK_EQ(tesla->cityReport(host).yields[prod], more(*tesla, *plain, host, 2));
+    CHECK_EQ(tesla->cityReport(near).yields[prod], more(*tesla, *plain, near, 2));
+    CHECK_EQ(tesla->cityReport(far).yields[prod], more(*tesla, *plain, far, 5));
+    // A town with its own Factory still gets Tesla's +2 (the two Factories' +3 does not stack).
+    const auto withFactory = [&](const char* who) {
+        GameState s = setup(who);
+        City& town = s.cities[1];
+        town.districts.push_back({rules().district("DISTRICT_INDUSTRIAL_ZONE"), {9, 6}, true});
+        for (const char* b : {"BUILDING_WORKSHOP", "BUILDING_FACTORY"}) town.buildings.push_back(rules().building(b));
+        std::sort(town.buildings.begin(), town.buildings.end());
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    CHECK_EQ(withFactory("GREAT_PERSON_NIKOLA_TESLA")->cityReport(near).yields[prod], more(*withFactory("GREAT_PERSON_NIKOLA_TESLA"), *withFactory(nullptr), near, 2));
+    for (YieldType y : {YieldType::Food, YieldType::Gold, YieldType::Science, YieldType::Culture})
+        CHECK_EQ(tesla->cityReport(far).yields[static_cast<size_t>(y)], plain->cityReport(far).yields[static_cast<size_t>(y)]);
+    CHECK_EQ(tesla->cityReport(far).amenities, plain->cityReport(far).amenities);  // the Zoo still stops at 6
+    // Paxton: +1 Amenity likewise, and the Zoo's Amenity reaches the far town.
+    CHECK_EQ(paxton->cityReport(host).amenities, plain->cityReport(host).amenities + 1);
+    CHECK_EQ(paxton->cityReport(near).amenities, plain->cityReport(near).amenities + 1);
+    CHECK_EQ(paxton->cityReport(far).amenities, plain->cityReport(far).amenities + 2);
+    // An Industrial Zone with no regional building gives nothing.
+    const auto bare = [&](const char* who) {
+        GameState s = setup(who);
+        std::vector<TypeIndex>& b = s.cities[0].buildings;
+        for (const char* r : {"BUILDING_FACTORY", "BUILDING_COAL_POWER_PLANT"}) b.erase(std::find(b.begin(), b.end(), rules().building(r)));
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    CHECK_EQ(bare("GREAT_PERSON_NIKOLA_TESLA")->cityReport(host).yields[prod], bare(nullptr)->cityReport(host).yields[prod]);
+    CHECK_EQ(bare("GREAT_PERSON_NIKOLA_TESLA")->cityReport(near).yields[prod], bare(nullptr)->cityReport(near).yields[prod]);
+    // A pillaged Industrial Zone gives nothing, Tesla or not.
+    auto pillaged = Game::fromScenario(rules(), setup("GREAT_PERSON_NIKOLA_TESLA", true));
+    auto pillagedPlain = Game::fromScenario(rules(), setup(nullptr, true));
+    CHECK_EQ(pillaged->cityReport(host).yields[prod], pillagedPlain->cityReport(host).yields[prod]);
+    CHECK_EQ(pillaged->cityReport(far).yields[prod], plain->cityReport(far).yields[prod]);
+    // Tesla is used on the Industrial Zone and counts from then on.
+    GameState s = setup(nullptr);
+    const UnitId t = addGreatPerson(s, "GREAT_PERSON_NIKOLA_TESLA", {5, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::activateGreatPerson(0, t)) == CommandError::Ok);
+    CHECK_EQ(g->cityReport(far).yields[prod], tesla->cityReport(far).yields[prod]);
+}

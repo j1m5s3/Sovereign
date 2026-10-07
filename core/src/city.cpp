@@ -399,6 +399,19 @@ CityReport Game::cityReport(CityId id) const {
     const bool mexico = suzerainBonus(c->owner, "CITYSTATE_MEXICO_CITY");
     const TypeIndex fartherFrom[] = {rules_->district("DISTRICT_INDUSTRIAL_ZONE"), rules_->district("DISTRICT_ENTERTAINMENT_COMPLEX"),
                                      rules_->district("DISTRICT_WATER_PARK")};
+    // Tesla and Paxton (07): a district they were used on gives each city its regional buildings reach a bonus, once.
+    std::vector<std::pair<CityId, TypeIndex>> bonusFrom;
+    const auto districtBonus = [&](const City& o, TypeIndex district) {
+        if (o.greatPeopleHere.empty() || district == kNone) return;
+        if (std::find(bonusFrom.begin(), bonusFrom.end(), std::make_pair(o.id, district)) != bonusFrom.end()) return;
+        if (const CityDistrict* home = o.district(district, true); !home || home->pillagedTurns > 0) return;
+        bonusFrom.emplace_back(o.id, district);
+        for (size_t i = 0; i < kNumYields; ++i) raw[i] += Fixed::fromInt(regionalBonus(o, district, GreatPersonEffectKind::RegionalYield, static_cast<YieldType>(i)));
+        rep.amenities += regionalBonus(o, district, GreatPersonEffectKind::RegionalAmenity);
+    };
+    for (TypeIndex bi : c->buildings) {
+        if (rules_->buildings[static_cast<size_t>(bi)].regionalRange > 0) districtBonus(*c, rules_->buildings[static_cast<size_t>(bi)].districtType);
+    }
     for (const City& o : state_.cities) {
         if (o.owner != c->owner || o.id == c->id) continue;
         const int d = state_.grid.distance(o.pos, c->pos);
@@ -410,11 +423,13 @@ CityReport Game::cityReport(CityId id) const {
             // A wonder reaches from its own plot (03: the Colosseum and Jebel Barkal; the Estadio do Maracana everywhere).
             int from = d;
             for (const CityWonder& cw : o.wonders) from = bt.wonder && cw.building == bi ? state_.grid.distance(cw.pos, c->pos) : from;
-            if (from > bt.regionalRange + (farther ? 3 : 0)) continue;
+            const int reach = o.greatPeopleHere.empty() ? 0 : regionalBonus(o, bt.districtType, GreatPersonEffectKind::RegionalRange);
+            if (from > bt.regionalRange + (farther ? 3 : 0) + reach) continue;
             if (bt.districtType != kNone) {
                 const CityDistrict* home = o.district(bt.districtType, true);
                 if (home && home->pillagedTurns > 0) continue;
             }
+            districtBonus(o, bt.districtType);  // whether or not this building's own effect counts here
             if (c->has(bi) || std::find(regional.begin(), regional.end(), bi) != regional.end()) {
                 // Vertical Integration (08: Magnus): the Production of every such building in range stacks.
                 if (vertical) {
