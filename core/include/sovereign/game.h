@@ -910,6 +910,8 @@ private:
     std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
     std::vector<TypeIndex> borderCivics_;     // the civics that close a civ's borders (Early Empire)
     int suzerainEnvoys_ = 0;                  // INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN (isSuzerain)
+    int touristTourism_ = 0;                  // TOURISM_TOURISM_TO_MOVE_CITIZEN (visitingTourists)
+    int touristCulture_ = 0;                  // TOURISM_CULTURE_PER_CITIZEN (domesticTourists)
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and

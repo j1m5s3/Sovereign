@@ -12,6 +12,20 @@ namespace sov {
 
 namespace {
 const TerrainType& terrainOf(const Rules& r, const Plot& p) { return r.terrains[static_cast<size_t>(p.terrain)]; }
+
+// hasRiver(from, d) where `to` is from's neighbour in direction d: a plot keeps the rivers on its E, SE and SW edges,
+// so the edge toward the other three directions is the neighbour's, facing back.
+bool riverBetween(const Plot& from, const Plot& to, Dir d) {
+    switch (d) {
+        case Dir::E: return (from.riverEdges & kRiverE) != 0;
+        case Dir::SE: return (from.riverEdges & kRiverSE) != 0;
+        case Dir::SW: return (from.riverEdges & kRiverSW) != 0;
+        case Dir::W: return (to.riverEdges & kRiverE) != 0;
+        case Dir::NW: return (to.riverEdges & kRiverSE) != 0;
+        case Dir::NE: return (to.riverEdges & kRiverSW) != 0;
+    }
+    return false;
+}
 const UnitType& typeOf(const Rules& r, const Unit& u) { return r.units[static_cast<size_t>(u.type)]; }
 }  // namespace
 
@@ -212,6 +226,8 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         if (rules_->civics[i].enforceBorders) borderCivics_.push_back(static_cast<TypeIndex>(i));
     }
     suzerainEnvoys_ = rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN");
+    touristTourism_ = rules_->globalInt("TOURISM_TOURISM_TO_MOVE_CITIZEN");
+    touristCulture_ = rules_->globalInt("TOURISM_CULTURE_PER_CITIZEN");
 }
 
 uint64_t Game::stateHash() const {
@@ -593,10 +609,10 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
         const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
         Fixed rc = slow.moveCost;
-        if (!slow.bridges && hasRiver(state_, from, dir)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
+        if (!slow.bridges && riverBetween(fp, p, dir)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
         return rc;
     }
-    if (hasRiver(state_, from, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
+    if (riverBetween(fp, p, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
     return Fixed::fromInt(std::max(cost, 1));
 }
 
