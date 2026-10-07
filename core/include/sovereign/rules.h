@@ -634,6 +634,7 @@ struct DistrictType {
     int amenityFeatureAmount = 0;
     int envoysNextToCityCenter = 0;  // envoys once built beside its City Center (Diplomatic Quarter [GS])
     int spyDefenseLevels = 0;        // enemy spies work this many levels lower against it and the districts beside it
+    int loyalty = 0;                 // loyalty per turn in its city while it stands (the Government Plaza +8 [R&F], 02)
     int appeal = 0;                  // to neighbouring plots (01: Appeal)
     // Housing added by the district plot's appeal: (minimum appeal, change), highest first (Neighborhood, Preserve).
     std::vector<std::pair<int, int>> appealHousing;
