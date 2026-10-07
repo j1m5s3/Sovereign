@@ -74,6 +74,27 @@ TEST(a_national_park_draws_tourism_and_cheers_its_city) {
     CHECK(!g->canImproveAt(0, (*plots)[1], rules().improvement("IMPROVEMENT_FARM")));  // the park stays as it is
 }
 
+TEST(a_national_park_cheers_its_civs_nearest_other_cities) {
+    GameState s = landState();
+    std::vector<CityId> others;  // player 0's other cities, ever farther from the park's city
+    for (int x = 7; x <= 15; x += 2) others.push_back(addCity(s, 0, {x, 10}, false));
+    for (size_t k = 1; k < others.size(); ++k) REQUIRE(s.grid.distance({4, 6}, {5 + 2 * static_cast<int>(k), 10}) < s.grid.distance({4, 6}, {7 + 2 * static_cast<int>(k), 10}));
+    const UnitId naturalist = addUnit(s, "UNIT_NATURALIST", 0, {5, 7});
+    auto g = Game::fromScenario(rules(), s);
+    std::vector<int> before;
+    for (const City& c : g->state().cities) before.push_back(g->cityReport(c.id).amenities);
+    REQUIRE(g->submit(Command::designatePark(0, naturalist)) == CommandError::Ok);
+    const size_t nearest = static_cast<size_t>(rules().globalInt("NATIONAL_PARK_NUM_OTHER_AMENITY_CITIES"));
+    REQUIRE(nearest + 1 == others.size());
+    for (size_t i = 0; i < g->state().cities.size(); ++i) {
+        const City& c = g->state().cities[i];
+        const size_t rank = static_cast<size_t>(std::find(others.begin(), others.end(), c.id) - others.begin());
+        int gain = rank < nearest ? 1 : 0;  // the farthest of player 0's cities and player 1's city gain nothing
+        if (c.owner == 0 && c.capital) gain = rules().globalInt("NATIONAL_PARK_AMENITIES_OWNING_CITY");
+        CHECK_EQ(g->cityReport(c.id).amenities, before[i] + gain);
+    }
+}
+
 TEST(naturalists_and_rock_bands_are_bought_with_faith_without_a_religion) {
     GameState s = landState();
     s.players[0].civics.done[at(rules().civic("CIVIC_CONSERVATION"))] = 1;
