@@ -246,6 +246,16 @@ TEST(sentry_sees_through_woods_and_spyglass_a_plot_further) {
     CHECK_EQ(promoted->unitSight(*promoted->state().unit(scout)), 3);
 }
 
+// An Observation Balloon's own ability (Unobstructed View) sees through woods, as Sentry does.
+TEST(observation_balloon_sees_through_woods) {
+    GameState s = flatState(24, 16, 1);
+    setFeature(s, {5, 8}, "FEATURE_FOREST");
+    addUnit(s, "UNIT_OBSERVATION_BALLOON", 0, {4, 8});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->visibility(0, {6, 8}) == Visibility::Visible);  // behind the woods
+    CHECK(g->visibility(0, {7, 8}) == Visibility::Visible);
+}
+
 TEST(game_replay_reproduces_state) {
     std::string err;
     GameSetup setup = sovtest::duelSetup(77);
