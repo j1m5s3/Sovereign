@@ -643,18 +643,33 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         return owner.visibility[static_cast<size_t>(state_.grid.index(h))] != static_cast<uint8_t>(Visibility::Unrevealed);
     };
     if (!known(*t)) return std::nullopt;
-    const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
-    const std::vector<uint8_t> zoc = zocMap(*u);
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
     const MoveLimits limits = moveLimits(*u, traits);
+    const int start = state_.grid.index(u->pos);
+    const int goal = state_.grid.index(*t);
+    if (goal != start) {
+        // A goal no step can enter is out of reach, which the search would only learn by visiting every plot it can
+        // reach. The steps into it are those from its neighbours, each the opposite way to the one the neighbour lies.
+        if (keepDry && terrainOf(*rules_, state_.plot(*t)).water && !bridgeAt(*t)) return std::nullopt;
+        bool enterable = false;
+        for (int d = 0; d < kNumDirs && !enterable; ++d) {
+            const std::optional<Hex> from = state_.grid.neighbor(*t, static_cast<Dir>(d));
+            enterable = from && moveCost(*u, traits, limits, *from, *t, opposite(static_cast<Dir>(d)));
+        }
+        if (!enterable) return std::nullopt;
+    }
+    const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
+    const std::vector<uint8_t> zoc = zocMap(*u);
 
-    // The best arrival found at each plot: its turn and the plot it came from are kept one higher, so a plot not
-    // reached yet is all zeros and the table starts as a plain zero fill.
-    struct Node { int turn1; int prev1; int64_t moves; };
-    std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
+    // The best arrival found at each plot, read only where reached is set: its turn, the plot it came from (-1 for the
+    // start) and the moves left.
+    struct Node { int turn; int prev; int64_t moves; };
+    const size_t plots = static_cast<size_t>(state_.grid.size());
+    const std::unique_ptr<Node[]> best(new Node[plots]);
+    std::vector<uint8_t> reached(plots, 0);
     auto better = [](int turn, Fixed moves, const Node& than) {
-        return than.turn1 == 0 || (turn + 1 != than.turn1 ? turn + 1 < than.turn1 : moves.raw() > than.moves);
+        return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
     };
     struct QItem { int turn; int64_t negMoves; int index; };
     auto cmp = [](const QItem& a, const QItem& b) {
@@ -663,15 +678,14 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         return a.index > b.index;
     };
     std::priority_queue<QItem, std::vector<QItem>, decltype(cmp)> open(cmp);
-    const int start = state_.grid.index(u->pos);
-    best[static_cast<size_t>(start)] = {1, 0, u->movesLeft.raw()};
+    best[static_cast<size_t>(start)] = {0, -1, u->movesLeft.raw()};
+    reached[static_cast<size_t>(start)] = 1;
     open.push({0, -u->movesLeft.raw(), start});
-    const int goal = state_.grid.index(*t);
     while (!open.empty()) {
         QItem q = open.top();
         open.pop();
         const Node cur = best[static_cast<size_t>(q.index)];
-        if (cur.turn1 - 1 != q.turn || -cur.moves != q.negMoves) continue;  // stale
+        if (cur.turn != q.turn || -cur.moves != q.negMoves) continue;  // stale
         if (q.index == goal) break;
         Hex from = state_.grid.at(q.index);
         for (int d = 0; d < kNumDirs; ++d) {
@@ -680,7 +694,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
             auto cost = moveCost(*u, traits, limits, from, *n, static_cast<Dir>(d));
             if (!cost) continue;
-            int turn = cur.turn1 - 1;
+            int turn = cur.turn;
             Fixed mp = Fixed::fromRaw(cur.moves);
             if (mp <= Fixed()) {
                 ++turn;
@@ -695,17 +709,19 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             const int next = state_.grid.index(*n);
             if (!zoc.empty() && zoc[static_cast<size_t>(next)]) mp = Fixed();  // entering enemy ZOC ends the move
             Node& nb = best[static_cast<size_t>(next)];
-            if (better(turn, mp, nb)) {
-                nb = {turn + 1, q.index + 1, mp.raw()};
+            uint8_t& seen = reached[static_cast<size_t>(next)];
+            if (!seen || better(turn, mp, nb)) {
+                nb = {turn, q.index, mp.raw()};
+                seen = 1;
                 open.push({turn, -mp.raw(), next});
             }
         }
     }
-    if (best[static_cast<size_t>(goal)].turn1 == 0) return std::nullopt;
+    if (!reached[static_cast<size_t>(goal)]) return std::nullopt;
     std::vector<PathStep> path;
-    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev1 - 1) {
+    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev) {
         const Node& n = best[static_cast<size_t>(i)];
-        path.push_back({state_.grid.at(i), n.turn1 - 1, Fixed::fromRaw(n.moves)});
+        path.push_back({state_.grid.at(i), n.turn, Fixed::fromRaw(n.moves)});
     }
     std::reverse(path.begin(), path.end());
     return path;
