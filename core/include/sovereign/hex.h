@@ -139,14 +139,13 @@ private:
             const int qMax = std::min(radius, -dr + radius);
             // Along a row the axial q and the offset column rise together, one plot a step.
             const int32_t first = toOffset(Axial{c.q + qMin, y}).x;
-            for (int dq = qMin; dq <= qMax; ++dq) {
-                const int32_t x = first + (dq - qMin);
+            for (int32_t x = first; x <= first + (qMax - qMin); ++x) {
                 Hex h{x, y};
                 if (x < 0 || x >= w_) {
                     if (!wrap_) continue;
                     h.x = static_cast<int32_t>(((x % w_) + w_) % w_);
                 }
-                fn(h, Axial{dq, dr});
+                fn(h, Axial{qMin + (x - first), dr});
             }
         }
     }
