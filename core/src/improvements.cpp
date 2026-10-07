@@ -239,12 +239,13 @@ Game::ImprovedPlots Game::improvedPlots(PlayerId player) const {
     n.byImprovement.assign(rules_->improvements.size(), 0);
     n.onResource.assign(rules_->improvements.size(), 0);
     n.byResource.assign(rules_->resources.size(), 0);
-    for (size_t i = 0, plotCount = state_.plots.size(); i < plotCount; ++i) {
-        const Plot& p = state_.plots[i];
+    // A range loop: its bounds stay in registers across the calls below, so a plot that is not the player's costs a compare.
+    const Plot* const first = state_.plots.data();
+    for (const Plot& p : state_.plots) {
         if (p.owner != player || p.improvement == kNone) continue;
         ++n.total;
         ++n.byImprovement[static_cast<size_t>(p.improvement)];
-        if (!resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+        if (!resourceImproved(state_.grid.at(static_cast<int>(&p - first)))) continue;
         ++n.onResource[static_cast<size_t>(p.improvement)];
         ++n.byResource[static_cast<size_t>(p.resource)];
     }
@@ -633,12 +634,12 @@ void Game::accumulateStrategics(PlayerId pid) {
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id)) holders.push_back(cs.id);
     }
-    for (size_t i = 0, plotCount = state_.plots.size(); i < plotCount; ++i) {
-        const Plot& p = state_.plots[i];
+    const Plot* const first = state_.plots.data();
+    for (const Plot& p : state_.plots) {  // a range loop, as in improvedPlots
         if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
         const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
         if (r.accumulation <= 0) continue;
-        const Hex h = state_.grid.at(static_cast<int>(i));
+        const Hex h = state_.grid.at(static_cast<int>(&p - first));
         if (!resourceVisible(pid, h) || !resourceImproved(h)) continue;
         const City* home = p.city == kNoCity ? nullptr : state_.city(p.city);
         int extra = home && cityGovernorHas(*home, "GOVERNOR_PROMOTION_DEFENSE_LOGISTICS") ? 1 : 0;  // Victor
