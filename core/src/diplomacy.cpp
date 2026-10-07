@@ -149,6 +149,11 @@ int Game::luxuryCopies(PlayerId player, TypeIndex resource) const {
     }
     // Magellan, Colaeus (07): a copy of the luxury each stood on, for good.
     for (TypeIndex lux : state_.players[at(player)].luxuryGrants) n += lux == resource ? 1 : 0;
+    // Zanzibar (08: suzerain): Cinnamon and Cloves, found nowhere else.
+    if (resource != kNone) {
+        const std::string& id = rules_->resources[at(resource)].id;
+        if ((id == "RESOURCE_CINNAMON" || id == "RESOURCE_CLOVES") && suzerainBonus(player, "CITYSTATE_ZANZIBAR")) ++n;
+    }
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         const Plot& p = state_.plots[i];
         if (p.owner != player || p.resource != resource) continue;

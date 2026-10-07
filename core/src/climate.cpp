@@ -112,7 +112,8 @@ void Game::unitCo2(PlayerId pid, size_t resource, int burned) {
 // the plant's power; Coal and Oil 4, Uranium 16) and emitting its CO2.
 void Game::burnPower(PlayerId pid) {
     Player& p = state_.players[at(pid)];
-    constexpr int kPlantRange = 6;  // Buildings.RegionalRange
+    // Buildings.RegionalRange; Mexico City's suzerain reaches 3 tiles farther from its Industrial Zones (08).
+    const int plantRange = 6 + (suzerainBonus(pid, "CITYSTATE_MEXICO_CITY") ? 3 : 0);
     // Free power (data): Synthetic Technocracy +3 in every city; Cardiff's suzerain +2 per Lighthouse, Shipyard
     // and Seaport, while at peace with it.
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
@@ -147,7 +148,7 @@ void Game::burnPower(PlayerId pid) {
         std::vector<std::pair<int, const City*>> plants;
         for (const City* o : mine) {
             const int d = state_.grid.distance(o->pos, c->pos);
-            if (d > kPlantRange) continue;
+            if (d > plantRange) continue;
             for (TypeIndex b : o->buildings) {
                 if (rules_->buildings[at(b)].burnsResource != kNone) plants.push_back({d, o});
             }

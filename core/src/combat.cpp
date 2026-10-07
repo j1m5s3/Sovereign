@@ -1011,7 +1011,9 @@ void Game::applyCombat(const Command& c) {
         }
         case CommandType::Promote: {
             Unit* u = state_.unit(c.id);
+            const int charges = unitEffectTotal(*u, UnitEffectKind::SpreadCharges);
             u->promotions.push_back(static_cast<TypeIndex>(c.arg));
+            u->charges += unitEffectTotal(*u, UnitEffectKind::SpreadCharges) - charges;  // Orator, chosen through Yerevan (08)
             // A third promotion is a distinction (09; Sovereign reading), once an era.
             if (u->promotions.size() == 3)
                 awardFirst(c.player, "MOMENT_FIRST_UNIT_PROMOTED_WITH_DISTINCTION", "MOMENT_UNIT_PROMOTED_WITH_DISTINCTION", state_.gameEra);

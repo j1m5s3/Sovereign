@@ -369,8 +369,10 @@ void Game::processTrade(PlayerId pid) {
         // A raider at war with the owner on the road plunders it (07: Plunder), unless the owner is in a
         // Golden Age with Reform the Coinage (09).
         if (!cut && !goldenDedication(pid, "DEDICATION_REFORM_THE_COINAGE")) {
+            const bool safeAtSea = suzerainBonus(pid, "CITYSTATE_MOGADISHU");  // Mogadishu (08): no plunder on water
             for (int32_t pi : r.path) {
                 const Hex h = state_.grid.at(pi);
+                if (safeAtSea && rules_->terrains[at(state_.plot(h).terrain)].water) continue;
                 const Unit* m = state_.unitAt(h, UnitLayer::Military, *rules_);
                 if (m && atWar(pid, m->owner) && !state_.cityAt(h)) {
                     state_.players[at(m->owner)].gold += Fixed::fromInt(
