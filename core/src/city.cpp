@@ -405,8 +405,12 @@ CityReport Game::cityReport(CityId id) const {
         const bool powered = o.powerDemand > 0 && o.powerSupply >= o.powerDemand;
         for (TypeIndex bi : o.buildings) {
             const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
+            if (bt.regionalRange <= 0) continue;
             const bool farther = mexico && bt.districtType != kNone && std::find(std::begin(fartherFrom), std::end(fartherFrom), bt.districtType) != std::end(fartherFrom);
-            if (bt.regionalRange <= 0 || d > bt.regionalRange + (farther ? 3 : 0)) continue;
+            // A wonder reaches from its own plot (03: the Colosseum and Jebel Barkal; the Estadio do Maracana everywhere).
+            int from = d;
+            for (const CityWonder& cw : o.wonders) from = bt.wonder && cw.building == bi ? state_.grid.distance(cw.pos, c->pos) : from;
+            if (from > bt.regionalRange + (farther ? 3 : 0)) continue;
             if (bt.districtType != kNone) {
                 const CityDistrict* home = o.district(bt.districtType, true);
                 if (home && home->pillagedTurns > 0) continue;
@@ -458,6 +462,29 @@ CityReport Game::cityReport(CityId id) const {
                 bool wet = isRiverAdjacent(state_, h);
                 for (const Hex& n : state_.grid.within(h, 1)) wet = wet || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].water;
                 if (wet) rep.amenities += it.waterAmenity;  // the City Park (08)
+            }
+        }
+    }
+    // Improvements near a wonder (03: the Temple of Artemis): each Camp, Pasture and Plantation within 4 tiles of it gives
+    // +1 Amenity to the city whose land it is on, whoever built the wonder (the data checks only the distance).
+    {
+        std::vector<std::pair<TypeIndex, int>> nearWonders;  // the wonders improvements count, and how far
+        for (const ImprovementType& it : rules_->improvements) {
+            if (it.nearWonder == kNone) continue;
+            auto w = std::find_if(nearWonders.begin(), nearWonders.end(), [&](const auto& n) { return n.first == it.nearWonder; });
+            if (w == nearWonders.end()) nearWonders.push_back({it.nearWonder, it.nearWonderRange});
+            else w->second = std::max(w->second, it.nearWonderRange);
+        }
+        for (const City& o : state_.cities) {
+            for (const CityWonder& cw : o.wonders) {
+                auto w = std::find_if(nearWonders.begin(), nearWonders.end(), [&](const auto& n) { return n.first == cw.building; });
+                if (w == nearWonders.end() || !o.has(cw.building)) continue;
+                for (const Hex& h : state_.grid.within(cw.pos, w->second)) {
+                    const Plot& ip = state_.plot(h);
+                    if (ip.city != c->id || ip.improvement == kNone || ip.pillagedTurns > 0) continue;
+                    const ImprovementType& it = rules_->improvements[static_cast<size_t>(ip.improvement)];
+                    if (it.nearWonder == cw.building && state_.grid.distance(h, cw.pos) <= it.nearWonderRange) rep.amenities += it.nearWonderAmenities;
+                }
             }
         }
     }

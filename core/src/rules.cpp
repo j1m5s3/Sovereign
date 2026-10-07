@@ -969,6 +969,11 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             im.governorYields = readYields(j["governorYields"]);
             im.waterAmenity = static_cast<int>(j["waterAmenity"].integer(0));
             im.amenities = static_cast<int>(j["amenities"].integer(0));
+            if (j["wonderAmenity"].isObject()) {
+                im.nearWonderId = j["wonderAmenity"]["wonder"].str();
+                im.nearWonderRange = static_cast<int>(j["wonderAmenity"]["range"].integer(0));
+                im.nearWonderAmenities = static_cast<int>(j["wonderAmenity"]["amount"].integer(0));
+            }
             im.defense = static_cast<int>(j["defense"].integer(0));
             im.sight = static_cast<int>(j["sight"].integer(0));
             im.borderOnly = j["borderOnly"].boolean(false);
@@ -2305,6 +2310,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         if (!im.adjacentImprovementId.empty() && (im.adjacentImprovement = improvement(im.adjacentImprovementId)) == kNone) {
             *error = "improvement " + im.id + ": unknown improvement " + im.adjacentImprovementId;
+            return false;
+        }
+        if (!im.nearWonderId.empty() && ((im.nearWonder = building(im.nearWonderId)) == kNone || !buildings[static_cast<size_t>(im.nearWonder)].wonder)) {
+            *error = "improvement " + im.id + ": unknown wonder " + im.nearWonderId;
             return false;
         }
     }

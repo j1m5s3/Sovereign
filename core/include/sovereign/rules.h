@@ -357,6 +357,11 @@ struct ImprovementType {
     Yields governorYields{};
     int waterAmenity = 0;    // to its city when beside the coast, a lake or a river (City Park)
     int amenities = 0;       // to its city
+    // Amenities to its city while within `nearWonderRange` tiles of this wonder (03: the Temple of Artemis's Camps,
+    // Pastures and Plantations).
+    TypeIndex nearWonder = kNone;
+    std::string nearWonderId;  // (loading only)
+    int nearWonderRange = 0, nearWonderAmenities = 0;
     int defense = 0;         // combat strength for units defending on it
     int sight = 0;           // extra sight for units on it
     bool borderOnly = false; // only on plots at the edge of the owner's territory
@@ -496,7 +501,7 @@ struct BuildingType {
     std::optional<Theming> theming;
     int tradeCapacity = 0;                 // + trade route capacity
     int spreadCharges = 0;                 // + spread charges for the owner's religious units (Hagia Sophia)
-    int regionalRange = 0;                 // Factory, Zoo, Stadium, Aquarium...: its yields and Amenities reach the owner's cities this near (03)
+    int regionalRange = 0;                 // Factory, Zoo, Stadium, Aquarium, Colosseum...: its yields and Amenities reach the owner's cities this near (03)
     int modifierCount = 0;                 // modifiers it carries (counted at load, for the AI's valuation)
     int policySlots[4] = {0, 0, 0, 0};     // + policy slots by PolicySlot (Alhambra, Forbidden City, Potala Palace, Big Ben)
     TypeIndex tradeCapacityUnless = kNone; // ...unless the city has this building (Lighthouse: a Market)
