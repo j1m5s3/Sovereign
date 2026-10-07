@@ -308,11 +308,13 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt("SCIENCE_PERCENTAGE_YIELD_PER_POP"), 100) * c->population;
     int districtsDone = 0;
     for (const CityDistrict& d : c->districts) districtsDone += d.complete ? 1 : 0;
+    const Yields flat = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYield);
+    const Yields perPop = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerPop);            // Tax Collector, Researcher
+    const Yields perDistrict = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerDistrict);  // Bishop
     for (size_t i = 0; i < kNumYields; ++i) {
-        const YieldType y = static_cast<YieldType>(i);
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYield, y);
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerPop, y) * c->population;  // Tax Collector, Researcher
-        raw[i] += sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPerDistrict, y) * districtsDone;  // Bishop
+        raw[i] += flat[i];
+        raw[i] += perPop[i] * c->population;
+        raw[i] += perDistrict[i] * districtsDone;
     }
     if (const Unit* here = leaderOf(c->owner); here && here->pos == c->pos)
         raw[idx(YieldType::Production)] += Fixed::fromInt(unitEffectTotal(*here, UnitEffectKind::CityProduction));
@@ -549,9 +551,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const std::string& mood = rules_->happiness[static_cast<size_t>(rep.happiness)].id;
         khaldun = mood == "HAPPINESS_ECSTATIC" ? 4 : mood == "HAPPINESS_HAPPY" ? 2 : 0;
     }
+    const Yields percents = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPercent);
     for (size_t i = 0; i < kNumYields; ++i) {
-        int pct = 100 + static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityYieldPercent,
-                                                          static_cast<YieldType>(i)).toInt());
+        int pct = 100 + static_cast<int>(percents[i].toInt());
         if (i != idx(YieldType::Food)) pct += khaldun;
         if (i == idx(YieldType::Gold)) pct += industries;  // 07: +10% per Industry, +20% per Corporation in the city
         // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.
