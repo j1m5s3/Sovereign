@@ -341,16 +341,17 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
             return false;
         }
         case BoostKind::Continents: {
-            // Land of this many continents revealed (Sovereign: every landmass is one).
-            std::vector<int16_t> seen;
-            // Both arrays through local pointers, so the loop need not reload them after the push below (which cannot move them).
-            const Plot* const plotAt = state_.plots.data();
-            const uint8_t* const visibilityAt = p.visibility.data();
-            for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
-                const int16_t k = plotAt[i].continent;
-                if (k < 0 || visibilityAt[i] == static_cast<uint8_t>(Visibility::Unrevealed) || std::find(seen.begin(), seen.end(), k) != seen.end()) continue;
-                seen.push_back(k);
-                if (static_cast<int>(seen.size()) >= b.count) return true;
+            // Land of this many continents revealed (Sovereign: every landmass is one): each landmass looked over until
+            // its first revealed plot.
+            int seen = 0;
+            for (size_t i = 0; i + 1 < landFirst_.size(); ++i) {
+                for (int32_t j = landFirst_[i]; j < landFirst_[i + 1]; ++j) {
+                    const size_t at = static_cast<size_t>(landPlots_[static_cast<size_t>(j)]);
+                    if (at >= p.visibility.size()) break;  // the rest lie further on
+                    if (p.visibility[at] == static_cast<uint8_t>(Visibility::Unrevealed)) continue;
+                    if (++seen >= b.count) return true;
+                    break;
+                }
             }
             return false;
         }

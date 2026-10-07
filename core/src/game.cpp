@@ -236,6 +236,17 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         }
     }
     parks_ = std::any_of(state_.plots.begin(), state_.plots.end(), [](const Plot& p) { return p.park; });
+    std::vector<int16_t> landmasses;
+    for (const Plot& p : state_.plots) {
+        if (p.continent >= 0 && std::find(landmasses.begin(), landmasses.end(), p.continent) == landmasses.end()) landmasses.push_back(p.continent);
+    }
+    landFirst_.push_back(0);
+    for (const int16_t k : landmasses) {
+        for (size_t i = 0; i < state_.plots.size(); ++i) {
+            if (state_.plots[i].continent == k) landPlots_.push_back(static_cast<int32_t>(i));
+        }
+        landFirst_.push_back(static_cast<int32_t>(landPlots_.size()));
+    }
 }
 
 uint64_t Game::stateHash() const {
@@ -831,11 +842,15 @@ void Game::refreshVisibility(PlayerId pid) {
             if (!lineOfSight(from, target, throughFeatures)) return;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
-                    for (size_t i = 0, upTo = std::min(state_.plots.size(), p.visibility.size()); i < upTo; ++i) {
-                        const int16_t seen = state_.plots[i].continent;
-                        if (seen >= 0 && p.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed) &&
-                            std::find(knownLand.begin(), knownLand.end(), seen) == knownLand.end())
-                            knownLand.push_back(seen);
+                    // Each landmass with a plot revealed, looked for until its first.
+                    for (size_t i = 0; i + 1 < landFirst_.size(); ++i) {
+                        for (int32_t j = landFirst_[i]; j < landFirst_[i + 1]; ++j) {
+                            const size_t at = static_cast<size_t>(landPlots_[static_cast<size_t>(j)]);
+                            if (at >= p.visibility.size()) break;  // the rest lie further on
+                            if (p.visibility[at] == static_cast<uint8_t>(Visibility::Unrevealed)) continue;
+                            knownLand.push_back(state_.plots[at].continent);
+                            break;
+                        }
                     }
                     landGathered = true;
                 }

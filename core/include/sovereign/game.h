@@ -918,6 +918,10 @@ private:
     // Whether any plot is a National Park: a game starts with those its state has, designatePark makes the others and
     // none is ever lost, so while this is false the park scans have nothing to find.
     bool parks_ = false;
+    // The plots of each landmass (a continent id k >= 0; only map generation and loading set them), in map order, one
+    // landmass after another in the order they first appear: landmass i is landPlots_[landFirst_[i]] up to
+    // landPlots_[landFirst_[i + 1]].
+    std::vector<int32_t> landFirst_, landPlots_;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
