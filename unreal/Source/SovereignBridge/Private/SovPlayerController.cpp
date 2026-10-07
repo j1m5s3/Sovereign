@@ -1199,9 +1199,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				Choices.Add({TEXT("Repair the improvement"), sov::Command::repairImprovement(Me(), U->id)});
 			}
 			// Military Engineers [GS]: a charge toward the district here, a railroad here, a tunnel into a neighbouring mountain.
+			// With the Royal Society, a Builder's charge toward the city's project here.
 			if (G.chargeProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
-				Choices.Add({TEXT("Speed the district here (a charge)"), sov::Command::contributeCharge(Me(), U->id)});
+				Choices.Add({G.chargedProject(*U) ? TEXT("Speed the project here (a charge)") : TEXT("Speed the district here (a charge)"),
+					sov::Command::contributeCharge(Me(), U->id)});
 			}
 			if (G.railroadProblem(Me(), U->id) == sov::CommandError::Ok)
 			{

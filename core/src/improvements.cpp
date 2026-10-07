@@ -314,15 +314,37 @@ CommandError Game::coastalRaidProblem(PlayerId player, UnitId unit, Hex at) cons
     return improvement || (d && d->complete && d->pillagedTurns == 0) ? CommandError::Ok : CommandError::BadTarget;
 }
 
-CommandError Game::chargeProblem(PlayerId player, UnitId engineer) const {
-    const Unit* u = state_.unit(engineer);
+CommandError Game::chargeProblem(PlayerId player, UnitId unit) const {
+    const Unit* u = state_.unit(unit);
     if (!u || u->owner != player) return CommandError::NotYourUnit;
     if (u->charges <= 0 || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
+    if (chargedProject(*u)) return CommandError::Ok;  // a Builder with the Royal Society
     const CityDistrict* d = state_.districtAt(u->pos);
     const City* c = state_.city(state_.plot(u->pos).city);
     if (!d || d->complete || !c || c->owner != player) return CommandError::CannotImprove;
     const DistrictType& dt = rules_->districts[static_cast<size_t>(d->type)];
     return dt.chargePercent > 0 && dt.chargeUnit == rules_->units[static_cast<size_t>(u->type)].id ? CommandError::Ok : CommandError::CannotImprove;
+}
+
+// The Royal Society (03; data: each charge completes 2% of a project): a Builder's charge speeds the project its city is
+// building, from where the project runs: its district, or the City Center for a project that needs none.
+std::optional<ProductionItem> Game::chargedProject(const Unit& builder) const {
+    if (!isBuilder(rules_->units[static_cast<size_t>(builder.type)]) || projectChargePercent(builder.owner) <= 0) return std::nullopt;
+    const City* c = state_.city(state_.plot(builder.pos).city);
+    if (!c || c->owner != builder.owner || c->queue.empty() || c->queue.front().kind != ProductionKind::Project) return std::nullopt;
+    const ProjectType& pj = rules_->projects[static_cast<size_t>(c->queue.front().type)];
+    if (pj.district == kNone) return builder.pos == c->pos ? std::optional<ProductionItem>(c->queue.front()) : std::nullopt;
+    const CityDistrict* d = state_.districtAt(builder.pos);
+    return d && d->type == pj.district && d->complete ? std::optional<ProductionItem>(c->queue.front()) : std::nullopt;
+}
+
+int Game::projectChargePercent(PlayerId player) const {
+    int pct = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (TypeIndex b : c.buildings) pct += rules_->buildings[static_cast<size_t>(b)].projectChargePercent;
+    }
+    return pct;
 }
 
 CommandError Game::repairProblem(PlayerId player, UnitId builder) const {

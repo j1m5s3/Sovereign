@@ -478,6 +478,7 @@ struct BuildingType {
     TypeIndex burnsResource = kNone;   // a power plant: burns this, `powerPerResource` power each
     int powerPerResource = 0;
     int powerProvided = 0;             // free power to its city (Hydroelectric Dam)
+    int projectChargePercent = 0;      // each Builder charge completes this share of a project (Royal Society, 03)
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first, any one of them (BuildingPrereqs: the Armory needs a Barracks or a Stable)
     std::vector<TypeIndex> prereqsAny;  // a wonder's: any one of these in the city (03: the Great Library needs a Library)

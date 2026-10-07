@@ -1073,6 +1073,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 b.powerPerResource = static_cast<int>(j["burns"]["power"].integer(0));
             }
             b.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
+            b.projectChargePercent = static_cast<int>(j["projectChargePercent"].integer(0));
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);
