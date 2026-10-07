@@ -1050,9 +1050,7 @@
    "era": "ERA_RENAISSANCE",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "VisibleLuxury"
-    ]
+    "luxuryHere": true
    },
    "effects": [
     {
@@ -1060,10 +1058,11 @@
      "yield": "GOLD",
      "amount": 300,
      "scaled": true
+    },
+    {
+     "kind": "LUXURY_HERE",
+     "amount": 1
     }
-   ],
-   "untrackedEffects": [
-    "grants 1 of the resource on the unit's tile (one-time)"
    ],
    "aura": {
     "domain": "SEA",
@@ -1840,9 +1839,7 @@
    "era": "ERA_CLASSICAL",
    "charges": 1,
    "requires": {
-    "untracked": [
-     "VisibleLuxury"
-    ]
+    "luxuryHere": true
    },
    "effects": [
     {
@@ -1850,10 +1847,11 @@
      "yield": "FAITH",
      "amount": 100,
      "scaled": true
+    },
+    {
+     "kind": "LUXURY_HERE",
+     "amount": 1
     }
-   ],
-   "untrackedEffects": [
-    "grants 1 of the resource on the unit's tile (one-time)"
    ]
   },
   {

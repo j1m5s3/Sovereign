@@ -253,6 +253,7 @@ int Game::maxMoves(const Unit& unit) const {
             if (p.techs.has(static_cast<TypeIndex>(i))) moves += rules_->techs[i].embarkedMoves;
         }
         if (goldenDedication(unit.owner, "DEDICATION_HIC_SUNT_DRACONES")) moves += 2;  // 09
+        moves += static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::EmbarkedMoves).toInt());  // the Great Lighthouse (03)
         return std::max(1, moves);
     }
     int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit) +

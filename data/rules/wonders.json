@@ -172,7 +172,6 @@
     "GREAT_PERSON_CLASS_ADMIRAL": 1
    },
    "untrackedEffects": [
-    "+1 Movement while embarked",
     "ability Great Lighthouse Embarked Movement for your units"
    ]
   },
@@ -1388,6 +1387,15 @@
    "effect": "GRANT_ABILITY",
    "arguments": {
     "ability": "ABILITY_GREAT_LIGHTHOUSE_MOVEMENT"
+   }
+  },
+  {
+   "id": "BUILDING_GREAT_LIGHTHOUSE_2",
+   "source": "BUILDING_GREAT_LIGHTHOUSE",
+   "collection": "PLAYER",
+   "effect": "ADJUST_EMBARKED_MOVES",
+   "arguments": {
+    "amount": 1
    }
   },
   {

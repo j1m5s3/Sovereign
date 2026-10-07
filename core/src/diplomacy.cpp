@@ -147,6 +147,8 @@ int Game::luxuryCopies(PlayerId player, TypeIndex resource) const {
             if (c.owner == player && !c.greatPeopleHere.empty()) n += kCorporations[i].second * usedHere(c, kCorporations[i].first);
         }
     }
+    // Magellan, Colaeus (07): a copy of the luxury each stood on, for good.
+    for (TypeIndex lux : state_.players[at(player)].luxuryGrants) n += lux == resource ? 1 : 0;
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         const Plot& p = state_.plots[i];
         if (p.owner != player || p.resource != resource) continue;

@@ -402,6 +402,7 @@ struct Player {
     std::vector<int> greatPeopleRecruited;   // per class
     std::vector<TypeIndex> greatPeoplePassed;     // individuals this player declined
     std::vector<TypeIndex> greatPeopleActivated;  // individuals it has used (their lasting effects apply)
+    std::vector<TypeIndex> luxuryGrants;          // lasting luxury copies, one entry each (Magellan, Colaeus; 07)
     TypeIndex pantheon = kNone;   // Rules::beliefs (06: Pantheon)
     TypeIndex cityState = kNone;  // Rules::cityStates: a city-state (one city, no expansion; 08)
     std::vector<int> envoys;      // per player: envoys this player sent to that city-state

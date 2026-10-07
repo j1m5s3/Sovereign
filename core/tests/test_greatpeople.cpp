@@ -264,6 +264,34 @@ TEST(luxury_corporations_supply_their_products) {
     CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, amenities + 1);
 }
 
+TEST(colaeus_takes_a_lasting_copy_of_the_luxury_he_stands_on) {
+    // Wine on (7,7), unimproved: the city has no copy of it yet.
+    const TypeIndex wine = rules().resource("RESOURCE_WINE");
+    GameState s = cityState();
+    s.plot({7, 7}).resource = wine;
+    const UnitId away = addGreatPerson(s, "GREAT_PERSON_COLAEUS", {5, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->submit(Command::activateGreatPerson(0, away)), CommandError::CannotActivate);  // no luxury on his plot
+    GameState t = cityState();
+    t.plot({7, 7}).resource = wine;
+    const UnitId colaeus = addGreatPerson(t, "GREAT_PERSON_COLAEUS", {7, 7});
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->luxuryCopies(0, wine), 0);
+    const Fixed faith = h->state().players[0].faith;
+    const int amenities = h->cityReport(h->state().cities[0].id).amenities;
+    REQUIRE(h->submit(Command::activateGreatPerson(0, colaeus)) == CommandError::Ok);
+    CHECK_EQ(h->luxuryCopies(0, wine), 1);
+    CHECK(h->hasLuxury(0, wine));
+    CHECK_EQ(h->cityReport(h->state().cities[0].id).amenities, amenities + 1);
+    CHECK(h->state().players[0].faith > faith);  // and his Faith
+    // The copy stays with the civ, through a save.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*h), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->luxuryCopies(0, wine), 1);
+    CHECK_EQ(loaded->stateHash(), h->stateHash());
+}
+
 TEST(james_young_reveals_oil) {
     GameState s = cityState("DISTRICT_CAMPUS");
     s.plot({8, 6}).resource = rules().resource("RESOURCE_OIL");

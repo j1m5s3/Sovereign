@@ -203,6 +203,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_DISTRICT_TOURISM", ModEffect::DistrictTourism},
         {"ADJUST_CITY_APPEAL", ModEffect::CityAppeal},
         {"ADJUST_CITY_TOURISM", ModEffect::CityTourism},
+        {"ADJUST_EMBARKED_MOVES", ModEffect::EmbarkedMoves},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -254,6 +255,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
                               mod.effect == ModEffect::TradeRouteYield || mod.effect == ModEffect::GreatPersonPoints ||
                               mod.effect == ModEffect::FavorPerTurn || mod.effect == ModEffect::InfluencePerTurn ||
                               mod.effect == ModEffect::RouteTourismPercent || mod.effect == ModEffect::DistrictTourism ||
+                              mod.effect == ModEffect::EmbarkedMoves ||
                               (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     mod.scope = args["scope"].str();
@@ -490,7 +492,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"OCEAN", GreatPersonEffectKind::Ocean}, {"ARTIFACT_TOURISM", GreatPersonEffectKind::ArtifactTourism},
                 {"RANDOM_CIVICS", GreatPersonEffectKind::RandomCivics}, {"DIPLOMATIC_VP", GreatPersonEffectKind::DiplomaticVp},
                 {"POPULATION", GreatPersonEffectKind::Population}, {"PROMOTE_ALL", GreatPersonEffectKind::PromoteAll},
-                {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent},
+                {"TREASURY_PERCENT", GreatPersonEffectKind::TreasuryPercent}, {"LUXURY_HERE", GreatPersonEffectKind::LuxuryHere},
             };
             bool known = false;
             for (const auto& [name, k] : kMore) {
@@ -1910,6 +1912,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             g.unitDomain = static_cast<int>(d == "SEA" ? Domain::Sea : d == "AIR" ? Domain::Air : Domain::Land);
         }
         if (rq.has("missingBuilding")) g.missingBuilding = building(rq["missingBuilding"].str());
+        g.luxuryHere = rq["luxuryHere"].boolean(false);
         for (const Json& ej : j["effects"].items()) {
             GreatPersonEffect fx;
             if (!parseEffect(ej, where, fx)) return false;
