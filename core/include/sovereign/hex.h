@@ -45,7 +45,14 @@ public:
     int32_t size() const { return w_ * h_; }
 
     // Normalises x for wrapping; nullopt when off the map.
-    std::optional<Hex> normalize(Hex h) const;
+    std::optional<Hex> normalize(Hex h) const {
+        if (h.y < 0 || h.y >= h_) return std::nullopt;
+        if (h.x < 0 || h.x >= w_) {
+            if (!wrap_) return std::nullopt;
+            h.x = static_cast<int32_t>(((h.x % w_) + w_) % w_);
+        }
+        return h;
+    }
     bool valid(Hex h) const { return normalize(h).has_value(); }
     int32_t index(Hex h) const { return h.y * w_ + h.x; }
     Hex at(int32_t index) const { return Hex{index % w_, index / w_}; }
@@ -71,8 +78,16 @@ public:
     // each until it returns false, and then returns false (true when it ran to the end).
     template <typename Fn>
     bool between(Hex a, Hex b, Fn&& fn) const {
-        const Axial aa = toAxial(a), bb = nearestAxial(a, b);
+        const Axial aa = toAxial(a), bb = nearestAxial(aa, b);
         const int n = axialDistance(aa, bb);
+        if (const LineStep* step = lineSteps(Axial{bb.q - aa.q, bb.r - aa.r}, n)) {  // a short line: its steps from a
+            const int parity = a.y & 1;
+            for (const LineStep* const end = step + (n > 1 ? n - 1 : 0); step != end; ++step) {
+                const std::optional<Hex> h = normalize(Hex{a.x + step->dx[parity], a.y + step->dy});
+                if (h && !fn(*h)) return false;
+            }
+            return true;
+        }
         for (int i = 1; i < n; ++i) {
             const std::optional<Hex> h = linePoint(aa, bb, n, i);
             if (h && !fn(*h)) return false;
@@ -103,10 +118,20 @@ private:
             }
         }
     }
-    // Axial position of b shifted by a multiple of the width to sit nearest a.
-    Axial nearestAxial(Hex a, Hex b) const;
+    // Axial position of b shifted by a multiple of the width to sit nearest aa.
+    Axial nearestAxial(Axial aa, Hex b) const;
     // Point i of the n + 1 points of the line from aa to bb (n their distance); nullopt when off the map.
     std::optional<Hex> linePoint(Axial aa, Axial bb, int n, int i) const;
+    // A point of a line as a step from its start: the column step from a start on an even row and on an odd row
+    // (odd rows sit half a hex east), and the row step.
+    struct LineStep {
+        int8_t dx[2];
+        int8_t dy;
+    };
+    static constexpr int kLineStepRange = 8;
+    // The n - 1 points strictly inside a line of length n to an end delta away, as steps from its start, the same
+    // points linePoint gives; null when n is over kLineStepRange.
+    static const LineStep* lineSteps(Axial delta, int n);
 
     int32_t w_ = 0, h_ = 0;
     bool wrap_ = false;
