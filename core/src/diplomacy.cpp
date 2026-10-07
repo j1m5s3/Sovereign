@@ -1329,6 +1329,7 @@ void Game::processDiplomacy(PlayerId pid) {
         points += (policyIs(pid, "POLICY_WISSELBANKEN") ? 1 : 0) + (policyIs(pid, "POLICY_DEMOCRATIC_LEGACY") ? 1 : 0);
         rel.alliancePoints += points;
     }
+    allianceEurekas(pid);
     // Strategic resources flow; a giver in debt or out of stock breaks its deals.
     std::vector<size_t> broken;
     for (size_t i = 0; i < state_.agreements.size(); ++i) {
