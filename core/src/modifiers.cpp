@@ -369,43 +369,46 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
 }
 
 namespace {
+// Whether a player-collection modifier applies to the player: the player holds its source and its requirements hold.
+inline bool appliesToPlayer(const Modifier& m, const GameState& s, const Rules& r, const Player& player) {
+    const City* holder = nullptr;
+    bool applies = false;
+    switch (m.sourceKind) {
+        case ModSource::Building:
+            for (const City& c : s.cities) {
+                if (c.owner == player.id && c.has(m.sourceIndex)) {
+                    holder = &c;
+                    break;
+                }
+            }
+            applies = holder != nullptr;
+            break;
+        case ModSource::Civ: applies = player.civ == m.sourceIndex; break;
+        case ModSource::Everyone: applies = true; break;
+        case ModSource::Policy:
+        case ModSource::Government: applies = playerHasSource(m, player); break;
+        case ModSource::Governor: applies = false; break;  // city effects only
+        case ModSource::GreatPerson:
+            applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
+            break;
+        case ModSource::CityState: applies = enjoysSuzerainBonus(s, r, player.id, m.sourceIndex); break;
+        case ModSource::Belief:
+            applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
+            break;
+    }
+    if (!applies) return false;
+    ReqContext ownerCtx{&s, &r, &player, holder, nullptr};
+    ReqContext subjectCtx{&s, &r, &player, nullptr, nullptr};
+    return testRequirements(m.ownerReqs, ownerCtx) && testRequirements(m.subjectReqs, subjectCtx);
+}
+
 // Calls fn for every player-collection modifier of the list (indices into Rules::modifiers) that applies to the
 // player. `pre` passes over modifiers on what they say alone, before the look at whether the player has their source.
 template <typename Pre, typename Fn>
 void forEachPlayerModifierIn(const std::vector<uint32_t>& list, const GameState& s, const Rules& r, const Player& player, Pre&& pre, Fn&& fn) {
     for (uint32_t i : list) {
         const Modifier& m = r.modifiers[i];
-        if (!pre(m)) continue;
-        const City* holder = nullptr;
-        bool applies = false;
-        switch (m.sourceKind) {
-            case ModSource::Building:
-                for (const City& c : s.cities) {
-                    if (c.owner == player.id && c.has(m.sourceIndex)) {
-                        holder = &c;
-                        break;
-                    }
-                }
-                applies = holder != nullptr;
-                break;
-            case ModSource::Civ: applies = player.civ == m.sourceIndex; break;
-            case ModSource::Everyone: applies = true; break;
-            case ModSource::Policy:
-            case ModSource::Government: applies = playerHasSource(m, player); break;
-            case ModSource::Governor: applies = false; break;  // city effects only
-            case ModSource::GreatPerson:
-                applies = std::find(player.greatPeopleActivated.begin(), player.greatPeopleActivated.end(), m.sourceIndex) != player.greatPeopleActivated.end();
-                break;
-            case ModSource::CityState: applies = enjoysSuzerainBonus(s, r, player.id, m.sourceIndex); break;
-            case ModSource::Belief:
-                applies = player.pantheon == m.sourceIndex || (player.religion >= 0 && religionHas(s, player.religion, m.sourceIndex));
-                break;
-        }
-        if (!applies) continue;
-        ReqContext ownerCtx{&s, &r, &player, holder, nullptr};
-        ReqContext subjectCtx{&s, &r, &player, nullptr, nullptr};
-        if (!testRequirements(m.ownerReqs, ownerCtx) || !testRequirements(m.subjectReqs, subjectCtx)) continue;
-        fn(m);
+        if (pre(m) && appliesToPlayer(m, s, r, player)) fn(m);
     }
 }
 
@@ -422,10 +425,8 @@ Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& playe
     return total;
 }
 
-std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::vector<uint32_t>& grants) {
-    std::vector<TypeIndex> out;
-    forEachPlayerModifierIn(grants, s, r, player, anyModifier, [&](const Modifier& m) { out.push_back(m.ability); });
-    return out;
+bool playerModifierApplies(const GameState& s, const Rules& r, const Player& player, const Modifier& m) {
+    return appliesToPlayer(m, s, r, player);
 }
 
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,

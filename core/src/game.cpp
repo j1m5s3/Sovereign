@@ -242,6 +242,11 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
             if (std::find(classes.begin(), classes.end(), rules_->units[t].unitClass) != classes.end()) abilityGrants_[t].push_back(i);
         }
     }
+    for (const AbilityType& a : rules_->abilities) {
+        uint64_t kinds = 0;
+        for (const UnitEffect& e : a.effects) kinds |= effectBit(e.kind);
+        abilityKinds_.push_back(kinds);
+    }
     parks_ = std::any_of(state_.plots.begin(), state_.plots.end(), [](const Plot& p) { return p.park; });
     std::vector<int16_t> landmasses;
     for (const Plot& p : state_.plots) {

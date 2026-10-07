@@ -205,23 +205,32 @@ bool Game::canMakePeace(PlayerId player, PlayerId target) const {
 
 // ------------------------------------------------------------------ unit effects
 
-std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
+// The unit's abilities that `want` keeps, in unitAbilities' order; an ability kept is listed as often as there.
+template <typename Want>
+std::vector<TypeIndex> Game::abilitiesWhere(const Unit& unit, Want&& want) const {
     const UnitType& ut = typeOf(*rules_, unit);
-    std::vector<TypeIndex> out = ut.abilities;
+    const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
+    std::vector<TypeIndex> out;
+    for (TypeIndex a : ut.abilities) {
+        if (want(a)) out.push_back(a);
+    }
     // Abilities the civ's leader grants its units of a class (Hold the Pass, Builder of Monuments).
     for (TypeIndex a : civAbility(unit.owner).grantAbilities) {
         const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
-        if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
+        if (want(a) && std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
             out.push_back(a);
     }
-    const std::vector<uint32_t>& grants = abilityGrants_[static_cast<size_t>(unit.type)];  // those of its class
-    for (TypeIndex a : grantedAbilities(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], grants)) {
-        if (std::find(out.begin(), out.end(), a) == out.end()) out.push_back(a);
+    // Those the owner's modifiers grant its class, in modifier order: a source is looked at only for an ability not
+    // listed yet.
+    for (uint32_t i : abilityGrants_[static_cast<size_t>(unit.type)]) {
+        const Modifier& m = rules_->modifiers[i];
+        if (want(m.ability) && std::find(out.begin(), out.end(), m.ability) == out.end() && playerModifierApplies(state_, *rules_, owner, m))
+            out.push_back(m.ability);
     }
     // Abilities a retired great person gave the civ's units (Francis Drake, Georgy Zhukov...).
-    for (TypeIndex person : state_.players[static_cast<size_t>(unit.owner)].greatPeopleActivated) {
+    for (TypeIndex person : owner.greatPeopleActivated) {
         for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {
-            if (fx.kind != GreatPersonEffectKind::Ability) continue;
+            if (fx.kind != GreatPersonEffectKind::Ability || !want(fx.ref)) continue;
             const AbilityType& at = rules_->abilities[static_cast<size_t>(fx.ref)];
             if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() &&
                 std::find(out.begin(), out.end(), fx.ref) == out.end())
@@ -229,6 +238,14 @@ std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
         }
     }
     return out;
+}
+
+std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
+    return abilitiesWhere(unit, [](TypeIndex) { return true; });
+}
+
+std::vector<TypeIndex> Game::abilitiesWithEffects(const Unit& unit, uint64_t kinds) const {
+    return abilitiesWhere(unit, [&](TypeIndex a) { return (abilityKinds_[static_cast<size_t>(a)] & kinds) != 0; });
 }
 
 namespace {
@@ -245,7 +262,7 @@ void forEachEffect(const Rules& r, const Unit& unit, const std::vector<TypeIndex
 
 int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
     int total = 0;
-    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+    forEachEffect(*rules_, unit, abilitiesWithEffects(unit, effectBit(kind)), [&](const UnitEffect& e) {
         if (e.kind == kind) total += e.amount != 0 ? e.amount : 1;
     });
     return total;
@@ -254,7 +271,9 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
 Game::MoveTraits Game::moveTraits(const Unit& unit) const {
     // unitHas for each movement effect, from one look at the unit's abilities.
     int freeEmbark = 0, hills = 0, forest = 0, terrain = 0, borders = 0;
-    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+    const uint64_t kinds = effectBit(UnitEffectKind::FreeEmbark) | effectBit(UnitEffectKind::IgnoreHills) | effectBit(UnitEffectKind::IgnoreForest) |
+                           effectBit(UnitEffectKind::IgnoreTerrain) | effectBit(UnitEffectKind::IgnoreBorders);
+    forEachEffect(*rules_, unit, abilitiesWithEffects(unit, kinds), [&](const UnitEffect& e) {
         const int n = e.amount != 0 ? e.amount : 1;
         switch (e.kind) {
             case UnitEffectKind::FreeEmbark: freeEmbark += n; break;
@@ -300,7 +319,7 @@ int Game::maxMoves(const Unit& unit) const {
     // Abilities and promotions. A conditional one counts where the unit stands, so where its turn starts: the War
     // Chariot on flat land, the Mandinka Lancer in desert, the Chasqui and the Royal Road on roads (leaders-and-art-style).
     const ConditionContext standing{&state_, rules_, &unit, nullptr, nullptr, false, false, cityMaxHp()};
-    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+    forEachEffect(*rules_, unit, abilitiesWithEffects(unit, effectBit(UnitEffectKind::Moves)), [&](const UnitEffect& e) {
         if (e.kind == UnitEffectKind::Moves && conditionsHold(e, standing)) moves += e.amount != 0 ? e.amount : 1;
     });
     // Heavy Chariot (05): +1 when its turn starts on open ground (flat, no feature). The data puts the ability on the
@@ -356,7 +375,8 @@ int Game::sightFrom(const Unit& unit, int sightEffects) const {
 
 std::pair<int, bool> Game::unitSightAndSentry(const Unit& unit) const {
     int sight = 0, sentry = 0;
-    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+    const uint64_t kinds = effectBit(UnitEffectKind::Sight) | effectBit(UnitEffectKind::SeesThroughFeatures);
+    forEachEffect(*rules_, unit, abilitiesWithEffects(unit, kinds), [&](const UnitEffect& e) {
         const int n = e.amount != 0 ? e.amount : 1;
         if (e.kind == UnitEffectKind::Sight) sight += n;
         if (e.kind == UnitEffectKind::SeesThroughFeatures) sentry += n;
