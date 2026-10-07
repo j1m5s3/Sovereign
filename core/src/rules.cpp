@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -12,6 +13,30 @@ namespace sov {
 
 namespace {
 constexpr const char* kYieldNames[kNumYields] = {"FOOD", "PRODUCTION", "GOLD", "SCIENCE", "CULTURE", "FAITH"};
+
+// A named constant's hash, mixing in eight bytes at a time (the last eight overlapping the rest when the length is
+// not a multiple). It only finds names within one process, so the byte order of the machine does not matter.
+uint64_t nameHash(std::string_view name) {
+    const size_t n = name.size();
+    uint64_t h = 0x9E3779B97F4A7C15ull ^ n;
+    auto mix = [&h](uint64_t w) {
+        h = (h ^ w) * 0xBF58476D1CE4E5B9ull;
+        h ^= h >> 31;
+    };
+    uint64_t w = 0;
+    if (n < 8) {
+        for (const char ch : name) w = (w << 8) | static_cast<unsigned char>(ch);
+        mix(w);
+        return h;
+    }
+    for (size_t i = 0; i + 8 < n; i += 8) {
+        std::memcpy(&w, name.data() + i, 8);
+        mix(w);
+    }
+    std::memcpy(&w, name.data() + n - 8, 8);
+    mix(w);
+    return h;
+}
 
 using Table = std::vector<std::pair<std::string, Json>>;
 
@@ -556,8 +581,15 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     globals_.clear();
-    for (const auto& [name, value] : m.globals) globals_.push_back({std::hash<std::string_view>{}(name), name, value});
-    std::sort(globals_.begin(), globals_.end(), [](const Global& a, const Global& b) { return a.hash < b.hash; });
+    for (const auto& [name, value] : m.globals) globals_.push_back({nameHash(name), name, value});
+    size_t tableSize = 16;
+    while (tableSize < 2 * globals_.size()) tableSize *= 2;
+    globalSlots_.assign(tableSize, 0);
+    for (size_t i = 0; i < globals_.size(); ++i) {
+        size_t slot = globals_[i].hash & (tableSize - 1);
+        while (globalSlots_[slot] != 0) slot = (slot + 1) & (tableSize - 1);
+        globalSlots_[slot] = static_cast<uint32_t>(i + 1);
+    }
 
     // Eras and research trees first: everything else may be unlocked by them.
     for (const auto& [id, j] : m.tables["eras"]) {
@@ -2498,10 +2530,13 @@ TypeIndex Rules::terrainFor(const std::string& base, Relief relief) const {
 }
 
 const Rules::Global* Rules::findGlobal(std::string_view name) const {
-    const size_t hash = std::hash<std::string_view>{}(name);
-    auto it = std::lower_bound(globals_.begin(), globals_.end(), hash, [](const Global& g, size_t h) { return g.hash < h; });
-    for (; it != globals_.end() && it->hash == hash; ++it) {
-        if (it->name == name) return &*it;
+    if (globalSlots_.empty()) return nullptr;
+    const uint64_t hash = nameHash(name);
+    const size_t mask = globalSlots_.size() - 1;
+    // The table is never full, so the probe ends at an empty slot when the name is missing.
+    for (size_t slot = hash & mask; globalSlots_[slot] != 0; slot = (slot + 1) & mask) {
+        const Global& g = globals_[globalSlots_[slot] - 1];
+        if (g.hash == hash && g.name == name) return &g;
     }
     return nullptr;
 }

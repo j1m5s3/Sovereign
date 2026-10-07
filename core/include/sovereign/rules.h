@@ -1361,14 +1361,15 @@ public:
     static const std::vector<std::string>& fileNames();
 
 private:
-    // The named constants, sorted by the hash of their names: a lookup hashes the name once and compares one name,
-    // where a tree of names compares strings at every level.
+    // The named constants, found through a table of their names' hashes: a lookup hashes the name once and compares
+    // one name, where a tree of names compares strings at every level.
     struct Global {
-        size_t hash;
+        uint64_t hash;
         std::string name;
         Fixed value;
     };
     std::vector<Global> globals_;
+    std::vector<uint32_t> globalSlots_;  // open addressing, a power of two in size and at most half full: 1 + an index in globals_, 0 empty
     const Global* findGlobal(std::string_view name) const;
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)

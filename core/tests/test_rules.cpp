@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "helpers.h"
+#include "sovereign/json.h"
 
 using namespace sov;
 using sovtest::rules;
@@ -73,6 +74,25 @@ TEST(rules_index_every_modifier_by_effect) {
     CHECK_EQ(misplaced(again), 0);
 }
 
+// Every named constant in the data is found by its name, with its value.
+TEST(rules_find_every_named_constant) {
+    std::ifstream in(std::string(SOVEREIGN_RULES_DIR) + "/globals.json", std::ios::binary);
+    std::stringstream ss;
+    ss << in.rdbuf();
+    std::string err;
+    const Json j = Json::parse(ss.str(), &err);
+    REQUIRE(err.empty());
+    const Rules& r = rules();
+    int missing = 0, wrong = 0;
+    for (const auto& [name, value] : j["globals"].members()) {
+        if (!r.hasGlobal(name)) ++missing;
+        else if (r.global(name) != value.fixed()) ++wrong;
+    }
+    CHECK(j["globals"].size() > 400u);
+    CHECK_EQ(missing, 0);
+    CHECK_EQ(wrong, 0);
+}
+
 TEST(rules_mod_layers_override_by_id) {
     std::map<std::string, std::string> base = {
         {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 3, "START_DISTANCE_MAJOR_CIVILIZATION": 12,
@@ -94,7 +114,7 @@ TEST(rules_mod_layers_override_by_id) {
     std::map<std::string, std::string> mod = {
         {"units.json", R"({"units": [{"id": "UNIT_WARRIOR", "combat": 25}, {"id": "UNIT_SCOUT", "delete": true},
                                      {"id": "UNIT_LEADER", "combat": 15}]})"},
-        {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 4}})"},
+        {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 4, "A": 1, "SEVEN_7": 7, "EIGHT_88": 8, "NINE_9999": 9}})"},
     };
     Rules plain, modded;
     std::string err;
@@ -105,6 +125,12 @@ TEST(rules_mod_layers_override_by_id) {
     CHECK(modded.unit("UNIT_SCOUT") == kNone);
     CHECK(modded.unit("UNIT_LEADER") != kNone);
     CHECK_EQ(modded.globalInt("CITY_MIN_RANGE"), 4);
+    // Names shorter than, as long as and longer than eight bytes.
+    CHECK_EQ(modded.globalInt("A"), 1);
+    CHECK_EQ(modded.globalInt("SEVEN_7"), 7);
+    CHECK_EQ(modded.globalInt("EIGHT_88"), 8);
+    CHECK_EQ(modded.globalInt("NINE_9999"), 9);
+    CHECK(!modded.hasGlobal("NINE_999") && !modded.hasGlobal("") && !plain.hasGlobal("A"));
     CHECK(plain.checksum() != modded.checksum());
 }
 
