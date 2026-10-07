@@ -920,6 +920,8 @@ private:
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
     int parkAmenities(const City& city, ReportShare& shared) const;
+    // goldPerTurn from the player's city reports, in city order, when the caller has made them already.
+    Fixed goldPerTurn(PlayerId player, const std::vector<CityReport>* reports) const;
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;

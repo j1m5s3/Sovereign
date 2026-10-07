@@ -960,13 +960,21 @@ std::vector<CityId> Game::citiesNeedingProduction(PlayerId player) const {
 }
 
 Fixed Game::goldPerTurn(PlayerId player) const {
+    return goldPerTurn(player, nullptr);
+}
+
+Fixed Game::goldPerTurn(PlayerId player, const std::vector<CityReport>* reports) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed net;
     net += Fixed::fromInt(3 * monopolySources(player));  // 07: Monopolies
     ReportShare shared;  // by its city reports
+    size_t k = 0;        // the player's cities so far
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
-        if (p.anarchyTurns == 0) net += cityReport(c, shared).yields[idx(YieldType::Gold)];  // anarchy: no gold
+        if (p.anarchyTurns == 0) {  // anarchy: no gold
+            net += reports ? (*reports)[k].yields[idx(YieldType::Gold)] : cityReport(c, shared).yields[idx(YieldType::Gold)];
+        }
+        ++k;
         for (TypeIndex b : c.buildings) net -= Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].maintenance);
         for (const CityDistrict& d : c.districts) {
             if (d.complete) net -= Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].maintenance);
@@ -1506,7 +1514,7 @@ void Game::processCities(PlayerId pid) {
     std::vector<CityReport> reports;
     ReportShare shared;  // by its city reports
     for (CityId id : ids) reports.push_back(cityReport(*state_.city(id), shared));
-    player.gold += goldPerTurn(pid);
+    player.gold += goldPerTurn(pid, &reports);  // the same cities in the same order
     Fixed science, culture;
     if (player.anarchyTurns == 0) {  // anarchy: no gold, science, culture or faith
         for (const CityReport& r : reports) {
