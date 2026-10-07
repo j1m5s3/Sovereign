@@ -75,6 +75,20 @@ TEST(land_units_embark_after_shipbuilding_and_reach_the_ocean_after_cartography)
     CHECK(!g2->findPath(w, {9, 5}, true));
 }
 
+TEST(amphibious_units_embark_and_land_without_the_extra_cost) {
+    GameState s = seaState();
+    giveTech(s, 0, "TECH_SHIPBUILDING");
+    const UnitId plain = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+    const UnitId marine = addUnit(s, "UNIT_WARRIOR", 0, {7, 7});
+    s.units.back().promotions = {rules().promotion("PROMOTION_AMPHIBIOUS")};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // Embarking or landing costs 2 on top of the plot entered; Amphibious waives it (05).
+    CHECK_EQ(g->moveCost(unit(*g, plain), {7, 5}, {8, 5}).value_or(Fixed()), Fixed::fromInt(3));
+    CHECK_EQ(g->moveCost(unit(*g, plain), {8, 5}, {7, 5}).value_or(Fixed()), Fixed::fromInt(3));
+    CHECK_EQ(g->moveCost(unit(*g, marine), {7, 7}, {8, 7}).value_or(Fixed()), Fixed::fromInt(1));
+    CHECK_EQ(g->moveCost(unit(*g, marine), {8, 7}, {7, 7}).value_or(Fixed()), Fixed::fromInt(1));
+}
+
 TEST(builders_embark_after_sailing) {
     GameState s = seaState();
     giveTech(s, 0, "TECH_SAILING");

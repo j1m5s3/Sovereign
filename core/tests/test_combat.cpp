@@ -505,3 +505,15 @@ TEST(recon_naval_and_melee_promotions_take_effect) {
     REQUIRE(g->state().unit(victim) == nullptr);
     CHECK(g->state().players[0].gold > gold);
 }
+
+TEST(helicopters_ignore_terrain_costs) {
+    UnitId heli = kNoUnit, foot = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        s.plot({5, 5}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+        s.plot({5, 5}).feature = rules().feature("FEATURE_FOREST");
+        heli = addUnit(s, "UNIT_HELICOPTER", 0, {4, 5});
+        foot = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+    }, false);
+    CHECK_EQ(g->moveCost(unit(*g, foot), {4, 5}, {5, 5}).value_or(Fixed()), Fixed::fromInt(3));  // hills and woods
+    CHECK_EQ(g->moveCost(unit(*g, heli), {4, 5}, {5, 5}).value_or(Fixed()), Fixed::fromInt(1));
+}

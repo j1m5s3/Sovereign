@@ -698,6 +698,14 @@ private:
     CommandError validateCombat(const Command& c) const;
     void applyCombat(const Command& c);
     std::optional<Fixed> terrainCost(const Unit& unit, Hex from, Hex to) const;
+    // What a unit's abilities, promotions and policies change about its movement: the same for every step of a path.
+    struct MoveTraits {
+        bool freeEmbark = false, ignoreHills = false, ignoreForest = false, ignoreTerrain = false, ignoreBorders = false;
+        bool zeal = false;  // a religious unit under Missionary Zeal
+    };
+    MoveTraits moveTraits(const Unit& unit) const;
+    std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const;
+    std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
