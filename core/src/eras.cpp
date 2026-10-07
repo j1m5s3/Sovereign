@@ -321,7 +321,7 @@ int Game::tourismBase(PlayerId pid) const {
             const int wonderEra = bt.unlock.none() ? 0 : (bt.unlock.civic ? rules_->civics : rules_->techs)[at(bt.unlock.index)].era;
             total += rules_->globalInt("TOURISM_BASE_FROM_WONDER") + rules_->globalInt("TOURISM_ADVANCED_ERA_WONDER") * std::max(0, era - wonderEra);
         }
-        if (p.religion >= 0 && state_.religions[static_cast<size_t>(p.religion)].holyCity == c.id) total += rules_->globalInt("TOURISM_FROM_HOLY_CITY");
+        total += religiousTourism(c);
         for (const CityDistrict& d : c.districts) {
             if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
         }
@@ -341,6 +341,15 @@ int Game::tourismBase(PlayerId pid) const {
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;
     }
     return technocracy ? total * 90 / 100 : total;  // 04: Synthetic Technocracy, -10% Tourism
+}
+
+// Religious tourism (07): the Holy City of the religion its owner founded. St. Basil's Cathedral doubles its
+// city's (03).
+int Game::religiousTourism(const City& city) const {
+    const Player& p = state_.players[at(city.owner)];
+    if (p.religion < 0 || static_cast<size_t>(p.religion) >= state_.religions.size() || state_.religions[at(p.religion)].holyCity != city.id) return 0;
+    const TypeIndex basil = rules_->building("BUILDING_ST_BASIL_S_CATHEDRAL");
+    return rules_->globalInt("TOURISM_FROM_HOLY_CITY") * (basil != kNone && city.has(basil) ? 2 : 1);
 }
 
 void Game::processTourism(PlayerId pid) {
@@ -375,15 +384,15 @@ void Game::processTourism(PlayerId pid) {
     if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
     const int t = tourismPerTurn(pid);
     if (t <= 0) return;
-    // Religious tourism (06): halved after The Enlightenment, and halved again toward a civ whose cities mostly follow
-    // another religion (TOURISM_DIFFERENT_RELIGION_REDUCTION).
+    // Religious tourism (06): halved after The Enlightenment (never with Cristo Redentor, 03), and halved again toward
+    // a civ whose cities mostly follow another religion (TOURISM_DIFFERENT_RELIGION_REDUCTION).
     int religious = 0;
     if (p.religion >= 0 && static_cast<size_t>(p.religion) < state_.religions.size()) {
         const City* holy = state_.city(state_.religions[static_cast<size_t>(p.religion)].holyCity);
-        if (holy && holy->owner == pid) religious = rules_->globalInt("TOURISM_FROM_HOLY_CITY");
+        if (holy && holy->owner == pid) religious = religiousTourism(*holy);
     }
     const TypeIndex enlightenment = rules_->civic("CIVIC_THE_ENLIGHTENMENT");
-    const int religiousLost = enlightenment != kNone && p.civics.has(enlightenment) ? religious / 2 : 0;
+    const int religiousLost = enlightenment != kNone && p.civics.has(enlightenment) && !holdsWonder(pid, W::Cristo) ? religious / 2 : 0;
     auto mainReligion = [&](PlayerId who) {
         std::vector<int> n(state_.religions.size(), 0);
         for (const City& c : state_.cities) {

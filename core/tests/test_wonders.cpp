@@ -1,4 +1,6 @@
 // World wonders (03-districts-buildings-wonders.md, Wonders).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/mapgen.h"
 #include "sovereign/modifiers.h"
@@ -242,4 +244,39 @@ TEST(a_wonder_needs_its_building_first) {
     std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
     auto with = Game::fromScenario(rules(), std::move(s));
     CHECK(with->canPlaceWonder(with->state().cities[0], library, {7, 6}));
+}
+
+TEST(the_great_library_gives_a_eureka_when_a_rival_recruits_a_great_scientist) {
+    // 03: a random Eureka whenever another civ recruits a Great Scientist. Player 1 has the points to recruit one.
+    const TypeIndex scientist = rules().greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
+    GameState s = wonderState();
+    s.players[1].greatPersonPoints[at(scientist)] = 10000;
+    auto withLibrary = [&](size_t city) {
+        GameState t = s;
+        t.cities[city].buildings.push_back(wonder("BUILDING_GREAT_LIBRARY"));
+        std::sort(t.cities[city].buildings.begin(), t.cities[city].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(t));
+        sovtest::endTurns(*g, 1);  // player 1's turn begins: it recruits
+        return g;
+    };
+    auto plain = Game::fromScenario(rules(), s);
+    sovtest::endTurns(*plain, 1);
+    auto rival = withLibrary(0);  // player 0 holds the Great Library
+    auto own = withLibrary(1);    // the recruiter holds it
+    const auto boosted = [](const Game& g, PlayerId p) {
+        const std::vector<uint8_t>& b = g.state().players[at(p)].techs.boosted;
+        return static_cast<int>(std::count(b.begin(), b.end(), uint8_t{1}));
+    };
+    for (const Game* g : {plain.get(), rival.get(), own.get()}) CHECK_EQ(g->state().players[1].greatPeopleRecruited[at(scientist)], 1);
+    REQUIRE(boosted(*rival, 0) == boosted(*plain, 0) + 1);
+    const Player& p = rival->state().players[0];
+    for (size_t t = 0; t < p.techs.boosted.size(); ++t) {
+        if (!p.techs.boosted[t] || plain->state().players[0].techs.boosted[t]) continue;
+        CHECK(!p.techs.done[t]);
+        const int pct = rules().techs[t].boost.percent > 0 ? rules().techs[t].boost.percent : 40;
+        CHECK_EQ(p.techs.progress[t], plain->state().players[0].techs.progress[t] + Fixed::fromInt(rival->techCost(static_cast<TypeIndex>(t))) * pct / 100);
+    }
+    // The recruiter's own Great Library gives it nothing.
+    CHECK_EQ(boosted(*own, 1), boosted(*plain, 1));
+    CHECK_EQ(boosted(*own, 0), boosted(*plain, 0));
 }

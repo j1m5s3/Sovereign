@@ -541,6 +541,7 @@ public:
     int bestAllianceLevel(PlayerId player, AllianceType type) const;
     bool militaryAllianceAtWar(PlayerId player) const;  // a level-2 Military ally, and a war on either side
     int tourismBase(PlayerId player) const;              // its own tourism, before an ally's share
+    int religiousTourism(const City& city) const;       // its owner's Holy City: TOURISM_FROM_HOLY_CITY, doubled by St. Basil's (03)
     Fixed allianceShare(PlayerId player, YieldType yield) const;  // Research/Cultural level 3: 10% of the ally's yield
     int warWeariness(PlayerId player) const;            // points against every opponent together
     int warWearinessAmenities(PlayerId player) const;   // amenities each of its cities loses (1 per 400 points)
@@ -782,6 +783,7 @@ private:
     void processGreatPeople(PlayerId player);
     void recruitGreatPerson(PlayerId player, TypeIndex person, const City* in = nullptr);  // appears in `in`, else the capital
     void wonderProphet(City& city, TypeIndex prophet);  // Stonehenge's Great Prophet, or an Apostle (03)
+    void greatLibraryEurekas(PlayerId recruiter);         // a random Eureka for each other civ with the Great Library (03)
     void applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx);
     // A one-time effect for a player at a plot (city: the player's city there, or null).
     void applyEffectAt(PlayerId player, City* city, Hex at, const GreatPersonEffect& fx);
