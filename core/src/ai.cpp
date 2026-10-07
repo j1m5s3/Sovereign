@@ -195,14 +195,6 @@ int freeSites(View& v) {
 // --- grand strategy (10-ai: Strategies) --------------------------------------------------
 bool isMajorPlayer(const Player& p) { return p.alive && !p.barbarian && !p.freeCity && p.cityState == kNone; }
 
-int faithPerTurn(const Game& g, PlayerId pid) {
-    Fixed total;
-    for (const City& c : g.state().cities) {
-        if (c.owner == pid) total += g.cityReport(c.id).yields[yi(YieldType::Faith)];
-    }
-    return static_cast<int>(total.toInt());
-}
-
 // Which strategies hold for the player and what they ask for. `sites`: free city sites.
 Posture assess(const Game& g, PlayerId me, int sites) {
     const GameState& s = g.state();
@@ -221,15 +213,17 @@ Posture assess(const Game& g, PlayerId me, int sites) {
     int rivals = 0;
     int64_t sciSum = 0, culSum = 0, faithSum = 0, techSum = 0;
     int maxStrength = 0, maxScore = 0, secondScore = 0, maxDvp = 0, maxDomestic = 0;
-    const int mySci = static_cast<int>(g.sciencePerTurn(me).toInt()), myCul = static_cast<int>(g.culturePerTurn(me).toInt());
-    const int myFaith = faithPerTurn(g, me), myStrength = militaryStrength(g, me), myScore = g.score(me);
+    const Game::Output myOutput = g.outputPerTurn(me);
+    const int mySci = static_cast<int>(myOutput.science.toInt()), myCul = static_cast<int>(myOutput.culture.toInt());
+    const int myFaith = static_cast<int>(myOutput.faith.toInt()), myStrength = militaryStrength(g, me), myScore = g.score(me);
     const int64_t myTechs = std::count(pl.techs.done.begin(), pl.techs.done.end(), 1);
     for (const Player& o : s.players) {
         if (o.id == me || !isMajorPlayer(o)) continue;
         ++rivals;
-        sciSum += g.sciencePerTurn(o.id).toInt();
-        culSum += g.culturePerTurn(o.id).toInt();
-        faithSum += faithPerTurn(g, o.id);
+        const Game::Output rival = g.outputPerTurn(o.id);
+        sciSum += rival.science.toInt();
+        culSum += rival.culture.toInt();
+        faithSum += static_cast<int>(rival.faith.toInt());
         techSum += std::count(o.techs.done.begin(), o.techs.done.end(), 1);
         maxStrength = std::max(maxStrength, militaryStrength(g, o.id));
         const int sc = g.score(o.id);
@@ -2455,8 +2449,9 @@ PaceSample measurePace(const Game& game) {
         out.techs += std::count(p.techs.done.begin(), p.techs.done.end(), 1);
         out.civics += std::count(p.civics.done.begin(), p.civics.done.end(), 1);
         out.era += game.playerEra(p.id);
-        out.science += game.sciencePerTurn(p.id).toInt();
-        out.culture += game.culturePerTurn(p.id).toInt();
+        const Game::Output output = game.outputPerTurn(p.id);
+        out.science += output.science.toInt();
+        out.culture += output.culture.toInt();
         out.gold += p.gold.toInt();
         for (const City& c : s.cities) {
             if (c.owner != p.id) continue;

@@ -72,10 +72,8 @@ void Game::processProfiles() {
         fade(pr.expansion, citiesAll > 0 ? std::min<int64_t>(5000, cities[me] * majors * 1000 / citiesAll) : 1000);
         // What it puts its economy into: shares of science, culture and faith in those three.
         {
-            Fixed sci = sciencePerTurn(p.id), cul = culturePerTurn(p.id), faith;
-            for (const City& c : state_.cities) {
-                if (c.owner == p.id) faith += cityReport(c.id).yields[static_cast<size_t>(YieldType::Faith)];
-            }
+            const Output output = outputPerTurn(p.id);
+            const Fixed sci = output.science, cul = output.culture, faith = output.faith;
             const int64_t total = (sci + cul + faith).toInt();
             fade(pr.science, total > 0 ? sci.toInt() * 1000 / total : 0);
             fade(pr.culture, total > 0 ? cul.toInt() * 1000 / total : 0);

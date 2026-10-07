@@ -660,6 +660,23 @@ TEST(alliance_levels_bring_their_effects) {
         auto h = Game::fromScenario(rules(), std::move(plain));
         CHECK_EQ(g->religiousStrength(*g->state().unit(m), false), h->religiousStrength(*h->state().unit(m2), false) + 10);
     }
+    // Research and Cultural, level 3: a tenth of the ally's Science or Culture from its cities; nothing in anarchy.
+    {
+        const auto yieldOf = [](const Game& g, size_t city, YieldType y) { return g.cityReport(g.state().cities[city].id).yields[static_cast<size_t>(y)]; };
+        auto research = Game::fromScenario(rules(), allied(AllianceType::Research, 960));
+        const Fixed allyScience = yieldOf(*research, 1, YieldType::Science);
+        REQUIRE(allyScience > Fixed());
+        CHECK_EQ(research->sciencePerTurn(0), yieldOf(*research, 0, YieldType::Science) + allyScience * Fixed::ratio(1, 10));
+        CHECK_EQ(research->culturePerTurn(0), yieldOf(*research, 0, YieldType::Culture));
+        auto cultural = Game::fromScenario(rules(), allied(AllianceType::Cultural, 960));
+        const Fixed allyCulture = yieldOf(*cultural, 1, YieldType::Culture);
+        REQUIRE(allyCulture > Fixed());
+        CHECK_EQ(cultural->culturePerTurn(0), yieldOf(*cultural, 0, YieldType::Culture) + allyCulture * Fixed::ratio(1, 10));
+        CHECK_EQ(cultural->sciencePerTurn(0), yieldOf(*cultural, 0, YieldType::Science));
+        GameState s = allied(AllianceType::Research, 960);
+        s.players[0].anarchyTurns = 2;
+        CHECK_EQ(Game::fromScenario(rules(), std::move(s))->sciencePerTurn(0), Fixed());
+    }
     // Cultural, level 3: a fifth of the ally's tourism.
     {
         GameState s = allied(AllianceType::Cultural, 960);

@@ -245,9 +245,13 @@ public:
     bool canStudyCivic(PlayerId player, TypeIndex civic) const;
     std::vector<TypeIndex> availableTechs(PlayerId player) const;
     std::vector<TypeIndex> availableCivics(PlayerId player) const;
-    // Science and culture the player earns this turn (zero in anarchy).
-    Fixed sciencePerTurn(PlayerId player) const;
-    Fixed culturePerTurn(PlayerId player) const;
+    // Science and culture the player earns this turn (zero in anarchy), and its cities' Faith: one report per city.
+    struct Output {
+        Fixed science, culture, faith;
+    };
+    Output outputPerTurn(PlayerId player) const;
+    Fixed sciencePerTurn(PlayerId player) const { return outputPerTurn(player).science; }
+    Fixed culturePerTurn(PlayerId player) const { return outputPerTurn(player).culture; }
     // Whether the player meets a boost's condition right now.
     bool boostMet(PlayerId player, const Boost& boost) const;
     bool canAdoptGovernment(PlayerId player, TypeIndex government, CommandError* why = nullptr) const;
