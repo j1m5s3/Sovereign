@@ -308,6 +308,20 @@ TEST(city_bankruptcy_disbands_units) {
     CHECK(g->state().unit(spear) == nullptr);
 }
 
+// The turn's income counts each city's own gold once: the capital's with the Palace, and a second city's, which is less.
+TEST(city_turn_income_counts_every_city) {
+    auto sc = capitalScenario();
+    GameState s = sc.game->state();
+    s.players[0].gold = Fixed::fromInt(100);
+    s.cities[0].queue.push_back(buildingItem("BUILDING_MONUMENT"));
+    const CityId second = sovtest::addCity(s, 0, {14, 8}, false);
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->cityReport(sc.city).yields[G] != g->cityReport(second).yields[G]);
+    const Fixed income = g->goldPerTurn(0);
+    endTurns(*g, 1);
+    CHECK_EQ(g->state().players[0].gold, Fixed::fromInt(100) + income);
+}
+
 TEST(exclusive_buildings_and_either_prerequisite) {
     // 03: a city holds the Barracks or the Stable, never both, and the Armory needs either; one Government Plaza
     // building a tier, and the next tier after any one of the last; one power plant. A civ's unique building
