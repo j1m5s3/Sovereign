@@ -123,22 +123,23 @@ Fixed Game::allianceShare(PlayerId player, YieldType yield) const {
     return share;
 }
 
-Fixed Game::sciencePerTurn(PlayerId player) const {
-    Fixed total;
-    if (state_.players[static_cast<size_t>(player)].anarchyTurns > 0) return total;
+Game::Output Game::outputPerTurn(PlayerId player) const {
+    Output out;
+    const bool anarchy = state_.players[static_cast<size_t>(player)].anarchyTurns > 0;  // no science or culture
     for (const City& c : state_.cities) {
-        if (c.owner == player) total += cityReport(c.id).yields[idx(YieldType::Science)];
+        if (c.owner != player) continue;
+        const Yields y = cityReport(c.id).yields;
+        if (!anarchy) {
+            out.science += y[idx(YieldType::Science)];
+            out.culture += y[idx(YieldType::Culture)];
+        }
+        out.faith += y[idx(YieldType::Faith)];
     }
-    return total + allianceShare(player, YieldType::Science);
-}
-
-Fixed Game::culturePerTurn(PlayerId player) const {
-    Fixed total;
-    if (state_.players[static_cast<size_t>(player)].anarchyTurns > 0) return total;
-    for (const City& c : state_.cities) {
-        if (c.owner == player) total += cityReport(c.id).yields[idx(YieldType::Culture)];
+    if (!anarchy) {
+        out.science += allianceShare(player, YieldType::Science);
+        out.culture += allianceShare(player, YieldType::Culture);
     }
-    return total + allianceShare(player, YieldType::Culture);
+    return out;
 }
 
 bool Game::boostMet(PlayerId player, const Boost& b) const {
