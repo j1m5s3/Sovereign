@@ -520,7 +520,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (Item.kind != sov::ProductionKind::Unit && Item.kind != sov::ProductionKind::Building) continue;
 				const sov::Command Buy = sov::Command::purchase(Me(), City->id, Item);
 				if (G.validate(Buy) != sov::CommandError::Ok) continue;
-				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item)), Buy});
+				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item, City)), Buy});
 			}
 			// A placed district, with Reyna's Contractor (Gold) or Moksha's Divine Architect (Faith) here (08: Governors).
 			for (const sov::CityDistrict& D : City->districts)

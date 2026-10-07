@@ -558,3 +558,110 @@ TEST(yerevans_apostles_choose_their_promotion) {
     CHECK_EQ(g->state().unit(id)->charges, charges + 2);  // Orator's two more spreads
     CHECK(g->availablePromotions(id).empty());
 }
+
+TEST(ngazargamu_cheapens_land_units_in_military_cities) {
+    // Ngazargamu (08): land units 20% cheaper with a Barracks or Stable, 40% with an Armory too, 60% with a Military Academy.
+    const ProductionItem warrior{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")};
+    const ProductionItem galley{ProductionKind::Unit, rules().unit("UNIT_GALLEY")};
+    const auto game = [](const char* cityState, std::initializer_list<const char*> buildings, int gold = 500) {
+        GameState s = suzerainState(cityState);
+        for (const char* b : buildings) s.cities[0].buildings.push_back(rules().building(b));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.players[0].gold = Fixed::fromInt(gold);
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    const auto cost = [&](const char* cityState, std::initializer_list<const char*> buildings, ProductionItem item) {
+        auto g = game(cityState, buildings);
+        return g->purchaseCost(0, item, &g->state().cities[0]);
+    };
+    const int plain = cost("CITYSTATE_GRANADA", {"BUILDING_BARRACKS"}, warrior);
+    REQUIRE(plain > 0);
+    REQUIRE(plain % 5 == 0);
+    CHECK_EQ(cost("CITYSTATE_NGAZARGAMU", {}, warrior), plain);
+    CHECK_EQ(cost("CITYSTATE_NGAZARGAMU", {"BUILDING_STABLE"}, warrior), plain * 80 / 100 / 5 * 5);
+    CHECK_EQ(cost("CITYSTATE_NGAZARGAMU", {"BUILDING_BARRACKS", "BUILDING_ARMORY"}, warrior), plain * 60 / 100 / 5 * 5);
+    CHECK_EQ(cost("CITYSTATE_NGAZARGAMU", {"BUILDING_BARRACKS", "BUILDING_ARMORY", "BUILDING_MILITARY_ACADEMY"}, warrior), plain * 40 / 100 / 5 * 5);
+    CHECK_EQ(cost("CITYSTATE_NGAZARGAMU", {"BUILDING_BARRACKS"}, galley), cost("CITYSTATE_GRANADA", {"BUILDING_BARRACKS"}, galley));  // land units only
+    // Buying one asks and pays the city's price: short of the full price is enough.
+    const int price = plain * 80 / 100 / 5 * 5;
+    auto g = game("CITYSTATE_NGAZARGAMU", {"BUILDING_BARRACKS"}, plain - 5);
+    REQUIRE(g->submit(Command::purchase(0, g->state().cities[0].id, warrior)) == CommandError::Ok);
+    CHECK(g->state().players[0].gold == Fixed::fromInt(plain - 5 - price));
+}
+
+TEST(nan_madol_pays_culture_for_districts_by_the_coast) {
+    // Nan Madol (08): +2 Culture for each finished, unpillaged district on or next to Coast, the City Center included.
+    const auto culture = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        s.plot({3, 6}).terrain = rules().terrain("TERRAIN_COAST");  // beside the City Center at (4,6)
+        std::vector<CityDistrict>& ds = s.cities[0].districts;
+        ds.push_back({rules().district("DISTRICT_CAMPUS"), {3, 7}, true});           // next to the Coast
+        ds.push_back({rules().district("DISTRICT_COMMERCIAL_HUB"), {5, 6}, true});   // inland
+        ds.push_back({rules().district("DISTRICT_ENCAMPMENT"), {3, 5}, false});      // unfinished
+        ds.push_back({rules().district("DISTRICT_HOLY_SITE"), {2, 6}, true});        // pillaged
+        ds.back().pillagedTurns = kPillagedDistrictTurns;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->cityReport(g->state().cities[0].id).yields[yi(YieldType::Culture)];
+    };
+    CHECK(culture("CITYSTATE_NAN_MADOL") == culture("CITYSTATE_RAPA_NUI") + Fixed::fromInt(4));
+}
+
+TEST(kandy_finds_relics_and_raises_their_faith) {
+    // Kandy (08): a Relic for each natural wonder its suzerain discovers; relics yield +50% Faith.
+    const auto setup = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));  // a relic slot
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.plot({8, 6}).feature = rules().feature("FEATURE_FOUNTAIN_OF_YOUTH");
+        for (Player& p : s.players) p.visibility[static_cast<size_t>(s.grid.index({8, 6}))] = static_cast<uint8_t>(Visibility::Unrevealed);
+        addUnit(s, "UNIT_SCOUT", 0, {5, 6});
+        return s;
+    };
+    const auto discover = [&](const char* cityState) {
+        auto g = Game::fromScenario(rules(), setup(cityState));
+        REQUIRE(g->state().cities[0].greatWorks.empty());
+        REQUIRE(g->submit(Command::move(0, g->state().units.back().id, {6, 6})) == CommandError::Ok);  // now it sees the Fountain of Youth
+        return g;
+    };
+    auto g = discover("CITYSTATE_KANDY");
+    REQUIRE(g->state().cities[0].greatWorks.size() == 1u);
+    CHECK(g->state().cities[0].greatWorks[0].type == rules().greatWorkType("RELIC"));
+    auto plain = discover("CITYSTATE_NAZCA");
+    CHECK(plain->state().cities[0].greatWorks.empty());
+    // A relic in the Temple: 4 Faith, 6 for Kandy's suzerain.
+    const auto faith = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        const TypeIndex temple = rules().building("BUILDING_TEMPLE");
+        s.cities[0].buildings.push_back(temple);
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        GreatWork relic;
+        relic.type = rules().greatWorkType("RELIC");
+        relic.building = temple;
+        s.cities[0].greatWorks.push_back(relic);
+        auto h = Game::fromScenario(rules(), std::move(s));
+        return h->cityReport(h->state().cities[0].id).yields[yi(YieldType::Faith)];
+    };
+    CHECK(faith("CITYSTATE_KANDY") == faith("CITYSTATE_NAZCA") + Fixed::fromInt(2));
+}
+
+TEST(vilnius_raises_theater_squares_with_each_alliance_level) {
+    // Vilnius (08): +50% Theater Square adjacency for each level (1+, 2+, 3+) of its suzerain's best alliance.
+    const auto adjacency = [](const char* cityState, int alliancePoints) {
+        GameState s = suzerainState(cityState);
+        s.cities[0].districts.push_back({rules().district("DISTRICT_ENTERTAINMENT_COMPLEX"), {6, 6}, true});
+        if (alliancePoints >= 0) {
+            Relation& r = s.players[0].relations[1];
+            r.alliance = AllianceType::Cultural;
+            r.allianceUntil = 100;
+            r.alliancePoints = alliancePoints;
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->districtAdjacency(0, rules().district("DISTRICT_THEATER_SQUARE"), {5, 6})[yi(YieldType::Culture)];
+    };
+    const Fixed base = adjacency("CITYSTATE_RAPA_NUI", 0);
+    REQUIRE(base > Fixed());
+    CHECK(adjacency("CITYSTATE_VILNIUS", -1) == base);  // no alliance
+    CHECK(adjacency("CITYSTATE_VILNIUS", 0) == base * 3 / 2);
+    CHECK(adjacency("CITYSTATE_VILNIUS", rules().globalInt("ALLIANCE_LEVEL_TWO_XP")) == base * 2);
+    CHECK(adjacency("CITYSTATE_VILNIUS", rules().globalInt("ALLIANCE_LEVEL_THREE_XP")) == base * 5 / 2);
+}

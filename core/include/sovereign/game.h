@@ -106,8 +106,8 @@ public:
     int borderGrowthCost(int plotsAcquired) const;
     // `city`: where it is built, for costs that depend on it (the Flood Barrier; 09).
     int productionCost(PlayerId player, ProductionItem item, const City* city = nullptr) const;
-    // Gold price, or -1 when the item cannot be bought with gold.
-    int purchaseCost(PlayerId player, ProductionItem item) const;
+    // Gold price, or -1 when the item cannot be bought with gold; `city`: where it is bought (Ngazargamu, 08).
+    int purchaseCost(PlayerId player, ProductionItem item, const City* city = nullptr) const;
     bool canTrainFormation(const City& city, TypeIndex unit, int formation) const;  // a Corps (1) or Army (2) whole (05)
     // A placed, unfinished district bought outright with Gold (Reyna's Contractor) or Faith (Moksha's
     // Divine Architect) (08: Governors); -1 when it cannot be.

@@ -1791,7 +1791,7 @@ void purchases(View& v) {
         if (v.threat[i] == 0 || hasGarrison(v, c)) continue;
         std::optional<ProductionItem> soldier = bestMilitaryUnit(v, g.buildableItems(c.id));
         if (!soldier) continue;
-        const int cost = g.purchaseCost(v.me, *soldier);
+        const int cost = g.purchaseCost(v.me, *soldier, &c);
         if (cost > 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost)) g.submit(Command::purchase(v.me, c.id, *soldier));
     }
     // Savings (DefaultSavings: units 4, slush fund 3): a small reserve, less for growth items.

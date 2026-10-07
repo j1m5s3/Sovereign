@@ -769,6 +769,13 @@ void Game::refreshVisibility(PlayerId pid) {
         }
         awardMoment(pid, first ? "MOMENT_FIRST_DISCOVERY_OF_A_NATURAL_WONDER" : "MOMENT_DISCOVERY_OF_A_NATURAL_WONDER");
         dedicationScore(pid, "DEDICATION_HIC_SUNT_DRACONES", 3);
+        // Kandy (08: suzerain): a Relic, in a free slot, for each natural wonder its suzerain discovers.
+        if (suzerainBonus(pid, "CITYSTATE_KANDY")) {
+            GreatPersonEffect relic;
+            relic.kind = GreatPersonEffectKind::Relic;
+            relic.amount = 1;
+            applyEffectAt(pid, nullptr, Hex{}, relic);
+        }
         const TypeIndex astrology = rules_->tech("TECH_ASTROLOGY");
         TreeProgress& t = p.techs;
         if (astrology != kNone && static_cast<size_t>(astrology) < t.done.size() && !t.done[static_cast<size_t>(astrology)] && !t.boosted[static_cast<size_t>(astrology)]) {
