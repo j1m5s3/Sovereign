@@ -284,6 +284,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (TypeIndex g : p.greatPeoplePassed) if (!inRange(g, rules.greatPeople.size(), true)) return false;
         for (TypeIndex g : p.greatPeopleActivated) if (!inRange(g, rules.greatPeople.size(), false)) return false;
         for (TypeIndex lux : p.luxuryGrants) if (!inRange(lux, rules.resources.size(), false)) return false;
+        for (TypeIndex im : p.improvementGrants) if (!inRange(im, rules.improvements.size(), false)) return false;
         if (!inRange(p.pantheon, rules.beliefs.size(), true) || p.religion < -1 || p.religion >= static_cast<int>(s.religions.size())) return false;
         if (p.relations.size() != s.players.size()) return false;
         if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
@@ -369,6 +370,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.greatPeoplePassed.begin(), p.greatPeoplePassed.end()));
         writeI32s(w, std::vector<int32_t>(p.greatPeopleActivated.begin(), p.greatPeopleActivated.end()));
         writeI32s(w, std::vector<int32_t>(p.luxuryGrants.begin(), p.luxuryGrants.end()));
+        writeI32s(w, std::vector<int32_t>(p.improvementGrants.begin(), p.improvementGrants.end()));
         writeI32s(w, std::vector<int32_t>(p.projectsDone.begin(), p.projectsDone.end()));
         w.i16(p.pantheon);
         w.i16(p.religion);
@@ -814,6 +816,9 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, trained)) return false;
         p.luxuryGrants.clear();
         for (int32_t v : trained) p.luxuryGrants.push_back(static_cast<TypeIndex>(v));
+        if (!readI32s(r, trained)) return false;
+        p.improvementGrants.clear();
+        for (int32_t v : trained) p.improvementGrants.push_back(static_cast<TypeIndex>(v));
         if (!readI32s(r, trained)) return false;
         p.projectsDone.assign(trained.begin(), trained.end());
         p.pantheon = r.i16();

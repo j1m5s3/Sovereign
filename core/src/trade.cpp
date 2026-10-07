@@ -151,6 +151,16 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         }
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(luxuries);
     }
+    // Samarkand (08): international routes +1 Gold per Trading Dome of the origin.
+    if (!domestic && suzerainBonus(origin.owner, "CITYSTATE_SAMARKAND")) {
+        const TypeIndex dome = rules_->improvement("IMPROVEMENT_TRADING_DOME");
+        int domes = 0;
+        for (const Hex& h : state_.grid.within(origin.pos, 3)) {
+            const Plot& p = state_.plot(h);
+            domes += dome != kNone && p.city == origin.id && p.improvement == dome && p.pillagedTurns == 0 ? 1 : 0;
+        }
+        out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(domes);
+    }
     if (suzerainBonus(origin.owner, "CITYSTATE_HUNZA"))
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::ratio(state_.grid.distance(origin.pos, destination.pos), 5);
     if (isCityState(destination.owner) && suzerainBonus(origin.owner, "CITYSTATE_KUMASI")) {

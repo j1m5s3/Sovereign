@@ -105,6 +105,15 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
         if (home && cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str()))
             for (size_t k = 0; k < kNumYields; ++k) y[k] += im.governorYields[k];
     }
+    // Its plot qualifies (08): the Moai beside the coast, or on or beside Volcanic Soil.
+    for (const ImprovementTileYield& t : im.tileYields) {
+        bool fits = false;
+        for (const Hex& h : state_.grid.within(at, 1)) {
+            const Plot& q = state_.plot(h);
+            fits = fits || (t.nextToCoast && rules_->terrains[static_cast<size_t>(q.terrain)].shallowWater) || (t.nearFeature != kNone && q.feature == t.nearFeature);
+        }
+        if (fits) y[static_cast<size_t>(t.yield)] += t.amount;
+    }
     for (const ImprovementAdjacency& a : im.adjacency) {
         if (!a.needs.none() && !hasUnlocked(owner, a.needs)) continue;
         if (!a.obsoleteWith.none() && hasUnlocked(owner, a.obsoleteWith)) continue;
@@ -417,6 +426,15 @@ void Game::applyBuilder(const Command& c) {
         if (built.id == "IMPROVEMENT_SEASIDE_RESORT") awardFirst(c.player, "MOMENT_WORLD_S_FIRST_SEASIDE_RESORT", "MOMENT_FIRST_SEASIDE_RESORT", 0);
         if (built.id == "IMPROVEMENT_SOLAR_FARM" || built.id == "IMPROVEMENT_WIND_FARM" || built.id == "IMPROVEMENT_OFFSHORE_WIND_FARM")
             awardFirst(c.player, "MOMENT_FIRST_GREEN_IMPROVEMENT_IN_WORLD", "MOMENT_FIRST_GREEN_IMPROVEMENT", 0);
+        // Nalanda (08): a player's first Mahavihara grants a random technology.
+        Player& builder = state_.players[static_cast<size_t>(c.player)];
+        if (built.id == "IMPROVEMENT_MAHAVIHARA" && suzerainBonus(c.player, "CITYSTATE_NALANDA") && !contains(builder.improvementGrants, p.improvement)) {
+            builder.improvementGrants.push_back(p.improvement);
+            GreatPersonEffect gift;
+            gift.kind = GreatPersonEffectKind::RandomTechs;
+            gift.count = 1;
+            applyEffectAt(c.player, nullptr, at, gift);
+        }
     } else {
         // Harvest: the feature (or the bonus resource) goes, its yields go to the owning city.
         Yields gain{};

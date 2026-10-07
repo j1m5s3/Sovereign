@@ -924,6 +924,36 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 if (!readUnlock(b["unlock"], bonus.unlock, where)) return false;
                 im.bonuses.push_back(bonus);
             }
+            for (const Json& t : j["tileYields"].items()) {
+                ImprovementTileYield ty;
+                if (!parseYieldName(t["yield"].str(), ty.yield)) {
+                    *error = where + ": bad tile yield";
+                    return false;
+                }
+                ty.amount = t["amount"].fixed();
+                ty.nextToCoast = t["nextToCoast"].boolean(false);
+                if (t.has("nearFeature") && (ty.nearFeature = findFeature(t["nearFeature"].str())) == kNone) {
+                    *error = where + ": unknown feature " + t["nearFeature"].str();
+                    return false;
+                }
+                im.tileYields.push_back(ty);
+            }
+            for (const Json& n : j["neighbourYields"].items()) {
+                ImprovementNeighbourYield ny;
+                if (!parseYieldName(n["yield"].str(), ny.yield)) {
+                    *error = where + ": bad neighbour yield";
+                    return false;
+                }
+                ny.amount = n["amount"].fixed();
+                if (!readUnlock(n["needs"], ny.needs, where)) return false;
+                ny.resource = n["resource"].boolean(false);
+                ny.notHills = n["notHills"].boolean(false);
+                if (n.has("terrain") && (ny.terrain = findTerrain(n["terrain"].str())) == kNone) {
+                    *error = where + ": unknown terrain " + n["terrain"].str();
+                    return false;
+                }
+                im.neighbourYields.push_back(ny);
+            }
             im.housing = j["housing"].fixed();
             im.appeal = static_cast<int>(j["appeal"].integer(0));
             im.uniqueToId = j["uniqueTo"].str();
