@@ -1190,9 +1190,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (sumCityModifiers(state_, *rules_, city, ModEffect::SettlerNoPopCost) <= Fixed()) city.population -= u.popCost;
         Unit& made = spawnUnit(item.type, city.owner, *spot);
         made.formation = item.formation;
+        // The Calmecac (leaders-and-art-style): units trained here earn +25% combat XP for good.
         for (TypeIndex bi : city.buildings) {
             const int pct = rules_->buildings[static_cast<size_t>(bi)].trainedXpPercent;
-            if (pct > 0 && !u.promotionClass.empty()) made.xp = std::min(xpForNextLevel(made), made.xp + xpForNextLevel(made) * pct / 100);
+            if (pct > 0 && !u.promotionClass.empty()) made.xpBonus = static_cast<int16_t>(made.xpBonus + pct);
         }
         if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
         // A Military alliance at level 3 (08): units trained have a promotion's XP.

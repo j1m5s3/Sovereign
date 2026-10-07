@@ -291,3 +291,112 @@ TEST(heirs_bring_their_traits_to_the_throne) {
     auto regent = Game::fromScenario(rules(), std::move(s));
     CHECK(regent->cityReport(regent->state().cities[0].id).yields[static_cast<size_t>(YieldType::Faith)] == faith);
 }
+
+TEST(war_chariots_and_mandinka_lancers_move_farther_on_their_ground) {
+    GameState s = pair("CIVILIZATION_EGYPT", "CIVILIZATION_MALI", {});
+    s.plot({8, 2}).feature = rules().feature("FEATURE_FOREST");
+    s.plot({10, 2}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    s.plot({8, 10}).terrain = rules().terrain("TERRAIN_DESERT");
+    s.plot({10, 10}).terrain = rules().terrain("TERRAIN_DESERT_HILLS");
+    const UnitId open = addUnit(s, "UNIT_WAR_CHARIOT", 0, {6, 2});
+    const UnitId woods = addUnit(s, "UNIT_WAR_CHARIOT", 0, {8, 2});
+    const UnitId hills = addUnit(s, "UNIT_WAR_CHARIOT", 0, {10, 2});
+    const UnitId heavy = addUnit(s, "UNIT_HEAVY_CHARIOT", 1, {12, 2});
+    const UnitId grass = addUnit(s, "UNIT_MANDINKA_LANCER", 1, {6, 10});
+    const UnitId desert = addUnit(s, "UNIT_MANDINKA_LANCER", 1, {8, 10});
+    const UnitId duneHills = addUnit(s, "UNIT_MANDINKA_LANCER", 1, {10, 10});
+    for (Unit& u : s.units) u.activity = Activity::Sleep;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int chariot = rules().units[at(rules().unit("UNIT_HEAVY_CHARIOT"))].moves;
+    const int knight = rules().units[at(rules().unit("UNIT_KNIGHT"))].moves;
+    auto moves = [&](UnitId id) { return g->maxMoves(*g->state().unit(id)); };
+    // The War Chariot keeps the Heavy Chariot's +1 on open ground and adds +1 on flat land.
+    CHECK_EQ(moves(open), chariot + 2);
+    CHECK_EQ(moves(woods), chariot + 1);
+    CHECK_EQ(moves(hills), chariot);
+    CHECK_EQ(moves(heavy), chariot + 1);
+    // The Mandinka Lancer: +1 in desert, flat or hills.
+    CHECK_EQ(moves(grass), knight);
+    CHECK_EQ(moves(desert), knight + 1);
+    CHECK_EQ(moves(duneHills), knight + 1);
+    // Counted where the turn starts.
+    sovtest::endTurns(*g, 2);
+    CHECK(g->state().unit(open)->movesLeft == Fixed::fromInt(chariot + 2));
+    CHECK(g->state().unit(desert)->movesLeft == Fixed::fromInt(knight + 1));
+}
+
+TEST(chasqui_royal_road_and_earthshaker_move_farther_on_roads) {
+    GameState s = pair("CIVILIZATION_PERSIA", "CIVILIZATION_INCA", {});
+    const int8_t road = 0;  // the Ancient Road
+    // Persia: a road from its land (x 3..7) out past its border.
+    for (int x = 3; x <= 10; ++x) s.plot({x, 2}).route = road;
+    for (int x = 3; x <= 7; ++x) s.plot({x, 2}).owner = 0;
+    s.plot({5, 3}).owner = 0;
+    s.plot({7, 2}).routePillaged = true;
+    s.plot({4, 6}).route = road;  // the capital's own road
+    const UnitId onRoad = addUnit(s, "UNIT_WARRIOR", 0, {5, 2});
+    const UnitId abroad = addUnit(s, "UNIT_WARRIOR", 0, {9, 2});
+    const UnitId offRoad = addUnit(s, "UNIT_WARRIOR", 0, {5, 3});
+    const UnitId pillaged = addUnit(s, "UNIT_WARRIOR", 0, {7, 2});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {4, 2});
+    const UnitId admiral = addUnit(s, "UNIT_GREAT_ADMIRAL", 0, {4, 6});
+    // Inca: roads on hills and next to mountains, and a Chasqui on a plain road.
+    for (int x = 12; x <= 20; ++x) s.plot({x, 11}).route = road;
+    s.plot({13, 11}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    s.plot({16, 12}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    s.plot({13, 9}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    const UnitId hillRoad = addUnit(s, "UNIT_WARRIOR", 1, {13, 11});
+    const UnitId mountainRoad = addUnit(s, "UNIT_WARRIOR", 1, {16, 11});
+    const UnitId plainRoad = addUnit(s, "UNIT_WARRIOR", 1, {19, 11});
+    const UnitId hillsOffRoad = addUnit(s, "UNIT_WARRIOR", 1, {13, 9});
+    const UnitId chasqui = addUnit(s, "UNIT_CHASQUI", 1, {20, 11});
+    const UnitId chasquiOff = addUnit(s, "UNIT_CHASQUI", 1, {20, 9});
+    const UnitId chasquiHills = addUnit(s, "UNIT_CHASQUI", 1, {12, 11});
+    s.plot({12, 11}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    for (Unit& u : s.units) u.activity = Activity::Sleep;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int warrior = rules().units[at(rules().unit("UNIT_WARRIOR"))].moves;
+    const int civilian = rules().units[at(rules().unit("UNIT_BUILDER"))].moves;
+    const int scout = rules().units[at(rules().unit("UNIT_CHASQUI"))].moves;
+    auto moves = [&](UnitId id) { return g->maxMoves(*g->state().unit(id)); };
+    // Cyrus's Royal Road: +1 on a road inside his own territory, for every land unit.
+    CHECK_EQ(moves(onRoad), warrior + 1);
+    CHECK_EQ(moves(abroad), warrior);
+    CHECK_EQ(moves(offRoad), warrior);
+    CHECK_EQ(moves(pillaged), warrior);
+    CHECK_EQ(moves(builder), civilian + 1);
+    CHECK_EQ(moves(admiral), rules().units[at(rules().unit("UNIT_GREAT_ADMIRAL"))].moves);  // ships are not on roads
+    // Pachacuti's Earthshaker: +1 on a road on hills or next to a mountain.
+    CHECK_EQ(moves(hillRoad), warrior + 1);
+    CHECK_EQ(moves(mountainRoad), warrior + 1);
+    CHECK_EQ(moves(plainRoad), warrior);
+    CHECK_EQ(moves(hillsOffRoad), warrior);
+    // The Chasqui: +1 on any road, and Earthshaker's on top.
+    CHECK_EQ(moves(chasqui), scout + 1);
+    CHECK_EQ(moves(chasquiOff), scout);
+    CHECK_EQ(moves(chasquiHills), scout + 2);
+    // Counted where the turn starts.
+    sovtest::endTurns(*g, 2);
+    CHECK(g->state().unit(onRoad)->movesLeft == Fixed::fromInt(warrior + 1));
+    CHECK(g->state().unit(chasqui)->movesLeft == Fixed::fromInt(scout + 1));
+}
+
+TEST(calmecac_trains_units_that_learn_faster) {
+    GameState s = pair("CIVILIZATION_AZTEC", "CIVILIZATION_MALI", {});
+    s.cities[0].buildings.push_back(rules().building("BUILDING_CALMECAC"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->completeItem(g->stateMutForTests().cities[0], unit("UNIT_SLINGER")));
+    REQUIRE(g->completeItem(g->stateMutForTests().cities[1], unit("UNIT_SLINGER")));
+    const Unit* aztec = nullptr;
+    const Unit* malian = nullptr;
+    for (const Unit& u : g->state().units) {
+        if (u.type != rules().unit("UNIT_SLINGER")) continue;
+        (u.owner == 0 ? aztec : malian) = &u;
+    }
+    REQUIRE(aztec && malian);
+    // +25% combat XP for good, not a head start.
+    CHECK_EQ(aztec->xpBonus, 25);
+    CHECK_EQ(aztec->xp, 0);
+    CHECK_EQ(malian->xpBonus, 0);
+}

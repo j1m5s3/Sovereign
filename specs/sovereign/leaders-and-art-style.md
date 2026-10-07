@@ -127,6 +127,8 @@ Status: proposed by Claude from each civ's historical specialty, at James's requ
 | Aztec | Lake farming, tribute | **Chinampas:** Farms next to a lake or river +1 Food and +0.5 Housing | **Jaguar Warrior** (Warrior): +4 Combat Strength in woods and rainforest; captures defeated units as Builders | **Calmecac** (Library): +1 Faith; +25% XP for units trained in the city |
 | Inca | Mountains, terraces, relay roads | **Mit'a Labor:** +20% Production toward districts in cities next to a mountain; mountain tiles can be worked for +2 Production | **Chasqui** (Scout): +1 Movement, +1 extra Movement on roads | **Qullqa** (Granary): +2 Housing, +1 Food per adjacent mountain (max +2) |
 
+Movement on a kind of ground (the War Chariot on flat land, the Mandinka Lancer in desert, the Chasqui, Cyrus's Royal Road and Pachacuti's Earthshaker on roads) counts where the unit's turn starts, as Civ VI's own terrain movement bonuses do; the War Chariot keeps the Heavy Chariot's +1 on open ground.
+
 **Dynasties (heirs).** Two hand-made successors per launch leader, in historical order; after them, successors come from the pool. Each heir brings a small personal trait (to design with the art pass).
 
 | Civ | Starting leader | Heir 1 | Heir 2 |
