@@ -105,6 +105,14 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     PlayerId govOwner = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &govOwner); g && govOwner == c->owner)
         change += Fixed::fromInt(rules_->governors[static_cast<size_t>(g->type)].loyalty + civAbility(c->owner).governorLoyalty);
+    // Hic Sunt Dracones in a Golden Age (09): +2 a turn in cities off the capital's continent.
+    if (goldenDedication(c->owner, "DEDICATION_HIC_SUNT_DRACONES")) {
+        for (const City& home : state_.cities) {
+            if (home.owner != c->owner || !home.capital) continue;
+            if (state_.plot(home.pos).continent != state_.plot(c->pos).continent) change += Fixed::fromInt(2);
+            break;
+        }
+    }
     // Wonders (03): the Colosseum steadies the owner's cities within 6 tiles; the Statue of Liberty keeps them loyal.
     if (nearOwnWonder(*c, wonderType(W::Colosseum), 6)) change += Fixed::fromInt(2);
     if (change < Fixed() && nearOwnWonder(*c, wonderType(W::Liberty), 6)) change = Fixed();

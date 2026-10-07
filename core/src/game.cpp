@@ -709,12 +709,30 @@ void Game::refreshVisibility(PlayerId pid) {
         if (v == static_cast<uint8_t>(Visibility::Visible)) v = static_cast<uint8_t>(Visibility::Revealed);
     }
     std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
+    std::vector<int16_t> landfalls;     // landmasses it sees for the first time (09: a new continent)
+    std::vector<int16_t> knownLand;     // landmasses it had seen before, gathered at the first new land plot
+    bool landGathered = false;
     Unit* finder = nullptr;
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
         range += terrainOf(*rules_, state_.plot(from)).sightModifier;
         for (const Hex& target : state_.grid.within(from, range)) {
             if (!lineOfSight(from, target, throughFeatures)) continue;
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
+            if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
+                if (!landGathered) {
+                    for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
+                        const int16_t seen = state_.plots[i].continent;
+                        if (seen >= 0 && p.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed) &&
+                            std::find(knownLand.begin(), knownLand.end(), seen) == knownLand.end())
+                            knownLand.push_back(seen);
+                    }
+                    landGathered = true;
+                }
+                if (std::find(knownLand.begin(), knownLand.end(), k) == knownLand.end()) {
+                    knownLand.push_back(k);
+                    landfalls.push_back(k);
+                }
+            }
             const TypeIndex f = state_.plot(target).feature;
             if (v == static_cast<uint8_t>(Visibility::Unrevealed) && f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder &&
                 std::find(discovered.begin(), discovered.end(), f) == discovered.end()) {
@@ -777,6 +795,23 @@ void Game::refreshVisibility(PlayerId pid) {
             applyEffectAt(pid, nullptr, Hex{}, relic);
         }
         eventBoost(pid, BoostKind::NaturalWonder);  // 04: Astrology
+    }
+    // A new continent discovered (09: historic moments; Sovereign: every landmass is one). It counts once
+    // the civ has a capital, whose continent it has seen by then: the world's first civ to see the land
+    // earns the moment, and Hic Sunt Dracones +3 for each.
+    bool capital = false;
+    for (size_t i = 0; i < state_.cities.size() && !landfalls.empty() && !capital; ++i) capital = state_.cities[i].owner == pid && state_.cities[i].capital;
+    if (capital && isMajorCiv(pid)) {
+        for (int16_t k : landfalls) {
+            bool first = true;
+            for (const Player& o : state_.players) {
+                if (o.id == pid || !isMajorCiv(o.id)) continue;
+                for (size_t i = 0; i < state_.plots.size() && i < o.visibility.size() && first; ++i)
+                    first = !(state_.plots[i].continent == k && o.visibility[i] != static_cast<uint8_t>(Visibility::Unrevealed));
+            }
+            if (first) awardMoment(pid, "MOMENT_FIRST_DISCOVERY_OF_A_NEW_CONTINENT");
+            dedicationScore(pid, "DEDICATION_HIC_SUNT_DRACONES", 3);
+        }
     }
 }
 
@@ -1126,13 +1161,14 @@ void Game::applyFoundCity(const Command& c) {
         else if (base == "SNOW") awardMoment(owner, "MOMENT_SNOW_CITY");
         else if (base == "TUNDRA") awardMoment(owner, "MOMENT_TUNDRA_CITY");
         // Bold settlements (09; Sovereign readings of the distances): beside a volcano or floodplains, near a rival's
-        // city, or on a continent where it has no city yet.
-        bool volcano = false, flood = false, rival = false, newContinent = true;
+        // city, or on a continent where it has no city yet. City of Awe: within 2 tiles of a natural wonder.
+        bool volcano = false, flood = false, rival = false, newContinent = true, awe = false;
         for (const Hex& h : state_.grid.within(at, 2)) {
             const TypeIndex f = state_.plot(h).feature;
             const std::string fid = f == kNone ? std::string() : rules_->features[static_cast<size_t>(f)].id;
             volcano = volcano || fid == "FEATURE_VOLCANO";
             flood = flood || (state_.grid.distance(h, at) <= 1 && fid.rfind("FEATURE_FLOODPLAINS", 0) == 0);
+            awe = awe || (f != kNone && rules_->features[static_cast<size_t>(f)].naturalWonder);
         }
         for (const City& o : state_.cities) {
             rival = rival || (o.owner != owner && isMajorCiv(o.owner) && state_.grid.distance(o.pos, at) <= 6);
@@ -1142,6 +1178,7 @@ void Game::applyFoundCity(const Command& c) {
         if (flood) awardMoment(owner, "MOMENT_CITY_NEAR_FLOODABLE_RIVER");
         if (rival) awardMoment(owner, "MOMENT_AGGRESSIVE_CITY_PLACEMENT");
         if (newContinent) awardMoment(owner, "MOMENT_CITY_ON_NEW_CONTINENT");
+        if (awe) awardMoment(owner, "MOMENT_CITY_OF_AWE");
     }
     // A city stands on a road of its founder's era (01: Routes).
     if (const TypeIndex road = roadFor(owner); road != kNone) {
@@ -1157,6 +1194,14 @@ void Game::applyFoundCity(const Command& c) {
         City& made = state_.cities.back();
         const CivAbility& ab = civAbility(owner);
         made.population += ab.foundPopulation;
+        // Hic Sunt Dracones in a Golden Age (09): +3 Population for a city founded off the capital's continent.
+        if (!made.capital && goldenDedication(owner, "DEDICATION_HIC_SUNT_DRACONES")) {
+            for (const City& home : state_.cities) {
+                if (home.owner != owner || !home.capital) continue;
+                if (state_.plot(home.pos).continent != center.continent) made.population += 3;
+                break;
+            }
+        }
         if (ab.foundBuilding != kNone && !made.has(ab.foundBuilding))
             made.buildings.insert(std::lower_bound(made.buildings.begin(), made.buildings.end(), ab.foundBuilding), ab.foundBuilding);
     }
