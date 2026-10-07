@@ -251,14 +251,28 @@ TEST(suzerain_bonuses_in_code) {
         CHECK_EQ(g->cityReport(mine).housing - plain->cityReport(mine).housing,
                  rules().global("CITY_POPULATION_RIVER_LAKE") - rules().global("CITY_POPULATION_NO_WATER"));
     }
-    // Valletta: City Center buildings for Faith, at their Gold price.
+    // Valletta: City Center and Encampment buildings for Faith, at their Gold price.
     {
-        auto g = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_VALLETTA"));
-        auto plain = Game::fromScenario(rules(), suzerainOfType("CITYSTATE_MITLA"));
+        const auto withCamp = [&](const char* id) {
+            GameState s = suzerainOfType(id);
+            CityDistrict camp;
+            camp.type = rules().district("DISTRICT_ENCAMPMENT");
+            camp.pos = {5, 6};
+            camp.complete = true;
+            s.city(mine)->districts.push_back(camp);
+            s.players[0].techs.done[at(rules().tech("TECH_BRONZE_WORKING"))] = 1;
+            return s;
+        };
+        auto g = Game::fromScenario(rules(), withCamp("CITYSTATE_VALLETTA"));
+        auto plain = Game::fromScenario(rules(), withCamp("CITYSTATE_MITLA"));
         const ProductionItem monument{ProductionKind::Building, rules().building("BUILDING_MONUMENT")};
+        const ProductionItem barracks{ProductionKind::Building, rules().building("BUILDING_BARRACKS")};
         const City& c = *g->state().city(mine);
         CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(mine), monument), -1);
         CHECK_EQ(g->faithPurchaseCost(0, c, monument), g->purchaseCost(0, monument));
+        CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(mine), barracks), -1);
+        CHECK(g->purchaseCost(0, barracks) > 0);
+        CHECK_EQ(g->faithPurchaseCost(0, c, barracks), g->purchaseCost(0, barracks));
     }
 }
 

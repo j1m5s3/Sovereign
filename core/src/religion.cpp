@@ -209,8 +209,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
     if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || at(item.type) >= rules_->buildings.size()) return -1;
         const BuildingType& b = rules_->buildings[at(item.type)];
-        // Valletta (08: suzerain): City Center buildings for Faith, at their Gold price.
-        if (b.district == "DISTRICT_CITY_CENTER" && !b.wonder && suzerainBonus(player, "CITYSTATE_VALLETTA") && canProduce(city, item, nullptr, true))
+        // Valletta (08: suzerain): City Center and Encampment buildings for Faith, at their Gold price.
+        if ((b.district == "DISTRICT_CITY_CENTER" || b.district == "DISTRICT_ENCAMPMENT") && !b.wonder && suzerainBonus(player, "CITYSTATE_VALLETTA") &&
+            canProduce(city, item, nullptr, true))
             return purchaseCost(player, item);
         // Jesuit Education (06): Campus and Theater Square buildings for Faith, at their Gold price.
         if ((b.district == "DISTRICT_CAMPUS" || b.district == "DISTRICT_THEATER_SQUARE") && !b.wonder && cityFollows(city, Bf::JesuitEducation) &&
