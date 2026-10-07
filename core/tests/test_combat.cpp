@@ -381,6 +381,10 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
     CHECK(!peace->moveCost(unit(*peace, w), {9, 5}, {10, 5}));                // their city
     CHECK(peace->moveCost(unit(*peace, w), {12, 5}, {11, 5}).has_value());    // their Encampment, at peace
     CHECK(peace->moveCost(unit(*peace, band), {8, 5}, {9, 5}).has_value());   // their land
+    // A path search keeps out alike (the city is in sight, so only the city stops it).
+    REQUIRE(peace->visibility(0, {10, 5}) != Visibility::Unrevealed);
+    CHECK(!peace->findPath(w, {10, 5}).has_value());
+    CHECK(peace->findPath(w, {9, 5}).has_value());
     auto war = setup(Case::War);
     CHECK(!war->moveCost(unit(*war, w), {12, 5}, {11, 5}));                    // a standing enemy Encampment
     CHECK(!war->moveCost(unit(*war, w), {9, 5}, {10, 5}));
@@ -390,6 +394,9 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
     CHECK(!censored->moveCost(unit(*censored, band), {8, 5}, {9, 5}));         // no foreign Rock Band enters
     CHECK(!censored->moveCost(unit(*censored, band), {9, 5}, {10, 4}));        // nor moves on inside
     CHECK(censored->moveCost(unit(*censored, w), {8, 5}, {9, 5}).has_value()); // other units do
+    REQUIRE(censored->visibility(0, {9, 5}) != Visibility::Unrevealed);
+    CHECK(!censored->findPath(band, {9, 5}).has_value());
+    CHECK(censored->findPath(w, {9, 5}).has_value());
     const auto stay = censored->findPath(band, {8, 4});  // a band already inside may stay where it is
     REQUIRE(stay.has_value());
     CHECK_EQ(stay->size(), 1u);
@@ -442,6 +449,13 @@ TEST(twins_form_a_corps_then_an_army) {
     auto g = Game::fromScenario(rules(), s);
     const int single = g->combatStrength(*g->state().unit(a), *g->state().unit(foe), true, false);
     CHECK(g->formationProblem(0, a, other) == CommandError::BadUnit);  // not the same type
+    CHECK(g->formationProblem(0, a, foe) == CommandError::NotYourUnit);  // nor someone else's
+    CHECK(g->formationProblem(1, foe, a) == CommandError::NotYourUnit);
+    CHECK(g->formationProblem(1, a, foe) == CommandError::NotYourUnit);
+    CHECK(g->formationProblem(1, a, b) == CommandError::NotYourUnit);
+    CHECK(g->formationProblem(0, a, a) == CommandError::NotYourUnit);  // nor itself
+    CHECK(g->formationProblem(0, a, 999) == CommandError::NotYourUnit);  // nor one that is gone
+    CHECK(g->formationProblem(0, 999, a) == CommandError::NotYourUnit);
     REQUIRE(g->submit(Command::formUnit(0, a, b)) == CommandError::Ok);
     CHECK(g->state().unit(b) == nullptr);
     CHECK_EQ(g->state().unit(a)->formation, 1);

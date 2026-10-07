@@ -756,7 +756,7 @@ int Game::wallDamagePercent(const Unit& attacker, const City& city, bool ranged,
     }
     if (bypass && !anyBuilding(*rules_, city, &BuildingType::wallsCannotBeBypassed)) return -1;
     // Akkad (08: suzerain): melee and anti-cavalry units deal full damage to walls.
-    if ((ut.unitClass == "MELEE" || ut.unitClass == "ANTI_CAVALRY") && suzerainBonus(attacker.owner, "CITYSTATE_AKKAD")) ram = true;
+    if ((ut.unitClass == "MELEE" || ut.unitClass == "ANTI_CAVALRY") && suzerainBonus(attacker.owner, Cs::Akkad)) ram = true;
     if (anyBuilding(*rules_, city, &BuildingType::meleeCannotDamageWalls)) return 0;
     return ram ? 100 : rules_->globalInt("COMBAT_DEFENSE_DAMAGE_PERCENT_MELEE");
 }
@@ -871,7 +871,7 @@ void Game::gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool atta
     xp += rules_->globalInt(ranged ? "EXPERIENCE_COMBAT_RANGED" : "EXPERIENCE_NOT_COMBAT_RANGED");
     if (attacker) xp += rules_->globalInt("EXPERIENCE_COMBAT_ATTACKER_BONUS");
     xp = std::min(xp, rules_->globalInt("EXPERIENCE_MAXIMUM_ONE_COMBAT"));
-    if (attacker && suzerainBonus(unit.owner, "CITYSTATE_KABUL")) xp *= 2;  // Kabul (08: suzerain)
+    if (attacker && suzerainBonus(unit.owner, Cs::Kabul)) xp *= 2;  // Kabul (08: suzerain)
     awardXp(unit, xp, vsBarbarian);
 }
 

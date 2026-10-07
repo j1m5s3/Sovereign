@@ -675,6 +675,27 @@ TEST(kandy_finds_relics_and_raises_their_faith) {
     CHECK(faith("CITYSTATE_KANDY") == faith("CITYSTATE_NAZCA") + Fixed::fromInt(2));
 }
 
+TEST(anshan_adds_science_to_writing_and_relics) {
+    // Anshan (08): +2 Science from each of its suzerain's Great Works of Writing, +1 from each artifact and relic.
+    const auto science = [](const char* cityState, const char* work, const char* building) {
+        GameState s = suzerainState(cityState);
+        const TypeIndex b = rules().building(building);
+        if (!s.cities[0].has(b)) {
+            s.cities[0].buildings.push_back(b);
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        }
+        GreatWork w;
+        w.type = rules().greatWorkType(work);
+        w.building = b;
+        s.cities[0].greatWorks.push_back(w);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->cityReport(g->state().cities[0].id).yields[yi(YieldType::Science)];
+    };
+    // Against Hattusa, a Scientific city-state too, so the envoys' own bonuses are the same.
+    CHECK(science("CITYSTATE_ANSHAN", "WRITING", "BUILDING_PALACE") == science("CITYSTATE_HATTUSA", "WRITING", "BUILDING_PALACE") + Fixed::fromInt(2));
+    CHECK(science("CITYSTATE_ANSHAN", "RELIC", "BUILDING_TEMPLE") == science("CITYSTATE_HATTUSA", "RELIC", "BUILDING_TEMPLE") + Fixed::fromInt(1));
+}
+
 TEST(vilnius_raises_theater_squares_with_each_alliance_level) {
     // Vilnius (08): +50% Theater Square adjacency for each level (1+, 2+, 3+) of its suzerain's best alliance.
     const auto adjacency = [](const char* cityState, int alliancePoints) {

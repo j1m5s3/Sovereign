@@ -739,10 +739,11 @@ private:
     struct MoveLimits {
         std::vector<uint8_t> blocked;  // per plot: another player's unit, a foreign city or a standing enemy Encampment
         std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
+        bool onlyBlocked = false;      // with `only`: whether that plot is blocked (`blocked` is then left empty)
     };
-    // With `only` (a plot on the grid), just the entries a step into it reads: its own and its owner's.
+    // With `only` (a plot on the grid), just what a step into it reads: whether it is blocked, and its owner's entry.
     MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt) const;
-    // A step's cost: `dir` is the direction from `from` to its neighbour `to`.
+    // A step's cost: `dir` is the direction from `from` to its neighbour `to`, `limits` the whole map's (no `only`).
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
@@ -910,6 +911,14 @@ private:
     };
     TypeIndex oil_ = kNone;  // James Young reveals it (07)
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
+    // City-states whose suzerain bonuses are in code, looked up once (08: City-States).
+    enum class Cs : uint8_t {
+        Akkad, Anshan, Antananarivo, Ayutthaya, BandarBrunei, BuenosAires, Chinguetti, Fez, Hattusa, Hunza, Jerusalem, Johannesburg, Kabul, Kandy, Kumasi,
+        MexicoCity, Mogadishu, MohenjoDaro, Nalanda, NanMadol, Ngazargamu, Samarkand, Singapore, Valletta, VaticanCity, Venice, Vilnius, Wolin, Yerevan,
+        Zanzibar, Count
+    };
+    TypeIndex cityStates_[static_cast<size_t>(Cs::Count)] = {};
+    bool suzerainBonus(PlayerId player, Cs cityState) const;  // suzerainBonus(player, its id)
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean

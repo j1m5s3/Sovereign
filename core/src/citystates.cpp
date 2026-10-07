@@ -139,6 +139,13 @@ bool Game::suzerainBonus(PlayerId player, const char* cityStateId) const {
     return false;
 }
 
+bool Game::suzerainBonus(PlayerId player, Cs cityState) const {
+    // The kind looked up once: enjoysSuzerainBonus goes by the first living city-state of the kind, as the search above
+    // does (and a kind these rules lack gives nothing).
+    const TypeIndex type = cityStates_[static_cast<size_t>(cityState)];
+    return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
+}
+
 int Game::suzeraintiesOf(PlayerId player) const {
     int n = 0;
     for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id) ? 1 : 0;

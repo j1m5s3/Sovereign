@@ -192,6 +192,25 @@ TEST(civ_abilities_colonia_and_craft_guilds) {
     CHECK(withGuild == plain + Fixed::fromInt(1));
 }
 
+TEST(civ_ability_saharan_riches) {
+    // Mali: a Commercial Hub earns +1 Gold for every two Desert plots beside it; its own plot does not count.
+    GameState s = pair("CIVILIZATION_MALI", "CIVILIZATION_EGYPT", {});
+    const Hex hub{10, 10}, onDesert{18, 10};
+    int desert = 0;
+    for (const Hex& h : s.grid.within(hub, 1)) {
+        if (h == hub || desert == 4) continue;  // four of its six neighbours
+        s.plot(h).terrain = rules().terrain("TERRAIN_DESERT");
+        ++desert;
+    }
+    s.plot(onDesert).terrain = rules().terrain("TERRAIN_DESERT");  // with one Desert neighbour
+    s.plot({onDesert.x + 1, onDesert.y}).terrain = rules().terrain("TERRAIN_DESERT");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex hubType = rules().district("DISTRICT_COMMERCIAL_HUB");
+    const auto gold = [&](PlayerId p, Hex at) { return g->districtAdjacency(p, hubType, at)[static_cast<size_t>(YieldType::Gold)]; };
+    CHECK(gold(0, hub) == gold(1, hub) + Fixed::fromInt(2));
+    CHECK(gold(0, onDesert) == gold(1, onDesert));
+}
+
 TEST(civ_abilities_satrapies_and_mita_labor) {
     GameState s = pair("CIVILIZATION_PERSIA", "CIVILIZATION_INCA", {});
     auto g = Game::fromScenario(rules(), s);

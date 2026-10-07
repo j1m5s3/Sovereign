@@ -604,6 +604,44 @@ TEST(delegations_and_spies_raise_access_and_bring_gossip) {
     CHECK_EQ(k->accessLevel(0, 1), 1);
 }
 
+// What access shows (08: Access level): Secret a civ's capital, Top Secret all its cities, each civ at its own
+// level; a city-state's city not at all.
+TEST(access_shows_a_capital_at_secret_and_every_city_at_top_secret) {
+    GameState s = flatState(30, 14, 4);
+    s.players[3].civ = kNone;
+    s.players[3].cityState = 0;
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.met.assign(4, 1);
+        p.relations.resize(4);
+    }
+    s.majorsAtStart = 3;
+    addCity(s, 0, {4, 6}, true);
+    addCity(s, 1, {14, 6}, true);
+    addCity(s, 2, {24, 6}, true);
+    addCity(s, 3, {20, 2}, true);
+    addCity(s, 1, {14, 11}, false);
+    addCity(s, 2, {24, 11}, false);
+    // Printing and a delegation with each make Secret; a level-3 spy in 1's capital makes 1 Top Secret.
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_PRINTING"))] = 1;
+    for (size_t o = 1; o <= 3; ++o) s.players[0].relations[o].delegation = 1;
+    Agent spy;
+    spy.id = 1;
+    spy.owner = 0;
+    spy.spy = true;
+    spy.level = 3;
+    spy.city = s.cities[1].id;
+    s.agents.push_back(spy);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->accessLevel(0, 1) == 4);
+    REQUIRE(g->accessLevel(0, 2) == 3);
+    REQUIRE(g->accessLevel(0, 3) == 3);
+    CHECK(g->visibility(0, {14, 11}) == Visibility::Visible);  // Top Secret: all of 1's cities
+    CHECK(g->visibility(0, {24, 6}) == Visibility::Visible);   // Secret: 2's capital
+    CHECK(g->visibility(0, {24, 11}) != Visibility::Visible);  // but not its other cities
+    CHECK(g->visibility(0, {20, 2}) != Visibility::Visible);   // nor a city-state's
+}
+
 TEST(an_embassy_follows_diplomatic_service_and_brings_favor_with_a_diplomatic_quarter) {
     GameState s = diploState();
     for (Player& p : s.players) p.relations.resize(2);

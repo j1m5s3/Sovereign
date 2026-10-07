@@ -113,7 +113,7 @@ void Game::unitCo2(PlayerId pid, size_t resource, int burned) {
 void Game::burnPower(PlayerId pid) {
     Player& p = state_.players[at(pid)];
     // Buildings.RegionalRange; Mexico City's suzerain reaches 3 tiles farther from its Industrial Zones (08).
-    const int plantRange = 6 + (suzerainBonus(pid, "CITYSTATE_MEXICO_CITY") ? 3 : 0);
+    const int plantRange = 6 + (suzerainBonus(pid, Cs::MexicoCity) ? 3 : 0);
     // Free power (data): Synthetic Technocracy +3 in every city; Cardiff's suzerain +2 per Lighthouse, Shipyard
     // and Seaport, while at peace with it.
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");

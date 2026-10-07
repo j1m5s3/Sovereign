@@ -12,6 +12,11 @@ int64_t floorDiv(int64_t a, int64_t b) {
     return q;
 }
 
+// floorDiv(a, 2) as one shift (every compiler this builds with shifts a negative arithmetically, which floors), where
+// the division's rounding fix takes a branch on the row's parity.
+constexpr int32_t floorHalf(int32_t a) { return a >> 1; }
+static_assert(floorHalf(-3) == -2 && floorHalf(-4) == -2 && floorHalf(-1) == -1 && floorHalf(3) == 1, "a right shift floors");
+
 // Rounds n / d to the nearest integer, halves away from zero.
 int64_t roundDiv(int64_t n, int64_t d) {
     return n >= 0 ? (n + d / 2) / d : -((-n + d / 2) / d);
@@ -39,11 +44,11 @@ Axial lineAxial(Axial aa, Axial bb, int n, int i) {
 
 Axial toAxial(Hex h) {
     // odd-r: odd rows are shifted half a hex to the east.
-    return Axial{h.x - static_cast<int32_t>(floorDiv(h.y, 2)), h.y};
+    return Axial{h.x - floorHalf(h.y), h.y};
 }
 
 Hex toOffset(Axial a) {
-    return Hex{a.q + static_cast<int32_t>(floorDiv(a.r, 2)), a.r};
+    return Hex{a.q + floorHalf(a.r), a.r};
 }
 
 int axialDistance(Axial a, Axial b) {

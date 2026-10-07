@@ -309,23 +309,44 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
     if (districtPillaged(plot)) return out;  // 05: Pillage
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
     const TypeIndex cityCenter = rules_->district("DISTRICT_CITY_CENTER");
+    // The neighbours (within(plot, 1) less the plot), with the district and the city on each looked up at most once:
+    // several rows ask after them.
+    Hex nbr[kNumDirs];
+    int nbrs = 0;
+    state_.grid.forEachWithin(plot, 1, [&](Hex n) {
+        if (n != plot && nbrs < kNumDirs) nbr[nbrs++] = n;
+    });
+    const CityDistrict* nearDistrict[kNumDirs] = {};
+    uint8_t nearCity[kNumDirs] = {};  // 0 not looked up yet, 1 none, 2 a city
+    uint8_t districtKnown = 0;        // bit k: nearDistrict[k] looked up
+    const auto districtNear = [&](int k) {
+        if (!(districtKnown & (1u << k))) {
+            nearDistrict[k] = state_.districtAt(nbr[k]);
+            districtKnown = static_cast<uint8_t>(districtKnown | (1u << k));
+        }
+        return nearDistrict[k];
+    };
+    const auto cityNear = [&](int k) {
+        if (nearCity[k] == 0) nearCity[k] = static_cast<uint8_t>(state_.cityAt(nbr[k]) ? 2 : 1);
+        return nearCity[k] == 2;
+    };
     for (const DistrictAdjacency& a : d.adjacency) {
         int matches = 0;
         if (a.kind == DistrictAdjacencyKind::River) {
             matches = onRiver(state_, plot) ? 1 : 0;
         } else {
-            state_.grid.forEachWithin(plot, 1, [&](Hex n) {
-                if (n == plot) return;
+            for (int k = 0; k < nbrs; ++k) {
+                const Hex n = nbr[k];
                 const Plot& np = state_.plot(n);
                 bool hit = false;
                 switch (a.kind) {
                     case DistrictAdjacencyKind::Mountain:
                         hit = rules_->terrains[static_cast<size_t>(np.terrain)].relief == Relief::Mountain;
                         break;
-                    case DistrictAdjacencyKind::AnyDistrict: hit = state_.districtAt(n) || state_.cityAt(n); break;  // city centers count
+                    case DistrictAdjacencyKind::AnyDistrict: hit = districtNear(k) || cityNear(k); break;  // city centers count
                     case DistrictAdjacencyKind::District: {
-                        const CityDistrict* nd = state_.districtAt(n);
-                        hit = (nd && nd->type == a.ref) || (a.ref == cityCenter && state_.cityAt(n));
+                        const CityDistrict* nd = districtNear(k);
+                        hit = (nd && nd->type == a.ref) || (a.ref == cityCenter && cityNear(k));
                         break;
                     }
                     case DistrictAdjacencyKind::SeaResource:
@@ -344,7 +365,7 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
                     case DistrictAdjacencyKind::River: break;
                 }
                 matches += hit ? 1 : 0;
-            });
+            }
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.tilesRequired));  // each "per 2" row floored
     }
@@ -352,13 +373,12 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
     for (const CivAdjacency& a : civAbility(player).extraAdjacency) {
         if (a.district != type) continue;
         int matches = 0;
-        for (const Hex& n : state_.grid.within(plot, 1)) {
-            if (n == plot) continue;
+        for (int k = 0; k < nbrs; ++k) {
             if (a.from != kNone) {
-                const CityDistrict* nd = state_.districtAt(n);
+                const CityDistrict* nd = districtNear(k);
                 matches += nd && nd->type == a.from ? 1 : 0;
             } else {
-                matches += rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].base == a.fromTerrainBase ? 1 : 0;
+                matches += rules_->terrains[static_cast<size_t>(state_.plot(nbr[k]).terrain)].base == a.fromTerrainBase ? 1 : 0;
             }
         }
         out[static_cast<size_t>(a.yield)] += Fixed::fromInt(a.amount * (matches / a.per));
@@ -399,7 +419,7 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
     }
     int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
     // Vilnius (08: suzerain): +50% Theater Square adjacency for each level of its suzerain's best alliance (1+, 2+, 3+).
-    if (d.id == "DISTRICT_THEATER_SQUARE" && suzerainBonus(player, "CITYSTATE_VILNIUS")) {
+    if (d.id == "DISTRICT_THEATER_SQUARE" && suzerainBonus(player, Cs::Vilnius)) {
         int level = 0;
         for (const Player& o : state_.players) level = std::max(level, allianceLevel(player, o.id));
         pct += 50 * level;

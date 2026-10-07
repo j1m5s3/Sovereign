@@ -162,7 +162,7 @@ void Game::grantApostlePromotion(Unit& apostle) {
     if (martyr != kNone) apostle.promotions.push_back(martyr);
     // Yerevan (08: suzerain): the Apostle chooses its promotion (Promote) instead of drawing one; a second grant
     // (Moksha's) is drawn and the choice still waits.
-    const bool chooses = suzerainBonus(apostle.owner, "CITYSTATE_YEREVAN");
+    const bool chooses = suzerainBonus(apostle.owner, Cs::Yerevan);
     if (chooses && apostle.xp < xpForNextLevel(apostle)) {
         apostle.xp = xpForNextLevel(apostle);
         return;
