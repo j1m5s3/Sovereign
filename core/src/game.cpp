@@ -211,6 +211,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     for (size_t i = 0; i < rules_->civics.size(); ++i) {
         if (rules_->civics[i].enforceBorders) borderCivics_.push_back(static_cast<TypeIndex>(i));
     }
+    suzerainEnvoys_ = rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN");
 }
 
 uint64_t Game::stateHash() const {
@@ -1151,7 +1152,7 @@ void Game::apply(const Command& c) {
             }
             // A city-state's first suzerain is a historic moment (09).
             Player& cs = state_.players[static_cast<size_t>(c.arg)];
-            if (!cs.hadSuzerain && suzerainOf(cs.id) == c.player) {
+            if (!cs.hadSuzerain && isSuzerain(c.player, cs.id)) {
                 cs.hadSuzerain = true;
                 awardMoment(c.player, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN");
             }

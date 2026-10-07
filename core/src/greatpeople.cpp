@@ -374,7 +374,7 @@ bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
     // Whose land it is (Tupac Amaru in an enemy's, Perry and Zhou Daguan in a city-state's, not a foe's).
     if (g.enemyTerritory && (plot.owner == kNoPlayer || !atWar(u->owner, plot.owner))) return fail(CommandError::CannotActivate);
     if (g.cityStateTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner))) return fail(CommandError::CannotActivate);
-    if (g.suzerainTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner) || suzerainOf(plot.owner) != u->owner || atWar(u->owner, plot.owner)))
+    if (g.suzerainTerritory && (plot.owner == kNoPlayer || !isCityState(plot.owner) || !isSuzerain(u->owner, plot.owner) || atWar(u->owner, plot.owner)))
         return fail(CommandError::CannotActivate);
     if (g.nonHostileTerritory && plot.owner != kNoPlayer && atWar(u->owner, plot.owner)) return fail(CommandError::CannotActivate);
     // What lies beside it: a barbarian (Boudica), a Mountain (Galileo), a natural wonder (Darwin), Rainforest (Janaki Ammal).

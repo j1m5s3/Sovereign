@@ -624,7 +624,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const CivAbility& ab = civAbility(c->owner);
         if (c->capital && ab.culturePerSuzerainty > 0) {
             int suzerain = 0;
-            for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == c->owner ? 1 : 0;
+            for (const Player& cs : state_.players) suzerain += cs.cityState != kNone && cs.alive && isSuzerain(c->owner, cs.id) ? 1 : 0;
             rep.yields[idx(YieldType::Culture)] += Fixed::fromInt(ab.culturePerSuzerainty * suzerain);
         }
         // A Religious alliance at level 3 (08): +1 Faith per follower of the ally's religion here.
