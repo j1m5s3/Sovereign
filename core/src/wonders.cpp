@@ -159,8 +159,10 @@ void Game::completeWonder(City& city, TypeIndex building) {
     // One-time effects: free units here, Eurekas.
     for (const GreatPersonEffect& fx : b.wonderEffects) {
         if (fx.kind == GreatPersonEffectKind::Unit) {
-            // A free Great Prophet only while religions remain to be founded.
-            if (rules_->units[at(fx.ref)].foundReligion && static_cast<int>(state_.religions.size()) >= maxReligions()) continue;
+            if (rules_->units[at(fx.ref)].foundReligion) {
+                wonderProphet(city, fx.ref);  // Stonehenge: the civ's Prophet, or an Apostle
+                continue;
+            }
             if (auto spot = unitSpawnPlot(city, fx.ref)) spawnUnit(fx.ref, city.owner, *spot);
         } else {
             applyEffectAt(city.owner, &city, city.pos, fx);

@@ -780,7 +780,8 @@ private:
     void theologicalCombat(Unit& attacker, Unit& defender);
     // A player's turn: earn points, then recruit whoever they can afford.
     void processGreatPeople(PlayerId player);
-    void recruitGreatPerson(PlayerId player, TypeIndex person);
+    void recruitGreatPerson(PlayerId player, TypeIndex person, const City* in = nullptr);  // appears in `in`, else the capital
+    void wonderProphet(City& city, TypeIndex prophet);  // Stonehenge's Great Prophet, or an Apostle (03)
     void applyGreatPersonEffect(Unit& unit, const GreatPersonEffect& fx);
     // A one-time effect for a player at a plot (city: the player's city there, or null).
     void applyEffectAt(PlayerId player, City* city, Hex at, const GreatPersonEffect& fx);
