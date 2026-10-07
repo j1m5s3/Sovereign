@@ -37,8 +37,8 @@ SOV_API bool religionHas(const GameState& s, int religion, TypeIndex belief);
 Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, ModEffect effect,
                        std::optional<YieldType> yield = std::nullopt);
 
-// Total flat plot-yield modifiers for a plot worked by this city.
-SOV_API Fixed sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, YieldType yield);
+// Total flat plot-yield modifiers for a plot worked by this city, each yield from one pass over the modifiers.
+SOV_API Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot);
 
 // Percentage bonus to production toward this unit type in the city.
 SOV_API Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& city, TypeIndex unitType);

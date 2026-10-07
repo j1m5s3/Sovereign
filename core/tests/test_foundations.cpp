@@ -97,6 +97,10 @@ TEST(hex_wraps_east_west_only) {
     CHECK(!g.neighbor({4, 0}, Dir::NE).has_value());
     CHECK_EQ(g.within({0, 4}, 1).size(), 7u);
     CHECK_EQ(g.within({5, 4}, 2).size(), 19u);
+    // On a map narrower than the area its rows wrap onto themselves: each plot is listed once.
+    HexGrid narrow(4, 9, true);
+    CHECK_EQ(narrow.within({1, 4}, 2).size(), 18u);  // rows of 3, 4, 4, 4 and 3
+    CHECK_EQ(narrow.within({1, 4}, 9).size(), 36u);  // the whole map
 }
 
 TEST(hex_line_is_contiguous) {
