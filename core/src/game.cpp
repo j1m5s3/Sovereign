@@ -554,15 +554,15 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     // The Golden Gate Bridge (03): land units cross its plot dry, along its road.
     const bool bridge = tt.water && p.route >= 0;
     const bool fromAfloat = fromWater && !bridgeAt(from);
-    const int embarkCost = rules_->globalInt("MOVEMENT_EMBARK_COST");
+    auto embarkCost = [&] { return rules_->globalInt("MOVEMENT_EMBARK_COST"); };  // looked up only on the steps that embark or land
     // Amphibious (05): embarking and disembarking cost nothing extra.
     const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && traits.freeEmbark;
     if (tt.water && !bridge) {
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
-        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
+        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost() + 1);  // embarking: 2 plus the water tile
     }
     if (!bridge && !isLandPassable(state_, *rules_, to)) return std::nullopt;
-    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
+    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost() + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
     if (tt.relief == Relief::Hills && cost > 1 && traits.ignoreHills) cost = 1;  // Alpine (05)
@@ -572,7 +572,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
         if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && traits.ignoreForest)) cost += ft.moveChange;
     }
     if (cost > 1 && traits.ignoreTerrain) cost = 1;
-    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
+    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost()) + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
@@ -853,14 +853,12 @@ void Game::refreshVisibility(PlayerId pid) {
 // Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
 bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
     const int viewerHeight = terrainOf(*rules_, state_.plot(from)).sightThrough;
-    std::vector<Hex> line = state_.grid.line(from, to);
-    for (size_t i = 1; i + 1 < line.size(); ++i) {
-        const Plot& op = state_.plot(line[i]);
+    return state_.grid.between(from, to, [&](Hex h) {
+        const Plot& op = state_.plot(h);
         int obstacle = terrainOf(*rules_, op).sightThrough;
         if (op.feature != kNone && !throughFeatures) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
-        if (obstacle > viewerHeight) return false;
-    }
-    return true;
+        return obstacle <= viewerHeight;
+    });
 }
 
 // ------------------------------------------------------------------ applying

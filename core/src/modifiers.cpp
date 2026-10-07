@@ -179,8 +179,10 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
 
 // The city that "holds" a modifier for this subject city, or nullptr if the
 // modifier does not reach it. For player-wide sources the subject's player
-// must carry the source.
-const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner) {
+// must carry the source. `majority` is the subject's majority religion, worked
+// out on first use (kUnknownReligion until then) and kept for a pass over the modifiers.
+constexpr int kUnknownReligion = -2;
+const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
     const bool ownerOnly = m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots;
     if (m.collection == ModCollection::PlayerCapital && !subject.capital) return nullptr;
     switch (m.sourceKind) {
@@ -203,8 +205,8 @@ const City* holderFor(const Modifier& m, const GameState& s, const Rules& r, con
             // Player-wide collections: the beliefs of the owner's pantheon and founded religion (God of the Forge...).
             if (!ownerOnly) return owner.pantheon == m.sourceIndex || (owner.religion >= 0 && religionHas(s, owner.religion, m.sourceIndex)) ? &subject : nullptr;
             // A city follows the beliefs of its majority religion, or its owner's pantheon while it has none.
-            const int maj = majorityReligion(s, r, subject);
-            if (maj >= 0) return religionHas(s, maj, m.sourceIndex) ? &subject : nullptr;
+            if (majority == kUnknownReligion) majority = majorityReligion(s, r, subject);
+            if (majority >= 0) return religionHas(s, majority, m.sourceIndex) ? &subject : nullptr;
             return owner.pantheon == m.sourceIndex ? &subject : nullptr;
         }
         case ModSource::GreatPerson: {
@@ -230,10 +232,11 @@ template <typename Fn>
 void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, bool plotEffect, const Plot* plot,
                      Fn&& fn) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
+    int majority = kUnknownReligion;
     for (uint32_t i : r.cityModifiers(effect)) {
         const Modifier& m = r.modifiers[i];
         if (isPlotCollection(m.collection) != plotEffect) continue;
-        const City* holder = holderFor(m, s, r, city, owner);
+        const City* holder = holderFor(m, s, r, city, owner, majority);
         if (!holder) continue;
         ReqContext ownerCtx{&s, &r, &owner, holder, nullptr};
         if (!testRequirements(m.ownerReqs, ownerCtx)) continue;

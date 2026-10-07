@@ -51,9 +51,10 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
         coast |= nt.water;
         mountain |= nt.relief == Relief::Mountain;
         center |= *n == city.pos;
-        const City* c = state_.cityAt(*n);
+        // Cities and districts are looked for only by the wonders that need a capital or a district beside them.
+        const City* c = w.nextToCapital ? state_.cityAt(*n) : nullptr;
         capital |= c && c->owner == city.owner && c->capital;
-        const CityDistrict* cd = state_.districtAt(*n);
+        const CityDistrict* cd = w.nextToDistrict != kNone ? state_.districtAt(*n) : nullptr;
         district |= cd && cd->type == w.nextToDistrict;
         resource |= np.resource == w.nextToResource && resourceVisible(city.owner, *n);
         improvement |= np.improvement != kNone && np.improvement == w.nextToImprovement;

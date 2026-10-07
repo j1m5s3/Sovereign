@@ -124,6 +124,14 @@ TEST(district_adjacency_yields) {
     CHECK_EQ(river->districtAdjacency(0, district("DISTRICT_INDUSTRIAL_ZONE"), spot)[static_cast<size_t>(YieldType::Production)],
              Fixed::fromInt(2));
 
+    // Commercial Hub beside a Harbor: +2 gold (one district alone is too few for the +1 per two districts).
+    auto port = town(1, [&](GameState& s) {
+        s.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+        s.cities[0].districts.push_back({district("DISTRICT_HARBOR"), {7, 6}, true});
+    });
+    CHECK_EQ(port->districtAdjacency(0, district("DISTRICT_COMMERCIAL_HUB"), spot)[static_cast<size_t>(YieldType::Gold)],
+             Fixed::fromInt(2));
+
     // Natural Philosophy doubles Campus adjacency.
     auto wise = town(1, [&](GameState& s) {
         s.plot({8, 5}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");

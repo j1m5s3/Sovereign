@@ -57,10 +57,24 @@ public:
     std::vector<Hex> within(Hex center, int radius) const;
     // Hexes from a to b inclusive (cube line, deterministic tie-breaking).
     std::vector<Hex> line(Hex a, Hex b) const;
+    // The hexes of line(a, b) strictly between a and b, in order and without building the list: calls fn(hex) for
+    // each until it returns false, and then returns false (true when it ran to the end).
+    template <typename Fn>
+    bool between(Hex a, Hex b, Fn&& fn) const {
+        const Axial aa = toAxial(a), bb = nearestAxial(a, b);
+        const int n = axialDistance(aa, bb);
+        for (int i = 1; i < n; ++i) {
+            const std::optional<Hex> h = linePoint(aa, bb, n, i);
+            if (h && !fn(*h)) return false;
+        }
+        return true;
+    }
 
 private:
     // Axial position of b shifted by a multiple of the width to sit nearest a.
     Axial nearestAxial(Hex a, Hex b) const;
+    // Point i of the n + 1 points of the line from aa to bb (n their distance); nullopt when off the map.
+    std::optional<Hex> linePoint(Axial aa, Axial bb, int n, int i) const;
 
     int32_t w_ = 0, h_ = 0;
     bool wrap_ = false;

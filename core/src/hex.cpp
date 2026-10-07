@@ -113,25 +113,28 @@ std::vector<Hex> HexGrid::line(Hex a, Hex b) const {
         out.push_back(a);
         return out;
     }
+    for (int i = 0; i <= n; ++i) {
+        if (auto h = linePoint(aa, bb, n, i)) out.push_back(*h);
+    }
+    return out;
+}
+
+std::optional<Hex> HexGrid::linePoint(Axial aa, Axial bb, int n, int i) const {
     // Cube lerp in integers scaled by n * kNudgeScale, with a small nudge so
     // points on hex edges fall consistently to one side.
     constexpr int64_t kNudgeScale = 1000000;
     const int64_t S = static_cast<int64_t>(n) * kNudgeScale;
     const int64_t ax = aa.q, az = aa.r, ay = -aa.q - aa.r;
     const int64_t bx = bb.q, bz = bb.r, by = -bb.q - bb.r;
-    for (int i = 0; i <= n; ++i) {
-        int64_t x = (ax * n + (bx - ax) * i) * kNudgeScale + 1;
-        int64_t y = (ay * n + (by - ay) * i) * kNudgeScale + 2;
-        int64_t z = (az * n + (bz - az) * i) * kNudgeScale - 3;
-        int64_t rx = roundDiv(x, S), ry = roundDiv(y, S), rz = roundDiv(z, S);
-        int64_t dx = std::llabs(rx * S - x), dy = std::llabs(ry * S - y), dz = std::llabs(rz * S - z);
-        if (dx > dy && dx > dz) rx = -ry - rz;
-        else if (dy > dz) ry = -rx - rz;
-        else rz = -rx - ry;
-        auto h = normalize(toOffset(Axial{static_cast<int32_t>(rx), static_cast<int32_t>(rz)}));
-        if (h) out.push_back(*h);
-    }
-    return out;
+    int64_t x = (ax * n + (bx - ax) * i) * kNudgeScale + 1;
+    int64_t y = (ay * n + (by - ay) * i) * kNudgeScale + 2;
+    int64_t z = (az * n + (bz - az) * i) * kNudgeScale - 3;
+    int64_t rx = roundDiv(x, S), ry = roundDiv(y, S), rz = roundDiv(z, S);
+    int64_t dx = std::llabs(rx * S - x), dy = std::llabs(ry * S - y), dz = std::llabs(rz * S - z);
+    if (dx > dy && dx > dz) rx = -ry - rz;
+    else if (dy > dz) ry = -rx - rz;
+    else rz = -rx - ry;
+    return normalize(toOffset(Axial{static_cast<int32_t>(rx), static_cast<int32_t>(rz)}));
 }
 
 }  // namespace sov
