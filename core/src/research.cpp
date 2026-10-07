@@ -164,7 +164,7 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
         case BoostKind::CoastalCity:
             return countCities([&](const City& c) { return isCoastal(state_, *rules_, c); }) > 0;
         case BoostKind::Building:
-            return countCities([&](const City& c) { return c.has(b.ref); }) >= b.count;
+            return countCities([&](const City& c) { return cityHasBuilding(c, *rules_, b.ref); }) >= b.count;  // a civ's unique counts
         case BoostKind::OwnUnits:
             return countUnits([&](const Unit& u) { return u.type == b.ref; }) >= b.count;
         case BoostKind::Tech: return p.techs.has(b.ref);

@@ -43,7 +43,7 @@ int Game::tradeRouteCapacity(PlayerId player) const {
         int city = 0;
         for (TypeIndex b : c.buildings) {
             const BuildingType& bt = rules_->buildings[at(b)];
-            if (bt.tradeCapacity > 0 && (bt.tradeCapacityUnless == kNone || !c.has(bt.tradeCapacityUnless))) city += bt.tradeCapacity;
+            if (bt.tradeCapacity > 0 && (bt.tradeCapacityUnless == kNone || !cityHasBuilding(c, *rules_, bt.tradeCapacityUnless))) city += bt.tradeCapacity;
         }
         cap += city;
     }
@@ -207,7 +207,7 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     if (!domestic && cityFollows(origin, Bf::ReligiousCommunity)) {
         int n = origin.district(rules_->district("DISTRICT_HOLY_SITE"), true) ? 1 : 0;
         n += origin.has(rules_->building("BUILDING_SHRINE")) ? 1 : 0;
-        n += origin.has(rules_->building("BUILDING_TEMPLE")) ? 1 : 0;
+        n += cityHasBuilding(origin, *rules_, rules_->building("BUILDING_TEMPLE")) ? 1 : 0;  // Mali's Sahel Mosque too
         bool worship = false;
         for (const BeliefType& bt : rules_->beliefs) worship = worship || (bt.worshipBuilding != kNone && origin.has(bt.worshipBuilding));
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(2 * (n + (worship ? 1 : 0)));

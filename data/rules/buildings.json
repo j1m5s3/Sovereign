@@ -324,6 +324,9 @@
    "unlock": "TECH_BRONZE_WORKING",
    "housing": 1,
    "citizenSlots": 1,
+   "exclusiveWith": [
+    "BUILDING_STABLE"
+   ],
    "trainedAbility": "ABILITY_BARRACKS_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
@@ -343,6 +346,9 @@
    "unlock": "TECH_HORSEBACK_RIDING",
    "housing": 1,
    "citizenSlots": 1,
+   "exclusiveWith": [
+    "BUILDING_BARRACKS"
+   ],
    "trainedAbility": "ABILITY_STABLE_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
@@ -448,7 +454,11 @@
    "district": "DISTRICT_GOVERNMENT_PLAZA",
    "cost": 150,
    "maintenance": 1,
-   "yields": {}
+   "yields": {},
+   "exclusiveWith": [
+    "BUILDING_ANCESTRAL_HALL",
+    "BUILDING_WARLORD_S_THRONE"
+   ]
   },
   {
    "id": "BUILDING_ANCESTRAL_HALL",
@@ -456,7 +466,11 @@
    "district": "DISTRICT_GOVERNMENT_PLAZA",
    "cost": 150,
    "maintenance": 1,
-   "yields": {}
+   "yields": {},
+   "exclusiveWith": [
+    "BUILDING_AUDIENCE_CHAMBER",
+    "BUILDING_WARLORD_S_THRONE"
+   ]
   },
   {
    "id": "BUILDING_WARLORD_S_THRONE",
@@ -464,7 +478,11 @@
    "district": "DISTRICT_GOVERNMENT_PLAZA",
    "cost": 150,
    "maintenance": 1,
-   "yields": {}
+   "yields": {},
+   "exclusiveWith": [
+    "BUILDING_AUDIENCE_CHAMBER",
+    "BUILDING_ANCESTRAL_HALL"
+   ]
   },
   {
    "id": "BUILDING_FOREIGN_MINISTRY",
@@ -477,6 +495,10 @@
     "BUILDING_AUDIENCE_CHAMBER",
     "BUILDING_ANCESTRAL_HALL",
     "BUILDING_WARLORD_S_THRONE"
+   ],
+   "exclusiveWith": [
+    "BUILDING_INTELLIGENCE_AGENCY",
+    "BUILDING_GRAND_MASTER_S_CHAPEL"
    ]
   },
   {
@@ -490,6 +512,10 @@
     "BUILDING_AUDIENCE_CHAMBER",
     "BUILDING_ANCESTRAL_HALL",
     "BUILDING_WARLORD_S_THRONE"
+   ],
+   "exclusiveWith": [
+    "BUILDING_FOREIGN_MINISTRY",
+    "BUILDING_GRAND_MASTER_S_CHAPEL"
    ]
   },
   {
@@ -505,6 +531,10 @@
     "BUILDING_AUDIENCE_CHAMBER",
     "BUILDING_ANCESTRAL_HALL",
     "BUILDING_WARLORD_S_THRONE"
+   ],
+   "exclusiveWith": [
+    "BUILDING_FOREIGN_MINISTRY",
+    "BUILDING_INTELLIGENCE_AGENCY"
    ]
   },
   {
@@ -518,6 +548,10 @@
     "BUILDING_FOREIGN_MINISTRY",
     "BUILDING_INTELLIGENCE_AGENCY",
     "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ],
+   "exclusiveWith": [
+    "BUILDING_NATIONAL_HISTORY_MUSEUM",
+    "BUILDING_ROYAL_SOCIETY"
    ]
   },
   {
@@ -531,6 +565,10 @@
     "BUILDING_FOREIGN_MINISTRY",
     "BUILDING_INTELLIGENCE_AGENCY",
     "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ],
+   "exclusiveWith": [
+    "BUILDING_WAR_DEPARTMENT",
+    "BUILDING_ROYAL_SOCIETY"
    ],
    "greatWorkSlots": {
     "PALACE": 4
@@ -547,6 +585,10 @@
     "BUILDING_FOREIGN_MINISTRY",
     "BUILDING_INTELLIGENCE_AGENCY",
     "BUILDING_GRAND_MASTER_S_CHAPEL"
+   ],
+   "exclusiveWith": [
+    "BUILDING_WAR_DEPARTMENT",
+    "BUILDING_NATIONAL_HISTORY_MUSEUM"
    ]
   },
   {
@@ -852,6 +894,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "exclusiveWith": [
+    "BUILDING_OIL_POWER_PLANT",
+    "BUILDING_NUCLEAR_POWER_PLANT"
+   ],
    "burns": {
     "resource": "RESOURCE_COAL",
     "power": 4
@@ -903,6 +949,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "exclusiveWith": [
+    "BUILDING_COAL_POWER_PLANT",
+    "BUILDING_NUCLEAR_POWER_PLANT"
+   ],
    "burns": {
     "resource": "RESOURCE_OIL",
     "power": 4
@@ -931,6 +981,10 @@
    "requires": [
     "BUILDING_FACTORY"
    ],
+   "exclusiveWith": [
+    "BUILDING_COAL_POWER_PLANT",
+    "BUILDING_OIL_POWER_PLANT"
+   ],
    "burns": {
     "resource": "RESOURCE_URANIUM",
     "power": 16
@@ -950,6 +1004,9 @@
     "FOOD": 4
    },
    "unlock": "TECH_REPLACEABLE_PARTS",
+   "exclusiveWith": [
+    "BUILDING_SHOPPING_MALL"
+   ],
    "requiredPower": 1,
    "poweredYields": {
     "FOOD": 2
@@ -967,6 +1024,9 @@
    },
    "unlock": "CIVIC_CAPITALISM",
    "amenities": 1,
+   "exclusiveWith": [
+    "BUILDING_FOOD_MARKET"
+   ],
    "requiredPower": 1,
    "poweredYields": {
     "GOLD": 2
@@ -1027,6 +1087,9 @@
    "requires": [
     "BUILDING_AMPHITHEATER"
    ],
+   "exclusiveWith": [
+    "BUILDING_ARCHAEOLOGICAL_MUSEUM"
+   ],
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_WRITER": 1,
@@ -1057,6 +1120,9 @@
    "citizenSlots": 1,
    "requires": [
     "BUILDING_AMPHITHEATER"
+   ],
+   "exclusiveWith": [
+    "BUILDING_ART_MUSEUM"
    ],
    "purchasable": true,
    "greatPersonPoints": {

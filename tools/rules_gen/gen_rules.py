@@ -652,7 +652,10 @@ def gen_buildings():
             b["outerDefenseHp"], b["defense"] = int(m.group(1)), int(m.group(2))
         reqs = [ids[x.strip()] for x in row["Requires"].split(",") if x.strip() in ids]
         if reqs:
-            b["requires"] = reqs
+            b["requires"] = reqs  # any one of them (BuildingPrereqs): the Armory needs a Barracks or a Stable
+        excl = [ids[x.strip()] for x in row["Exclusive with"].split(",") if x.strip() in ids]
+        if excl:
+            b["exclusiveWith"] = excl  # never in the same city (the Barracks and the Stable, 03)
         m = re.search(r"\+(\d+) air slots", row["Modifiers"] or "")
         if m:
             b["airSlots"] = int(m.group(1))  # Hangar, Airport (05: air units)

@@ -302,6 +302,12 @@ TEST(a_wonder_needs_its_building_first) {
     std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
     auto with = Game::fromScenario(rules(), std::move(s));
     CHECK(with->canPlaceWonder(with->state().cities[0], library, {7, 6}));
+    // A civ's unique building counts as the one it replaces: the Aztecs' Calmecac is their Library.
+    GameState t = without->state();
+    t.cities[0].buildings.push_back(rules().building("BUILDING_CALMECAC"));
+    std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+    auto aztec = Game::fromScenario(rules(), std::move(t));
+    CHECK(aztec->canPlaceWonder(aztec->state().cities[0], library, {7, 6}));
 }
 
 TEST(the_great_library_gives_a_eureka_when_a_rival_recruits_a_great_scientist) {

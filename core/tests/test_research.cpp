@@ -167,6 +167,21 @@ TEST(research_boosts_fire_from_state) {
     CHECK_EQ(g->state().players[0].techs.progress[at(tech("TECH_CONSTRUCTION"))], Fixed::fromInt(g->techCost(tech("TECH_CONSTRUCTION"))) * 40 / 100);
 }
 
+TEST(a_civ_s_unique_building_counts_toward_boosts) {
+    // Guilds: two Markets; Rome's Forum is its Market.
+    const auto met = [](int forums) {
+        GameState s = flatState(20, 14, 1);
+        Game::fitPlayerToRules(s.players[0], rules());
+        sovtest::addCity(s, 0, {4, 5}, true, 3);
+        sovtest::addCity(s, 0, {12, 5}, false, 3);
+        for (int i = 0; i < forums; ++i) s.cities[static_cast<size_t>(i)].buildings.push_back(rules().building("BUILDING_FORUM"));
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->boostMet(0, rules().civics[at(civic("CIVIC_GUILDS"))].boost);
+    };
+    CHECK(!met(1));
+    CHECK(met(2));
+}
+
 TEST(research_unlocks_units_buildings_and_resources) {
     GameState base = flatState(20, 14, 1);
     base.plot({7, 6}).resource = rules().resource("RESOURCE_HORSES");
