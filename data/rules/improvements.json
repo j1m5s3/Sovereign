@@ -595,6 +595,12 @@
      "amount": 1,
      "per": 1,
      "improvement": "IMPROVEMENT_FISHING_BOATS"
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "per": 1,
+     "feature": "FEATURE_REEF"
     }
    ],
    "housing": 2.0,
@@ -878,6 +884,14 @@
    ],
    "validFeatures": [],
    "validResources": [],
+   "adjacency": [
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "per": 1,
+     "seaResource": true
+    }
+   ],
    "housing": 0.5,
    "plunder": {
     "kind": "GOLD",

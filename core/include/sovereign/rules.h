@@ -299,10 +299,12 @@ struct ImprovementAdjacency {
     Fixed amount;
     int per = 1;                     // amount per this many adjacent improvements
     TypeIndex improvement = kNone;
-    // ...or what else it counts next to it: a district (`district`: an id, or ANY), a feature, or a resource class.
+    // ...or what else it counts next to it: a district (`district`: an id, or ANY), a feature, a resource class, or
+    // any resource the owner can see on water (the Fishery's sea resources, as a Harbor counts them).
     std::string district;
     TypeIndex feature = kNone;
     int resourceClass = -1;          // ResourceClass, -1: none
+    bool seaResource = false;
     Unlock needs, obsoleteWith;
 };
 

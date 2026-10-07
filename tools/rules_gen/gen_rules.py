@@ -940,7 +940,8 @@ def gen_improvements():
     ids = {r["Improvement"]: "IMPROVEMENT_" + snake(r["Improvement"]) for r in rows}
     districts = {r["District"]: "DISTRICT_" + snake(r["District"]) for r in table(SPEC / "districts.md", "District stats") if not r.get("Unique to")}
     adjacent_kinds = {"district": ("district", "ANY"), "Bonus resource": ("resourceClass", "BONUS"), "Luxury resource": ("resourceClass", "LUXURY"),
-                      "Woods": ("feature", "FEATURE_FOREST"), "Rainforest": ("feature", "FEATURE_JUNGLE")}
+                      "Woods": ("feature", "FEATURE_FOREST"), "Rainforest": ("feature", "FEATURE_JUNGLE"), "Reef": ("feature", "FEATURE_REEF"),
+                      "sea resource": ("seaResource", True)}  # the Seastead's Reefs; any resource on water, for the Fishery
     out = []
     for row in rows:
         i = {"id": ids[row["Improvement"]], "name": row["Improvement"], "yields": yields(row["Base yields"])}
