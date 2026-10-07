@@ -426,3 +426,59 @@ TEST(the_temple_of_artemis_gives_amenities_for_camps_pastures_and_plantations_ne
     CHECK_EQ(amenities(*building, 0), amenities(*plain, 0));
     CHECK_EQ(amenities(*building, 1), amenities(*plain, 1));
 }
+
+// The Golden Gate Bridge (03; data: roads within 1 tile): a land bridge carrying the owner's road. Land units
+// cross its plot dry and fight there; ships still sail through; the land on either side gets the road.
+TEST(the_golden_gate_bridge_carries_land_units_over_the_water) {
+    const TypeIndex ggb = wonder("BUILDING_GOLDEN_GATE_BRIDGE");
+    const auto strait = [&]() {
+        GameState s = flatState(24, 14, 2);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.relations.resize(s.players.size());
+        }
+        for (int y = 0; y < 14; ++y) s.plot({10, y}).terrain = rules().terrain("TERRAIN_COAST");
+        addCity(s, 0, {6, 6}, true, 3);
+        s.cities[0].wonders.push_back({ggb, {10, 6}});
+        addCity(s, 1, {16, 6}, true, 3);
+        return s;
+    };
+    GameState s = strait();
+    const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {9, 6});
+    const UnitId galley = sovtest::addUnit(s, "UNIT_GALLEY", 0, {10, 5});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Unit& w = *g->state().unit(warrior);
+    const TypeIndex trader = rules().unit("UNIT_TRADER");
+    CHECK(!g->bridgeAt({10, 6}));
+    CHECK(!g->moveCost(w, {9, 6}, {10, 6}));  // no embarking yet
+    CHECK(g->tradePath(0, trader, g->state().cities[0], g->state().cities[1]).empty());
+    g->wonderCompleted(g->state().cities[0].id, ggb);
+    CHECK(g->bridgeAt({10, 6}));
+    CHECK(g->state().plot({9, 6}).route >= 0);  // the land on either side
+    CHECK(g->state().plot({11, 6}).route >= 0);
+    CHECK(!g->bridgeAt({10, 7}));  // the rest of the strait stays water
+    CHECK(!g->moveCost(w, {9, 7}, {10, 7}));
+    CHECK(!g->isEmbarkTransition(w, {9, 6}, {10, 6}));
+    CHECK(g->moveCost(*g->state().unit(galley), {10, 5}, {10, 6}).has_value());  // ships pass under it
+    const auto path = g->findPath(warrior, {12, 6}, true);  // overland: no embarking
+    REQUIRE(path.has_value());
+    CHECK(std::any_of(path->begin(), path->end(), [](const PathStep& st) { return st.pos == Hex{10, 6}; }));
+    REQUIRE(g->submit(Command::move(0, warrior, {10, 6})) == CommandError::Ok);
+    REQUIRE((g->state().unit(warrior)->pos == Hex{10, 6}));
+    CHECK(!g->isEmbarked(*g->state().unit(warrior)));
+    CHECK(!g->isEmbarkTransition(*g->state().unit(warrior), {10, 6}, {11, 6}));
+    const Fixed road = rules().routes[static_cast<size_t>(g->state().plot({11, 6}).route)].moveCost;
+    CHECK(g->moveCost(*g->state().unit(warrior), {10, 6}, {11, 6}) == std::optional<Fixed>(road));  // ashore along the road
+    // A Trader's way runs over it to the far shore.
+    const std::vector<Hex> way = g->tradePath(0, trader, g->state().cities[0], g->state().cities[1]);
+    CHECK(std::find(way.begin(), way.end(), Hex{10, 6}) != way.end());
+
+    // A land unit attacks an enemy standing on the bridge.
+    GameState t = strait();
+    t.players[0].relations[1].war = t.players[1].relations[0].war = true;
+    const UnitId attacker = sovtest::addUnit(t, "UNIT_WARRIOR", 0, {9, 6});
+    sovtest::addUnit(t, "UNIT_WARRIOR", 1, {10, 6});
+    auto h = Game::fromScenario(rules(), std::move(t));
+    h->wonderCompleted(h->state().cities[0].id, ggb);
+    CHECK(h->submit(Command::attack(0, attacker, {10, 6})) == CommandError::Ok);
+}

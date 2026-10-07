@@ -38,7 +38,7 @@ struct Plot {
     PlayerId owner = kNoPlayer;
     CityId city = kNoCity;  // owning city
     int16_t continent = -1;
-    int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
+    int8_t route = -1;  // Rules::routes: the road on this plot (-1: none); on water, the Golden Gate Bridge's land bridge
     bool routePillaged = false;  // pillaged (05: Pillage): moves as if it had no road until repaired
     uint8_t pillagedTurns = 0;  // the improvement is pillaged (05: Pillage; a disaster, 09): nothing until a Builder repairs it
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)

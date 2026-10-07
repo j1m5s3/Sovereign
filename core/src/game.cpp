@@ -478,13 +478,19 @@ bool Game::canEnterOcean(PlayerId player) const {
     return greatPersonEffectTotal(player, GreatPersonEffectKind::Ocean) > 0;  // Leif Erikson (07)
 }
 
+bool Game::bridgeAt(Hex plot) const {
+    const Plot& p = state_.plot(plot);
+    return p.route >= 0 && terrainOf(*rules_, p).water;
+}
+
 bool Game::isEmbarked(const Unit& unit) const {
-    return typeOf(*rules_, unit).domain == Domain::Land && terrainOf(*rules_, state_.plot(unit.pos)).water;
+    return typeOf(*rules_, unit).domain == Domain::Land && terrainOf(*rules_, state_.plot(unit.pos)).water && !bridgeAt(unit.pos);
 }
 
 bool Game::isEmbarkTransition(const Unit& unit, Hex from, Hex to) const {
     if (typeOf(*rules_, unit).domain != Domain::Land) return false;
-    return terrainOf(*rules_, state_.plot(from)).water != terrainOf(*rules_, state_.plot(to)).water;
+    const auto afloat = [&](Hex h) { return terrainOf(*rules_, state_.plot(h)).water && !bridgeAt(h); };
+    return afloat(from) != afloat(to);
 }
 
 bool Game::isCoastalCity(const City& city) const {
@@ -518,18 +524,21 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         return std::nullopt;
     }
     if (ut.domain != Domain::Land) return std::nullopt;  // air units arrive later
+    // The Golden Gate Bridge (03): land units cross its plot dry, along its road.
+    const bool bridge = tt.water && p.route >= 0;
+    const bool fromAfloat = fromWater && !bridgeAt(from);
     const int embarkCost = rules_->globalInt("MOVEMENT_EMBARK_COST");
     // Amphibious (05): embarking and disembarking cost nothing extra.
-    const bool freeEmbark = (tt.water || fromWater) && unitHas(unit, UnitEffectKind::FreeEmbark);
-    if (tt.water) {
+    const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && unitHas(unit, UnitEffectKind::FreeEmbark);
+    if (tt.water && !bridge) {
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
-        return Fixed::fromInt(fromWater || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
+        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
     }
-    if (!isLandPassable(state_, *rules_, to)) return std::nullopt;
+    if (!bridge && !isLandPassable(state_, *rules_, to)) return std::nullopt;
     // Missionary Zeal: religious units ignore terrain (06).
     if (ut.religiousStrength > 0 &&
         sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed())
-        return Fixed::fromInt(fromWater ? embarkCost + 1 : 1);
+        return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
     if (tt.relief == Relief::Hills && cost > 1 && unitHas(unit, UnitEffectKind::IgnoreHills)) cost = 1;  // Alpine (05)
@@ -539,7 +548,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
         if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && unitHas(unit, UnitEffectKind::IgnoreForest))) cost += ft.moveChange;
     }
     if (cost > 1 && unitHas(unit, UnitEffectKind::IgnoreTerrain)) cost = 1;
-    if (fromWater) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
+    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
@@ -590,7 +599,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         for (int d = 0; d < kNumDirs; ++d) {
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
             if (!n || !known(*n)) continue;
-            if (keepDry && terrainOf(*rules_, state_.plot(*n)).water) continue;
+            if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
             auto cost = moveCost(*u, from, *n);
             if (!cost) continue;
             int turn = cur.turn;

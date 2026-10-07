@@ -273,7 +273,7 @@ std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const Ci
                 if (!nh) continue;
                 const int ni = state_.grid.index(*nh);
                 const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
-                const bool ok = ni == goal || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
+                const bool ok = ni == goal || bridgeAt(*nh) || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
                 if (!ok) continue;
                 const int left = refuel[static_cast<size_t>(ni)] ? range : cur.fuel - 1;
                 if (left <= best[static_cast<size_t>(ni)]) continue;

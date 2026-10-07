@@ -906,8 +906,8 @@ CommandError Game::validateCombat(const Command& c) const {
     if (meleeStrength(*u) <= 0 || (rangedStrength(*u) > 0 && !unitHas(*u, UnitEffectKind::MeleeAndRanged)) || ut.bombard > 0)
         return CommandError::CannotAttack;
     if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
-    // Land units fight on land; ships fight on the water and against coastal cities.
-    if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water) return CommandError::CannotAttack;
+    // Land units fight on land (and on a land bridge); ships fight on the water and against coastal cities.
+    if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water && !bridgeAt(*t)) return CommandError::CannotAttack;
     if (city) {
         // A city at 0 HP is only entered by a unit that can take it; barbarians never take cities.
         const bool takes = capturesCities(ut) && !state_.players[static_cast<size_t>(c.player)].barbarian;
