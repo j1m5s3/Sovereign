@@ -109,9 +109,8 @@ Yields Game::plotYields(Hex at, const City& city) const {
         const Yields imp = improvementYields(at, city.owner);
         for (size_t i = 0; i < kNumYields; ++i) y[i] += imp[i];
     }
-    for (size_t i = 0; i < kNumYields; ++i) {
-        y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
-    }
+    const Yields mods = sumPlotModifiers(state_, *rules_, city, at);
+    for (size_t i = 0; i < kNumYields; ++i) y[i] += mods[i];
     // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), and an
     // improvement that feeds its owner's plots beside it (the Nazca Line; 08).
     for (const Hex& n : state_.grid.within(at, 1)) {

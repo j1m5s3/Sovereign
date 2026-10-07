@@ -300,11 +300,11 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
     return total;
 }
 
-Fixed sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, YieldType yield) {
-    Fixed total;
+Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot) {
+    Yields total{};
     const Plot& p = s.plot(plot);
     forEachApplying(s, r, city, ModEffect::PlotYield, true, &p, [&](const Modifier& m) {
-        if (m.yield == yield) total += m.amount;
+        if (static_cast<size_t>(m.yield) < kNumYields) total[static_cast<size_t>(m.yield)] += m.amount;
     });
     return total;
 }

@@ -86,6 +86,9 @@ int HexGrid::distance(Hex a, Hex b) const {
 
 std::vector<Hex> HexGrid::within(Hex center, int radius) const {
     std::vector<Hex> out;
+    out.reserve(static_cast<size_t>(std::min<int64_t>(3 * static_cast<int64_t>(radius) * (radius + 1) + 1, size())));
+    // A row spans 2 * radius + 1 hexes, so only a map narrower than that can wrap onto itself.
+    const bool mayRepeat = wrap_ && w_ <= 2 * static_cast<int64_t>(radius);
     Axial c = toAxial(center);
     for (int dr = -radius; dr <= radius; ++dr) {
         int qMin = std::max(-radius, -dr - radius);
@@ -93,9 +96,8 @@ std::vector<Hex> HexGrid::within(Hex center, int radius) const {
         for (int dq = qMin; dq <= qMax; ++dq) {
             auto h = normalize(toOffset(Axial{c.q + dq, c.r + dr}));
             if (!h) continue;
-            bool dup = false;  // tiny maps can wrap onto themselves
-            for (const Hex& e : out) dup = dup || e == *h;
-            if (!dup) out.push_back(*h);
+            if (mayRepeat && std::find(out.begin(), out.end(), *h) != out.end()) continue;
+            out.push_back(*h);
         }
     }
     return out;
@@ -106,6 +108,7 @@ std::vector<Hex> HexGrid::line(Hex a, Hex b) const {
     Axial bb = nearestAxial(a, b);
     int n = axialDistance(aa, bb);
     std::vector<Hex> out;
+    out.reserve(static_cast<size_t>(n) + 1);
     if (n == 0) {
         out.push_back(a);
         return out;
