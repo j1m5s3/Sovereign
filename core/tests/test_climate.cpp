@@ -84,6 +84,21 @@ TEST(power_plants_burn_fuel_and_emissions_cost_favor) {
     CHECK_EQ(g2->favorPerTurn(0), before - 8);
 }
 
+TEST(lake_shores_are_not_coastal_lowlands) {
+    GameState s = coastState(12, 24, 1);
+    auto probe = Game::fromScenario(rules(), s);
+    Hex low{-1, -1};
+    for (int y = 0; y < 24 && low.x < 0; ++y) {
+        if (probe->lowlandBand({1, y}) > 0) low = {1, y};
+    }
+    REQUIRE(low.x == 1);
+    // The same plot beside a lake instead of the sea: the rising sea never reaches it (01: Lake).
+    GameState lake = flatState(12, 24, 1);
+    lake.plot({0, low.y}).terrain = rules().terrain("TERRAIN_COAST");
+    auto g = Game::fromScenario(rules(), std::move(lake));
+    CHECK_EQ(g->lowlandBand(low), 0);
+}
+
 TEST(climate_phases_warm_the_world_and_the_sea_takes_lowlands) {
     GameState s = coastState(12, 24, 1);
     // Find a 1 m lowland in the first land column.

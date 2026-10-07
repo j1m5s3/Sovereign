@@ -821,7 +821,7 @@ private:
 
     const Rules* rules_;
     // World wonders read in hot paths, looked up once (03: Wonders).
-    enum class W : uint8_t { Kilwa, Sankore, Oracle, MachuPicchu, Colosseum, Liberty, Zimbabwe, Torre, Eiffel, GoldenGate, Biosphere, Cristo, Count };
+    enum class W : uint8_t { Kilwa, Sankore, Oracle, MachuPicchu, Colosseum, Liberty, Zimbabwe, Torre, Eiffel, GoldenGate, Biosphere, Cristo, Huey, Count };
     TypeIndex wonders_[static_cast<size_t>(W::Count)] = {};
     TypeIndex wonderType(W w) const { return wonders_[static_cast<size_t>(w)]; }
     bool holdsWonder(PlayerId player, W w) const;  // one of the player's cities has it

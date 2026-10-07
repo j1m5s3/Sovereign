@@ -21,7 +21,7 @@ Values from Terrains / Terrain_YieldChanges. "Move" is the movement cost to ente
 | Hills (any of the above + hills) | base +1P (Plains Hills 1F 2P) | 2 | +3 | 0 | Sight +1; hills block line of sight for lower units |
 | Mountains | none, unworkable | impassable | — | +1 | Sight +2 and block sight. Adjacency for Campus and Holy Site; tunnels [GS] late game |
 | Coast | 1F 1G | 1 (embarked/naval) | 0 | +1 | Shallow water; early ships restricted to it |
-| Lake | 1F 1G | 1 (embarked/naval) | 0 | +1 | Stored as the Coast terrain plus a lake flag; counts as fresh water |
+| Lake | 1F 1G | 1 (embarked/naval) | 0 | +1 | Stored as the Coast terrain; a body of water of at most 9 plots is a lake, a larger one the sea (data: LAKE_MAX_AREA_SIZE, OCEAN_MIN_WATER_SIZE = 10); counts as fresh water |
 | Ocean | 1F | 1 (embarked/naval) | 0 | 0 | Embarked land units and most early ships need Cartography to enter |
 
 ## Features
@@ -120,7 +120,7 @@ Pipeline:
 1. Height map via fractal noise or plate simulation; sea level sets land/water.
 2. Mountains and hills from world age (old = fewer).
 3. Latitude bands + rainfall noise determine terrain.
-4. Rivers along edges from highlands to coast; lakes in basins.
+4. Rivers along edges from highlands to coast; lakes in basins (data: LAKE_PLOT_RANDOM = 40; the core turns about one flat inland plot in 40, away from water and rivers, into a lake of one to a few plots).
 5. Features by climate (woods, rainforest near equator, marsh, oasis in desert, floodplains along rivers, reefs, ice).
 6. Natural wonders by placement constraints (count per map size above).
 7. Start positions: score tiles for food, production, fresh water, coast, nearby luxuries, distance from others (data: START_DISTANCE_MAJOR_CIVILIZATION = 12 between majors, 6 between a major and a city-state, 5 between city-states). **Start biases** per civ (data: StartBias* tables; e.g. Russia tundra, Egypt floodplain river, England/Norway coast, Inca mountains, Kongo rainforest). Guarantee minimum food/production; balanced starts add resources.

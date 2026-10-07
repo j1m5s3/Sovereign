@@ -865,6 +865,8 @@ enum class ReqType : uint8_t {
     PlayerIsHuman,
     PlotHasImprovement,  // ref kNone: any improvement (PlotHasFeature likewise: any feature)
     PlotNextToRiver,
+    PlotIsLake,      // 01: Lake (Huey Teocalli, Mausoleum)
+    PlotNextToLake,  // a lake plot beside it (Aztec Chinampas)
 };
 
 struct Requirement {
@@ -1092,7 +1094,7 @@ struct CivAbility {
     TypeIndex extraGovernorTitleCivic = kNone;  // +1 governor title with this civic
     int desertRouteGold = 0;            // trade routes whose way crosses desert
     Yields capitalYieldsPerGovernorTitle{};
-    Fixed freshWaterFarmHousing;        // per farm next to a river
+    Fixed freshWaterFarmHousing;        // per farm next to a river or lake
     int mountainDistrictProductionPercent = 0;  // in cities next to a mountain
     int mountainProduction = 0;         // mountains can be worked for this much production
     // Leader abilities (Leader details) use the same struct; these fields are theirs so far.

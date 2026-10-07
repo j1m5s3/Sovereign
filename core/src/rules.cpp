@@ -117,6 +117,8 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "PLOT_HAS_TERRAIN") { q.type = ReqType::PlotHasTerrain; q.ref = rules.terrain(ref); }
         else if (type == "PLOT_HAS_IMPROVEMENT") { q.type = ReqType::PlotHasImprovement; q.ref = ref.empty() ? kNone : rules.improvement(ref); }
         else if (type == "PLOT_NEXT_TO_RIVER") q.type = ReqType::PlotNextToRiver;
+        else if (type == "PLOT_IS_LAKE") q.type = ReqType::PlotIsLake;
+        else if (type == "PLOT_NEXT_TO_LAKE") q.type = ReqType::PlotNextToLake;
         else if (type == "CITY_HAS_BUILDING") { q.type = ReqType::CityHasBuilding; q.ref = rules.building(ref); }
         else if (type == "CITY_IS_CAPITAL") { q.type = ReqType::CityIsCapital; }
         else if (type == "CITY_HAS_DISTRICT") { q.type = ReqType::CityHasDistrict; q.ref = rules.district(ref); }

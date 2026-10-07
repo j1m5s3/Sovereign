@@ -2473,15 +2473,13 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
         if (s.grid.distance(camp.pos, plot) <= 3) return -1;
     }
     int score = 0;
-    bool fresh = isRiverAdjacent(s, plot), coastal = false;
+    const bool fresh = hasFreshWater(s, r, plot);
+    bool coastal = false;
     for (const Hex& h : s.grid.within(plot, 3)) {
         const Plot& p = s.plot(h);
         const int ring = s.grid.distance(plot, h);
         const TerrainType& t = r.terrains[at(p.terrain)];
-        if (ring == 1) {
-            if (p.feature != kNone && r.features[at(p.feature)].freshWater) fresh = true;
-            if (t.shallowWater) coastal = true;
-        }
+        if (ring == 1 && t.shallowWater) coastal = true;
         if (p.owner != kNoPlayer && p.owner != player) continue;
         Yields y = t.yields;
         if (p.feature != kNone) {

@@ -609,9 +609,7 @@
    },
    "text": "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time); +1 Food on this city's tiles where tile is a lake in all cities where player owns object; +1 Production on this city's tiles where tile is a lake in all cities where player owns object",
    "untrackedEffects": [
-    "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time)",
-    "+1 Food on this city's tiles where tile is a lake in all cities where player owns object",
-    "+1 Production on this city's tiles where tile is a lake in all cities where player owns object"
+    "adjust city entertainment from wonder adjacent to lake (BuildingType=Huey Teocalli) (one-time)"
    ]
   },
   {
@@ -1569,6 +1567,10 @@
      {
       "type": "PLOT_HAS_TERRAIN",
       "ref": "TERRAIN_COAST"
+     },
+     {
+      "type": "PLOT_IS_LAKE",
+      "negate": true
      }
     ]
    }
@@ -1587,6 +1589,10 @@
      {
       "type": "PLOT_HAS_TERRAIN",
       "ref": "TERRAIN_COAST"
+     },
+     {
+      "type": "PLOT_IS_LAKE",
+      "negate": true
      }
     ]
    }
@@ -1605,6 +1611,10 @@
      {
       "type": "PLOT_HAS_TERRAIN",
       "ref": "TERRAIN_COAST"
+     },
+     {
+      "type": "PLOT_IS_LAKE",
+      "negate": true
      }
     ]
    }
@@ -1661,6 +1671,40 @@
    "effect": "GRANT_ABILITY",
    "arguments": {
     "ability": "ABILITY_SAGE"
+   }
+  },
+  {
+   "id": "BUILDING_HUEY_TEOCALLI_PLOTS_FOOD_0",
+   "source": "BUILDING_HUEY_TEOCALLI",
+   "collection": "PLAYER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "FOOD",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_IS_LAKE"
+     }
+    ]
+   }
+  },
+  {
+   "id": "BUILDING_HUEY_TEOCALLI_PLOTS_PRODUCTION_0",
+   "source": "BUILDING_HUEY_TEOCALLI",
+   "collection": "PLAYER_CITY_PLOTS",
+   "effect": "ADJUST_PLOT_YIELD",
+   "arguments": {
+    "yield": "PRODUCTION",
+    "amount": 1
+   },
+   "subjectRequirements": {
+    "all": [
+     {
+      "type": "PLOT_IS_LAKE"
+     }
+    ]
    }
   },
   {

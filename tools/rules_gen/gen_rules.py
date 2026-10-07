@@ -2337,8 +2337,9 @@ def wonder_effect(wid, part, w, modifiers, eras):
     if m and m.group(2) in UNIT_CLASS_WORDS:
         mod("UNITS", "PLAYER_CITIES", "ADJUST_UNIT_PRODUCTION_PERCENT", {"unitClass": UNIT_CLASS_WORDS[m.group(2)], "amount": int(m.group(1))})
         return []
-    m = re.fullmatch(r"(.+?) on this city's tiles where tile (?:is|has) (.+?)(?: or tile (?:is|has) (.+?))?(?: in all cities where city has .+)?", t)
+    m = re.fullmatch(r"(.+?) on this city's tiles where tile (?:is|has) (.+?)(?: or tile (?:is|has) (.+?))?(?: in all cities where city has .+| in all cities where (player owns object))?", t)
     if m:
+        collection = "PLAYER_CITY_PLOTS" if m.group(4) else "OWNER_CITY_PLOTS"  # Huey Teocalli: the owner's lakes in every city
         gains = [re.fullmatch(r"\+(\d+) (\w+)", g) for g in m.group(1).split(", ")]
         alternatives = []  # each a list of requirements that must all hold
         for place in (m.group(2), m.group(3)):
@@ -2348,8 +2349,10 @@ def wonder_effect(wid, part, w, modifiers, eras):
                 for terrain in (tid, tid + "_HILLS"):
                     alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": terrain},
                                          {"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[k.group(2)], "negate": True}])
-            elif place == "Coast and Lake and NOT tile is a lake":  # Mausoleum (the map has no lakes apart from Coast)
-                alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}])
+            elif place == "Coast and Lake and NOT tile is a lake":  # Mausoleum: the sea's Coast, not lakes (01: Lake)
+                alternatives.append([{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}, {"type": "PLOT_IS_LAKE", "negate": True}])
+            elif place == "a lake":  # Huey Teocalli
+                alternatives.append([{"type": "PLOT_IS_LAKE"}])
             elif place in FEATURE_IDS:
                 alternatives.append([{"type": "PLOT_HAS_FEATURE", "ref": FEATURE_IDS[place]}])
             elif place in terrain_names():
@@ -2362,7 +2365,7 @@ def wonder_effect(wid, part, w, modifiers, eras):
             return None
         for g in gains:
             for i, reqs in enumerate(alternatives):  # either place: one modifier each
-                mod("PLOTS_%s_%d" % (YIELD_WORDS[g.group(2)], i), "OWNER_CITY_PLOTS", "ADJUST_PLOT_YIELD",
+                mod("PLOTS_%s_%d" % (YIELD_WORDS[g.group(2)], i), collection, "ADJUST_PLOT_YIELD",
                     {"yield": YIELD_WORDS[g.group(2)], "amount": int(g.group(1))}, reqs)
         return []
     # One-time effects on completion.

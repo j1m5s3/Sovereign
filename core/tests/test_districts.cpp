@@ -219,6 +219,37 @@ TEST(aqueduct_and_neighborhood_add_housing) {
     CHECK(g4->cityReport(g4->state().cities[0].id).housing == before + Fixed::fromInt(10));
 }
 
+TEST(lakes_feed_aqueducts_and_raise_appeal) {
+    // A lake beside the Aqueduct's plot is fresh water; the sea is not (01: Lake, 03: Aqueduct).
+    const TypeIndex coast = rules().terrain("TERRAIN_COAST");
+    auto dry = town(3, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
+    auto lake = town(3, [&](GameState& s) {
+        learn(s, 0, {"TECH_ENGINEERING"});
+        s.plot({8, 6}).terrain = coast;
+    });
+    auto sea = town(3, [&](GameState& s) {
+        learn(s, 0, {"TECH_ENGINEERING"});
+        for (int x = 8; x <= 17; ++x) s.plot({x, 6}).terrain = coast;  // ten plots: a sea
+    });
+    const TypeIndex aqueduct = district("DISTRICT_AQUEDUCT");
+    CHECK(!dry->canPlaceDistrict(dry->state().cities[0], aqueduct, {7, 6}));
+    CHECK(lake->canPlaceDistrict(lake->state().cities[0], aqueduct, {7, 6}));
+    CHECK(!sea->canPlaceDistrict(sea->state().cities[0], aqueduct, {7, 6}));
+    // Appeal: +1 for the water beside it, and +1 once beside a lake, as beside a river.
+    CHECK_EQ(lake->plotAppeal({7, 6}), dry->plotAppeal({7, 6}) + 2);
+    CHECK_EQ(sea->plotAppeal({7, 6}), dry->plotAppeal({7, 6}) + 1);
+    // A city beside a lake already has fresh water, so its Aqueduct adds CITY_POPULATION_AQUEDUCT_BOOST (+2).
+    auto lakeside = town(3, [&](GameState& s) {
+        learn(s, 0, {"TECH_ENGINEERING"});
+        s.plot({7, 6}).terrain = coast;
+    });
+    REQUIRE(lakeside->canPlaceDistrict(lakeside->state().cities[0], aqueduct, {6, 7}));
+    GameState built = lakeside->state();
+    built.cities[0].districts.push_back({aqueduct, {6, 7}, true});
+    auto watered = Game::fromScenario(rules(), std::move(built));
+    CHECK(watered->cityReport(watered->state().cities[0].id).housing == lakeside->cityReport(lakeside->state().cities[0].id).housing + Fixed::fromInt(2));
+}
+
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
     auto g = town(7, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
     GameState s = g->state();

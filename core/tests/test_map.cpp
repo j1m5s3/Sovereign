@@ -84,3 +84,49 @@ TEST(map_river_edges_are_shared) {
     CHECK(isRiverAdjacent(s, {3, 3}));
     CHECK(!isRiverAdjacent(s, {6, 6}));
 }
+
+TEST(lakes_are_small_bodies_of_water) {
+    GameState s = sovtest::flatState(16, 16, 1);
+    const Rules& r = rules();
+    const TypeIndex coast = r.terrain("TERRAIN_COAST");
+    // One plot of water inside the land: a lake, fresh water for the plots beside it (01: Lake).
+    s.plot({4, 4}).terrain = coast;
+    CHECK(isLake(s, r, {4, 4}));
+    CHECK(!isLake(s, r, {5, 4}));
+    CHECK(isLakeAdjacent(s, r, {5, 4}));
+    CHECK(hasFreshWater(s, r, {5, 4}));
+    CHECK(!isLakeAdjacent(s, r, {7, 4}));
+    CHECK(!hasFreshWater(s, r, {7, 4}));
+    // Nine plots of water are still a lake; a tenth makes them a sea (LAKE_MAX_AREA_SIZE).
+    for (int x = 4; x <= 12; ++x) s.plot({x, 10}).terrain = coast;
+    CHECK(isLake(s, r, {4, 10}));
+    CHECK(hasFreshWater(s, r, {4, 11}));
+    s.plot({13, 10}).terrain = coast;
+    CHECK(!isLake(s, r, {4, 10}));
+    CHECK(!isLake(s, r, {13, 10}));
+    CHECK(!isLakeAdjacent(s, r, {4, 11}));
+    CHECK(!hasFreshWater(s, r, {4, 11}));
+    // Rivers and fresh-water features count too.
+    setRiver(s, {2, 13}, Dir::E);
+    CHECK(hasFreshWater(s, r, {2, 13}));
+    s.plot({10, 2}).feature = r.feature("FEATURE_OASIS");
+    CHECK(hasFreshWater(s, r, {11, 2}));
+}
+
+TEST(maps_have_lakes) {
+    // Lakes in basins (01): the map scripts' lakes, each its own small body of Coast.
+    const Rules& r = rules();
+    int lakes = 0;
+    for (uint64_t seed : {1ull, 2ull, 3ull, 4ull}) {
+        std::string err;
+        auto g = Game::create(r, sovtest::duelSetup(seed), &err);
+        REQUIRE(g);
+        const GameState& s = g->state();
+        for (int i = 0; i < s.grid.size(); ++i) {
+            if (!isLake(s, r, s.grid.at(i))) continue;
+            ++lakes;
+            CHECK_EQ(s.plot(s.grid.at(i)).terrain, r.terrain("TERRAIN_COAST"));
+        }
+    }
+    CHECK(lakes >= 4);
+}
