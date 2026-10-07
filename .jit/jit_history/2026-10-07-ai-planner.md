@@ -1,6 +1,6 @@
-# Plan: the AI's development planner (step 6, "everything else")
+# Record: the AI's development planner (step 6, "everything else")
 
-Status: active, 2026-10-06. Previous: `jit_history/2026-10-06-spec-audit-part-2.md`; the pace study it follows up: `jit_history/2026-10-06-ai-pace.md`. Chosen by Claude under James's standing consent.
+Status: done, 2026-10-07 (#132, #196). Previous: `jit_history/2026-10-06-spec-audit-part-2.md`; the pace study it follows up: `jit_history/2026-10-06-ai-pace.md`. Chosen by Claude under James's standing consent.
 
 At turn 200 the AI is in era 2.4 (Medieval to Renaissance) against a target of the Industrial era. The pace study found that the core's rules match Civ VI and that weight tuning has stopped helping.
 
@@ -24,9 +24,9 @@ Every change is measured with `sovsim --bench 8 --players 6 --size MAPSIZE_SMALL
 3. **Done (kept): science cities.** Settler pumps (X3) were dropped earlier as neutral.
    - A city of population 4 or more weighs its Campus +150 and the Campus's buildings +100.
    - Research weighs +8 the techs that open a science building.
-4. **Opening build order:**
-   - the capital follows a fixed opening (Scout, Slinger or Warrior, Settler, Builder, Settler);
-   - then the planner takes over.
+4. **Dropped: opening build order.** Both variants moved nothing beyond noise, so the opening stays as it was (Slinger, Settler, Builder, Settler):
+   - O1, the first two Settlers ahead of anything but a guard;
+   - O2, the cheapest melee unit as the first guard.
 
 ## Results (8 seeds, turn 200)
 
@@ -51,3 +51,24 @@ Against the new main (after #195; 8 seeds, turn 200):
 | R1 + R2 (kept) | 7.7 | 45.6 | 28.9 | 20.7 | 2.9 | 69.2 | 49.7 | 95.8 | 171 |
 | R1 from population 3, + R2 | 7.1 | 43.3 | 29.1 | 20.7 | 2.9 | 68.4 | 48.9 | 92.3 | 157 |
 | R1 doubled, + R2 | 7.2 | 42.8 | 28.9 | 20.4 | 2.9 | 69.2 | 43.8 | 88.6 | 163 |
+
+Opening variants (8 seeds, turn 200, on top of R1 + R2):
+
+| Build | cities | pop | techs | era | science | prod |
+|---|---|---|---|---|---|---|
+| R1 + R2 | 7.7 | 45.6 | 28.9 | 2.9 | 69.2 | 95.8 |
+| + O1 Settlers first | 7.7 | 45.3 | 28.8 | 2.9 | 68.6 | 98.9 |
+| + O2 cheap guard | 7.8 | 45.5 | 28.9 | 2.8 | 68.9 | 95.8 |
+| + O1 + O2 | 7.7 | 45.2 | 28.8 | 2.8 | 68.3 | 99.0 |
+
+## Findings
+
+- Across both PRs, science at turn 200 went from 54.8 to 69.2 on the newer main. Production and population rose too.
+- The era went from 2.6–2.7 to 2.9. The Industrial target (era 4) is still about one era away.
+- The levers that worked:
+  - Builders and housing (population and production);
+  - spending gold;
+  - science cities (Campus in cities of 4+);
+  - research toward science buildings.
+- The levers that did not: Settler pumps, opening orders, and the earlier single-knob weights.
+- What remains is probably city count (7.7 against Civ VI's usual 10–12 on Small by turn 200) and city size. Both are bounded by sites the map offers and by housing. That would be its own study of site choice and the settle-site scorer.
