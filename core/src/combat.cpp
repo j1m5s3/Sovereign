@@ -395,8 +395,9 @@ std::vector<uint8_t> Game::zocMap(const Unit& mover) const {
     if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return out;
     auto mark = [&](Hex center) {
         if (out.empty()) out.assign(static_cast<size_t>(state_.grid.size()), 0);
-        for (const Hex& h : state_.grid.within(center, 1)) {
-            if (h != center) out[static_cast<size_t>(state_.grid.index(h))] = 1;
+        for (int d = 0; d < kNumDirs; ++d) {
+            const std::optional<Hex> h = state_.grid.neighbor(center, static_cast<Dir>(d));
+            if (h && *h != center) out[static_cast<size_t>(state_.grid.index(*h))] = 1;
         }
     };
     for (const City& c : state_.cities) if (atWar(mover.owner, c.owner)) mark(c.pos);
