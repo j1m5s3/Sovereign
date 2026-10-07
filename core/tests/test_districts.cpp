@@ -46,7 +46,7 @@ TEST(district_data_from_civ_tables) {
     CHECK(!campus.unlock.civic && campus.unlock.index == r.tech("TECH_WRITING"));
     CHECK(campus.needsPopulation);
     CHECK_EQ(campus.costDiscountPercent, 40);
-    CHECK_EQ(campus.adjacency.size(), 6u);
+    CHECK_EQ(campus.adjacency.size(), 8u);
     CHECK(r.districts[at(district("DISTRICT_THEATER_SQUARE"))].unlock.civic);
     CHECK(r.districts[at(district("DISTRICT_ENCAMPMENT"))].notAdjacentToCityCenter);
     CHECK_EQ(r.buildings[at(r.building("BUILDING_LIBRARY"))].districtType, district("DISTRICT_CAMPUS"));
@@ -132,6 +132,27 @@ TEST(district_adjacency_yields) {
     });
     CHECK_EQ(wise->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot)[static_cast<size_t>(YieldType::Science)],
              Fixed::fromInt(2));
+}
+
+TEST(wonders_and_natural_wonders_raise_adjacency) {
+    // Holy Site +2 Faith per natural wonder plot; Theater Square +2 Culture per finished world wonder; the Great
+    // Barrier Reef +2 Science to a Campus; Pamukkale +1 Faith, +2 Science, +2 Gold, +2 Culture (data: districts).
+    const Hex spot{8, 6};
+    auto g = town(1, [&](GameState& s) {
+        s.plot({8, 5}).feature = rules().feature("FEATURE_GREAT_BARRIER_REEF");
+        s.plot({9, 6}).feature = rules().feature("FEATURE_PAMUKKALE");
+        City& c = s.cities[0];
+        const TypeIndex stonehenge = rules().building("BUILDING_STONEHENGE"), pyramids = rules().building("BUILDING_PYRAMIDS");
+        c.wonders.push_back({stonehenge, {7, 7}});  // finished
+        c.buildings.push_back(stonehenge);
+        std::sort(c.buildings.begin(), c.buildings.end());
+        c.wonders.push_back({pyramids, {8, 7}});  // still being built
+    });
+    const auto adj = [&](const char* d, YieldType y) { return g->districtAdjacency(0, district(d), spot)[static_cast<size_t>(y)]; };
+    CHECK_EQ(adj("DISTRICT_HOLY_SITE", YieldType::Faith), Fixed::fromInt(5));
+    CHECK_EQ(adj("DISTRICT_CAMPUS", YieldType::Science), Fixed::fromInt(4));
+    CHECK_EQ(adj("DISTRICT_COMMERCIAL_HUB", YieldType::Gold), Fixed::fromInt(2));
+    CHECK_EQ(adj("DISTRICT_THEATER_SQUARE", YieldType::Culture), Fixed::fromInt(4));
 }
 
 TEST(district_cost_grows_with_progress_and_discounts) {

@@ -762,13 +762,14 @@ PLACEABLE_DISTRICTS = ["Campus", "Holy Site", "Commercial Hub", "Encampment", "T
                        "Aqueduct", "Neighborhood", "Entertainment Complex", "Water Park", "Dam", "Preserve",
                        "Government Plaza", "Diplomatic Quarter", "Spaceport", "Aerodrome", "Canal"]
 FEATURE_NAMES = {"Rainforest": "FEATURE_JUNGLE", "Woods": "FEATURE_FOREST", "Reef": "FEATURE_REEF",
-                 "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE"}
+                 "Geothermal Fissure": "FEATURE_GEOTHERMAL_FISSURE", "Great Barrier Reef": "FEATURE_GREAT_BARRIER_REEF",
+                 "Pamukkale": "FEATURE_PAMUKKALE"}
 IMPROVEMENT_NAMES = {"Quarry": "IMPROVEMENT_QUARRY", "Mine": "IMPROVEMENT_MINE", "Lumber Mill": "IMPROVEMENT_LUMBER_MILL"}
 
 
 def district_adjacency(text, emitted):
     """Parse '+1 Science per 2 Rainforest; +2 Gold per river; ...' into typed rows; rows about
-    things the core does not model (wonders, natural wonders, districts not generated) are dropped."""
+    districts not generated (civs' unique districts) are dropped."""
     out = []
     for part in [p.strip() for p in text.split(";") if p.strip()]:
         m = re.fullmatch(r"\+(\d+) (\w+) per (2 )?(.+)", part)
@@ -788,6 +789,10 @@ def district_adjacency(text, emitted):
             row["kind"] = "STRATEGIC_RESOURCE"
         elif thing == "sea resource":
             row["kind"] = "SEA_RESOURCE"
+        elif thing == "wonder":
+            row["kind"] = "WONDER"
+        elif thing == "natural wonder":
+            row["kind"] = "NATURAL_WONDER"
         elif thing in FEATURE_NAMES:
             row["kind"], row["ref"] = "FEATURE", FEATURE_NAMES[thing]
         elif thing in IMPROVEMENT_NAMES:

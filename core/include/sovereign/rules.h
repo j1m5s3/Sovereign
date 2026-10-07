@@ -589,7 +589,11 @@ struct BarbarianTribe {
 };
 
 // One adjacency row of a district (03-districts-buildings-wonders.md, Adjacency bonuses).
-enum class DistrictAdjacencyKind : uint8_t { Mountain = 0, River, AnyDistrict, District, Feature, Improvement, StrategicResource, SeaResource };
+enum class DistrictAdjacencyKind : uint8_t {
+    Mountain = 0, River, AnyDistrict, District, Feature, Improvement, StrategicResource, SeaResource,
+    Wonder,        // a finished world wonder
+    NaturalWonder  // any natural wonder's plot
+};
 struct DistrictAdjacency {
     YieldType yield = YieldType::Food;
     int amount = 0;
