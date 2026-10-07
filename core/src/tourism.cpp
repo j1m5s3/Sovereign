@@ -140,6 +140,13 @@ void Game::grantApostlePromotion(Unit& apostle) {
     // Mont St. Michel (03: Wonders): every Apostle is also a Martyr.
     const TypeIndex martyr = buildingsOwned(apostle.owner, "BUILDING_MONT_ST_MICHEL") > 0 ? rules_->promotion("PROMOTION_MARTYR") : kNone;
     if (martyr != kNone) apostle.promotions.push_back(martyr);
+    // Yerevan (08: suzerain): the Apostle chooses its promotion (Promote) instead of drawing one; a second grant
+    // (Moksha's) is drawn and the choice still waits.
+    const bool chooses = suzerainBonus(apostle.owner, "CITYSTATE_YEREVAN");
+    if (chooses && apostle.xp < xpForNextLevel(apostle)) {
+        apostle.xp = xpForNextLevel(apostle);
+        return;
+    }
     std::vector<TypeIndex> open;
     for (size_t i = 0; i < rules_->promotions.size(); ++i) {
         if (rules_->promotions[i].promotionClass == "PROMOTION_CLASS_RELIGIOUS_APOSTLE" && static_cast<TypeIndex>(i) != martyr)
@@ -149,6 +156,7 @@ void Game::grantApostlePromotion(Unit& apostle) {
     const TypeIndex pick = open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))];
     apostle.promotions.push_back(pick);
     apostle.charges += unitEffectTotal(apostle, UnitEffectKind::SpreadCharges);  // Orator
+    if (chooses) apostle.xp = xpForNextLevel(apostle);
 }
 
 void Game::grantBandPromotion(Unit& band) {

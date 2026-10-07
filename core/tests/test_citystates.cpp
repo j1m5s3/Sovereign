@@ -22,14 +22,18 @@ TypeIndex cityStateOf(CityStateKind kind) {
     return kNone;
 }
 
-// Players 0 and 1 are majors; player 2 is a Scientific city-state with its city at (16,6).
-GameState csState() {
-    GameState s = flatState(24, 14, 3);
+// Players 0 and 1 are majors; player 2 is a Scientific city-state with its city at (16,6); player 3, if asked for, the barbarians.
+GameState csState(bool barbarians = false) {
+    GameState s = flatState(24, 14, barbarians ? 4 : 3);
     s.players[2].civ = kNone;
     s.players[2].cityState = cityStateOf(CityStateKind::Scientific);
+    if (barbarians) {
+        s.players[3].civ = kNone;
+        s.players[3].barbarian = true;
+    }
     for (Player& p : s.players) {
         Game::fitPlayerToRules(p, rules());
-        p.envoys.assign(3, 0);
+        p.envoys.assign(s.players.size(), 0);
         p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
     }
     addCity(s, 0, {4, 6}, true, 3);
@@ -286,11 +290,11 @@ TEST(samarkands_trading_domes_pay_international_routes) {
 
 namespace {
 // Player 0 is the suzerain of the city-state, which takes the given kind.
-GameState suzerainState(const char* cityState) {
-    GameState s = csState();
+GameState suzerainState(const char* cityState, bool barbarians = false) {
+    GameState s = csState(barbarians);
     s.players[2].cityState = rules().cityState(cityState);
     s.players[0].envoys[2] = 3;
-    for (Player& p : s.players) p.relations.resize(3);
+    for (Player& p : s.players) p.relations.resize(s.players.size());
     return s;
 }
 
@@ -387,4 +391,156 @@ TEST(vatican_city_spreads_pressure_from_great_people) {
     };
     CHECK(spread("CITYSTATE_VATICAN_CITY") == (std::vector<int32_t>{400, 400, 0}));
     CHECK(spread("CITYSTATE_MITLA") == (std::vector<int32_t>{0, 0, 0}));
+}
+
+TEST(zanzibar_and_buenos_aires_add_amenities) {
+    // Zanzibar (08): Cinnamon and Cloves, 6 cities each. Buenos Aires: each kind of improved bonus resource is an Amenity.
+    const auto amenities = [](const char* cityState, bool improve) {
+        GameState s = suzerainState(cityState);
+        const TypeIndex wheat = rules().resource("RESOURCE_WHEAT"), farm = rules().improvement("IMPROVEMENT_FARM");
+        for (Hex h : {Hex{5, 6}, Hex{3, 6}}) {  // two Wheat farms: one kind
+            s.plot(h).resource = wheat;
+            s.plot(h).improvement = improve ? farm : kNone;
+        }
+        s.plot({4, 7}).resource = rules().resource("RESOURCE_CATTLE");  // no Pasture
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->luxuryAmenities(g->state().cities[0]);
+    };
+    CHECK_EQ(amenities("CITYSTATE_ZANZIBAR", true), amenities("CITYSTATE_MITLA", true) + 2);
+    CHECK_EQ(amenities("CITYSTATE_BUENOS_AIRES", true), amenities("CITYSTATE_MITLA", true) + 1);
+    CHECK_EQ(amenities("CITYSTATE_BUENOS_AIRES", false), amenities("CITYSTATE_MITLA", false));
+    auto g = Game::fromScenario(rules(), suzerainState("CITYSTATE_ZANZIBAR"));
+    CHECK(g->hasLuxury(0, rules().resource("RESOURCE_CINNAMON")));
+    CHECK(g->hasLuxury(0, rules().resource("RESOURCE_CLOVES")));
+    CHECK(!g->hasLuxury(1, rules().resource("RESOURCE_CLOVES")));
+}
+
+TEST(mexico_city_extends_regional_reach) {
+    // Mexico City (08): Industrial Zone, Entertainment Complex and Water Park buildings reach 3 tiles farther.
+    const auto setup = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        addCity(s, 0, {12, 6}, false, 3);  // 8 tiles from the capital
+        City& capital = s.cities[0];
+        for (const char* b : {"BUILDING_ZOO", "BUILDING_COAL_POWER_PLANT"}) capital.buildings.push_back(rules().building(b));
+        std::sort(capital.buildings.begin(), capital.buildings.end());
+        s.cities.back().buildings.push_back(rules().building("BUILDING_RESEARCH_LAB"));  // needs 3 power
+        s.players[0].stockpile[at(rules().resource("RESOURCE_COAL"))] = 10;
+        return s;
+    };
+    auto plain = Game::fromScenario(rules(), setup("CITYSTATE_MITLA"));
+    auto g = Game::fromScenario(rules(), setup("CITYSTATE_MEXICO_CITY"));
+    const CityId far = g->state().cities.back().id;
+    REQUIRE(g->state().grid.distance(g->state().cities[0].pos, g->state().city(far)->pos) == 8);
+    CHECK_EQ(g->cityReport(far).amenities, plain->cityReport(far).amenities + 1);  // the Zoo
+    sovtest::endTurns(*plain, 3);
+    sovtest::endTurns(*g, 3);
+    CHECK_EQ(plain->state().city(far)->powerSupply, 0);
+    CHECK(g->state().city(far)->powerSupply >= 3);  // the Coal Power Plant
+}
+
+TEST(bandar_brunei_and_mogadishu_help_traders) {
+    // A route from player 0's capital to the city-state, through player 1's city where player 0 has a Trading Post.
+    const auto withRoute = [](const char* cityState, bool post = true) {
+        GameState s = suzerainState(cityState);
+        s.cities[1].tradingPosts = {post ? uint8_t{1} : uint8_t{0}, 0, 0};
+        TradeRoute r;
+        r.id = 1;
+        r.owner = 0;
+        r.origin = s.cities[0].id;
+        r.destination = s.cities[2].id;
+        r.traderType = rules().unit("UNIT_TRADER");
+        for (Hex h : {s.cities[0].pos, Hex{8, 6}, s.cities[1].pos, s.cities[2].pos}) r.path.push_back(s.grid.index(h));
+        r.turnsLeft = 20;
+        s.tradeRoutes.push_back(r);
+        return s;
+    };
+    // Bandar Brunei (08): each foreign Trading Post the route passes pays 1 Gold more.
+    const auto postGold = [&](const char* cityState) {
+        auto with = Game::fromScenario(rules(), withRoute(cityState));
+        auto without = Game::fromScenario(rules(), withRoute(cityState, false));
+        const CityId home = with->state().cities[0].id;
+        return with->cityReport(home).yields[yi(YieldType::Gold)] - without->cityReport(home).yields[yi(YieldType::Gold)];
+    };
+    CHECK_EQ(postGold("CITYSTATE_MITLA"), Fixed::fromInt(rules().globalInt("TRADING_POST_GOLD_IN_FOREIGN_CITY")));
+    CHECK_EQ(postGold("CITYSTATE_BANDAR_BRUNEI"), postGold("CITYSTATE_MITLA") + Fixed::fromInt(1));
+    // Mogadishu (08): an enemy on the water does not plunder the route; one on land still does.
+    const auto plundered = [&](const char* cityState, bool water) {
+        GameState s = withRoute(cityState);
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        if (water) s.plot({8, 6}).terrain = rules().terrain("TERRAIN_COAST");
+        addUnit(s, water ? "UNIT_GALLEY" : "UNIT_WARRIOR", 1, {8, 6});
+        s.units.back().activity = Activity::Sleep;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 3);  // player 0's next turn
+        return g->state().tradeRoutes.empty();
+    };
+    CHECK(plundered("CITYSTATE_MITLA", true));
+    CHECK(!plundered("CITYSTATE_MOGADISHU", true));
+    CHECK(plundered("CITYSTATE_MOGADISHU", false));
+}
+
+TEST(wolin_earns_great_general_and_admiral_points_from_victories) {
+    // Wolin (08): a quarter of the beaten unit's strength, as Great General points on land and Great Admiral points at sea,
+    // for victories over civs' and city-states' units, not barbarians'.
+    const auto points = [](const char* cityState) {
+        GameState s = suzerainState(cityState, true);
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        for (Hex h : {Hex{8, 10}, Hex{9, 10}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+        const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 6});
+        addUnit(s, "UNIT_WARRIOR", 1, {8, 6});
+        s.units.back().hp = 1;
+        const UnitId slinger = addUnit(s, "UNIT_WARRIOR", 0, {7, 8});
+        addUnit(s, "UNIT_WARRIOR", 3, {8, 8});
+        s.units.back().hp = 1;
+        const UnitId galley = addUnit(s, "UNIT_GALLEY", 0, {8, 10});
+        addUnit(s, "UNIT_GALLEY", 1, {9, 10});
+        s.units.back().hp = 1;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const size_t general = at(rules().greatPersonClass("GREAT_PERSON_CLASS_GENERAL"));
+        const size_t admiral = at(rules().greatPersonClass("GREAT_PERSON_CLASS_ADMIRAL"));
+        std::vector<int> out;
+        for (const auto& [unit, target] : {std::pair<UnitId, Hex>{warrior, {8, 6}}, {slinger, {8, 8}}, {galley, {9, 10}}}) {
+            REQUIRE(g->submit(Command::attack(0, unit, target)) == CommandError::Ok);
+            REQUIRE(!g->state().unitAt(target, UnitLayer::Military, rules()) || g->state().unitAt(target, UnitLayer::Military, rules())->owner == 0);
+            out.push_back(g->state().players[0].greatPersonPoints[general]);
+            out.push_back(g->state().players[0].greatPersonPoints[admiral]);
+        }
+        return out;
+    };
+    const int warrior = rules().units[at(rules().unit("UNIT_WARRIOR"))].combat / 4;
+    const int galley = rules().units[at(rules().unit("UNIT_GALLEY"))].combat / 4;
+    CHECK(points("CITYSTATE_MITLA") == (std::vector<int>{0, 0, 0, 0, 0, 0}));
+    CHECK(points("CITYSTATE_WOLIN") == (std::vector<int>{warrior, 0, warrior, 0, warrior, galley}));
+}
+
+TEST(yerevans_apostles_choose_their_promotion) {
+    // Yerevan (08): a new Apostle takes the promotion its player chooses instead of a random one.
+    const auto bought = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        foundBuddhism(s, 0);
+        s.cities[0].pressure = {10000};  // the Holy City follows it
+        s.cities[0].districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {5, 6}, true});
+        for (const char* b : {"BUILDING_SHRINE", "BUILDING_TEMPLE"}) s.cities[0].buildings.push_back(rules().building(b));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.players[0].faith = Fixed::fromInt(2000);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const CommandError e = g->submit(Command::purchaseWithFaith(0, g->state().cities[0].id, {ProductionKind::Unit, rules().unit("UNIT_APOSTLE")}));
+        if (e != CommandError::Ok) std::printf("  purchase: %s\n", commandErrorName(e));
+        REQUIRE(e == CommandError::Ok);
+        return g;
+    };
+    size_t kinds = 0;
+    for (const PromotionType& p : rules().promotions) kinds += p.promotionClass == "PROMOTION_CLASS_RELIGIOUS_APOSTLE" ? 1 : 0;
+    auto plain = bought("CITYSTATE_MITLA");
+    CHECK_EQ(plain->state().units.back().promotions.size(), 1u);
+    CHECK(plain->availablePromotions(plain->state().units.back().id).empty());
+    auto g = bought("CITYSTATE_YEREVAN");
+    const Unit& apostle = g->state().units.back();
+    const UnitId id = apostle.id;
+    const int charges = apostle.charges;
+    CHECK(apostle.promotions.empty());
+    CHECK_EQ(g->availablePromotions(id).size(), kinds);
+    REQUIRE(g->submit(Command::promote(0, id, rules().promotion("PROMOTION_ORATOR"))) == CommandError::Ok);
+    CHECK_EQ(g->state().unit(id)->charges, charges + 2);  // Orator's two more spreads
+    CHECK(g->availablePromotions(id).empty());
 }

@@ -207,16 +207,19 @@ CityReport Game::cityReport(CityId id) const {
     }
     // Trade routes from this city pay by the districts at their destinations (07); routes to it may
     // pay it too (allies, Wisselbanken).
+    const bool brunei = suzerainBonus(c->owner, "CITYSTATE_BANDAR_BRUNEI");
     for (const TradeRoute& tr : state_.tradeRoutes) {
         if (tr.origin == c->id) {
             if (const City* dest = state_.city(tr.destination)) {
                 const Yields ty = tradeRouteYields(*c, *dest);
                 for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
-                // Each of the owner's Trading Posts the route passes in foreign cities pays (07: TRADING_POST_GOLD_*).
+                // Each of the owner's Trading Posts the route passes in foreign cities pays (07: TRADING_POST_GOLD_*),
+                // one Gold more for Bandar Brunei's suzerain (08).
                 for (int32_t pi : tr.path) {
                     const City* on = state_.cityAt(state_.grid.at(pi));
                     if (!on || !on->hasTradingPost(c->owner)) continue;
-                    raw[idx(YieldType::Gold)] += Fixed::fromInt(rules_->globalInt(on->owner == c->owner ? "TRADING_POST_GOLD_IN_OWN_CITY" : "TRADING_POST_GOLD_IN_FOREIGN_CITY"));
+                    raw[idx(YieldType::Gold)] += Fixed::fromInt(rules_->globalInt(on->owner == c->owner ? "TRADING_POST_GOLD_IN_OWN_CITY" : "TRADING_POST_GOLD_IN_FOREIGN_CITY") +
+                                                                (brunei && on->owner != c->owner ? 1 : 0));
                 }
             }
         } else if (tr.destination == c->id) {
@@ -360,13 +363,18 @@ CityReport Game::cityReport(CityId id) const {
     // powered bonus while the holding city is powered.
     std::vector<TypeIndex> regional;
     const bool vertical = cityGovernorHas(*c, "GOVERNOR_PROMOTION_VERTICAL_INTEGRATION");
+    // Mexico City (08: suzerain): Industrial Zone, Entertainment Complex and Water Park buildings reach 3 tiles farther.
+    const bool mexico = suzerainBonus(c->owner, "CITYSTATE_MEXICO_CITY");
+    const TypeIndex fartherFrom[] = {rules_->district("DISTRICT_INDUSTRIAL_ZONE"), rules_->district("DISTRICT_ENTERTAINMENT_COMPLEX"),
+                                     rules_->district("DISTRICT_WATER_PARK")};
     for (const City& o : state_.cities) {
         if (o.owner != c->owner || o.id == c->id) continue;
         const int d = state_.grid.distance(o.pos, c->pos);
         const bool powered = o.powerDemand > 0 && o.powerSupply >= o.powerDemand;
         for (TypeIndex bi : o.buildings) {
             const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
-            if (bt.regionalRange <= 0 || d > bt.regionalRange) continue;
+            const bool farther = mexico && bt.districtType != kNone && std::find(std::begin(fartherFrom), std::end(fartherFrom), bt.districtType) != std::end(fartherFrom);
+            if (bt.regionalRange <= 0 || d > bt.regionalRange + (farther ? 3 : 0)) continue;
             if (bt.districtType != kNone) {
                 const CityDistrict* home = o.district(bt.districtType, true);
                 if (home && home->pillagedTurns > 0) continue;

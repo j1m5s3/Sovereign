@@ -17,6 +17,8 @@ bool contains(const std::vector<T>& v, T x) {
 int speedPercent(const GameState& s, const Rules& r) {
     return r.speeds[static_cast<size_t>(r.speed(s.setup.speed))].costPercent;
 }
+
+constexpr int kBonusAmenityCities = 4;  // Buenos Aires' bonus resources reach as many cities as most luxuries (Sovereign reading)
 }  // namespace
 
 // ------------------------------------------------------------------ queries
@@ -182,6 +184,12 @@ int Game::luxuryAmenities(const City& city) const {
         if (resolutionHits(ResolutionKind::LuxuryPolicy, 1, res)) continue;
         const int reach = rules_->resources[r].amenityCities * (resolutionHits(ResolutionKind::LuxuryPolicy, 0, res) ? 2 : 1);
         if (rank < reach) ++amenities;
+    }
+    // Buenos Aires (08: suzerain): each kind of improved bonus resource is an Amenity too, for as many cities as a luxury's.
+    if (rank < kBonusAmenityCities && suzerainBonus(owner, "CITYSTATE_BUENOS_AIRES")) {
+        for (size_t r = 0; r < rules_->resources.size(); ++r) {
+            if (rules_->resources[r].cls == ResourceClass::Bonus && luxuryCopies(owner, static_cast<TypeIndex>(r)) > 0) ++amenities;
+        }
     }
     return amenities;
 }

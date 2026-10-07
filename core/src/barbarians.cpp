@@ -119,6 +119,19 @@ void Game::noteKill(const Unit& victim, const Unit* killer) {
                 for (const UnitEffect& e : rules_->promotions[static_cast<size_t>(pr)].effects) killReward(kp, e, vt);
             }
         }
+        // Wolin (08: suzerain): a land victory over a civ's or a city-state's unit earns Great General points, a naval one
+        // Great Admiral points, of a quarter of the beaten unit's strength.
+        if (!state_.players[static_cast<size_t>(victim.owner)].barbarian && suzerainBonus(killer->owner, "CITYSTATE_WOLIN")) {
+            if (const Unit* k = state_.unit(killer->id)) {
+                const std::vector<TypeIndex> abilities = unitAbilities(*k);
+                const auto has = [&](const char* id) { return std::find(abilities.begin(), abilities.end(), rules_->ability(id)) != abilities.end(); };
+                const TypeIndex cls = has("ABILITY_GREAT_GENERAL_POINTS")  ? rules_->greatPersonClass("GREAT_PERSON_CLASS_GENERAL")
+                                      : has("ABILITY_WOLIN_NAVAL_UNITS") ? rules_->greatPersonClass("GREAT_PERSON_CLASS_ADMIRAL")
+                                                                          : kNone;
+                if (cls != kNone && static_cast<size_t>(cls) < kp.greatPersonPoints.size())
+                    kp.greatPersonPoints[static_cast<size_t>(cls)] += rules_->units[static_cast<size_t>(victim.type)].combat / 4;
+            }
+        }
         // War Department (03): the victor heals 20.
         if (Unit* k = state_.unit(killer->id); k && buildingsOwned(killer->owner, "BUILDING_WAR_DEPARTMENT") > 0)
             k->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), k->hp + 20);
