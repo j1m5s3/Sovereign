@@ -617,6 +617,29 @@ void Game::processResearch(PlayerId pid, Fixed science, Fixed culture) {
     advance(true, culture);
 }
 
+// A Research alliance at level 2 (08; data: alliance research agreement, Amount=30): every 30 turns at standard
+// speed, a random Eureka toward a tech the ally has researched or boosted and this civ has neither.
+void Game::allianceEurekas(PlayerId pid) {
+    const int period = std::max(1, 30 * speedPercent(state_, *rules_) / 100);
+    Player& me = state_.players[static_cast<size_t>(pid)];
+    for (size_t o = 0; o < me.relations.size() && o < state_.players.size(); ++o) {
+        Relation& rel = me.relations[o];
+        if (rel.alliance != AllianceType::Research || allianceLevel(pid, static_cast<PlayerId>(o)) < 2) {
+            rel.sharedBoostTurns = 0;
+            continue;
+        }
+        if (++rel.sharedBoostTurns < period) continue;
+        rel.sharedBoostTurns = 0;
+        const TreeProgress& mine = me.techs;
+        const TreeProgress& theirs = state_.players[o].techs;
+        std::vector<size_t> open;
+        for (size_t t = 0; t < rules_->techs.size() && t < mine.done.size() && t < theirs.done.size(); ++t) {
+            if ((theirs.done[t] || theirs.boosted[t]) && !mine.done[t] && !mine.boosted[t]) open.push_back(t);
+        }
+        if (!open.empty()) grantBoost(pid, false, open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))]);
+    }
+}
+
 void Game::updateBoosts(PlayerId pid) {
     for (int civic = 0; civic < 2; ++civic) {
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;

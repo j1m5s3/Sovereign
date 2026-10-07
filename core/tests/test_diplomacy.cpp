@@ -442,6 +442,7 @@ TEST(alliances_survive_a_save) {
         r.alliance = AllianceType::Cultural;
         r.allianceUntil = s.turn + 30;
         r.alliancePoints = 44;
+        r.sharedBoostTurns = 7;
     }
     auto g = Game::fromScenario(rules(), std::move(s));
     std::string err;
@@ -449,6 +450,7 @@ TEST(alliances_survive_a_save) {
     REQUIRE(loaded);
     CHECK(loaded->alliance(0, 1) == AllianceType::Cultural);
     CHECK_EQ(loaded->state().players[0].relations[1].alliancePoints, 44);
+    CHECK_EQ(loaded->state().players[0].relations[1].sharedBoostTurns, 7);
 }
 
 // ---- casus belli (08: War types)
@@ -660,6 +662,53 @@ TEST(alliance_levels_bring_their_effects) {
         auto g = Game::fromScenario(rules(), std::move(s));
         REQUIRE(g->tourismBase(1) >= 5);
         CHECK_EQ(g->tourismPerTurn(0), g->tourismBase(0) + g->tourismBase(1) / 5);
+    }
+}
+
+// A Research alliance at level 2 (08; data: alliance research agreement, Amount=30): every 30 turns at standard
+// speed, a Eureka toward a tech the ally has researched or boosted and this civ has neither.
+TEST(a_research_alliance_shares_a_eureka_every_30_turns) {
+    const size_t flight = static_cast<size_t>(rules().tech("TECH_FLIGHT"));
+    const int two = rules().globalInt("ALLIANCE_LEVEL_TWO_XP");
+    auto allied = [&](AllianceType type, int points, int16_t turns, bool done, const char* speed) {
+        GameState s = diploState(2);
+        s.setup.speed = speed;
+        for (Player& p : s.players) p.relations.resize(2);
+        for (auto [a, b] : {std::pair<int, int>{0, 1}, {1, 0}}) {
+            Relation& r = s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(b)];
+            r.alliance = type;
+            r.allianceUntil = 1000;
+            r.alliancePoints = points;
+            r.friendsUntil = 1000;
+        }
+        s.players[0].relations[1].sharedBoostTurns = turns;
+        // Flight is the only tech the ally could share: player 0 has researched or boosted every other, and the
+        // ally has researched two in three of them.
+        for (size_t t = 0; t < rules().techs.size(); ++t) {
+            if (t == flight) continue;
+            (t % 2 ? s.players[0].techs.boosted : s.players[0].techs.done)[t] = 1;
+            if (t % 3 != 2) s.players[1].techs.done[t] = 1;
+        }
+        (done ? s.players[1].techs.done : s.players[1].techs.boosted)[flight] = 1;
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    auto g = allied(AllianceType::Research, two, 28, true, "GAMESPEED_STANDARD");
+    sovtest::endTurns(*g, 2);  // player 0's turn again: its 29th at level 2
+    CHECK(!g->state().players[0].techs.boosted[flight]);
+    CHECK_EQ(g->state().players[0].relations[1].sharedBoostTurns, 29);
+    sovtest::endTurns(*g, 2);  // the 30th
+    CHECK(g->state().players[0].techs.boosted[flight]);
+    CHECK_EQ(g->state().players[0].relations[1].sharedBoostTurns, 0);
+    // A tech the ally only boosted counts too; faster speeds share sooner (Online: every 15 turns).
+    auto quick = allied(AllianceType::Research, two, 14, false, "GAMESPEED_ONLINE");
+    sovtest::endTurns(*quick, 2);
+    CHECK(quick->state().players[0].techs.boosted[flight]);
+    // Level 1, or another kind of alliance, shares nothing and keeps no count.
+    for (auto [type, points] : {std::pair<AllianceType, int>{AllianceType::Research, 0}, {AllianceType::Cultural, two}}) {
+        auto h = allied(type, points, 29, true, "GAMESPEED_STANDARD");
+        sovtest::endTurns(*h, 2);
+        CHECK(!h->state().players[0].techs.boosted[flight]);
+        CHECK_EQ(h->state().players[0].relations[1].sharedBoostTurns, 0);
     }
 }
 

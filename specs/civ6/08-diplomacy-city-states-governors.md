@@ -29,7 +29,7 @@ Durations are 30 turns unless noted (data: DiplomaticActions.Duration; DIPLOMACY
 
 | Type | Level 1 | Level 2 | Level 3 |
 |---|---|---|---|
-| Research | routes with ally: +2 Science origin, +1 destination | research agreement (30) | share 10% of ally's Science |
+| Research | routes with ally: +2 Science origin, +1 destination | research agreement (30): every 30 turns (standard speed) a random Eureka toward a tech the ally has researched or boosted (Civilopedia: "Allies share 1 Tech Boost every 30 turns") | share 10% of ally's Science |
 | Military | +5 Combat Strength vs common war targets | shared visibility; +15% military unit Production while either is at war | units trained gain a free promotion's XP |
 | Economic | routes with ally: +4 Gold origin, +2 destination | +1 envoy point from ally's city-state tributaries | share ally's suzerain bonuses |
 | Cultural | routes: +2 Culture origin, +1 destination; no loyalty pressure between allies | +1 GPP from districts in cities with a route to ally | share 20% tourism and 10% Culture |

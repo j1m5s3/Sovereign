@@ -406,6 +406,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.i8(static_cast<int8_t>(rel.alliance));
             w.i32(rel.allianceUntil);
             w.i32(rel.alliancePoints);
+            w.i16(rel.sharedBoostTurns);
             w.u8(rel.delegation);
         }
         w.u8(static_cast<uint8_t>(p.dedications.size()));
@@ -865,6 +866,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             rel.alliance = static_cast<AllianceType>(alliance);
             rel.allianceUntil = r.i32();
             rel.alliancePoints = r.i32();
+            rel.sharedBoostTurns = r.i16();
             rel.delegation = r.u8();
             if (rel.delegation > 2) return false;
         }
