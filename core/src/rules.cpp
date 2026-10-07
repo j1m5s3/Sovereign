@@ -17,7 +17,7 @@ using Table = std::vector<std::pair<std::string, Json>>;
 
 struct Merged {
     std::map<std::string, Table> tables;
-    std::map<std::string, Fixed> globals;
+    std::map<std::string, Fixed, std::less<>> globals;
 };
 
 bool readFile(const std::string& path, std::string& out) {
@@ -2495,7 +2495,7 @@ TypeIndex Rules::terrainFor(const std::string& base, Relief relief) const {
     return kNone;
 }
 
-Fixed Rules::global(const std::string& name) const {
+Fixed Rules::global(std::string_view name) const {
     auto it = globals_.find(name);
     return it == globals_.end() ? Fixed() : it->second;
 }

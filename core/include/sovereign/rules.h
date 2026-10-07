@@ -12,6 +12,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "sovereign/fixed.h"
@@ -1349,9 +1350,9 @@ public:
 
     // Named constants (GlobalParameters-style). Missing names are a load error
     // when required through requireGlobals().
-    Fixed global(const std::string& name) const;
-    int globalInt(const std::string& name) const { return static_cast<int>(global(name).toInt()); }
-    bool hasGlobal(const std::string& name) const { return globals_.count(name) != 0; }
+    Fixed global(std::string_view name) const;
+    int globalInt(std::string_view name) const { return static_cast<int>(global(name).toInt()); }
+    bool hasGlobal(std::string_view name) const { return globals_.find(name) != globals_.end(); }
 
     // Checksum of the loaded rules; saves and multiplayer peers must match.
     uint64_t checksum() const { return checksum_; }
@@ -1360,7 +1361,7 @@ public:
     static const std::vector<std::string>& fileNames();
 
 private:
-    std::map<std::string, Fixed> globals_;
+    std::map<std::string, Fixed, std::less<>> globals_;  // looked up by string_view without a copy
     uint64_t checksum_ = 0;
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
 };

@@ -14,8 +14,9 @@ int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cs) {
     int n = static_cast<size_t>(cs) < p.envoys.size() ? p.envoys[static_cast<size_t>(cs)] : 0;
     // Amani serving there counts as envoys (08: Governors, Messenger and Puppeteer).
     for (const Governor& g : p.governors) {
+        if (g.establishTurns > 0) continue;
         const City* c = s.city(g.city);
-        if (!c || c->owner != cs || g.establishTurns > 0) continue;
+        if (!c || c->owner != cs) continue;
         const bool puppeteer = std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex pr) {
             return r.governorPromotions[static_cast<size_t>(pr)].id == "GOVERNOR_PROMOTION_PUPPETEER";
         });
@@ -54,12 +55,16 @@ bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, Ty
         if (cs.cityState != type || !cs.alive) continue;
         const auto& rels = s.players[static_cast<size_t>(player)].relations;
         if (static_cast<size_t>(cs.id) < rels.size() && rels[static_cast<size_t>(cs.id)].war) return false;
+        // A level-3 Economic alliance shares the ally's suzerain bonuses (08: alliance levels).
+        auto shares = [&](const Relation& rel) {
+            return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
+        };
+        // Too few envoys to be suzerain and no such alliance: no need to find the suzerain.
+        if (envoysAt(s, r, player, cs.id) < r.globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN") && std::none_of(rels.begin(), rels.end(), shares)) return false;
         const PlayerId suz = suzerainOf(s, r, cs.id);
         if (suz == player) return true;
-        // A level-3 Economic alliance shares the ally's suzerain bonuses (08: alliance levels).
         if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
-        const Relation& rel = rels[static_cast<size_t>(suz)];
-        return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
+        return shares(rels[static_cast<size_t>(suz)]);
     }
     return false;
 }
@@ -239,19 +244,33 @@ void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEf
 }
 }  // namespace
 
-int religionFollowers(const GameState& s, const Rules& r, const City& city, int religion) {
-    if (religion < 0 || static_cast<size_t>(religion) >= city.pressure.size() || city.population <= 0) return 0;
+namespace {
+// All the pressure in a city, atheism included: the share each religion's followers are counted from.
+int64_t totalPressure(const Rules& r, const City& city) {
     int64_t total = static_cast<int64_t>(r.globalInt("RELIGION_SPREAD_ATHEISM_PRESSURE_PER_POP")) * city.population;
     for (int32_t p : city.pressure) total += std::max<int32_t>(0, p);
-    const int64_t mine = std::max<int32_t>(0, city.pressure[static_cast<size_t>(religion)]);
-    (void)s;
+    return total;
+}
+
+int followersOf(const City& city, size_t religion, int64_t total) {
+    const int64_t mine = std::max<int32_t>(0, city.pressure[religion]);
     return total <= 0 ? 0 : static_cast<int>((mine * city.population * 2 + total) / (total * 2));  // rounded
+}
+}  // namespace
+
+int religionFollowers(const GameState& s, const Rules& r, const City& city, int religion) {
+    if (religion < 0 || static_cast<size_t>(religion) >= city.pressure.size() || city.population <= 0) return 0;
+    (void)s;
+    return followersOf(city, static_cast<size_t>(religion), totalPressure(r, city));
 }
 
 int majorityReligion(const GameState& s, const Rules& r, const City& city) {
+    const int64_t total = city.population > 0 ? totalPressure(r, city) : 0;
     for (size_t i = 0; i < city.pressure.size(); ++i) {
-        if (religionFollowers(s, r, city, static_cast<int>(i)) * 2 > city.population) return static_cast<int>(i);
+        const int followers = city.population > 0 ? followersOf(city, i, total) : 0;
+        if (followers * 2 > city.population) return static_cast<int>(i);
     }
+    (void)s;
     return -1;
 }
 
