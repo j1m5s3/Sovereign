@@ -79,6 +79,21 @@ public:
             for (const Hex& h : within(center, radius)) fn(h);
             return;
         }
+        walkWithin(center, radius, [&](Hex h, Axial) { fn(h); });
+    }
+    // The same, calling fn(hex, step) with the axial step from center to the copy of the hex that line(center, hex)
+    // runs to: the hex itself, or on a wrapping map the copy a map's width east or west nearest the center.
+    template <typename Fn>
+    void forEachWithinStep(Hex center, int radius, Fn&& fn) const {
+        if (wrap_ && w_ <= 2 * static_cast<int64_t>(radius)) {
+            const Axial c = toAxial(center);
+            for (const Hex& h : within(center, radius)) {
+                const Axial b = nearestAxial(c, h);
+                fn(h, Axial{b.q - c.q, b.r - c.r});
+            }
+            return;
+        }
+        // Each step of the walk is at most radius long, under half the map's width: the nearest copy is the one walked to.
         walkWithin(center, radius, fn);
     }
     // Hexes from a to b inclusive (cube line, deterministic tie-breaking).
@@ -88,15 +103,22 @@ public:
     template <typename Fn>
     bool between(Hex a, Hex b, Fn&& fn) const {
         const Axial aa = toAxial(a), bb = nearestAxial(aa, b);
-        const int n = axialDistance(aa, bb);
-        if (const LineStep* step = lineSteps(Axial{bb.q - aa.q, bb.r - aa.r}, n)) {  // a short line: its steps from a
+        return betweenStep(a, Axial{bb.q - aa.q, bb.r - aa.r}, fn);
+    }
+    // between(a, b) given the axial step from a to the copy of b the line runs to (as forEachWithinStep gives it).
+    template <typename Fn>
+    bool betweenStep(Hex a, Axial step, Fn&& fn) const {
+        const int n = axialDistance(Axial{}, step);
+        if (n <= 1) return true;  // the same hex or a neighbour: nothing between
+        if (const LineStep* s = lineSteps(step, n)) {  // a short line: its steps from a
             const int parity = a.y & 1;
-            for (const LineStep* const end = step + (n > 1 ? n - 1 : 0); step != end; ++step) {
-                const std::optional<Hex> h = normalize(Hex{a.x + step->dx[parity], a.y + step->dy});
+            for (const LineStep* const end = s + (n - 1); s != end; ++s) {
+                const std::optional<Hex> h = normalize(Hex{a.x + s->dx[parity], a.y + s->dy});
                 if (h && !fn(*h)) return false;
             }
             return true;
         }
+        const Axial aa = toAxial(a), bb{aa.q + step.q, aa.r + step.r};
         for (int i = 1; i < n; ++i) {
             const std::optional<Hex> h = linePoint(aa, bb, n, i);
             if (h && !fn(*h)) return false;
@@ -105,8 +127,8 @@ public:
     }
 
 private:
-    // The hexes within radius of center row by row, north to south and west to east, to fn: on a map narrow enough
-    // for a row to wrap onto itself, some more than once.
+    // The hexes within radius of center row by row, north to south and west to east, to fn(hex, step) with the axial
+    // step from center walked to reach it: on a map narrow enough for a row to wrap onto itself, some more than once.
     template <typename Fn>
     void walkWithin(Hex center, int radius, Fn&& fn) const {
         const Axial c = toAxial(center);
@@ -117,13 +139,14 @@ private:
             const int qMax = std::min(radius, -dr + radius);
             // Along a row the axial q and the offset column rise together, one plot a step.
             const int32_t first = toOffset(Axial{c.q + qMin, y}).x;
-            for (int32_t x = first; x <= first + (qMax - qMin); ++x) {
+            for (int dq = qMin; dq <= qMax; ++dq) {
+                const int32_t x = first + (dq - qMin);
                 Hex h{x, y};
                 if (x < 0 || x >= w_) {
                     if (!wrap_) continue;
                     h.x = static_cast<int32_t>(((x % w_) + w_) % w_);
                 }
-                fn(h);
+                fn(h, Axial{dq, dr});
             }
         }
     }

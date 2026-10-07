@@ -27,6 +27,13 @@ bool riverBetween(const Plot& from, const Plot& to, Dir d) {
     return false;
 }
 const UnitType& typeOf(const Rules& r, const Unit& u) { return r.units[static_cast<size_t>(u.type)]; }
+// How high a plot stands in the way of sight (01: Visibility): its terrain, and its feature unless seen through.
+int sightObstacle(const GameState& s, const Rules& r, Hex h, bool throughFeatures) {
+    const Plot& op = s.plot(h);
+    int obstacle = terrainOf(r, op).sightThrough;
+    if (op.feature != kNone && !throughFeatures) obstacle += r.features[static_cast<size_t>(op.feature)].sightThrough;
+    return obstacle;
+}
 }  // namespace
 
 std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, std::string* error) {
@@ -845,11 +852,14 @@ void Game::refreshVisibility(PlayerId pid) {
     bool landGathered = false;
     Unit* finder = nullptr;
     auto see = [&](Hex from, int range, bool throughFeatures = false) {
-        range += terrainOf(*rules_, state_.plot(from)).sightModifier;
-        state_.grid.forEachWithin(from, range, [&](Hex target) {
+        const TerrainType& viewer = terrainOf(*rules_, state_.plot(from));
+        range += viewer.sightModifier;
+        // lineOfSight(from, target), with the step to the target known from the walk.
+        const auto clear = [&](Hex h) { return sightObstacle(state_, *rules_, h, throughFeatures) <= viewer.sightThrough; };
+        state_.grid.forEachWithinStep(from, range, [&](Hex target, Axial step) {
             uint8_t& v = p.visibility[static_cast<size_t>(state_.grid.index(target))];
             if (v == static_cast<uint8_t>(Visibility::Visible)) return;  // already seen in this refresh: nothing more to learn
-            if (!lineOfSight(from, target, throughFeatures)) return;
+            if (!state_.grid.betweenStep(from, step, clear)) return;
             if (const int16_t k = state_.plot(target).continent; k >= 0 && v == static_cast<uint8_t>(Visibility::Unrevealed)) {
                 if (!landGathered) {
                     // Each landmass with a plot revealed, looked for until its first.
@@ -960,12 +970,7 @@ void Game::refreshVisibility(PlayerId pid) {
 // Nothing between the two plots stands higher than the viewer's plot (01: Visibility).
 bool Game::lineOfSight(Hex from, Hex to, bool throughFeatures) const {
     const int viewerHeight = terrainOf(*rules_, state_.plot(from)).sightThrough;
-    return state_.grid.between(from, to, [&](Hex h) {
-        const Plot& op = state_.plot(h);
-        int obstacle = terrainOf(*rules_, op).sightThrough;
-        if (op.feature != kNone && !throughFeatures) obstacle += rules_->features[static_cast<size_t>(op.feature)].sightThrough;
-        return obstacle <= viewerHeight;
-    });
+    return state_.grid.between(from, to, [&](Hex h) { return sightObstacle(state_, *rules_, h, throughFeatures) <= viewerHeight; });
 }
 
 // ------------------------------------------------------------------ applying

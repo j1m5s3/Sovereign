@@ -91,7 +91,7 @@ std::vector<Hex> HexGrid::within(Hex center, int radius) const {
     out.reserve(static_cast<size_t>(std::min<int64_t>(3 * static_cast<int64_t>(radius) * (radius + 1) + 1, size())));
     // A row spans 2 * radius + 1 hexes, so only a map narrower than that can wrap onto itself.
     const bool mayRepeat = wrap_ && w_ <= 2 * static_cast<int64_t>(radius);
-    walkWithin(center, radius, [&](Hex h) {
+    walkWithin(center, radius, [&](Hex h, Axial) {
         if (!mayRepeat || std::find(out.begin(), out.end(), h) == out.end()) out.push_back(h);
     });
     return out;
