@@ -206,6 +206,8 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         if (t.ocean) oceanTechs_.push_back(static_cast<TypeIndex>(i));
         if (t.embarkAll || t.embarkUnit != kNone) embarkTechs_.push_back(static_cast<TypeIndex>(i));
     }
+    for (const TreeNode& t : rules_->techs) techEras_.push_back(t.era);
+    for (const TreeNode& t : rules_->civics) civicEras_.push_back(t.era);
 }
 
 uint64_t Game::stateHash() const {

@@ -900,6 +900,7 @@ private:
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
     std::vector<TypeIndex> oceanTechs_;       // the techs that open the Ocean (Cartography)
     std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
+    std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
