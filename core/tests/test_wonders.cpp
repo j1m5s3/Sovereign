@@ -344,3 +344,83 @@ TEST(the_great_library_gives_a_eureka_when_a_rival_recruits_a_great_scientist) {
     CHECK_EQ(boosted(*own, 1), boosted(*plain, 1));
     CHECK_EQ(boosted(*own, 0), boosted(*plain, 0));
 }
+
+TEST(regional_wonders_reach_the_owners_cities_from_their_plot) {
+    // 03: the Colosseum's +2 Culture and +2 Amenity reach the owner's cities within 6 tiles of its plot, as Jebel Barkal's
+    // +4 Faith does; the Estadio do Maracana's +6 Culture and +2 Amenity reach every city of the owner. A rival's never.
+    GameState s = flatState(40, 14, 2);
+    for (PlayerId p = 0; p < 2; ++p) Game::fitPlayerToRules(s.players[at(p)], rules());
+    const Hex site{8, 5};
+    const CityId host = addCity(s, 0, {5, 5}, true, 3);
+    const CityId near = addCity(s, 0, {13, 5}, false, 3);
+    const CityId far = addCity(s, 0, {32, 5}, false, 3);
+    const CityId rival = addCity(s, 1, {9, 11}, true, 3);
+    REQUIRE(s.grid.distance(site, {13, 5}) <= 6);
+    REQUIRE(s.grid.distance({5, 5}, {13, 5}) > 6);  // in reach of the wonder's plot, not of its city
+    REQUIRE(s.grid.distance(site, {32, 5}) > 6);
+    REQUIRE(s.grid.distance(site, {9, 11}) <= 6);
+    auto plain = Game::fromScenario(rules(), s);
+    const auto with = [&](const char* id) {
+        GameState t = s;
+        City& c = *t.city(host);
+        c.buildings.push_back(wonder(id));
+        std::sort(c.buildings.begin(), c.buildings.end());
+        c.wonders.push_back({wonder(id), site});
+        return Game::fromScenario(rules(), std::move(t));
+    };
+    const size_t culture = static_cast<size_t>(YieldType::Culture), faith = static_cast<size_t>(YieldType::Faith);
+    const auto amenities = [](const Game& g, CityId c) { return g.cityReport(c).amenities; };
+    const auto yield = [](const Game& g, CityId c, size_t y) { return g.cityReport(c).yields[y]; };
+    auto colosseum = with("BUILDING_COLOSSEUM");
+    CHECK_EQ(amenities(*colosseum, host), amenities(*plain, host) + 2);  // once in its own city
+    CHECK_EQ(amenities(*colosseum, near), amenities(*plain, near) + 2);
+    CHECK(yield(*colosseum, near, culture) > yield(*plain, near, culture));
+    CHECK_EQ(amenities(*colosseum, far), amenities(*plain, far));
+    CHECK_EQ(yield(*colosseum, far, culture), yield(*plain, far, culture));
+    CHECK_EQ(amenities(*colosseum, rival), amenities(*plain, rival));
+    CHECK_EQ(yield(*colosseum, rival, culture), yield(*plain, rival, culture));
+    auto jebel = with("BUILDING_JEBEL_BARKAL");
+    CHECK(yield(*jebel, near, faith) > yield(*plain, near, faith));
+    CHECK_EQ(yield(*jebel, far, faith), yield(*plain, far, faith));
+    CHECK_EQ(yield(*jebel, rival, faith), yield(*plain, rival, faith));
+    auto maracana = with("BUILDING_EST_DIO_DO_MARACAN");
+    CHECK_EQ(amenities(*maracana, far), amenities(*plain, far) + 2);
+    CHECK(yield(*maracana, far, culture) > yield(*plain, far, culture));
+    CHECK_EQ(amenities(*maracana, rival), amenities(*plain, rival));
+    CHECK_EQ(yield(*maracana, rival, culture), yield(*plain, rival, culture));
+}
+
+TEST(the_temple_of_artemis_gives_amenities_for_camps_pastures_and_plantations_near_it) {
+    // 03: each Camp, Pasture and Plantation within 4 tiles of the Temple of Artemis gives +1 Amenity to the city whose land
+    // it is on, a rival's too (the data checks only the distance). A pillaged one, a Farm, one farther away, or a Temple
+    // still being built gives nothing.
+    GameState s = wonderState();
+    const Hex site{8, 6};
+    const TypeIndex temple = wonder("BUILDING_TEMPLE_OF_ARTEMIS");
+    const auto improve = [&](Hex h, const char* id) { s.plot(h).improvement = rules().improvement(id); };
+    improve({7, 6}, "IMPROVEMENT_CAMP");
+    improve({4, 6}, "IMPROVEMENT_PLANTATION");
+    improve({6, 8}, "IMPROVEMENT_PASTURE");
+    improve({2, 6}, "IMPROVEMENT_CAMP");        // 6 tiles from the Temple
+    improve({6, 5}, "IMPROVEMENT_PLANTATION");  // pillaged below
+    improve({5, 7}, "IMPROVEMENT_FARM");
+    improve({12, 6}, "IMPROVEMENT_CAMP");       // the rival's
+    s.plot({6, 5}).pillagedTurns = 1;
+    REQUIRE(s.grid.distance(site, {4, 6}) == 4);
+    REQUIRE(s.grid.distance(site, {6, 8}) <= 4);
+    REQUIRE(s.grid.distance(site, {2, 6}) > 4);
+    REQUIRE(s.grid.distance(site, {12, 6}) == 4);
+    for (Hex h : {Hex{7, 6}, Hex{4, 6}, Hex{6, 8}, Hex{2, 6}, Hex{6, 5}, Hex{5, 7}}) REQUIRE(s.plot(h).city == s.cities[0].id);
+    REQUIRE(s.plot({12, 6}).city == s.cities[1].id);
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].wonders.push_back({temple, site});
+    auto building = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(temple);
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const auto amenities = [](const Game& game, size_t c) { return game.cityReport(game.state().cities[c].id).amenities; };
+    CHECK_EQ(amenities(*g, 0), amenities(*plain, 0) + 3);
+    CHECK_EQ(amenities(*g, 1), amenities(*plain, 1) + 1);
+    CHECK_EQ(amenities(*building, 0), amenities(*plain, 0));
+    CHECK_EQ(amenities(*building, 1), amenities(*plain, 1));
+}

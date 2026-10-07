@@ -239,6 +239,7 @@
    },
    "text": "+2 Loyalty per turn in all your cities where within 6 tiles of Colosseum",
    "amenities": 2,
+   "regionalRange": 6,
    "requiresAny": [
     "BUILDING_ARENA"
    ],
@@ -449,6 +450,7 @@
     ]
    },
    "text": "+6 Iron per turn",
+   "regionalRange": 6,
    "effects": [
     {
      "kind": "RESOURCE_PER_TURN",
@@ -1168,6 +1170,7 @@
    },
    "text": "",
    "amenities": 2,
+   "regionalRange": 100000,
    "requiresAny": [
     "BUILDING_STADIUM"
    ]

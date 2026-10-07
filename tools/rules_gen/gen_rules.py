@@ -1045,6 +1045,10 @@ def gen_improvements():
             m = re.fullmatch(r"\+(\d+) Amenity in this city", part)
             if m:
                 i["amenities"] = int(m.group(1))  # the Ski Resort (07)
+            # The Temple of Artemis (03): a Camp, Pasture or Plantation this near it gives its city an Amenity.
+            m = re.fullmatch(r"\+(\d+) Amenity where within (\d+) tiles of (.+)", part)
+            if m:
+                i["wonderAmenity"] = {"wonder": "BUILDING_" + snake(m.group(3)), "range": int(m.group(2)), "amount": int(m.group(1))}
             m = re.fullmatch(r"\+(\d+) Amenity in this city where (NOT )?has (.+)", part)
             if m:
                 amenity_sides.setdefault((int(m.group(1)), m.group(3)), set()).add(bool(m.group(2)))
@@ -2300,6 +2304,10 @@ def gen_wonders():
             w["housing"] = num(row["Housing"])
         if row["Amenity"]:
             w["amenities"] = num(row["Amenity"])
+        if row.get("Regional range") and num(row["Regional range"]):
+            # Its yields and Amenities reach the owner's cities this near its plot (03: the Colosseum and Jebel Barkal 6
+            # tiles; the Estadio do Maracana's 100000 is every city).
+            w["regionalRange"] = num(row["Regional range"])
         # A building the city needs first, any one of them (03: BuildingPrereqs: the Great Library needs a Library).
         if row.get("Requires"):
             w["requiresAny"] = ["BUILDING_" + snake(b.strip()) for b in row["Requires"].split(" or ")]

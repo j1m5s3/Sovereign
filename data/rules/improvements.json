@@ -87,6 +87,11 @@
    "plunder": {
     "kind": "FAITH",
     "amount": 25
+   },
+   "wonderAmenity": {
+    "wonder": "BUILDING_TEMPLE_OF_ARTEMIS",
+    "range": 4,
+    "amount": 1
    }
   },
   {
@@ -484,6 +489,11 @@
     "source": "CULTURE",
     "percent": 100,
     "after": "TECH_FLIGHT"
+   },
+   "wonderAmenity": {
+    "wonder": "BUILDING_TEMPLE_OF_ARTEMIS",
+    "range": 4,
+    "amount": 1
    }
   },
   {
@@ -537,6 +547,11 @@
     "source": "CULTURE",
     "percent": 100,
     "after": "TECH_FLIGHT"
+   },
+   "wonderAmenity": {
+    "wonder": "BUILDING_TEMPLE_OF_ARTEMIS",
+    "range": 4,
+    "amount": 1
    }
   },
   {
