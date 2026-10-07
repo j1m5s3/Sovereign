@@ -717,3 +717,19 @@ TEST(the_consulate_and_the_chancery_add_influence) {
     CHECK_EQ(influence({"BUILDING_CONSULATE"}), none + 2);
     CHECK_EQ(influence({"BUILDING_CONSULATE", "BUILDING_CHANCERY"}), none + 5);
 }
+
+TEST(hattusa_gives_strategics_its_suzerain_has_not_improved) {
+    // Player 0's Horses, revealed, on its own land but not improved: Hattusa's suzerain gets 2 a turn of them.
+    const auto horsesAfterATurn = [](const char* id) {
+        GameState s = csState();
+        s.players[2].cityState = rules().cityState(id);
+        s.players[0].envoys[2] = 3;
+        for (Player& p : s.players) p.relations.resize(3);
+        s.players[0].techs.done[at(rules().tech("TECH_ANIMAL_HUSBANDRY"))] = 1;
+        s.plot({5, 6}).resource = rules().resource("RESOURCE_HORSES");
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 3);  // round to player 0's next turn
+        return g->state().players[0].stockpile[at(rules().resource("RESOURCE_HORSES"))];
+    };
+    CHECK_EQ(horsesAfterATurn("CITYSTATE_HATTUSA"), horsesAfterATurn("CITYSTATE_MITLA") + 2);
+}
