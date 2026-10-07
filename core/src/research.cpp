@@ -157,6 +157,11 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
         }
         return n;
     };
+    // A civ's unique unit stands in for the unit it replaces.
+    auto unitIs = [&](TypeIndex type, TypeIndex ref) { return type == ref || rules_->units[static_cast<size_t>(type)].replaces == ref; };
+    auto wonderEra = [&](const BuildingType& bt) {
+        return bt.unlock.none() ? 0 : (bt.unlock.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(bt.unlock.index)].era;
+    };
     switch (b.kind) {
         case BoostKind::None:
         case BoostKind::NotTracked:
@@ -166,7 +171,7 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
         case BoostKind::Building:
             return countCities([&](const City& c) { return cityHasBuilding(c, *rules_, b.ref); }) >= b.count;  // a civ's unique counts
         case BoostKind::OwnUnits:
-            return countUnits([&](const Unit& u) { return u.type == b.ref; }) >= b.count;
+            return countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) >= b.count;
         case BoostKind::Tech: return p.techs.has(b.ref);
         case BoostKind::Civic: return p.civics.has(b.ref);
         case BoostKind::GovernmentTier:
@@ -196,6 +201,129 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
                     return true;
             }
             return false;
+        case BoostKind::District:
+            return countCities([&](const City& c) { return c.district(b.ref, true) != nullptr; }) >= b.count;
+        case BoostKind::SpecialtyDistricts: {
+            std::vector<uint8_t> seen(rules_->districts.size(), 0);
+            int kinds = 0;
+            for (const City& c : state_.cities) {
+                if (c.owner != player) continue;
+                for (const CityDistrict& d : c.districts) {
+                    const size_t k = static_cast<size_t>(d.type);
+                    if (!d.complete || !rules_->districts[k].needsPopulation || seen[k]) continue;
+                    seen[k] = 1;
+                    ++kinds;
+                }
+            }
+            return kinds >= b.count;
+        }
+        case BoostKind::TradeRoutes:
+            return std::count_if(state_.tradeRoutes.begin(), state_.tradeRoutes.end(), [&](const TradeRoute& r) { return r.owner == player; }) >= b.count;
+        case BoostKind::MetCivs:
+        case BoostKind::MetCityStates: {
+            int n = 0;
+            for (const Player& o : state_.players) {
+                if (o.id == player || static_cast<size_t>(o.id) >= p.met.size() || !p.met[static_cast<size_t>(o.id)]) continue;
+                n += (b.kind == BoostKind::MetCivs ? isMajorCiv(o.id) : isCityState(o.id)) ? 1 : 0;
+            }
+            return n >= b.count;
+        }
+        case BoostKind::Pantheon: return p.pantheon != kNone;
+        case BoostKind::Religion: return p.religion >= 0;
+        case BoostKind::FollowingCities: {
+            if (p.religion < 0) return false;
+            int n = 0;
+            for (const City& c : state_.cities) n += cityMajorityReligion(c) == p.religion ? 1 : 0;
+            return n >= b.count;
+        }
+        case BoostKind::Alliance:
+            for (const Player& o : state_.players) {
+                if (o.id != player && allianceLevel(player, o.id) >= b.count) return true;
+            }
+            return false;
+        case BoostKind::GreatPeople: {
+            int n = 0;
+            for (int k : p.greatPeopleRecruited) n += k;
+            return n >= b.count;
+        }
+        case BoostKind::Corps:
+        case BoostKind::Armies: {
+            const uint8_t formation = b.kind == BoostKind::Corps ? 1 : 2;
+            return countUnits([&](const Unit& u) { return u.formation == formation; }) >= b.count;
+        }
+        case BoostKind::DistrictAppeal:
+            for (const City& c : state_.cities) {
+                const CityDistrict* d = c.owner == player ? c.district(b.ref, true) : nullptr;
+                if (d && plotAppeal(d->pos) >= b.count) return true;
+            }
+            return false;
+        case BoostKind::ThemedBuildings: {
+            int n = 0;
+            for (const City& c : state_.cities) {
+                if (c.owner != player) continue;
+                for (TypeIndex bi : c.buildings) n += themed(c, bi) ? 1 : 0;
+            }
+            return n >= b.count;
+        }
+        case BoostKind::BuildingNextToMountain:
+            // The building's district (the University's Campus) stands next to a Mountain.
+            for (const City& c : state_.cities) {
+                if (c.owner != player || !cityHasBuilding(c, *rules_, b.ref)) continue;
+                const CityDistrict* d = c.district(rules_->buildings[static_cast<size_t>(b.ref)].districtType, true);
+                if (!d) continue;
+                for (const Hex& n : state_.grid.within(d->pos, 1)) {
+                    if (rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain) return true;
+                }
+            }
+            return false;
+        case BoostKind::Wonders:
+        case BoostKind::WonderFromEra: {
+            int n = 0;
+            for (const City& c : state_.cities) {
+                if (c.owner != player) continue;
+                for (TypeIndex bi : c.buildings) {
+                    const BuildingType& bt = rules_->buildings[static_cast<size_t>(bi)];
+                    if (bt.wonder && (b.kind == BoostKind::Wonders || wonderEra(bt) >= b.count)) ++n;
+                }
+            }
+            return n >= (b.kind == BoostKind::Wonders ? b.count : 1);
+        }
+        case BoostKind::UnitAndImprovement:
+            if (countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) == 0) return false;
+            for (const Plot& pl : state_.plots) {
+                if (pl.owner == player && pl.improvement == b.improvement && (b.resource == kNone || pl.resource == b.resource)) return true;
+            }
+            return false;
+        case BoostKind::AirBaseAbroad: {
+            // An Aerodrome or an Airstrip on another continent than the capital's (Sovereign: every landmass is one).
+            const City* capital = nullptr;
+            for (const City& c : state_.cities) capital = c.owner == player && c.capital ? &c : capital;
+            if (!capital) return false;
+            const int16_t home = state_.plot(capital->pos).continent;
+            for (const City& c : state_.cities) {
+                if (c.owner != player) continue;
+                for (const CityDistrict& d : c.districts) {
+                    if (d.complete && rules_->districts[static_cast<size_t>(d.type)].airSlots > 0 && state_.plot(d.pos).continent != home) return true;
+                }
+            }
+            for (const Plot& pl : state_.plots) {
+                if (pl.owner == player && pl.improvement != kNone && rules_->improvements[static_cast<size_t>(pl.improvement)].airSlots > 0 &&
+                    pl.continent != home)
+                    return true;
+            }
+            return false;
+        }
+        case BoostKind::Continents: {
+            // Land of this many continents revealed (Sovereign: every landmass is one).
+            std::vector<int16_t> seen;
+            for (size_t i = 0; i < state_.plots.size() && i < p.visibility.size(); ++i) {
+                const int16_t k = state_.plots[i].continent;
+                if (k < 0 || p.visibility[i] == static_cast<uint8_t>(Visibility::Unrevealed) || std::find(seen.begin(), seen.end(), k) != seen.end()) continue;
+                seen.push_back(k);
+                if (static_cast<int>(seen.size()) >= b.count) return true;
+            }
+            return false;
+        }
     }
     return false;
 }

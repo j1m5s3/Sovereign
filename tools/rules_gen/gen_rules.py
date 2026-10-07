@@ -1139,9 +1139,10 @@ def lookup(name, ids):
     return None
 
 
-def boost_trigger(text):
+def boost_trigger(text, era=None):
     """Turn a boost condition into {type, ref, count}. "NONE" means no condition
-    can earn it; conditions the rules core cannot read are "UNTRACKED"."""
+    can earn it; conditions the rules core cannot read are "UNTRACKED". `era` is
+    the node's own era (for "a wonder of a later era")."""
     units = {r["Unit"]: "UNIT_" + snake(r["Unit"]) for r in table(SPEC / "units.md", "Units") if not r.get("Unique to")}
     buildings = {r["Building"]: "BUILDING_" + snake(r["Building"])
                  for r in table(SPEC / "buildings.md", "Buildings") if not r.get("Unique to")}
@@ -1197,6 +1198,58 @@ def boost_trigger(text):
     m = re.fullmatch(r"have (\d+) different specialty districts", t)
     if m:
         return {"type": "SPECIALTY_DISTRICTS", "count": int(m.group(1))}
+    m = re.fullmatch(r"have (a|an|\d+) trade routes?", t)
+    if m:
+        return {"type": "TRADE_ROUTES", "count": count(m.group(1))}
+    if t == "meet another civilization":
+        return {"type": "MET_CIVS", "count": 1}
+    m = re.fullmatch(r"meet (\d+) city-states", t)
+    if m:
+        return {"type": "MET_CITY_STATES", "count": int(m.group(1))}
+    if t in ("found a pantheon", "found a religion"):
+        return {"type": t.split()[-1].upper()}
+    m = re.fullmatch(r"have (\d+) cities following your religion", t)
+    if m:
+        return {"type": "FOLLOWING_CITIES", "count": int(m.group(1))}
+    m = re.fullmatch(r"have an alliance|have a level (\d+) alliance", t)
+    if m:
+        return {"type": "ALLIANCE", "count": int(m.group(1) or 1)}
+    m = re.fullmatch(r"earn (\d+) Great People", t)
+    if m:
+        return {"type": "GREAT_PEOPLE", "count": int(m.group(1))}
+    m = re.fullmatch(r"have (\d+) (corps|armies)", t)
+    if m:
+        return {"type": m.group(2).upper(), "count": int(m.group(1))}
+    m = re.fullmatch(r"have an? (.+) with appeal (\d+)\+", t)
+    if m and lookup(m.group(1), districts):
+        return {"type": "DISTRICT_APPEAL", "ref": lookup(m.group(1), districts), "count": int(m.group(2))}
+    m = re.fullmatch(r"have (a|\d+) themed buildings?", t)
+    if m:
+        return {"type": "THEMED_BUILDINGS", "count": count(m.group(1))}
+    m = re.fullmatch(r"build an? (.+) next to a mountain", t)
+    if m and lookup(m.group(1), buildings):
+        return {"type": "BUILDING_NEXT_TO_MOUNTAIN", "ref": lookup(m.group(1), buildings)}
+    m = re.fullmatch(r"build (a|\d+) wonders?", t)
+    if m:
+        return {"type": "WONDERS", "count": count(m.group(1))}
+    eras = ["ERA_" + e.upper() for e in ERAS]
+    if t == "build a wonder of a later era" and era in eras[1:]:
+        # The table drops the era: Civ VI asks for a wonder of the era before the node's or later (Buttress: Classical,
+        # Flight: Industrial; 04).
+        return {"type": "WONDER_FROM_ERA", "era": eras[eras.index(era) - 1]}
+    m = re.fullmatch(r"have an? (.+?) and an? (.+?)(?: on (.+))?", t)
+    if m and lookup(m.group(1), units) and lookup(m.group(2), improvements) and (not m.group(3) or m.group(3) in resources):
+        b = {"type": "UNIT_AND_IMPROVEMENT", "ref": lookup(m.group(1), units), "improvement": lookup(m.group(2), improvements)}
+        if m.group(3):
+            b["resource"] = resources[m.group(3)]
+        elif b["improvement"] == "IMPROVEMENT_MINE" and b["ref"] == "UNIT_IRONCLAD":
+            b["resource"] = "RESOURCE_COAL"  # tables extracted before the resource was named: Steel's is a Coal Mine (04)
+        return b
+    if t == "build an aerodrome/airstrip on a foreign continent":
+        return {"type": "AIR_BASE_ABROAD"}
+    m = re.fullmatch(r"discover a second continent|discover (\d+) continents", t)
+    if m:
+        return {"type": "CONTINENTS", "count": int(m.group(1) or 2)}
     if not t or t.lower().startswith("none"):
         return {"type": "NONE"}
     return {"type": "UNTRACKED"}
@@ -1586,7 +1639,7 @@ def gen_tree(kind, name_col, prefix, key):
             n["embarkedMoves"] = int(m.group(1))
         if row["Boost %"]:
             n["boost"] = {"percent": num(row["Boost %"]), "text": row["Boost condition"],
-                          **boost_trigger(row["Boost condition"])}
+                          **boost_trigger(row["Boost condition"], era)}
         out.append(n)
     # Future-era nodes get random prerequisites in Civ VI (Tree Randomizer).
     # Sovereign: a Future node without prerequisites needs the whole Information era.

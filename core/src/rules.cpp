@@ -1343,25 +1343,61 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"IMPROVEMENT_ON_RESOURCE", BoostKind::ImprovementOnResource},
                 {"IMPROVE_RESOURCE", BoostKind::ImproveResource},
                 {"IMPROVED_TILES", BoostKind::ImprovedTiles},
+                {"DISTRICT", BoostKind::District},
+                {"SPECIALTY_DISTRICTS", BoostKind::SpecialtyDistricts},
+                {"TRADE_ROUTES", BoostKind::TradeRoutes},
+                {"MET_CIVS", BoostKind::MetCivs},
+                {"MET_CITY_STATES", BoostKind::MetCityStates},
+                {"PANTHEON", BoostKind::Pantheon},
+                {"RELIGION", BoostKind::Religion},
+                {"FOLLOWING_CITIES", BoostKind::FollowingCities},
+                {"ALLIANCE", BoostKind::Alliance},
+                {"GREAT_PEOPLE", BoostKind::GreatPeople},
+                {"CORPS", BoostKind::Corps},
+                {"ARMIES", BoostKind::Armies},
+                {"DISTRICT_APPEAL", BoostKind::DistrictAppeal},
+                {"THEMED_BUILDINGS", BoostKind::ThemedBuildings},
+                {"BUILDING_NEXT_TO_MOUNTAIN", BoostKind::BuildingNextToMountain},
+                {"WONDERS", BoostKind::Wonders},
+                {"WONDER_FROM_ERA", BoostKind::WonderFromEra},
+                {"UNIT_AND_IMPROVEMENT", BoostKind::UnitAndImprovement},
+                {"AIR_BASE_ABROAD", BoostKind::AirBaseAbroad},
+                {"CONTINENTS", BoostKind::Continents},
             };
             b.kind = BoostKind::NotTracked;
             for (const auto& [k, v] : kinds) if (b.type == k) b.kind = v;
             switch (b.kind) {
-                case BoostKind::Building: b.ref = building(ref); break;
-                case BoostKind::OwnUnits: b.ref = unit(ref); break;
+                case BoostKind::Building:
+                case BoostKind::BuildingNextToMountain: b.ref = building(ref); break;
+                case BoostKind::OwnUnits:
+                case BoostKind::UnitAndImprovement: b.ref = unit(ref); break;
                 case BoostKind::Tech: b.ref = tech(ref); break;
                 case BoostKind::Civic: b.ref = civic(ref); break;
                 case BoostKind::Improvement:
                 case BoostKind::ImprovementOnResource: b.ref = improvement(ref); break;
                 case BoostKind::ImproveResource: b.ref = resource(ref); break;
+                case BoostKind::District:
+                case BoostKind::DistrictAppeal: b.ref = district(ref); break;
                 default: break;
             }
             const bool needsRef = b.kind == BoostKind::Building || b.kind == BoostKind::OwnUnits ||
                                   b.kind == BoostKind::Tech || b.kind == BoostKind::Civic ||
                                   b.kind == BoostKind::Improvement || b.kind == BoostKind::ImprovementOnResource ||
-                                  b.kind == BoostKind::ImproveResource;
+                                  b.kind == BoostKind::ImproveResource || b.kind == BoostKind::District ||
+                                  b.kind == BoostKind::DistrictAppeal || b.kind == BoostKind::BuildingNextToMountain ||
+                                  b.kind == BoostKind::UnitAndImprovement;
+            if (b.kind == BoostKind::UnitAndImprovement) {
+                b.improvement = improvement(bj["improvement"].str());
+                if (bj.has("resource")) b.resource = resource(bj["resource"].str());
+                if (b.improvement == kNone || (bj.has("resource") && b.resource == kNone)) b.ref = kNone;
+            }
+            if (b.kind == BoostKind::WonderFromEra) {
+                const TypeIndex e = era(bj["era"].str());
+                if (e == kNone) b.kind = BoostKind::NotTracked;
+                b.count = static_cast<int>(e);
+            }
             if (needsRef && b.ref == kNone) {
-                // A reference the rules do not define (e.g. a Great Person unit) cannot fire yet.
+                // A reference the rules do not define cannot fire.
                 b.kind = BoostKind::NotTracked;
             }
         }

@@ -129,7 +129,7 @@ Status: proposed by Claude from each civ's historical specialty, at James's requ
 
 Movement on a kind of ground (the War Chariot on flat land, the Mandinka Lancer in desert, the Chasqui, Cyrus's Royal Road and Pachacuti's Earthshaker on roads) counts where the unit's turn starts, as Civ VI's own terrain movement bonuses do; the War Chariot keeps the Heavy Chariot's +1 on open ground.
 
-A unique building stands in for the one it replaces wherever a rule names that building: building and wonder prerequisites (the Calmecac opens the Great Library), Apostles and worship buildings (the Sahel Mosque is a Temple), city-state envoy bonuses, Eureka and Inspiration counts, Religious Community, and the Lighthouse's trade route, which a city with Rome's Forum does not get, as it would not with a Market.
+A unique building stands in for the one it replaces wherever a rule names that building: building and wonder prerequisites (the Calmecac opens the Great Library), Apostles and worship buildings (the Sahel Mosque is a Temple), city-state envoy bonuses, Eureka and Inspiration counts, Religious Community, and the Lighthouse's trade route, which a city with Rome's Forum does not get, as it would not with a Market. A unique unit likewise counts as the unit it replaces toward Eurekas and Inspirations (China's Repeating Crossbows toward Metal Casting's two Crossbowmen).
 
 **Dynasties (heirs).** Two hand-made successors per launch leader, in historical order; after them, successors come from the pool. Each heir brings a small personal trait (to design with the art pass).
 

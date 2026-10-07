@@ -36,7 +36,8 @@
    "boost": {
     "percent": 40,
     "text": "discover a second continent",
-    "type": "UNTRACKED"
+    "type": "CONTINENTS",
+    "count": 2
    }
   },
   {
@@ -68,7 +69,7 @@
    "boost": {
     "percent": 40,
     "text": "found a pantheon",
-    "type": "UNTRACKED"
+    "type": "PANTHEON"
    }
   },
   {
@@ -131,7 +132,8 @@
    "boost": {
     "percent": 40,
     "text": "meet 3 city-states",
-    "type": "UNTRACKED"
+    "type": "MET_CITY_STATES",
+    "count": 3
    }
   },
   {
@@ -145,7 +147,8 @@
    "boost": {
     "percent": 40,
     "text": "build a wonder",
-    "type": "UNTRACKED"
+    "type": "WONDERS",
+    "count": 1
    }
   },
   {
@@ -179,7 +182,7 @@
    "boost": {
     "percent": 40,
     "text": "found a religion",
-    "type": "UNTRACKED"
+    "type": "RELIGION"
    }
   },
   {
@@ -306,7 +309,8 @@
    "boost": {
     "percent": 40,
     "text": "have 4 trade routes",
-    "type": "UNTRACKED"
+    "type": "TRADE_ROUTES",
+    "count": 4
    }
   },
   {
@@ -355,7 +359,8 @@
    "boost": {
     "percent": 40,
     "text": "have 6 cities following your religion",
-    "type": "UNTRACKED"
+    "type": "FOLLOWING_CITIES",
+    "count": 6
    }
   },
   {
@@ -387,7 +392,8 @@
    "boost": {
     "percent": 40,
     "text": "have an alliance",
-    "type": "UNTRACKED"
+    "type": "ALLIANCE",
+    "count": 1
    }
   },
   {
@@ -418,7 +424,8 @@
    "boost": {
     "percent": 40,
     "text": "earn 3 Great People",
-    "type": "UNTRACKED"
+    "type": "GREAT_PEOPLE",
+    "count": 3
    }
   },
   {
@@ -546,7 +553,9 @@
    "boost": {
     "percent": 40,
     "text": "have a Neighborhood with appeal 4+",
-    "type": "UNTRACKED"
+    "type": "DISTRICT_APPEAL",
+    "ref": "DISTRICT_NEIGHBORHOOD",
+    "count": 4
    }
   },
   {
@@ -577,7 +586,8 @@
    "boost": {
     "percent": 40,
     "text": "have 3 corps",
-    "type": "UNTRACKED"
+    "type": "CORPS",
+    "count": 3
    }
   },
   {
@@ -683,7 +693,8 @@
    "boost": {
     "percent": 40,
     "text": "have a themed building",
-    "type": "UNTRACKED"
+    "type": "THEMED_BUILDINGS",
+    "count": 1
    }
   },
   {
@@ -729,7 +740,7 @@
    "boost": {
     "percent": 40,
     "text": "build an aerodrome/airstrip on a foreign continent",
-    "type": "UNTRACKED"
+    "type": "AIR_BASE_ABROAD"
    }
   },
   {
