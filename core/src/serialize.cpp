@@ -436,6 +436,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, p.warWeariness);
         w.i32(p.wmdsLaunched);
         w.i32(p.killsThisEra);
+        w.i32(p.barbarianKills);
         w.i32(p.rulingHeir);
         w.i64(p.co2);
         for (const TreeProgress* t : {&p.techs, &p.civics}) {
@@ -913,6 +914,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, p.warWeariness)) return false;
         p.wmdsLaunched = r.i32();
         p.killsThisEra = r.i32();
+        p.barbarianKills = r.i32();
         p.rulingHeir = r.i32();
         p.co2 = r.i64();
         for (TreeProgress* t : {&p.techs, &p.civics}) {

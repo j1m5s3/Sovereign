@@ -79,6 +79,7 @@ CommandError Game::parkProblem(PlayerId player, UnitId id) const {
 void Game::designatePark(UnitId id) {
     const auto plots = parkPlots(id);
     awardFirst(state_.unit(id)->owner, "MOMENT_WORLD_S_FIRST_NATIONAL_PARK", "MOMENT_NATIONAL_PARK_FOUNDED", 0);
+    eventBoost(state_.unit(id)->owner, BoostKind::NationalPark);  // 04: Radio
     if (plots) for (const Hex& h : *plots) state_.plot(h).park = true;
     removeUnit(id);
 }

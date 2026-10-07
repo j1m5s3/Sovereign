@@ -39,7 +39,7 @@
    "boost": {
     "percent": 40,
     "text": "discover a natural wonder",
-    "type": "UNTRACKED"
+    "type": "NATURAL_WONDER"
    }
   },
   {
@@ -84,7 +84,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Slinger",
-    "type": "UNTRACKED"
+    "type": "KILL_WITH",
+    "ref": "UNIT_SLINGER"
    }
   },
   {
@@ -114,7 +115,8 @@
    "boost": {
     "percent": 40,
     "text": "kill 3 barbarians",
-    "type": "UNTRACKED"
+    "type": "BARBARIAN_KILLS",
+    "count": 3
    }
   },
   {
@@ -291,7 +293,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Spearman",
-    "type": "UNTRACKED"
+    "type": "KILL_WITH",
+    "ref": "UNIT_SPEARMAN"
    }
   },
   {
@@ -491,7 +494,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Musketman",
-    "type": "UNTRACKED"
+    "type": "KILL_WITH",
+    "ref": "UNIT_MUSKETMAN"
    }
   },
   {
@@ -602,7 +606,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Knight",
-    "type": "UNTRACKED"
+    "type": "KILL_WITH",
+    "ref": "UNIT_KNIGHT"
    }
   },
   {
@@ -764,7 +769,7 @@
    "boost": {
     "percent": 40,
     "text": "create a National Park",
-    "type": "UNTRACKED"
+    "type": "NATIONAL_PARK"
    }
   },
   {
@@ -796,7 +801,7 @@
    "boost": {
     "percent": 40,
     "text": "extract an artifact",
-    "type": "UNTRACKED"
+    "type": "ARTIFACT"
    }
   },
   {
@@ -969,7 +974,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a Fighter",
-    "type": "UNTRACKED"
+    "type": "KILL_UNIT",
+    "ref": "UNIT_FIGHTER"
    }
   },
   {

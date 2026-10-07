@@ -35,9 +35,12 @@ TEST(battles_become_antiquity_sites_and_archaeologists_dig_them) {
     for (const Plot& p : g->state().plots) land += p.antiquity == 1 ? 1 : 0;
     CHECK_EQ(land, 2 * rules().globalInt("ARCHAEOLOGY_SITES_PER_CIV_LAND"));
     const size_t works = g->state().cities[0].greatWorks.size();
+    const size_t combustion = static_cast<size_t>(rules().tech("TECH_COMBUSTION"));
+    CHECK_EQ(g->state().players[0].techs.boosted[combustion], 0);
     REQUIRE(g->submit(Command::excavate(0, dig)) == CommandError::Ok);
     CHECK_EQ(g->state().plot({6, 6}).antiquity, 0);
     CHECK(sovtest::hasMoment(*g, 0, "MOMENT_ARTIFACT_EXTRACTED"));  // 09
+    CHECK_EQ(g->state().players[0].techs.boosted[combustion], 1);    // 04: Combustion's Eureka
     REQUIRE(g->state().cities[0].greatWorks.size() == works + 1);
     CHECK_EQ(g->state().cities[0].greatWorks.back().era, 1);
     CHECK_EQ(g->state().cities[0].greatWorks.back().civ, g->state().players[1].civ);

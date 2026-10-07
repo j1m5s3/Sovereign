@@ -776,13 +776,7 @@ void Game::refreshVisibility(PlayerId pid) {
             relic.amount = 1;
             applyEffectAt(pid, nullptr, Hex{}, relic);
         }
-        const TypeIndex astrology = rules_->tech("TECH_ASTROLOGY");
-        TreeProgress& t = p.techs;
-        if (astrology != kNone && static_cast<size_t>(astrology) < t.done.size() && !t.done[static_cast<size_t>(astrology)] && !t.boosted[static_cast<size_t>(astrology)]) {
-            const int pct = rules_->techs[static_cast<size_t>(astrology)].boost.percent > 0 ? rules_->techs[static_cast<size_t>(astrology)].boost.percent : 40;
-            t.boosted[static_cast<size_t>(astrology)] = 1;
-            t.progress[static_cast<size_t>(astrology)] += Fixed::fromInt(techCost(astrology)) * pct / 100;
-        }
+        eventBoost(pid, BoostKind::NaturalWonder);  // 04: Astrology
     }
 }
 

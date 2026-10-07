@@ -169,6 +169,9 @@ void Game::declareWarOn(PlayerId by, PlayerId target, CasusBelli why) {
     Relation& mine = state_.players[static_cast<size_t>(by)].relations[static_cast<size_t>(target)];
     Relation& theirs = state_.players[static_cast<size_t>(target)].relations[static_cast<size_t>(by)];
     onWarDeclared(by, target, why);
+    // Boosts (04): Defensive Tactics for the target; Nationalism for a war with a casus belli (a Joint War is a deal).
+    eventBoost(target, BoostKind::WarDeclaredOn);
+    if (why != CasusBelli::None && why != CasusBelli::JointWar) eventBoost(by, BoostKind::CasusBelliWar);
     for (Relation* r : {&mine, &theirs}) {
         r->war = true;
         r->since = state_.turn;

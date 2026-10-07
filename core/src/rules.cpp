@@ -1363,6 +1363,15 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 {"UNIT_AND_IMPROVEMENT", BoostKind::UnitAndImprovement},
                 {"AIR_BASE_ABROAD", BoostKind::AirBaseAbroad},
                 {"CONTINENTS", BoostKind::Continents},
+                {"BARBARIAN_KILLS", BoostKind::BarbarianKills},
+                {"KILL_WITH", BoostKind::KillWith},
+                {"KILL_UNIT", BoostKind::KillUnit},
+                {"CLEAR_CAMP", BoostKind::ClearCamp},
+                {"WAR_DECLARED_ON", BoostKind::WarDeclaredOn},
+                {"CASUS_BELLI_WAR", BoostKind::CasusBelliWar},
+                {"ARTIFACT", BoostKind::Artifact},
+                {"NATIONAL_PARK", BoostKind::NationalPark},
+                {"NATURAL_WONDER", BoostKind::NaturalWonder},
             };
             b.kind = BoostKind::NotTracked;
             for (const auto& [k, v] : kinds) if (b.type == k) b.kind = v;
@@ -1370,7 +1379,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 case BoostKind::Building:
                 case BoostKind::BuildingNextToMountain: b.ref = building(ref); break;
                 case BoostKind::OwnUnits:
-                case BoostKind::UnitAndImprovement: b.ref = unit(ref); break;
+                case BoostKind::UnitAndImprovement:
+                case BoostKind::KillWith:
+                case BoostKind::KillUnit: b.ref = unit(ref); break;
                 case BoostKind::Tech: b.ref = tech(ref); break;
                 case BoostKind::Civic: b.ref = civic(ref); break;
                 case BoostKind::Improvement:
@@ -1385,7 +1396,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                                   b.kind == BoostKind::Improvement || b.kind == BoostKind::ImprovementOnResource ||
                                   b.kind == BoostKind::ImproveResource || b.kind == BoostKind::District ||
                                   b.kind == BoostKind::DistrictAppeal || b.kind == BoostKind::BuildingNextToMountain ||
-                                  b.kind == BoostKind::UnitAndImprovement;
+                                  b.kind == BoostKind::UnitAndImprovement || b.kind == BoostKind::KillWith ||
+                                  b.kind == BoostKind::KillUnit;
             if (b.kind == BoostKind::UnitAndImprovement) {
                 b.improvement = improvement(bj["improvement"].str());
                 if (bj.has("resource")) b.resource = resource(bj["resource"].str());

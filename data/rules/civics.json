@@ -54,7 +54,7 @@
    "boost": {
     "percent": 40,
     "text": "clear a barbarian camp",
-    "type": "UNTRACKED"
+    "type": "CLEAR_CAMP"
    }
   },
   {
@@ -197,7 +197,7 @@
    "boost": {
     "percent": 40,
     "text": "be the target of a war declaration",
-    "type": "UNTRACKED"
+    "type": "WAR_DECLARED_ON"
    }
   },
   {
@@ -229,7 +229,8 @@
    "boost": {
     "percent": 40,
     "text": "kill a unit with a Quadrireme",
-    "type": "UNTRACKED"
+    "type": "KILL_WITH",
+    "ref": "UNIT_QUADRIREME"
    }
   },
   {
@@ -488,7 +489,7 @@
    "boost": {
     "percent": 40,
     "text": "declare war using a casus belli",
-    "type": "UNTRACKED"
+    "type": "CASUS_BELLI_WAR"
    }
   },
   {

@@ -1250,6 +1250,21 @@ def boost_trigger(text, era=None):
     m = re.fullmatch(r"discover a second continent|discover (\d+) continents", t)
     if m:
         return {"type": "CONTINENTS", "count": int(m.group(1) or 2)}
+    m = re.fullmatch(r"kill (\d+) barbarians", t)
+    if m:
+        return {"type": "BARBARIAN_KILLS", "count": int(m.group(1))}
+    # Events, earned as they happen.
+    m = re.fullmatch(r"kill a unit with an? (.+)", t)
+    if m and lookup(m.group(1), units):
+        return {"type": "KILL_WITH", "ref": lookup(m.group(1), units)}
+    m = re.fullmatch(r"kill an? (.+)", t)
+    if m and lookup(m.group(1), units):
+        return {"type": "KILL_UNIT", "ref": lookup(m.group(1), units)}
+    events = {"clear a barbarian camp": "CLEAR_CAMP", "be the target of a war declaration": "WAR_DECLARED_ON",
+              "declare war using a casus belli": "CASUS_BELLI_WAR", "extract an artifact": "ARTIFACT",
+              "create a National Park": "NATIONAL_PARK", "discover a natural wonder": "NATURAL_WONDER"}
+    if t in events:
+        return {"type": events[t]}
     if not t or t.lower().startswith("none"):
         return {"type": "NONE"}
     return {"type": "UNTRACKED"}

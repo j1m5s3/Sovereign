@@ -677,6 +677,8 @@ private:
     void processResearch(PlayerId p, Fixed science, Fixed culture);
     void completeNode(PlayerId p, bool civic, TypeIndex node);
     void updateBoosts(PlayerId p);
+    void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
+    void eventBoost(PlayerId p, BoostKind kind, TypeIndex ref = kNone);  // boosts of this event kind (a kill, a camp...)
     CommandError validateBuilder(const Command& c) const;
     void applyBuilder(const Command& c);
     void accumulateStrategics(PlayerId p);
