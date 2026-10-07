@@ -1248,6 +1248,10 @@ bool Game::completeItem(City& city, ProductionItem item) {
         for (CityDistrict& d : city.districts) {
             if (d.type != item.type) continue;
             d.complete = true;
+            // The Diplomatic Quarter [GS]: an envoy when it is built beside the City Center (Rogue State: none, 09).
+            const int envoys = rules_->districts[static_cast<size_t>(d.type)].envoysNextToCityCenter;
+            if (envoys > 0 && state_.grid.distance(d.pos, city.pos) == 1 && !policyIs(city.owner, "POLICY_ROGUE_STATE"))
+                state_.players[static_cast<size_t>(city.owner)].envoyTokens += envoys;
             // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it; Mimar Sinan (07) an Industrial Zone.
             const std::string& kind = rules_->districts[static_cast<size_t>(d.type)].id;
             // Historic moments (09).

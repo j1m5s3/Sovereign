@@ -848,6 +848,16 @@ def gen_districts():
                 d["housing"] = num(row["Housing"])
             if row["Amenity"]:
                 d["amenities"] = num(row["Amenity"])
+            mods = extra[name]["Modifiers"] or ""
+            m = re.search(r"\+(\d+) Amenity where district is [\w ]+ and adjacent to ([^;]+)", mods)
+            if m:
+                d["amenityNextTo"] = {"feature": FEATURE_NAMES[m.group(2).strip()], "amount": int(m.group(1))}  # an Aqueduct by a Geothermal Fissure [GS]
+            m = re.search(r"grants (\d+) Envoy\(s\) where adjacent to City Center", mods)
+            if m:
+                d["envoysNextToCityCenter"] = int(m.group(1))  # once built beside its City Center (Diplomatic Quarter [GS])
+            m = re.search(r"adjust district within one hex espionage defense bonus \(Amount=(\d+)\)", mods)
+            if m:
+                d["spyDefenseLevels"] = int(m.group(1))  # enemy spies this many levels lower against it and the districts beside it
             if row["Appeal"]:
                 d["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
             if "aqueduct rules" in flags:

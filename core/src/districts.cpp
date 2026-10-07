@@ -224,9 +224,14 @@ int Game::districtAmenities(const City& city) const {
     const bool works = cityGovernorHas(city, "GOVERNOR_PROMOTION_WATER_WORKS");  // Liang
     for (const CityDistrict& cd : city.districts) {
         if (!cd.complete) continue;
-        total += rules_->districts[static_cast<size_t>(cd.type)].amenities;
-        const std::string& id = rules_->districts[static_cast<size_t>(cd.type)].id;
-        if (works && (id == "DISTRICT_CANAL" || id == "DISTRICT_DAM")) total += 1;
+        const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
+        total += d.amenities;
+        if (works && (d.id == "DISTRICT_CANAL" || d.id == "DISTRICT_DAM")) total += 1;
+        if (d.amenityFeature != kNone) {
+            const auto beside = state_.grid.within(cd.pos, 1);
+            if (std::any_of(beside.begin(), beside.end(), [&](const Hex& n) { return n != cd.pos && state_.plot(n).feature == d.amenityFeature; }))
+                total += d.amenityFeatureAmount;
+        }
     }
     return total;
 }

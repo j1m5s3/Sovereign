@@ -476,6 +476,10 @@
    "needsPopulation": false,
    "maintenance": 0,
    "adjacency": [],
+   "amenityNextTo": {
+    "feature": "FEATURE_GEOTHERMAL_FISSURE",
+    "amount": 1
+   },
    "appeal": 0,
    "aqueduct": true,
    "preventsDrought": true,
@@ -685,6 +689,8 @@
    "needsPopulation": true,
    "maintenance": 1,
    "adjacency": [],
+   "envoysNextToCityCenter": 1,
+   "spyDefenseLevels": 2,
    "appeal": 0,
    "onePerPlayer": true,
    "tradeYields": {

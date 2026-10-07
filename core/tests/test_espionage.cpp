@@ -411,3 +411,27 @@ TEST(cryptography_sharpens_our_spies_and_blunts_theirs) {
     auto blunt = Game::fromScenario(rules(), std::move(s));
     CHECK(blunt->spySuccessPercent(spy, SpyMission::SiphonFunds, target) < base);
 }
+
+TEST(a_diplomatic_quarter_shields_the_districts_beside_it) {
+    // [GS] Foreign spies work two levels lower against the Diplomatic Quarter and the districts beside it; a
+    // mission with no target district works from the City Center. Their city is at (16,6), its Campus at (17,6)
+    // and its Commercial Hub at (15,6).
+    const auto odds = [](Hex quarter, bool complete, SpyMission m) {
+        GameState s = spyState();
+        CityDistrict dq;
+        dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
+        dq.pos = quarter;
+        dq.complete = complete;
+        s.cities[1].districts.push_back(dq);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->spySuccessPercent(g->state().agents[0].id, m, theirCity(*g));
+    };
+    const Hex far{16, 10};
+    CHECK_EQ(odds(far, true, SpyMission::StealTechBoost), 37);
+    CHECK_EQ(odds({18, 6}, true, SpyMission::StealTechBoost), 16);  // beside the Campus: two steps down
+    CHECK_EQ(odds({18, 6}, false, SpyMission::StealTechBoost), 37);  // not built yet
+    CHECK_EQ(odds({18, 6}, true, SpyMission::SiphonFunds), 50);     // the Commercial Hub is out of reach
+    CHECK_EQ(odds({18, 6}, true, SpyMission::FomentUnrest), odds(far, true, SpyMission::FomentUnrest));
+    CHECK_EQ(odds({16, 7}, true, SpyMission::FomentUnrest), 25);    // beside the City Center
+    CHECK_EQ(odds(far, true, SpyMission::FomentUnrest), 50);
+}
