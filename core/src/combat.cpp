@@ -95,6 +95,18 @@ bool atomHolds(const CombatCondition& c, const ConditionContext& x) {
         case CombatAtom::NearOwnTerritory:
             for (const Hex& h : x.s->grid.within(x.unit->pos, 1)) ok = ok || x.s->plot(h).owner == x.unit->owner;
             break;
+        case CombatAtom::TileFlat: {
+            const TerrainType& t = x.r->terrains[static_cast<size_t>(plot.terrain)];
+            ok = t.relief == Relief::Flat && !t.water;
+            break;
+        }
+        case CombatAtom::TileRoad:
+            ok = typeOf(*x.r, *x.unit).domain == Domain::Land && plot.route >= 0 && !plot.routePillaged;
+            break;
+        case CombatAtom::NextToMountain:
+            for (const Hex& h : x.s->grid.within(x.unit->pos, 1))
+                ok = ok || (h != x.unit->pos && x.r->terrains[static_cast<size_t>(x.s->plot(h).terrain)].relief == Relief::Mountain);
+            break;
     }
     return c.negate ? !ok : ok;
 }
@@ -256,11 +268,18 @@ int Game::maxMoves(const Unit& unit) const {
         moves += static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::EmbarkedMoves).toInt());  // the Great Lighthouse (03)
         return std::max(1, moves);
     }
-    int moves = typeOf(*rules_, unit).moves + unitEffectTotal(unit, UnitEffectKind::Moves) + greatPersonAuraMoves(unit) +
-                ((unit.wonderAbilities & 4) ? 1 : 0);  // the Bermuda Triangle (01)
+    int moves = typeOf(*rules_, unit).moves + greatPersonAuraMoves(unit) + ((unit.wonderAbilities & 4) ? 1 : 0);  // the Bermuda Triangle (01)
+    // Abilities and promotions. A conditional one counts where the unit stands, so where its turn starts: the War
+    // Chariot on flat land, the Mandinka Lancer in desert, the Chasqui and the Royal Road on roads (leaders-and-art-style).
+    const ConditionContext standing{&state_, rules_, &unit, nullptr, nullptr, false, false, cityMaxHp()};
+    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+        if (e.kind == UnitEffectKind::Moves && conditionsHold(e, standing)) moves += e.amount != 0 ? e.amount : 1;
+    });
     // Heavy Chariot (05): +1 when its turn starts on open ground (flat, no feature). The data puts the ability on the
-    // whole Heavy Cavalry line (Tanks too); Civ VI gives the bonus to the Heavy Chariot alone.
-    if (const int open = typeOf(*rules_, unit).id == "UNIT_HEAVY_CHARIOT" ? unitEffectTotal(unit, UnitEffectKind::OpenGroundMoves) : 0; open > 0) {
+    // whole Heavy Cavalry line (Tanks too); Civ VI gives the bonus to the Heavy Chariot alone, and its unique (the War Chariot).
+    const UnitType& own = typeOf(*rules_, unit);
+    const bool chariot = own.id == "UNIT_HEAVY_CHARIOT" || (own.replaces != kNone && rules_->units[static_cast<size_t>(own.replaces)].id == "UNIT_HEAVY_CHARIOT");
+    if (const int open = chariot ? unitEffectTotal(unit, UnitEffectKind::OpenGroundMoves) : 0; open > 0) {
         const Plot& here = state_.plot(unit.pos);
         if (here.feature == kNone && rules_->terrains[static_cast<size_t>(here.terrain)].relief == Relief::Flat) moves += open;
     }

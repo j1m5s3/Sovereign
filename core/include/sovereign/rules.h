@@ -192,6 +192,9 @@ enum class CombatAtom : uint8_t {
     OpponentFreeCity,   // the opponent belongs to the Free Cities
     NearOwnTerritory,   // this unit is in or next to its owner's territory
     NextToFriendlyClass, // a unit of the owner's of class `value` stands next to it (a Drone)
+    TileFlat,           // this unit's plot is flat land (no hills, mountain or water)
+    TileRoad,           // this land unit's plot has a road that is not pillaged
+    NextToMountain,     // a mountain stands next to this unit's plot
 };
 
 struct CombatCondition {

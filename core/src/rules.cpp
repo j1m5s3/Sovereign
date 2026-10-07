@@ -737,6 +737,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"COASTAL_TILE", CombatAtom::CoastalTile},           {"HOME_CONTINENT", CombatAtom::HomeContinent},
             {"OPPONENT_MINOR", CombatAtom::OpponentMinor},       {"OPPONENT_FREE_CITY", CombatAtom::OpponentFreeCity},
             {"NEAR_OWN_TERRITORY", CombatAtom::NearOwnTerritory}, {"NEXT_TO_FRIENDLY_CLASS", CombatAtom::NextToFriendlyClass},
+            {"TILE_FLAT", CombatAtom::TileFlat},                 {"TILE_ROAD", CombatAtom::TileRoad},
+            {"NEXT_TO_MOUNTAIN", CombatAtom::NextToMountain},
         };
         for (const Json& e : list.items()) {
             UnitEffect fx;
