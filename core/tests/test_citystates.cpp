@@ -254,3 +254,29 @@ TEST(suzerain_bonuses_in_code) {
         CHECK_EQ(g->faithPurchaseCost(0, c, monument), g->purchaseCost(0, monument));
     }
 }
+
+TEST(samarkands_trading_domes_pay_international_routes) {
+    // Samarkand (08): its suzerain's international routes earn +1 Gold per Trading Dome of the origin city.
+    const auto routeGold = [](const char* cityState, int domes, bool pillageOne, bool domestic = false) {
+        GameState s = csState();
+        s.players[2].cityState = rules().cityState(cityState);
+        s.players[0].envoys[2] = 3;
+        for (Player& p : s.players) p.relations.resize(3);
+        const Hex spots[] = {{5, 6}, {4, 7}};
+        for (int i = 0; i < domes; ++i) {
+            Plot& p = s.plot(spots[i]);
+            p.owner = 0;
+            p.city = s.cities[0].id;
+            p.improvement = rules().improvement("IMPROVEMENT_TRADING_DOME");
+            p.pillagedTurns = pillageOne && i == 0 ? 3 : 0;
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const City& home = g->state().cities[0];
+        return g->tradeRouteYields(home, domestic ? home : g->state().cities[1])[yi(YieldType::Gold)];
+    };
+    CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 0, false), routeGold("CITYSTATE_MITLA", 0, false));
+    CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 1, false), routeGold("CITYSTATE_MITLA", 1, false) + Fixed::fromInt(1));
+    CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, false), routeGold("CITYSTATE_MITLA", 2, false) + Fixed::fromInt(2));
+    CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, true), routeGold("CITYSTATE_MITLA", 2, true) + Fixed::fromInt(1));  // not while pillaged
+    CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, false, true), routeGold("CITYSTATE_MITLA", 2, false, true));  // nor at home
+}

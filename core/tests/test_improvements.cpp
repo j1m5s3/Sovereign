@@ -496,3 +496,102 @@ TEST(a_city_states_improvement_for_its_suzerain) {
     auto h = Game::fromScenario(rules(), std::move(t));
     CHECK_EQ(h->improvementYields({6, 6}, 0)[static_cast<size_t>(YieldType::Faith)], Fixed::fromInt(3));  // 2, and 1 for two woods
 }
+
+TEST(city_state_improvements_add_their_extras) {
+    // Player 0's capital at (4,6) owns the land around (6,6), where each improvement goes (08: City-States).
+    GameState s = flatState(20, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    for (const Hex& h : s.grid.within({4, 6}, 3)) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    const size_t C = static_cast<size_t>(YieldType::Culture), Fa = static_cast<size_t>(YieldType::Faith);
+    const auto with = [](GameState t, Hex h, const char* id) {
+        t.plot(h).improvement = improvement(id);
+        return t;
+    };
+    // Rapa Nui's Moai: +1 Culture beside the coast, +2 on or beside Volcanic Soil.
+    const auto moaiCulture = [&](GameState t) { return Game::fromScenario(rules(), with(std::move(t), {6, 6}, "IMPROVEMENT_MOAI"))->improvementYields({6, 6}, 0)[C]; };
+    CHECK_EQ(moaiCulture(s), Fixed::fromInt(1));
+    GameState t = s;
+    t.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    CHECK_EQ(moaiCulture(t), Fixed::fromInt(2));
+    t = s;
+    t.plot({7, 6}).feature = rules().feature("FEATURE_VOLCANIC_SOIL");
+    CHECK_EQ(moaiCulture(t), Fixed::fromInt(3));
+    t = s;
+    t.plot({6, 6}).feature = rules().feature("FEATURE_VOLCANIC_SOIL");
+    CHECK_EQ(moaiCulture(t), Fixed::fromInt(3));
+    // Cahokia Mounds: +1 Amenity to its city.
+    {
+        auto plain = Game::fromScenario(rules(), s);
+        auto mounds = Game::fromScenario(rules(), with(s, {6, 6}, "IMPROVEMENT_CAHOKIA_MOUNDS"));
+        CHECK_EQ(mounds->cityReport(s.cities[0].id).amenities, plain->cityReport(s.cities[0].id).amenities + 1);
+    }
+    // Nazca's Nazca Line: its owner's plots beside it gain +1 Faith (+1 more with a resource), +1 Food on desert after
+    // Civil Service and +1 Production off the hills after Mass Production; not its own plot, nor plots of no one.
+    t = s;
+    t.plot({7, 6}).terrain = rules().terrain("TERRAIN_DESERT");
+    t.plot({6, 7}).terrain = rules().terrain("TERRAIN_DESERT_HILLS");
+    t.plot({5, 6}).resource = rules().resource("RESOURCE_WHEAT");
+    t.plot({6, 5}).owner = kNoPlayer;
+    t.plot({6, 5}).city = kNoCity;
+    const auto gain = [&](const GameState& base, Hex h) {
+        auto plain = Game::fromScenario(rules(), base);
+        auto line = Game::fromScenario(rules(), with(base, {6, 6}, "IMPROVEMENT_NAZCA_LINE"));
+        const Yields a = plain->plotYields(h, plain->state().cities[0]), b = line->plotYields(h, line->state().cities[0]);
+        Yields d{};
+        for (size_t i = 0; i < kNumYields; ++i) d[i] = b[i] - a[i];
+        return d;
+    };
+    for (size_t i = 0; i < kNumYields; ++i) CHECK_EQ(gain(t, {7, 6})[i], i == Fa ? Fixed::fromInt(1) : Fixed());  // Faith only, for now
+    CHECK_EQ(gain(t, {5, 6})[Fa], Fixed::fromInt(2));
+    CHECK_EQ(gain(t, {6, 6})[Fa], Fixed());
+    CHECK_EQ(gain(t, {6, 5})[Fa], Fixed());
+    t.players[0].civics.done[at(rules().civic("CIVIC_CIVIL_SERVICE"))] = 1;
+    t.players[0].techs.done[at(tech("TECH_MASS_PRODUCTION"))] = 1;
+    CHECK_EQ(gain(t, {7, 6})[F], Fixed::fromInt(1));
+    CHECK_EQ(gain(t, {7, 6})[P], Fixed::fromInt(1));
+    CHECK_EQ(gain(t, {6, 7})[F], Fixed::fromInt(1));
+    CHECK_EQ(gain(t, {6, 7})[P], Fixed());  // hills
+    CHECK_EQ(gain(t, {5, 6})[F], Fixed());  // grassland
+    GameState u = with(t, {6, 6}, "IMPROVEMENT_NAZCA_LINE");
+    u.plot({6, 6}).pillagedTurns = 3;
+    auto pillaged = Game::fromScenario(rules(), std::move(u));
+    auto plain = Game::fromScenario(rules(), t);
+    CHECK(pillaged->plotYields({7, 6}, pillaged->state().cities[0]) == plain->plotYields({7, 6}, plain->state().cities[0]));  // nothing while pillaged
+}
+
+TEST(nalandas_first_mahavihara_grants_a_technology) {
+    GameState base = flatState(20, 14, 2);
+    for (Player& p : base.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.envoys.assign(2, 0);
+        p.relations.resize(2);
+    }
+    base.players[1].civ = kNone;
+    base.players[1].cityState = rules().cityState("CITYSTATE_NALANDA");
+    sovtest::addCity(base, 1, {16, 6}, true, 2);
+    base.players[0].envoys[1] = 3;  // its suzerain
+    auto g = builderGame([](GameState& s) { addUnit(s, "UNIT_BUILDER", 0, {5, 6}); }, base);
+    std::vector<UnitId> builders;
+    for (const Unit& u : g->state().units) {
+        if (u.owner == 0 && u.type == rules().unit("UNIT_BUILDER")) builders.push_back(u.id);
+    }
+    REQUIRE(builders.size() == 2u);
+    const auto techs = [&] {
+        const std::vector<uint8_t>& d = g->state().players[0].techs.done;
+        return std::count(d.begin(), d.end(), uint8_t{1});
+    };
+    const auto before = techs();
+    const TypeIndex vihara = improvement("IMPROVEMENT_MAHAVIHARA");
+    REQUIRE(g->submit(Command::buildImprovement(0, builders[0], vihara)) == CommandError::Ok);
+    CHECK_EQ(techs(), before + 1);
+    REQUIRE(g->submit(Command::buildImprovement(0, builders[1], vihara)) == CommandError::Ok);
+    CHECK_EQ(techs(), before + 1);  // the first one only
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK(loaded->state().players[0].improvementGrants == std::vector<TypeIndex>{vihara});
+}

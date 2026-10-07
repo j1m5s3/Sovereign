@@ -298,6 +298,25 @@ struct ImprovementAdjacency {
     Unlock needs, obsoleteWith;
 };
 
+// A yield an improvement adds to its own plot when the plot qualifies (08: the Moai beside the coast, or on or
+// beside Volcanic Soil).
+struct ImprovementTileYield {
+    YieldType yield = YieldType::Food;
+    Fixed amount;
+    bool nextToCoast = false;       // a Coast plot beside it
+    TypeIndex nearFeature = kNone;  // this feature on the plot or beside it
+};
+
+// A yield an improvement gives each plot of its owner beside it (08: the Nazca Line).
+struct ImprovementNeighbourYield {
+    YieldType yield = YieldType::Food;
+    Fixed amount;
+    Unlock needs;
+    bool resource = false;      // the plot has a resource its owner can see
+    TypeIndex terrain = kNone;  // the plot is of this terrain
+    bool notHills = false;      // the plot is not hills
+};
+
 struct ImprovementType {
     std::string id, name;
     Unlock unlock;
@@ -305,6 +324,8 @@ struct ImprovementType {
     std::vector<TypeIndex> validTerrains, validFeatures, validResources;
     std::vector<ImprovementBonus> bonuses;
     std::vector<ImprovementAdjacency> adjacency;
+    std::vector<ImprovementTileYield> tileYields;
+    std::vector<ImprovementNeighbourYield> neighbourYields;
     Fixed housing;  // per improved plot the city owns
     int appeal = 0;  // to neighbouring plots (01: Appeal)
     // Tourism (07): equal to the plot's appeal, Culture, Faith... once `tourismAfter` is known (none: at once).

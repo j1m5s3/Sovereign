@@ -969,7 +969,19 @@
     "source": "CULTURE",
     "percent": 100,
     "after": "TECH_FLIGHT"
-   }
+   },
+   "tileYields": [
+    {
+     "yield": "CULTURE",
+     "amount": 1,
+     "nextToCoast": true
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 2,
+     "nearFeature": "FEATURE_VOLCANIC_SOIL"
+    }
+   ]
   },
   {
    "id": "IMPROVEMENT_MONASTERY",
@@ -1046,7 +1058,8 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "amenities": 1
   },
   {
    "id": "IMPROVEMENT_NAZCA_LINE",
@@ -1062,7 +1075,36 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "neighbourYields": [
+    {
+     "yield": "FAITH",
+     "amount": 1
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "resource": true
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "needs": "CIVIC_CIVIL_SERVICE",
+     "terrain": "TERRAIN_DESERT_HILLS"
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "needs": "CIVIC_CIVIL_SERVICE",
+     "terrain": "TERRAIN_DESERT"
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 1,
+     "needs": "TECH_MASS_PRODUCTION",
+     "notHills": true
+    }
+   ]
   },
   {
    "id": "IMPROVEMENT_TRADING_DOME",

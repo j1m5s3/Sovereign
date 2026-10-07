@@ -92,18 +92,27 @@ Yields Game::plotYields(Hex at, const City& city) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         y[i] += sumPlotModifiers(state_, *rules_, city, at, static_cast<YieldType>(i));
     }
-    // Natural wonders next door (01): their adjacent yields, or the terrain's yields again (Torres del Paine).
-    if (!rules_->features.empty()) {
-        for (const Hex& n : state_.grid.within(at, 1)) {
-            const Plot& np = state_.plot(n);
-            if (n == at || np.feature == kNone || np.feature == p.feature) continue;
-            const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
-            if (!nw.naturalWonder) continue;
-            for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
-            if (nw.doublesAdjacentTerrain) {
-                const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
-                for (size_t i = 0; i < kNumYields; ++i) y[i] += ty[i];
+    // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), and an
+    // improvement that feeds its owner's plots beside it (the Nazca Line; 08).
+    for (const Hex& n : state_.grid.within(at, 1)) {
+        if (n == at) continue;
+        const Plot& np = state_.plot(n);
+        if (np.improvement != kNone && np.pillagedTurns == 0 && np.owner == city.owner && p.owner == city.owner) {
+            for (const ImprovementNeighbourYield& f : rules_->improvements[static_cast<size_t>(np.improvement)].neighbourYields) {
+                if (!f.needs.none() && !hasUnlocked(city.owner, f.needs)) continue;
+                if (f.resource && (p.resource == kNone || !hasUnlocked(city.owner, rules_->resources[static_cast<size_t>(p.resource)].reveal))) continue;
+                if (f.terrain != kNone && p.terrain != f.terrain) continue;
+                if (f.notHills && rules_->terrains[static_cast<size_t>(p.terrain)].relief == Relief::Hills) continue;
+                y[idx(f.yield)] += f.amount;
             }
+        }
+        if (np.feature == kNone || np.feature == p.feature) continue;
+        const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
+        if (!nw.naturalWonder) continue;
+        for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
+        if (nw.doublesAdjacentTerrain) {
+            const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
+            for (size_t i = 0; i < kNumYields; ++i) y[i] += ty[i];
         }
     }
     if (p.improvement != kNone && p.pillagedTurns == 0 && rules_->improvements[static_cast<size_t>(p.improvement)].powerProvided > 0 &&

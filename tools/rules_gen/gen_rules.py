@@ -1013,10 +1013,46 @@ def gen_improvements():
                 i["tourism"]["after"] = m.group(3)
         if row["Min appeal"] and num(row["Min appeal"]):
             i["minAppeal"] = num(row["Min appeal"])
+        # Modifiers (08: the city-states' improvements): yields on its own plot when the plot qualifies (the Moai beside the
+        # coast, or on or beside Volcanic Soil), yields on its owner's plots beside it (the Nazca Line) and Amenities.
+        tile, near, amenity_sides = [], [], {}
         for part in (x.strip() for x in (row["Modifiers"] or "").split(";")):
             m = re.fullmatch(r"\+(\d+) Amenity in this city", part)
             if m:
                 i["amenities"] = int(m.group(1))  # the Ski Resort (07)
+            m = re.fullmatch(r"\+(\d+) Amenity in this city where (NOT )?has (.+)", part)
+            if m:
+                amenity_sides.setdefault((int(m.group(1)), m.group(3)), set()).add(bool(m.group(2)))
+            m = re.fullmatch(r"\+(\d+) (\w+) on this tile where plot is coast or plot adjacent to coast", part)
+            if m:
+                tile.append({"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1)), "nextToCoast": True})
+            m = re.fullmatch(r"\+(\d+) (\w+) on this tile where adjacent to (.+?) or tile is \3", part)
+            if m and m.group(3) in FEATURE_IDS:
+                tile.append({"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1)), "nearFeature": FEATURE_IDS[m.group(3)]})
+            # "within tiles" gives no distance: Sovereign reads it as the plots beside the improvement.
+            m = re.fullmatch(r"\+(\d+) (\w+) on your tiles where within tiles((?: and .+?)*)", part)
+            if m:
+                n = {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}
+                for cond in filter(None, m.group(3).split(" and ")):
+                    if cond == "plot has any resource":
+                        n["resource"] = True
+                    elif cond == "NOT tile is Hills":
+                        n["notHills"] = True
+                    elif cond.startswith("tile is ") and cond[len("tile is "):] in tnames:
+                        n["terrain"] = tnames[cond[len("tile is "):]]
+                    elif cond.startswith("has "):
+                        n["needs"] = unlock_id(cond[len("has "):])
+                    else:
+                        raise ValueError(f"improvement {row['Improvement']}: unknown condition {cond!r}")
+                near.append(n)
+        # Cahokia Mounds: +1 Amenity before Natural History and +1 after it, so always 1.
+        for (amount, _), sides in amenity_sides.items():
+            if sides == {True, False}:
+                i["amenities"] = i.get("amenities", 0) + amount
+        if tile:
+            i["tileYields"] = tile
+        if near:
+            i["neighbourYields"] = near
         if row["Improvement"] == "Seaside Resort":
             i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
         out.append(i)
