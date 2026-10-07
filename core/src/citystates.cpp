@@ -66,6 +66,12 @@ int Game::envoysAt(PlayerId player, PlayerId cs) const { return sov::envoysAt(st
 
 PlayerId Game::suzerainOf(PlayerId cs) const { return sov::suzerainOf(state_, *rules_, cs); }
 
+bool Game::isSuzerain(PlayerId player, PlayerId cs) const {
+    // The suzerain has at least the minimum of envoys there, so a civ with fewer is not it and nobody's need counting.
+    if (player >= 0 && at(player) < state_.players.size() && envoysAt(player, cs) < suzerainEnvoys_) return false;
+    return suzerainOf(cs) == player;
+}
+
 bool Game::canSendEnvoy(PlayerId player, PlayerId cs) const {
     const Player& p = state_.players[at(player)];
     if (!isMajor(p) || p.envoyTokens <= 0 || !isCityState(cs) || !state_.players[at(cs)].alive) return false;
@@ -77,7 +83,7 @@ bool Game::canSendEnvoy(PlayerId player, PlayerId cs) const {
 }
 
 int Game::levyCost(PlayerId player, PlayerId cityState) const {
-    if (!isCityState(cityState) || !state_.players[at(cityState)].alive || suzerainOf(cityState) != player || atWar(player, cityState)) return -1;
+    if (!isCityState(cityState) || !state_.players[at(cityState)].alive || !isSuzerain(player, cityState) || atWar(player, cityState)) return -1;
     for (const Levy& lv : state_.levies) {
         if (lv.cityState == cityState) return -1;  // already serving
     }
@@ -128,7 +134,7 @@ bool Game::suzerainBonus(PlayerId player, const char* cityStateId) const {
 
 int Game::suzeraintiesOf(PlayerId player) const {
     int n = 0;
-    for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player ? 1 : 0;
+    for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id) ? 1 : 0;
     return n;
 }
 

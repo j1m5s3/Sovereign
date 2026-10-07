@@ -139,7 +139,7 @@ int Game::kilwaPercent(const City& city, CityStateKind kind) const {
     if (!holdsWonder(city.owner, W::Kilwa)) return 0;
     int n = 0;
     for (const Player& p : state_.players) {
-        if (p.cityState != kNone && p.alive && rules_->cityStates[at(p.cityState)].kind == kind && suzerainOf(p.id) == city.owner) ++n;
+        if (p.cityState != kNone && p.alive && rules_->cityStates[at(p.cityState)].kind == kind && isSuzerain(city.owner, p.id)) ++n;
     }
     return (city.has(kilwa) && n >= 1 ? 15 : 0) + (n >= 2 ? 15 : 0);
 }

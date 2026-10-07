@@ -108,6 +108,22 @@ TEST(the_suzerain_gets_the_city_states_luxuries) {
     CHECK(g->hasLuxury(0, lux));
 }
 
+TEST(the_suzerain_gathers_the_city_states_strategics) {
+    GameState s = withCityState(CityStateKind::Militaristic);
+    const TypeIndex horses = rules().resource("RESOURCE_HORSES");
+    s.plot({14, 5}).resource = horses;  // on the city center, which counts as improved
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_ANIMAL_HUSBANDRY"))] = 1;
+    const auto stockAfterATurn = [&](GameState t) {
+        auto g = Game::fromScenario(rules(), std::move(t));
+        sovtest::endTurns(*g, 2);  // the civ's and the city-state's
+        REQUIRE(g->state().turn == 2 && g->state().currentPlayer == 0);
+        return g->state().players[0].stockpile[static_cast<size_t>(horses)];
+    };
+    const int alone = stockAfterATurn(s);
+    s.players[0].envoys[1] = 3;
+    CHECK_EQ(stockAfterATurn(s), alone + rules().resources[static_cast<size_t>(horses)].accumulation);
+}
+
 TEST(policies_change_for_gold_between_civics) {
     GameState s = flatState(16, 10, 1);
     Game::fitPlayerToRules(s.players[0], rules());

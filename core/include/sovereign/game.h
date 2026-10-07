@@ -168,6 +168,7 @@ public:
     bool isCityState(PlayerId player) const;
     int envoysAt(PlayerId player, PlayerId cityState) const;
     PlayerId suzerainOf(PlayerId cityState) const;  // kNoPlayer: none
+    bool isSuzerain(PlayerId player, PlayerId cityState) const;  // suzerainOf(cityState) == player
     int suzeraintiesOf(PlayerId player) const;       // living city-states it is suzerain of
     bool suzerainBonus(PlayerId player, const char* cityStateId) const;  // enjoys that city-state's suzerain bonus (08)
     // Levy Military (08): the Gold to take a city-state's military units for LEVY_MILITARY_TURN_DURATION
@@ -908,6 +909,11 @@ private:
     std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
     std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
     std::vector<TypeIndex> borderCivics_;     // the civics that close a civ's borders (Early Empire)
+    int suzerainEnvoys_ = 0;                  // INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN (isSuzerain)
+    int touristTourism_ = 0;                  // TOURISM_TOURISM_TO_MOVE_CITIZEN (visitingTourists)
+    int touristCulture_ = 0;                  // TOURISM_CULTURE_PER_CITIZEN (domesticTourists)
+    // By unit type: the GrantAbility player modifiers whose ability covers its class, in modifier order (unitAbilities).
+    std::vector<std::vector<uint32_t>> abilityGrants_;
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
@@ -920,6 +926,8 @@ private:
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
     int parkAmenities(const City& city, ReportShare& shared) const;
+    // goldPerTurn from the player's city reports, in city order, when the caller has made them already.
+    Fixed goldPerTurn(PlayerId player, const std::vector<CityReport>* reports) const;
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <utility>
 
 #include "sovereign/mapgen.h"
 
@@ -350,11 +351,11 @@ Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const City& c
 }
 
 namespace {
-// Calls fn for every player-collection modifier with this effect that applies to the player. `pre` passes over
-// modifiers on what they say alone, before the look at whether the player has their source.
+// Calls fn for every player-collection modifier of the list (indices into Rules::modifiers) that applies to the
+// player. `pre` passes over modifiers on what they say alone, before the look at whether the player has their source.
 template <typename Pre, typename Fn>
-void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Pre&& pre, Fn&& fn) {
-    for (uint32_t i : r.playerModifiers(effect)) {
+void forEachPlayerModifierIn(const std::vector<uint32_t>& list, const GameState& s, const Rules& r, const Player& player, Pre&& pre, Fn&& fn) {
+    for (uint32_t i : list) {
         const Modifier& m = r.modifiers[i];
         if (!pre(m)) continue;
         const City* holder = nullptr;
@@ -389,6 +390,12 @@ void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& pla
         fn(m);
     }
 }
+
+// The same for the player-collection modifiers with this effect.
+template <typename Pre, typename Fn>
+void forEachPlayerModifier(const GameState& s, const Rules& r, const Player& player, ModEffect effect, Pre&& pre, Fn&& fn) {
+    forEachPlayerModifierIn(r.playerModifiers(effect), s, r, player, std::forward<Pre>(pre), std::forward<Fn>(fn));
+}
 }  // namespace
 
 Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect) {
@@ -397,13 +404,9 @@ Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& playe
     return total;
 }
 
-std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass) {
+std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::vector<uint32_t>& grants) {
     std::vector<TypeIndex> out;
-    auto forClass = [&](const Modifier& m) {
-        const std::vector<std::string>& classes = r.abilities[static_cast<size_t>(m.ability)].classes;
-        return std::find(classes.begin(), classes.end(), unitClass) != classes.end();
-    };
-    forEachPlayerModifier(s, r, player, ModEffect::GrantAbility, forClass, [&](const Modifier& m) { out.push_back(m.ability); });
+    forEachPlayerModifierIn(grants, s, r, player, anyModifier, [&](const Modifier& m) { out.push_back(m.ability); });
     return out;
 }
 

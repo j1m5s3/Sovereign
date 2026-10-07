@@ -81,6 +81,30 @@ TEST(game_movement_costs) {
     CHECK_EQ(*g->moveCost(u, {4, 6}, {3, 6}), Fixed::fromInt(3));   // either direction
 }
 
+// A river on any of a plot's six edges costs its crossing both ways, and only across that edge; an Ancient Road
+// pays it too, a Classical Road bridges it (01: Routes).
+TEST(game_river_crossings_in_every_direction) {
+    const Hex from{6, 6};
+    for (int d = 0; d < kNumDirs; ++d) {
+        for (int road = -1; road <= 1; ++road) {  // none, then Rules::routes[0] (Ancient) and [1] (Classical)
+            GameState s = flatState(16, 12, 1);
+            setRiver(s, from, static_cast<Dir>(d));
+            s.plot(from).route = static_cast<int8_t>(road);
+            for (int e = 0; e < kNumDirs; ++e) s.plot(*s.grid.neighbor(from, static_cast<Dir>(e))).route = static_cast<int8_t>(road);
+            UnitId w = addUnit(s, "UNIT_WARRIOR", 0, from);
+            auto g = Game::fromScenario(rules(), std::move(s));
+            const Unit& u = *g->state().unit(w);
+            const Hex to = *g->state().grid.neighbor(from, static_cast<Dir>(d));
+            const Fixed across = Fixed::fromInt(road == 1 ? 1 : 3);  // flat ground or a road, plus 2 to cross
+            CHECK_EQ(*g->moveCost(u, from, to), across);
+            CHECK_EQ(*g->moveCost(u, to, from), across);
+            for (int e = 0; e < kNumDirs; ++e) {
+                if (e != d) CHECK_EQ(*g->moveCost(u, from, *g->state().grid.neighbor(from, static_cast<Dir>(e))), Fixed::fromInt(1));
+            }
+        }
+    }
+}
+
 TEST(game_full_moves_can_always_enter_one_plot) {
     GameState s = flatState(16, 12, 1);
     setTerrain(s, {5, 4}, "TERRAIN_GRASS_HILLS");

@@ -631,7 +631,7 @@ void Game::accumulateStrategics(PlayerId pid) {
     // The suzerain also gathers its city-states' strategic resources (08: Suzerain).
     std::vector<PlayerId> holders{pid};
     for (const Player& cs : state_.players) {
-        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid) holders.push_back(cs.id);
+        if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id)) holders.push_back(cs.id);
     }
     for (size_t i = 0, plotCount = state_.plots.size(); i < plotCount; ++i) {
         const Plot& p = state_.plots[i];

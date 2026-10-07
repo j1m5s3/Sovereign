@@ -76,7 +76,7 @@ Yields Game::tradeRouteDestinationYields(const City& origin, const City& destina
     // Policy cards (04): Wisselbanken, Democratic Legacy.
     const bool cs = isCityState(destination.owner);
     const Yields extra = tradeRouteModifierYields(state_, *rules_, state_.players[at(origin.owner)], false, type != AllianceType::None, cs,
-                                                  cs && suzerainOf(destination.owner) == origin.owner, true);
+                                                  cs && isSuzerain(origin.owner, destination.owner), true);
     for (size_t i = 0; i < kNumYields; ++i) out[i] += extra[i];
     return out;
 }
@@ -127,7 +127,7 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         const bool cs = isCityState(destination.owner);
         const bool ally = !domestic && alliance(origin.owner, destination.owner) != AllianceType::None;
         const Yields extra = tradeRouteModifierYields(state_, *rules_, state_.players[at(origin.owner)], domestic, ally, cs,
-                                                      cs && suzerainOf(destination.owner) == origin.owner);
+                                                      cs && isSuzerain(origin.owner, destination.owner));
         for (size_t i = 0; i < kNumYields; ++i) out[i] += extra[i];
     }
     // Market Economy (04): international routes +1 Gold per luxury and per strategic resource at the destination.

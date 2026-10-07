@@ -207,13 +207,13 @@ std::vector<uint8_t> Game::luxuriesHeld(PlayerId player) const {
     };
     // The suzerain gets its city-states' luxuries (08: Suzerain).
     for (const Player& cs : state_.players) {
-        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == player) addFrom(cs.id);
+        if (cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id)) addFrom(cs.id);
     }
     // Affluence: Amani in a city-state we are suzerain of copies its luxuries (08: Governors).
     for (const Governor& g : state_.players[at(player)].governors) {
         const City* c = state_.city(g.city);
         if (!c || g.establishTurns > 0 || !governorHasPromotion(g, "GOVERNOR_PROMOTION_AFFLUENCE")) continue;
-        if (state_.players[at(c->owner)].cityState != kNone && suzerainOf(c->owner) == player) addFrom(c->owner);
+        if (state_.players[at(c->owner)].cityState != kNone && isSuzerain(player, c->owner)) addFrom(c->owner);
     }
     // And copies traded to it.
     for (const Agreement& a : state_.agreements) {
@@ -1134,7 +1134,7 @@ bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const
             // They are at war with a city-state we are suzerain of (no denouncement needed).
             if (!has("CIVIC_DEFENSIVE_TACTICS")) return false;
             for (const Player& cs : state_.players) {
-                if (isCityState(cs.id) && cs.alive && suzerainOf(cs.id) == player && atWar(target, cs.id)) return true;
+                if (isCityState(cs.id) && cs.alive && isSuzerain(player, cs.id) && atWar(target, cs.id)) return true;
             }
             return false;
         case CasusBelli::Colonial:

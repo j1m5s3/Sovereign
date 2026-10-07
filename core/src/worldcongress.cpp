@@ -69,7 +69,7 @@ int Game::favorPerTurn(PlayerId pid) const {
     }
     for (const Player& cs : state_.players) {
         // Országház (03: Wonders) doubles the favor from suzerainties.
-        if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == pid)
+        if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id))
             favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN") * (buildingsOwned(pid, "BUILDING_ORSZ_GH_Z") > 0 ? 2 : 1);
         if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");
     }

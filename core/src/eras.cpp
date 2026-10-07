@@ -430,7 +430,7 @@ void Game::processTourism(PlayerId pid) {
 int Game::visitingTourists(PlayerId pid, PlayerId from) const {
     const Player& p = state_.players[at(pid)];
     const int majors = std::max(1, state_.majorsAtStart);
-    const int per = rules_->globalInt("TOURISM_TOURISM_TO_MOVE_CITIZEN") * majors;
+    const int per = touristTourism_ * majors;
     return at(from) < p.tourismTo.size() ? p.tourismTo[at(from)] / per : 0;
 }
 
@@ -443,7 +443,7 @@ int Game::visitingTourists(PlayerId pid) const {
 }
 
 int Game::domesticTourists(PlayerId pid) const {
-    int n = static_cast<int>((state_.players[at(pid)].lifetimeCulture / rules_->globalInt("TOURISM_CULTURE_PER_CITIZEN")).toInt());
+    int n = static_cast<int>((state_.players[at(pid)].lifetimeCulture / touristCulture_).toInt());
     for (const Player& x : state_.players) {
         if (x.id != pid && isMajor(x)) n -= visitingTourists(x.id, pid);  // our people visiting them
     }
