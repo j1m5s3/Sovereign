@@ -457,6 +457,8 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt("CITY_MIN_RANGE");
     for (const City& c : state_.cities) {
+        // A city more rows away than the range is farther than it (rows do not wrap).
+        if (std::abs(c.pos.y - at.y) > minRange) continue;
         // Across water (another landmass) the cities may stand one plot closer (02: Founding).
         const bool otherLand = state_.plot(c.pos).continent != state_.plot(at).continent;
         if (state_.grid.distance(c.pos, at) <= minRange - (otherLand ? 1 : 0)) return set(CommandError::TooCloseToCity);
