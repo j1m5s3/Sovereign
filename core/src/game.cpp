@@ -437,8 +437,10 @@ std::vector<UnitId> Game::unitsNeedingOrders(PlayerId player) const {
 // ------------------------------------------------------------------ movement
 
 std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
+    const std::optional<Dir> d = state_.grid.directionTo(from, to);
+    if (!d) return std::nullopt;
     const MoveTraits traits = moveTraits(unit);
-    return moveCost(unit, traits, moveLimits(unit, traits), from, to);
+    return moveCost(unit, traits, moveLimits(unit, traits), from, to, *d);
 }
 
 Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) const {
@@ -474,13 +476,13 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits) co
     return limits;
 }
 
-std::optional<Fixed> Game::moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to) const {
+std::optional<Fixed> Game::moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const {
     if (limits.blocked[static_cast<size_t>(state_.grid.index(to))]) return std::nullopt;
     if (const PlayerId land = state_.plot(to).owner; land != kNoPlayer) {
         const uint8_t closed = limits.closed[static_cast<size_t>(land)];
         if ((closed & 2) || ((closed & 1) && state_.plot(from).owner != land)) return std::nullopt;
     }
-    return terrainCost(unit, traits, from, to);
+    return terrainCost(unit, traits, from, to, dir);
 }
 
 bool Game::canEmbark(PlayerId player, TypeIndex unitType) const {
@@ -526,12 +528,13 @@ bool Game::isCoastalCity(const City& city) const {
     return false;
 }
 
-std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const { return terrainCost(unit, moveTraits(unit), from, to); }
+std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const {
+    const std::optional<Dir> d = state_.grid.directionTo(from, to);
+    return d ? terrainCost(unit, moveTraits(unit), from, to, *d) : std::nullopt;
+}
 
-std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const {
+std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const {
     const UnitType& ut = typeOf(*rules_, unit);
-    auto d = state_.grid.directionTo(from, to);
-    if (!d) return std::nullopt;
     const Plot& p = state_.plot(to);
     const TerrainType& tt = terrainOf(*rules_, p);
     const bool fromWater = terrainOf(*rules_, state_.plot(from)).water;
@@ -569,7 +572,7 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     if (p.feature != kNone) {
         const FeatureType& ft = rules_->features[static_cast<size_t>(p.feature)];
         // Ranger (05): woods cost nothing extra.
-        if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && traits.ignoreForest)) cost += ft.moveChange;
+        if (!(traits.ignoreForest && ft.moveChange > 0 && ft.id == "FEATURE_FOREST")) cost += ft.moveChange;
     }
     if (cost > 1 && traits.ignoreTerrain) cost = 1;
     if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost()) + std::max(cost, 1));  // disembarking
@@ -578,10 +581,10 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
     if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
         const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
         Fixed rc = slow.moveCost;
-        if (!slow.bridges && hasRiver(state_, from, *d)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
+        if (!slow.bridges && hasRiver(state_, from, dir)) rc += Fixed::fromInt(rules_->globalInt("MOVEMENT_RIVER_COST"));
         return rc;
     }
-    if (hasRiver(state_, from, *d) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
+    if (hasRiver(state_, from, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt("MOVEMENT_RIVER_COST");  // helicopters fly over (05)
     return Fixed::fromInt(std::max(cost, 1));
 }
 
@@ -626,7 +629,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
             if (!n || !known(*n)) continue;
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
-            auto cost = moveCost(*u, traits, limits, from, *n);
+            auto cost = moveCost(*u, traits, limits, from, *n, static_cast<Dir>(d));
             if (!cost) continue;
             int turn = cur.turn;
             Fixed mp = cur.moves;

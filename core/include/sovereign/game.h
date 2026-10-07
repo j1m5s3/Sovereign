@@ -727,8 +727,9 @@ private:
         std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
     };
     MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits) const;
-    std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to) const;
-    std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const;
+    // A step's cost: `dir` is the direction from `from` to its neighbour `to`.
+    std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
+    std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
     bool lineOfSight(Hex from, Hex to, bool throughFeatures = false) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
