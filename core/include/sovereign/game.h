@@ -860,6 +860,11 @@ private:
     TypeIndex oil_ = kNone;  // James Young reveals it (07)
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
+    TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
+    // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
+    void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
+    std::vector<int> resourceCopies(PlayerId player) const;     // luxuryCopies for every resource, in one pass
+    std::vector<uint8_t> luxuriesHeld(PlayerId player) const;  // hasLuxury for every resource, in one pass
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;

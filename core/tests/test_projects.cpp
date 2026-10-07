@@ -80,6 +80,24 @@ TEST(projects_with_one_time_effects) {
     CHECK(!g->canProduce(g->state().cities[0], project("PROJECT_REPAIR_OUTER_DEFENSES")));
 }
 
+TEST(the_court_festival_pays_for_each_spare_luxury_copy) {
+    GameState s = campusTown();
+    std::vector<TypeIndex> luxuries;
+    for (size_t i = 0; i < rules().resources.size(); ++i) {
+        if (rules().resources[i].cls == ResourceClass::Luxury && rules().resources[i].reveal.none()) luxuries.push_back(static_cast<TypeIndex>(i));
+    }
+    REQUIRE(luxuries.size() >= 2);
+    // Three copies of one luxury (two lasting grants and the city center's), one of another: two spare.
+    s.plot({6, 6}).resource = luxuries[0];
+    s.players[0].luxuryGrants = {luxuries[0], luxuries[0], luxuries[1]};
+    auto g = Game::fromScenario(rules(), s);
+    CHECK_EQ(g->luxuryCopies(0, luxuries[0]), 3);
+    CHECK_EQ(g->luxuryCopies(0, luxuries[1]), 1);
+    const Fixed before = g->state().players[0].civics.overflow;
+    g->completeProject(g->stateMutForTests().cities[0], rules().project("PROJECT_COURT_FESTIVAL"));
+    CHECK_EQ(g->state().players[0].civics.overflow, before + Fixed::fromInt(50 * 2));
+}
+
 TEST(projects_survive_a_save) {
     GameState s = campusTown();
     auto g = Game::fromScenario(rules(), std::move(s));

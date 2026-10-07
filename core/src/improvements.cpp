@@ -174,9 +174,9 @@ int Game::luxuryAmenities(const City& city) const {
     std::stable_sort(mine.begin(), mine.end(), [](const City* a, const City* b) { return a->population > b->population; });
     const int rank = static_cast<int>(std::find(mine.begin(), mine.end(), &city) - mine.begin());
     // Access after deals: copies traded away are lost, copies traded in count (08: Trade Deal).
-    std::vector<uint8_t> have(rules_->resources.size(), 0);
+    std::vector<uint8_t> have = luxuriesHeld(owner);
     for (size_t r = 0; r < rules_->resources.size(); ++r) {
-        if (rules_->resources[r].cls == ResourceClass::Luxury) have[r] = hasLuxury(owner, static_cast<TypeIndex>(r)) ? 1 : 0;
+        if (rules_->resources[r].cls != ResourceClass::Luxury) have[r] = 0;
     }
     int amenities = 0;
     for (size_t r = 0; r < have.size(); ++r) {
@@ -189,8 +189,9 @@ int Game::luxuryAmenities(const City& city) const {
     }
     // Buenos Aires (08: suzerain): each kind of improved bonus resource is an Amenity too, for as many cities as a luxury's.
     if (rank < kBonusAmenityCities && suzerainBonus(owner, "CITYSTATE_BUENOS_AIRES")) {
+        const std::vector<int> copies = resourceCopies(owner);
         for (size_t r = 0; r < rules_->resources.size(); ++r) {
-            if (rules_->resources[r].cls == ResourceClass::Bonus && luxuryCopies(owner, static_cast<TypeIndex>(r)) > 0) ++amenities;
+            if (rules_->resources[r].cls == ResourceClass::Bonus && copies[r] > 0) ++amenities;
         }
     }
     return amenities;

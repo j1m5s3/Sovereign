@@ -1414,8 +1414,9 @@ void Game::completeProject(City& city, TypeIndex project) {
             case ProjectEffectKind::Festival: {
                 // Court Festival: Culture and tourism for each luxury copy beyond the first held.
                 int surplus = 0;
+                const std::vector<int> copies = resourceCopies(city.owner);
                 for (size_t r = 0; r < rules_->resources.size(); ++r) {
-                    if (rules_->resources[r].cls == ResourceClass::Luxury) surplus += std::max(0, luxuryCopies(city.owner, static_cast<TypeIndex>(r)) - 1);
+                    if (rules_->resources[r].cls == ResourceClass::Luxury) surplus += std::max(0, copies[r] - 1);
                 }
                 p.civics.overflow += Fixed::fromInt(e.amount * surplus);
                 if (p.tourismTo.size() < state_.players.size()) p.tourismTo.resize(state_.players.size(), 0);
