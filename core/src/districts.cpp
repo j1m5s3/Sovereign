@@ -349,6 +349,12 @@ Yields Game::districtAdjacency(PlayerId player, TypeIndex type, Hex plot) const 
         out[static_cast<size_t>(mountainYield)] += Fixed::fromInt(mountains);
     }
     int pct = 100 + sumDistrictAdjacencyPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], type);
+    // Vilnius (08: suzerain): +50% Theater Square adjacency for each level of its suzerain's best alliance (1+, 2+, 3+).
+    if (d.id == "DISTRICT_THEATER_SQUARE" && suzerainBonus(player, "CITYSTATE_VILNIUS")) {
+        int level = 0;
+        for (const Player& o : state_.players) level = std::max(level, allianceLevel(player, o.id));
+        pct += 50 * level;
+    }
     // Reyna's Harbormaster doubles the Commercial Hub's and Harbor's adjacency in her city.
     const Plot& here = state_.plot(plot);
     const City* home = here.city == kNoCity ? nullptr : state_.city(here.city);

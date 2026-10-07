@@ -231,10 +231,13 @@ CityReport Game::cityReport(CityId id) const {
     }
     // Great Works in the city's slots, and great people whose effects improve its buildings.
     const bool reliquaries = !c->greatWorks.empty() && cityFollows(*c, Bf::Reliquaries);
+    const bool kandy = !c->greatWorks.empty() && suzerainBonus(c->owner, "CITYSTATE_KANDY");
     for (const GreatWork& w : c->greatWorks) {
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
         const int pct = themed(*c, w.building) ? 100 + rules_->buildings[static_cast<size_t>(w.building)].theming->yieldPercent : 100;  // 07: Theming
-        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100 * (gw.id == "RELIC" && reliquaries ? 3 : 1));  // Reliquaries (06)
+        // Relics: triple with Reliquaries (06), half again for Kandy's suzerain (08).
+        const int relic = gw.id == "RELIC" ? (reliquaries ? 300 : 100) * (kandy ? 150 : 100) / 100 : 100;
+        raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100 * relic / 100);
         // Anshan (08: suzerain): +2 Science from writing, +1 from artifacts and relics.
         if (suzerainBonus(c->owner, "CITYSTATE_ANSHAN"))
             raw[idx(YieldType::Science)] += Fixed::fromInt(gw.id == "WRITING" ? 2 : (gw.id == "ARTIFACT" || gw.id == "RELIC") ? 1 : 0);
@@ -259,6 +262,17 @@ CityReport Game::cityReport(CityId id) const {
         if (pen && kind != "DISTRICT_CITY_CENTER") raw[idx(YieldType::Culture)] += Fixed::fromInt(1);
         // Work Ethic (06): the Holy Site's Faith adjacency as Production too.
         if (kind == "DISTRICT_HOLY_SITE" && cityFollows(*c, Bf::WorkEthic)) raw[idx(YieldType::Production)] += adj[idx(YieldType::Faith)];
+    }
+    // Nan Madol (08: suzerain): +2 Culture for each district, the City Center too, on or next to Coast (a lake is Coast too).
+    if (suzerainBonus(c->owner, "CITYSTATE_NAN_MADOL")) {
+        const TypeIndex coast = rules_->terrain("TERRAIN_COAST");
+        const auto byCoast = [&](Hex h) {
+            const std::vector<Hex> near = state_.grid.within(h, 1);
+            return std::any_of(near.begin(), near.end(), [&](const Hex& n) { return state_.plot(n).terrain == coast; });
+        };
+        int districts = byCoast(c->pos) ? 1 : 0;
+        for (const CityDistrict& d : c->districts) districts += d.complete && d.pillagedTurns == 0 && byCoast(d.pos) ? 1 : 0;
+        raw[idx(YieldType::Culture)] += Fixed::fromInt(2 * districts);
     }
     // Divine Inspiration (06): +4 Faith per wonder in the city.
     if (cityFollows(*c, Bf::DivineInspiration)) {
@@ -641,7 +655,7 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
 
-int Game::purchaseCost(PlayerId player, ProductionItem item) const {
+int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city) const {
     if (item.kind == ProductionKind::District || item.kind == ProductionKind::Project) return -1;  // built, never bought
     if (item.kind == ProductionKind::Unit) {
         if (rules_->units[static_cast<size_t>(item.type)].purchaseYield != "GOLD") return -1;
@@ -653,6 +667,18 @@ int Game::purchaseCost(PlayerId player, ProductionItem item) const {
     if (item.kind == ProductionKind::Unit && goldenDedication(player, "DEDICATION_MONUMENTALITY")) {
         const std::string& id = rules_->units[static_cast<size_t>(item.type)].id;
         if (id == "UNIT_BUILDER" || id == "UNIT_SETTLER") cost = cost * 70 / 100;  // 09: Monumentality
+    }
+    // Ngazargamu (08: suzerain): land units 20% cheaper in a city with a Barracks or Stable, 20% more with an
+    // Armory, and 20% more with a Military Academy.
+    if (city && item.kind == ProductionKind::Unit && rules_->units[static_cast<size_t>(item.type)].domain == Domain::Land &&
+        suzerainBonus(player, "CITYSTATE_NGAZARGAMU")) {
+        const auto has = [&](const char* id) {
+            const TypeIndex b = rules_->building(id);
+            return b != kNone && cityHasBuilding(*city, *rules_, b);
+        };
+        const int off = (has("BUILDING_BARRACKS") || has("BUILDING_STABLE") ? 20 : 0) + (has("BUILDING_ARMORY") ? 20 : 0) +
+                        (has("BUILDING_MILITARY_ACADEMY") ? 20 : 0);
+        cost = cost * (100 - off) / 100;
     }
     // Valletta (08: suzerain): walls at half price.
     if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].outerDefenseHp > 0 && suzerainBonus(player, "CITYSTATE_VALLETTA"))
@@ -969,7 +995,7 @@ CommandError Game::validateCity(const Command& c) const {
                 return CommandError::Ok;
             }
             if (!canProduce(*city, item, &why, true)) return why;
-            int cost = purchaseCost(c.player, item);
+            int cost = purchaseCost(c.player, item, city);
             if (cost < 0) return CommandError::CannotBuild;
             if (item.kind == ProductionKind::Unit) {
                 const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
@@ -1071,7 +1097,7 @@ void Game::applyCity(const Command& c) {
                 }
                 break;
             }
-            p.gold -= Fixed::fromInt(purchaseCost(c.player, item));
+            p.gold -= Fixed::fromInt(purchaseCost(c.player, item, &city));
             completeItem(city, item);
             // A bought building leaves the queue; what was put into it carries over.
             if (item.kind == ProductionKind::Building) {
