@@ -46,8 +46,9 @@ SOV_API Fixed sumUnitProductionPercent(const GameState& s, const Rules& r, const
 // Total of a player-wide modifier effect (collection PLAYER).
 SOV_API Fixed sumPlayerModifiers(const GameState& s, const Rules& r, const Player& player, ModEffect effect);
 
-// Abilities the player's modifiers grant (each still filtered by the ability's unit classes).
-SOV_API std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player);
+// Abilities the player's modifiers grant to units of this class (modifiers granting other classes' abilities are
+// passed over without testing whether the player has them).
+SOV_API std::vector<TypeIndex> grantedAbilities(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);
 
 // Flat combat strength from the player's modifiers for a unit of this class.
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,

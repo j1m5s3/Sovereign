@@ -140,6 +140,9 @@ TEST(district_adjacency_yields) {
     });
     CHECK_EQ(wise->districtAdjacency(0, district("DISTRICT_CAMPUS"), spot)[static_cast<size_t>(YieldType::Science)],
              Fixed::fromInt(2));
+    // Only the Campus's: the Holy Site keeps +1 from the mountain.
+    CHECK_EQ(wise->districtAdjacency(0, district("DISTRICT_HOLY_SITE"), spot)[static_cast<size_t>(YieldType::Faith)],
+             Fixed::fromInt(1));
 }
 
 TEST(wonders_and_natural_wonders_raise_adjacency) {

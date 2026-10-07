@@ -214,11 +214,8 @@ std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
         if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
             out.push_back(a);
     }
-    for (TypeIndex a : grantedAbilities(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)])) {
-        const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
-        if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() &&
-            std::find(out.begin(), out.end(), a) == out.end())
-            out.push_back(a);
+    for (TypeIndex a : grantedAbilities(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ut.unitClass)) {
+        if (std::find(out.begin(), out.end(), a) == out.end()) out.push_back(a);
     }
     // Abilities a retired great person gave the civ's units (Francis Drake, Georgy Zhukov...).
     for (TypeIndex person : state_.players[static_cast<size_t>(unit.owner)].greatPeopleActivated) {

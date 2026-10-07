@@ -173,11 +173,11 @@ Fixed Game::improvementHousing(const City& city) const {
 }
 
 int Game::luxuryAmenities(const City& city) const {
-    HeldLuxuries luxuries;
-    return luxuryAmenities(city, luxuries);
+    ReportShare shared;
+    return luxuryAmenities(city, shared);
 }
 
-int Game::luxuryAmenities(const City& city, HeldLuxuries& ownerLuxuries) const {
+int Game::luxuryAmenities(const City& city, ReportShare& shared) const {
     // Each luxury type the player has improved gives +1 amenity to up to
     // `amenityCities` cities. Sovereign reading: the largest cities get them
     // first (ties: oldest city); Civ gives them to the cities needing them most.
@@ -189,8 +189,8 @@ int Game::luxuryAmenities(const City& city, HeldLuxuries& ownerLuxuries) const {
     std::stable_sort(mine.begin(), mine.end(), [](const City* a, const City* b) { return a->population > b->population; });
     const int rank = static_cast<int>(std::find(mine.begin(), mine.end(), &city) - mine.begin());
     // Access after deals: copies traded away are lost, copies traded in count (08: Trade Deal).
-    if (!ownerLuxuries) ownerLuxuries = luxuriesHeld(owner);
-    const std::vector<uint8_t>& have = *ownerLuxuries;
+    if (!shared.luxuries) shared.luxuries = luxuriesHeld(owner);
+    const std::vector<uint8_t>& have = *shared.luxuries;
     int amenities = 0;
     for (size_t r = 0; r < have.size(); ++r) {
         if (!have[r] || rules_->resources[r].cls != ResourceClass::Luxury) continue;

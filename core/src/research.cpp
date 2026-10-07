@@ -115,9 +115,9 @@ Fixed Game::allianceShare(PlayerId player, YieldType yield) const {
     for (const Player& ally : state_.players) {
         if (alliance(player, ally.id) != type || allianceLevel(player, ally.id) < 3 || ally.anarchyTurns > 0) continue;
         Fixed theirs;
-        HeldLuxuries luxuries;  // shared by the ally's city reports
+        ReportShare shared;  // by the ally's city reports
         for (const City& c : state_.cities) {
-            if (c.owner == ally.id) theirs += cityReport(c, luxuries).yields[static_cast<size_t>(yield)];
+            if (c.owner == ally.id) theirs += cityReport(c, shared).yields[static_cast<size_t>(yield)];
         }
         share += theirs * Fixed::ratio(1, 10);
     }
@@ -127,10 +127,10 @@ Fixed Game::allianceShare(PlayerId player, YieldType yield) const {
 Game::Output Game::outputPerTurn(PlayerId player) const {
     Output out;
     const bool anarchy = state_.players[static_cast<size_t>(player)].anarchyTurns > 0;  // no science or culture
-    HeldLuxuries luxuries;  // shared by its city reports
+    ReportShare shared;  // by its city reports
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
-        const Yields y = cityReport(c, luxuries).yields;
+        const Yields y = cityReport(c, shared).yields;
         if (!anarchy) {
             out.science += y[idx(YieldType::Science)];
             out.culture += y[idx(YieldType::Culture)];
