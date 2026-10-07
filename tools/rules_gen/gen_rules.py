@@ -1465,12 +1465,17 @@ def gen_governors():
 
 
 def gen_moments():
-    """Historic moments with their era score and the era they stop counting in (09: Era score)."""
+    """Historic moments with their era score, the eras they count in and the era they stop counting in (09: Era score)."""
     out = []
     for r in table(SPEC / "eras-moments-loyalty.md", "Historic moments [R&F]"):
         m = {"id": "MOMENT_" + snake(r["Moment"]), "name": r["Moment"], "eraScore": num(r["Era score"])}
         if r["Obsolete era"]:
             m["obsoleteEra"] = "ERA_" + r["Obsolete era"].replace(" Era", "").upper()
+        if r["Era window"]:
+            lo, _, hi = r["Era window"].partition("-")  # counts only while the world's era is inside it
+            m["eraMin"] = "ERA_" + lo.replace(" Era", "").strip().upper()
+            if hi.strip():
+                m["eraMax"] = "ERA_" + hi.replace(" Era", "").strip().upper()
         out.append(m)
     # Dedications [R&F] (09: Dedications): the era window; their effects are coded by id in the core.
     dedications = []

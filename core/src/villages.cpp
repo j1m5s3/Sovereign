@@ -27,6 +27,7 @@ void Game::enterVillage(Unit& unit) {
     const PlayerId pid = unit.owner;
     Player& p = state_.players[at(pid)];
     unit.xp += rules_->globalInt("EXPERIENCE_ACTIVATE_GOODY_HUT");
+    awardMoment(pid, "MOMENT_TRIBAL_VILLAGE_CONTACTED");  // 09: in the Ancient Era only
     const City* nearest = nullptr;
     for (const City& c : state_.cities) {
         if (c.owner == pid && (!nearest || state_.grid.distance(c.pos, unit.pos) < state_.grid.distance(nearest->pos, unit.pos))) nearest = &c;

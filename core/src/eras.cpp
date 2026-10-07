@@ -23,6 +23,7 @@ void Game::awardMoment(PlayerId pid, const char* id) {
     if (!isMajor(p) || m == kNone) return;
     const MomentType& mt = rules_->moments[at(m)];
     if (mt.obsoleteEra >= 0 && state_.gameEra >= mt.obsoleteEra) return;
+    if ((mt.eraMin >= 0 && state_.gameEra < mt.eraMin) || (mt.eraMax >= 0 && state_.gameEra > mt.eraMax)) return;  // its era window
     if (p.momentEras.size() < rules_->moments.size()) p.momentEras.resize(rules_->moments.size(), 0);
     p.momentEras[at(m)] = static_cast<int8_t>(state_.gameEra + 1);
     // Taj Mahal (03: Wonders): +1 era score for each moment worth 2 or more.

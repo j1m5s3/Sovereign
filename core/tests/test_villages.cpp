@@ -41,6 +41,26 @@ TEST(entering_a_village_consumes_it_for_a_reward) {
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
 
+TEST(a_village_contacted_in_the_ancient_era_is_a_moment) {
+    // 09: Tribal Village Contacted counts only while the world is in the Ancient Era; the camp moments until the Medieval.
+    const auto contacted = [](int era) {
+        GameState s = flatState(16, 12, 1);
+        Game::fitPlayerToRules(s.players[0], rules());
+        addCity(s, 0, {4, 6}, true, 3);
+        const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {6, 6});
+        s.plot({7, 6}).village = true;
+        s.gameEra = era;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::move(0, scout, {7, 6})) == CommandError::Ok);
+        return sovtest::hasMoment(*g, 0, "MOMENT_TRIBAL_VILLAGE_CONTACTED");
+    };
+    CHECK(contacted(0));
+    CHECK(!contacted(1));
+    const MomentType& camp = rules().moments[static_cast<size_t>(rules().moment("MOMENT_BARBARIAN_CAMP_DESTROYED"))];
+    CHECK_EQ(camp.eraMin, static_cast<int>(rules().era("ERA_ANCIENT")));
+    CHECK_EQ(camp.eraMax, static_cast<int>(rules().era("ERA_MEDIEVAL")));
+}
+
 TEST(the_map_script_scatters_villages) {
     std::string err;
     GameSetup setup = sovtest::duelSetup(5);

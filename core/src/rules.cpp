@@ -1546,6 +1546,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         mo.name = j["name"].str(id);
         mo.eraScore = static_cast<int>(j["eraScore"].integer(0));
         mo.obsoleteEra = j.has("obsoleteEra") ? era(j["obsoleteEra"].str()) : -1;
+        mo.eraMin = j.has("eraMin") ? era(j["eraMin"].str()) : -1;
+        mo.eraMax = j.has("eraMax") ? era(j["eraMax"].str()) : -1;
         moments.push_back(std::move(mo));
     }
     for (const auto& [id, j] : m.tables["rockBandResults"]) {
