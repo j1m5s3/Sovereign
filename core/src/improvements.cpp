@@ -39,10 +39,19 @@ bool Game::resourceImproved(Hex at) const {
 }
 
 bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
-    if (improvement < 0 || static_cast<size_t>(improvement) >= rules_->improvements.size()) return false;
+    return improvement >= 0 && static_cast<size_t>(improvement) < rules_->improvements.size() && improvablePlot(player, at) &&
+           improvementFits(player, at, improvement, ownUnit);
+}
+
+// The player's own worked land, with no city, district or wonder on it.
+bool Game::improvablePlot(PlayerId player, Hex at) const {
     const Plot& p = state_.plot(at);
-    if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || state_.districtAt(at) || state_.wonderAt(at) != kNone || p.improvement == improvement)
-        return false;
+    return p.owner == player && p.city != kNoCity && !state_.cityAt(at) && !state_.districtAt(at) && state_.wonderAt(at) == kNone;
+}
+
+bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
+    const Plot& p = state_.plot(at);
+    if (p.improvement == improvement) return false;
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(improvement)];
     if (!ownUnit && !hasUnlocked(player, im.unlock)) return false;
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
@@ -74,8 +83,9 @@ bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement, bool own
 
 std::vector<TypeIndex> Game::improvementsAt(PlayerId player, Hex at) const {
     std::vector<TypeIndex> out;
+    if (!improvablePlot(player, at)) return out;  // once for the plot, not once per improvement
     for (size_t i = 0; i < rules_->improvements.size(); ++i) {
-        if (canImproveAt(player, at, static_cast<TypeIndex>(i))) out.push_back(static_cast<TypeIndex>(i));
+        if (improvementFits(player, at, static_cast<TypeIndex>(i), false)) out.push_back(static_cast<TypeIndex>(i));
     }
     return out;
 }

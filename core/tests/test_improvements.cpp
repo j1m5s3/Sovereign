@@ -102,6 +102,29 @@ TEST(builder_builds_farm_with_charges) {
     CHECK(g2->state().unit(b) == nullptr);
 }
 
+TEST(improvements_go_only_on_the_players_own_open_land) {
+    // A Farm fits the capital's grassland, but not its city center, a district, a wonder or another civ's land.
+    GameState s = flatState(20, 14, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    sovtest::addCity(s, 0, {6, 6}, true, 3);
+    sovtest::addCity(s, 1, {12, 6}, true, 3);
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {7, 6}, true});
+    s.cities[0].wonders.push_back({rules().building("BUILDING_PYRAMIDS"), {5, 6}});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const TypeIndex farm = improvement("IMPROVEMENT_FARM");
+    auto takesFarm = [&](Hex h) {
+        const std::vector<TypeIndex> listed = g->improvementsAt(0, h);
+        const bool fits = std::find(listed.begin(), listed.end(), farm) != listed.end();
+        CHECK_EQ(fits, g->canImproveAt(0, h, farm));
+        return fits;
+    };
+    CHECK(takesFarm({6, 5}));
+    CHECK(!takesFarm({6, 6}));   // the city center
+    CHECK(!takesFarm({7, 6}));   // the Campus
+    CHECK(!takesFarm({5, 6}));   // the Pyramids
+    CHECK(!takesFarm({12, 5}));  // player 1's land
+}
+
 TEST(farm_adjacency_after_feudalism) {
     auto g = builderGame([](GameState& s) {
         for (Hex h : {Hex{7, 6}, Hex{7, 7}, Hex{6, 7}}) s.plot(h).improvement = improvement("IMPROVEMENT_FARM");
