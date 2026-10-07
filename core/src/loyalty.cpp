@@ -85,6 +85,10 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)
         change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_STARVATION"));
     change += sumCityModifiers(state_, *rules_, *c, ModEffect::CityLoyalty);
+    // Districts (02): the Government Plaza steadies its city while it stands unpillaged.
+    for (const CityDistrict& d : c->districts) {
+        if (d.complete && d.pillagedTurns == 0) change += Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].loyalty);
+    }
     // Communications Office (04): +1 a turn per title of the city's own established governor.
     if (policyIs(c->owner, "POLICY_COMMUNICATIONS_OFFICE")) {
         PlayerId holder = kNoPlayer;

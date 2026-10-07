@@ -1137,6 +1137,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         d.envoysNextToCityCenter = static_cast<int>(j["envoysNextToCityCenter"].integer(0));
         d.spyDefenseLevels = static_cast<int>(j["spyDefenseLevels"].integer(0));
+        d.loyalty = static_cast<int>(j["loyalty"].integer(0));
         d.airSlots = static_cast<int>(j["airSlots"].integer(0));
         d.plunder = readPlunder(j["plunder"]);
         d.specialistYields = readYields(j["specialistYields"]);

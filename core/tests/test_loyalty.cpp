@@ -321,3 +321,24 @@ TEST(a_monument_adds_culture_while_loyalty_is_full) {
     auto shaken = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->cityReport(c).yields[C], shaken->cityReport(c).yields[C] + Fixed::fromInt(1));
 }
+
+TEST(the_government_plaza_steadies_its_city) {
+    // 02: +8 loyalty a turn in the Government Plaza's city (data: the district's modifier), not while it is being built or
+    // pillaged, and not in the civ's other cities.
+    GameState s = flatState(24, 14, 2);
+    const CityId c = addCity(s, 0, {5, 7}, true, 3);
+    const CityId other = addCity(s, 0, {12, 7}, false, 3);
+    auto plain = Game::fromScenario(rules(), s);
+    const TypeIndex plaza = rules().district("DISTRICT_GOVERNMENT_PLAZA");
+    REQUIRE(plaza != kNone);
+    const auto with = [&](bool complete, int pillaged) {
+        GameState t = s;
+        cityRef(t, c).districts.push_back({plaza, {7, 7}, complete});
+        cityRef(t, c).districts.back().pillagedTurns = static_cast<uint8_t>(pillaged);
+        return Game::fromScenario(rules(), std::move(t));
+    };
+    CHECK_EQ(with(true, 0)->loyaltyPerTurn(c), plain->loyaltyPerTurn(c) + Fixed::fromInt(8));
+    CHECK_EQ(with(true, 0)->loyaltyPerTurn(other), plain->loyaltyPerTurn(other));
+    CHECK_EQ(with(false, 0)->loyaltyPerTurn(c), plain->loyaltyPerTurn(c));
+    CHECK_EQ(with(true, 3)->loyaltyPerTurn(c), plain->loyaltyPerTurn(c));
+}

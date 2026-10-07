@@ -61,6 +61,7 @@ Related data: [data/global-parameters.md](data/global-parameters.md) (CITY_*, CU
   - Religion: city's majority religion is one the owner founded +3, a religion another civ founded −3 (data: IDENTITY_PER_TURN_FROM_RELIGION_*).
   - Starving city: −4 (data: IDENTITY_PER_TURN_FROM_STARVATION).
   - Monument: +1 (and +1 Culture while loyalty is full).
+  - Government Plaza: +8 in its own city while it stands unpillaged (data: the district's modifier; source above: "+8 local loyalty to the city it has been built in").
   - Wonders, Great Works, policies, governor titles and beliefs add more via modifiers.
   - Free Cities +10/turn and city-states +20/turn towards themselves (data: IDENTITY_PER_TURN_FROM_FREE_CITIES / _CITY_STATES).
 - Loyalty 0: the city revolts and becomes a **Free City** (independent, has its own units). Free cities can be won back by loyalty pressure (they join the civ exerting the most pressure, arriving at 100 loyalty) or conquered. A city taken in combat starts at 50 loyalty; a liberated one at 100 (data: LOYALTY_AFTER_TRANSFERRED_BY_*).

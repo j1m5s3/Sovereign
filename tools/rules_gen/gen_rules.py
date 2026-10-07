@@ -865,6 +865,9 @@ def gen_districts():
             m = re.search(r"adjust district within one hex espionage defense bonus \(Amount=(\d+)\)", mods)
             if m:
                 d["spyDefenseLevels"] = int(m.group(1))  # enemy spies this many levels lower against it and the districts beside it
+            m = re.search(r"(?:^|; )\+(\d+) Loyalty per turn(?:$|;)", mods)
+            if m:
+                d["loyalty"] = int(m.group(1))  # in its city (the Government Plaza [R&F])
             if row["Appeal"]:
                 d["appeal"] = num(row["Appeal"])  # to neighbouring plots (01: Appeal)
             if "aqueduct rules" in flags:
