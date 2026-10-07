@@ -261,6 +261,17 @@ TEST(a_great_work_heist_and_disrupted_rocketry) {
     }
 }
 
+TEST(a_breached_dam_leaves_the_floodplains_to_the_builders) {
+    GameState s = spyState(4);
+    s.plot({16, 7}).feature = rules().feature("FEATURE_FLOODPLAINS_GRASSLAND");
+    s.plot({16, 7}).improvement = rules().improvement("IMPROVEMENT_FARM");
+    auto g = succeed(s, SpyMission::BreachDam);
+    REQUIRE(g);
+    CHECK(g->state().plot({16, 7}).pillagedTurns == kPillagedUntilRepaired);  // until a Builder repairs it (05: Pillage)
+    sovtest::endTurns(*g, 16);
+    CHECK(g->state().plot({16, 7}).pillagedTurns == kPillagedUntilRepaired);
+}
+
 TEST(a_successful_spy_earns_a_promotion) {
     GameState s = spyState(1);
     auto g = succeed(s, SpyMission::SiphonFunds);

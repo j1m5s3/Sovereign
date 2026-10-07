@@ -334,7 +334,7 @@ void Game::resolveSpyOperation(Agent& a) {
             for (const Hex& h : state_.grid.within(c.pos, 3)) {
                 Plot& pl = state_.plot(h);
                 if (pl.city != c.id || pl.feature == kNone || rules_->features[at(pl.feature)].id.rfind("FEATURE_FLOODPLAINS", 0) != 0) continue;
-                if (pl.improvement != kNone) pl.pillagedTurns = 5;
+                if (pl.improvement != kNone) pl.pillagedTurns = kPillagedUntilRepaired;
                 for (Unit& u : state_.units) {
                     if (u.pos == h && !isLeader(u)) u.hp = std::max(1, u.hp - 30);
                 }

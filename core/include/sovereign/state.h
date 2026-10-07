@@ -40,7 +40,7 @@ struct Plot {
     int16_t continent = -1;
     int8_t route = -1;  // Rules::routes: the road on this plot (-1: none)
     bool routePillaged = false;  // pillaged (05: Pillage): moves as if it had no road until repaired
-    uint8_t pillagedTurns = 0;  // the improvement yields nothing until repaired (a disaster pillaged it)
+    uint8_t pillagedTurns = 0;  // the improvement is pillaged (05: Pillage; a disaster, 09): nothing until a Builder repairs it
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
     bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
@@ -115,6 +115,8 @@ struct CityDistrict {
 
 // Sovereign reading: a city repairs a pillaged district itself in this many turns.
 constexpr uint8_t kPillagedDistrictTurns = 10;
+// A pillaged improvement, by war, disaster, flood or blast, waits for a Builder (Plot::pillagedTurns).
+constexpr uint8_t kPillagedUntilRepaired = 255;
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
