@@ -12,6 +12,7 @@
    },
    "unlock": "TECH_FLIGHT",
    "airSlots": 1,
+   "trainedAbility": "ABILITY_HANGAR_TRAINED_AIRCRAFT_XP",
    "purchasable": true
   },
   {
@@ -28,6 +29,7 @@
     "BUILDING_HANGAR"
    ],
    "airSlots": 1,
+   "trainedAbility": "ABILITY_AIRPORT_TRAINED_AIRCRAFT_XP",
    "requiredPower": 1,
    "poweredYields": {
     "PRODUCTION": 2
@@ -322,6 +324,7 @@
    "unlock": "TECH_BRONZE_WORKING",
    "housing": 1,
    "citizenSlots": 1,
+   "trainedAbility": "ABILITY_BARRACKS_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
    "greatPersonPoints": {
@@ -340,6 +343,7 @@
    "unlock": "TECH_HORSEBACK_RIDING",
    "housing": 1,
    "citizenSlots": 1,
+   "trainedAbility": "ABILITY_STABLE_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
    "greatPersonPoints": {
@@ -361,6 +365,7 @@
     "BUILDING_BARRACKS",
     "BUILDING_STABLE"
    ],
+   "trainedAbility": "ABILITY_ARMORY_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
    "greatPersonPoints": {
@@ -385,6 +390,7 @@
    "requires": [
     "BUILDING_ARMORY"
    ],
+   "trainedAbility": "ABILITY_MILITARY_ACADEMY_TRAINED_UNIT_XP",
    "purchasable": true,
    "stockpileCap": 10,
    "greatPersonPoints": {
@@ -553,6 +559,7 @@
    "unlock": "TECH_CELESTIAL_NAVIGATION",
    "housing": 1,
    "citizenSlots": 1,
+   "trainedAbility": "ABILITY_LIGHTHOUSE_TRAINED_UNIT_XP",
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
@@ -574,6 +581,7 @@
    "requires": [
     "BUILDING_LIGHTHOUSE"
    ],
+   "trainedAbility": "ABILITY_SHIPYARD_TRAINED_UNIT_XP",
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1
@@ -598,6 +606,7 @@
    "requires": [
     "BUILDING_SHIPYARD"
    ],
+   "trainedAbility": "ABILITY_SEAPORT_TRAINED_UNIT_XP",
    "purchasable": true,
    "greatPersonPoints": {
     "GREAT_PERSON_CLASS_ADMIRAL": 1

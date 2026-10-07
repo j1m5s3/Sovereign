@@ -35,6 +35,26 @@ Fixed citizenScore(const Yields& y) {
 int speedPercent(const GameState& s, const Rules& r) {
     return r.speeds[static_cast<size_t>(r.speed(s.setup.speed))].costPercent;
 }
+
+// The combat XP a unit trained or bought in `city` keeps for good: the Barracks' +25% for melee, ranged and
+// anti-cavalry, the Hangar's for aircraft (03), the Calmecac's for all (leaders-and-art-style). A pillaged
+// district's buildings give none (05: Pillage).
+int trainedXpPercent(const Rules& r, const City& city, const UnitType& u) {
+    int total = 0;
+    for (TypeIndex bi : city.buildings) {
+        const BuildingType& b = r.buildings[static_cast<size_t>(bi)];
+        if (b.districtType != kNone) {
+            const CityDistrict* home = city.district(b.districtType, true);
+            if (home && home->pillagedTurns > 0) continue;
+        }
+        total += u.promotionClass.empty() ? 0 : b.trainedXpPercent;
+        if (b.trainedAbility == kNone) continue;
+        const AbilityType& a = r.abilities[static_cast<size_t>(b.trainedAbility)];
+        if (std::find(a.classes.begin(), a.classes.end(), u.unitClass) == a.classes.end()) continue;
+        for (const UnitEffect& e : a.effects) total += e.kind == UnitEffectKind::XpPercent ? e.amount : 0;
+    }
+    return total;
+}
 }  // namespace
 
 const CityDistrict* City::district(TypeIndex type, bool completeOnly) const {
@@ -1079,6 +1099,7 @@ void Game::applyCity(const Command& c) {
                     unitMoments(c.player, item.type);
                     Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
                     const UnitType& bought = rules_->units[static_cast<size_t>(item.type)];
+                    u.xpBonus = static_cast<int16_t>(u.xpBonus + trainedXpPercent(*rules_, city, bought));  // Grand Master's Chapel, Theocracy
                     // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
                     u.religion = static_cast<int16_t>(bought.religiousStrength > 0 || bought.spreadCharges > 0 ? religion : -1);
                     if (bought.id == "UNIT_ROCK_BAND") grantBandPromotion(u);  // every band starts with one (07)
@@ -1224,11 +1245,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (sumCityModifiers(state_, *rules_, city, ModEffect::SettlerNoPopCost) <= Fixed()) city.population -= u.popCost;
         Unit& made = spawnUnit(item.type, city.owner, *spot);
         made.formation = item.formation;
-        // The Calmecac (leaders-and-art-style): units trained here earn +25% combat XP for good.
-        for (TypeIndex bi : city.buildings) {
-            const int pct = rules_->buildings[static_cast<size_t>(bi)].trainedXpPercent;
-            if (pct > 0 && !u.promotionClass.empty()) made.xpBonus = static_cast<int16_t>(made.xpBonus + pct);
-        }
+        made.xpBonus = static_cast<int16_t>(made.xpBonus + trainedXpPercent(*rules_, city, u));
         if (!u.promotionClass.empty() && cityGovernorHas(city, "GOVERNOR_PROMOTION_EMBRASURE")) made.xp = std::max(made.xp, xpForNextLevel(made));  // Victor's Embrasure
         // A Military alliance at level 3 (08): units trained have a promotion's XP.
         if (!u.promotionClass.empty() && u.layer == UnitLayer::Military && bestAllianceLevel(city.owner, AllianceType::Military) >= 3)

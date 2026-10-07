@@ -463,6 +463,7 @@ struct BuildingType {
     int adjacentAmount = 0;
     std::string adjacentImprovementId;   // (loading only)
     int goldPerTradeRoute = 0, envoysOnBuild = 0, trainedXpPercent = 0, foodPerAdjacentMountain = 0;
+    TypeIndex trainedAbility = kNone;  // units of its classes trained in its city keep its combat XP (the Barracks, 03)
     int citizenSlots = 0;              // specialist slots it opens in its district (02)
     Yields specialistYields{};         // extra yields for each specialist in its district
     // Power [GS] (09: Power).

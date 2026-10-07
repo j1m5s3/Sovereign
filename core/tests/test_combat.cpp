@@ -418,6 +418,62 @@ TEST(a_military_academy_trains_corps_and_armies_whole) {
     CHECK(back->state().city(city)->queue.front() == corps);
 }
 
+TEST(units_trained_in_a_city_keep_its_buildings_combat_xp) {
+    // 03: each Encampment, Harbor and Aerodrome building gives units of its classes trained in its city
+    // +25% combat XP for good (the Airport +50%); a pillaged district's buildings give none.
+    const auto trained = [](std::vector<const char*> buildings, const char* unitId, bool pillaged = false) {
+        GameState s = sovtest::flatState(16, 12, 2);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        s.players[0].stockpile[at(rules().resource("RESOURCE_HORSES"))] = 50;
+        s.players[0].stockpile[at(rules().resource("RESOURCE_OIL"))] = 10;
+        sovtest::addCity(s, 0, {4, 5}, true, 8);
+        for (const char* b : buildings) s.cities[0].buildings.push_back(rules().building(b));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.cities[0].districts.push_back({rules().district("DISTRICT_ENCAMPMENT"), {6, 5}, true});
+        if (pillaged) s.cities[0].districts.back().pillagedTurns = kPillagedDistrictTurns;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->completeItem(g->stateMutForTests().cities[0], ProductionItem{ProductionKind::Unit, rules().unit(unitId)}));
+        const Unit& made = g->state().units.back();
+        CHECK_EQ(made.type, rules().unit(unitId));
+        CHECK_EQ(made.xp, 0);  // a faster pace, not a head start
+        return static_cast<int>(made.xpBonus);
+    };
+    CHECK_EQ(trained({}, "UNIT_SPEARMAN"), 0);
+    CHECK_EQ(trained({"BUILDING_BARRACKS"}, "UNIT_SPEARMAN"), 25);
+    CHECK_EQ(trained({"BUILDING_BARRACKS"}, "UNIT_SLINGER"), 25);
+    CHECK_EQ(trained({"BUILDING_BARRACKS"}, "UNIT_HORSEMAN"), 0);  // cavalry and siege learn at the Stable
+    CHECK_EQ(trained({"BUILDING_STABLE"}, "UNIT_HORSEMAN"), 25);
+    CHECK_EQ(trained({"BUILDING_STABLE"}, "UNIT_CATAPULT"), 25);
+    CHECK_EQ(trained({"BUILDING_STABLE"}, "UNIT_SPEARMAN"), 0);
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_ARMORY", "BUILDING_MILITARY_ACADEMY"}, "UNIT_SPEARMAN"), 75);
+    CHECK_EQ(trained({"BUILDING_STABLE", "BUILDING_ARMORY", "BUILDING_MILITARY_ACADEMY"}, "UNIT_HORSEMAN"), 75);
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_ARMORY"}, "UNIT_BUILDER"), 0);  // civilians earn no XP
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_ARMORY"}, "UNIT_SPEARMAN", true), 0);
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_LIGHTHOUSE"}, "UNIT_SPEARMAN"), 25);
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_CALMECAC"}, "UNIT_SPEARMAN"), 50);  // the Aztecs' Calmecac adds its own 25%
+    CHECK_EQ(trained({"BUILDING_CALMECAC"}, "UNIT_BUILDER"), 0);
+    // Ships wait in the port: the Lighthouse, Shipyard and Seaport each add 25%, and the pillaged Encampment is not theirs.
+    CHECK_EQ(trained({"BUILDING_LIGHTHOUSE"}, "UNIT_GALLEY"), 25);
+    CHECK_EQ(trained({"BUILDING_BARRACKS", "BUILDING_LIGHTHOUSE", "BUILDING_SHIPYARD", "BUILDING_SEAPORT"}, "UNIT_GALLEY", true), 75);
+    // Aircraft: the Hangar 25%, the Airport 50%.
+    CHECK_EQ(trained({"BUILDING_HANGAR"}, "UNIT_BIPLANE"), 25);
+    CHECK_EQ(trained({"BUILDING_HANGAR", "BUILDING_AIRPORT"}, "UNIT_BIPLANE"), 75);
+    CHECK_EQ(trained({"BUILDING_HANGAR", "BUILDING_AIRPORT"}, "UNIT_SPEARMAN"), 0);
+    // A unit bought with Faith (Theocracy, the Grand Master's Chapel) is trained in the city too.
+    GameState s = sovtest::flatState(16, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    const CityId city = sovtest::addCity(s, 0, {4, 5}, true, 8);
+    s.cities[0].buildings.push_back(rules().building("BUILDING_BARRACKS"));
+    s.players[0].techs.done[at(rules().tech("TECH_BRONZE_WORKING"))] = 1;
+    s.players[0].government = rules().government("GOVERNMENT_THEOCRACY");
+    s.players[0].policies.assign(static_cast<size_t>(rules().governments[at(s.players[0].government)].totalSlots()), kNone);
+    s.players[0].faith = Fixed::fromInt(5000);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, city, ProductionItem{ProductionKind::Unit, rules().unit("UNIT_SPEARMAN")})) == CommandError::Ok);
+    CHECK_EQ(g->state().units.back().type, rules().unit("UNIT_SPEARMAN"));
+    CHECK_EQ(g->state().units.back().xpBonus, 25);
+}
+
 TEST(recon_naval_and_melee_promotions_take_effect) {
     UnitId scout = kNoUnit, plain = kNoUnit, raider = kNoUnit, victim = kNoUnit, carrier = kNoUnit;
     auto g = duel([&](GameState& s) {
