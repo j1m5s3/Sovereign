@@ -893,6 +893,12 @@ private:
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
     // Copies of each resource the player holds, added into `n` (by resource index); `only`: just that one (kNone: all).
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
+    // A city owner's luxuriesHeld, worked out on first use and shared by a run of its city reports in which no city
+    // changes hands.
+    using HeldLuxuries = std::optional<std::vector<uint8_t>>;
+    CityReport cityReport(const City& city, HeldLuxuries& ownerLuxuries) const;
+    Fixed loyaltyPerTurn(const City& city, HeldLuxuries& ownerLuxuries) const;
+    int luxuryAmenities(const City& city, HeldLuxuries& ownerLuxuries) const;
     int usedHere(const City& city, Gp g) const;  // times it was used on the city's land
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;

@@ -164,9 +164,15 @@ std::vector<Hex> Game::workablePlots(const City& city) const {
 }
 
 CityReport Game::cityReport(CityId id) const {
-    CityReport rep;
     const City* c = state_.city(id);
-    if (!c) return rep;
+    if (!c) return CityReport();
+    HeldLuxuries luxuries;
+    return cityReport(*c, luxuries);
+}
+
+CityReport Game::cityReport(const City& city, HeldLuxuries& ownerLuxuries) const {
+    CityReport rep;
+    const City* c = &city;
     const Player& owner = state_.players[static_cast<size_t>(c->owner)];
     Yields raw = plotYields(c->pos, *c);
     for (int32_t pi : c->worked) {
@@ -370,7 +376,7 @@ CityReport Game::cityReport(CityId id) const {
         rep.amenities += usedHere(*c, Gp::Roebling) + 3 * usedHere(*c, Gp::JaneDrew);
         rep.housing += Fixed::fromInt(2 * usedHere(*c, Gp::Roebling) + 4 * usedHere(*c, Gp::JaneDrew));
     }
-    rep.amenities += luxuryAmenities(*c);
+    rep.amenities += luxuryAmenities(*c, ownerLuxuries);
     rep.amenities += districtAmenities(*c);
     rep.amenities += parkAmenities(*c);  // 07: National Parks
     // Natural wonders (01): the city owning Pamukkale gains an amenity per natural wonder in its land.
@@ -957,9 +963,10 @@ Fixed Game::goldPerTurn(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed net;
     net += Fixed::fromInt(3 * monopolySources(player));  // 07: Monopolies
+    HeldLuxuries luxuries;  // shared by its city reports
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
-        if (p.anarchyTurns == 0) net += cityReport(c.id).yields[idx(YieldType::Gold)];  // anarchy: no gold
+        if (p.anarchyTurns == 0) net += cityReport(c, luxuries).yields[idx(YieldType::Gold)];  // anarchy: no gold
         for (TypeIndex b : c.buildings) net -= Fixed::fromInt(rules_->buildings[static_cast<size_t>(b)].maintenance);
         for (const CityDistrict& d : c.districts) {
             if (d.complete) net -= Fixed::fromInt(rules_->districts[static_cast<size_t>(d.type)].maintenance);
@@ -1497,7 +1504,8 @@ void Game::processCities(PlayerId pid) {
 
     // Steps 2-5 of the turn order: yields, gold and maintenance, research.
     std::vector<CityReport> reports;
-    for (CityId id : ids) reports.push_back(cityReport(id));
+    HeldLuxuries luxuries;  // shared by its city reports
+    for (CityId id : ids) reports.push_back(cityReport(*state_.city(id), luxuries));
     player.gold += goldPerTurn(pid);
     Fixed science, culture;
     if (player.anarchyTurns == 0) {  // anarchy: no gold, science, culture or faith
