@@ -143,6 +143,18 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     // Cryptography (04): our spies work a level higher abroad; foreign spies two lower in our cities.
     if (policyIs(a->owner, "POLICY_CRYPTOGRAPHY")) need -= op->levelChange;
     if (policyIs(c->owner, "POLICY_CRYPTOGRAPHY")) need += 2 * op->levelChange;
+    // A Diplomatic Quarter [GS]: foreign spies two levels lower against it and the districts beside it. A mission
+    // with no target district works from the City Center (Sovereign reading).
+    const CityDistrict* target = op->district != kNone ? c->district(op->district, true) : nullptr;
+    const Hex aim = target ? target->pos : c->pos;
+    int shield = 0;
+    for (const City& own : state_.cities) {
+        if (own.owner != c->owner) continue;
+        for (const CityDistrict& d : own.districts) {
+            if (d.complete && state_.grid.distance(d.pos, aim) <= 1) shield = std::max(shield, rules_->districts[at(d.type)].spyDefenseLevels);
+        }
+    }
+    need += shield * op->levelChange;
     // The city's best counterspy, and Amani's Local Informants (+3 levels), defend.
     int defender = 0;
     for (const Agent& o : state_.agents) {

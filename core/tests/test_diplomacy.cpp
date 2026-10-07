@@ -562,14 +562,21 @@ TEST(an_embassy_follows_diplomatic_service_and_brings_favor_with_a_diplomatic_qu
     REQUIRE(g->submit(Command::sendDelegation(0, 1, true)) == CommandError::Ok);
     CHECK_EQ(g->state().players[0].relations[1].delegation, 2);
     CHECK_EQ(g->favorPerTurn(0), before);  // no Diplomatic Quarter yet
-    GameState t = g->state();
+    // A Diplomatic Quarter earns 1 Favor a turn for each delegation or embassy it receives, not for one it sends.
+    const int theirs = g->favorPerTurn(1);
     CityDistrict dq;
     dq.type = rules().district("DISTRICT_DIPLOMATIC_QUARTER");
     dq.pos = {5, 7};
     dq.complete = true;
+    GameState t = g->state();
     t.cities[0].districts.push_back(dq);
     auto h = Game::fromScenario(rules(), std::move(t));
-    CHECK_EQ(h->favorPerTurn(0), before + 1);
+    CHECK_EQ(h->favorPerTurn(0), before);
+    dq.pos = {14, 7};
+    GameState u = g->state();
+    u.cities[1].districts.push_back(dq);
+    auto k = Game::fromScenario(rules(), std::move(u));
+    CHECK_EQ(k->favorPerTurn(1), theirs + 1);
 }
 
 TEST(a_joint_war_is_agreed_and_declared_together) {

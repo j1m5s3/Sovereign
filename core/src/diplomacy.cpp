@@ -964,9 +964,9 @@ void Game::breakPromises(PlayerId by, PlayerId to, PromiseKind kind) {
 // Delegations and resident embassies (08: Diplomatic actions; data: DiplomaticActions). A Send Delegation
 // (25 Gold, until Diplomatic Service) or a Resident Embassy (50 Gold, from Diplomatic Service; it replaces
 // the delegation) goes to a met major at peace; an AI turns it away while it denounces or dislikes the
-// sender. It stays until war between them. Each is a Delegate source of access; with a Diplomatic Quarter
-// [GS] the sender gains 1 Favor a turn for each (favorPerTurn). The land path a delegation needs in
-// Civ VI is not checked (Sovereign reading).
+// sender. It stays until war between them. Each is a Delegate source of access; a receiver with a Diplomatic
+// Quarter [GS] gains 1 Favor a turn for each (favorPerTurn). The land path a delegation needs in Civ VI is
+// not checked (Sovereign reading).
 CommandError Game::delegationProblem(PlayerId from, PlayerId to, bool embassy) const {
     if (from == to || !isMajorCiv(from) || !isMajorCiv(to) || !hasMet(from, to) || atWar(from, to)) return CommandError::CannotDeal;
     const Player& p = state_.players[at(from)];

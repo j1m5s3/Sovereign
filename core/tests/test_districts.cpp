@@ -339,3 +339,36 @@ TEST(specialists_work_district_slots) {
     c.districts[0].specialists = 0;
     CHECK(g->cityReport(c.id).yields[static_cast<size_t>(YieldType::Science)] < science);
 }
+
+TEST(an_aqueduct_by_a_geothermal_fissure_brings_an_amenity) {
+    // [GS] An Aqueduct at (7,6) beside a Geothermal Fissure gives its city +1 Amenity; a fissure two plots away doesn't.
+    auto g = town(3, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
+    const auto amenities = [&](Hex fissure, bool complete) {
+        GameState s = g->state();
+        s.plot(fissure).feature = rules().feature("FEATURE_GEOTHERMAL_FISSURE");
+        s.cities[0].districts.push_back({district("DISTRICT_AQUEDUCT"), {7, 6}, complete});
+        auto h = Game::fromScenario(rules(), std::move(s));
+        return h->cityReport(h->state().cities[0].id).amenities;
+    };
+    CHECK_EQ(amenities({8, 6}, true), amenities({9, 6}, true) + 1);
+    CHECK_EQ(amenities({7, 7}, true), amenities({9, 6}, true) + 1);
+    CHECK_EQ(amenities({8, 6}, false), amenities({9, 6}, false));  // not until it is built
+}
+
+TEST(a_diplomatic_quarter_beside_the_city_center_brings_an_envoy) {
+    // [GS] +1 Envoy once a Diplomatic Quarter is built beside the City Center at (6,6); none two plots away.
+    const auto envoys = [](Hex quarter) {
+        auto g = town(4, [&](GameState& s) {
+            CityDistrict dq;
+            dq.type = district("DISTRICT_DIPLOMATIC_QUARTER");
+            dq.pos = quarter;
+            s.cities[0].districts.push_back(dq);
+        });
+        const int before = g->state().players[0].envoyTokens;
+        REQUIRE(g->completeItem(g->stateMutForTests().cities[0], item("DISTRICT_DIPLOMATIC_QUARTER")));
+        REQUIRE(g->state().cities[0].district(district("DISTRICT_DIPLOMATIC_QUARTER"), true) != nullptr);
+        return g->state().players[0].envoyTokens - before;
+    };
+    CHECK_EQ(envoys({7, 6}), 1);
+    CHECK_EQ(envoys({8, 6}), 0);
+}

@@ -73,13 +73,14 @@ int Game::favorPerTurn(PlayerId pid) const {
             favor += rules_->globalInt("WORLD_CONGRESS_SUZERAIN_FAVOR_PER_TURN") * (buildingsOwned(pid, "BUILDING_ORSZ_GH_Z") > 0 ? 2 : 1);
         if (alliance(pid, cs.id) != AllianceType::None) favor += rules_->globalInt("WORLD_CONGRESS_ALLIANCE_FAVOR_PER_TURN");
     }
-    // A Diplomatic Quarter [GS]: +1 a turn for each delegation and embassy it keeps (08: Resident Embassy).
+    // A Diplomatic Quarter [GS]: +1 a turn for each delegation or embassy another civ keeps with this one (08:
+    // Resident Embassy; Civilopedia: "for each Delegation or Embassy from a foreign civilization").
     const TypeIndex quarter = rules_->district("DISTRICT_DIPLOMATIC_QUARTER");
     const bool hasQuarter = quarter != kNone && std::any_of(state_.cities.begin(), state_.cities.end(), [&](const City& c) {
         return c.owner == pid && std::any_of(c.districts.begin(), c.districts.end(), [&](const CityDistrict& d) { return d.type == quarter && d.complete; });
     });
     if (hasQuarter) {
-        for (const Relation& rel : p.relations) favor += rel.delegation > 0 ? 1 : 0;
+        for (const Player& o : state_.players) favor += o.id != pid && at(pid) < o.relations.size() && o.relations[at(pid)].delegation > 0 ? 1 : 0;
     }
     // Grievances held against it beyond FAVOR_GRIEVANCES_START cost 1 per FAVOR_GRIEVANCES_DIVISOR.
     int held = 0;

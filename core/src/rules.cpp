@@ -1115,6 +1115,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.tradeInternational = readYields(j["tradeYields"]["international"]);
         d.housing = static_cast<int>(j["housing"].integer(0));
         d.amenities = static_cast<int>(j["amenities"].integer(0));
+        if (j.has("amenityNextTo")) {
+            d.amenityFeature = feature(j["amenityNextTo"]["feature"].str());
+            if (d.amenityFeature == kNone) {
+                if (error) *error = where + ": unknown feature " + j["amenityNextTo"]["feature"].str();
+                return false;
+            }
+            d.amenityFeatureAmount = static_cast<int>(j["amenityNextTo"]["amount"].integer(0));
+        }
+        d.envoysNextToCityCenter = static_cast<int>(j["envoysNextToCityCenter"].integer(0));
+        d.spyDefenseLevels = static_cast<int>(j["spyDefenseLevels"].integer(0));
         d.airSlots = static_cast<int>(j["airSlots"].integer(0));
         d.plunder = readPlunder(j["plunder"]);
         d.specialistYields = readYields(j["specialistYields"]);

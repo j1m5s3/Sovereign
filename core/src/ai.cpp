@@ -522,7 +522,7 @@ void deals(View& v) {
             v.game.submit(Command::denounce(v.me, o.id));
             continue;
         }
-        // Delegations and embassies with every met major (08): access, and favor with a Diplomatic Quarter.
+        // Delegations and embassies with every met major (08): access (the receiver's Diplomatic Quarter earns the favor).
         if (s.players[at(v.me)].gold >= Fixed::fromInt(150) && v.game.wouldReceive(o.id, v.me)) {
             for (const bool embassy : {true, false}) {
                 const Command send = Command::sendDelegation(v.me, o.id, embassy);
