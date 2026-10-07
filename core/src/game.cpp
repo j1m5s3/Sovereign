@@ -946,6 +946,7 @@ void Game::apply(const Command& c) {
             state_.plot(u.pos).routePillaged = false;
             u.movesLeft = Fixed();  // laying a road takes the unit's turn
             u.moveTarget.reset();
+            if (freeRoad(c.player, c.id)) break;  // Qin's Builders keep their charges
             if (--u.charges <= 0 && rules_->units[static_cast<size_t>(u.type)].layer != UnitLayer::Military) removeUnit(c.id);  // a Legionary stays
             break;
         }

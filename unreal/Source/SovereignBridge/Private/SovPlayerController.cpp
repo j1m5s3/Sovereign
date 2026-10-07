@@ -1207,10 +1207,10 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				Choices.Add({TEXT("Railroad (1 Iron, 1 Coal)"), sov::Command::buildRailroad(Me(), U->id)});
 			}
-			// A road by hand (01: Routes): Military Engineers before railroads, and the Legionary.
+			// A road by hand (01: Routes): Military Engineers before railroads, the Legionary, and Qin's Builders for no charge.
 			if (G.roadProblem(Me(), U->id) == sov::CommandError::Ok)
 			{
-				Choices.Add({TEXT("Road (a charge)"), sov::Command::buildRoad(Me(), U->id)});
+				Choices.Add({G.freeRoad(Me(), U->id) ? TEXT("Road (no charge)") : TEXT("Road (a charge)"), sov::Command::buildRoad(Me(), U->id)});
 			}
 			const sov::TypeIndex Tunnel = R.improvement("IMPROVEMENT_MOUNTAIN_TUNNEL");
 			for (const sov::Hex& Site : G.tunnelSites(Me(), U->id))

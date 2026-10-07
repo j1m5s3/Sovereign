@@ -356,6 +356,7 @@ CivAbility combineAbilities(const CivAbility& a, const CivAbility& b) {
     c.nearFollowingCityStrength += b.nearFollowingCityStrength;
     c.nearFollowingCityRange = std::max(c.nearFollowingCityRange, b.nearFollowingCityRange);
     c.extraBuilderCharges += b.extraBuilderCharges;
+    c.builderRoads = c.builderRoads || b.builderRoads;
     c.wonderCulture += b.wonderCulture;
     if (c.faithPurchaseDistrict == kNone) c.faithPurchaseDistrict = b.faithPurchaseDistrict;
     c.killFaithPercent += b.killFaithPercent;
@@ -1483,6 +1484,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         ab.nearFollowingCityStrength = static_cast<int>(a["strengthNearFollowingCity"]["amount"].integer(0));
         ab.nearFollowingCityRange = static_cast<int>(a["strengthNearFollowingCity"]["range"].integer(0));
         ab.extraBuilderCharges = static_cast<int>(a["extraBuilderCharges"].integer(0));
+        ab.builderRoads = a["builderRoads"].boolean(false);
         ab.peaceYieldPercent = readYields(a["peaceYieldPercent"]);
         ab.wonderCulture = static_cast<int>(a["wonderCulture"].integer(0));
         if (!a["faithPurchaseDistrict"].str().empty()) ab.faithPurchaseDistrict = district(a["faithPurchaseDistrict"].str());

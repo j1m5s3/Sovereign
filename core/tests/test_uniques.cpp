@@ -427,3 +427,32 @@ TEST(legionaries_lay_a_road_or_a_fort_and_march_on) {
         CHECK_EQ(g->state().unit(id)->charges, 0);
     }
 }
+
+TEST(qins_builders_lay_roads_for_no_charge) {
+    GameState s = pair("CIVILIZATION_CHINA", "CIVILIZATION_EGYPT", {});
+    for (const Hex& h : {Hex{6, 6}, Hex{6, 8}}) {
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    s.plot({14, 6}).owner = 1;
+    s.plot({14, 6}).city = s.cities[1].id;
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+    s.units.back().charges = 1;  // its last charge
+    const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {6, 8});
+    const UnitId egyptian = addUnit(s, "UNIT_BUILDER", 1, {14, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // Only Qin's Builders: not his other units, nor another civ's Builders.
+    CHECK(g->freeRoad(0, builder));
+    CHECK(!g->freeRoad(0, warrior));
+    CHECK(!g->freeRoad(1, egyptian));
+    CHECK(!g->freeRoad(1, builder));
+    CHECK(!g->freeRoad(0, egyptian));
+    CHECK(g->validate(Command::buildRoad(0, warrior)) == CommandError::CannotImprove);
+    CHECK(g->roadProblem(1, egyptian) == CommandError::CannotImprove);
+    // The road takes the Builder's turn but not its last charge.
+    REQUIRE(g->submit(Command::buildRoad(0, builder)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({6, 6}).route, g->roadFor(0));
+    REQUIRE(g->state().unit(builder) != nullptr);
+    CHECK_EQ(g->state().unit(builder)->charges, 1);
+    CHECK(g->validate(Command::buildRoad(0, builder)) == CommandError::CannotImprove);
+}

@@ -85,7 +85,7 @@ Leanings: 5 Warlord, 4 Statesman, 3 Builder-King.
 - Agenda, *Magnanimous:* likes civs that release captured leaders and honour peace deals; hates civs that send assassins.
 
 **Qin Shi Huang (China), "Standardization"**
-- Ability: Builders +1 charge; +50% Production toward walls; roads cost no Builder charge.
+- Ability: Builders +1 charge; +50% Production toward walls; roads cost no Builder charge (Builders lay no roads in Civ VI; his lay a road on their tile, which takes their turn but no charge).
 - Agenda, *First Emperor:* dislikes civs that build wonders before him.
 
 **Tokugawa Ieyasu (Japan), "Edo Peace"**

@@ -87,7 +87,7 @@ enum class CommandType : uint8_t {
     BuyPolicyChanges = 74,      // pays Gold to change government and policies this turn (04)
     LaunchInquisition = 75,     // id = an unused Apostle of the player's religion: Inquisitors may be bought (06)
     HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
-    BuildRoad = 77,             // id = Military Engineer (until railroads) or Legionary: a road on its plot for a charge (01: Routes)
+    BuildRoad = 77,             // id = Military Engineer (until railroads), Legionary or Qin's Builder: a road on its plot for a charge (none for Qin's)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)

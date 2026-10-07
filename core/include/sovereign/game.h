@@ -437,6 +437,7 @@ public:
     TypeIndex railroad() const;                        // the unit-only route (kNone: none in the rules)
     CommandError railroadProblem(PlayerId player, UnitId engineer) const;
     CommandError roadProblem(PlayerId player, UnitId unit) const;  // a road by hand for a charge (01: Routes)
+    bool freeRoad(PlayerId player, UnitId unit) const;  // a Builder of Qin's laying one for no charge (Standardization)
     CommandError chargeProblem(PlayerId player, UnitId engineer) const;  // spending a charge on the district it stands on (03)
     std::vector<Hex> tunnelSites(PlayerId player, UnitId engineer) const;  // neighbouring mountains it may tunnel
 

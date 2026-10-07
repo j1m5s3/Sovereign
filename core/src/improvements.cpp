@@ -404,13 +404,14 @@ CommandError Game::railroadProblem(PlayerId player, UnitId engineer) const {
 }
 
 // A road by hand (01: Routes): a Military Engineer, until railroads replace its roads [GS], or a Legionary
-// (leaders-and-art-style) spends a charge on a road of the owner's era on its plot.
+// (leaders-and-art-style) spends a charge on a road of the owner's era on its plot; Qin's Builders lay one for none.
 CommandError Game::roadProblem(PlayerId player, UnitId unit) const {
     const Unit* u = state_.unit(unit);
     if (!u || u->owner != player) return CommandError::NotYourUnit;
     const UnitType& ut = rules_->units[static_cast<size_t>(u->type)];
     const TypeIndex road = roadFor(player);
-    if (!ut.buildsRoads || u->charges <= 0 || u->movesLeft <= Fixed() || road == kNone) return CommandError::CannotImprove;
+    if ((!ut.buildsRoads && !freeRoad(player, unit)) || u->charges <= 0 || u->movesLeft <= Fixed() || road == kNone)
+        return CommandError::CannotImprove;
     if (const TypeIndex rr = railroad(); rr != kNone && ut.id == "UNIT_MILITARY_ENGINEER") {
         const TypeIndex tech = rules_->routes[static_cast<size_t>(rr)].tech;
         if (tech != kNone && state_.players[static_cast<size_t>(player)].techs.has(tech)) return CommandError::CannotImprove;
@@ -420,6 +421,13 @@ CommandError Game::roadProblem(PlayerId player, UnitId unit) const {
         (here.owner != kNoPlayer && here.owner != player && !atWar(player, here.owner)))
         return CommandError::CannotImprove;
     return CommandError::Ok;
+}
+
+// Qin Shi Huang's Standardization (leaders-and-art-style): roads cost his Builders no charge. Builders lay no roads
+// in Civ VI, so his are the only ones that do.
+bool Game::freeRoad(PlayerId player, UnitId unit) const {
+    const Unit* u = state_.unit(unit);
+    return u && u->owner == player && isBuilder(rules_->units[static_cast<size_t>(u->type)]) && civAbility(player).builderRoads;
 }
 
 std::vector<Hex> Game::tunnelSites(PlayerId player, UnitId engineer) const {
