@@ -567,6 +567,20 @@ TEST(government_adoption_and_policy_slots) {
     CHECK_EQ(g->submit(Command::setPolicy(0, 1, kNone)), CommandError::ChangesLocked);
 }
 
+// God King: +1 Gold and +1 Faith in the capital alone (a PLAYER_CAPITAL modifier).
+TEST(god_king_reaches_only_the_capital) {
+    auto g = capitalWith([](GameState& s) {
+        chiefdom(s);
+        sovtest::addCity(s, 0, {13, 6}, false, 2);
+    });
+    const CityId capital = g->state().cities[0].id, town = g->state().cities[1].id;
+    constexpr size_t F = static_cast<size_t>(YieldType::Faith);
+    const Fixed capitalFaith = g->cityReport(capital).yields[F], townFaith = g->cityReport(town).yields[F];
+    REQUIRE(g->submit(Command::setPolicy(0, 1, policy("POLICY_GOD_KING"))) == CommandError::Ok);
+    CHECK_EQ(g->cityReport(capital).yields[F], capitalFaith + Fixed::fromInt(1));
+    CHECK_EQ(g->cityReport(town).yields[F], townFaith);
+}
+
 TEST(government_bonus_and_anarchy) {
     auto g = capitalWith([](GameState& s) {
         chiefdom(s);
