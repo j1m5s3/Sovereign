@@ -466,6 +466,8 @@ void Game::applyGreatPeople(const Command& c) {
         p.greatPeopleActivated.push_back(u->greatPerson);
         if (City* here = state_.city(state_.plot(u->pos).city); here && here->owner == c.player) here->greatPeopleHere.push_back(u->greatPerson);
     }
+    // Vatican City (08: suzerain): 400 pressure of the player's religion on the cities within 10 tiles.
+    if (suzerainBonus(c.player, "CITYSTATE_VATICAN_CITY")) shiftPressure(u->pos, 10, civReligion(c.player), 400);
     if (--u->charges <= 0) removeUnit(c.id);
     refreshVisibility(c.player);
 }

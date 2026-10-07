@@ -161,6 +161,9 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
         }
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(domes);
     }
+    // Chinguetti (08): +1 Faith per follower of the player's founded (or majority) religion in the origin city.
+    if (suzerainBonus(origin.owner, "CITYSTATE_CHINGUETTI"))
+        out[static_cast<size_t>(YieldType::Faith)] += Fixed::fromInt(cityFollowers(origin, civReligion(origin.owner)));
     if (suzerainBonus(origin.owner, "CITYSTATE_HUNZA"))
         out[static_cast<size_t>(YieldType::Gold)] += Fixed::ratio(state_.grid.distance(origin.pos, destination.pos), 5);
     if (isCityState(destination.owner) && suzerainBonus(origin.owner, "CITYSTATE_KUMASI")) {

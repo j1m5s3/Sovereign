@@ -462,6 +462,13 @@ void Game::applyReligion(const Command& c) {
                         awardMoment(u.owner, "MOMENT_RIVAL_HOLY_CITY_CONVERTED");
                 }
                 if (city.owner != u.owner && atWar(u.owner, city.owner)) awardMoment(u.owner, "MOMENT_ENEMY_CITY_ADOPTS_OUR_RELIGION");
+                // Fez (08: suzerain): the first time this player's religious units convert the city, 20 Science per citizen.
+                std::vector<CityId>& converted = state_.players[at(u.owner)].convertedCities;
+                if (std::find(converted.begin(), converted.end(), city.id) == converted.end()) {
+                    converted.push_back(city.id);
+                    if (suzerainBonus(u.owner, "CITYSTATE_FEZ"))
+                        processResearch(u.owner, Fixed::fromInt(20 * city.population * speedPercent(state_, *rules_) / 100), Fixed());
+                }
                 // Indulgence Vendor: Gold the first time it turns a city (bit 0x80 of wonderAbilities marks it spent).
                 if (const int gold = unitEffectTotal(u, UnitEffectKind::ConvertGold); gold > 0 && !(u.wonderAbilities & 0x80)) {
                     state_.players[at(u.owner)].gold += Fixed::fromInt(gold);
@@ -550,7 +557,9 @@ void Game::processReligion() {
         const Player& founder = state_.players[at(state_.religions[static_cast<size_t>(maj)].founder)];
         int amount = base * 10;  // tenths, so percentage beliefs keep their precision
         if (holySite != kNone && c.district(holySite, true)) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_SITE_PRESSURE_MULTIPLIER");
-        if (state_.religions[static_cast<size_t>(maj)].holyCity == c.id) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_CITY_PRESSURE_MULTIPLIER");
+        // Jerusalem (08: suzerain): its suzerain's cities with a Holy Site press as if they were Holy Cities.
+        const bool asHoly = holySite != kNone && c.district(holySite, true) && suzerainBonus(c.owner, "CITYSTATE_JERUSALEM");
+        if (state_.religions[static_cast<size_t>(maj)].holyCity == c.id || asHoly) amount *= rules_->globalInt("RELIGION_SPREAD_HOLY_CITY_PRESSURE_MULTIPLIER");
         amount = amount * (100 + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressurePercent).toInt())) / 100;
         amount = amount * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityReligionPressurePercent).toInt())) / 100;  // Bishop
         const int range = baseRange + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressureRange).toInt());

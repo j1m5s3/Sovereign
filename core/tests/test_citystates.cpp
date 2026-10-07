@@ -1,10 +1,13 @@
 // City-states and envoys (08-diplomacy-city-states-governors.md, City-States).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/modifiers.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addCity;
+using sovtest::addUnit;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -279,4 +282,109 @@ TEST(samarkands_trading_domes_pay_international_routes) {
     CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, false), routeGold("CITYSTATE_MITLA", 2, false) + Fixed::fromInt(2));
     CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, true), routeGold("CITYSTATE_MITLA", 2, true) + Fixed::fromInt(1));  // not while pillaged
     CHECK_EQ(routeGold("CITYSTATE_SAMARKAND", 2, false, true), routeGold("CITYSTATE_MITLA", 2, false, true));  // nor at home
+}
+
+namespace {
+// Player 0 is the suzerain of the city-state, which takes the given kind.
+GameState suzerainState(const char* cityState) {
+    GameState s = csState();
+    s.players[2].cityState = rules().cityState(cityState);
+    s.players[0].envoys[2] = 3;
+    for (Player& p : s.players) p.relations.resize(3);
+    return s;
+}
+
+// Buddhism, founded by the given player in its first city.
+void foundBuddhism(GameState& s, PlayerId founder) {
+    const size_t f = static_cast<size_t>(founder);
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), founder, s.cities[f].id, {rules().belief("BELIEF_TITHE")}});
+    s.players[f].religion = 0;
+}
+
+int32_t buddhistPressure(const Game& g, size_t city) {
+    const std::vector<int32_t>& p = g.state().cities[city].pressure;
+    return p.empty() ? 0 : p[0];
+}
+}  // namespace
+
+TEST(chinguettis_routes_earn_faith_per_follower_at_home) {
+    // Chinguetti (08): its suzerain's routes earn +1 Faith per follower of its founded (or majority) religion in the origin city.
+    const auto routeFaith = [](const char* cityState, PlayerId founder, bool follows, bool domestic) {
+        GameState s = suzerainState(cityState);
+        foundBuddhism(s, founder);
+        if (follows) s.cities[0].pressure = {10000};  // all 3 citizens of player 0's capital
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const City& home = g->state().cities[0];
+        return g->tradeRouteYields(home, domestic ? home : g->state().cities[1])[yi(YieldType::Faith)];
+    };
+    CHECK_EQ(routeFaith("CITYSTATE_CHINGUETTI", 0, true, false), routeFaith("CITYSTATE_MITLA", 0, true, false) + Fixed::fromInt(3));
+    CHECK_EQ(routeFaith("CITYSTATE_CHINGUETTI", 0, true, true), routeFaith("CITYSTATE_MITLA", 0, true, true) + Fixed::fromInt(3));
+    // Without a religion of its own, the one its capital follows counts.
+    CHECK_EQ(routeFaith("CITYSTATE_CHINGUETTI", 1, true, false), routeFaith("CITYSTATE_MITLA", 1, true, false) + Fixed::fromInt(3));
+    CHECK_EQ(routeFaith("CITYSTATE_CHINGUETTI", 0, false, false), routeFaith("CITYSTATE_MITLA", 0, false, false));  // no followers at home
+}
+
+TEST(fez_pays_science_the_first_time_a_city_is_converted) {
+    // Fez (08): the first time its suzerain's religious unit converts a city, 20 Science per citizen of that city.
+    const auto science = [](const char* cityState, bool convertedBefore) {
+        GameState s = suzerainState(cityState);
+        foundBuddhism(s, 0);
+        const City& target = s.cities[1];  // player 1's capital, 3 citizens
+        const CityId id = target.id;
+        if (convertedBefore) s.players[0].convertedCities.push_back(id);
+        Hex spot = target.pos;
+        for (const Hex& h : s.grid.within(target.pos, 1)) {
+            if (h != target.pos) {
+                spot = h;
+                break;
+            }
+        }
+        const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, spot);
+        s.units.back().religion = 0;
+        s.units.back().charges = 3;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::spreadReligion(0, missionary)) == CommandError::Ok);
+        REQUIRE(g->cityMajorityReligion(*g->state().city(id)) == 0);
+        const std::vector<CityId>& done = g->state().players[0].convertedCities;
+        CHECK_EQ(std::count(done.begin(), done.end(), id), 1);
+        return g->state().players[0].techs.overflow;
+    };
+    CHECK_EQ(science("CITYSTATE_FEZ", false), science("CITYSTATE_MITLA", false) + Fixed::fromInt(60));
+    CHECK_EQ(science("CITYSTATE_FEZ", true), science("CITYSTATE_MITLA", true));  // not the first time
+}
+
+TEST(jerusalem_makes_holy_site_cities_press_like_holy_cities) {
+    // Jerusalem (08): its suzerain's cities with a Holy Site press as if they were Holy Cities (x4).
+    const auto pressed = [](const char* cityState, bool holySite) {
+        GameState s = suzerainState(cityState);
+        foundBuddhism(s, 1);  // player 1's Holy City no longer follows it; player 0's capital does
+        s.cities[0].pressure = {10000};
+        if (holySite) s.cities[0].districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {5, 6}, true});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->state().grid.distance(g->state().cities[0].pos, g->state().cities[1].pos) <= 10);
+        sovtest::endTurns(*g, 3);  // one world turn
+        return buddhistPressure(*g, 1);
+    };
+    CHECK(pressed("CITYSTATE_MITLA", true) > 0);
+    CHECK_EQ(pressed("CITYSTATE_JERUSALEM", true), 4 * pressed("CITYSTATE_MITLA", true));
+    CHECK_EQ(pressed("CITYSTATE_JERUSALEM", false), pressed("CITYSTATE_MITLA", false));
+}
+
+TEST(vatican_city_spreads_pressure_from_great_people) {
+    // Vatican City (08): a great person used spreads 400 pressure of its suzerain's religion on the cities within 10 tiles.
+    const auto spread = [](const char* cityState) {
+        GameState s = suzerainState(cityState);
+        foundBuddhism(s, 0);
+        const UnitId homer = addUnit(s, "UNIT_GREAT_WRITER", 0, s.cities[0].pos);
+        s.units.back().greatPerson = rules().greatPerson("GREAT_PERSON_HOMER");
+        s.units.back().charges = 2;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const Hex home = g->state().cities[0].pos;
+        REQUIRE(g->state().grid.distance(home, g->state().cities[1].pos) <= 10);
+        REQUIRE(g->state().grid.distance(home, g->state().cities[2].pos) > 10);
+        REQUIRE(g->submit(Command::activateGreatPerson(0, homer)) == CommandError::Ok);
+        return std::vector<int32_t>{buddhistPressure(*g, 0), buddhistPressure(*g, 1), buddhistPressure(*g, 2)};
+    };
+    CHECK(spread("CITYSTATE_VATICAN_CITY") == (std::vector<int32_t>{400, 400, 0}));
+    CHECK(spread("CITYSTATE_MITLA") == (std::vector<int32_t>{0, 0, 0}));
 }
