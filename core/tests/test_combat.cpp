@@ -227,6 +227,7 @@ TEST(zone_of_control_stops_movement) {
     auto g = setup(true);
     CHECK(g->inEnemyZoc(unit(*g, w), {5, 5}));
     CHECK(!g->inEnemyZoc(unit(*g, w), {4, 4}));
+    CHECK(g->inEnemyZoc(unit(*g, w), {6, 4}));  // beside it on the row above too
     CHECK(!g->inEnemyZoc(unit(*g, horse), {5, 5}));  // cavalry ignores ZOC
     CHECK_EQ(g->submit(Command::move(0, w, {5, 5})), CommandError::Ok);
     CHECK_EQ(unit(*g, w).movesLeft, Fixed());  // entering the ZOC ends its move
@@ -372,6 +373,7 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
                 p.policies.assign(static_cast<size_t>(r.governments[at(p.government)].totalSlots()), kNone);
                 p.policies[0] = r.policy("POLICY_MUSIC_CENSORSHIP");
                 s.plot({8, 4}).owner = 1;  // the band's own plot too
+                s.plot({9, 4}).owner = 1;  // and the one beside it
             }
             w = addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
             band = addUnit(s, "UNIT_ROCK_BAND", 0, {8, 4});
@@ -397,6 +399,8 @@ TEST(what_keeps_a_unit_out_of_a_plot) {
     REQUIRE(censored->visibility(0, {9, 5}) != Visibility::Unrevealed);
     CHECK(!censored->findPath(band, {9, 5}).has_value());
     CHECK(censored->findPath(w, {9, 5}).has_value());
+    REQUIRE(censored->visibility(0, {9, 4}) != Visibility::Unrevealed);
+    CHECK(!censored->findPath(band, {9, 4}).has_value());  // not even from the plot inside it is on
     const auto stay = censored->findPath(band, {8, 4});  // a band already inside may stay where it is
     REQUIRE(stay.has_value());
     CHECK_EQ(stay->size(), 1u);

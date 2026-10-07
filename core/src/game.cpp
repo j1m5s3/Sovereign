@@ -13,15 +13,15 @@ namespace sov {
 namespace {
 const TerrainType& terrainOf(const Rules& r, const Plot& p) { return r.terrains[static_cast<size_t>(p.terrain)]; }
 
-// hasRiver(from, d) where `to` is from's neighbour in direction d: a plot keeps the rivers on its E, SE and SW edges,
-// so the edge toward the other three directions is the neighbour's, facing back.
-bool riverBetween(const Plot& from, const Plot& to, Dir d) {
+// hasRiver(from, d) where `to` is from's neighbour in direction d, from the two plots' riverEdges: a plot keeps the
+// rivers on its E, SE and SW edges, so the edge toward the other three directions is the neighbour's, facing back.
+bool riverEdgeBetween(uint8_t fromEdges, uint8_t toEdges, Dir d) {
     // Looked up rather than switched on: a path search's steps run every way in turn, which a jump mispredicts.
     static constexpr uint8_t kEdge[kNumDirs] = {kRiverSW, kRiverE, kRiverSE, kRiverSW, kRiverE, kRiverSE};  // NE, E, SE, SW, W, NW
     const unsigned i = static_cast<unsigned>(d);
     if (i >= static_cast<unsigned>(kNumDirs)) return false;
     const bool own = i - 1 < 3u;  // E, SE, SW
-    return ((own ? from : to).riverEdges & kEdge[i]) != 0;
+    return ((own ? fromEdges : toEdges) & kEdge[i]) != 0;
 }
 const UnitType& typeOf(const Rules& r, const Unit& u) { return r.units[static_cast<size_t>(u.type)]; }
 // How high a plot stands in the way of sight (01: Visibility): its terrain, and its feature unless seen through.
@@ -639,40 +639,66 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
 }
 
 std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const {
+    StepUnit su = stepUnit(unit, traits);
+    const StepInto into = stepInto(su, to);
+    return stepCost(su, into, stepFrom(from), dir);
+}
+
+Game::StepUnit Game::stepUnit(const Unit& unit, const MoveTraits& traits) const {
+    StepUnit su;
+    su.unit = &unit;
+    su.traits = &traits;
     const UnitType& ut = typeOf(*rules_, unit);
+    su.domain = ut.domain;
+    su.heli = ut.unitClass == "HELICOPTER";
+    su.embarkCost = rules_->globalInt(HotGlobal::MovementEmbarkCost);
+    su.riverCost = rules_->globalInt(HotGlobal::MovementRiverCost);
+    return su;
+}
+
+Game::StepInto Game::stepInto(StepUnit& su, Hex to) const {
+    StepInto s{};
     const Plot& p = state_.plot(to);
     const TerrainType& tt = terrainOf(*rules_, p);
-    const bool fromWater = terrainOf(*rules_, state_.plot(from)).water;
+    // The Golden Gate Bridge (03): land units cross its plot dry, along its road.
+    const bool bridge = tt.water && p.route >= 0;
+    s.water = tt.water;
+    s.afloat = tt.water && !bridge;
+    s.road = p.route >= 0 && !p.routePillaged ? p.route : int8_t{-1};  // a pillaged road counts for nothing
+    s.riverEdges = p.riverEdges;
     // Water: Coast and Lake for anyone afloat; Ocean once the owner has Cartography.
     auto sailable = [&] {
         if (!tt.water || tt.impassable) return false;
         if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].impassable) return false;
-        return p.terrain != oceanTerrain_ || canEnterOcean(unit.owner);
+        if (p.terrain != oceanTerrain_) return true;
+        if (su.ocean < 0) su.ocean = canEnterOcean(su.unit->owner) ? 1 : 0;
+        return su.ocean != 0;
     };
-    if (ut.domain == Domain::Sea) {
-        if (tt.water) return sailable() ? std::optional<Fixed>(Fixed::fromInt(1)) : std::nullopt;
-        // Ships put into a city from the water and sail out again (a coastal city is a port).
-        if (state_.cityAt(to) && fromWater) return Fixed::fromInt(1);
-        // A finished Canal carries them across the land (03: Canal [GS]).
-        if (const CityDistrict* cd = state_.districtAt(to); cd && cd->complete && rules_->districts[static_cast<size_t>(cd->type)].canal)
-            return Fixed::fromInt(1);
-        return std::nullopt;
+    if (su.domain == Domain::Sea) {
+        if (tt.water) {
+            if (sailable()) s.kind = StepKind::Sail;
+        } else if (const CityDistrict* cd = state_.districtAt(to); cd && cd->complete && rules_->districts[static_cast<size_t>(cd->type)].canal) {
+            s.kind = StepKind::Sail;  // a finished Canal carries ships across the land (03: Canal [GS])
+        } else if (state_.cityAt(to)) {
+            s.kind = StepKind::Port;  // ships put into a city from the water and sail out again (a coastal city is a port)
+        }
+        return s;
     }
-    if (ut.domain != Domain::Land) return std::nullopt;  // air units arrive later
-    // The Golden Gate Bridge (03): land units cross its plot dry, along its road.
-    const bool bridge = tt.water && p.route >= 0;
-    const bool fromAfloat = fromWater && !bridgeAt(from);
-    const int embarkCost = rules_->globalInt(HotGlobal::MovementEmbarkCost);
-    // Amphibious (05): embarking and disembarking cost nothing extra.
-    const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && traits.freeEmbark;
-    if (tt.water && !bridge) {
-        if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
-        return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
+    if (su.domain != Domain::Land) return s;  // air units arrive later
+    if (s.afloat) {
+        if (!sailable()) return s;
+        if (su.embark < 0) su.embark = canEmbark(su.unit->owner, su.unit->type) ? 1 : 0;
+        if (su.embark != 0) s.kind = StepKind::Embark;
+        return s;
     }
-    if (!bridge && !isLandPassable(*rules_, p)) return std::nullopt;
-    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
+    if (!bridge && !isLandPassable(*rules_, p)) return s;
+    const MoveTraits& traits = *su.traits;
+    if (traits.zeal) {
+        s.kind = StepKind::Zeal;  // Missionary Zeal: religious units ignore terrain (06)
+        return s;
+    }
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
-    if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
+    if ((su.unit->wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
     if (tt.relief == Relief::Hills && cost > 1 && traits.ignoreHills) cost = 1;  // Alpine (05)
     if (p.feature != kNone) {
         const FeatureType& ft = rules_->features[static_cast<size_t>(p.feature)];
@@ -680,16 +706,42 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& trait
         if (!(traits.ignoreForest && ft.moveChange > 0 && ft.id == "FEATURE_FOREST")) cost += ft.moveChange;
     }
     if (cost > 1 && traits.ignoreTerrain) cost = 1;
-    if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
+    s.kind = StepKind::Land;
+    s.cost = cost;
+    return s;
+}
+
+Game::StepFrom Game::stepFrom(Hex from) const {
+    const Plot& p = state_.plot(from);
+    StepFrom f{};
+    f.water = terrainOf(*rules_, p).water;
+    f.afloat = f.water && p.route < 0;  // not on a land bridge
+    f.road = p.route >= 0 && !p.routePillaged ? p.route : int8_t{-1};
+    f.riverEdges = p.riverEdges;
+    return f;
+}
+
+std::optional<Fixed> Game::stepCost(const StepUnit& su, const StepInto& to, const StepFrom& from, Dir dir) const {
+    switch (to.kind) {
+        case StepKind::None: return std::nullopt;
+        case StepKind::Sail: return Fixed::fromInt(1);
+        case StepKind::Port: return from.water ? std::optional<Fixed>(Fixed::fromInt(1)) : std::nullopt;
+        // Amphibious (05): embarking and disembarking cost nothing extra.
+        case StepKind::Embark: return Fixed::fromInt(from.afloat || su.traits->freeEmbark ? 1 : su.embarkCost + 1);  // embarking: 2 plus the water tile
+        case StepKind::Zeal: return Fixed::fromInt(from.afloat ? su.embarkCost + 1 : 1);
+        case StepKind::Land: break;
+    }
+    if (from.afloat) return Fixed::fromInt((su.traits->freeEmbark ? 0 : su.embarkCost) + std::max(to.cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
-    const Plot& fp = state_.plot(from);
-    if (p.route >= 0 && fp.route >= 0 && !p.routePillaged && !fp.routePillaged) {  // a pillaged road counts for nothing
-        const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(p.route, fp.route))];
+    const bool river = riverEdgeBetween(from.riverEdges, to.riverEdges, dir);
+    if (to.road >= 0 && from.road >= 0) {
+        const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(to.road, from.road))];
         Fixed rc = slow.moveCost;
-        if (!slow.bridges && riverBetween(fp, p, dir)) rc += Fixed::fromInt(rules_->globalInt(HotGlobal::MovementRiverCost));
+        if (!slow.bridges && river) rc += Fixed::fromInt(su.riverCost);
         return rc;
     }
-    if (riverBetween(fp, p, dir) && ut.unitClass != "HELICOPTER") cost += rules_->globalInt(HotGlobal::MovementRiverCost);  // helicopters fly over (05)
+    int cost = to.cost;
+    if (river && !su.heli) cost += su.riverCost;  // helicopters fly over (05)
     return Fixed::fromInt(std::max(cost, 1));
 }
 
@@ -699,88 +751,143 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     auto t = state_.grid.normalize(target);
     if (!t) return std::nullopt;
     const Player& owner = state_.players[static_cast<size_t>(u->owner)];
-    auto known = [&](Hex h) {
-        return owner.visibility[static_cast<size_t>(state_.grid.index(h))] != static_cast<uint8_t>(Visibility::Unrevealed);
-    };
-    if (!known(*t)) return std::nullopt;
+    auto known = [&](int index) { return owner.visibility[static_cast<size_t>(index)] != static_cast<uint8_t>(Visibility::Unrevealed); };
+    const int start = state_.grid.index(u->pos);
+    const int goal = state_.grid.index(*t);
+    if (!known(goal)) return std::nullopt;
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
     const MoveLimits limits = moveLimits(*u, traits);
-    const int start = state_.grid.index(u->pos);
-    const int goal = state_.grid.index(*t);
+    StepUnit su = stepUnit(*u, traits);
+
+    // Per plot: the best arrival found (read only where `seen` has bit 1): its turn, the plot it came from (-1 for
+    // the start) and the moves left; and the plot as a step's end (worked out the first time a step reaches it, bit
+    // 2): whether a step may end there at all, or only from the owner's own land (closed borders), and the rest of
+    // the step's cost that it decides.
+    enum : uint8_t { kReached = 1, kRead = 2 };
+    enum : uint8_t { kNever = 0, kAny, kInside };
+    struct Cell {
+        int turn;
+        int prev;
+        int64_t moves;
+        StepInto into;
+        uint8_t entry;
+        int8_t owner;
+    };
+    const size_t plots = static_cast<size_t>(state_.grid.size());
+    const std::unique_ptr<Cell[]> cells(new Cell[plots]);
+    std::vector<uint8_t> seen(plots, 0);
+    auto read = [&](int index, Hex h) -> const Cell& {
+        Cell& c = cells[static_cast<size_t>(index)];
+        uint8_t& s = seen[static_cast<size_t>(index)];
+        if (s & kRead) return c;
+        s |= kRead;
+        c.entry = kNever;
+        c.owner = kNoPlayer;
+        // A step never ends on a plot the owner has not seen, on the water when kept dry, on a plot another player
+        // holds (a unit, a foreign city, a standing enemy Encampment), or across borders closed to it.
+        if (!known(index) || limits.blocked[static_cast<size_t>(index)]) return c;
+        c.into = stepInto(su, h);
+        if (c.into.kind == StepKind::None || (keepDry && c.into.afloat)) return c;
+        c.entry = kAny;
+        if (const PlayerId land = state_.plot(h).owner; land != kNoPlayer) {
+            const uint8_t closed = limits.closed[static_cast<size_t>(land)];
+            if (closed & 2) c.entry = kNever;
+            else if (closed & 1) c.entry = kInside;
+            c.owner = land;
+        }
+        return c;
+    };
+    // A step into the plot `to` (at `index`) from a plot read as `sf` and held by `fromOwner`, `dir` from the one to
+    // the other: its cost, or none.
+    auto step = [&](const StepFrom& sf, PlayerId fromOwner, int index, Hex to, Dir dir) -> std::optional<Fixed> {
+        const Cell& c = read(index, to);
+        if (c.entry == kNever || (c.entry == kInside && fromOwner != c.owner)) return std::nullopt;
+        return stepCost(su, c.into, sf, dir);
+    };
     if (goal != start) {
         // A goal no step can enter is out of reach, which the search would only learn by visiting every plot it can
-        // reach. The steps into it are those from its neighbours, each the opposite way to the one the neighbour lies.
-        if (keepDry && terrainOf(*rules_, state_.plot(*t)).water && !bridgeAt(*t)) return std::nullopt;
+        // reach. The steps into it are those from its neighbours (seen or not), each the opposite way to the one
+        // the neighbour lies.
         bool enterable = false;
         for (int d = 0; d < kNumDirs && !enterable; ++d) {
             const std::optional<Hex> from = state_.grid.neighbor(*t, static_cast<Dir>(d));
-            enterable = from && moveCost(*u, traits, limits, *from, *t, opposite(static_cast<Dir>(d)));
+            if (!from) continue;
+            enterable = step(stepFrom(*from), state_.plot(*from).owner, goal, *t, opposite(static_cast<Dir>(d))).has_value();
         }
         if (!enterable) return std::nullopt;
     }
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
     const std::vector<uint8_t> zoc = zocMap(*u);
 
-    // The best arrival found at each plot, read only where reached is set: its turn, the plot it came from (-1 for the
-    // start) and the moves left.
-    struct Node { int turn; int prev; int64_t moves; };
-    const size_t plots = static_cast<size_t>(state_.grid.size());
-    const std::unique_ptr<Node[]> best(new Node[plots]);
-    std::vector<uint8_t> reached(plots, 0);
-    auto better = [](int turn, Fixed moves, const Node& than) {
+    auto better = [](int turn, Fixed moves, const Cell& than) {
         return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
     };
-    struct QItem { int turn; int64_t negMoves; int index; };
+    struct QItem { int64_t negMoves; int turn; int index; };
     auto cmp = [](const QItem& a, const QItem& b) {
         if (a.turn != b.turn) return a.turn > b.turn;
         if (a.negMoves != b.negMoves) return a.negMoves > b.negMoves;
         return a.index > b.index;
     };
-    std::priority_queue<QItem, std::vector<QItem>, decltype(cmp)> open(cmp);
-    best[static_cast<size_t>(start)] = {0, -1, u->movesLeft.raw()};
-    reached[static_cast<size_t>(start)] = 1;
-    open.push({0, -u->movesLeft.raw(), start});
+    std::vector<QItem> queued;
+    queued.reserve(64);
+    std::priority_queue<QItem, std::vector<QItem>, decltype(cmp)> open(cmp, std::move(queued));
+    {
+        Cell& s = cells[static_cast<size_t>(start)];
+        s.turn = 0;
+        s.prev = -1;
+        s.moves = u->movesLeft.raw();
+        seen[static_cast<size_t>(start)] |= kReached;
+    }
+    open.push({-u->movesLeft.raw(), 0, start});
+    const bool land = su.domain == Domain::Land;
     while (!open.empty()) {
         QItem q = open.top();
         open.pop();
-        const Node cur = best[static_cast<size_t>(q.index)];
-        if (cur.turn != q.turn || -cur.moves != q.negMoves) continue;  // stale
+        const Cell& cur = cells[static_cast<size_t>(q.index)];
+        const int curTurn = cur.turn;
+        const int64_t curMoves = cur.moves;
+        if (curTurn != q.turn || -curMoves != q.negMoves) continue;  // stale
         if (q.index == goal) break;
-        Hex from = state_.grid.at(q.index);
+        const Hex from = state_.grid.at(q.index);
+        // A plot reached by a step was read as its end, which holds what a step from it reads.
+        const bool first = q.index == start;
+        const StepFrom sf = first ? stepFrom(from) : StepFrom{cur.into.water, cur.into.afloat, cur.into.road, cur.into.riverEdges};
+        const PlayerId fromOwner = first ? state_.plot(from).owner : cur.owner;
         for (int d = 0; d < kNumDirs; ++d) {
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
-            if (!n || !known(*n)) continue;
-            if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
-            auto cost = moveCost(*u, traits, limits, from, *n, static_cast<Dir>(d));
+            if (!n) continue;
+            const int next = state_.grid.index(*n);
+            auto cost = step(sf, fromOwner, next, *n, static_cast<Dir>(d));
             if (!cost) continue;
-            int turn = cur.turn;
-            Fixed mp = Fixed::fromRaw(cur.moves);
+            int turn = curTurn;
+            Fixed mp = Fixed::fromRaw(curMoves);
             if (mp <= Fixed()) {
                 ++turn;
                 mp = fullMoves;
             }
             // Embarking or disembarking is allowed with any movement left (it uses it up).
-            if (mp < *cost && mp != fullMoves && !isEmbarkTransition(*u, from, *n)) {
+            if (mp < *cost && mp != fullMoves && !(land && sf.afloat != cells[static_cast<size_t>(next)].into.afloat)) {
                 ++turn;
                 mp = fullMoves;
             }
             mp = mp >= *cost ? mp - *cost : Fixed();
-            const int next = state_.grid.index(*n);
             if (!zoc.empty() && zoc[static_cast<size_t>(next)]) mp = Fixed();  // entering enemy ZOC ends the move
-            Node& nb = best[static_cast<size_t>(next)];
-            uint8_t& seen = reached[static_cast<size_t>(next)];
-            if (!seen || better(turn, mp, nb)) {
-                nb = {turn, q.index, mp.raw()};
-                seen = 1;
-                open.push({turn, -mp.raw(), next});
+            Cell& nb = cells[static_cast<size_t>(next)];
+            uint8_t& s = seen[static_cast<size_t>(next)];
+            if (!(s & kReached) || better(turn, mp, nb)) {
+                nb.turn = turn;
+                nb.prev = q.index;
+                nb.moves = mp.raw();
+                s |= kReached;
+                open.push({-mp.raw(), turn, next});
             }
         }
     }
-    if (!reached[static_cast<size_t>(goal)]) return std::nullopt;
+    if (!(seen[static_cast<size_t>(goal)] & kReached)) return std::nullopt;
     std::vector<PathStep> path;
-    for (int i = goal; i != -1; i = best[static_cast<size_t>(i)].prev) {
-        const Node& n = best[static_cast<size_t>(i)];
+    for (int i = goal; i != -1; i = cells[static_cast<size_t>(i)].prev) {
+        const Cell& n = cells[static_cast<size_t>(i)];
         path.push_back({state_.grid.at(i), n.turn, Fixed::fromRaw(n.moves)});
     }
     std::reverse(path.begin(), path.end());

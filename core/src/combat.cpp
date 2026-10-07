@@ -390,18 +390,31 @@ int Game::maxAttacks(const Unit& unit) const {
 
 bool Game::inEnemyZoc(const Unit& mover, Hex plot) const {
     if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return false;
-    for (const Hex& h : state_.grid.within(plot, 1)) {
-        if (h == plot) continue;
+    // Each neighbour looked at for a city or an Encampment of a civ at war with the mover, then every unit, in one
+    // pass, for one of such a civ on any neighbour. Neighbours lie on the plot's own row and the rows beside it.
+    std::array<Hex, 7> around;
+    size_t count = 0;
+    bool zoc = false;
+    state_.grid.forEachWithin(plot, 1, [&](Hex h) {
+        if (h == plot) return;
+        around[count++] = h;
+        if (zoc) return;
         const City* c = state_.cityAt(h);
-        if (c && atWar(mover.owner, c->owner)) return true;
+        if (c && atWar(mover.owner, c->owner)) {
+            zoc = true;
+            return;
+        }
         // An Encampment exerts zone of control like a city (03: Defense).
         if (const CityDistrict* d = state_.districtAt(h); d && d->complete && rules_->districts[static_cast<size_t>(d->type)].id == "DISTRICT_ENCAMPMENT") {
             const PlayerId owner = state_.plot(h).owner;
-            if (owner != kNoPlayer && atWar(mover.owner, owner)) return true;
+            zoc = owner != kNoPlayer && atWar(mover.owner, owner);
         }
-        for (const Unit& u : state_.units) {
-            if (u.pos == h && atWar(mover.owner, u.owner) && exertsZoc(u)) return true;
-        }
+    });
+    if (zoc) return true;
+    for (const Unit& u : state_.units) {
+        const auto end = around.begin() + static_cast<std::ptrdiff_t>(count);
+        if (std::abs(u.pos.y - plot.y) > 1 || std::find(around.begin(), end, u.pos) == end) continue;
+        if (atWar(mover.owner, u.owner) && exertsZoc(u)) return true;
     }
     return false;
 }

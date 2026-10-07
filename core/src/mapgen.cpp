@@ -187,11 +187,12 @@ std::vector<uint8_t> lakeMap(const GameState& state, const Rules& rules) {
 
 bool hasFreshWater(const GameState& state, const Rules& rules, Hex h, const std::vector<uint8_t>* lakes) {
     if (isRiverAdjacent(state, h)) return true;
-    for (const Hex& n : state.grid.within(h, 1)) {
+    bool fresh = false;  // a fresh-water feature on it or beside it (an Oasis)
+    state.grid.forEachWithin(h, 1, [&](Hex n) {
         const Plot& p = state.plot(n);
-        if (p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].freshWater) return true;
-    }
-    return isLakeAdjacent(state, rules, h, lakes);
+        fresh = fresh || (p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].freshWater);
+    });
+    return fresh || isLakeAdjacent(state, rules, h, lakes);
 }
 
 bool isLandPassable(const GameState& state, const Rules& rules, Hex h) {

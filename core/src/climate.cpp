@@ -171,10 +171,10 @@ void Game::burnPower(PlayerId pid) {
 int Game::renewablePower(const City& city) const {
     int power = 0;
     for (TypeIndex b : city.buildings) power += rules_->buildings[at(b)].powerProvided;
-    for (const Hex& h : state_.grid.within(city.pos, 3)) {
+    state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
         const Plot& pl = state_.plot(h);
         if (pl.city == city.id && pl.improvement != kNone && pl.pillagedTurns == 0) power += rules_->improvements[at(pl.improvement)].powerProvided;
-    }
+    });
     return power;
 }
 

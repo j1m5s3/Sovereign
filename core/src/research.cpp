@@ -17,10 +17,9 @@ int speedPercent(const GameState& s, const Rules& r) {
 bool inRange(int32_t i, size_t n) { return i >= 0 && static_cast<size_t>(i) < n; }
 
 bool isCoastal(const GameState& s, const Rules& r, const City& c) {
-    for (const Hex& n : s.grid.within(c.pos, 1)) {
-        if (n != c.pos && r.terrains[static_cast<size_t>(s.plot(n).terrain)].shallowWater) return true;
-    }
-    return false;
+    bool coast = false;
+    s.grid.forEachWithin(c.pos, 1, [&](Hex n) { coast = coast || (n != c.pos && r.terrains[static_cast<size_t>(s.plot(n).terrain)].shallowWater); });
+    return coast;
 }
 }  // namespace
 
@@ -154,7 +153,7 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
     // The player's cities and units, listed on first need; how many of them pass a test.
     auto mine = [&](std::optional<std::vector<size_t>>& list, const auto& all) -> const std::vector<size_t>& {
         if (!list) {
-            list.emplace();
+            list.emplace().reserve(all.size());
             for (size_t i = 0; i < all.size(); ++i) {
                 if (all[i].owner == player) list->push_back(i);
             }
@@ -173,6 +172,62 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
     };
     // A civ's unique unit stands in for the unit it replaces.
     auto unitIs = [&](TypeIndex type, TypeIndex ref) { return type == ref || rules_->units[static_cast<size_t>(type)].replaces == ref; };
+    // The counts by building, district and unit type, each made on first need for every type at once: a city is
+    // counted for a building when cityHasBuilding would find it there, and once however many of its buildings do.
+    auto buildingCities = [&]() -> const std::vector<int>& {
+        if (!scan.buildingCities) {
+            const size_t n = rules_->buildings.size();
+            std::vector<int>& cities = scan.buildingCities.emplace(n, 0);
+            std::vector<size_t> last(n, state_.cities.size());  // the city each building was last counted for
+            for (size_t i : mine(scan.cities, state_.cities)) {
+                const City& c = state_.cities[i];
+                auto mark = [&](TypeIndex x) {
+                    if (last[static_cast<size_t>(x)] == i) return;
+                    last[static_cast<size_t>(x)] = i;
+                    ++cities[static_cast<size_t>(x)];
+                };
+                for (const TypeIndex x : c.buildings) {
+                    if (!inRange(x, n)) continue;
+                    if (c.has(x)) mark(x);
+                    // A unique counts as its base, unless the rules list no unique for that base.
+                    const TypeIndex base = rules_->buildings[static_cast<size_t>(x)].replaces;
+                    if (!inRange(base, n)) continue;
+                    const std::vector<TypeIndex>* uniques = rules_->buildingsReplacing(base);
+                    if (!(uniques && uniques->empty())) mark(base);
+                }
+            }
+        }
+        return *scan.buildingCities;
+    };
+    auto districtCities = [&]() -> const std::vector<int>& {
+        if (!scan.districtCities) {
+            const size_t n = rules_->districts.size();
+            std::vector<int>& cities = scan.districtCities.emplace(n, 0);
+            std::vector<size_t> last(n, state_.cities.size());
+            for (size_t i : mine(scan.cities, state_.cities)) {
+                for (const CityDistrict& d : state_.cities[i].districts) {
+                    if (!d.complete || !inRange(d.type, n) || last[static_cast<size_t>(d.type)] == i) continue;
+                    last[static_cast<size_t>(d.type)] = i;
+                    ++cities[static_cast<size_t>(d.type)];
+                }
+            }
+        }
+        return *scan.districtCities;
+    };
+    auto unitsOfType = [&]() -> const std::vector<int>& {
+        if (!scan.unitsOfType) {
+            const size_t n = rules_->units.size();
+            std::vector<int>& units = scan.unitsOfType.emplace(n, 0);
+            for (size_t i : mine(scan.units, state_.units)) {
+                const TypeIndex t = state_.units[i].type;
+                if (!inRange(t, n)) continue;
+                ++units[static_cast<size_t>(t)];
+                const TypeIndex base = rules_->units[static_cast<size_t>(t)].replaces;
+                if (base != t && inRange(base, n)) ++units[static_cast<size_t>(base)];
+            }
+        }
+        return *scan.unitsOfType;
+    };
     // The player's improved plots, counted on first need; a count from one of their lists.
     auto plots = [&]() -> const ImprovedPlots& {
         if (!scan.improved) scan.improved = improvedPlots(player);
@@ -198,8 +253,10 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
         case BoostKind::CoastalCity:
             return countCities([&](const City& c) { return isCoastal(state_, *rules_, c); }) > 0;
         case BoostKind::Building:
+            if (inRange(b.ref, rules_->buildings.size())) return buildingCities()[static_cast<size_t>(b.ref)] >= b.count;
             return countCities([&](const City& c) { return cityHasBuilding(c, *rules_, b.ref); }) >= b.count;  // a civ's unique counts
         case BoostKind::OwnUnits:
+            if (inRange(b.ref, rules_->units.size())) return unitsOfType()[static_cast<size_t>(b.ref)] >= b.count;
             return countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) >= b.count;
         case BoostKind::Tech: return p.techs.has(b.ref);
         case BoostKind::Civic: return p.civics.has(b.ref);
@@ -224,6 +281,7 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
         case BoostKind::ImprovedTiles: return plots().total >= b.count;
         case BoostKind::ImproveResource: return count(plots().byResource, b.ref) > 0;
         case BoostKind::District:
+            if (inRange(b.ref, rules_->districts.size())) return districtCities()[static_cast<size_t>(b.ref)] >= b.count;
             return countCities([&](const City& c) { return c.district(b.ref, true) != nullptr; }) >= b.count;
         case BoostKind::SpecialtyDistricts: {
             std::vector<uint8_t> seen(rules_->districts.size(), 0);
@@ -311,7 +369,9 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
             return n >= (b.kind == BoostKind::Wonders ? b.count : 1);
         }
         case BoostKind::UnitAndImprovement:
-            if (countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) == 0) return false;
+            if (inRange(b.ref, rules_->units.size()) ? unitsOfType()[static_cast<size_t>(b.ref)] == 0
+                                                     : countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) == 0)
+                return false;
             for (const Plot& pl : state_.plots) {
                 if (pl.owner == player && pl.improvement == b.improvement && (b.resource == kNone || pl.resource == b.resource)) return true;
             }

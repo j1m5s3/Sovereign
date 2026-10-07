@@ -37,6 +37,23 @@ GameState landState() {
 }
 }  // namespace
 
+// Each of a park's four plots must fit: with one the park would take held by another civ instead, it goes on four
+// plots of the civ's own.
+TEST(every_plot_of_a_national_park_must_fit) {
+    GameState s = landState();
+    const UnitId naturalist = addUnit(s, "UNIT_NATURALIST", 0, {5, 7});
+    const auto first = Game::fromScenario(rules(), s)->parkPlots(naturalist);
+    REQUIRE(first);
+    for (size_t i = 1; i < first->size(); ++i) {
+        GameState t = s;
+        t.plot((*first)[i]).owner = 1;
+        auto g = Game::fromScenario(rules(), t);
+        const auto plots = g->parkPlots(naturalist);
+        REQUIRE(plots);
+        for (const Hex& h : *plots) CHECK_EQ(g->state().plot(h).owner, 0);
+    }
+}
+
 TEST(improvements_with_a_tourism_source_from_the_data) {
     const Rules& r = rules();
     const ImprovementType& resort = r.improvements[at(r.improvement("IMPROVEMENT_SEASIDE_RESORT"))];
