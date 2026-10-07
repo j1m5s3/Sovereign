@@ -228,6 +228,13 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     suzerainEnvoys_ = rules_->globalInt("INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN");
     touristTourism_ = rules_->globalInt("TOURISM_TOURISM_TO_MOVE_CITIZEN");
     touristCulture_ = rules_->globalInt("TOURISM_CULTURE_PER_CITIZEN");
+    abilityGrants_.resize(rules_->units.size());
+    for (uint32_t i : rules_->playerModifiers(ModEffect::GrantAbility)) {
+        const std::vector<std::string>& classes = rules_->abilities[static_cast<size_t>(rules_->modifiers[i].ability)].classes;
+        for (size_t t = 0; t < rules_->units.size(); ++t) {
+            if (std::find(classes.begin(), classes.end(), rules_->units[t].unitClass) != classes.end()) abilityGrants_[t].push_back(i);
+        }
+    }
 }
 
 uint64_t Game::stateHash() const {
