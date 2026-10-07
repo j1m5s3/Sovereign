@@ -25,6 +25,9 @@ TEST(rules_load_known_values) {
     CHECK_EQ(r.globalInt("CITY_MIN_RANGE"), 3);
     CHECK_EQ(r.globalInt("MOVEMENT_RIVER_COST"), 2);
     CHECK_EQ(r.globalInt("START_DISTANCE_MAJOR_CIVILIZATION"), 12);
+    CHECK(r.hasGlobal("CITY_MIN_RANGE"));
+    CHECK(!r.hasGlobal("NO_SUCH_GLOBAL"));  // a name the rules lack: absent, and zero
+    CHECK_EQ(r.globalInt("NO_SUCH_GLOBAL"), 0);
     const TerrainType& hills = r.terrains[static_cast<size_t>(r.terrain("TERRAIN_PLAINS_HILLS"))];
     CHECK_EQ(hills.moveCost, 2);
     CHECK_EQ(hills.defense, 3);

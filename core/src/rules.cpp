@@ -555,7 +555,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             row = Json::overlay(*base, row);
         }
     }
-    globals_ = m.globals;
+    globals_.clear();
+    for (const auto& [name, value] : m.globals) globals_.push_back({std::hash<std::string_view>{}(name), name, value});
+    std::sort(globals_.begin(), globals_.end(), [](const Global& a, const Global& b) { return a.hash < b.hash; });
 
     // Eras and research trees first: everything else may be unlocked by them.
     for (const auto& [id, j] : m.tables["eras"]) {
@@ -2495,9 +2497,18 @@ TypeIndex Rules::terrainFor(const std::string& base, Relief relief) const {
     return kNone;
 }
 
+const Rules::Global* Rules::findGlobal(std::string_view name) const {
+    const size_t hash = std::hash<std::string_view>{}(name);
+    auto it = std::lower_bound(globals_.begin(), globals_.end(), hash, [](const Global& g, size_t h) { return g.hash < h; });
+    for (; it != globals_.end() && it->hash == hash; ++it) {
+        if (it->name == name) return &*it;
+    }
+    return nullptr;
+}
+
 Fixed Rules::global(std::string_view name) const {
-    auto it = globals_.find(name);
-    return it == globals_.end() ? Fixed() : it->second;
+    const Global* g = findGlobal(name);
+    return g ? g->value : Fixed();
 }
 
 }  // namespace sov
