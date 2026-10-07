@@ -436,7 +436,9 @@ std::vector<UnitId> Game::unitsNeedingOrders(PlayerId player) const {
 
 // ------------------------------------------------------------------ movement
 
-std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
+std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const { return moveCost(unit, moveTraits(unit), from, to); }
+
+std::optional<Fixed> Game::moveCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const {
     if (state_.foreignUnitAt(to, unit.owner)) return std::nullopt;  // attacks and captures are their own commands
     const City* c = state_.cityAt(to);
     if (c && c->owner != unit.owner) return std::nullopt;
@@ -452,12 +454,10 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
         !grantsOpenBorders(owner, unit.owner)) {
         const Player& op = state_.players[static_cast<size_t>(owner)];
         for (size_t i = 0; i < rules_->civics.size(); ++i) {
-            if (rules_->civics[i].enforceBorders && op.civics.has(static_cast<TypeIndex>(i)) &&
-                !unitHas(unit, UnitEffectKind::IgnoreBorders))
-                return std::nullopt;
+            if (rules_->civics[i].enforceBorders && op.civics.has(static_cast<TypeIndex>(i)) && !traits.ignoreBorders) return std::nullopt;
         }
     }
-    return terrainCost(unit, from, to);
+    return terrainCost(unit, traits, from, to);
 }
 
 bool Game::canEmbark(PlayerId player, TypeIndex unitType) const {
@@ -503,7 +503,9 @@ bool Game::isCoastalCity(const City& city) const {
     return false;
 }
 
-std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const {
+std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const { return terrainCost(unit, moveTraits(unit), from, to); }
+
+std::optional<Fixed> Game::terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to) const {
     const UnitType& ut = typeOf(*rules_, unit);
     auto d = state_.grid.directionTo(from, to);
     if (!d) return std::nullopt;
@@ -531,25 +533,22 @@ std::optional<Fixed> Game::terrainCost(const Unit& unit, Hex from, Hex to) const
     const bool fromAfloat = fromWater && !bridgeAt(from);
     const int embarkCost = rules_->globalInt("MOVEMENT_EMBARK_COST");
     // Amphibious (05): embarking and disembarking cost nothing extra.
-    const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && unitHas(unit, UnitEffectKind::FreeEmbark);
+    const bool freeEmbark = ((tt.water && !bridge) || fromAfloat) && traits.freeEmbark;
     if (tt.water && !bridge) {
         if (!sailable() || !canEmbark(unit.owner, unit.type)) return std::nullopt;
         return Fixed::fromInt(fromAfloat || freeEmbark ? 1 : embarkCost + 1);  // embarking: 2 plus the water tile
     }
     if (!bridge && !isLandPassable(state_, *rules_, to)) return std::nullopt;
-    // Missionary Zeal: religious units ignore terrain (06).
-    if (ut.religiousStrength > 0 &&
-        sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed())
-        return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);
+    if (traits.zeal) return Fixed::fromInt(fromAfloat ? embarkCost + 1 : 1);  // Missionary Zeal: religious units ignore terrain (06)
     int cost = tt.impassable ? 1 : tt.moveCost;  // through a tunnel: as flat ground
     if ((unit.wonderAbilities & 1) && tt.relief == Relief::Hills) cost = std::min(cost, 1);  // Everest (01): hills as flat ground
-    if (tt.relief == Relief::Hills && cost > 1 && unitHas(unit, UnitEffectKind::IgnoreHills)) cost = 1;  // Alpine (05)
+    if (tt.relief == Relief::Hills && cost > 1 && traits.ignoreHills) cost = 1;  // Alpine (05)
     if (p.feature != kNone) {
         const FeatureType& ft = rules_->features[static_cast<size_t>(p.feature)];
         // Ranger (05): woods cost nothing extra.
-        if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && unitHas(unit, UnitEffectKind::IgnoreForest))) cost += ft.moveChange;
+        if (!(ft.moveChange > 0 && ft.id == "FEATURE_FOREST" && traits.ignoreForest)) cost += ft.moveChange;
     }
-    if (cost > 1 && unitHas(unit, UnitEffectKind::IgnoreTerrain)) cost = 1;
+    if (cost > 1 && traits.ignoreTerrain) cost = 1;
     if (fromAfloat) return Fixed::fromInt((freeEmbark ? 0 : embarkCost) + std::max(cost, 1));  // disembarking
     // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
     const Plot& fp = state_.plot(from);
@@ -576,6 +575,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
     const std::vector<uint8_t> zoc = zocMap(*u);
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
+    const MoveTraits traits = moveTraits(*u);
 
     struct Node { int turn = INT32_MAX; Fixed moves; int prev = -1; };
     std::vector<Node> best(static_cast<size_t>(state_.grid.size()));
@@ -602,7 +602,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
             auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
             if (!n || !known(*n)) continue;
             if (keepDry && terrainOf(*rules_, state_.plot(*n)).water && !bridgeAt(*n)) continue;
-            auto cost = moveCost(*u, from, *n);
+            auto cost = moveCost(*u, traits, from, *n);
             if (!cost) continue;
             int turn = cur.turn;
             Fixed mp = cur.moves;

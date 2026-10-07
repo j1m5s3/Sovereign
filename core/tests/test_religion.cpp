@@ -303,6 +303,18 @@ TEST(follower_beliefs_take_effect) {
     CHECK_EQ(monks->faithPurchaseCost(0, *monks->state().city(holy), monk), 2 * monkPrice);
 }
 
+TEST(missionary_zeal_lets_religious_units_ignore_terrain) {
+    GameState s = religionState();
+    s.plot({8, 9}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, {7, 9});
+    auto g = withReligion(std::move(s));
+    const int religion = g->state().players[0].religion;
+    REQUIRE(religion >= 0);
+    CHECK_EQ(g->moveCost(*g->state().unit(missionary), {7, 9}, {8, 9}).value_or(Fixed()), Fixed::fromInt(2));  // hills
+    g->stateMutForTests().religions[static_cast<size_t>(religion)].beliefs.push_back(belief("BELIEF_MISSIONARY_ZEAL"));
+    CHECK_EQ(g->moveCost(*g->state().unit(missionary), {7, 9}, {8, 9}).value_or(Fixed()), Fixed::fromInt(1));
+}
+
 TEST(sacred_places_pays_for_wonders_in_following_cities) {
     GameState s = religionState();
     s.cities[0].buildings.push_back(rules().building("BUILDING_PYRAMIDS"));

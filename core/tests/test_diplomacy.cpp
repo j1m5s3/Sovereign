@@ -194,6 +194,17 @@ TEST(open_borders_let_units_through) {
     CHECK(g->submit(Command::move(0, scout, {13, 6})) == CommandError::Ok);
 }
 
+TEST(units_that_ignore_borders_cross_closed_ones) {
+    GameState s = diploState();
+    s.players[1].civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
+    const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {12, 6});
+    const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, {12, 7});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    // After Early Empire only units at war, or able to ignore borders like religious units (06), may enter.
+    CHECK(!g->moveCost(*g->state().unit(scout), {12, 6}, {13, 6}));
+    CHECK_EQ(g->moveCost(*g->state().unit(missionary), {12, 6}, {13, 6}).value_or(Fixed()), Fixed::fromInt(1));
+}
+
 TEST(a_losing_ai_takes_peace) {
     GameState s = diploState();
     s.turn = 20;

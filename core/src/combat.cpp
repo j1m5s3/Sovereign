@@ -253,6 +253,32 @@ int Game::unitEffectTotal(const Unit& unit, UnitEffectKind kind) const {
     return total;
 }
 
+Game::MoveTraits Game::moveTraits(const Unit& unit) const {
+    // unitHas for each movement effect, from one look at the unit's abilities.
+    int freeEmbark = 0, hills = 0, forest = 0, terrain = 0, borders = 0;
+    forEachEffect(*rules_, unit, unitAbilities(unit), [&](const UnitEffect& e) {
+        const int n = e.amount != 0 ? e.amount : 1;
+        switch (e.kind) {
+            case UnitEffectKind::FreeEmbark: freeEmbark += n; break;
+            case UnitEffectKind::IgnoreHills: hills += n; break;
+            case UnitEffectKind::IgnoreForest: forest += n; break;
+            case UnitEffectKind::IgnoreTerrain: terrain += n; break;
+            case UnitEffectKind::IgnoreBorders: borders += n; break;
+            default: break;
+        }
+    });
+    MoveTraits t;
+    t.freeEmbark = freeEmbark > 0;
+    t.ignoreHills = hills > 0;
+    t.ignoreForest = forest > 0;
+    t.ignoreTerrain = terrain > 0;
+    t.ignoreBorders = borders > 0;
+    // Missionary Zeal: religious units ignore terrain (06).
+    t.zeal = typeOf(*rules_, unit).religiousStrength > 0 &&
+             sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed();
+    return t;
+}
+
 int Game::plunderPercent(const Unit& unit) const {
     // Abilities and promotions (Francis Drake...), and Letters of Marque (09: +100% for all units).
     return unitEffectTotal(unit, UnitEffectKind::PlunderPercent) + (policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE") ? 100 : 0) +
