@@ -1,5 +1,7 @@
 // Religion (06-religion.md): pantheons, founding, pressure and followers, religious units,
 // theological combat, founder beliefs, worship buildings, the religious victory.
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/modifiers.h"
 #include "sovereign/serialize.h"
@@ -397,4 +399,37 @@ TEST(stonehenge_grants_the_civs_prophet_or_else_an_apostle) {
     CHECK_EQ(apostle.type, rules().unit("UNIT_APOSTLE"));
     CHECK_EQ(apostle.religion, k->state().players[0].religion);
     CHECK(apostle.charges > 0);
+}
+
+TEST(st_basils_doubles_religious_tourism_and_cristo_keeps_it_whole) {
+    // Religious tourism (07): the Holy City of the religion its owner founded.
+    const int holy = rules().globalInt("TOURISM_FROM_HOLY_CITY");
+    auto g = withReligion(religionState());
+    REQUIRE(g->state().players[0].religion >= 0);
+    CHECK_EQ(g->religiousTourism(g->state().cities[0]), holy);
+    CHECK_EQ(g->religiousTourism(g->state().cities[1]), 0);  // not the Holy City
+    CHECK_EQ(g->religiousTourism(g->state().cities[2]), 0);  // player 1 founded no religion
+    auto build = [](GameState s, size_t city, const char* building) {
+        s.cities[city].buildings.push_back(rules().building(building));
+        std::sort(s.cities[city].buildings.begin(), s.cities[city].buildings.end());
+        return s;
+    };
+    // St. Basil's Cathedral doubles its city's (03): in the Holy City it brings 8 more than in another city.
+    auto inHoly = Game::fromScenario(rules(), build(g->state(), 0, "BUILDING_ST_BASIL_S_CATHEDRAL"));
+    auto elsewhere = Game::fromScenario(rules(), build(g->state(), 1, "BUILDING_ST_BASIL_S_CATHEDRAL"));
+    CHECK_EQ(inHoly->religiousTourism(inHoly->state().cities[0]), 2 * holy);
+    CHECK_EQ(inHoly->tourismBase(0), elsewhere->tourismBase(0) + holy);
+    // The Enlightenment halves it, except with Cristo Redentor (03: never reduced by later-era rules).
+    const TypeIndex enlightenment = rules().civic("CIVIC_THE_ENLIGHTENMENT");
+    auto sent = [&](bool cristo, bool enlightened) {
+        GameState s = cristo ? build(g->state(), 1, "BUILDING_CRISTO_REDENTOR") : g->state();
+        s.players[0].civics.done[at(enlightenment)] = enlightened ? 1 : 0;
+        auto h = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*h, 2);  // player 0's next turn sends its tourism
+        return h->state().players[0].tourismTo[1];
+    };
+    REQUIRE(sent(false, false) > 0);
+    // Half of it is lost, and the cut toward a civ of another religion then halves what is left: a quarter less in all.
+    CHECK_EQ(sent(false, true), sent(false, false) - holy / 4);
+    CHECK_EQ(sent(true, true), sent(true, false));
 }

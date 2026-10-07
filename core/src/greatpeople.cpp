@@ -250,6 +250,7 @@ void Game::recruitGreatPerson(PlayerId pid, TypeIndex person, const City* in) {
         competitionScore(pid, CompetitionKind::NobelLiterature, 1);
     if (cls.id == "GREAT_PERSON_CLASS_SCIENTIST" || cls.id == "GREAT_PERSON_CLASS_ENGINEER" || cls.id == "GREAT_PERSON_CLASS_MERCHANT")
         competitionScore(pid, CompetitionKind::NobelPhysics, 1);
+    if (cls.id == "GREAT_PERSON_CLASS_SCIENTIST") greatLibraryEurekas(pid);
     pushEvent(EventKind::GreatPersonRecruited, pid, kNoPlayer, person);
     dedicationScore(pid, "DEDICATION_SKY_AND_STARS", 1);  // 09: a great person earned
     if (!spot) return;  // no city to appear in: the great person is lost
@@ -287,6 +288,23 @@ void Game::wonderProphet(City& city, TypeIndex prophet) {
     u.religion = static_cast<int16_t>(religion);
     u.charges = rules_->units[at(apostle)].spreadCharges;
     grantApostlePromotion(u);  // each new Apostle gets one (06)
+}
+
+// The Great Library (03): whenever another civ recruits a Great Scientist, a random Eureka toward a tech
+// it has neither researched nor boosted.
+void Game::greatLibraryEurekas(PlayerId recruiter) {
+    for (Player& o : state_.players) {
+        if (o.id == recruiter || !isMajor(o) || buildingsOwned(o.id, "BUILDING_GREAT_LIBRARY") == 0) continue;
+        std::vector<TypeIndex> open;
+        for (size_t t = 0; t < rules_->techs.size(); ++t) {
+            if (!o.techs.done[t] && !o.techs.boosted[t]) open.push_back(static_cast<TypeIndex>(t));
+        }
+        if (open.empty()) continue;
+        const TypeIndex t = open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))];
+        const int pct = rules_->techs[at(t)].boost.percent > 0 ? rules_->techs[at(t)].boost.percent : 40;
+        o.techs.boosted[at(t)] = 1;
+        o.techs.progress[at(t)] += Fixed::fromInt(techCost(t)) * pct / 100;
+    }
 }
 
 bool Game::canActivateGreatPerson(UnitId id, CommandError* why) const {
