@@ -221,14 +221,19 @@ bool Game::unitObsolete(PlayerId player, TypeIndex unitType) const {
     return !up.mustPurchase && hasUnlocked(player, up.unlock) && hasStrategicFor(player, u.upgradesTo);
 }
 
-int Game::countImprovedPlots(PlayerId player, TypeIndex improvement, bool onResourceOnly) const {
-    int n = 0;
+Game::ImprovedPlots Game::improvedPlots(PlayerId player) const {
+    ImprovedPlots n;
+    n.byImprovement.assign(rules_->improvements.size(), 0);
+    n.onResource.assign(rules_->improvements.size(), 0);
+    n.byResource.assign(rules_->resources.size(), 0);
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         const Plot& p = state_.plots[i];
         if (p.owner != player || p.improvement == kNone) continue;
-        if (improvement != kNone && p.improvement != improvement) continue;
-        if (onResourceOnly && !resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
-        ++n;
+        ++n.total;
+        ++n.byImprovement[static_cast<size_t>(p.improvement)];
+        if (!resourceImproved(state_.grid.at(static_cast<int>(i)))) continue;
+        ++n.onResource[static_cast<size_t>(p.improvement)];
+        ++n.byResource[static_cast<size_t>(p.resource)];
     }
     return n;
 }

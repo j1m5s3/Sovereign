@@ -234,6 +234,31 @@ TEST(a_civ_s_unique_unit_counts_toward_boosts) {
     CHECK(boostIn(s, techBoost("TECH_METAL_CASTING")));
 }
 
+TEST(boosts_from_improved_plots) {
+    // 04: Apprenticeship (3 Mines), Craftsmanship (3 improved tiles), the Wheel (a Mine on a resource it works) and Iron
+    // Working (an improved Iron). A rival's plots count for nothing.
+    GameState s = boostState();
+    const TypeIndex mine = rules().improvement("IMPROVEMENT_MINE"), iron = rules().resource("RESOURCE_IRON");
+    s.plot({3, 5}).improvement = mine;
+    s.plot({5, 5}).improvement = mine;
+    s.plot({21, 5}).improvement = mine;  // player 1's
+    CHECK(!boostIn(s, techBoost("TECH_APPRENTICESHIP")));
+    CHECK(!boostIn(s, civicBoost("CIVIC_CRAFTSMANSHIP")));
+    s.plot({11, 5}).improvement = rules().improvement("IMPROVEMENT_FARM");
+    CHECK(!boostIn(s, techBoost("TECH_APPRENTICESHIP")));  // two Mines and a Farm
+    CHECK(boostIn(s, civicBoost("CIVIC_CRAFTSMANSHIP")));
+    s.plot({13, 5}).improvement = mine;
+    CHECK(boostIn(s, techBoost("TECH_APPRENTICESHIP")));
+
+    s.plot({11, 5}).resource = iron;                               // under the Farm, which does not work it
+    s.plot({3, 5}).resource = rules().resource("RESOURCE_WHEAT");  // under a Mine, which does not work it
+    CHECK(!boostIn(s, techBoost("TECH_WHEEL")));
+    CHECK(!boostIn(s, techBoost("TECH_IRON_WORKING")));
+    s.plot({5, 5}).resource = iron;
+    CHECK(boostIn(s, techBoost("TECH_WHEEL")));
+    CHECK(boostIn(s, techBoost("TECH_IRON_WORKING")));
+}
+
 TEST(boosts_from_districts_trade_routes_and_meetings) {
     // 04: Cartography (2 Harbors), Mathematics (3 different specialty districts), Currency and Medieval Faires (1 and 4
     // trade routes), Writing (another civ met), Political Philosophy (3 city-states met).

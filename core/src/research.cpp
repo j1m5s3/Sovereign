@@ -142,6 +142,11 @@ Fixed Game::culturePerTurn(PlayerId player) const {
 }
 
 bool Game::boostMet(PlayerId player, const Boost& b) const {
+    std::optional<ImprovedPlots> improved;
+    return boostMet(player, b, improved);
+}
+
+bool Game::boostMet(PlayerId player, const Boost& b, std::optional<ImprovedPlots>& improved) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     auto countCities = [&](auto pred) {
         int n = 0;
@@ -159,6 +164,12 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
     };
     // A civ's unique unit stands in for the unit it replaces.
     auto unitIs = [&](TypeIndex type, TypeIndex ref) { return type == ref || rules_->units[static_cast<size_t>(type)].replaces == ref; };
+    // The player's improved plots, counted on first need; a count from one of their lists.
+    auto plots = [&]() -> const ImprovedPlots& {
+        if (!improved) improved = improvedPlots(player);
+        return *improved;
+    };
+    auto count = [](const std::vector<int>& by, TypeIndex k) { return k >= 0 && static_cast<size_t>(k) < by.size() ? by[static_cast<size_t>(k)] : 0; };
     auto wonderEra = [&](const BuildingType& bt) {
         return bt.unlock.none() ? 0 : (bt.unlock.civic ? rules_->civics : rules_->techs)[static_cast<size_t>(bt.unlock.index)].era;
     };
@@ -199,17 +210,10 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
                        const UnitType& t = rules_->units[static_cast<size_t>(u.type)];
                        return t.domain == Domain::Land && t.layer == UnitLayer::Military && t.combat > 0;
                    }) >= b.count;
-        case BoostKind::Improvement: return countImprovedPlots(player, b.ref, false) >= b.count;
-        case BoostKind::ImprovementOnResource: return countImprovedPlots(player, b.ref, true) >= b.count;
-        case BoostKind::ImprovedTiles: return countImprovedPlots(player, kNone, false) >= b.count;
-        case BoostKind::ImproveResource:
-            for (size_t i = 0; i < state_.plots.size(); ++i) {
-                const Plot& pl = state_.plots[i];
-                if (pl.owner == player && pl.resource == b.ref && pl.improvement != kNone &&
-                    resourceImproved(state_.grid.at(static_cast<int>(i))))
-                    return true;
-            }
-            return false;
+        case BoostKind::Improvement: return count(plots().byImprovement, b.ref) >= b.count;
+        case BoostKind::ImprovementOnResource: return count(plots().onResource, b.ref) >= b.count;
+        case BoostKind::ImprovedTiles: return plots().total >= b.count;
+        case BoostKind::ImproveResource: return count(plots().byResource, b.ref) > 0;
         case BoostKind::District:
             return countCities([&](const City& c) { return c.district(b.ref, true) != nullptr; }) >= b.count;
         case BoostKind::SpecialtyDistricts: {
@@ -641,13 +645,14 @@ void Game::allianceEurekas(PlayerId pid) {
 }
 
 void Game::updateBoosts(PlayerId pid) {
+    std::optional<ImprovedPlots> improved;  // the player's improved plots, counted for the first boost that needs them
     for (int civic = 0; civic < 2; ++civic) {
         const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
         const TreeProgress& t = civic ? state_.players[static_cast<size_t>(pid)].civics : state_.players[static_cast<size_t>(pid)].techs;
         for (size_t i = 0; i < nodes.size(); ++i) {
             const Boost& b = nodes[i].boost;
             if (b.percent <= 0 || b.kind == BoostKind::None || b.kind == BoostKind::NotTracked) continue;
-            if (t.done[i] || t.boosted[i] || !boostMet(pid, b)) continue;
+            if (t.done[i] || t.boosted[i] || !boostMet(pid, b, improved)) continue;
             grantBoost(pid, civic != 0, i);
         }
     }
