@@ -2407,6 +2407,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         *error = "rules are missing a required table";
         return false;
     }
+    indexModifiers();
     return true;
 }
 
@@ -2431,6 +2432,28 @@ std::vector<const Modifier*> Rules::modifiersFrom(const std::string& source) con
         if (m.source == source) out.push_back(&m);
     }
     return out;
+}
+
+namespace {
+const std::vector<uint32_t>& modsWith(const std::vector<std::vector<uint32_t>>& byEffect, ModEffect effect) {
+    static const std::vector<uint32_t> none;
+    const size_t e = static_cast<size_t>(effect);
+    return e < byEffect.size() ? byEffect[e] : none;
+}
+}  // namespace
+
+const std::vector<uint32_t>& Rules::playerModifiers(ModEffect effect) const { return modsWith(playerModsByEffect_, effect); }
+const std::vector<uint32_t>& Rules::cityModifiers(ModEffect effect) const { return modsWith(cityModsByEffect_, effect); }
+
+void Rules::indexModifiers() {
+    playerModsByEffect_.clear();
+    cityModsByEffect_.clear();
+    for (size_t i = 0; i < modifiers.size(); ++i) {
+        auto& byEffect = modifiers[i].collection == ModCollection::Player ? playerModsByEffect_ : cityModsByEffect_;
+        const size_t e = static_cast<size_t>(modifiers[i].effect);
+        if (byEffect.size() <= e) byEffect.resize(e + 1);
+        byEffect[e].push_back(static_cast<uint32_t>(i));
+    }
 }
 TypeIndex Rules::civ(const std::string& id) const { return findIn(civs, id); }
 TypeIndex Rules::gearType(const std::string& id) const { return findIn(gear, id); }

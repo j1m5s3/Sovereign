@@ -40,6 +40,36 @@ TEST(rules_load_known_values) {
     CHECK_EQ(r.startingUnits.size(), 2u);
 }
 
+TEST(rules_index_every_modifier_by_effect) {
+    // Each modifier is listed once, under its own effect and collection, in load order; indexing again rebuilds the lists.
+    auto misplaced = [](const Rules& r) {
+        int wrong = 0;
+        std::vector<int> listed(r.modifiers.size(), 0);
+        for (int e = 0; e < 256; ++e) {
+            const ModEffect effect = static_cast<ModEffect>(e);
+            for (bool player : {true, false}) {
+                const std::vector<uint32_t>& list = player ? r.playerModifiers(effect) : r.cityModifiers(effect);
+                for (size_t k = 0; k < list.size(); ++k) {
+                    if (list[k] >= r.modifiers.size() || (k > 0 && list[k - 1] >= list[k])) {
+                        ++wrong;
+                        continue;
+                    }
+                    const Modifier& m = r.modifiers[list[k]];
+                    if (m.effect != effect || player != (m.collection == ModCollection::Player)) ++wrong;
+                    ++listed[list[k]];
+                }
+            }
+        }
+        for (int n : listed) wrong += n == 1 ? 0 : 1;
+        return wrong;
+    };
+    REQUIRE(!rules().modifiers.empty());
+    CHECK_EQ(misplaced(rules()), 0);
+    Rules again = rules();
+    again.indexModifiers();
+    CHECK_EQ(misplaced(again), 0);
+}
+
 TEST(rules_mod_layers_override_by_id) {
     std::map<std::string, std::string> base = {
         {"globals.json", R"({"globals": {"CITY_MIN_RANGE": 3, "START_DISTANCE_MAJOR_CIVILIZATION": 12,
