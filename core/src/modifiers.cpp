@@ -426,6 +426,42 @@ Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& c
     return total;
 }
 
+void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums) {
+    // A yield sum skips what names no yield before its holder and requirements are looked at, as
+    // sumCityModifiersByYield does.
+    const auto counts = [](const CityEffectSum& e, const Modifier& m) {
+        return !e.byYield || static_cast<size_t>(m.yield) < kNumYields;
+    };
+    const auto add = [](const CityEffectSum& e, const Modifier& m) {
+        if (e.byYield) (*e.byYield)[static_cast<size_t>(m.yield)] += m.amount;
+        else *e.total += m.amount;
+    };
+    for (const CityEffectSum& e : sums) {
+        forEachApplyingIn({&r.cityModifiersBesidePolicies(e.effect)}, s, r, city, false, nullptr, nullptr,
+                          [&](const Modifier& m) { return counts(e, m); }, [&](const Modifier& m) { add(e, m); });
+    }
+    const Player& owner = s.players[static_cast<size_t>(city.owner)];
+    if (owner.anarchyTurns > 0) return;
+    // `pre` finds the sum a policy's modifier counts toward; fn, called next for that same modifier when it applies,
+    // adds to it.
+    const CityEffectSum* into = nullptr;
+    const auto pre = [&](const Modifier& m) {
+        into = nullptr;
+        for (const CityEffectSum& e : sums) {
+            if (e.effect != m.effect) continue;
+            if (counts(e, m)) into = &e;
+            break;
+        }
+        return into != nullptr;
+    };
+    for (auto slot = owner.policies.begin(); slot != owner.policies.end(); ++slot) {
+        const std::vector<uint32_t>* mods = r.policyCityModifiers(*slot);
+        if (mods && !mods->empty() && std::find(owner.policies.begin(), slot, *slot) == slot)
+            forEachApplyingIn({mods}, s, r, city, false, nullptr, nullptr, pre,
+                              [&](const Modifier& m) { add(*into, m); });
+    }
+}
+
 Yields sumPlotModifiers(const GameState& s, const Rules& r, const City& city, Hex plot, const std::vector<uint8_t>* lakes) {
     Yields total{};
     const Plot& p = s.plot(plot);

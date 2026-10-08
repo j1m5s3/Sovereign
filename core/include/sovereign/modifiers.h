@@ -6,6 +6,7 @@
 
 #include "sovereign/api.h"
 
+#include <initializer_list>
 #include <optional>
 #include <string>
 #include <vector>
@@ -39,6 +40,15 @@ Fixed sumCityModifiers(const GameState& s, const Rules& r, const City& city, Mod
                        std::optional<YieldType> yield = std::nullopt);
 // sumCityModifiers of a yield effect for every yield, from one pass over its modifiers.
 Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& city, ModEffect effect);
+// Several effects' sums at once (each effect named once), the owner's policies looked through once for all of them:
+// an effect with `byYield` gets sumCityModifiersByYield's sums added there, one with `total` sumCityModifiers' (no
+// yield filter).
+struct CityEffectSum {
+    ModEffect effect;
+    Yields* byYield = nullptr;
+    Fixed* total = nullptr;
+};
+void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums);
 
 // Total flat plot-yield modifiers for a plot worked by this city, each yield from one pass over the modifiers.
 // `lakes`, when given, is a lakeMap of the state.

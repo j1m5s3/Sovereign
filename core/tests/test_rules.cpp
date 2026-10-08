@@ -172,6 +172,80 @@ TEST(modifiers_of_each_source_find_their_own_holder) {
     CHECK_EQ(gold(more, s.cities[1]) - gold(r, s.cities[1]), Fixed::fromInt(1010));
 }
 
+// One pass over a city's modifiers for several effects gives each effect its own sums: a policy's modifiers count once
+// however many slots hold it and not at all in anarchy, and a yield effect's modifier that names no yield is skipped.
+TEST(modifiers_summed_together_match_each_effects_own_sums) {
+    const Rules& r = rules();
+    const TypeIndex feudal = r.policy("POLICY_FEUDAL_CONTRACT");
+    REQUIRE(feudal != kNone);
+    Rules more = r;
+    const auto add = [&](ModSource kind, TypeIndex source, ModEffect effect, YieldType yield, int amount) {
+        Modifier m;
+        m.sourceKind = kind;
+        m.sourceIndex = source;
+        m.collection = ModCollection::PlayerCities;
+        m.effect = effect;
+        m.yield = yield;
+        m.amount = Fixed::fromInt(amount);
+        more.modifiers.push_back(m);
+    };
+    add(ModSource::Policy, feudal, ModEffect::CityYield, YieldType::Gold, 1);
+    add(ModSource::Policy, feudal, ModEffect::CityYieldPercent, YieldType::Science, 20);
+    add(ModSource::Policy, feudal, ModEffect::CityHousing, YieldType::Count, 300);
+    add(ModSource::Policy, feudal, ModEffect::CityYieldPerPop, YieldType::Count, 4000);  // names no yield
+    add(ModSource::Everyone, kNone, ModEffect::CityYield, YieldType::Gold, 50000);
+    add(ModSource::Everyone, kNone, ModEffect::CityDefense, YieldType::Count, 600000);
+    add(ModSource::Everyone, kNone, ModEffect::CityAmenities, YieldType::Count, 7000000);
+    more.indexModifiers();
+    GameState s = sovtest::flatState(16, 10, 1);
+    sovtest::addCity(s, 0, {3, 4}, true);
+    s.players[0].policies = {feudal, kNone, feudal};
+    const City& c = s.cities[0];
+    struct Sums {
+        Yields flat{}, perPop{}, percents{};
+        Fixed housing, amenities, defense;
+    };
+    const auto together = [&](const Rules& with) {
+        Sums t;
+        sumCityModifiers(s, with, c,
+                         {{ModEffect::CityYield, &t.flat, nullptr},
+                          {ModEffect::CityYieldPerPop, &t.perPop, nullptr},
+                          {ModEffect::CityYieldPercent, &t.percents, nullptr},
+                          {ModEffect::CityHousing, nullptr, &t.housing},
+                          {ModEffect::CityAmenities, nullptr, &t.amenities},
+                          {ModEffect::CityDefense, nullptr, &t.defense}});
+        return t;
+    };
+    const auto sameAsApart = [&](const Rules& with, const Sums& t) {
+        const Yields flat = sumCityModifiersByYield(s, with, c, ModEffect::CityYield);
+        const Yields perPop = sumCityModifiersByYield(s, with, c, ModEffect::CityYieldPerPop);
+        const Yields percents = sumCityModifiersByYield(s, with, c, ModEffect::CityYieldPercent);
+        for (size_t i = 0; i < kNumYields; ++i) {
+            CHECK_EQ(t.flat[i], flat[i]);
+            CHECK_EQ(t.perPop[i], perPop[i]);
+            CHECK_EQ(t.percents[i], percents[i]);
+        }
+        CHECK_EQ(t.housing, sumCityModifiers(s, with, c, ModEffect::CityHousing));
+        CHECK_EQ(t.amenities, sumCityModifiers(s, with, c, ModEffect::CityAmenities));
+        CHECK_EQ(t.defense, sumCityModifiers(s, with, c, ModEffect::CityDefense));
+    };
+    const auto gold = [](const Yields& y) { return y[static_cast<size_t>(YieldType::Gold)]; };
+    const auto science = [](const Yields& y) { return y[static_cast<size_t>(YieldType::Science)]; };
+    for (int anarchy : {0, 2}) {
+        s.players[0].anarchyTurns = anarchy;
+        const Sums base = together(r), added = together(more);
+        sameAsApart(r, base);
+        sameAsApart(more, added);
+        const int policy = anarchy > 0 ? 0 : 1;
+        CHECK_EQ(gold(added.flat) - gold(base.flat), Fixed::fromInt(50000 + policy));
+        CHECK_EQ(science(added.percents) - science(base.percents), Fixed::fromInt(20 * policy));
+        CHECK_EQ(added.housing - base.housing, Fixed::fromInt(300 * policy));
+        CHECK_EQ(added.amenities - base.amenities, Fixed::fromInt(7000000));
+        CHECK_EQ(added.defense - base.defense, Fixed::fromInt(600000));
+        for (size_t i = 0; i < kNumYields; ++i) CHECK_EQ(added.perPop[i], base.perPop[i]);
+    }
+}
+
 // Every named constant in the data is found by its name, with its value.
 TEST(rules_find_every_named_constant) {
     std::ifstream in(std::string(SOVEREIGN_RULES_DIR) + "/globals.json", std::ios::binary);
