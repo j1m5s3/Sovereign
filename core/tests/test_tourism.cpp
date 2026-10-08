@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addCity;
@@ -158,4 +159,89 @@ TEST(a_bands_promotion_adds_its_burst_where_it_plays) {
     REQUIRE(burst);
     REQUIRE(g->submit(Command::performConcert(0, band)) == CommandError::Ok);
     CHECK(g->state().players[0].tourismTo[1] >= 500);
+}
+
+// Hallyu (04): a Rock Band chooses its promotion (Promote) instead of drawing one, when bought and when a concert
+// earns another. Choosing ends its turn and keeps its level, which its XP counts (07).
+TEST(hallyu_lets_rock_bands_choose_their_promotions) {
+    const auto slot = [](GameState& s, bool hallyu) {
+        Player& p = s.players[0];
+        p.government = rules().government("GOVERNMENT_CHIEFDOM");
+        p.policies.assign(static_cast<size_t>(rules().governments[at(p.government)].totalSlots()), kNone);
+        if (hallyu) p.policies[0] = rules().policy("POLICY_HALLYU");
+    };
+    size_t bandPromotions = 0;
+    for (const PromotionType& pr : rules().promotions) bandPromotions += pr.promotionClass == "PROMOTION_CLASS_ROCK_BAND" ? 1 : 0;
+    const TypeIndex glam = rules().promotion("PROMOTION_GLAM_ROCK"), indie = rules().promotion("PROMOTION_INDIE");
+    const auto bought = [&](bool hallyu) {
+        GameState s = landState();
+        s.players[0].civics.done[at(rules().civic("CIVIC_COLD_WAR"))] = 1;
+        s.players[0].faith = Fixed::fromInt(1000);
+        slot(s, hallyu);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const ProductionItem band{ProductionKind::Unit, rules().unit("UNIT_ROCK_BAND")};
+        REQUIRE(g->submit(Command::purchaseWithFaith(0, g->state().cities[0].id, band)) == CommandError::Ok);
+        return g;
+    };
+    auto drawn = bought(false);
+    const Unit& d = drawn->state().units.back();
+    CHECK_EQ(d.promotions.size(), 1u);  // drawn (07)
+    CHECK(drawn->availablePromotions(d.id).empty());
+
+    auto g = bought(true);
+    const UnitId band = g->state().units.back().id;
+    CHECK(g->state().unit(band)->promotions.empty());
+    CHECK_EQ(g->availablePromotions(band).size(), bandPromotions);  // any of them
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().unit(band)->promotionPicks, 1);  // the choice is saved
+    REQUIRE(g->submit(Command::promote(0, band, glam)) == CommandError::Ok);
+    const Unit& chosen = *g->state().unit(band);
+    CHECK(chosen.promotions == std::vector<TypeIndex>{glam});
+    CHECK_EQ(chosen.promotionPicks, 0);
+    CHECK_EQ(chosen.xp, 0);  // still level 1
+    CHECK(chosen.movesLeft == Fixed());
+    CHECK(g->submit(Command::promote(0, band, indie)) == CommandError::CannotPromote);
+    // A band never has more to choose than the promotions it lacks.
+    Unit& almost = g->stateMutForTests().units.back();
+    for (size_t i = 0; i < rules().promotions.size() && almost.promotions.size() + 1 < bandPromotions; ++i) {
+        const auto pr = static_cast<TypeIndex>(i);
+        if (rules().promotions[i].promotionClass == "PROMOTION_CLASS_ROCK_BAND" && pr != glam) almost.promotions.push_back(pr);
+    }
+    g->grantBandPromotion(almost);
+    g->grantBandPromotion(almost);
+    CHECK_EQ(almost.promotionPicks, 1);
+
+    // A concert that earns another promotion leaves it to choose next turn, and the level it gains stays.
+    const auto concert = [&](bool hallyu, uint64_t seed) {
+        GameState s = landState();
+        slot(s, hallyu);
+        s.rng.seed(seed);
+        addUnit(s, "UNIT_ROCK_BAND", 0, {16, 6});  // in player 1's capital
+        s.units.back().promotions.push_back(glam);
+        s.units.back().xp = 1;  // level 2
+        auto game = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(game->submit(Command::performConcert(0, game->state().units.back().id)) == CommandError::Ok);
+        return game;
+    };
+    bool earned = false;
+    for (uint64_t seed = 1; seed <= 40 && !earned; ++seed) {
+        auto plain = concert(false, seed);
+        const Unit* p = plain->state().units.empty() ? nullptr : &plain->state().units.back();
+        if (!p || p->promotions.size() < 2) continue;  // broke up, or no promotion this time
+        earned = true;
+        auto chooser = concert(true, seed);
+        const Unit& u = chooser->state().units.back();
+        CHECK(u.promotions == std::vector<TypeIndex>{glam});
+        CHECK_EQ(u.promotionPicks, 1);
+        CHECK_EQ(u.xp, p->xp);
+        CHECK(chooser->availablePromotions(u.id).empty());  // its moves went on the concert
+        const UnitId id = u.id;
+        sovtest::endTurns(*chooser, 2);
+        REQUIRE(chooser->submit(Command::promote(0, id, indie)) == CommandError::Ok);
+        CHECK(chooser->state().unit(id)->promotions == (std::vector<TypeIndex>{glam, indie}));
+        CHECK_EQ(chooser->state().unit(id)->xp, p->xp);
+    }
+    CHECK(earned);
 }

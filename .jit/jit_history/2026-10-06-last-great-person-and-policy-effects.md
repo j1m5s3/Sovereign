@@ -44,3 +44,7 @@ The product luxuries exist in the data (Toys, Cosmetics, Jeans, Perfume; no map 
 Also since: James Young lets his player see Oil before its tech (`resourceVisible`), and Mary Katherine Goddard adds a level of diplomatic access with every civ (`accessLevel`).
 
 Also since: Giovanni de' Medici gives each of his player's Banks 2 Palace-type slots (`extraPalaceSlots`), counted in `greatWorkSlots`, `freeGreatWorkSlot` and Great Work moves.
+
+## Follow-up: Hallyu
+
+Under Hallyu a Rock Band chooses its promotion instead of drawing it: the promotion a band starts with and each one a concert earns. Each becomes a pick (`Unit::promotionPicks`, save version 84) that the band spends with `Promote`, though short of the XP. A pick keeps its XP, which counts a band's levels, and like any promotion ends its turn. The AI takes the first promotion offered, as for its other units.

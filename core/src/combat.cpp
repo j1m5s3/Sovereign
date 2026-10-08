@@ -849,7 +849,7 @@ bool Game::canPromote(UnitId id, TypeIndex promotion) const {
     if (!u || promotion < 0 || static_cast<size_t>(promotion) >= rules_->promotions.size()) return false;
     const PromotionType& pr = rules_->promotions[static_cast<size_t>(promotion)];
     if (pr.promotionClass.empty() || pr.promotionClass != typeOf(*rules_, *u).promotionClass) return false;
-    if (u->xp < xpForNextLevel(*u) || u->movesLeft <= Fixed()) return false;
+    if ((u->xp < xpForNextLevel(*u) && u->promotionPicks == 0) || u->movesLeft <= Fixed()) return false;
     if (std::find(u->promotions.begin(), u->promotions.end(), promotion) != u->promotions.end()) return false;
     // A leader finishes only one branch per reign (leader doc §3).
     if (!pr.branch.empty() && pr.tier >= 2) {
@@ -867,9 +867,10 @@ bool Game::canPromote(UnitId id, TypeIndex promotion) const {
 
 std::vector<TypeIndex> Game::availablePromotions(UnitId id) const {
     std::vector<TypeIndex> out;
-    // A unit short of its next level's experience, or out of moves, can take none (canPromote's own test, made once).
+    // A unit short of its next level's experience with no promotion to choose, or out of moves, can take none
+    // (canPromote's own test, made once).
     const Unit* u = state_.unit(id);
-    if (!u || u->xp < xpForNextLevel(*u) || u->movesLeft <= Fixed()) return out;
+    if (!u || (u->xp < xpForNextLevel(*u) && u->promotionPicks == 0) || u->movesLeft <= Fixed()) return out;
     for (size_t i = 0; i < rules_->promotions.size(); ++i) {
         if (canPromote(id, static_cast<TypeIndex>(i))) out.push_back(static_cast<TypeIndex>(i));
     }
@@ -1106,13 +1107,17 @@ void Game::applyCombat(const Command& c) {
         }
         case CommandType::Promote: {
             Unit* u = state_.unit(c.id);
+            // Short of the XP, the promotion is one the unit chooses (a Rock Band under Hallyu, 04), and its XP, which
+            // counts a band's levels, stays.
+            const bool picked = u->xp < xpForNextLevel(*u);
             const int charges = unitEffectTotal(*u, UnitEffectKind::SpreadCharges);
             u->promotions.push_back(static_cast<TypeIndex>(c.arg));
             u->charges += unitEffectTotal(*u, UnitEffectKind::SpreadCharges) - charges;  // Orator, chosen through Yerevan (08)
             // A third promotion is a distinction (09; Sovereign reading), once an era.
             if (u->promotions.size() == 3)
                 awardFirst(c.player, "MOMENT_FIRST_UNIT_PROMOTED_WITH_DISTINCTION", "MOMENT_UNIT_PROMOTED_WITH_DISTINCTION", state_.gameEra);
-            u->xp = 0;  // excess XP is lost on promotion
+            if (picked) --u->promotionPicks;
+            else u->xp = 0;  // excess XP is lost on promotion
             u->hp = std::min(rules_->globalInt("COMBAT_MAX_HIT_POINTS"), u->hp + rules_->globalInt("EXPERIENCE_PROMOTE_HEALED"));
             u->movesLeft = Fixed();  // promoting ends the unit's turn
             return;
