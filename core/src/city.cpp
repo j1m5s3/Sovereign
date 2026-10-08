@@ -71,6 +71,10 @@ bool City::has(TypeIndex building) const {
 // ------------------------------------------------------------------ queries
 
 Yields Game::plotYields(Hex at, const City& city) const {
+    return plotYields(at, city, cityFollows(city, Bf::EarthGoddess));
+}
+
+Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
     const Plot& p = state_.plot(at);
     Yields y = rules_->terrains[static_cast<size_t>(p.terrain)].yields;
     if (p.feature != kNone) {
@@ -144,7 +148,7 @@ Yields Game::plotYields(Hex at, const City& city) const {
         if (p.industry == 2) y[idx(YieldType::Production)] += Fixed::fromInt(2);
     }
     // Earth Goddess (06): +1 Faith on plots of Appeal 4 or more.
-    if (cityFollows(city, Bf::EarthGoddess) && plotAppeal(at) >= 4) y[idx(YieldType::Faith)] += Fixed::fromInt(1);
+    if (earthGoddess && plotAppeal(at) >= 4) y[idx(YieldType::Faith)] += Fixed::fromInt(1);
     return y;
 }
 
@@ -174,9 +178,10 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     CityReport rep;
     const City* c = &city;
     const Player& owner = state_.players[static_cast<size_t>(c->owner)];
-    Yields raw = plotYields(c->pos, *c);
+    const bool earthGoddess = cityFollows(*c, Bf::EarthGoddess);
+    Yields raw = plotYields(c->pos, *c, earthGoddess);
     for (int32_t pi : c->worked) {
-        Yields y = plotYields(state_.grid.at(pi), *c);
+        Yields y = plotYields(state_.grid.at(pi), *c, earthGoddess);
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += y[i];
     }
     for (TypeIndex b : c->buildings) {
@@ -1253,10 +1258,11 @@ void Game::assignCitizens(City& city) {
     // Candidates: each workable plot, and each specialist slot in the city's districts (index -1 - district).
     struct Cand { int32_t index; Fixed score; };
     std::vector<Cand> cands;
+    const bool earthGoddess = cityFollows(city, Bf::EarthGoddess);
     for (const Hex& h : plots) {
         int32_t pi = state_.grid.index(h);
         if (std::binary_search(city.locked.begin(), city.locked.end(), pi)) continue;
-        cands.push_back({pi, citizenScore(plotYields(h, city))});
+        cands.push_back({pi, citizenScore(plotYields(h, city, earthGoddess))});
     }
     for (size_t k = 0; k < city.districts.size(); ++k) {
         CityDistrict& d = city.districts[k];

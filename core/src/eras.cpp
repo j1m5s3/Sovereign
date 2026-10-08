@@ -460,25 +460,28 @@ PlayerId Game::cultureVictor() const {
     // the host and comes off the rival's domestic tourists (07: Tourism).
     constexpr int kMinTouristsPerRival = 5;
     std::vector<PlayerId> majors;  // in the players' order
+    majors.reserve(state_.players.size());
     for (const Player& p : state_.players) {
         if (isMajor(p)) majors.push_back(p.id);
     }
+    const int rivals = static_cast<int>(majors.size()) - 1;  // each civ's: the other majors
+    if (rivals <= 0) return kNoPlayer;
     std::vector<int> domestic(state_.players.size(), -1);  // each civ's domesticTourists, worked out on first need
     for (const PlayerId pid : majors) {
         int visitors = 0;  // visitingTourists(pid)
         for (const PlayerId x : majors) visitors += x != pid ? visitingTourists(pid, x) : 0;
-        if (visitors <= 0) continue;
+        if (visitors < kMinTouristsPerRival * rivals) continue;  // the floor, before any rival's home tourists
         bool all = true;
-        int rivals = 0;
         for (const PlayerId x : majors) {
             if (x == pid) continue;
-            ++rivals;
-            if (!all) continue;  // one rival it falls short of settles it: the rest are only counted
             int& theirs = domestic[at(x)];
             if (theirs < 0) theirs = domesticTourists(x);
-            if (visitors <= theirs) all = false;
+            if (visitors <= theirs) {
+                all = false;  // one rival it falls short of settles it
+                break;
+            }
         }
-        if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return pid;
+        if (all) return pid;
     }
     return kNoPlayer;
 }

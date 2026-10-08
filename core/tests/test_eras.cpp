@@ -190,6 +190,12 @@ TEST(visitors_beyond_every_rivals_home_tourists_win) {
     CHECK_EQ(early->visitingTourists(0, 1), 2);
     CHECK_EQ(early->domesticTourists(1), 1);
     CHECK_EQ(early->cultureVictor(), kNoPlayer);
+    GameState atFloor = s;
+    atFloor.players[0].tourismTo = {0, 2 * 200 * 5};  // five visitors: the floor itself is enough
+    auto just = Game::fromScenario(rules(), std::move(atFloor));
+    CHECK_EQ(just->visitingTourists(0, 1), 5);
+    CHECK_EQ(just->domesticTourists(1), 4);
+    CHECK_EQ(just->cultureVictor(), 0);
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->visitingTourists(0, 1), 6);
     CHECK_EQ(g->domesticTourists(1), 3);
