@@ -319,7 +319,8 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
                       {ModEffect::CityYieldPercent, &percents, nullptr},
                       {ModEffect::CityHousing, nullptr, &housingMods},
                       {ModEffect::CityAmenities, nullptr, &amenityMods},
-                      {ModEffect::CityDefense, nullptr, &defenseMods}});
+                      {ModEffect::CityDefense, nullptr, &defenseMods}},
+                     &shared.holders);
     for (size_t i = 0; i < kNumYields; ++i) {
         raw[i] += flat[i];
         raw[i] += perPop[i] * c->population;

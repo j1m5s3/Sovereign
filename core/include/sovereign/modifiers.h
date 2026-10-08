@@ -6,9 +6,11 @@
 
 #include "sovereign/api.h"
 
+#include <array>
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sovereign/rules.h"
@@ -48,7 +50,18 @@ struct CityEffectSum {
     Yields* byYield = nullptr;
     Fixed* total = nullptr;
 };
-void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums);
+// The city of a player holding each building whose modifiers reach all its cities (a wonder's, a Government Plaza
+// building's), as looked for over the game's cities, kept through a run of sums for that player's cities while the
+// game does not change. Another player's sums start it afresh.
+struct BuildingHolders {
+    PlayerId owner = kNoPlayer;
+    uint8_t count = 0;
+    // The first `count` buildings looked for, each with its holder's place in GameState::cities (-1: none). Any
+    // looked for once these are full is looked for each time.
+    std::array<std::pair<TypeIndex, int32_t>, 8> found{};
+};
+void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums,
+                      BuildingHolders* holders = nullptr);
 
 // Total flat plot-yield modifiers for a plot worked by this city, each yield from one pass over the modifiers.
 // `lakes`, when given, is a lakeMap of the state.

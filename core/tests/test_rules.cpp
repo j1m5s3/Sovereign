@@ -246,6 +246,74 @@ TEST(modifiers_summed_together_match_each_effects_own_sums) {
     }
 }
 
+// A run of sums over a player's cities keeps the city holding each building whose modifiers reach all of them: each
+// city gets the sums it gets alone, the holder's own requirements are tested on the holder, and another player's city
+// looks for a holder of its own.
+TEST(modifier_sums_keep_building_holders_through_a_run) {
+    const Rules& r = rules();
+    const TypeIndex granary = r.building("BUILDING_GRANARY"), mill = r.building("BUILDING_WATER_MILL");
+    REQUIRE(granary != kNone && mill != kNone);
+    Rules more = r;
+    Modifier m;
+    m.sourceKind = ModSource::Building;
+    m.sourceIndex = granary;
+    m.collection = ModCollection::PlayerCities;
+    m.effect = ModEffect::CityYield;
+    m.yield = YieldType::Gold;
+    m.amount = Fixed::fromInt(10);
+    m.ownerReqs.reqs.push_back({ReqType::CityMinPopulation, kNone, 3, false});  // held in a city of 3 or more
+    more.modifiers.push_back(m);
+    m.sourceIndex = mill;
+    m.effect = ModEffect::CityHousing;
+    m.amount = Fixed::fromInt(100);
+    m.ownerReqs.reqs.clear();
+    more.modifiers.push_back(m);
+    more.indexModifiers();
+    GameState s = sovtest::flatState(20, 12, 2);
+    sovtest::addCity(s, 0, {3, 4}, true);
+    sovtest::addCity(s, 0, {10, 4}, false, 3);
+    sovtest::addCity(s, 1, {16, 8}, true, 3);
+    for (const auto& [place, building] : {std::pair<size_t, TypeIndex>{0, mill}, {1, granary}}) {
+        std::vector<TypeIndex>& b = s.cities[place].buildings;
+        b.push_back(building);
+        std::sort(b.begin(), b.end());
+    }
+    const auto sums = [&](const Rules& with, const City& c, BuildingHolders* holders) {
+        std::pair<Yields, Fixed> out{};
+        sumCityModifiers(s, with, c,
+                         {{ModEffect::CityYield, &out.first, nullptr}, {ModEffect::CityHousing, nullptr, &out.second}},
+                         holders);
+        return out;
+    };
+    const auto gold = [](const std::pair<Yields, Fixed>& p) { return p.first[static_cast<size_t>(YieldType::Gold)]; };
+    BuildingHolders run, baseRun;  // a run of sums with the added modifiers, and one without
+    // How many times the run holds the building, and the place of its holder as last held (-2: not held).
+    const auto held = [&](TypeIndex building) {
+        std::pair<int, int32_t> out{0, -2};
+        for (uint8_t k = 0; k < run.count; ++k) {
+            if (run.found[k].first == building) out = {out.first + 1, run.found[k].second};
+        }
+        return out;
+    };
+    const int addedGold[] = {10, 10, 0}, addedHousing[] = {100, 100, 0};
+    for (size_t i = 0; i < s.cities.size(); ++i) {
+        const City& c = s.cities[i];
+        const auto shared = sums(more, c, &run), alone = sums(more, c, nullptr), base = sums(r, c, &baseRun);
+        CHECK_EQ(gold(shared), gold(alone));
+        CHECK_EQ(shared.second, alone.second);
+        CHECK_EQ(gold(shared) - gold(base), Fixed::fromInt(addedGold[i]));
+        CHECK_EQ(shared.second - base.second, Fixed::fromInt(addedHousing[i]));
+        if (i == 1) {  // player 0's two cities: the Water Mill held in the first, the Granary in the second
+            CHECK_EQ(run.owner, static_cast<PlayerId>(0));
+            CHECK(held(mill) == std::make_pair(1, int32_t{0}));
+            CHECK(held(granary) == std::make_pair(1, int32_t{1}));
+        }
+    }
+    CHECK_EQ(run.owner, static_cast<PlayerId>(1));  // started afresh for player 1, who holds neither
+    CHECK(held(granary) == std::make_pair(1, int32_t{-1}));
+    CHECK(held(mill) == std::make_pair(1, int32_t{-1}));
+}
+
 // Every named constant in the data is found by its name, with its value.
 TEST(rules_find_every_named_constant) {
     std::ifstream in(std::string(SOVEREIGN_RULES_DIR) + "/globals.json", std::ios::binary);

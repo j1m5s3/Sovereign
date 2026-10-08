@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "sovereign/commands.h"
+#include "sovereign/modifiers.h"
 #include "sovereign/rules.h"
 #include "sovereign/state.h"
 
@@ -1097,12 +1098,14 @@ private:
     // The part of them not counted off its land: corporations' products, luxuries granted, Zanzibar's spices.
     void addCopiesOffMap(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld, the
-    // National Park plots of each city, and the owner's suzerainBonus by city-state kind (0 not asked yet, 1 no, 2
-    // yes). Valid while no city changes hands.
+    // National Park plots of each city, the owner's suzerainBonus by city-state kind (0 not asked yet, 1 no, 2
+    // yes), and the cities holding the buildings whose modifiers reach all its cities. Valid while no city changes
+    // hands and no building is built or lost.
     struct ReportShare {
         std::optional<std::vector<uint8_t>> luxuries;
         std::optional<std::map<CityId, int>> parkPlots;
         uint8_t suzerain[static_cast<size_t>(Cs::Count)] = {};
+        BuildingHolders holders;
     };
     // suzerainBonus(player, cityState) for the owner of a run of city reports, asked once per kind for the run.
     bool suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const;

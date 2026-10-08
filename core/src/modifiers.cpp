@@ -234,19 +234,42 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
     return std::find(owner.policies.begin(), owner.policies.end(), m.sourceIndex) != owner.policies.end();
 }
 
+// The first of the player's cities with the building, which holds its modifiers for all their cities. A civ's unique
+// building carries the modifiers of the building it replaces.
+const City* buildingHolder(const GameState& s, const Rules& r, PlayerId player, TypeIndex building) {
+    for (const City& c : s.cities) {
+        if (c.owner == player && cityHasBuilding(c, r, building)) return &c;
+    }
+    return nullptr;
+}
+
+// buildingHolder, kept in `holders` for the rest of a run of sums over the player's cities.
+const City* buildingHolder(const GameState& s, const Rules& r, PlayerId player, TypeIndex building,
+                           BuildingHolders& holders) {
+    if (holders.owner != player) holders = {player, 0, {}};
+    for (uint8_t k = 0; k < holders.count; ++k) {
+        const auto [b, place] = holders.found[k];
+        if (b == building) return place < 0 ? nullptr : &s.cities[static_cast<size_t>(place)];
+    }
+    const City* holder = buildingHolder(s, r, player, building);
+    if (holders.count < holders.found.size())
+        holders.found[holders.count++] = {building, holder ? static_cast<int32_t>(holder - s.cities.data()) : -1};
+    return holder;
+}
+
 // holderFor for the sources that take more than a look at the subject's player: buildings, beliefs, great people,
 // city-states and governors.
 constexpr int kUnknownReligion = -2;
-const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rules& r, const City& subject, const Player& owner, int& majority) {
+// A building's modifiers for all the player's cities go through `holders` when given.
+const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rules& r, const City& subject,
+                               const Player& owner, int& majority, BuildingHolders* holders) {
     const bool ownerOnly = m.collection == ModCollection::OwnerCity || m.collection == ModCollection::OwnerCityPlots;
     switch (m.sourceKind) {
         case ModSource::Building:
             // A civ's unique building carries the modifiers of the building it replaces.
             if (ownerOnly) return cityHasBuilding(subject, r, m.sourceIndex) ? &subject : nullptr;
-            for (const City& c : s.cities) {
-                if (c.owner == owner.id && cityHasBuilding(c, r, m.sourceIndex)) return &c;
-            }
-            return nullptr;
+            if (holders) return buildingHolder(s, r, owner.id, m.sourceIndex, *holders);
+            return buildingHolder(s, r, owner.id, m.sourceIndex);
         case ModSource::Civ:
         case ModSource::Everyone:
         case ModSource::Policy:
@@ -280,10 +303,12 @@ const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rule
 }
 
 // The holder holderBeyondPlayer found last in a pass, with the modifier it was for: it depends only on the
-// modifier's collection and source, and the modifiers of one source come together in the lists.
+// modifier's collection and source, and the modifiers of one source come together in the lists. `holders` (or null)
+// goes to holderBeyondPlayer.
 struct HolderMemo {
     const Modifier* of = nullptr;
     const City* holder = nullptr;
+    BuildingHolders* holders = nullptr;
 };
 
 // Whether holderFor settles a modifier from this source with a look at the subject's player alone.
@@ -306,7 +331,7 @@ inline const City* holderFor(const Modifier& m, const GameState& s, const Rules&
         case ModSource::Government: return playerHasSource(m, owner) ? &subject : nullptr;
         default:
             if (!memo.of || memo.of->collection != m.collection || memo.of->sourceKind != m.sourceKind || memo.of->sourceIndex != m.sourceIndex) {
-                memo.holder = holderBeyondPlayer(m, s, r, subject, owner, majority);
+                memo.holder = holderBeyondPlayer(m, s, r, subject, owner, majority, memo.holders);
                 memo.of = &m;
             }
             return memo.holder;
@@ -317,13 +342,15 @@ inline const City* holderFor(const Modifier& m, const GameState& s, const Rules&
 // `pre` passes over modifiers on what they say alone (a yield, a unit class) before the costlier look for the city
 // holding the modifier. A plot's own requirements (its terrain, feature, improvement...) are cheap and go before
 // that look too, unless a look at the city's player settles it; a city's can scan the map, so they go after it.
-// `lakes` (a lakeMap, or null) goes to the plot's.
+// `lakes` (a lakeMap, or null) goes to the plot's; `holders` (or null) to the look for a holder.
 template <typename Pre, typename Fn>
 void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists, const GameState& s, const Rules& r, const City& city,
-                       bool plotEffect, const Plot* plot, const std::vector<uint8_t>* lakes, Pre&& pre, Fn&& fn) {
+                       bool plotEffect, const Plot* plot, const std::vector<uint8_t>* lakes, Pre&& pre, Fn&& fn,
+                       BuildingHolders* holders = nullptr) {
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     int majority = kUnknownReligion;
     HolderMemo memo;
+    memo.holders = holders;
     const ReqContext subjectCtx{&s, &r, &owner, &city, plot, lakes};
     for (const std::vector<uint32_t>* list : lists) {
         if (!list) continue;
@@ -426,7 +453,8 @@ Yields sumCityModifiersByYield(const GameState& s, const Rules& r, const City& c
     return total;
 }
 
-void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums) {
+void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std::initializer_list<CityEffectSum> sums,
+                      BuildingHolders* holders) {
     // A yield sum skips what names no yield before its holder and requirements are looked at, as
     // sumCityModifiersByYield does.
     const auto counts = [](const CityEffectSum& e, const Modifier& m) {
@@ -437,8 +465,9 @@ void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std:
         else *e.total += m.amount;
     };
     for (const CityEffectSum& e : sums) {
-        forEachApplyingIn({&r.cityModifiersBesidePolicies(e.effect)}, s, r, city, false, nullptr, nullptr,
-                          [&](const Modifier& m) { return counts(e, m); }, [&](const Modifier& m) { add(e, m); });
+        forEachApplyingIn(
+            {&r.cityModifiersBesidePolicies(e.effect)}, s, r, city, false, nullptr, nullptr,
+            [&](const Modifier& m) { return counts(e, m); }, [&](const Modifier& m) { add(e, m); }, holders);
     }
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     if (owner.anarchyTurns > 0) return;
@@ -458,7 +487,7 @@ void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std:
         const std::vector<uint32_t>* mods = r.policyCityModifiers(*slot);
         if (mods && !mods->empty() && std::find(owner.policies.begin(), slot, *slot) == slot)
             forEachApplyingIn({mods}, s, r, city, false, nullptr, nullptr, pre,
-                              [&](const Modifier& m) { add(*into, m); });
+                              [&](const Modifier& m) { add(*into, m); }, holders);
     }
 }
 
