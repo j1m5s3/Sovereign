@@ -37,6 +37,7 @@ constexpr int kNeighbourRange = 14;     // a target's city must be this close to
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kProposalGap = 10;        // turns between deals put to the same civ
+constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kThreatRange = 4;
 constexpr int kHealBelow = 40;
 constexpr int kStageDistance = 4;     // an operation gathers this far from its target city
@@ -444,6 +445,30 @@ int districtPercent(const View& v, const DistrictType& d) {
 }
 
 // --- diplomacy ---------------------------------------------------------------------
+// Losing badly to a civ that has not taken its white peace, it offers a city for peace (08: peace deals include ceding
+// cities): the one it parts with most easily, never one dearer to it than peace (dealValue), to an AI only one that AI
+// would take, at most every kProposalGap turns. True once peace is made.
+bool offerCityForPeace(View& v, PlayerId e) {
+    const GameState& s = v.s();
+    const Relation& rel = s.players[at(v.me)].relations[at(e)];
+    if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) return false;
+    std::vector<std::pair<int, std::vector<DealItem>>> offers;  // the deal's value to us, and its items
+    for (CityId id : v.cities) {
+        std::vector<DealItem> idea{{DealItemKind::Peace, v.me, 0, kNone}, {DealItemKind::City, v.me, id, kNone}};
+        const Deal d{0, v.me, e, s.turn, idea};
+        if (v.game.dealProblem(d) != CommandError::Ok) continue;
+        const int value = v.game.dealValue(v.me, d);
+        if (value >= 0) offers.push_back({value, std::move(idea)});
+    }
+    std::stable_sort(offers.begin(), offers.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    for (const auto& offer : offers) {
+        if (!s.players[at(e)].human && !v.game.wouldAccept(e, Deal{0, v.me, e, s.turn, offer.second})) continue;
+        v.game.submit(Command::proposeDeal(v.me, e, offer.second));
+        return !v.game.atWar(v.me, e);
+    }
+    return false;
+}
+
 void diplomacy(View& v) {
     const GameState& s = v.s();
     const int mine = militaryStrength(v.game, v.me);
@@ -459,6 +484,8 @@ void diplomacy(View& v) {
         const bool accept = theyOffer && mine * 100 < theirs * v.posture.warRatio;
         if ((losing || tired || accept) && v.game.canMakePeace(v.me, e))
             changed = v.game.submit(Command::makePeace(v.me, e)) == CommandError::Ok || changed;
+        else if (mine * 2 < theirs && v.game.isMajorCiv(e))  // losing badly, its white peace already offered
+            changed = offerCityForPeace(v, e) || changed;
     }
     // Emergencies (08): join one against a civ it dislikes or fears.
     for (size_t i = 0; i < s.emergencies.size(); ++i) {
@@ -592,6 +619,17 @@ void deals(View& v) {
         if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
         std::vector<std::vector<DealItem>> ideas;
         const bool distrusted = std::find(v.posture.distrust.begin(), v.posture.distrust.end(), o.id) != v.posture.distrust.end();
+        // A neighbour it dislikes and is at least twice as strong as is asked for gold (08: Make Demand), on one turn in
+        // kDemandGap: as much as an AI that weak would hand over.
+        if (opinion < 0 && (s.turn + v.me + o.id) % kDemandGap == 0 && !v.game.friends(v.me, o.id) && v.game.alliance(v.me, o.id) == AllianceType::None) {
+            const int mine = militaryStrength(v.game, v.me), theirs = std::max(1, militaryStrength(v.game, o.id));
+            const int gold = static_cast<int>(o.gold.toInt());
+            bool near = false;
+            for (const City& c : s.cities) {
+                near = near || (c.owner == o.id && v.game.visibility(v.me, c.pos) != Visibility::Unrevealed && distanceToCity(s, v.me, c.pos) <= kNeighbourRange);
+            }
+            if (near && mine >= 2 * theirs && gold >= 50) ideas.push_back({{DealItemKind::Gold, o.id, std::min(gold, 200 + 100 * (mine / theirs - 2)) / 10 * 10, kNone}});
+        }
         if (opinion >= kFriendOpinion && !distrusted) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
         // An alliance with a friend it likes, of the kind its strategy wants (08: Alliance).
         if (opinion >= kFriendOpinion && !distrusted && v.game.friends(v.me, o.id)) {

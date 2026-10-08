@@ -890,6 +890,130 @@ TEST(a_strong_civ_can_make_demands) {
     CHECK(strong.second < 0);     // and resents it
 }
 
+// An AI losing badly whose white peace was not taken offers a city for peace (08): its cheapest, never one dearer to
+// it than peace; to an AI only one that AI takes.
+TEST(an_ai_losing_badly_offers_a_city_for_peace) {
+    // Player 1 holds a capital of 1 (never ceded), a town of townPop at (20,11) and a city of cityPop at (20,2).
+    const auto offer = [](bool offered, int townPop, int cityPop, bool humanFoe, int aiArmy = 0) {
+        GameState s = warState(true);
+        for (Unit& u : s.units) u.activity = Activity::Sleep;  // the human's army waits
+        for (int i = 0; i < aiArmy; ++i) addUnit(s, "UNIT_SWORDSMAN", 1, {13 + i, 9});
+        s.cities[1].population = 1;
+        s.cities[2].population = townPop;
+        addCity(s, 1, {20, 2}, false, cityPop);
+        s.players[1].relations[0].peaceOffered = offered;
+        s.players[0].human = humanFoe;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        REQUIRE(g->state().currentPlayer == 1);
+        ai::playTurn(*g);
+        return g;
+    };
+    const auto g = offer(true, 1, 4, true);
+    const CityId town = g->state().cities[2].id, city = g->state().cities[3].id;
+    REQUIRE(g->state().deals.size() == 1u);
+    const Deal d = g->state().deals[0];
+    CHECK_EQ(d.from, 1);
+    REQUIRE(d.items.size() == 2u);
+    CHECK(d.items[0].kind == DealItemKind::Peace);
+    CHECK(d.items[1].kind == DealItemKind::City && d.items[1].from == 1 && d.items[1].amount == town);  // the cheaper
+    REQUIRE(g->submit(Command::answerDeal(0, d.id, true)) == CommandError::Ok);
+    CHECK(!g->atWar(0, 1));
+    CHECK_EQ(g->state().city(town)->owner, 0);
+    // First it offers a white peace; cities worth more to it than peace are kept.
+    const auto white = offer(false, 1, 4, true);
+    CHECK(white->state().deals.empty());
+    CHECK(white->state().players[1].relations[0].peaceOffered);
+    CHECK(offer(true, 12, 12, true)->state().deals.empty());
+    CHECK(offer(true, 1, 4, true, 5)->state().deals.empty());  // losing, but not badly
+    // Turned down, it asks again kProposalGap turns later.
+    const auto again = offer(true, 1, 4, true);
+    REQUIRE(again->state().deals.size() == 1u);
+    CHECK_EQ(again->state().deals[0].turn, 30);
+    REQUIRE(again->submit(Command::answerDeal(0, again->state().deals[0].id, false)) == CommandError::Ok);
+    int next = 0;
+    for (int t = 0; t < 12 && next == 0; ++t) {
+        sovtest::endTurns(*again, 1);
+        ai::playTurn(*again);
+        if (!again->state().deals.empty()) next = again->state().deals[0].turn;
+    }
+    CHECK_EQ(next, 40);
+    // An AI winning the war turns the town down but takes the larger city at once.
+    const auto ai = offer(true, 1, 4, false);
+    CHECK(!ai->atWar(0, 1));
+    CHECK_EQ(ai->state().city(town)->owner, 1);
+    CHECK_EQ(ai->state().city(city)->owner, 0);
+}
+
+// An AI asks a neighbour it dislikes and outmatches twice over for gold, on one turn in 30 (08: Make Demand): as much
+// as an AI that weak would hand over.
+TEST(an_ai_demands_tribute_from_a_weak_neighbour_it_dislikes) {
+    struct Setup {
+        int turn = 59, grudge = -20, army = 4, humanArmy = 0, gold = 300;
+        bool seen = true, friends = false, allied = false;
+        int outpost = 0;  // x of a second human city on the AI capital's row, seen when the capital is not
+    };
+    const auto demands = [](Setup k) {
+        GameState s = diploState();
+        s.turn = k.turn;
+        s.players[0].gold = Fixed::fromInt(k.gold);
+        for (int i = 0; i < k.army; ++i) addUnit(s, "UNIT_SWORDSMAN", 1, {12 + i % 4, 9 + i / 4});
+        for (int i = 0; i < k.humanArmy; ++i) addUnit(s, "UNIT_SWORDSMAN", 0, {2 + i, 9});
+        for (Unit& u : s.units) u.activity = Activity::Sleep;
+        if (k.grudge != 0) s.players[1].memories.push_back({0, MemoryKind::Denounced, static_cast<int16_t>(k.grudge), 30, k.turn - 1});
+        std::vector<uint8_t>& seen = s.players[1].visibility;  // whether the AI has seen the human's capital
+        seen.resize(static_cast<size_t>(s.grid.size()), 0);
+        if (k.seen) seen[static_cast<size_t>(s.grid.index({4, 6}))] = static_cast<uint8_t>(Visibility::Revealed);
+        if (k.outpost > 0) {
+            addCity(s, 0, {k.outpost, 6}, false, 1);
+            seen[static_cast<size_t>(s.grid.index({k.outpost, 6}))] = static_cast<uint8_t>(Visibility::Revealed);
+        }
+        for (PlayerId x : {0, 1}) {
+            std::vector<Relation>& rels = s.players[static_cast<size_t>(x)].relations;
+            rels.resize(2);
+            Relation& r = rels[static_cast<size_t>(1 - x)];
+            r.friendsUntil = k.friends ? k.turn + 10 : 0;
+            r.alliance = k.allied ? AllianceType::Research : AllianceType::None;
+            r.allianceUntil = k.allied ? k.turn + 10 : 0;
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        REQUIRE(g->state().currentPlayer == 1);
+        ai::playTurn(*g);
+        int asked = 0;
+        for (const Deal& d : g->state().deals) {
+            if (d.from == 1 && d.items.size() == 1u && d.items[0].kind == DealItemKind::Gold && d.items[0].from == 0) asked = d.items[0].amount;
+        }
+        return std::pair{asked, static_cast<int>(g->state().players[0].gold.toInt()) / 10 * 10};
+    };
+    const auto [asked, purse] = demands({});
+    CHECK(purse >= 50);
+    CHECK_EQ(asked, purse);  // the defenceless human's whole purse
+    Setup twice;             // exactly twice as strong: 200
+    twice.humanArmy = 2;
+    CHECK_EQ(demands(twice).first, 200);
+    // Not its turn; no grudge; no army; not twice as strong; a thin purse.
+    for (Setup k : {Setup{58}, Setup{59, 0}, Setup{59, -20, 0}, Setup{59, -20, 4, 3}, Setup{59, -20, 4, 0, 40}}) CHECK_EQ(demands(k).first, 0);
+    Setup unseen, friends, allied;
+    unseen.seen = false;
+    friends.friends = true;
+    allied.allied = true;
+    for (const Setup& k : {unseen, friends, allied}) CHECK_EQ(demands(k).first, 0);
+    // Only a city it has seen within kNeighbourRange (14) of its own makes a neighbour.
+    Setup edge = unseen, beyond = unseen;  // 14 and 15 plots from its capital
+    edge.outpost = 28;
+    beyond.outpost = 29;
+    const auto [edgeAsked, edgePurse] = demands(edge);
+    CHECK(edgeAsked > 0);
+    CHECK_EQ(edgeAsked, edgePurse);
+    CHECK_EQ(demands(beyond).first, 0);
+    // A neighbour without an army counts as strength 1, as when it weighs the demand: one Swordsman (35) may ask up
+    // to 200 + 100 x 33, so the whole purse.
+    const auto [rich, richPurse] = demands(Setup{59, -20, 1, 0, 2000});
+    CHECK(richPurse >= 2000);
+    CHECK_EQ(rich, richPurse);
+}
+
 TEST(city_states_join_their_suzerains_wars) {
     GameState s = diploState(3);
     s.players[2].civ = kNone;
