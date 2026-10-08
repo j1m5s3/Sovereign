@@ -99,6 +99,15 @@ void readProfile(ByteReader& r, PlayerProfile& p) {
         *v = r.i32();
 }
 
+void writeRival(ByteWriter& w, const RivalMemory& m) {
+    w.str(m.civ);
+    for (int32_t v : {m.games, m.wars, m.betrayals, m.leadersTaken, m.leadersLost, m.citiesLost, m.friendTurns}) w.i32(v);
+}
+void readRival(ByteReader& r, RivalMemory& m) {
+    m.civ = r.str();
+    for (int32_t* v : {&m.games, &m.wars, &m.betrayals, &m.leadersTaken, &m.leadersLost, &m.citiesLost, &m.friendTurns}) *v = r.i32();
+}
+
 void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.u64(s.seed);
     w.str(s.mapSize);
@@ -110,6 +119,8 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
         w.boolean(p.human);
         w.boolean(p.hasProfile);
         if (p.hasProfile) writeProfile(w, p.profile);
+        w.u32(static_cast<uint32_t>(p.rivals.size()));
+        for (const RivalMemory& m : p.rivals) writeRival(w, m);
     }
     w.boolean(s.barbarians);
     w.boolean(s.dominationVictory);
@@ -126,6 +137,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.liveBattles);
     w.boolean(s.barbarianClans);
     w.boolean(s.monopolies);
+    w.boolean(s.rivalMemory);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -140,6 +152,10 @@ void readSetup(ByteReader& r, GameSetup& s) {
         p.human = r.boolean();
         p.hasProfile = r.boolean();
         if (p.hasProfile) readProfile(r, p.profile);
+        const uint32_t nrival = r.u32();
+        if (!r.checkCount(nrival, 8)) return;
+        p.rivals.resize(nrival);
+        for (RivalMemory& m : p.rivals) readRival(r, m);
     }
     s.barbarians = r.boolean();
     s.dominationVictory = r.boolean();
@@ -156,6 +172,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.liveBattles = r.boolean();
     s.barbarianClans = r.boolean();
     s.monopolies = r.boolean();
+    s.rivalMemory = r.boolean();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -600,6 +617,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     w.i32(s.nextDealId);
     w.u32(static_cast<uint32_t>(s.profiles.size()));
     for (const PlayerProfile& p : s.profiles) writeProfile(w, p);
+    w.u32(static_cast<uint32_t>(s.rivalTally.size()));
+    for (const RivalTally& t : s.rivalTally) {
+        w.i8(t.human);
+        w.i8(t.ai);
+        writeRival(w, t.memory);
+    }
     w.i64(s.co2);
     w.i32(s.climatePhase);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
@@ -1128,6 +1151,14 @@ bool deserializeState(ByteReader& r, GameState& s) {
     if (!r.checkCount(nprofile, 64)) return false;
     s.profiles.resize(nprofile);
     for (PlayerProfile& p : s.profiles) readProfile(r, p);
+    uint32_t ntally = r.u32();
+    if (!r.checkCount(ntally, 9)) return false;
+    s.rivalTally.resize(ntally);
+    for (RivalTally& t : s.rivalTally) {
+        t.human = r.i8();
+        t.ai = r.i8();
+        readRival(r, t.memory);
+    }
     s.co2 = r.i64();
     s.climatePhase = r.i32();
     uint32_t ndrought = r.u32();
@@ -1463,6 +1494,69 @@ bool profileFromText(const std::string& text, PlayerProfile& out) {
     }
     if (!header) return false;
     out = p;
+    return true;
+}
+
+// ---- rival memories between games (player-retention §1) -------------------------------------
+
+namespace {
+struct RivalField {
+    const char* name;
+    int32_t RivalMemory::*field;
+};
+const RivalField kRivalFields[] = {
+    {"games", &RivalMemory::games},           {"wars", &RivalMemory::wars},
+    {"betrayals", &RivalMemory::betrayals},   {"leadersTaken", &RivalMemory::leadersTaken},
+    {"leadersLost", &RivalMemory::leadersLost}, {"citiesLost", &RivalMemory::citiesLost},
+    {"friendTurns", &RivalMemory::friendTurns},
+};
+}  // namespace
+
+std::string rivalsToText(const std::vector<RivalMemory>& rivals) {
+    std::string out = "sovereign-rivals 1\n";
+    for (const RivalMemory& m : rivals) {
+        for (const RivalField& f : kRivalFields) out += m.civ + "." + f.name + " " + std::to_string(m.*(f.field)) + "\n";
+    }
+    return out;
+}
+
+bool rivalsFromText(const std::string& text, std::vector<RivalMemory>& out) {
+    std::vector<RivalMemory> rivals;
+    size_t pos = 0;
+    bool header = false;
+    while (pos < text.size()) {
+        size_t end = text.find('\n', pos);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(pos, end - pos);
+        pos = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+        if (!header) {
+            if (line != "sovereign-rivals 1") return false;
+            header = true;
+            continue;
+        }
+        const size_t space = line.find(' ');
+        const size_t dot = line.rfind('.', space);
+        if (space == std::string::npos || dot == std::string::npos || dot == 0) return false;
+        char* rest = nullptr;
+        const long value = std::strtol(line.c_str() + space + 1, &rest, 10);
+        if (rest == line.c_str() + space + 1 || value < 0 || value > 1000000) return false;
+        const std::string civ = line.substr(0, dot), field = line.substr(dot + 1, space - dot - 1);
+        auto it = std::find_if(rivals.begin(), rivals.end(), [&](const RivalMemory& m) { return m.civ == civ; });
+        if (it == rivals.end()) {
+            if (rivals.size() >= 64) return false;
+            rivals.push_back(RivalMemory{});
+            rivals.back().civ = civ;
+            it = rivals.end() - 1;
+        }
+        for (const RivalField& f : kRivalFields) {
+            if (field == f.name) (*it).*(f.field) = static_cast<int32_t>(value);
+        }
+        // Unknown fields are skipped: newer files load in older builds.
+    }
+    if (!header) return false;
+    out = std::move(rivals);
     return true;
 }
 

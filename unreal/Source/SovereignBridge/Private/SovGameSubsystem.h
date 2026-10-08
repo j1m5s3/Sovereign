@@ -57,4 +57,5 @@ public:
 private:
 	FSovSession Session;
 	float SinceLastSeat = 0.f;
+	bool bWroteEnd = false;  // the profile and rivals were written when the game ended for this player
 };

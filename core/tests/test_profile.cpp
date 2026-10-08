@@ -161,3 +161,82 @@ TEST(profiles_carry_between_games_as_text) {
     CHECK(loaded->state().setup.players[0].hasProfile);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+TEST(rivals_carry_between_games_as_text) {
+    RivalMemory rome;
+    rome.civ = "CIVILIZATION_ROME";
+    rome.games = 3;
+    rome.leadersLost = 2;
+    rome.friendTurns = 40;
+    RivalMemory egypt;
+    egypt.civ = "CIVILIZATION_EGYPT";
+    egypt.betrayals = 1;
+    const std::string text = rivalsToText({rome, egypt});
+    CHECK(text.rfind("sovereign-rivals 1\n", 0) == 0);
+    std::vector<RivalMemory> back;
+    REQUIRE(rivalsFromText(text + "CIVILIZATION_ROME.futureField 9\n", back));  // unknown fields are skipped
+    REQUIRE(back.size() == 2u);
+    CHECK_EQ(back[0].civ, std::string("CIVILIZATION_ROME"));
+    CHECK_EQ(back[0].games, 3);
+    CHECK_EQ(back[0].leadersLost, 2);
+    CHECK_EQ(back[0].friendTurns, 40);
+    CHECK_EQ(back[1].betrayals, 1);
+    std::vector<RivalMemory> bad;
+    CHECK(!rivalsFromText("sovereign-profile 1\n", bad));
+    CHECK(!rivalsFromText("sovereign-rivals 1\nCIVILIZATION_ROME.games many\n", bad));
+    CHECK(!rivalsFromText("sovereign-rivals 1\nnodot 3\n", bad));
+}
+
+TEST(rivals_remember_grudges_and_respect) {
+    // Player 1's civ remembers human 0 from earlier games: two of its rulers taken and a betrayal.
+    GameState s = twoCivs();
+    s.players[0].human = true;
+    RivalMemory m;
+    m.civ = rules().civs[static_cast<size_t>(s.players[1].civ)].id;
+    m.leadersLost = 2;
+    m.betrayals = 1;
+    m.friendTurns = 100;
+    s.setup.players[0].rivals = {m};
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->rivalMemory(1, 0) != nullptr);
+    CHECK(g->rivalMemory(0, 1) == nullptr);  // only AI civs remember, and only humans
+    CHECK_EQ(g->rivalGrudge(1, 0), 17);
+    CHECK_EQ(g->rivalRespect(1, 0), 10);
+    int past = 0;
+    for (const OpinionReason& r : g->opinionReasons(1, 0)) past += r.kind == OpinionReasonKind::PastGames ? r.value : 0;
+    CHECK_EQ(past, -7);
+    CHECK(std::string(opinionReasonName(OpinionReasonKind::PastGames)).size() > 0);
+    // Turned off in the setup, nothing is remembered.
+    s.setup.rivalMemory = false;
+    auto off = Game::fromScenario(rules(), std::move(s));
+    CHECK(off->rivalMemory(1, 0) == nullptr);
+    for (const OpinionReason& r : off->opinionReasons(1, 0)) CHECK(r.kind != OpinionReasonKind::PastGames);
+}
+
+TEST(rivals_tally_this_game_and_survive_a_save) {
+    GameState s = twoCivs();
+    s.players[0].human = true;
+    RivalMemory m;
+    m.civ = rules().civs[static_cast<size_t>(s.players[1].civ)].id;
+    m.games = 2;
+    m.wars = 1;
+    s.setup.players[0].rivals = {m};
+    for (Player& p : s.players) p.met.assign(s.players.size(), 1);
+    sleepAll(s);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);  // a surprise war: a betrayal
+    endTurns(*g, 4);
+    const std::vector<RivalMemory> mem = g->rivalMemories(0);
+    REQUIRE(mem.size() == 1u);
+    CHECK_EQ(mem[0].games, 3);  // two earlier games and this one
+    CHECK_EQ(mem[0].wars, 2);
+    CHECK_EQ(mem[0].betrayals, 1);
+    CHECK(g->rivalMemories(1).empty());
+    // The tally and the carried memory are part of the saved game.
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    CHECK_EQ(back->stateHash(), g->stateHash());
+    CHECK_EQ(back->rivalMemories(0)[0].betrayals, 1);
+    CHECK_EQ(back->rivalGrudge(1, 0), 2);
+}

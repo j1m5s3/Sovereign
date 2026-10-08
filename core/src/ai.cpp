@@ -368,7 +368,13 @@ Posture assess(const Game& g, PlayerId me, int sites) {
     }
     // Counters (leader doc §10, player modelling): what its neighbours field and how they behave.
     // Settler and Chieftain ignore profiles; Warlord to Prince read the army mix; King and up all of it.
-    const int skill = g.difficulty().aiSkill;
+    int skill = g.difficulty().aiSkill;
+    // A leader a human has beaten before (two of its rulers or cities lost) reads that player's game as
+    // a King would, at any difficulty (player-retention §1: adaptation).
+    for (const Player& o : s.players) {
+        const RivalMemory* m = g.rivalMemory(me, o.id);
+        if (m && m->leadersLost + m->citiesLost >= 2) skill = std::max(skill, 4);
+    }
     if (skill >= 2) {
         std::array<int64_t, kNumProfileClasses> mix{};
         int64_t weight = 0;
@@ -489,7 +495,7 @@ void diplomacy(View& v) {
     }
     // War on the weakest neighbour we clearly outmatch whose cities we have seen.
     PlayerId pick = kNoPlayer;
-    int pickStrength = INT_MAX;
+    int pickStrength = INT_MAX, pickScore = INT_MAX;
     for (const Player& p : s.players) {
         if (!p.alive || p.barbarian || p.id == v.me || !v.game.canDeclareWar(v.me, p.id)) continue;
         // City-states only once there is no more room to settle.
@@ -503,10 +509,15 @@ void diplomacy(View& v) {
         if (v.game.wmdsHeld(p.id) > 0 && v.game.wmdsHeld(v.me) == 0) continue;  // deterred (05: Nuclear weapons)
         if (v.game.friends(v.me, p.id) || v.game.alliance(v.me, p.id) != AllianceType::None) continue;  // no betrayal
         // An emergency's target is fair game at three quarters of the usual margin (an Emergency War costs no grievances).
-        const int ratio = v.game.inEmergencyAgainst(v.me, p.id) ? v.posture.warRatio * 3 / 4 : v.posture.warRatio;
-        if (near && mine * 100 >= theirs * ratio && theirs < pickStrength && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
+        // A grudge from earlier games lowers the margin it needs against that human and puts them first
+        // among equals, by up to 30% (player-retention §1).
+        const int grudge = v.game.rivalGrudge(v.me, p.id);
+        const int ratio = (v.game.inEmergencyAgainst(v.me, p.id) ? v.posture.warRatio * 3 / 4 : v.posture.warRatio) * (100 - grudge) / 100;
+        const int score = theirs * (100 - grudge) / 100;
+        if (near && mine * 100 >= theirs * ratio && score < pickScore && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
             pick = p.id;
             pickStrength = theirs;
+            pickScore = score;
         }
     }
     if (pick == kNoPlayer) return;

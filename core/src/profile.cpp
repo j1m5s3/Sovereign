@@ -120,4 +120,89 @@ void Game::processProfiles() {
     }
 }
 
+// ---- rivals who remember you (player-retention §1) -------------------------------------------
+// Each AI civ's memory of a human from earlier games enters through the setup; this game's part is
+// tallied in the state each world turn, and the two are merged when the human's file is written.
+
+const RivalMemory* Game::rivalMemory(PlayerId ai, PlayerId human) const {
+    if (!state_.setup.rivalMemory || ai < 0 || human < 0 || at(ai) >= state_.players.size() || at(human) >= state_.setup.players.size()) return nullptr;
+    const Player& a = state_.players[at(ai)];
+    if (a.human || a.civ == kNone || !state_.players[at(human)].human) return nullptr;
+    const std::string& civ = rules_->civs[at(a.civ)].id;
+    for (const RivalMemory& m : state_.setup.players[at(human)].rivals) {
+        if (m.civ == civ) return &m;
+    }
+    return nullptr;
+}
+
+int Game::rivalGrudge(PlayerId ai, PlayerId human) const {
+    const RivalMemory* m = rivalMemory(ai, human);
+    if (!m) return 0;
+    // Its rulers taken and its cities lost weigh most, then betrayals, then plain wars.
+    return std::min(30, 6 * m->leadersLost + 3 * m->citiesLost + 5 * m->betrayals + 2 * m->wars);
+}
+
+int Game::rivalRespect(PlayerId ai, PlayerId human) const {
+    const RivalMemory* m = rivalMemory(ai, human);
+    return m ? std::min(15, m->friendTurns / 10) : 0;
+}
+
+void Game::processRivals() {
+    if (!state_.setup.rivalMemory) return;
+    for (const Player& h : state_.players) {
+        if (!h.human || h.barbarian) continue;
+        for (const Player& a : state_.players) {
+            if (a.human || !isMajor(a) || a.civ == kNone || !hasMet(h.id, a.id)) continue;
+            auto it = std::find_if(state_.rivalTally.begin(), state_.rivalTally.end(),
+                                   [&](const RivalTally& t) { return t.human == h.id && t.ai == a.id; });
+            if (it == state_.rivalTally.end()) {
+                RivalTally t;
+                t.human = h.id;
+                t.ai = a.id;
+                t.memory.civ = rules_->civs[at(a.civ)].id;
+                t.memory.games = 1;
+                state_.rivalTally.push_back(t);
+                it = state_.rivalTally.end() - 1;
+            }
+            RivalMemory& m = it->memory;
+            for (const GameEvent& e : state_.events) {
+                if (e.turn != state_.turn - 1) continue;
+                const bool between = (e.actor == h.id && e.target == a.id) || (e.actor == a.id && e.target == h.id);
+                if (e.kind == EventKind::WarDeclared && between) {
+                    ++m.wars;
+                    if (e.actor == h.id && e.value == 1) ++m.betrayals;
+                }
+                if (e.kind == EventKind::LeaderLost && between) ++(e.actor == a.id ? m.leadersTaken : m.leadersLost);
+            }
+            int taken = 0;
+            for (const City& c : state_.cities) taken += c.owner == h.id && c.originalOwner == a.id ? 1 : 0;
+            m.citiesLost = std::max(m.citiesLost, taken);
+            if (friends(h.id, a.id)) ++m.friendTurns;
+        }
+    }
+}
+
+std::vector<RivalMemory> Game::rivalMemories(PlayerId human) const {
+    std::vector<RivalMemory> out;
+    if (human < 0 || at(human) >= state_.setup.players.size()) return out;
+    out = state_.setup.players[at(human)].rivals;
+    if (!state_.setup.rivalMemory) return out;
+    for (const RivalTally& t : state_.rivalTally) {
+        if (t.human != human) continue;
+        auto it = std::find_if(out.begin(), out.end(), [&](const RivalMemory& m) { return m.civ == t.memory.civ; });
+        if (it == out.end()) {
+            out.push_back(t.memory);
+            continue;
+        }
+        it->games += t.memory.games;
+        it->wars += t.memory.wars;
+        it->betrayals += t.memory.betrayals;
+        it->leadersTaken += t.memory.leadersTaken;
+        it->leadersLost += t.memory.leadersLost;
+        it->citiesLost += t.memory.citiesLost;
+        it->friendTurns += t.memory.friendTurns;
+    }
+    return out;
+}
+
 }  // namespace sov

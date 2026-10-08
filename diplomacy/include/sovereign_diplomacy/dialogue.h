@@ -26,6 +26,9 @@ struct Persona {
     int opinion = 0;
     std::vector<std::string> reasons;  // "Gave us gifts (+10)"
     std::vector<std::string> pastTalks;  // "Turn 40: ..."
+    // What it remembers of this ruler from earlier games (player-retention §1), and the crowns taken each way.
+    std::vector<std::string> earlierGames;
+    int crownsTaken = 0, crownsLost = 0;
     std::vector<std::string> leaderOffers, playerOffers;  // what each side could put into a deal now
     std::vector<std::string> resourceNames;  // every tradeable resource (the scripted reader matches these)
     bool atWar = false;

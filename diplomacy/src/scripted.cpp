@@ -208,6 +208,9 @@ bool ScriptedModel::reply(const Persona& p, const std::vector<ChatMessage>& hist
     else if (warm) greet = "Welcome, friend. What can " + p.civName + " do for you?";
     else greet = "Greetings from " + p.civName + ". What brings you here?";
     if (!p.pastTalks.empty() && history.empty()) greet += " I remember our last conversation.";
+    // Trophies and grudges from earlier games (player-retention §1).
+    if (history.empty() && p.crownsTaken > 0) greet += " I have held your crown before. Do not make me take it again.";
+    else if (history.empty() && p.crownsLost > 0) greet += " You took my crown once. I have not forgotten.";
     text = greet;
     return true;
 }

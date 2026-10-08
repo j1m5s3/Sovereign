@@ -321,6 +321,9 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 			case sov::EventKind::AssassinKilled: Text = FString::Printf(TEXT("An assassin sent against %s was killed."), *CivOf(E.target)); break;
 			case sov::EventKind::AssassinCaptured: Text = FString::Printf(TEXT("%s caught an assassin sent by %s."), *CivOf(E.target), *CivOf(E.actor)); break;
 			case sov::EventKind::Rebellion: Text = FString::Printf(TEXT("Rebels rise against the iron fist of %s."), *CivOf(E.target)); break;
+			case sov::EventKind::LeaderLost:
+				Text = FString::Printf(TEXT("%s %s the ruler of %s in battle."), *CivOf(E.actor), E.value ? TEXT("captured") : TEXT("killed"), *CivOf(E.target));
+				break;
 			case sov::EventKind::HistoricMoment:
 				Text = FString::Printf(TEXT("%s: %s (+%d era score)."), E.actor == Me ? TEXT("Historic moment") : *FString::Printf(TEXT("Word from %s"), *CivOf(E.actor)), *Str(R.moments[static_cast<size_t>(E.value)].name),
 					R.moments[static_cast<size_t>(E.value)].eraScore);
