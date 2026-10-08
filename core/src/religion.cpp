@@ -319,13 +319,14 @@ Yields Game::founderYields(PlayerId player) const {
 }
 
 PlayerId Game::religiousVictor() const {
-    std::vector<int> majority;  // each city's majority religion, worked out for the first religion that asks
+    // Each city's majority religion, worked out the first time a count needs it (kUnknown until then): a religion
+    // short of half one civ's cities is out, so most cities are never asked.
+    constexpr int kUnknown = -2;
+    std::vector<int> majority;  // sized for the first religion that asks
     for (size_t r = 0; r < state_.religions.size(); ++r) {
         const PlayerId founder = state_.religions[r].founder;
         if (!isMajor(state_.players[at(founder)])) continue;
-        if (majority.empty()) {
-            for (const City& c : state_.cities) majority.push_back(cityMajorityReligion(c));
-        }
+        if (majority.empty()) majority.assign(state_.cities.size(), kUnknown);
         bool all = true;
         for (const Player& civ : state_.players) {
             if (!isMajor(civ)) continue;
@@ -333,6 +334,7 @@ PlayerId Game::religiousVictor() const {
             for (size_t i = 0; i < state_.cities.size(); ++i) {
                 if (state_.cities[i].owner != civ.id) continue;
                 ++cities;
+                if (majority[i] == kUnknown) majority[i] = cityMajorityReligion(state_.cities[i]);
                 converted += majority[i] == static_cast<int>(r) ? 1 : 0;
             }
             if (cities > 0 && converted * 2 <= cities) {  // more than half its cities

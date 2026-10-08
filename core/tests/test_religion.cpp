@@ -255,6 +255,18 @@ TEST(half_a_civs_cities_is_not_enough_for_a_religious_victory) {
     CHECK_EQ(victor(true), 0);
 }
 
+// The first religion, short of half of one civ's cities, is out; the second, followed everywhere, still wins.
+TEST(a_second_religion_wins_where_the_first_falls_short) {
+    GameState s = religionState();
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+    s.religions.push_back({rules().religion("RELIGION_HINDUISM"), 1, s.cities[2].id, {belief("BELIEF_PILGRIMAGE")}});
+    s.players[0].religion = 0;
+    s.players[1].religion = 1;
+    for (City& c : s.cities) c.pressure = {0, 10000};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->religiousVictor(), 1);
+}
+
 TEST(pantheon_beliefs_take_effect) {
     // Desert Folklore: the Holy Site gains +1 Faith per adjacent Desert.
     GameState s = religionState();

@@ -173,9 +173,15 @@ int distanceToCity(const GameState& s, PlayerId owner, Hex h) {
 int countFreeSites(const Game& game, PlayerId me, const std::vector<Hex>& claimed) {
     const GameState& s = game.state();
     std::vector<Hex> found;
+    // Each plot looked at once: one in reach of two cities comes round again, and is no site then if it was none the
+    // first time (found only grows), nor a second one if it was.
+    std::vector<uint8_t> looked(static_cast<size_t>(s.grid.size()), 0);
     for (const City& c : s.cities) {
         if (c.owner != me) continue;
         for (const Hex& h : s.grid.within(c.pos, kSiteSurvey)) {
+            uint8_t& seen = looked[static_cast<size_t>(s.grid.index(h))];
+            if (seen) continue;
+            seen = 1;
             if (game.visibility(me, h) == Visibility::Unrevealed) continue;
             bool near = false;
             for (const Hex& f : claimed) near = near || s.grid.distance(f, h) <= 3;
@@ -984,10 +990,9 @@ void build(View& v, UnitId id) {
         const Plot& p = s.plot(h);
         if (s.setup.monopolies && v.game.industryProblem(v.me, h) == CommandError::Ok) return 80;
         if (p.owner == v.me && ((p.improvement != kNone && p.pillagedTurns > 0) || p.routePillaged)) return 70;  // to repair
-        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || s.districtAt(h) || s.wonderAt(h) != kNone || s.cityAt(h)) return -1;
-        // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work).
-        const std::vector<TypeIndex> opts = v.game.improvementsAt(v.me, h);
-        if (std::none_of(opts.begin(), opts.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy == kNone; })) return -1;
+        // Only what a Builder can build counts (a plot with nothing but a Fort or Airstrip is not work); a city, district
+        // or wonder plot takes none.
+        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || !v.game.builderCanImprove(v.me, h)) return -1;
         int w = 10;
         if (p.resource != kNone && v.game.resourceVisible(v.me, h)) {
             w += 20;
@@ -1012,16 +1017,22 @@ void build(View& v, UnitId id) {
     }
     std::optional<Hex> best;
     int bestScore = INT_MIN;
-    // The plots another player's unit stands on (foreignUnitAt), marked once rather than looked for plot by plot.
-    std::vector<uint8_t> foreign(static_cast<size_t>(s.grid.size()), 0);
+    // The plots another player's unit stands on (foreignUnitAt), marked once rather than looked for plot by plot (1),
+    // and the plots already looked at (2): one near two of our cities comes round again, and scores no better then.
+    std::vector<uint8_t> mark(static_cast<size_t>(s.grid.size()), 0);
     for (const Unit& other : s.units) {
         const std::optional<Hex> spot = s.grid.normalize(other.pos);
-        if (other.owner != v.me && spot && *spot == other.pos) foreign[static_cast<size_t>(s.grid.index(other.pos))] = 1;
+        if (other.owner != v.me && spot && *spot == other.pos) mark[static_cast<size_t>(s.grid.index(other.pos))] = 1;
     }
     for (CityId cid : v.cities) {
         for (const Hex& h : s.grid.within(s.city(cid)->pos, 3)) {
+            uint8_t& seen = mark[static_cast<size_t>(s.grid.index(h))];
+            if (seen & 2) continue;
+            seen |= 2;
+            // The cheap tests first: none of them changes anything.
+            if ((seen & 1) || v.claimedNear(h, 0)) continue;
             const int w = worth(h);
-            if (w < 0 || v.claimedNear(h, 0) || foreign[static_cast<size_t>(s.grid.index(h))]) continue;
+            if (w < 0) continue;
             const int score = w * 10 - s.grid.distance(u->pos, h) * 15;
             if (score > bestScore) {
                 bestScore = score;
@@ -1164,6 +1175,24 @@ void nuclear(View& v) {
 }
 
 void attacks(View& v) {
+    // The plots holding something of another player's, where alone an attack finds a target (validateCombat: a unit, a
+    // city or a standing Encampment, a district): elsewhere previewAttack finds none, so those plots are passed over.
+    // Marked again after each attack made.
+    std::vector<uint8_t> targets;
+    const auto markTargets = [&] {
+        const GameState& s = v.s();
+        targets.assign(static_cast<size_t>(s.grid.size()), 0);
+        const auto mark = [&](PlayerId owner, Hex pos) {
+            const std::optional<Hex> spot = s.grid.normalize(pos);
+            if (owner != v.me && spot && *spot == pos) targets[static_cast<size_t>(s.grid.index(pos))] = 1;
+        };
+        for (const Unit& o : s.units) mark(o.owner, o.pos);
+        for (const City& c : s.cities) {
+            mark(c.owner, c.pos);
+            for (const CityDistrict& d : c.districts) mark(c.owner, d.pos);
+        }
+    };
+    markTargets();
     for (int round = 0; round < 4; ++round) {
         std::vector<UnitId> order;
         for (const Unit& u : v.s().units) {
@@ -1183,6 +1212,7 @@ void attacks(View& v) {
             std::optional<Hex> best;
             int bestValue = INT_MIN;
             for (const Hex& h : v.s().grid.within(u->pos, std::max(1, range))) {
+                if (!targets[static_cast<size_t>(v.s().grid.index(h))]) continue;  // nothing to attack there
                 const int value = attackValue(v, *u, v.game.previewAttack(id, h, ranged));
                 if (value > bestValue) {
                     bestValue = value;
@@ -1191,7 +1221,9 @@ void attacks(View& v) {
             }
             if (!best) continue;
             const Command c = ranged ? Command::rangedAttack(v.me, id, *best) : Command::attack(v.me, id, *best);
-            any |= v.game.submit(c) == CommandError::Ok;
+            if (v.game.submit(c) != CommandError::Ok) continue;
+            any = true;
+            markTargets();
         }
         if (!any) break;
     }
@@ -2414,15 +2446,33 @@ void patronage(View& v) {
 }
 
 void cityActions(View& v) {
+    // The plots another player's unit stands on, where alone a strike finds its target (canCityStrike: a unit we are at
+    // war with); marked again after each strike made.
+    std::vector<uint8_t> foes;
+    const auto markFoes = [&] {
+        const GameState& s = v.s();
+        foes.assign(static_cast<size_t>(s.grid.size()), 0);
+        for (const Unit& o : s.units) {
+            const std::optional<Hex> spot = s.grid.normalize(o.pos);
+            if (o.owner != v.me && spot && *spot == o.pos) foes[static_cast<size_t>(s.grid.index(o.pos))] = 1;
+        }
+    };
+    markFoes();
+    const auto strike = [&](const Command& c) {
+        if (v.game.submit(c) != CommandError::Ok) return false;
+        markFoes();
+        return true;
+    };
     for (CityId cid : v.cities) {
         const City* c = v.s().city(cid);
         for (const Hex& h : v.s().grid.within(c->pos, 2)) {
-            if (v.game.canCityStrike(cid, h) && v.game.submit(Command::cityStrike(v.me, cid, h)) == CommandError::Ok) break;
+            if (foes[static_cast<size_t>(v.s().grid.index(h))] && v.game.canCityStrike(cid, h) && strike(Command::cityStrike(v.me, cid, h))) break;
         }
         // The Encampment fires too (03: Defense).
         if (const CityDistrict* camp = v.game.encampmentOf(*c)) {
             for (const Hex& h : v.s().grid.within(camp->pos, 2)) {
-                if (v.game.canEncampmentStrike(cid, h) && v.game.submit(Command::encampmentStrike(v.me, cid, h)) == CommandError::Ok) break;
+                if (foes[static_cast<size_t>(v.s().grid.index(h))] && v.game.canEncampmentStrike(cid, h) && strike(Command::encampmentStrike(v.me, cid, h)))
+                    break;
             }
         }
     }

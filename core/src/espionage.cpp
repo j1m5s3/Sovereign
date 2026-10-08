@@ -6,6 +6,7 @@
 // Sources' bonus, plus a counterspy's defence. Success raises the spy a level; failure means
 // escape or capture, and the target remembers.
 #include <algorithm>
+#include <string_view>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -73,7 +74,8 @@ bool Game::governmentIs(PlayerId pid, const char* governmentId) const {
 bool Game::policyIs(PlayerId pid, const char* policyId) const {
     const Player& p = state_.players[at(pid)];
     if (p.government == kNone || p.anarchyTurns > 0) return false;
-    return std::any_of(p.policies.begin(), p.policies.end(), [&](TypeIndex x) { return x != kNone && rules_->policies[at(x)].id == policyId; });
+    const std::string_view id(policyId);  // its length found once, not once for each policy slotted
+    return std::any_of(p.policies.begin(), p.policies.end(), [&](TypeIndex x) { return x != kNone && rules_->policies[at(x)].id == id; });
 }
 
 int Game::buildingsOwned(PlayerId pid, const char* buildingId) const {

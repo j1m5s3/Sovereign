@@ -275,6 +275,8 @@ public:
     // ownUnit: built by a unit's own ability (the Legionary's Fort), which needs no unlock.
     bool canImproveAt(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit = false) const;
     std::vector<TypeIndex> improvementsAt(PlayerId player, Hex plot) const;
+    // improvementsAt holds one a Builder makes (no builtBy unit), found with no more checks than it takes.
+    bool builderCanImprove(PlayerId player, Hex plot) const;
     bool canHarvestAt(PlayerId player, Hex plot) const;
     // Yields the plot's improvement adds for its owner (base, tech bonuses, adjacency).
     Yields improvementYields(Hex plot, PlayerId owner) const;
@@ -692,6 +694,8 @@ private:
     // resourceVisible for the plot, which the plot's improvements share).
     bool improvablePlot(PlayerId player, Hex plot) const;
     bool improvementFits(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit, bool resourceSeen) const;
+    // The improvements that take the plot's land, as improvementsAt tries them (its resource's when seen).
+    const std::vector<TypeIndex>& improvementsForLand(const Plot& plot, bool resourceSeen) const;
     CommandError validateCity(const Command& c) const;
     void applyCity(const Command& c);
     void processCities(PlayerId p);
