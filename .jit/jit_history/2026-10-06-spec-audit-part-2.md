@@ -47,7 +47,6 @@ Status: done, 2026-10-06 (PRs #126–#130 and the closing PR). Previous: `2026-1
   - City of Awe, unique districts, levies near enemies, pacified city-states;
   - the score-0 ones.
 - **Meteor sites** (their goody) and the Fishery's sea-resource adjacency.
-- **AI:** it does not make demands or offer cities on its own.
 - **From part 2's own list:** AI random agendas (each leader has one hand-written agenda), liberation envoys by era (no data), trade route length in round trips (the flat length stands).
 
 ## Decisions (Claude's, under James's standing consent)
@@ -65,3 +64,9 @@ Status: done, 2026-10-06 (PRs #126–#130 and the closing PR). Previous: `2026-1
 - **Threatening camp:** one within 6 plots of a city.
 - **Aggressive placement:** a city within 6 plots of a rival's city.
 - **Ages:** in three 250-turn AI games after the new moments, ages split Normal 69%, Golden 14%, Dark 13% and Heroic 4%, so ERA_SCORE_THRESHOLD_ADJUST stays at −10.
+
+## Follow-up (2026-10-08): the AI makes demands and offers cities
+
+- **City for peace:** an AI at war with a major civ whose army is more than twice its own, after offering that civ a white peace, offers peace with one of its cities: the one it values least, never one worth more to it than the peace. To an AI it offers only a deal that AI accepts; a human answers it like any deal. It asks again at most every 10 turns, like its other deals.
+- **Tribute:** an AI asks a neighbour it dislikes (a city it has seen within 14 plots of its own; not a friend or ally) and outmatches at least twice over for Gold, on one turn in 30 for each pair. It asks for as much as Make Demand says an AI that weak would hand over, up to the whole purse in tens, and only from a purse of 50 or more.
+- **AI pace:** over 24 bench games (6 civs, Small, 200 turns) science at T200 went 66.8 → 65.6 and cities 7.8 → 7.9; the era stayed at 2.8.
