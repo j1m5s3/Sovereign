@@ -33,6 +33,10 @@ public:
 	// Writes the game in the core's save format (live scenes autosave on entry, engine doc).
 	bool SaveGame(const FString& Name);
 	static FString SavePath(const FString& Name);
+	// Resumes a game written by SaveGame (local play only).
+	bool LoadGame(const FString& Name);
+	// Saved games on this machine, newest first: their names and when they were written.
+	static TArray<TPair<FString, FDateTime>> ListSaves();
 
 	// Fires after every change to the game (player command or an AI seat's turn).
 	FSovStateChanged OnStateChanged;

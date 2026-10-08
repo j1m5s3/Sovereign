@@ -1779,6 +1779,19 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (WasInputKeyJustPressed(EKeys::F2)) OpenChooser(EChooser::Government);
+	// Quicksave and quickload (local games; online the host's game is the only copy that counts).
+	if (Subsystem()->GetSession().NetMode() == ESovNet::Local)
+	{
+		if (WasInputKeyJustPressed(EKeys::F5))
+		{
+			Subsystem()->LastMessage = Subsystem()->SaveGame(TEXT("quicksave")) ? FString(TEXT("Game saved (quicksave). F9 loads it."))
+																				: FString(TEXT("Could not save the game"));
+		}
+		if (WasInputKeyJustPressed(EKeys::F9) && Subsystem()->LoadGame(TEXT("quicksave")))
+		{
+			bCenteredOnGame = false;
+		}
+	}
 	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
 	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
@@ -2417,6 +2430,23 @@ void ASovPlayerController::OpenMenu()
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
+	// Saved games, newest first (the four latest): continue one.
+	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
+	{
+		const TArray<TPair<FString, FDateTime>> Saves = USovGameSubsystem::ListSaves();
+		for (int32 i = 0; i < Saves.Num() && i < 4; ++i)
+		{
+			const FString SaveName = Saves[i].Key;
+			SavedGames->AddSlot().AutoHeight()[Item(FString::Printf(TEXT("Continue: %s (%s)"), *SaveName, *Saves[i].Value.ToString(TEXT("%Y-%m-%d %H:%M"))),
+				[this, SaveName]() {
+					if (Subsystem() && Subsystem()->LoadGame(SaveName))
+					{
+						CloseMenu();
+						bCenteredOnGame = false;
+					}
+				})];
+		}
+	}
 	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
 		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
 			SNew(SVerticalBox)
@@ -2438,6 +2468,7 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
 				S.HumanSeats = 2;

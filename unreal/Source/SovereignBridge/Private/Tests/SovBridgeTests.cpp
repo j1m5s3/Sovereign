@@ -15,6 +15,7 @@
 
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
+#include "sovereign/serialize.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -640,3 +641,37 @@ bool FSovOnlineBattleTest::RunTest(const FString& Parameters)
 }
 
 #endif  // WITH_DEV_AUTOMATION_TESTS
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovSaveLoadTest, "Sovereign.Bridge.SaveAndLoadResume", kSovTestFlags)
+bool FSovSaveLoadTest::RunTest(const FString& Parameters)
+{
+	// An all-AI game plays a few turns, is saved, and resumes in a fresh session as the same game.
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.bHumanSeat0 = false;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	int32 Guard = 400;
+	while (Session.GetGame().state().turn < 6 && Guard-- > 0 && Session.StepAI())
+	{
+	}
+	const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
+	FSovSession Resumed;
+	if (!Resumed.LoadLocal(Bytes, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	TestEqual(TEXT("the same game"), Resumed.GetGame().stateHash(), Session.GetGame().stateHash());
+	TestEqual(TEXT("the same turn"), Resumed.GetGame().state().turn, Session.GetGame().state().turn);
+	TestTrue(TEXT("it plays on"), Resumed.StepAI());
+	std::vector<uint8_t> Junk = Bytes;
+	Junk.resize(Junk.size() / 2);
+	TestFalse(TEXT("a truncated save is refused"), Resumed.LoadLocal(Junk, Error));
+	TestTrue(TEXT("and the game in hand stays"), Resumed.IsRunning());
+	return true;
+}

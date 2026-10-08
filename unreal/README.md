@@ -79,6 +79,7 @@ from `../data/rules`.
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
+| `F5` / `F9` | Quicksave / quickload (local games). Saves live in `Saved/Sovereign/*.sov`; the main menu offers to continue the four latest (the autosave a live battle writes among them) |
 | Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city |
 
 ## Tests
@@ -101,9 +102,10 @@ Headless automation tests (no window):
 - `Sovereign.Battle.OnlineSnapshotsAndRemoteOrders`: the remote side's order holds against the AI, a snapshot round-trips and draws the same field (positions within a hundredth), a truncated one is refused.
 - `Sovereign.Bridge.HotSeatHandsOver`: with two human seats, the end of the first player's turn hides the screen until the second takes over, and the view then follows the second seat.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
+- `Sovereign.Bridge.SaveAndLoadResume`: an all-AI game saved after a few turns resumes in a fresh session with the same state hash and plays on; a truncated save is refused and the game in hand stays.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.
 
 ## Not yet
 
-Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there is no promotions UI or save menu yet.
+Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there is no promotions UI yet.

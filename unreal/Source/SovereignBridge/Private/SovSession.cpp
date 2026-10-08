@@ -75,6 +75,51 @@ FString FSovSetup::DefaultRulesDir()
 FSovSession::FSovSession() = default;
 FSovSession::~FSovSession() = default;
 
+bool FSovSession::LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError)
+{
+	auto LoadedRules = std::make_unique<sov::Rules>();
+	std::string Error;
+	const FString Dir = FSovSetup::DefaultRulesDir();
+	if (!LoadedRules->load({std::string(TCHAR_TO_UTF8(*Dir))}, &Error))
+	{
+		OutError = FString::Printf(TEXT("rules (%s): %s"), *Dir, UTF8_TO_TCHAR(Error.c_str()));
+		return false;
+	}
+	std::unique_ptr<sov::Game> Loaded = sov::loadGame(*LoadedRules, Bytes, &Error);
+	if (!Loaded)
+	{
+		OutError = FString::Printf(TEXT("save: %s"), UTF8_TO_TCHAR(Error.c_str()));
+		return false;
+	}
+	if (bSteam && FSovSteam::Get()) FSovSteam::Get()->LeaveLobby();
+	Game.reset();  // before the rules it points at
+	NetHost.reset();
+	NetClient.reset();
+	Listener.reset();
+	Rules = std::move(LoadedRules);
+	Game = std::move(Loaded);
+	CoreSetup = std::make_unique<sov::GameSetup>(Game->state().setup);
+	Mode = ESovNet::Local;
+	bSteam = false;
+	bStalled = false;
+	bHandover = false;
+	SeenGame = nullptr;
+	SeenLog = 0;
+	Demos = FSovSetup();
+	// The view follows the first human seat (seat 0 when every seat is the AI's).
+	ViewSeat = 0;
+	for (const sov::Player& P : Game->state().players)
+	{
+		if (P.human)
+		{
+			ViewSeat = P.id;
+			break;
+		}
+	}
+	++Rev;
+	return true;
+}
+
 bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 {
 	Game.reset();
