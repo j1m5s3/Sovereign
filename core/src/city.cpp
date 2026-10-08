@@ -1194,8 +1194,9 @@ void Game::applyCity(const Command& c) {
                     // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
                     u.religion = static_cast<int16_t>(bought.religiousStrength > 0 || bought.spreadCharges > 0 ? religion : -1);
                     if (bought.id == "UNIT_ROCK_BAND") grantBandPromotion(u);  // every band starts with one (07)
-                    u.charges = rules_->units[static_cast<size_t>(item.type)].spreadCharges +
-                                (goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);  // 09: Exodus of the Evangelists
+                    // 09: Exodus of the Evangelists, 2 more spreads for Missionaries, Apostles and Inquisitors.
+                    const bool evangelist = bought.id == "UNIT_MISSIONARY" || bought.id == "UNIT_APOSTLE" || bought.id == "UNIT_INQUISITOR";
+                    u.charges = bought.spreadCharges + (evangelist && goldenDedication(c.player, "DEDICATION_EXODUS_OF_THE_EVANGELISTS") ? 2 : 0);
                     if (bought.id == "UNIT_APOSTLE") grantApostlePromotion(u);  // each new Apostle gets one (06)
                     if (bought.id == "UNIT_APOSTLE" && cityGovernorHas(city, "GOVERNOR_PROMOTION_PATRON_SAINT")) grantApostlePromotion(u);  // Moksha (08)
                     if (bought.healCharges > 0) u.charges = bought.healCharges;  // a Guru's heals (06)

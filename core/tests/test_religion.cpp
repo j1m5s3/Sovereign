@@ -145,6 +145,30 @@ TEST(missionaries_bought_with_faith_convert_cities) {
     CHECK_EQ(game.state().unit(id)->charges, 2);
 }
 
+// Exodus of the Evangelists in a Golden Age (09): Missionaries, Apostles and Inquisitors bought with Faith carry 2 more
+// spreads; nothing else Faith buys gains charges from it (a Naturalist here).
+TEST(exodus_of_the_evangelists_adds_spreads_to_evangelists_only) {
+    const auto charges = [](bool exodus, const char* unit) {
+        GameState s = religionState();
+        s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        Player& p = s.players[0];
+        p.faith = Fixed::fromInt(2000);
+        p.civics.done[at(rules().civic("CIVIC_CONSERVATION"))] = 1;
+        p.inquisition = true;
+        if (exodus) {
+            p.age = Age::Golden;
+            p.dedications = {rules().dedication("DEDICATION_EXODUS_OF_THE_EVANGELISTS")};
+        }
+        auto g = withReligion(std::move(s));
+        const ProductionItem item{ProductionKind::Unit, rules().unit(unit)};
+        REQUIRE(g->submit(Command::purchaseWithFaith(0, g->state().cities[0].id, item)) == CommandError::Ok);
+        return g->state().units.back().charges;
+    };
+    for (const char* unit : {"UNIT_MISSIONARY", "UNIT_APOSTLE", "UNIT_INQUISITOR"}) CHECK_EQ(charges(true, unit), charges(false, unit) + 2);
+    CHECK_EQ(charges(true, "UNIT_NATURALIST"), 0);
+}
+
 TEST(founder_beliefs_pay_per_following_city) {
     auto g = withReligion(religionState());
     // Tithe: +3 Gold for each city following the religion (the Holy City so far).
