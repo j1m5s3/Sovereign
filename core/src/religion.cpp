@@ -323,17 +323,33 @@ PlayerId Game::religiousVictor() const {
     // short of half one civ's cities is out, so most cities are never asked.
     constexpr int kUnknown = -2;
     std::vector<int> majority;  // sized for the first religion that asks
+    // The cities' places by owner, in the game's order, listed for the first religion that asks: a player's run starts
+    // at first[id] and ends at first[id + 1].
+    std::vector<int32_t> first, byOwner;
     for (size_t r = 0; r < state_.religions.size(); ++r) {
         const PlayerId founder = state_.religions[r].founder;
         if (!isMajor(state_.players[at(founder)])) continue;
-        if (majority.empty()) majority.assign(state_.cities.size(), kUnknown);
+        if (majority.empty()) {
+            majority.assign(state_.cities.size(), kUnknown);
+            first.assign(state_.players.size() + 1, 0);
+            for (const City& c : state_.cities) {
+                if (at(c.owner) < state_.players.size()) ++first[at(c.owner) + 1];
+            }
+            for (size_t k = 1; k < first.size(); ++k) first[k] += first[k - 1];
+            byOwner.resize(static_cast<size_t>(first.back()));
+            std::vector<int32_t> next(first.begin(), first.end() - 1);
+            for (size_t i = 0; i < state_.cities.size(); ++i) {
+                const size_t owner = at(state_.cities[i].owner);
+                if (owner < next.size()) byOwner[static_cast<size_t>(next[owner]++)] = static_cast<int32_t>(i);
+            }
+        }
         bool all = true;
         for (const Player& civ : state_.players) {
             if (!isMajor(civ)) continue;
-            int cities = 0, converted = 0;
-            for (size_t i = 0; i < state_.cities.size(); ++i) {
-                if (state_.cities[i].owner != civ.id) continue;
-                ++cities;
+            const int cities = first[at(civ.id) + 1] - first[at(civ.id)];
+            int converted = 0;
+            for (int32_t k = first[at(civ.id)]; k < first[at(civ.id) + 1]; ++k) {
+                const size_t i = static_cast<size_t>(byOwner[static_cast<size_t>(k)]);
                 if (majority[i] == kUnknown) majority[i] = cityMajorityReligion(state_.cities[i]);
                 converted += majority[i] == static_cast<int>(r) ? 1 : 0;
             }

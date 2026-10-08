@@ -1,6 +1,7 @@
 // Research and government (specs/civ6/04-tech-civics-government.md): the tech
 // and civic trees, boosts, governments, anarchy and policy cards.
 #include <algorithm>
+#include <limits>
 
 #include "sovereign/game.h"
 #include "sovereign/modifiers.h"
@@ -317,10 +318,14 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
             return n >= b.count;
         }
         case BoostKind::Alliance:
-            for (const Player& o : state_.players) {
-                if (o.id != player && allianceLevel(player, o.id) >= b.count) return true;
+            if (!scan.alliance) {
+                int best = std::numeric_limits<int>::min();
+                for (const Player& o : state_.players) {
+                    if (o.id != player) best = std::max(best, allianceLevel(player, o.id));
+                }
+                scan.alliance = best;
             }
-            return false;
+            return *scan.alliance >= b.count;
         case BoostKind::GreatPeople: {
             int n = 0;
             for (int k : p.greatPeopleRecruited) n += k;

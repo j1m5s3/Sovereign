@@ -459,22 +459,26 @@ PlayerId Game::cultureVictor() const {
     // civs one early tourist (a tribal village's relic) otherwise wins, as each tourist both counts for
     // the host and comes off the rival's domestic tourists (07: Tourism).
     constexpr int kMinTouristsPerRival = 5;
-    std::vector<int> domestic(state_.players.size(), -1);  // each civ's domesticTourists, worked out on first need
+    std::vector<PlayerId> majors;  // in the players' order
     for (const Player& p : state_.players) {
-        if (!isMajor(p)) continue;
-        const int visitors = visitingTourists(p.id);
+        if (isMajor(p)) majors.push_back(p.id);
+    }
+    std::vector<int> domestic(state_.players.size(), -1);  // each civ's domesticTourists, worked out on first need
+    for (const PlayerId pid : majors) {
+        int visitors = 0;  // visitingTourists(pid)
+        for (const PlayerId x : majors) visitors += x != pid ? visitingTourists(pid, x) : 0;
         if (visitors <= 0) continue;
         bool all = true;
         int rivals = 0;
-        for (const Player& x : state_.players) {
-            if (x.id == p.id || !isMajor(x)) continue;
+        for (const PlayerId x : majors) {
+            if (x == pid) continue;
             ++rivals;
             if (!all) continue;  // one rival it falls short of settles it: the rest are only counted
-            int& theirs = domestic[at(x.id)];
-            if (theirs < 0) theirs = domesticTourists(x.id);
+            int& theirs = domestic[at(x)];
+            if (theirs < 0) theirs = domesticTourists(x);
             if (visitors <= theirs) all = false;
         }
-        if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return p.id;
+        if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return pid;
     }
     return kNoPlayer;
 }

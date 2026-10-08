@@ -62,10 +62,12 @@ void Game::checkVictory() {
                 const City* capital = q.id >= 0 && static_cast<size_t>(q.id) < originalCapital.size() ? originalCapital[static_cast<size_t>(q.id)] : nullptr;
                 if (!capital) {
                     if (q.alive) all = false;
-                    continue;
+                } else if (capital->owner != p.id) {
+                    all = false;
+                } else {
+                    any = true;
                 }
-                if (capital->owner != p.id) all = false;
-                else any = true;
+                if (!all) break;  // one civ's capital not held settles it
             }
             if (all && any) return win(p.id, Victory::Domination);
         }

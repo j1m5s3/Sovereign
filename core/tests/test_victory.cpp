@@ -67,6 +67,27 @@ TEST(domination_needs_every_rival_capital) {
     CHECK_EQ(duel->log().size(), 2u);  // declare war, attack
 }
 
+// A civ that fell before founding a city has no capital to take; one still alive without a city holds out.
+TEST(domination_skips_a_civ_that_fell_without_a_city) {
+    const auto won = [](bool thirdAlive) {
+        GameState s = flatState(16, 12, 3);
+        s.setup.dominationVictory = true;
+        addCity(s, 0, {2, 5}, true);
+        const CityId theirs = addCity(s, 1, {8, 5}, true, 4);
+        s.city(theirs)->hp = 1;
+        s.players[2].alive = thirdAlive;
+        if (thirdAlive) addUnit(s, "UNIT_SETTLER", 2, {14, 2});
+        const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        g->submit(Command::declareWar(0, 1));
+        CHECK_EQ(g->submit(Command::attack(0, warrior, {8, 5})), CommandError::Ok);
+        CHECK_EQ(g->state().players[2].alive, thirdAlive);
+        return g->gameOver() && g->state().victory == Victory::Domination;
+    };
+    CHECK(won(false));
+    CHECK(!won(true));
+}
+
 TEST(last_civ_standing_wins_without_domination) {
     UnitId warrior = kNoUnit;
     auto g = lastStand(false, false, &warrior);

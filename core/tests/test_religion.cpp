@@ -255,6 +255,23 @@ TEST(half_a_civs_cities_is_not_enough_for_a_religious_victory) {
     CHECK_EQ(victor(true), 0);
 }
 
+// Each civ counts its own cities, wherever they sit in the game's list: player 1's second city following the
+// religion can't make up for its capital not following it.
+TEST(each_civ_counts_its_own_cities_for_a_religious_victory) {
+    const auto victor = [](bool capital) {
+        GameState s = religionState();
+        addCity(s, 1, {21, 10}, false, 4);
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+        s.players[0].religion = 0;
+        for (City& c : s.cities) c.pressure = {10000};
+        if (!capital) s.cities[2].pressure = {};
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->religiousVictor();
+    };
+    CHECK_EQ(victor(false), kNoPlayer);  // one of player 1's two cities
+    CHECK_EQ(victor(true), 0);
+}
+
 // The first religion, short of half of one civ's cities, is out; the second, followed everywhere, still wins.
 TEST(a_second_religion_wins_where_the_first_falls_short) {
     GameState s = religionState();
