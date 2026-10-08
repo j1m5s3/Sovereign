@@ -25,7 +25,7 @@ Specs: 09-civs-eras-victory-climate (Ages, Dedications); data/eras-moments-loyal
      - Free Inquiry: Eurekas +10 points; Commercial Hubs and Harbors add their Gold adjacency as Science.
      - Pen, Brush and Voice: Inspirations +10 points; +1 Culture per district.
      - Monumentality: Builders and Settlers 30% cheaper to buy; Builders +2 Movement.
-     - Exodus: religious units +2 Movement and, when bought, +2 spreads; +4 Great Prophet points a turn.
+     - Exodus: Missionaries, Apostles and Inquisitors +2 Movement and, when bought, +2 spreads; +4 Great Prophet points a turn. (Until 2026-10-08 the 2 spreads also went to other units bought with Faith, such as Naturalists.)
      - Hic Sunt Dracones: naval and embarked units +2 Movement.
      - Reform the Coinage: international routes +3 Gold per specialty district at the destination; routes immune to plunder.
      - Heartbeat of Steam: +10% Production toward Industrial-and-later wonders; Campuses add their Science adjacency as Production.
