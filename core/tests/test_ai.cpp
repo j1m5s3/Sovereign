@@ -80,6 +80,58 @@ TEST(ai_settle_score_prefers_good_sites) {
     CHECK(ai::settleScore(*dry, 0, {12, 6}) < ai::settleScore(*dry, 0, {6, 6}));
 }
 
+// A Builder heads for the best plot no other player's unit stands on: a stranger stands on the Wheat east of the
+// capital, so it farms the Wheat to the west, where one of its own units stands, or else a plain plot.
+TEST(ai_builders_pass_over_plots_others_stand_on) {
+    const auto farmed = [](bool ownWest) {
+        GameState s = flatState(20, 14, 2);
+        addCity(s, 0, {6, 6}, true);
+        addCity(s, 1, {16, 6}, true);
+        s.plot({7, 6}).resource = rules().resource("RESOURCE_WHEAT");
+        addUnit(s, "UNIT_WARRIOR", 1, {7, 6});
+        if (ownWest) {
+            s.plot({5, 6}).resource = rules().resource("RESOURCE_WHEAT");
+            addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
+        }
+        const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        CHECK(g->state().plot({7, 6}).improvement == kNone);
+        const Unit* u = g->state().unit(builder);
+        REQUIRE(u);
+        CHECK(g->state().plot(u->pos).improvement != kNone);  // it improved the plot it went to
+        return u->pos;
+    };
+    const Hex plain = farmed(false);
+    CHECK(plain != (Hex{6, 6}));
+    CHECK(plain != (Hex{7, 6}));
+    CHECK(farmed(true) == (Hex{5, 6}));
+}
+
+// Two of the AI's units of a type side by side merge into a Corps once it has Nationalism (05); another player's unit
+// of the type beside one, or one of its own of another type, does not.
+TEST(ai_merges_twins_into_a_corps) {
+    GameState s = flatState(20, 14, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.players[0].civics.done[at(rules().civic("CIVIC_NATIONALISM"))] = 1;
+    addCity(s, 0, {4, 6}, true);
+    addCity(s, 1, {16, 6}, true);
+    const UnitId a = addUnit(s, "UNIT_WARRIOR", 0, {9, 6});
+    addUnit(s, "UNIT_WARRIOR", 1, {10, 6});
+    addUnit(s, "UNIT_SPEARMAN", 0, {9, 7});
+    auto alone = Game::fromScenario(rules(), s);
+    ai::playTurn(*alone);
+    for (const Unit& u : alone->state().units) CHECK_EQ(u.formation, 0);
+    const UnitId b = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    const Unit* ua = g->state().unit(a);
+    const Unit* ub = g->state().unit(b);
+    CHECK((ua == nullptr) != (ub == nullptr));  // one joined the other
+    REQUIRE((ua ? ua : ub) != nullptr);
+    CHECK_EQ((ua ? ua : ub)->formation, 1);
+}
+
 TEST(ai_wins_a_fight_it_should_win) {
     GameState s = flatState(20, 14, 2);
     addCity(s, 0, {4, 6}, true);

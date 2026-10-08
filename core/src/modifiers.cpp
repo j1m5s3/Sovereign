@@ -9,6 +9,13 @@
 namespace sov {
 
 namespace {
+// The envoys a governor serving in a city-state's city counts as there: Amani's 2, or 4 with Puppeteer.
+int amaniEnvoys(const Rules& r, const Governor& g) {
+    const bool puppeteer = std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex pr) {
+        return r.governorPromotions[static_cast<size_t>(pr)].id == "GOVERNOR_PROMOTION_PUPPETEER";
+    });
+    return puppeteer ? 4 : 2;
+}
 }  // namespace
 
 int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cs) {
@@ -16,25 +23,52 @@ int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cs) {
     int n = static_cast<size_t>(cs) < p.envoys.size() ? p.envoys[static_cast<size_t>(cs)] : 0;
     // Amani serving there counts as envoys (08: Governors, Messenger and Puppeteer).
     for (const Governor& g : p.governors) {
-        if (g.establishTurns > 0) continue;
+        if (g.establishTurns > 0 || g.city == kNoCity) continue;  // not serving yet, or unassigned
         const City* c = s.city(g.city);
         if (!c || c->owner != cs) continue;
-        const bool puppeteer = std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex pr) {
-            return r.governorPromotions[static_cast<size_t>(pr)].id == "GOVERNOR_PROMOTION_PUPPETEER";
-        });
-        n += puppeteer ? 4 : 2;
+        n += amaniEnvoys(r, g);
         break;
     }
     return n;
 }
 
+std::vector<int> envoysByPlayer(const GameState& s, const Rules& r, PlayerId player) {
+    const Player& p = s.players[static_cast<size_t>(player)];
+    std::vector<int> out(s.players.size(), 0);
+    for (size_t i = 0; i < out.size() && i < p.envoys.size(); ++i) out[i] = p.envoys[i];
+    // Each governor's city looked up once: the first serving in a city of a player counts there, as envoysAt finds it.
+    std::vector<uint8_t> served(out.size(), 0);
+    for (const Governor& g : p.governors) {
+        if (g.establishTurns > 0 || g.city == kNoCity) continue;
+        const City* c = s.city(g.city);
+        if (!c || static_cast<size_t>(c->owner) >= out.size() || served[static_cast<size_t>(c->owner)]) continue;
+        served[static_cast<size_t>(c->owner)] = 1;
+        out[static_cast<size_t>(c->owner)] += amaniEnvoys(r, g);
+    }
+    return out;
+}
+
 PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
     // The most envoys, at least INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN, and more than anyone else.
+    // envoysAt for each player, with the city-state's cities listed once: a governor counts when it serves in one.
+    std::vector<CityId> held;
+    for (const City& c : s.cities) {
+        if (c.owner == cs) held.push_back(c.id);
+    }
+    const auto envoys = [&](const Player& p) {
+        int n = static_cast<size_t>(cs) < p.envoys.size() ? p.envoys[static_cast<size_t>(cs)] : 0;
+        for (const Governor& g : p.governors) {
+            if (g.establishTurns > 0 || std::find(held.begin(), held.end(), g.city) == held.end()) continue;
+            n += amaniEnvoys(r, g);
+            break;
+        }
+        return n;
+    };
     PlayerId best = kNoPlayer;
     int most = 0;
     bool tie = false;
     for (const Player& p : s.players) {
-        const int n = envoysAt(s, r, p.id, cs);
+        const int n = envoys(p);
         if (n > most) {
             most = n;
             best = p.id;
@@ -55,13 +89,13 @@ bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, Ty
 }
 
 bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type, const Player* found) {
+    if (!found) return false;  // none of the type in this game (most of the rules' city-states)
     // Sovereignty option B (World Congress): city-states of the chosen kind give no unique bonus.
     for (const PassedResolution& pr : s.passedResolutions) {
         if (r.resolutions[static_cast<size_t>(pr.resolution)].kind == ResolutionKind::Sovereignty && pr.option == 1 && type >= 0 &&
             pr.target == static_cast<int32_t>(r.cityStates[static_cast<size_t>(type)].kind))
             return false;
     }
-    if (!found) return false;
     const Player& cs = *found;
     const auto& rels = s.players[static_cast<size_t>(player)].relations;
     if (static_cast<size_t>(cs.id) < rels.size() && rels[static_cast<size_t>(cs.id)].war) return false;
