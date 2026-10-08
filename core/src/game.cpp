@@ -254,7 +254,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     for (uint32_t i : rules_->playerModifiers(ModEffect::GrantAbility)) {
         const std::vector<std::string>& classes = rules_->abilities[static_cast<size_t>(rules_->modifiers[i].ability)].classes;
         for (size_t t = 0; t < rules_->units.size(); ++t) {
-            if (std::find(classes.begin(), classes.end(), rules_->units[t].unitClass) != classes.end()) abilityGrants_[t].push_back(i);
+            if (hasClassIn(rules_->units[t], classes)) abilityGrants_[t].push_back(i);
         }
     }
     for (const AbilityType& a : rules_->abilities) {

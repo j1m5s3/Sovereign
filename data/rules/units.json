@@ -1958,6 +1958,31 @@
    "abilities": [
     "ABILITY_ANTI_AIR_COVER"
    ]
+  },
+  {
+   "id": "UNIT_NIHANG",
+   "name": "Nihang",
+   "class": "MELEE",
+   "domain": "LAND",
+   "layer": "MILITARY",
+   "cost": 100,
+   "maintenance": 2,
+   "combat": 25,
+   "ranged": 0,
+   "range": 0,
+   "moves": 2,
+   "sight": 2,
+   "zoneOfControl": true,
+   "mustPurchase": true,
+   "purchaseYield": "FAITH",
+   "promotionClass": "PROMOTION_CLASS_NIHANG",
+   "abilities": [
+    "ABILITY_ANTI_SPEAR"
+   ],
+   "cityState": "CITYSTATE_LAHORE",
+   "tags": [
+    "LAHORE_NIHANG"
+   ]
   }
  ],
  "rockBandResults": [

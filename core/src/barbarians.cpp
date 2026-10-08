@@ -369,14 +369,15 @@ void Game::releaseUnit(Camp& camp, PlayerId bp) {
 TypeIndex Game::campUnitType(const Camp& camp, bool ranged, Domain& domain) const {
     const BarbarianTribe& tribe = rules_->barbarianTribes[static_cast<size_t>(camp.tribe)];
     domain = tribe.coastal ? Domain::Sea : Domain::Land;  // naval tribes put to sea
-    // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT).
+    // The strongest generic unit of the class that at least half the majors can build (BARBARIAN_TECH_PERCENT); never a
+    // city-state's own (Lahore's Nihang).
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
         int majors = 0;
         for (const Player& p : state_.players) majors += p.alive && !p.barbarian ? 1 : 0;
         for (size_t i = 0; i < rules_->units.size(); ++i) {
             const UnitType& ut = rules_->units[i];
-            if (ut.unitClass != cls || ut.domain != domain || ut.layer != UnitLayer::Military) continue;
+            if (ut.unitClass != cls || ut.domain != domain || ut.layer != UnitLayer::Military || ut.cityState != kNone) continue;
             int knowing = 0;
             for (const Player& p : state_.players) {
                 if (p.alive && !p.barbarian && hasUnlocked(p.id, ut.unlock)) ++knowing;

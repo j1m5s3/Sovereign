@@ -400,11 +400,11 @@ bool Game::canTakeStance(PlayerId player, CityId cityId, Stance stance, CommandE
 void Game::rebellion(City& city) {
     const PlayerId barb = barbarianPlayer();
     if (barb == kNoPlayer) return;
-    // The rebels carry the strongest melee arms the owner can field.
+    // The rebels carry the strongest melee arms the owner can field (a city-state's own, Lahore's Nihang, aside).
     TypeIndex best = kNone;
     for (size_t i = 0; i < rules_->units.size(); ++i) {
         const UnitType& t = rules_->units[i];
-        if (t.unitClass != "MELEE" || t.domain != Domain::Land || !t.trainable || !hasUnlocked(city.owner, t.unlock)) continue;
+        if (t.unitClass != "MELEE" || t.domain != Domain::Land || !t.trainable || t.cityState != kNone || !hasUnlocked(city.owner, t.unlock)) continue;
         if (best == kNone || t.combat > rules_->units[static_cast<size_t>(best)].combat) best = static_cast<TypeIndex>(i);
     }
     if (best == kNone) return;

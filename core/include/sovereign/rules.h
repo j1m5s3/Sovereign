@@ -6,6 +6,7 @@
 
 #include "sovereign/api.h"
 
+#include <algorithm>
 #include <array>
 #include <climits>
 #include <cstdint>
@@ -232,6 +233,7 @@ struct PromotionType {
 struct UnitType {
     std::string id, name;
     std::string unitClass;  // e.g. "MELEE", "RECON", "CIVILIAN"
+    std::vector<std::string> tags;  // further class tags abilities may name (Lahore's Nihang: LAHORE_NIHANG)
     Domain domain = Domain::Land;
     UnitLayer layer = UnitLayer::Military;
     int cost = 0;
@@ -283,10 +285,22 @@ struct UnitType {
     bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
     bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
     TypeIndex needsDistrict = kNone;  // the training city must have this district finished
+    // A city-state's unit (08: Lahore's Nihang): never trained; whoever enjoys the city-state's suzerain bonus buys it.
+    TypeIndex cityState = kNone;
+    std::string cityStateId;  // (loading only)
 };
 
 // A Builder (01, 02): its charges improve and harvest tiles, and the Builder bonuses (Pyramids, Serfdom...) are its.
 inline bool isBuilder(const UnitType& t) { return t.buildCharges > 0 && t.layer == UnitLayer::Civilian; }
+
+// Whether an ability for these class tags reaches the unit: one of them is its class or one of its tags.
+inline bool hasClassIn(const UnitType& t, const std::vector<std::string>& classes) {
+    if (std::find(classes.begin(), classes.end(), t.unitClass) != classes.end()) return true;
+    for (const std::string& tag : t.tags) {
+        if (std::find(classes.begin(), classes.end(), tag) != classes.end()) return true;
+    }
+    return false;
+}
 
 // Tile improvements built by Builders (02-cities.md, 01-map-and-terrain.md; data: improvements.md).
 struct ImprovementBonus {
