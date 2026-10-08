@@ -1601,8 +1601,11 @@ Hex districtSpot(const View& v, CityId cid, TypeIndex district) {
 void production(View& v) {
     const GameState& s = v.s();
     Game& g = v.game;
+    // Gold per turn looks at every city: it is worked out only when a city needs something to make.
+    const std::vector<CityId> needing = g.citiesNeedingProduction(v.me);
+    if (needing.empty()) return;
     const Fixed goldPerTurn = g.goldPerTurn(v.me);
-    for (CityId cid : g.citiesNeedingProduction(v.me)) {
+    for (CityId cid : needing) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
         const bool threatened = ci >= 0 && v.threat[static_cast<size_t>(ci)] > 0;
@@ -1926,16 +1929,25 @@ void purchases(View& v) {
             if (pick && g.submit(Command::buyPlot(v.me, cid, *pick)) == CommandError::Ok) have[at(v.s().plot(*pick).resource)] = 1;
         }
     }
-    // Still well above the reserve: buy the building that yields most per gold in any city (from Warlord).
+    // Still well above the reserve: buy the building that yields most per gold in any city (from Warlord). A building
+    // costs the same in every city, so the ones in reach are found once a purchase, and each city checks only those.
     for (int guard = 0; guard < (v.skill >= 2 ? 4 : 0); ++guard) {
         const Fixed gold = v.s().players[at(v.me)].gold;
+        std::vector<std::pair<ProductionItem, int>> affordable;  // with its price, in the rules' order
+        for (size_t i = 0; i < v.r.buildings.size(); ++i) {
+            const ProductionItem it{ProductionKind::Building, static_cast<TypeIndex>(i)};
+            if (v.r.buildings[i].wonder) continue;
+            const int cost = g.purchaseCost(v.me, it);
+            if (cost > 0 && gold >= Fixed::fromInt(cost + reserve)) affordable.emplace_back(it, cost);
+        }
+        if (affordable.empty()) break;
         std::optional<std::pair<CityId, ProductionItem>> best;
         int64_t bestScore = 0;
         for (CityId cid : v.cities) {
-            for (const ProductionItem& it : g.buildableItems(cid)) {
-                if (it.kind != ProductionKind::Building || v.r.buildings[at(it.type)].wonder) continue;
-                const int cost = g.purchaseCost(v.me, it);
-                if (cost <= 0 || gold < Fixed::fromInt(cost + reserve)) continue;
+            const City* c = v.s().city(cid);
+            if (!c) continue;
+            for (const auto& [it, cost] : affordable) {
+                if (!g.canProduce(*c, it) || std::find(c->queue.begin(), c->queue.end(), it) != c->queue.end()) continue;
                 const BuildingType& b = v.r.buildings[at(it.type)];
                 const int64_t score = static_cast<int64_t>(30 + worth(v, b.yields) * 25 + b.amenities * 25) * 1000 / cost;
                 if (score > bestScore) {
