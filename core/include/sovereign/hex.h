@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <optional>
 #include <vector>
 
@@ -30,9 +31,18 @@ struct Hex {
     bool operator!=(const Hex& o) const { return !(*this == o); }
 };
 
-SOV_API Axial toAxial(Hex h);
-SOV_API Hex toOffset(Axial a);
-SOV_API int axialDistance(Axial a, Axial b);
+// floorDiv(a, 2) as one shift (every compiler this builds with shifts a negative arithmetically, which floors), where
+// the division's rounding fix takes a branch on the row's parity.
+constexpr int32_t floorHalf(int32_t a) { return a >> 1; }
+static_assert(floorHalf(-3) == -2 && floorHalf(-4) == -2 && floorHalf(-1) == -1 && floorHalf(3) == 1, "a right shift floors");
+
+// odd-r: odd rows are shifted half a hex to the east. Inline, as hex distances are taken everywhere.
+inline Axial toAxial(Hex h) { return Axial{h.x - floorHalf(h.y), h.y}; }
+inline Hex toOffset(Axial a) { return Hex{a.q + floorHalf(a.r), a.r}; }
+inline int axialDistance(Axial a, Axial b) {
+    const int dq = a.q - b.q, dr = a.r - b.r;
+    return (std::abs(dq) + std::abs(dr) + std::abs(dq + dr)) / 2;
+}
 
 // A step in each direction (NE, E, SE, SW, W, NW) in offset coordinates. The column step depends on the row's
 // parity, odd rows sitting half a hex east: the axial steps (1,-1) (1,0) (0,1) (-1,1) (-1,0) (0,-1) carried
@@ -69,7 +79,13 @@ public:
     }
     // Direction from a to an adjacent b, if adjacent.
     std::optional<Dir> directionTo(Hex a, Hex b) const;
-    int distance(Hex a, Hex b) const;
+    int distance(Hex a, Hex b) const {
+        // The nearest of b and, on a wrapping map, its copies a map's width to the east and west (nearestAxial's choice).
+        const Axial aa = toAxial(a), bb = toAxial(b);
+        const int d = axialDistance(aa, bb);
+        if (!wrap_ || d <= w_ - std::abs(bb.q - aa.q)) return d;  // no copy can be nearer (nearestAxial's bound)
+        return std::min({d, axialDistance(aa, Axial{bb.q - w_, bb.r}), axialDistance(aa, Axial{bb.q + w_, bb.r})});
+    }
     // All valid hexes with distance <= radius, in a fixed order.
     std::vector<Hex> within(Hex center, int radius) const;
     // Calls fn(hex) for each hex of within(center, radius), in the same order, without building the list.

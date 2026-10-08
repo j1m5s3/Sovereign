@@ -232,8 +232,8 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         if (t.ocean) oceanTechs_.push_back(static_cast<TypeIndex>(i));
         if (t.embarkAll || t.embarkUnit != kNone) embarkTechs_.push_back(static_cast<TypeIndex>(i));
     }
-    for (const TreeNode& t : rules_->techs) techEras_.push_back(t.era);
-    for (const TreeNode& t : rules_->civics) civicEras_.push_back(t.era);
+    for (const TreeNode& t : rules_->techs) techEras_.push_back(static_cast<uint8_t>(std::clamp(t.era, 0, 255)));
+    for (const TreeNode& t : rules_->civics) civicEras_.push_back(static_cast<uint8_t>(std::clamp(t.era, 0, 255)));
     for (size_t i = 0; i < rules_->civics.size(); ++i) {
         if (rules_->civics[i].enforceBorders) borderCivics_.push_back(static_cast<TypeIndex>(i));
     }
@@ -746,6 +746,10 @@ std::optional<Fixed> Game::stepCost(const StepUnit& su, const StepInto& to, cons
 }
 
 std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool overland) const {
+    return searchPath(id, target, overland, nullptr);
+}
+
+std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along) const {
     const Unit* u = state_.unit(id);
     if (!u) return std::nullopt;
     auto t = state_.grid.normalize(target);
@@ -757,14 +761,15 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     if (!known(goal)) return std::nullopt;
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
-    const MoveLimits limits = moveLimits(*u, traits);
+    MoveLimits limits = moveLimits(*u, traits);
     StepUnit su = stepUnit(*u, traits);
 
-    // Per plot: the best arrival found (read only where `seen` has bit 1): its turn, the plot it came from (-1 for
-    // the start) and the moves left; and the plot as a step's end (worked out the first time a step reaches it, bit
-    // 2): whether a step may end there at all, or only from the owner's own land (closed borders), and the rest of
-    // the step's cost that it decides.
-    enum : uint8_t { kReached = 1, kRead = 2 };
+    // Per plot: the best arrival found (read only where its flags have kReached): its turn, the plot it came from (-1
+    // for the start) and the moves left; and the plot as a step's end (worked out the first time a step reaches it,
+    // kRead): whether a step may end there at all, or only from the owner's own land (closed borders), and the rest of
+    // the step's cost that it decides. The flags are moveLimits' blocked marks (1), with enemy ZOC (kZoc) marked in too
+    // (or, along a path, every plot off it blocked).
+    enum : uint8_t { kBlocked = 1, kZoc = 2, kReached = 4, kRead = 8 };
     enum : uint8_t { kNever = 0, kAny, kInside };
     struct Cell {
         int turn;
@@ -776,17 +781,25 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     };
     const size_t plots = static_cast<size_t>(state_.grid.size());
     const std::unique_ptr<Cell[]> cells(new Cell[plots]);
-    std::vector<uint8_t> seen(plots, 0);
+    std::vector<uint8_t> flags = std::move(limits.blocked);
+    if (along) {
+        std::vector<uint8_t> walk(plots, kBlocked);
+        for (const PathStep& s : *along) {
+            const size_t i = static_cast<size_t>(state_.grid.index(s.pos));
+            walk[i] = flags[i];
+        }
+        flags.swap(walk);
+    }
     auto read = [&](int index, Hex h) -> const Cell& {
         Cell& c = cells[static_cast<size_t>(index)];
-        uint8_t& s = seen[static_cast<size_t>(index)];
-        if (s & kRead) return c;
-        s |= kRead;
+        uint8_t& f = flags[static_cast<size_t>(index)];
+        if (f & kRead) return c;
+        f |= kRead;
         c.entry = kNever;
         c.owner = kNoPlayer;
         // A step never ends on a plot the owner has not seen, on the water when kept dry, on a plot another player
         // holds (a unit, a foreign city, a standing enemy Encampment), or across borders closed to it.
-        if (!known(index) || limits.blocked[static_cast<size_t>(index)]) return c;
+        if (!known(index) || (f & kBlocked)) return c;
         c.into = stepInto(su, h);
         if (c.into.kind == StepKind::None || (keepDry && c.into.afloat)) return c;
         c.entry = kAny;
@@ -818,7 +831,8 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         if (!enterable) return std::nullopt;
     }
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
-    const std::vector<uint8_t> zoc = zocMap(*u);
+    // Enemy ZOC changes only the moves a path leaves, not whether there is one (all a search along a path asks).
+    if (!along) markZoc(*u, flags, kZoc);
 
     auto better = [](int turn, Fixed moves, const Cell& than) {
         return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
@@ -837,7 +851,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
         s.turn = 0;
         s.prev = -1;
         s.moves = u->movesLeft.raw();
-        seen[static_cast<size_t>(start)] |= kReached;
+        flags[static_cast<size_t>(start)] |= kReached;
     }
     open.push({-u->movesLeft.raw(), 0, start});
     const bool land = su.domain == Domain::Land;
@@ -872,19 +886,19 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
                 mp = fullMoves;
             }
             mp = mp >= *cost ? mp - *cost : Fixed();
-            if (!zoc.empty() && zoc[static_cast<size_t>(next)]) mp = Fixed();  // entering enemy ZOC ends the move
+            uint8_t& f = flags[static_cast<size_t>(next)];
+            if (f & kZoc) mp = Fixed();  // entering enemy ZOC ends the move
             Cell& nb = cells[static_cast<size_t>(next)];
-            uint8_t& s = seen[static_cast<size_t>(next)];
-            if (!(s & kReached) || better(turn, mp, nb)) {
+            if (!(f & kReached) || better(turn, mp, nb)) {
                 nb.turn = turn;
                 nb.prev = q.index;
                 nb.moves = mp.raw();
-                s |= kReached;
+                f |= kReached;
                 open.push({-mp.raw(), turn, next});
             }
         }
     }
-    if (!(seen[static_cast<size_t>(goal)] & kReached)) return std::nullopt;
+    if (!(flags[static_cast<size_t>(goal)] & kReached)) return std::nullopt;
     std::vector<PathStep> path;
     for (int i = goal; i != -1; i = cells[static_cast<size_t>(i)].prev) {
         const Cell& n = cells[static_cast<size_t>(i)];
@@ -895,6 +909,7 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
 }
 
 void Game::advanceUnit(UnitId id) {
+    std::optional<std::vector<PathStep>> path;  // the path the unit's last step took
     for (int guard = 0; guard < 64; ++guard) {
         Unit* u = state_.unit(id);
         if (!u || !u->moveTarget) return;
@@ -904,8 +919,17 @@ void Game::advanceUnit(UnitId id) {
         }
         // A move just checked by submit takes the path its check found for this unit: the unit's orders and activity,
         // all that changed since, do not enter the search.
-        std::optional<std::vector<PathStep>> path;
-        if (checkedPath_ && checkedPath_->unit == id) path = std::move(checkedPath_->steps);
+        const bool checked = checkedPath_ && checkedPath_->unit == id;
+        // Out of moves after a step, the unit goes on next turn unless no path is left (which ends the order): a path
+        // over just the plots of the last step's path shows one is left.
+        if (!checked && path && u->movesLeft <= Fixed()) {
+            const std::optional<std::vector<PathStep>> rest = searchPath(id, *u->moveTarget, u->moveOverland, &*path);
+            if (rest && rest->size() >= 2) {
+                checkedPath_.reset();
+                return;
+            }
+        }
+        if (checked) path = std::move(checkedPath_->steps);
         else path = findPath(id, *u->moveTarget, u->moveOverland);
         checkedPath_.reset();
         if (!path || path->size() < 2) {

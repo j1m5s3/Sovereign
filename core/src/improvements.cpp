@@ -208,7 +208,7 @@ int Game::luxuryAmenities(const City& city, ReportShare& shared) const {
         if (rank < reach) ++amenities;
     }
     // Buenos Aires (08: suzerain): each kind of improved bonus resource is an Amenity too, for as many cities as a luxury's.
-    if (rank < kBonusAmenityCities && suzerainBonus(owner, Cs::BuenosAires)) {
+    if (rank < kBonusAmenityCities && suzerainBonus(owner, Cs::BuenosAires, shared)) {
         const std::vector<int> copies = resourceCopies(owner);
         for (size_t r = 0; r < rules_->resources.size(); ++r) {
             if (rules_->resources[r].cls == ResourceClass::Bonus && copies[r] > 0) ++amenities;

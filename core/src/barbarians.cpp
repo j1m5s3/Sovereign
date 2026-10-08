@@ -584,18 +584,25 @@ void Game::barbarianScoutAct(UnitId id) {
         return;  // its work is done; it keeps watch at home
     }
     std::optional<Hex> goal = camp->scoutSaw ? std::optional<Hex>(camp->pos) : u->moveTarget;
-    if (!goal || *goal == u->pos || !findPath(id, *goal)) {
+    std::optional<std::vector<PathStep>> path;  // to the goal
+    if (goal && *goal != u->pos) path = findPath(id, *goal);
+    if (!path) {
         goal.reset();
         Rng& rng = state_.rng.get(RngStream::Gameplay);
         const std::vector<Hex> around = state_.grid.within(camp->pos, 10);
         for (int tries = 0; tries < 12 && !goal; ++tries) {
             const Hex h = around[rng.below(static_cast<uint32_t>(around.size()))];
-            if (h != u->pos && isLandPassable(state_, *rules_, h) && !state_.cityAt(h) && findPath(id, h)) goal = h;
+            if (h == u->pos || !isLandPassable(state_, *rules_, h) || state_.cityAt(h)) continue;
+            path = findPath(id, h);
+            if (path) goal = h;
         }
     }
     if (!goal) return;
     u->moveTarget = *goal;
     u->activity = Activity::Awake;
+    // The first step takes the path just found, as a checked move's does (advanceUnit): the order and activity set
+    // since do not enter the search.
+    if (!u->moveOverland) checkedPath_ = CheckedPath{id, std::move(*path)};
     advanceUnit(id);
     if (Unit* after = state_.unit(id); after && camp->scoutSaw && state_.grid.distance(after->pos, camp->pos) <= 1) {
         camp->alerted = true;
@@ -696,10 +703,12 @@ void Game::barbarianAct(UnitId id) {
     for (const Hex& n : around) {
         if (n == u->pos) break;  // already as close as it gets
         if (state_.unitAt(n, UnitLayer::Military, *rules_) || state_.foreignUnitAt(n, me) || state_.cityAt(n)) continue;
-        if (!findPath(id, n)) continue;
+        std::optional<std::vector<PathStep>> path = findPath(id, n);
+        if (!path) continue;
         Unit* mover = state_.unit(id);
         mover->moveTarget = n;
         mover->activity = Activity::Awake;
+        if (!mover->moveOverland) checkedPath_ = CheckedPath{id, std::move(*path)};  // the first step takes it (as the scout's)
         advanceUnit(id);
         if (Unit* after = state_.unit(id)) after->moveTarget.reset();  // re-decided every turn
         break;
