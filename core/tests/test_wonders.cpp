@@ -61,7 +61,9 @@ TEST(wonders_need_their_ground) {
     CHECK(g->canPlaceWonder(c, gardens, {6, 6}));   // on the river
     CHECK(!g->canPlaceWonder(c, gardens, {4, 6}));  // dry land
     CHECK(!g->canPlaceWonder(c, gardens, {5, 6}));  // the city itself
-    CHECK(g->canPlaceWonder(c, wonder("BUILDING_PYRAMIDS"), {4, 6}));  // desert
+    CHECK(g->canPlaceWonder(c, wonder("BUILDING_PYRAMIDS"), {4, 6}));   // desert
+    CHECK(!g->canPlaceWonder(c, wonder("BUILDING_PYRAMIDS"), {5, 6}));  // not the city's own plot
+    CHECK(g->wonderPlots(c.id, rules().building("BUILDING_LIBRARY")).empty());  // a Library is no wonder
     const TypeIndex apadana = wonder("BUILDING_APADANA");
     CHECK(g->canPlaceWonder(c, apadana, {4, 6}));   // beside the capital
     CHECK(!g->canPlaceWonder(c, apadana, {3, 6}));  // two plots away
@@ -86,6 +88,14 @@ TEST(wonders_need_a_plot_with_nothing_built) {
     camped.camps.push_back(camp);
     auto g2 = Game::fromScenario(rules(), std::move(camped));
     CHECK(!g2->canPlaceWonder(g2->state().cities[0], pyramids, {4, 7}));
+    // Nor a resource the owner can see, or a natural wonder.
+    GameState other = wonderState();
+    other.plot({4, 7}).resource = rules().resource("RESOURCE_STONE");
+    other.plot({6, 6}).feature = rules().feature("FEATURE_EYE_OF_THE_SAHARA");
+    auto g3 = Game::fromScenario(rules(), std::move(other));
+    CHECK(!g3->canPlaceWonder(g3->state().cities[0], pyramids, {4, 7}));
+    CHECK(!g3->canPlaceWonder(g3->state().cities[0], pyramids, {6, 6}));
+    CHECK(g3->canPlaceWonder(g3->state().cities[0], pyramids, {4, 6}));
 }
 
 TEST(a_wonder_is_built_once_and_rivals_keep_half) {
@@ -94,6 +104,11 @@ TEST(a_wonder_is_built_once_and_rivals_keep_half) {
     const TypeIndex pyramids = wonder("BUILDING_PYRAMIDS");
     const CityId mine = g->state().cities[0].id, theirs = g->state().cities[1].id;
     const ProductionItem item{ProductionKind::Building, pyramids};
+    const auto offered = [&](const Game& game, CityId city) {
+        const std::vector<ProductionItem> list = game.buildableItems(city);
+        return std::find(list.begin(), list.end(), item) != list.end();
+    };
+    CHECK(offered(*g, theirs));
     REQUIRE(g->submit(Command::setProduction(0, mine, item, {4, 6})) == CommandError::Ok);
     CHECK_EQ(g->state().wonderAt({4, 6}), pyramids);
     sovtest::endTurns(*g, 1);
@@ -114,6 +129,7 @@ TEST(a_wonder_is_built_once_and_rivals_keep_half) {
     CHECK(rival.wonders.empty());
     CHECK(rival.overflow >= Fixed::fromInt(50));
     CHECK(!g2->canProduce(rival, item));
+    CHECK(!offered(*g2, theirs));  // off the list of what the city can make
 }
 
 TEST(wonder_effects_reach_every_city) {

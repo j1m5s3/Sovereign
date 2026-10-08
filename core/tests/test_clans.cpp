@@ -97,3 +97,34 @@ TEST(a_clan_becomes_a_city_state) {
     CHECK_EQ(g->state().unit(raider)->owner, cs.id);  // the clan's warriors serve it
     CHECK(g->atWar(2, cs.id));                         // the barbarians are at war with it
 }
+
+// The city-state a clan founds is one like any other: its suzerain may build its unique improvement (08).
+TEST(a_clans_city_state_gives_its_suzerain_its_improvement) {
+    GameState s = clanState();
+    s.camps[0].progress = 99;
+    addUnit(s, "UNIT_WARRIOR", 2, {12, 6});
+    s.units.back().camp = s.camps[0].id;
+    // Dead city-states hold the kinds before Armagh, so the clan settles as Armagh.
+    const TypeIndex armagh = rules().cityState("CITYSTATE_ARMAGH"), monastery = rules().improvement("IMPROVEMENT_MONASTERY");
+    for (TypeIndex k = 0; k < armagh; ++k) {
+        Player p;
+        p.id = static_cast<PlayerId>(s.players.size());
+        p.cityState = k;
+        p.alive = false;
+        Game::fitPlayerToRules(p, rules());
+        s.players.push_back(p);
+    }
+    for (Player& p : s.players) {
+        p.relations.resize(s.players.size());
+        p.met.resize(s.players.size(), 0);
+    }
+    s.players[0].envoys.assign(s.players.size() + 1, 0);
+    s.players[0].envoys.back() = 3;  // at the city-state to come
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(!g->canImproveAt(0, {4, 5}, monastery, true));
+    sovtest::endTurns(*g, 2);
+    REQUIRE(g->state().players.back().cityState == armagh);
+    CHECK(g->state().players.back().alive);
+    CHECK(g->canImproveAt(0, {4, 5}, monastery, true));
+    CHECK(!g->canImproveAt(0, {4, 5}, rules().improvement("IMPROVEMENT_BATEY"), true));  // Caguana's: not in this game
+}

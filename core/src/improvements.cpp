@@ -75,7 +75,7 @@ bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool 
         if (!home || !cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str())) return false;
     }
     // The dearer checks last. City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
-    if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState)) return false;
+    if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState, cityStateOfType(im.cityState))) return false;
     return im.minAppeal <= -100 || plotAppeal(at) >= im.minAppeal;  // Seaside Resort: Breathtaking (07)
 }
 

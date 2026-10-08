@@ -79,6 +79,8 @@ SOV_API int districtTourism(const GameState& s, const Rules& r, const Player& pl
 SOV_API int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cityState);
 SOV_API PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cityState);
 SOV_API bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex cityStateType);
+// The same with the city-state of the type found: the first living player of the type, null when there is none.
+SOV_API bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex cityStateType, const Player* cityState);
 
 // Combat XP bonus percent for the player's units of this class.
 SOV_API Fixed sumUnitXpPercent(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass);

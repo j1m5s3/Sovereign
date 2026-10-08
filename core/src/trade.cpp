@@ -3,7 +3,6 @@
 // pays its origin each turn by the districts at the destination, lays roads along the way and
 // ends after its length (the Trader comes home), or when war or a raider cuts it.
 #include <algorithm>
-#include <queue>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -240,7 +239,7 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     return out;
 }
 
-std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const {
+std::vector<std::vector<Hex>> Game::tradeWays(PlayerId player, TypeIndex traderType, const City& origin, const std::vector<const City*>& destinations) const {
     const int landRange = rules_->globalInt("TRADE_ROUTE_BASE_RANGE");
     const int waterRange = rules_->globalInt("TRADE_ROUTE_WATER_RANGE_REFUEL");
     const bool sails = canEmbark(player, traderType);
@@ -248,53 +247,67 @@ std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const Ci
     // Breadth-first over plots: land, then water too once Traders may embark (07: Range).
     // Range refuels in the player's own cities and in cities holding its Trading Post (07: Trading Posts):
     // a plot is searched again when reached with more range left. Each arrival is its own entry, so the
-    // way back is the walk that reached the goal.
+    // way back is the walk that reached the destination.
+    // A destination is reached from the first plot searched beside it, whatever it stands on, and is otherwise
+    // searched as any plot: so one search finds each destination's way as a search for it alone, ending there, would.
     const int n = state_.grid.size();
     std::vector<uint8_t> refuel(static_cast<size_t>(n), 0);
     for (const City& c : state_.cities) {
         if (c.owner == player || c.hasTradingPost(player)) refuel[static_cast<size_t>(state_.grid.index(c.pos))] = 1;
     }
-    auto search = [&](bool water, int range) -> std::vector<Hex> {
+    const int start = state_.grid.index(origin.pos);
+    std::vector<int> goal(static_cast<size_t>(n), -1);  // the destination on each plot (none on the start: it is never reached)
+    size_t open = 0;                                     // destinations not reached yet
+    for (size_t k = 0; k < destinations.size(); ++k) {
+        const int plot = state_.grid.index(destinations[k]->pos);
+        if (plot == start) continue;
+        goal[static_cast<size_t>(plot)] = static_cast<int>(k);
+        ++open;
+    }
+    std::vector<std::vector<Hex>> ways(destinations.size());
+    auto search = [&](bool water, int range) {
         struct Entry { int plot, parent, fuel; };
-        std::vector<Entry> entries;
+        std::vector<Entry> entries;  // searched from in turn
         std::vector<int> best(static_cast<size_t>(n), -1);
-        std::queue<int> open;
-        const int start = state_.grid.index(origin.pos), goal = state_.grid.index(destination.pos);
+        std::vector<int8_t> passable(static_cast<size_t>(n), -1);  // worked out when first looked at
         entries.push_back({start, -1, range});
         best[static_cast<size_t>(start)] = range;
-        open.push(0);
-        int found = -1;
-        while (!open.empty() && found < 0) {
-            const Entry cur = entries[static_cast<size_t>(open.front())];
-            const int curIndex = open.front();
-            open.pop();
+        for (size_t e = 0; e < entries.size() && open > 0; ++e) {
+            const Entry cur = entries[e];
             if (cur.fuel <= 0) continue;
+            const Hex here = state_.grid.at(cur.plot);
             for (int d = 0; d < kNumDirs; ++d) {
-                auto nh = state_.grid.neighbor(state_.grid.at(cur.plot), static_cast<Dir>(d));
+                auto nh = state_.grid.neighbor(here, static_cast<Dir>(d));
                 if (!nh) continue;
-                const int ni = state_.grid.index(*nh);
-                const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
-                const bool ok = ni == goal || bridgeAt(*nh) || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
-                if (!ok) continue;
-                const int left = refuel[static_cast<size_t>(ni)] ? range : cur.fuel - 1;
-                if (left <= best[static_cast<size_t>(ni)]) continue;
-                best[static_cast<size_t>(ni)] = left;
-                entries.push_back({ni, curIndex, left});
-                if (ni == goal) {
-                    found = static_cast<int>(entries.size()) - 1;
-                    break;
+                const size_t ni = static_cast<size_t>(state_.grid.index(*nh));
+                if (const int k = goal[ni]; k >= 0 && ways[static_cast<size_t>(k)].empty()) {
+                    std::vector<Hex>& way = ways[static_cast<size_t>(k)];
+                    for (int w = static_cast<int>(e); w != -1; w = entries[static_cast<size_t>(w)].parent)
+                        way.push_back(state_.grid.at(entries[static_cast<size_t>(w)].plot));
+                    std::reverse(way.begin(), way.end());
+                    way.push_back(*nh);
+                    --open;
                 }
-                open.push(static_cast<int>(entries.size()) - 1);
+                if (passable[ni] < 0) {
+                    const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
+                    const bool ok = bridgeAt(*nh) || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
+                    passable[ni] = static_cast<int8_t>(ok ? 1 : 0);
+                }
+                if (!passable[ni]) continue;
+                const int left = refuel[ni] ? range : cur.fuel - 1;
+                if (left <= best[ni]) continue;
+                best[ni] = left;
+                entries.push_back({static_cast<int>(ni), static_cast<int>(e), left});
             }
         }
-        std::vector<Hex> path;
-        for (int e = found; e != -1; e = entries[static_cast<size_t>(e)].parent) path.push_back(state_.grid.at(entries[static_cast<size_t>(e)].plot));
-        std::reverse(path.begin(), path.end());
-        return path;
     };
-    std::vector<Hex> path = search(false, landRange);
-    if (path.empty() && sails) path = search(true, waterRange);
-    return path;
+    search(false, landRange);
+    if (open > 0 && sails) search(true, waterRange);
+    return ways;
+}
+
+std::vector<Hex> Game::tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const {
+    return tradeWays(player, traderType, origin, {&destination}).front();
 }
 
 bool Game::canStartTradeRoute(UnitId traderId, CityId destinationId) const {
@@ -312,9 +325,21 @@ bool Game::canStartTradeRoute(UnitId traderId, CityId destinationId) const {
 }
 
 std::vector<CityId> Game::tradeDestinations(UnitId trader) const {
+    // canStartTradeRoute for each city, with the checks on the Trader made once and one search for the ways to all.
     std::vector<CityId> out;
+    const Unit* u = state_.unit(trader);
+    if (!u || rules_->units[at(u->type)].id != "UNIT_TRADER" || u->movesLeft <= Fixed()) return out;
+    const City* origin = originOf(state_, *u);
+    if (!origin || tradeRoutesOf(u->owner) >= tradeRouteCapacity(u->owner)) return out;
+    std::vector<const City*> cities;  // those the other checks allow
     for (const City& c : state_.cities) {
-        if (canStartTradeRoute(trader, c.id)) out.push_back(c.id);
+        const Player& them = state_.players[at(c.owner)];
+        if (c.id == origin->id || !them.alive || them.barbarian || them.freeCity || atWar(u->owner, c.owner)) continue;
+        if (visibility(u->owner, c.pos) != Visibility::Unrevealed) cities.push_back(&c);
+    }
+    const std::vector<std::vector<Hex>> ways = tradeWays(u->owner, u->type, *origin, cities);
+    for (size_t k = 0; k < cities.size(); ++k) {
+        if (!ways[k].empty()) out.push_back(cities[k]->id);
     }
     return out;
 }

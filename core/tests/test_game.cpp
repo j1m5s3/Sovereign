@@ -39,6 +39,22 @@ TEST(game_starts_with_settler_and_warrior) {
     }
 }
 
+// Cities are found by id after one is lost, when their ids no longer run one after another; a lost id finds none.
+TEST(game_finds_cities_by_id_after_one_is_lost) {
+    GameState s = flatState(20, 10, 1);
+    const CityId a = sovtest::addCity(s, 0, {3, 3}, true), b = sovtest::addCity(s, 0, {9, 3}, false);
+    const CityId c = sovtest::addCity(s, 0, {15, 3}, false);
+    s.cities.erase(s.cities.begin() + 1);  // b razed
+    const GameState& seen = s;
+    CHECK(s.city(a) == &s.cities[0]);
+    CHECK(s.city(b) == nullptr);
+    CHECK(seen.city(b) == nullptr);
+    CHECK(s.city(c) == &s.cities[1]);
+    CHECK(seen.city(c) == &s.cities[1]);
+    CHECK(s.city(c + 1) == nullptr);
+    CHECK(s.city(kNoCity) == nullptr);
+}
+
 TEST(game_found_city_rules) {
     GameState s = flatState(16, 12, 2);
     UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {4, 4});
