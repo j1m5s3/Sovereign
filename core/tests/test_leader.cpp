@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 #include "sovereign/ai.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addCity;
@@ -644,4 +645,40 @@ TEST(leader_goals_put_the_most_pressing_first) {
     auto k = Game::fromScenario(rules(), std::move(t));
     goals = k->leaderGoals(0);
     CHECK(std::none_of(goals.begin(), goals.end(), [](const LeaderGoal& x) { return x.kind == LeaderGoalKind::AssassinNear; }));
+}
+TEST(chronicle_records_wars_rulers_and_successions) {
+    UnitId enemy = 0;
+    auto g = duel([&](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        addLeader(s, 0, hx(5, 5));
+        s.units.back().hp = 1;
+        enemy = addUnit(s, "UNIT_SWORDSMAN", 1, hx(6, 5));
+    }, false);
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);  // a surprise war
+    pass(*g, 1);
+    REQUIRE(g->submit(Command::attack(1, enemy, hx(5, 5))) == CommandError::Ok);
+    REQUIRE(!g->leaderOf(0));
+    pass(*g, 1);
+    if (g->state().players[0].captor != kNoPlayer) REQUIRE(g->submit(Command::abandonLeader(0)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::chooseSuccessor(0, Succession::Heir)) == CommandError::Ok);
+    const std::string me = rules().civs[0].name, them = rules().civs[1].name;
+    const std::vector<std::string> lines = g->chronicleLines(0);
+    const auto has = [&](const std::string& what) {
+        return std::any_of(lines.begin(), lines.end(), [&](const std::string& l) { return l.find(what) != std::string::npos; });
+    };
+    CHECK(has("Turn 1: " + me + " declared a surprise war on " + them + "."));
+    CHECK(has(them + " captured the ruler of " + me) || has(them + " slew the ruler of " + me));
+    CHECK(has(rules().dynastyOf(g->state().players[0].civ)->names[1] + " took the throne of " + me));
+    // The other side's chronicle has the war too; it lives in the save.
+    const std::vector<std::string> theirs = g->chronicleLines(1);
+    CHECK(!theirs.empty() && theirs[0].find("surprise war") != std::string::npos);
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    CHECK(back->chronicleLines(0) == lines);
+    // The Hall of Sovereigns record names the new ruler and the reign's state.
+    const std::string hall = g->hallEntry(0);
+    CHECK(hall.find(rules().dynastyOf(g->state().players[0].civ)->names[1] + " of " + me) == 0);
+    CHECK(hall.find("the reign goes on") != std::string::npos);
+    CHECK(Game::chronicleWorthy(EventKind::LeaderLost) && !Game::chronicleWorthy(EventKind::DealProposed));
 }

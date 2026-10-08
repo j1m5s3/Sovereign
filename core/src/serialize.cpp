@@ -108,6 +108,30 @@ void readRival(ByteReader& r, RivalMemory& m) {
     for (int32_t* v : {&m.games, &m.wars, &m.betrayals, &m.leadersTaken, &m.leadersLost, &m.citiesLost, &m.friendTurns}) *v = r.i32();
 }
 
+void writeEvents(ByteWriter& w, const std::vector<GameEvent>& events) {
+    w.u32(static_cast<uint32_t>(events.size()));
+    for (const GameEvent& e : events) {
+        w.i32(e.turn);
+        w.u8(static_cast<uint8_t>(e.kind));
+        w.i8(e.actor);
+        w.i8(e.target);
+        w.i32(e.value);
+    }
+}
+bool readEvents(ByteReader& r, std::vector<GameEvent>& events) {
+    const uint32_t n = r.u32();
+    if (!r.checkCount(n, 11)) return false;
+    events.resize(n);
+    for (GameEvent& e : events) {
+        e.turn = r.i32();
+        e.kind = static_cast<EventKind>(r.u8());
+        e.actor = r.i8();
+        e.target = r.i8();
+        e.value = r.i32();
+    }
+    return true;
+}
+
 void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.u64(s.seed);
     w.str(s.mapSize);
@@ -623,6 +647,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i8(t.ai);
         writeRival(w, t.memory);
     }
+    writeEvents(w, s.chronicle);
     w.i64(s.co2);
     w.i32(s.climatePhase);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
@@ -1159,6 +1184,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         t.ai = r.i8();
         readRival(r, t.memory);
     }
+    if (!readEvents(r, s.chronicle)) return false;
     s.co2 = r.i64();
     s.climatePhase = r.i32();
     uint32_t ndrought = r.u32();

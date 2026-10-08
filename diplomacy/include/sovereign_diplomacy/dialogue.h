@@ -93,9 +93,11 @@ public:
     bool reply(const Persona& persona, const std::vector<ChatMessage>& history, const std::string& words, const std::string& proposal,
                Verdict verdict, std::string& text) override;
     bool summarize(const Persona& persona, const std::vector<ChatMessage>& history, const std::string& facts, std::string& text) override;
+    // The chronicle of a reign in a historical voice, from its plain lines (player-retention §2).
+    bool chronicle(const std::string& title, const std::vector<std::string>& lines, std::string& text);
 
 private:
-    bool complete(const std::vector<ChatMessage>& messages, bool jsonSchema, std::string& content);
+    bool complete(const std::vector<ChatMessage>& messages, bool jsonSchema, std::string& content, int maxTokens = 0);
     Transport& transport_;
     int maxTokens_;
 };
@@ -106,6 +108,16 @@ SOV_API std::string interpretInstructions(const Persona& p);
 SOV_API std::string replyInstructions(const Persona& p, const std::string& proposal, Verdict verdict);
 SOV_API std::string summaryInstructions(const Persona& p);
 SOV_API const char* interpretSchema();  // JSON schema for the structured reading
+
+// ---- the chronicle of a reign (player-retention §2; persona.cpp)
+// `title` names the reign ("Elizabeth I of England"); `lines` are Game::chronicleLines.
+constexpr size_t kMaxChronicleChars = 4000;
+constexpr size_t kChronicleLinesToModel = 120;  // the latest lines a model is given
+SOV_API std::string chronicleInstructions(const std::string& title);
+// The scripted chronicle: the lines told as short paragraphs.
+SOV_API std::string scriptedChronicle(const std::string& title, const std::vector<std::string>& lines);
+// The model's chronicle when it answers with safe text (`usedModel` true), else the scripted one.
+SOV_API std::string writeChronicle(LlamaModel* model, const std::string& title, const std::vector<std::string>& lines, bool* usedModel = nullptr);
 
 // ---- parsing (parse.cpp)
 // Reads a model's JSON into an interpretation; names of resources and sides ("leader",

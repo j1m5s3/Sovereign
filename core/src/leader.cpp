@@ -271,6 +271,8 @@ void Game::applyLeader(const Command& c) {
         l.movesLeft = Fixed();
         p.successionPending = false;
         refreshVisibility(c.player);
+        // value: the Succession kind, and for an heir its place in the dynasty (x16) for the chronicle.
+        pushEvent(EventKind::Succession, c.player, kNoPlayer, c.arg + (kind == Succession::Heir ? 16 * p.rulingHeir : 0));
         return;
     }
     Unit* u = state_.unit(c.id);
@@ -502,6 +504,7 @@ int Game::assassinSuccessPercent(const Agent& a, const Unit& leader) const {
 
 void Game::pushEvent(EventKind kind, PlayerId actor, PlayerId target, int value) {
     state_.events.push_back({state_.turn, kind, actor, target, value});
+    if (chronicleWorthy(kind)) recordChronicle(state_.events.back());
     const size_t cap = 64;
     if (state_.events.size() > cap) state_.events.erase(state_.events.begin(), state_.events.end() - static_cast<long>(cap));
 }

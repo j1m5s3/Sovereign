@@ -35,6 +35,7 @@ add_library(sovereign_core
   src/espionage.cpp
   src/worldcongress.cpp
   src/climate.cpp
+  src/chronicle.cpp
   src/profile.cpp
   src/air.cpp
   src/wmd.cpp

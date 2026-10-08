@@ -477,7 +477,7 @@ void ASovHUD::DrawHelp()
 		TEXT("P production, T research, C civics, F2 government and policies, Y great people, Z governors."),
 		TEXT("N diplomacy (talk to leaders, trade, demand), O city-states, J agents, ',' World Congress, I pantheon."),
 		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
-		TEXT("F3 yields on your plots (* worked). Rest the cursor on a plot for its details."),
+		TEXT("F3 yields on your plots (* worked). F4 the chronicle of your reign, F6 has it written up. Rest the cursor on a plot for its details."),
 		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
 		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser, then the menu (save, load, new game, quit)."),
 	};
@@ -488,6 +488,24 @@ void ASovHUD::DrawHelp()
 	for (int32 i = 0; i < UE_ARRAY_COUNT(Lines); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
 }
 
+void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
+{
+	const sov::Game& G = Sub.GetGame();
+	const std::vector<std::string> All = G.chronicleLines(static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer()));
+	constexpr int32 Shown = 22;
+	const int32 From = FMath::Max(0, static_cast<int32>(All.size()) - Shown);
+	const int32 Count = static_cast<int32>(All.size()) - From;
+	const float W = 860.f, H = 56.f + 20.f * FMath::Max(1, Count);
+	const float Left = (Canvas->ClipX - W) * 0.5f, Top = (Canvas->ClipY - H) * 0.5f;
+	DrawRect(FLinearColor(0.03f, 0.025f, 0.02f, 0.93f), Left, Top, W, H);
+	float Y = Top + 8.f;
+	Line(FString::Printf(TEXT("The chronicle of your reign (%d events%s; F4 closes)"), static_cast<int32>(All.size()), From > 0 ? TEXT(", the latest shown") : TEXT("")), Left + 14.f, Y,
+		FLinearColor(1.f, 0.85f, 0.45f));
+	if (All.empty()) Line(TEXT("Nothing of note has happened yet."), Left + 14.f, Y);
+	for (int32 i = From; i < static_cast<int32>(All.size()); ++i) Line(UTF8_TO_TCHAR(All[static_cast<size_t>(i)].c_str()), Left + 14.f, Y);
+	Line(Sub.WritingChronicle() ? TEXT("The court historian is writing...") : TEXT("F6: have the court historian write it up (a file in Saved/Sovereign/Chronicles)"), Left + 14.f, Y,
+		FLinearColor(0.8f, 0.85f, 1.f));
+}
 void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 {
 	const sov::Game& G = Sub.GetGame();
@@ -722,4 +740,5 @@ void ASovHUD::DrawHUD()
 		Line(L, 16, PY);
 	}
 	if (bShowHelp) DrawHelp();
+	if (bShowChronicle && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
 }

@@ -6,6 +6,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Tickable.h"
 
+#include "SovDiplomacy.h"
 #include "SovSession.h"
 
 #include "SovGameSubsystem.generated.h"
@@ -35,6 +36,12 @@ public:
 	static FString SavePath(const FString& Name);
 	// Resumes a game written by SaveGame (local play only).
 	bool LoadGame(const FString& Name);
+	// The chronicle of the viewer's reign, written to Saved/Sovereign/Chronicles off the game thread by the
+	// local model or the script (player-retention §2); the note lands in LastMessage. Also done at the game's end.
+	void WriteChronicle();
+	bool WritingChronicle() const { return Chronicle.IsBusy(); }
+	// The Hall of Sovereigns: one line per finished reign, newest first (Saved/Sovereign/Hall.txt).
+	static TArray<FString> HallEntries();
 	// Saved games on this machine, newest first: their names and when they were written.
 	static TArray<TPair<FString, FDateTime>> ListSaves();
 
@@ -57,5 +64,7 @@ public:
 private:
 	FSovSession Session;
 	float SinceLastSeat = 0.f;
-	bool bWroteEnd = false;  // the profile and rivals were written when the game ended for this player
+	bool bWroteEnd = false;  // the profile, rivals, chronicle and Hall entry were written when the game ended for this player
+	FSovChronicleWriter Chronicle;
+	static FString HallPath();
 };

@@ -7,6 +7,9 @@
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Algo/Reverse.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSovereign, Log, All);
 
@@ -56,6 +59,11 @@ void USovGameSubsystem::Tick(float DeltaTime)
 		NetLines.Add(N);
 		UE_LOG(LogSovereign, Log, TEXT("%s"), *N);
 	}
+	FString ChronicleNote;
+	if (Chronicle.Poll(ChronicleNote))
+	{
+		LastMessage = ChronicleNote;
+	}
 	while (NetLines.Num() > 8)
 	{
 		NetLines.RemoveAt(0);
@@ -69,6 +77,14 @@ void USovGameSubsystem::Tick(float DeltaTime)
 		if (Session.IsGameOver() || (Seat >= 0 && Seat < static_cast<int32>(S.players.size()) && !S.players[static_cast<size_t>(Seat)].alive))
 		{
 			Session.SaveProfile();
+			// The reign enters the Hall of Sovereigns, and its chronicle is written (player-retention §2).
+			const std::string Entry = Session.GetGame().hallEntry(static_cast<sov::PlayerId>(Seat));
+			if (!Entry.empty() && Session.GetGame().state().players[static_cast<size_t>(Seat)].human)
+			{
+				FFileHelper::SaveStringToFile(FDateTime::Now().ToString(TEXT("%Y-%m-%d  ")) + UTF8_TO_TCHAR(Entry.c_str()) + LINE_TERMINATOR, *HallPath(),
+					FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM, &IFileManager::Get(), FILEWRITE_Append);
+				WriteChronicle();
+			}
 			bWroteEnd = true;
 		}
 	}
@@ -157,4 +173,37 @@ TArray<TPair<FString, FDateTime>> USovGameSubsystem::ListSaves()
 TStatId USovGameSubsystem::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(USovGameSubsystem, STATGROUP_Tickables);
+}
+
+FString USovGameSubsystem::HallPath()
+{
+	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Hall.txt"));
+}
+
+TArray<FString> USovGameSubsystem::HallEntries()
+{
+	TArray<FString> Lines;
+	FFileHelper::LoadFileToStringArray(Lines, *HallPath());
+	Lines.RemoveAll([](const FString& L) { return L.TrimStartAndEnd().IsEmpty(); });
+	Algo::Reverse(Lines);
+	return Lines;
+}
+
+void USovGameSubsystem::WriteChronicle()
+{
+	if (!Session.IsRunning() || Chronicle.IsBusy())
+	{
+		return;
+	}
+	const sov::Game& G = Session.GetGame();
+	const sov::PlayerId Seat = static_cast<sov::PlayerId>(Session.ViewPlayer());
+	const sov::Player& P = G.state().players[static_cast<size_t>(Seat)];
+	const FString Civ = P.civ == sov::kNone ? FString(TEXT("Sovereign")) : FString(UTF8_TO_TCHAR(G.rules().civs[static_cast<size_t>(P.civ)].name.c_str()));
+	const FString Ruler = P.leaderName.empty() ? Civ : FString(UTF8_TO_TCHAR(P.leaderName.c_str()));
+	int32 Port = 8080;
+	FParse::Value(FCommandLine::Get(), TEXT("SovLlmPort="), Port);
+	const FString Path = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Chronicles"),
+		FString::Printf(TEXT("%s seed %llu turn %d.txt"), *Civ, G.state().setup.seed, G.state().turn));
+	Chronicle.Start(FString::Printf(TEXT("%s of %s"), *Ruler, *Civ), G.chronicleLines(Seat), Port, Path);
+	LastMessage = TEXT("The court historian is writing the chronicle...");
 }

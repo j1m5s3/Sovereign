@@ -82,6 +82,7 @@ from `../data/rules`.
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
 | `F1` / `F3` | How to play (the main keys) / yields on your territory's plots, `*` on the ones worked |
+| `F4` / `F6` | The chronicle of your reign so far (wars, assassinations, rulers captured or slain, successions, rebellions, historic moments, new ages) / have the court historian write it up: the local model (as for talks) or, without one, the scripted chronicle, saved to `Saved/Sovereign/Chronicles/`. When the game ends for you the chronicle is written and the reign enters the Hall of Sovereigns (`Saved/Sovereign/Hall.txt`, shown from the menu) |
 | `F5` / `F9` | Quicksave / quickload (local games). Saves live in `Saved/Sovereign/*.sov`; the main menu offers to continue the four latest (the autosave a live battle writes among them) |
 | Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city. The map wraps east-west: panning past one edge carries on into the other, drawn as a copy on each side |
 
@@ -106,6 +107,7 @@ Headless automation tests (no window):
 - `Sovereign.Bridge.HotSeatHandsOver`: with two human seats, the end of the first player's turn hides the screen until the second takes over, and the view then follows the second seat.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
 - `Sovereign.Bridge.HumanSeatPlaysLongGame`: a newcomer at seat 0 (the first fitting choice the controller offers, settlers to good sites, builders to empty plots, traders on routes, a pantheon, governments, cards, envoys and governors) plays two games to turn 250, answering every End Turn refusal through the chooser the controller opens, saving and resuming every 50 turns; any refusal with no way out fails it.
+- `Sovereign.Bridge.ChronicleWrittenWithoutAModel`: with no model server, the chronicle writer saves the scripted chronicle off the game thread and hands the HUD a note.
 - `Sovereign.Bridge.SaveAndLoadResume`: an all-AI game saved after a few turns resumes in a fresh session with the same state hash and plays on; a truncated save is refused and the game in hand stays.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.

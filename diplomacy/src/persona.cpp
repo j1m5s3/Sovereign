@@ -1,6 +1,9 @@
 // The leader's persona and the prompts built from it (leader doc §10: "prompt built from the
 // leader's agendas, relationship state and a short summary of past conversations"; Safety: a
 // fixed persona prompt that refuses out-of-game topics).
+#include <cctype>
+#include <cstdlib>
+#include <initializer_list>
 #include <string>
 
 #include "sovereign_diplomacy/dialogue.h"
@@ -164,6 +167,56 @@ const char* interpretSchema() {
            R"("from":{"type":"string","enum":["player","leader"]},"amount":{"type":"integer"},"resource":{"type":"string"},"city":{"type":"string"},)"
            R"("type":{"type":"string","enum":["research","military","economic","cultural","religious"]}},)"
            R"("required":["kind","from"]}}},"required":["intent","items"]})";
+}
+
+std::string chronicleInstructions(const std::string& title) {
+    return "You are the royal chronicler of " + title + " in the strategy game Sovereign. The user gives you the reign's events, one per "
+           "line, each with its turn. Write the chronicle of this reign as a court historian would, in the past tense and a grave, "
+           "vivid voice, in four to eight short paragraphs. Keep to the events given: invent no battles, names or deeds, and keep "
+           "their order. Name turns as \"in the Nth year of the reign\". Stay inside the world of the game; never mention being an "
+           "AI, a model, a game or anything outside it. No lists, headings, links or profanity, and no cruelty about real peoples.";
+}
+
+std::string scriptedChronicle(const std::string& title, const std::vector<std::string>& lines) {
+    std::string out = "The Chronicle of " + title + "\n\n";
+    if (lines.empty()) return out + "The chroniclers found nothing worth the ink.\n";
+    // "Turn 12: Rome declared war on Egypt." becomes "In the 12th year of the reign, Rome declared war on Egypt."
+    const auto ordinal = [](const std::string& n) {
+        const int v = std::atoi(n.c_str());
+        const char* suffix = (v % 100 >= 11 && v % 100 <= 13) ? "th" : v % 10 == 1 ? "st" : v % 10 == 2 ? "nd" : v % 10 == 3 ? "rd" : "th";
+        return n + suffix;
+    };
+    int inParagraph = 0;
+    for (const std::string& line : lines) {
+        std::string sentence = line;
+        const size_t colon = line.find(": ");
+        if (line.rfind("Turn ", 0) == 0 && colon != std::string::npos) {
+            const std::string turn = line.substr(5, colon - 5);
+            std::string rest = line.substr(colon + 2);
+            // Only the chronicle's own openings lose their capital; civs and rulers keep theirs.
+            for (const char* opening : {"A ", "An ", "Rebels "}) {
+                if (rest.rfind(opening, 0) == 0) rest[0] = static_cast<char>(std::tolower(static_cast<unsigned char>(rest[0])));
+            }
+            sentence = "In the " + ordinal(turn) + " year of the reign, " + rest;
+        }
+        out += (inParagraph ? " " : "") + sentence;
+        if (++inParagraph == 4) {
+            out += "\n\n";
+            inParagraph = 0;
+        }
+    }
+    if (inParagraph) out += "\n";
+    return out;
+}
+
+std::string writeChronicle(LlamaModel* model, const std::string& title, const std::vector<std::string>& lines, bool* usedModel) {
+    if (usedModel) *usedModel = false;
+    std::string text;
+    if (model && !lines.empty() && model->chronicle(title, lines, text) && filterOutput(text, kMaxChronicleChars)) {
+        if (usedModel) *usedModel = true;
+        return "The Chronicle of " + title + "\n\n" + text + "\n";
+    }
+    return scriptedChronicle(title, lines);
 }
 
 }  // namespace sov::diplomacy
