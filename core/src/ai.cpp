@@ -1012,10 +1012,16 @@ void build(View& v, UnitId id) {
     }
     std::optional<Hex> best;
     int bestScore = INT_MIN;
+    // The plots another player's unit stands on (foreignUnitAt), marked once rather than looked for plot by plot.
+    std::vector<uint8_t> foreign(static_cast<size_t>(s.grid.size()), 0);
+    for (const Unit& other : s.units) {
+        const std::optional<Hex> spot = s.grid.normalize(other.pos);
+        if (other.owner != v.me && spot && *spot == other.pos) foreign[static_cast<size_t>(s.grid.index(other.pos))] = 1;
+    }
     for (CityId cid : v.cities) {
         for (const Hex& h : s.grid.within(s.city(cid)->pos, 3)) {
             const int w = worth(h);
-            if (w < 0 || v.claimedNear(h, 0) || s.foreignUnitAt(h, v.me)) continue;
+            if (w < 0 || v.claimedNear(h, 0) || foreign[static_cast<size_t>(s.grid.index(h))]) continue;
             const int score = w * 10 - s.grid.distance(u->pos, h) * 15;
             if (score > bestScore) {
                 bestScore = score;
@@ -2618,6 +2624,8 @@ void playTurn(Game& game) {
         for (const Unit& u : game.state().units) {
             if (u.owner != v.me || std::find(taken.begin(), taken.end(), u.id) != taken.end()) continue;
             for (const Unit& w : game.state().units) {
+                // Only our own units of its type can join it (formationProblem asks that too): the rest skipped cheaply.
+                if (w.owner != v.me || w.type != u.type) continue;
                 if (w.id == u.id || std::find(taken.begin(), taken.end(), w.id) != taken.end()) continue;
                 if (game.formationProblem(v.me, u.id, w.id) != CommandError::Ok) continue;
                 merges.push_back({u.id, w.id});

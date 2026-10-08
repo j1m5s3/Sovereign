@@ -204,9 +204,10 @@ Yields Game::envoyYields(const City& city) const {
     Yields out{};
     const Player& owner = state_.players[at(city.owner)];
     if (!isMajor(owner)) return out;
+    const std::vector<int> envoys = envoysByPlayer(state_, *rules_, owner.id);
     for (const Player& cs : state_.players) {
         if (cs.cityState == kNone || !cs.alive || atWar(owner.id, cs.id)) continue;
-        const int n = envoysAt(owner.id, cs.id);
+        const int n = envoys[at(cs.id)];
         if (n <= 0) continue;
         const CityStateKind kind = rules_->cityStates[at(cs.cityState)].kind;
         for (const EnvoyBonus& b : rules_->envoyBonuses) {
@@ -226,9 +227,10 @@ int Game::envoyProduction(const City& city, ProductionItem item) const {
                                : item.kind == ProductionKind::District ? EnvoyToward::Districts
                                                                        : EnvoyToward::Buildings;
     int total = 0;
+    const std::vector<int> envoys = envoysByPlayer(state_, *rules_, owner.id);
     for (const Player& cs : state_.players) {
         if (cs.cityState == kNone || !cs.alive || atWar(owner.id, cs.id)) continue;
-        const int n = envoysAt(owner.id, cs.id);
+        const int n = envoys[at(cs.id)];
         if (n <= 0) continue;
         const CityStateKind kind = rules_->cityStates[at(cs.cityState)].kind;
         for (const EnvoyBonus& b : rules_->envoyBonuses) {

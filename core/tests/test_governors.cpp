@@ -1,5 +1,7 @@
 // Governors (08: Governors [R&F]): titles from civics, appointing, promoting along the tree,
 // establishing, loyalty, promotion effects in the city, Amani as envoys, losing a city, saves.
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/ai.h"
 #include "sovereign/serialize.h"
@@ -130,6 +132,44 @@ TEST(amani_in_a_city_state_counts_as_envoys) {
     CHECK_EQ(g->envoysAt(0, 2), 0);
     sovtest::endTurns(*g, 3 * 5);  // three players
     CHECK_EQ(g->envoysAt(0, 2), 2);
+}
+
+// Amani's envoys count toward who is suzerain and toward the city-state's envoy bonuses (08) once she is established;
+// Puppeteer makes them 4.
+TEST(amani_counts_toward_the_suzerain_and_envoy_bonuses) {
+    GameState s = govState();
+    s.players.push_back(Player{});
+    Player& cs = s.players.back();
+    cs.id = 2;
+    cs.cityState = rules().cityState("CITYSTATE_GENEVA");  // Scientific
+    Game::fitPlayerToRules(cs, rules());
+    for (Player& p : s.players) p.relations.resize(3);
+    addCity(s, 2, {10, 10}, true, 3);
+    s.players[0].met.assign(3, 1);
+    s.players[0].envoys.assign(3, 0);
+    s.players[0].envoys[2] = 1;  // one sent
+    s.cities[0].buildings.push_back(rules().building("BUILDING_UNIVERSITY"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const auto science = [&] { return g->envoyYields(g->state().cities[0])[static_cast<size_t>(YieldType::Science)]; };
+    CHECK_EQ(science(), Fixed::fromInt(1));  // the capital's, for one envoy
+    CHECK_EQ(g->suzerainOf(2), kNoPlayer);
+    const TypeIndex amani = gov("GOVERNOR_AMANI");
+    REQUIRE(g->submit(Command::appointGovernor(0, amani)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::assignGovernor(0, amani, g->state().cities.back().id)) == CommandError::Ok);
+    CHECK_EQ(science(), Fixed::fromInt(1));  // not established yet
+    CHECK_EQ(g->suzerainOf(2), kNoPlayer);
+    sovtest::endTurns(*g, 3 * 5);  // three players
+    REQUIRE(g->envoysAt(0, 2) == 3);
+    CHECK_EQ(science(), Fixed::fromInt(3));  // and the University's, for three
+    CHECK_EQ(g->suzerainOf(2), 0);
+    GameState t = g->state();
+    for (Governor& gv : t.players[0].governors) {
+        if (gv.type == amani) gv.promotions.push_back(promo("GOVERNOR_PROMOTION_PUPPETEER"));
+    }
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->envoysAt(0, 2), 5);
+    CHECK_EQ(h->suzerainOf(2), 0);
 }
 
 TEST(a_lost_city_sends_its_governor_home) {

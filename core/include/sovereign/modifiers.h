@@ -77,6 +77,8 @@ SOV_API int districtTourism(const GameState& s, const Rules& r, const Player& pl
 // a player enjoys the suzerain bonus of a city-state type (its suzerain, or a level-3 Economic ally of it,
 // at peace with the city-state).
 SOV_API int envoysAt(const GameState& s, const Rules& r, PlayerId player, PlayerId cityState);
+// envoysAt at every player (by id) at once.
+SOV_API std::vector<int> envoysByPlayer(const GameState& s, const Rules& r, PlayerId player);
 SOV_API PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cityState);
 SOV_API bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex cityStateType);
 // The same with the city-state of the type found: the first living player of the type, null when there is none.
