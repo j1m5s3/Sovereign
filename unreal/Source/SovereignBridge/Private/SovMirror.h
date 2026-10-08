@@ -25,6 +25,18 @@ struct FSovTile
 	bool bVisible = false;  // false: revealed earlier, drawn fogged
 	bool bWoods = false;    // woods or rainforest: trees on the tile
 	FLinearColor Color;     // terrain and feature, before fog
+	int32 Owner = -1;       // the civ whose territory it is (-1: none)
+	// A resource the viewer can see (0 none, 1 bonus, 2 luxury, 3 strategic) and the plot's improvement.
+	uint8 ResourceClass = 0;
+	bool bImproved = false;
+	bool bPillaged = false;
+};
+
+// One edge between two neighbouring plots: a river, or a territory border drawn on the owner's side.
+struct FSovEdge
+{
+	FIntPoint A, B;  // A: the plot whose side it is drawn on
+	FLinearColor Color;
 };
 
 struct FSovUnitMarker
@@ -74,7 +86,12 @@ struct FSovMirror
 	TArray<FSovWonderMarker> Wonders;           // on revealed plots
 	TArray<FIntPoint> Villages;                 // tribal villages on revealed plots (01)
 	TArray<FIntPoint> Antiquity;                // antiquity sites and shipwrecks, once the viewer knows Natural History (07)
+	TArray<FSovEdge> Rivers;                    // river edges between revealed plots (01)
+	TArray<FSovEdge> Borders;                   // territory edges, in the owner's colour (02)
 };
+
+// What a plot shows when the cursor rests on it (terrain, resource, improvement, owner, yields), for the viewer.
+TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int32 Y);
 
 FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);
 

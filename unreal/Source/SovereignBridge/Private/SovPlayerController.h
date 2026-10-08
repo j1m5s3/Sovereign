@@ -129,6 +129,8 @@ protected:
 public:
 	// The main menu (single player, hot seat, host or join on the network or through Steam).
 	void OpenMenu();
+	// The plot under the mouse, for the HUD's tooltip.
+	bool CursorHex(int32& OutX, int32& OutY) const { return HexUnderCursor(OutX, OutY); }
 protected:
 	void CloseMenu();
 	void StartFromMenu(const struct FSovSetup& Setup);

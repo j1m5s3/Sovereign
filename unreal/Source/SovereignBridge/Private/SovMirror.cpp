@@ -1,6 +1,7 @@
 #include "SovMirror.h"
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 
 namespace
 {
@@ -165,6 +166,35 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
 			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
 		}
+		// Territory, the resource the viewer can see, and the improvement.
+		T.Owner = Pl.owner;
+		if (Pl.resource != sov::kNone && Game.resourceVisible(View, H))
+		{
+			const sov::ResourceClass Cls = Rules.resources[static_cast<size_t>(Pl.resource)].cls;
+			T.ResourceClass = Cls == sov::ResourceClass::Luxury ? 2 : Cls == sov::ResourceClass::Strategic ? 3 : 1;
+		}
+		T.bImproved = Pl.improvement != sov::kNone;
+		T.bPillaged = T.bImproved && Pl.pillagedTurns > 0;
+		for (int32 D = 0; D < sov::kNumDirs; ++D)
+		{
+			const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));
+			if (!N)
+			{
+				continue;
+			}
+			const bool bKnown = Game.visibility(View, *N) != sov::Visibility::Unrevealed;
+			// Rivers on the edges a plot owns (E, SE, SW), so each is listed once.
+			if ((D == static_cast<int32>(sov::Dir::E) || D == static_cast<int32>(sov::Dir::SE) || D == static_cast<int32>(sov::Dir::SW)) && bKnown &&
+				sov::hasRiver(S, H, static_cast<sov::Dir>(D)))
+			{
+				M.Rivers.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), Srgb(70, 150, 230)});
+			}
+			// A border where the territory ends.
+			if (Pl.owner != sov::kNoPlayer && (!bKnown || S.plot(*N).owner != Pl.owner))
+			{
+				M.Borders.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), SovPlayerColor(Game, Pl.owner)});
+			}
+		}
 		// Roads (01: Routes) to the east, south-east and south-west neighbours, so each joint is listed once.
 		// A pillaged road is not drawn until it is repaired (05: Pillage).
 		if (Pl.route >= 0 && !Pl.routePillaged)
@@ -246,4 +276,65 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		}
 	}
 	return M;
+}
+
+TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int32 Y)
+{
+	TArray<FString> Out;
+	const sov::GameState& S = Game.state();
+	const sov::Rules& R = Game.rules();
+	const sov::Hex H{X, Y};
+	if (!S.grid.normalize(H) || Game.visibility(static_cast<sov::PlayerId>(Viewer), H) == sov::Visibility::Unrevealed)
+	{
+		return Out;
+	}
+	const sov::Plot& P = S.plot(H);
+	auto Str = [](const std::string& V) { return FString(UTF8_TO_TCHAR(V.c_str())); };
+	FString Land = Str(R.terrains[static_cast<size_t>(P.terrain)].name);
+	if (P.feature != sov::kNone)
+	{
+		Land += TEXT(", ") + Str(R.features[static_cast<size_t>(P.feature)].name);
+	}
+	bool bRiver = false;
+	for (int32 D = 0; D < sov::kNumDirs; ++D)
+	{
+		bRiver = bRiver || sov::hasRiver(S, H, static_cast<sov::Dir>(D));
+	}
+	Out.Add(FString::Printf(TEXT("(%d,%d) %s%s"), X, Y, *Land, bRiver ? TEXT(", river") : TEXT("")));
+	if (P.resource != sov::kNone && Game.resourceVisible(static_cast<sov::PlayerId>(Viewer), H))
+	{
+		const sov::ResourceType& Res = R.resources[static_cast<size_t>(P.resource)];
+		const TCHAR* Cls = Res.cls == sov::ResourceClass::Luxury ? TEXT("luxury") : Res.cls == sov::ResourceClass::Strategic ? TEXT("strategic") : TEXT("bonus");
+		Out.Add(FString::Printf(TEXT("%s (%s)"), *Str(Res.name), Cls));
+	}
+	if (P.improvement != sov::kNone)
+	{
+		Out.Add(Str(R.improvements[static_cast<size_t>(P.improvement)].name) + (P.pillagedTurns > 0 ? TEXT(" (pillaged)") : TEXT("")));
+	}
+	if (const sov::CityDistrict* Dist = S.districtAt(H))
+	{
+		Out.Add(Str(R.districts[static_cast<size_t>(Dist->type)].name) + (Dist->complete ? TEXT("") : TEXT(" (being built)")));
+	}
+	if (P.owner != sov::kNoPlayer)
+	{
+		const sov::Player& O = S.players[static_cast<size_t>(P.owner)];
+		const FString Who = O.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(O.cityState)].name)
+			: O.civ != sov::kNone ? Str(R.civs[static_cast<size_t>(O.civ)].name) : FString(TEXT("Free Cities"));
+		const sov::City* C = P.city != sov::kNoCity ? S.city(P.city) : nullptr;
+		Out.Add(C ? FString::Printf(TEXT("%s, %s"), *Str(C->name), *Who) : Who);
+		if (C)
+		{
+			// What working it would bring that city.
+			const sov::Yields Y2 = Game.plotYields(H, *C);
+			static const TCHAR* Names[] = {TEXT("Food"), TEXT("Production"), TEXT("Gold"), TEXT("Science"), TEXT("Culture"), TEXT("Faith")};
+			FString Yl;
+			for (size_t i = 0; i < sov::kNumYields && i < UE_ARRAY_COUNT(Names); ++i)
+			{
+				const int32 V = static_cast<int32>(Y2[i].toInt());
+				if (V != 0) Yl += FString::Printf(TEXT("%s%d %s"), Yl.IsEmpty() ? TEXT("") : TEXT(", "), V, Names[i]);
+			}
+			if (!Yl.IsEmpty()) Out.Add(Yl);
+		}
+	}
+	return Out;
 }

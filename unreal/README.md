@@ -79,6 +79,7 @@ from `../data/rules`.
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
+| Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city |
 
 ## Tests
 
@@ -105,5 +106,4 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 
 ## Not yet
 
-Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there are no rivers, resources,
-improvements, borders, yields, promotions UI or saves in the UI yet.
+Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there is no promotions UI or save menu yet.

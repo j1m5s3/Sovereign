@@ -617,6 +617,21 @@ void ASovHUD::DrawHUD()
 	}
 	DrawLabels(*Sub);
 	DrawStatus(*Sub, Y);
+	// The plot under the cursor: terrain, resource, improvement, owner and yields.
+	int32 TX = 0, TY = 0;
+	float MX = 0.f, MY = 0.f;
+	if (PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))
+	{
+		const TArray<FString> Tip = SovPlotTooltip(Sub->GetGame(), Sub->GetSession().ViewPlayer(), TX, TY);
+		if (Tip.Num() > 0)
+		{
+			const float W = 300.f, H = 8.f + 18.f * Tip.Num();
+			const float Left = FMath::Min(MX + 18.f, Canvas->ClipX - W - 4.f), Top = FMath::Min(MY + 18.f, Canvas->ClipY - H - 4.f);
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), Left, Top, W, H);
+			float TipY = Top + 4.f;
+			for (const FString& L : Tip) Line(L, Left + 6.f, TipY);
+		}
+	}
 	// Online: the latest notices and chat (whose turn it is shows in the status lines).
 	if (Sub->GetSession().NetMode() != ESovNet::Local)
 	{

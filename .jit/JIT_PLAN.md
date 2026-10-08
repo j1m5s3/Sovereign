@@ -30,7 +30,7 @@ At turn 200 the AI held about 7.7 cities a civ on a Small map, where Civ VI usua
 
 The game can be played end to end from the Unreal menu, but the map and controls make a playtest hard (unreal/README.md "Not yet", checked against the code on 2026-10-07).
 
-1. **Map:** draw borders, resources, improvements, rivers and roads on the map, with a tile tooltip.
+1. **Done: map.** Borders, rivers, resources and improvements are drawn (roads already were), with a tile tooltip that includes yields.
 2. **Saves:** save and load from the menu, and a quicksave.
 3. **Panels:** city and unit info panels, and a promotions screen.
 4. **Yields and help:** a yields overlay, and a short "how to play" screen.
