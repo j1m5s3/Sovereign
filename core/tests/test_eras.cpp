@@ -220,6 +220,26 @@ TEST(every_rivals_home_tourists_must_be_beaten) {
     CHECK_EQ(victor(1800), kNoPlayer);  // twelve at home
 }
 
+// A city-state and a fallen civ are no rivals: six visitors from the one civ left clear the floor, and neither the
+// tourists the fallen civ sent before it fell nor those it kept at home count.
+TEST(city_states_and_fallen_civs_are_no_culture_rivals) {
+    GameState s = flatState(30, 14, 4);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {4, 6}, true, 4);
+    addCity(s, 1, {14, 6}, true, 4);
+    addCity(s, 2, {24, 6}, true, 4);
+    s.players[2].cityState = rules().cityState("CITYSTATE_GENEVA");
+    s.players[3].alive = false;
+    s.majorsAtStart = 2;  // a tourist is 2 x 200 Tourism
+    s.players[0].tourismTo = {0, 400 * 6, 0, 400 * 6};  // six visitors from player 1, six from the fallen civ
+    s.players[1].lifetimeCulture = Fixed::fromInt(900);  // nine tourists, six of them visiting us: three at home
+    s.players[3].lifetimeCulture = Fixed::fromInt(2000);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->visitingTourists(0), 6);
+    CHECK_EQ(g->domesticTourists(1), 3);
+    CHECK_EQ(g->cultureVictor(), 0);
+}
+
 TEST(eras_survive_a_save) {
     GameState s = eraState();
     s.players[0].eraScore = 7;

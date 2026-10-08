@@ -761,6 +761,7 @@ private:
         // the one it replaces) or the finished district, and how many of its units are of the type (a civ's unique
         // counting as the unit it replaces).
         std::optional<std::vector<int>> buildingCities, districtCities, unitsOfType;
+        std::optional<int> alliance;  // its highest allianceLevel with another player (INT_MIN with none)
     };
     bool boostMet(PlayerId player, const Boost& boost, BoostScan& scan) const;
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
