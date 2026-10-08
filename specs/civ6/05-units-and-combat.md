@@ -24,7 +24,7 @@ Unit instance { id, type, owner, plot, hp (0..100), moves_left, xp, level,
 ## Stacking (1UPT)
 - Per tile, at most one unit per **layer**: military (land or naval combat unit), civilian (Settler, Builder, Trader, Great Person, Archaeologist, Naturalist, religious units), support (Battering Ram, Siege Tower, Military Engineer, Medic, Observation Balloon, Drone, Anti-Air Gun, Mobile SAM, Supply Convoy). Air units are based in cities/Aerodromes/airstrips/carriers and do not occupy map layers.
 - Units of different owners never share a tile. A civilian on a tile with a friendly military unit is "escorted"; units can be **linked** to move together.
-- A unit may move through a tile holding a unit of its layer, of its own civ or of a civ it is not at war with, if it has the movement to enter the tile beyond: it never ends a move there. Civilians pass too (source: https://civilization.fandom.com/wiki/Movement_(Civ6), "Moving around Other Nations' Units").
+- A unit may move through a tile holding a unit of its own civ of its layer, or any unit of a civ it is not at war with, if it has the movement to enter the tile beyond: it never ends a move there. Civilians pass too (source: https://civilization.fandom.com/wiki/Movement_(Civ6), "Moving around Other Nations' Units").
 - Moving a military unit into a tile holding only an enemy civilian captures it. Capture results come from `UnitCaptures` (data): a captured Settler stays a Settler and a Builder stays a Builder (see [data/units.md](data/units.md#unit-capture-results)). Other civilians that are not capturable (e.g., Traders) are destroyed/plundered. Religious units can only be removed by military units at war via "Condemn Heretic" (see 06).
 
 ## Unit classes and representative units

@@ -199,8 +199,9 @@ TEST(game_one_unit_per_tile) {
     REQUIRE(g->submit(Command::move(0, settler, {5, 4})) == CommandError::Ok);
     CHECK_EQ(g->state().unit(settler)->pos, (Hex{5, 4}));
     CHECK_EQ(g->state().unit(b)->pos, (Hex{5, 4}));
-    // Foreign units block (no war yet).
-    CHECK(!g->moveCost(*g->state().unit(b), {5, 4}, {4, 6}).has_value());
+    // Another player's unit (no war yet) may be passed, but no move ends on it.
+    CHECK_EQ(g->moveCost(*g->state().unit(b), {4, 5}, {4, 6}).value_or(Fixed()), Fixed::fromInt(1));
+    CHECK_EQ(g->submit(Command::move(0, b, {4, 6})), CommandError::NoPath);
 }
 
 // A unit may pass its owner's units of its layer but never end a turn on one (05: Stacking): its path plans no turn's
@@ -335,6 +336,86 @@ TEST(game_moves_never_end_on_our_units) {
             REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
         }
         CHECK_EQ(g->state().unit(w)->pos, (Hex{7, 6}));
+    }
+}
+
+// A unit may pass another player's units as well while not at war with it, but never end a move on one, of any
+// layer (05: Stacking); at war it keeps out of their plots (attacks and captures are their own commands).
+TEST(game_moves_pass_other_players_units_at_peace) {
+    // The wall of mountains at x = 5 again, another player's Warrior in its gap (5,6); hills beyond it if asked.
+    const auto wall = [](bool hills, bool war) {
+        GameState s = flatState(20, 14, 2);
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        for (int y = 0; y < 14; ++y) {
+            if (y != 6) setTerrain(s, {5, y}, "TERRAIN_GRASS_MOUNTAIN");
+            if (hills) setTerrain(s, {6, y}, "TERRAIN_GRASS_HILLS");
+        }
+        addUnit(s, "UNIT_WARRIOR", 1, {5, 6});
+        s.units.back().activity = Activity::Sleep;
+        for (Player& p : s.players) p.relations.resize(2);
+        s.players[0].relations[1].war = s.players[1].relations[0].war = war;
+        return s;
+    };
+    {
+        // Neither a Warrior nor a Builder may stop on it. The Warrior passes it to the plot beyond; the Builder, two
+        // plots back, would reach it with no moves left, so it waits a plot short and passes next turn.
+        GameState s = wall(false, false);
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        const UnitId b = addUnit(s, "UNIT_BUILDER", 0, {3, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(g->moveCost(*g->state().unit(w), {4, 6}, {5, 6}).value_or(Fixed()), Fixed::fromInt(1));
+        CHECK_EQ(g->submit(Command::move(0, w, {5, 6})), CommandError::NoPath);
+        CHECK_EQ(g->submit(Command::move(0, b, {5, 6})), CommandError::NoPath);
+        CHECK(!g->moveReach(b)[static_cast<size_t>(g->state().grid.index({5, 6}))]);
+        REQUIRE(g->submit(Command::move(0, w, {7, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(w)->pos, (Hex{6, 6}));
+        REQUIRE(g->submit(Command::move(0, b, {6, 7})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{4, 6}));
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{6, 6}));
+    }
+    {
+        // With hills beyond, a Warrior would stop on it with 1 MP left: no path. A Scout gets past with 3.
+        GameState s = wall(true, false);
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        const UnitId sc = addUnit(s, "UNIT_SCOUT", 0, {4, 5});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(g->submit(Command::move(0, w, {7, 6})), CommandError::NoPath);
+        REQUIRE(g->submit(Command::move(0, sc, {6, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(sc)->pos, (Hex{6, 6}));
+    }
+    {
+        // At war the gap is closed to moves.
+        GameState s = wall(false, true);
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK(!g->moveCost(*g->state().unit(w), {4, 6}, {5, 6}).has_value());
+        CHECK_EQ(g->submit(Command::move(0, w, {7, 6})), CommandError::NoPath);
+    }
+    {
+        // Two walls, at x = 5 and x = 7, forest in both gaps, our Warrior in the second. A Heavy Chariot has 3 MP where
+        // its turn starts on open ground, 2 in forest. It passes the other player's Warrior with 1 MP left: from that
+        // forest the search finds no way on, as 2 MP a turn cannot pass ours, so it goes on as its path said, and
+        // passes ours next turn.
+        GameState s = wall(false, false);
+        for (int y = 0; y < 14; ++y) {
+            if (y != 6) setTerrain(s, {7, y}, "TERRAIN_GRASS_MOUNTAIN");
+        }
+        setFeature(s, {5, 6}, "FEATURE_FOREST");
+        setFeature(s, {7, 6}, "FEATURE_FOREST");
+        addUnit(s, "UNIT_WARRIOR", 0, {7, 6});
+        const UnitId c = addUnit(s, "UNIT_HEAVY_CHARIOT", 0, {4, 6});
+        s.units.back().movesLeft = Fixed::fromInt(3);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->maxMoves(*g->state().unit(c)) == 3);
+        REQUIRE(g->submit(Command::move(0, c, {8, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(c)->pos, (Hex{6, 6}));
+        CHECK(g->state().unit(c)->moveTarget.has_value());
+        for (const Unit& u : g->state().units) {
+            if (u.owner == 0 && u.id != c) REQUIRE(g->submit(Command::setActivity(0, u.id, Activity::Sleep)) == CommandError::Ok);
+        }
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().unit(c)->pos, (Hex{8, 6}));
     }
 }
 
