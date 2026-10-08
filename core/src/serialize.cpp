@@ -162,6 +162,7 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.barbarianClans);
     w.boolean(s.monopolies);
     w.boolean(s.rivalMemory);
+    w.i32(s.startEra);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -197,6 +198,7 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.barbarianClans = r.boolean();
     s.monopolies = r.boolean();
     s.rivalMemory = r.boolean();
+    s.startEra = r.i32();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {

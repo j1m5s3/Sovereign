@@ -39,6 +39,10 @@ struct FSovSetup
 	uint64 Seed = 7;
 	int32 Players = 4;
 	FString MapSize = TEXT("MAPSIZE_TINY");
+	// Shorter games (player-retention §5): the speed (GAMESPEED_SHORT_REIGN is 100 turns) and the era to begin in
+	// (empty: Ancient). -SovSpeed= and -SovEra=.
+	FString Speed = TEXT("GAMESPEED_STANDARD");
+	FString StartEra;
 	// Difficulty: 0 Settler .. 3 Prince .. 7 Deity (the core's Rules::difficulties).
 	int32 Difficulty = 3;
 	// Seat 0 is played by the human; false lets the AI play every seat (spectating seat 0).

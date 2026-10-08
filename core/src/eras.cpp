@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/modifiers.h"
 
 namespace sov {
@@ -106,7 +107,10 @@ void Game::awardFirst(PlayerId pid, const char* worldId, const char* ownId, int 
     if (o == kNone) return;
     if (at(o) < p.momentEras.size() && p.momentEras[at(o)] >= key + 1) return;
     awardMoment(pid, ownId);
-    state_.players[at(pid)].momentEras[at(o)] = static_cast<int8_t>(key + 1);
+    // Marked even when the moment fell outside its era window (awardMoment then sized nothing).
+    std::vector<int8_t>& seen = state_.players[at(pid)].momentEras;
+    if (seen.size() < rules_->moments.size()) seen.resize(rules_->moments.size(), 0);
+    seen[at(o)] = static_cast<int8_t>(key + 1);
 }
 
 void Game::awardOnce(PlayerId pid, const char* id) {
@@ -473,6 +477,43 @@ PlayerId Game::cultureVictor() const {
         if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return p.id;
     }
     return kNoPlayer;
+}
+
+// A game begun in a later era (game-setup.md, Advanced start eras; player-retention §5): every civ and
+// city-state knows the techs and civics of the eras before it (without their moments), majors get the
+// era's gold, faith and units beside the usual ones, and the world starts in that era. Cities founded
+// later get their population and buildings in applyFoundCity.
+void Game::applyEraStart() {
+    const int startEra = std::clamp(state_.setup.startEra, 0, static_cast<int>(rules_->eras.size()) - 1);
+    const EraStartType* es = rules_->eraStart(startEra);
+    state_.gameEra = startEra;
+    for (Player& p : state_.players) {
+        if (p.barbarian) continue;
+        for (bool civic : {false, true}) {
+            const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+            TreeProgress& tree = civic ? p.civics : p.techs;
+            for (size_t i = 0; i < nodes.size() && i < tree.done.size(); ++i) {
+                if (nodes[i].era >= startEra || tree.done[i]) continue;
+                tree.done[i] = 1;
+                if (civic) p.envoyTokens += nodes[i].envoys;
+            }
+        }
+        p.freeChanges = true;
+        if (!es || p.cityState != kNone) continue;
+        p.gold += Fixed::fromInt(es->gold);
+        p.faith += Fixed::fromInt(es->faith);
+        for (const auto& [type, count] : es->units) {
+            const UnitLayer layer = rules_->units[at(type)].layer;
+            for (int k = 0; k < count; ++k) {
+                for (const Hex& h : state_.grid.within(p.startPos, 3)) {
+                    if (isLandPassable(state_, *rules_, h) && !state_.unitAt(h, layer, *rules_) && !state_.foreignUnitAt(h, p.id)) {
+                        spawnUnit(type, p.id, h);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 }  // namespace sov

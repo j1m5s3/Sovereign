@@ -2340,6 +2340,33 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         startingUnits.push_back(u);
     }
+    for (const auto& [id, j] : m.tables["eraStarts"]) {
+        EraStartType es;
+        es.era = era(id);
+        if (es.era == kNone) {
+            *error = "era start " + id + ": unknown era";
+            return false;
+        }
+        es.gold = static_cast<int>(j["gold"].integer(0));
+        es.faith = static_cast<int>(j["faith"].integer(0));
+        es.capitalPopulation = static_cast<int>(j["capitalPopulation"].integer(1));
+        es.otherPopulation = static_cast<int>(j["otherPopulation"].integer(1));
+        for (const auto& [u, count] : j["units"].members()) {
+            if (unit(u) == kNone) {
+                *error = "era start " + id + ": unknown unit " + u;
+                return false;
+            }
+            es.units.push_back({unit(u), static_cast<int>(count.integer(1))});
+        }
+        for (const Json& b : j["buildings"].items()) {
+            if (building(b.str()) == kNone) {
+                *error = "era start " + id + ": unknown building " + b.str();
+                return false;
+            }
+            es.buildings.push_back(building(b.str()));
+        }
+        eraStarts.push_back(std::move(es));
+    }
 
     // The weapons the projects build (05: Nuclear weapons), before the projects.
     for (const auto& [id, j] : m.tables["wmds"]) {
@@ -2633,6 +2660,12 @@ const Dynasty* Rules::dynastyOf(TypeIndex c) const {
 }
 TypeIndex Rules::mapSize(const std::string& id) const { return findIn(mapSizes, id); }
 TypeIndex Rules::speed(const std::string& id) const { return findIn(speeds, id); }
+const EraStartType* Rules::eraStart(int e) const {
+    for (const EraStartType& es : eraStarts) {
+        if (es.era == e) return &es;
+    }
+    return nullptr;
+}
 
 TypeIndex Rules::terrainFor(const std::string& base, Relief relief) const {
     for (size_t i = 0; i < terrains.size(); ++i) {

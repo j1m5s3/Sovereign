@@ -539,6 +539,7 @@ struct GameSetup {
     bool barbarianClans = false;  // optional mode: camps can be bribed, hired, incited, and become city-states (01: Barbarians)
     bool monopolies = false;      // optional mode: Industries, Corporations and Monopolies on luxuries (07)
     bool rivalMemory = true;      // AI leaders remember humans from earlier games (player-retention §1)
+    int startEra = 0;             // Rules::eras index the game begins in (0: Ancient; player-retention §5)
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };

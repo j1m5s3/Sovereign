@@ -24,6 +24,8 @@ FSovSetup FSovSetup::FromCommandLine()
 	FParse::Value(Cmd, TEXT("SovSeed="), Setup.Seed);
 	FParse::Value(Cmd, TEXT("SovPlayers="), Setup.Players);
 	FParse::Value(Cmd, TEXT("SovSize="), Setup.MapSize);
+	FParse::Value(Cmd, TEXT("SovSpeed="), Setup.Speed);
+	FParse::Value(Cmd, TEXT("SovEra="), Setup.StartEra);
 	if (FParse::Param(Cmd, TEXT("SovSpectate")))
 	{
 		Setup.bHumanSeat0 = false;
@@ -59,7 +61,8 @@ FSovSetup FSovSetup::FromCommandLine()
 bool FSovSetup::HasStartOptions()
 {
 	static const TCHAR* const Options[] = {TEXT("SovSeed="), TEXT("SovPlayers="), TEXT("SovSize="), TEXT("SovSpectate"), TEXT("SovBattleDemo"),
-		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart")};
+		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart"),
+		TEXT("SovSpeed="), TEXT("SovEra=")};
 	const FString Cmd = FCommandLine::Get();
 	for (const TCHAR* O : Options)
 	{
@@ -154,6 +157,17 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup = std::make_unique<sov::GameSetup>();
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
+	CoreSetup->speed = TCHAR_TO_UTF8(*Setup.Speed);
+	if (!Setup.StartEra.IsEmpty())
+	{
+		const sov::TypeIndex Era = Rules->era(TCHAR_TO_UTF8(*Setup.StartEra));
+		if (Era == sov::kNone)
+		{
+			OutError = FString::Printf(TEXT("unknown era %s"), *Setup.StartEra);
+			return false;
+		}
+		CoreSetup->startEra = static_cast<int>(Era);
+	}
 	CoreSetup->liveBattles = Setup.bHumanSeat0;  // melee with the human's leader stack can be fought live
 	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
 	int32 Disasters = CoreSetup->disasterIntensity;

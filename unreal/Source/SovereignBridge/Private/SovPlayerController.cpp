@@ -70,6 +70,18 @@ int32 TurnsFor(int32 Remaining, int32 PerTurn)
 	return PerTurn > 0 ? FMath::Max(1, (Remaining + PerTurn - 1) / PerTurn) : 999;
 }
 
+// The menu's game lengths and start eras (player-retention §5).
+struct FMenuChoice
+{
+	const TCHAR* Id;
+	const TCHAR* Label;
+};
+const FMenuChoice kMenuSpeeds[] = {{TEXT("GAMESPEED_STANDARD"), TEXT("Standard (500 turns)")}, {TEXT("GAMESPEED_SHORT_REIGN"), TEXT("Short Reign (100 turns)")},
+	{TEXT("GAMESPEED_ONLINE"), TEXT("Online (250 turns)")}, {TEXT("GAMESPEED_QUICK"), TEXT("Quick (330 turns)")}, {TEXT("GAMESPEED_EPIC"), TEXT("Epic (750 turns)")},
+	{TEXT("GAMESPEED_MARATHON"), TEXT("Marathon (1500 turns)")}};
+const FMenuChoice kMenuEras[] = {{TEXT("ERA_ANCIENT"), TEXT("Ancient")}, {TEXT("ERA_CLASSICAL"), TEXT("Classical")}, {TEXT("ERA_MEDIEVAL"), TEXT("Medieval")},
+	{TEXT("ERA_RENAISSANCE"), TEXT("Renaissance")}, {TEXT("ERA_INDUSTRIAL"), TEXT("Industrial")}, {TEXT("ERA_MODERN"), TEXT("Modern")},
+	{TEXT("ERA_ATOMIC"), TEXT("Atomic")}, {TEXT("ERA_INFORMATION"), TEXT("Information")}};
 const FKey DigitKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine};
 constexpr int32 PageSize = 9;
 }  // namespace
@@ -2500,6 +2512,8 @@ void ASovPlayerController::OpenMenu()
 		S.PlayerName = Name.IsEmpty() ? FString(TEXT("Player")) : Name;
 		S.Difficulty = MenuDifficulty;
 		S.bRivalMemory = bMenuRivals;
+		S.Speed = kMenuSpeeds[MenuSpeed].Id;
+		S.StartEra = MenuEra > 0 ? kMenuEras[MenuEra].Id : TEXT("");
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
@@ -2555,8 +2569,17 @@ void ASovPlayerController::OpenMenu()
 					MenuDifficulty = FMath::Min(7, MenuDifficulty + 1);
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
-			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
+			// Shorter games (player-retention §5): the game's length and the era it begins in.
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuSpeed = (MenuSpeed + 1) % UE_ARRAY_COUNT(kMenuSpeeds);
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuEra = (MenuEra + 1) % UE_ARRAY_COUNT(kMenuEras);
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
@@ -2571,6 +2594,7 @@ void ASovPlayerController::OpenMenu()
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
 			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
