@@ -6,6 +6,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -254,6 +255,7 @@ TEST(civ_abilities_colonia_and_craft_guilds) {
     // Japan: an Industrial Zone next to a Theater Square gains production adjacency.
     GameState j = pair("CIVILIZATION_JAPAN", "CIVILIZATION_ROME", {});
     j.cities[0].districts.push_back({rules().district("DISTRICT_THEATER_SQUARE"), {5, 7}, true});
+    claimFor(j, j.cities[0], {5, 7});
     auto gj = Game::fromScenario(rules(), j);
     const TypeIndex iz = rules().district("DISTRICT_INDUSTRIAL_ZONE");
     const Fixed withGuild = gj->districtAdjacency(0, iz, {6, 7})[static_cast<size_t>(YieldType::Production)];

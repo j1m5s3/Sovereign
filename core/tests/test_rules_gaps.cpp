@@ -7,6 +7,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -21,6 +22,27 @@ TEST(cities_may_stand_closer_across_water) {
     CommandError why = CommandError::Ok;
     CHECK(!g->canFoundCityAt(0, {5, 8}, &why));  // three away on the same landmass
     CHECK_EQ(why, CommandError::TooCloseToCity);
+}
+
+TEST(no_city_is_founded_on_a_district_or_wonder_across_the_water) {
+    // A district or wonder may stand three plots from its city on another landmass, where a city could be founded
+    // (above), but the plot is taken (03).
+    const auto founding = [](bool district, bool wonder) {
+        GameState s = flatState(20, 12, 1);
+        Game::fitPlayerToRules(s.players[0], rules());
+        addCity(s, 0, {5, 5}, true, 3);
+        for (Plot& p : s.plots) p.continent = 0;
+        s.plot({8, 5}).continent = 1;
+        claimFor(s, s.cities[0], {8, 5});
+        if (district) s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {8, 5}, true});
+        if (wonder) s.cities[0].wonders.push_back({rules().building("BUILDING_STONEHENGE"), {8, 5}});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CommandError why = CommandError::Ok;
+        return g->canFoundCityAt(0, {8, 5}, &why) ? CommandError::Ok : why;
+    };
+    CHECK_EQ(founding(false, false), CommandError::Ok);  // in its own land, with nothing on the plot
+    CHECK_EQ(founding(true, false), CommandError::CannotFoundHere);
+    CHECK_EQ(founding(false, true), CommandError::CannotFoundHere);
 }
 
 TEST(occupied_cities_do_not_grow) {
@@ -68,6 +90,26 @@ TEST(support_units_and_open_ground) {
     const UnitType& ct = rules().units[static_cast<size_t>(rules().unit("UNIT_HEAVY_CHARIOT"))];
     CHECK_EQ(g->maxMoves(*g->state().unit(chariot)), ct.moves + 1);  // flat grassland, no feature
     CHECK_EQ(g->unitRange(*g->state().unit(catapult)), g->unitRange(*g->state().unit(lone)) + 1);
+}
+
+// The balloon's +1 range (05: Support units) is for its own side's siege units beside it, and counts once however
+// many balloons are beside one.
+TEST(an_observation_balloon_helps_only_its_own_siege_units_beside_it) {
+    GameState s = flatState(24, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const UnitId lone = addUnit(s, "UNIT_CATAPULT", 0, {2, 2});
+    const UnitId twice = addUnit(s, "UNIT_CATAPULT", 0, {8, 4});
+    addUnit(s, "UNIT_OBSERVATION_BALLOON", 0, {7, 4});
+    addUnit(s, "UNIT_OBSERVATION_BALLOON", 0, {9, 4});
+    const UnitId far = addUnit(s, "UNIT_CATAPULT", 0, {14, 4});
+    addUnit(s, "UNIT_OBSERVATION_BALLOON", 0, {16, 4});  // two plots away
+    const UnitId foreign = addUnit(s, "UNIT_CATAPULT", 0, {20, 8});
+    addUnit(s, "UNIT_OBSERVATION_BALLOON", 1, {21, 8});  // another player's
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int base = g->unitRange(*g->state().unit(lone));
+    CHECK_EQ(g->unitRange(*g->state().unit(twice)), base + 1);
+    CHECK_EQ(g->unitRange(*g->state().unit(far)), base);
+    CHECK_EQ(g->unitRange(*g->state().unit(foreign)), base);
 }
 
 TEST(a_captured_city_can_be_liberated) {

@@ -8,6 +8,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -653,6 +654,7 @@ TEST(nan_madol_pays_culture_for_districts_by_the_coast) {
         ds.push_back({rules().district("DISTRICT_ENCAMPMENT"), {3, 5}, false});      // unfinished
         ds.push_back({rules().district("DISTRICT_HOLY_SITE"), {2, 6}, true});        // pillaged
         ds.back().pillagedTurns = kPillagedDistrictTurns;
+        for (const CityDistrict& d : ds) claimFor(s, s.cities[0], d.pos);
         auto g = Game::fromScenario(rules(), std::move(s));
         return g->cityReport(g->state().cities[0].id).yields[yi(YieldType::Culture)];
     };
@@ -723,6 +725,7 @@ TEST(vilnius_raises_theater_squares_with_each_alliance_level) {
     const auto adjacency = [](const char* cityState, int alliancePoints) {
         GameState s = suzerainState(cityState);
         s.cities[0].districts.push_back({rules().district("DISTRICT_ENTERTAINMENT_COMPLEX"), {6, 6}, true});
+        claimFor(s, s.cities[0], {6, 6});
         if (alliancePoints >= 0) {
             Relation& r = s.players[0].relations[1];
             r.alliance = AllianceType::Cultural;

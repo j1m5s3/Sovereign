@@ -239,6 +239,22 @@ TEST(a_religion_followed_across_every_civ_wins) {
     CHECK(g->state().victory == Victory::Religious);
 }
 
+// A civ counts once more than half its cities follow the religion: half of them is not enough.
+TEST(half_a_civs_cities_is_not_enough_for_a_religious_victory) {
+    const auto victor = [](bool both) {
+        GameState s = religionState();
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+        s.players[0].religion = 0;
+        s.cities[0].pressure = {10000};
+        s.cities[2].pressure = {10000};
+        if (both) s.cities[1].pressure = {10000};
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->religiousVictor();
+    };
+    CHECK_EQ(victor(false), kNoPlayer);  // one of player 0's two cities
+    CHECK_EQ(victor(true), 0);
+}
+
 TEST(pantheon_beliefs_take_effect) {
     // Desert Folklore: the Holy Site gains +1 Faith per adjacent Desert.
     GameState s = religionState();

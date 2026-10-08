@@ -62,16 +62,20 @@ const City* GameState::city(CityId id) const {
     return at < cities.size() ? &cities[at] : findById(cities, id);
 }
 
+const City* GameState::landCity(Hex h) const {
+    if (h.x < 0 || h.y < 0 || h.x >= grid.width() || h.y >= grid.height()) return nullptr;  // off the map, or not as stored
+    const CityId id = plots[static_cast<size_t>(grid.index(h))].city;
+    return id == kNoCity ? nullptr : city(id);
+}
+
 const City* GameState::cityAt(Hex h) const {
-    for (const City& c : cities) {
-        if (c.pos == h) return &c;
-    }
-    return nullptr;
+    const City* c = landCity(h);
+    return c && c->pos == h ? c : nullptr;
 }
 
 TypeIndex GameState::wonderAt(Hex h) const {
-    for (const City& c : cities) {
-        for (const CityWonder& w : c.wonders) {
+    if (const City* c = landCity(h)) {
+        for (const CityWonder& w : c->wonders) {
             if (w.pos == h) return w.building;
         }
     }
@@ -79,8 +83,8 @@ TypeIndex GameState::wonderAt(Hex h) const {
 }
 
 const CityDistrict* GameState::districtAt(Hex h) const {
-    for (const City& c : cities) {
-        for (const CityDistrict& d : c.districts) {
+    if (const City* c = landCity(h)) {
+        for (const CityDistrict& d : c->districts) {
             if (d.pos == h) return &d;
         }
     }

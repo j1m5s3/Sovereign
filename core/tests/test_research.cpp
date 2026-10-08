@@ -7,6 +7,7 @@
 
 using namespace sov;
 using sovtest::capitalScenario;
+using sovtest::claimFor;
 using sovtest::endTurns;
 using sovtest::flatState;
 using sovtest::rules;
@@ -711,6 +712,7 @@ TEST(dark_age_cards_come_with_a_dark_age_and_go_with_it) {
         holy.pos = {9, 7};
         holy.complete = true;
         s.cities[0].districts.push_back(holy);
+        claimFor(s, s.cities[0], holy.pos);
     };
     auto g = capitalWith(setup);
     const TypeIndex monasticism = policy("POLICY_MONASTICISM");
@@ -907,6 +909,7 @@ TEST(generated_policy_cards_take_effect) {
                 d.pos = {static_cast<int>(s.cities[0].districts.size()) == 0 ? 7 : 5, 7};
                 d.complete = true;
                 s.cities[0].districts.push_back(d);
+                claimFor(s, s.cities[0], d.pos);
             }
         };
         auto g = with("POLICY_INSULAE", districts);
@@ -1046,6 +1049,7 @@ TEST(policy_cards_in_code_military_and_economy) {
             d.pos = {7, 7};
             d.complete = true;
             s.cities[0].districts.push_back(d);
+            claimFor(s, s.cities[0], d.pos);
             s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
             std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
             s.cities[0].population = 15;
