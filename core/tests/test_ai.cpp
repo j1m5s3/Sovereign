@@ -214,7 +214,8 @@ TEST(ai_scouts_explore_past_ground_they_cannot_reach) {
 }
 
 // Two Builders split the work: the first heads for the Wheat (on land already seen), and the second leaves it to the
-// first. They start off the city's land, too far out to reach the Wheat this turn or when the next one begins.
+// first, in the turn they set off and in the turns after, while the first is on its way. They start off the city's land,
+// too far out to reach the Wheat before the fourth turn begins.
 TEST(ai_builders_split_up_over_the_work) {
     GameState s = flatState(20, 14, 1);
     addCity(s, 0, {6, 6}, true);
@@ -225,15 +226,161 @@ TEST(ai_builders_split_up_over_the_work) {
     const UnitId first = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
     const UnitId second = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
     auto g = Game::fromScenario(rules(), std::move(s));
-    ai::playTurn(*g);
-    int bound = 0;
-    for (const UnitId id : {first, second}) {
-        const Unit* u = g->state().unit(id);
-        REQUIRE(u);
-        bound += u->pos == wheat || u->moveTarget == wheat ? 1 : 0;
+    for (int turn = 0; turn < 3; ++turn) {
+        ai::playTurn(*g);
+        int bound = 0;
+        for (const UnitId id : {first, second}) {
+            const Unit* u = g->state().unit(id);
+            REQUIRE(u);
+            bound += u->pos == wheat || u->moveTarget == wheat ? 1 : 0;
+        }
+        CHECK_EQ(bound, 1);
+        CHECK(g->state().plot(wheat).improvement == kNone);  // not reached yet
     }
-    CHECK_EQ(bound, 1);
-    CHECK(g->state().plot(wheat).improvement == kNone);  // not reached yet
+}
+
+// A Builder whose best plots are out of its reach (six Wheat plots on an island, before it may embark) works the best
+// plot it can reach, rather than wait on the Wheat for good: one failed move is enough to look for the plots in reach.
+TEST(ai_builders_work_what_they_can_reach) {
+    GameState s = flatState(20, 14, 1);
+    for (int y = 0; y < 14; ++y) {
+        for (int x = 7; x < 20; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    }
+    addCity(s, 0, {6, 6}, true);
+    std::vector<Hex> island;
+    for (const Hex& h : s.grid.within({6, 6}, 3)) {
+        sovtest::claimFor(s, s.cities[0], h);
+        if (h.x < 8) continue;
+        s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
+        s.plot(h).resource = rules().resource("RESOURCE_WHEAT");
+        island.push_back(h);
+    }
+    REQUIRE(island.size() >= 6);
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    const Unit* u = g->state().unit(builder);
+    REQUIRE(u);
+    CHECK(u->pos.x < 7);
+    CHECK(u->pos != (Hex{6, 6}));
+    CHECK(g->state().plot(u->pos).improvement != kNone);
+    for (const Hex& h : island) CHECK(g->state().plot(h).improvement == kNone);
+}
+
+// A Builder out of moves on a plot to improve waits there and improves it next turn, rather than set off for the next
+// plot (where a move order's step at the next turn's start would leave it out of moves again, and so on). Here its
+// order's steps at the start of the turn bring it to the plot out of moves.
+TEST(ai_builders_out_of_moves_wait_on_their_plot) {
+    GameState s = flatState(20, 14, 1);
+    addCity(s, 0, {6, 6}, true);
+    const Hex here{8, 6}, next{9, 6};
+    for (const Hex& h : s.grid.within({6, 6}, 3)) {
+        sovtest::claimFor(s, s.cities[0], h);
+        if (h != Hex{6, 6} && h != here && h != next) s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+    }
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+    s.units.back().moveTarget = here;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->state().unit(builder)->pos == here);
+    REQUIRE(g->state().unit(builder)->movesLeft == Fixed());
+    ai::playTurn(*g);
+    const Unit* u = g->state().unit(builder);
+    REQUIRE(u);
+    CHECK_EQ(u->pos, here);
+    CHECK(!u->moveTarget);
+    CHECK(g->state().plot(next).improvement == kNone);
+    ai::playTurn(*g);
+    CHECK(g->state().plot(here).improvement != kNone);
+}
+
+// A Builder on its way to a plot that was improved meanwhile (by another Builder) turns to other work.
+TEST(ai_builders_turn_from_a_plot_improved_meanwhile) {
+    GameState s = flatState(20, 14, 1);
+    addCity(s, 0, {6, 6}, true);
+    for (const Hex& h : s.grid.within({6, 6}, 3)) sovtest::claimFor(s, s.cities[0], h);
+    const Hex wheat{9, 6};
+    s.plot(wheat).resource = rules().resource("RESOURCE_WHEAT");
+    s.plot(wheat).improvement = rules().improvement("IMPROVEMENT_FARM");
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
+    s.units.back().moveTarget = wheat;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->state().unit(builder)->moveTarget == std::optional<Hex>(wheat));  // under way when the turn begins
+    ai::playTurn(*g);
+    const Unit* u = g->state().unit(builder);
+    REQUIRE(u);
+    CHECK(u->moveTarget != std::optional<Hex>(wheat));
+    CHECK(g->state().grid.distance(u->pos, {6, 6}) <= 3);  // at other work on the city's land
+}
+
+// A city trains a Builder only while there are more plots to improve than its Builders carry charges, counting the
+// Builders in training (and not a stranger's): with a Builder of three charges, three plots left train none and four
+// one; with four, a Builder already in training in another city, or one another city picks the same turn, is the one.
+TEST(ai_trains_builders_only_for_work_left) {
+    // other: 0 no second city, 1 a second city training a Builder, 2 a second city picking what to make as well
+    const auto builders = [](int free, int other) {
+        GameState s = flatState(20, 14, 2);
+        addUnit(s, "UNIT_BUILDER", 1, {18, 12});
+        s.turn = 20;
+        addCity(s, 0, {6, 6}, true);
+        s.cities[0].queue.clear();
+        for (const Hex& h : s.grid.within({6, 6}, 3)) {
+            sovtest::claimFor(s, s.cities[0], h);
+            const int d = s.grid.distance({6, 6}, h);
+            if (d == 0) continue;
+            if (d == 3 && free > 0) {  // the plots left lie as far out as a Builder works
+                --free;
+                continue;
+            }
+            if (d == 2 && h.y < 6) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");  // and no Builder works these
+            else s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+        }
+        if (other > 0) {
+            addCity(s, 0, {14, 6}, false);
+            s.cities.back().queue.clear();
+            if (other == 1) s.cities.back().queue.push_back({ProductionKind::Unit, rules().unit("UNIT_BUILDER")});
+            for (const Hex& h : s.grid.within({14, 6}, 1)) {
+                if (h != Hex{14, 6}) s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+            }
+            addUnit(s, "UNIT_WARRIOR", 0, {14, 6});
+        }
+        addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+        addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
+        addUnit(s, "UNIT_BUILDER", 0, {6, 7});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        int n = 0;
+        for (const City& c : g->state().cities) {
+            n += !c.queue.empty() && c.queue.front().kind == ProductionKind::Unit && isBuilder(rules().units[at(c.queue.front().type)]) ? 1 : 0;
+        }
+        return n;
+    };
+    CHECK_EQ(builders(3, 0), 0);
+    CHECK_EQ(builders(4, 0), 1);
+    CHECK_EQ(builders(4, 1), 1);
+    CHECK_EQ(builders(4, 2), 1);
+}
+
+// A Builder's work does not keep a Settler off a city site: the Settler heads for the river site by the plot a Builder
+// is on its way to improve (only where another Settler heads is a site taken).
+TEST(ai_settlers_pass_by_builders_at_work) {
+    GameState s = flatState(24, 14, 1);
+    addCity(s, 0, {4, 6}, true);
+    for (const Hex& h : s.grid.within({4, 6}, 3)) sovtest::claimFor(s, s.cities[0], h);
+    s.plot({9, 6}).riverEdges = kRiverE;
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {4, 6});
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {0, 6});
+    s.units.back().moveTarget = Hex{7, 6};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->state().unit(builder)->moveTarget == std::optional<Hex>(Hex{7, 6}));  // under way when the turn begins
+    ai::playTurn(*g);
+    const Unit* u = g->state().unit(settler);
+    REQUIRE(u);
+    REQUIRE(u->moveTarget);
+    CHECK(g->state().grid.distance(*u->moveTarget, {7, 6}) <= 3);
 }
 
 // An Archer at war shoots what it can reach with no unit there: an Encampment, or else the city itself (an attack
@@ -389,7 +536,7 @@ TEST(ai_beats_the_random_bot) {
 
 TEST(ai_soak_takes_a_capital_and_replays) {
     GameSetup setup;
-    setup.seed = 27;
+    setup.seed = 87;
     setup.mapSize = "MAPSIZE_TINY";
     for (int i = 0; i < 4; ++i) setup.players.push_back({rules().civs[at(static_cast<TypeIndex>(i))].id, false});
     std::string err;
