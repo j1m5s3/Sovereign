@@ -150,6 +150,25 @@ bool Game::boostMet(PlayerId player, const Boost& b) const {
 }
 
 bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
+    // What the player's own record answers, and a count by type the scan holds already, without boostScanned's
+    // frame: most checks after a command are these.
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const std::optional<std::vector<int>>* by = nullptr;
+    switch (b.kind) {
+        case BoostKind::Tech: return p.techs.has(b.ref);
+        case BoostKind::Civic: return p.civics.has(b.ref);
+        case BoostKind::GovernmentTier:
+            return p.government != kNone && rules_->governments[static_cast<size_t>(p.government)].tier >= b.count;
+        case BoostKind::Building: by = &scan.buildingCities; break;
+        case BoostKind::OwnUnits: by = &scan.unitsOfType; break;
+        case BoostKind::District: by = &scan.districtCities; break;
+        default: break;
+    }
+    if (by && *by && inRange(b.ref, (*by)->size())) return (**by)[static_cast<size_t>(b.ref)] >= b.count;
+    return boostScanned(player, b, scan);
+}
+
+bool Game::boostScanned(PlayerId player, const Boost& b, BoostScan& scan) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     // The player's cities and units, listed on first need; how many of them pass a test.
     auto mine = [&](std::optional<std::vector<size_t>>& list, const auto& all) -> const std::vector<size_t>& {
@@ -259,10 +278,9 @@ bool Game::boostMet(PlayerId player, const Boost& b, BoostScan& scan) const {
         case BoostKind::OwnUnits:
             if (inRange(b.ref, rules_->units.size())) return unitsOfType()[static_cast<size_t>(b.ref)] >= b.count;
             return countUnits([&](const Unit& u) { return unitIs(u.type, b.ref); }) >= b.count;
-        case BoostKind::Tech: return p.techs.has(b.ref);
-        case BoostKind::Civic: return p.civics.has(b.ref);
-        case BoostKind::GovernmentTier:
-            return p.government != kNone && rules_->governments[static_cast<size_t>(p.government)].tier >= b.count;
+        case BoostKind::Tech:
+        case BoostKind::Civic:
+        case BoostKind::GovernmentTier: break;  // boostMet answers these
         case BoostKind::TotalPopulation: {
             int pop = 0;
             for (const City& c : state_.cities) {

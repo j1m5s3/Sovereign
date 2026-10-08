@@ -452,6 +452,42 @@ TEST(boosts_from_wonders_places_and_continents) {
     CHECK(boostIn(t, civicBoost("CIVIC_FOREIGN_TRADE")));
 }
 
+// As a turn opens and after each command one pass checks every Eureka and Inspiration still open, sharing the counts
+// of the player's cities by building and district and of their units by type until it grants one. Each comes out as
+// it does alone: Engineering, Printing and Humanism with just the 1 Ancient Walls, 2 Universities and 1 Great Artist
+// they need, each checked after counts of another kind were taken; Stirrups (Feudalism) and Castles (a government of
+// tier 2) from the player's own record.
+TEST(one_pass_checks_each_boost_as_it_would_alone) {
+    GameState s = boostState();
+    s.players[0].civics.done[at(civic("CIVIC_FEUDALISM"))] = 1;
+    s.players[0].government = rules().government("GOVERNMENT_MONARCHY");
+    const auto build = [&](size_t city, const char* b) {
+        s.cities[city].buildings.push_back(rules().building(b));
+        std::sort(s.cities[city].buildings.begin(), s.cities[city].buildings.end());
+    };
+    build(0, "BUILDING_ANCIENT_WALLS");
+    build(0, "BUILDING_UNIVERSITY");
+    build(1, "BUILDING_UNIVERSITY");
+    sovtest::addUnit(s, "UNIT_GREAT_ARTIST", 0, {6, 8});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::chooseResearch(0, tech("TECH_POTTERY"))) == CommandError::Ok);
+    const Player& p = g->state().players[0];
+    std::string differ;  // the boosts the passes left otherwise than their check alone
+    for (const bool civicTree : {false, true}) {
+        const std::vector<TreeNode>& nodes = civicTree ? rules().civics : rules().techs;
+        const TreeProgress& t = civicTree ? p.civics : p.techs;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (!t.done[i] && (t.boosted[i] != 0) != g->boostMet(0, nodes[i].boost)) differ += nodes[i].id + " ";
+        }
+    }
+    CHECK_EQ(differ, std::string());
+    for (const char* id : {"TECH_ENGINEERING", "TECH_PRINTING", "TECH_STIRRUPS", "TECH_CASTLES"}) {
+        CHECK(p.techs.boosted[at(tech(id))]);
+    }
+    CHECK(p.civics.boosted[at(civic("CIVIC_HUMANISM"))]);
+    CHECK(!p.techs.boosted[at(tech("TECH_COMPUTERS"))]);  // a government of tier 3
+}
+
 TEST(boosts_from_kills_and_cleared_camps) {
     // 04: Archery (a kill with a Slinger), Military Tactics (with a Spearman; Greece's Hoplite stands in), Bronze Working
     // (3 barbarians killed), Military Tradition (a barbarian camp cleared).

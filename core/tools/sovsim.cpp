@@ -12,7 +12,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -151,8 +150,11 @@ int main(int argc, char** argv) {
     if (bench > 0) return runBench(rules, setup, bench, turns);
     std::unique_ptr<Game> game;
     if (!loadPath.empty()) {
-        std::ifstream in(loadPath, std::ios::binary);
-        const std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::ifstream in(loadPath, std::ios::binary | std::ios::ate);
+        const std::streamoff size = in ? static_cast<std::streamoff>(in.tellg()) : 0;
+        std::vector<uint8_t> bytes(size > 0 ? static_cast<size_t>(size) : 0);
+        in.seekg(0);
+        in.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         game = loadGame(rules, bytes, &err);
     } else {
         game = Game::create(rules, setup, &err);

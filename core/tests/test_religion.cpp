@@ -339,6 +339,27 @@ TEST(pantheons_reach_plots_by_resource_class) {
     CHECK(added("BELIEF_RELIGIOUS_IDOLS") == std::vector<int>({0, 0, 0, 2, 0, 2, 0, 0}));
 }
 
+// Earth Goddess: +1 Faith on a plot of Breathtaking appeal (4 or more), on the plot as in its city's yields.
+TEST(earth_goddess_adds_faith_on_breathtaking_plots) {
+    GameState s = religionState();
+    const Hex ringed = {3, 6}, center = s.cities[0].pos;
+    for (const Hex& h : s.grid.within(ringed, 1)) {
+        if (h != ringed) s.plot(h).feature = rules().feature("FEATURE_FOREST");
+    }
+    s.cities[0].worked = {s.grid.index(ringed)};
+    auto plain = Game::fromScenario(rules(), s);
+    s.players[0].pantheon = belief("BELIEF_EARTH_GODDESS");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->plotAppeal(ringed) >= 4);  // Woods all round
+    REQUIRE(g->plotAppeal(center) < 4);
+    const size_t faith = static_cast<size_t>(YieldType::Faith);
+    const City& with = g->state().cities[0];
+    const City& without = plain->state().cities[0];
+    CHECK_EQ(g->plotYields(ringed, with)[faith], plain->plotYields(ringed, without)[faith] + Fixed::fromInt(1));
+    CHECK_EQ(g->plotYields(center, with)[faith], plain->plotYields(center, without)[faith]);
+    CHECK_EQ(g->cityReport(with.id).yields[faith], plain->cityReport(without.id).yields[faith] + Fixed::fromInt(1));
+}
+
 TEST(god_of_healing_heals_next_to_a_holy_site) {
     auto hpAfter = [](bool healing) {
         GameState s = religionState();

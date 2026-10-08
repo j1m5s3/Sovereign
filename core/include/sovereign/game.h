@@ -764,6 +764,8 @@ private:
         std::optional<int> alliance;  // its highest allianceLevel with another player (INT_MIN with none)
     };
     bool boostMet(PlayerId player, const Boost& boost, BoostScan& scan) const;
+    // boostMet for the boosts it leaves: those that gather the player's cities, units or plots first.
+    bool boostScanned(PlayerId player, const Boost& boost, BoostScan& scan) const;
     void grantBoost(PlayerId p, bool civic, size_t node);  // a boost earned now, with its dedication and quest bookkeeping
     void eventBoost(PlayerId p, BoostKind kind, TypeIndex ref = kNone);  // boosts of this event kind (a kill, a camp...)
     CommandError validateBuilder(const Command& c) const;
@@ -1111,6 +1113,8 @@ private:
     // suzerainBonus(player, cityState) for the owner of a run of city reports, asked once per kind for the run.
     bool suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const;
     CityReport cityReport(const City& city, ReportShare& shared) const;
+    // plotYields, told whether the city follows Earth Goddess (cityFollows), for a pass over many of its plots.
+    Yields plotYields(Hex plot, const City& city, bool earthGoddess) const;
     // `report`, when given, gets the report the change was worked out from (none for a city-state's or a Free City's).
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<CityReport>* report = nullptr) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
