@@ -67,6 +67,15 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> RoadPieces;
 
+	// Rivers, territory borders, resource and improvement markers.
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> RiverPieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> BorderPieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ResourcePieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ImprovementPieces;
+
+	// A strip along the edge between two neighbouring plots, pulled `Inset` toward A's centre.
+	int32 EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<UStaticMeshComponent>>& Pool, double Inset, double StripWidth, double Lift);
+
 	// Boats under embarked units.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Boats;

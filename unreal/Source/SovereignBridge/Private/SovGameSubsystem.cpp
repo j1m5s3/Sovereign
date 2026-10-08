@@ -104,6 +104,42 @@ bool USovGameSubsystem::SaveGame(const FString& Name)
 	return FFileHelper::SaveArrayToFile(Data, *Path);
 }
 
+bool USovGameSubsystem::LoadGame(const FString& Name)
+{
+	TArray<uint8> Data;
+	if (!FFileHelper::LoadFileToArray(Data, *SavePath(Name)))
+	{
+		LastMessage = FString::Printf(TEXT("No saved game named %s"), *Name);
+		return false;
+	}
+	const std::vector<uint8_t> Bytes(Data.GetData(), Data.GetData() + Data.Num());
+	FString Error;
+	if (!Session.LoadLocal(Bytes, Error))
+	{
+		LastMessage = FString::Printf(TEXT("Could not load %s: %s"), *Name, *Error);
+		UE_LOG(LogSovereign, Error, TEXT("%s"), *LastMessage);
+		return false;
+	}
+	LastMessage = FString::Printf(TEXT("Loaded %s (turn %d)"), *Name, Session.GetGame().state().turn);
+	UE_LOG(LogSovereign, Log, TEXT("%s"), *LastMessage);
+	OnStateChanged.Broadcast();
+	return true;
+}
+
+TArray<TPair<FString, FDateTime>> USovGameSubsystem::ListSaves()
+{
+	TArray<FString> Files;
+	const FString Dir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"));
+	IFileManager::Get().FindFiles(Files, *FPaths::Combine(Dir, TEXT("*.sov")), true, false);
+	TArray<TPair<FString, FDateTime>> Out;
+	for (const FString& F : Files)
+	{
+		Out.Add({FPaths::GetBaseFilename(F), IFileManager::Get().GetTimeStamp(*FPaths::Combine(Dir, F))});
+	}
+	Out.Sort([](const TPair<FString, FDateTime>& A, const TPair<FString, FDateTime>& B) { return A.Value > B.Value; });
+	return Out;
+}
+
 TStatId USovGameSubsystem::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(USovGameSubsystem, STATGROUP_Tickables);

@@ -1779,6 +1779,24 @@ void ASovPlayerController::HandleOrders()
 	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (WasInputKeyJustPressed(EKeys::F2)) OpenChooser(EChooser::Government);
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+	{
+		if (WasInputKeyJustPressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
+		if (WasInputKeyJustPressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
+	}
+	// Quicksave and quickload (local games; online the host's game is the only copy that counts).
+	if (Subsystem()->GetSession().NetMode() == ESovNet::Local)
+	{
+		if (WasInputKeyJustPressed(EKeys::F5))
+		{
+			Subsystem()->LastMessage = Subsystem()->SaveGame(TEXT("quicksave")) ? FString(TEXT("Game saved (quicksave). F9 loads it."))
+																				: FString(TEXT("Could not save the game"));
+		}
+		if (WasInputKeyJustPressed(EKeys::F9) && Subsystem()->LoadGame(TEXT("quicksave")))
+		{
+			bCenteredOnGame = false;
+		}
+	}
 	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
 	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
 	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
@@ -1918,6 +1936,12 @@ void ASovPlayerController::UpdatePanel()
 		if (T.buildCharges > 0) Line += FString::Printf(TEXT("   Charges %d"), U->charges);
 		if (!T.promotionClass.empty()) Line += FString::Printf(TEXT("   Level %d (XP %d/%d)"), U->level(), U->xp, G.xpForNextLevel(*U));
 		L.Add(Line);
+		if (!U->promotions.empty())
+		{
+			FString Promos = TEXT("Promotions:");
+			for (sov::TypeIndex Pr : U->promotions) Promos += TEXT(" ") + Str(R.promotions[static_cast<size_t>(Pr)].name) + TEXT(",");
+			L.Add(Promos.LeftChop(1));
+		}
 		FString Keys = TEXT("Right-click: move/attack   K skip   G fortify/sleep");
 		if (!G.availablePromotions(U->id).empty()) Keys += TEXT("   U promote");
 		if (T.foundCity) Keys += TEXT("   F found city");
@@ -1950,6 +1974,19 @@ void ASovPlayerController::UpdatePanel()
 		L.Add(FString::Printf(TEXT("%s   Pop %d   HP %d/%d   Food %s  Prod %s  Gold %s  Sci %s  Cul %s"), *Str(C->name), C->population, C->hp,
 			G.cityMaxHp(), *Y(sov::YieldType::Food), *Y(sov::YieldType::Production), *Y(sov::YieldType::Gold), *Y(sov::YieldType::Science),
 			*Y(sov::YieldType::Culture)));
+		// Growth, housing and amenities (02), and the buildings standing.
+		{
+			const sov::Fixed Surplus = Rep.yields[static_cast<size_t>(sov::YieldType::Food)] - Rep.foodConsumption;
+			const int32 Need = G.growthThreshold(C->population);
+			const int64 Left = static_cast<int64>(Need) - C->food.toInt();
+			const int64 PerTurn = FMath::Max<int64>(1, Surplus.toInt());
+			L.Add(FString::Printf(TEXT("Growth: food %lld/%d (%s a turn%s)   Housing %s for %d   Amenities %d of %d needed"), C->food.toInt(), Need, *Str(Surplus.toString()),
+				Surplus > sov::Fixed() ? *FString::Printf(TEXT(", %lld turns"), FMath::Max<int64>(1, (Left + PerTurn - 1) / PerTurn)) : TEXT(""),
+				*Str(Rep.housing.toString()), C->population, Rep.amenities, Rep.amenitiesNeeded));
+			FString Built;
+			for (sov::TypeIndex B : C->buildings) Built += (Built.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.buildings[static_cast<size_t>(B)].name);
+			if (!Built.IsEmpty()) L.Add(TEXT("Buildings: ") + Built);
+		}
 		// The Encampment's own hit points and outer defences (05: City combat).
 		if (G.encampmentOf(*C))
 		{
@@ -2417,6 +2454,23 @@ void ASovPlayerController::OpenMenu()
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
+	// Saved games, newest first (the four latest): continue one.
+	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
+	{
+		const TArray<TPair<FString, FDateTime>> Saves = USovGameSubsystem::ListSaves();
+		for (int32 i = 0; i < Saves.Num() && i < 4; ++i)
+		{
+			const FString SaveName = Saves[i].Key;
+			SavedGames->AddSlot().AutoHeight()[Item(FString::Printf(TEXT("Continue: %s (%s)"), *SaveName, *Saves[i].Value.ToString(TEXT("%Y-%m-%d %H:%M"))),
+				[this, SaveName]() {
+					if (Subsystem() && Subsystem()->LoadGame(SaveName))
+					{
+						CloseMenu();
+						bCenteredOnGame = false;
+					}
+				})];
+		}
+	}
 	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
 		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
 			SNew(SVerticalBox)
@@ -2438,6 +2492,7 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
 				S.HumanSeats = 2;

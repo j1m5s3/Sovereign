@@ -1,5 +1,7 @@
 #include "SovHUD.h"
 
+#include <algorithm>
+
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -56,7 +58,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString CurrentName = Current.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(Current.cityState)].name)
 		: Current.civ == sov::kNone ? FString(TEXT("Barbarians")) : Str(R.civs[static_cast<size_t>(Current.civ)].name);
 
-	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
+	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s   (F1 how to play)"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
 			 Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")),
 		16, Y);
 	// Our civ's identity (leaders-and-art-style): its ability, its leader's, and its uniques.
@@ -411,6 +413,70 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	}
 }
 
+void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
+{
+	const sov::Game& G = Sub.GetGame();
+	const sov::GameState& S = G.state();
+	const sov::PlayerId View = static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer());
+	UFont* Font = GEngine->GetSmallFont();
+	static const TCHAR* Letters[] = {TEXT("F"), TEXT("P"), TEXT("G"), TEXT("S"), TEXT("C"), TEXT("R")};
+	static const FLinearColor Colors[] = {FLinearColor(0.5f, 1.f, 0.4f), FLinearColor(1.f, 0.6f, 0.3f), FLinearColor(1.f, 0.9f, 0.3f),
+		FLinearColor(0.4f, 0.75f, 1.f), FLinearColor(0.9f, 0.5f, 1.f), FLinearColor(0.9f, 0.9f, 0.9f)};
+	for (int32 i = 0; i < S.grid.size(); ++i)
+	{
+		const sov::Plot& P = S.plots[static_cast<size_t>(i)];
+		if (P.owner != View || P.city == sov::kNoCity)
+		{
+			continue;
+		}
+		const sov::City* C = S.city(P.city);
+		const sov::Hex H = S.grid.at(i);
+		if (!C || G.visibility(View, H) == sov::Visibility::Unrevealed)
+		{
+			continue;
+		}
+		const FVector Screen = Project(SovHex::Center(H.x, H.y, 5.0));
+		if (Screen.Z <= 0 || Screen.X < 0 || Screen.Y < 0 || Screen.X > Canvas->ClipX || Screen.Y > Canvas->ClipY)
+		{
+			continue;
+		}
+		const sov::Yields Y = G.plotYields(H, *C);
+		const bool bWorked = std::find(C->worked.begin(), C->worked.end(), i) != C->worked.end();
+		float X = Screen.X - 30.f;
+		for (size_t k = 0; k < sov::kNumYields && k < UE_ARRAY_COUNT(Letters); ++k)
+		{
+			const int32 V = static_cast<int32>(Y[k].toInt());
+			if (V <= 0) continue;
+			const FString T = FString::Printf(TEXT("%d%s"), V, Letters[k]);
+			DrawText(T, FLinearColor(0, 0, 0, 0.9f), X + 1, Screen.Y + 1, Font, 1.0f);
+			DrawText(T, Colors[k], X, Screen.Y, Font, 1.0f);
+			X += 18.f;
+		}
+		if (bWorked) DrawText(TEXT("*"), FLinearColor::White, Screen.X - 8.f, Screen.Y - 14.f, Font, 1.2f);
+	}
+}
+
+void ASovHUD::DrawHelp()
+{
+	static const TCHAR* const Lines[] = {
+		TEXT("How to play (F1 closes)"),
+		TEXT("Goal: win by science, culture, religion, diplomacy or conquest, or hold the best score at the turn limit."),
+		TEXT("Left-click a unit or city to select it; right-click a plot to move or attack there. '.' next unit needing orders."),
+		TEXT("Settler: F founds a city. Builder: B builds an improvement. U promotes a unit with enough XP."),
+		TEXT("P production, T research, C civics, F2 government and policies, Y great people, Z governors."),
+		TEXT("N diplomacy (talk to leaders, trade, demand), O city-states, J agents, ',' World Congress, I pantheon."),
+		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
+		TEXT("F3 yields on your plots (* worked). Rest the cursor on a plot for its details."),
+		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
+		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser."),
+	};
+	const float W = 860.f, H = 16.f + 20.f * UE_ARRAY_COUNT(Lines);
+	const float Left = (Canvas->ClipX - W) * 0.5f, Top = (Canvas->ClipY - H) * 0.5f;
+	DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f), Left, Top, W, H);
+	float Y = Top + 8.f;
+	for (int32 i = 0; i < UE_ARRAY_COUNT(Lines); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
+}
+
 void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 {
 	const sov::Game& G = Sub.GetGame();
@@ -615,8 +681,24 @@ void ASovHUD::DrawHUD()
 		DrawStreet(*Sub, *PC);
 		return;
 	}
+	if (bShowYields) DrawYields(*Sub);
 	DrawLabels(*Sub);
 	DrawStatus(*Sub, Y);
+	// The plot under the cursor: terrain, resource, improvement, owner and yields.
+	int32 TX = 0, TY = 0;
+	float MX = 0.f, MY = 0.f;
+	if (PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))
+	{
+		const TArray<FString> Tip = SovPlotTooltip(Sub->GetGame(), Sub->GetSession().ViewPlayer(), TX, TY);
+		if (Tip.Num() > 0)
+		{
+			const float W = 300.f, H = 8.f + 18.f * Tip.Num();
+			const float Left = FMath::Min(MX + 18.f, Canvas->ClipX - W - 4.f), Top = FMath::Min(MY + 18.f, Canvas->ClipY - H - 4.f);
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), Left, Top, W, H);
+			float TipY = Top + 4.f;
+			for (const FString& L : Tip) Line(L, Left + 6.f, TipY);
+		}
+	}
 	// Online: the latest notices and chat (whose turn it is shows in the status lines).
 	if (Sub->GetSession().NetMode() != ESovNet::Local)
 	{
@@ -628,4 +710,5 @@ void ASovHUD::DrawHUD()
 	{
 		Line(L, 16, PY);
 	}
+	if (bShowHelp) DrawHelp();
 }

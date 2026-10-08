@@ -202,9 +202,67 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	}
 }
 
+int32 ASovMapActor::EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<UStaticMeshComponent>>& Pool, double Inset, double StripWidth, double Lift)
+{
+	int32 Count = 0;
+	for (const FSovEdge& E : Edges)
+	{
+		const FVector A = SovHex::Center(E.A.X, E.A.Y, SurfaceZ(E.A.X, E.A.Y));
+		const FVector B = SovHex::Center(E.B.X, E.B.Y, SurfaceZ(E.B.X, E.B.Y));
+		const FVector Dir = B - A;
+		if (Dir.Size2D() > SovHex::Size * 2.5)
+		{
+			continue;  // a pair across the east-west wrap
+		}
+		const FVector Across = FVector(Dir.X, Dir.Y, 0.0).GetSafeNormal();
+		FVector Mid = (A + B) * 0.5 - Across * Inset;
+		Mid.Z = FMath::Max(A.Z, B.Z) + Lift;
+		UStaticMeshComponent* C = Marker(Pool, Count++, CubeMesh.Get());
+		C->SetRelativeLocation(Mid);
+		// The edge runs at right angles to the line between the two centres; a hex side is as long as the hex's radius.
+		C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))) + 90.f, 0.f));
+		C->SetRelativeScale3D(FVector(SovHex::Size * TileScale / 100.0, StripWidth / 100.0, 0.02));
+		C->SetMaterial(0, MaterialFor(E.Color));
+	}
+	for (int32 i = Count; i < Pool.Num(); ++i)
+	{
+		Pool[i]->SetVisibility(false);
+	}
+	return Count;
+}
+
 void ASovMapActor::Sync(const FSovMirror& Mirror)
 {
 	BuildTerrain(Mirror);
+
+	// Rivers along plot edges; borders just inside the owner's side.
+	EdgeStrips(Mirror.Rivers, RiverPieces, 0.0, 9.0, 1.0);
+	EdgeStrips(Mirror.Borders, BorderPieces, 7.0, 4.0, 2.0);
+
+	// Resources the viewer sees (a small ball: green bonus, violet luxury, red strategic) and improvements (a flat tile,
+	// dark red when pillaged).
+	int32 ResourceCount = 0, ImprovementCount = 0;
+	for (const FSovTile& Tile : Mirror.Tiles)
+	{
+		const FVector At = SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y));
+		if (Tile.ResourceClass > 0)
+		{
+			static const FLinearColor Colors[] = {FLinearColor::White, FLinearColor(0.35f, 0.8f, 0.3f), FLinearColor(0.7f, 0.35f, 0.9f), FLinearColor(0.9f, 0.25f, 0.2f)};
+			UStaticMeshComponent* C = Marker(ResourcePieces, ResourceCount++, SphereMesh.Get());
+			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(-30.0, 26.0), 7.0));
+			C->SetRelativeScale3D(FVector(0.14));
+			C->SetMaterial(0, MaterialFor(Colors[Tile.ResourceClass & 3]));
+		}
+		if (Tile.bImproved)
+		{
+			UStaticMeshComponent* C = Marker(ImprovementPieces, ImprovementCount++, CubeMesh.Get());
+			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(30.0, -26.0), 2.0));
+			C->SetRelativeScale3D(FVector(0.26, 0.26, 0.03));
+			C->SetMaterial(0, MaterialFor(Tile.bPillaged ? FLinearColor(0.45f, 0.08f, 0.06f) : FLinearColor(0.78f, 0.66f, 0.35f)));
+		}
+	}
+	for (int32 i = ResourceCount; i < ResourcePieces.Num(); ++i) ResourcePieces[i]->SetVisibility(false);
+	for (int32 i = ImprovementCount; i < ImprovementPieces.Num(); ++i) ImprovementPieces[i]->SetVisibility(false);
 
 	// Woods: a few kit trees per wooded tile (map scale: 1 km hexes drawn 1 m wide).
 	int32 TreeCount = 0;

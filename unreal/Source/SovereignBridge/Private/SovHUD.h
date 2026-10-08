@@ -19,10 +19,15 @@ public:
 
 	// Extra lines the player controller wants shown (selection, chooser), drawn bottom-left.
 	TArray<FString> PanelLines;
+	// F3: what each plot of the viewer's territory yields its city (* worked). F1: the keys.
+	bool bShowYields = false;
+	bool bShowHelp = false;
 
 protected:
 	void DrawStatus(const USovGameSubsystem& Sub, float& Y);
 	void DrawLabels(const USovGameSubsystem& Sub);
+	void DrawYields(const USovGameSubsystem& Sub);
+	void DrawHelp();
 	void DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerController& PC);
 	void DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerController& PC);
 	void Line(const FString& Text, float X, float& Y, const FLinearColor& Color = FLinearColor::White);

@@ -80,6 +80,8 @@ public:
 	~FSovSession();
 
 	bool Start(const FSovSetup& Setup, FString& OutError);
+	// Resumes a saved game on this machine (its human seats as saved; the rules from the default directory).
+	bool LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError);
 	// A game exists (online: once the host has started it and it has arrived here).
 	bool IsRunning() const { return CurrentGame() != nullptr; }
 	// Running, or waiting in an online lobby.
