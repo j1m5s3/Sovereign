@@ -16,6 +16,8 @@
 #include "SovMapActor.h"
 #include "SovPlayerController.h"
 
+#include "sovereign/game.h"
+
 ASovGameMode::ASovGameMode()
 {
 	DefaultPawnClass = ASovCameraPawn::StaticClass();
@@ -104,6 +106,17 @@ void ASovGameMode::OnStateChanged()
 	USovGameSubsystem* Sub = GetGameInstance()->GetSubsystem<USovGameSubsystem>();
 	if (Map && Sub->IsRunning())
 	{
-		Map->Sync(BuildMirror(Sub->GetGame(), Sub->GetSession().ViewPlayer()));
+		FSovMirror Mirror = BuildMirror(Sub->GetGame(), Sub->GetSession().ViewPlayer());
+		// The cosmetic chosen on this machine tints the viewer's own ruler (player-retention §7; not part of the game).
+		const FString CosmeticId = USovGameSubsystem::Cosmetic();
+		for (const sov::CosmeticType& C : Sub->GetGame().rules().cosmetics)
+		{
+			if (CosmeticId != UTF8_TO_TCHAR(C.id.c_str())) continue;
+			for (FSovUnitMarker& U : Mirror.Units)
+			{
+				if (U.bLeader && U.Owner == Mirror.Viewer) U.Color = FLinearColor(FColor(C.color[0], C.color[1], C.color[2]));
+			}
+		}
+		Map->Sync(Mirror);
 	}
 }

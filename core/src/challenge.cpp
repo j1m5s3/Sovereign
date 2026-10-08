@@ -65,7 +65,7 @@ Challenge weeklyChallenge(const Rules& rules, int32_t week) {
                                          "score the most you can by the last turn"};
     static const char* const kEras[] = {"Ancient", "Classical", "Medieval"};
     const std::string civ = civs > 0 ? rules.civs[first].name : std::string("?");
-    c.text = "Week " + std::to_string(week) + ": " + kGoals[static_cast<size_t>(c.goal)] + ", as " + civ + " (Short Reign, " +
+    c.text = "Week " + std::to_string(week) + " challenge: " + kGoals[static_cast<size_t>(c.goal)] + ", as " + civ + " (Short Reign, " +
              kEras[static_cast<size_t>(s.startEra)] + " start)";
     return c;
 }

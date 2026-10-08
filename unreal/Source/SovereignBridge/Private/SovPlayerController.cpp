@@ -29,6 +29,7 @@
 
 #include "Engine/World.h"
 
+#include "sovereign/challenge.h"
 #include "sovereign/game.h"
 
 #include <algorithm>
@@ -2561,7 +2562,34 @@ void ASovPlayerController::OpenMenu()
 	}
 	// The weekly challenge (player-retention §3): this week's game, with the local board's results so far.
 	const int32 Week = FSovSession::CurrentChallengeWeek();
-	FString ChallengeLabel = FSovSession::ChallengeText(Week);
+	sov::Rules Plain;  // the plain rules: the challenge, achievements and cosmetics are named from them
+	std::string PlainError;
+	const bool bPlain = Plain.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &PlainError);
+	FString ChallengeLabel = bPlain ? FString(UTF8_TO_TCHAR(sov::weeklyChallenge(Plain, Week).text.c_str())) : FString();
+	// Achievements (player-retention §7): the ones held, and the colours they unlock for the ruler's figure.
+	const TArray<FString> Held = USovGameSubsystem::Achievements();
+	MenuCosmetics = {TPair<FString, FString>(FString(), TEXT("the civ's own"))};
+	MenuCosmetic = 0;
+	MenuAchievementsText.Reset();
+	for (const sov::AchievementType& A : Plain.achievements)
+	{
+		const FString Id = UTF8_TO_TCHAR(A.id.c_str());
+		const bool bHeld = Held.Contains(Id);
+		FString Unlock;
+		for (const sov::CosmeticType& C : Plain.cosmetics)
+		{
+			if (C.id != A.unlock) continue;
+			Unlock = UTF8_TO_TCHAR(C.name.c_str());
+			if (bHeld) MenuCosmetics.Add(TPair<FString, FString>(UTF8_TO_TCHAR(C.id.c_str()), Unlock));
+		}
+		MenuAchievementsText += FString::Printf(TEXT("%s%s %s: %s%s"), MenuAchievementsText.IsEmpty() ? TEXT("") : TEXT("\n"), bHeld ? TEXT("[x]") : TEXT("[ ]"),
+			UTF8_TO_TCHAR(A.name.c_str()), UTF8_TO_TCHAR(A.text.c_str()), Unlock.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (the ruler in %s)"), *Unlock));
+	}
+	for (int32 i = 0; i < MenuCosmetics.Num(); ++i)
+	{
+		if (MenuCosmetics[i].Key == USovGameSubsystem::Cosmetic()) MenuCosmetic = i;
+	}
+	const int32 HeldCount = Held.Num(), AllCount = static_cast<int32>(Plain.achievements.size());
 	const TArray<FString> Results = USovGameSubsystem::ChallengeResults(Week);
 	if (Results.Num() > 0) ChallengeLabel += FString::Printf(TEXT("  [your last: %s]"), *Results.Last().RightChop(FString::Printf(TEXT("week %d  "), Week).Len()));
 	// Saved games, newest first (the four latest): continue one.
@@ -2628,7 +2656,7 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
-			+ SVerticalBox::Slot().AutoHeight()[Item(FString(TEXT("Weekly challenge: ")) + ChallengeLabel, [this, Base, Week]() {
+			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
 				FSovSetup S = Base();
 				S.ChallengeWeek = Week;
 				StartFromMenu(S);
@@ -2673,6 +2701,24 @@ void ASovPlayerController::OpenMenu()
 			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
 				return bMenuMods ? EVisibility::Visible : EVisibility::Collapsed;
 			})[ModList]]
+			// Achievements and the ruler's colour (player-retention §7).
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuAchievements = MenuAchievements.IsEmpty() ? MenuAchievementsText : FString();
+					return FReply::Handled();
+				})[SNew(STextBlock).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuCosmetic = (MenuCosmetic + 1) % FMath::Max(1, MenuCosmetics.Num());
+					USovGameSubsystem::SetCosmetic(MenuCosmetics[MenuCosmetic].Key);
+					if (USovGameSubsystem* S = Subsystem(); S && S->IsRunning()) S->OnStateChanged.Broadcast();
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() {
+					return FText::FromString(FString(TEXT("Ruler's colour: ")) + (MenuCosmetics.IsValidIndex(MenuCosmetic) ? MenuCosmetics[MenuCosmetic].Value : FString()));
+				})]]]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+					.Text_Lambda([this]() { return FText::FromString(MenuAchievements); })]]
 			// The Hall of Sovereigns: past reigns, newest first (player-retention §2).
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hall of Sovereigns"), [this]() {
 				if (!MenuHall.IsEmpty())

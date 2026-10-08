@@ -142,4 +142,39 @@ std::string Game::hallEntry(PlayerId player) const {
     return s + ".";
 }
 
+std::vector<std::string> Game::achievementsEarned(PlayerId player) const {
+    std::vector<std::string> out;
+    if (player < 0 || at(player) >= state_.players.size()) return out;
+    static const std::pair<const char*, Victory> kVictories[] = {{"DOMINATION", Victory::Domination}, {"SCORE", Victory::Score},
+                                                                 {"LAST_STANDING", Victory::LastStanding}, {"RELIGIOUS", Victory::Religious},
+                                                                 {"CULTURE", Victory::Culture}, {"DIPLOMATIC", Victory::Diplomatic},
+                                                                 {"SCIENCE", Victory::Science}};
+    int rulers = 0;
+    for (const GameEvent& e : state_.chronicle) rulers += e.kind == EventKind::LeaderLost && e.actor == player ? 1 : 0;
+    int wonders = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        for (const TypeIndex b : c.buildings) wonders += rules_->buildings[at(b)].wonder ? 1 : 0;
+    }
+    const Unit* l = leaderOf(player);
+    for (const AchievementType& a : rules_->achievements) {
+        bool earned = false;
+        switch (a.kind) {
+            case AchievementKind::Victory: {
+                earned = state_.winner == player && (a.speed.empty() || a.speed == state_.setup.speed);
+                if (earned && !a.victory.empty()) {
+                    earned = std::any_of(std::begin(kVictories), std::end(kVictories),
+                                         [&](const std::pair<const char*, Victory>& v) { return a.victory == v.first && state_.victory == v.second; });
+                }
+                break;
+            }
+            case AchievementKind::RulersTaken: earned = rulers >= a.value; break;
+            case AchievementKind::LeaderLevel: earned = l && l->level() >= a.value; break;
+            case AchievementKind::Wonders: earned = wonders >= a.value; break;
+        }
+        if (earned) out.push_back(a.id);
+    }
+    return out;
+}
+
 }  // namespace sov

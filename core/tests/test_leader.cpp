@@ -681,4 +681,24 @@ TEST(chronicle_records_wars_rulers_and_successions) {
     CHECK(hall.find(rules().dynastyOf(g->state().players[0].civ)->names[1] + " of " + me) == 0);
     CHECK(hall.find("the reign goes on") != std::string::npos);
     CHECK(Game::chronicleWorthy(EventKind::LeaderLost) && !Game::chronicleWorthy(EventKind::DealProposed));
+    // Taking a ruler in battle is an achievement for the captor.
+    const std::vector<std::string> theirs1 = g->achievementsEarned(1), mine = g->achievementsEarned(0);
+    CHECK(std::find(theirs1.begin(), theirs1.end(), "ACH_KINGTAKER") != theirs1.end());
+    CHECK(std::find(mine.begin(), mine.end(), "ACH_KINGTAKER") == mine.end());
+}
+TEST(achievements_follow_how_a_game_ended) {
+    const Rules& r = rules();
+    REQUIRE(!r.achievements.empty());
+    for (const AchievementType& a : r.achievements) {
+        CHECK(a.unlock.empty() || std::any_of(r.cosmetics.begin(), r.cosmetics.end(), [&](const CosmeticType& c) { return c.id == a.unlock; }));
+    }
+    GameState s = sovtest::flatState(16, 12, 2);
+    s.setup.speed = "GAMESPEED_SHORT_REIGN";
+    s.winner = 0;
+    s.victory = Victory::Science;
+    auto g = Game::fromScenario(r, std::move(s));
+    const std::vector<std::string> won = g->achievementsEarned(0);
+    for (const char* id : {"ACH_CROWNED_IN_GLORY", "ACH_STARGAZER", "ACH_SWIFT_REIGN"}) CHECK(std::find(won.begin(), won.end(), id) != won.end());
+    CHECK(std::find(won.begin(), won.end(), "ACH_PATRON") == won.end());
+    CHECK(g->achievementsEarned(1).empty());
 }

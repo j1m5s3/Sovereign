@@ -22,7 +22,7 @@ struct Challenge {
     int32_t week = 0;
     GameSetup setup;  // seat 0 is the human; no carried profile, rivals or mods, so every player's game is the same
     ChallengeGoal goal = ChallengeGoal::AnyVictory;
-    std::string text;  // "Week 40: win without declaring a war, as England (Short Reign, Classical start)"
+    std::string text;  // "Week 40 challenge: win without declaring a war, as England (Short Reign, Classical start)"
 };
 
 // Weeks since Monday 2026-01-05 (UTC).

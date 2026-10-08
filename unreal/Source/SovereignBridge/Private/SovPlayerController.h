@@ -190,5 +190,11 @@ protected:
 	int32 MenuEra = 0;         // the era to begin in (0: Ancient)
 	bool bMenuMods = false;    // the menu shows the installed mods (player-retention §6)
 	TArray<FString> MenuModsOn;  // the mods turned on, in load order
+	// Achievements and cosmetics (player-retention §7): the colours unlocked (id, name; the first is none), the
+	// one chosen, and the achievements list as shown (empty: hidden).
+	TArray<TPair<FString, FString>> MenuCosmetics;
+	int32 MenuCosmetic = 0;
+	FString MenuAchievements;
+	FString MenuAchievementsText;
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };
