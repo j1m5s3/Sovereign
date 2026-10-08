@@ -1310,7 +1310,7 @@ bool explore(View& v, UnitId id) {
     for (const Hex& h : s.grid.within(u->pos, 8)) {
         if (h == u->pos || v.game.visibility(v.me, h) == Visibility::Unrevealed || !isLandPassable(s, v.r, h)) continue;
         bool edge = false;
-        for (const Hex& n : s.grid.within(h, 1)) edge |= v.game.visibility(v.me, n) == Visibility::Unrevealed;
+        s.grid.forEachWithin(h, 1, [&](Hex n) { edge = edge || v.game.visibility(v.me, n) == Visibility::Unrevealed; });
         if (edge) frontier.push_back({s.grid.distance(u->pos, h), h});
     }
     std::stable_sort(frontier.begin(), frontier.end(),
