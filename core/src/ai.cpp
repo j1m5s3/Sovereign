@@ -447,6 +447,7 @@ int districtPercent(const View& v, const DistrictType& d) {
 void diplomacy(View& v) {
     const GameState& s = v.s();
     const int mine = militaryStrength(v.game, v.me);
+    bool changed = false;  // a peace made, an emergency joined or a war declared below
     for (PlayerId e : v.enemies) {
         const int theirs = militaryStrength(v.game, e);
         const Relation& rel = s.players[at(v.me)].relations[at(e)];
@@ -456,13 +457,17 @@ void diplomacy(View& v) {
         // Long wars, or war weariness costing two amenities a city, end a war that is not clearly being won.
         const bool tired = (s.turn - rel.since >= kWarWeariness || v.game.warWearinessAmenities(v.me) >= 2) && mine * 100 < theirs * v.posture.warRatio * 2;
         const bool accept = theyOffer && mine * 100 < theirs * v.posture.warRatio;
-        if ((losing || tired || accept) && v.game.canMakePeace(v.me, e)) v.game.submit(Command::makePeace(v.me, e));
+        if ((losing || tired || accept) && v.game.canMakePeace(v.me, e))
+            changed = v.game.submit(Command::makePeace(v.me, e)) == CommandError::Ok || changed;
     }
     // Emergencies (08): join one against a civ it dislikes or fears.
     for (size_t i = 0; i < s.emergencies.size(); ++i) {
         const Emergency& e = s.emergencies[i];
         if (!v.game.canJoinEmergency(v.me, static_cast<int>(i))) continue;
-        if (v.game.opinionOf(v.me, e.target) < 0 || militaryStrength(v.game, e.target) > mine) v.game.submit(Command::joinEmergency(v.me, static_cast<int32_t>(i)));
+        if (v.game.opinionOf(v.me, e.target) < 0 || militaryStrength(v.game, e.target) > mine) {
+            const Command join = Command::joinEmergency(v.me, static_cast<int32_t>(i));
+            changed = v.game.submit(join) == CommandError::Ok || changed;
+        }
     }
     // Called to arms: join the war of an ally that was attacked, against a civ we are not friends
     // with (08: Alliance; the ally remembers who declared on it).
@@ -475,10 +480,15 @@ void diplomacy(View& v) {
             });
             if (!attacked) continue;
             if (v.game.friends(v.me, foe.id) || v.game.alliance(v.me, foe.id) != AllianceType::None || !v.game.canDeclareWar(v.me, foe.id)) continue;
-            if (v.game.submit(Command::declareWar(v.me, foe.id)) == CommandError::Ok) v.target = foe.id;
+            if (v.game.submit(Command::declareWar(v.me, foe.id)) == CommandError::Ok) {
+                v.target = foe.id;
+                changed = true;
+            }
         }
     }
-    survey(v);
+    // The turn's survey, and the free sites it counted, still hold unless something above changed the game (a failed
+    // command changes nothing).
+    if (changed) survey(v);
     if (!v.enemies.empty() || v.cities.size() < 2) {
         // Keep marching on the nearest enemy.
         int best = INT_MAX;

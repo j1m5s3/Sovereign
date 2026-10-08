@@ -309,9 +309,17 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     raw[idx(YieldType::Science)] += Fixed::ratio(rules_->globalInt(HotGlobal::SciencePercentageYieldPerPop), 100) * c->population;
     int districtsDone = 0;
     for (const CityDistrict& d : c->districts) districtsDone += d.complete ? 1 : 0;
-    const Yields flat = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYield);
-    const Yields perPop = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerPop);            // Tax Collector, Researcher
-    const Yields perDistrict = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPerDistrict);  // Bishop
+    // The city's modifiers, summed once for all the effects the report reads.
+    Yields flat{}, perPop{}, perDistrict{}, percents{};  // per citizen: Tax Collector, Researcher; per district: Bishop
+    Fixed housingMods, amenityMods, defenseMods;
+    sumCityModifiers(state_, *rules_, *c,
+                     {{ModEffect::CityYield, &flat, nullptr},
+                      {ModEffect::CityYieldPerPop, &perPop, nullptr},
+                      {ModEffect::CityYieldPerDistrict, &perDistrict, nullptr},
+                      {ModEffect::CityYieldPercent, &percents, nullptr},
+                      {ModEffect::CityHousing, nullptr, &housingMods},
+                      {ModEffect::CityAmenities, nullptr, &amenityMods},
+                      {ModEffect::CityDefense, nullptr, &defenseMods}});
     for (size_t i = 0; i < kNumYields; ++i) {
         raw[i] += flat[i];
         raw[i] += perPop[i] * c->population;
@@ -370,10 +378,10 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         state_.grid.forEachWithin(c->pos, 1, [&](Hex n) { mountain = mountain || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].relief == Relief::Mountain; });
         if (mountain) rep.housing += Fixed::fromInt(mh);
     }
-    rep.housing += sumCityModifiers(state_, *rules_, *c, ModEffect::CityHousing);
+    rep.housing += housingMods;
 
     // Amenities: bankruptcy costs 1 per 10 gold below zero (00-overview.md, Turn processing order).
-    rep.amenities += static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityAmenities).toInt());
+    rep.amenities += static_cast<int>(amenityMods.toInt());
     // John Roebling, Jane Drew (07): Amenities and Housing where they were used.
     if (!c->greatPeopleHere.empty()) {
         rep.amenities += usedHere(*c, Gp::Roebling) + 3 * usedHere(*c, Gp::JaneDrew);
@@ -549,7 +557,6 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const std::string& mood = rules_->happiness[static_cast<size_t>(rep.happiness)].id;
         khaldun = mood == "HAPPINESS_ECSTATIC" ? 4 : mood == "HAPPINESS_HAPPY" ? 2 : 0;
     }
-    const Yields percents = sumCityModifiersByYield(state_, *rules_, *c, ModEffect::CityYieldPercent);
     const CivAbility& peaceAbility = civAbility(c->owner);
     const DifficultyType* aiDifficulty = difficultyAi(c->owner) ? &difficulty() : nullptr;  // AI cities at Immortal and Deity
     for (size_t i = 0; i < kNumYields; ++i) {
@@ -666,7 +673,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (pj.converts) rep.yields[idx(pj.conversionYield)] += rep.yields[idx(YieldType::Production)] * pj.conversionPercent / 100;
     }
     rep.foodConsumption = rules_->global(HotGlobal::CityFoodConsumptionPerPopulation) * c->population;
-    rep.defense = static_cast<int>(sumCityModifiers(state_, *rules_, *c, ModEffect::CityDefense).toInt());
+    rep.defense = static_cast<int>(defenseMods.toInt());
     return rep;
 }
 

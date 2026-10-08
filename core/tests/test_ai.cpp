@@ -332,6 +332,42 @@ TEST(ai_declares_war_on_a_weak_neighbour) {
     CHECK(!blind->atWar(0, 1));
 }
 
+// Called to arms by an ally that was attacked (08: Alliance), the AI joins its ally's war and marches on the attacker:
+// it starts no war of its own that turn on the weak neighbour it would attack otherwise.
+TEST(ai_called_to_arms_marches_on_its_allys_attacker) {
+    GameState s = flatState(48, 14, 4);
+    addCity(s, 0, {4, 6}, true);
+    addCity(s, 0, {4, 10}, false);
+    addCity(s, 1, {12, 6}, true);  // the weak neighbour
+    addCity(s, 2, {32, 6}, true);  // far off: the ally...
+    addCity(s, 3, {44, 6}, true);  // ... and the civ that declared war on it
+    learn(s, 0, "TECH_BRONZE_WORKING");
+    for (int i = 0; i < 6; ++i) addUnit(s, "UNIT_WARRIOR", 0, {static_cast<int32_t>(3 + i), 3});
+    addUnit(s, "UNIT_WARRIOR", 1, {12, 6});
+    addUnit(s, "UNIT_SCOUT", 0, {10, 6});  // has seen the neighbour's city
+    s.turn = 60;
+    for (Player& p : s.players) p.relations.resize(4);
+    s.players[2].relations[3].war = s.players[3].relations[2].war = true;
+    s.players[2].relations[3].since = s.players[3].relations[2].since = 58;
+    s.players[2].memories.push_back({3, MemoryKind::DeclaredWar, -20, 30, 58});
+    GameState unallied = s;
+    for (PlayerId x : {0, 2}) {
+        Relation& r = s.players[at(x)].relations[at(2 - x)];
+        r.alliance = AllianceType::Military;
+        r.allianceUntil = s.turn + 30;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->visibility(0, {12, 6}) != Visibility::Unrevealed);
+    ai::playTurn(*g);
+    CHECK(g->atWar(0, 3));
+    CHECK(!g->atWar(0, 1));
+    // Without the alliance, it goes to war with the neighbour.
+    auto alone = Game::fromScenario(rules(), std::move(unallied));
+    ai::playTurn(*alone);
+    CHECK(!alone->atWar(0, 3));
+    CHECK(alone->atWar(0, 1));
+}
+
 TEST(ai_beats_the_random_bot) {
     GameSetup setup;
     setup.seed = 3;
