@@ -145,6 +145,11 @@ void ASovPlayerController::UpdateCamera(float DeltaTime)
 	{
 		return;
 	}
+	if (const USovGameSubsystem* Sub = Subsystem(); Sub && Sub->IsRunning())
+	{
+		const sov::HexGrid& Grid = Sub->GetGame().state().grid;
+		Cam->WrapWidth = Grid.wrapX() ? SovHex::MapWorldWidth(Grid.width()) : 0.0;
+	}
 	FVector2D Dir(0, 0);
 	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Dir.Y += 1;
 	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Dir.Y -= 1;

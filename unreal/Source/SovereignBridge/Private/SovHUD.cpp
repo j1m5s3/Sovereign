@@ -7,6 +7,7 @@
 #include "Engine/Font.h"
 #include "Engine/GameInstance.h"
 
+#include "SovCameraPawn.h"
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
 #include "SovMirror.h"
@@ -35,6 +36,13 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::Science: return TEXT("Science");
 		default: return TEXT("");
 	}
+}
+
+// On a wrapping map, the copy of a map point nearest the camera (the one on screen).
+FVector NearCamera(const APlayerController* PC, const FVector& P)
+{
+	const ASovCameraPawn* Cam = PC ? Cast<ASovCameraPawn>(PC->GetPawn()) : nullptr;
+	return Cam ? SovHex::NearestCopy(P, Cam->FocusPoint().Y, Cam->WrapWidth) : P;
 }
 }  // namespace
 
@@ -435,7 +443,7 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		const FVector Screen = Project(SovHex::Center(H.x, H.y, 5.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(H.x, H.y, 5.0)));
 		if (Screen.Z <= 0 || Screen.X < 0 || Screen.Y < 0 || Screen.X > Canvas->ClipX || Screen.Y > Canvas->ClipY)
 		{
 			continue;
@@ -484,7 +492,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	UFont* Font = GEngine->GetSmallFont();
 	for (const FSovCityMarker& C : M.Cities)
 	{
-		const FVector Screen = Project(SovHex::Center(C.X, C.Y, 60.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(C.X, C.Y, 60.0)));
 		if (Screen.Z <= 0)
 		{
 			continue;
@@ -509,7 +517,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		if (U.bLeader)
 		{
 			// Leaders carry their ruler's name.
-			const FVector At = Project(SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0));
+			const FVector At = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
 			if (At.Z > 0)
 			{
 				float W = 0, H = 0;
@@ -522,7 +530,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		const FVector Screen = Project(SovHex::Center(U.X, U.Y, 80.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 80.0)));
 		if (Screen.Z <= 0)
 		{
 			continue;

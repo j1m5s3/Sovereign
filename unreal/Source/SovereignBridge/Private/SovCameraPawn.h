@@ -29,6 +29,9 @@ public:
 	float MinHeight = 500.f;
 	float MaxHeight = 9000.f;
 	float Pitch = -58.f;
+	// On a wrapping map, the world width of one copy: the focus stays within one copy and
+	// LookAt goes to the nearest copy of its target (0: the map does not wrap).
+	double WrapWidth = 0.0;
 
 private:
 	void Place(const FVector& Focus);

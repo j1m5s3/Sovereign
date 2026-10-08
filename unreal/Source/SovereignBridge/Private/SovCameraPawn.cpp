@@ -3,6 +3,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
 
+#include "SovHexLayout.h"
+
 ASovCameraPawn::ASovCameraPawn()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -23,13 +25,16 @@ FVector ASovCameraPawn::FocusPoint() const
 void ASovCameraPawn::Place(const FVector& Focus)
 {
 	const double Back = Height / FMath::Tan(FMath::DegreesToRadians(-Pitch));
-	SetActorLocation(FVector(Focus.X - Back, Focus.Y, Height));
+	// Panning off one side of a wrapping map comes back in from the other; the copies drawn on each side look the same.
+	const double Y = WrapWidth > 0.0 ? Focus.Y - WrapWidth * FMath::Floor(Focus.Y / WrapWidth) : Focus.Y;
+	SetActorLocation(FVector(Focus.X - Back, Y, Height));
 	SetActorRotation(FRotator(Pitch, 0.f, 0.f));
 }
 
 void ASovCameraPawn::LookAt(const FVector& Target)
 {
-	Place(FVector(Target.X, Target.Y, 0.0));
+	const FVector Near = SovHex::NearestCopy(Target, FocusPoint().Y, WrapWidth);
+	Place(FVector(Near.X, Near.Y, 0.0));
 }
 
 void ASovCameraPawn::Pan(const FVector2D& MapDelta)

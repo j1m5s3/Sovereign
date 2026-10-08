@@ -78,6 +78,7 @@ struct FSovWonderMarker
 struct FSovMirror
 {
 	int32 Width = 0, Height = 0;
+	bool bWrap = false;  // the map wraps east-west (drawn with a copy on each side)
 	int32 Viewer = 0;
 	TArray<FSovTile> Tiles;  // revealed plots only
 	TArray<FSovUnitMarker> Units;  // the viewer's own, and others' on visible plots

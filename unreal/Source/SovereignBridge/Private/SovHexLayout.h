@@ -27,6 +27,22 @@ inline FVector Center(int32 Col, int32 Row, double Z = 0.0)
 	return ToWorld(MapPos(Col, Row), Z);
 }
 
+// World width of a map Width hexes wide: on a wrapping map, the distance between two copies along world Y.
+inline double MapWorldWidth(int32 Width)
+{
+	return Size * Sqrt3 * Width;
+}
+
+// On a wrapping map (WrapWidth > 0), the copy of a world point nearest NearY along world Y (map east).
+inline FVector NearestCopy(FVector P, double NearY, double WrapWidth)
+{
+	if (WrapWidth > 0.0)
+	{
+		P.Y += WrapWidth * FMath::RoundToDouble((NearY - P.Y) / WrapWidth);
+	}
+	return P;
+}
+
 // Offset hex under a world point (not wrapped or range-checked).
 inline FIntPoint FromWorld(const FVector& World)
 {

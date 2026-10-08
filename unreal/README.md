@@ -82,7 +82,7 @@ from `../data/rules`.
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
 | `F1` / `F3` | How to play (the main keys) / yields on your territory's plots, `*` on the ones worked |
 | `F5` / `F9` | Quicksave / quickload (local games). Saves live in `Saved/Sovereign/*.sov`; the main menu offers to continue the four latest (the autosave a live battle writes among them) |
-| Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city |
+| Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city. The map wraps east-west: panning past one edge carries on into the other, drawn as a copy on each side |
 
 ## Tests
 
@@ -111,4 +111,4 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 
 ## Not yet
 
-Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once).
+Street scenes use engine primitives (one temperate kit) until the art pipeline exists.

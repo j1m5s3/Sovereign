@@ -70,6 +70,34 @@ bool FSovHexLayoutTest::RunTest(const FString& Parameters)
 		const double D = FVector::Dist(SovHex::Center(H.x, H.y), SovHex::Center(N->x, N->y));
 		TestTrue(FString::Printf(TEXT("direction %d distance %.2f"), Dir, D), FMath::IsNearlyEqual(D, SovHex::Size * SovHex::Sqrt3, 0.01));
 	}
+	// A wrapping map: the copies drawn a map's width west and east pick back to the same plot, and
+	// neighbours across the wrap sit side by side once the far one is taken from the nearest copy.
+	sov::HexGrid Wrap(20, 12, true);
+	const double W = SovHex::MapWorldWidth(Wrap.width());
+	for (int32 Row = 0; Row < Wrap.height(); ++Row)
+	{
+		for (int32 Col = 0; Col < Wrap.width(); ++Col)
+		{
+			const FVector C = SovHex::Center(Col, Row);
+			for (const double Shift : {-W, W})
+			{
+				const FIntPoint P = SovHex::FromWorld(C + FVector(0.0, Shift, 0.0));
+				const std::optional<sov::Hex> Back = Wrap.normalize(sov::Hex{P.X, P.Y});
+				TestTrue(TEXT("a copy picks back to its plot"), Back && Back->x == Col && Back->y == Row);
+			}
+			for (int32 Dir = 0; Dir < sov::kNumDirs; ++Dir)
+			{
+				const std::optional<sov::Hex> N = Wrap.neighbor(sov::Hex{Col, Row}, static_cast<sov::Dir>(Dir));
+				if (!N) continue;
+				const double D = FVector::Dist(C, SovHex::NearestCopy(SovHex::Center(N->x, N->y), C.Y, W));
+				if (!FMath::IsNearlyEqual(D, SovHex::Size * SovHex::Sqrt3, 0.01))
+				{
+					AddError(FString::Printf(TEXT("(%d,%d) and its neighbour (%d,%d) are %.1f apart"), Col, Row, N->x, N->y, D));
+					return false;
+				}
+			}
+		}
+	}
 	return true;
 }
 
