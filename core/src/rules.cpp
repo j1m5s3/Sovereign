@@ -932,6 +932,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.buildCharges = static_cast<int>(j["buildCharges"].integer(0));
         u.buildsRoads = j["buildsRoads"].boolean(false);
         u.costProgression = static_cast<int>(j["costProgression"].integer(0));
+        u.gameProgressPercent = static_cast<int>(j["gameProgressPercent"].integer(0));
         u.popCost = static_cast<int>(j["popCost"].integer(0));
         u.minPopulation = static_cast<int>(j["minPopulation"].integer(0));
         u.mustPurchase = j["mustPurchase"].boolean(false);

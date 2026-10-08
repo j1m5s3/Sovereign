@@ -1077,6 +1077,10 @@ private:
     bool canProduce(const City& city, ProductionItem item, CommandError* why, bool purchase, WonderShare* shared) const;
     // purchaseCost's price for a unit or building, whether or not Gold may buy it (Valletta opens walls to Faith; 08).
     int purchasePrice(PlayerId player, ProductionItem item, const City* city, YieldType currency) const;
+    // The larger share of the tech or civic tree the player has completed (GAME_PROGRESS costs).
+    Fixed treeProgress(PlayerId player) const;
+    // A unit's cost before game speed: + PREVIOUS_COPIES for each copy already made, or x GAME_PROGRESS.
+    int unitCost(PlayerId player, TypeIndex type) const;
     // tradePath to each of the destinations (each on a plot of its own), in their order, from one search.
     std::vector<std::vector<Hex>> tradeWays(PlayerId player, TypeIndex traderType, const City& origin, const std::vector<const City*>& destinations) const;
     // canPlaceWonder's checks that do not depend on the wonder (the plot is the city's own land within 3 plots, not its

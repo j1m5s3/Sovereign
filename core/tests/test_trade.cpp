@@ -1,4 +1,6 @@
 // Trade routes and roads (07-economy-trade-great-people.md, Trade routes; 01, Routes).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/serialize.h"
 
@@ -60,6 +62,28 @@ TEST(trade_rules_data) {
     CHECK(!r.routes[0].bridges);
     CHECK(r.routes[1].bridges);
     CHECK_EQ(r.routes[3].moveCost, Fixed::ratio(1, 2));
+}
+
+// GAME_PROGRESS 400 (data: units): a Trader's 40 rises by up to 400% of itself with the larger share of the tech or
+// civic tree its player has completed (districts' Cost progression).
+TEST(traders_cost_more_as_the_game_progresses) {
+    const auto cost = [](size_t techs, size_t civics) {
+        GameState s = tradeState();
+        Player& p = s.players[0];
+        std::fill(p.techs.done.begin(), p.techs.done.end(), 0);
+        std::fill(p.civics.done.begin(), p.civics.done.end(), 0);
+        for (size_t t = 0; t < techs; ++t) p.techs.done[t] = 1;
+        for (size_t c = 0; c < civics; ++c) p.civics.done[c] = 1;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->productionCost(0, {ProductionKind::Unit, rules().unit("UNIT_TRADER")});
+    };
+    const size_t techs = rules().techs.size(), civics = rules().civics.size();
+    CHECK_EQ(cost(0, 0), 40);
+    CHECK_EQ(cost(techs, 0), 200);
+    CHECK_EQ(cost(0, civics), 200);
+    CHECK_EQ(cost(techs / 2, civics), 200);  // the larger share counts
+    const int half = cost(techs / 2, 0);     // about 40 x (1 + 4 x 1/2)
+    CHECK(half >= 115 && half <= 120);
 }
 
 TEST(capacity_from_foreign_trade_markets_and_lighthouses) {

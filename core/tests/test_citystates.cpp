@@ -399,7 +399,8 @@ TEST(lahores_suzerain_buys_nihangs_that_military_buildings_strengthen) {
     const City& c = *g->state().city(mine);
     CHECK(!g->canProduce(c, nihang));
     CHECK_EQ(g->faithPurchaseCost(0, c, naturalist), rules().units[at(naturalist.type)].cost * 70 / 100);  // Holy Order
-    const int price = rules().units[at(nihang.type)].cost;
+    const int price = g->productionCost(0, nihang);  // its cost, Conservation's share of the civic tree included
+    CHECK(price > rules().units[at(nihang.type)].cost);
     CHECK_EQ(g->faithPurchaseCost(0, c, nihang), price);
     REQUIRE(g->submit(Command::purchaseWithFaith(0, mine, nihang)) == CommandError::Ok);
     CHECK_EQ(g->state().players[0].faith, Fixed::fromInt(1000 - price));
@@ -416,6 +417,12 @@ TEST(lahores_suzerain_buys_nihangs_that_military_buildings_strengthen) {
         auto game = Game::fromScenario(rules(), std::move(s));
         return game->combatStrength(*game->state().unit(ours), *game->state().unit(foe), true, false);
     };
+    // Its price rises with the game (GAME_PROGRESS 400): 500 Faith once the civic tree is complete.
+    GameState late = suzerainOf("CITYSTATE_LAHORE");
+    std::fill(late.players[0].civics.done.begin(), late.players[0].civics.done.end(), 1);
+    auto lateGame = Game::fromScenario(rules(), std::move(late));
+    CHECK_EQ(lateGame->faithPurchaseCost(0, *lateGame->state().city(mine), nihang), 500);
+
     CHECK_EQ(strength({}, "UNIT_NIHANG"), 25);
     CHECK_EQ(strength({"BUILDING_BARRACKS"}, "UNIT_NIHANG"), 40);
     CHECK_EQ(strength({"BUILDING_BARRACKS", "BUILDING_ARMORY"}, "UNIT_NIHANG"), 55);

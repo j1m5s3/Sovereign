@@ -292,6 +292,7 @@
    "range": 0,
    "moves": 2,
    "sight": 2,
+   "gameProgressPercent": 400,
    "purchaseYield": "GOLD",
    "unlock": "CIVIC_FOREIGN_TRADE"
   },
@@ -1973,6 +1974,7 @@
    "moves": 2,
    "sight": 2,
    "zoneOfControl": true,
+   "gameProgressPercent": 400,
    "mustPurchase": true,
    "purchaseYield": "FAITH",
    "promotionClass": "PROMOTION_CLASS_NIHANG",

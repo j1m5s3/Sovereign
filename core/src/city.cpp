@@ -699,13 +699,29 @@ int Game::borderGrowthCost(int plotsAcquired) const {
     return static_cast<int>(t.floor() * speedPercent(state_, *rules_) / 100);
 }
 
+Fixed Game::treeProgress(PlayerId player) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    auto share = [](const TreeProgress& t) {
+        const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
+        return t.done.empty() ? Fixed() : Fixed::ratio(done, static_cast<int64_t>(t.done.size()));
+    };
+    return std::max(share(p.techs), share(p.civics));
+}
+
+int Game::unitCost(PlayerId player, TypeIndex type) const {
+    const UnitType& u = rules_->units[static_cast<size_t>(type)];
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const int copies = static_cast<size_t>(type) < p.unitsTrained.size() ? p.unitsTrained[static_cast<size_t>(type)] : 0;
+    const int cost = u.cost + u.costProgression * copies;
+    // GAME_PROGRESS (the Trader, Lahore's Nihang): x (1 + param/100 x the larger share of the tech or civic tree completed).
+    if (u.gameProgressPercent <= 0) return cost;
+    return static_cast<int>((Fixed::fromInt(cost) * (Fixed::fromInt(1) + treeProgress(player) * u.gameProgressPercent / 100)).toInt());
+}
+
 int Game::productionCost(PlayerId player, ProductionItem item, const City* city) const {
     int base = 0;
     if (item.kind == ProductionKind::Unit) {
-        const UnitType& u = rules_->units[static_cast<size_t>(item.type)];
-        const Player& p = state_.players[static_cast<size_t>(player)];
-        int copies = static_cast<size_t>(item.type) < p.unitsTrained.size() ? p.unitsTrained[static_cast<size_t>(item.type)] : 0;
-        base = u.cost + u.costProgression * copies;
+        base = unitCost(player, item.type);
         // Trained as a Corps or an Army (05): UNIT_CORPS_COST_MODIFIER / UNIT_ARMY_COST_MODIFIER.
         if (item.formation > 0)
             base = static_cast<int>((Fixed::fromInt(base) * rules_->global(item.formation == 1 ? "UNIT_CORPS_COST_MODIFIER" : "UNIT_ARMY_COST_MODIFIER")).toInt());
@@ -715,14 +731,8 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
         // GAME_PROGRESS: x (1 + param/100 x the larger share of the tech or civic tree completed).
         const ProjectType& pj = rules_->projects[static_cast<size_t>(item.type)];
         Fixed cost = Fixed::fromInt(pj.cost);
-        if (pj.costProgression == DistrictCostProgression::GameProgress) {
-            const Player& p = state_.players[static_cast<size_t>(player)];
-            auto share = [](const TreeProgress& t) {
-                const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
-                return t.done.empty() ? Fixed() : Fixed::ratio(done, static_cast<int64_t>(t.done.size()));
-            };
-            cost = cost * (Fixed::fromInt(1) + std::max(share(p.techs), share(p.civics)) * pj.costProgressionParam / 100);
-        }
+        if (pj.costProgression == DistrictCostProgression::GameProgress)
+            cost = cost * (Fixed::fromInt(1) + treeProgress(player) * pj.costProgressionParam / 100);
         return std::max(1, static_cast<int>(cost.toInt()) * speedPercent(state_, *rules_) / 100);
     } else {
         base = rules_->buildings[static_cast<size_t>(item.type)].cost;

@@ -254,6 +254,7 @@ struct UnitType {
     bool buildsRoads = false;       // spends a charge on a road (01: Routes; Military Engineers, the Legionary)
     std::vector<TypeIndex> builds;  // its charges build only these, unlocked by the unit itself (the Legionary's Fort)
     int costProgression = 0;  // PREVIOUS_COPIES: extra cost per copy already trained
+    int gameProgressPercent = 0;  // GAME_PROGRESS: cost x (1 + this/100 x tree progress) (the Trader, 400)
     int popCost = 0;          // population removed when trained (Settler)
     int minPopulation = 0;    // city population needed to train
     bool mustPurchase = false;

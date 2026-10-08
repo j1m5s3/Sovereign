@@ -44,17 +44,9 @@ int Game::districtLimit(const City& city) const {
 
 int Game::districtCost(PlayerId player, TypeIndex type) const {
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
-    const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed cost = Fixed::fromInt(d.cost * speedPercent(state_, *rules_)) / 100;
-    if (d.costProgression != DistrictCostProgression::None) {
-        // x (1 + 9 x the larger share of the tech or civic tree completed).
-        auto share = [](const TreeProgress& t) {
-            const int64_t done = std::count(t.done.begin(), t.done.end(), static_cast<uint8_t>(1));
-            return t.done.empty() ? Fixed() : Fixed::ratio(done, static_cast<int64_t>(t.done.size()));
-        };
-        const Fixed progress = std::max(share(p.techs), share(p.civics));
-        cost = cost * (Fixed::fromInt(1) + progress * 9);
-    }
+    // x (1 + 9 x the larger share of the tech or civic tree completed).
+    if (d.costProgression != DistrictCostProgression::None) cost = cost * (Fixed::fromInt(1) + treeProgress(player) * 9);
     if (d.costProgression == DistrictCostProgression::NumUnderAvgPlusTech && d.costDiscountPercent > 0) {
         // Discount for a type built less than the player's own average: A types unlocked,
         // B districts completed, discounted while B >= A and B / A > this type's count.

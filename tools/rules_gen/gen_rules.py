@@ -333,6 +333,8 @@ def gen_units():
         prog = row["Cost progression"].split()
         if len(prog) == 2 and prog[0] == "PREVIOUS_COPIES":
             u["costProgression"] = int(prog[1])
+        if len(prog) == 2 and prog[0] == "GAME_PROGRESS":
+            u["gameProgressPercent"] = int(prog[1])  # the Trader, Lahore's Nihang
         m = re.search(r"pop cost (\d+)", special)
         if m:
             u["popCost"] = int(m.group(1))
