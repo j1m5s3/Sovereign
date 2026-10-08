@@ -203,8 +203,7 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         const bool inquisitor = u.id == "UNIT_INQUISITOR" && p.inquisition && majority >= 0 && majority == p.religion;
         if (!secular && !monk && !inquisitor && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE" && u.id != "UNIT_GURU") return -1;
         if (!secular && majority < 0) return -1;
-        const int copies = at(item.type) < p.unitsTrained.size() ? p.unitsTrained[at(item.type)] : 0;
-        int cost = (u.cost + u.costProgression * copies) * speed / 100;
+        int cost = unitCost(player, item.type) * speed / 100;
         // Holy Order's discount is for religious units, which a city-state's soldiers are not.
         const int discount = u.cityState != kNone ? 0 : static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());
         cost = cost * std::max(0, 100 - discount) / 100;

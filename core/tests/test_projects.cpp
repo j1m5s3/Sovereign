@@ -63,6 +63,21 @@ TEST(district_projects_convert_production_and_grant_great_people) {
     CHECK(g->state().players[0].greatPersonPoints[at(scientist)] >= gppBefore + 10);
 }
 
+// District projects cost more as the game progresses (03: GAME_PROGRESS 1500): x (1 + 15 x the larger share of the
+// tech or civic tree completed), 25 at the start and 400 with a whole tree done.
+TEST(district_projects_cost_more_as_the_game_progresses) {
+    const auto cost = [](bool civicsDone) {
+        GameState s = campusTown();
+        Player& p = s.players[0];
+        std::fill(p.techs.done.begin(), p.techs.done.end(), static_cast<uint8_t>(0));
+        std::fill(p.civics.done.begin(), p.civics.done.end(), static_cast<uint8_t>(civicsDone ? 1 : 0));
+        auto g = Game::fromScenario(rules(), s);
+        return g->productionCost(0, project("PROJECT_CAMPUS_RESEARCH_GRANTS"));
+    };
+    CHECK_EQ(cost(false), 25);
+    CHECK_EQ(cost(true), 400);
+}
+
 TEST(projects_with_one_time_effects) {
     GameState s = campusTown();
     s.cities[0].loyalty = 60;
