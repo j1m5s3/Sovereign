@@ -12,6 +12,7 @@
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
+#include "sovereign/challenge.h"
 #include "sovereign/serialize.h"
 #include "sovereign_net/session.h"
 
@@ -122,6 +123,12 @@ bool FSovSession::LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError
 	Game = std::move(Loaded);
 	CoreSetup = std::make_unique<sov::GameSetup>(Game->state().setup);
 	Mode = ESovNet::Local;
+	// A saved weekly challenge (this week's or last week's) is still that challenge.
+	ChallengeWeek = -1;
+	for (const int32 Week : {CurrentChallengeWeek(), CurrentChallengeWeek() - 1})
+	{
+		if (Week >= 0 && CoreSetup->mods.empty() && CoreSetup->seed == sov::weeklyChallenge(*Rules, Week).setup.seed) ChallengeWeek = Week;
+	}
 	bSteam = false;
 	bStalled = false;
 	bHandover = false;
@@ -165,7 +172,8 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	// The mods lay their rules over the base (player-retention §6).
 	std::vector<std::string> Dirs;
 	FString Missing;
-	if (!SovMods::RulesDirs(Setup.Mods, Dirs, Missing))
+	// The weekly challenge is played on the plain rules, as the board's check replays it.
+	if (!SovMods::RulesDirs(Setup.ChallengeWeek >= 0 ? TArray<FString>() : Setup.Mods, Dirs, Missing))
 	{
 		OutError = FString::Printf(TEXT("the mod %s is not installed"), *Missing);
 		return false;
@@ -185,7 +193,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
 	CoreSetup->speed = TCHAR_TO_UTF8(*Setup.Speed);
-	CoreSetup->mods = SovMods::ToStd(Setup.Mods);
+	CoreSetup->mods = Setup.ChallengeWeek >= 0 ? std::vector<std::string>() : SovMods::ToStd(Setup.Mods);
 	if (!Setup.StartEra.IsEmpty())
 	{
 		const sov::TypeIndex Era = Rules->era(TCHAR_TO_UTF8(*Setup.StartEra));
@@ -231,6 +239,13 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		{
 			CoreSetup->players[0].rivals = Rivals;
 		}
+	}
+	// The weekly challenge: the week's own setup, the same for everyone (no profile, rivals or mods).
+	ChallengeWeek = Setup.ChallengeWeek;
+	if (ChallengeWeek >= 0)
+	{
+		*CoreSetup = sov::weeklyChallenge(*Rules, ChallengeWeek).setup;
+		Mode = ESovNet::Local;
 	}
 	if (bSteam)
 	{
@@ -411,6 +426,19 @@ FString FSovSession::ProfilePath(const FString& PlayerName)
 	}
 	if (Safe.IsEmpty()) Safe = TEXT("Player");
 	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Profiles"), Safe + TEXT(".txt"));
+}
+
+int32 FSovSession::CurrentChallengeWeek()
+{
+	return sov::challengeWeek(FDateTime::UtcNow().ToUnixTimestamp());
+}
+
+FString FSovSession::ChallengeText(int32 Week)
+{
+	sov::Rules Plain;
+	std::string Error;
+	if (!Plain.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Error)) return FString();
+	return UTF8_TO_TCHAR(sov::weeklyChallenge(Plain, Week).text.c_str());
 }
 
 FString FSovSession::RivalsPath(const FString& PlayerName)

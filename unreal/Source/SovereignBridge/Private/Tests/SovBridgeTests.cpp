@@ -17,6 +17,7 @@
 #include "Misc/Paths.h"
 #include "UObject/UObjectGlobals.h"
 
+#include "sovereign/challenge.h"
 #include "sovereign/commands.h"
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
@@ -718,6 +719,36 @@ bool FSovModsTest::RunTest(const FString& Parameters)
 	Setup.Mods = {TEXT("no-such-mod")};
 	TestFalse(TEXT("a missing mod is refused"), Missing.Start(Setup, Error));
 	TestTrue(TEXT("and named"), Error.Contains(TEXT("no-such-mod")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovChallengeTest, "Sovereign.Bridge.WeeklyChallengeIsTheWeeksGame", kSovTestFlags)
+bool FSovChallengeTest::RunTest(const FString& Parameters)
+{
+	// This week's challenge starts from the week's setup whatever the options and mods, and a save of it
+	// is still the challenge; its log passes the board's check.
+	const int32 Week = FSovSession::CurrentChallengeWeek();
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.ChallengeWeek = Week;
+	Setup.Mods = {TEXT("swift-settlers")};
+	Setup.Seed = 99;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Challenge Ch = sov::weeklyChallenge(Session.GetRules(), Week);
+	TestEqual(TEXT("the week's seed"), Session.GetGame().state().setup.seed, Ch.setup.seed);
+	TestTrue(TEXT("no mods"), Session.GetGame().state().setup.mods.empty());
+	TestEqual(TEXT("the challenge"), Session.GetChallengeWeek(), Week);
+	TestFalse(TEXT("its text"), FSovSession::ChallengeText(Week).IsEmpty());
+	const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
+	FSovSession Resumed;
+	TestTrue(TEXT("its save loads"), Resumed.LoadLocal(Bytes, Error));
+	TestEqual(TEXT("and is still the challenge"), Resumed.GetChallengeWeek(), Week);
+	TestTrue(TEXT("the board's check passes"), sov::checkChallenge(Session.GetRules(), Ch, Bytes).valid);
 	return true;
 }
 

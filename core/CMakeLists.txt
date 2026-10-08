@@ -35,6 +35,7 @@ add_library(sovereign_core
   src/espionage.cpp
   src/worldcongress.cpp
   src/climate.cpp
+  src/challenge.cpp
   src/chronicle.cpp
   src/profile.cpp
   src/air.cpp
@@ -81,6 +82,7 @@ add_executable(sovereign_tests
   tests/test_map.cpp
   tests/test_game.cpp
   tests/test_save.cpp
+  tests/test_challenge.cpp
   tests/test_city.cpp
   tests/test_research.cpp
   tests/test_improvements.cpp

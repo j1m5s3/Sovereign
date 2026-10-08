@@ -1591,6 +1591,16 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	{
 		// One result command into the game; the core clamps it to the band (§9).
 		Outcome = Sim.Result();
+		// Recorded already within the band, so a replayed log (the weekly challenge's check) holds no result outside it.
+		{
+			const sov::PendingBattle& Pb = Subsystem()->GetGame().state().pendingBattle;
+			const int32 Band = Subsystem()->GetGame().rules().globalInt("LIVE_BATTLE_BAND_PERCENT");
+			auto InBand = [Band](int32 Field, int32 Expected) {
+				return FMath::Clamp(Field, Expected * (100 - Band) / 100, (Expected * (100 + Band) + 99) / 100);
+			};
+			Outcome.ToDefender = InBand(Outcome.ToDefender, Pb.expectedToDefender);
+			Outcome.ToAttacker = InBand(Outcome.ToAttacker, Pb.expectedToAttacker);
+		}
 		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound, Outcome.Habits));
 		bBattleSent = true;
 		BattleExitTimer = 3.f;
@@ -2549,6 +2559,11 @@ void ASovPlayerController::OpenMenu()
 			return FText::FromString((MenuModsOn.Contains(Id) ? TEXT("[on]  ") : TEXT("[off]  ")) + Label);
 		})]];
 	}
+	// The weekly challenge (player-retention §3): this week's game, with the local board's results so far.
+	const int32 Week = FSovSession::CurrentChallengeWeek();
+	FString ChallengeLabel = FSovSession::ChallengeText(Week);
+	const TArray<FString> Results = USovGameSubsystem::ChallengeResults(Week);
+	if (Results.Num() > 0) ChallengeLabel += FString::Printf(TEXT("  [your last: %s]"), *Results.Last().RightChop(FString::Printf(TEXT("week %d  "), Week).Len()));
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
 	{
@@ -2613,6 +2628,11 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[Item(FString(TEXT("Weekly challenge: ")) + ChallengeLabel, [this, Base, Week]() {
+				FSovSetup S = Base();
+				S.ChallengeWeek = Week;
+				StartFromMenu(S);
+			})]
 			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
