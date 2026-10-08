@@ -79,19 +79,36 @@ bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool 
     return im.minAppeal <= -100 || plotAppeal(at) >= im.minAppeal;  // Seaside Resort: Breathtaking (07)
 }
 
+// Only the improvements that take the plot's land can fit it (improvementFits looks at the land first).
+const std::vector<TypeIndex>& Game::improvementsForLand(const Plot& p, bool resourceSeen) const {
+    return resourceSeen ? resourceImprovements_[static_cast<size_t>(p.resource)]
+           : p.feature != kNone ? featureImprovements_[static_cast<size_t>(p.feature)]
+                                : terrainImprovements_[static_cast<size_t>(p.terrain)];
+}
+
 std::vector<TypeIndex> Game::improvementsAt(PlayerId player, Hex at) const {
     std::vector<TypeIndex> out;
     if (!improvablePlot(player, at)) return out;  // once for the plot, not once per improvement
-    // Only the improvements that take the plot's land can fit it (improvementFits looks at the land first).
-    const Plot& p = state_.plot(at);
     const bool resourceSeen = resourceVisible(player, at);
-    const std::vector<TypeIndex>& candidates = resourceSeen      ? resourceImprovements_[static_cast<size_t>(p.resource)]
-                                               : p.feature != kNone ? featureImprovements_[static_cast<size_t>(p.feature)]
-                                                                    : terrainImprovements_[static_cast<size_t>(p.terrain)];
-    for (const TypeIndex i : candidates) {
+    for (const TypeIndex i : improvementsForLand(state_.plot(at), resourceSeen)) {
         if (improvementFits(player, at, i, false, resourceSeen)) out.push_back(i);
     }
     return out;
+}
+
+bool Game::builderCanImprove(PlayerId player, Hex at) const {
+    if (!improvablePlot(player, at)) return false;
+    const bool resourceSeen = resourceVisible(player, at);
+    const std::vector<TypeIndex>& candidates = improvementsForLand(state_.plot(at), resourceSeen);
+    // Any one will do, so the city-states' improvements, whose suzerain check costs most, are tried last.
+    for (const bool cityStates : {false, true}) {
+        for (const TypeIndex i : candidates) {
+            const ImprovementType& im = rules_->improvements[static_cast<size_t>(i)];
+            if (im.builtBy != kNone || (im.cityState != kNone) != cityStates) continue;
+            if (improvementFits(player, at, i, false, resourceSeen)) return true;
+        }
+    }
+    return false;
 }
 
 bool Game::canHarvestAt(PlayerId player, Hex at) const {

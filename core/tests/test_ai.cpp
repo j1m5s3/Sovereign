@@ -132,6 +132,113 @@ TEST(ai_merges_twins_into_a_corps) {
     CHECK_EQ((ua ? ua : ub)->formation, 1);
 }
 
+// The AI's Builders ask builderCanImprove of every plot near their cities: on every plot of a game well under way, with
+// city-states in it, it says what improvementsAt says of Builder work, for every player.
+TEST(ai_builder_work_matches_the_improvements_listed) {
+    GameSetup setup;
+    setup.seed = 3;
+    setup.mapSize = "MAPSIZE_TINY";
+    for (int i = 0; i < 4; ++i) setup.players.push_back({rules().civs[at(static_cast<TypeIndex>(i))].id, false});
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    while (g->state().turn < 80 && !g->gameOver()) ai::playTurn(*g);
+    int work = 0, wrong = 0;
+    for (const Player& p : g->state().players) {
+        for (int i = 0; i < g->state().grid.size(); ++i) {
+            const Hex h = g->state().grid.at(i);
+            const std::vector<TypeIndex> listed = g->improvementsAt(p.id, h);
+            const bool any = std::any_of(listed.begin(), listed.end(), [](TypeIndex im) { return rules().improvements[at(im)].builtBy == kNone; });
+            work += any ? 1 : 0;
+            wrong += g->builderCanImprove(p.id, h) != any ? 1 : 0;
+        }
+    }
+    CHECK(work > 0);
+    CHECK_EQ(wrong, 0);
+}
+
+// Two Builders split the work: the first heads for the Wheat (on land already seen), and the second leaves it to the
+// first. They start off the city's land, too far out to reach the Wheat this turn or when the next one begins.
+TEST(ai_builders_split_up_over_the_work) {
+    GameState s = flatState(20, 14, 1);
+    addCity(s, 0, {6, 6}, true);
+    for (const Hex& h : s.grid.within({6, 6}, 3)) sovtest::claimFor(s, s.cities[0], h);
+    const Hex wheat{9, 6};
+    s.plot(wheat).resource = rules().resource("RESOURCE_WHEAT");
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId first = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
+    const UnitId second = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    int bound = 0;
+    for (const UnitId id : {first, second}) {
+        const Unit* u = g->state().unit(id);
+        REQUIRE(u);
+        bound += u->pos == wheat || u->moveTarget == wheat ? 1 : 0;
+    }
+    CHECK_EQ(bound, 1);
+    CHECK(g->state().plot(wheat).improvement == kNone);  // not reached yet
+}
+
+// An Archer at war shoots what it can reach with no unit there: an Encampment, or else the city itself (an attack
+// looks for its targets among the other players' units, cities and districts).
+TEST(ai_shoots_an_undefended_encampment_or_city) {
+    const auto shoot = [](bool encampment) {
+        GameState s = flatState(24, 14, 2);
+        addCity(s, 0, {4, 6}, true, 3);
+        addCity(s, 1, {16, 6}, true, 3);
+        if (encampment) {
+            CityDistrict camp;
+            camp.type = rules().district("DISTRICT_ENCAMPMENT");
+            camp.pos = {13, 6};
+            camp.complete = true;
+            s.cities[1].districts.push_back(camp);
+            sovtest::claimFor(s, s.cities[1], camp.pos);
+        }
+        addUnit(s, "UNIT_ARCHER", 0, encampment ? Hex{11, 6} : Hex{14, 6});  // two plots from its target
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+        const City& before = g->state().cities[1];
+        const int hp = before.hp, damage = encampment ? before.districts[0].damage : 0;
+        ai::playTurn(*g);
+        const City& after = g->state().cities[1];
+        return encampment ? after.districts[0].damage > damage && after.hp == hp : after.hp < hp;
+    };
+    CHECK(shoot(true));
+    CHECK(shoot(false));
+}
+
+// A walled city strikes an enemy beside it, and its Encampment one beside that (03: Defense).
+TEST(ai_cities_and_encampments_strike_enemies_in_reach) {
+    const auto struck = [](bool encampment) {
+        GameState s = flatState(24, 14, 2);
+        addCity(s, 0, {4, 6}, true, 3);
+        addCity(s, 1, {20, 6}, true, 3);
+        City& home = s.cities[0];
+        home.buildings.push_back(rules().building("BUILDING_ANCIENT_WALLS"));
+        std::sort(home.buildings.begin(), home.buildings.end());
+        home.wallHp += rules().buildings[at(rules().building("BUILDING_ANCIENT_WALLS"))].outerDefenseHp;
+        if (encampment) {
+            CityDistrict camp;
+            camp.type = rules().district("DISTRICT_ENCAMPMENT");
+            camp.pos = {7, 6};
+            camp.complete = true;
+            home.districts.push_back(camp);
+            sovtest::claimFor(s, home, camp.pos);
+        }
+        // Beside the city, or beside the Encampment and out of the city's reach.
+        const UnitId foe = addUnit(s, "UNIT_WARRIOR", 1, encampment ? Hex{9, 6} : Hex{5, 6});
+        for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(foe);
+        return !u || u->hp < 100;
+    };
+    CHECK(struck(false));
+    CHECK(struck(true));
+}
+
 TEST(ai_wins_a_fight_it_should_win) {
     GameState s = flatState(20, 14, 2);
     addCity(s, 0, {4, 6}, true);

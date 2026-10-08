@@ -125,6 +125,48 @@ TEST(improvements_go_only_on_the_players_own_open_land) {
     CHECK(!takesFarm({12, 5}));  // player 1's land
 }
 
+// builderCanImprove agrees with improvementsAt: a Fort (a Military Engineer's) is no Builder work, and a city-state's
+// improvement is, for its suzerain (Nazca's Nazca Line on desert, where nothing else fits).
+TEST(builder_work_is_what_improvements_at_lists_for_builders) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.envoys.assign(2, 0);
+        p.relations.resize(2);
+    }
+    s.players[1].civ = kNone;
+    s.players[1].cityState = rules().cityState("CITYSTATE_NAZCA");
+    sovtest::addCity(s, 0, {4, 6}, true, 4);
+    sovtest::addCity(s, 1, {14, 6}, true, 2);
+    const Hex sand{6, 6};
+    s.plot(sand).owner = 0;
+    s.plot(sand).city = s.cities[0].id;
+    s.plot(sand).terrain = rules().terrain("TERRAIN_DESERT");
+    s.players[0].techs.done[at(tech("TECH_SIEGE_TACTICS"))] = 1;  // a Fort fits the desert
+    const auto listed = [](const Game& g, Hex h, const char* id) {
+        const std::vector<TypeIndex> all = g.improvementsAt(0, h);
+        return std::find(all.begin(), all.end(), improvement(id)) != all.end();
+    };
+    const auto builderWork = [](const Game& g, Hex h) {
+        const std::vector<TypeIndex> all = g.improvementsAt(0, h);
+        const bool any = std::any_of(all.begin(), all.end(), [](TypeIndex i) { return rules().improvements[at(i)].builtBy == kNone; });
+        CHECK_EQ(g.builderCanImprove(0, h), any);
+        return any;
+    };
+    {
+        auto g = Game::fromScenario(rules(), s);
+        CHECK(listed(*g, sand, "IMPROVEMENT_FORT"));
+        CHECK(!builderWork(*g, sand));     // nothing but the Fort
+        CHECK(builderWork(*g, {5, 6}));    // grassland: a Farm
+        CHECK(!builderWork(*g, {4, 6}));   // the city center
+        CHECK(!builderWork(*g, {14, 5}));  // the city-state's land
+    }
+    s.players[0].envoys[1] = 3;  // its suzerain
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(listed(*g, sand, "IMPROVEMENT_NAZCA_LINE"));
+    CHECK(builderWork(*g, sand));
+}
+
 // Rules that list a land twice for an improvement still offer it once there.
 TEST(an_improvement_is_offered_once_where_its_land_is_listed_twice) {
     Rules r = rules();

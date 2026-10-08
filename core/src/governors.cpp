@@ -4,6 +4,7 @@
 // loyalty per turn there and its promotions apply to the city through the modifier model
 // (ModSource::Governor). Amani may serve in a city-state, where she counts as envoys.
 #include <algorithm>
+#include <string_view>
 
 #include "sovereign/game.h"
 
@@ -69,8 +70,9 @@ bool Game::territoryGovernorHas(Hex at, PlayerId owner, const char* promotionId)
 
 bool Game::governorHasPromotion(const Governor& g, const char* promotionId) const {
     // One of its promotions has that name (ids are unique), found without a search of them all.
+    const std::string_view id(promotionId);
     return std::any_of(g.promotions.begin(), g.promotions.end(), [&](TypeIndex p) {
-        return p >= 0 && at(p) < rules_->governorPromotions.size() && rules_->governorPromotions[at(p)].id == promotionId;
+        return p >= 0 && at(p) < rules_->governorPromotions.size() && rules_->governorPromotions[at(p)].id == id;
     });
 }
 

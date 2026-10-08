@@ -5,6 +5,7 @@
 // visiting tourists; the culture victory goes to a civ whose visitors outnumber every other
 // civ's domestic tourists.
 #include <algorithm>
+#include <string_view>
 
 #include "sovereign/game.h"
 #include "sovereign/modifiers.h"
@@ -73,7 +74,8 @@ bool Game::dedicated(PlayerId player, const char* id) const {
     if (player < 0 || at(player) >= state_.players.size()) return false;
     // One of the player's few dedications has that name (ids are unique), found without a search of them all.
     const std::vector<TypeIndex>& mine = state_.players[at(player)].dedications;
-    return std::any_of(mine.begin(), mine.end(), [&](TypeIndex d) { return d >= 0 && at(d) < rules_->dedications.size() && rules_->dedications[at(d)].id == id; });
+    const std::string_view name(id);
+    return std::any_of(mine.begin(), mine.end(), [&](TypeIndex d) { return d >= 0 && at(d) < rules_->dedications.size() && rules_->dedications[at(d)].id == name; });
 }
 
 bool Game::goldenDedication(PlayerId player, const char* id) const {
@@ -453,6 +455,7 @@ PlayerId Game::cultureVictor() const {
     // civs one early tourist (a tribal village's relic) otherwise wins, as each tourist both counts for
     // the host and comes off the rival's domestic tourists (07: Tourism).
     constexpr int kMinTouristsPerRival = 5;
+    std::vector<int> domestic(state_.players.size(), -1);  // each civ's domesticTourists, worked out on first need
     for (const Player& p : state_.players) {
         if (!isMajor(p)) continue;
         const int visitors = visitingTourists(p.id);
@@ -462,7 +465,10 @@ PlayerId Game::cultureVictor() const {
         for (const Player& x : state_.players) {
             if (x.id == p.id || !isMajor(x)) continue;
             ++rivals;
-            if (visitors <= domesticTourists(x.id)) all = false;
+            if (!all) continue;  // one rival it falls short of settles it: the rest are only counted
+            int& theirs = domestic[at(x.id)];
+            if (theirs < 0) theirs = domesticTourists(x.id);
+            if (visitors <= theirs) all = false;
         }
         if (all && rivals > 0 && visitors >= kMinTouristsPerRival * rivals) return p.id;
     }

@@ -196,6 +196,28 @@ TEST(visitors_beyond_every_rivals_home_tourists_win) {
     CHECK(g->state().victory == Victory::Culture);
 }
 
+// With two rivals the visitors must beat each one's own tourists: the second rival's many keep them home.
+TEST(every_rivals_home_tourists_must_be_beaten) {
+    GameState s = flatState(30, 14, 3);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {4, 6}, true, 4);
+    addCity(s, 1, {14, 6}, true, 4);
+    addCity(s, 2, {24, 6}, true, 4);
+    s.majorsAtStart = 3;  // a tourist is 3 x 200 Tourism
+    s.players[0].tourismTo = {0, 600 * 6, 600 * 6};  // twelve visitors, six from each rival (the floor: 5 per rival)
+    s.players[1].lifetimeCulture = Fixed::fromInt(800);  // eight tourists, six of them visiting us: two at home
+    const auto victor = [&](int secondCulture) {
+        GameState t = s;
+        t.players[2].lifetimeCulture = Fixed::fromInt(secondCulture);
+        auto g = Game::fromScenario(rules(), std::move(t));
+        CHECK_EQ(g->visitingTourists(0), 12);
+        CHECK_EQ(g->domesticTourists(1), 2);
+        return g->cultureVictor();
+    };
+    CHECK_EQ(victor(1700), 0);           // eleven at home: twelve visitors beat them
+    CHECK_EQ(victor(1800), kNoPlayer);  // twelve at home
+}
+
 TEST(eras_survive_a_save) {
     GameState s = eraState();
     s.players[0].eraScore = 7;
