@@ -744,7 +744,11 @@ int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city, Y
     } else if (!rules_->buildings[static_cast<size_t>(item.type)].purchasable) {
         return -1;
     }
-    int cost = productionCost(player, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") *
+    return purchasePrice(player, item, city, currency);
+}
+
+int Game::purchasePrice(PlayerId player, ProductionItem item, const City* city, YieldType currency) const {
+    int cost = productionCost(player, item, city) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") *
                std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
     if (item.kind == ProductionKind::Unit && goldenDedication(player, "DEDICATION_MONUMENTALITY")) {
         const std::string& id = rules_->units[static_cast<size_t>(item.type)].id;
@@ -1179,10 +1183,7 @@ void Game::applyCity(const Command& c) {
             }
             if (c.target.x == 1) {
                 p.faith -= Fixed::fromInt(faithPurchaseCost(c.player, city, item));
-                if (item.kind == ProductionKind::Building) {
-                    city.buildings.push_back(item.type);
-                    std::sort(city.buildings.begin(), city.buildings.end());
-                } else {
+                if (item.kind == ProductionKind::Unit) {
                     const int religion = cityMajorityReligion(city);
                     if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
                     ++p.unitsTrained[static_cast<size_t>(item.type)];
@@ -1205,10 +1206,13 @@ void Game::applyCity(const Command& c) {
                             for (TypeIndex b : o.buildings) u.charges += rules_->buildings[static_cast<size_t>(b)].spreadCharges;  // Hagia Sophia
                         }
                     }
+                    break;
                 }
-                break;
+            } else {
+                p.gold -= Fixed::fromInt(purchaseCost(c.player, item, &city));
             }
-            p.gold -= Fixed::fromInt(purchaseCost(c.player, item, &city));
+            // A building bought with Faith is finished as one bought with Gold: walls stand at full strength, and its
+            // moments, dedications and the like count.
             completeItem(city, item);
             // A bought building leaves the queue; what was put into it carries over.
             if (item.kind == ProductionKind::Building) {
