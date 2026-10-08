@@ -146,6 +146,12 @@ bool Game::suzerainBonus(PlayerId player, Cs cityState) const {
     return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
 }
 
+bool Game::suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const {
+    uint8_t& asked = shared.suzerain[static_cast<size_t>(cityState)];
+    if (asked == 0) asked = suzerainBonus(player, cityState) ? 2 : 1;
+    return asked == 2;
+}
+
 int Game::suzeraintiesOf(PlayerId player) const {
     int n = 0;
     for (const Player& cs : state_.players) n += cs.cityState != kNone && cs.alive && isSuzerain(player, cs.id) ? 1 : 0;

@@ -834,8 +834,8 @@ private:
     void seizeCivilian(UnitId id, PlayerId captor);
     void removeUnit(UnitId id);
     bool exertsZoc(const Unit& unit) const;
-    // Plots in enemy ZOC for this mover (empty: none, or it ignores ZOC).
-    std::vector<uint8_t> zocMap(const Unit& mover) const;
+    // Marks with `bit` the plots in enemy ZOC for this mover (none when it ignores ZOC) in `plots`, one entry per plot.
+    void markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) const;
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
     bool growBorders(City& city);  // false when no plot was available
@@ -926,6 +926,9 @@ private:
     void applyEndTurn(const Command& c);
     // Moves the unit along its move order as far as its moves allow.
     void advanceUnit(UnitId id);
+    // findPath's search; with `along`, one kept to the plots of `along` (and without enemy ZOC, which changes only the
+    // moves a path leaves): a path it finds then shows that findPath finds one too.
+    std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along) const;
     void beginPlayerTurn(PlayerId p, bool runCities = true);
     void beginGlobalTurn();
     void refreshVisibility(PlayerId p);
@@ -966,7 +969,8 @@ private:
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
     std::vector<TypeIndex> oceanTechs_;       // the techs that open the Ocean (Cartography)
     std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
-    std::vector<int> techEras_, civicEras_;   // each tech's and civic's era, by index (playerEra)
+    // Each tech's and civic's era, by index (playerEra), raised to 0 where below: a player's era is never below the first.
+    std::vector<uint8_t> techEras_, civicEras_;
     std::vector<TypeIndex> borderCivics_;     // the civics that close a civ's borders (Early Empire)
     int suzerainEnvoys_ = 0;                  // INFLUENCE_TOKENS_MINIMUM_FOR_SUZERAIN (isSuzerain)
     int touristTourism_ = 0;                  // TOURISM_TOURISM_TO_MOVE_CITIZEN (visitingTourists)
@@ -1027,12 +1031,16 @@ private:
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // The part of them not counted off its land: corporations' products, luxuries granted, Zanzibar's spices.
     void addCopiesOffMap(PlayerId player, TypeIndex only, std::vector<int>& n) const;
-    // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
-    // the National Park plots of each city. Valid while no city changes hands.
+    // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld, the
+    // National Park plots of each city, and the owner's suzerainBonus by city-state kind (0 not asked yet, 1 no, 2
+    // yes). Valid while no city changes hands.
     struct ReportShare {
         std::optional<std::vector<uint8_t>> luxuries;
         std::optional<std::map<CityId, int>> parkPlots;
+        uint8_t suzerain[static_cast<size_t>(Cs::Count)] = {};
     };
+    // suzerainBonus(player, cityState) for the owner of a run of city reports, asked once per kind for the run.
+    bool suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const;
     CityReport cityReport(const City& city, ReportShare& shared) const;
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;

@@ -40,8 +40,15 @@ Unit* Game::escortMut(const Unit& leader) {
 }
 
 const Unit* Game::defenderAt(Hex plot) const {
-    if (const Unit* m = state_.unitAt(plot, UnitLayer::Military, *rules_)) return m;
-    return state_.unitAt(plot, UnitLayer::Leader, *rules_);
+    // The first military unit there, else the first leader (as unitAt finds each), from one look at the units.
+    const Unit* leader = nullptr;
+    for (const Unit& u : state_.units) {
+        if (u.pos != plot) continue;
+        const UnitLayer layer = rules_->units[static_cast<size_t>(u.type)].layer;
+        if (layer == UnitLayer::Military) return &u;
+        if (layer == UnitLayer::Leader && !leader) leader = &u;
+    }
+    return leader;
 }
 
 int Game::meleeStrength(const Unit& unit) const {
@@ -416,11 +423,11 @@ void Game::rebellion(City& city) {
 int Game::playerEra(PlayerId player) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     // The latest era of a tech or civic researched, read off compact lists of their eras.
-    auto latest = [](const std::vector<uint8_t>& done, const std::vector<int>& eras, int era) {
+    // Bytes, each era masked by whether it is done (0xFF or 0) and maxed rather than branched on, so the compiler can
+    // do many at once.
+    auto latest = [](const std::vector<uint8_t>& done, const std::vector<uint8_t>& eras, uint8_t era) {
         const size_t n = std::min(done.size(), eras.size());
-        for (size_t i = 0; i < n; ++i) {
-            if (done[i] != 0 && eras[i] > era) era = eras[i];
-        }
+        for (size_t i = 0; i < n; ++i) era = std::max(era, static_cast<uint8_t>(eras[i] & static_cast<uint8_t>(-(done[i] != 0))));
         return era;
     };
     return latest(p.civics.done, civicEras_, latest(p.techs.done, techEras_, 0));

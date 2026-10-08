@@ -232,7 +232,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     }
     // Trade routes from this city pay by the districts at their destinations (07); routes to it may
     // pay it too (allies, Wisselbanken).
-    const bool brunei = suzerainBonus(c->owner, Cs::BandarBrunei);
+    const bool brunei = suzerainBonus(c->owner, Cs::BandarBrunei, shared);
     for (const TradeRoute& tr : state_.tradeRoutes) {
         if (tr.origin == c->id) {
             if (const City* dest = state_.city(tr.destination)) {
@@ -256,7 +256,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     }
     // Great Works in the city's slots, and great people whose effects improve its buildings.
     const bool reliquaries = !c->greatWorks.empty() && cityFollows(*c, Bf::Reliquaries);
-    const bool kandy = !c->greatWorks.empty() && suzerainBonus(c->owner, Cs::Kandy);
+    const bool kandy = !c->greatWorks.empty() && suzerainBonus(c->owner, Cs::Kandy, shared);
     for (const GreatWork& w : c->greatWorks) {
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
         const int pct = themed(*c, w.building) ? 100 + rules_->buildings[static_cast<size_t>(w.building)].theming->yieldPercent : 100;  // 07: Theming
@@ -264,7 +264,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const int relic = gw.id == "RELIC" ? (reliquaries ? 300 : 100) * (kandy ? 150 : 100) / 100 : 100;
         raw[idx(gw.yield)] += Fixed::fromInt(gw.amount * pct / 100 * relic / 100);
         // Anshan (08: suzerain): +2 Science from writing, +1 from artifacts and relics.
-        if (suzerainBonus(c->owner, Cs::Anshan))
+        if (suzerainBonus(c->owner, Cs::Anshan, shared))
             raw[idx(YieldType::Science)] += Fixed::fromInt(gw.id == "WRITING" ? 2 : (gw.id == "ARTIFACT" || gw.id == "RELIC") ? 1 : 0);
     }
     for (TypeIndex person : owner.greatPeopleActivated) {
@@ -289,7 +289,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (kind == "DISTRICT_HOLY_SITE" && cityFollows(*c, Bf::WorkEthic)) raw[idx(YieldType::Production)] += adj[idx(YieldType::Faith)];
     }
     // Nan Madol (08: suzerain): +2 Culture for each district, the City Center too, on or next to Coast (a lake is Coast too).
-    if (suzerainBonus(c->owner, Cs::NanMadol)) {
+    if (suzerainBonus(c->owner, Cs::NanMadol, shared)) {
         const TypeIndex coast = rules_->terrain("TERRAIN_COAST");
         const auto byCoast = [&](Hex h) {
             bool by = false;
@@ -332,7 +332,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         }
     }
     // Johannesburg (08: suzerain): +1 Production per kind of improved resource here, +1 more after Industrialization.
-    if (suzerainBonus(c->owner, Cs::Johannesburg)) {
+    if (suzerainBonus(c->owner, Cs::Johannesburg, shared)) {
         std::vector<TypeIndex> kinds;
         state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& p = state_.plot(h);
@@ -343,7 +343,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         raw[idx(YieldType::Production)] += Fixed::fromInt(static_cast<int>(kinds.size()) * (industrial ? 2 : 1));
     }
     // Singapore (08: suzerain): +2 Production per major civ we trade with.
-    if (suzerainBonus(c->owner, Cs::Singapore)) {
+    if (suzerainBonus(c->owner, Cs::Singapore, shared)) {
         std::vector<PlayerId> partners;
         for (const TradeRoute& tr : state_.tradeRoutes) {
             const City* a = state_.city(tr.origin);
@@ -360,7 +360,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     state_.grid.forEachWithin(c->pos, 1, [&](Hex n) {
         if (n != c->pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
     });
-    if (suzerainBonus(c->owner, Cs::MohenjoDaro)) fresh = true;  // Mohenjo-Daro (08: suzerain): every city as if on a river
+    if (suzerainBonus(c->owner, Cs::MohenjoDaro, shared)) fresh = true;  // Mohenjo-Daro (08: suzerain): every city as if on a river
     const HotGlobal water = fresh ? HotGlobal::CityPopulationRiverLake : coastal ? HotGlobal::CityPopulationCoast : HotGlobal::CityPopulationNoWater;
     rep.housing += rules_->global(water);
     rep.housing += improvementHousing(*c);
@@ -403,7 +403,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     std::vector<TypeIndex> regional;
     const bool vertical = cityGovernorHas(*c, "GOVERNOR_PROMOTION_VERTICAL_INTEGRATION");
     // Mexico City (08: suzerain): Industrial Zone, Entertainment Complex and Water Park buildings reach 3 tiles farther.
-    const bool mexico = suzerainBonus(c->owner, Cs::MexicoCity);
+    const bool mexico = suzerainBonus(c->owner, Cs::MexicoCity, shared);
     // Tesla and Paxton (07): a district they were used on gives each city its regional buildings reach a bonus, once.
     std::vector<std::pair<CityId, TypeIndex>> bonusFrom;
     const auto districtBonus = [&](const City& o, TypeIndex district) {
@@ -563,7 +563,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
             for (const auto& [y, k] : kKilwa) pct += i == idx(y) ? kilwaPercent(*c, k) : 0;
         }
         // Antananarivo (08: suzerain): +2% Culture per great person earned.
-        if (i == idx(YieldType::Culture) && suzerainBonus(c->owner, Cs::Antananarivo)) {
+        if (i == idx(YieldType::Culture) && suzerainBonus(c->owner, Cs::Antananarivo, shared)) {
             int earned = 0;
             for (int n : owner.greatPeopleRecruited) earned += n;
             pct += 2 * earned;

@@ -75,6 +75,31 @@ TEST(land_units_embark_after_shipbuilding_and_reach_the_ocean_after_cartography)
     CHECK(!g2->findPath(w, {9, 5}, true));
 }
 
+// Afloat, an overland order may still go by water (it is only kept from embarking). Once ashore it keeps dry, so an
+// order that lands where only a way over the water is left ends at once, not on the next turn.
+TEST(an_overland_order_that_lands_with_only_a_wet_way_left_ends_at_once) {
+    // A land column (x = 6) between two strips of Coast, x = 4-5 and 7-8, from edge to edge; land beyond them.
+    GameState s = flatState(12, 8, 2);
+    for (int y = 0; y < 8; ++y) {
+        for (int x : {4, 5, 7, 8}) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    }
+    for (PlayerId p = 0; p < 2; ++p) {
+        Player& pl = s.players[static_cast<size_t>(p)];
+        Game::fitPlayerToRules(pl, rules());
+        pl.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    giveTech(s, 0, "TECH_SHIPBUILDING");
+    const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {5, 3});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->isEmbarked(unit(*g, w)));
+    REQUIRE(g->submit(Command::move(0, w, {9, 3}, true)) == CommandError::Ok);
+    // Landing on the column takes all its moves; from there only the Coast beyond leads on.
+    CHECK_EQ(unit(*g, w).pos.x, 6);
+    CHECK(!g->isEmbarked(unit(*g, w)));
+    CHECK_EQ(unit(*g, w).movesLeft, Fixed());
+    CHECK(!unit(*g, w).moveTarget);
+}
+
 TEST(amphibious_units_embark_and_land_without_the_extra_cost) {
     GameState s = seaState();
     giveTech(s, 0, "TECH_SHIPBUILDING");

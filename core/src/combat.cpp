@@ -426,19 +426,16 @@ bool Game::exertsZoc(const Unit& u) const {
     return ut.layer == UnitLayer::Military && (ut.zoneOfControl || unitHas(u, UnitEffectKind::ExertZoc));
 }
 
-std::vector<uint8_t> Game::zocMap(const Unit& mover) const {
-    std::vector<uint8_t> out;
-    if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return out;
+void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) const {
+    if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return;
     auto mark = [&](Hex center) {
-        if (out.empty()) out.assign(static_cast<size_t>(state_.grid.size()), 0);
         for (int d = 0; d < kNumDirs; ++d) {
             const std::optional<Hex> h = state_.grid.neighbor(center, static_cast<Dir>(d));
-            if (h && *h != center) out[static_cast<size_t>(state_.grid.index(*h))] = 1;
+            if (h && *h != center) plots[static_cast<size_t>(state_.grid.index(*h))] |= bit;
         }
     };
     for (const City& c : state_.cities) if (atWar(mover.owner, c.owner)) mark(c.pos);
     for (const Unit& u : state_.units) if (atWar(mover.owner, u.owner) && exertsZoc(u)) mark(u.pos);
-    return out;
 }
 
 // ------------------------------------------------------------------ strength and damage
