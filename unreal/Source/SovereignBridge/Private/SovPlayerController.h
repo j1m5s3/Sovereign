@@ -47,6 +47,10 @@ public:
 	int32 GetBattleSquad() const { return BattleSquad; }
 	bool BattleSettled() const { return bBattleSent; }
 	const FSovBattleResult& BattleOutcome() const { return Outcome; }
+	// Battle replays (player-retention §2): a recorded battle played back in the battle scene.
+	bool InReplay() const { return bReplay; }
+	const FString& ReplayTitle() const { return Recording.Title; }
+	void StartReplay(const FString& Path);
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
 
@@ -174,6 +178,11 @@ protected:
 	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle
 	sov::PlayerId PendingJoin = sov::kNoPlayer;   // the opponent asked to join before our battle began
 	float SnapshotTimer = 0.f;
+	FSovBattleRecording Recording;  // the live battle being fought (or replayed), kept for replay
+	float RecordTimer = 0.f;
+	bool bReplay = false;
+	float ReplayTime = 0.f;
+	bool bMenuReplays = false;
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second

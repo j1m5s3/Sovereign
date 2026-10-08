@@ -752,6 +752,56 @@ bool FSovChallengeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovBattleReplayTest, "Sovereign.Battle.RecordedBattleReplays", kSovTestFlags)
+bool FSovBattleReplayTest::RunTest(const FString& Parameters)
+{
+	// A battle fought with no input is recorded ten times a second; the file round-trips, and playing
+	// its frames through the remote view ends on the field the battle ended on.
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, 36, 100, false};
+	Spec.Defender = {TEXT("Archer"), 1, 25, 100, false};
+	Spec.Seed = 5;
+	FSovBattleSim Live;
+	Live.Start(Spec);
+	FSovBattleRecording Rec;
+	Rec.Title = TEXT("Turn 3: Swordsman attacks Archer");
+	Rec.Spec = Spec;
+	Rec.bWoods = true;
+	Rec.Frames.push_back(Live.Snapshot().Encode());
+	for (int32 Step = 0; Step < 4000 && !Live.Finished(); ++Step)
+	{
+		Live.Step(0.05f);
+		if (Step % 2 == 1 || Live.Finished()) Rec.Frames.push_back(Live.Snapshot().Encode());
+	}
+	TestTrue(TEXT("the battle ended"), Live.Finished());
+	FSovBattleRecording Back;
+	TestTrue(TEXT("the file decodes"), Back.Decode(Rec.Encode()));
+	TestEqual(TEXT("its title"), Back.Title, Rec.Title);
+	TestEqual(TEXT("its frames"), Back.Frames.size(), Rec.Frames.size());
+	TestTrue(TEXT("its field"), Back.bWoods && Back.Spec.Attacker.Name == TEXT("Swordsman") && Back.Spec.Seed == 5);
+	FSovBattleSim Replay;
+	Replay.StartRemoteView(Back.Spec);
+	for (const std::vector<uint8_t>& F : Back.Frames)
+	{
+		FSovBattleSnapshot S;
+		TestTrue(TEXT("a frame decodes"), S.Decode(F));
+		Replay.ApplySnapshot(S);
+	}
+	TestEqual(TEXT("attackers standing at the end"), Replay.Alive(0), Live.Alive(0));
+	TestEqual(TEXT("defenders standing at the end"), Replay.Alive(1), Live.Alive(1));
+	// Kept where a developer can watch it: -SovReplay=<Saved>/Automation/replay-test.sovbattle
+	{
+		const std::vector<uint8_t> Bytes = Rec.Encode();
+		TArray<uint8> Data;
+		Data.Append(Bytes.data(), static_cast<int32>(Bytes.size()));
+		FFileHelper::SaveArrayToFile(Data, *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("replay-test.sovbattle")));
+	}
+	std::vector<uint8_t> Junk = Rec.Encode();
+	Junk.resize(Junk.size() - 3);
+	TestFalse(TEXT("a cut file is refused"), FSovBattleRecording().Decode(Junk));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovSaveLoadTest, "Sovereign.Bridge.SaveAndLoadResume", kSovTestFlags)
 bool FSovSaveLoadTest::RunTest(const FString& Parameters)
 {

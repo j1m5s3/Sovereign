@@ -9,6 +9,8 @@
 #include "Engine/TextureCube.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 #include "SovCameraPawn.h"
 #include "SovGameSubsystem.h"
@@ -82,7 +84,13 @@ void ASovGameMode::StartPlay()
 	{
 		PC->SetMap(Map);
 		PC->CenterOnHome();
-		if (bMenu)
+		// -SovReplay=<file>: watch a recorded battle first (player-retention §2: replays can be shared).
+		FString Replay;
+		if (FParse::Value(FCommandLine::Get(), TEXT("SovReplay="), Replay))
+		{
+			PC->StartReplay(Replay);  // the menu opens when it ends
+		}
+		else if (bMenu)
 		{
 			PC->OpenMenu();  // no start options: the player chooses
 		}

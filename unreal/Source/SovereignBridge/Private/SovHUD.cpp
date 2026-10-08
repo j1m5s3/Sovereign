@@ -621,6 +621,15 @@ void ASovHUD::DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerControlle
 	const FSovBattleSim& Sim = PC.GetBattleSim();
 	const FSovBattleSpec& Spec = Sim.GetSpec();
 	float Y = 12.f;
+	if (PC.InReplay())
+	{
+		Line(FString::Printf(TEXT("REPLAY  %s"), *PC.ReplayTitle()), 16, Y, FLinearColor(1.f, 0.85f, 0.3f));
+		Line(FString::Printf(TEXT("Attackers %d/%d   Defenders %d/%d   Time %d s"), Sim.Alive(0), Sim.Started(0), Sim.Alive(1), Sim.Started(1),
+				 static_cast<int32>(Sim.TimeLeft())), 16, Y);
+		float RY = Canvas->ClipY - 26.f;
+		Line(TEXT("Hold right mouse or Q E to look   Esc leaves the replay"), 16, RY);
+		return;
+	}
 	Line(FString::Printf(TEXT("BATTLE: %s (strength %d) attacks %s (strength %d)"), *Spec.Attacker.Name, Spec.Attacker.Strength,
 			 *Spec.Defender.Name, Spec.Defender.Strength), 16, Y, FLinearColor(1.f, 0.85f, 0.3f));
 	Line(FString::Printf(TEXT("Attackers %d/%d   Defenders %d/%d   Time %d s"), Sim.Alive(0), Sim.Started(0), Sim.Alive(1), Sim.Started(1),
@@ -682,6 +691,12 @@ void ASovHUD::DrawHUD()
 		Y += 10.f;
 		for (const FString& L : Sub->NetLines) Line(L, 16, Y, FLinearColor(0.7f, 0.85f, 1.f));
 		if (!Sub->LastMessage.IsEmpty()) Line(Sub->LastMessage, 16, Y, FLinearColor(1.f, 0.4f, 0.4f));
+		return;
+	}
+	// A battle replay plays with or without a game (player-retention §2).
+	if (const ASovPlayerController* RPC = Cast<ASovPlayerController>(PlayerOwner); Sub && RPC && RPC->InBattle() && RPC->InReplay())
+	{
+		DrawBattle(*Sub, *RPC);
 		return;
 	}
 	if (!Sub || !Sub->IsRunning())
