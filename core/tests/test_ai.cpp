@@ -789,6 +789,50 @@ TEST(ai_walks_great_people_to_where_they_work) {
           }));
 }
 
+// The AI weighs its religion's beliefs on a copy of the game on its own turn. The copy used to begin player 0's turn,
+// where any other player's founding failed, so every AI but player 0 took the first beliefs listed.
+TEST(ai_weighs_religion_beliefs_on_its_own_turn) {
+    // Two players of one civ, each with a capital, a Holy Site and a Shrine; `who` has a Great Prophet on its Holy Site.
+    // Returns the founder and follower beliefs it founds a religion with, and the first ones listed.
+    const auto founded = [](PlayerId who) {
+        GameState s = flatState(24, 14, 2);
+        s.players[1].civ = s.players[0].civ;
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        for (PlayerId p = 0; p < 2; ++p) {
+            const Hex pos{5 + 12 * p, 6};
+            addCity(s, p, pos, true, 4);
+            City& c = s.cities.back();
+            c.districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {pos.x + 1, pos.y}, true});
+            c.buildings.push_back(rules().building("BUILDING_SHRINE"));
+            std::sort(c.buildings.begin(), c.buildings.end());
+        }
+        addUnit(s, "UNIT_GREAT_PROPHET", who, {6 + 12 * who, 6});
+        s.units.back().greatPerson = rules().greatPerson("GREAT_PERSON_CONFUCIUS");
+        auto g = Game::fromScenario(rules(), std::move(s));
+        std::vector<TypeIndex> first;
+        for (BeliefClass cls : {BeliefClass::Founder, BeliefClass::Follower}) {
+            for (TypeIndex b : g->availableBeliefs(cls)) {
+                if (g->beliefModelled(b)) {
+                    first.push_back(b);
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < 2 && g->state().religions.empty(); ++i) ai::playTurn(*g);
+        REQUIRE(g->state().religions.size() == 1u);
+        const FoundedReligion& r = g->state().religions[0];
+        CHECK_EQ(r.founder, who);
+        REQUIRE(r.beliefs.size() >= 2u);
+        const std::vector<TypeIndex> picked(r.beliefs.end() - 2, r.beliefs.end());
+        return std::make_pair(picked, first);
+    };
+    const auto [zero, firstListed] = founded(0);
+    const auto [one, firstListedToo] = founded(1);
+    CHECK(zero != firstListed);  // neither listed first is worth most here
+    CHECK(firstListedToo == firstListed);
+    CHECK(one == zero);
+}
+
 TEST(ai_buys_the_building_worth_most_per_gold) {
     enum { MonumentQueued = 1, HasMonument = 2 };
     // Player 0's two cities build Ancient Walls (never bought with gold) and can buy a Monument or a Granary; the AI
