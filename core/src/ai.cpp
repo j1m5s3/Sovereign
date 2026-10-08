@@ -217,19 +217,13 @@ Posture assess(const Game& g, PlayerId me, int sites) {
 
     // The other majors, for "good at" conditions.
     int rivals = 0;
-    int64_t sciSum = 0, culSum = 0, faithSum = 0, techSum = 0;
+    int64_t techSum = 0;
     int maxStrength = 0, maxScore = 0, secondScore = 0, maxDvp = 0, maxDomestic = 0;
-    const Game::Output myOutput = g.outputPerTurn(me);
-    const int mySci = static_cast<int>(myOutput.science.toInt()), myCul = static_cast<int>(myOutput.culture.toInt());
-    const int myFaith = static_cast<int>(myOutput.faith.toInt()), myStrength = militaryStrength(g, me), myScore = g.score(me);
+    const int myStrength = militaryStrength(g, me), myScore = g.score(me);
     const int64_t myTechs = std::count(pl.techs.done.begin(), pl.techs.done.end(), 1);
     for (const Player& o : s.players) {
         if (o.id == me || !isMajorPlayer(o)) continue;
         ++rivals;
-        const Game::Output rival = g.outputPerTurn(o.id);
-        sciSum += rival.science.toInt();
-        culSum += rival.culture.toInt();
-        faithSum += static_cast<int>(rival.faith.toInt());
         techSum += std::count(o.techs.done.begin(), o.techs.done.end(), 1);
         maxStrength = std::max(maxStrength, militaryStrength(g, o.id));
         const int sc = g.score(o.id);
@@ -242,13 +236,31 @@ Posture assess(const Game& g, PlayerId me, int sites) {
         maxDvp = std::max(maxDvp, o.diplomaticVictoryPoints);
         maxDomestic = std::max(maxDomestic, g.domesticTourists(o.id));
     }
-    const auto good = [&](int64_t mine, int64_t sum) { return rivals > 0 && mine * rivals * 10 >= sum * 12 && mine > 0; };  // 20% above average
+    // Whether our Science, Culture and Faith (the bits 1, 2 and 4) are 20% above the other majors' average. It takes a
+    // report of every city of every major, so it is worked out only when the victory strategy picked turns on it.
+    const auto goodAt = [&] {
+        int64_t sciSum = 0, culSum = 0, faithSum = 0;
+        for (const Player& o : s.players) {
+            if (o.id == me || !isMajorPlayer(o)) continue;
+            const Game::Output rival = g.outputPerTurn(o.id);
+            sciSum += rival.science.toInt();
+            culSum += rival.culture.toInt();
+            faithSum += static_cast<int>(rival.faith.toInt());
+        }
+        const Game::Output myOutput = g.outputPerTurn(me);
+        const int mySci = static_cast<int>(myOutput.science.toInt()), myCul = static_cast<int>(myOutput.culture.toInt());
+        const int myFaith = static_cast<int>(myOutput.faith.toInt());
+        const auto good = [&](int64_t mine, int64_t sum) { return rivals > 0 && mine * rivals * 10 >= sum * 12 && mine > 0; };
+        return (good(mySci, sciSum) ? 1 : 0) | (good(myCul, culSum) ? 2 : 0) | (good(myFaith, faithSum) ? 4 : 0);
+    };
 
-    // Victory strategies, from the Classical era: conditions met / needed, exclusive conditions win outright.
+    // Victory strategies, from the Classical era: conditions met / needed, exclusive conditions win outright. `good`:
+    // the good-at bit that meets one more condition when set.
     struct Score {
         Strategy s;
         int met, needed;
         bool exclusive, disqualified;
+        int good;
     };
     std::vector<Score> victories;
     {
@@ -265,34 +277,47 @@ Posture assess(const Game& g, PlayerId me, int sites) {
             }
         }
         victories.push_back({Strategy::ScienceVictory,
-                             (good(mySci, sciSum) ? 1 : 0) + (era >= 3 ? 1 : 0) + (cities > 0 && campuses * 2 >= cities ? 1 : 0) +
+                             (era >= 3 ? 1 : 0) + (cities > 0 && campuses * 2 >= cities ? 1 : 0) +
                                  (rivals > 0 && myTechs * rivals * 100 >= techSum * 115 ? 1 : 0) + (myStrength < maxStrength ? 1 : 0),
-                             3, g.expeditionSpeed(me) > 0, !s.setup.scienceVictory});  // exclusive once the expedition flies
+                             3, g.expeditionSpeed(me) > 0, !s.setup.scienceVictory, 1});  // exclusive once the expedition flies
         const bool nearCulture = maxDomestic > 0 && g.visitingTourists(me) * 4 >= maxDomestic * 3;
-        victories.push_back({Strategy::CultureVictory, (good(myCul, culSum) ? 1 : 0) + (greatWorks >= 1 ? 1 : 0) + (greatWorks >= 3 ? 1 : 0), 3,
-                             nearCulture, !s.setup.cultureVictory});
+        victories.push_back({Strategy::CultureVictory, (greatWorks >= 1 ? 1 : 0) + (greatWorks >= 3 ? 1 : 0), 3, nearCulture, !s.setup.cultureVictory, 2});
         const bool noReligion = pl.religion < 0 && static_cast<int>(s.religions.size()) >= g.maxReligions();
-        victories.push_back({Strategy::ReligiousVictory, (good(myFaith, faithSum) ? 1 : 0) + (pl.religion >= 0 ? 1 : 0) + (unconverted >= 2 ? 1 : 0), 3,
-                             false, noReligion || !s.setup.religiousVictory});
+        victories.push_back({Strategy::ReligiousVictory, (pl.religion >= 0 ? 1 : 0) + (unconverted >= 2 ? 1 : 0), 3, false,
+                             noReligion || !s.setup.religiousVictory, 4});
         victories.push_back({Strategy::DominationVictory,
                              (foreignCapital > 0 ? 1 : 0) + (rivals >= 2 ? 1 : 0) + (myStrength > maxStrength ? 1 : 0) + (myScore > maxScore ? 1 : 0) +
                                  (myScore * 10 > std::max(maxScore, secondScore) * 12 ? 1 : 0),
-                             3, capitals >= 2, false});
+                             3, capitals >= 2, false, 0});
         const int need = r.globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED");
         victories.push_back({Strategy::DiplomaticVictory,
                              (pl.diplomaticVictoryPoints > 0 ? 1 : 0) + (pl.diplomaticVictoryPoints > 0 && pl.diplomaticVictoryPoints >= maxDvp ? 1 : 0) +
                                  (need > 0 && pl.diplomaticVictoryPoints * 4 >= need ? 1 : 0),
-                             2, need > 0 && pl.diplomaticVictoryPoints * 10 >= need * 6, !s.setup.diplomaticVictory});
+                             2, need > 0 && pl.diplomaticVictoryPoints * 10 >= need * 6, !s.setup.diplomaticVictory, 0});
     }
     if (era >= 1) {
-        const Score* pick = nullptr;
-        for (const Score& v : victories) {
-            if (v.disqualified) continue;
-            if (v.exclusive) {
-                pick = &v;
+        // The strategy picked with the good-at bits `good`.
+        const auto pickFor = [&](int good) {
+            const Score* pick = nullptr;
+            int pickMargin = 0;
+            for (const Score& v : victories) {
+                if (v.disqualified) continue;
+                if (v.exclusive) return &v;
+                const int margin = v.met + ((good & v.good) != 0 ? 1 : 0) - v.needed;
+                if (margin >= 0 && (!pick || margin > pickMargin)) {
+                    pick = &v;
+                    pickMargin = margin;
+                }
+            }
+            return pick;
+        };
+        // The bits are worked out only when some of them would change the pick.
+        const Score* pick = pickFor(0);
+        for (int good = 1; good < 8; ++good) {
+            if (pickFor(good) != pick) {
+                pick = pickFor(goodAt());
                 break;
             }
-            if (v.met >= v.needed && (!pick || v.met - v.needed > pick->met - pick->needed)) pick = &v;
         }
         if (pick) out.on[static_cast<size_t>(pick->s)] = true;
     }
@@ -1279,8 +1304,14 @@ bool explore(View& v, UnitId id) {
     }
     std::stable_sort(frontier.begin(), frontier.end(),
                      [](const std::pair<int, Hex>& a, const std::pair<int, Hex>& b) { return a.first < b.first; });
-    for (size_t i = 0; i < frontier.size() && i < 6; ++i) {
+    // A move to a plot out of the unit's reach fails, most often only after searching all the land it can reach: so
+    // once a move fails, the reach is found, and only the plots in it are tried after (a failed move changes nothing).
+    const size_t tries = std::min<size_t>(frontier.size(), 6);
+    std::vector<uint8_t> reach;  // found after the first failed move
+    for (size_t i = 0; i < tries; ++i) {
+        if (!reach.empty() && !reach[static_cast<size_t>(s.grid.index(frontier[i].second))]) continue;
         if (v.game.submit(Command::move(v.me, id, frontier[i].second, true)) == CommandError::Ok) return true;
+        if (reach.empty() && i + 1 < tries) reach = v.game.moveReach(id, true);
     }
     return false;
 }

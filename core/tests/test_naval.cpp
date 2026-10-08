@@ -136,6 +136,41 @@ TEST(builders_embark_after_sailing) {
     CHECK(!g->findPath(w, {9, 6}));
 }
 
+// A unit's move reach is every plot a move order for it finds a path to, overland or not, planned as the order is: for
+// a linked escort on its leader's plot, as the leader's (a Builder stands in for the leader here: it embarks after
+// Sailing, a Warrior not). An escort away from its leader, or linked to another player's unit, moves alone.
+TEST(a_move_reach_is_where_a_move_order_finds_a_path) {
+    GameState s = seaState();
+    giveTech(s, 0, "TECH_SAILING");
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {7, 5});
+    const UnitId escort = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+    s.units.back().escorting = builder;
+    const UnitId lone = addUnit(s, "UNIT_WARRIOR", 0, {6, 8});
+    const UnitId apart = addUnit(s, "UNIT_WARRIOR", 0, {7, 10});
+    s.units.back().escorting = builder;
+    const UnitId theirs = addUnit(s, "UNIT_BUILDER", 1, {6, 2});
+    const UnitId foreign = addUnit(s, "UNIT_WARRIOR", 0, {6, 2});
+    s.units.back().escorting = theirs;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const HexGrid& grid = g->state().grid;
+    const auto reaches = [&](UnitId id, Hex h, bool overland) { return g->moveReach(id, overland)[static_cast<size_t>(grid.index(h))] != 0; };
+    for (bool overland : {false, true}) {
+        for (const auto& [id, mover] : {std::pair{builder, builder}, std::pair{escort, builder}, std::pair{lone, lone}, std::pair{apart, apart},
+                                        std::pair{foreign, foreign}}) {
+            const std::vector<uint8_t> reach = g->moveReach(id, overland);
+            REQUIRE(reach.size() == static_cast<size_t>(grid.size()));
+            int wrong = 0;
+            for (int i = 0; i < grid.size(); ++i) wrong += (reach[static_cast<size_t>(i)] != 0) != g->findPath(mover, grid.at(i), overland).has_value();
+            CHECK_EQ(wrong, 0);
+        }
+        CHECK_EQ(reaches(escort, {9, 5}, overland), !overland);  // the pair goes to sea as the Builder does
+        CHECK(!reaches(lone, {9, 8}, overland));
+        CHECK(reaches(lone, {2, 8}, overland));
+        CHECK(!reaches(apart, {9, 10}, overland));  // alone, the Warrior keeps to the land
+        CHECK(reaches(foreign, {7, 5}, overland));  // its own units' plot, which the other player's units may not enter
+    }
+}
+
 TEST(embarked_movement_grows_with_techs) {
     GameState s = seaState();
     giveTech(s, 0, "TECH_SHIPBUILDING");

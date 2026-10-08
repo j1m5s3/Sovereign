@@ -157,6 +157,62 @@ TEST(ai_builder_work_matches_the_improvements_listed) {
     CHECK_EQ(wrong, 0);
 }
 
+// The AI's explorers try only the plots in a unit's move reach: in a game well under way (foreign land and units,
+// city-states, coasts), a unit's reach is every plot near it that a move order for it finds a path to, overland or not.
+TEST(move_reach_matches_the_paths_found_in_a_game) {
+    GameSetup setup;
+    setup.seed = 3;
+    setup.mapSize = "MAPSIZE_TINY";
+    for (int i = 0; i < 4; ++i) setup.players.push_back({rules().civs[at(static_cast<TypeIndex>(i))].id, false});
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    while (g->state().turn < 60 && !g->gameOver()) ai::playTurn(*g);
+    const GameState& s = g->state();
+    std::vector<int> looked(s.players.size(), 0);
+    int units = 0, reached = 0, unreached = 0, wrong = 0;
+    for (const Unit& u : s.units) {
+        if (looked[static_cast<size_t>(u.owner)]++ >= 4) continue;  // a few of each player's
+        ++units;
+        // A linked escort's order moves the pair: it is planned for the leader.
+        const Unit* leader = u.escorting != kNoUnit ? s.unit(u.escorting) : nullptr;
+        const UnitId mover = leader && leader->pos == u.pos && leader->owner == u.owner ? leader->id : u.id;
+        for (bool overland : {false, true}) {
+            const std::vector<uint8_t> reach = g->moveReach(u.id, overland);
+            for (const Hex& h : s.grid.within(u.pos, 6)) {
+                const bool path = g->findPath(mover, h, overland).has_value();
+                reached += path ? 1 : 0;
+                unreached += path ? 0 : 1;
+                wrong += (reach[static_cast<size_t>(s.grid.index(h))] != 0) != path ? 1 : 0;
+            }
+        }
+    }
+    CHECK(units >= 8);
+    CHECK(reached > 0);
+    CHECK(unreached > 0);
+    CHECK_EQ(wrong, 0);
+}
+
+// A scout sent exploring heads for the nearest unexplored ground it can get to: here not the island just off the coast
+// (it cannot embark yet), but the land the other way.
+TEST(ai_scouts_explore_past_ground_they_cannot_reach) {
+    GameState s = flatState(24, 14, 1);
+    for (int y = 0; y < 14; ++y) {
+        for (int x = 7; x < 24; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    }
+    s.plot({9, 6}).terrain = rules().terrain("TERRAIN_GRASS");
+    Player& p = s.players[0];
+    Game::fitPlayerToRules(p, rules());
+    p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    for (const Hex& h : {Hex{10, 6}, Hex{1, 6}}) p.visibility[static_cast<size_t>(s.grid.index(h))] = static_cast<uint8_t>(Visibility::Unrevealed);
+    const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    const Unit* u = g->state().unit(scout);
+    REQUIRE(u);
+    CHECK(u->pos.x < 6);
+}
+
 // Two Builders split the work: the first heads for the Wheat (on land already seen), and the second leaves it to the
 // first. They start off the city's land, too far out to reach the Wheat this turn or when the next one begins.
 TEST(ai_builders_split_up_over_the_work) {
@@ -349,6 +405,71 @@ TEST(ai_grand_strategy_domination_after_taking_a_capital) {
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK(holds(*g, 0, ai::Strategy::DominationVictory));  // took a capital, two rivals, the strongest army
     CHECK(!holds(*g, 1, ai::Strategy::DominationVictory));
+}
+
+// Being a fifth above the other majors' average in Science, Culture or Faith is one of the conditions its victory
+// counts. Player 0 meets two of the others for one victory (three are needed) and too few for the rest, so the lead
+// decides it; of two victories met as well, the first listed is taken, unless the other's condition wins outright.
+TEST(ai_grand_strategy_counts_a_yield_lead) {
+    enum { Campus = 1, Library = 2, Works = 4, RivalWorks = 8, Religion = 16, Shrine = 32, Points = 64 };
+    // The victory strategy player 0 picks in the Classical era (Count: none), against one rival with two cities.
+    const auto victory = [](int has) {
+        GameState s = flatState(30, 14, 2);
+        addCity(s, 0, {6, 6}, true);
+        addCity(s, 1, {16, 6}, true);
+        addCity(s, 1, {24, 6}, false);
+        const auto add = [&](City& c, const char* district, Hex at, std::initializer_list<const char*> buildings) {
+            c.districts.push_back({rules().district(district), at, true});
+            for (const char* b : buildings) c.buildings.push_back(rules().building(b));
+            std::sort(c.buildings.begin(), c.buildings.end());
+        };
+        // Three Great Works of Writing: two in an Amphitheater, one in the Palace.
+        const auto works = [&](City& c) {
+            add(c, "DISTRICT_THEATER_SQUARE", {c.pos.x, c.pos.y + 1}, {"BUILDING_AMPHITHEATER"});
+            for (const char* b : {"BUILDING_AMPHITHEATER", "BUILDING_AMPHITHEATER", "BUILDING_PALACE"}) {
+                GreatWork w;
+                w.type = rules().greatWorkType("WRITING");
+                w.building = rules().building(b);
+                c.greatWorks.push_back(w);
+            }
+        };
+        if (has & Campus) add(s.cities[0], "DISTRICT_CAMPUS", {7, 6}, {});
+        if (has & Library) s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+        if (has & Library) s.cities[0].buildings.push_back(rules().building("BUILDING_UNIVERSITY"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        if (has & Works) works(s.cities[0]);
+        if (has & RivalWorks) works(s.cities[1]);
+        if (has & Religion) {
+            s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {rules().belief("BELIEF_TITHE")}});
+            s.players[0].religion = 0;
+        }
+        if (has & Shrine) add(s.cities[0], "DISTRICT_HOLY_SITE", {5, 6}, {"BUILDING_SHRINE"});
+        if (has & Points) {
+            const int need = rules().globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED");
+            s.players[0].diplomaticVictoryPoints = need * 6 / 10;  // near enough to win outright
+            s.players[1].diplomaticVictoryPoints = need - 1;      // but behind the rival
+        }
+        s.gameEra = 1;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        for (ai::Strategy v : {ai::Strategy::ScienceVictory, ai::Strategy::CultureVictory, ai::Strategy::ReligiousVictory,
+                               ai::Strategy::DominationVictory, ai::Strategy::DiplomaticVictory}) {
+            if (holds(*g, 0, v)) return v;
+        }
+        return ai::Strategy::Count;
+    };
+    // Science: a Campus (one a city) and as many techs as the rival; the Library and University give the lead.
+    CHECK(victory(Campus) == ai::Strategy::Count);
+    CHECK(victory(Campus | Library) == ai::Strategy::ScienceVictory);
+    // Culture: three Great Works, whose own culture is the lead unless the rival has as many.
+    CHECK(victory(Works) == ai::Strategy::CultureVictory);
+    CHECK(victory(Works | RivalWorks) == ai::Strategy::Count);
+    // Religion: its own, and the rival's two cities follow none; the Shrine's faith gives the lead (none on either side
+    // is no lead).
+    CHECK(victory(Religion) == ai::Strategy::Count);
+    CHECK(victory(Religion | Shrine) == ai::Strategy::ReligiousVictory);
+    // Science and Culture both met: Science, listed first. Diplomatic points near a win take it over either.
+    CHECK(victory(Campus | Library | Works) == ai::Strategy::ScienceVictory);
+    CHECK(victory(Campus | Library | Points) == ai::Strategy::DiplomaticVictory);
 }
 
 TEST(ai_grand_strategy_agendas) {

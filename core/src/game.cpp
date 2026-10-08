@@ -481,11 +481,7 @@ CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePa
 
     switch (c.type) {
         case CommandType::MoveUnit: {
-            // A linked escort's order moves the pair: plan it for the leader.
-            if (u->escorting != kNoUnit) {
-                const Unit* l = state_.unit(u->escorting);
-                if (l && l->pos == u->pos && l->owner == u->owner) u = l;
-            }
+            u = &orderMover(*u);
             auto t = state_.grid.normalize(c.target);
             if (!t || *t != c.target || *t == u->pos) return CommandError::BadTarget;
             if (isAircraft(*u)) return CommandError::BadTarget;  // aircraft rebase, they do not walk
@@ -781,7 +777,25 @@ std::optional<std::vector<PathStep>> Game::findPath(UnitId id, Hex target, bool 
     return searchPath(id, target, overland, nullptr);
 }
 
-std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along) const {
+const Unit& Game::orderMover(const Unit& unit) const {
+    if (unit.escorting != kNoUnit) {
+        const Unit* l = state_.unit(unit.escorting);
+        if (l && l->pos == unit.pos && l->owner == unit.owner) return *l;
+    }
+    return unit;
+}
+
+std::vector<uint8_t> Game::moveReach(UnitId id, bool overland) const {
+    std::vector<uint8_t> reach(static_cast<size_t>(state_.grid.size()), 0);
+    const Unit* u = state_.unit(id);
+    // Every plot a step can take the mover to (a search's goal changes only when it stops), each one a search for it
+    // would find a path to.
+    if (u) searchPath(orderMover(*u).id, u->pos, overland, nullptr, &reach);
+    return reach;
+}
+
+std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
+                                                      std::vector<uint8_t>* reach) const {
     const Unit* u = state_.unit(id);
     if (!u) return std::nullopt;
     auto t = state_.grid.normalize(target);
@@ -789,8 +803,8 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     const Player& owner = state_.players[static_cast<size_t>(u->owner)];
     auto known = [&](int index) { return owner.visibility[static_cast<size_t>(index)] != static_cast<uint8_t>(Visibility::Unrevealed); };
     const int start = state_.grid.index(u->pos);
-    const int goal = state_.grid.index(*t);
-    if (!known(goal)) return std::nullopt;
+    const int goal = reach ? -1 : state_.grid.index(*t);  // none for a reach
+    if (goal >= 0 && !known(goal)) return std::nullopt;
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
     MoveLimits limits = moveLimits(*u, traits);
@@ -850,7 +864,7 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
         if (c.entry == kNever || (c.entry == kInside && fromOwner != c.owner)) return std::nullopt;
         return stepCost(su, c.into, sf, dir);
     };
-    if (goal != start) {
+    if (goal >= 0 && goal != start) {
         // A goal no step can enter is out of reach, which the search would only learn by visiting every plot it can
         // reach. The steps into it are those from its neighbours (seen or not), each the opposite way to the one
         // the neighbour lies.
@@ -863,8 +877,8 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
         if (!enterable) return std::nullopt;
     }
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
-    // Enemy ZOC changes only the moves a path leaves, not whether there is one (all a search along a path asks).
-    if (!along) markZoc(*u, flags, kZoc);
+    // Enemy ZOC changes only the moves a path leaves, not whether there is one (all a search along a path or a reach asks).
+    if (!along && !reach) markZoc(*u, flags, kZoc);
 
     auto better = [](int turn, Fixed moves, const Cell& than) {
         return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
@@ -929,6 +943,10 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
                 open.push({-mp.raw(), turn, next});
             }
         }
+    }
+    if (reach) {
+        for (size_t i = 0; i < plots; ++i) (*reach)[i] = (flags[i] & kReached) ? 1 : 0;
+        return std::nullopt;
     }
     if (!(flags[static_cast<size_t>(goal)] & kReached)) return std::nullopt;
     std::vector<PathStep> path;

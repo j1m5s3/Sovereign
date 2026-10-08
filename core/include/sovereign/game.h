@@ -80,6 +80,9 @@ public:
     // Path for a unit from where it stands, planned on its owner's knowledge.
     // overland: a land unit does not embark on the way (it may still leave the water).
     std::optional<std::vector<PathStep>> findPath(UnitId unit, Hex target, bool overland = false) const;
+    // The plots a move order for the unit finds a path to (1, the rest 0), planned as the order is (a linked escort's
+    // for its leader): an order to any other plot fails.
+    std::vector<uint8_t> moveReach(UnitId unit, bool overland = false) const;
     // Movement points needed for this unit to enter `to` from adjacent `from`;
     // nullopt when it cannot enter.
     std::optional<Fixed> moveCost(const Unit& unit, Hex from, Hex to) const;
@@ -932,8 +935,12 @@ private:
     // Moves the unit along its move order as far as its moves allow.
     void advanceUnit(UnitId id);
     // findPath's search; with `along`, one kept to the plots of `along` (and without enemy ZOC, which changes only the
-    // moves a path leaves): a path it finds then shows that findPath finds one too.
-    std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along) const;
+    // moves a path leaves): a path it finds then shows that findPath finds one too. With `reach`, a search with no goal
+    // (nor ZOC) that marks in it every plot it gets to.
+    std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
+                                                    std::vector<uint8_t>* reach = nullptr) const;
+    // The unit a move order for `unit` is planned for: a linked escort's moves the pair, so it is planned for the leader.
+    const Unit& orderMover(const Unit& unit) const;
     void beginPlayerTurn(PlayerId p, bool runCities = true);
     void beginGlobalTurn();
     void refreshVisibility(PlayerId p);
