@@ -44,6 +44,12 @@ public:
 	static TArray<FString> HallEntries();
 	// The local board of weekly challenge results (Saved/Sovereign/Challenges.txt) for one week.
 	static TArray<FString> ChallengeResults(int32 Week);
+	// Achievements earned on this machine (Rules::achievements ids, Saved/Sovereign/Achievements.txt) and the
+	// cosmetic chosen for the ruler's figure (a Rules::cosmetics id; empty: none), kept in Saved/Sovereign/cosmetic.txt.
+	// Cosmetic only: never part of the game (player-retention §7).
+	static TArray<FString> Achievements();
+	static FString Cosmetic();
+	static void SetCosmetic(const FString& Id);
 	// Saved games on this machine, newest first: their names and when they were written.
 	static TArray<TPair<FString, FDateTime>> ListSaves();
 

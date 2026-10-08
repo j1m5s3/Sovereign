@@ -702,6 +702,26 @@ struct EraStartType {
     std::vector<TypeIndex> buildings;              // this era's own (earlier eras' rows add theirs)
 };
 
+// Achievements and the cosmetics they unlock (player-retention §7), checked when a game ends for a player.
+// Cosmetic only: a cosmetic never changes the rules, and is not part of the game state.
+enum class AchievementKind : uint8_t {
+    Victory = 0,  // win (a `victory` kind, or any), in a game of `speed` when one is named
+    RulersTaken,  // capture or slay `value` rival rulers in battle in one game
+    LeaderLevel,  // the ruler reaches level `value`
+    Wonders,      // hold `value` world wonders at the end
+};
+struct AchievementType {
+    std::string id, name, text;
+    AchievementKind kind = AchievementKind::Victory;
+    int value = 1;
+    std::string victory;  // "SCIENCE", "CULTURE", ... (empty: any)
+    std::string speed;    // a game speed id (empty: any)
+    std::string unlock;   // the CosmeticType it unlocks (empty: none)
+};
+struct CosmeticType {
+    std::string id, name;
+    std::array<int, 3> color{{255, 255, 255}};  // the ruler's figure tint, 0..255
+};
 // Historic moments (09: Era score and Ages; data: eras-moments-loyalty.md).
 struct MomentType {
     std::string id, name;
@@ -1313,6 +1333,8 @@ public:
     std::vector<GameSpeedType> speeds;
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
     std::vector<EraStartType> eraStarts;     // by era; Ancient has none
+    std::vector<AchievementType> achievements;
+    std::vector<CosmeticType> cosmetics;
     const EraStartType* eraStart(int era) const;
     std::vector<DifficultyType> difficulties;  // Settler .. Deity (setup.json)
     std::vector<ProjectType> projects;

@@ -1,5 +1,7 @@
 #include "SovBattleSim.h"
 
+#include "sovereign/serialize.h"
+
 #include "Misc/Paths.h"
 
 std::shared_ptr<const sov::battle::Policy> FSovBattleSim::TrainedPolicy()
@@ -236,4 +238,93 @@ FSovBattleResult FSovBattleSim::Result() const
 		Out.Habits = {H.flank, H.fallBack, H.huntLeader, H.leaderFront};
 	}
 	return Out;
+}
+
+namespace
+{
+constexpr uint32 kRecordingMagic = 0x42564F53;  // "SOVB"
+constexpr uint32 kRecordingVersion = 1;
+
+void WriteColor(sov::ByteWriter& W, const FLinearColor& C)
+{
+	const FColor B = C.ToFColor(true);
+	W.u8(B.R);
+	W.u8(B.G);
+	W.u8(B.B);
+}
+FLinearColor ReadColor(sov::ByteReader& R)
+{
+	const uint8 Red = R.u8(), Green = R.u8(), Blue = R.u8();
+	return FLinearColor(FColor(Red, Green, Blue));
+}
+void WriteUnit(sov::ByteWriter& W, const FSovBattleUnitSpec& U)
+{
+	W.str(TCHAR_TO_UTF8(*U.Name));
+	W.i32(U.Owner);
+	W.i32(U.Strength);
+	W.i32(U.Hp);
+	W.boolean(U.bLeaderIsUnit);
+}
+void ReadUnit(sov::ByteReader& R, FSovBattleUnitSpec& U)
+{
+	U.Name = UTF8_TO_TCHAR(R.str().c_str());
+	U.Owner = R.i32();
+	U.Strength = R.i32();
+	U.Hp = R.i32();
+	U.bLeaderIsUnit = R.boolean();
+}
+}  // namespace
+
+std::vector<uint8_t> FSovBattleRecording::Encode() const
+{
+	sov::ByteWriter W;
+	W.u32(kRecordingMagic);
+	W.u32(kRecordingVersion);
+	W.str(TCHAR_TO_UTF8(*Title));
+	WriteUnit(W, Spec.Attacker);
+	WriteUnit(W, Spec.Defender);
+	W.i32(Spec.HumanSide);
+	W.boolean(Spec.bLeaderPresent);
+	W.i32(Spec.LeaderStrength);
+	W.i32(Spec.LeaderHp);
+	W.i32(Spec.Seed);
+	W.i32(FMath::RoundToInt(Spec.TimeLimit * 1000.f));
+	WriteColor(W, Ground);
+	WriteColor(W, AttackerColor);
+	WriteColor(W, DefenderColor);
+	W.boolean(bWoods);
+	W.boolean(bCity);
+	W.boolean(bWalls);
+	W.u32(static_cast<uint32>(Frames.size()));
+	for (const std::vector<uint8_t>& F : Frames) W.bytes(F);
+	return W.take();
+}
+
+bool FSovBattleRecording::Decode(const std::vector<uint8_t>& Bytes)
+{
+	sov::ByteReader R(Bytes);
+	if (R.u32() != kRecordingMagic || R.u32() != kRecordingVersion) return false;
+	FSovBattleRecording Out;
+	Out.Title = UTF8_TO_TCHAR(R.str().c_str());
+	ReadUnit(R, Out.Spec.Attacker);
+	ReadUnit(R, Out.Spec.Defender);
+	Out.Spec.HumanSide = R.i32();
+	Out.Spec.bLeaderPresent = R.boolean();
+	Out.Spec.LeaderStrength = R.i32();
+	Out.Spec.LeaderHp = R.i32();
+	Out.Spec.Seed = R.i32();
+	Out.Spec.TimeLimit = R.i32() / 1000.f;
+	Out.Ground = ReadColor(R);
+	Out.AttackerColor = ReadColor(R);
+	Out.DefenderColor = ReadColor(R);
+	Out.bWoods = R.boolean();
+	Out.bCity = R.boolean();
+	Out.bWalls = R.boolean();
+	const uint32 Count = R.u32();
+	if (!R.checkCount(Count, 4)) return false;
+	Out.Frames.resize(Count);
+	for (std::vector<uint8_t>& F : Out.Frames) F = R.bytes();
+	if (!R.ok() || !R.atEnd()) return false;
+	*this = std::move(Out);
+	return true;
 }

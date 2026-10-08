@@ -85,6 +85,24 @@ void USovGameSubsystem::Tick(float DeltaTime)
 				FFileHelper::SaveStringToFile(FDateTime::Now().ToString(TEXT("%Y-%m-%d  ")) + UTF8_TO_TCHAR(Entry.c_str()) + LINE_TERMINATOR, *HallPath(),
 					FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM, &IFileManager::Get(), FILEWRITE_Append);
 				WriteChronicle();
+				// Achievements earned in this game join the ones held on this machine (player-retention §7).
+				TArray<FString> Held = Achievements();
+				FString NewOnes;
+				for (const std::string& Id : Session.GetGame().achievementsEarned(static_cast<sov::PlayerId>(Seat)))
+				{
+					const FString A = UTF8_TO_TCHAR(Id.c_str());
+					if (Held.Contains(A)) continue;
+					Held.Add(A);
+					for (const sov::AchievementType& T : Session.GetRules().achievements)
+					{
+						if (T.id == Id) NewOnes += (NewOnes.IsEmpty() ? TEXT("") : TEXT(", ")) + FString(UTF8_TO_TCHAR(T.name.c_str()));
+					}
+				}
+				if (!NewOnes.IsEmpty())
+				{
+					FFileHelper::SaveStringToFile(FString::Join(Held, LINE_TERMINATOR), *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Achievements.txt")));
+					NetLines.Add(FString::Printf(TEXT("Achievement unlocked: %s (see the menu for the ruler's new colours)"), *NewOnes));
+				}
 			}
 			// The weekly challenge: the result on the local board, and the save to submit (player-retention §3).
 			if (const int32 Week = Session.GetChallengeWeek(); Week >= 0)
@@ -198,6 +216,46 @@ TArray<FString> USovGameSubsystem::ChallengeResults(int32 Week)
 	const FString Prefix = FString::Printf(TEXT("week %d "), Week);
 	Lines.RemoveAll([&](const FString& L) { return !L.StartsWith(Prefix); });
 	return Lines;
+}
+
+TArray<FString> USovGameSubsystem::Achievements()
+{
+	TArray<FString> Lines;
+	FFileHelper::LoadFileToStringArray(Lines, *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Achievements.txt")));
+	Lines.RemoveAll([](const FString& L) { return L.TrimStartAndEnd().IsEmpty(); });
+	return Lines;
+}
+
+namespace
+{
+// The chosen cosmetic, read from its file once and kept here after.
+FString& CosmeticCache(bool& bLoaded)
+{
+	static FString Id;
+	static bool bRead = false;
+	bLoaded = bRead;
+	bRead = true;
+	return Id;
+}
+}  // namespace
+
+FString USovGameSubsystem::Cosmetic()
+{
+	bool bLoaded = false;
+	FString& Id = CosmeticCache(bLoaded);
+	if (!bLoaded)
+	{
+		FFileHelper::LoadFileToString(Id, *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("cosmetic.txt")));
+		Id.TrimStartAndEndInline();
+	}
+	return Id;
+}
+
+void USovGameSubsystem::SetCosmetic(const FString& Id)
+{
+	bool bLoaded = false;
+	CosmeticCache(bLoaded) = Id;
+	FFileHelper::SaveStringToFile(Id, *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("cosmetic.txt")));
 }
 
 FString USovGameSubsystem::HallPath()

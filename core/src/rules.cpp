@@ -2369,6 +2369,42 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         eraStarts.push_back(std::move(es));
     }
+    for (const auto& [id, j] : m.tables["cosmetics"]) {
+        CosmeticType ct;
+        ct.id = id;
+        ct.name = j["name"].str(id);
+        const auto& rgb = j["color"].items();
+        for (size_t k = 0; k < 3 && k < rgb.size(); ++k) ct.color[k] = std::clamp(static_cast<int>(rgb[k].integer(255)), 0, 255);
+        cosmetics.push_back(std::move(ct));
+    }
+    for (const auto& [id, j] : m.tables["achievements"]) {
+        AchievementType a;
+        a.id = id;
+        a.name = j["name"].str(id);
+        a.text = j["text"].str();
+        static const std::pair<const char*, AchievementKind> kinds[] = {{"VICTORY", AchievementKind::Victory}, {"RULERS_TAKEN", AchievementKind::RulersTaken},
+                                                                        {"LEADER_LEVEL", AchievementKind::LeaderLevel}, {"WONDERS", AchievementKind::Wonders}};
+        bool known = false;
+        for (const auto& [name, kind] : kinds) {
+            if (j["kind"].str() == name) {
+                a.kind = kind;
+                known = true;
+            }
+        }
+        if (!known) {
+            *error = "achievement " + id + ": unknown kind " + j["kind"].str();
+            return false;
+        }
+        a.value = static_cast<int>(j["value"].integer(1));
+        a.victory = j["victory"].str();
+        a.speed = j["speed"].str();
+        a.unlock = j["unlock"].str();
+        if (!a.unlock.empty() && std::none_of(cosmetics.begin(), cosmetics.end(), [&](const CosmeticType& c) { return c.id == a.unlock; })) {
+            *error = "achievement " + id + ": unknown cosmetic " + a.unlock;
+            return false;
+        }
+        achievements.push_back(std::move(a));
+    }
 
     // The weapons the projects build (05: Nuclear weapons), before the projects.
     for (const auto& [id, j] : m.tables["wmds"]) {

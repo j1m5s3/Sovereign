@@ -334,6 +334,8 @@ public:
     static bool chronicleWorthy(EventKind kind);
     std::vector<std::string> chronicleLines(PlayerId viewer) const;
     std::string hallEntry(PlayerId player) const;
+    // The achievements (Rules::achievements ids) the player holds as the game stands (player-retention §7).
+    std::vector<std::string> achievementsEarned(PlayerId player) const;
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)

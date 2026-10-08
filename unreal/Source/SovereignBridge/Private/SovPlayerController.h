@@ -47,6 +47,10 @@ public:
 	int32 GetBattleSquad() const { return BattleSquad; }
 	bool BattleSettled() const { return bBattleSent; }
 	const FSovBattleResult& BattleOutcome() const { return Outcome; }
+	// Battle replays (player-retention §2): a recorded battle played back in the battle scene.
+	bool InReplay() const { return bReplay; }
+	const FString& ReplayTitle() const { return Recording.Title; }
+	void StartReplay(const FString& Path);
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
 
@@ -174,6 +178,11 @@ protected:
 	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle
 	sov::PlayerId PendingJoin = sov::kNoPlayer;   // the opponent asked to join before our battle began
 	float SnapshotTimer = 0.f;
+	FSovBattleRecording Recording;  // the live battle being fought (or replayed), kept for replay
+	float RecordTimer = 0.f;
+	bool bReplay = false;
+	float ReplayTime = 0.f;
+	bool bMenuReplays = false;
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second
@@ -190,5 +199,11 @@ protected:
 	int32 MenuEra = 0;         // the era to begin in (0: Ancient)
 	bool bMenuMods = false;    // the menu shows the installed mods (player-retention §6)
 	TArray<FString> MenuModsOn;  // the mods turned on, in load order
+	// Achievements and cosmetics (player-retention §7): the colours unlocked (id, name; the first is none), the
+	// one chosen, and the achievements list as shown (empty: hidden).
+	TArray<TPair<FString, FString>> MenuCosmetics;
+	int32 MenuCosmetic = 0;
+	FString MenuAchievements;
+	FString MenuAchievementsText;
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

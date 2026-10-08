@@ -59,6 +59,19 @@ struct FSovBattleSnapshot
 	bool Decode(const std::vector<uint8_t>& Bytes);
 };
 
+// A live battle kept for replay (player-retention §2): the field as it was drawn and its snapshots ten
+// times a second, played back through the online remote view. Saved in Saved/Sovereign/Battles/.
+struct FSovBattleRecording
+{
+	FString Title;  // "Turn 42: Swordsman attacks Archer"
+	FSovBattleSpec Spec;
+	FLinearColor Ground = FLinearColor::Gray, AttackerColor = FLinearColor::Red, DefenderColor = FLinearColor::Blue;
+	bool bWoods = false, bCity = false, bWalls = false;
+	std::vector<std::vector<uint8_t>> Frames;  // encoded FSovBattleSnapshot, 0.1 s apart
+
+	std::vector<uint8_t> Encode() const;
+	bool Decode(const std::vector<uint8_t>& Bytes);
+};
 struct FSovBattleResult
 {
 	int32 ToAttacker = 0;   // HP damage to the attacking unit

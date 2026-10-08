@@ -31,7 +31,29 @@
   {"id": "START_SETTLER", "unit": "UNIT_SETTLER"},
   {"id": "START_WARRIOR", "unit": "UNIT_WARRIOR"}
  ],
- "_eraStarts": "Era starts (game-setup.md, Advanced start eras; Starting units (major civs), non-AI rows; Starting buildings by start era, City Center only; player-retention section 5). A game begun in an era gives every civ the techs and civics of the eras before it, this gold and faith and these units on top of the usual Settler and Warrior; cities founded in the game start with this population and the City Center buildings of this era and the ones before.",
+ "_achievements": "Achievements and the cosmetics they unlock (player-retention section 7), checked when a game ends for a player. Cosmetics tint the ruler's figure; they never change the rules. Kinds: VICTORY (victory: SCIENCE, CULTURE, DOMINATION, RELIGIOUS, DIPLOMATIC, SCORE or empty for any; speed: a game speed or empty), RULERS_TAKEN, LEADER_LEVEL, WONDERS (value: how many).",
+ "cosmetics": [
+  {"id": "COSMETIC_GILDED", "name": "Gilded", "color": [235, 190, 60]},
+  {"id": "COSMETIC_SILVERED", "name": "Silvered", "color": [200, 205, 215]},
+  {"id": "COSMETIC_VIOLET", "name": "Imperial violet", "color": [130, 70, 170]},
+  {"id": "COSMETIC_CRIMSON", "name": "Crimson", "color": [175, 25, 35]},
+  {"id": "COSMETIC_AZURE", "name": "Azure", "color": [50, 120, 220]},
+  {"id": "COSMETIC_OBSIDIAN", "name": "Obsidian", "color": [30, 28, 34]},
+  {"id": "COSMETIC_BRONZE", "name": "Bronze", "color": [170, 110, 55]},
+  {"id": "COSMETIC_EMERALD", "name": "Emerald", "color": [30, 150, 80]},
+  {"id": "COSMETIC_IVORY", "name": "Ivory", "color": [240, 232, 210]}
+ ],
+ "achievements": [
+  {"id": "ACH_CROWNED_IN_GLORY", "name": "Crowned in Glory", "text": "Win a game.", "kind": "VICTORY", "unlock": "COSMETIC_GILDED"},
+  {"id": "ACH_STARGAZER", "name": "Stargazer", "text": "Win a Science victory.", "kind": "VICTORY", "victory": "SCIENCE", "unlock": "COSMETIC_SILVERED"},
+  {"id": "ACH_PATRON", "name": "Patron of the Arts", "text": "Win a Culture victory.", "kind": "VICTORY", "victory": "CULTURE", "unlock": "COSMETIC_VIOLET"},
+  {"id": "ACH_CONQUEROR", "name": "Conqueror", "text": "Win a Domination victory.", "kind": "VICTORY", "victory": "DOMINATION", "unlock": "COSMETIC_CRIMSON"},
+  {"id": "ACH_PEACEMAKER", "name": "Peacemaker", "text": "Win a Diplomatic victory.", "kind": "VICTORY", "victory": "DIPLOMATIC", "unlock": "COSMETIC_AZURE"},
+  {"id": "ACH_KINGTAKER", "name": "Kingtaker", "text": "Capture or slay a rival ruler in battle.", "kind": "RULERS_TAKEN", "value": 1, "unlock": "COSMETIC_OBSIDIAN"},
+  {"id": "ACH_VETERAN", "name": "Veteran Sovereign", "text": "Raise your ruler to level 4.", "kind": "LEADER_LEVEL", "value": 4, "unlock": "COSMETIC_BRONZE"},
+  {"id": "ACH_SWIFT_REIGN", "name": "Swift Reign", "text": "Win a Short Reign game.", "kind": "VICTORY", "speed": "GAMESPEED_SHORT_REIGN", "unlock": "COSMETIC_EMERALD"},
+  {"id": "ACH_WONDERS", "name": "Builder of Wonders", "text": "Hold five world wonders at the end of a game.", "kind": "WONDERS", "value": 5, "unlock": "COSMETIC_IVORY"}
+ ], "_eraStarts": "Era starts (game-setup.md, Advanced start eras; Starting units (major civs), non-AI rows; Starting buildings by start era, City Center only; player-retention section 5). A game begun in an era gives every civ the techs and civics of the eras before it, this gold and faith and these units on top of the usual Settler and Warrior; cities founded in the game start with this population and the City Center buildings of this era and the ones before.",
  "eraStarts": [
   {"id": "ERA_CLASSICAL", "gold": 110, "faith": 10, "capitalPopulation": 4, "otherPopulation": 1, "units": {"UNIT_BUILDER": 1, "UNIT_SCOUT": 1, "UNIT_SETTLER": 1, "UNIT_SPEARMAN": 1}, "buildings": []},
   {"id": "ERA_MEDIEVAL", "gold": 210, "faith": 20, "capitalPopulation": 4, "otherPopulation": 2, "units": {"UNIT_ARCHER": 1, "UNIT_BUILDER": 2, "UNIT_SCOUT": 1, "UNIT_SETTLER": 2, "UNIT_SPEARMAN": 1, "UNIT_TRADER": 1}, "buildings": ["BUILDING_MONUMENT"]},

@@ -9,12 +9,16 @@
 #include "Engine/TextureCube.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 #include "SovCameraPawn.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
 #include "SovMapActor.h"
 #include "SovPlayerController.h"
+
+#include "sovereign/game.h"
 
 ASovGameMode::ASovGameMode()
 {
@@ -80,7 +84,13 @@ void ASovGameMode::StartPlay()
 	{
 		PC->SetMap(Map);
 		PC->CenterOnHome();
-		if (bMenu)
+		// -SovReplay=<file>: watch a recorded battle first (player-retention §2: replays can be shared).
+		FString Replay;
+		if (FParse::Value(FCommandLine::Get(), TEXT("SovReplay="), Replay))
+		{
+			PC->StartReplay(Replay);  // the menu opens when it ends
+		}
+		else if (bMenu)
 		{
 			PC->OpenMenu();  // no start options: the player chooses
 		}
@@ -104,6 +114,17 @@ void ASovGameMode::OnStateChanged()
 	USovGameSubsystem* Sub = GetGameInstance()->GetSubsystem<USovGameSubsystem>();
 	if (Map && Sub->IsRunning())
 	{
-		Map->Sync(BuildMirror(Sub->GetGame(), Sub->GetSession().ViewPlayer()));
+		FSovMirror Mirror = BuildMirror(Sub->GetGame(), Sub->GetSession().ViewPlayer());
+		// The cosmetic chosen on this machine tints the viewer's own ruler (player-retention §7; not part of the game).
+		const FString CosmeticId = USovGameSubsystem::Cosmetic();
+		for (const sov::CosmeticType& C : Sub->GetGame().rules().cosmetics)
+		{
+			if (CosmeticId != UTF8_TO_TCHAR(C.id.c_str())) continue;
+			for (FSovUnitMarker& U : Mirror.Units)
+			{
+				if (U.bLeader && U.Owner == Mirror.Viewer) U.Color = FLinearColor(FColor(C.color[0], C.color[1], C.color[2]));
+			}
+		}
+		Map->Sync(Mirror);
 	}
 }

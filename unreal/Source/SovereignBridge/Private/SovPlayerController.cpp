@@ -19,6 +19,8 @@
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBox.h"
 #include "HAL/FileManager.h"
+#include "Misc/Paths.h"
+#include "Misc/FileHelper.h"
 #include "HAL/PlatformProcess.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Text/STextBlock.h"
@@ -29,6 +31,7 @@
 
 #include "Engine/World.h"
 
+#include "sovereign/challenge.h"
 #include "sovereign/game.h"
 
 #include <algorithm>
@@ -1490,6 +1493,18 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
 	Battle->Build(Spec, Ground, bWoods && !C, SovPlayerColor(G, A->owner), SovPlayerColor(G, DefOwner), C != nullptr, C && C->wallHp > 0);
 	Battle->Sync(Sim);
+	// Kept for replay as it is fought (player-retention §2).
+	Recording = FSovBattleRecording();
+	Recording.Title = FString::Printf(TEXT("Turn %d: %s attacks %s"), G.state().turn, *Spec.Attacker.Name, *Spec.Defender.Name);
+	Recording.Spec = Spec;
+	Recording.Ground = Ground;
+	Recording.AttackerColor = SovPlayerColor(G, A->owner);
+	Recording.DefenderColor = SovPlayerColor(G, DefOwner);
+	Recording.bWoods = bWoods && !C;
+	Recording.bCity = C != nullptr;
+	Recording.bWalls = C && C->wallHp > 0;
+	RecordTimer = 0.f;
+	if (!bRemoteView) Recording.Frames.push_back(Sim.Snapshot().Encode());
 	const FVector2D Start = Sim.LeaderIndex() != INDEX_NONE ? Sim.Soldiers()[Sim.LeaderIndex()].Pos : FVector2D(Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
 	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
 	Walker->SetColor(SovPlayerColor(G, Me()));
@@ -1503,9 +1518,58 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 		: TEXT("To battle! WASD move, left click or F strike, Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc settle now.");
 }
 
+void ASovPlayerController::StartReplay(const FString& Path)
+{
+	TArray<uint8> Data;
+	FSovBattleRecording Loaded;
+	if (Battle || !FFileHelper::LoadFileToArray(Data, *Path) || !Loaded.Decode(std::vector<uint8_t>(Data.GetData(), Data.GetData() + Data.Num())) || Loaded.Frames.empty())
+	{
+		if (USovGameSubsystem* Sub = Subsystem()) Sub->LastMessage = TEXT("That battle cannot be replayed.");
+		return;
+	}
+	Recording = MoveTemp(Loaded);
+	Sim.StartRemoteView(Recording.Spec);
+	FSovBattleSnapshot First;
+	if (First.Decode(Recording.Frames.front())) Sim.ApplySnapshot(First);
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
+	Battle->Build(Recording.Spec, Recording.Ground, Recording.bWoods, Recording.AttackerColor, Recording.DefenderColor, Recording.bCity, Recording.bWalls);
+	Battle->Sync(Sim);
+	const FVector2D Start(Recording.Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
+	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
+	Walker->SetColor(Recording.Spec.HumanSide == 0 ? Recording.AttackerColor : Recording.DefenderColor);
+	Walker->GetCharacterMovement()->DisableMovement();
+	Walker->Body->SetVisibility(false);  // only a viewpoint: the recorded leader is among the men
+	Walker->Crown->SetVisibility(false);
+	MapPawn = GetPawn();
+	Possess(Walker);
+	SetControlRotation(FRotator(-20.f, Recording.Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
+	bReplay = true;
+	ReplayTime = 0.f;
+	Chooser = EChooser::None;
+}
+
 void ASovPlayerController::UpdateBattle(float DeltaTime)
 {
 	LookAround(DeltaTime);
+	if (bReplay)
+	{
+		// The recording plays at its own pace, ten snapshots a second; Esc, or two seconds past the end, leaves.
+		ReplayTime += DeltaTime;
+		const int32 Count = static_cast<int32>(Recording.Frames.size());
+		const int32 Frame = FMath::Min(static_cast<int32>(ReplayTime * 10.f), Count - 1);
+		FSovBattleSnapshot Snap;
+		if (Snap.Decode(Recording.Frames[static_cast<size_t>(Frame)])) Sim.ApplySnapshot(Snap);
+		Battle->Sync(Sim);
+		if (WasInputKeyJustPressed(EKeys::Escape) || ReplayTime * 10.f > Count + 20)
+		{
+			ExitBattle();
+			bReplay = false;
+			if (!Subsystem()->IsRunning()) OpenMenu();
+		}
+		return;
+	}
 	HandleBattleRelays();
 	if (Sim.RemoteView())
 	{
@@ -1569,6 +1633,12 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);
+	RecordTimer += DeltaTime;
+	if (RecordTimer >= 0.1f || Sim.Finished() || bSettleNow)
+	{
+		RecordTimer = 0.f;
+		Recording.Frames.push_back(Sim.Snapshot().Encode());
+	}
 	// Online: the other side's player sees the field ten times a second.
 	SnapshotTimer += DeltaTime;
 	if (BattlePeer != sov::kNoPlayer && (SnapshotTimer >= 0.1f || Sim.Finished()))
@@ -1604,6 +1674,14 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound, Outcome.Habits));
 		bBattleSent = true;
 		BattleExitTimer = 3.f;
+		// The battle is kept for replay (menu: Battle replays).
+		const FString Path = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Battles"),
+			FString::Printf(TEXT("%s %s.sovbattle"), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H%M%S")), *FPaths::MakeValidFileName(Recording.Title.Replace(TEXT(":"), TEXT("")))));
+		const std::vector<uint8_t> Bytes = Recording.Encode();
+		TArray<uint8> Data;
+		Data.Append(Bytes.data(), static_cast<int32>(Bytes.size()));
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
+		FFileHelper::SaveArrayToFile(Data, *Path);
 	}
 }
 
@@ -2561,9 +2639,54 @@ void ASovPlayerController::OpenMenu()
 	}
 	// The weekly challenge (player-retention §3): this week's game, with the local board's results so far.
 	const int32 Week = FSovSession::CurrentChallengeWeek();
-	FString ChallengeLabel = FSovSession::ChallengeText(Week);
+	sov::Rules Plain;  // the plain rules: the challenge, achievements and cosmetics are named from them
+	std::string PlainError;
+	const bool bPlain = Plain.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &PlainError);
+	FString ChallengeLabel = bPlain ? FString(UTF8_TO_TCHAR(sov::weeklyChallenge(Plain, Week).text.c_str())) : FString();
+	// Achievements (player-retention §7): the ones held, and the colours they unlock for the ruler's figure.
+	const TArray<FString> Held = USovGameSubsystem::Achievements();
+	MenuCosmetics = {TPair<FString, FString>(FString(), TEXT("the civ's own"))};
+	MenuCosmetic = 0;
+	MenuAchievementsText.Reset();
+	for (const sov::AchievementType& A : Plain.achievements)
+	{
+		const FString Id = UTF8_TO_TCHAR(A.id.c_str());
+		const bool bHeld = Held.Contains(Id);
+		FString Unlock;
+		for (const sov::CosmeticType& C : Plain.cosmetics)
+		{
+			if (C.id != A.unlock) continue;
+			Unlock = UTF8_TO_TCHAR(C.name.c_str());
+			if (bHeld) MenuCosmetics.Add(TPair<FString, FString>(UTF8_TO_TCHAR(C.id.c_str()), Unlock));
+		}
+		MenuAchievementsText += FString::Printf(TEXT("%s%s %s: %s%s"), MenuAchievementsText.IsEmpty() ? TEXT("") : TEXT("\n"), bHeld ? TEXT("[x]") : TEXT("[ ]"),
+			UTF8_TO_TCHAR(A.name.c_str()), UTF8_TO_TCHAR(A.text.c_str()), Unlock.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (the ruler in %s)"), *Unlock));
+	}
+	for (int32 i = 0; i < MenuCosmetics.Num(); ++i)
+	{
+		if (MenuCosmetics[i].Key == USovGameSubsystem::Cosmetic()) MenuCosmetic = i;
+	}
+	const int32 HeldCount = Held.Num(), AllCount = static_cast<int32>(Plain.achievements.size());
 	const TArray<FString> Results = USovGameSubsystem::ChallengeResults(Week);
 	if (Results.Num() > 0) ChallengeLabel += FString::Printf(TEXT("  [your last: %s]"), *Results.Last().RightChop(FString::Printf(TEXT("week %d  "), Week).Len()));
+	// Battle replays: the eight latest recordings.
+	TSharedRef<SVerticalBox> Replays = SNew(SVerticalBox);
+	{
+		const FString Dir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Battles"));
+		TArray<FString> Files;
+		IFileManager::Get().FindFiles(Files, *FPaths::Combine(Dir, TEXT("*.sovbattle")), true, false);
+		Files.Sort([](const FString& A, const FString& B) { return A > B; });  // named by date: newest first
+		for (int32 i = 0; i < Files.Num() && i < 8; ++i)
+		{
+			const FString Path = FPaths::Combine(Dir, Files[i]);
+			Replays->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Path]() {
+				CloseMenu();
+				StartReplay(Path);
+				return FReply::Handled();
+			})[SNew(STextBlock).Text(FText::FromString(FPaths::GetBaseFilename(Files[i])))]];
+		}
+		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
+	}
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
 	{
@@ -2628,7 +2751,7 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
-			+ SVerticalBox::Slot().AutoHeight()[Item(FString(TEXT("Weekly challenge: ")) + ChallengeLabel, [this, Base, Week]() {
+			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
 				FSovSetup S = Base();
 				S.ChallengeWeek = Week;
 				StartFromMenu(S);
@@ -2673,6 +2796,29 @@ void ASovPlayerController::OpenMenu()
 			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
 				return bMenuMods ? EVisibility::Visible : EVisibility::Collapsed;
 			})[ModList]]
+			// Achievements and the ruler's colour (player-retention §7).
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuAchievements = MenuAchievements.IsEmpty() ? MenuAchievementsText : FString();
+					return FReply::Handled();
+				})[SNew(STextBlock).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuCosmetic = (MenuCosmetic + 1) % FMath::Max(1, MenuCosmetics.Num());
+					USovGameSubsystem::SetCosmetic(MenuCosmetics[MenuCosmetic].Key);
+					if (USovGameSubsystem* S = Subsystem(); S && S->IsRunning()) S->OnStateChanged.Broadcast();
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() {
+					return FText::FromString(FString(TEXT("Ruler's colour: ")) + (MenuCosmetics.IsValidIndex(MenuCosmetic) ? MenuCosmetics[MenuCosmetic].Value : FString()));
+				})]]]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+					.Text_Lambda([this]() { return FText::FromString(MenuAchievements); })]]
+			// Battle replays (player-retention §2): the latest live battles, played back in the battle scene.
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Battle replays"), [this]() { bMenuReplays = !bMenuReplays; })]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
+				return bMenuReplays ? EVisibility::Visible : EVisibility::Collapsed;
+			})[Replays]]
 			// The Hall of Sovereigns: past reigns, newest first (player-retention §2).
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hall of Sovereigns"), [this]() {
 				if (!MenuHall.IsEmpty())
