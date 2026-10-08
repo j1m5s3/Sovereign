@@ -7,6 +7,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -85,6 +86,7 @@ TEST(moksha_brings_faith_for_each_finished_district) {
     campus.pos = {5, 7};
     campus.complete = true;
     s.cities[0].districts.push_back(campus);
+    claimFor(s, s.cities[0], campus.pos);
     int done = 0;
     for (const CityDistrict& d : s.cities[0].districts) done += d.complete ? 1 : 0;
     REQUIRE(done > 0 && done != s.cities[0].population);

@@ -688,9 +688,10 @@ public:
 
 private:
     void apply(const Command& c);
-    // canImproveAt in two parts: the plot takes any improvement of the player's, and this one fits it.
+    // canImproveAt in two parts: the plot takes any improvement of the player's, and this one fits it (`resourceSeen`:
+    // resourceVisible for the plot, which the plot's improvements share).
     bool improvablePlot(PlayerId player, Hex plot) const;
-    bool improvementFits(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit) const;
+    bool improvementFits(PlayerId player, Hex plot, TypeIndex improvement, bool ownUnit, bool resourceSeen) const;
     CommandError validateCity(const Command& c) const;
     void applyCity(const Command& c);
     void processCities(PlayerId p);
@@ -1002,23 +1003,15 @@ private:
     // on each of them. Once the map is made only a Builder's work adds an improvement, and it lists the plot.
     std::vector<int32_t> improvedOnce_;
     std::vector<uint8_t> improvedOnceAt_;
+    // The improvements that take each terrain, feature and resource (ImprovementType::validTerrains, validFeatures and
+    // validResources), in the rules' order: those improvementsAt tries on a plot.
+    std::vector<std::vector<TypeIndex>> terrainImprovements_, featureImprovements_, resourceImprovements_;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
     bool anyWonderPlot(CityId city, TypeIndex building) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
-    // The plots within 3 of a city that hold a city, a district or a wonder (as cityAt, districtAt and wonderAt find
-    // them), listed on first need for a run of placement checks around the city, so that each plot's check need not
-    // look through every city. It lists those in the rows within 3 of the city's, which hold all of them.
-    struct BuiltNear {
-        explicit BuiltNear(Hex around) : center(around) {}
-        Hex center;
-        bool listed = false;
-        std::vector<Hex> plots;
-    };
-    bool builtOn(BuiltNear& built, Hex plot) const;  // for a plot within 3 of built.center
-    // canPlaceWonder and canPlaceDistrict looking up the built plots in a run's list. With `cityChecks` false, the
-    // district's checks that do not depend on the plot (districtOpenIn, districtUnblockedIn) are taken as passed.
-    bool canPlaceWonder(const City& city, TypeIndex building, Hex plot, BuiltNear* built) const;
-    bool canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, BuiltNear* built, bool cityChecks) const;
+    // canPlaceDistrict with `cityChecks` false: the district's checks that do not depend on the plot (districtOpenIn,
+    // districtUnblockedIn) are taken as passed.
+    bool canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, bool cityChecks) const;
     // canPlaceDistrict's checks that do not depend on the plot: those it makes before the plot's (the district is
     // unlocked, not yet placed here, and the city's population allows another) and after them (no district it
     // excludes here, and none of a one-per-civ kind anywhere).

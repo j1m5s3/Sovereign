@@ -262,21 +262,45 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         abilityKinds_.push_back(kinds);
     }
     parks_ = std::any_of(state_.plots.begin(), state_.plots.end(), [](const Plot& p) { return p.park; });
-    std::vector<int16_t> landmasses;
+    // The landmasses in the order they first appear (each one's place in it, by landmass, + 1) and their plot counts;
+    // then each plot goes after the earlier plots of its landmass.
+    std::vector<int32_t> place, count;
     for (const Plot& p : state_.plots) {
-        if (p.continent >= 0 && std::find(landmasses.begin(), landmasses.end(), p.continent) == landmasses.end()) landmasses.push_back(p.continent);
-    }
-    landFirst_.push_back(0);
-    for (const int16_t k : landmasses) {
-        for (size_t i = 0; i < state_.plots.size(); ++i) {
-            if (state_.plots[i].continent == k) landPlots_.push_back(static_cast<int32_t>(i));
+        if (p.continent < 0) continue;
+        const size_t k = static_cast<size_t>(p.continent);
+        if (k >= place.size()) place.resize(k + 1, 0);
+        if (place[k] == 0) {
+            count.push_back(0);
+            place[k] = static_cast<int32_t>(count.size());
         }
-        landFirst_.push_back(static_cast<int32_t>(landPlots_.size()));
+        ++count[static_cast<size_t>(place[k] - 1)];
+    }
+    landFirst_.assign(count.size() + 1, 0);
+    for (size_t g = 0; g < count.size(); ++g) landFirst_[g + 1] = landFirst_[g] + count[g];
+    landPlots_.resize(static_cast<size_t>(landFirst_.back()));
+    std::vector<int32_t> next(landFirst_.begin(), landFirst_.end() - 1);
+    for (size_t i = 0; i < state_.plots.size(); ++i) {
+        const int16_t k = state_.plots[i].continent;
+        if (k >= 0) landPlots_[static_cast<size_t>(next[static_cast<size_t>(place[static_cast<size_t>(k)] - 1)]++)] = static_cast<int32_t>(i);
     }
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         if (state_.plots[i].resource != kNone) resourcePlots_.push_back(static_cast<int32_t>(i));
     }
     lakes_ = lakeMap(state_, *rules_);
+    terrainImprovements_.resize(rules_->terrains.size());
+    featureImprovements_.resize(rules_->features.size());
+    resourceImprovements_.resize(rules_->resources.size());
+    for (size_t i = 0; i < rules_->improvements.size(); ++i) {
+        const ImprovementType& im = rules_->improvements[i];
+        const auto takes = [&](std::vector<std::vector<TypeIndex>>& by, TypeIndex land) {
+            if (land < 0 || static_cast<size_t>(land) >= by.size()) return;
+            std::vector<TypeIndex>& list = by[static_cast<size_t>(land)];
+            if (list.empty() || list.back() != static_cast<TypeIndex>(i)) list.push_back(static_cast<TypeIndex>(i));
+        };
+        for (const TypeIndex t : im.validTerrains) takes(terrainImprovements_, t);
+        for (const TypeIndex f : im.validFeatures) takes(featureImprovements_, f);
+        for (const TypeIndex r : im.validResources) takes(resourceImprovements_, r);
+    }
     improvedOnceAt_.assign(state_.plots.size(), 0);
     for (size_t i = 0; i < state_.plots.size(); ++i) {
         if (state_.plots[i].improvement == kNone) continue;
@@ -502,6 +526,8 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
     const Plot& p = state_.plot(at);
     if (p.owner != kNoPlayer && p.owner != player) return set(CommandError::CannotFoundHere);
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
+    // Nor on a district or wonder (03): one across the water three plots from its city is as far as founding asks.
+    if (state_.districtAt(at) || state_.wonderAt(at) != kNone) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt(HotGlobal::CityMinRange);
     for (const City& c : state_.cities) {
         // A city more rows away than the range is farther than it (rows do not wrap).

@@ -39,7 +39,7 @@ bool Game::resourceImproved(Hex at) const {
 
 bool Game::canImproveAt(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
     return improvement >= 0 && static_cast<size_t>(improvement) < rules_->improvements.size() && improvablePlot(player, at) &&
-           improvementFits(player, at, improvement, ownUnit);
+           improvementFits(player, at, improvement, ownUnit, resourceVisible(player, at));
 }
 
 // The player's own worked land, with no city, district or wonder on it.
@@ -48,22 +48,18 @@ bool Game::improvablePlot(PlayerId player, Hex at) const {
     return p.owner == player && p.city != kNoCity && !state_.cityAt(at) && !state_.districtAt(at) && state_.wonderAt(at) == kNone;
 }
 
-bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit) const {
+bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool ownUnit, bool resourceSeen) const {
     const Plot& p = state_.plot(at);
-    if (p.improvement == improvement) return false;
+    if (p.improvement == improvement || p.park) return false;  // a National Park keeps its land as it is (07)
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(improvement)];
+    // The plot's land, looked at first as most improvements are for other land: a visible resource only takes the
+    // improvements that work it.
+    if (!(resourceSeen ? contains(im.validResources, p.resource) : p.feature != kNone ? contains(im.validFeatures, p.feature) : contains(im.validTerrains, p.terrain)))
+        return false;
     if (!ownUnit && !hasUnlocked(player, im.unlock)) return false;
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;
-    // City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
-    if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState)) return false;
-    if (im.governorPromotion != kNone) {
-        const City* home = state_.plot(at).city == kNoCity ? nullptr : state_.city(state_.plot(at).city);
-        if (!home || !cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str())) return false;
-    }
     if (im.needsRiver && !isRiverAdjacent(state_, at)) return false;
-    if (p.park) return false;  // a National Park keeps its land as it is (07)
-    if (im.minAppeal > -100 && plotAppeal(at) < im.minAppeal) return false;  // Seaside Resort: Breathtaking (07)
     if (im.coastal) {
         bool coast = false;
         for (const Hex& n : state_.grid.within(at, 1)) coast = coast || rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater;
@@ -74,17 +70,26 @@ bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool 
         for (const Hex& n : state_.grid.within(at, 1)) edge = edge || state_.plot(n).owner != player;
         if (!edge) return false;
     }
-    // A visible resource only takes the improvements that work it.
-    if (resourceVisible(player, at)) return contains(im.validResources, p.resource);
-    if (p.feature != kNone) return contains(im.validFeatures, p.feature);
-    return contains(im.validTerrains, p.terrain);
+    if (im.governorPromotion != kNone) {
+        const City* home = state_.plot(at).city == kNoCity ? nullptr : state_.city(state_.plot(at).city);
+        if (!home || !cityGovernorHas(*home, rules_->governorPromotions[static_cast<size_t>(im.governorPromotion)].id.c_str())) return false;
+    }
+    // The dearer checks last. City-states' unique improvements (08): for whoever enjoys that city-state's suzerain bonus.
+    if (im.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, im.cityState)) return false;
+    return im.minAppeal <= -100 || plotAppeal(at) >= im.minAppeal;  // Seaside Resort: Breathtaking (07)
 }
 
 std::vector<TypeIndex> Game::improvementsAt(PlayerId player, Hex at) const {
     std::vector<TypeIndex> out;
     if (!improvablePlot(player, at)) return out;  // once for the plot, not once per improvement
-    for (size_t i = 0; i < rules_->improvements.size(); ++i) {
-        if (improvementFits(player, at, static_cast<TypeIndex>(i), false)) out.push_back(static_cast<TypeIndex>(i));
+    // Only the improvements that take the plot's land can fit it (improvementFits looks at the land first).
+    const Plot& p = state_.plot(at);
+    const bool resourceSeen = resourceVisible(player, at);
+    const std::vector<TypeIndex>& candidates = resourceSeen      ? resourceImprovements_[static_cast<size_t>(p.resource)]
+                                               : p.feature != kNone ? featureImprovements_[static_cast<size_t>(p.feature)]
+                                                                    : terrainImprovements_[static_cast<size_t>(p.terrain)];
+    for (const TypeIndex i : candidates) {
+        if (improvementFits(player, at, i, false, resourceSeen)) out.push_back(i);
     }
     return out;
 }

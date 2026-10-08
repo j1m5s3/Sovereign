@@ -125,6 +125,78 @@ TEST(improvements_go_only_on_the_players_own_open_land) {
     CHECK(!takesFarm({12, 5}));  // player 1's land
 }
 
+// Rules that list a land twice for an improvement still offer it once there.
+TEST(an_improvement_is_offered_once_where_its_land_is_listed_twice) {
+    Rules r = rules();
+    ImprovementType& farm = r.improvements[at(improvement("IMPROVEMENT_FARM"))];
+    const TypeIndex grass = r.terrain("TERRAIN_GRASS");
+    REQUIRE(std::find(farm.validTerrains.begin(), farm.validTerrains.end(), grass) != farm.validTerrains.end());
+    farm.validTerrains.push_back(grass);
+    GameState s = flatState(20, 14, 1);
+    Game::fitPlayerToRules(s.players[0], r);
+    sovtest::addCity(s, 0, {6, 6}, true, 3);
+    auto g = Game::fromScenario(r, std::move(s));
+    const std::vector<TypeIndex> listed = g->improvementsAt(0, {6, 5});
+    CHECK_EQ(std::count(listed.begin(), listed.end(), improvement("IMPROVEMENT_FARM")), 1);
+}
+
+// A plot's feature decides which improvements fit it, not the terrain under it (data/improvements.md, "Valid
+// terrain/feature"): a Farm goes on floodplains over desert but not on woods over grassland.
+TEST(a_plots_feature_decides_which_improvements_fit) {
+    const Hex plot{7, 6};
+    const TypeIndex farm = improvement("IMPROVEMENT_FARM");
+    const auto farmFits = [&](const char* terrain, const char* feature) {
+        auto g = builderGame([&](GameState& s) {
+            s.plot(plot).terrain = rules().terrain(terrain);
+            s.plot(plot).feature = feature ? rules().feature(feature) : kNone;
+        });
+        const std::vector<TypeIndex> listed = g->improvementsAt(0, plot);
+        const bool fits = std::find(listed.begin(), listed.end(), farm) != listed.end();
+        CHECK_EQ(fits, g->canImproveAt(0, plot, farm));
+        return fits;
+    };
+    CHECK(farmFits("TERRAIN_GRASS", nullptr));
+    CHECK(!farmFits("TERRAIN_GRASS", "FEATURE_FOREST"));
+    CHECK(!farmFits("TERRAIN_DESERT", nullptr));
+    CHECK(farmFits("TERRAIN_DESERT", "FEATURE_FLOODPLAINS"));
+}
+
+// A National Park keeps its land as it is (07): no improvement goes on its plots.
+TEST(no_improvement_goes_in_a_national_park) {
+    const Hex plot{7, 6};
+    const TypeIndex farm = improvement("IMPROVEMENT_FARM");
+    auto open = builderGame([](GameState&) {});
+    auto park = builderGame([&](GameState& s) { s.plot(plot).park = true; });
+    CHECK(open->canImproveAt(0, plot, farm));
+    CHECK(!park->canImproveAt(0, plot, farm));
+    CHECK(park->improvementsAt(0, plot).empty());
+}
+
+// A Seaside Resort needs Breathtaking land, Appeal 4 or more (07), beside the water.
+TEST(a_seaside_resort_needs_breathtaking_appeal) {
+    const Hex plot{7, 6};
+    const TypeIndex resort = improvement("IMPROVEMENT_SEASIDE_RESORT");
+    const auto resortFits = [&](int woods, int appeal) {
+        auto g = builderGame([&](GameState& s) {
+            s.players[0].techs.done[at(tech("TECH_RADIO"))] = 1;
+            std::vector<Hex> around;  // the plot's neighbours but the city
+            for (int d = 0; d < kNumDirs; ++d) {
+                const std::optional<Hex> n = s.grid.neighbor(plot, static_cast<Dir>(d));
+                if (n && *n != Hex{6, 6}) around.push_back(*n);
+            }
+            s.plot(around[0]).terrain = rules().terrain("TERRAIN_COAST");  // a lake: +1, and +1 once beside a lake
+            for (size_t i = 1; i <= static_cast<size_t>(woods); ++i) s.plot(around[i]).feature = rules().feature("FEATURE_FOREST");
+        });
+        REQUIRE(g->plotAppeal(plot) == appeal);
+        const std::vector<TypeIndex> listed = g->improvementsAt(0, plot);
+        const bool fits = std::find(listed.begin(), listed.end(), resort) != listed.end();
+        CHECK_EQ(fits, g->canImproveAt(0, plot, resort));
+        return fits;
+    };
+    CHECK(!resortFits(1, 3));
+    CHECK(resortFits(2, 4));
+}
+
 TEST(farm_adjacency_after_feudalism) {
     auto g = builderGame([](GameState& s) {
         for (Hex h : {Hex{7, 6}, Hex{7, 7}, Hex{6, 7}}) s.plot(h).improvement = improvement("IMPROVEMENT_FARM");

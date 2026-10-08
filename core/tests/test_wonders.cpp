@@ -78,6 +78,14 @@ TEST(wonders_need_a_plot_with_nothing_built) {
     CHECK(g->canPlaceWonder(c, pyramids, {4, 7}));   // open desert
     CHECK(!g->canPlaceWonder(c, pyramids, {4, 6}));  // the Campus
     CHECK(!g->canPlaceWonder(c, pyramids, {6, 6}));  // the Apadana's plot
+    // Nor a barbarian camp's.
+    GameState camped = wonderState();
+    Camp camp;
+    camp.id = camped.nextCampId++;
+    camp.pos = {4, 7};
+    camped.camps.push_back(camp);
+    auto g2 = Game::fromScenario(rules(), std::move(camped));
+    CHECK(!g2->canPlaceWonder(g2->state().cities[0], pyramids, {4, 7}));
 }
 
 TEST(a_wonder_is_built_once_and_rivals_keep_half) {

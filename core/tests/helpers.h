@@ -84,6 +84,13 @@ inline sov::CityId addCity(sov::GameState& s, sov::PlayerId owner, sov::Hex pos,
     return c.id;
 }
 
+// The plot joins the city's land, where a district or wonder placed in play always stands (GameState::districtAt).
+inline void claimFor(sov::GameState& s, const sov::City& c, sov::Hex h) {
+    sov::Plot& p = s.plot(h);
+    p.owner = c.owner;
+    p.city = c.id;
+}
+
 // One player on flat grassland with a capital founded at (6,6).
 struct CityScenario {
     std::unique_ptr<sov::Game> game;

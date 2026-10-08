@@ -6,6 +6,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -352,6 +353,7 @@ TEST(the_government_plaza_steadies_its_city) {
     const auto with = [&](bool complete, int pillaged) {
         GameState t = s;
         cityRef(t, c).districts.push_back({plaza, {7, 7}, complete});
+        claimFor(t, cityRef(t, c), {7, 7});
         cityRef(t, c).districts.back().pillagedTurns = static_cast<uint8_t>(pillaged);
         return Game::fromScenario(rules(), std::move(t));
     };

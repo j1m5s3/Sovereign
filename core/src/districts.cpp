@@ -20,9 +20,9 @@ int speedPercent(const GameState& s, const Rules& r) {
 
 // A finished world wonder stands on the plot (one still being built does not count yet).
 bool finishedWonderAt(const GameState& s, Hex h) {
-    for (const City& c : s.cities) {
-        for (const CityWonder& w : c.wonders) {
-            if (w.pos == h && c.has(w.building)) return true;
+    if (const City* c = s.landCity(h)) {
+        for (const CityWonder& w : c->wonders) {
+            if (w.pos == h && c->has(w.building)) return true;
         }
     }
     return false;
@@ -104,10 +104,10 @@ bool Game::districtUnblockedIn(const City& city, TypeIndex type) const {
 }
 
 bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why) const {
-    return canPlaceDistrict(city, type, plot, why, nullptr, true);
+    return canPlaceDistrict(city, type, plot, why, true);
 }
 
-bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, BuiltNear* built, bool cityChecks) const {
+bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, bool cityChecks) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
         return false;
@@ -120,8 +120,8 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
     // Owned by this city, within 3, open land, no visible luxury or strategic resource.
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return fail(CommandError::BadTarget);
-    if ((built ? builtOn(*built, plot) : state_.cityAt(plot) || state_.districtAt(plot) || state_.wonderAt(plot) != kNone) || campAt(plot))
-        return fail(CommandError::BadTarget);
+    // Nothing built on it yet (no city: the plot is this city's land, and not its center).
+    if (state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return fail(CommandError::BadTarget);
     if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return fail(CommandError::BadTarget);  // 01: natural wonders
     if (d.water) {
         // Harbor: Coast or Lake (not Ocean) next to land.
@@ -184,38 +184,19 @@ int Game::plotAppeal(Hex plot) const {
     const City* home = state_.city(state_.plot(plot).city);
     const uint32_t held = home ? heldWonders(home->owner, bit(W::Biosphere) | bit(W::Eiffel) | bit(W::GoldenGate)) : 0;
     const bool biosphere = (held & bit(W::Biosphere)) != 0;  // Biosphère (03): Rainforest and Marsh +1 Appeal
-    std::array<std::optional<Hex>, kNumDirs> around;
-    for (int dir = 0; dir < kNumDirs; ++dir) around[static_cast<size_t>(dir)] = state_.grid.neighbor(plot, static_cast<Dir>(dir));
-    // The district and the wonder on each neighbour, the first of each in the cities' lists as districtAt and wonderAt
-    // find them, from one pass over the cities. Neighbours lie on the plot's own row and the rows beside it.
-    std::array<const CityDistrict*, kNumDirs> district{};
-    std::array<const CityWonder*, kNumDirs> wonder{};
-    for (const City& c : state_.cities) {
-        for (const CityDistrict& d : c.districts) {
-            if (std::abs(d.pos.y - plot.y) > 1) continue;
-            for (size_t dir = 0; dir < kNumDirs; ++dir) {
-                if (!district[dir] && around[dir] == d.pos) district[dir] = &d;
-            }
-        }
-        for (const CityWonder& w : c.wonders) {
-            if (std::abs(w.pos.y - plot.y) > 1) continue;
-            for (size_t dir = 0; dir < kNumDirs; ++dir) {
-                if (!wonder[dir] && around[dir] == w.pos) wonder[dir] = &w;
-            }
-        }
-    }
-    for (size_t dir = 0; dir < kNumDirs; ++dir) {
-        if (!around[dir]) continue;
-        const Plot& np = state_.plot(*around[dir]);
+    for (int dir = 0; dir < kNumDirs; ++dir) {
+        const std::optional<Hex> n = state_.grid.neighbor(plot, static_cast<Dir>(dir));
+        if (!n) continue;
+        const Plot& np = state_.plot(*n);
         appeal += rules_->terrains[static_cast<size_t>(np.terrain)].appeal;
         if (np.feature != kNone) {
             const FeatureType& f = rules_->features[static_cast<size_t>(np.feature)];
             appeal += f.appeal + (biosphere && (f.id == "FEATURE_JUNGLE" || f.id == "FEATURE_MARSH") ? 1 : 0);
         }
         if (np.improvement != kNone) appeal += np.pillagedTurns > 0 ? -1 : rules_->improvements[static_cast<size_t>(np.improvement)].appeal;
-        if (district[dir]) appeal += rules_->districts[static_cast<size_t>(district[dir]->type)].appeal;
-        if (wonder[dir] && wonder[dir]->building != kNone) appeal += 1;
-        if (campAt(*around[dir])) appeal -= 1;
+        if (const CityDistrict* d = state_.districtAt(*n)) appeal += rules_->districts[static_cast<size_t>(d->type)].appeal;
+        if (state_.wonderAt(*n) != kNone) appeal += 1;
+        if (campAt(*n)) appeal -= 1;
     }
     // Alvar Aalto, Charles Correa (07): appeal across the city where they were used; Eiffel Tower, Golden Gate Bridge (03) in all.
     if (home && (!home->greatPeopleHere.empty() || (held & (bit(W::Eiffel) | bit(W::GoldenGate))) != 0))
@@ -289,9 +270,8 @@ std::vector<Hex> Game::districtPlots(CityId id, TypeIndex type) const {
     std::vector<Hex> out;
     const City* c = state_.city(id);
     if (!c) return out;
-    BuiltNear built(c->pos);
     state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
-        if (canPlaceDistrict(*c, type, h, nullptr, &built, true)) out.push_back(h);
+        if (canPlaceDistrict(*c, type, h, nullptr, true)) out.push_back(h);
     });
     return out;
 }
@@ -302,32 +282,11 @@ bool Game::anyDistrictPlot(CityId id, TypeIndex type) const {
     // canPlaceDistrict on each plot, with what does not depend on the plot looked at once, and only the city's own
     // plots looked at.
     if (type < 0 || static_cast<size_t>(type) >= rules_->districts.size() || !districtOpenIn(*c, type) || !districtUnblockedIn(*c, type)) return false;
-    BuiltNear built(c->pos);
     bool any = false;
     state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
-        any = any || (h != c->pos && state_.plot(h).city == c->id && canPlaceDistrict(*c, type, h, nullptr, &built, false));
+        any = any || (h != c->pos && state_.plot(h).city == c->id && canPlaceDistrict(*c, type, h, nullptr, false));
     });
     return any;
-}
-
-bool Game::builtOn(BuiltNear& built, Hex plot) const {
-    if (!built.listed) {
-        built.listed = true;
-        const auto inRows = [&](Hex h) { return std::abs(h.y - built.center.y) <= 3; };  // as every plot within 3 is
-        std::vector<Hex> wonders;  // plots whose first wonder in the lists was met: wonderAt goes by that one
-        for (const City& c : state_.cities) {
-            if (inRows(c.pos)) built.plots.push_back(c.pos);
-            for (const CityDistrict& d : c.districts) {
-                if (inRows(d.pos)) built.plots.push_back(d.pos);
-            }
-            for (const CityWonder& w : c.wonders) {
-                if (!inRows(w.pos) || std::find(wonders.begin(), wonders.end(), w.pos) != wonders.end()) continue;
-                wonders.push_back(w.pos);
-                if (w.building != kNone) built.plots.push_back(w.pos);
-            }
-        }
-    }
-    return std::find(built.plots.begin(), built.plots.end(), plot) != built.plots.end();
 }
 
 int Game::specialistSlots(const City& city, const CityDistrict& district) const {

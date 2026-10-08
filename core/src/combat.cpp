@@ -355,10 +355,11 @@ int Game::unitRange(const Unit& unit) const {
     int range = base + unitEffectTotal(unit, UnitEffectKind::Range);
     // Observation Balloon, Drone (05: Support units): +1 range for siege units next to one.
     if (const int observed = unitEffectTotal(unit, UnitEffectKind::ObservedRange); observed > 0) {
+        const TypeIndex observer = rules_->ability("ABILITY_OBSERVATION_STRENGTH_BONUS");
         for (const Unit& o : state_.units) {
+            if (o.owner != unit.owner || o.id == unit.id || state_.grid.distance(o.pos, unit.pos) > 1) continue;
             const std::vector<TypeIndex>& oa = typeOf(*rules_, o).abilities;
-            const TypeIndex observer = rules_->ability("ABILITY_OBSERVATION_STRENGTH_BONUS");
-            if (o.owner == unit.owner && o.id != unit.id && state_.grid.distance(o.pos, unit.pos) <= 1 && std::find(oa.begin(), oa.end(), observer) != oa.end()) {
+            if (std::find(oa.begin(), oa.end(), observer) != oa.end()) {
                 range += observed;
                 break;
             }

@@ -695,6 +695,10 @@ struct SOV_API GameState {
     const Unit* unit(UnitId id) const;
     City* city(CityId id);
     const City* city(CityId id) const;
+    // The city whose land the plot is (none off the map, or in no city's land). A city, district or wonder stands in
+    // its own city's land (founding, Game::canPlaceDistrict, Game::canPlaceWonder), which no other city takes from it,
+    // so cityAt, districtAt and wonderAt look only in this city.
+    const City* landCity(Hex h) const;
     const City* cityAt(Hex h) const;
     // The district placed on this plot, if any (city centers are not districts here).
     const CityDistrict* districtAt(Hex h) const;

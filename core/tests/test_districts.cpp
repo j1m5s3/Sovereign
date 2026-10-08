@@ -283,7 +283,8 @@ TEST(lakes_feed_aqueducts_and_raise_appeal) {
 }
 
 // Appeal (03): each district beside a plot adds its own Appeal (Holy Site and Theater Square +1, Industrial Zone -1)
-// and each wonder +1, on the rows beside the plot as on its own; the Biosphère's holder gets +1 from a Marsh beside it.
+// and each wonder +1, on the rows beside the plot as on its own; the Biosphère's holder gets +1 from a Marsh beside it,
+// and a barbarian camp beside it takes 1.
 TEST(districts_wonders_and_the_biosphere_beside_a_plot_change_its_appeal) {
     const Hex plot{6, 8};  // beside it: (6, 7) and (5, 7) above, (5, 8) and (7, 8) on its row, (6, 9) and (5, 9) below
     auto plain = town(3, [](GameState&) {});
@@ -305,6 +306,14 @@ TEST(districts_wonders_and_the_biosphere_beside_a_plot_change_its_appeal) {
     };
     CHECK_EQ(marsh(false)->plotAppeal(plot), plain->plotAppeal(plot) - 1);
     CHECK_EQ(marsh(true)->plotAppeal(plot), plain->plotAppeal(plot));
+    // A barbarian camp beside it: -1, the Barbarian Outpost's Appeal (data/improvements.md).
+    auto camped = town(3, [](GameState& s) {
+        Camp c;
+        c.id = s.nextCampId++;
+        c.pos = {7, 8};
+        s.camps.push_back(c);
+    });
+    CHECK_EQ(camped->plotAppeal(plot), plain->plotAppeal(plot) - 1);
 }
 
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
@@ -337,6 +346,15 @@ TEST(no_district_goes_on_a_plot_already_built_on) {
     CHECK(std::find(plots.begin(), plots.end(), open) != plots.end());
     CHECK(std::find(plots.begin(), plots.end(), holy) == plots.end());
     CHECK(std::find(plots.begin(), plots.end(), wonder) == plots.end());
+    // Nor does a barbarian camp's, in the city's land.
+    auto camped = town(7, [&](GameState& s) {
+        Camp c;
+        c.id = s.nextCampId++;
+        c.pos = open;
+        s.camps.push_back(c);
+    });
+    const std::vector<Hex> left = camped->districtPlots(1, district("DISTRICT_CAMPUS"));
+    CHECK(std::find(left.begin(), left.end(), open) == left.end());
 }
 
 TEST(one_per_civ_and_exclusive_districts_leave_the_build_list) {
