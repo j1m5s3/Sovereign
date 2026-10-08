@@ -1,4 +1,6 @@
 // Eras, ages, historic moments and tourism (09: Era score and Ages; 07: Tourism and Culture Victory).
+#include <algorithm>
+
 #include "helpers.h"
 #include "sovereign/serialize.h"
 
@@ -432,4 +434,57 @@ TEST(a_city_founded_beside_a_natural_wonder_is_a_city_of_awe) {
     CHECK(awe({10, 6}, "FEATURE_ULURU"));
     CHECK(!awe({8, 9}, "FEATURE_ULURU"));   // 3 tiles away
     CHECK(!awe({10, 6}, "FEATURE_FOREST"));  // not a natural wonder
+}
+
+TEST(a_game_can_begin_in_a_later_era) {
+    GameSetup setup = sovtest::duelSetup(11);
+    setup.startEra = static_cast<int>(rules().era("ERA_MEDIEVAL"));
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    const Player& p = g->state().players[0];
+    // The techs and civics of the Ancient and Classical eras, none of the Medieval.
+    for (size_t i = 0; i < rules().techs.size(); ++i) CHECK_EQ(p.techs.done[i] != 0, rules().techs[i].era < setup.startEra);
+    for (size_t i = 0; i < rules().civics.size(); ++i) CHECK_EQ(p.civics.done[i] != 0, rules().civics[i].era < setup.startEra);
+    CHECK_EQ(g->state().gameEra, setup.startEra);
+    CHECK(p.gold.toInt() >= 210);
+    // The usual Settler and the era's two more.
+    int settlers = 0, traders = 0;
+    for (const Unit& u : g->state().units) {
+        if (u.owner != 0) continue;
+        settlers += u.type == rules().unit("UNIT_SETTLER") ? 1 : 0;
+        traders += u.type == rules().unit("UNIT_TRADER") ? 1 : 0;
+    }
+    CHECK_EQ(settlers, 3);
+    CHECK_EQ(traders, 1);
+    // Cities founded in it start larger, with the era's buildings.
+    UnitId first = kNoUnit;
+    for (const Unit& u : g->state().units) {
+        if (u.owner == 0 && u.type == rules().unit("UNIT_SETTLER")) {
+            first = u.id;
+            break;
+        }
+    }
+    REQUIRE(g->submit(Command::foundCity(0, first)) == CommandError::Ok);
+    const City& capital = g->state().cities.back();
+    CHECK(capital.population >= 4);  // the era's 4, and any founding bonus on top
+    CHECK(std::find(capital.buildings.begin(), capital.buildings.end(), rules().building("BUILDING_MONUMENT")) != capital.buildings.end());
+    // It is part of the setup a save carries.
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    CHECK_EQ(back->state().setup.startEra, setup.startEra);
+}
+
+TEST(a_short_reign_lasts_a_hundred_turns) {
+    GameSetup setup = sovtest::duelSetup(3);
+    setup.speed = "GAMESPEED_SHORT_REIGN";
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    CHECK_EQ(g->turnLimit(), 100);
+    auto standard = Game::create(rules(), sovtest::duelSetup(3), &err);
+    REQUIRE(standard);
+    // Costs scale to a fifth of Standard's.
+    const TypeIndex writing = rules().tech("TECH_WRITING");
+    CHECK(g->techCost(writing) * 4 < standard->techCost(writing));
 }

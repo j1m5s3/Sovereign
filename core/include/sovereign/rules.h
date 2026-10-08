@@ -691,6 +691,17 @@ struct EraType {
     int grievanceDecay = 0;          // grievances that fade each turn while the world is in this era [GS]
 };
 
+// A game begun in a later era (game-setup.md, Advanced start eras; player-retention §5): the techs and civics of
+// earlier eras, this gold and faith and these units for every major civ, and cities founded with this population
+// and the City Center buildings of this era and earlier ones.
+struct EraStartType {
+    TypeIndex era = kNone;
+    int gold = 0, faith = 0;
+    int capitalPopulation = 1, otherPopulation = 1;
+    std::vector<std::pair<TypeIndex, int>> units;  // unit type, how many
+    std::vector<TypeIndex> buildings;              // this era's own (earlier eras' rows add theirs)
+};
+
 // Historic moments (09: Era score and Ages; data: eras-moments-loyalty.md).
 struct MomentType {
     std::string id, name;
@@ -1301,6 +1312,8 @@ public:
     std::vector<MapSizeType> mapSizes;
     std::vector<GameSpeedType> speeds;
     std::vector<std::string> startingUnits;  // unit ids every major civ starts with
+    std::vector<EraStartType> eraStarts;     // by era; Ancient has none
+    const EraStartType* eraStart(int era) const;
     std::vector<DifficultyType> difficulties;  // Settler .. Deity (setup.json)
     std::vector<ProjectType> projects;
     std::vector<WmdType> wmds;

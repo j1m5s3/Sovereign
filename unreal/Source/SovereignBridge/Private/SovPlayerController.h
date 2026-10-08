@@ -186,5 +186,9 @@ protected:
 	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
 	bool bMenuRivals = true;   // AI leaders remember you from earlier games (player-retention §1)
 	FString MenuHall;          // the Hall of Sovereigns as shown on the menu (empty: hidden)
+	int32 MenuSpeed = 0;       // game length on the menu (player-retention §5): see kMenuSpeeds
+	int32 MenuEra = 0;         // the era to begin in (0: Ancient)
+	bool bMenuMods = false;    // the menu shows the installed mods (player-retention §6)
+	TArray<FString> MenuModsOn;  // the mods turned on, in load order
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

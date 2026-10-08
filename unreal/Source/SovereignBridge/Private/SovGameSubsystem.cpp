@@ -1,5 +1,6 @@
 #include "SovGameSubsystem.h"
 
+#include "sovereign/challenge.h"
 #include "sovereign/commands.h"
 #include "sovereign/game.h"
 #include "sovereign/serialize.h"
@@ -84,6 +85,16 @@ void USovGameSubsystem::Tick(float DeltaTime)
 				FFileHelper::SaveStringToFile(FDateTime::Now().ToString(TEXT("%Y-%m-%d  ")) + UTF8_TO_TCHAR(Entry.c_str()) + LINE_TERMINATOR, *HallPath(),
 					FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM, &IFileManager::Get(), FILEWRITE_Append);
 				WriteChronicle();
+			}
+			// The weekly challenge: the result on the local board, and the save to submit (player-retention §3).
+			if (const int32 Week = Session.GetChallengeWeek(); Week >= 0)
+			{
+				const sov::Challenge Ch = sov::weeklyChallenge(Session.GetRules(), Week);
+				const sov::ChallengeResult R = sov::judgeChallenge(Session.GetGame(), Ch);
+				const FString Line = FString::Printf(TEXT("week %d  %s  turn %d  score %d"), Week, R.goalMet ? TEXT("goal met") : TEXT("goal missed"), R.turn, R.score);
+				FFileHelper::SaveStringToFile(Line + LINE_TERMINATOR, *ChallengesPath(), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM, &IFileManager::Get(), FILEWRITE_Append);
+				SaveGame(FString::Printf(TEXT("challenge week %d"), Week));
+				LastMessage = FString::Printf(TEXT("Weekly challenge: %s. Saved as \"challenge week %d\" to submit."), *Line, Week);
 			}
 			bWroteEnd = true;
 		}
@@ -173,6 +184,20 @@ TArray<TPair<FString, FDateTime>> USovGameSubsystem::ListSaves()
 TStatId USovGameSubsystem::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(USovGameSubsystem, STATGROUP_Tickables);
+}
+
+FString USovGameSubsystem::ChallengesPath()
+{
+	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Challenges.txt"));
+}
+
+TArray<FString> USovGameSubsystem::ChallengeResults(int32 Week)
+{
+	TArray<FString> Lines;
+	FFileHelper::LoadFileToStringArray(Lines, *ChallengesPath());
+	const FString Prefix = FString::Printf(TEXT("week %d "), Week);
+	Lines.RemoveAll([&](const FString& L) { return !L.StartsWith(Prefix); });
+	return Lines;
 }
 
 FString USovGameSubsystem::HallPath()

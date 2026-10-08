@@ -4,6 +4,7 @@
 
 #include "SovHexLayout.h"
 #include "SovMirror.h"
+#include "SovMods.h"
 #include "SovSession.h"
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
@@ -16,6 +17,7 @@
 #include "Misc/Paths.h"
 #include "UObject/UObjectGlobals.h"
 
+#include "sovereign/challenge.h"
 #include "sovereign/commands.h"
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
@@ -689,6 +691,64 @@ bool FSovChronicleTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("its title"), Text.Contains(TEXT("The Chronicle of Elizabeth I of England")));
 	TestTrue(TEXT("its events"), Text.Contains(TEXT("In the 9th year of the reign, France made peace with England.")));
 	IFileManager::Get().Delete(*Path);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovModsTest, "Sovereign.Bridge.ModsLayerOverTheRules", kSovTestFlags)
+bool FSovModsTest::RunTest(const FString& Parameters)
+{
+	// The shipped example mod is found, a game with it has its rules, and its save loads it again.
+	TestTrue(TEXT("the example mod is installed"), SovMods::Discover().ContainsByPredicate([](const FSovMod& M) { return M.Id == TEXT("swift-settlers"); }));
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.bHumanSeat0 = false;
+	Setup.Mods = {TEXT("swift-settlers")};
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Rules& R = Session.GetRules();
+	TestEqual(TEXT("Settlers cost 60"), R.units[static_cast<size_t>(R.unit("UNIT_SETTLER"))].cost, 60);
+	TestTrue(TEXT("the setup names the mod"), Session.GetGame().state().setup.mods == std::vector<std::string>{"swift-settlers"});
+	FSovSession Resumed;
+	TestTrue(TEXT("its save loads with the mod"), Resumed.LoadLocal(sov::saveGame(Session.GetGame()), Error));
+	TestEqual(TEXT("the same game"), Resumed.GetGame().stateHash(), Session.GetGame().stateHash());
+	FSovSession Missing;
+	Setup.Mods = {TEXT("no-such-mod")};
+	TestFalse(TEXT("a missing mod is refused"), Missing.Start(Setup, Error));
+	TestTrue(TEXT("and named"), Error.Contains(TEXT("no-such-mod")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovChallengeTest, "Sovereign.Bridge.WeeklyChallengeIsTheWeeksGame", kSovTestFlags)
+bool FSovChallengeTest::RunTest(const FString& Parameters)
+{
+	// This week's challenge starts from the week's setup whatever the options and mods, and a save of it
+	// is still the challenge; its log passes the board's check.
+	const int32 Week = FSovSession::CurrentChallengeWeek();
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.ChallengeWeek = Week;
+	Setup.Mods = {TEXT("swift-settlers")};
+	Setup.Seed = 99;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Challenge Ch = sov::weeklyChallenge(Session.GetRules(), Week);
+	TestEqual(TEXT("the week's seed"), Session.GetGame().state().setup.seed, Ch.setup.seed);
+	TestTrue(TEXT("no mods"), Session.GetGame().state().setup.mods.empty());
+	TestEqual(TEXT("the challenge"), Session.GetChallengeWeek(), Week);
+	TestFalse(TEXT("its text"), FSovSession::ChallengeText(Week).IsEmpty());
+	const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
+	FSovSession Resumed;
+	TestTrue(TEXT("its save loads"), Resumed.LoadLocal(Bytes, Error));
+	TestEqual(TEXT("and is still the challenge"), Resumed.GetChallengeWeek(), Week);
+	TestTrue(TEXT("the board's check passes"), sov::checkChallenge(Session.GetRules(), Ch, Bytes).valid);
 	return true;
 }
 

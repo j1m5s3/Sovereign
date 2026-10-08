@@ -9,6 +9,7 @@
   {"id": "MAPSIZE_HUGE", "width": 106, "height": 66, "defaultPlayers": 12, "maxReligions": 7, "defaultCityStates": 18, "co2PerDegree": 3000000}
  ],
  "gameSpeeds": [
+  {"id": "GAMESPEED_SHORT_REIGN", "costPercent": 20, "turns": 100},
   {"id": "GAMESPEED_ONLINE", "costPercent": 50, "turns": 250},
   {"id": "GAMESPEED_QUICK", "costPercent": 67, "turns": 330},
   {"id": "GAMESPEED_STANDARD", "costPercent": 100, "turns": 500},
@@ -29,6 +30,16 @@
  "startingUnits": [
   {"id": "START_SETTLER", "unit": "UNIT_SETTLER"},
   {"id": "START_WARRIOR", "unit": "UNIT_WARRIOR"}
+ ],
+ "_eraStarts": "Era starts (game-setup.md, Advanced start eras; Starting units (major civs), non-AI rows; Starting buildings by start era, City Center only; player-retention section 5). A game begun in an era gives every civ the techs and civics of the eras before it, this gold and faith and these units on top of the usual Settler and Warrior; cities founded in the game start with this population and the City Center buildings of this era and the ones before.",
+ "eraStarts": [
+  {"id": "ERA_CLASSICAL", "gold": 110, "faith": 10, "capitalPopulation": 4, "otherPopulation": 1, "units": {"UNIT_BUILDER": 1, "UNIT_SCOUT": 1, "UNIT_SETTLER": 1, "UNIT_SPEARMAN": 1}, "buildings": []},
+  {"id": "ERA_MEDIEVAL", "gold": 210, "faith": 20, "capitalPopulation": 4, "otherPopulation": 2, "units": {"UNIT_ARCHER": 1, "UNIT_BUILDER": 2, "UNIT_SCOUT": 1, "UNIT_SETTLER": 2, "UNIT_SPEARMAN": 1, "UNIT_TRADER": 1}, "buildings": ["BUILDING_MONUMENT"]},
+  {"id": "ERA_RENAISSANCE", "gold": 250, "faith": 20, "capitalPopulation": 7, "otherPopulation": 2, "units": {"UNIT_BUILDER": 2, "UNIT_CROSSBOWMAN": 1, "UNIT_PIKEMAN": 2, "UNIT_SETTLER": 2, "UNIT_SKIRMISHER": 2, "UNIT_TRADER": 1}, "buildings": ["BUILDING_GRANARY", "BUILDING_ANCIENT_WALLS"]},
+  {"id": "ERA_INDUSTRIAL", "gold": 360, "faith": 400, "capitalPopulation": 7, "otherPopulation": 4, "units": {"UNIT_BUILDER": 2, "UNIT_CROSSBOWMAN": 2, "UNIT_PIKE_AND_SHOT": 2, "UNIT_SETTLER": 2, "UNIT_SKIRMISHER": 2, "UNIT_TRADER": 1}, "buildings": []},
+  {"id": "ERA_MODERN", "gold": 485, "faith": 800, "capitalPopulation": 10, "otherPopulation": 4, "units": {"UNIT_BUILDER": 3, "UNIT_FIELD_CANNON": 2, "UNIT_PIKE_AND_SHOT": 3, "UNIT_SETTLER": 3, "UNIT_TRADER": 2}, "buildings": ["BUILDING_MEDIEVAL_WALLS"]},
+  {"id": "ERA_ATOMIC", "gold": 550, "faith": 1600, "capitalPopulation": 10, "otherPopulation": 6, "units": {"UNIT_AT_CREW": 3, "UNIT_BUILDER": 3, "UNIT_FIELD_CANNON": 3, "UNIT_SETTLER": 3, "UNIT_TRADER": 2}, "buildings": ["BUILDING_RENAISSANCE_WALLS"]},
+  {"id": "ERA_INFORMATION", "gold": 710, "faith": 2400, "capitalPopulation": 13, "otherPopulation": 6, "units": {"UNIT_AT_CREW": 4, "UNIT_BUILDER": 4, "UNIT_MACHINE_GUN": 3, "UNIT_SETTLER": 4, "UNIT_TRADER": 2}, "buildings": ["BUILDING_SEWER"]}
  ],
  "grantedBuildings": [
   {"id": "GRANT_PALACE", "building": "BUILDING_PALACE", "_note": "granted to the capital"}

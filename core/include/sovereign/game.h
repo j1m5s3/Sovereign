@@ -893,6 +893,7 @@ private:
     void processProfiles();            // world turn: update every major civ's play profile
     void processRivals();              // world turn: this game's part of each human's rival memories
     void recordChronicle(const GameEvent& e);  // keeps a chronicle-worthy event for the whole game
+    void applyEraStart();  // game creation: the techs, civics, gold, faith and units of the setup's start era
     void processSpaceRace();           // world turn: exoplanet expeditions travel
     void burnPower(PlayerId player);   // power [GS]: each city's demand met by free sources, then by plants burning fuel (CO2)
     int renewablePower(const City& city) const;  // from its Hydroelectric Dam and renewable improvements, before the Biosphère

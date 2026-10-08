@@ -162,6 +162,9 @@ void writeSetup(ByteWriter& w, const GameSetup& s) {
     w.boolean(s.barbarianClans);
     w.boolean(s.monopolies);
     w.boolean(s.rivalMemory);
+    w.i32(s.startEra);
+    w.u32(static_cast<uint32_t>(s.mods.size()));
+    for (const std::string& m : s.mods) w.str(m);
 }
 void readSetup(ByteReader& r, GameSetup& s) {
     s.seed = r.u64();
@@ -197,6 +200,11 @@ void readSetup(ByteReader& r, GameSetup& s) {
     s.barbarianClans = r.boolean();
     s.monopolies = r.boolean();
     s.rivalMemory = r.boolean();
+    s.startEra = r.i32();
+    const uint32_t nmods = r.u32();
+    if (!r.checkCount(nmods, 4)) return;
+    s.mods.resize(nmods);
+    for (std::string& m : s.mods) m = r.str();
 }
 
 void writeCommand(ByteWriter& w, const Command& c) {
@@ -1409,6 +1417,22 @@ std::vector<uint8_t> saveGame(const Game& game) {
     w.u32(static_cast<uint32_t>(game.log().size()));
     for (const Command& c : game.log()) writeCommand(w, c);
     return w.take();
+}
+
+bool peekSaveSetup(const std::vector<uint8_t>& bytes, GameSetup& out) {
+    ByteReader r(bytes);
+    for (uint8_t m : kMagic) {
+        if (r.u8() != m) return false;
+    }
+    if (r.u32() != kSaveVersion) return false;
+    (void)r.u64();  // the rules checksum
+    const std::vector<uint8_t> stateBytes = r.bytes();
+    ByteReader sr(stateBytes);
+    GameSetup setup;
+    readSetup(sr, setup);
+    if (!r.ok() || !sr.ok()) return false;
+    out = std::move(setup);
+    return true;
 }
 
 std::unique_ptr<Game> loadGame(const Rules& rules, const std::vector<uint8_t>& bytes, std::string* error) {

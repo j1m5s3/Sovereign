@@ -135,6 +135,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
         // The leader starts on the Settler's tile with the normal starting units (leader doc §1).
         if (rules.leaderUnit != kNone) game->spawnLeader(p.id, p.startPos);
     }
+    if (setup.startEra > 0) game->applyEraStart();
     for (const Player& p : st.players) game->refreshVisibility(p.id);
     // Profiles carried from earlier games seed this one (leader doc §10); this game's conquests start at zero.
     st.profiles.resize(st.players.size());
@@ -1532,6 +1533,17 @@ void Game::applyFoundCity(const Command& c) {
     if (city.capital) {
         for (size_t b = 0; b < rules_->buildings.size(); ++b) {
             if (rules_->buildings[b].granted) city.buildings.push_back(static_cast<TypeIndex>(b));
+        }
+    }
+    // A game begun in a later era: its cities start larger, with that era's City Center buildings (game-setup.md).
+    if (p.cityState == kNone && !p.barbarian && !p.freeCity) {
+        for (int e = 1; e <= state_.setup.startEra; ++e) {
+            const EraStartType* es = rules_->eraStart(e);
+            if (!es) continue;
+            if (e == state_.setup.startEra) city.population = std::max(city.population, city.capital ? es->capitalPopulation : es->otherPopulation);
+            for (const TypeIndex b : es->buildings) {
+                if (std::find(city.buildings.begin(), city.buildings.end(), b) == city.buildings.end()) city.buildings.push_back(b);
+            }
         }
     }
     const CityId newId = city.id;

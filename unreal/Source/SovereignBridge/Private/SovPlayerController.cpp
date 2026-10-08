@@ -8,6 +8,7 @@
 #include "SovHUD.h"
 #include "SovHexLayout.h"
 #include "SovMapActor.h"
+#include "SovMods.h"
 #include "SovStreetScene.h"
 #include "SovBattleScene.h"
 #include "SovDiplomacyPanel.h"
@@ -70,6 +71,18 @@ int32 TurnsFor(int32 Remaining, int32 PerTurn)
 	return PerTurn > 0 ? FMath::Max(1, (Remaining + PerTurn - 1) / PerTurn) : 999;
 }
 
+// The menu's game lengths and start eras (player-retention §5).
+struct FMenuChoice
+{
+	const TCHAR* Id;
+	const TCHAR* Label;
+};
+const FMenuChoice kMenuSpeeds[] = {{TEXT("GAMESPEED_STANDARD"), TEXT("Standard (500 turns)")}, {TEXT("GAMESPEED_SHORT_REIGN"), TEXT("Short Reign (100 turns)")},
+	{TEXT("GAMESPEED_ONLINE"), TEXT("Online (250 turns)")}, {TEXT("GAMESPEED_QUICK"), TEXT("Quick (330 turns)")}, {TEXT("GAMESPEED_EPIC"), TEXT("Epic (750 turns)")},
+	{TEXT("GAMESPEED_MARATHON"), TEXT("Marathon (1500 turns)")}};
+const FMenuChoice kMenuEras[] = {{TEXT("ERA_ANCIENT"), TEXT("Ancient")}, {TEXT("ERA_CLASSICAL"), TEXT("Classical")}, {TEXT("ERA_MEDIEVAL"), TEXT("Medieval")},
+	{TEXT("ERA_RENAISSANCE"), TEXT("Renaissance")}, {TEXT("ERA_INDUSTRIAL"), TEXT("Industrial")}, {TEXT("ERA_MODERN"), TEXT("Modern")},
+	{TEXT("ERA_ATOMIC"), TEXT("Atomic")}, {TEXT("ERA_INFORMATION"), TEXT("Information")}};
 const FKey DigitKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine};
 constexpr int32 PageSize = 9;
 }  // namespace
@@ -1578,6 +1591,16 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	{
 		// One result command into the game; the core clamps it to the band (§9).
 		Outcome = Sim.Result();
+		// Recorded already within the band, so a replayed log (the weekly challenge's check) holds no result outside it.
+		{
+			const sov::PendingBattle& Pb = Subsystem()->GetGame().state().pendingBattle;
+			const int32 Band = Subsystem()->GetGame().rules().globalInt("LIVE_BATTLE_BAND_PERCENT");
+			auto InBand = [Band](int32 Field, int32 Expected) {
+				return FMath::Clamp(Field, Expected * (100 - Band) / 100, (Expected * (100 + Band) + 99) / 100);
+			};
+			Outcome.ToDefender = InBand(Outcome.ToDefender, Pb.expectedToDefender);
+			Outcome.ToAttacker = InBand(Outcome.ToAttacker, Pb.expectedToAttacker);
+		}
 		Send(sov::Command::battleResult(Me(), Outcome.ToDefender, Outcome.ToAttacker, Outcome.LeaderWound, Outcome.Habits));
 		bBattleSent = true;
 		BattleExitTimer = 3.f;
@@ -2500,6 +2523,9 @@ void ASovPlayerController::OpenMenu()
 		S.PlayerName = Name.IsEmpty() ? FString(TEXT("Player")) : Name;
 		S.Difficulty = MenuDifficulty;
 		S.bRivalMemory = bMenuRivals;
+		S.Speed = kMenuSpeeds[MenuSpeed].Id;
+		S.StartEra = MenuEra > 0 ? kMenuEras[MenuEra].Id : TEXT("");
+		S.Mods = MenuModsOn;
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
@@ -2517,6 +2543,27 @@ void ASovPlayerController::OpenMenu()
 			})];
 		}
 	}
+	// Data mods (player-retention §6): each installed one, on or off for new games.
+	MenuModsOn = SovMods::Enabled();
+	TSharedRef<SVerticalBox> ModList = SNew(SVerticalBox);
+	for (const FSovMod& Mod : SovMods::Discover())
+	{
+		const FString Id = Mod.Id;
+		const FString Label = FString::Printf(TEXT("%s %s: %s"), *Mod.Name, *Mod.Version, *Mod.Description);
+		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Id]() {
+			if (MenuModsOn.Contains(Id)) MenuModsOn.Remove(Id);
+			else MenuModsOn.Add(Id);
+			SovMods::SetEnabled(MenuModsOn);
+			return FReply::Handled();
+		})[SNew(STextBlock).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
+			return FText::FromString((MenuModsOn.Contains(Id) ? TEXT("[on]  ") : TEXT("[off]  ")) + Label);
+		})]];
+	}
+	// The weekly challenge (player-retention §3): this week's game, with the local board's results so far.
+	const int32 Week = FSovSession::CurrentChallengeWeek();
+	FString ChallengeLabel = FSovSession::ChallengeText(Week);
+	const TArray<FString> Results = USovGameSubsystem::ChallengeResults(Week);
+	if (Results.Num() > 0) ChallengeLabel += FString::Printf(TEXT("  [your last: %s]"), *Results.Last().RightChop(FString::Printf(TEXT("week %d  "), Week).Len()));
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
 	{
@@ -2555,8 +2602,17 @@ void ASovPlayerController::OpenMenu()
 					MenuDifficulty = FMath::Min(7, MenuDifficulty + 1);
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
-			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
+			// Shorter games (player-retention §5): the game's length and the era it begins in.
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuSpeed = (MenuSpeed + 1) % UE_ARRAY_COUNT(kMenuSpeeds);
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					MenuEra = (MenuEra + 1) % UE_ARRAY_COUNT(kMenuEras);
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
@@ -2571,6 +2627,12 @@ void ASovPlayerController::OpenMenu()
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[Item(FString(TEXT("Weekly challenge: ")) + ChallengeLabel, [this, Base, Week]() {
+				FSovSetup S = Base();
+				S.ChallengeWeek = Week;
+				StartFromMenu(S);
+			})]
 			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
@@ -2607,6 +2669,10 @@ void ASovPlayerController::OpenMenu()
 				S.bSteam = true;
 				StartFromMenu(S);
 			})]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Mods"), [this]() { bMenuMods = !bMenuMods; })]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
+				return bMenuMods ? EVisibility::Visible : EVisibility::Collapsed;
+			})[ModList]]
 			// The Hall of Sovereigns: past reigns, newest first (player-retention §2).
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hall of Sovereigns"), [this]() {
 				if (!MenuHall.IsEmpty())

@@ -39,6 +39,14 @@ struct FSovSetup
 	uint64 Seed = 7;
 	int32 Players = 4;
 	FString MapSize = TEXT("MAPSIZE_TINY");
+	// Shorter games (player-retention §5): the speed (GAMESPEED_SHORT_REIGN is 100 turns) and the era to begin in
+	// (empty: Ancient). -SovSpeed= and -SovEra=.
+	FString Speed = TEXT("GAMESPEED_STANDARD");
+	FString StartEra;
+	// Data mods over the rules, in load order (player-retention §6; mods/README.md). -SovMods=a,b.
+	TArray<FString> Mods;
+	// The weekly challenge (player-retention §3): this week's setup instead of the options above (-1: none).
+	int32 ChallengeWeek = -1;
 	// Difficulty: 0 Settler .. 3 Prince .. 7 Deity (the core's Rules::difficulties).
 	int32 Difficulty = 3;
 	// Seat 0 is played by the human; false lets the AI play every seat (spectating seat 0).
@@ -135,6 +143,11 @@ public:
 	static FString ProfilePath(const FString& PlayerName);
 	// The rival memories beside it (player-retention §1).
 	static FString RivalsPath(const FString& PlayerName);
+	// The weekly challenge being played (-1: none), and the current week.
+	int32 GetChallengeWeek() const { return ChallengeWeek; }
+	static int32 CurrentChallengeWeek();
+	// The week's challenge in words (loads the plain rules; empty when they do not load).
+	static FString ChallengeText(int32 Week);
 	void SaveProfile() const;  // writes the local seat's current profile (no-op without one)
 
 	// Bumped on every change to the game; observers resync when it moves.
@@ -157,6 +170,7 @@ private:
 	FSovSetup Demos;  // the setup the session started with (its developer starts apply when hosting starts)
 	int32 AutoStartPlayers = 0;
 	bool bSteam = false;
+	int32 ChallengeWeek = -1;
 	FString LocalName;
 	bool bHandover = false;
 	const sov::Game* SeenGame = nullptr;  // online: which game object, and how long its log, at the last Poll

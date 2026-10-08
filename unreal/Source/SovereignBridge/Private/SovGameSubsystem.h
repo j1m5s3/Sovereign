@@ -42,6 +42,8 @@ public:
 	bool WritingChronicle() const { return Chronicle.IsBusy(); }
 	// The Hall of Sovereigns: one line per finished reign, newest first (Saved/Sovereign/Hall.txt).
 	static TArray<FString> HallEntries();
+	// The local board of weekly challenge results (Saved/Sovereign/Challenges.txt) for one week.
+	static TArray<FString> ChallengeResults(int32 Week);
 	// Saved games on this machine, newest first: their names and when they were written.
 	static TArray<TPair<FString, FDateTime>> ListSaves();
 
@@ -67,4 +69,5 @@ private:
 	bool bWroteEnd = false;  // the profile, rivals, chronicle and Hall entry were written when the game ended for this player
 	FSovChronicleWriter Chronicle;
 	static FString HallPath();
+	static FString ChallengesPath();
 };

@@ -3,7 +3,7 @@
 // state hash (compare hashes across machines to catch nondeterminism).
 //
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
-//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--clans] [--monopolies]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
+//          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--speed GAMESPEED_X] [--era ERA_X] [--clans] [--monopolies]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
 //          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none; --difficulty N: 0 Settler .. 3 Prince .. 7 Deity;
 //          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns; --clans: the Barbarian Clans mode; --monopolies: the Monopolies and Corporations mode).
 //          Stops early when someone wins.
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     GameSetup setup;
     setup.seed = 1;
     int turns = 50, players = 2, aiSeats = 0, bench = 0;
-    std::string savePath, loadPath;
+    std::string savePath, loadPath, era;
     bool showMap = false, showCities = false;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -123,6 +123,8 @@ int main(int argc, char** argv) {
         else if (a == "--clans") setup.barbarianClans = true;
         else if (a == "--monopolies") setup.monopolies = true;
         else if (a == "--difficulty") setup.difficulty = std::atoi(next().c_str());
+        else if (a == "--speed") setup.speed = next();
+        else if (a == "--era") era = next();
         else if (a == "--bench") bench = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
@@ -138,6 +140,13 @@ int main(int argc, char** argv) {
     }
     for (int i = 0; i < players; ++i) {
         setup.players.push_back({rules.civs[static_cast<size_t>(i) % rules.civs.size()].id, false});
+    }
+    if (!era.empty()) {
+        if (rules.era(era) == kNone) {
+            std::fprintf(stderr, "unknown era %s\n", era.c_str());
+            return 1;
+        }
+        setup.startEra = static_cast<int>(rules.era(era));
     }
     if (bench > 0) return runBench(rules, setup, bench, turns);
     std::unique_ptr<Game> game;

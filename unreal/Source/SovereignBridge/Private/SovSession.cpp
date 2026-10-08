@@ -1,4 +1,5 @@
 #include "SovSession.h"
+#include "SovMods.h"
 
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -11,6 +12,7 @@
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
+#include "sovereign/challenge.h"
 #include "sovereign/serialize.h"
 #include "sovereign_net/session.h"
 
@@ -24,6 +26,11 @@ FSovSetup FSovSetup::FromCommandLine()
 	FParse::Value(Cmd, TEXT("SovSeed="), Setup.Seed);
 	FParse::Value(Cmd, TEXT("SovPlayers="), Setup.Players);
 	FParse::Value(Cmd, TEXT("SovSize="), Setup.MapSize);
+	FParse::Value(Cmd, TEXT("SovSpeed="), Setup.Speed);
+	FParse::Value(Cmd, TEXT("SovEra="), Setup.StartEra);
+	FString ModList;
+	Setup.Mods = FParse::Value(Cmd, TEXT("SovMods="), ModList) ? TArray<FString>() : SovMods::Enabled();
+	if (!ModList.IsEmpty()) ModList.ParseIntoArray(Setup.Mods, TEXT(","));
 	if (FParse::Param(Cmd, TEXT("SovSpectate")))
 	{
 		Setup.bHumanSeat0 = false;
@@ -59,7 +66,8 @@ FSovSetup FSovSetup::FromCommandLine()
 bool FSovSetup::HasStartOptions()
 {
 	static const TCHAR* const Options[] = {TEXT("SovSeed="), TEXT("SovPlayers="), TEXT("SovSize="), TEXT("SovSpectate"), TEXT("SovBattleDemo"),
-		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart")};
+		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart"),
+		TEXT("SovSpeed="), TEXT("SovEra=")};
 	const FString Cmd = FCommandLine::Get();
 	for (const TCHAR* O : Options)
 	{
@@ -81,7 +89,21 @@ bool FSovSession::LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError
 	auto LoadedRules = std::make_unique<sov::Rules>();
 	std::string Error;
 	const FString Dir = FSovSetup::DefaultRulesDir();
-	if (!LoadedRules->load({std::string(TCHAR_TO_UTF8(*Dir))}, &Error))
+	// The save names its mods; the rules are loaded with them (player-retention §6).
+	sov::GameSetup Saved;
+	TArray<FString> Mods;
+	if (sov::peekSaveSetup(Bytes, Saved))
+	{
+		for (const std::string& M : Saved.mods) Mods.Add(UTF8_TO_TCHAR(M.c_str()));
+	}
+	std::vector<std::string> Dirs;
+	FString Missing;
+	if (!SovMods::RulesDirs(Mods, Dirs, Missing))
+	{
+		OutError = FString::Printf(TEXT("this save needs the mod %s"), *Missing);
+		return false;
+	}
+	if (!LoadedRules->load(Dirs, &Error))
 	{
 		OutError = FString::Printf(TEXT("rules (%s): %s"), *Dir, UTF8_TO_TCHAR(Error.c_str()));
 		return false;
@@ -101,6 +123,12 @@ bool FSovSession::LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError
 	Game = std::move(Loaded);
 	CoreSetup = std::make_unique<sov::GameSetup>(Game->state().setup);
 	Mode = ESovNet::Local;
+	// A saved weekly challenge (this week's or last week's) is still that challenge.
+	ChallengeWeek = -1;
+	for (const int32 Week : {CurrentChallengeWeek(), CurrentChallengeWeek() - 1})
+	{
+		if (Week >= 0 && CoreSetup->mods.empty() && CoreSetup->seed == sov::weeklyChallenge(*Rules, Week).setup.seed) ChallengeWeek = Week;
+	}
 	bSteam = false;
 	bStalled = false;
 	bHandover = false;
@@ -141,7 +169,17 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	Rules = std::make_unique<sov::Rules>();
 	std::string Error;
 	const FString Dir = Setup.RulesDir.IsEmpty() ? FSovSetup::DefaultRulesDir() : Setup.RulesDir;
-	if (!Rules->load({std::string(TCHAR_TO_UTF8(*Dir))}, &Error))
+	// The mods lay their rules over the base (player-retention §6).
+	std::vector<std::string> Dirs;
+	FString Missing;
+	// The weekly challenge is played on the plain rules, as the board's check replays it.
+	if (!SovMods::RulesDirs(Setup.ChallengeWeek >= 0 ? TArray<FString>() : Setup.Mods, Dirs, Missing))
+	{
+		OutError = FString::Printf(TEXT("the mod %s is not installed"), *Missing);
+		return false;
+	}
+	Dirs[0] = TCHAR_TO_UTF8(*Dir);
+	if (!Rules->load(Dirs, &Error))
 	{
 		OutError = FString::Printf(TEXT("rules (%s): %s"), *Dir, UTF8_TO_TCHAR(Error.c_str()));
 		return false;
@@ -154,6 +192,18 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup = std::make_unique<sov::GameSetup>();
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
+	CoreSetup->speed = TCHAR_TO_UTF8(*Setup.Speed);
+	CoreSetup->mods = Setup.ChallengeWeek >= 0 ? std::vector<std::string>() : SovMods::ToStd(Setup.Mods);
+	if (!Setup.StartEra.IsEmpty())
+	{
+		const sov::TypeIndex Era = Rules->era(TCHAR_TO_UTF8(*Setup.StartEra));
+		if (Era == sov::kNone)
+		{
+			OutError = FString::Printf(TEXT("unknown era %s"), *Setup.StartEra);
+			return false;
+		}
+		CoreSetup->startEra = static_cast<int>(Era);
+	}
 	CoreSetup->liveBattles = Setup.bHumanSeat0;  // melee with the human's leader stack can be fought live
 	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
 	int32 Disasters = CoreSetup->disasterIntensity;
@@ -190,6 +240,13 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			CoreSetup->players[0].rivals = Rivals;
 		}
 	}
+	// The weekly challenge: the week's own setup, the same for everyone (no profile, rivals or mods).
+	ChallengeWeek = Setup.ChallengeWeek;
+	if (ChallengeWeek >= 0)
+	{
+		*CoreSetup = sov::weeklyChallenge(*Rules, ChallengeWeek).setup;
+		Mode = ESovNet::Local;
+	}
 	if (bSteam)
 	{
 #if SOV_WITH_STEAM
@@ -211,7 +268,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	{
 		FSovSteam::Get()->CreateLobby(Setup.Players);
 		Listener = FSovSteam::Get()->MakeListener();
-		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0, CoreSetup->mods);
 		Notices.Add(TEXT("Opening a Steam lobby..."));
 		++Rev;
 		return true;
@@ -235,7 +292,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			return false;
 		}
 		Listener = std::move(L);
-		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0, CoreSetup->mods);
 		Notices.Add(FString::Printf(TEXT("Hosting on port %d. Waiting for players; Enter starts the game."), Setup.Port));
 		++Rev;
 		return true;
@@ -248,7 +305,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			OutError = FString::Printf(TEXT("nobody answered at %s:%d"), *Setup.JoinAddress, Setup.Port);
 			return false;
 		}
-		NetClient = std::make_unique<sov::net::Client>(*Rules, std::move(Link), Name);
+		NetClient = std::make_unique<sov::net::Client>(*Rules, std::move(Link), Name, sov::kNoPlayer, CoreSetup->mods);
 		Notices.Add(FString::Printf(TEXT("Connected to %s:%d. Waiting for the host to start."), *Setup.JoinAddress, Setup.Port));
 		++Rev;
 		return true;
@@ -371,6 +428,19 @@ FString FSovSession::ProfilePath(const FString& PlayerName)
 	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Profiles"), Safe + TEXT(".txt"));
 }
 
+int32 FSovSession::CurrentChallengeWeek()
+{
+	return sov::challengeWeek(FDateTime::UtcNow().ToUnixTimestamp());
+}
+
+FString FSovSession::ChallengeText(int32 Week)
+{
+	sov::Rules Plain;
+	std::string Error;
+	if (!Plain.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Error)) return FString();
+	return UTF8_TO_TCHAR(sov::weeklyChallenge(Plain, Week).text.c_str());
+}
+
 FString FSovSession::RivalsPath(const FString& PlayerName)
 {
 	return FPaths::ChangeExtension(ProfilePath(PlayerName), TEXT("rivals.txt"));
@@ -483,7 +553,7 @@ bool FSovSession::Poll()
 			}
 			if (Steam->LobbyState() == FSovSteam::ELobby::In && !Steam->OwnsLobby())
 			{
-				NetClient = std::make_unique<sov::net::Client>(*Rules, Steam->MakeLink(Steam->LobbyOwner()), std::string(TCHAR_TO_UTF8(*LocalName)));
+				NetClient = std::make_unique<sov::net::Client>(*Rules, Steam->MakeLink(Steam->LobbyOwner()), std::string(TCHAR_TO_UTF8(*LocalName)), sov::kNoPlayer, CoreSetup->mods);
 				Notices.Add(TEXT("In the lobby. Waiting for the host to start."));
 				bChanged = true;
 			}
