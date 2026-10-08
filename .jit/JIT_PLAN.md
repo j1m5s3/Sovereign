@@ -32,6 +32,6 @@ The game can be played end to end from the Unreal menu, but the map and controls
 
 1. **Done: map.** Borders, rivers, resources and improvements are drawn (roads already were), with a tile tooltip that includes yields.
 2. **Done: saves.** `F5` and `F9` quicksave and quickload in local games, and the main menu can continue the four latest saves (`FSovSession::LoadLocal`).
-3. **Panels:** city and unit info panels, and a promotions screen.
-4. **Yields and help:** a yields overlay, and a short "how to play" screen.
+3. **Done: panels.** The unit and city panels already existed, and `U` already offered promotions. The unit panel now lists promotions held; the city panel shows growth (turns to grow), housing, amenities and its buildings.
+4. **Done: yields and help.** `F3` toggles yields on the viewer's plots; `F1` opens a how-to-play screen, hinted at in the status line.
 5. **Playtest pass:** play through the human-seat path and fix the dead ends found; update unreal/README.md.
