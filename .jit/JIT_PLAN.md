@@ -34,4 +34,8 @@ The game can be played end to end from the Unreal menu, but the map and controls
 2. **Done: saves.** `F5` and `F9` quicksave and quickload in local games, and the main menu can continue the four latest saves (`FSovSession::LoadLocal`).
 3. **Done: panels.** The unit and city panels already existed, and `U` already offered promotions. The unit panel now lists promotions held; the city panel shows growth (turns to grow), housing, amenities and its buildings.
 4. **Done: yields and help.** `F3` toggles yields on the viewer's plots; `F1` opens a how-to-play screen, hinted at in the status line.
-5. **Playtest pass:** play through the human-seat path and fix the dead ends found; update unreal/README.md.
+5. **Playtest pass.**
+   - **Done: automated playthrough.** `Sovereign.Bridge.HumanSeatPlaysLongGame` plays seat 0 as a newcomer for two games to turn 250 through what the controller offers, saving and resuming every 50 turns. It found no End Turn dead end. It did find that a game had no way out: there was no in-game menu, so after a victory or elimination the only exit was closing the window. `Esc` with nothing selected now opens the menu over the game (resume, save, continue, new game, quit). `F2` was missing from the README.
+   - Seed 7's newcomer, who fortifies every unit, lost its only city before turn 250 on Prince. Noted for the hands-on pass, not changed.
+   - **Next: James plays.** A hands-on game from the menu; fix what he reports.
+6. **Done: east-west wrap drawn.** The map actor draws a copy of itself a map's width to the west and east (`ASovMapActor::SyncGhosts`). The camera's focus stays within one copy, so panning past an edge carries on into the other. `LookAt` and the HUD's labels use the copy nearest the camera (`SovHex::NearestCopy`), and rivers, borders and roads across the wrap are drawn rather than skipped. Picking already wrapped through `HexGrid::normalize`. Checked in the game at column 0 of seed 7.

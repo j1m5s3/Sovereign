@@ -144,6 +144,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 	FSovMirror M;
 	M.Width = S.grid.width();
 	M.Height = S.grid.height();
+	M.bWrap = S.grid.wrapX();
 	M.Viewer = Viewer;
 
 	M.Tiles.Reserve(S.grid.size());

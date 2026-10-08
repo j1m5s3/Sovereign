@@ -145,6 +145,11 @@ void ASovPlayerController::UpdateCamera(float DeltaTime)
 	{
 		return;
 	}
+	if (const USovGameSubsystem* Sub = Subsystem(); Sub && Sub->IsRunning())
+	{
+		const sov::HexGrid& Grid = Sub->GetGame().state().grid;
+		Cam->WrapWidth = Grid.wrapX() ? SovHex::MapWorldWidth(Grid.width()) : 0.0;
+	}
 	FVector2D Dir(0, 0);
 	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Dir.Y += 1;
 	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Dir.Y -= 1;
@@ -924,8 +929,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				for (size_t W = 0; W < From.greatWorks.size(); ++W)
 				{
 					const sov::GreatWork& Work = From.greatWorks[W];
-					const FString Kind = Str(R.greatWorkTypes[static_cast<size_t>(Work.type)].id).ToLower();
-					const FString WorkName = Work.creator != sov::kNone ? FString::Printf(TEXT("%s's %s"), *Str(R.greatPeople[static_cast<size_t>(Work.creator)].name), *Kind) : Kind;
+					const FString WorkKind = Str(R.greatWorkTypes[static_cast<size_t>(Work.type)].id).ToLower();
+					const FString WorkName = Work.creator != sov::kNone ? FString::Printf(TEXT("%s's %s"), *Str(R.greatPeople[static_cast<size_t>(Work.creator)].name), *WorkKind) : WorkKind;
 					for (const sov::City& To : G.state().cities)
 					{
 						if (To.owner != Me()) continue;
@@ -1738,8 +1743,14 @@ void ASovPlayerController::HandleOrders()
 	}
 	if (WasInputKeyJustPressed(EKeys::Escape))
 	{
+		// Esc steps back: the chooser, then the selection, then the menu (also the way out once the game is over).
 		if (Chooser != EChooser::None) Chooser = EChooser::None;
-		else SelectedUnit = SelectedCity = -1;
+		else if (SelectedUnit >= 0 || SelectedCity >= 0) SelectedUnit = SelectedCity = -1;
+		else
+		{
+			OpenMenu();
+			return;
+		}
 	}
 	if (Chooser != EChooser::None)
 	{
@@ -2337,6 +2348,8 @@ bool ASovPlayerController::HandleSessionScreens()
 	FSovSession& Session = Sub->GetSessionMut();
 	if (Menu.IsValid())
 	{
+		// Over a game in progress, Esc closes the menu again.
+		if (Session.IsRunning() && WasInputKeyJustPressed(EKeys::Escape)) CloseMenu();
 		return true;
 	}
 	if (ChatBox.IsValid())
@@ -2454,6 +2467,20 @@ void ASovPlayerController::OpenMenu()
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
+	// Over a game in progress (Esc): back to it, or save it first (local games).
+	TSharedRef<SVerticalBox> InGame = SNew(SVerticalBox);
+	if (const USovGameSubsystem* Sub = Subsystem(); Sub && Sub->IsRunning())
+	{
+		InGame->AddSlot().AutoHeight()[Item(TEXT("Resume (Esc)"), [this]() { CloseMenu(); })];
+		if (Sub->GetSession().NetMode() == ESovNet::Local)
+		{
+			InGame->AddSlot().AutoHeight()[Item(TEXT("Save the game"), [this]() {
+				USovGameSubsystem* S = Subsystem();
+				const FString SaveName = FString::Printf(TEXT("turn %d"), S->GetGame().state().turn);
+				S->LastMessage = S->SaveGame(SaveName) ? FString::Printf(TEXT("Saved as \"%s\"."), *SaveName) : FString(TEXT("Could not save the game"));
+			})];
+		}
+	}
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
 	{
@@ -2477,6 +2504,7 @@ void ASovPlayerController::OpenMenu()
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
 				SNew(STextBlock).Text(FText::FromString(TEXT("Sovereign"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28))
 				.ColorAndOpacity(FLinearColor(1.f, 0.85f, 0.45f))]
+			+ SVerticalBox::Slot().AutoHeight()[InGame]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {

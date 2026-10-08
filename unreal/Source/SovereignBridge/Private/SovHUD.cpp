@@ -7,6 +7,7 @@
 #include "Engine/Font.h"
 #include "Engine/GameInstance.h"
 
+#include "SovCameraPawn.h"
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
 #include "SovMirror.h"
@@ -35,6 +36,13 @@ const TCHAR* VictoryName(sov::Victory V)
 		case sov::Victory::Science: return TEXT("Science");
 		default: return TEXT("");
 	}
+}
+
+// On a wrapping map, the copy of a map point nearest the camera (the one on screen).
+FVector NearCamera(const APlayerController* PC, const FVector& P)
+{
+	const ASovCameraPawn* Cam = PC ? Cast<ASovCameraPawn>(PC->GetPawn()) : nullptr;
+	return Cam ? SovHex::NearestCopy(P, Cam->FocusPoint().Y, Cam->WrapWidth) : P;
 }
 }  // namespace
 
@@ -399,13 +407,13 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	}
 	if (!P.alive)
 	{
-		Line(TEXT("You have been eliminated."), 16, Y, FLinearColor(1.f, 0.3f, 0.3f));
+		Line(TEXT("You have been eliminated. Esc opens the menu."), 16, Y, FLinearColor(1.f, 0.3f, 0.3f));
 	}
 	if (G.gameOver())
 	{
 		const sov::Player& W = S.players[static_cast<size_t>(S.winner)];
 		const FString Winner = W.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(W.civ)].name);
-		Line(FString::Printf(TEXT("%s wins: %s victory"), *Winner, VictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
+		Line(FString::Printf(TEXT("%s wins: %s victory. Esc opens the menu."), *Winner, VictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
 	}
 	if (!Sub.LastMessage.IsEmpty())
 	{
@@ -435,7 +443,7 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		const FVector Screen = Project(SovHex::Center(H.x, H.y, 5.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(H.x, H.y, 5.0)));
 		if (Screen.Z <= 0 || Screen.X < 0 || Screen.Y < 0 || Screen.X > Canvas->ClipX || Screen.Y > Canvas->ClipY)
 		{
 			continue;
@@ -468,7 +476,7 @@ void ASovHUD::DrawHelp()
 		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
 		TEXT("F3 yields on your plots (* worked). Rest the cursor on a plot for its details."),
 		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
-		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser."),
+		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser, then the menu (save, load, new game, quit)."),
 	};
 	const float W = 860.f, H = 16.f + 20.f * UE_ARRAY_COUNT(Lines);
 	const float Left = (Canvas->ClipX - W) * 0.5f, Top = (Canvas->ClipY - H) * 0.5f;
@@ -484,7 +492,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	UFont* Font = GEngine->GetSmallFont();
 	for (const FSovCityMarker& C : M.Cities)
 	{
-		const FVector Screen = Project(SovHex::Center(C.X, C.Y, 60.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(C.X, C.Y, 60.0)));
 		if (Screen.Z <= 0)
 		{
 			continue;
@@ -509,7 +517,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		if (U.bLeader)
 		{
 			// Leaders carry their ruler's name.
-			const FVector At = Project(SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0));
+			const FVector At = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
 			if (At.Z > 0)
 			{
 				float W = 0, H = 0;
@@ -522,7 +530,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		const FVector Screen = Project(SovHex::Center(U.X, U.Y, 80.0));
+		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 80.0)));
 		if (Screen.Z <= 0)
 		{
 			continue;

@@ -14,6 +14,7 @@
 #include "UObject/UObjectGlobals.h"
 
 #include "sovereign/commands.h"
+#include "sovereign/ai.h"
 #include "sovereign/game.h"
 #include "sovereign/serialize.h"
 
@@ -68,6 +69,34 @@ bool FSovHexLayoutTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("neighbour exists"), N.has_value());
 		const double D = FVector::Dist(SovHex::Center(H.x, H.y), SovHex::Center(N->x, N->y));
 		TestTrue(FString::Printf(TEXT("direction %d distance %.2f"), Dir, D), FMath::IsNearlyEqual(D, SovHex::Size * SovHex::Sqrt3, 0.01));
+	}
+	// A wrapping map: the copies drawn a map's width west and east pick back to the same plot, and
+	// neighbours across the wrap sit side by side once the far one is taken from the nearest copy.
+	sov::HexGrid Wrap(20, 12, true);
+	const double W = SovHex::MapWorldWidth(Wrap.width());
+	for (int32 Row = 0; Row < Wrap.height(); ++Row)
+	{
+		for (int32 Col = 0; Col < Wrap.width(); ++Col)
+		{
+			const FVector C = SovHex::Center(Col, Row);
+			for (const double Shift : {-W, W})
+			{
+				const FIntPoint P = SovHex::FromWorld(C + FVector(0.0, Shift, 0.0));
+				const std::optional<sov::Hex> Back = Wrap.normalize(sov::Hex{P.X, P.Y});
+				TestTrue(TEXT("a copy picks back to its plot"), Back && Back->x == Col && Back->y == Row);
+			}
+			for (int32 Dir = 0; Dir < sov::kNumDirs; ++Dir)
+			{
+				const std::optional<sov::Hex> N = Wrap.neighbor(sov::Hex{Col, Row}, static_cast<sov::Dir>(Dir));
+				if (!N) continue;
+				const double D = FVector::Dist(C, SovHex::NearestCopy(SovHex::Center(N->x, N->y), C.Y, W));
+				if (!FMath::IsNearlyEqual(D, SovHex::Size * SovHex::Sqrt3, 0.01))
+				{
+					AddError(FString::Printf(TEXT("(%d,%d) and its neighbour (%d,%d) are %.1f apart"), Col, Row, N->x, N->y, D));
+					return false;
+				}
+			}
+		}
 	}
 	return true;
 }
@@ -640,8 +669,6 @@ bool FSovOnlineBattleTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif  // WITH_DEV_AUTOMATION_TESTS
-
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovSaveLoadTest, "Sovereign.Bridge.SaveAndLoadResume", kSovTestFlags)
 bool FSovSaveLoadTest::RunTest(const FString& Parameters)
 {
@@ -675,3 +702,311 @@ bool FSovSaveLoadTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("and the game in hand stays"), Resumed.IsRunning());
 	return true;
 }
+
+namespace
+{
+// A plain human at seat 0 for the long playthrough: it only gives orders the controller offers
+// (the first fitting choice, the way a newcomer clicks), and answers every End Turn refusal through
+// the chooser the controller would open. Returns false, with Why, on a dead end.
+struct FNaivePlayer
+{
+	FSovSession* Session = nullptr;
+	sov::PlayerId Me = 0;
+	FString Why;
+	int32 Founded = 0;
+
+	bool Ok(const sov::Command& C) const { return Session->GetGame().validate(C) == sov::CommandError::Ok; }
+	bool Try(const sov::Command& C) { return Ok(C) && Session->Submit(C) == sov::CommandError::Ok; }
+
+	// What the production chooser lists first for this city (EChooser::Production skips a new
+	// district or wonder with no plot). Settlers while the empire is small, else one by the turn.
+	bool ChooseProduction(sov::CityId City)
+	{
+		const sov::Game& G = Session->GetGame();
+		const sov::Rules& R = G.rules();
+		const sov::City* C = G.state().city(City);
+		TArray<sov::Command> Listed;
+		int32 Settler = INDEX_NONE;
+		for (const sov::ProductionItem& Item : G.buildableItems(City))
+		{
+			sov::Hex Plot{};
+			if (Item.kind == sov::ProductionKind::District && !C->district(Item.type, false))
+			{
+				const std::vector<sov::Hex> Plots = G.districtPlots(City, Item.type);
+				if (Plots.empty()) continue;
+				Plot = Plots.front();
+			}
+			if (Item.kind == sov::ProductionKind::Building && R.buildings[static_cast<size_t>(Item.type)].wonder &&
+				std::none_of(C->wonders.begin(), C->wonders.end(), [&](const sov::CityWonder& W) { return W.building == Item.type; }))
+			{
+				const std::vector<sov::Hex> Plots = G.wonderPlots(City, Item.type);
+				if (Plots.empty()) continue;
+				Plot = Plots.front();
+			}
+			if (Item.kind == sov::ProductionKind::Unit && Item.formation == 0 && R.units[static_cast<size_t>(Item.type)].foundCity) Settler = Listed.Num();
+			Listed.Add(sov::Command::setProduction(Me, City, Item, Plot));
+		}
+		if (Listed.Num() == 0)
+		{
+			Why = FString::Printf(TEXT("turn %d: production needed in %s but the chooser lists nothing"), G.state().turn, UTF8_TO_TCHAR(C->name.c_str()));
+			return false;
+		}
+		int32 Cities = 0;
+		for (const sov::City& Mine : G.state().cities) Cities += Mine.owner == Me;
+		const int32 Pick = Settler != INDEX_NONE && Cities < 5 ? Settler : G.state().turn % Listed.Num();
+		if (Session->Submit(Listed[Pick]) != sov::CommandError::Ok && Session->Submit(Listed[0]) != sov::CommandError::Ok)
+		{
+			Why = FString::Printf(TEXT("turn %d: the production chooser's choices are refused in %s"), G.state().turn, UTF8_TO_TCHAR(C->name.c_str()));
+			return false;
+		}
+		return true;
+	}
+
+	// The throne chooser's choices in its order: abandon a captured leader, the heir, a unit, a regent.
+	bool ChooseSuccessor()
+	{
+		const sov::Game& G = Session->GetGame();
+		TArray<sov::Command> Listed{sov::Command::abandonLeader(Me), sov::Command::chooseSuccessor(Me, sov::Succession::Heir)};
+		for (sov::UnitId Id : G.successorUnits(Me)) Listed.Add(sov::Command::chooseSuccessor(Me, sov::Succession::Unit, Id));
+		Listed.Add(sov::Command::chooseSuccessor(Me, sov::Succession::Regent));
+		for (const sov::Command& C : Listed)
+		{
+			if (Try(C)) return true;
+		}
+		Why = FString::Printf(TEXT("turn %d: a successor is needed but the throne offers none"), G.state().turn);
+		return false;
+	}
+
+	void OrderUnit(sov::UnitId Id)
+	{
+		const sov::Game& G = Session->GetGame();
+		const sov::Rules& R = G.rules();
+		const sov::GameState& S = G.state();
+		const sov::Unit* U = S.unit(Id);
+		if (!U) return;
+		const sov::UnitType& T = R.units[static_cast<size_t>(U->type)];
+		if (T.foundCity)
+		{
+			// F where it stands when it may; otherwise walk to the best site nearby.
+			if (Try(sov::Command::foundCity(Me, Id)))
+			{
+				++Founded;
+				return;
+			}
+			sov::Hex Best = U->pos;
+			int32 BestScore = 0;
+			for (const sov::Hex& H : S.grid.within(U->pos, 5))
+			{
+				if (!G.canFoundCityAt(Me, H)) continue;
+				const int32 Score = sov::ai::settleScore(G, Me, H) - 10 * S.grid.distance(U->pos, H);
+				if (Score > BestScore)
+				{
+					BestScore = Score;
+					Best = H;
+				}
+			}
+			if (!(Best == U->pos) && Try(sov::Command::move(Me, Id, Best))) return;
+		}
+		if (T.buildCharges > 0)
+		{
+			for (size_t I = 0; I < R.improvements.size(); ++I)
+			{
+				if (!R.improvements[I].tunnel && Try(sov::Command::buildImprovement(Me, Id, static_cast<sov::TypeIndex>(I)))) return;
+			}
+			// Off to the nearest plot of ours with nothing on it.
+			for (int32 Radius = 1; Radius <= 4; ++Radius)
+			{
+				for (const sov::Hex& H : S.grid.within(U->pos, Radius))
+				{
+					const sov::Plot& P = S.plot(H);
+					if (P.owner == Me && P.improvement == sov::kNone && !S.cityAt(H) && !S.districtAt(H) && !(H == U->pos) &&
+						Try(sov::Command::move(Me, Id, H)))
+						return;
+				}
+			}
+		}
+		const std::vector<sov::CityId> Destinations = G.tradeDestinations(Id);
+		if (!Destinations.empty() && Try(sov::Command::startTradeRoute(Me, Id, Destinations.front()))) return;
+		const std::vector<sov::TypeIndex> Promotions = G.availablePromotions(Id);
+		if (!Promotions.empty() && Try(sov::Command::promote(Me, Id, Promotions.front()))) return;
+		if (Try(sov::Command::setActivity(Me, Id, sov::Activity::Fortify))) return;
+		Try(sov::Command::setActivity(Me, Id, sov::Activity::Skip));
+	}
+
+	// The side choices a player makes now and then: a pantheon, a government and its cards, envoys, governors.
+	void Housekeeping()
+	{
+		const sov::Game& G = Session->GetGame();
+		const sov::Rules& R = G.rules();
+		for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Pantheon))
+		{
+			if (Try(sov::Command::foundPantheon(Me, B))) break;
+		}
+		for (int32 Gov = static_cast<int32>(R.governments.size()) - 1; Gov >= 0; --Gov)
+		{
+			const sov::Player& P = G.state().players[static_cast<size_t>(Me)];
+			if (Gov > P.government && G.canAdoptGovernment(Me, static_cast<sov::TypeIndex>(Gov)) && Try(sov::Command::changeGovernment(Me, static_cast<sov::TypeIndex>(Gov)))) break;
+		}
+		const int32 Slots = static_cast<int32>(G.state().players[static_cast<size_t>(Me)].policies.size());
+		for (int32 Slot = 0; Slot < Slots; ++Slot)
+		{
+			if (G.state().players[static_cast<size_t>(Me)].policies[static_cast<size_t>(Slot)] != sov::kNone) continue;
+			for (size_t Pol = 0; Pol < R.policies.size(); ++Pol)
+			{
+				if (G.canSetPolicy(Me, Slot, static_cast<sov::TypeIndex>(Pol)) && Try(sov::Command::setPolicy(Me, Slot, static_cast<sov::TypeIndex>(Pol)))) break;
+			}
+		}
+		for (const sov::Player& Cs : G.state().players)
+		{
+			if (Cs.cityState != sov::kNone && Cs.alive) Try(sov::Command::sendEnvoy(Me, Cs.id));
+		}
+		for (size_t Gv = 0; Gv < R.governors.size(); ++Gv)
+		{
+			if (G.canAppointGovernor(Me, static_cast<sov::TypeIndex>(Gv))) Try(sov::Command::appointGovernor(Me, static_cast<sov::TypeIndex>(Gv)));
+			for (const sov::City& C : G.state().cities)
+			{
+				if (C.owner == Me && G.canAssignGovernor(Me, static_cast<sov::TypeIndex>(Gv), C.id))
+				{
+					Try(sov::Command::assignGovernor(Me, static_cast<sov::TypeIndex>(Gv), C.id));
+					break;
+				}
+			}
+		}
+	}
+
+	// Seat 0's turn: orders, then End Turn until it goes through. False on a dead end.
+	bool PlayTurn()
+	{
+		Housekeeping();
+		for (sov::UnitId Id : Session->GetGame().unitsNeedingOrders(Me)) OrderUnit(Id);
+		for (int32 Attempt = 0; Attempt < 32; ++Attempt)
+		{
+			const sov::Game& G = Session->GetGame();
+			if (G.battlePending())
+			{
+				if (Session->Submit(sov::Command::autoResolveBattle(Me)) != sov::CommandError::Ok)
+				{
+					Why = FString::Printf(TEXT("turn %d: a waiting battle cannot be auto-resolved"), G.state().turn);
+					return false;
+				}
+				continue;
+			}
+			const sov::CommandError Result = Session->Submit(sov::Command::endTurn(Me));
+			switch (Result)
+			{
+				case sov::CommandError::Ok: return true;
+				case sov::CommandError::UnitsNeedOrders:
+					// The controller selects each waiting unit; K skips it.
+					for (sov::UnitId Id : G.unitsNeedingOrders(Me))
+					{
+						if (!Try(sov::Command::setActivity(Me, Id, sov::Activity::Skip)))
+						{
+							Why = FString::Printf(TEXT("turn %d: unit %d waits for orders and cannot be skipped"), G.state().turn, Id);
+							return false;
+						}
+					}
+					break;
+				case sov::CommandError::ProductionNeeded:
+					for (sov::CityId Id : G.citiesNeedingProduction(Me))
+					{
+						if (!ChooseProduction(Id)) return false;
+					}
+					break;
+				case sov::CommandError::ResearchNeeded:
+				{
+					const std::vector<sov::TypeIndex> Techs = G.availableTechs(Me);
+					Session->Submit(sov::Command::chooseResearch(Me, Techs[static_cast<size_t>(G.state().turn) % Techs.size()]));
+					break;
+				}
+				case sov::CommandError::CivicNeeded:
+				{
+					const std::vector<sov::TypeIndex> Civics = G.availableCivics(Me);
+					Session->Submit(sov::Command::chooseCivic(Me, Civics[static_cast<size_t>(G.state().turn) % Civics.size()]));
+					break;
+				}
+				case sov::CommandError::LeaderNeeded:
+					if (!ChooseSuccessor()) return false;
+					break;
+				default:
+					Why = FString::Printf(TEXT("turn %d: End Turn refused (%s) and the controller opens nothing for it"), G.state().turn,
+						UTF8_TO_TCHAR(sov::commandErrorName(Result)));
+					return false;
+			}
+		}
+		Why = FString::Printf(TEXT("turn %d: End Turn still refused after every chooser was answered"), Session->GetGame().state().turn);
+		return false;
+	}
+};
+}  // namespace
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovHumanLongGameTest, "Sovereign.Bridge.HumanSeatPlaysLongGame", kSovTestFlags)
+bool FSovHumanLongGameTest::RunTest(const FString& Parameters)
+{
+	// A newcomer at seat 0 plays a whole game (to turn 250 or its end) through what the controller
+	// offers, quicksaving and resuming every 50 turns as F5 and the menu's Continue do.
+	for (const uint64 Seed : {7ull, 11ull})
+	{
+		TUniquePtr<FSovSession> Session = MakeUnique<FSovSession>();
+		FSovSetup Setup;
+		Setup.Seed = Seed;
+		FString Error;
+		if (!Session->Start(Setup, Error))
+		{
+			AddError(Error);
+			return false;
+		}
+		FNaivePlayer Human;
+		Human.Session = Session.Get();
+		int32 Guard = 100000;
+		int32 NextSave = 50;
+		while (Session->GetGame().state().turn < 250 && !Session->IsGameOver() && Guard-- > 0)
+		{
+			if (Session->GetGame().battlePending())
+			{
+				TestEqual(TEXT("auto-resolve"), Session->Submit(sov::Command::autoResolveBattle(0)), sov::CommandError::Ok);
+				continue;
+			}
+			if (!Session->IsHumanTurn())
+			{
+				if (!Session->StepAI() && !Session->IsGameOver())
+				{
+					AddError(FString::Printf(TEXT("seed %llu turn %d: an AI seat stalled"), Seed, Session->GetGame().state().turn));
+					return false;
+				}
+				continue;
+			}
+			if (!Session->GetGame().state().players[0].alive) break;
+			if (Session->GetGame().state().turn >= NextSave)
+			{
+				NextSave += 50;
+				const std::vector<uint8_t> Bytes = sov::saveGame(Session->GetGame());
+				const uint64_t Hash = Session->GetGame().stateHash();
+				TUniquePtr<FSovSession> Resumed = MakeUnique<FSovSession>();
+				if (!Resumed->LoadLocal(Bytes, Error))
+				{
+					AddError(FString::Printf(TEXT("seed %llu: the quicksave does not load: %s"), Seed, *Error));
+					return false;
+				}
+				TestEqual(TEXT("the resumed game is the same"), Resumed->GetGame().stateHash(), Hash);
+				TestTrue(TEXT("seat 0 is still the human's"), Resumed->IsHumanTurn());
+				Session = MoveTemp(Resumed);
+				Human.Session = Session.Get();
+			}
+			if (!Human.PlayTurn())
+			{
+				AddError(FString::Printf(TEXT("seed %llu: %s"), Seed, *Human.Why));
+				return false;
+			}
+		}
+		const sov::GameState& S = Session->GetGame().state();
+		int32 Cities = 0;
+		for (const sov::City& C : S.cities) Cities += C.owner == 0;
+		AddInfo(FString::Printf(TEXT("seed %llu: turn %d, game over %d, seat 0 alive %d with %d cities (%d founded)"), Seed, S.turn, Session->IsGameOver() ? 1 : 0,
+			S.players[0].alive ? 1 : 0, Cities, Human.Founded));
+		TestTrue(TEXT("the game reached turn 250 or its end"), S.turn >= 250 || Session->IsGameOver() || !S.players[0].alive);
+		TestTrue(TEXT("seat 0 founded its capital"), Human.Founded >= 1);
+	}
+	return true;
+}
+
+#endif  // WITH_DEV_AUTOMATION_TESTS

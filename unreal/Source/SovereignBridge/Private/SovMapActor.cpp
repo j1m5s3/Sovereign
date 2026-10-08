@@ -1,6 +1,7 @@
 #include "SovMapActor.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "ProceduralMeshComponent.h"
@@ -208,11 +209,12 @@ int32 ASovMapActor::EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<
 	for (const FSovEdge& E : Edges)
 	{
 		const FVector A = SovHex::Center(E.A.X, E.A.Y, SurfaceZ(E.A.X, E.A.Y));
-		const FVector B = SovHex::Center(E.B.X, E.B.Y, SurfaceZ(E.B.X, E.B.Y));
+		// A pair across the east-west wrap is drawn between A and B's copy beside it.
+		const FVector B = SovHex::NearestCopy(SovHex::Center(E.B.X, E.B.Y, SurfaceZ(E.B.X, E.B.Y)), A.Y, WrapWidth);
 		const FVector Dir = B - A;
 		if (Dir.Size2D() > SovHex::Size * 2.5)
 		{
-			continue;  // a pair across the east-west wrap
+			continue;  // a pair across the edge of a map that does not wrap
 		}
 		const FVector Across = FVector(Dir.X, Dir.Y, 0.0).GetSafeNormal();
 		FVector Mid = (A + B) * 0.5 - Across * Inset;
@@ -231,8 +233,36 @@ int32 ASovMapActor::EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<
 	return Count;
 }
 
+void ASovMapActor::SyncGhosts(const FSovMirror& Mirror)
+{
+	if (WrapWidth <= 0.0)
+	{
+		for (ASovMapActor* Ghost : Ghosts) Ghost->SetActorHiddenInGame(true);
+		return;
+	}
+	while (Ghosts.Num() < 2)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		ASovMapActor* Ghost = GetWorld()->SpawnActor<ASovMapActor>(GetActorLocation(), FRotator::ZeroRotator, Params);
+		Ghost->bGhost = true;
+		Ghosts.Add(Ghost);
+	}
+	for (int32 i = 0; i < Ghosts.Num(); ++i)
+	{
+		Ghosts[i]->SetActorLocation(GetActorLocation() + FVector(0.0, (i == 0 ? -1.0 : 1.0) * WrapWidth, 0.0));
+		Ghosts[i]->SetActorHiddenInGame(false);
+		Ghosts[i]->Sync(Mirror);
+	}
+}
+
 void ASovMapActor::Sync(const FSovMirror& Mirror)
 {
+	WrapWidth = Mirror.bWrap ? SovHex::MapWorldWidth(Mirror.Width) : 0.0;
+	if (!bGhost)
+	{
+		SyncGhosts(Mirror);
+	}
 	BuildTerrain(Mirror);
 
 	// Rivers along plot edges; borders just inside the owner's side.
@@ -291,12 +321,12 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		Trees[i]->SetVisibility(false);
 	}
 
-	// Roads: a thin packed-earth strip from centre to centre (wrapping pairs are skipped).
+	// Roads: a thin packed-earth strip from centre to centre (across the wrap, to the copy beside it).
 	int32 RoadCount = 0;
 	for (const TPair<FIntPoint, FIntPoint>& R : Mirror.Roads)
 	{
 		const FVector A = SovHex::Center(R.Key.X, R.Key.Y, SurfaceZ(R.Key.X, R.Key.Y));
-		const FVector B = SovHex::Center(R.Value.X, R.Value.Y, SurfaceZ(R.Value.X, R.Value.Y));
+		const FVector B = SovHex::NearestCopy(SovHex::Center(R.Value.X, R.Value.Y, SurfaceZ(R.Value.X, R.Value.Y)), A.Y, WrapWidth);
 		const FVector Dir = B - A;
 		if (Dir.Size2D() > SovHex::Size * 2.5)
 		{
@@ -462,6 +492,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 
 void ASovMapActor::SetHighlight(int32 X, int32 Y)
 {
+	for (ASovMapActor* Ghost : Ghosts) Ghost->SetHighlight(X, Y);
 	if (X < 0)
 	{
 		Highlight->SetVisibility(false);

@@ -36,6 +36,8 @@ private:
 	UMaterialInstanceDynamic* MaterialFor(const FLinearColor& Color);
 	UStaticMeshComponent* Marker(TArray<TObjectPtr<UStaticMeshComponent>>& Pool, int32 Index, UStaticMesh* Mesh);
 	void BuildTerrain(const FSovMirror& Mirror);
+	// On a wrapping map, the copies a map's width to the west and east draw the same mirror.
+	void SyncGhosts(const FSovMirror& Mirror);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UProceduralMeshComponent> Terrain;
@@ -97,6 +99,11 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> CylinderMesh;
+
+	UPROPERTY()
+	TArray<TObjectPtr<ASovMapActor>> Ghosts;
+	bool bGhost = false;     // a copy beside the real map: it spawns no copies of its own
+	double WrapWidth = 0.0;  // world width of one copy on a wrapping map, else 0
 
 	int32 Width = 0;
 	TArray<double> Heights;  // per plot index, top surface
