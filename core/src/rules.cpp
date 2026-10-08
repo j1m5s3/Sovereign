@@ -122,11 +122,13 @@ bool mergeDocument(const Json& doc, const std::string& file, Merged& m, std::str
                 return false;
             }
             bool del = row["delete"].boolean(false);
+            // A later layer (a mod) replaces a row, deletes it, or with "patch" lays its fields over it.
+            const bool patch = row["patch"].boolean(false);
             bool replaced = false;
             for (size_t i = 0; i < table.size(); ++i) {
                 if (table[i].first == id) {
                     if (del) table.erase(table.begin() + static_cast<long>(i));
-                    else table[i].second = row;
+                    else table[i].second = patch ? Json::overlay(table[i].second, row) : row;
                     replaced = true;
                     break;
                 }

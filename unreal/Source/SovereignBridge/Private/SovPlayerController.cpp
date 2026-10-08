@@ -8,6 +8,7 @@
 #include "SovHUD.h"
 #include "SovHexLayout.h"
 #include "SovMapActor.h"
+#include "SovMods.h"
 #include "SovStreetScene.h"
 #include "SovBattleScene.h"
 #include "SovDiplomacyPanel.h"
@@ -2514,6 +2515,7 @@ void ASovPlayerController::OpenMenu()
 		S.bRivalMemory = bMenuRivals;
 		S.Speed = kMenuSpeeds[MenuSpeed].Id;
 		S.StartEra = MenuEra > 0 ? kMenuEras[MenuEra].Id : TEXT("");
+		S.Mods = MenuModsOn;
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
@@ -2530,6 +2532,22 @@ void ASovPlayerController::OpenMenu()
 				S->LastMessage = S->SaveGame(SaveName) ? FString::Printf(TEXT("Saved as \"%s\"."), *SaveName) : FString(TEXT("Could not save the game"));
 			})];
 		}
+	}
+	// Data mods (player-retention §6): each installed one, on or off for new games.
+	MenuModsOn = SovMods::Enabled();
+	TSharedRef<SVerticalBox> ModList = SNew(SVerticalBox);
+	for (const FSovMod& Mod : SovMods::Discover())
+	{
+		const FString Id = Mod.Id;
+		const FString Label = FString::Printf(TEXT("%s %s: %s"), *Mod.Name, *Mod.Version, *Mod.Description);
+		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Id]() {
+			if (MenuModsOn.Contains(Id)) MenuModsOn.Remove(Id);
+			else MenuModsOn.Add(Id);
+			SovMods::SetEnabled(MenuModsOn);
+			return FReply::Handled();
+		})[SNew(STextBlock).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
+			return FText::FromString((MenuModsOn.Contains(Id) ? TEXT("[on]  ") : TEXT("[off]  ")) + Label);
+		})]];
 	}
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
@@ -2631,6 +2649,10 @@ void ASovPlayerController::OpenMenu()
 				S.bSteam = true;
 				StartFromMenu(S);
 			})]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Mods"), [this]() { bMenuMods = !bMenuMods; })]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
+				return bMenuMods ? EVisibility::Visible : EVisibility::Collapsed;
+			})[ModList]]
 			// The Hall of Sovereigns: past reigns, newest first (player-retention §2).
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hall of Sovereigns"), [this]() {
 				if (!MenuHall.IsEmpty())

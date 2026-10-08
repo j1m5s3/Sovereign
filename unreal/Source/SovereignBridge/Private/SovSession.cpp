@@ -1,4 +1,5 @@
 #include "SovSession.h"
+#include "SovMods.h"
 
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -26,6 +27,9 @@ FSovSetup FSovSetup::FromCommandLine()
 	FParse::Value(Cmd, TEXT("SovSize="), Setup.MapSize);
 	FParse::Value(Cmd, TEXT("SovSpeed="), Setup.Speed);
 	FParse::Value(Cmd, TEXT("SovEra="), Setup.StartEra);
+	FString ModList;
+	Setup.Mods = FParse::Value(Cmd, TEXT("SovMods="), ModList) ? TArray<FString>() : SovMods::Enabled();
+	if (!ModList.IsEmpty()) ModList.ParseIntoArray(Setup.Mods, TEXT(","));
 	if (FParse::Param(Cmd, TEXT("SovSpectate")))
 	{
 		Setup.bHumanSeat0 = false;
@@ -84,7 +88,21 @@ bool FSovSession::LoadLocal(const std::vector<uint8_t>& Bytes, FString& OutError
 	auto LoadedRules = std::make_unique<sov::Rules>();
 	std::string Error;
 	const FString Dir = FSovSetup::DefaultRulesDir();
-	if (!LoadedRules->load({std::string(TCHAR_TO_UTF8(*Dir))}, &Error))
+	// The save names its mods; the rules are loaded with them (player-retention §6).
+	sov::GameSetup Saved;
+	TArray<FString> Mods;
+	if (sov::peekSaveSetup(Bytes, Saved))
+	{
+		for (const std::string& M : Saved.mods) Mods.Add(UTF8_TO_TCHAR(M.c_str()));
+	}
+	std::vector<std::string> Dirs;
+	FString Missing;
+	if (!SovMods::RulesDirs(Mods, Dirs, Missing))
+	{
+		OutError = FString::Printf(TEXT("this save needs the mod %s"), *Missing);
+		return false;
+	}
+	if (!LoadedRules->load(Dirs, &Error))
 	{
 		OutError = FString::Printf(TEXT("rules (%s): %s"), *Dir, UTF8_TO_TCHAR(Error.c_str()));
 		return false;
@@ -144,7 +162,16 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	Rules = std::make_unique<sov::Rules>();
 	std::string Error;
 	const FString Dir = Setup.RulesDir.IsEmpty() ? FSovSetup::DefaultRulesDir() : Setup.RulesDir;
-	if (!Rules->load({std::string(TCHAR_TO_UTF8(*Dir))}, &Error))
+	// The mods lay their rules over the base (player-retention §6).
+	std::vector<std::string> Dirs;
+	FString Missing;
+	if (!SovMods::RulesDirs(Setup.Mods, Dirs, Missing))
+	{
+		OutError = FString::Printf(TEXT("the mod %s is not installed"), *Missing);
+		return false;
+	}
+	Dirs[0] = TCHAR_TO_UTF8(*Dir);
+	if (!Rules->load(Dirs, &Error))
 	{
 		OutError = FString::Printf(TEXT("rules (%s): %s"), *Dir, UTF8_TO_TCHAR(Error.c_str()));
 		return false;
@@ -158,6 +185,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	CoreSetup->seed = Setup.Seed;
 	CoreSetup->mapSize = TCHAR_TO_UTF8(*Setup.MapSize);
 	CoreSetup->speed = TCHAR_TO_UTF8(*Setup.Speed);
+	CoreSetup->mods = SovMods::ToStd(Setup.Mods);
 	if (!Setup.StartEra.IsEmpty())
 	{
 		const sov::TypeIndex Era = Rules->era(TCHAR_TO_UTF8(*Setup.StartEra));
@@ -225,7 +253,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	{
 		FSovSteam::Get()->CreateLobby(Setup.Players);
 		Listener = FSovSteam::Get()->MakeListener();
-		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0, CoreSetup->mods);
 		Notices.Add(TEXT("Opening a Steam lobby..."));
 		++Rev;
 		return true;
@@ -249,7 +277,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			return false;
 		}
 		Listener = std::move(L);
-		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0);
+		NetHost = std::make_unique<sov::net::Host>(*Rules, *CoreSetup, *Listener, Name, 0, CoreSetup->mods);
 		Notices.Add(FString::Printf(TEXT("Hosting on port %d. Waiting for players; Enter starts the game."), Setup.Port));
 		++Rev;
 		return true;
@@ -262,7 +290,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 			OutError = FString::Printf(TEXT("nobody answered at %s:%d"), *Setup.JoinAddress, Setup.Port);
 			return false;
 		}
-		NetClient = std::make_unique<sov::net::Client>(*Rules, std::move(Link), Name);
+		NetClient = std::make_unique<sov::net::Client>(*Rules, std::move(Link), Name, sov::kNoPlayer, CoreSetup->mods);
 		Notices.Add(FString::Printf(TEXT("Connected to %s:%d. Waiting for the host to start."), *Setup.JoinAddress, Setup.Port));
 		++Rev;
 		return true;
@@ -497,7 +525,7 @@ bool FSovSession::Poll()
 			}
 			if (Steam->LobbyState() == FSovSteam::ELobby::In && !Steam->OwnsLobby())
 			{
-				NetClient = std::make_unique<sov::net::Client>(*Rules, Steam->MakeLink(Steam->LobbyOwner()), std::string(TCHAR_TO_UTF8(*LocalName)));
+				NetClient = std::make_unique<sov::net::Client>(*Rules, Steam->MakeLink(Steam->LobbyOwner()), std::string(TCHAR_TO_UTF8(*LocalName)), sov::kNoPlayer, CoreSetup->mods);
 				Notices.Add(TEXT("In the lobby. Waiting for the host to start."));
 				bChanged = true;
 			}

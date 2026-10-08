@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "sovereign/json.h"
 #include "sovereign/modifiers.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::rules;
@@ -346,4 +347,28 @@ TEST(rules_checksum_ignores_line_endings) {
     REQUIRE(a.loadFromText({lf}, &err));
     REQUIRE(b.loadFromText({crlf}, &err));
     CHECK_EQ(a.checksum(), b.checksum());
+}
+
+TEST(a_mod_patches_rows_over_the_rules) {
+    // The example mod lays a Settler cost over the rules; the rest of the row stays, and the checksum notices.
+    Rules modded;
+    std::string err;
+    REQUIRE(modded.load({SOVEREIGN_RULES_DIR, std::string(SOVEREIGN_RULES_DIR) + "/../../mods/swift-settlers"}, &err));
+    const UnitType& settler = modded.units[static_cast<size_t>(modded.unit("UNIT_SETTLER"))];
+    CHECK_EQ(settler.cost, 60);
+    CHECK(settler.foundCity);
+    CHECK_EQ(settler.name, std::string("Settler"));
+    CHECK(modded.checksum() != rules().checksum());
+    // A save names its mods, and they can be read before the rules are loaded.
+    GameSetup setup = sovtest::duelSetup(4);
+    setup.mods = {"swift-settlers"};
+    auto g = Game::create(modded, setup, &err);
+    REQUIRE(g);
+    const std::vector<uint8_t> bytes = saveGame(*g);
+    GameSetup peeked;
+    REQUIRE(peekSaveSetup(bytes, peeked));
+    CHECK(peeked.mods == setup.mods);
+    CHECK(loadGame(modded, bytes, &err) != nullptr);
+    CHECK(loadGame(rules(), bytes, &err) == nullptr);  // without the mod the rules differ
+    CHECK(!peekSaveSetup({1, 2, 3}, peeked));
 }

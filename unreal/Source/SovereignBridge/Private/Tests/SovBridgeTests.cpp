@@ -4,6 +4,7 @@
 
 #include "SovHexLayout.h"
 #include "SovMirror.h"
+#include "SovMods.h"
 #include "SovSession.h"
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
@@ -689,6 +690,34 @@ bool FSovChronicleTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("its title"), Text.Contains(TEXT("The Chronicle of Elizabeth I of England")));
 	TestTrue(TEXT("its events"), Text.Contains(TEXT("In the 9th year of the reign, France made peace with England.")));
 	IFileManager::Get().Delete(*Path);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovModsTest, "Sovereign.Bridge.ModsLayerOverTheRules", kSovTestFlags)
+bool FSovModsTest::RunTest(const FString& Parameters)
+{
+	// The shipped example mod is found, a game with it has its rules, and its save loads it again.
+	TestTrue(TEXT("the example mod is installed"), SovMods::Discover().ContainsByPredicate([](const FSovMod& M) { return M.Id == TEXT("swift-settlers"); }));
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.bHumanSeat0 = false;
+	Setup.Mods = {TEXT("swift-settlers")};
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Rules& R = Session.GetRules();
+	TestEqual(TEXT("Settlers cost 60"), R.units[static_cast<size_t>(R.unit("UNIT_SETTLER"))].cost, 60);
+	TestTrue(TEXT("the setup names the mod"), Session.GetGame().state().setup.mods == std::vector<std::string>{"swift-settlers"});
+	FSovSession Resumed;
+	TestTrue(TEXT("its save loads with the mod"), Resumed.LoadLocal(sov::saveGame(Session.GetGame()), Error));
+	TestEqual(TEXT("the same game"), Resumed.GetGame().stateHash(), Session.GetGame().stateHash());
+	FSovSession Missing;
+	Setup.Mods = {TEXT("no-such-mod")};
+	TestFalse(TEXT("a missing mod is refused"), Missing.Start(Setup, Error));
+	TestTrue(TEXT("and named"), Error.Contains(TEXT("no-such-mod")));
 	return true;
 }
 

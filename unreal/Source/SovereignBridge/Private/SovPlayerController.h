@@ -188,5 +188,7 @@ protected:
 	FString MenuHall;          // the Hall of Sovereigns as shown on the menu (empty: hidden)
 	int32 MenuSpeed = 0;       // game length on the menu (player-retention §5): see kMenuSpeeds
 	int32 MenuEra = 0;         // the era to begin in (0: Ancient)
+	bool bMenuMods = false;    // the menu shows the installed mods (player-retention §6)
+	TArray<FString> MenuModsOn;  // the mods turned on, in load order
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

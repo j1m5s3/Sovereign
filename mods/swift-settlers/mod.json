@@ -1,0 +1,6 @@
+{
+ "id": "swift-settlers",
+ "name": "Swift Settlers",
+ "version": "1.0",
+ "description": "An example balance mod: Settlers cost 60 production instead of 80."
+}

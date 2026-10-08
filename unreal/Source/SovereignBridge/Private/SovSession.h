@@ -43,6 +43,8 @@ struct FSovSetup
 	// (empty: Ancient). -SovSpeed= and -SovEra=.
 	FString Speed = TEXT("GAMESPEED_STANDARD");
 	FString StartEra;
+	// Data mods over the rules, in load order (player-retention §6; mods/README.md). -SovMods=a,b.
+	TArray<FString> Mods;
 	// Difficulty: 0 Settler .. 3 Prince .. 7 Deity (the core's Rules::difficulties).
 	int32 Difficulty = 3;
 	// Seat 0 is played by the human; false lets the AI play every seat (spectating seat 0).

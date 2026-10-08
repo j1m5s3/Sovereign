@@ -540,6 +540,8 @@ struct GameSetup {
     bool monopolies = false;      // optional mode: Industries, Corporations and Monopolies on luxuries (07)
     bool rivalMemory = true;      // AI leaders remember humans from earlier games (player-retention §1)
     int startEra = 0;             // Rules::eras index the game begins in (0: Ancient; player-retention §5)
+    // Data mods layered over the rules, in load order (player-retention §6): a save names the mods it needs.
+    std::vector<std::string> mods;
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };
