@@ -234,6 +234,25 @@ TEST(a_suzerain_enjoys_its_city_states_bonus) {
     CHECK(enjoysSuzerainBonus(e->state(), rules(), 1, rules().cityState("CITYSTATE_GENEVA")));
 }
 
+// A city-state's unique improvement (08) is for its suzerain, and only while the city-state lives.
+TEST(a_city_states_improvement_is_for_its_suzerain_while_it_lives) {
+    GameState s = csState();
+    const TypeIndex armagh = rules().cityState("CITYSTATE_ARMAGH"), monastery = rules().improvement("IMPROVEMENT_MONASTERY");
+    s.players[2].cityState = armagh;
+    s.players[0].envoys[2] = 3;
+    for (Player& p : s.players) p.relations.resize(3);
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->suzerainOf(2) == 0);
+    CHECK(enjoysSuzerainBonus(g->state(), rules(), 0, armagh));
+    CHECK(g->canImproveAt(0, {5, 6}, monastery, true));
+    CHECK(!g->canImproveAt(1, {11, 2}, monastery, true));  // not its suzerain
+    CHECK(!g->canImproveAt(0, {5, 6}, rules().improvement("IMPROVEMENT_BATEY"), true));  // no Caguana in this game
+    s.players[2].alive = false;  // conquered
+    auto gone = Game::fromScenario(rules(), std::move(s));
+    CHECK(!enjoysSuzerainBonus(gone->state(), rules(), 0, armagh));
+    CHECK(!gone->canImproveAt(0, {5, 6}, monastery, true));
+}
+
 TEST(gunboat_diplomacy_opens_city_state_borders) {
     GameState s = csState();
     s.players[0].envoys[2] = 1;

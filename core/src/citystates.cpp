@@ -143,7 +143,18 @@ bool Game::suzerainBonus(PlayerId player, Cs cityState) const {
     // The kind looked up once: enjoysSuzerainBonus goes by the first living city-state of the kind, as the search above
     // does (and a kind these rules lack gives nothing).
     const TypeIndex type = cityStates_[static_cast<size_t>(cityState)];
-    return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type);
+    return type != kNone && enjoysSuzerainBonus(state_, *rules_, player, type, cityStateOfType(type));
+}
+
+const Player* Game::cityStateOfType(TypeIndex type) const {
+    const auto found = [&](size_t i) { return state_.players[i].cityState == type && state_.players[i].alive; };
+    for (size_t i : cityStatePlayers_[static_cast<size_t>(type)]) {
+        if (found(i)) return &state_.players[i];
+    }
+    for (size_t i = playersAtStart_; i < state_.players.size(); ++i) {  // those who joined since
+        if (found(i)) return &state_.players[i];
+    }
+    return nullptr;
 }
 
 bool Game::suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const {

@@ -965,6 +965,14 @@ private:
     };
     TypeIndex cityStates_[static_cast<size_t>(Cs::Count)] = {};
     bool suzerainBonus(PlayerId player, Cs cityState) const;  // suzerainBonus(player, its id)
+    // The players of each city-state type (by Rules::cityStates index) when the game was built, in player order, and
+    // how many players there were then. A player's type is set before it joins, and players only ever join after the
+    // others (a clan settling, a free city), so cityStateOfType looks through these lists and the later players only.
+    std::vector<std::vector<size_t>> cityStatePlayers_;
+    size_t playersAtStart_ = 0;
+    // The first living player of a city-state type of the rules, as a look through the players in order finds it (null:
+    // none).
+    const Player* cityStateOfType(TypeIndex type) const;
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
@@ -1006,8 +1014,24 @@ private:
     // The improvements that take each terrain, feature and resource (ImprovementType::validTerrains, validFeatures and
     // validResources), in the rules' order: those improvementsAt tries on a plot.
     std::vector<std::vector<TypeIndex>> terrainImprovements_, featureImprovements_, resourceImprovements_;
+    // What the wonders of one city's list of things to make (buildableItems) look up alike, each part worked out for the
+    // first wonder that needs it: the buildings standing anywhere (by building: 1 when some city has it), for
+    // wonderBuilt, and the city's plots that wonderOpen allows.
+    struct WonderShare {
+        std::vector<uint8_t> built;
+        std::optional<std::vector<Hex>> open;
+    };
+    // canProduce with that shared by its wonders (null: each looks it up).
+    bool canProduce(const City& city, ProductionItem item, CommandError* why, bool purchase, WonderShare* shared) const;
+    // tradePath to each of the destinations (each on a plot of its own), in their order, from one search.
+    std::vector<std::vector<Hex>> tradeWays(PlayerId player, TypeIndex traderType, const City& origin, const std::vector<const City*>& destinations) const;
+    // canPlaceWonder's checks that do not depend on the wonder (the plot is the city's own land within 3 plots, not its
+    // center, with no visible resource, natural wonder, district, wonder or barbarian camp), and those that do.
+    bool wonderOpen(const City& city, Hex plot) const;
+    bool wonderFits(const City& city, TypeIndex building, Hex plot) const;
     // Whether wonderPlots or districtPlots would list a plot, trying them in the same order and stopping at the first.
-    bool anyWonderPlot(CityId city, TypeIndex building) const;
+    // `open`: the city's plots that wonderOpen allows, listed on first use (null: each plot is looked at in full).
+    bool anyWonderPlot(CityId city, TypeIndex building, std::optional<std::vector<Hex>>* open = nullptr) const;
     bool anyDistrictPlot(CityId city, TypeIndex district) const;
     // canPlaceDistrict with `cityChecks` false: the district's checks that do not depend on the plot (districtOpenIn,
     // districtUnblockedIn) are taken as passed.

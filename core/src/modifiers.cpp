@@ -47,28 +47,34 @@ PlayerId suzerainOf(const GameState& s, const Rules& r, PlayerId cs) {
 }
 
 bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type) {
+    // The first living city-state of the type.
+    for (const Player& cs : s.players) {
+        if (cs.cityState == type && cs.alive) return enjoysSuzerainBonus(s, r, player, type, &cs);
+    }
+    return enjoysSuzerainBonus(s, r, player, type, nullptr);
+}
+
+bool enjoysSuzerainBonus(const GameState& s, const Rules& r, PlayerId player, TypeIndex type, const Player* found) {
     // Sovereignty option B (World Congress): city-states of the chosen kind give no unique bonus.
     for (const PassedResolution& pr : s.passedResolutions) {
         if (r.resolutions[static_cast<size_t>(pr.resolution)].kind == ResolutionKind::Sovereignty && pr.option == 1 && type >= 0 &&
             pr.target == static_cast<int32_t>(r.cityStates[static_cast<size_t>(type)].kind))
             return false;
     }
-    for (const Player& cs : s.players) {
-        if (cs.cityState != type || !cs.alive) continue;
-        const auto& rels = s.players[static_cast<size_t>(player)].relations;
-        if (static_cast<size_t>(cs.id) < rels.size() && rels[static_cast<size_t>(cs.id)].war) return false;
-        // A level-3 Economic alliance shares the ally's suzerain bonuses (08: alliance levels).
-        auto shares = [&](const Relation& rel) {
-            return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
-        };
-        // Too few envoys to be suzerain and no such alliance: no need to find the suzerain.
-        if (envoysAt(s, r, player, cs.id) < r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) && std::none_of(rels.begin(), rels.end(), shares)) return false;
-        const PlayerId suz = suzerainOf(s, r, cs.id);
-        if (suz == player) return true;
-        if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
-        return shares(rels[static_cast<size_t>(suz)]);
-    }
-    return false;
+    if (!found) return false;
+    const Player& cs = *found;
+    const auto& rels = s.players[static_cast<size_t>(player)].relations;
+    if (static_cast<size_t>(cs.id) < rels.size() && rels[static_cast<size_t>(cs.id)].war) return false;
+    // A level-3 Economic alliance shares the ally's suzerain bonuses (08: alliance levels).
+    auto shares = [&](const Relation& rel) {
+        return rel.alliance == AllianceType::Economic && rel.allianceUntil >= s.turn && rel.alliancePoints >= r.globalInt("ALLIANCE_LEVEL_THREE_XP");
+    };
+    // Too few envoys to be suzerain and no such alliance: no need to find the suzerain.
+    if (envoysAt(s, r, player, cs.id) < r.globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain) && std::none_of(rels.begin(), rels.end(), shares)) return false;
+    const PlayerId suz = suzerainOf(s, r, cs.id);
+    if (suz == player) return true;
+    if (suz == kNoPlayer || static_cast<size_t>(suz) >= rels.size()) return false;
+    return shares(rels[static_cast<size_t>(suz)]);
 }
 
 namespace {

@@ -307,6 +307,12 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         improvedOnceAt_[i] = 1;
         improvedOnce_.push_back(static_cast<int32_t>(i));
     }
+    cityStatePlayers_.resize(rules_->cityStates.size());
+    for (size_t i = 0; i < state_.players.size(); ++i) {
+        const TypeIndex type = state_.players[i].cityState;
+        if (type >= 0 && static_cast<size_t>(type) < cityStatePlayers_.size()) cityStatePlayers_[static_cast<size_t>(type)].push_back(i);
+    }
+    playersAtStart_ = state_.players.size();
 }
 
 uint64_t Game::stateHash() const {

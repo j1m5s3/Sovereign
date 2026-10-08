@@ -811,6 +811,10 @@ bool Game::canTrainFormation(const City& c, TypeIndex unit, int formation) const
 }
 
 bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, bool purchase) const {
+    return canProduce(c, item, why, purchase, nullptr);
+}
+
+bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, bool purchase, WonderShare* shared) const {
     auto fail = [&](CommandError e) {
         if (why) *why = e;
         return false;
@@ -848,9 +852,15 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (b.replaces != kNone && c.has(b.replaces)) return fail(CommandError::CannotBuild);
         if (b.wonder) {
             // Once in the world, on a plot of its own (03: Wonders).
-            if (wonderBuilt(item.type)) return fail(CommandError::CannotBuild);
+            if (shared && shared->built.empty()) {
+                shared->built.assign(rules_->buildings.size(), 0);
+                for (const City& other : state_.cities) {
+                    for (TypeIndex x : other.buildings) shared->built[static_cast<size_t>(x)] = 1;
+                }
+            }
+            if (shared ? shared->built[static_cast<size_t>(item.type)] != 0 : wonderBuilt(item.type)) return fail(CommandError::CannotBuild);
             const bool sited = std::any_of(c.wonders.begin(), c.wonders.end(), [&](const CityWonder& w) { return w.building == item.type; });
-            if (!sited && !anyWonderPlot(c.id, item.type)) return fail(CommandError::CannotBuild);
+            if (!sited && !anyWonderPlot(c.id, item.type, shared ? &shared->open : nullptr)) return fail(CommandError::CannotBuild);
             if (why) *why = CommandError::Ok;
             return true;
         }
@@ -934,9 +944,10 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
             if (canProduce(*c, whole)) out.push_back(whole);
         }
     }
+    WonderShare shared;
     for (size_t i = 0; i < rules_->buildings.size(); ++i) {
         ProductionItem it{ProductionKind::Building, static_cast<TypeIndex>(i)};
-        if (canProduce(*c, it) && std::find(c->queue.begin(), c->queue.end(), it) == c->queue.end()) out.push_back(it);
+        if (canProduce(*c, it, nullptr, false, &shared) && std::find(c->queue.begin(), c->queue.end(), it) == c->queue.end()) out.push_back(it);
     }
     // Districts already placed here, or with a plot to go on.
     for (size_t i = 0; i < rules_->districts.size(); ++i) {

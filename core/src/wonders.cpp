@@ -17,16 +17,24 @@ bool Game::wonderBuilt(TypeIndex building) const {
 }
 
 bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const {
-    if (building < 0 || at(building) >= rules_->buildings.size()) return false;
-    const BuildingType& b = rules_->buildings[at(building)];
-    if (!b.wonder) return false;
+    if (building < 0 || at(building) >= rules_->buildings.size() || !rules_->buildings[at(building)].wonder) return false;
+    return wonderOpen(city, plot) && wonderFits(city, building, plot);
+}
+
+bool Game::wonderOpen(const City& city, Hex plot) const {
     auto h = state_.grid.normalize(plot);
     if (!h || *h != plot) return false;
     const Plot& p = state_.plot(plot);
     if (p.city != city.id || plot == city.pos || state_.grid.distance(city.pos, plot) > 3) return false;
     if (resourceVisible(city.owner, plot)) return false;  // not on resources
     if (p.feature != kNone && rules_->features[at(p.feature)].naturalWonder) return false;  // nor on natural wonders
-    const WonderPlacement& w = b.placement;
+    // Nothing built on it yet (no city: the plot is this city's land, and not its center).
+    return !state_.districtAt(plot) && state_.wonderAt(plot) == kNone && !campAt(plot);
+}
+
+bool Game::wonderFits(const City& city, TypeIndex building, Hex plot) const {
+    const Plot& p = state_.plot(plot);
+    const WonderPlacement& w = rules_->buildings[at(building)].placement;
     const TerrainType& t = rules_->terrains[at(p.terrain)];
     const bool water = std::any_of(w.terrains.begin(), w.terrains.end(), [&](TypeIndex x) { return rules_->terrains[at(x)].water; });
     if (t.water != water) return false;
@@ -40,8 +48,6 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
     if (!w.needsFeature.empty() && std::find(w.needsFeature.begin(), w.needsFeature.end(), p.feature) == w.needsFeature.end()) return false;
     if (w.river && !isRiverAdjacent(state_, plot)) return false;
     if ((w.lake || w.notLake) && isLake(state_, *rules_, plot, &lakes_) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
-    // Nothing built on it yet (no city: the plot is this city's land, and not its center).
-    if (state_.districtAt(plot) || state_.wonderAt(plot) != kNone || campAt(plot)) return false;
     bool land = false, coast = false, capital = false, mountain = false, center = false, district = false, resource = false, improvement = false;
     for (int d = 0; d < kNumDirs; ++d) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(d));
@@ -57,7 +63,7 @@ bool Game::canPlaceWonder(const City& city, TypeIndex building, Hex plot) const 
         capital |= c && c->owner == city.owner && c->capital;
         const CityDistrict* cd = w.nextToDistrict != kNone ? state_.districtAt(*n) : nullptr;
         district |= cd && cd->type == w.nextToDistrict;
-        resource |= np.resource == w.nextToResource && resourceVisible(city.owner, *n);
+        resource |= w.nextToResource != kNone && np.resource == w.nextToResource && resourceVisible(city.owner, *n);
         improvement |= np.improvement != kNone && np.improvement == w.nextToImprovement;
     }
     if ((w.nextToLand && !land) || (w.coastal && !coast) || (w.nextToMountain && !mountain) || (w.nextToCityCenter && !center) ||
@@ -83,7 +89,7 @@ std::vector<Hex> Game::wonderPlots(CityId id, TypeIndex building) const {
     return out;
 }
 
-bool Game::anyWonderPlot(CityId id, TypeIndex building) const {
+bool Game::anyWonderPlot(CityId id, TypeIndex building, std::optional<std::vector<Hex>>* open) const {
     const City* c = state_.city(id);
     if (!c) return false;
     // canPlaceWonder on each plot, with what does not depend on the plot looked at once: the buildings the city needs
@@ -91,6 +97,16 @@ bool Game::anyWonderPlot(CityId id, TypeIndex building) const {
     if (building >= 0 && at(building) < rules_->buildings.size()) {
         const std::vector<TypeIndex>& needs = rules_->buildings[at(building)].prereqsAny;
         if (!needs.empty() && std::none_of(needs.begin(), needs.end(), [&](TypeIndex pre) { return cityHasBuilding(*c, *rules_, pre); })) return false;
+    }
+    if (open) {  // and what does not depend on the wonder looked at once for all the city's wonders
+        if (building < 0 || at(building) >= rules_->buildings.size() || !rules_->buildings[at(building)].wonder) return false;
+        if (!*open) {
+            open->emplace();
+            state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
+                if (wonderOpen(*c, h)) (*open)->push_back(h);
+            });
+        }
+        return std::any_of((*open)->begin(), (*open)->end(), [&](Hex h) { return wonderFits(*c, building, h); });
     }
     bool any = false;
     state_.grid.forEachWithin(c->pos, 3, [&](Hex h) { any = any || (state_.plot(h).city == c->id && canPlaceWonder(*c, building, h)); });

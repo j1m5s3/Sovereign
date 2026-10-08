@@ -104,6 +104,10 @@ TEST(a_trader_runs_a_route_lays_roads_and_comes_home) {
     REQUIRE(g->submit(Command::startTradeRoute(0, trader, home)) == CommandError::Ok);
     CHECK(!g->state().unit(trader));
     REQUIRE(g->state().tradeRoutes.size() == 1u);
+    const std::vector<int32_t>& way = g->state().tradeRoutes[0].path;  // from the origin, 8 steps to the destination
+    REQUIRE(way.size() == 9u);
+    CHECK_EQ(way.front(), g->state().grid.index({4, 6}));
+    CHECK_EQ(way.back(), g->state().grid.index({12, 6}));
     CHECK_EQ(g->tradeRoutesOf(0), 1);
     CHECK_EQ(g->cityReport(origin).yields[yi(YieldType::Food)], before + Fixed::fromInt(1));
     CHECK(g->state().plot({8, 6}).route >= 0);  // a road along the way
@@ -132,6 +136,90 @@ TEST(trading_posts_extend_range_and_pay_on_the_way) {
     const Fixed route = g->tradeRouteYields(g->state().cities[0], g->state().cities[2])[yi(YieldType::Gold)];
     REQUIRE(g->submit(Command::startTradeRoute(0, trader, far)) == CommandError::Ok);
     CHECK_EQ(g->cityReport(origin).yields[yi(YieldType::Gold)], before + route + Fixed::fromInt(1));  // the post in a foreign city
+}
+
+// The cities a Trader may start a route to are those canStartTradeRoute allows one by one: not its own city, nor one of
+// a dead, barbarian or free player, of an enemy, never seen, or out of range: overland, or by sea once Traders sail (07),
+// on the Ocean once the civ may enter it.
+TEST(a_trader_lists_the_cities_it_may_start_a_route_to) {
+    const auto setUp = [](const char* strait, std::initializer_list<const char*> techs) {
+        GameState s = flatState(36, 14, 7);
+        for (int y = 0; y < 14; ++y) {
+            for (int x = 22; x <= 24; ++x) s.plot({x, y}).terrain = rules().terrain(strait);  // land beyond it
+        }
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.relations.resize(s.players.size());
+            p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        }
+        giveCivic(s, 0, "CIVIC_FOREIGN_TRADE");
+        for (const char* t : techs) s.players[0].techs.done[at(rules().tech(t))] = 1;
+        addCity(s, 0, {4, 6}, true, 3);    // the Trader's
+        addCity(s, 0, {12, 6}, false, 3);  // ours: range refuels here
+        addCity(s, 1, {20, 6}, true, 3);   // 16 tiles away, 8 past ours
+        addCity(s, 2, {8, 11}, true, 3);   // an enemy's
+        addCity(s, 3, {16, 2}, true, 3);   // a dead player's
+        addCity(s, 4, {16, 11}, true, 3);  // a barbarian's
+        addCity(s, 5, {8, 1}, true, 3);    // a free city
+        addCity(s, 6, {20, 11}, true, 3);  // never seen
+        addCity(s, 1, {27, 6}, false, 3);  // over the strait, 15 tiles past ours
+        s.players[0].relations[2].war = s.players[2].relations[0].war = true;
+        s.players[3].alive = false;
+        s.players[4].barbarian = true;
+        s.players[5].freeCity = true;
+        s.players[0].visibility[static_cast<size_t>(s.grid.index({20, 11}))] = static_cast<uint8_t>(Visibility::Unrevealed);
+        addUnit(s, "UNIT_TRADER", 0, {4, 6});
+        return s;
+    };
+    const auto listed = [](const Game& g, UnitId trader) {
+        std::vector<CityId> one;
+        for (const City& c : g.state().cities) {
+            if (g.canStartTradeRoute(trader, c.id)) one.push_back(c.id);
+        }
+        CHECK(g.tradeDestinations(trader) == one);
+        return g.tradeDestinations(trader);
+    };
+    GameState s = setUp("TERRAIN_COAST", {});
+    const UnitId trader = s.units[0].id;
+    const UnitId warrior = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+    auto g = Game::fromScenario(rules(), s);
+    const std::vector<City>& cities = g->state().cities;
+    const std::vector<CityId> overland{cities[1].id, cities[2].id}, all{cities[1].id, cities[2].id, cities[8].id};
+    CHECK(listed(*g, trader) == overland);
+    CHECK(listed(*g, warrior).empty());
+    CHECK(listed(*Game::fromScenario(rules(), setUp("TERRAIN_COAST", {"TECH_CELESTIAL_NAVIGATION"})), trader) == all);
+    CHECK(listed(*Game::fromScenario(rules(), setUp("TERRAIN_OCEAN", {"TECH_CELESTIAL_NAVIGATION"})), trader) == overland);
+    CHECK(listed(*Game::fromScenario(rules(), setUp("TERRAIN_OCEAN", {"TECH_CELESTIAL_NAVIGATION", "TECH_CARTOGRAPHY"})), trader) == all);
+    // None with every route taken, or once the Trader has moved this turn.
+    TradeRoute r;
+    r.id = s.nextTradeRouteId++;
+    r.owner = 0;
+    r.origin = cities[1].id;
+    r.destination = cities[2].id;
+    r.traderType = rules().unit("UNIT_TRADER");
+    r.turnsLeft = 5;
+    s.tradeRoutes.push_back(r);
+    CHECK(listed(*Game::fromScenario(rules(), s), trader).empty());
+    REQUIRE(g->submit(Command::move(0, trader, {5, 6})) == CommandError::Ok);
+    REQUIRE(g->submit(Command::move(0, trader, {4, 7})) == CommandError::Ok);  // back beside its city, no moves left
+    CHECK(g->state().unit(trader)->movesLeft <= Fixed());
+    CHECK(listed(*g, trader).empty());
+}
+
+// Mountains turn a Trader's way aside, and a range right across the land stops it.
+TEST(mountains_turn_a_traders_way_aside) {
+    GameState s = tradeState();
+    for (int y = 3; y < 14; ++y) s.plot({16, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");  // a pass to the north
+    const UnitId trader = addUnit(s, "UNIT_TRADER", 0, {4, 6});
+    auto g = Game::fromScenario(rules(), s);
+    const CityId home = g->state().cities[1].id, abroad = g->state().cities[2].id;
+    CHECK(g->tradeDestinations(trader) == (std::vector<CityId>{home, abroad}));
+    const std::vector<Hex> way = g->tradePath(0, rules().unit("UNIT_TRADER"), g->state().cities[0], g->state().cities[2]);
+    CHECK(std::any_of(way.begin(), way.end(), [](Hex h) { return h.x == 16 && h.y < 3; }));
+    for (int y = 0; y < 3; ++y) s.plot({16, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    auto closed = Game::fromScenario(rules(), std::move(s));
+    CHECK(closed->tradeDestinations(trader) == (std::vector<CityId>{home}));
+    CHECK(!closed->canStartTradeRoute(trader, abroad));
 }
 
 TEST(a_raider_at_war_plunders_a_route) {
