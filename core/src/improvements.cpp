@@ -1,6 +1,7 @@
 // Builders, tile improvements, harvesting, luxury amenities and strategic
 // stockpiles (specs/civ6/01-map-and-terrain.md, 02-cities.md; data: improvements.md).
 #include <algorithm>
+#include <cstddef>
 
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
@@ -199,44 +200,59 @@ int Game::luxuryAmenities(const City& city) const {
 }
 
 int Game::luxuryAmenities(const City& city, ReportShare& shared) const {
-    // Each luxury type the player has improved gives +1 amenity to up to
-    // `amenityCities` cities. Sovereign reading: the largest cities get them
-    // first (ties: oldest city); Civ gives them to the cities needing them most.
-    const PlayerId owner = city.owner;
-    // Its place in that order, counted in one pass: the owner's cities larger than it and those as large listed
-    // before it; past the last when it is not in the list.
-    int rank = 0, cities = 0;
-    bool listed = false;
-    for (const City& c : state_.cities) {
-        if (c.owner != owner) continue;
-        ++cities;
-        if (&c == &city) {
-            listed = true;
-        } else if (c.population > city.population || (c.population == city.population && !listed)) {
-            ++rank;
-        }
+    if (!shared.luxuryShares) shared.luxuryShares = luxuryShares(city.owner, shared);
+    for (const auto& [id, amenities] : *shared.luxuryShares) {
+        if (id == city.id) return amenities;
     }
-    if (!listed) rank = cities;
+    return 0;
+}
+
+std::vector<std::pair<CityId, int>> Game::luxuryShares(PlayerId player, ReportShare& shared) const {
+    // Each luxury type the player has improved gives +1 amenity to up to `amenityCities` of its cities, those that need
+    // them most (02: Amenities). Sovereign reading: those whose population asks the most Amenities that luxuries have
+    // not given yet; of those, the larger, then the older city.
+    std::vector<const City*> cities;
+    for (const City& c : state_.cities) {
+        if (c.owner == player) cities.push_back(&c);
+    }
+    const size_t n = cities.size();
+    const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
+    std::vector<int> unmet(n);
+    for (size_t i = 0; i < n; ++i) unmet[i] = std::max(0, (cities[i]->population + perAmenity - 1) / perAmenity - 1);
+    std::vector<std::pair<CityId, int>> out(n);
+    for (size_t i = 0; i < n; ++i) out[i] = {cities[i]->id, 0};
+    std::vector<size_t> order(n);
+    const auto give = [&](int reach) {
+        const size_t k = std::min(n, static_cast<size_t>(std::max(0, reach)));
+        for (size_t i = 0; i < n; ++i) order[i] = i;
+        std::partial_sort(order.begin(), order.begin() + static_cast<std::ptrdiff_t>(k), order.end(), [&](size_t a, size_t b) {
+            if (unmet[a] != unmet[b]) return unmet[a] > unmet[b];
+            if (cities[a]->population != cities[b]->population) return cities[a]->population > cities[b]->population;
+            return a < b;
+        });
+        for (size_t i = 0; i < k; ++i) {
+            --unmet[order[i]];
+            ++out[order[i]].second;
+        }
+    };
     // Access after deals: copies traded away are lost, copies traded in count (08: Trade Deal).
-    if (!shared.luxuries) shared.luxuries = luxuriesHeld(owner);
+    if (!shared.luxuries) shared.luxuries = luxuriesHeld(player);
     const std::vector<uint8_t>& have = *shared.luxuries;
-    int amenities = 0;
     for (size_t r = 0; r < have.size(); ++r) {
         if (!have[r] || rules_->resources[r].cls != ResourceClass::Luxury) continue;
         // Luxury Policy (World Congress): option A lifts the luxury's cap (twice the cities), B bans it.
         const int32_t res = static_cast<int32_t>(r);
         if (resolutionHits(ResolutionKind::LuxuryPolicy, 1, res)) continue;
-        const int reach = rules_->resources[r].amenityCities * (resolutionHits(ResolutionKind::LuxuryPolicy, 0, res) ? 2 : 1);
-        if (rank < reach) ++amenities;
+        give(rules_->resources[r].amenityCities * (resolutionHits(ResolutionKind::LuxuryPolicy, 0, res) ? 2 : 1));
     }
     // Buenos Aires (08: suzerain): each kind of improved bonus resource is an Amenity too, for as many cities as a luxury's.
-    if (rank < kBonusAmenityCities && suzerainBonus(owner, Cs::BuenosAires, shared)) {
-        const std::vector<int> copies = resourceCopies(owner);
+    if (suzerainBonus(player, Cs::BuenosAires, shared)) {
+        const std::vector<int> copies = resourceCopies(player);
         for (size_t r = 0; r < rules_->resources.size(); ++r) {
-            if (rules_->resources[r].cls == ResourceClass::Bonus && copies[r] > 0) ++amenities;
+            if (rules_->resources[r].cls == ResourceClass::Bonus && copies[r] > 0) give(kBonusAmenityCities);
         }
     }
-    return amenities;
+    return out;
 }
 
 int Game::strategicCostIn(const City* city, TypeIndex unitType) const {
