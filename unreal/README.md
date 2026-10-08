@@ -75,7 +75,8 @@ from `../data/rules`.
 | `,` | World Congress (once a civ reaches the Medieval era, every 30 turns): vote on each resolution in session, option A or B and a target, with a free vote and more bought with Diplomatic Favor ("Buy another vote" first). The HUD shows favor and its rate, Diplomatic Victory points, when the Congress meets and the resolutions in force; the news lines announce sessions and what passed |
 | `Z` | Governors: appoint one with a title (titles come from civics such as State Workforce and Early Empire), promote one along its tree, or, with a city selected, send one there (5 turns to establish, Victor 3; an established governor gives +8 loyalty and its promotions work in that city). Amani can serve in a city-state you have met, where she counts as 2 envoys. The HUD lists your governors and titles |
 | `Y` | Great people: each class's current individual with your points, the cost and points per turn; pick one to buy it now with gold (or faith), pass on one, or move a Great Work to another of your slots (for theming). A selected great person: `F` uses it where it stands (on its district, or a Great Work in a city with a free slot) |
-| `P` / `T` / `C` | Production / research / civics chooser; `1`-`9` picks, `0` next page, `Esc` closes |
+| `P` / `T` / `C` / `F2` | Production / research / civics / government, policy cards and dedications chooser; `1`-`9` picks, `0` next page, `Esc` closes |
+| `Esc` | Closes a chooser, then clears the selection, then opens the menu over the game: resume, save the game (local games, saved as `turn N`), continue a save, start a new game, quit. After a victory or your elimination this is the way out |
 | `.` | Next unit that needs orders |
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
@@ -103,10 +104,11 @@ Headless automation tests (no window):
 - `Sovereign.Battle.OnlineSnapshotsAndRemoteOrders`: the remote side's order holds against the AI, a snapshot round-trips and draws the same field (positions within a hundredth), a truncated one is refused.
 - `Sovereign.Bridge.HotSeatHandsOver`: with two human seats, the end of the first player's turn hides the screen until the second takes over, and the view then follows the second seat.
 - `Sovereign.Bridge.HumanSeatPlaysThroughCommands`: a scripted seat 0 founds a city and plays 10 turns through commands with AI opponents; the log replays to the same state hash.
+- `Sovereign.Bridge.HumanSeatPlaysLongGame`: a newcomer at seat 0 (the first fitting choice the controller offers, settlers to good sites, builders to empty plots, traders on routes, a pantheon, governments, cards, envoys and governors) plays two games to turn 250, answering every End Turn refusal through the chooser the controller opens, saving and resuming every 50 turns; any refusal with no way out fails it.
 - `Sovereign.Bridge.SaveAndLoadResume`: an all-AI game saved after a few turns resumes in a fresh session with the same state hash and plays on; a truncated save is refused and the game in hand stays.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.
 
 ## Not yet
 
-Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once), and there is no promotions UI yet.
+Street scenes use engine primitives (one temperate kit) until the art pipeline exists. East-west wrap is not drawn (the map is shown once).
