@@ -643,3 +643,28 @@ TEST(helicopters_ignore_terrain_costs) {
     CHECK_EQ(g->moveCost(unit(*g, foot), {4, 5}, {5, 5}).value_or(Fixed()), Fixed::fromInt(3));  // hills and woods
     CHECK_EQ(g->moveCost(unit(*g, heli), {4, 5}, {5, 5}).value_or(Fixed()), Fixed::fromInt(1));
 }
+
+// A river crossing costs more, along a road that does not bridge it too; Amphibious and the Helicopter cross at no
+// extra cost (05).
+TEST(amphibious_units_and_helicopters_cross_rivers_freely) {
+    UnitId plain = kNoUnit, marine = kNoUnit, heli = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        s.plot({4, 5}).riverEdges |= kRiverE;  // between (4, 5) and (5, 5)
+        s.plot({4, 7}).riverEdges |= kRiverE;  // between (4, 7) and (5, 7), on an Ancient Road
+        s.plot({4, 7}).route = 0;
+        s.plot({5, 7}).route = 0;
+        plain = addUnit(s, "UNIT_WARRIOR", 0, {3, 5});
+        marine = addUnit(s, "UNIT_WARRIOR", 0, {3, 6});
+        s.units.back().promotions = {promotion("PROMOTION_AMPHIBIOUS")};
+        heli = addUnit(s, "UNIT_HELICOPTER", 0, {3, 7});
+    }, false);
+    REQUIRE(!rules().routes[0].bridges);
+    const Fixed crossing = Fixed::fromInt(rules().globalInt("MOVEMENT_RIVER_COST"));
+    REQUIRE(crossing > Fixed());
+    for (const UnitId id : {plain, marine, heli}) {
+        const Fixed extra = id == plain ? crossing : Fixed();
+        CHECK_EQ(g->moveCost(unit(*g, id), {4, 5}, {5, 5}).value_or(Fixed()), Fixed::fromInt(1) + extra);
+        CHECK_EQ(g->moveCost(unit(*g, id), {5, 5}, {4, 5}).value_or(Fixed()), Fixed::fromInt(1) + extra);
+        CHECK_EQ(g->moveCost(unit(*g, id), {4, 7}, {5, 7}).value_or(Fixed()), rules().routes[0].moveCost + extra);
+    }
+}

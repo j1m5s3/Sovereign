@@ -740,6 +740,7 @@ private:
     struct MoveTraits {
         bool freeEmbark = false, ignoreHills = false, ignoreForest = false, ignoreTerrain = false, ignoreBorders = false;
         bool zeal = false;      // a religious unit under Missionary Zeal
+        bool noRiver = false;   // crosses rivers at no extra cost (Amphibious, the Helicopter: 05)
         bool rockBand = false;  // kept out by Music Censorship
     };
     MoveTraits moveTraits(const Unit& unit) const;
@@ -761,7 +762,6 @@ private:
         const Unit* unit = nullptr;
         const MoveTraits* traits = nullptr;
         Domain domain = Domain::Land;
-        bool heli = false;  // a helicopter flies over rivers (05)
         int embarkCost = 0, riverCost = 0;
         int8_t embark = -1, ocean = -1;  // canEmbark and canEnterOcean, asked on first need (-1: not yet)
     };
