@@ -328,6 +328,12 @@ public:
     int rivalGrudge(PlayerId ai, PlayerId human) const;
     int rivalRespect(PlayerId ai, PlayerId human) const;
     std::vector<RivalMemory> rivalMemories(PlayerId human) const;
+    // ---- the chronicle of a reign (player-retention §2): its key events in plain lines ("Turn 40: ..."),
+    // those the player took part in, ending with how the game ended for them; and its Hall of Sovereigns
+    // record (the ruler, its loadout and level, victory or fall, rivals made).
+    static bool chronicleWorthy(EventKind kind);
+    std::vector<std::string> chronicleLines(PlayerId viewer) const;
+    std::string hallEntry(PlayerId player) const;
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
@@ -886,6 +892,7 @@ private:
     void processClimate();             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
     void processProfiles();            // world turn: update every major civ's play profile
     void processRivals();              // world turn: this game's part of each human's rival memories
+    void recordChronicle(const GameEvent& e);  // keeps a chronicle-worthy event for the whole game
     void processSpaceRace();           // world turn: exoplanet expeditions travel
     void burnPower(PlayerId player);   // power [GS]: each city's demand met by free sources, then by plants burning fuel (CO2)
     int renewablePower(const City& city) const;  // from its Hydroelectric Dam and renewable improvements, before the Biosphère

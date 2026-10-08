@@ -19,8 +19,8 @@ std::vector<ChatMessage> withHistory(const std::string& system, const std::vecto
 }
 }  // namespace
 
-bool LlamaModel::complete(const std::vector<ChatMessage>& messages, bool jsonSchema, std::string& content) {
-    std::string body = "{\"model\":\"sovereign-leader\",\"stream\":false,\"max_tokens\":" + std::to_string(maxTokens_) +
+bool LlamaModel::complete(const std::vector<ChatMessage>& messages, bool jsonSchema, std::string& content, int maxTokens) {
+    std::string body = "{\"model\":\"sovereign-leader\",\"stream\":false,\"max_tokens\":" + std::to_string(maxTokens > 0 ? maxTokens : maxTokens_) +
                        ",\"temperature\":" + (jsonSchema ? "0.1" : "0.7") + ",\"messages\":[";
     for (size_t i = 0; i < messages.size(); ++i) {
         body += (i ? "," : "") + std::string("{\"role\":") + jsonString(messages[i].role) + ",\"content\":" + jsonString(messages[i].content) + "}";
@@ -52,6 +52,13 @@ bool LlamaModel::summarize(const Persona& persona, const std::vector<ChatMessage
     for (const ChatMessage& m : history) talk += (m.role == "user" ? persona.playerCivName : persona.leaderName) + ": " + m.content + "\n";
     if (!facts.empty()) talk += "What was decided: " + facts + "\n";
     return complete({{"system", systemPrompt(persona) + "\n\n" + summaryInstructions(persona)}, {"user", talk}}, false, text);
+}
+
+bool LlamaModel::chronicle(const std::string& title, const std::vector<std::string>& lines, std::string& text) {
+    std::string events;
+    const size_t from = lines.size() > kChronicleLinesToModel ? lines.size() - kChronicleLinesToModel : 0;
+    for (size_t i = from; i < lines.size(); ++i) events += lines[i] + "\n";
+    return complete({{"system", chronicleInstructions(title)}, {"user", events}}, false, text, 900);
 }
 
 }  // namespace sov::diplomacy

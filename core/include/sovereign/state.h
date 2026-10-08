@@ -617,6 +617,7 @@ enum class EventKind : uint8_t {
     ClimatePhase,    // value: the phase the world entered
     GoodyHut,        // actor entered a tribal village; value: the reward (Rules::goodies)
     LeaderLost,      // actor captured (value 1) or killed (value 0) target's ruler in battle
+    Succession,      // actor crowned a ruler; value: the Succession kind + 16 x the heir's place in the dynasty
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -696,6 +697,7 @@ struct SOV_API GameState {
     int32_t woodsAtStart = -1;          // forest and rainforest plots when climate was first tracked (deforestation)
     std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
     std::vector<RivalTally> rivalTally;   // per human and AI civ met: this game's part of the rival memory
+    std::vector<GameEvent> chronicle;     // the reign's key events, kept all game (player-retention §2; capped)
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t lastSpecialSession = 0;     // the turn the last special session (an emergency or an aid request) was called
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)

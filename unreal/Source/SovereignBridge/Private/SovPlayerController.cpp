@@ -1753,6 +1753,9 @@ void ASovPlayerController::HandleOrders()
 			return;
 		}
 	}
+	// The chronicle of the reign, at any time (player-retention §2): F4 shows it, F6 has it written up.
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && WasInputKeyJustPressed(EKeys::F4)) Hud->bShowChronicle = !Hud->bShowChronicle;
+	if (WasInputKeyJustPressed(EKeys::F6)) Subsystem()->WriteChronicle();
 	if (Chooser != EChooser::None)
 	{
 		for (int32 i = 0; i < PageSize; ++i)
@@ -2604,6 +2607,20 @@ void ASovPlayerController::OpenMenu()
 				S.bSteam = true;
 				StartFromMenu(S);
 			})]
+			// The Hall of Sovereigns: past reigns, newest first (player-retention §2).
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hall of Sovereigns"), [this]() {
+				if (!MenuHall.IsEmpty())
+				{
+					MenuHall.Reset();
+					return;
+				}
+				const TArray<FString> Reigns = USovGameSubsystem::HallEntries();
+				for (int32 i = 0; i < Reigns.Num() && i < 8; ++i) MenuHall += (i ? TEXT("\n") : TEXT("")) + Reigns[i];
+				if (MenuHall.IsEmpty()) MenuHall = TEXT("No reign has ended yet.");
+			})]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+					.Text_Lambda([this]() { return FText::FromString(MenuHall); })]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
 				SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))

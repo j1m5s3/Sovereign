@@ -104,3 +104,21 @@ private:
 	sov::diplomacy::Exchange Last;
 	bool bHasLast = false;
 };
+
+// Writes a reign's chronicle to a text file off the game thread (player-retention §2): the local
+// model when one answers on the port, else the scripted chronicle.
+class FSovChronicleWriter
+{
+public:
+	~FSovChronicleWriter();
+	// Starts writing; ignored while a chronicle is being written.
+	void Start(const FString& Title, std::vector<std::string> Lines, int32 Port, const FString& Path);
+	bool IsBusy() const { return bBusy.load(); }
+	// Game thread: the note on a finished chronicle ("written to ..."), handed over once.
+	bool Poll(FString& OutNote);
+
+private:
+	TFuture<void> Work;
+	std::atomic<bool> bBusy{false}, bDone{false};
+	FString Note;  // set by the worker before bDone
+};

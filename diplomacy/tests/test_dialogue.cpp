@@ -85,6 +85,32 @@ TEST(the_persona_remembers_earlier_games) {
     CHECK(!contains(systemPrompt(buildPersona(*talkGame(), 1, 0)), "from earlier games"));
 }
 
+TEST(the_chronicle_is_written_by_the_model_or_the_script) {
+    const std::vector<std::string> lines = {"Turn 1: England declared war on France.", "Turn 12: An assassin from France wounded the ruler of England.",
+                                            "Turn 40: France won a Science victory."};
+    const std::string scripted = scriptedChronicle("Elizabeth I of England", lines);
+    CHECK(contains(scripted, "The Chronicle of Elizabeth I of England"));
+    CHECK(contains(scripted, "In the 1st year of the reign, England declared war on France."));
+    CHECK(contains(scripted, "In the 12th year of the reign, an assassin from France"));
+    StubTransport t;
+    t.answers = {"In the first year of the reign, England took up arms against France."};
+    LlamaModel m(t);
+    bool used = false;
+    const std::string text = writeChronicle(&m, "Elizabeth I of England", lines, &used);
+    CHECK(used);
+    CHECK(contains(text, "took up arms"));
+    REQUIRE(t.bodies.size() == 1u);
+    CHECK(contains(t.bodies[0], "royal chronicler"));
+    CHECK(contains(t.bodies[0], "declared war on France"));
+    // A model that steps out of the world, or no model at all: the scripted chronicle.
+    StubTransport bad;
+    bad.answers = {"As an AI language model I cannot write that."};
+    LlamaModel mb(bad);
+    CHECK(contains(writeChronicle(&mb, "Elizabeth I of England", lines, &used), "1st year"));
+    CHECK(!used);
+    CHECK(contains(writeChronicle(nullptr, "Elizabeth I of England", lines), "40th year"));
+}
+
 TEST(model_json_becomes_deal_items) {
     auto g = talkGame();
     const Persona p = buildPersona(*g, 1, 0);

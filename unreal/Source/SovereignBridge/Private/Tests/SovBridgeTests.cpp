@@ -10,7 +10,10 @@
 #include "SovArt.h"
 #include "SovDiplomacy.h"
 #include "sovereign_net/session.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "UObject/UObjectGlobals.h"
 
 #include "sovereign/commands.h"
@@ -666,6 +669,26 @@ bool FSovOnlineBattleTest::RunTest(const FString& Parameters)
 	for (int32 i = 0; i < 500 && Guest.GetGame().log().size() < Host.GetGame().log().size(); ++i) PumpBoth(1);
 	TestFalse(TEXT("settled on the guest's machine too"), Guest.GetGame().battlePending());
 	TestEqual(TEXT("the same game on both"), Guest.GetGame().stateHash(), Host.GetGame().stateHash());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovChronicleTest, "Sovereign.Bridge.ChronicleWrittenWithoutAModel", kSovTestFlags)
+bool FSovChronicleTest::RunTest(const FString& Parameters)
+{
+	// With no model server (port 1) the scripted chronicle is written to the file, off the game thread.
+	const FString Path = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("chronicle-test.txt"));
+	IFileManager::Get().Delete(*Path);
+	FSovChronicleWriter Writer;
+	Writer.Start(TEXT("Elizabeth I of England"), {"Turn 1: England declared war on France.", "Turn 9: France made peace with England."}, 1, Path);
+	TestTrue(TEXT("busy at first"), Writer.IsBusy());
+	FString Note;
+	for (int32 i = 0; i < 400 && !Writer.Poll(Note); ++i) FPlatformProcess::Sleep(0.05f);
+	TestTrue(TEXT("a note for the HUD"), Note.Contains(TEXT("chronicle is written")));
+	FString Text;
+	TestTrue(TEXT("the file is there"), FFileHelper::LoadFileToString(Text, *Path));
+	TestTrue(TEXT("its title"), Text.Contains(TEXT("The Chronicle of Elizabeth I of England")));
+	TestTrue(TEXT("its events"), Text.Contains(TEXT("In the 9th year of the reign, France made peace with England.")));
+	IFileManager::Get().Delete(*Path);
 	return true;
 }
 

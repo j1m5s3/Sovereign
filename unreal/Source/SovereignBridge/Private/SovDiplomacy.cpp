@@ -4,6 +4,9 @@
 #include "HAL/Event.h"
 #include "HAL/PlatformProcess.h"
 #include "HttpModule.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
 
@@ -185,5 +188,51 @@ bool FSovDiplomacyTalk::SummaryReady(sov::Command& Out)
 	}
 	bPendingSummary = false;
 	Out = Summary;
+	return true;
+}
+
+FSovChronicleWriter::~FSovChronicleWriter()
+{
+	if (Work.IsValid())
+	{
+		Work.Wait();
+	}
+}
+
+void FSovChronicleWriter::Start(const FString& Title, std::vector<std::string> Lines, int32 Port, const FString& Path)
+{
+	if (bBusy.load())
+	{
+		return;
+	}
+	if (Work.IsValid())
+	{
+		Work.Wait();
+	}
+	bBusy = true;
+	bDone = false;
+	const std::string TitleUtf8 = TCHAR_TO_UTF8(*Title);
+	Work = Async(EAsyncExecution::Thread, [this, TitleUtf8, Lines = std::move(Lines), Port, Path]() {
+		FSovHttpTransport Transport(Port);
+		sov::diplomacy::LlamaModel Llama(Transport);
+		bool bUsedModel = false;
+		const std::string Text = sov::diplomacy::writeChronicle(Transport.Healthy() ? &Llama : nullptr, TitleUtf8, Lines, &bUsedModel);
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
+		const bool bSaved = FFileHelper::SaveStringToFile(FString(UTF8_TO_TCHAR(Text.c_str())), *Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+		Note = bSaved ? FString::Printf(TEXT("The chronicle is written%s: %s"), bUsedModel ? TEXT(" by the court historian (local model)") : TEXT(""), *Path)
+					  : FString::Printf(TEXT("Could not write the chronicle to %s"), *Path);
+		bDone = true;
+		bBusy = false;
+	});
+}
+
+bool FSovChronicleWriter::Poll(FString& OutNote)
+{
+	if (!bDone.load())
+	{
+		return false;
+	}
+	bDone = false;
+	OutNote = Note;
 	return true;
 }
