@@ -394,6 +394,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         for (int8_t f : p.fertility) w.i8(f);
         w.u8(p.fallout);
         w.boolean(p.village);
+        w.boolean(p.meteorSite);
         w.u8(p.antiquity);
         w.boolean(p.park);
         w.boolean(p.routePillaged);
@@ -837,6 +838,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         for (int8_t& f : p.fertility) f = r.i8();
         p.fallout = r.u8();
         p.village = r.boolean();
+        p.meteorSite = r.boolean();
         p.antiquity = r.u8();
         p.park = r.boolean();
         p.routePillaged = r.boolean();

@@ -182,7 +182,6 @@ void Game::spawnCaptures() {
 }
 
 void Game::enterPlot(Unit& unit) {
-    const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
     // Natural wonders' permanent abilities (01): land units beside Everest, land units entering the
     // Fountain of Youth, ships entering the Bermuda Triangle.
     {
@@ -209,9 +208,15 @@ void Game::enterPlot(Unit& unit) {
     if (state_.plot(unit.pos).village && isMajorCiv(unit.owner)) {
         const UnitId id = unit.id;
         enterVillage(unit);
-        if (!state_.unit(id)) return;
+        // A reward may add a unit and so move the unit list: the unit is looked up again.
+        if (Unit* still = state_.unit(id)) clearCamp(*still);
+        return;
     }
-    if (owner.barbarian || rules_->units[static_cast<size_t>(unit.type)].layer != UnitLayer::Military) return;
+    clearCamp(unit);
+}
+
+void Game::clearCamp(Unit& unit) {
+    if (state_.players[static_cast<size_t>(unit.owner)].barbarian || rules_->units[static_cast<size_t>(unit.type)].layer != UnitLayer::Military) return;
     auto it = std::find_if(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.pos == unit.pos; });
     if (it == state_.camps.end()) return;
     // Clearing a camp pays gold; its surviving units roam on without a home.

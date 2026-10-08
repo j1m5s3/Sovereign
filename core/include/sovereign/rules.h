@@ -1139,6 +1139,7 @@ struct GoodyType {
     GoodyKind kind = GoodyKind::Gold;
     int amount = 0;
     TypeIndex unit = kNone;  // Unit: what appears in the nearest city
+    std::string unitClass;   // Unit, when `unit` is kNone: the player's best unit of this class (Game::bestUnitOfClass)
     int minTurn = 0;
     bool needsCity = false;
 };

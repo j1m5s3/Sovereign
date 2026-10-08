@@ -1062,6 +1062,20 @@ std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const 
     return std::nullopt;
 }
 
+TypeIndex Game::bestUnitOfClass(PlayerId player, const std::string& unitClass, bool orFirst) const {
+    const TypeIndex civ = state_.players[static_cast<size_t>(player)].civ;
+    TypeIndex best = kNone, first = kNone;
+    for (size_t i = 0; i < rules_->units.size(); ++i) {
+        const UnitType& ut = rules_->units[i];
+        const TypeIndex type = static_cast<TypeIndex>(i);
+        if (ut.unitClass != unitClass || !ut.trainable || ut.cityState != kNone) continue;
+        if ((ut.uniqueTo != kNone && ut.uniqueTo != civ) || rules_->uniqueUnitFor(civ, type) != kNone) continue;
+        if (first == kNone || ut.era < rules_->units[static_cast<size_t>(first)].era) first = type;
+        if (hasUnlocked(player, ut.unlock) && (best == kNone || ut.era > rules_->units[static_cast<size_t>(best)].era)) best = type;
+    }
+    return best == kNone && orFirst ? first : best;
+}
+
 // ---------------------------------------------------------------- commands
 
 CommandError Game::validateCity(const Command& c) const {

@@ -1928,9 +1928,14 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         g.amount = static_cast<int>(j["amount"].integer(0));
         g.unit = j.has("unit") ? unit(j["unit"].str()) : kNone;
+        g.unitClass = j["unitClass"].str();
         g.minTurn = static_cast<int>(j["minTurn"].integer(0));
         g.needsCity = j["needsCity"].boolean(false);
-        if (known && (g.kind != GoodyKind::Unit || g.unit != kNone)) goodies.push_back(std::move(g));
+        if (!g.unitClass.empty() && std::none_of(units.begin(), units.end(), [&](const UnitType& u) { return u.unitClass == g.unitClass; })) {
+            *error = "goody " + id + ": no units of class " + g.unitClass;
+            return false;
+        }
+        if (known && (g.kind != GoodyKind::Unit || g.unit != kNone || !g.unitClass.empty())) goodies.push_back(std::move(g));
     }
     for (const auto& [id, j] : m.tables["spyPromotions"]) {
         SpyPromotionType sp;

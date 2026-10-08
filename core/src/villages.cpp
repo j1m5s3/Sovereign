@@ -2,7 +2,8 @@
 // rewards). The first unit of a major civ to enter one consumes it and gains EXPERIENCE_ACTIVATE_GOODY_HUT
 // XP; the reward is drawn in two stages: one of the categories with an eligible reward (equal weights),
 // then a reward inside it by weight, skipping those whose minimum turn has not come and those that need a
-// city the civ does not yet have.
+// city the civ does not yet have. A meteor site (the goody hut a meteor shower leaves) draws from its own
+// category, METEOR, alone; villages never do.
 #include <algorithm>
 
 #include "sovereign/game.h"
@@ -30,18 +31,20 @@ bool Game::nextToNaturalWonder(Hex plot, const char* featureId) const {
 }
 
 void Game::enterVillage(Unit& unit) {
-    state_.plot(unit.pos).village = false;
+    Plot& plot = state_.plot(unit.pos);
+    const bool meteor = plot.meteorSite;
+    plot.village = plot.meteorSite = false;
     const PlayerId pid = unit.owner;
     Player& p = state_.players[at(pid)];
     unit.xp += rules_->globalInt("EXPERIENCE_ACTIVATE_GOODY_HUT");
-    awardMoment(pid, "MOMENT_TRIBAL_VILLAGE_CONTACTED");  // 09: in the Ancient Era only
+    if (!meteor) awardMoment(pid, "MOMENT_TRIBAL_VILLAGE_CONTACTED");  // 09: in the Ancient Era only
     const City* nearest = nullptr;
     for (const City& c : state_.cities) {
         if (c.owner == pid && (!nearest || state_.grid.distance(c.pos, unit.pos) < state_.grid.distance(nearest->pos, unit.pos))) nearest = &c;
     }
     std::vector<const GoodyType*> eligible;
     for (const GoodyType& g : rules_->goodies) {
-        if (state_.turn >= g.minTurn && (!g.needsCity || nearest)) eligible.push_back(&g);
+        if ((g.category == "METEOR") == meteor && state_.turn >= g.minTurn && (!g.needsCity || nearest)) eligible.push_back(&g);
     }
     if (eligible.empty()) return;
     std::vector<std::string> categories;
@@ -140,11 +143,15 @@ void Game::enterVillage(Unit& unit) {
                 assignCitizens(c);
             }
             break;
-        case GoodyKind::Unit:
-            if (nearest) {
-                if (auto spot = unitSpawnPlot(*nearest, pick->unit)) spawnUnit(pick->unit, pid, *spot);
+        case GoodyKind::Unit: {
+            // A unit of a class (the meteor site's Heavy Cavalry): its best, or with none unlocked yet the class's first
+            // (Sovereign reading).
+            const TypeIndex type = pick->unit != kNone ? pick->unit : bestUnitOfClass(pid, pick->unitClass, true);
+            if (nearest && type != kNone) {
+                if (auto spot = unitSpawnPlot(*nearest, type)) spawnUnit(type, pid, *spot);
             }
             break;
+        }
     }
     pushEvent(EventKind::GoodyHut, pid, kNoPlayer, static_cast<int>(pick - rules_->goodies.data()));
 }

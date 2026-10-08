@@ -46,7 +46,7 @@ Status: done, 2026-10-06 (PRs #126–#130 and the closing PR). Previous: `2026-1
   - circumnavigation, discovering a new continent, railroad connections, strategic potential;
   - City of Awe, unique districts, levies near enemies, pacified city-states;
   - the score-0 ones.
-- **Meteor sites** (their goody) and the Fishery's sea-resource adjacency.
+- **The Fishery's sea-resource adjacency.**
 - **From part 2's own list:** AI random agendas (each leader has one hand-written agenda), liberation envoys by era (no data), trade route length in round trips (the flat length stands).
 
 ## Decisions (Claude's, under James's standing consent)
@@ -70,3 +70,11 @@ Status: done, 2026-10-06 (PRs #126–#130 and the closing PR). Previous: `2026-1
 - **City for peace:** an AI at war with a major civ whose army is more than twice its own, after offering that civ a white peace, offers peace with one of its cities: the one it values least, never one worth more to it than the peace. To an AI it offers only a deal that AI accepts; a human answers it like any deal. It asks again at most every 10 turns, like its other deals.
 - **Tribute:** an AI asks a neighbour it dislikes (a city it has seen within 14 plots of its own; not a friend or ally) and outmatches at least twice over for Gold, on one turn in 30 for each pair. It asks for as much as Make Demand says an AI that weak would hand over, up to the whole purse in tens, and only from a purse of 50 or more.
 - **AI pace:** over 24 bench games (6 civs, Small, 200 turns) science at T200 went 66.8 → 65.6 and cities 7.8 → 7.9; the era stayed at 2.8.
+
+## Follow-up (2026-10-08): meteor sites
+
+- **Where:** a meteor shower leaves a meteor site on its plot when one may stand there (data: improvements, Meteor Site: land that is not a mountain, bare or with woods, rainforest or marsh) and nothing else is: no improvement (the shower pillages one instead), city, district, wonder, tribal village, barbarian camp, antiquity site, National Park plot or unit. It is a goody hut like a tribal village (`Plot::village`, with `meteorSite`), so it shows as one in Unreal and AI explorers make for it.
+- **Reward** (data: Meteor Goodies): the first unit of a major civ to enter it gains the goody hut's XP, and the civ gets its best Heavy Cavalry unit in its nearest city, its unique one where it has one (`Game::bestUnitOfClass`). With none unlocked yet it gets the class's first, the Heavy Chariot or its civ's own unit in its place (Sovereign reading). Villages never draw this reward, and meteor sites draw nothing else. No Tribal Village Contacted moment. Save version 85.
+- **Fix that came with it:** a goody hut's new unit could move the unit list while the unit entering it was still in use (`Game::enterPlot`, `Game::advanceUnit`); both now look the unit up again.
+- **Unreal:** the event feed still words the reward as a tribal village's.
+- **AI soak test:** now plays seed 27. Seed 2's game gains a meteor site on turn 5 and from there no capital falls by turn 250. Over 400 seeds (Tiny, 4 AI, 250 turns) a capital fell in 266 games without meteor sites and 254 with them; on the 264 seeds not looked at first, 170 and 174, so the sites leave AI conquest as it was.

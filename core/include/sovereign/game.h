@@ -140,6 +140,9 @@ public:
     bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr, bool purchase = false) const;
     // Where a unit trained in this city appears (ships: the port or the water beside it); nullopt when full.
     std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
+    // The most advanced unit of a class the player can train, its civ's unique one where it has one. With none unlocked
+    // yet: kNone, or with orFirst the class's first unit.
+    TypeIndex bestUnitOfClass(PlayerId player, const std::string& unitClass, bool orFirst = false) const;
     std::vector<ProductionItem> buildableItems(CityId city) const;
     std::vector<CityId> citiesNeedingProduction(PlayerId player) const;
     // Net gold per turn: city gold minus building and unit maintenance.
@@ -860,8 +863,9 @@ private:
     // Barbarian bookkeeping before a unit dies in combat: camp boldness.
     void noteKill(const Unit& victim, const Unit* killer);
     void killReward(Player& to, const UnitEffect& effect, const UnitType& victim);  // a KillYield effect's reward
-    // A military unit entered this plot: clears a barbarian camp there.
+    // A unit entered this plot: natural wonders' abilities, a goody hut, a barbarian camp.
     void enterPlot(Unit& unit);
+    void clearCamp(Unit& unit);  // a civ's military unit entering a barbarian camp clears it
     void linkBarbarians();
     void processBarbarians();
     void placeCamps(PlayerId barbarian);
