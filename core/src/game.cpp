@@ -1043,8 +1043,9 @@ void Game::advanceUnit(UnitId id) {
         u->activity = Activity::Awake;
         u->moved = true;
         u->fortifyTurns = 0;
-        enterPlot(*u);
-        refreshVisibility(u->owner);
+        const PlayerId mover = u->owner;
+        enterPlot(*u);  // which may move the unit list (a goody hut's unit)
+        refreshVisibility(mover);
     }
 }
 

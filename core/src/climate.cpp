@@ -509,6 +509,19 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
             y = static_cast<int8_t>(std::min(4, y + f.amount));
         }
     }
+    // A meteor shower leaves a meteor site, a goody hut of its own (data: Meteor Goodies), on its plot when the site
+    // may stand there (data: improvements, Meteor Site: open land, bare or with woods, rainforest or marsh) and nothing
+    // else is there.
+    if (dt.kind == DisasterKind::Meteor) {
+        Plot& p = state_.plot(center);
+        const TerrainType& t = rules_->terrains[at(p.terrain)];
+        const bool ground = p.feature == kNone || p.feature == forest || p.feature == jungle || p.feature == rules_->feature("FEATURE_MARSH");
+        if (!t.water && !t.impassable && ground && p.improvement == kNone && !p.village && p.antiquity == 0 && !p.park && !state_.cityAt(center) &&
+            !state_.districtAt(center) && state_.wonderAt(center) == kNone &&
+            std::none_of(state_.units.begin(), state_.units.end(), [&](const Unit& u) { return u.pos == center; }) &&
+            std::none_of(state_.camps.begin(), state_.camps.end(), [&](const Camp& c) { return c.pos == center; }))
+            p.village = p.meteorSite = true;
+    }
     std::sort(shrank.begin(), shrank.end());
     shrank.erase(std::unique(shrank.begin(), shrank.end()), shrank.end());
     for (CityId id : shrank) {

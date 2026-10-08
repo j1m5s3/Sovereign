@@ -752,14 +752,16 @@ def gen_barbarians():
             t["resource"] = "RESOURCE_" + snake(row["Required resource"])
             t["resourceRange"] = num(row["Resource range"])
         out.append(t)
-    # Tribal village rewards (01: Tribal Villages; data: Tribal village rewards); the meteor site waits for meteors.
+    # Tribal village rewards (01: Tribal Villages; data: Tribal village rewards), and the meteor site's (category METEOR),
+    # which a meteor shower leaves behind.
     goodies = []
     units = {"Recon": "UNIT_SCOUT", "Builder": "UNIT_BUILDER", "Trader": "UNIT_TRADER", "Settler": "UNIT_SETTLER"}
     for row in table(SPEC / "barbarians-goody-huts.md", "Tribal village rewards"):
-        if row["Category"] == "Meteor Goodies" or not num(row["Weight"]):
+        if not num(row["Weight"]):
             continue
         eff = row["Effect"]
-        g = {"id": "GOODY_" + snake(row["Reward"]), "category": row["Category"].replace("Goodyhut ", "").upper(), "weight": num(row["Weight"])}
+        category = "METEOR" if row["Category"] == "Meteor Goodies" else row["Category"].replace("Goodyhut ", "").upper()
+        g = {"id": "GOODY_" + snake(row["Reward"]), "category": category, "weight": num(row["Weight"])}
         rules = [(r"grants 1 Relic", ("RELIC", 1)), (r"\+(\d+) Inspiration", ("INSPIRATION", None)), (r"\+(\d+) Eureka", ("EUREKA", None)),
                  (r"\+(\d+) Governor Title", ("GOVERNOR_TITLE", None)), (r"grants (\d+) Envoy", ("ENVOY", None)),
                  (r"\+(\d+) Diplomatic Favor", ("FAVOR", None)), (r"grant of (\d+) Faith", ("FAITH", None)), (r"grant of (\d+) Gold", ("GOLD", None)),
@@ -776,6 +778,11 @@ def gen_barbarians():
         if m and m.group(1) in units:
             g["kind"] = "UNIT"
             g["unit"] = units[m.group(1)]
+            g["amount"] = 1
+        m = re.search(r"grants a ([A-Za-z ]+) unit in the nearest city", eff)
+        if m and m.group(1) in UNIT_CLASS_WORDS and "unit" not in g:
+            g["kind"] = "UNIT"
+            g["unitClass"] = UNIT_CLASS_WORDS[m.group(1)]  # its best unit of the class
             g["amount"] = 1
         if "kind" not in g:
             continue  # not carried (the unit upgrade)

@@ -43,7 +43,9 @@ struct Plot {
     uint8_t pillagedTurns = 0;  // the improvement is pillaged (05: Pillage; a disaster, 09): nothing until a Builder repairs it
     std::array<int8_t, kNumYields> fertility{};  // yields a disaster left behind (09: Climate and Disasters)
     uint8_t fallout = 0;  // turns of nuclear contamination left (05: Nuclear weapons): not worked, units take damage
-    bool village = false; // a tribal village (01: Tribal Villages), consumed by the first unit of a civ to enter
+    bool village = false; // a goody hut, consumed by the first unit of a civ to enter: a tribal village (01: Tribal Villages),
+                          // or a meteor site when meteorSite (09: a meteor shower leaves one)
+    bool meteorSite = false;
     uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
     bool park = false;     // part of a National Park (07: National Parks)
     uint8_t industry = 0;  // Monopolies and Corporations mode (07): 1 an Industry, 2 a Corporation on its luxury

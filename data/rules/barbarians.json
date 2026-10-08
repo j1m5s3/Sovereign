@@ -209,6 +209,14 @@
    "amount": 1,
    "minTurn": 15,
    "needsCity": true
+  },
+  {
+   "id": "GOODY_METEOR_GRANT_GOODIES",
+   "category": "METEOR",
+   "weight": 100,
+   "kind": "UNIT",
+   "unitClass": "HEAVY_CAVALRY",
+   "amount": 1
   }
  ]
 }

@@ -2,6 +2,7 @@
 // rising over coastal lowlands, disasters striking (damage and fertility), droughts, the favor
 // cost of emissions, the world turn's rolls, saves.
 #include <algorithm>
+#include <functional>
 
 #include "helpers.h"
 #include "sovereign/mapgen.h"
@@ -10,6 +11,7 @@
 using namespace sov;
 using sovtest::addCity;
 using sovtest::addUnit;
+using sovtest::claimFor;
 using sovtest::flatState;
 using sovtest::rules;
 
@@ -430,6 +432,69 @@ TEST(a_meteor_shower_pillages_its_plot) {
     g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {9, 6});
     CHECK(g->state().plot({9, 6}).pillagedTurns > 0);
     CHECK(g->state().plot({10, 6}).pillagedTurns == 0);  // one plot only
+}
+
+// It leaves a meteor site, a goody hut of its own, where one may stand (data: improvements, Meteor Site: open land, bare
+// or with woods, rainforest or marsh) and nothing else is.
+TEST(a_meteor_shower_leaves_a_meteor_site) {
+    const auto site = [](const std::function<void(GameState&)>& setUp) {
+        GameState s = coastState(16, 12, 1);
+        addCity(s, 0, {8, 6}, true, 3);
+        setUp(s);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {10, 6});
+        const Plot& p = g->state().plot({10, 6});
+        CHECK_EQ(p.village, p.meteorSite);
+        CHECK(!g->state().plot({11, 6}).meteorSite);
+        return p.meteorSite;
+    };
+    const auto feature = [](const char* id) { return [id](GameState& s) { s.plot({10, 6}).feature = rules().feature(id); }; };
+    CHECK(site([](GameState&) {}));
+    CHECK(site(feature("FEATURE_FOREST")));
+    CHECK(site(feature("FEATURE_JUNGLE")));
+    CHECK(site(feature("FEATURE_MARSH")));
+    CHECK(site([](GameState& s) { s.plot({10, 6}).terrain = rules().terrain("TERRAIN_TUNDRA_HILLS"); }));
+    CHECK(!site(feature("FEATURE_FLOODPLAINS")));
+    CHECK(!site([](GameState& s) { s.plot({10, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN"); }));
+    CHECK(!site([](GameState& s) { s.plot({10, 6}).improvement = rules().improvement("IMPROVEMENT_FARM"); }));  // pillaged instead
+    CHECK(!site([](GameState& s) { addUnit(s, "UNIT_WARRIOR", 0, {10, 6}); }));
+    CHECK(!site([](GameState& s) { s.plot({10, 6}).terrain = rules().terrain("TERRAIN_COAST"); }));
+    CHECK(!site([](GameState& s) { addCity(s, 0, {10, 6}, false); }));
+    CHECK(!site([](GameState& s) {
+        claimFor(s, s.cities[0], {10, 6});
+        CityDistrict campus;
+        campus.type = rules().district("DISTRICT_CAMPUS");
+        campus.pos = {10, 6};
+        campus.complete = true;
+        s.cities[0].districts.push_back(campus);
+    }));
+    CHECK(!site([](GameState& s) {
+        claimFor(s, s.cities[0], {10, 6});
+        s.cities[0].wonders.push_back({rules().building("BUILDING_PYRAMIDS"), {10, 6}});
+    }));
+    CHECK(!site([](GameState& s) { s.plot({10, 6}).antiquity = 1; }));
+    CHECK(!site([](GameState& s) { s.plot({10, 6}).park = true; }));
+    CHECK(!site([](GameState& s) {
+        Camp camp;
+        camp.id = s.nextCampId++;
+        camp.pos = {10, 6};
+        camp.tribe = 0;
+        s.camps.push_back(camp);
+    }));
+    // A tribal village there stays one.
+    GameState s = coastState(16, 12, 1);
+    addCity(s, 0, {8, 6}, true, 3);
+    s.plot({10, 6}).village = true;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->strikeDisaster(disaster("DISASTER_METEOR_SHOWER"), {10, 6});
+    CHECK(g->state().plot({10, 6}).village);
+    CHECK(!g->state().plot({10, 6}).meteorSite);
+    // Other disasters leave none.
+    GameState t = coastState(16, 12, 1);
+    addCity(t, 0, {8, 6}, true, 3);
+    auto storm = Game::fromScenario(rules(), std::move(t));
+    storm->strikeDisaster(disaster("DISASTER_TORNADO_OUTBREAK"), {10, 6});
+    CHECK(!storm->state().plot({10, 6}).village);
 }
 
 TEST(disaster_damage_waits_for_a_builder) {

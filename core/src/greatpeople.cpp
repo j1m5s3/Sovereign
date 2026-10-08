@@ -690,14 +690,7 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
         }
         case GreatPersonEffectKind::NavalMeleeUnit: {
             // The most advanced naval melee unit the player can train (its civ's unique one where it has it).
-            TypeIndex best = kNone;
-            for (size_t i = 0; i < rules_->units.size(); ++i) {
-                const UnitType& ut = rules_->units[i];
-                if (ut.unitClass != "NAVAL_MELEE" || !ut.trainable || !hasUnlocked(pid, ut.unlock)) continue;
-                if (ut.uniqueTo != kNone && ut.uniqueTo != p.civ) continue;
-                if (rules_->uniqueUnitFor(p.civ, static_cast<TypeIndex>(i)) != kNone) continue;
-                if (best == kNone || ut.era > rules_->units[at(best)].era) best = static_cast<TypeIndex>(i);
-            }
+            const TypeIndex best = bestUnitOfClass(pid, "NAVAL_MELEE");
             if (best == kNone) break;
             std::optional<Hex> spot;
             if (city) spot = unitSpawnPlot(*city, best);

@@ -361,6 +361,26 @@ TEST(great_people_one_time_gifts) {
     CHECK_EQ(static_cast<int>(g->state().unit(sword)->formation), 1);
 }
 
+// Hanno the Navigator: the most advanced naval melee unit the player can train, in the city he is used in; nothing
+// before it can train one.
+TEST(hanno_the_navigator_grants_a_naval_melee_unit) {
+    const auto use = [](std::initializer_list<const char*> techs) {
+        GameState s = cityState();
+        for (const char* t : techs) s.players[0].techs.done[at(rules().tech(t))] = 1;
+        const UnitId hanno = addGreatPerson(s, "GREAT_PERSON_HANNO_THE_NAVIGATOR", {7, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::activateGreatPerson(0, hanno)) == CommandError::Ok);
+        std::string granted;
+        for (const Unit& u : g->state().units) {
+            if (u.owner == 0 && rules().units[at(u.type)].unitClass == "NAVAL_MELEE") granted += rules().units[at(u.type)].id;
+        }
+        return granted;
+    };
+    CHECK_EQ(use({}), std::string());
+    CHECK_EQ(use({"TECH_SAILING"}), std::string("UNIT_GALLEY"));
+    CHECK_EQ(use({"TECH_SAILING", "TECH_CARTOGRAPHY"}), std::string("UNIT_CARAVEL"));
+}
+
 TEST(great_people_are_used_only_where_their_effect_applies) {
     // The plots beside (7,6) other than the capital's.
     const auto besideOf = [](const GameState& s, Hex h) {
