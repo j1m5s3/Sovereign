@@ -17,6 +17,7 @@
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBox.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Text/STextBlock.h"
@@ -2094,6 +2095,37 @@ void ASovPlayerController::UpdatePanel()
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
 		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   F2 government   Z governors   I pantheon   J assassins   WASD/wheel camera"),
 			static_cast<int32>(Waiting)));
+		// The leader's next one or two personal goals (player-retention §4).
+		FString Goals;
+		const std::vector<sov::LeaderGoal> Next = G.leaderGoals(Me());
+		for (size_t i = 0; i < Next.size() && i < 2; ++i)
+		{
+			const sov::LeaderGoal& Goal = Next[i];
+			FString Text;
+			switch (Goal.kind)
+			{
+				case sov::LeaderGoalKind::AssassinNear:
+					Text = Goal.value ? TEXT("an assassin is reported close: get your leader to a guarded city") : TEXT("an assassin is reported close (your leader is guarded)");
+					break;
+				case sov::LeaderGoalKind::CityUnrest:
+				{
+					const sov::City* C = S.city(Goal.id);
+					Text = FString::Printf(TEXT("%s is restless (loyalty %d): visit with your leader, V or X"), C ? *Str(C->name) : TEXT("a city"), Goal.value);
+					break;
+				}
+				case sov::LeaderGoalKind::RivalLeaderNear:
+				{
+					const sov::Player& O = S.players[static_cast<size_t>(Goal.id)];
+					Text = FString::Printf(TEXT("%s is %d plot(s) from your leader%s"), *Str(O.leaderName), Goal.value,
+						G.atWar(Me(), Goal.id) ? TEXT(": a melee there is fought live") : TEXT(""));
+					break;
+				}
+				case sov::LeaderGoalKind::Promotion: Text = TEXT("a promotion waits for your leader (U)"); break;
+				case sov::LeaderGoalKind::PromotionSoon: Text = FString::Printf(TEXT("%d XP to your leader's next promotion"), Goal.value); break;
+			}
+			Goals += (Goals.IsEmpty() ? TEXT("Leader: ") : TEXT("; ")) + Text;
+		}
+		if (!Goals.IsEmpty()) L.Add(Goals);
 		if (SelectedCity >= 0)
 			L.Add(TEXT("City: P production (Shift+pick to queue)   Shift+click a plot to lock or free a citizen   Ctrl+right-click Encampment strike"));
 		L.Add(TEXT("Alt+right-click: launch a nuclear device from a Missile Silo in range"));
@@ -2464,6 +2496,7 @@ void ASovPlayerController::OpenMenu()
 		FSovSetup S;
 		S.PlayerName = Name.IsEmpty() ? FString(TEXT("Player")) : Name;
 		S.Difficulty = MenuDifficulty;
+		S.bRivalMemory = bMenuRivals;
 		return S;
 	};
 	static const TCHAR* const Levels[] = {TEXT("Settler"), TEXT("Chieftain"), TEXT("Warlord"), TEXT("Prince"), TEXT("King"), TEXT("Emperor"), TEXT("Immortal"), TEXT("Deity")};
@@ -2520,6 +2553,21 @@ void ASovPlayerController::OpenMenu()
 					return FReply::Handled();
 				})]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+					bMenuRivals = !bMenuRivals;
+					return FReply::Handled();
+				})[SNew(STextBlock).Text_Lambda([this]() {
+					return FText::FromString(bMenuRivals ? TEXT("Rivals remember you: on") : TEXT("Rivals remember you: off"));
+				})]]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).Text(FText::FromString(TEXT("Forget your rivals"))).OnClicked_Lambda([this, Name]() {
+					const FString Path = FSovSession::RivalsPath(Name.IsEmpty() ? FString(TEXT("Player")) : Name);
+					if (USovGameSubsystem* S = Subsystem())
+						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
+					return FReply::Handled();
+				})]]
 			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();

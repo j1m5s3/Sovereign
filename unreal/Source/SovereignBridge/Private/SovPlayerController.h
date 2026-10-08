@@ -184,5 +184,6 @@ protected:
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
 	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
+	bool bMenuRivals = true;   // AI leaders remember you from earlier games (player-retention §1)
 	bool bCenteredOnGame = false;  // online games arrive after BeginPlay: centre on them once
 };

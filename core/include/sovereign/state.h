@@ -164,6 +164,7 @@ enum class OpinionReasonKind : uint8_t {
     AtWar = 0, DeclaredWar, SurpriseWar, DenouncedUs, WeDenounced, Friends, OpenBorders, SameReligion, ConvertingUs,
     TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught, Grievances,
     UsedWmd, Demanded,
+    PastGames,  // what an AI leader remembers of a human from earlier games (player-retention §1)
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;
@@ -484,12 +485,31 @@ struct PlayerProfile {
     int32_t battleFlank = 0, battleFallBack = 0, battleHunt = 0, battleLeaderFront = 0;
 };
 
+// What an AI leader remembers of one human across games (player-retention §1). Counts only grow;
+// the memory sets opinions and AI targeting only, never units or yields.
+struct RivalMemory {
+    std::string civ;           // the AI's civ, which names its leader
+    int32_t games = 0;         // games they met in
+    int32_t wars = 0;          // wars between them, whoever declared
+    int32_t betrayals = 0;     // surprise wars the human declared on it
+    int32_t leadersTaken = 0;  // the human's rulers it captured or killed (its trophies)
+    int32_t leadersLost = 0;   // its rulers the human captured or killed
+    int32_t citiesLost = 0;    // its cities the human took
+    int32_t friendTurns = 0;   // turns as declared friends
+};
+// This game's share of a memory, kept in the game state until the human's file is written.
+struct RivalTally {
+    PlayerId human = kNoPlayer, ai = kNoPlayer;
+    RivalMemory memory;
+};
+
 struct PlayerSetup {
     std::string civ;
     bool human = false;
     // A human's profile carried from earlier games (leader doc §10: it persists between games).
     bool hasProfile = false;
     PlayerProfile profile;
+    std::vector<RivalMemory> rivals;  // a human's rivals from earlier games (player-retention §1)
 };
 
 struct GameSetup {
@@ -518,6 +538,7 @@ struct GameSetup {
     bool regicide = false;  // optional mode: losing the leader eliminates you (leader doc §5)
     bool barbarianClans = false;  // optional mode: camps can be bribed, hired, incited, and become city-states (01: Barbarians)
     bool monopolies = false;      // optional mode: Industries, Corporations and Monopolies on luxuries (07)
+    bool rivalMemory = true;      // AI leaders remember humans from earlier games (player-retention §1)
 };
 
 enum class Victory : uint8_t { None = 0, Domination, Score, LastStanding, Religious, Culture, Diplomatic, Science };
@@ -595,6 +616,7 @@ enum class EventKind : uint8_t {
     Disaster,        // value: disaster type; target: the owner of the plot it struck (kNoPlayer: unowned)
     ClimatePhase,    // value: the phase the world entered
     GoodyHut,        // actor entered a tribal village; value: the reward (Rules::goodies)
+    LeaderLost,      // actor captured (value 1) or killed (value 0) target's ruler in battle
 };
 struct GameEvent {
     int32_t turn = 0;
@@ -673,6 +695,7 @@ struct SOV_API GameState {
     std::vector<Ongoing> ongoing;
     int32_t woodsAtStart = -1;          // forest and rainforest plots when climate was first tracked (deforestation)
     std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
+    std::vector<RivalTally> rivalTally;   // per human and AI civ met: this game's part of the rival memory
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t lastSpecialSession = 0;     // the turn the last special session (an emergency or an aid request) was called
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)

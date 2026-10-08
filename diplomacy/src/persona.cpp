@@ -79,6 +79,18 @@ Persona buildPersona(const Game& g, PlayerId leader, PlayerId player) {
         p.reasons.push_back(std::string(opinionReasonName(why.kind)) + " (" + signedNumber(why.value) + ")");
     }
     for (const TalkRecord* t : g.talksBetween(leader, player)) p.pastTalks.push_back("Turn " + std::to_string(t->turn) + ": " + t->text);
+    if (const RivalMemory* m = g.rivalMemory(leader, player)) {
+        const auto times = [](int n, const char* what) { return std::to_string(n) + " " + what + (n == 1 ? "" : "s"); };
+        p.earlierGames.push_back("you have met them in " + times(m->games, "earlier game"));
+        if (m->wars > 0) p.earlierGames.push_back("fought " + times(m->wars, "war"));
+        if (m->betrayals > 0) p.earlierGames.push_back("they betrayed you with " + times(m->betrayals, "surprise war"));
+        if (m->leadersTaken > 0) p.earlierGames.push_back("you captured or slew their ruler " + times(m->leadersTaken, "time"));
+        if (m->leadersLost > 0) p.earlierGames.push_back("they captured or slew your ruler " + times(m->leadersLost, "time"));
+        if (m->citiesLost > 0) p.earlierGames.push_back("they took " + std::to_string(m->citiesLost) + (m->citiesLost == 1 ? " city" : " cities") + " of yours");
+        if (m->friendTurns >= 10) p.earlierGames.push_back("you were friends for " + times(m->friendTurns, "turn"));
+        p.crownsTaken = m->leadersTaken;
+        p.crownsLost = m->leadersLost;
+    }
     for (const DealItem& i : g.offerableItems(leader, player)) p.leaderOffers.push_back(offerText(r, i));
     for (const DealItem& i : g.offerableItems(player, leader)) p.playerOffers.push_back(offerText(r, i));
     for (const ResourceType& rt : r.resources) {
@@ -99,6 +111,7 @@ std::string systemPrompt(const Persona& p) {
     if (p.atWar) s += " You are at war with them.";
     s += "\nWhy you feel this way: " + list(p.reasons, "nothing in particular yet") + ".";
     s += "\nWhat you remember of past talks: " + list(p.pastTalks, "you have not spoken before") + ".";
+    if (!p.earlierGames.empty()) s += "\nWhat you remember of them from earlier games (bring it up when it fits): " + list(p.earlierGames, "") + ".";
     s += "\nYou could offer: " + list(p.leaderOffers, "nothing at present") + ".";
     s += "\nThey could offer: " + list(p.playerOffers, "nothing at present") + ".";
     s += "\nRules you never break: stay in character and in the world of the game. Never mention being an AI, a model, "

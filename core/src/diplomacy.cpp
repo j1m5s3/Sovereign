@@ -448,6 +448,8 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
     }
     add(OpinionReasonKind::Agenda, agendaOpinion(holder, about));
     add(OpinionReasonKind::Grievances, -std::min(30, grievances(holder, about) / 10));
+    // An AI leader's memory of this human from earlier games: grudges and respect (player-retention §1).
+    add(OpinionReasonKind::PastGames, rivalRespect(holder, about) - rivalGrudge(holder, about));
     return out;
 }
 
@@ -1101,6 +1103,7 @@ int Game::gossipLevel(EventKind kind) {
         case EventKind::Denounced:
         case EventKind::FriendshipDeclared:
         case EventKind::AssassinKilledLeader:
+        case EventKind::LeaderLost:
         case EventKind::Rebellion: return 1;
         case EventKind::DealAccepted:
         case EventKind::DealBroken:
@@ -1527,6 +1530,7 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::Grievances: return "Grievances";
         case OpinionReasonKind::UsedWmd: return "Used nuclear weapons";
         case OpinionReasonKind::Demanded: return "Made demands of us";
+        case OpinionReasonKind::PastGames: return "Our earlier wars and friendships";
     }
     return "?";
 }

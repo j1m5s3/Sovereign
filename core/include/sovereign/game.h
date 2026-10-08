@@ -48,6 +48,21 @@ struct PathStep {
     Fixed movesLeft;    // after entering this plot
 };
 
+// A personal aim for the leader, shown at turn end beside Civ's "X turns to Y" (player-retention §4).
+enum class LeaderGoalKind : uint8_t {
+    Promotion = 0,    // a promotion waits to be chosen
+    PromotionSoon,    // value: XP still to earn for the next one
+    AssassinNear,     // an assassin is reported in place to strike; value: 1 when the leader is exposed
+    CityUnrest,       // id: a city of ours that may revolt or rebel; value: its loyalty
+    RivalLeaderNear,  // id: the rival; value: plots between the leaders; at: the rival leader's plot
+};
+struct LeaderGoal {
+    LeaderGoalKind kind = LeaderGoalKind::Promotion;
+    int32_t value = 0;
+    int32_t id = -1;
+    Hex at;
+};
+
 // Places the map size's city-states at the start (08: City-States); used when a game is created.
 void placeCityStates(GameState& state, const Rules& rules);
 
@@ -306,6 +321,13 @@ public:
 
     // ---- player modelling (leader doc §10, AI layer 2)
     const PlayerProfile* profile(PlayerId player) const;  // nullptr before the first world turn
+    // ---- rivals who remember you (player-retention §1): an AI civ's memory of a human from earlier
+    // games (nullptr: none, or the setup turned it off), the grudge (0..30) and respect (0..15) it
+    // brings to opinions and targeting, and the memories to write back: earlier games plus this one.
+    const RivalMemory* rivalMemory(PlayerId ai, PlayerId human) const;
+    int rivalGrudge(PlayerId ai, PlayerId human) const;
+    int rivalRespect(PlayerId ai, PlayerId human) const;
+    std::vector<RivalMemory> rivalMemories(PlayerId human) const;
 
     // ---- city projects (03: Projects)
     void completeProject(City& city, TypeIndex project);  // its completion effects (the production queue calls it)
@@ -687,6 +709,9 @@ public:
     // An opening: the leader is outside a city, or in one with no own military unit on or next to its plot.
     bool leaderExposed(const Unit& leader) const;
     int assassinSuccessPercent(const Agent& agent, const Unit& leader) const;
+    // The leader's next personal goals, most pressing first: an assassin in place, a city near revolt, a rival
+    // leader within reach, a promotion to choose or close by (player-retention §4). Empty without a leader.
+    std::vector<LeaderGoal> leaderGoals(PlayerId player) const;
 
     // Sizes a player's per-rules vectors (trees, government uses, units trained).
     static void fitPlayerToRules(Player& p, const Rules& rules);
@@ -860,6 +885,7 @@ private:
     void processWorldCongress();       // world turn: convene, open sessions, count votes
     void processClimate();             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
     void processProfiles();            // world turn: update every major civ's play profile
+    void processRivals();              // world turn: this game's part of each human's rival memories
     void processSpaceRace();           // world turn: exoplanet expeditions travel
     void burnPower(PlayerId player);   // power [GS]: each city's demand met by free sources, then by plants burning fuel (CO2)
     int renewablePower(const City& city) const;  // from its Hydroelectric Dam and renewable improvements, before the Biosphère
@@ -914,7 +940,8 @@ private:
     void completeWonder(City& city, TypeIndex building);
     void spawnLeader(PlayerId p, Hex at);
     // The leader was beaten: captured (melee, city capture) or killed (ranged, its own failed attack).
-    void leaderLost(UnitId leader, PlayerId by, bool captured);
+    // A LeaderLost event records it unless an assassin's own event already does (inBattle false).
+    void leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle = true);
     // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
     void barbarianWound(Unit& leader);
     void startInterregnum(Player& p);

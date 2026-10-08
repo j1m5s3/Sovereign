@@ -304,7 +304,7 @@ void Game::startInterregnum(Player& p) {
     p.freeChanges = false;
 }
 
-void Game::leaderLost(UnitId leader, PlayerId by, bool captured) {
+void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) {
     const Unit* l = state_.unit(leader);
     const PlayerId owner = l->owner;
     Player& p = state_.players[static_cast<size_t>(owner)];
@@ -314,6 +314,7 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured) {
         if (o.escorting == leader) o.escorting = kNoUnit;
     }
     removeUnit(leader);
+    if (inBattle) pushEvent(EventKind::LeaderLost, by, owner, captured ? 1 : 0);
     if (state_.setup.regicide) {
         regicide(owner, by);
         return;
@@ -538,7 +539,7 @@ void Game::processAgents() {
             remember(victim, sender, MemoryKind::Assassin, -15, 60);
             if (l->hp <= 0) {
                 pushEvent(EventKind::AssassinKilledLeader, sender, victim, dmg);
-                leaderLost(leaderId, sender, false);
+                leaderLost(leaderId, sender, false, false);
             } else {
                 pushEvent(EventKind::AssassinWoundedLeader, sender, victim, dmg);
             }
@@ -571,6 +572,44 @@ void Game::barbarianWound(Unit& leader) {
         refreshVisibility(leader.owner);
         return;
     }
+}
+
+std::vector<LeaderGoal> Game::leaderGoals(PlayerId player) const {
+    std::vector<LeaderGoal> out;
+    const Unit* leader = leaderOf(player);
+    if (!leader) return out;
+    // An assassin in place to strike is reported, not who sent it (§6).
+    for (const Agent& a : state_.agents) {
+        if (!a.spy && a.owner != player && a.target == player && a.travel == 0) {
+            out.push_back({LeaderGoalKind::AssassinNear, leaderExposed(*leader) ? 1 : 0, -1, leader->pos});
+            break;
+        }
+    }
+    // Cities in Unrest, unhappy enough to rebel, or within 10 turns of revolting: a visit's stance helps (§4).
+    std::vector<LeaderGoal> cities;
+    const int unrestBelow = rules_->loyaltyLevels.size() > 1 ? rules_->loyaltyLevels[1].minLoyalty : 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != player) continue;
+        const int perTurn = static_cast<int>(loyaltyPerTurn(c.id).toInt());
+        const bool revolting = perTurn < 0 && c.loyalty <= -perTurn * 10;
+        if (c.loyalty < unrestBelow || c.rebellion > 0 || revolting) cities.push_back({LeaderGoalKind::CityUnrest, c.loyalty, c.id, c.pos});
+    }
+    std::sort(cities.begin(), cities.end(), [](const LeaderGoal& a, const LeaderGoal& b) { return a.value != b.value ? a.value < b.value : a.id < b.id; });
+    out.insert(out.end(), cities.begin(), cities.end());
+    // Rival leaders in sight within 3 plots: a melee on one goes live (leader doc §9).
+    std::vector<LeaderGoal> rivals;
+    for (const Unit& u : state_.units) {
+        if (u.owner == player || !isLeader(u) || visibility(player, u.pos) != Visibility::Visible) continue;
+        const int d = state_.grid.distance(leader->pos, u.pos);
+        if (d <= 3) rivals.push_back({LeaderGoalKind::RivalLeaderNear, d, u.owner, u.pos});
+    }
+    std::sort(rivals.begin(), rivals.end(), [](const LeaderGoal& a, const LeaderGoal& b) { return a.value != b.value ? a.value < b.value : a.id < b.id; });
+    out.insert(out.end(), rivals.begin(), rivals.end());
+    // A promotion to choose, or one within half a level's XP.
+    const int next = xpForNextLevel(*leader);
+    if (leader->xp >= next) out.push_back({LeaderGoalKind::Promotion, 0, leader->id, leader->pos});
+    else if ((next - leader->xp) * 2 <= next) out.push_back({LeaderGoalKind::PromotionSoon, next - leader->xp, leader->id, leader->pos});
+    return out;
 }
 
 }  // namespace sov

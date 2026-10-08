@@ -63,6 +63,8 @@ struct FSovSetup
 	// Online through Steam (a friends-only lobby and Steam's networking) instead of TCP.
 	bool bSteam = false;
 	uint64 SteamLobby = 0;  // joining: this lobby (0: wait for an invite)
+	// AI leaders remember this player from earlier games (player-retention §1); -SovNoRivals turns it off.
+	bool bRivalMemory = true;
 
 	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo, -SovNavalDemo,
 	// -SovDiploDemo, -SovHotSeat=N (N human seats), -SovHost (with -SovHumans=N), -SovJoin=address, -SovPort=, -SovName=, -SovAutoStart=N,
@@ -131,6 +133,8 @@ public:
 
 	// ---- player modelling (leader doc §10): the local human's play profile carried between games
 	static FString ProfilePath(const FString& PlayerName);
+	// The rival memories beside it (player-retention §1).
+	static FString RivalsPath(const FString& PlayerName);
 	void SaveProfile() const;  // writes the local seat's current profile (no-op without one)
 
 	// Bumped on every change to the game; observers resync when it moves.

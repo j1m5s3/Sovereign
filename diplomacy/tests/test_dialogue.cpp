@@ -65,6 +65,26 @@ TEST(the_persona_carries_agenda_relationship_and_memory) {
     CHECK(contains(sys, "Wine"));  // what England could offer
 }
 
+TEST(the_persona_remembers_earlier_games) {
+    // France's ruler remembers England from two earlier games, in one of which England took its crown.
+    GameState s = talkGame()->state();
+    RivalMemory m;
+    m.civ = rules().civs[static_cast<size_t>(s.players[1].civ)].id;
+    m.games = 2;
+    m.wars = 1;
+    m.leadersLost = 1;
+    s.setup.players[0].rivals = {m};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Persona p = buildPersona(*g, 1, 0);
+    REQUIRE(p.earlierGames.size() == 3u);
+    CHECK(contains(p.earlierGames[0], "2 earlier games"));
+    CHECK(contains(p.earlierGames[2], "slew your ruler 1 time"));
+    CHECK_EQ(p.crownsLost, 1);
+    CHECK(contains(systemPrompt(p), "from earlier games"));
+    // Without a memory the prompt says nothing of earlier games.
+    CHECK(!contains(systemPrompt(buildPersona(*talkGame(), 1, 0)), "from earlier games"));
+}
+
 TEST(model_json_becomes_deal_items) {
     auto g = talkGame();
     const Persona p = buildPersona(*g, 1, 0);

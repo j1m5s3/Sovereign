@@ -603,3 +603,45 @@ TEST(an_heir_keeps_one_promotion) {
     CHECK(g->leaderOf(0)->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WARY")});
     (void)leader;
 }
+
+TEST(leader_goals_put_the_most_pressing_first) {
+    CityId calm = kNoCity, restless = kNoCity;
+    UnitId mine = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        calm = addCity(s, 0, hx(3, 5), true);
+        restless = addCity(s, 0, hx(10, 9), false);
+        s.cities.back().loyalty = 20;  // below Unrest
+        mine = addLeader(s, 0, hx(5, 5));
+        addLeader(s, 1, hx(7, 5));
+    }, false);
+    // A city near revolt, then the rival leader two plots away; no promotion is near at 0 XP.
+    std::vector<LeaderGoal> goals = g->leaderGoals(0);
+    REQUIRE(goals.size() >= 2u);
+    CHECK(goals[0].kind == LeaderGoalKind::CityUnrest);
+    CHECK_EQ(goals[0].id, restless);
+    CHECK_EQ(goals[0].value, 20);
+    CHECK(std::none_of(goals.begin(), goals.end(), [&](const LeaderGoal& x) { return x.kind == LeaderGoalKind::CityUnrest && x.id == calm; }));
+    CHECK(goals[1].kind == LeaderGoalKind::RivalLeaderNear);
+    CHECK_EQ(goals[1].id, 1);
+    CHECK_EQ(goals[1].value, 2);
+    CHECK(goals.back().kind == LeaderGoalKind::RivalLeaderNear);
+
+    // An assassin in place goes first, and XP close to the next level shows last.
+    GameState s = g->state();
+    addAgent(s, 1, 0, 1);
+    for (Unit& u : s.units)
+        if (u.id == mine) u.xp = g->xpForNextLevel(u) - 3;
+    auto h = Game::fromScenario(rules(), std::move(s));
+    goals = h->leaderGoals(0);
+    REQUIRE(goals.size() >= 4u);
+    CHECK(goals.front().kind == LeaderGoalKind::AssassinNear);
+    CHECK_EQ(goals.front().value, 1);  // the leader stands outside a city: exposed
+    CHECK(goals.back().kind == LeaderGoalKind::PromotionSoon);
+    CHECK_EQ(goals.back().value, 3);
+    // An assassin still travelling is not reported, and nobody else's leader has goals here.
+    GameState t = h->state();
+    t.agents.back().travel = 2;
+    auto k = Game::fromScenario(rules(), std::move(t));
+    goals = k->leaderGoals(0);
+    CHECK(std::none_of(goals.begin(), goals.end(), [](const LeaderGoal& x) { return x.kind == LeaderGoalKind::AssassinNear; }));
+}

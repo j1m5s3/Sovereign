@@ -19,6 +19,7 @@ bool USovGameSubsystem::StartGame(const FSovSetup& Setup)
 		UE_LOG(LogSovereign, Error, TEXT("%s"), *LastMessage);
 		return false;
 	}
+	bWroteEnd = false;
 	LastMessage = Setup.Net == ESovNet::Local
 		? FString::Printf(TEXT("New game: seed %llu, %d players, %s%s"), Setup.Seed, Setup.Players, *Setup.MapSize,
 			  Setup.bHumanSeat0 ? (Setup.HumanSeats > 1 ? TEXT(" (hot seat)") : TEXT("")) : TEXT(" (spectating)"))
@@ -58,6 +59,18 @@ void USovGameSubsystem::Tick(float DeltaTime)
 	while (NetLines.Num() > 8)
 	{
 		NetLines.RemoveAt(0);
+	}
+	// The game is over for this player (a victory, or eliminated): the play profile and the rivals'
+	// memories travel to the next game whether or not it was saved (player-retention §1).
+	if (Session.IsRunning() && !bWroteEnd)
+	{
+		const sov::GameState& S = Session.GetGame().state();
+		const int32 Seat = Session.ViewPlayer();
+		if (Session.IsGameOver() || (Seat >= 0 && Seat < static_cast<int32>(S.players.size()) && !S.players[static_cast<size_t>(Seat)].alive))
+		{
+			Session.SaveProfile();
+			bWroteEnd = true;
+		}
 	}
 	// Online, the host plays the AI seats inside Poll; there is nothing to step here.
 	if (!Session.IsRunning() || Session.NetMode() != ESovNet::Local || Session.HandoverPending())
@@ -120,6 +133,7 @@ bool USovGameSubsystem::LoadGame(const FString& Name)
 		UE_LOG(LogSovereign, Error, TEXT("%s"), *LastMessage);
 		return false;
 	}
+	bWroteEnd = false;
 	LastMessage = FString::Printf(TEXT("Loaded %s (turn %d)"), *Name, Session.GetGame().state().turn);
 	UE_LOG(LogSovereign, Log, TEXT("%s"), *LastMessage);
 	OnStateChanged.Broadcast();

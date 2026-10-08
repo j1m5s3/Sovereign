@@ -31,6 +31,7 @@ FSovSetup FSovSetup::FromCommandLine()
 	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
 	Setup.bNavalDemo = FParse::Param(Cmd, TEXT("SovNavalDemo"));
 	Setup.bDiploDemo = FParse::Param(Cmd, TEXT("SovDiploDemo"));
+	Setup.bRivalMemory = !FParse::Param(Cmd, TEXT("SovNoRivals"));
 	FParse::Value(Cmd, TEXT("SovHotSeat="), Setup.HumanSeats);
 	FParse::Value(Cmd, TEXT("SovPort="), Setup.Port);
 	FParse::Value(Cmd, TEXT("SovName="), Setup.PlayerName);
@@ -170,6 +171,7 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
 		CoreSetup->players.push_back({Civ.id, Setup.bHumanSeat0 && i < Setup.HumanSeats});
 	}
+	CoreSetup->rivalMemory = Setup.bRivalMemory;
 	// The local human's profile from earlier games (leader doc §10, player modelling): it enters the
 	// game through the setup, so replays and every machine online see the same profile.
 	if (Setup.bHumanSeat0 && !CoreSetup->players.empty() && Mode != ESovNet::Join)
@@ -180,6 +182,12 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 		{
 			CoreSetup->players[0].hasProfile = true;
 			CoreSetup->players[0].profile = Loaded;
+		}
+		// The AI leaders' memories of this player from earlier games (player-retention §1).
+		std::vector<sov::RivalMemory> Rivals;
+		if (Setup.bRivalMemory && FFileHelper::LoadFileToString(Text, *RivalsPath(Setup.PlayerName)) && sov::rivalsFromText(TCHAR_TO_UTF8(*Text), Rivals))
+		{
+			CoreSetup->players[0].rivals = Rivals;
 		}
 	}
 	if (bSteam)
@@ -363,6 +371,11 @@ FString FSovSession::ProfilePath(const FString& PlayerName)
 	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Sovereign"), TEXT("Profiles"), Safe + TEXT(".txt"));
 }
 
+FString FSovSession::RivalsPath(const FString& PlayerName)
+{
+	return FPaths::ChangeExtension(ProfilePath(PlayerName), TEXT("rivals.txt"));
+}
+
 void FSovSession::SaveProfile() const
 {
 	const sov::Game* G = CurrentGame();
@@ -378,6 +391,12 @@ void FSovSession::SaveProfile() const
 	const FString Path = ProfilePath(LocalName);
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
 	FFileHelper::SaveStringToFile(FString(UTF8_TO_TCHAR(sov::profileToText(*P).c_str())), *Path);
+	// The rivals' memories: earlier games plus this one (player-retention §1).
+	const std::vector<sov::RivalMemory> Rivals = G->rivalMemories(static_cast<sov::PlayerId>(ViewSeat));
+	if (G->state().setup.rivalMemory && !Rivals.empty())
+	{
+		FFileHelper::SaveStringToFile(FString(UTF8_TO_TCHAR(sov::rivalsToText(Rivals).c_str())), *RivalsPath(LocalName));
+	}
 }
 
 const sov::Game* FSovSession::CurrentGame() const

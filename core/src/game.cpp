@@ -1664,6 +1664,7 @@ void Game::beginGlobalTurn() {
     assignQuests();
     placeAntiquity();
     processProfiles();
+    processRivals();
     processSpaceRace();
     processReligion();
     processAgents();
