@@ -327,6 +327,53 @@ TEST(suzerain_bonuses_in_code) {
     }
 }
 
+// Valletta (08: suzerain): walls for Faith though Gold cannot buy them, at half their price, standing at full strength once
+// bought as a building bought with Gold does, with what was put into them carried over; the Flood Barrier for Faith too.
+TEST(valletta_sells_walls_for_faith_at_half_price) {
+    const auto suzerainOf = [](const char* id) {
+        GameState s = csState();
+        s.players[2].cityState = rules().cityState(id);
+        s.players[0].envoys[2] = 3;
+        for (Player& p : s.players) p.relations.resize(3);
+        for (const char* t : {"TECH_MASONRY", "TECH_COMPUTERS"}) s.players[0].techs.done[at(rules().tech(t))] = 1;
+        s.players[0].faith = Fixed::fromInt(1000);
+        return s;
+    };
+    const CityId mine = csState().cities[0].id;
+    const ProductionItem walls{ProductionKind::Building, rules().building("BUILDING_ANCIENT_WALLS")};
+    const ProductionItem barrier{ProductionKind::Building, rules().building("BUILDING_FLOOD_BARRIER")};
+    const int gold = rules().globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules().globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
+    auto plain = Game::fromScenario(rules(), suzerainOf("CITYSTATE_MITLA"));
+    const City& theirs = *plain->state().city(mine);
+    CHECK_EQ(plain->purchaseCost(0, walls), -1);  // Gold never buys walls
+    CHECK_EQ(plain->faithPurchaseCost(0, theirs, walls), -1);
+    CHECK_EQ(plain->faithPurchaseCost(0, theirs, barrier), -1);
+    GameState s = suzerainOf("CITYSTATE_VALLETTA");
+    for (int i = 0; i < s.grid.size(); ++i) {  // the sea to the west, and the city's land out to 3 plots
+        const Hex h = s.grid.at(i);
+        if (h.x <= 1) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+        else if (s.grid.distance(h, s.city(mine)->pos) <= 3) claimFor(s, *s.city(mine), h);
+    }
+    s.city(mine)->queue = {walls};
+    s.city(mine)->progress = {{walls, Fixed::fromInt(30)}};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const City& c = *g->state().city(mine);
+    const int price = g->productionCost(0, walls) * gold / 2 / 5 * 5;
+    CHECK_EQ(g->purchaseCost(0, walls), -1);
+    CHECK_EQ(g->faithPurchaseCost(0, c, walls), price);
+    REQUIRE(g->productionCost(0, barrier, &c) > g->productionCost(0, barrier));  // the city's coastal lowlands
+    CHECK_EQ(g->faithPurchaseCost(0, c, barrier), g->productionCost(0, barrier, &c) * gold / 5 * 5);
+    const Fixed carried = c.overflow + Fixed::fromInt(30);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, mine, walls)) == CommandError::Ok);
+    CHECK(c.has(walls.type));
+    CHECK_EQ(c.wallHp, 100);
+    CHECK_EQ(g->state().players[0].faith, Fixed::fromInt(1000 - price));
+    CHECK(c.queue.empty());
+    CHECK(c.progress.empty());
+    CHECK_EQ(c.overflow, carried);
+    CHECK_EQ(g->faithPurchaseCost(0, c, walls), -1);  // standing already
+}
+
 TEST(samarkands_trading_domes_pay_international_routes) {
     // Samarkand (08): its suzerain's international routes earn +1 Gold per Trading Dome of the origin city.
     const auto routeGold = [](const char* cityState, int domes, bool pillageOne, bool domestic = false) {
