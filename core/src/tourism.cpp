@@ -151,7 +151,7 @@ int Game::parkAmenities(const City& city, ReportShare& shared) const {
 // wonder plot. The outcome is drawn by the results' base probabilities, each level of the band moving 2 points
 // from the two worst outcomes to the two best. The band's owner gains its album sales plus its tourism bomb as
 // tourism toward the city's civ (a negative bomb takes from the sales; Sovereign reading); a band may gain a
-// level (up to ROCK_BAND_MAX_LEVEL) or break up. Its level is kept in its XP (it has no promotions).
+// level (up to ROCK_BAND_MAX_LEVEL) or break up. Its level is kept in its XP (its promotions are not bought with XP).
 CommandError Game::concertProblem(PlayerId player, UnitId id) const {
     const Unit* u = state_.unit(id);
     if (!u || u->owner != player) return CommandError::NotYourUnit;
@@ -193,7 +193,12 @@ void Game::grantBandPromotion(Unit& band) {
         if (rules_->promotions[i].promotionClass != "PROMOTION_CLASS_ROCK_BAND") continue;
         if (std::find(band.promotions.begin(), band.promotions.end(), static_cast<TypeIndex>(i)) == band.promotions.end()) open.push_back(static_cast<TypeIndex>(i));
     }
-    if (open.empty()) return;
+    if (open.size() <= band.promotionPicks) return;  // none left beyond those it has still to choose
+    // Hallyu (04): the band chooses it (Promote) instead of drawing it.
+    if (policyIs(band.owner, "POLICY_HALLYU")) {
+        ++band.promotionPicks;
+        return;
+    }
     band.promotions.push_back(open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))]);
 }
 

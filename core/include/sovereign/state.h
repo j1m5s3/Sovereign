@@ -80,6 +80,7 @@ struct Unit {
     // Fountain of Youth (+10 HP healing a turn), bit 2 Bermuda Triangle (+1 movement).
     uint8_t wonderAbilities = 0;  // natural wonder gifts (1 Everest, 2 Fountain of Youth, 4 Bermuda); 0x40 Pilgrim and 0x80 Indulgence Vendor spent
     int16_t xpBonus = 0;  // + % combat XP for good (a great general's or admiral's gift, 07; a Calmecac's)
+    uint8_t promotionPicks = 0;  // promotions it may choose without the XP (a Rock Band's under Hallyu, 04)
 
     int level() const { return 1 + static_cast<int>(promotions.size()); }
 };
