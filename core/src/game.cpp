@@ -650,7 +650,6 @@ Game::StepUnit Game::stepUnit(const Unit& unit, const MoveTraits& traits) const 
     su.traits = &traits;
     const UnitType& ut = typeOf(*rules_, unit);
     su.domain = ut.domain;
-    su.heli = ut.unitClass == "HELICOPTER";
     su.embarkCost = rules_->globalInt(HotGlobal::MovementEmbarkCost);
     su.riverCost = rules_->globalInt(HotGlobal::MovementRiverCost);
     return su;
@@ -732,8 +731,9 @@ std::optional<Fixed> Game::stepCost(const StepUnit& su, const StepInto& to, cons
         case StepKind::Land: break;
     }
     if (from.afloat) return Fixed::fromInt((su.traits->freeEmbark ? 0 : su.embarkCost) + std::max(to.cost, 1));  // disembarking
-    // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes).
-    const bool river = riverEdgeBetween(from.riverEdges, to.riverEdges, dir);
+    // Along a road the road's cost replaces the terrain's; later roads bridge rivers (01: Routes). A unit that ignores
+    // rivers (Amphibious, the Helicopter) crosses them at no extra cost either way (05).
+    const bool river = !su.traits->noRiver && riverEdgeBetween(from.riverEdges, to.riverEdges, dir);
     if (to.road >= 0 && from.road >= 0) {
         const RouteType& slow = rules_->routes[static_cast<size_t>(std::min(to.road, from.road))];
         Fixed rc = slow.moveCost;
@@ -741,7 +741,7 @@ std::optional<Fixed> Game::stepCost(const StepUnit& su, const StepInto& to, cons
         return rc;
     }
     int cost = to.cost;
-    if (river && !su.heli) cost += su.riverCost;  // helicopters fly over (05)
+    if (river) cost += su.riverCost;
     return Fixed::fromInt(std::max(cost, 1));
 }
 
