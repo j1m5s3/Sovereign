@@ -469,12 +469,37 @@ TEST(an_encampment_strikes_and_holds_ground) {
     REQUIRE(g->submit(Command::encampmentStrike(1, cid, {12, 5})) == CommandError::Ok);
     CHECK(g->state().unit(foe)->hp < 100);
     CHECK(!g->canEncampmentStrike(cid, {12, 5}));  // once a turn
-    // Zone of control next to it, and +2 city strength.
+    // Zone of control next to it, which path planning reads too, and +2 city strength.
     CHECK(g->inEnemyZoc(*g->state().unit(foe), {11, 5}));
+    const std::optional<std::vector<PathStep>> path = g->findPath(foe, {11, 5});
+    REQUIRE(path && path->size() == 2u);
+    CHECK_EQ(path->back().movesLeft, Fixed());
     GameState s = g->state();
     s.cities[0].districts.clear();
     auto bare = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->cityStrength(g->state().cities[0]), bare->cityStrength(bare->state().cities[0]) + 2);
+}
+
+// A planned path ends its move beside an Encampment only as its zone of control has it: a finished one, of a civ at
+// war with the mover (03: Defense).
+TEST(an_encampment_stops_planned_moves_only_finished_and_at_war) {
+    for (int c = 0; c < 4; ++c) {  // at war; unfinished; at peace; the Encampment's own civ's unit
+        UnitId mover = kNoUnit;
+        auto g = siege([&](GameState& s) {
+            CityDistrict camp;
+            camp.type = rules().district("DISTRICT_ENCAMPMENT");
+            camp.pos = {10, 5};
+            camp.complete = c != 1;
+            s.cities[0].districts.push_back(camp);
+            s.plot({10, 5}).owner = 1;
+            s.plot({10, 5}).city = s.cities[0].id;
+            mover = sovtest::addUnit(s, "UNIT_WARRIOR", c == 3 ? 1 : 0, {12, 5});
+            for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+        }, c != 2);
+        const std::optional<std::vector<PathStep>> path = g->findPath(mover, {11, 5});
+        REQUIRE(path && path->size() == 2u);
+        CHECK_EQ(path->back().movesLeft, c == 0 ? Fixed() : Fixed::fromInt(1));
+    }
 }
 
 TEST(a_coastal_camp_puts_ships_to_sea) {

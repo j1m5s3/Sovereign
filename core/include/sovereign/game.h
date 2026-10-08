@@ -979,9 +979,13 @@ private:
     void applyEndTurn(const Command& c);
     // Moves the unit along its move order as far as its moves allow.
     void advanceUnit(UnitId id);
-    // findPath's search; with `along`, one kept to the plots of `along` (and without enemy ZOC, which changes only the
-    // moves a path leaves): a path it finds then shows that findPath finds one too. With `reach`, a search with no goal
-    // (nor ZOC) that marks in it every plot it gets to.
+    // How far `path` takes a unit about to step onto a plot one of its owner's units of its layer holds, this turn: past
+    // them to a free plot (1), to the end of its moves among them (0), or to the path's end with them still there (-1).
+    int passOurs(const Unit& unit, const std::vector<PathStep>& path) const;
+    // findPath's search; with `along`, one kept to the plots of `along` (and with enemy ZOC only where it ends a pass
+    // over our units, as elsewhere it changes only the moves a path leaves): a path it finds then shows that findPath
+    // finds one too. With `reach`, a search with no goal (reading ZOC the same way) that marks in it every plot it gets
+    // to.
     std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
                                                     std::vector<uint8_t>* reach = nullptr) const;
     // The unit a move order for `unit` is planned for: a linked escort's moves the pair, so it is planned for the leader.
@@ -1032,6 +1036,7 @@ private:
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
+    TypeIndex encampment_ = kNone;            // DISTRICT_ENCAMPMENT: exerts zone of control like a city (markZoc)
     std::vector<TypeIndex> oceanTechs_;       // the techs that open the Ocean (Cartography)
     std::vector<TypeIndex> embarkTechs_;      // the techs that let land units, or one of their types, embark
     // Each tech's and civic's era, by index (playerEra), raised to 0 where below: a player's era is never below the first.

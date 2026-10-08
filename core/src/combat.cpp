@@ -434,7 +434,15 @@ void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) 
             if (h && *h != center) plots[static_cast<size_t>(state_.grid.index(*h))] |= bit;
         }
     };
-    for (const City& c : state_.cities) if (atWar(mover.owner, c.owner)) mark(c.pos);
+    for (const City& c : state_.cities) {
+        if (atWar(mover.owner, c.owner)) mark(c.pos);
+        // An Encampment exerts zone of control like a city, its plot's owner's (inEnemyZoc).
+        for (const CityDistrict& d : c.districts) {
+            if (!d.complete || d.type != encampment_) continue;
+            const PlayerId owner = state_.plot(d.pos).owner;
+            if (owner != kNoPlayer && atWar(mover.owner, owner)) mark(d.pos);
+        }
+    }
     for (const Unit& u : state_.units) if (atWar(mover.owner, u.owner) && exertsZoc(u)) mark(u.pos);
 }
 

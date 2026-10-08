@@ -258,6 +258,49 @@ TEST(zone_of_control_ends_planned_moves_on_every_side) {
     }
 }
 
+// So does a step past one of ours (05: Stacking): a Scout through the gap one of ours holds, in a wall of mountains,
+// plans its stop on the plot beyond it, beside the enemy.
+TEST(zone_of_control_ends_planned_moves_past_our_units) {
+    UnitId scout = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        for (int y = 0; y < 12; ++y) {
+            if (y != 6) s.plot({6, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        }
+        addUnit(s, "UNIT_WARRIOR", 1, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+        scout = addUnit(s, "UNIT_SCOUT", 0, {5, 6});
+    });
+    const auto path = g->findPath(scout, {7, 6});
+    REQUIRE(path && path->size() == 3u);
+    CHECK_EQ(path->back().turn, 0);
+    CHECK_EQ(path->back().movesLeft, Fixed());
+}
+
+// Nor may a unit wait to pass one of ours in an enemy's zone of control: entering its plot would end the move there.
+// Through the one gap in a wall of mountains, held by one of ours beside an enemy, there is no way at war; a move
+// reach, which reads zone of control only where it decides that much, agrees.
+TEST(zone_of_control_closes_a_gap_our_unit_holds) {
+    for (bool war : {true, false}) {
+        UnitId w = kNoUnit;
+        auto g = duel([&](GameState& s) {
+            s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+            for (int y = 0; y < 12; ++y) {
+                if (y != 6) s.plot({6, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+            }
+            addUnit(s, "UNIT_WARRIOR", 1, {5, 7});
+            addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+            w = addUnit(s, "UNIT_WARRIOR", 0, {5, 4});
+        }, war);
+        const HexGrid& grid = g->state().grid;
+        const std::vector<uint8_t> reach = g->moveReach(w);
+        for (const Hex h : {Hex{6, 6}, Hex{7, 6}, Hex{8, 6}}) {
+            CHECK_EQ(reach[static_cast<size_t>(grid.index(h))] != 0, g->findPath(w, h).has_value());
+        }
+        CHECK_EQ(reach[static_cast<size_t>(grid.index({8, 6}))] != 0, !war);
+        CHECK_EQ(g->submit(Command::move(0, w, {8, 6})), war ? CommandError::NoPath : CommandError::Ok);
+    }
+}
+
 TEST(promotion_and_healing) {
     const Rules& r = rules();
     UnitId w = kNoUnit;

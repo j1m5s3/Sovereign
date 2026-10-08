@@ -203,6 +203,141 @@ TEST(game_one_unit_per_tile) {
     CHECK(!g->moveCost(*g->state().unit(b), {5, 4}, {4, 6}).has_value());
 }
 
+// A unit may pass its owner's units of its layer but never end a turn on one (05: Stacking): its path plans no turn's
+// end there, so it stops short and passes next turn, goes around, or has no path.
+TEST(game_moves_never_end_on_our_units) {
+    // A wall of mountains at x = 5 with one gap, (5,6), where one of our Builders stands; hills beyond it if asked.
+    const auto wall = [](bool hills) {
+        GameState s = flatState(20, 14, 1);
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        for (int y = 0; y < 14; ++y) {
+            if (y != 6) setTerrain(s, {5, y}, "TERRAIN_GRASS_MOUNTAIN");
+            if (hills) setTerrain(s, {6, y}, "TERRAIN_GRASS_HILLS");
+        }
+        return s;
+    };
+    {
+        // In the gap a Builder has 1 MP left, too little for the hills (2): it would end its turn on the other one.
+        GameState s = wall(true);
+        const UnitId a = addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        const UnitId b = addUnit(s, "UNIT_BUILDER", 0, {4, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(g->submit(Command::move(0, b, {7, 6})), CommandError::NoPath);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{4, 6}));
+        // The other one goes back through b's plot, which it gets past.
+        REQUIRE(g->submit(Command::move(0, a, {3, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(a)->pos, (Hex{3, 6}));
+        REQUIRE(g->submit(Command::move(0, b, {7, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{5, 6}));
+    }
+    {
+        // One of another layer is no obstacle: a Warrior's move ends in the gap with the Builder.
+        GameState s = wall(true);
+        addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::move(0, w, {7, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(w)->pos, (Hex{5, 6}));
+    }
+    {
+        // From (3,6) a Builder would reach the gap with no moves left: it waits a plot short and passes next turn,
+        // as its path says.
+        GameState s = wall(false);
+        const UnitId a = addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        const UnitId b = addUnit(s, "UNIT_BUILDER", 0, {3, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const std::optional<std::vector<PathStep>> path = g->findPath(b, {7, 6});
+        REQUIRE(path.has_value());
+        CHECK_EQ(path->back().turn, 2);
+        REQUIRE(g->submit(Command::move(0, b, {7, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{4, 6}));
+        REQUIRE(g->submit(Command::setActivity(0, a, Activity::Sleep)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{6, 6}));
+        REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{7, 6}));
+    }
+    {
+        // Meanwhile another of ours took the order's end, beyond the one in the gap: the order ends where b stands.
+        GameState s = wall(false);
+        const UnitId a = addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        const UnitId b = addUnit(s, "UNIT_BUILDER", 0, {3, 6});
+        const UnitId c = addUnit(s, "UNIT_BUILDER", 0, {7, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::move(0, b, {6, 6})) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{4, 6}));
+        REQUIRE(g->submit(Command::move(0, c, {6, 6})) == CommandError::Ok);
+        REQUIRE(g->submit(Command::setActivity(0, a, Activity::Sleep)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::setActivity(0, c, Activity::Sleep)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
+        CHECK_EQ(g->state().unit(b)->pos, (Hex{4, 6}));
+        CHECK(!g->state().unit(b)->moveTarget.has_value());
+    }
+    for (const char* mover : {"UNIT_SCOUT", "UNIT_WARRIOR"}) {
+        // Two of ours in a row, before the gap and in it: a Scout (3 MP) gets past both in one move; a Warrior (2 MP)
+        // may stop on neither, so it goes around the first and passes the second next turn.
+        GameState s = wall(false);
+        const UnitId a = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        const UnitId b = addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
+        const UnitId m = addUnit(s, mover, 0, {3, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const bool scout = std::string(mover) == "UNIT_SCOUT";
+        const std::optional<std::vector<PathStep>> path = g->findPath(m, {6, 6});
+        REQUIRE(path.has_value());
+        CHECK_EQ(path->back().turn, scout ? 0 : 1);
+        if (scout) {
+            REQUIRE(path->size() == 4u);
+            CHECK_EQ((*path)[1].pos, (Hex{4, 6}));
+            CHECK_EQ((*path)[2].pos, (Hex{5, 6}));
+        }
+        REQUIRE(g->submit(Command::move(0, m, {6, 6})) == CommandError::Ok);
+        REQUIRE(g->submit(Command::setActivity(0, a, Activity::Fortify)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::setActivity(0, b, Activity::Fortify)) == CommandError::Ok);
+        if (!scout) {
+            CHECK(g->state().unit(m)->pos != (Hex{4, 6}));
+            REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
+        }
+        CHECK_EQ(g->state().unit(m)->pos, (Hex{6, 6}));
+    }
+    {
+        // The wall at x = 6 now, one of ours in its gap (6,6). A Horseman (4 MP) a hill away from the gap reaches it
+        // with 1 MP from (5,6), or the turn after from (5,5), across a river: that later arrival with more moves does
+        // not stand for the earlier one, which goes on this turn.
+        GameState s = flatState(20, 14, 1);
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        for (int y = 0; y < 14; ++y) {
+            if (y != 6) setTerrain(s, {6, y}, "TERRAIN_GRASS_MOUNTAIN");
+        }
+        setTerrain(s, {5, 5}, "TERRAIN_GRASS_HILLS");
+        setTerrain(s, {5, 6}, "TERRAIN_GRASS_HILLS");
+        setTerrain(s, {5, 7}, "TERRAIN_GRASS_MOUNTAIN");
+        s.plot({5, 5}).riverEdges = kRiverSE;  // between (5,5) and (6,6)
+        addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+        const UnitId h = addUnit(s, "UNIT_HORSEMAN", 0, {4, 5});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const std::optional<std::vector<PathStep>> path = g->findPath(h, {7, 6});
+        REQUIRE(path.has_value());
+        CHECK_EQ(path->back().turn, 0);
+        CHECK_EQ((*path)[1].pos, (Hex{5, 6}));
+    }
+    {
+        // On open ground a Warrior goes around one of ours standing before woods rather than stop on it.
+        GameState s = flatState(20, 14, 1);
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        setFeature(s, {5, 6}, "FEATURE_FOREST");
+        const UnitId a = addUnit(s, "UNIT_WARRIOR", 0, {4, 6});
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {3, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->submit(Command::setActivity(0, a, Activity::Fortify)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::move(0, w, {7, 6})) == CommandError::Ok);
+        for (int turn = 0; turn < 3 && g->state().unit(w)->moveTarget; ++turn) {
+            CHECK(g->state().unit(w)->pos != g->state().unit(a)->pos);
+            REQUIRE(g->submit(Command::endTurn(0)) == CommandError::Ok);
+        }
+        CHECK_EQ(g->state().unit(w)->pos, (Hex{7, 6}));
+    }
+}
+
 TEST(game_end_turn_needs_orders_and_cycles_players) {
     GameState s = flatState(16, 12, 2);
     UnitId w0 = addUnit(s, "UNIT_WARRIOR", 0, {3, 3});
