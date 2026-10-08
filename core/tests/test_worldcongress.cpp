@@ -213,6 +213,15 @@ TEST(luxury_policy_and_deforestation_treaty) {
     auto plain = Game::fromScenario(rules(), s);
     auto banned = withResolution("RESOLUTION_LUXURY_POLICY", 1, lux, s);
     CHECK_EQ(banned->luxuryAmenities(banned->state().cities[0]), plain->luxuryAmenities(plain->state().cities[0]) - 1);
+    // Option A: the luxury reaches eight cities instead of four.
+    for (Hex h : {Hex{4, 10}, Hex{4, 2}, Hex{10, 10}, Hex{10, 2}, Hex{24, 10}}) addCity(s, 0, h, false, 3);
+    const auto reached = [](const Game& g) {
+        int n = 0;
+        for (const City& c : g.state().cities) n += c.owner == 0 ? g.luxuryAmenities(c) : 0;
+        return n;
+    };
+    CHECK_EQ(reached(*Game::fromScenario(rules(), s)), 4);
+    CHECK_EQ(reached(*withResolution("RESOLUTION_LUXURY_POLICY", 0, lux, s)), 6);
     // Deforestation Treaty A: woods may not be chopped.
     GameState w = wcState();
     const TypeIndex forest = rules().feature("FEATURE_FOREST");

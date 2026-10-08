@@ -1122,12 +1122,13 @@ private:
     void addCopies(PlayerId player, TypeIndex only, std::vector<int>& n) const;
     // The part of them not counted off its land: corporations' products, luxuries granted, Zanzibar's spices.
     void addCopiesOffMap(PlayerId player, TypeIndex only, std::vector<int>& n) const;
-    // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld, the
-    // National Park plots of each city, the owner's suzerainBonus by city-state kind (0 not asked yet, 1 no, 2
-    // yes), and the cities holding the buildings whose modifiers reach all its cities. Valid while no city changes
-    // hands and no building is built or lost.
+    // What a run of one civ's city reports shares, each part worked out on first use: the owner's luxuriesHeld and
+    // luxuryShares, the National Park plots of each city, the owner's suzerainBonus by city-state kind (0 not asked
+    // yet, 1 no, 2 yes), and the cities holding the buildings whose modifiers reach all its cities. Valid while no
+    // city changes hands, grows or shrinks and no building is built or lost.
     struct ReportShare {
         std::optional<std::vector<uint8_t>> luxuries;
+        std::optional<std::vector<std::pair<CityId, int>>> luxuryShares;
         std::optional<std::map<CityId, int>> parkPlots;
         uint8_t suzerain[static_cast<size_t>(Cs::Count)] = {};
         BuildingHolders holders;
@@ -1140,6 +1141,8 @@ private:
     // `report`, when given, gets the report the change was worked out from (none for a city-state's or a Free City's).
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<CityReport>* report = nullptr) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
+    // The Amenities each of the player's cities gets from luxuries, in state order.
+    std::vector<std::pair<CityId, int>> luxuryShares(PlayerId player, ReportShare& shared) const;
     int parkAmenities(const City& city, ReportShare& shared) const;
     // goldPerTurn from the player's city reports, in city order, when the caller has made them already.
     Fixed goldPerTurn(PlayerId player, const std::vector<CityReport>* reports) const;

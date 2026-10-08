@@ -338,20 +338,34 @@ TEST(luxury_gives_amenities) {
     CHECK_EQ(g->cityReport(city).amenities, before + 1);
 }
 
-TEST(a_luxury_reaches_the_largest_cities_first_then_the_oldest) {
-    // Wine gives an Amenity to four cities: the largest first, and of those as large the first founded.
-    const auto amenities = [](int lastPopulation) {
-        GameState s = flatState(50, 14, 1);
-        Game::fitPlayerToRules(s.players[0], rules());
-        for (int i = 0; i < 5; ++i) sovtest::addCity(s, 0, {4 + 9 * i, 6}, i == 0, i == 4 ? lastPopulation : 3);
-        s.plot({4, 6}).resource = rules().resource("RESOURCE_WINE");  // on the capital's center: improved
+TEST(luxuries_reach_the_cities_that_need_them_most) {
+    // Each luxury gives an Amenity to four cities: those whose population asks the most Amenities luxuries have not
+    // given yet, then the larger, then the first founded. `luxuries` sit on the first cities' centers (improved).
+    const auto amenities = [](std::vector<int> population, std::vector<const char*> luxuries, int foreign = 0) {
+        GameState s = flatState(50, 14, 2);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        for (size_t i = 0; i < population.size(); ++i) sovtest::addCity(s, 0, {4 + 9 * static_cast<int>(i), 6}, i == 0, population[i]);
+        for (size_t i = 0; i < luxuries.size(); ++i) s.plot({4 + 9 * static_cast<int>(i), 6}).resource = rules().resource(luxuries[i]);
+        for (int i = 0; i < foreign; ++i) sovtest::addCity(s, 1, {4 + 9 * i, 11}, i == 0, 9);  // another civ's
         auto g = Game::fromScenario(rules(), std::move(s));
         std::vector<int> out;
-        for (const City& c : g->state().cities) out.push_back(g->luxuryAmenities(c));
+        for (const City& c : g->state().cities) {
+            if (c.owner == 0) out.push_back(g->luxuryAmenities(c));
+        }
         return out;
     };
-    CHECK(amenities(3) == (std::vector<int>{1, 1, 1, 1, 0}));
-    CHECK(amenities(4) == (std::vector<int>{1, 1, 1, 0, 1}));
+    // One luxury: the largest cities, and of those as large the first founded.
+    CHECK(amenities({3, 3, 3, 3, 3}, {"RESOURCE_WINE"}) == (std::vector<int>{1, 1, 1, 1, 0}));
+    CHECK(amenities({3, 3, 3, 3, 4}, {"RESOURCE_WINE"}) == (std::vector<int>{1, 1, 1, 0, 1}));
+    // Three: the capital asks 4 Amenities and gets one of each; the second and third go where the first did not
+    // reach, so the fifth city has two where the four largest cities used to take them all.
+    CHECK(amenities({9, 3, 3, 3, 3}, {"RESOURCE_WINE", "RESOURCE_SALT", "RESOURCE_DIAMONDS"}) == (std::vector<int>{3, 3, 2, 2, 2}));
+    // Another civ's cities take none, however much they ask.
+    CHECK(amenities({9, 3, 3, 3, 3}, {"RESOURCE_WINE", "RESOURCE_SALT", "RESOURCE_DIAMONDS"}, 4) == (std::vector<int>{3, 3, 2, 2, 2}));
+    // Cities that ask none (populations 1 and 2) share what is left, the larger first: none gets a second before each has one.
+    CHECK(amenities({7, 5, 1, 2, 2}, {"RESOURCE_WINE", "RESOURCE_SALT"}) == (std::vector<int>{2, 2, 1, 2, 1}));
+    // But not while others still ask: five cities of 9 ask 4 each, so the sixth, of 1, gets none.
+    CHECK(amenities({9, 9, 9, 9, 9, 1}, {"RESOURCE_WINE", "RESOURCE_SALT"}) == (std::vector<int>{2, 2, 2, 1, 1, 0}));
 }
 
 TEST(builder_harvests_woods_and_bonus_resources) {
