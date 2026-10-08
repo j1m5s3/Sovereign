@@ -336,7 +336,8 @@ void Game::resolveSpyOperation(Agent& a) {
             TypeIndex best = kNone;
             for (size_t i = 0; i < rules_->units.size(); ++i) {
                 const UnitType& ut = rules_->units[i];
-                if (ut.unitClass != "MELEE" || ut.domain != Domain::Land || ut.uniqueTo != kNone || !hasUnlocked(victim, ut.unlock)) continue;
+                if (ut.unitClass != "MELEE" || ut.domain != Domain::Land || ut.uniqueTo != kNone || ut.cityState != kNone || !hasUnlocked(victim, ut.unlock))
+                    continue;
                 if (best == kNone || ut.combat > rules_->units[at(best)].combat) best = static_cast<TypeIndex>(i);
             }
             int raised = 0;

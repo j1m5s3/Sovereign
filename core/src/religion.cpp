@@ -193,8 +193,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
             return -1;
         // Missionaries and Apostles carry the city's majority religion; Inquisitors, Gurus and
         // Warrior Monks wait for the beliefs and actions that open them.
-        // Naturalists and Rock Bands are bought with Faith whatever the city follows (07).
-        const bool secular = u.id == "UNIT_NATURALIST" || u.id == "UNIT_ROCK_BAND";
+        // Naturalists and Rock Bands are bought with Faith whatever the city follows (07), and so is a city-state's unit
+        // (Lahore's Nihang, 08), by whoever enjoys the city-state's suzerain bonus.
+        if (u.cityState != kNone && !enjoysSuzerainBonus(state_, *rules_, player, u.cityState, cityStateOfType(u.cityState))) return -1;
+        const bool secular = u.id == "UNIT_NATURALIST" || u.id == "UNIT_ROCK_BAND" || u.cityState != kNone;
         // Warrior Monks (06): bought where the city follows a religion with the belief.
         const bool monk = u.id == "UNIT_WARRIOR_MONK" && cityFollows(city, Bf::WarriorMonks);
         // Gurus wherever the city follows a religion; Inquisitors after Launch Inquisition, in cities of the player's own (06).
@@ -203,7 +205,8 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (!secular && majority < 0) return -1;
         const int copies = at(item.type) < p.unitsTrained.size() ? p.unitsTrained[at(item.type)] : 0;
         int cost = (u.cost + u.costProgression * copies) * speed / 100;
-        const int discount = static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());
+        // Holy Order's discount is for religious units, which a city-state's soldiers are not.
+        const int discount = u.cityState != kNone ? 0 : static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());
         cost = cost * std::max(0, 100 - discount) / 100;
         if (u.id == "UNIT_GURU" && buildingsOwned(player, "BUILDING_MEENAKSHI_TEMPLE") > 0) cost = cost * 70 / 100;  // Meenakshi Temple (03)
         cost = cost * mercenaryPercent(player, item.type, YieldType::Faith) / 100;  // Mercenary Companies (World Congress): Warrior Monks

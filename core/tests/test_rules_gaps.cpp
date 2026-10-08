@@ -141,6 +141,15 @@ TEST(unhappy_cities_breed_rebels) {
     const size_t units = g->state().units.size();
     sovtest::endTurns(*g, 1);
     CHECK(g->state().units.size() > units);  // the rebels
+    // They carry the strongest melee arms their city's owner can field: with no techs, Warriors, never Lahore's
+    // Nihang (25 strength and needing no tech, but the city-state's own; 08).
+    int warriors = 0;
+    for (const Unit& u : g->state().units) {
+        if (u.owner != 1) continue;
+        CHECK(u.type != rules().unit("UNIT_NIHANG"));
+        warriors += u.type == rules().unit("UNIT_WARRIOR") ? 1 : 0;
+    }
+    CHECK(warriors > 0);
     CHECK_EQ(g->state().city(c)->rebellion, 0);
     CHECK(g->state().city(c)->rebellionCooldown > g->state().turn);
 }

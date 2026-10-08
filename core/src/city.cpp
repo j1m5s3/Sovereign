@@ -50,7 +50,7 @@ int trainedXpPercent(const Rules& r, const City& city, const UnitType& u) {
         total += u.promotionClass.empty() ? 0 : b.trainedXpPercent;
         if (b.trainedAbility == kNone) continue;
         const AbilityType& a = r.abilities[static_cast<size_t>(b.trainedAbility)];
-        if (std::find(a.classes.begin(), a.classes.end(), u.unitClass) == a.classes.end()) continue;
+        if (!hasClassIn(u, a.classes)) continue;
         for (const UnitEffect& e : a.effects) total += e.kind == UnitEffectKind::XpPercent ? e.amount : 0;
     }
     return total;

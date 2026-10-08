@@ -272,6 +272,28 @@ TEST(a_breached_dam_leaves_the_floodplains_to_the_builders) {
     CHECK(g->state().plot({16, 7}).pillagedTurns == kPillagedUntilRepaired);
 }
 
+TEST(recruited_partisans_carry_the_owners_best_melee_arms) {
+    // Two rebels (barbarians) of the strongest melee unit the city's owner can field: with no techs, Warriors, never
+    // Lahore's Nihang (25 strength and needing no tech, but the city-state's own; 08).
+    GameState s = spyState(4);
+    addDistrict(s.cities[1], "DISTRICT_NEIGHBORHOOD", {16, 7});
+    std::fill(s.players[1].techs.done.begin(), s.players[1].techs.done.end(), 0);
+    Player rebels;
+    rebels.id = 2;
+    rebels.civ = kNone;
+    rebels.barbarian = true;
+    s.players.push_back(rebels);
+    auto g = succeed(s, SpyMission::RecruitPartisans);
+    REQUIRE(g);
+    int warriors = 0;
+    for (const Unit& u : g->state().units) {
+        if (u.owner != 2) continue;
+        CHECK(u.type != rules().unit("UNIT_NIHANG"));
+        warriors += u.type == rules().unit("UNIT_WARRIOR") ? 1 : 0;
+    }
+    CHECK(warriors >= 2);  // the two partisans, besides any a barbarian camp sent out
+}
+
 TEST(a_successful_spy_earns_a_promotion) {
     GameState s = spyState(1);
     auto g = succeed(s, SpyMission::SiphonFunds);

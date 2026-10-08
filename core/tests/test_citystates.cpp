@@ -374,6 +374,56 @@ TEST(valletta_sells_walls_for_faith_at_half_price) {
     CHECK_EQ(g->faithPurchaseCost(0, c, walls), -1);  // standing already
 }
 
+// Lahore (08: suzerain): its suzerain buys the Nihang with Faith, at its cost (never trained, and not one of the religious
+// units Holy Order makes cheaper); a Nihang has +15 Combat Strength for each of a Barracks, an Armory and a Military
+// Academy its owner has.
+TEST(lahores_suzerain_buys_nihangs_that_military_buildings_strengthen) {
+    const auto suzerainOf = [](const char* id) {
+        GameState s = csState();
+        s.players[2].cityState = rules().cityState(id);
+        s.players[0].envoys[2] = 3;
+        for (Player& p : s.players) p.relations.resize(3);
+        s.players[0].faith = Fixed::fromInt(1000);
+        s.players[0].civics.done[at(rules().civic("CIVIC_CONSERVATION"))] = 1;
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {rules().belief("BELIEF_HOLY_ORDER")}});
+        s.players[0].religion = 0;
+        return s;
+    };
+    const CityId mine = csState().cities[0].id;
+    const ProductionItem nihang{ProductionKind::Unit, rules().unit("UNIT_NIHANG")};
+    const ProductionItem naturalist{ProductionKind::Unit, rules().unit("UNIT_NATURALIST")};
+    REQUIRE(nihang.type != kNone);
+    auto plain = Game::fromScenario(rules(), suzerainOf("CITYSTATE_MITLA"));
+    CHECK_EQ(plain->faithPurchaseCost(0, *plain->state().city(mine), nihang), -1);
+    auto g = Game::fromScenario(rules(), suzerainOf("CITYSTATE_LAHORE"));
+    const City& c = *g->state().city(mine);
+    CHECK(!g->canProduce(c, nihang));
+    CHECK_EQ(g->faithPurchaseCost(0, c, naturalist), rules().units[at(naturalist.type)].cost * 70 / 100);  // Holy Order
+    const int price = rules().units[at(nihang.type)].cost;
+    CHECK_EQ(g->faithPurchaseCost(0, c, nihang), price);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, mine, nihang)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].faith, Fixed::fromInt(1000 - price));
+    CHECK_EQ(std::count_if(g->state().units.begin(), g->state().units.end(),
+                           [&](const Unit& u) { return u.owner == 0 && u.type == nihang.type && u.religion < 0; }),
+             1);
+
+    const auto strength = [](std::vector<const char*> buildings, const char* type) {
+        GameState s = csState();
+        for (const char* b : buildings) s.cities[0].buildings.push_back(rules().building(b));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        const UnitId ours = addUnit(s, type, 0, {6, 6});
+        const UnitId foe = addUnit(s, "UNIT_WARRIOR", 1, {12, 6});
+        auto game = Game::fromScenario(rules(), std::move(s));
+        return game->combatStrength(*game->state().unit(ours), *game->state().unit(foe), true, false);
+    };
+    CHECK_EQ(strength({}, "UNIT_NIHANG"), 25);
+    CHECK_EQ(strength({"BUILDING_BARRACKS"}, "UNIT_NIHANG"), 40);
+    CHECK_EQ(strength({"BUILDING_BARRACKS", "BUILDING_ARMORY"}, "UNIT_NIHANG"), 55);
+    CHECK_EQ(strength({"BUILDING_STABLE", "BUILDING_MILITARY_ACADEMY"}, "UNIT_NIHANG"), 40);
+    CHECK_EQ(strength({"BUILDING_BARRACKS", "BUILDING_ARMORY", "BUILDING_MILITARY_ACADEMY"}, "UNIT_NIHANG"), 70);
+    CHECK_EQ(strength({"BUILDING_BARRACKS", "BUILDING_ARMORY", "BUILDING_MILITARY_ACADEMY"}, "UNIT_WARRIOR"), 20);  // the Nihang's own
+}
+
 TEST(samarkands_trading_domes_pay_international_routes) {
     // Samarkand (08): its suzerain's international routes earn +1 Gold per Trading Dome of the origin city.
     const auto routeGold = [](const char* cityState, int domes, bool pillageOne, bool domestic = false) {

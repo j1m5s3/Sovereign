@@ -906,6 +906,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.id = id;
         u.name = j["name"].str(id);
         u.unitClass = j["class"].str();
+        for (const Json& t : j["tags"].items()) u.tags.push_back(t.str());
         const std::string domain = j["domain"].str("LAND");
         u.domain = domain == "SEA" ? Domain::Sea : domain == "AIR" ? Domain::Air : Domain::Land;
         const std::string layer = j["layer"].str("MILITARY");
@@ -967,6 +968,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         u.promotionClass = j["promotionClass"].str();
         u.uniqueToId = j["uniqueTo"].str();
+        u.cityStateId = j["cityState"].str();
         auto findAbility = [this](const std::string& aid) { return ability(aid); };
         if (!resolveList(j["abilities"], findAbility, u.abilities, "unit " + id, error)) return false;
         units.push_back(std::move(u));
@@ -2522,6 +2524,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     for (UnitType& u : units) {
+        if (!u.cityStateId.empty() && (u.cityState = cityState(u.cityStateId)) == kNone) {
+            *error = "unit " + u.id + ": unknown city-state " + u.cityStateId;
+            return false;
+        }
         if (u.uniqueToId.empty()) continue;
         u.uniqueTo = civ(u.uniqueToId);
         if (u.uniqueTo == kNone) {

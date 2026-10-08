@@ -217,7 +217,7 @@ std::vector<TypeIndex> Game::abilitiesWhere(const Unit& unit, Want&& want) const
     // Abilities the civ's leader grants its units of a class (Hold the Pass, Builder of Monuments).
     for (TypeIndex a : civAbility(unit.owner).grantAbilities) {
         const AbilityType& at = rules_->abilities[static_cast<size_t>(a)];
-        if (want(a) && std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() && std::find(out.begin(), out.end(), a) == out.end())
+        if (want(a) && hasClassIn(ut, at.classes) && std::find(out.begin(), out.end(), a) == out.end())
             out.push_back(a);
     }
     // Those the owner's modifiers grant its class, in modifier order: a source is looked at only for an ability not
@@ -232,8 +232,7 @@ std::vector<TypeIndex> Game::abilitiesWhere(const Unit& unit, Want&& want) const
         for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {
             if (fx.kind != GreatPersonEffectKind::Ability || !want(fx.ref)) continue;
             const AbilityType& at = rules_->abilities[static_cast<size_t>(fx.ref)];
-            if (std::find(at.classes.begin(), at.classes.end(), ut.unitClass) != at.classes.end() &&
-                std::find(out.begin(), out.end(), fx.ref) == out.end())
+            if (hasClassIn(ut, at.classes) && std::find(out.begin(), out.end(), fx.ref) == out.end())
                 out.push_back(fx.ref);
         }
     }

@@ -290,9 +290,15 @@ def gen_resources():
 
 
 def gen_units():
-    out = []
+    out, city_state_units = [], []
+    # City-states' units (08: Lahore's Nihang) are kept, after the others: whoever enjoys the city-state's suzerain bonus
+    # buys them.
+    city_states = {r["City-state"]: "CITYSTATE_" + snake(r["City-state"]) for r in table(SPEC / "city-states.md", "City-states and suzerain bonuses")}
+    ability_tags = {r["Ability"]: [t.strip().upper() for t in r["Applies to class tags"].split(",") if t.strip()]
+                    for r in table(SPEC / "units.md", "Unit abilities")}
     for row in table(SPEC / "units.md", "Units"):
-        if row.get("Unique to"):
+        city_state = city_states.get(row.get("Unique to") or "")
+        if row.get("Unique to") and not city_state:
             continue  # Sovereign defines its own uniques (leaders-and-art-style.md)
         cls = row["Class"]
         special = row["Special"]
@@ -389,7 +395,20 @@ def gen_units():
         abilities = [a.strip() for a in row["Innate abilities (via class tags)"].split(",") if a.strip()]
         if abilities:
             u["abilities"] = ["ABILITY_" + snake(a) for a in abilities]
-        out.append(u)
+        if city_state:
+            u["cityState"] = city_state
+            # It fights as the class its innate abilities name (the Nihang's Anti-Spear: melee), and carries a tag of its
+            # own (lahore_nihang) that the abilities its suzerain's buildings grant name.
+            innate = {t for a in abilities for t in ability_tags.get(a, [])}
+            if len(innate) == 1:
+                u["class"] = innate.pop()
+            own = snake(row["Unique to"]) + "_" + snake(row["Unit"])
+            if any(own in tags for tags in ability_tags.values()):
+                u["tags"] = [own]
+            city_state_units.append(u)
+        else:
+            out.append(u)
+    out += city_state_units
     known = {u["id"] for u in out}
     for u in out:
         if u.get("upgradesTo") not in known:
@@ -517,7 +536,7 @@ def unit_effects(text):
     are 'A and B or C' = A and (B or C): a list of any-of groups that must all hold."""
     out = []
     for part in filter(None, (p.strip() for p in text.split("; "))):
-        m = re.fullmatch(r"([+-]\d+) Combat Strength in combat(?: where (.*))?", part)
+        m = re.fullmatch(r"([+-]\d+) Combat Strength(?: in combat(?: where (.*))?)?", part)
         # Inquisition [R&F]: read "friendly territory" as the unit's own territory.
         territory = re.fullmatch(r"([+-]\d+) Combat Strength in friendly territory", part)
         if territory:

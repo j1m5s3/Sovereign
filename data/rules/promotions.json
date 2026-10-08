@@ -5311,8 +5311,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+15 Combat Strength"
+     "kind": "STRENGTH",
+     "amount": 15
     }
    ]
   },
@@ -5325,8 +5325,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+15 Combat Strength"
+     "kind": "STRENGTH",
+     "amount": 15
     }
    ]
   },
@@ -5339,8 +5339,8 @@
    "inactive": true,
    "effects": [
     {
-     "kind": "UNTRACKED",
-     "text": "+15 Combat Strength"
+     "kind": "STRENGTH",
+     "amount": 15
     }
    ]
   },
