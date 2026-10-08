@@ -171,6 +171,30 @@ TEST(a_move_reach_is_where_a_move_order_finds_a_path) {
     }
 }
 
+// A Builder passing one of ours on the shore embarks from that plot with what moves it has left, as from any other,
+// but not with none: there it would end its move on the other one (05: Stacking). So it waits a plot short.
+TEST(units_embark_past_our_units_only_with_moves_left) {
+    GameState s = seaState();
+    giveTech(s, 0, "TECH_SAILING");
+    for (int y = 0; y < 12; ++y) {
+        if (y != 6) s.plot({7, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    }
+    const UnitId a = addUnit(s, "UNIT_BUILDER", 0, {7, 6});
+    const UnitId b = addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const std::optional<std::vector<PathStep>> path = g->findPath(b, {8, 6});
+    REQUIRE(path && path->size() == 4u);
+    CHECK_EQ((*path)[1].turn, 0);  // (6,6)
+    CHECK_EQ((*path)[2].turn, 1);  // past the other Builder, with 1 MP
+    CHECK_EQ(path->back().turn, 1);
+    // And it moves so: it waits beside the other Builder, then passes it and embarks with the 1 MP left.
+    REQUIRE(g->submit(Command::move(0, b, {8, 6})) == CommandError::Ok);
+    CHECK_EQ(unit(*g, b).pos, (Hex{6, 6}));
+    REQUIRE(g->submit(Command::setActivity(0, a, Activity::Sleep)) == CommandError::Ok);
+    sovtest::endTurns(*g, 2);
+    CHECK_EQ(unit(*g, b).pos, (Hex{8, 6}));
+}
+
 TEST(embarked_movement_grows_with_techs) {
     GameState s = seaState();
     giveTech(s, 0, "TECH_SHIPBUILDING");

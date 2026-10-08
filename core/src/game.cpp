@@ -228,6 +228,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     spices_[0] = rules_->resource("RESOURCE_CINNAMON");
     spices_[1] = rules_->resource("RESOURCE_CLOVES");
     oceanTerrain_ = rules_->terrain("TERRAIN_OCEAN");
+    encampment_ = rules_->district("DISTRICT_ENCAMPMENT");
     for (size_t i = 0; i < rules_->techs.size(); ++i) {
         const TreeNode& t = rules_->techs[i];
         if (t.ocean) oceanTechs_.push_back(static_cast<TypeIndex>(i));
@@ -812,15 +813,18 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     StepUnit su = stepUnit(*u, traits);
 
     // Per plot: the best arrival found (read only where its flags have kReached): its turn, the plot it came from (-1
-    // for the start) and the moves left; and the plot as a step's end (worked out the first time a step reaches it,
-    // kRead): whether a step may end there at all, or only from the owner's own land (closed borders), and the rest of
-    // the step's cost that it decides. The flags are moveLimits' blocked marks (1), with enemy ZOC (kZoc) marked in too
-    // (or, along a path, every plot off it blocked).
-    enum : uint8_t { kBlocked = 1, kZoc = 2, kReached = 4, kRead = 8 };
+    // for the start) and the pass it came on (-1 for none, below), and the moves left; and the plot as a step's end
+    // (worked out the first time a step reaches it, kRead): whether a step may end there at all, or only from the
+    // owner's own land (closed borders), the rest of the step's cost that it decides, and its first pass. The flags are
+    // moveLimits' blocked marks (1), with enemy ZOC (kZoc) and plots our own units of the mover's layer hold (kOurs)
+    // marked in too (or, along a path, every plot off it blocked).
+    enum : uint8_t { kBlocked = 1, kZoc = 2, kReached = 4, kRead = 8, kOurs = 16 };
     enum : uint8_t { kNever = 0, kAny, kInside };
     struct Cell {
         int turn;
         int prev;
+        int prevPass;
+        int firstPass;
         int64_t moves;
         StepInto into;
         uint8_t entry;
@@ -829,6 +833,15 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     const size_t plots = static_cast<size_t>(state_.grid.size());
     const std::unique_ptr<Cell[]> cells(new Cell[plots]);
     std::vector<uint8_t> flags = std::move(limits.blocked);
+    // A unit may pass its owner's units of its layer but never end a turn on one (05: Stacking). The order's goal is
+    // planned as any other plot: the order ends before it while one of ours holds it (advanceUnit).
+    if (const UnitLayer layer = typeOf(*rules_, *u).layer; layer != UnitLayer::Air) {
+        for (const Unit& o : state_.units) {
+            if (o.owner != u->owner || o.id == u->id || typeOf(*rules_, o).layer != layer || state_.grid.normalize(o.pos) != o.pos) continue;
+            flags[static_cast<size_t>(state_.grid.index(o.pos))] |= kOurs;
+        }
+        if (goal >= 0) flags[static_cast<size_t>(goal)] &= static_cast<uint8_t>(~kOurs);
+    }
     if (along) {
         std::vector<uint8_t> walk(plots, kBlocked);
         for (const PathStep& s : *along) {
@@ -842,6 +855,7 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
         uint8_t& f = flags[static_cast<size_t>(index)];
         if (f & kRead) return c;
         f |= kRead;
+        c.firstPass = -1;
         c.entry = kNever;
         c.owner = kNoPlayer;
         // A step never ends on a plot the owner has not seen, on the water when kept dry, on a plot another player
@@ -878,8 +892,11 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
         if (!enterable) return std::nullopt;
     }
     const Fixed fullMoves = Fixed::fromInt(maxMoves(*u));
-    // Enemy ZOC changes only the moves a path leaves, not whether there is one (all a search along a path or a reach asks).
-    if (!along && !reach) markZoc(*u, flags, kZoc);
+    // Enemy ZOC changes only the moves a path leaves, not whether there is one (all a search along a path or a reach
+    // asks), except on plots our units hold, where a move it ends could not stay: such a search marks it the first
+    // time it steps onto one.
+    bool zocMarked = !along && !reach;
+    if (zocMarked) markZoc(*u, flags, kZoc);
 
     auto better = [](int turn, Fixed moves, const Cell& than) {
         return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
@@ -897,11 +914,75 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
         Cell& s = cells[static_cast<size_t>(start)];
         s.turn = 0;
         s.prev = -1;
+        s.prevPass = -1;
         s.moves = u->movesLeft.raw();
         flags[static_cast<size_t>(start)] |= kReached;
     }
     open.push({-u->movesLeft.raw(), 0, start});
     const bool land = su.domain == Domain::Land;
+    // A unit standing where one of ours does (passing it) may not wait there either.
+    const bool passing = flags[static_cast<size_t>(start)] & kOurs;
+    auto relax = [&](int next, int turn, Fixed mp, int prev, int prevPass) {
+        uint8_t& f = flags[static_cast<size_t>(next)];
+        Cell& nb = cells[static_cast<size_t>(next)];
+        if (!(f & kReached) || better(turn, mp, nb)) {
+            nb.turn = turn;
+            nb.prev = prev;
+            nb.prevPass = prevPass;
+            nb.moves = mp.raw();
+            f |= kReached;
+            open.push({-mp.raw(), turn, next});
+        }
+    };
+    // Passes over plots our units hold, which a step crosses within one turn. One plot can hold several, as an earlier
+    // arrival there does not stand for a later one with more moves: no turn ends there to wait for them. Each keeps the
+    // step before it (a plot, and the pass it was on, or -1), and the next pass over the same plot.
+    struct Pass {
+        int plot;
+        int prev;
+        int prevPass;
+        int nextHere;
+        int turn;
+        int64_t moves;
+    };
+    std::vector<Pass> passes;
+    std::vector<int> todo;
+    auto pass = [&](int at, int prev, int prevPass, int turn, Fixed mp) {
+        flags[static_cast<size_t>(at)] |= kReached;  // an order to it gets that far (and ends there)
+        if (mp <= Fixed()) return;  // its moves would end there
+        Cell& c = cells[static_cast<size_t>(at)];
+        for (int k = c.firstPass; k >= 0; k = passes[static_cast<size_t>(k)].nextHere) {
+            if (passes[static_cast<size_t>(k)].turn <= turn && passes[static_cast<size_t>(k)].moves >= mp.raw()) return;
+        }
+        passes.push_back({at, prev, prevPass, c.firstPass, turn, mp.raw()});
+        c.firstPass = static_cast<int>(passes.size()) - 1;
+        todo.push_back(c.firstPass);
+    };
+    // The steps out of the passes in `todo`: only those its moves pay for now (or that embark or disembark).
+    auto crossOurs = [&] {
+        while (!todo.empty()) {
+            const int k = todo.back();
+            todo.pop_back();
+            const Pass p = passes[static_cast<size_t>(k)];  // a copy, as `passes` grows below
+            const Cell& c = cells[static_cast<size_t>(p.plot)];
+            const StepFrom sf{c.into.water, c.into.afloat, c.into.road, c.into.riverEdges};
+            const Hex from = state_.grid.at(p.plot);
+            for (int d = 0; d < kNumDirs; ++d) {
+                auto n = state_.grid.neighbor(from, static_cast<Dir>(d));
+                if (!n) continue;
+                const int next = state_.grid.index(*n);
+                auto cost = step(sf, c.owner, next, *n, static_cast<Dir>(d));
+                if (!cost) continue;
+                Fixed mp = Fixed::fromRaw(p.moves);
+                if (mp < *cost && mp != fullMoves && !(land && sf.afloat != cells[static_cast<size_t>(next)].into.afloat)) continue;
+                mp = mp >= *cost ? mp - *cost : Fixed();
+                const uint8_t f = flags[static_cast<size_t>(next)];
+                if (f & kZoc) mp = Fixed();
+                if (f & kOurs) pass(next, p.plot, k, p.turn, mp);
+                else relax(next, p.turn, mp, p.plot, k);
+            }
+        }
+    };
     while (!open.empty()) {
         QItem q = open.top();
         open.pop();
@@ -929,20 +1010,27 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
             }
             // Embarking or disembarking is allowed with any movement left (it uses it up).
             if (mp < *cost && mp != fullMoves && !(land && sf.afloat != cells[static_cast<size_t>(next)].into.afloat)) {
+                if (first && passing) continue;
                 ++turn;
                 mp = fullMoves;
             }
             mp = mp >= *cost ? mp - *cost : Fixed();
-            uint8_t& f = flags[static_cast<size_t>(next)];
-            if (f & kZoc) mp = Fixed();  // entering enemy ZOC ends the move
-            Cell& nb = cells[static_cast<size_t>(next)];
-            if (!(f & kReached) || better(turn, mp, nb)) {
-                nb.turn = turn;
-                nb.prev = q.index;
-                nb.moves = mp.raw();
-                f |= kReached;
-                open.push({-mp.raw(), turn, next});
+            if (!(flags[static_cast<size_t>(next)] & kOurs)) {
+                if (flags[static_cast<size_t>(next)] & kZoc) mp = Fixed();  // entering enemy ZOC ends the move
+                relax(next, turn, mp, q.index, -1);
+                continue;
             }
+            if (!zocMarked) {
+                markZoc(*u, flags, kZoc);
+                zocMarked = true;
+            }
+            const bool zoc = flags[static_cast<size_t>(next)] & kZoc;
+            pass(next, q.index, -1, turn, zoc ? Fixed() : mp);
+            // Or first wait here for a new turn's moves, which may get it past ours where these do not.
+            if (turn == curTurn && !(first && passing) && Fixed::fromRaw(curMoves) != fullMoves) {
+                pass(next, q.index, -1, turn + 1, zoc || fullMoves < *cost ? Fixed() : fullMoves - *cost);
+            }
+            crossOurs();
         }
     }
     if (reach) {
@@ -951,9 +1039,18 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     }
     if (!(flags[static_cast<size_t>(goal)] & kReached)) return std::nullopt;
     std::vector<PathStep> path;
-    for (int i = goal; i != -1; i = cells[static_cast<size_t>(i)].prev) {
-        const Cell& n = cells[static_cast<size_t>(i)];
-        path.push_back({state_.grid.at(i), n.turn, Fixed::fromRaw(n.moves)});
+    for (int i = goal, k = -1; i != -1;) {
+        if (k >= 0) {
+            const Pass& p = passes[static_cast<size_t>(k)];
+            path.push_back({state_.grid.at(i), p.turn, Fixed::fromRaw(p.moves)});
+            i = p.prev;
+            k = p.prevPass;
+        } else {
+            const Cell& n = cells[static_cast<size_t>(i)];
+            path.push_back({state_.grid.at(i), n.turn, Fixed::fromRaw(n.moves)});
+            i = n.prev;
+            k = n.prevPass;
+        }
     }
     std::reverse(path.begin(), path.end());
     return path;
@@ -995,12 +1092,15 @@ void Game::advanceUnit(UnitId id) {
         const Fixed after = u->movesLeft >= cost ? u->movesLeft - cost : Fixed();
         const Unit* own = state_.unitAt(next, typeOf(*rules_, *u).layer, *rules_);
         if (own && own->id != u->id) {
-            // Friendly units may be passed through but not shared at the end of a move.
-            if (next == *u->moveTarget) {
+            // Friendly units may be passed through but not shared at the end of a move: the unit steps among them only
+            // to get past them this turn, as the search plans it (or waits for them to move on), and an order whose
+            // end they hold ends here.
+            const int past = passOurs(*u, *path);
+            if (next == *u->moveTarget || past < 0) {
                 u->moveTarget.reset();
                 return;
             }
-            if (after <= Fixed()) return;
+            if (past == 0) return;
         }
         // A linked escort steps with its leader, at the slower unit's pace.
         Unit* escort = isLeader(*u) ? escortMut(*u) : nullptr;
@@ -1047,6 +1147,26 @@ void Game::advanceUnit(UnitId id) {
         enterPlot(*u);  // which may move the unit list (a goody hut's unit)
         refreshVisibility(mover);
     }
+}
+
+int Game::passOurs(const Unit& unit, const std::vector<PathStep>& path) const {
+    const UnitLayer layer = typeOf(*rules_, unit).layer;
+    const auto ours = [&](Hex h) {
+        const Unit* o = state_.unitAt(h, layer, *rules_);
+        return o && o->id != unit.id;
+    };
+    const Fixed full = Fixed::fromInt(maxMoves(unit));
+    Fixed moves = unit.movesLeft;
+    for (size_t i = 0; i + 1 < path.size(); ++i) {
+        const Hex from = path[i].pos;
+        const Hex to = path[i + 1].pos;
+        if (i > 0 && !ours(from)) return 1;
+        const std::optional<Fixed> cost = moveCost(unit, from, to);
+        if (!cost || moves <= Fixed() || (moves < *cost && moves != full && !isEmbarkTransition(unit, from, to))) return 0;
+        moves = moves >= *cost ? moves - *cost : Fixed();
+        if (inEnemyZoc(unit, to)) moves = Fixed();
+    }
+    return ours(path.back().pos) ? -1 : 1;
 }
 
 // ---------------------------------------------------------------- visibility

@@ -1,5 +1,6 @@
 // The computer opponent (MVP-6; 10-ai-ui-implementation.md, AI architecture).
 #include <algorithm>
+#include <set>
 #include <string>
 
 #include "../tools/random_bot.h"
@@ -542,8 +543,18 @@ TEST(ai_soak_takes_a_capital_and_replays) {
     std::string err;
     auto g = Game::create(rules(), setup, &err);
     REQUIRE(g);
-    while (g->state().turn < 250 && !capitalTaken(*g) && !g->gameOver()) ai::playTurn(*g);
+    int stacked = 0;  // plots two units of one owner and layer share as its turn begins (05: Stacking)
+    while (g->state().turn < 250 && !capitalTaken(*g) && !g->gameOver()) {
+        const GameState& s = g->state();
+        std::set<std::pair<int, UnitLayer>> held;
+        for (const Unit& u : s.units) {
+            const UnitLayer layer = rules().units[at(u.type)].layer;
+            if (u.owner == s.currentPlayer && layer != UnitLayer::Air && !held.insert({s.grid.index(u.pos), layer}).second) ++stacked;
+        }
+        ai::playTurn(*g);
+    }
     CHECK(capitalTaken(*g));
+    CHECK_EQ(stacked, 0);
     auto again = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(again);
     CHECK_EQ(again->stateHash(), g->stateHash());
