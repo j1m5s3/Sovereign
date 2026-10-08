@@ -77,7 +77,8 @@ struct View {
     std::vector<PlayerId> enemies; // majors at war with us
     PlayerId target = kNoPlayer;   // the major whose cities the army marches on
     int military = 0, ranged = 0, settlers = 0, builders = 0;
-    std::vector<Hex> claimed;      // sites and plots other units are already heading for
+    std::vector<Hex> claimed;      // sites Settlers are already heading for
+    std::vector<Hex> works;        // plots Builders are already heading for (no reason to keep a city site clear)
     bool majorWar = false;         // at war with a major civ (city-state wars do not stop expansion)
     int sites = -1;                // free city sites near our cities (-1: not counted yet this turn)
     Posture posture;
@@ -110,6 +111,7 @@ void survey(View& v) {
     v.threat.assign(v.cities.size(), 0);
     v.military = v.ranged = v.settlers = v.builders = 0;
     v.claimed.clear();
+    v.works.clear();
     for (const Unit& u : s.units) {
         const UnitType& t = v.r.units[at(u.type)];
         if (u.owner == v.me) {
@@ -119,7 +121,8 @@ void survey(View& v) {
             }
             v.settlers += t.foundCity;
             v.builders += isBuilder(t);  // not Military Engineers or Legionaries
-            if (u.moveTarget && (t.foundCity || isBuilder(t))) v.claimed.push_back(*u.moveTarget);
+            if (u.moveTarget && t.foundCity) v.claimed.push_back(*u.moveTarget);
+            else if (u.moveTarget && isBuilder(t)) v.works.push_back(*u.moveTarget);
             continue;
         }
         if (!v.hostile(u.owner) || !isArmy(t) || !v.game.unitVisibleTo(v.me, u)) continue;
@@ -1065,11 +1068,6 @@ void pickImprovement(const View& v, Hex h, std::vector<TypeIndex>& options) {
 void build(View& v, UnitId id) {
     const GameState& s = v.s();
     const Unit* u = s.unit(id);
-    if (u->moveTarget) return;
-    // A pillaged improvement is repaired first (no charge; 05: Pillage).
-    if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
-    // Monopolies and Corporations mode (07): an Industry, or a Corporation of one, on an improved luxury.
-    if (s.setup.monopolies && v.game.submit(Command::buildIndustry(v.me, id)) == CommandError::Ok) return;
     auto worth = [&](Hex h) -> int {
         const Plot& p = s.plot(h);
         if (s.setup.monopolies && v.game.industryProblem(v.me, h) == CommandError::Ok) return 80;
@@ -1087,6 +1085,13 @@ void build(View& v, UnitId id) {
         if (c && std::binary_search(c->worked.begin(), c->worked.end(), s.grid.index(h))) w += 10;
         return w;
     };
+    // On its way it keeps going while the plot still wants work. Once another Builder has improved (or mended) it, the
+    // order is stale and the Builder turns to other work (one such order held a Builder 35 turns).
+    if (u->moveTarget && worth(*u->moveTarget) >= 0) return;
+    // A pillaged improvement is repaired first (no charge; 05: Pillage).
+    if (v.game.repairProblem(v.me, id) == CommandError::Ok && v.game.submit(Command::repairImprovement(v.me, id)) == CommandError::Ok) return;
+    // Monopolies and Corporations mode (07): an Industry, or a Corporation of one, on an improved luxury.
+    if (s.setup.monopolies && v.game.submit(Command::buildIndustry(v.me, id)) == CommandError::Ok) return;
     if (worth(u->pos) >= 0 && s.plot(u->pos).improvement == kNone) {
         // The resource's own improvement comes first in the list; a city short of power takes a renewable.
         std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
@@ -1099,8 +1104,7 @@ void build(View& v, UnitId id) {
         }
         if (v.game.submit(Command::buildImprovement(v.me, id, options.front())) == CommandError::Ok) return;
     }
-    std::optional<Hex> best;
-    int bestScore = INT_MIN;
+    std::vector<std::pair<int, Hex>> targets;  // score, plot
     // The plots another player's unit stands on (foreignUnitAt), marked once rather than looked for plot by plot (1),
     // and the plots already looked at (2): one near two of our cities comes round again, and scores no better then.
     std::vector<uint8_t> mark(static_cast<size_t>(s.grid.size()), 0);
@@ -1114,26 +1118,35 @@ void build(View& v, UnitId id) {
             if (seen & 2) continue;
             seen |= 2;
             // The cheap tests first: none of them changes anything.
-            if ((seen & 1) || v.claimedNear(h, 0)) continue;
+            if ((seen & 1) || v.claimedNear(h, 0) || std::find(v.works.begin(), v.works.end(), h) != v.works.end()) continue;
             const int w = worth(h);
             if (w < 0) continue;
-            const int score = w * 10 - s.grid.distance(u->pos, h) * 15;
-            if (score > bestScore) {
-                bestScore = score;
-                best = h;
-            }
+            targets.push_back({w * 10 - s.grid.distance(u->pos, h) * 15, h});
         }
     }
-    if (best && v.game.submit(Command::move(v.me, id, *best, true)) == CommandError::Ok) {
-        v.claimed.push_back(*best);
-        u = s.unit(id);
-        if (u && u->pos == *best && u->movesLeft > Fixed()) {
-            std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
-            options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
-            pickImprovement(v, u->pos, options);
-            if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
+    std::stable_sort(targets.begin(), targets.end(), [](const std::pair<int, Hex>& a, const std::pair<int, Hex>& b) { return a.first > b.first; });
+    // The best plot it can reach. A move to one out of its reach (a sea resource before it may embark, another
+    // landmass) fails, and the Builder would wait on it for good: so once a move fails, the reach is found, and only
+    // the plots in it are tried after (a failed move changes nothing).
+    std::vector<uint8_t> reach;
+    int tries = 0;
+    for (const std::pair<int, Hex>& target : targets) {
+        const Hex h = target.second;
+        if (h == u->pos) break;  // out of moves on the plot to improve: it builds there next turn
+        if (!reach.empty() && !reach[static_cast<size_t>(s.grid.index(h))]) continue;
+        if (v.game.submit(Command::move(v.me, id, h, true)) == CommandError::Ok) {
+            v.works.push_back(h);
+            u = s.unit(id);
+            if (u && u->pos == h && u->movesLeft > Fixed()) {
+                std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+                options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
+                pickImprovement(v, u->pos, options);
+                if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
+            }
+            return;
         }
-        return;
+        if (++tries == 6) break;
+        if (reach.empty()) reach = v.game.moveReach(id, true);
     }
     v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
 }
@@ -1653,6 +1666,21 @@ void production(View& v) {
     const std::vector<CityId> needing = g.citiesNeedingProduction(v.me);
     if (needing.empty()) return;
     const Fixed goldPerTurn = g.goldPerTurn(v.me);
+    // Plots our Builders could still improve, and the charges they already carry (those in training too): a Builder
+    // beyond the work only waits for the borders to grow.
+    int work = 0, charges = 0;
+    for (const Unit& u : s.units) charges += u.owner == v.me && isBuilder(v.r.units[at(u.type)]) ? u.charges : 0;
+    for (CityId cid : v.cities) {
+        const City& c = *s.city(cid);
+        if (!c.queue.empty() && c.queue.front().kind == ProductionKind::Unit && isBuilder(v.r.units[at(c.queue.front().type)]))
+            charges += v.r.units[at(c.queue.front().type)].buildCharges;
+    }
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const Plot& p = s.plots[static_cast<size_t>(i)];
+        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone) continue;
+        const Hex h = s.grid.at(i);
+        if (s.grid.distance(s.city(p.city)->pos, h) <= 3 && g.builderCanImprove(v.me, h)) ++work;
+    }
     for (CityId cid : needing) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
@@ -1688,8 +1716,9 @@ void production(View& v) {
                 }
             }
         }
-        const bool wantBuilder = v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0) ||
-                                 (unimproved >= 2 && v.builders < static_cast<int>(v.cities.size()) * 3 / 2);
+        const bool wantBuilder = work > charges &&
+                                 (v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0) ||
+                                  (unimproved >= 2 && v.builders < static_cast<int>(v.cities.size()) * 3 / 2));
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
         // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
         bool assassinQueued = false;
@@ -1914,6 +1943,7 @@ void production(View& v) {
             const UnitType& t = v.r.units[at(best->type)];
             v.settlers += t.foundCity;
             v.builders += isBuilder(t);
+            if (isBuilder(t)) charges += t.buildCharges;
             v.military += isArmy(t);
         }
     }
