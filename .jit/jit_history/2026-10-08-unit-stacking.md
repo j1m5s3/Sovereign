@@ -44,4 +44,4 @@ Save and reload: 8 games in 5 setups, each saved and loaded once or twice, end o
 
 ## Left open
 
-- Other civs' units. Passing is now in the spec (05: Stacking), which, after the Civ VI wiki, also lets a unit pass the units of a civ it is not at war with. The engine still treats their plots as blocked (`Game::moveLimits`), so a path goes around them.
+- Other civs' units. Passing is now in the spec (05: Stacking), which, after the Civ VI wiki, also lets a unit pass the units of a civ it is not at war with. The engine still treats their plots as blocked (`Game::moveLimits`), so a path goes around them. Done next: `2026-10-08-passing-units.md`.

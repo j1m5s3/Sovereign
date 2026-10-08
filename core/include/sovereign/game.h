@@ -99,8 +99,8 @@ public:
     // The plots a move order for the unit finds a path to (1, the rest 0), planned as the order is (a linked escort's
     // for its leader): an order to any other plot fails.
     std::vector<uint8_t> moveReach(UnitId unit, bool overland = false) const;
-    // Movement points needed for this unit to enter `to` from adjacent `from`;
-    // nullopt when it cannot enter.
+    // Movement points needed for this unit to enter `to` from adjacent `from`, also where it may only pass (05:
+    // Stacking); nullopt when it cannot enter.
     std::optional<Fixed> moveCost(const Unit& unit, Hex from, Hex to) const;
     // ---- naval play and embarkation (05-units-and-combat.md, Embarkation)
     bool canEmbark(PlayerId player, TypeIndex unitType) const;
@@ -794,9 +794,13 @@ private:
     MoveTraits moveTraits(const Unit& unit) const;
     // What keeps a unit out of plots, the same for every step of a path.
     struct MoveLimits {
-        std::vector<uint8_t> blocked;  // per plot: another player's unit, a foreign city or a standing enemy Encampment
+        // A plot's marks in `blocked` (valued to sit beside a path search's own): kept out of (a unit of a player at
+        // war, a foreign city, a standing enemy Encampment), or held by another player's unit at peace, which a move
+        // may pass but not end on (kPassOnly | kTheirs).
+        enum : uint8_t { kKeepOut = 1, kPassOnly = 16, kTheirs = 32 };
+        std::vector<uint8_t> blocked;  // per plot, its marks
         std::vector<uint8_t> closed;   // per player: 1 closed borders (entered only from inside), 2 no entry at all
-        bool onlyBlocked = false;      // with `only`: whether that plot is blocked (`blocked` is then left empty)
+        bool onlyBlocked = false;      // with `only`: whether that plot is kept out of (`blocked` is then left empty)
     };
     // With `only` (a plot on the grid), just what a step into it reads: whether it is blocked, and its owner's entry.
     MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt) const;
@@ -979,13 +983,16 @@ private:
     void applyEndTurn(const Command& c);
     // Moves the unit along its move order as far as its moves allow.
     void advanceUnit(UnitId id);
-    // How far `path` takes a unit about to step onto a plot one of its owner's units of its layer holds, this turn: past
-    // them to a free plot (1), to the end of its moves among them (0), or to the path's end with them still there (-1).
-    int passOurs(const Unit& unit, const std::vector<PathStep>& path) const;
+    // Whether `unit` may pass `plot` but not stop there (05: Stacking): another of its owner's units of its layer, or
+    // another player's unit, holds it.
+    bool passOnly(const Unit& unit, Hex plot) const;
+    // How far `path` takes a unit about to step onto a plot it may only pass, this turn: past such plots to a free one
+    // (1), to the end of its moves among them (0), or to the path's end with it still held (-1).
+    int passOn(const Unit& unit, const std::vector<PathStep>& path) const;
     // findPath's search; with `along`, one kept to the plots of `along` (and with enemy ZOC only where it ends a pass
-    // over our units, as elsewhere it changes only the moves a path leaves): a path it finds then shows that findPath
-    // finds one too. With `reach`, a search with no goal (reading ZOC the same way) that marks in it every plot it gets
-    // to.
+    // over plots others hold, as elsewhere it changes only the moves a path leaves): a path it finds then shows that
+    // findPath finds one too. With `reach`, a search with no goal (reading ZOC the same way) that marks in it every plot
+    // a move order may go to.
     std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
                                                     std::vector<uint8_t>* reach = nullptr) const;
     // The unit a move order for `unit` is planned for: a linked escort's moves the pair, so it is planned for the leader.

@@ -25,7 +25,7 @@ Both modes use the same rules underneath, and in both you must keep the leader g
 
 This fits Civ VI's Great General model (05: a person on the map with a 2-tile aura and a one-time retire effect).
 
-- **Stacking (05, 1UPT):** the Sovereign uses the civilian layer like a Great Person, so one military escort can share its tile, linked so they move together. Because the leader can now fight (decision 3), it defends itself when attacked rather than being captured instantly. An enemy military unit only captures it after beating it in combat while it has no escort (section 5).
+- **Stacking (05, 1UPT):** the Sovereign uses the civilian layer like a Great Person, so one military escort can share its tile, linked so they move together. Linked, the pair does not move through other civs' units; alone, the Sovereign passes them as any unit may. Because the leader can now fight (decision 3), it defends itself when attacked rather than being captured instantly. An enemy military unit only captures it after beating it in combat while it has no escort (section 5).
 - **No cost:** the leader cannot be built and has no maintenance.
 - **Presence aura (2 tiles, grows with level) [decided, James 2026-10-05]:** +combat strength to nearby friendly units (does not stack with a Great General: the higher one applies), and loyalty per turn to a city whose tiles it stands on. Built in step 3 with the strength part; loyalty arrives with the loyalty system.
 - **Leader abilities stay empire-wide (09):** each Civ VI leader's ability is unchanged. The unit adds a separate layer on top.

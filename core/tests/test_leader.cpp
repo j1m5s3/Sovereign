@@ -244,6 +244,28 @@ TEST(linked_escort_moves_with_the_leader) {
     CHECK(!g->escortOf(*g->state().unit(leader)));
 }
 
+// A unit may pass another player's units at peace (05: Stacking), a lone leader too; with its escort it keeps out of
+// them, as the pair would share a plot with them.
+TEST(a_linked_pair_keeps_out_of_other_players_units) {
+    UnitId leader = 0, escort = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            // A wall of mountains at x = 6 with one gap, (6,5), where the other player's Warrior stands.
+            for (int y = 0; y < 12; ++y) {
+                if (y != 5) s.plot({6, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+            }
+            addUnit(s, "UNIT_WARRIOR", 1, {6, 5});
+            leader = addLeader(s, 0, {5, 5});
+            escort = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        },
+        false);
+    REQUIRE(g->submit(Command::linkEscort(0, escort, leader)) == CommandError::Ok);
+    CHECK(!g->findPath(leader, {7, 5}).has_value());
+    REQUIRE(g->submit(Command::linkEscort(0, escort, -1)) == CommandError::Ok);
+    CHECK(g->findPath(leader, {7, 5}).has_value());
+}
+
 TEST(city_capture_takes_the_leader) {
     UnitId leader = 0, enemy = 0;
     CityId city = kNoCity;

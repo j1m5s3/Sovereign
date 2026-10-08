@@ -544,17 +544,20 @@ TEST(ai_soak_takes_a_capital_and_replays) {
     auto g = Game::create(rules(), setup, &err);
     REQUIRE(g);
     int stacked = 0;  // plots two units of one owner and layer share as its turn begins (05: Stacking)
+    int shared = 0;   // and plots its units share with another player's
     while (g->state().turn < 250 && !capitalTaken(*g) && !g->gameOver()) {
         const GameState& s = g->state();
         std::set<std::pair<int, UnitLayer>> held;
         for (const Unit& u : s.units) {
             const UnitLayer layer = rules().units[at(u.type)].layer;
             if (u.owner == s.currentPlayer && layer != UnitLayer::Air && !held.insert({s.grid.index(u.pos), layer}).second) ++stacked;
+            if (u.owner == s.currentPlayer && s.foreignUnitAt(u.pos, u.owner)) ++shared;
         }
         ai::playTurn(*g);
     }
     CHECK(capitalTaken(*g));
     CHECK_EQ(stacked, 0);
+    CHECK_EQ(shared, 0);
     auto again = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(again);
     CHECK_EQ(again->stateHash(), g->stateHash());
