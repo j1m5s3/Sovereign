@@ -591,3 +591,45 @@ TEST(ai_walks_great_people_to_where_they_work) {
               return p.item.kind == ProductionKind::Building && p.item.type == pyramids && p.amount >= Fixed::fromInt(215);
           }));
 }
+
+TEST(ai_buys_the_building_worth_most_per_gold) {
+    enum { MonumentQueued = 1, HasMonument = 2 };
+    // Player 0's two cities build Ancient Walls (never bought with gold) and can buy a Monument or a Granary; the AI
+    // keeps 30 + 5 gold a city (40) in reserve. Returns the buildings bought in its turn, as (city index, building).
+    const TypeIndex monument = rules().building("BUILDING_MONUMENT"), granary = rules().building("BUILDING_GRANARY");
+    const auto purchases = [&](int gold, int has) {
+        GameState s = flatState(24, 14, 1);
+        addCity(s, 0, {6, 6}, true, 3);
+        addCity(s, 0, {14, 6}, false, 3);
+        learn(s, 0, "TECH_POTTERY");
+        learn(s, 0, "TECH_MASONRY");
+        for (City& c : s.cities) c.queue.assign(1, ProductionItem{ProductionKind::Building, rules().building("BUILDING_ANCIENT_WALLS")});
+        if (has & MonumentQueued) s.cities[0].queue.push_back({ProductionKind::Building, monument});
+        if (has & HasMonument) s.cities[0].buildings.push_back(monument);
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.players[0].gold = Fixed::fromInt(gold);
+        const std::vector<TypeIndex> before[2] = {s.cities[0].buildings, s.cities[1].buildings};
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        std::vector<std::pair<int, TypeIndex>> out;
+        for (int i = 0; i < 2; ++i) {
+            for (TypeIndex b : g->state().cities[static_cast<size_t>(i)].buildings) {
+                if (std::find(before[i].begin(), before[i].end(), b) == before[i].end()) out.emplace_back(i, b);
+            }
+        }
+        return out;
+    };
+    const int price = Game::fromScenario(rules(), flatState(4, 4, 1))->purchaseCost(0, {ProductionKind::Building, monument});
+    REQUIRE(price > 0);
+    REQUIRE(price + 40 + 10 < Game::fromScenario(rules(), flatState(4, 4, 1))->purchaseCost(0, {ProductionKind::Building, granary}) + 40);
+    using Bought = std::vector<std::pair<int, TypeIndex>>;
+    // Not a gold piece of the reserve is spent.
+    CHECK(purchases(price + 40 - 5, 0).empty());
+    // Only a Monument is in reach: the first city gets it (both value it alike), unless the first already has one or
+    // has it in its list to make.
+    CHECK((purchases(price + 40 + 10, 0) == Bought{{0, monument}}));
+    CHECK((purchases(price + 40 + 10, HasMonument) == Bought{{1, monument}}));
+    CHECK((purchases(price + 40 + 10, MonumentQueued) == Bought{{1, monument}}));
+    // With gold to spare, a building a time while one is in reach, up to four.
+    CHECK(purchases(4000, 0).size() == 4);
+}
