@@ -137,6 +137,51 @@ TEST(rebellion_counts_the_luxuries_left_after_a_revolt) {
     CHECK_EQ(g->state().city(home)->rebellion, 1);  // Unrest (2 - 7): +1; Unhappy, as with the Wine, would add none
 }
 
+TEST(a_city_left_at_zero_loyalty_revolts_and_takes_its_luxuries) {
+    // A spy's Foment Unrest or a Rock Band can leave a city at 0 Loyalty: it revolts without its Loyalty moving.
+    CityId small = kNoCity, home = kNoCity;
+    auto g = world([&](GameState& s) {
+        small = addCity(s, 0, {5, 7}, false, 1);
+        cityRef(s, small).loyalty = 0;
+        s.plot({5, 7}).resource = rules().resource("RESOURCE_WINE");
+        addCity(s, 1, {8, 7}, true, 8);
+        home = addCity(s, 0, {20, 7}, true, 16);
+        cityRef(s, home).rebellionCooldown = 1000;
+    });
+    REQUIRE(g->cityReport(home).amenities == 3);
+    pass(*g, 2);
+    REQUIRE(g->state().city(small)->owner != 0);
+    CHECK_EQ(g->cityReport(home).amenities, 2);
+    CHECK_EQ(g->state().city(home)->rebellion, 1);
+}
+
+// A city's mood at its turn comes from the Loyalty it has just reached. No Amenity hangs on Loyalty in the data, so the
+// Monument's full-Loyalty Culture is made an Amenity here.
+TEST(a_citys_mood_follows_the_loyalty_it_reaches) {
+    Rules r = rules();
+    const auto full = std::find_if(r.modifiers.begin(), r.modifiers.end(),
+                                   [](const Modifier& m) { return m.id == "MONUMENT_FULL_LOYALTY_CULTURE"; });
+    REQUIRE(full != r.modifiers.end());
+    full->effect = ModEffect::CityAmenities;
+    r.indexModifiers();
+    const auto rebellionFrom = [&](int loyalty) {
+        GameState s = flatState(24, 14, 2);
+        const CityId home = addCity(s, 0, {20, 7}, true, 16);  // its size needs 7 Amenities: the Palace gives 2
+        City& c = cityRef(s, home);
+        c.loyalty = loyalty;
+        c.rebellionCooldown = 1000;
+        c.buildings.push_back(r.building("BUILDING_MONUMENT"));
+        std::sort(c.buildings.begin(), c.buildings.end());
+        addCity(s, 1, {3, 7}, true, 3);
+        auto g = Game::fromScenario(r, std::move(s));
+        REQUIRE(g->loyaltyPerTurn(home) > Fixed());
+        pass(*g, 2);
+        return g->state().city(home)->rebellion;
+    };
+    CHECK_EQ(rebellionFrom(50), 1);  // Unrest (2 - 7)
+    CHECK_EQ(rebellionFrom(99), 0);  // full at its turn: Unhappy (3 - 7)
+}
+
 TEST(free_cities_join_the_strongest_neighbour) {
     CityId fcity = kNoCity;
     auto g = world([&](GameState& s) {

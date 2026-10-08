@@ -1104,7 +1104,8 @@ private:
     // suzerainBonus(player, cityState) for the owner of a run of city reports, asked once per kind for the run.
     bool suzerainBonus(PlayerId player, Cs cityState, ReportShare& shared) const;
     CityReport cityReport(const City& city, ReportShare& shared) const;
-    Fixed loyaltyPerTurn(const City& city, ReportShare& shared) const;
+    // `report`, when given, gets the report the change was worked out from (none for a city-state's or a Free City's).
+    Fixed loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<CityReport>* report = nullptr) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
     int parkAmenities(const City& city, ReportShare& shared) const;
     // goldPerTurn from the player's city reports, in city order, when the caller has made them already.

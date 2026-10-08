@@ -69,7 +69,7 @@ Fixed Game::loyaltyPerTurn(CityId id) const {
     return loyaltyPerTurn(*c, shared);
 }
 
-Fixed Game::loyaltyPerTurn(const City& city, ReportShare& shared) const {
+Fixed Game::loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<CityReport>* report) const {
     const City* c = &city;
     Fixed change = loyaltyPressure(*c);
     // A Feared ruler's cities rarely flip: pressure losses are halved; a Beloved one gains loyalty (§8.1).
@@ -87,6 +87,7 @@ Fixed Game::loyaltyPerTurn(const City& city, ReportShare& shared) const {
         else if (founder != kNoPlayer) change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_RELIGION_MISMATCHING_FOUNDED"));
     }
     const CityReport rep = cityReport(*c, shared);
+    if (report) *report = rep;
     if (!rules_->happiness.empty()) change += Fixed::fromInt(rules_->happiness[static_cast<size_t>(rep.happiness)].loyaltyPerTurn);
     if (rep.yields[static_cast<size_t>(YieldType::Food)] < rep.foodConsumption)
         change += Fixed::fromInt(rules_->globalInt("IDENTITY_PER_TURN_FROM_STARVATION"));
@@ -215,20 +216,28 @@ void Game::processLoyalty(PlayerId pid) {
     // Changes are worked out first so a revolt does not shift its neighbours' numbers this turn.
     ReportShare shared;  // by its city reports until a city changes hands or rebels rise
     std::vector<int> changes;
-    for (CityId id : ids) changes.push_back(static_cast<int>(loyaltyPerTurn(*state_.city(id), shared).round()));
+    // The reports the changes were worked out from. A city's mood below comes from its own while nothing a report reads
+    // has changed since: no city's loyalty has moved, none has changed hands and no rebels have risen.
+    std::vector<std::optional<CityReport>> reports(ids.size());
+    for (size_t i = 0; i < ids.size(); ++i)
+        changes.push_back(static_cast<int>(loyaltyPerTurn(*state_.city(ids[i]), shared, &reports[i]).round()));
+    bool moved = false;
     for (size_t i = 0; i < ids.size(); ++i) {
         City* c = state_.city(ids[i]);
         if (!c || c->owner != pid) continue;
+        const int was = c->loyalty;
         c->loyalty = std::clamp(c->loyalty + changes[i], 0, maximum);
+        moved = moved || c->loyalty != was;
         if (c->loyalty == 0) {
             transferCity(ids[i], ensureFreeCityPlayer(), rules_->globalInt("LOYALTY_START") / 2);
             shared = {};
+            moved = true;
             continue;
         }
         // Unhappiness (02: Amenities): rebellion points by the city's mood, each a REBELLION_CHANCE_PER_POINT% chance a
         // turn of rebels rising beside it, then REBELLION_COOLDOWN_TURNS of quiet.
         if (!rules_->happiness.empty()) {
-            const CityReport rep = cityReport(*c, shared);
+            const CityReport rep = !moved && reports[i] ? *reports[i] : cityReport(*c, shared);
             c->rebellion = std::max(0, c->rebellion + rules_->happiness[static_cast<size_t>(rep.happiness)].rebellionPoints);
             if (c->rebellion > 0 && state_.turn >= c->rebellionCooldown) {
                 const int chance = static_cast<int>(rules_->global("REBELLION_CHANCE_PER_POINT").toInt()) * c->rebellion;
@@ -237,6 +246,7 @@ void Game::processLoyalty(PlayerId pid) {
                     c->rebellionCooldown = state_.turn + rules_->globalInt("REBELLION_COOLDOWN_TURNS");
                     rebellion(*c);
                     shared = {};
+                    moved = true;
                     c = state_.city(ids[i]);
                     if (!c || c->owner != pid) continue;
                 }
@@ -248,6 +258,7 @@ void Game::processLoyalty(PlayerId pid) {
             static_cast<int>(state_.rng.get(RngStream::Gameplay).below(100)) < rules_->globalInt("REBELLION_PERCENT")) {
             rebellion(*c);
             shared = {};
+            moved = true;
         }
     }
 }
