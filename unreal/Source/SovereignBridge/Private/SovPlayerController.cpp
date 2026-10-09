@@ -2245,6 +2245,31 @@ void ASovPlayerController::UpdateReach()
 				Edges.Add({FIntPoint(H.x, H.y), FIntPoint(Out.x, Out.y), FLinearColor(0.55f, 0.85f, 1.f)});
 			}
 		}
+		// Enemies it can strike this turn, ringed in red: in range of where it stands (ranged), or beside a plot it can
+		// reach (melee). Only units we see, of civs we are at war with.
+		const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
+		const int32 Range = T.ranged > 0 ? G.unitRange(*U) : 0;
+		if (T.combat > 0 || Range > 0)
+		{
+			TSet<int32> Marked;
+			for (const sov::Unit& E : S.units)
+			{
+				if (E.owner == Me() || !G.atWar(Me(), E.owner) || G.visibility(Me(), E.pos) != sov::Visibility::Visible) continue;
+				bool bTarget = Range > 0 && S.grid.distance(U->pos, E.pos) <= Range;
+				for (int32 d = 0; d < 6 && !bTarget && T.combat > 0 && T.ranged == 0; ++d)
+				{
+					const std::optional<sov::Hex> N = S.grid.neighbor(E.pos, static_cast<sov::Dir>(d));
+					bTarget = N && Left.Contains(S.grid.index(*N));
+				}
+				if (!bTarget || Marked.Contains(S.grid.index(E.pos))) continue;
+				Marked.Add(S.grid.index(E.pos));
+				for (int32 d = 0; d < 6; ++d)
+				{
+					const std::optional<sov::Hex> N = S.grid.neighbor(E.pos, static_cast<sov::Dir>(d));
+					if (N) Edges.Add({FIntPoint(E.pos.x, E.pos.y), FIntPoint(N->x, N->y), FLinearColor(0.95f, 0.25f, 0.2f)});
+				}
+			}
+		}
 	}
 	Map->SetReach(Edges);
 }
