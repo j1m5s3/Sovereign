@@ -224,7 +224,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         // Free Market, Grand Opera, Rationalism, Simultaneum (04): +50% of the district's yield from its buildings
         // with an adjacency of 4 or more for it, and +50% more in a city of 15 or more.
         static const std::array<std::tuple<const char*, const char*, YieldType>, 4> kCards = {{
-            {"POLICY_FREE_MARKET", "DISTRICT_COMMERCIAL_HUB", YieldType::Gold}, {"POLICY_GRAND_OPERA", "DISTRICT_THEATER", YieldType::Culture},
+            {"POLICY_FREE_MARKET", "DISTRICT_COMMERCIAL_HUB", YieldType::Gold}, {"POLICY_GRAND_OPERA", "DISTRICT_THEATER_SQUARE", YieldType::Culture},
             {"POLICY_RATIONALISM", "DISTRICT_CAMPUS", YieldType::Science}, {"POLICY_SIMULTANEUM", "DISTRICT_HOLY_SITE", YieldType::Faith}}};
         for (const auto& [card, district, yield] : kCards) {
             if (bt.district != district || !policyIs(c->owner, card)) continue;
@@ -1368,7 +1368,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
     if (item.kind == ProductionKind::Building) {
         const std::string& d = rules_->buildings[static_cast<size_t>(item.type)].district;
         if (d == "DISTRICT_CAMPUS") dedicationScore(city.owner, "DEDICATION_FREE_INQUIRY", 1);
-        if (d == "DISTRICT_THEATER") dedicationScore(city.owner, "DEDICATION_PEN_BRUSH_AND_VOICE", 1);
+        if (d == "DISTRICT_THEATER_SQUARE") dedicationScore(city.owner, "DEDICATION_PEN_BRUSH_AND_VOICE", 1);
         if (d == "DISTRICT_INDUSTRIAL_ZONE") dedicationScore(city.owner, "DEDICATION_HEARTBEAT_OF_STEAM", 1);
         if (d == "DISTRICT_AERODROME") dedicationScore(city.owner, "DEDICATION_SKY_AND_STARS", 1);
     }

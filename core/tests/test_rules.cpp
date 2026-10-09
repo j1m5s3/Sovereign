@@ -497,6 +497,37 @@ TEST(rules_reject_a_governor_promotion_listed_twice) {
     CHECK(err.find("PROMOTION_A") != std::string::npos);
 }
 
+// A Rock Band promotion's concert bonus names a district, an improvement or one of three kinds of place (07: Rock Bands);
+// any other name would never match where a band plays, so the rules refuse it.
+TEST(rules_reject_an_unknown_concert_place) {
+    // A promotion's effects, or the same effects on an ability; the place under test is a level bonus's or a burst's.
+    const auto withPlace = [](const std::string& place, bool ability, const std::string& kind = "BAND_LEVEL") {
+        std::map<std::string, std::string> docs = minimalRules();
+        const std::string effects = R"("effects": [{"kind": "BAND_BURST", "amount": 100, "at": "NATURAL_WONDER"},
+            {"kind": ")" + kind + R"(", "amount": 2, "at": ")" + place + R"("}])";
+        docs["promotions.json"] = ability ? R"({"abilities": [{"id": "ABILITY_A", )" + effects + "}]}"
+                                          : R"({"promotions": [{"id": "PROMOTION_A", "class": "PROMOTION_CLASS_ROCK_BAND", )" + effects + "}]}";
+        return docs;
+    };
+    for (const bool ability : {false, true}) {
+        std::string err;
+        for (const char* place : {"DISTRICT_CITY_CENTER", "WONDER", "NATIONAL_PARK", "NATURAL_WONDER"}) {
+            Rules r;
+            CHECK(r.loadFromText({withPlace(place, ability)}, &err));
+        }
+        Rules misspelt;
+        CHECK(!misspelt.loadFromText({withPlace("DISTRICT_THEATER", ability)}, &err));
+        CHECK(err.find(ability ? "ABILITY_A" : "PROMOTION_A") != std::string::npos);
+        CHECK(err.find("DISTRICT_THEATER") != std::string::npos);
+        CHECK(!misspelt.loadFromText({withPlace("DISTRICT_THEATER", ability, "BAND_BURST")}, &err));
+    }
+    // The real rules name the Theater Square by its id (Glam Rock).
+    const TypeIndex glam = rules().promotion("PROMOTION_GLAM_ROCK");
+    bool theater = false;
+    for (const UnitEffect& e : rules().promotions[static_cast<size_t>(glam)].effects) theater = theater || (e.kind == UnitEffectKind::BandLevel && e.at == "DISTRICT_THEATER_SQUARE");
+    CHECK(theater);
+}
+
 // A government's own modifiers load like a policy card's (04: Governments); a purchase discount names Gold or Faith.
 TEST(rules_load_government_modifiers) {
     const auto withDiscount = [](const std::string& yield) {

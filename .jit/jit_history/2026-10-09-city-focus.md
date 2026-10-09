@@ -21,4 +21,4 @@ Status: done, 2026-10-09. Previous: `2026-10-09-leader-ransom.md`. The cities au
 ## Left open
 
 - **Unreal:** the city panel needs a focus control that submits `Command::setCityFocus` (a PC session task; the cloud session does not edit Unreal code).
-- **Found on the way:** three places name the Theater Square `DISTRICT_THEATER` while the rules call it `DISTRICT_THEATER_SQUARE` (`city.cpp` Grand Opera and the Pen, Brush and Voice dedication, a promotion in `promotions.json`), so those effects never fire. The next PR.
+- **Found on the way:** three places name the Theater Square `DISTRICT_THEATER` while the rules call it `DISTRICT_THEATER_SQUARE` (`city.cpp` Grand Opera and the Pen, Brush and Voice dedication, a promotion in `promotions.json`), so those effects never fired. Fixed in `2026-10-09-theater-square.md`.

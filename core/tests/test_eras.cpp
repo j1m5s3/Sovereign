@@ -312,6 +312,25 @@ TEST(a_dedication_scores_in_a_normal_age_and_rewards_in_a_golden_one) {
     CHECK_EQ(h->maxMoves(*h->state().unit(b)), rules().units[at(rules().unit("UNIT_BUILDER"))].moves + 2);
 }
 
+// Free Inquiry, Pen, Brush, and Voice, Heartbeat of Steam and Sky and Stars (09): +1 era score in a Normal Age for each
+// building finished in their district.
+TEST(building_dedications_score_their_districts_buildings) {
+    const std::pair<const char*, const char*> cases[] = {
+        {"DEDICATION_FREE_INQUIRY", "BUILDING_LIBRARY"}, {"DEDICATION_PEN_BRUSH_AND_VOICE", "BUILDING_AMPHITHEATER"},
+        {"DEDICATION_HEARTBEAT_OF_STEAM", "BUILDING_WORKSHOP"}, {"DEDICATION_SKY_AND_STARS", "BUILDING_HANGAR"}};
+    for (const auto& c : cases) {
+        const auto gain = [&](bool dedicated) {
+            GameState s = eraState();
+            if (dedicated) s.players[0].dedications = {rules().dedication(c.first)};
+            auto g = Game::fromScenario(rules(), std::move(s));
+            const int before = g->state().players[0].eraScore;
+            g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::Building, rules().building(c.second)});
+            return g->state().players[0].eraScore - before;
+        };
+        CHECK_EQ(gain(true), gain(false) + 1);
+    }
+}
+
 TEST(to_arms_in_a_golden_age_opens_the_golden_age_war) {
     GameState s = eraState();
     s.gameEra = rules().era("ERA_INDUSTRIAL");

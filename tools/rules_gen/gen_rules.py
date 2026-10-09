@@ -513,7 +513,7 @@ def condition_atom(text):
 
 # Where a Rock Band promotion's concert bonus applies (07: Rock Bands). Civ-unique districts are left out:
 # Sovereign defines its own uniques.
-BAND_PLACES = {"Wonder": "WONDER", "Entertainment Complex": "DISTRICT_ENTERTAINMENT_COMPLEX", "Theater Square": "DISTRICT_THEATER",
+BAND_PLACES = {"Wonder": "WONDER", "Entertainment Complex": "DISTRICT_ENTERTAINMENT_COMPLEX", "Theater Square": "DISTRICT_THEATER_SQUARE",
                "Water Park": "DISTRICT_WATER_PARK", "Spaceport": "DISTRICT_SPACEPORT", "Campus": "DISTRICT_CAMPUS",
                "Harbor": "DISTRICT_HARBOR", "Seaside Resort": "IMPROVEMENT_SEASIDE_RESORT",
                "national park": "NATIONAL_PARK", "natural wonder": "NATURAL_WONDER"}
