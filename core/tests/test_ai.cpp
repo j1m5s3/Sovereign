@@ -1527,3 +1527,73 @@ TEST(ai_buys_more_missionaries_under_a_religious_strategy) {
     CHECK_EQ(bought(false), 1);
     CHECK_EQ(bought(true), 3);
 }
+
+TEST(ai_promotes_for_the_foes_around) {
+    // A Warrior ready for its first promotion takes Tortoise (+10 defending against ranged attacks) when its foes are
+    // mostly Archers, else Battlecry (+7 attacking melee and ranged units). Foes at war count three times; units out
+    // of sight or more than 8 plots away count for nothing.
+    enum Extra { None = 0, PeacefulWarrior = 1, FarWarrior = 2, HiddenWarrior = 3 };
+    const auto pick = [](const char* foe, Extra extra) {
+        GameState s = flatState(30, 12, 3);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.met.assign(3, 1);
+            p.relations.resize(3);
+        }
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        addCity(s, 0, {3, 6}, true, 3);
+        addCity(s, 1, {16, 10}, true, 3);
+        addCity(s, 2, {26, 6}, true, 3);
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {9, 6});
+        s.units.back().xp = 1000;
+        addUnit(s, foe, 1, {11, 6});
+        if (extra == PeacefulWarrior) addUnit(s, "UNIT_WARRIOR", 2, {9, 4});
+        if (extra == FarWarrior) addUnit(s, "UNIT_WARRIOR", 1, {19, 6});
+        if (extra == FarWarrior) addUnit(s, "UNIT_SCOUT", 0, {20, 7});  // in our sight, 10 plots from the Warrior
+        if (extra == HiddenWarrior) addUnit(s, "UNIT_WARRIOR", 1, {9, 1});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        if (extra == HiddenWarrior) REQUIRE(g->visibility(0, {9, 1}) != Visibility::Visible);
+        if (extra == FarWarrior) REQUIRE(g->visibility(0, {19, 6}) == Visibility::Visible);
+        const std::vector<TypeIndex> offered = g->availablePromotions(w);
+        REQUIRE(offered.size() == 2u);
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(w);
+        REQUIRE(u != nullptr && !u->promotions.empty());
+        return rules().promotions[at(u->promotions.front())].id;
+    };
+    CHECK_EQ(pick("UNIT_ARCHER", None), std::string("PROMOTION_TORTOISE"));
+    CHECK_EQ(pick("UNIT_WARRIOR", None), std::string("PROMOTION_BATTLECRY"));
+    CHECK_EQ(pick("UNIT_ARCHER", PeacefulWarrior), std::string("PROMOTION_TORTOISE"));  // 3 of 4 parts Archer
+    CHECK_EQ(pick("UNIT_ARCHER", FarWarrior), std::string("PROMOTION_TORTOISE"));
+    CHECK_EQ(pick("UNIT_ARCHER", HiddenWarrior), std::string("PROMOTION_TORTOISE"));
+}
+
+TEST(ai_promotes_a_ship_for_speed_with_no_foes_near) {
+    // A Galley's first promotion: Helmsman (+1 movement) with no foe near, Embolon (+7 against ships) beside an
+    // enemy Galley.
+    const auto pick = [](bool foe) {
+        GameState s = flatState(24, 12, 2);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.met.assign(2, 1);
+            p.relations.resize(2);
+        }
+        for (int y = 0; y < 12; ++y) {
+            for (int x = 7; x < 18; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+        }
+        s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+        addCity(s, 0, {4, 6}, true, 3);
+        addCity(s, 1, {21, 6}, true, 3);
+        const UnitId galley = addUnit(s, "UNIT_GALLEY", 0, {10, 6});
+        s.units.back().xp = 1000;
+        if (foe) addUnit(s, "UNIT_GALLEY", 1, {12, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->availablePromotions(galley).size() == 2u);
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(galley);
+        REQUIRE(u != nullptr && !u->promotions.empty());
+        return rules().promotions[at(u->promotions.front())].id;
+    };
+    CHECK_EQ(pick(false), std::string("PROMOTION_HELMSMAN"));
+    CHECK_EQ(pick(true), std::string("PROMOTION_EMBOLON"));
+}

@@ -43,6 +43,7 @@ constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never 
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kEnvoyStrategyBonus = 12;  // an envoy's pull toward a city-state of a kind our strategy wants, short of a tier's 20
 constexpr int kMissionaryPressureWeight = 6;  // a missionary's turn away from a city already full of our religion's pressure
+constexpr int kPromotionFoeRange = 8;  // foreign units a promotion is weighed against
 constexpr int kProposalGap = 10;        // an alliance's last turns, when it is renewed
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
@@ -3135,6 +3136,58 @@ void sendAssassins(Game& game, PlayerId me) {
     for (int32_t id : idle) game.submit(Command::sendAssassin(me, id, best));
 }
 
+// The promotion worth most to a unit (10: promotions weighed, not the first offered): the combat strength it adds
+// against the foreign military units in sight within kPromotionFoeRange plots, attacking and defending, those at war
+// with us counting three times, then movement, range, extra attacks and sight. Ties keep the order offered.
+TypeIndex bestPromotion(const View& v, const Unit& u, const std::vector<TypeIndex>& promos) {
+    if (promos.size() < 2 || v.r.units[at(u.type)].layer == UnitLayer::Leader) return promos.front();
+    const GameState& s = v.s();
+    std::vector<std::pair<UnitId, int>> foes;
+    for (const Unit& o : s.units) {
+        if (o.owner == v.me || o.owner == kNoPlayer || v.r.units[at(o.type)].layer != UnitLayer::Military) continue;
+        if (s.grid.distance(u.pos, o.pos) > kPromotionFoeRange || v.game.visibility(v.me, o.pos) != Visibility::Visible) continue;
+        foes.push_back({o.id, v.hostile(o.owner) ? 3 : 1});
+    }
+    const bool ranged = v.game.rangedStrength(u) > 0;
+    TypeIndex best = promos.front();
+    int bestScore = INT_MIN;
+    for (TypeIndex p : promos) {
+        int score = 0;
+        bool strength = false;
+        for (const UnitEffect& e : v.r.promotions[at(p)].effects) {
+            switch (e.kind) {
+                case UnitEffectKind::Strength: strength = true; break;
+                case UnitEffectKind::Moves: score += 12 * e.amount; break;
+                case UnitEffectKind::Range: score += 10 * e.amount; break;
+                case UnitEffectKind::Attacks: score += 15 * e.amount; break;
+                case UnitEffectKind::Sight: score += 3 * e.amount; break;
+                default: break;
+            }
+        }
+        if (strength && !foes.empty()) {
+            GameState trialState = s;
+            trialState.unit(u.id)->promotions.push_back(p);
+            const Game trial(v.r, std::move(trialState), {});
+            const Unit& tu = *trial.state().unit(u.id);
+            int gain = 0, weights = 0;
+            for (const auto& [id, weight] : foes) {
+                const Unit& o = *s.unit(id);
+                const Unit& to = *trial.state().unit(id);
+                gain += weight * (trial.combatStrength(tu, to, true, ranged) - v.game.combatStrength(u, o, true, ranged));
+                const bool theirRanged = v.game.rangedStrength(o) > 0;  // how it would strike us
+                gain += weight * (trial.combatStrength(tu, to, false, theirRanged) - v.game.combatStrength(u, o, false, theirRanged));
+                weights += weight;
+            }
+            score += 4 * gain / weights;
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            best = p;
+        }
+    }
+    return best;
+}
+
 void playTurn(Game& game) {
     // A live battle against a human is waiting; the turn resumes once it is settled.
     if (game.gameOver() || game.battlePending()) return;
@@ -3150,11 +3203,11 @@ void playTurn(Game& game) {
     if (!cityState) spies(v);
     research(v);
     cityActions(v);
-    // Promotions as soon as they are earned (the first offered; a planner can come later).
+    // Promotions as soon as they are earned, the one worth most.
     for (const Unit& u : game.state().units) {
         if (u.owner != v.me) continue;
         std::vector<TypeIndex> promos = game.availablePromotions(u.id);
-        if (!promos.empty()) game.submit(Command::promote(v.me, u.id, promos.front()));
+        if (!promos.empty()) game.submit(Command::promote(v.me, u.id, bestPromotion(v, u, promos)));
     }
     if (!cityState) nuclear(v);
     attacks(v);
