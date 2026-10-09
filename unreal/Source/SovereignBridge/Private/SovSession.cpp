@@ -37,6 +37,7 @@ FSovSetup FSovSetup::FromCommandLine()
 		Setup.bHumanSeat0 = false;
 	}
 	Setup.bBattleDemo = FParse::Param(Cmd, TEXT("SovBattleDemo"));
+	FParse::Value(Cmd, TEXT("SovBattleUnits="), Setup.BattleUnits, false);  // the whole list, commas and all
 	Setup.bNavalDemo = FParse::Param(Cmd, TEXT("SovNavalDemo"));
 	Setup.bDiploDemo = FParse::Param(Cmd, TEXT("SovDiploDemo"));
 	Setup.bRivalMemory = !FParse::Param(Cmd, TEXT("SovNoRivals"));
@@ -356,6 +357,14 @@ void FSovSession::ApplyDemos(const FSovSetup& Setup)
 					Foe->pos = *N;
 					break;
 				}
+			}
+			// -SovBattleUnits: other unit types for the two sides (a developer's way to see each arm fight).
+			TArray<FString> Types;
+			Setup.BattleUnits.ParseIntoArray(Types, TEXT(","));
+			for (int32 k = 0; k < Types.Num() && k < 2; ++k)
+			{
+				const sov::TypeIndex T = Rules->unit(TCHAR_TO_UTF8(*Types[k]));
+				if (T != sov::kNone) (k == 0 ? Guard : Foe)->type = T;
 			}
 			S.players[0].relations[1].war = S.players[1].relations[0].war = true;
 			S.players[0].relations[1].since = S.players[1].relations[0].since = 1;

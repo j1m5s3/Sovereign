@@ -57,8 +57,9 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 	for (int32 Side = 0; Side < 2; ++Side)
 	{
 		const FName F = Side == 0 ? Spec.Attacker.Figure : Spec.Defender.Figure;
-		const bool bOnFoot = F == FName("Archer") || F == FName("Musketeer") || F == FName("Rifleman");
+		const bool bOnFoot = F == FName("Archer") || F == FName("Musketeer") || F == FName("Rifleman") || F == FName("Rider");
 		SideFigure[Side] = bOnFoot && SovArt::Mesh(TEXT("Figures"), F.ToString()) ? F.ToString() : FString(TEXT("Soldier"));
+		SideYaw[Side] = SideFigure[Side] == TEXT("Rider") ? -90.f : 0.f;
 	}
 	UStaticMeshComponent* Floor = Add(CubeMesh, FVector(0, 0, -50), FVector(90.0, 60.0, 1.0), Ground);
 	Floor->SetCollisionProfileName(TEXT("BlockAll"));
@@ -142,7 +143,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			continue;
 		}
 		// Figures face the enemy's side of the field (kit figures face +Y in Unreal).
-		const float Facing = S.Side == 0 ? -90.f : 90.f;
+		const float Facing = (S.Side == 0 ? -90.f : 90.f) + (S.bLeader ? 0.f : SideYaw[S.Side]);
 		if (S.bAlive)
 		{
 			if (Figure[i])

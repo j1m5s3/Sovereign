@@ -53,6 +53,8 @@ struct FSovSetup
 	bool bHumanSeat0 = true;
 	// Developer start: seat 0's warrior on its leader's plot, an enemy warrior next to it, at war.
 	bool bBattleDemo = false;
+	// -SovBattleUnits=UNIT_A,UNIT_B: the battle demo's two units (ours, theirs) instead of the first ones found.
+	FString BattleUnits;
 	// Developer start: seat 0 knows Shipbuilding, with a galley and an embarked warrior on the nearest coast.
 	bool bNavalDemo = false;
 	// Developer start: every civ has met every other, each has 200 gold, and seat 1 waits on seat 0
