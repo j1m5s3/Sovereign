@@ -2,6 +2,7 @@
 //   UnrealEditor-Cmd.exe Sovereign.uproject -ExecCmds="Automation RunTests Sovereign; Quit" -nullrhi -unattended
 #include "Misc/AutomationTest.h"
 
+#include "SovDescribe.h"
 #include "SovHexLayout.h"
 #include "SovKeys.h"
 #include "SovLens.h"
@@ -1195,6 +1196,28 @@ bool FSovLensTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("%s lens recolours plots"), SovLensName(static_cast<ESovLens>(L))), Changed > 0);
 		TestTrue(*FString::Printf(TEXT("%s lens has a legend"), SovLensName(static_cast<ESovLens>(L))), Legend.Num() > 0);
 	}
+	return true;
+}
+
+// Every policy card and government reads as words, not as a modifier id (plan E: the government screen).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovDescribeTest, "Sovereign.Bridge.PoliciesAreDescribed", kSovTestFlags)
+bool FSovDescribeTest::RunTest(const FString& Parameters)
+{
+	sov::Rules R;
+	std::string Error;
+	if (!TestTrue(TEXT("rules load"), R.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Error))) return false;
+	int32 Described = 0;
+	for (size_t p = 0; p < R.policies.size(); ++p)
+	{
+		const FString T = SovSourceText(R, sov::ModSource::Policy, static_cast<sov::TypeIndex>(p));
+		if (T.IsEmpty()) continue;
+		++Described;
+		TestFalse(*FString::Printf(TEXT("%s reads as words: %s"), UTF8_TO_TCHAR(R.policies[p].name.c_str()), *T), T.Contains(TEXT("POLICY_")) || T.Contains(TEXT("MODIFIER")));
+		if (p % 10 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.policies[p].name.c_str()), *T));
+	}
+	TestTrue(TEXT("most cards have a description"), Described * 2 > static_cast<int32>(R.policies.size()));
+	for (size_t g = 0; g < R.governments.size(); ++g)
+		AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.governments[g].name.c_str()), *SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g))));
 	return true;
 }
 

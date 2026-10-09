@@ -4,6 +4,7 @@
 #include "InputCoreTypes.h"
 
 #include "SovCameraPawn.h"
+#include "SovDescribe.h"
 #include "SovEvents.h"
 #include "SovSettingsScreen.h"
 #include "SovStatus.h"
@@ -2433,13 +2434,15 @@ void ASovPlayerController::UpdateGameUI()
 			O.Detail = FString::Printf(TEXT("Tier %d"), Gt.tier);
 			if (Gt.favor) O.Detail += FString::Printf(TEXT(", +%d favor a turn"), Gt.favor);
 			if (Gt.influencePerTurn) O.Detail += FString::Printf(TEXT(", +%d influence a turn"), Gt.influencePerTurn);
+			if (const FString Bonus = SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g)); !Bonus.IsEmpty()) O.Detail += TEXT(". ") + Bonus;
 			O.bCurrent = static_cast<sov::TypeIndex>(g) == Cur;
 			O.bCanAdopt = !O.bCurrent && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g));
 		}
 		for (int32 Slot = 0; Slot < static_cast<int32>(P.policies.size()); ++Slot)
 		{
 			const sov::TypeIndex In = P.policies[static_cast<size_t>(Slot)];
-			V.Slots.Add({static_cast<int32>(G.policySlotType(Me(), Slot)), In == sov::kNone ? FString() : Str(R.policies[static_cast<size_t>(In)].name)});
+			V.Slots.Add({static_cast<int32>(G.policySlotType(Me(), Slot)), In == sov::kNone ? FString() : Str(R.policies[static_cast<size_t>(In)].name),
+				In == sov::kNone ? FString() : SovSourceText(R, sov::ModSource::Policy, In)});
 		}
 		if (GovSlot >= V.Slots.Num()) GovSlot = -1;
 		V.Selected = GovSlot;
@@ -2448,7 +2451,7 @@ void ASovPlayerController::UpdateGameUI()
 			for (size_t pol = 0; pol < R.policies.size(); ++pol)
 			{
 				if (static_cast<sov::TypeIndex>(pol) == P.policies[static_cast<size_t>(GovSlot)] || !G.canSetPolicy(Me(), GovSlot, static_cast<sov::TypeIndex>(pol))) continue;
-				V.Cards.Add({static_cast<int32>(pol), Str(R.policies[pol].name), static_cast<int32>(R.policies[pol].slot)});
+				V.Cards.Add({static_cast<int32>(pol), Str(R.policies[pol].name), static_cast<int32>(R.policies[pol].slot), SovSourceText(R, sov::ModSource::Policy, static_cast<sov::TypeIndex>(pol))});
 			}
 		}
 		if (const sov::Command Buy = sov::Command::buyPolicyChanges(Me()); G.validate(Buy) == sov::CommandError::Ok)

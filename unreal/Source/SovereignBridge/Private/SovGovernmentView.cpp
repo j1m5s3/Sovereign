@@ -203,6 +203,7 @@ void SSovGovernmentView::Rebuild()
 			SNew(SBox).WidthOverride(170).HeightOverride(96)
 			[
 				SNew(SButton).IsFocusable(false).ButtonStyle(&CardStyle()).ButtonColorAndOpacity(bSel ? KindColor(S.Kind) * 1.8f : KindColor(S.Kind))
+				.ToolTipText(FText::FromString(S.Policy.IsEmpty() ? FString(TEXT("Empty: click to fill it")) : S.Policy + TEXT(": ") + S.Text))
 				.OnClicked_Lambda([this, i]() { OnSlot.ExecuteIfBound(i); return FReply::Handled(); })
 				[
 					SNew(SVerticalBox)
@@ -229,6 +230,7 @@ void SSovGovernmentView::Rebuild()
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(8, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(FString(KindName(C.Kind)).ToUpper()))]
 				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(C.Name))]
+				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Text * 0.85f).AutoWrapText(true).Text(FText::FromString(C.Text))]
 			]
 		];
 	}

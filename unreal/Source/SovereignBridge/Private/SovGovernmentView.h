@@ -22,6 +22,7 @@ struct FSovGovSlot
 {
 	int32 Kind = 0;  // sov::PolicySlot: military, economic, diplomatic, wildcard, great person
 	FString Policy;  // empty: no card
+	FString Text;    // what the card does
 };
 
 struct FSovGovCard
@@ -29,6 +30,7 @@ struct FSovGovCard
 	int32 Index = -1;  // Rules::policies
 	FString Name;
 	int32 Kind = 0;
+	FString Text;  // what it does
 };
 
 struct FSovGovModel
