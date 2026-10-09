@@ -149,11 +149,11 @@ std::pair<int, UnitId> Game::interception(const Unit& attacker, Hex target) cons
         if (isAircraft(d)) {
             // A fighter on patrol (fortified at its base) covers its strike range.
             if (t.ranged <= 0 || d.activity != Activity::Fortify || state_.grid.distance(d.pos, target) > unitRange(d)) continue;
-            strength = t.combat * d.hp / 100;
+            strength = combatStrength(d, attacker, true, false);  // the strength formula, as in every fight (05)
         } else if (t.antiAir > 0 && state_.grid.distance(d.pos, target) <= 1) {
             // Anti-air guns and AA ships cover adjacent plots; +25 in a city's territory with Air Defense Initiative (08: Victor).
             const int bonus = territoryGovernorHas(d.pos, d.owner, "GOVERNOR_PROMOTION_AIR_DEFENSE_INITIATIVE") ? 25 : 0;
-            strength = (t.antiAir + bonus) * d.hp / 100;
+            strength = t.antiAir + bonus - woundedPenalty(d);
         }
         if (strength > best) {
             best = strength;

@@ -95,6 +95,56 @@ TEST(air_strikes_and_interception) {
     CHECK(g4->interception(*g4->state().unit(plane), {8, 7}).first > 0);
 }
 
+// Interception uses the strength formula like every fight (05): a wounded interceptor or anti-air gun loses
+// round(10 - hp/10), not a share of its strength in proportion to its health; aircraft get no fortification.
+TEST(interception_uses_the_strength_formula) {
+    GameState s = skies();
+    const UnitId plane = addUnit(s, "UNIT_BIPLANE", 0, {5, 7});
+    s.unit(plane)->fortifyTurns = 2;
+    const UnitId gun = addUnit(s, "UNIT_ANTI_AIR_GUN", 1, {9, 7});
+    s.unit(gun)->hp = 50;
+    GameState patrol = s;
+    patrol.units.pop_back();  // the gun
+    const UnitId guard = addUnit(patrol, "UNIT_BIPLANE", 1, {11, 7});
+    patrol.unit(guard)->activity = Activity::Fortify;
+    patrol.unit(guard)->fortifyTurns = 2;
+    patrol.unit(guard)->hp = 60;
+    const int biplane = rules().units[at(rules().unit("UNIT_BIPLANE"))].combat;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->interception(*g->state().unit(plane), {8, 7}).first, rules().units[at(rules().unit("UNIT_ANTI_AIR_GUN"))].antiAir - 5);
+    CHECK_EQ(g->combatStrength(*g->state().unit(plane), *g->state().unit(gun), false, false), biplane);  // no fortification
+    auto h = Game::fromScenario(rules(), std::move(patrol));
+    CHECK_EQ(h->interception(*h->state().unit(plane), {8, 7}).first, biplane - 4);
+    // A Biplane at 70 HP striking past a whole anti-air gun (90): 90 against 77, 40 to 61 damage, so it lives (scaled
+    // by its health it would defend at 56 and fall).
+    GameState strike = skies();
+    const UnitId hurt = addUnit(strike, "UNIT_BIPLANE", 0, {5, 7});
+    strike.unit(hurt)->hp = 70;
+    addUnit(strike, "UNIT_INFANTRY", 1, {8, 7});
+    addUnit(strike, "UNIT_ANTI_AIR_GUN", 1, {9, 7});
+    auto k = Game::fromScenario(rules(), std::move(strike));
+    REQUIRE(k->submit(Command::rangedAttack(0, hurt, {8, 7})) == CommandError::Ok);
+    const Unit* after = k->state().unit(hurt);
+    REQUIRE(after);
+    CHECK(after->hp >= 70 - 61 && after->hp <= 70 - 40);
+}
+
+// A Corps or Army fighting an aircraft gets +7 instead of +10 or +17 (05: Formations).
+TEST(corps_and_armies_get_less_against_aircraft) {
+    GameState s = skies();
+    const UnitId plane = addUnit(s, "UNIT_BIPLANE", 0, {5, 7});
+    const UnitId foot = addUnit(s, "UNIT_INFANTRY", 0, {6, 9});
+    const std::array<UnitId, 3> infantry = {addUnit(s, "UNIT_INFANTRY", 1, {8, 7}), addUnit(s, "UNIT_INFANTRY", 1, {8, 8}),
+                                            addUnit(s, "UNIT_INFANTRY", 1, {8, 9})};
+    for (int8_t f = 0; f < 3; ++f) s.unit(infantry[static_cast<size_t>(f)])->formation = f;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const auto vs = [&](UnitId id, UnitId opp) { return g->combatStrength(*g->state().unit(id), *g->state().unit(opp), false, false); };
+    CHECK_EQ(vs(infantry[1], plane), vs(infantry[0], plane) + rules().globalInt("COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER"));
+    CHECK_EQ(vs(infantry[2], plane), vs(infantry[0], plane) + rules().globalInt("COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER"));
+    CHECK_EQ(vs(infantry[1], foot), vs(infantry[0], foot) + rules().globalInt("COMBAT_CORPS_STRENGTH_MODIFIER"));
+    CHECK_EQ(vs(infantry[2], foot), vs(infantry[0], foot) + rules().globalInt("COMBAT_ARMY_STRENGTH_MODIFIER"));
+}
+
 TEST(bringing_down_a_fighter_earns_guidance_systems) {
     // 04: Guidance Systems' Eureka, a Fighter killed: an anti-air gun brings down a crippled one striking beside it.
     GameState s = skies();

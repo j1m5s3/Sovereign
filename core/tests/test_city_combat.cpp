@@ -536,6 +536,42 @@ TEST(an_encampment_strikes_and_holds_ground) {
     CHECK_EQ(g->cityStrength(g->state().cities[0]), bare->cityStrength(bare->state().cities[0]) + 2);
 }
 
+// An attack on an Encampment counts the river and flanking at the Encampment, not at its city center (05: Strength).
+TEST(an_encampment_attack_counts_the_river_and_flanks_at_the_encampment) {
+    const Hex camp{11, 5}, from{12, 5}, flank{12, 4};
+    const auto strength = [&](bool river, bool flanker) {
+        UnitId foe = kNoUnit;
+        auto g = siege([&](GameState& s) {
+            CityDistrict d;
+            d.type = rules().district("DISTRICT_ENCAMPMENT");
+            d.pos = camp;
+            d.complete = true;
+            s.cities[0].districts.push_back(d);
+            s.plot(camp).owner = 1;
+            s.plot(camp).city = s.cities[0].id;
+            if (river) s.plot(camp).riverEdges |= kRiverE;  // between the Encampment and the attacker
+            Game::fitPlayerToRules(s.players[0], rules());
+            s.players[0].civics.done[at(rules().civic("CIVIC_MILITARY_TRADITION"))] = 1;
+            foe = sovtest::addUnit(s, "UNIT_WARRIOR", 0, from);
+            if (flanker) sovtest::addUnit(s, "UNIT_WARRIOR", 0, flank);
+            for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+        });
+        const HexGrid& grid = g->state().grid;
+        REQUIRE(grid.distance(from, camp) == 1 && grid.distance(from, kCity) > 1);
+        REQUIRE(grid.distance(flank, camp) == 1 && grid.distance(flank, kCity) > 1);
+        const CombatPreview p = g->previewAttack(foe, camp, false);
+        REQUIRE(p.valid && p.encampment);
+        REQUIRE(g->submit(Command::attack(0, foe, camp)) == CommandError::Ok);
+        return std::make_pair(p.attackerStrength, static_cast<int>(g->state().cities[0].districts.back().damage));
+    };
+    const auto plain = strength(false, false), river = strength(true, false), flanked = strength(false, true);
+    CHECK_EQ(river.first, plain.first - rules().globalInt("COMBAT_RIVER_DEFENSE"));
+    CHECK_EQ(flanked.first, plain.first + rules().globalInt("COMBAT_FLANKING_BONUS_MODIFIER"));
+    CHECK(plain.second > 0);  // the attack itself, with the same roll, counts them too
+    CHECK(river.second < plain.second);
+    CHECK(flanked.second > plain.second);
+}
+
 // A planned path ends its move beside an Encampment only as its zone of control has it: a finished one, of a civ at
 // war with the mover (03: Defense).
 TEST(an_encampment_stops_planned_moves_only_finished_and_at_war) {
