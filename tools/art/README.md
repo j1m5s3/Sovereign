@@ -24,7 +24,7 @@ Each kit maps its colours to a pattern (`kitlib.patterns({...})` at the top of t
 | File | What it does |
 |---|---|
 | `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses; lofts through elliptical rings, limbs between two points, flat profiles, two-sided rippled sheets for cloth) and the painted look: vertex colours darkened at the foot and lightened at the crown, of the whole piece and of each part; flat shading, or smooth for figures |
-| `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
+| `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks; the map's features (reeds, palms, coral, ice floes, volcano, fumarole, burnt tree) and natural-wonder landforms (peak, mesa, spires, pool, cliffs, mounds) |
 | `blender/kit_fields.py` | Fields kit, the map's tile improvements: farm, mine, quarry, pasture, plantation, camp, fishing boats, lumber mill, oil well, fort, wind farm, solar farm, and a walled yard for the rest |
 | `blender/kit_districts.py` | Districts kit, one map token per specialty district (Campus to Preserve), each with a pennant in the owner's colour |
 | `blender/kit_wonders.py` | Wonders kit, by kind: pyramid, step pyramid, stone circle, gardens, statue, tower, lattice tower, domed hall, arena, citadel, arsenal (the map maps each wonder to one; the rest use the Classical temple) |

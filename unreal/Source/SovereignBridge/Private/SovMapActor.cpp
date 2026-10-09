@@ -189,6 +189,47 @@ TPair<const TCHAR*, FString> CityPiece(int32 Era, int32 Kind)
 	return {TEXT("Classical"), Classical[Kind]};
 }
 
+// The Nature kit's piece for a terrain feature or natural wonder (tools/art/blender/kit_nature.py); null for none
+// (woods have their trees, floodplains only their colour).
+const TCHAR* FeatureModel(const FString& Id)
+{
+	// Each piece and the features (their ids without FEATURE_) drawn with it.
+	static const TPair<const TCHAR*, const TCHAR*> Kinds[] = {
+		{TEXT("Reeds"), TEXT("MARSH PANTANAL UBSUNUR_HOLLOW")},
+		{TEXT("Palms"), TEXT("OASIS GALAPAGOS_ISLANDS PAITITI")},
+		{TEXT("Coral"), TEXT("REEF GREAT_BARRIER_REEF")},
+		{TEXT("IceFloe"), TEXT("ICE")},
+		{TEXT("Volcano"), TEXT("VOLCANO MOUNT_VESUVIUS EYJAFJALLAJOKULL")},
+		{TEXT("Fumarole"), TEXT("GEOTHERMAL_FISSURE")},
+		{TEXT("BurntTree"), TEXT("BURNING_FOREST BURNT_FOREST BURNING_JUNGLE BURNT_JUNGLE")},
+		{TEXT("Peak"), TEXT("MOUNT_EVEREST MOUNT_KILIMANJARO MATTERHORN")},
+		{TEXT("Mesa"), TEXT("ULURU MOUNT_RORAIMA MATO_TIPILA GOBUSTAN SAHARA_EL_BEYDA DELICATE_ARCH")},
+		{TEXT("Spires"), TEXT("TSINGY_DE_BEMARAHA TORRES_DEL_PAINE ZHANGYE_DANXIA GIANT_S_CAUSEWAY HA_LONG_BAY PIOPIOTAHI LYSEFJORD")},
+		{TEXT("Pool"), TEXT("CRATER_LAKE DEAD_SEA IK_KIL PAMUKKALE LAKE_RETBA FOUNTAIN_OF_YOUTH EYE_OF_THE_SAHARA")},
+		{TEXT("Cliffs"), TEXT("CLIFFS_OF_DOVER YOSEMITE")},
+		{TEXT("Mounds"), TEXT("CHOCOLATE_HILLS")},
+	};
+	static TMap<FString, const TCHAR*> ById;
+	if (ById.IsEmpty())
+	{
+		for (const auto& K : Kinds)
+		{
+			TArray<FString> Ids;
+			FString(K.Value).ParseIntoArray(Ids, TEXT(" "));
+			for (const FString& I : Ids) ById.Add(I, K.Key);
+		}
+	}
+	const TCHAR* const* Found = ById.Find(Id.RightChop(8));
+	return Found ? *Found : nullptr;
+}
+
+// Features drawn as one large piece in the middle of the plot (volcanoes and natural wonders): no rocks under them.
+bool IsLandform(const TCHAR* Model)
+{
+	return Model && FCString::Strcmp(Model, TEXT("Reeds")) && FCString::Strcmp(Model, TEXT("Palms")) && FCString::Strcmp(Model, TEXT("Coral"))
+		&& FCString::Strcmp(Model, TEXT("IceFloe")) && FCString::Strcmp(Model, TEXT("Fumarole")) && FCString::Strcmp(Model, TEXT("BurntTree"));
+}
+
 // Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
 void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 {
@@ -508,6 +549,37 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		Trees[i]->SetVisibility(false);
 	}
 
+	// Features: reeds in marshes, palms at oases, coral on reefs, floes on ice, fissures, burnt trees, and a landform
+	// for volcanoes and natural wonders (larger, in the middle of the plot).
+	int32 FeatureCount = 0;
+	for (const FSovTile& Tile : Mirror.Tiles)
+	{
+		const TCHAR* Model = Tile.Feature.IsEmpty() ? nullptr : FeatureModel(Tile.Feature);
+		if (!Model || !SovArt::Mesh(TEXT("Nature"), Model))
+		{
+			continue;
+		}
+		const uint32 H = static_cast<uint32>(Tile.X * 2246822519u) ^ static_cast<uint32>(Tile.Y * 3266489917u);
+		const bool bLandform = IsLandform(Model);
+		const bool bBurnt = !FCString::Strcmp(Model, TEXT("BurntTree"));
+		const int32 Count = bBurnt ? 3 : 1;
+		for (int32 k = 0; k < Count; ++k)
+		{
+			const double A = (k * 2.1 + (H % 7)) * 1.0;
+			const double R = bLandform ? 0.0 : bBurnt ? 32.0 + ((H >> (k * 3)) & 7) * 3.0 : 22.0;
+			UStaticMeshComponent* C = Marker(FeaturePieces, FeatureCount++, nullptr);
+			SovArt::SetKitMesh(C, TEXT("Nature"), Model, FLinearColor::White);
+			ShadeKit(C, FLinearColor(0.62f, 0.6f, 0.58f));
+			C->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
+			C->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 5) % 360), 0.f));
+			C->SetRelativeScale3D(FVector(bLandform ? 0.13 : bBurnt ? 0.075 : !FCString::Strcmp(Model, TEXT("IceFloe")) ? 0.12 : 0.09));
+		}
+	}
+	for (int32 i = FeatureCount; i < FeaturePieces.Num(); ++i)
+	{
+		FeaturePieces[i]->SetVisibility(false);
+	}
+
 	// Rocks: a small cluster on a hill, a large one with a smaller beside it crowning a mountain.
 	int32 RockCount = 0;
 	if (SovArt::Mesh(TEXT("Nature"), TEXT("Rocks")))
@@ -515,6 +587,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		for (const FSovTile& Tile : Mirror.Tiles)
 		{
 			if (Tile.Relief != ESovRelief::Hills && Tile.Relief != ESovRelief::Mountain) continue;
+			if (IsLandform(FeatureModel(Tile.Feature))) continue;
 			const uint32 H = static_cast<uint32>(Tile.X * 83492791) ^ static_cast<uint32>(Tile.Y * 2971215073u);
 			const bool bMountain = Tile.Relief == ESovRelief::Mountain;
 			const int32 Count = bMountain ? 2 : 1;

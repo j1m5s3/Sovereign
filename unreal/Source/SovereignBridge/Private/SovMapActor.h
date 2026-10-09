@@ -70,6 +70,8 @@ private:
 	TArray<TObjectPtr<UStaticMeshComponent>> WonderPieces;
 	// Districts (the Districts kit) and the houses round a city centre, more as it grows.
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> DistrictPieces;
+	// Terrain features and natural wonders (the Nature kit).
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> FeaturePieces;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> CityHouses;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> VillagePieces;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> AntiquityPieces;

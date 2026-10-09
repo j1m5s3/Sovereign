@@ -91,7 +91,9 @@ bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString
 TArray<FString> RequiredAssets()
 {
 	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit")};
-	for (const TCHAR* Name : {TEXT("Tree_Broadleaf"), TEXT("Tree_Conifer"), TEXT("Bush"), TEXT("Rocks")})
+	for (const TCHAR* Name : {TEXT("Tree_Broadleaf"), TEXT("Tree_Conifer"), TEXT("Bush"), TEXT("Rocks"), TEXT("Reeds"), TEXT("Palms"),
+			 TEXT("Coral"), TEXT("IceFloe"), TEXT("Volcano"), TEXT("Fumarole"), TEXT("BurntTree"), TEXT("Peak"), TEXT("Mesa"), TEXT("Spires"),
+			 TEXT("Pool"), TEXT("Cliffs"), TEXT("Mounds")})
 	{
 		Out.Add(MeshPath(TEXT("Nature"), Name));
 	}
