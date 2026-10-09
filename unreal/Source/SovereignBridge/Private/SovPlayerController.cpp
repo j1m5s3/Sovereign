@@ -2184,7 +2184,22 @@ void ASovPlayerController::UpdatePath()
 	PathKey = Key;
 	Hud->PathPlots.Reset();
 	Hud->PathTurns.Reset();
+	CombatLines.Reset();
 	if (!bShow) return;
+	// An attack there: both strengths and the damage each side would take, before the dice.
+	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
+	const sov::CombatPreview Pv = G.previewAttack(U->id, sov::Hex{X, Y}, T.ranged > 0);
+	if (Pv.valid)
+	{
+		CombatLines.Add(Pv.capture ? FString(TEXT("Capture: no fight")) : Pv.captureCity ? FString(TEXT("Take the city: no fight"))
+			: FString::Printf(TEXT("%s: strength %d against %d"), Pv.ranged ? TEXT("Ranged attack") : TEXT("Attack"), Pv.attackerStrength, Pv.defenderStrength));
+		if (!Pv.capture && !Pv.captureCity)
+		{
+			CombatLines.Add(FString::Printf(TEXT("%s take %d-%d damage%s"), Pv.city != sov::kNoCity ? (Pv.hitsWalls ? TEXT("Their walls") : TEXT("The city")) : TEXT("They"),
+				Pv.damageToDefenderMin, Pv.damageToDefenderMax, Pv.encampment ? TEXT(" (Encampment)") : TEXT("")));
+			if (!Pv.ranged) CombatLines.Add(FString::Printf(TEXT("You take %d-%d damage"), Pv.damageToAttackerMin, Pv.damageToAttackerMax));
+		}
+	}
 	const std::optional<std::vector<sov::PathStep>> Path = G.findPath(U->id, sov::Hex{X, Y});
 	if (!Path || Path->empty()) return;
 	Hud->PathPlots.Add(FIntPoint(U->pos.x, U->pos.y));
@@ -2334,6 +2349,8 @@ void ASovPlayerController::UpdateGameUI()
 			})
 			.OnGovDedication_Lambda([this](int32 D) { Send(sov::Command::chooseDedication(Me(), static_cast<sov::TypeIndex>(D))); })
 			.OnGovBuy_Lambda([this]() { Send(sov::Command::buyPolicyChanges(Me())); })
+			.OnEmpireCity_Lambda([this](int32 Id) { SelectCity(Id, true); })
+			.OnEmpireUnit_Lambda([this](int32 Id) { SelectUnit(Id, true); })
 			.OnLens_Lambda([this](int32 Lens) {
 				// A lens is this machine's view: the map redraws with it (again: off).
 				USovGameSubsystem* S = Subsystem();
@@ -2815,6 +2832,13 @@ void ASovPlayerController::UpdateGameUI()
 	M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
 	// The plot under the cursor.
 	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
+	if (M.Hover.Num() > 0 && CombatLines.Num() > 0)
+	{
+		// An attack on the plot under the cursor comes first.
+		TArray<FString> Lines = CombatLines;
+		Lines.Append(M.Hover);
+		M.Hover = Lines;
+	}
 	// How to play (F1) or the chronicle (F4), as a page over the map.
 	if (const ASovHUD* H = Cast<ASovHUD>(GetHUD()))
 	{
@@ -2846,6 +2870,51 @@ void ASovPlayerController::UpdateGameUI()
 	if (bEmpireOpen)
 	{
 		for (const FSovStatusLine& L : SovStatusLines(G, Me())) M.EmpireLines.Add({NAME_None, L.Text, TEXT(""), L.Color});
+		// Our units, those waiting on orders first ("!" in Section marks them), then by type.
+		{
+			const std::vector<sov::UnitId> Waiting = G.unitsNeedingOrders(Me());
+			TArray<TPair<int32, int32>> Order;  // (rank, unit id)
+			for (const sov::Unit& Un : S.units)
+				if (Un.owner == Me()) Order.Add({std::find(Waiting.begin(), Waiting.end(), Un.id) != Waiting.end() ? 0 : 1, Un.id});
+			Order.StableSort([&](const TPair<int32, int32>& A, const TPair<int32, int32>& B) {
+				if (A.Key != B.Key) return A.Key < B.Key;
+				return S.unit(A.Value)->type < S.unit(B.Value)->type;
+			});
+			for (const TPair<int32, int32>& O : Order)
+			{
+				const sov::Unit* Un = S.unit(O.Value);
+				FSovUIChoice Row;
+				Row.Label = Str(R.units[static_cast<size_t>(Un->type)].name) + (Un->hp < 100 ? FString::Printf(TEXT("  %d HP"), Un->hp) : FString());
+				Row.Right = O.Key == 0 ? TEXT("needs orders") : Un->moveTarget ? TEXT("moving") : Un->activity == sov::Activity::Fortify ? TEXT("fortified")
+					: Un->activity == sov::Activity::Sleep ? TEXT("asleep") : Un->activity == sov::Activity::Skip ? TEXT("skipping") : TEXT("done");
+				if (O.Key == 0) Row.Section = TEXT("!");
+				M.EmpireUnits.Add(Row);
+				M.EmpireUnitIds.Add(Un->id);
+			}
+		}
+		// Our cities, the capital first: population, what each builds; yields on hover. A click selects one.
+		for (const sov::City& Ci : S.cities)
+		{
+			if (Ci.owner != Me()) continue;
+			const sov::CityReport Rep = G.cityReport(Ci.id);
+			FSovUIChoice Row;
+			Row.Label = FString::Printf(TEXT("%s%s  %d"), Ci.capital ? TEXT("* ") : TEXT(""), *Str(Ci.name), Ci.population);
+			Row.Right = Ci.queue.empty() ? FString(TEXT("needs production")) : ItemName(R, Ci.queue.front());
+			static const TCHAR* const Names[] = {TEXT("Food"), TEXT("Production"), TEXT("Gold"), TEXT("Science"), TEXT("Culture"), TEXT("Faith")};
+			for (size_t y = 0; y < sov::kNumYields; ++y)
+				Row.Tip += FString::Printf(TEXT("%s%s %s"), y ? TEXT(", ") : TEXT(""), *Str(Rep.yields[y].toString()), Names[y]);
+			Row.Tip += FString::Printf(TEXT("\nLoyalty %d, amenities %d of %d"), Ci.loyalty, Rep.amenities, Rep.amenitiesNeeded);
+			if (Ci.capital)
+			{
+				M.EmpireCities.Insert(Row, 0);
+				M.EmpireCityIds.Insert(Ci.id, 0);
+			}
+			else
+			{
+				M.EmpireCities.Add(Row);
+				M.EmpireCityIds.Add(Ci.id);
+			}
+		}
 	}
 	// The lens and the minimap, with the camera's place on it (plan D, step 6).
 	M.Lens = static_cast<int32>(Sub->Lens);

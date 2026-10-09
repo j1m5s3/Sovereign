@@ -240,6 +240,7 @@ protected:
 	// The selected unit's path to the plot under the cursor, for the HUD.
 	void UpdatePath();
 	FString PathKey;
+	TArray<FString> CombatLines;  // what an attack on the plot under the cursor would do (empty: none)
 	bool bEmpireOpen = false;  // the Empire panel (F8)
 	bool bBattleNowDone = false;  // -SovBattleNow has attacked
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
