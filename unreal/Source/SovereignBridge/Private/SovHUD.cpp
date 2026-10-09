@@ -382,7 +382,7 @@ void ASovHUD::DrawHUD()
 	const USovGameSubsystem* Sub = GI ? GI->GetSubsystem<USovGameSubsystem>() : nullptr;
 	float Y = 12.f + TopInset;
 	// Online: the lobby until the host starts the game.
-	if (Sub && Sub->GetSession().InLobby())
+	if (const ASovPlayerController* LPC = Cast<ASovPlayerController>(PlayerOwner); Sub && Sub->GetSession().InLobby() && !(LPC && LPC->UsesWidgets()))
 	{
 		const bool bHost = Sub->GetSession().NetMode() == ESovNet::Host;
 		const bool bSteam = Sub->GetSession().UsesSteam();

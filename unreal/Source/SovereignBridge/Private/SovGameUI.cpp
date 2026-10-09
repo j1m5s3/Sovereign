@@ -421,6 +421,56 @@ void SSovGameUI::Construct(const FArguments& Args)
 			})
 			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
 		]
+		// The online lobby.
+		+ SOverlay::Slot()
+		[
+			SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.012f, 0.011f, 0.01f, 0.85f))
+			.HAlign(HAlign_Center).VAlign(VAlign_Center)
+			.Visibility_Lambda([this]() { return Model.bLobby ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBox).WidthOverride(760).MinDesiredHeight(380)
+				[
+					SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(20, 14))
+					[
+						SNew(SVerticalBox)
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(20, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.LobbyTitle); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 4)
+						[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("SEATS")))]
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(FString::Join(Model.LobbySeats, TEXT("\n"))); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 4)
+						[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("NEWS AND CHAT")))]
+						+ SVerticalBox::Slot().FillHeight(1.f)
+						[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(FString::Join(Model.LobbyNews, TEXT("\n"))); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 12, 0, 0)
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot().AutoWidth()
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::M); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Chat (M)")))]
+							]
+							+ SHorizontalBox::Slot().AutoWidth().Padding(8, 0, 0, 0)
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+								.Visibility_Lambda([this]() { return Model.bLobbyHost && Model.bLobbySteam ? EVisibility::Visible : EVisibility::Collapsed; })
+								.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Invite friends (F)")))]
+							]
+							+ SHorizontalBox::Slot().FillWidth(1.f)
+							+ SHorizontalBox::Slot().AutoWidth()
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary())
+								.Visibility_Lambda([this]() { return Model.bLobbyHost ? EVisibility::Visible : EVisibility::Collapsed; })
+								.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Enter); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(14, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Start the game (Enter)")))]
+							]
+						]
+					]
+				]
+			]
+		]
 		// Walking a City Center: the city at the top left, a prompt when someone will listen, the keys at the bottom.
 		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(16, 16, 0, 0)
 		[

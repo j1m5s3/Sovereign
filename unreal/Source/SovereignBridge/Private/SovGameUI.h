@@ -55,6 +55,11 @@ struct FSovUIChoice
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// The online lobby (shown even when bVisible is false): the seats, the network's lines, and the host's buttons.
+	bool bLobby = false;
+	bool bLobbyHost = false, bLobbySteam = false;
+	FString LobbyTitle;
+	TArray<FString> LobbySeats, LobbyNews;
 	// Walking a City Center (shown even when bVisible is false): the city, its mood, and who is near to talk to.
 	bool bStreet = false;
 	FString StreetTitle, StreetSub, StreetPrompt;

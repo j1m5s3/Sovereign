@@ -2229,6 +2229,19 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		// The online lobby.
+		if (Sub && Sub->GetSession().InLobby() && !Menu.IsValid())
+		{
+			const FSovSession& Ses = Sub->GetSession();
+			M.bLobby = true;
+			M.bLobbyHost = Ses.NetMode() == ESovNet::Host;
+			M.bLobbySteam = Ses.UsesSteam();
+			M.LobbyTitle = M.bLobbyHost ? (M.bLobbySteam ? TEXT("Hosting a game for Steam friends") : TEXT("Hosting a game on your network"))
+										: TEXT("In the host's lobby: waiting for the game to start");
+			M.LobbySeats = Ses.LobbyLines();
+			M.LobbyNews = Sub->NetLines;
+			if (!Sub->LastMessage.IsEmpty()) M.LobbyNews.Add(Sub->LastMessage);
+		}
 		// Walking a City Center.
 		if (InStreet() && Street && !Menu.IsValid())
 		{
@@ -3294,18 +3307,18 @@ bool ASovPlayerController::HandleSessionScreens()
 		if (WasInputKeyJustPressed(EKeys::Escape)) CloseChat();
 		return true;  // typing: the map takes no keys
 	}
-	if (Session.NetMode() != ESovNet::Local && WasInputKeyJustPressed(EKeys::M))
+	if (Session.NetMode() != ESovNet::Local && (WasInputKeyJustPressed(EKeys::M) || UIKeys.Contains(EKeys::M)))
 	{
 		OpenChat();
 		return true;
 	}
 	if (Session.InLobby())
 	{
-		if (Session.UsesSteam() && Session.NetMode() == ESovNet::Host && WasInputKeyJustPressed(EKeys::F))
+		if (Session.UsesSteam() && Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::F) || UIKeys.Contains(EKeys::F)))
 		{
 			Session.InviteFriends();
 		}
-		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar)))
+		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar) || UIKeys.Contains(EKeys::Enter)))
 		{
 			FString Error;
 			if (!Session.StartHostedGame(Error))
