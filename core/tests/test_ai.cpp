@@ -398,6 +398,43 @@ TEST(ai_trains_builders_only_for_work_left) {
     CHECK_EQ(builders(4, 2), 1);
 }
 
+// A Builder works for all our cities, so a city whose own plots are improved trains one for the plots another city works
+// unimproved, beyond the charges our Builders carry: four such plots and no Builder train one; four and a Builder of three
+// charges at work there do not. A city working three unimproved plots of its own still trains one beside that Builder.
+TEST(ai_trains_builders_for_plots_other_cities_work) {
+    const auto trainsBuilder = [](int own, int others, bool builder) {
+        GameState s = flatState(24, 14, 1);
+        s.turn = 20;
+        addCity(s, 0, {6, 6}, true, std::max(1, own));
+        City& home = s.cities[0];
+        home.queue.clear();
+        for (const Hex& h : s.grid.within({6, 6}, 1)) {
+            if (h == Hex{6, 6}) continue;
+            if (static_cast<int>(home.worked.size()) < std::max(1, own)) home.worked.push_back(s.grid.index(h));
+            if (own == 0) s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+        }
+        std::sort(home.worked.begin(), home.worked.end());
+        addCity(s, 0, {14, 6}, false, std::max(1, others));  // busy with its Monument
+        City& other = s.cities[1];
+        for (const Hex& h : s.grid.within({14, 6}, 1)) {
+            if (h == Hex{14, 6}) continue;
+            if (static_cast<int>(other.worked.size()) < std::max(1, others)) other.worked.push_back(s.grid.index(h));
+            if (others == 0) s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+        }
+        std::sort(other.worked.begin(), other.worked.end());
+        addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+        addUnit(s, "UNIT_WARRIOR", 0, {14, 6});
+        if (builder) addUnit(s, "UNIT_BUILDER", 0, {14, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const City& after = g->state().cities[0];
+        return !after.queue.empty() && after.queue.front().kind == ProductionKind::Unit && isBuilder(rules().units[at(after.queue.front().type)]);
+    };
+    CHECK(trainsBuilder(0, 4, false));
+    CHECK(!trainsBuilder(0, 4, true));
+    CHECK(trainsBuilder(3, 0, true));
+}
+
 // A Builder's work does not keep a Settler off a city site: the Settler heads for the river site by the plot a Builder
 // is on its way to improve (only where another Settler heads is a site taken).
 TEST(ai_settlers_pass_by_builders_at_work) {
