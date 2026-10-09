@@ -1408,3 +1408,48 @@ TEST(ai_builds_housing_where_growth_stalls) {
     // An Aqueduct (Housing up to 6 without water: 4 more) before the Granary's 2.
     CHECK(pick({6, 6, "TERRAIN_PLAINS", false, true}) == (ProductionItem{ProductionKind::District, rules().district("DISTRICT_AQUEDUCT")}));
 }
+
+TEST(ai_sends_envoys_to_the_city_states_its_strategy_wants) {
+    // Two city-states the AI has met and holds no envoys at: Scientific Anshan first in turn order, Militaristic
+    // Akkad second. At war with a major civ, the envoy goes to Akkad; at peace the tie stays with Anshan. A tier
+    // within reach still comes first: holding one envoy at Akkad, the next goes where it reaches the first tier.
+    auto make = [](bool war, int atAkkad) {
+        GameState s = flatState(40, 14, 4);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        s.players[2].civ = s.players[3].civ = kNone;
+        s.players[2].cityState = rules().cityState("CITYSTATE_ANSHAN");
+        s.players[3].cityState = rules().cityState("CITYSTATE_AKKAD");
+        for (Player& p : s.players) {
+            p.envoys.assign(4, 0);
+            p.met.assign(4, 1);
+            p.relations.resize(4);
+            p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        }
+        addCity(s, 0, {6, 6}, true, 3);
+        addCity(s, 1, {34, 6}, true, 3);
+        addCity(s, 2, {16, 3}, true, 2);
+        addCity(s, 3, {16, 10}, true, 2);
+        s.players[0].envoyTokens = 1;
+        s.players[0].envoys[3] = atAkkad;
+        s.turn = 40;
+        if (war) {
+            s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+            s.players[0].relations[1].since = s.players[1].relations[0].since = 38;
+        }
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    auto atWar = make(true, 0);
+    REQUIRE(atWar->atWar(0, 1));
+    ai::playTurn(*atWar);
+    CHECK_EQ(atWar->envoysAt(0, 3), 1);
+    CHECK_EQ(atWar->envoysAt(0, 2), 0);
+    auto atPeace = make(false, 0);
+    ai::playTurn(*atPeace);
+    CHECK_EQ(atPeace->envoysAt(0, 2), 1);
+    CHECK_EQ(atPeace->envoysAt(0, 3), 0);
+    auto tier = make(true, 1);
+    REQUIRE(tier->envoysAt(0, 3) == 1);
+    ai::playTurn(*tier);
+    CHECK_EQ(tier->envoysAt(0, 2), 1);
+    CHECK_EQ(tier->envoysAt(0, 3), 1);
+}
