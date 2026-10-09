@@ -144,7 +144,7 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
         if (items.empty()) continue;
         const ProductionItem pick = items[rng.below(static_cast<uint32_t>(items.size()))];
         Hex at{};
-        if (pick.kind == ProductionKind::District && !game.state().city(cid)->district(pick.type, false)) {
+        if (pick.kind == ProductionKind::District && !districtInWork(*game.state().city(cid), game.rules(), pick.type)) {
             // New districts go where their adjacency is best (ties: first plot).
             Fixed best = Fixed::fromInt(-1);
             for (const Hex& h : game.districtPlots(cid, pick.type)) {

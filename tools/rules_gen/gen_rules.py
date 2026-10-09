@@ -917,6 +917,8 @@ def gen_districts():
                 d["aqueduct"] = True  # next to the City Center and a River, Lake, Oasis or Mountain
             if "max 1 per player" in flags:
                 d["onePerPlayer"] = True
+            if "one per city" not in flags and "one per river" not in flags:
+                d["repeatable"] = True  # a city may hold several (Neighborhood, Canal); the Dam stays one per city (Sovereign)
             m = re.search(r"exclusive with ([^;]+)", flags)
             if m:
                 d["exclusiveWith"] = ["DISTRICT_" + snake(x.strip()) for x in m.group(1).split(",") if "DISTRICT_" + snake(x.strip()) in emitted]
@@ -2489,8 +2491,15 @@ def gen_wonders():
     eras = {e + " Era": "ERA_" + e.upper() for e in ERAS}
     wonders, modifiers = [], []
     refs = policy_refs()
+    terrains = terrain_names()
+    canal_terrains = [terrains[t.strip()] for t in (next(r for r in table(SPEC / "districts.md", "District adjacency, placement, trade-route yields and modifiers")
+                                                         if r["District"] == "Canal")["Valid terrain"] or "").split(",") if t.strip() in terrains]
     for row in table(SPEC / "wonders.md", "World wonders"):
         place = wonder_placement(row["Placement"], districts, resources, improvements)
+        if place is None and "CanalWonder" in (row["Flags [GS]"] or "") and not row["Placement"]:
+            # The Panama Canal (03: "as a canal"): placed as the Canal district is, on its flat land, and ships sail
+            # through it. Sovereign reading: one plot; the multi-plot span is not modelled.
+            place = {"canal": True, "terrains": canal_terrains}
         if place is None:
             continue
         wid = "BUILDING_" + snake(row["Wonder"])

@@ -353,6 +353,9 @@ SOV_API bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex bui
 // The building stands idle: its district is pillaged (03: "a pillaged district or building stops working until
 // repaired"). City Center buildings and wonders never are.
 SOV_API bool buildingIdle(const City& city, const Rules& rules, TypeIndex building);
+// The placed district that producing this type builds or resumes: the city's one of a type it holds once, or the
+// unfinished one of a repeatable type (Neighborhood, Canal; 03). None when producing it places a new one.
+SOV_API const CityDistrict* districtInWork(const City& city, const Rules& rules, TypeIndex type);
 
 // A player's progress through one research tree (techs or civics). Progress
 // is kept per node, so switching away loses nothing (04-tech-civics-government.md).

@@ -674,6 +674,75 @@ TEST(a_canal_links_two_waters_and_lets_ships_through) {
     CHECK(!g3->findPath(ship, {5, 8}, false).has_value());
 }
 
+TEST(a_city_holds_several_neighborhoods_and_canals) {
+    // 03: the Neighborhood and the Canal carry no OnePerCity flag. A finished Neighborhood at (6,8) and a finished Canal at
+    // (4,8) between water at (3,8) and (5,8); more water at (8,6), so (7,6) links it to the City Center.
+    const TypeIndex hood = district("DISTRICT_NEIGHBORHOOD"), canal = district("DISTRICT_CANAL");
+    CHECK(rules().districts[at(hood)].repeatable && rules().districts[at(canal)].repeatable);
+    CHECK(!rules().districts[at(district("DISTRICT_CAMPUS"))].repeatable && !rules().districts[at(district("DISTRICT_DAM"))].repeatable);
+    auto g = town(6, [&](GameState& s) {
+        learn(s, 0, {"TECH_STEAM_POWER"});
+        Game::fitPlayerToRules(s.players[0], rules());
+        s.players[0].civics.done[at(rules().civic("CIVIC_URBANIZATION"))] = 1;
+        s.players[0].gold = Fixed::fromInt(5000);
+        for (const Hex& h : {Hex{3, 8}, Hex{5, 8}, Hex{8, 6}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+        s.cities[0].districts.push_back({hood, {6, 8}, true});
+        s.cities[0].districts.push_back({canal, {4, 8}, true});
+    });
+    const CityId id = g->state().cities[0].id;
+    // Another of each may go into production, on a plot of its own.
+    CHECK(g->canProduce(*g->state().city(id), item("DISTRICT_NEIGHBORHOOD")));
+    CHECK(g->canProduce(*g->state().city(id), item("DISTRICT_CANAL")));
+    const std::vector<ProductionItem> items = g->buildableItems(id);
+    CHECK(std::find(items.begin(), items.end(), item("DISTRICT_NEIGHBORHOOD")) != items.end());
+    {
+        // With no plot left for another, it is not offered.
+        GameState peaks = g->state();
+        for (const Hex& h : peaks.grid.within(kCenter, 3)) {
+            if (h != kCenter && !peaks.districtAt(h)) peaks.plot(h).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        }
+        auto gp = Game::fromScenario(rules(), std::move(peaks));
+        const std::vector<ProductionItem> none = gp->buildableItems(id);
+        CHECK(std::find(none.begin(), none.end(), item("DISTRICT_NEIGHBORHOOD")) == none.end());
+    }
+    CHECK_EQ(g->submit(Command::setProduction(0, id, item("DISTRICT_NEIGHBORHOOD"))), CommandError::BadTarget);
+    CHECK_EQ(g->submit(Command::setProduction(0, id, item("DISTRICT_NEIGHBORHOOD"), {6, 8})), CommandError::BadTarget);  // taken
+    REQUIRE(g->submit(Command::setProduction(0, id, item("DISTRICT_NEIGHBORHOOD"), {6, 4})) == CommandError::Ok);
+    REQUIRE(g->state().city(id)->districts.size() == 3u);
+    CHECK(!g->state().city(id)->districts[2].complete);
+    // Switching away and back resumes the unfinished one; no third goes down meanwhile.
+    REQUIRE(g->submit(Command::setProduction(0, id, {ProductionKind::Unit, rules().unit("UNIT_WARRIOR")})) == CommandError::Ok);
+    REQUIRE(g->submit(Command::setProduction(0, id, item("DISTRICT_NEIGHBORHOOD"))) == CommandError::Ok);
+    CHECK_EQ(g->state().city(id)->districts.size(), 3u);
+    CHECK(!g->canPlaceDistrict(*g->state().city(id), hood, {8, 8}));
+    // A Contractor (08) buys the unfinished one; both then house the city.
+    const Fixed housing = g->districtHousing(*g->state().city(id));
+    GameState t = g->state();
+    Governor reyna;
+    reyna.type = rules().governor("GOVERNOR_REYNA");
+    reyna.city = id;
+    reyna.promotions = {rules().governorPromotion("GOVERNOR_PROMOTION_LAND_ACQUISITION"), rules().governorPromotion("GOVERNOR_PROMOTION_CONTRACTOR")};
+    t.players[0].governors.push_back(reyna);
+    auto h = Game::fromScenario(rules(), std::move(t));
+    REQUIRE(h->districtPurchaseCost(*h->state().city(id), hood, false) > 0);
+    REQUIRE(h->submit(Command::purchase(0, id, item("DISTRICT_NEIGHBORHOOD"))) == CommandError::Ok);
+    CHECK(h->state().city(id)->districts[2].complete);
+    CHECK(h->districtHousing(*h->state().city(id)) > housing);
+    // A second Canal, queued on a plot that links water: finishing it counts its moment once, the first Canal is not
+    // finished again.
+    CHECK_EQ(h->submit(Command::queueProduction(0, id, item("DISTRICT_CANAL"), {8, 8})), CommandError::BadTarget);  // dry land
+    REQUIRE(h->submit(Command::queueProduction(0, id, item("DISTRICT_CANAL"), {7, 6})) == CommandError::Ok);
+    const int score = h->state().players[0].eraScore;
+    REQUIRE(h->submit(Command::purchase(0, id, item("DISTRICT_CANAL"))) == CommandError::Ok);
+    CHECK(h->state().city(id)->districts[3].complete);
+    CHECK_EQ(h->state().players[0].eraScore - score, 2);
+    // A Campus stays one per city.
+    GameState u = h->state();
+    u.cities[0].districts.push_back({district("DISTRICT_CAMPUS"), {8, 8}, true});
+    auto k = Game::fromScenario(rules(), std::move(u));
+    CHECK(!k->canProduce(*k->state().city(id), item("DISTRICT_CAMPUS")));
+}
+
 // ---- specialists (02: Citizens and specialists)
 
 TEST(specialists_work_district_slots) {
