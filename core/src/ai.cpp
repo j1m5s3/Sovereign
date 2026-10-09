@@ -42,6 +42,7 @@ constexpr int kWarMargin = 50;          // added to the posture's war ratio to s
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kEnvoyStrategyBonus = 12;  // an envoy's pull toward a city-state of a kind our strategy wants, short of a tier's 20
+constexpr int kMissionaryPressureWeight = 6;  // a missionary's turn away from a city already full of our religion's pressure
 constexpr int kProposalGap = 10;        // an alliance's last turns, when it is renewed
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
@@ -2605,8 +2606,8 @@ void greatPerson(View& v, UnitId id) {
 }
 
 // Religion (06): a pantheon as soon as Faith allows, a religion when a Prophet reaches a Holy
-// Site, Apostles filling the belief classes, Missionaries bought and sent to the nearest city
-// that does not follow the religion yet (our own first).
+// Site, Apostles filling the belief classes, Missionaries bought (more under a Religious strategy)
+// and sent toward cities with low pressure of our religion and many citizens (10: religion layer).
 TypeIndex firstBelief(const View& v, BeliefClass cls) {
     TypeIndex fallback = kNone;
     for (TypeIndex b : v.game.availableBeliefs(cls)) {
@@ -2758,13 +2759,18 @@ void religiousUnit(View& v, UnitId id) {
         g.submit(Command::spreadReligion(v.me, id));
         return;
     }
-    // The nearest city not following our religion, ours first; walk next to its center.
+    // A city not following our religion, near, ours first, with many citizens and little of our religion's
+    // pressure (10: "toward cities with low pressure and high population"); walk next to its center.
     std::optional<Hex> best;
     int bestScore = INT_MAX;
     for (const City& c : v.s().cities) {
         if (g.cityMajorityReligion(c) == u->religion || promisedNot(c.owner) || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
         if (inquisitor && c.owner != v.me) continue;  // Inquisitors work at home
-        const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6);
+        int64_t total = 0;
+        for (int32_t pr : c.pressure) total += std::max(pr, 0);
+        const int64_t ours = at(u->religion) < c.pressure.size() ? std::max(c.pressure[at(u->religion)], 0) : 0;
+        const int share = total > 0 ? static_cast<int>(ours * kMissionaryPressureWeight / total) : 0;  // 0 .. the weight
+        const int score = v.s().grid.distance(u->pos, c.pos) + (c.owner == v.me ? 0 : 6) + share - c.population;
         if (score < bestScore) {
             bestScore = score;
             best = c.pos;
@@ -2788,7 +2794,7 @@ void buyReligion(View& v) {
             const int cost = g.faithPurchaseCost(v.me, c, item);
             if (cost > 0 && v.s().players[at(v.me)].faith >= Fixed::fromInt(cost + 50)) g.submit(Command::purchaseWithFaith(v.me, cid, item));
         }
-        if (missionaries >= 3) continue;
+        if (missionaries >= (v.posture.has(Strategy::ReligiousVictory) ? 3 : 1)) continue;  // 10: faith spent on them under a Religious strategy
         for (const char* type : {"UNIT_INQUISITOR", "UNIT_APOSTLE", "UNIT_MISSIONARY"}) {
             if (std::string(type) == "UNIT_INQUISITOR" && !heresyAtHome(v)) continue;
             const ProductionItem item{ProductionKind::Unit, v.r.unit(type)};

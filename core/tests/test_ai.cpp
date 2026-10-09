@@ -1453,3 +1453,77 @@ TEST(ai_sends_envoys_to_the_city_states_its_strategy_wants) {
     CHECK_EQ(tier->envoysAt(0, 2), 1);
     CHECK_EQ(tier->envoysAt(0, 3), 1);
 }
+
+TEST(ai_missionaries_seek_large_cities_with_little_of_their_religion) {
+    // A Missionary of our religion between two foreign cities, North a little nearer than South. It heads South
+    // when South has more citizens, or when North already holds much of our religion's pressure.
+    enum { Equal = 0, SouthLarger = 1, NorthPressed = 2 };
+    auto heading = [](int setup) {
+        GameState s = flatState(24, 16, 3);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.met.assign(3, 1);
+            p.relations.resize(3);
+            p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        }
+        addCity(s, 0, {3, 7}, true, 3);
+        const CityId north = addCity(s, 1, {14, 2}, true, 4);
+        const CityId south = addCity(s, 2, {14, 13}, true, setup == SouthLarger ? 10 : 4);
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {rules().belief("BELIEF_TITHE")}});
+        s.religions.push_back({rules().religion("RELIGION_HINDUISM"), 1, north, {}});
+        s.players[0].religion = 0;
+        s.players[1].religion = 1;
+        for (City& c : s.cities) c.pressure.assign(2, 0);
+        s.cities[0].pressure = {1000, 0};  // our Holy City follows our religion
+        s.city(north)->pressure = setup == NorthPressed ? std::vector<int32_t>{400, 600} : std::vector<int32_t>{0, 1000};
+        s.city(south)->pressure = {0, 1000};
+        const UnitId m = addUnit(s, "UNIT_MISSIONARY", 0, {14, 7});
+        s.units.back().religion = 0;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->cityMajorityReligion(*g->state().city(north)) != 0);
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(m);
+        REQUIRE(u != nullptr);
+        const HexGrid& grid = g->state().grid;
+        return grid.distance(u->pos, g->state().city(south)->pos) < grid.distance(u->pos, g->state().city(north)->pos) ? 'S' : 'N';
+    };
+    CHECK_EQ(heading(Equal), 'N');
+    CHECK_EQ(heading(SouthLarger), 'S');
+    CHECK_EQ(heading(NorthPressed), 'S');
+}
+
+TEST(ai_buys_more_missionaries_under_a_religious_strategy) {
+    // Three of our cities follow our religion and have a Shrine, and Faith is plenty. Without a Religious strategy one
+    // religious unit is bought, not one in each city; with one (the rival's cities unconverted) three (10: "faith
+    // spend on missionaries/apostles" under a Religious strategy).
+    const auto bought = [](bool religiousStrategy) {
+        GameState s = flatState(30, 12, 2);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.met.assign(2, 1);
+            p.relations.resize(2);
+        }
+        for (int x : {4, 12, 20}) {
+            const CityId id = addCity(s, 0, {x, 5}, x == 4, 4);
+            City& c = *s.city(id);
+            c.districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {x, 6}, true});
+            c.buildings.push_back(rules().building("BUILDING_SHRINE"));
+            std::sort(c.buildings.begin(), c.buildings.end());
+        }
+        addCity(s, 1, {27, 5}, true, 3);
+        if (religiousStrategy) addCity(s, 1, {27, 10}, false, 3);
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {rules().belief("BELIEF_TITHE")}});
+        s.players[0].religion = 0;
+        for (City& c : s.cities) c.pressure = {c.owner == 0 ? 1000 : 0};
+        s.gameEra = 1;
+        s.players[0].faith = Fixed::fromInt(3000);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(holds(*g, 0, ai::Strategy::ReligiousVictory) == religiousStrategy);
+        ai::playTurn(*g);
+        int religious = 0;
+        for (const Unit& u : g->state().units) religious += u.owner == 0 && u.religion >= 0;
+        return religious;
+    };
+    CHECK_EQ(bought(false), 1);
+    CHECK_EQ(bought(true), 3);
+}
