@@ -579,3 +579,77 @@ TEST(chinampas_farms_beside_lakes) {
     CHECK_EQ(wet->plotYields({2, 6}, c)[food], dry->plotYields({2, 6}, dry->state().cities[0])[food]);
     CHECK_EQ(wet->improvementHousing(c), dry->improvementHousing(dry->state().cities[0]) + Fixed::fromInt(1) / 2);
 }
+
+// Ramesses' Builder of Monuments: light cavalry and chariots +5 on flat desert and floodplains, not heavy cavalry.
+TEST(builder_of_monuments_favours_light_cavalry_and_chariots) {
+    GameState s = pair("CIVILIZATION_EGYPT", "CIVILIZATION_MALI", {});
+    const TypeIndex desert = rules().terrain("TERRAIN_DESERT");
+    for (int x = 6; x <= 12; x += 2) s.plot({x, 2}).terrain = desert;
+    const UnitId foe = addUnit(s, "UNIT_WARRIOR", 1, {8, 10});
+    const UnitId horse = addUnit(s, "UNIT_HORSEMAN", 0, {6, 2}), chariot = addUnit(s, "UNIT_WAR_CHARIOT", 0, {8, 2});
+    const UnitId knight = addUnit(s, "UNIT_KNIGHT", 0, {10, 2}), maliHorse = addUnit(s, "UNIT_HORSEMAN", 1, {12, 2});
+    const UnitId grassChariot = addUnit(s, "UNIT_WAR_CHARIOT", 0, {8, 4}), maliKnight = addUnit(s, "UNIT_KNIGHT", 1, {12, 4});
+    s.plot({12, 4}).terrain = desert;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    auto str = [&](UnitId u) { return g->combatStrength(*g->state().unit(u), *g->state().unit(foe), true, false); };
+    CHECK_EQ(str(horse), str(maliHorse) + 5);
+    CHECK_EQ(str(chariot), str(grassChariot) + 5);
+    CHECK_EQ(str(knight), str(maliKnight));  // a Knight is heavy cavalry, not a chariot
+}
+
+// Gift of the Nile: Egypt's floodplain districts and buildings take no flood damage; a storm still wrecks them.
+TEST(gift_of_the_nile_spares_floodplain_districts) {
+    const auto struck = [](const char* civ0, const char* disasterId) {
+        GameState s = pair(civ0, "CIVILIZATION_MALI", {});
+        s.plot({5, 6}).feature = rules().feature("FEATURE_FLOODPLAINS_GRASSLAND");
+        CityDistrict campus;
+        campus.type = rules().district("DISTRICT_CAMPUS");
+        campus.pos = {5, 6};
+        campus.complete = true;
+        s.cities[0].districts.push_back(campus);
+        s.cities[0].buildings.push_back(rules().building("BUILDING_LIBRARY"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        sovtest::claimFor(s, s.cities[0], {5, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        TypeIndex d = kNone;
+        for (size_t i = 0; i < rules().disasters.size(); ++i) d = rules().disasters[i].id == disasterId ? static_cast<TypeIndex>(i) : d;
+        g->strikeDisaster(d, {5, 6});
+        return g->state().cities[0].districts.back().pillagedTurns > 0;
+    };
+    CHECK(struck("CIVILIZATION_MALI", "DISASTER_MODERATE_FLOOD"));
+    CHECK(!struck("CIVILIZATION_EGYPT", "DISASTER_MODERATE_FLOOD"));
+    CHECK(!struck("CIVILIZATION_EGYPT", "DISASTER_1000_YEAR_FLOOD"));
+    CHECK(struck("CIVILIZATION_EGYPT", "DISASTER_TORNADO_OUTBREAK"));
+}
+
+// Arabia's +2 Gold for a route crossing desert looks at the plots the route takes; the straight line is only the estimate
+// used before a route has its way.
+TEST(arabias_desert_routes_follow_the_way_taken) {
+    GameState s = pair("CIVILIZATION_ARABIA", "CIVILIZATION_MALI", {});
+    addCity(s, 0, {12, 6}, false, 3);
+    s.plot({8, 2}).terrain = rules().terrain("TERRAIN_DESERT");  // off the straight line
+    std::vector<int32_t> straight, around;
+    for (int x = 4; x <= 12; ++x) straight.push_back(s.grid.index({x, 6}));
+    for (int x = 4; x <= 12; ++x) around.push_back(s.grid.index({x, x == 8 ? 2 : 6}));
+    const auto routeGold = [&](const std::vector<int32_t>& path) {
+        GameState t = s;
+        TradeRoute tr;
+        tr.id = 1;
+        tr.owner = 0;
+        tr.origin = t.cities[0].id;
+        tr.destination = t.cities[2].id;
+        tr.traderType = rules().unit("UNIT_TRADER");
+        tr.path = path;
+        tr.turnsLeft = 10;
+        t.tradeRoutes.push_back(tr);
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->cityReport(g->state().cities[0].id).yields[static_cast<size_t>(YieldType::Gold)];
+    };
+    CHECK_EQ(routeGold(around), routeGold(straight) + Fixed::fromInt(2));
+    auto g = Game::fromScenario(rules(), s);
+    const City& a = g->state().cities[0];
+    const City& b = g->state().cities[2];
+    const size_t gold = static_cast<size_t>(YieldType::Gold);
+    CHECK_EQ(g->tradeRouteYields(a, b, &around)[gold], g->tradeRouteYields(a, b, &straight)[gold] + Fixed::fromInt(2));
+    CHECK_EQ(g->tradeRouteYields(a, b)[gold], g->tradeRouteYields(a, b, &straight)[gold]);  // the line misses (8,2)
+}

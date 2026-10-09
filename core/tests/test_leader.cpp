@@ -89,6 +89,27 @@ TEST(leader_starts_on_the_settler_tile) {
     }
 }
 
+// The leader starts with the first promotion of its civ's leaning (leaders-and-art-style: Leader pool).
+TEST(a_starting_leader_holds_its_leanings_first_promotion) {
+    CHECK_EQ(rules().leaningPromotion(rules().civ("CIVILIZATION_ENGLAND")), rules().promotion("PROMOTION_SOVEREIGN_WARY"));
+    CHECK_EQ(rules().leaningPromotion(rules().civ("CIVILIZATION_FRANCE")), rules().promotion("PROMOTION_SOVEREIGN_WEAPON_MASTER"));
+    CHECK_EQ(rules().leaningPromotion(rules().civ("CIVILIZATION_ROME")), rules().promotion("PROMOTION_SOVEREIGN_OVERSEER"));
+    CHECK_EQ(rules().leaningPromotion(kNone), kNone);
+    CHECK_EQ(rules().leaningPromotion(static_cast<TypeIndex>(rules().civs.size())), kNone);  // out of range
+    sov::GameSetup setup = sovtest::duelSetup(7);
+    setup.mapSize = "MAPSIZE_TINY";
+    setup.players = {{"CIVILIZATION_ENGLAND", true}, {"CIVILIZATION_FRANCE", false}, {"CIVILIZATION_ROME", false}};
+    std::string err;
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    for (PlayerId p = 0; p < 3; ++p) {
+        const Unit* l = g->leaderOf(p);
+        REQUIRE(l);
+        CHECK(l->promotions == std::vector<TypeIndex>{rules().leaningPromotion(g->state().players[at(p)].civ)});
+        CHECK_EQ(l->level(), 2);
+    }
+}
+
 TEST(leader_strength_comes_from_gear) {
     UnitId leader = 0, enemy = 0;
     auto g = duel([&](GameState& s) {

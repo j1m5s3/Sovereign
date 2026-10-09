@@ -237,8 +237,9 @@ public:
     // ---- trade routes and roads (07: Trade routes; 01: Routes)
     int tradeRouteCapacity(PlayerId player) const;
     int tradeRoutesOf(PlayerId player) const;
-    // What a route from origin to destination pays its origin each turn.
-    Yields tradeRouteYields(const City& origin, const City& destination) const;
+    // What a route from origin to destination pays its origin each turn; `way` is the route's plots when it runs
+    // (without it, Arabia's desert gold is judged on the straight line, as an estimate for choosing a route).
+    Yields tradeRouteYields(const City& origin, const City& destination, const std::vector<int32_t>* way = nullptr) const;
     Yields tradeRouteDestinationYields(const City& origin, const City& destination) const;  // what the destination city gets
     // The plots a Trader would follow to a destination, within range (15 tiles, 30 when it sails); empty: out of reach.
     std::vector<Hex> tradePath(PlayerId player, TypeIndex traderType, const City& origin, const City& destination) const;

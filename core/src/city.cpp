@@ -298,7 +298,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     for (const TradeRoute& tr : state_.tradeRoutes) {
         if (tr.origin == c->id) {
             if (const City* dest = state_.city(tr.destination)) {
-                const Yields ty = tradeRouteYields(*c, *dest);
+                const Yields ty = tradeRouteYields(*c, *dest, &tr.path);
                 for (size_t i = 0; i < kNumYields; ++i) raw[i] += ty[i];
                 // Each of the owner's Trading Posts the route passes in foreign cities pays (07: TRADING_POST_GOLD_*),
                 // one Gold more for Bandar Brunei's suzerain (08).

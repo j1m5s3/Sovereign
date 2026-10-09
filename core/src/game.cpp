@@ -134,7 +134,14 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             }
         }
         // The leader starts on the Settler's tile with the normal starting units (leader doc §1).
-        if (rules.leaderUnit != kNone) game->spawnLeader(p.id, p.startPos);
+        if (rules.leaderUnit != kNone) {
+            game->spawnLeader(p.id, p.startPos);
+            // It starts with the first promotion of its civ's leaning (Leaders and art style: "the leader
+            // starts with the first promotion of one SOVEREIGN branch"); a successor brings its own instead.
+            const TypeIndex lean = p.civ == kNone ? kNone : rules.leaningPromotion(p.civ);
+            const Unit* leader = lean == kNone ? nullptr : game->leaderOf(p.id);
+            if (leader) st.unit(leader->id)->promotions.push_back(lean);
+        }
     }
     if (setup.startEra > 0) game->applyEraStart();
     for (const Player& p : st.players) game->refreshVisibility(p.id);

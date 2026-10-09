@@ -501,9 +501,11 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
                 case DisasterDamageType::BuildingPillaged:
                 case DisasterDamageType::BuildingDestroyed: {
                     // A district on the plot is pillaged (its buildings idle with it); a meltdown destroys its buildings.
+                    // Egypt's floodplain districts take no harm from a flood (Gift of the Nile: "no penalty").
                     const CityDistrict* here = state_.districtAt(h);
                     City* home = here ? state_.city(p.city) : nullptr;
                     if (!home || !rng.chance(static_cast<uint32_t>(std::min(100, dd.percent)))) break;
+                    if (dt.kind == DisasterKind::Flood && civAbility(home->owner).floodSafeDistricts) break;
                     for (CityDistrict& d : home->districts) {
                         if (d.pos != h) continue;
                         if (dd.type == DisasterDamageType::BuildingDestroyed) {

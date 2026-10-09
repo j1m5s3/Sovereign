@@ -1,5 +1,6 @@
 #include "sovereign/rules.h"
 
+#include <cctype>
 #include <algorithm>
 #include <climits>
 #include <cstring>
@@ -432,6 +433,7 @@ CivAbility combineAbilities(const CivAbility& a, const CivAbility& b) {
     c.nearFollowingCityRange = std::max(c.nearFollowingCityRange, b.nearFollowingCityRange);
     c.extraBuilderCharges += b.extraBuilderCharges;
     c.builderRoads = c.builderRoads || b.builderRoads;
+    c.floodSafeDistricts = c.floodSafeDistricts || b.floodSafeDistricts;
     c.wonderCulture += b.wonderCulture;
     if (c.faithPurchaseDistrict == kNone) c.faithPurchaseDistrict = b.faithPurchaseDistrict;
     c.killFaithPercent += b.killFaithPercent;
@@ -1730,6 +1732,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         ab.nearFollowingCityRange = static_cast<int>(a["strengthNearFollowingCity"]["range"].integer(0));
         ab.extraBuilderCharges = static_cast<int>(a["extraBuilderCharges"].integer(0));
         ab.builderRoads = a["builderRoads"].boolean(false);
+        ab.floodSafeDistricts = a["floodSafeDistricts"].boolean(false);
         ab.peaceYieldPercent = readYields(a["peaceYieldPercent"]);
         ab.wonderCulture = static_cast<int>(a["wonderCulture"].integer(0));
         if (!a["faithPurchaseDistrict"].str().empty()) ab.faithPurchaseDistrict = district(a["faithPurchaseDistrict"].str());
@@ -2693,6 +2696,18 @@ TypeIndex Rules::resource(const std::string& id) const { return findIn(resources
 TypeIndex Rules::ability(const std::string& id) const { return findIn(abilities, id); }
 TypeIndex Rules::promotion(const std::string& id) const { return findIn(promotions, id); }
 TypeIndex Rules::unit(const std::string& id) const { return findIn(units, id); }
+
+TypeIndex Rules::leaningPromotion(TypeIndex civ) const {
+    if (civ < 0 || static_cast<size_t>(civ) >= civs.size()) return kNone;
+    // "Builder-King" names the BUILDER_KING branch.
+    std::string branch;
+    for (char ch : civs[static_cast<size_t>(civ)].leaning) branch += ch == '-' ? '_' : static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+    for (size_t i = 0; i < promotions.size(); ++i) {
+        const PromotionType& t = promotions[i];
+        if (t.promotionClass == "PROMOTION_CLASS_SOVEREIGN" && t.tier == 1 && !branch.empty() && t.branch == branch) return static_cast<TypeIndex>(i);
+    }
+    return kNone;
+}
 TypeIndex Rules::building(const std::string& id) const { return findIn(buildings, id); }
 TypeIndex Rules::district(const std::string& id) const { return findIn(districts, id); }
 TypeIndex Rules::improvement(const std::string& id) const { return findIn(improvements, id); }
