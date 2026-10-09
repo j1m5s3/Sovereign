@@ -755,6 +755,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     }
     w.i32(s.gameEra);
     w.i32(s.gameEraStart);
+    w.i32(s.eraEndsOn);
     w.bytes(std::vector<uint8_t>(s.worldMoments.begin(), s.worldMoments.end()));
     w.i32(s.majorsAtStart);
     w.u32(static_cast<uint32_t>(s.religions.size()));
@@ -1340,6 +1341,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
     }
     s.gameEra = r.i32();
     s.gameEraStart = r.i32();
+    s.eraEndsOn = r.i32();
     {
         const std::vector<uint8_t> wm = r.bytes();
         s.worldMoments.assign(wm.begin(), wm.end());

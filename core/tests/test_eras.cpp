@@ -141,6 +141,7 @@ TEST(the_world_era_sets_each_civs_age) {
     s.players[0].eraScore = 100;  // far above the Golden threshold
     s.players[1].eraScore = 0;    // below the Dark one
     s.turn = 70;                  // past the Ancient era's 60 turns
+    s.eraEndsOn = 70;             // and its countdown has run
     auto g = Game::fromScenario(rules(), std::move(s));
     const auto [dark, golden] = g->ageThresholds(0);
     CHECK(dark < golden);
@@ -153,9 +154,43 @@ TEST(the_world_era_sets_each_civs_age) {
     GameState next = g->state();
     next.players[1].eraScore = 100;
     next.turn = next.gameEraStart + 61;
+    next.eraEndsOn = next.turn;
     auto g2 = Game::fromScenario(rules(), std::move(next));
     sovtest::endTurns(*g2, 2);
     CHECK(g2->state().players[1].age == Age::Heroic);
+}
+
+// The world gets a 10-turn warning of the next era (09: NEXT_ERA_TURN_COUNTDOWN). The countdown starts in time for
+// the era to end at its minimum length once half the civs are ahead, or at its maximum when they are not; it carries
+// over a save.
+TEST(the_world_is_warned_ten_turns_before_the_next_era) {
+    const EraType& ancient = rules().eras[0];
+    const auto run = [&](bool ahead) {
+        GameState s = eraState();
+        if (ahead) s.players[0].techs.done[at(rules().tech("TECH_SHIPBUILDING"))] = 1;  // one civ of two in the Classical era
+        s.turn = s.gameEraStart + (ahead ? ancient.minTurns : ancient.maxTurns) - 12;
+        for (City& c : s.cities) c.queue.assign(20, ProductionItem{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(g->eraCountdown(), -1);
+        int warned = 0;
+        for (int i = 0; i < 30 && g->state().gameEra == 0; ++i) {
+            sovtest::endTurns(*g, 2);
+            if (warned == 0 && g->eraCountdown() >= 0) {
+                warned = g->state().turn;
+                CHECK_EQ(g->eraCountdown(), 10);
+                std::string err;
+                auto loaded = loadGame(rules(), saveGame(*g), &err);
+                REQUIRE(loaded);
+                CHECK_EQ(loaded->eraCountdown(), 10);
+            }
+        }
+        CHECK_EQ(g->state().gameEra, 1);
+        CHECK_EQ(g->state().turn - warned, 10);
+        CHECK_EQ(g->eraCountdown(), -1);
+        return g->state().gameEraStart - 1;  // the Ancient era's length
+    };
+    CHECK_EQ(run(true), ancient.minTurns);
+    CHECK_EQ(run(false), ancient.maxTurns);
 }
 
 // A civ's era is the latest of its techs and civics: a Medieval civic counts as much as a Medieval tech.
@@ -541,4 +576,24 @@ TEST(a_short_reign_lasts_a_hundred_turns) {
     // Costs scale to a fifth of Standard's.
     const TypeIndex writing = rules().tech("TECH_WRITING");
     CHECK(g->techCost(writing) * 4 < standard->techCost(writing));
+}
+
+// Wish You Were Here in a Golden Age doubles the tourism of the civ's National Parks (09: "+100% National Park
+// tourism").
+TEST(wish_you_were_here_doubles_national_park_tourism) {
+    const auto tourism = [](Age age) {
+        GameState s = eraState();
+        for (const Hex& h : s.grid.within({8, 6}, 2)) s.plot(h).feature = rules().feature("FEATURE_FOREST");
+        for (const Hex& h : {Hex{7, 6}, Hex{7, 7}, Hex{8, 7}, Hex{8, 6}}) {
+            sovtest::claimFor(s, s.cities[0], h);
+            s.plot(h).park = true;
+        }
+        s.players[0].dedications.push_back(rules().dedication("DEDICATION_WISH_YOU_WERE_HERE"));
+        s.players[0].age = age;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return std::pair<int, int>{g->tourismBase(0), g->parkTourism(0)};
+    };
+    const auto [normal, parks] = tourism(Age::Normal);
+    REQUIRE(parks > 0);
+    CHECK_EQ(tourism(Age::Golden).first, normal + parks);
 }
