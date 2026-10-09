@@ -88,6 +88,7 @@ enum class CommandType : uint8_t {
     LaunchInquisition = 75,     // id = an unused Apostle of the player's religion: Inquisitors may be bought (06)
     HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
     BuildRoad = 77,             // id = Military Engineer (until railroads), Legionary or Qin's Builder: a road on its plot for a charge (none for Qin's)
+    SetCityFocus = 78,          // id = city, arg = CityFocus: the yield its citizens favour (02: Citizens)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -144,6 +145,9 @@ struct Command {
     static Command buyPlot(PlayerId p, CityId c, Hex plot) { return {CommandType::BuyPlot, p, c, plot, 0, 0}; }
     static Command lockPlot(PlayerId p, CityId c, Hex plot, bool lock) {
         return {CommandType::LockPlot, p, c, plot, lock ? 1 : 0, 0};
+    }
+    static Command setCityFocus(PlayerId p, CityId c, CityFocus focus) {
+        return {CommandType::SetCityFocus, p, c, {}, static_cast<int32_t>(focus), 0};
     }
     static Command chooseResearch(PlayerId p, TypeIndex tech) { return {CommandType::ChooseResearch, p, tech, {}, 0, 0}; }
     static Command chooseCivic(PlayerId p, TypeIndex civic) { return {CommandType::ChooseCivic, p, civic, {}, 0, 0}; }

@@ -440,6 +440,57 @@ TEST(specialists_work_district_slots) {
     CHECK(g->cityReport(c.id).yields[static_cast<size_t>(YieldType::Science)] < science);
 }
 
+TEST(city_focus_steers_its_citizens) {
+    // One citizen; grassland (2 Food) all around but one wooded plains plot (1 Food, 2 Production), and four districts each
+    // with one building's specialist slot (Science, Gold, Culture, Faith). Balanced, it works the woods; a Food focus takes
+    // grassland, a yield focus that yield's specialist slot, a Production focus the woods again (02: Citizens).
+    const Hex woods{8, 6};
+    auto g = town(1, [&](GameState& s) {
+        s.plot(woods).terrain = rules().terrain("TERRAIN_PLAINS");
+        s.plot(woods).feature = rules().feature("FEATURE_FOREST");
+        City& c = s.cities[0];
+        c.districts.push_back({district("DISTRICT_CAMPUS"), {7, 6}, true});
+        c.districts.push_back({district("DISTRICT_COMMERCIAL_HUB"), {5, 6}, true});
+        c.districts.push_back({district("DISTRICT_THEATER_SQUARE"), {6, 8}, true});
+        c.districts.push_back({district("DISTRICT_HOLY_SITE"), {6, 4}, true});
+        for (const char* b : {"BUILDING_LIBRARY", "BUILDING_MARKET", "BUILDING_AMPHITHEATER", "BUILDING_SHRINE"}) c.buildings.push_back(rules().building(b));
+        std::sort(c.buildings.begin(), c.buildings.end());
+    });
+    const CityId id = g->state().cities[0].id;
+    const int32_t woodsIndex = g->state().grid.index(woods);
+    // The plot its one citizen works, or -1 - the district whose specialist slot it fills.
+    const auto focus = [&](CityFocus f) {
+        REQUIRE(g->submit(Command::setCityFocus(0, id, f)) == CommandError::Ok);
+        const City& c = *g->state().city(id);
+        CHECK(c.focus == f);
+        int specialists = 0, slot = 0;
+        for (size_t k = 0; k < c.districts.size(); ++k) {
+            specialists += c.districts[k].specialists;
+            if (c.districts[k].specialists > 0) slot = -1 - static_cast<int>(k);
+        }
+        REQUIRE(static_cast<int>(c.worked.size()) + specialists == 1);
+        return specialists > 0 ? slot : c.worked[0];
+    };
+    CHECK_EQ(focus(CityFocus::Balanced), woodsIndex);
+    const int32_t food = focus(CityFocus::Food);
+    CHECK(food >= 0 && food != woodsIndex);
+    CHECK_EQ(focus(CityFocus::Science), -1);
+    CHECK_EQ(focus(CityFocus::Gold), -2);
+    CHECK_EQ(focus(CityFocus::Culture), -3);
+    CHECK_EQ(focus(CityFocus::Faith), -4);
+    CHECK_EQ(focus(CityFocus::Production), woodsIndex);
+    CHECK_EQ(g->validate({CommandType::SetCityFocus, 0, id, {}, kNumCityFocuses, 0}), CommandError::BadTarget);
+    CHECK_EQ(g->validate({CommandType::SetCityFocus, 0, id, {}, -1, 0}), CommandError::BadTarget);
+    // Saved with the city.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK(loaded->state().city(id)->focus == CityFocus::Production);
+    // A save naming no focus is refused.
+    g->stateMutForTests().cities[0].focus = static_cast<CityFocus>(kNumCityFocuses);
+    CHECK(!loadGame(rules(), saveGame(*g), &err));
+}
+
 TEST(an_aqueduct_by_a_geothermal_fissure_brings_an_amenity) {
     // [GS] An Aqueduct at (7,6) beside a Geothermal Fissure gives its city +1 Amenity; a fissure two plots away doesn't.
     auto g = town(3, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });

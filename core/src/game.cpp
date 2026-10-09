@@ -361,6 +361,7 @@ CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePa
         case CommandType::Purchase:
         case CommandType::BuyPlot:
         case CommandType::LockPlot:
+        case CommandType::SetCityFocus:
             return validateCity(c);
         case CommandType::ChooseResearch:
         case CommandType::ChooseCivic:
@@ -1383,7 +1384,8 @@ void Game::apply(const Command& c) {
         case CommandType::QueueProduction:
         case CommandType::Purchase:
         case CommandType::BuyPlot:
-        case CommandType::LockPlot: applyCity(c); break;
+        case CommandType::LockPlot:
+        case CommandType::SetCityFocus: applyCity(c); break;
         case CommandType::ChooseResearch:
         case CommandType::ChooseCivic:
         case CommandType::ChangeGovernment:

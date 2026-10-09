@@ -185,6 +185,7 @@ std::string describe(const Command& c) {
         case CommandType::Purchase:
             return s + (c.type == CommandType::SetProduction ? "SetProduction" : c.type == CommandType::QueueProduction ? "QueueProduction" : "Purchase") +
                    " city" + std::to_string(c.id) + " kind" + std::to_string(c.arg) + " type" + std::to_string(c.arg2);
+        case CommandType::SetCityFocus: return s + "SetCityFocus city" + std::to_string(c.id) + " " + std::to_string(c.arg);
         case CommandType::BuyPlot:
         case CommandType::LockPlot:
             return s + (c.type == CommandType::BuyPlot ? "BuyPlot" : "LockPlot") + " city" + std::to_string(c.id) +

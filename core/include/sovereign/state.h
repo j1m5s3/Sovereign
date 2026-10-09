@@ -294,6 +294,10 @@ struct GreatWork {
     int32_t lockedUntil = 0;     // art moved or traded stays put until this turn (07: GREATWORK_ART_LOCK_TIME)
 };
 
+// What a city's citizens favour when the city assigns them (02: Citizens): balanced, or one yield.
+enum class CityFocus : uint8_t { Balanced = 0, Food, Production, Gold, Science, Culture, Faith };
+constexpr int kNumCityFocuses = 7;
+
 struct SOV_API City {
     CityId id = kNoCity;
     PlayerId owner = kNoPlayer;
@@ -311,6 +315,7 @@ struct SOV_API City {
     std::vector<ProductionProgress> progress;
     std::vector<int32_t> worked;  // plot indices worked by citizens (center excluded), sorted
     std::vector<int32_t> locked;  // plot indices the player pinned a citizen to, sorted
+    CityFocus focus = CityFocus::Balanced;  // the yield its citizens favour (02: Citizens)
     int hp = 0;              // city center hit points (0: not yet set; full on founding)
     int wallHp = 0;          // outer defence hit points left
     int lastAttackedTurn = -100;
