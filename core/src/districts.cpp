@@ -213,22 +213,20 @@ Fixed Game::districtHousing(const City& city) const {
                 }
             }
         }
-        if (d.aqueduct) {
-            // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
-            const bool fresh = hasFreshWater(state_, *rules_, city.pos, &lakes_);
-            bool coastal = false;
-            state_.grid.forEachWithin(city.pos, 1, [&](Hex n) {
-                if (n != city.pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
-            });
-            if (fresh) {
-                total += rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
-            } else {
-                const Fixed base = rules_->global(coastal ? HotGlobal::CityPopulationCoast : HotGlobal::CityPopulationNoWater);
-                total += std::max(Fixed(), rules_->global("CITY_POPULATION_AQUEDUCT_MIN") - base);
-            }
-        }
+        if (d.aqueduct) total += aqueductHousing(city);
     }
     return total;
+}
+
+Fixed Game::aqueductHousing(const City& city) const {
+    // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
+    if (hasFreshWater(state_, *rules_, city.pos, &lakes_)) return rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
+    bool coastal = false;
+    state_.grid.forEachWithin(city.pos, 1, [&](Hex n) {
+        if (n != city.pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;
+    });
+    const Fixed base = rules_->global(coastal ? HotGlobal::CityPopulationCoast : HotGlobal::CityPopulationNoWater);
+    return std::max(Fixed(), rules_->global("CITY_POPULATION_AQUEDUCT_MIN") - base);
 }
 
 int Game::districtAmenities(const City& city) const {

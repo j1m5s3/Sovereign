@@ -280,6 +280,17 @@ TEST(lakes_feed_aqueducts_and_raise_appeal) {
     built.cities[0].districts.push_back({aqueduct, {6, 7}, true});
     auto watered = Game::fromScenario(rules(), std::move(built));
     CHECK(watered->cityReport(watered->state().cities[0].id).housing == lakeside->cityReport(lakeside->state().cities[0].id).housing + Fixed::fromInt(2));
+    // A city on the sea has 3 Housing from it, so its Aqueduct adds 3 (up to CITY_POPULATION_AQUEDUCT_MIN).
+    auto shore = town(3, [&](GameState& s) {
+        learn(s, 0, {"TECH_ENGINEERING"});
+        for (int x = 2; x <= 11; ++x) s.plot({x, 7}).terrain = coast;  // ten plots: a sea beside the City Center
+        s.plot({8, 6}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    });
+    REQUIRE(shore->canPlaceDistrict(shore->state().cities[0], aqueduct, {7, 6}));
+    GameState piped = shore->state();
+    piped.cities[0].districts.push_back({aqueduct, {7, 6}, true});
+    auto seaside = Game::fromScenario(rules(), std::move(piped));
+    CHECK(seaside->cityReport(seaside->state().cities[0].id).housing == shore->cityReport(shore->state().cities[0].id).housing + Fixed::fromInt(3));
 }
 
 // Appeal (03): each district beside a plot adds its own Appeal (Holy Site and Theater Square +1, Industrial Zone -1)

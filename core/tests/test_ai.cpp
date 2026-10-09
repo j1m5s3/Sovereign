@@ -980,3 +980,62 @@ TEST(ai_buys_the_building_worth_most_per_gold) {
     // With gold to spare, a building a time while one is in reach, up to four.
     CHECK(purchases(4000, 0).size() == 4);
 }
+
+// A city builds Housing as far as its growth stalls for want of it (02: Housing), weighed against the Library its
+// Campus is ready for: the share of its food surplus the cap holds back once the next citizen is in, given back.
+TEST(ai_builds_housing_where_growth_stalls) {
+    // The capital at (4,4) has its six neighbours farmed (Housing 6: 2 without water, the Palace's 1, the farms' 3) and
+    // works the first `pop` of them; ocean from three plots out (no site for a Settler, no work for a Builder).
+    // Returns what it starts to make.
+    struct Setup {
+        int pop = 6;
+        int grass = 6;                        // farms on grassland (3 Food each), the rest on `rest`:
+        const char* rest = "TERRAIN_PLAINS";  // plains (2 Food) or desert (1)
+        bool river = false;
+        bool engineering = false;  // and a Mountain beside its west neighbour: room for an Aqueduct
+    };
+    const auto pick = [](const Setup& set) {
+        GameState s = flatState(9, 9, 1);
+        for (int i = 0; i < s.grid.size(); ++i) {
+            if (s.grid.distance(s.grid.at(i), {4, 4}) >= 3) s.plots[static_cast<size_t>(i)].terrain = rules().terrain("TERRAIN_OCEAN");
+        }
+        if (set.river) s.plot({4, 4}).riverEdges = kRiverE;
+        s.turn = 20;
+        addCity(s, 0, {4, 4}, true, set.pop);
+        City& c = s.cities[0];
+        c.queue.clear();
+        sovtest::claimFor(s, c, {6, 4});
+        c.districts.push_back({rules().district("DISTRICT_CAMPUS"), {6, 4}, true});
+        int farms = 0;
+        for (const Hex& h : s.grid.within({4, 4}, 1)) {
+            if (h == Hex{4, 4}) continue;
+            s.plot(h).terrain = rules().terrain(farms++ < set.grass ? "TERRAIN_GRASS" : set.rest);
+            s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+            if (static_cast<int>(c.worked.size()) < set.pop) c.worked.push_back(s.grid.index(h));
+        }
+        std::sort(c.worked.begin(), c.worked.end());
+        learn(s, 0, "TECH_POTTERY");
+        learn(s, 0, "TECH_WRITING");
+        if (set.engineering) {
+            learn(s, 0, "TECH_ENGINEERING");
+            s.plot({2, 4}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        }
+        for (const Hex& h : {Hex{4, 4}, Hex{3, 4}, Hex{4, 5}}) addUnit(s, "UNIT_WARRIOR", 0, h);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const City& after = g->state().cities[0];
+        return after.queue.empty() ? ProductionItem{} : after.queue.front();
+    };
+    const ProductionItem granary{ProductionKind::Building, rules().building("BUILDING_GRANARY")};
+    const ProductionItem library{ProductionKind::Building, rules().building("BUILDING_LIBRARY")};
+    // At the cap, a Granary gives back a quarter of the food surplus: with 8 Food to spare, 2 Food; with 5, 1.25; with 4,
+    // 1 Food, less than the Library's Science.
+    CHECK(pick({}) == granary);
+    CHECK(pick({6, 3}) == granary);
+    CHECK(pick({6, 2}) == library);
+    CHECK(pick({4}) == granary);                                   // room for 2: the next citizen would halve growth
+    CHECK(pick({6, 0, "TERRAIN_DESERT"}) == library);              // at the cap, but starving
+    CHECK(pick({6, 6, "TERRAIN_PLAINS", true}) == library);        // fresh water: Housing 9, room for three more
+    // An Aqueduct (Housing up to 6 without water: 4 more) before the Granary's 2.
+    CHECK(pick({6, 6, "TERRAIN_PLAINS", false, true}) == (ProductionItem{ProductionKind::District, rules().district("DISTRICT_AQUEDUCT")}));
+}
