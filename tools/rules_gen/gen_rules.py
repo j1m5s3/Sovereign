@@ -1118,6 +1118,10 @@ def gen_improvements():
             i["neighbourYields"] = near
         if row["Improvement"] == "Seaside Resort":
             i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
+        # Improvements that work the sea (the Improvements table's Domain, which the extract leaves out): Fishing Boats,
+        # and those whose land is water only. A resource found on both (Amber, Oil) takes the improvement of its own.
+        if row["Improvement"] == "Fishing Boats" or (terr and all(t in ("TERRAIN_COAST", "TERRAIN_OCEAN") for t in terr)):
+            i["water"] = True
         out.append(i)
     return {"improvements": out}
 

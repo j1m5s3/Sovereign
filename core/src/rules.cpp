@@ -1075,6 +1075,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             im.minAppeal = j.has("minAppeal") ? static_cast<int>(j["minAppeal"].integer(0)) : -100;
             im.coastal = j["coastal"].boolean(false);
+            im.water = j["water"].boolean(false);
             im.airSlots = static_cast<int>(j["airSlots"].integer(0));
             im.tunnel = j["tunnel"].boolean(false);
             im.plunder = readPlunder(j["plunder"]);

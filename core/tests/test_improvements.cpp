@@ -276,6 +276,32 @@ TEST(resources_take_only_their_improvement_and_fire_boosts) {
     CHECK_EQ(g->state().players[0].stockpile[at(rules().resource("RESOURCE_IRON"))], 2);
 }
 
+// Amber and Oil are found on land and on water (01): the sea takes Fishing Boats or an Offshore Oil Rig, the land a Mine
+// or an Oil Well, never the other way round.
+TEST(sea_and_land_resources_take_improvements_of_their_own_kind) {
+    const Hex woods{7, 6}, sea{5, 6};
+    const auto game = [&](const char* resource) {
+        return builderGame([&](GameState& s) {
+            for (const char* t : {"TECH_MINING", "TECH_SAILING", "TECH_REFINING", "TECH_PLASTICS"}) know(s, t);
+            s.plot(woods).terrain = rules().terrain("TERRAIN_PLAINS");
+            s.plot(woods).feature = rules().feature("FEATURE_FOREST");
+            s.plot(woods).resource = rules().resource(resource);
+            s.plot(sea).terrain = rules().terrain("TERRAIN_COAST");
+            s.plot(sea).resource = rules().resource(resource);
+        });
+    };
+    auto amber = game("RESOURCE_AMBER");
+    CHECK(amber->canImproveAt(0, woods, improvement("IMPROVEMENT_MINE")));
+    CHECK(!amber->canImproveAt(0, woods, improvement("IMPROVEMENT_FISHING_BOATS")));
+    CHECK(amber->canImproveAt(0, sea, improvement("IMPROVEMENT_FISHING_BOATS")));
+    CHECK(!amber->canImproveAt(0, sea, improvement("IMPROVEMENT_MINE")));
+    auto oil = game("RESOURCE_OIL");
+    CHECK(oil->canImproveAt(0, woods, improvement("IMPROVEMENT_OIL_WELL")));
+    CHECK(!oil->canImproveAt(0, woods, improvement("IMPROVEMENT_OFFSHORE_OIL_RIG")));
+    CHECK(oil->canImproveAt(0, sea, improvement("IMPROVEMENT_OFFSHORE_OIL_RIG")));
+    CHECK(!oil->canImproveAt(0, sea, improvement("IMPROVEMENT_OIL_WELL")));
+}
+
 TEST(a_plot_improved_over_again_counts_as_one_improved_tile) {
     GameState base = flatState(20, 14, 1);
     base.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
