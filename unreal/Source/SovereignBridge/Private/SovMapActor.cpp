@@ -351,6 +351,39 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		Trees[i]->SetVisibility(false);
 	}
 
+	// Rocks: a small cluster on a hill, a large one with a smaller beside it crowning a mountain.
+	int32 RockCount = 0;
+	if (SovArt::Mesh(TEXT("Nature"), TEXT("Rocks")))
+	{
+		for (const FSovTile& Tile : Mirror.Tiles)
+		{
+			if (Tile.Relief != ESovRelief::Hills && Tile.Relief != ESovRelief::Mountain) continue;
+			const uint32 H = static_cast<uint32>(Tile.X * 83492791) ^ static_cast<uint32>(Tile.Y * 2971215073u);
+			const bool bMountain = Tile.Relief == ESovRelief::Mountain;
+			const int32 Count = bMountain ? 2 : 1;
+			for (int32 k = 0; k < Count; ++k)
+			{
+				const double A = (H % 360) * PI / 180.0 + k * 2.4;
+				const double R = k == 0 ? (bMountain ? 0.0 : 28.0) : 42.0;
+				const double Scale = bMountain ? (k == 0 ? 0.34 : 0.2) : 0.12;
+				UStaticMeshComponent* Rk = Marker(Rocks, RockCount++, nullptr);
+				SovArt::SetKitMesh(Rk, TEXT("Nature"), TEXT("Rocks"), FLinearColor::White);
+				// Darker than the kit's stone, which reads as snow on the map: a tinted instance of its one material.
+				UMaterialInstanceDynamic* Dark = Cast<UMaterialInstanceDynamic>(Rk->GetMaterial(0));
+				if (!Dark || Dark->GetOuter() != Rk) Dark = Rk->CreateAndSetMaterialInstanceDynamic(0);
+				if (Dark) Dark->SetVectorParameterValue(TEXT("Tint"), FLinearColor(0.5f, 0.48f, 0.45f));
+				Rk->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
+				Rk->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 4) % 360 + k * 97), 0.f));
+				Rk->SetRelativeScale3D(FVector(Scale));
+				Rk->SetVisibility(!Tile.bWoods || bMountain);
+			}
+		}
+	}
+	for (int32 i = RockCount; i < Rocks.Num(); ++i)
+	{
+		Rocks[i]->SetVisibility(false);
+	}
+
 	// Roads: a thin packed-earth strip from centre to centre (across the wrap, to the copy beside it).
 	int32 RoadCount = 0;
 	for (const TPair<FIntPoint, FIntPoint>& R : Mirror.Roads)

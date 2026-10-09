@@ -645,6 +645,8 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildCity();
 	}
 	if (Model.Tree.bOpen) TreeView->SetModel(Model.Tree);
+	if (Model.Tree.bOpen && !bTreeWasOpen) TreeView->ScrollToCurrent();
+	bTreeWasOpen = Model.Tree.bOpen;
 	if (Model.Gov.bOpen) GovView->SetModel(Model.Gov);
 	FString E = Model.bEnd ? Model.EndTitle + Model.EndSub : FString();
 	for (const FString& L : Model.EndScores) E += L + TEXT("|");

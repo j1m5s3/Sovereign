@@ -218,6 +218,7 @@ private:
 	TDelegate<void()> OnEndClose;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
+	bool bTreeWasOpen = false;  // to scroll the tree to the current node each time it opens
 	TSharedPtr<SSovGovernmentView> GovView;
 	TSharedPtr<SSovBattleHud> BattleHud;
 	TDelegate<void(int32)> OnGovAdopt, OnGovSlot, OnGovCard, OnGovDedication;

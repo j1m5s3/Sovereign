@@ -50,6 +50,8 @@ public:
 
 	void Construct(const FArguments& Args);
 	void SetModel(const FSovTreeModel& InModel);
+	// Scrolls so the node being researched (or else the goal, or else the first open one) is in view.
+	void ScrollToCurrent();
 
 private:
 	void Layout();     // columns and rows, when the tree itself changes
@@ -63,6 +65,7 @@ private:
 	TSharedPtr<SConstraintCanvas> Canvas;
 	TSharedPtr<SSovTreeLines> Lines;
 	TSharedPtr<class SBox> Sizer;
+	TSharedPtr<class SScrollBox> HScroll, VScroll;
 	TDelegate<void(int32)> OnNode;
 	TDelegate<void()> OnClose;
 };

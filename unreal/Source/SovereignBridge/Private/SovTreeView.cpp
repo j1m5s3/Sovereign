@@ -112,10 +112,10 @@ void SSovTreeView::Construct(const FArguments& Args)
 			]
 			+ SVerticalBox::Slot().FillHeight(1.f)
 			[
-				SNew(SScrollBox).Orientation(Orient_Vertical)
+				SAssignNew(VScroll, SScrollBox).Orientation(Orient_Vertical)
 				+ SScrollBox::Slot()
 				[
-					SNew(SScrollBox).Orientation(Orient_Horizontal)
+					SAssignNew(HScroll, SScrollBox).Orientation(Orient_Horizontal)
 					+ SScrollBox::Slot()
 					[
 						SAssignNew(Sizer, SBox)
@@ -156,6 +156,21 @@ void SSovTreeView::SetModel(const FSovTreeModel& InModel)
 		LookKey = Look;
 		Rebuild();
 	}
+}
+
+void SSovTreeView::ScrollToCurrent()
+{
+	int32 Pick = INDEX_NONE;
+	for (const ESovTreeState Want : {ESovTreeState::Current, ESovTreeState::Goal, ESovTreeState::Available})
+	{
+		for (int32 i = 0; i < Model.Nodes.Num() && Pick == INDEX_NONE; ++i)
+			if (Model.Nodes[i].State == Want) Pick = i;
+		if (Pick != INDEX_NONE) break;
+	}
+	if (!Pos.IsValidIndex(Pick)) return;
+	// A column of room to its left, so its prerequisites show too.
+	if (HScroll.IsValid()) HScroll->SetScrollOffset(FMath::Max(0.f, static_cast<float>(Pos[Pick].X) - ColW * 1.2f));
+	if (VScroll.IsValid()) VScroll->SetScrollOffset(FMath::Max(0.f, static_cast<float>(Pos[Pick].Y) - RowH * 2.f));
 }
 
 void SSovTreeView::Layout()
