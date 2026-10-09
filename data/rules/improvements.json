@@ -48,7 +48,8 @@
     "percent": 100
    },
    "minAppeal": 4,
-   "coastal": true
+   "coastal": true,
+   "appealYield": "GOLD"
   },
   {
    "id": "IMPROVEMENT_CAMP",
@@ -138,7 +139,17 @@
    "plunder": {
     "kind": "HEAL",
     "amount": 50
-   }
+   },
+   "terrainUnlocks": [
+    {
+     "terrain": "TERRAIN_GRASS_HILLS",
+     "unlock": "CIVIC_CIVIL_ENGINEERING"
+    },
+    {
+     "terrain": "TERRAIN_PLAINS_HILLS",
+     "unlock": "CIVIC_CIVIL_ENGINEERING"
+    }
+   ]
   },
   {
    "id": "IMPROVEMENT_FISHING_BOATS",

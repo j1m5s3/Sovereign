@@ -1,6 +1,6 @@
 # Record: district, building and wonder rules the spec audit found off (03)
 
-Status: in progress, 2026-10-09 (part 1 done; parts 2 to 4 planned). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
+Status: in progress, 2026-10-09 (parts 1 and 2 done; parts 3 and 4 planned). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
 
 ## Part 1: pillage, mountains, the Golden Gate and Government Plaza tiers
 
@@ -15,10 +15,20 @@ Results:
 - 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; all 8 play out differently.
 - Tests: `a_pillaged_district_and_its_buildings_stop_working` (each district pillaged against it left out: Housing, Amenities, culture, trade capacity, Tourism, loyalty, the Zoo's modifier, flood protection, great person points), `a_pillaged_districts_buildings_lose_their_bonuses` (powered yields and Amenities, Hypatia and James Watt, Magnus, Charlemagne and Japan), `pillaged_districts_draw_and_give_no_power`, `a_tunnelled_mountain_holds_no_district_and_only_a_mountain_wonder`, `a_hidden_strategic_resource_under_a_district_or_wonder_is_granted_once_revealed`, `the_golden_gate_bridge_spans_opposite_land`, `government_plaza_buildings_need_a_government_of_their_tier`; `exclusive_buildings_and_either_prerequisite` now runs under Democracy. Mutation check: 28 mutants, all caught (the second pillage test was added to catch the last 6).
 
+## Part 2: yields by Appeal and Farms on hills
+
+- **The Preserve's Grove and Sanctuary feed its unimproved neighbours by their Appeal** (03: Preserve; data: `Adjacent_AppealYieldChanges`). The Grove gives +1 Food and +1 Faith on a Charming plot, and +2 Food, +2 Faith and +2 Culture on a Breathtaking one. The Sanctuary gives +1 Science and +1 Gold, or +2 Science, +2 Gold and +2 Production. The data table names only the Preserve, so `tools/rules_gen/gen_rules.py` gives each row to the building whose yields they are (source: https://primagames.com/?p=314685) as `appealYields`. A plot beside two Preserves with a Grove gains the Grove's yields once (Sovereign reading). A water plot gains nothing unless it is a natural wonder. Nothing is gained beside a pillaged or unfinished Preserve (`Game::preserveYields`, from `Game::plotYields`). Before, both buildings did nothing.
+- **A Seaside Resort yields Gold equal to its plot's Appeal** (03), as well as Tourism. The extract leaves out the data's `YieldFromAppeal`, so the generator sets `appealYield` (`Game::improvementYields`).
+- **A Farm goes on Grassland or Plains Hills only with Civil Engineering** (03). The extract leaves out the data's `PrereqCivic`, so the generator sets the Farm's `terrainUnlocks` (`Game::improvementFits`). A Farm for the plot's resource (Wheat on Plains Hills) needs no civic.
+
+Results:
+- 128 AI games (Small, 6 AI, turn 200) against part 1: AI Builders mine the hills they used to farm before Civil Engineering, so production rises 182.5 to 186.2 (+3.8 ± 1.5) and population falls 66.9 to 65.6 (-1.3 ± 0.4); science -2.0 ± 1.2 and culture -1.2 ± 0.8 are within noise, Gold +9 ± 7. A 150-turn 6-AI game takes the same time.
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; all 8 play out differently.
+- Tests: `the_preserves_buildings_feed_its_neighbours_by_appeal` (both bands, both buildings, a lake, a Farm, a pillaged and an unfinished Preserve, a second city's Preserve), `a_seaside_resort_yields_its_appeal_in_gold`, `a_farm_on_hills_needs_civil_engineering`; two hill Farms in older tests now come with Civil Engineering. Mutation check: 11 mutants, all caught (the pillaged Preserve case got two more Woods to catch the last: a pillaged district lowers the plot's Appeal by 2, so the plot was no longer Charming).
+
 ## Planned
 
-- **Part 2: yields and terrain.** The Preserve's Grove and Sanctuary give yields by Appeal; the Seaside Resort's Gold equals the plot's Appeal; a Farm on Grassland or Plains Hills needs Civil Engineering; the Panama Canal wonder (needs `tools/rules_gen/gen_rules.py` to place it).
-- **Part 3: repeatable districts.** A city may hold more than one Neighborhood, Canal or Dam; production progress is keyed by district type today, so this changes how a placed district is tracked.
+- **Part 3: repeatable districts and the Panama Canal.** A city may hold more than one Neighborhood, Canal or Dam. Production progress is keyed by district type today, so this changes how a placed district is tracked. The Panama Canal wonder acts as a canal (03), and `tools/rules_gen/gen_rules.py` leaves it out because it cannot place it.
 - **Part 4: the district discount** (03: District cost, `COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH`): count placed districts, keep B (completed districts) as of the last tech or civic finished, and count the Preserve in A.
 
 ## Unsure, not changed

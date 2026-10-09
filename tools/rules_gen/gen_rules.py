@@ -733,6 +733,18 @@ def gen_buildings():
         if row["Building"] in theming:
             b["theming"] = theming[row["Building"]]
         out.append(b)
+    # The Preserve's buildings give its unimproved neighbours yields by their Appeal (03: Preserve; data:
+    # Adjacent_AppealYieldChanges). The table names only the Preserve, so the rows go to the building whose yields they are:
+    # the Grove's Food, Faith and Culture, the Sanctuary's Science, Gold and Production (source:
+    # https://primagames.com/?p=314685).
+    by_id = {b["id"]: b for b in out}
+    grove, sanctuary = "BUILDING_GROVE", "BUILDING_SANCTUARY"
+    owner = {"Food": grove, "Faith": grove, "Culture": grove, "Science": sanctuary, "Gold": sanctuary, "Production": sanctuary}
+    for r in table(SPEC / "districts.md", "Appeal-based district yields"):
+        if r["District/Building"] != "Preserve" or r["Unimproved only"] != "yes":
+            raise ValueError(f"appeal yield row {r} is not the Preserve's on unimproved plots")
+        by_id[owner[r["Yield"]]].setdefault("appealYields", []).append(
+            {"yield": YIELD_WORDS[r["Yield"]], "amount": int(r["Change"]), "minAppeal": int(r["Min appeal"]), "maxAppeal": int(r["Max"])})
     return {"buildings": out}
 
 
@@ -1118,6 +1130,11 @@ def gen_improvements():
             i["neighbourYields"] = near
         if row["Improvement"] == "Seaside Resort":
             i["coastal"] = True  # 07: built on the coast (the terrain list leaves it out)
+            i["appealYield"] = "GOLD"  # 03: Gold equal to the plot's Appeal (Improvements.YieldFromAppeal, left out of the extract)
+        if row["Improvement"] == "Farm":
+            # 03: on Grassland and Plains Hills only with Civil Engineering (Improvement_ValidTerrains.PrereqCivic, left out
+            # of the extract).
+            i["terrainUnlocks"] = [{"terrain": tnames[t], "unlock": unlock_id("Civil Engineering")} for t in ("Grassland (Hills)", "Plains (Hills)")]
         # Improvements that work the sea (the Improvements table's Domain, which the extract leaves out): Fishing Boats,
         # and those whose land is water only. A resource found on both (Amber, Oil) takes the improvement of its own.
         if row["Improvement"] == "Fishing Boats" or (terr and all(t in ("TERRAIN_COAST", "TERRAIN_OCEAN") for t in terr)):

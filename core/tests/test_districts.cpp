@@ -515,6 +515,78 @@ TEST(a_pillaged_districts_buildings_lose_their_bonuses) {
     }
 }
 
+// The Preserve's buildings feed its unimproved neighbours by their Appeal (03): the Grove +1 Food and Faith on a Charming
+// plot, +2 Food, Faith and Culture on a Breathtaking one; the Sanctuary +1 Science and Gold, or +2 Science, Gold and
+// Production. An improved plot, a water plot and the plots of a pillaged or unfinished Preserve get nothing.
+TEST(the_preserves_buildings_feed_its_neighbours_by_appeal) {
+    const Hex preserve{8, 6};
+    const Hex charming{9, 6}, breathtaking{7, 7}, lake{7, 5};  // all beside the Preserve
+    const auto scene = [&](std::vector<const char*> buildings, auto&& edit) {
+        return town(3, [&](GameState& s) {
+            for (Hex h : {Hex{9, 5}, Hex{7, 8}, Hex{8, 8}, Hex{6, 7}, Hex{7, 4}, Hex{8, 4}}) s.plot(h).feature = rules().feature("FEATURE_FOREST");
+            s.plot(lake).terrain = rules().terrain("TERRAIN_COAST");
+            City& c = s.cities[0];
+            c.districts.push_back({district("DISTRICT_PRESERVE"), preserve, true});
+            for (const char* b : buildings) c.buildings.push_back(rules().building(b));
+            std::sort(c.buildings.begin(), c.buildings.end());
+            edit(s);
+        });
+    };
+    const auto none = [](GameState&) {};
+    auto bare = scene({}, none);
+    const int lowAppeal = bare->plotAppeal(charming), highAppeal = bare->plotAppeal(breathtaking);
+    REQUIRE(lowAppeal >= 2 && lowAppeal <= 3);
+    REQUIRE(highAppeal >= 4);
+    REQUIRE(bare->plotAppeal(lake) >= 2);
+    // What the plot gains over the same scene without the buildings.
+    const auto gain = [&](const Game& with, const Game& without, Hex h) {
+        const Yields a = with.plotYields(h, with.state().cities[0]), b = without.plotYields(h, without.state().cities[0]);
+        std::vector<int> out;
+        for (size_t i = 0; i < kNumYields; ++i) out.push_back(static_cast<int>((a[i] - b[i]).toInt()));
+        return out;
+    };
+    const auto yields = [](std::initializer_list<std::pair<YieldType, int>> list) {
+        std::vector<int> out(kNumYields, 0);
+        for (const auto& [t, n] : list) out[static_cast<size_t>(t)] = n;
+        return out;
+    };
+    using Y = YieldType;
+    auto grove = scene({"BUILDING_GROVE"}, none), sanctuary = scene({"BUILDING_SANCTUARY"}, none);
+    auto both = scene({"BUILDING_GROVE", "BUILDING_SANCTUARY"}, none);
+    CHECK(gain(*grove, *bare, charming) == yields({{Y::Food, 1}, {Y::Faith, 1}}));
+    CHECK(gain(*grove, *bare, breathtaking) == yields({{Y::Food, 2}, {Y::Faith, 2}, {Y::Culture, 2}}));
+    CHECK(gain(*sanctuary, *bare, charming) == yields({{Y::Science, 1}, {Y::Gold, 1}}));
+    CHECK(gain(*sanctuary, *bare, breathtaking) == yields({{Y::Science, 2}, {Y::Gold, 2}, {Y::Production, 2}}));
+    CHECK(gain(*both, *bare, charming) == yields({{Y::Food, 1}, {Y::Faith, 1}, {Y::Science, 1}, {Y::Gold, 1}}));
+    CHECK(gain(*grove, *bare, lake) == yields({}));
+    const auto farm = [&](GameState& s) { s.plot(charming).improvement = rules().improvement("IMPROVEMENT_FARM"); };
+    CHECK(gain(*scene({"BUILDING_GROVE"}, farm), *scene({}, farm), charming) == yields({}));
+    // A pillaged Preserve lowers the plot's Appeal by 2 (01); two more Woods keep it Charming.
+    const auto pillaged = [](GameState& s) {
+        s.cities[0].districts.back().pillagedTurns = 3;
+        for (Hex h : {Hex{10, 6}, Hex{9, 7}}) s.plot(h).feature = rules().feature("FEATURE_FOREST");
+    };
+    auto idle = scene({"BUILDING_GROVE"}, pillaged);
+    REQUIRE(idle->plotAppeal(charming) >= 2 && idle->plotAppeal(charming) <= 3);
+    CHECK(gain(*idle, *scene({}, pillaged), charming) == yields({}));
+    const auto unfinished = [](GameState& s) { s.cities[0].districts.back().complete = false; };
+    CHECK(gain(*scene({"BUILDING_GROVE"}, unfinished), *scene({}, unfinished), charming) == yields({}));
+    // Beside a second city's Preserve with a Grove too, the plot still gains the Grove's yields once.
+    const auto second = [&](bool grove) {
+        return [grove](GameState& s) {
+            const CityId other = addCity(s, 0, {12, 6}, false, 3);
+            s.plot({10, 6}).owner = 0;
+            s.plot({10, 6}).city = other;
+            s.city(other)->districts.push_back({district("DISTRICT_PRESERVE"), {10, 6}, true});
+            if (grove) s.city(other)->buildings.push_back(rules().building("BUILDING_GROVE"));
+        };
+    };
+    auto twice = scene({"BUILDING_GROVE"}, second(true)), never = scene({}, second(false));
+    const int appeal = twice->plotAppeal(charming);
+    REQUIRE(appeal >= 2 && appeal <= 3);
+    CHECK(gain(*twice, *never, charming) == yields({{Y::Food, 1}, {Y::Faith, 1}}));
+}
+
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {
     auto g = town(7, [](GameState& s) { learn(s, 0, {"TECH_ENGINEERING"}); });
     GameState s = g->state();

@@ -361,6 +361,8 @@ struct ImprovementType {
     int tourismPercent = 0;
     Unlock tourismAfter;
     int minAppeal = -100;  // the plot's appeal it needs (Seaside Resort 4)
+    std::optional<YieldType> appealYield;  // as much of this yield as the plot's Appeal (the Seaside Resort's Gold, 03)
+    std::vector<std::pair<TypeIndex, Unlock>> terrainUnlocks;  // terrains it needs more for (a Farm on Hills: Civil Engineering, 03)
     bool coastal = false;  // on the coast only
     bool water = false;    // works the sea (Fishing Boats, Offshore Oil Rig ...): on water only, and the others on land only
     // Civ unique improvements (leaders-and-art-style).
@@ -505,6 +507,13 @@ struct BuildingType {
     int powerProvided = 0;             // free power to its city (Hydroelectric Dam)
     int projectChargePercent = 0;      // each Builder charge completes this share of a project (Royal Society, 03)
     int plazaTier = 0;                 // a Government Plaza building's tier, needing a government of that tier (03); 0 for others
+    // Yields its district's unimproved neighbours gain while their Appeal is within the bounds (the Preserve's Grove and
+    // Sanctuary, 03).
+    struct AppealYield {
+        YieldType yield = YieldType::Food;
+        int amount = 0, minAppeal = 0, maxAppeal = 0;
+    };
+    std::vector<AppealYield> appealYields;
     int defense = 0;
     std::vector<TypeIndex> prereqs;  // buildings needed first, any one of them (BuildingPrereqs: the Armory needs a Barracks or a Stable)
     std::vector<TypeIndex> prereqsAny;  // a wonder's: any one of these in the city (03: the Great Library needs a Library)

@@ -1043,7 +1043,39 @@
    "maintenance": 0,
    "yields": {},
    "unlock": "CIVIC_MYSTICISM",
-   "purchasable": true
+   "purchasable": true,
+   "appealYields": [
+    {
+     "yield": "FAITH",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    },
+    {
+     "yield": "FAITH",
+     "amount": 1,
+     "minAppeal": 2,
+     "maxAppeal": 3
+    },
+    {
+     "yield": "FOOD",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    },
+    {
+     "yield": "FOOD",
+     "amount": 1,
+     "minAppeal": 2,
+     "maxAppeal": 3
+    },
+    {
+     "yield": "CULTURE",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    }
+   ]
   },
   {
    "id": "BUILDING_SANCTUARY",
@@ -1053,7 +1085,39 @@
    "maintenance": 0,
    "yields": {},
    "unlock": "CIVIC_CONSERVATION",
-   "purchasable": true
+   "purchasable": true,
+   "appealYields": [
+    {
+     "yield": "GOLD",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    },
+    {
+     "yield": "GOLD",
+     "amount": 1,
+     "minAppeal": 2,
+     "maxAppeal": 3
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    },
+    {
+     "yield": "SCIENCE",
+     "amount": 1,
+     "minAppeal": 2,
+     "maxAppeal": 3
+    },
+    {
+     "yield": "PRODUCTION",
+     "amount": 2,
+     "minAppeal": 4,
+     "maxAppeal": 100
+    }
+   ]
   },
   {
    "id": "BUILDING_AMPHITHEATER",

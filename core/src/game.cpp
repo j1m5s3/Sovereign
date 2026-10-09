@@ -226,6 +226,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     static const char* const kProducts[] = {"RESOURCE_TOYS", "RESOURCE_COSMETICS", "RESOURCE_JEANS", "RESOURCE_PERFUME"};
     for (size_t i = 0; i < 4; ++i) products_[i] = rules_->resource(kProducts[i]);
     oil_ = rules_->resource("RESOURCE_OIL");
+    preserve_ = rules_->district("DISTRICT_PRESERVE");
     spices_[0] = rules_->resource("RESOURCE_CINNAMON");
     spices_[1] = rules_->resource("RESOURCE_CLOVES");
     oceanTerrain_ = rules_->terrain("TERRAIN_OCEAN");
