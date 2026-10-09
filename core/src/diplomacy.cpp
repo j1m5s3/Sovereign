@@ -404,7 +404,7 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
     // units; Sovereign reads it as a denouncement's weight here).
     {
         const TypeIndex mine = state_.players[at(holder)].government, theirs = state_.players[at(about)].government;
-        if (mine != kNone && theirs != kNone && mine != theirs && rules_->governments[at(mine)].tier >= 3) add(OpinionReasonKind::OtherGovernment, -6);
+        if (mine != kNone && theirs != kNone && mine != theirs && rules_->governments[static_cast<size_t>(mine)].tier >= 3) add(OpinionReasonKind::OtherGovernment, -6);
     }
     // Religion: the same majority faith draws civs together; theirs taking our cities does not.
     {
