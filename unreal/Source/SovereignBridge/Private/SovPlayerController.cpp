@@ -771,6 +771,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 08: each city-state we have met, its kind, our envoys and its suzerain; picking sends an envoy.
 			ChooserTitle = FString::Printf(TEXT("City-states (%d envoys to send). Pick one to send an envoy"), P.envoyTokens);
 			static const TCHAR* Kinds[] = {TEXT("Scientific"), TEXT("Cultural"), TEXT("Religious"), TEXT("Trade"), TEXT("Industrial"), TEXT("Militaristic")};
+			const int32 FirstCs = Choices.Num();
 			for (const sov::Player& Cs : G.state().players)
 			{
 				if (Cs.cityState == sov::kNone || !Cs.alive)
@@ -791,14 +792,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const FString SuzName = Suz == sov::kNoPlayer ? FString(TEXT("none"))
 					: Suz == Me() ? FString(TEXT("you"))
 					: Str(G.state().players[static_cast<size_t>(Suz)].leaderName);
-				Choices.Add({FString::Printf(TEXT("%s (%s): your envoys %d, suzerain %s"), *Str(T.name), Kinds[static_cast<size_t>(T.kind) % 6],
-								 G.envoysAt(Me(), Cs.id), *SuzName),
-					sov::Command::sendEnvoy(Me(), Cs.id)});
+				const FString Section = FString::Printf(TEXT("%s city-states"), Kinds[static_cast<size_t>(T.kind) % 6]);
+				Choices.Add({FString::Printf(TEXT("Send an envoy to %s"), *Str(T.name)), sov::Command::sendEnvoy(Me(), Cs.id), {},
+					FString::Printf(TEXT("yours %d, suzerain %s"), G.envoysAt(Me(), Cs.id), *SuzName), "favor", Section});
 				// Levy Military (08): its army serves us for a while, as its suzerain.
 				if (const int32 Cost = G.levyCost(Me(), Cs.id); Cost >= 0)
 				{
-					Choices.Add({FString::Printf(TEXT("  Levy %s's military for %d Gold"), *Str(T.name), Cost), sov::Command::levyMilitary(Me(), Cs.id)});
+					Choices.Add({FString::Printf(TEXT("Levy %s's military"), *Str(T.name)), sov::Command::levyMilitary(Me(), Cs.id), {}, FString::Printf(TEXT("%d gold"), Cost), "strength", Section});
 				}
+			}
+			// One section per kind.
+			{
+				TArray<FChoice> Made(Choices.GetData() + FirstCs, Choices.Num() - FirstCs);
+				Made.StableSort([](const FChoice& A, const FChoice& B) { return A.Section < B.Section; });
+				Choices.SetNum(FirstCs);
+				Choices.Append(Made);
 			}
 			break;
 		}
@@ -818,24 +826,27 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					if (G.canAppointGovernor(Me(), T))
 					{
-						Choices.Add({FString::Printf(TEXT("Appoint %s the %s: %s"), *Str(Gt.name), *Str(Gt.title),
-										 *Str(R.governorPromotions[static_cast<size_t>(Gt.promotions.front())].effects)),
-							sov::Command::appointGovernor(Me(), T)});
+						FChoice Ch{FString::Printf(TEXT("Appoint %s"), *Str(Gt.name)), sov::Command::appointGovernor(Me(), T), {}, TEXT("1 title"), "government",
+							FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))};
+						Ch.Tip = Str(R.governorPromotions[static_cast<size_t>(Gt.promotions.front())].effects);
+						Choices.Add(Ch);
 					}
 					continue;
 				}
 				if (Sel && G.canAssignGovernor(Me(), T, Sel->id))
 				{
-					Choices.Add({FString::Printf(TEXT("Send %s to %s (%d turns to establish)"), *Str(Gt.name), *Str(Sel->name), G.governorEstablishTurns(T)),
-						sov::Command::assignGovernor(Me(), T, Sel->id)});
+					Choices.Add({FString::Printf(TEXT("Send %s to %s"), *Str(Gt.name), *Str(Sel->name)), sov::Command::assignGovernor(Me(), T, Sel->id), {},
+						FString::Printf(TEXT("%d turns to establish"), G.governorEstablishTurns(T)), "found", FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))});
 				}
 				for (sov::TypeIndex Promo : Gt.promotions)
 				{
 					if (G.canPromoteGovernor(Me(), T, Promo))
 					{
 						const sov::GovernorPromotionType& Pt = R.governorPromotions[static_cast<size_t>(Promo)];
-						Choices.Add({FString::Printf(TEXT("Promote %s: %s (%s)"), *Str(Gt.name), *Str(Pt.name), *Str(Pt.effects)),
-							sov::Command::promoteGovernor(Me(), T, Promo)});
+						FChoice Ch{FString::Printf(TEXT("Promote: %s"), *Str(Pt.name)), sov::Command::promoteGovernor(Me(), T, Promo), {}, TEXT("1 title"), "promote",
+							FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))};
+						Ch.Tip = Str(Pt.effects);
+						Choices.Add(Ch);
 					}
 				}
 			}
@@ -944,7 +955,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 		case EChooser::GreatPeople:
 		{
 			// 07: each class offers one person to everyone; points earn them, gold or faith buys them now.
-			ChooserTitle = TEXT("Great people (points / cost, +per turn). Pick one to buy it now");
+			ChooserTitle = TEXT("Great people: buy one now, or pass on one");
 			for (size_t c = 0; c < R.greatPersonClasses.size(); ++c)
 			{
 				const sov::TypeIndex Cls = static_cast<sov::TypeIndex>(c);
@@ -956,20 +967,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				}
 				const sov::GreatPersonType& Gp = R.greatPeople[static_cast<size_t>(Who)];
 				const int32 Have = c < P.greatPersonPoints.size() ? P.greatPersonPoints[c] : 0;
-				const FString Head = FString::Printf(TEXT("%s: %s (%s) %d/%d, +%d"), *ClassName, *Str(Gp.name), *Str(R.eras[static_cast<size_t>(Gp.era)].name), Have,
-					G.greatPersonCost(Who), G.greatPersonPointsPerTurn(Me(), Cls));
+				// A section per class: who is on offer, and our points toward them.
+				const FString Section = FString::Printf(TEXT("%s: %d of %d points, +%d a turn"), *ClassName, Have, G.greatPersonCost(Who), G.greatPersonPointsPerTurn(Me(), Cls));
+				const FString Who2 = FString::Printf(TEXT("%s (%s)"), *Str(Gp.name), *Str(R.eras[static_cast<size_t>(Gp.era)].name));
 				const int32 Gold = G.patronageCost(Me(), Cls, false);
 				const int32 Faith = G.patronageCost(Me(), Cls, true);
 				if (Gold > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("%s   buy %d gold"), *Head, Gold), sov::Command::patronizeGreatPerson(Me(), Cls, false)});
+					Choices.Add({TEXT("Buy ") + Who2, sov::Command::patronizeGreatPerson(Me(), Cls, false), {}, FString::Printf(TEXT("%d gold"), Gold), "gold", Section});
 				}
 				if (Faith > 0 && P.faith >= sov::Fixed::fromInt(Faith))
 				{
-					Choices.Add({FString::Printf(TEXT("%s   buy %d faith"), *Head, Faith), sov::Command::patronizeGreatPerson(Me(), Cls, true)});
+					Choices.Add({TEXT("Buy ") + Who2, sov::Command::patronizeGreatPerson(Me(), Cls, true), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", Section});
 				}
 				const sov::Command Pass = sov::Command::passGreatPerson(Me(), Cls);
-				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("%s   pass on %s"), *ClassName, *Str(Gp.name)), Pass});
+				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({TEXT("Pass on ") + Who2, Pass, {}, TEXT(""), "skip", Section});
 			}
 			// 07: Great Works move between our slots (for theming); every move the rules allow.
 			for (const sov::City& From : G.state().cities)
@@ -987,7 +999,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						{
 							const sov::Command Move = sov::Command::moveGreatWork(Me(), From.id, static_cast<int>(W), To.id, B);
 							if (G.validate(Move) != sov::CommandError::Ok) continue;
-							Choices.Add({FString::Printf(TEXT("Move %s from %s to the %s in %s"), *WorkName, *Str(From.name), *Str(R.buildings[static_cast<size_t>(B)].name), *Str(To.name)), Move});
+							Choices.Add({FString::Printf(TEXT("Move %s from %s to the %s in %s"), *WorkName, *Str(From.name), *Str(R.buildings[static_cast<size_t>(B)].name), *Str(To.name)), Move, {}, TEXT(""), "culture", TEXT("Great Works")});
 						}
 					}
 				}
