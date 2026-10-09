@@ -133,6 +133,22 @@ TEST(city_production_completes_with_overflow) {
     CHECK_EQ(g.state().players[0].unitsTrained[static_cast<size_t>(rules().unit("UNIT_WARRIOR"))], 1);
 }
 
+// A new unit appears in its city, and beside it only while a unit of its layer holds the city plot.
+TEST(a_new_unit_appears_in_its_city) {
+    auto sc = capitalScenario();
+    const City& c = *sc.game->state().city(sc.city);
+    const TypeIndex warrior = rules().unit("UNIT_WARRIOR"), builder = rules().unit("UNIT_BUILDER");
+    CHECK(sc.game->unitSpawnPlot(c, warrior) == c.pos);
+    GameState s = sc.game->state();
+    addUnit(s, "UNIT_WARRIOR", 0, c.pos);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const City& held = *g->state().city(sc.city);
+    const std::optional<Hex> beside = g->unitSpawnPlot(held, warrior);
+    REQUIRE(beside.has_value());
+    CHECK_EQ(g->state().grid.distance(*beside, held.pos), 1);
+    CHECK(g->unitSpawnPlot(held, builder) == held.pos);
+}
+
 TEST(city_settler_costs_and_population) {
     auto sc = capitalScenario();
     Game& g = *sc.game;

@@ -209,6 +209,11 @@ public:
     bool campLeavesAlone(const Camp& camp, PlayerId player) const;  // bribed by it, or incited against someone else
     bool levied(const Unit& unit) const;             // serving a suzerain under a levy
     void processLevies(PlayerId player);             // levies running out send their units home
+    // Whether the unit may stay on the plot (its kind of ground, no other unit of its layer and no other player's unit
+    // or city there; 05: Stacking), and the nearest plot within radius of `around` where it may (HexGrid::nearestFirst).
+    bool mayStand(const Unit& unit, Hex plot) const;
+    std::optional<Hex> standingPlotNear(const Unit& unit, Hex around, int radius) const;
+    static constexpr int kLevyPlacement = 5;  // how far a levied unit looks for a plot to stand on (Sovereign)
     bool canSendEnvoy(PlayerId player, PlayerId cityState) const;
     // Yields a city earns from its owner's envoys (capital and building tiers), and production toward an item.
     Yields envoyYields(const City& city) const;
@@ -890,6 +895,7 @@ private:
     // A captured civilian changes hands as its capture type, or is destroyed.
     void seizeCivilian(UnitId id, PlayerId captor);
     void removeUnit(UnitId id);
+    void relocateUnit(Unit& unit, Hex to);  // puts it there: its order and escort end, and its fortification if it moves
     bool exertsZoc(const Unit& unit) const;
     // Marks with `bit` the plots in enemy ZOC for this mover (none when it ignores ZOC) in `plots`, one entry per plot.
     void markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) const;

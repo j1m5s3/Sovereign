@@ -1062,18 +1062,22 @@ std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const 
     const UnitType& ut = rules_->units[static_cast<size_t>(unitType)];
     if (ut.domain == Domain::Air) return freeAirBase(c);
     const UnitLayer layer = ut.layer;
-    for (const Hex& h : state_.grid.within(c.pos, 1)) {  // the center comes first
+    auto fits = [&](Hex h) {
         if (ut.domain == Domain::Sea) {
             // A new ship waits in the port, or on the water next to it.
             const TerrainType& t = rules_->terrains[static_cast<size_t>(state_.plot(h).terrain)];
-            if (h != c.pos && (!t.water || t.impassable || (t.id == "TERRAIN_OCEAN" && !canEnterOcean(c.owner)))) continue;
+            if (h != c.pos && (!t.water || t.impassable || (t.id == "TERRAIN_OCEAN" && !canEnterOcean(c.owner)))) return false;
         } else if (!isLandPassable(state_, *rules_, h)) {
-            continue;
+            return false;
         }
-        if (state_.foreignUnitAt(h, c.owner) || state_.unitAt(h, layer, *rules_)) continue;
+        if (state_.foreignUnitAt(h, c.owner) || state_.unitAt(h, layer, *rules_)) return false;
         const City* other = state_.cityAt(h);
-        if (other && other->owner != c.owner) continue;
-        return h;
+        return !other || other->owner == c.owner;
+    };
+    // The center first, then its neighbours (in within()'s order, as HexGrid::nearestFirst gives them).
+    if (fits(c.pos)) return c.pos;
+    for (const Hex& h : state_.grid.within(c.pos, 1)) {
+        if (h != c.pos && fits(h)) return h;
     }
     return std::nullopt;
 }

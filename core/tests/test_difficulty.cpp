@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 #include "sovereign/ai.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -50,6 +51,16 @@ TEST(deity_ai_starts_with_extra_units_and_the_human_does_not) {
     CHECK_EQ(unitsOf(*deity, 1, "UNIT_WARRIOR"), 5);
     CHECK_EQ(unitsOf(*deity, 1, "UNIT_BUILDER"), 2);
     CHECK_EQ(unitsOf(*deity, 0, "UNIT_SETTLER"), 1);  // the human: the normal start
+    // They stand as near the start as the land allows: every plot nearer it than one of them holds another of its layer.
+    const GameState& s = deity->state();
+    const Hex home = s.players[1].startPos;
+    for (const Unit& u : s.units) {
+        const UnitLayer layer = rules().units[static_cast<size_t>(u.type)].layer;
+        if (u.owner != 1 || layer == UnitLayer::Leader) continue;
+        for (const Hex& h : s.grid.within(home, s.grid.distance(u.pos, home) - 1)) {
+            if (isLandPassable(s, rules(), h)) CHECK(s.unitAt(h, layer, rules()) != nullptr);
+        }
+    }
 }
 
 TEST(top_difficulty_ai_cities_yield_more) {

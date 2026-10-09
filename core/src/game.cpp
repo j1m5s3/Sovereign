@@ -104,7 +104,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
             UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
             std::optional<Hex> spot;
             if (!st.unitAt(p.startPos, layer, rules)) spot = p.startPos;
-            for (const Hex& n : st.grid.within(p.startPos, 2)) {
+            for (const Hex& n : st.grid.nearestFirst(p.startPos, 2)) {
                 if (spot) break;
                 if (isLandPassable(st, rules, n) && !st.unitAt(n, layer, rules) && !st.foreignUnitAt(n, p.id)) spot = n;
             }
@@ -123,7 +123,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
                 if (t == kNone) continue;
                 const UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
                 for (int k = 0; k < count; ++k) {
-                    for (const Hex& n : st.grid.within(p.startPos, 2)) {
+                    for (const Hex& n : st.grid.nearestFirst(p.startPos, 2)) {
                         if (isLandPassable(st, rules, n) && !st.unitAt(n, layer, rules) && !st.foreignUnitAt(n, p.id)) {
                             game->spawnUnit(t, p.id, n);
                             break;
@@ -1591,6 +1591,13 @@ void Game::apply(const Command& c) {
                 u.owner = c.player;
                 lv.units.push_back(u.id);
             }
+            // A levied unit standing in the city-state's city or among its units steps to the nearest plot it may stand
+            // on (05: Stacking; Sovereign: the spec does not say where levied units go).
+            for (UnitId id : lv.units) {
+                Unit& u = *state_.unit(id);
+                if (mayStand(u, u.pos)) continue;
+                if (const std::optional<Hex> spot = standingPlotNear(u, u.pos, kLevyPlacement)) relocateUnit(u, *spot);
+            }
             state_.levies.push_back(lv);
             awardMoment(c.player, "MOMENT_CITY_STATE_ARMY_LEVIED");  // 09
             refreshVisibility(c.player);
@@ -1880,6 +1887,39 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     for (UnitId id : moving) advanceUnit(id);
     refreshVisibility(pid);
     updateBoosts(pid);
+}
+
+bool Game::mayStand(const Unit& unit, Hex plot) const {
+    const UnitType& ut = typeOf(*rules_, unit);
+    const City* city = state_.cityAt(plot);
+    if (city && city->owner != unit.owner) return false;
+    const TerrainType& t = terrainOf(*rules_, state_.plot(plot));
+    if (ut.domain == Domain::Sea) {
+        if (!city && (!t.water || t.impassable || (t.id == "TERRAIN_OCEAN" && !canEnterOcean(unit.owner)))) return false;
+    } else if (!isLandPassable(state_, *rules_, plot) && !(plot == unit.pos && isEmbarked(unit))) {
+        return false;  // a land unit stands on land, or stays embarked where it is
+    }
+    for (const Unit& o : state_.units) {
+        if (o.pos == plot && o.id != unit.id && (o.owner != unit.owner || typeOf(*rules_, o).layer == ut.layer)) return false;
+    }
+    return true;
+}
+
+std::optional<Hex> Game::standingPlotNear(const Unit& unit, Hex around, int radius) const {
+    for (const Hex& h : state_.grid.nearestFirst(around, radius)) {
+        if (mayStand(unit, h)) return h;
+    }
+    return std::nullopt;
+}
+
+void Game::relocateUnit(Unit& unit, Hex to) {
+    if (unit.pos != to) {
+        unit.pos = to;
+        unit.activity = Activity::Awake;
+        unit.fortifyTurns = 0;
+    }
+    unit.moveTarget.reset();
+    unit.escorting = kNoUnit;
 }
 
 Unit& Game::spawnUnit(TypeIndex type, PlayerId owner, Hex pos) {

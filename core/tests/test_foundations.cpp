@@ -92,6 +92,16 @@ TEST(hex_neighbors_and_distance) {
     CHECK(!g.neighbor({0, 0}, Dir::NW).has_value());
 }
 
+TEST(hex_nearest_first_lists_the_disc_by_distance) {
+    HexGrid g(10, 8, false);
+    const Hex c{4, 4};
+    const std::vector<Hex> near = g.nearestFirst(c, 2), all = g.within(c, 2);
+    REQUIRE(near.size() == 19u);
+    CHECK(std::is_permutation(near.begin(), near.end(), all.begin(), all.end()));
+    CHECK_EQ(near[0], c);
+    for (size_t i = 1; i < near.size(); ++i) CHECK_EQ(g.distance(c, near[i]), i <= 6 ? 1 : 2);
+}
+
 TEST(hex_wraps_east_west_only) {
     HexGrid g(10, 8, true);
     CHECK_EQ(*g.neighbor({0, 2}, Dir::W), (Hex{9, 2}));
