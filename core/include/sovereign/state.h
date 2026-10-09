@@ -526,7 +526,8 @@ struct RivalMemory {
     int32_t leadersTaken = 0;  // the human's rulers it captured or killed (its trophies)
     int32_t leadersLost = 0;   // its rulers the human captured or killed
     int32_t citiesLost = 0;    // its cities the human took
-    int32_t friendTurns = 0;   // turns as declared friends
+    int32_t friendTurns = 0;   // turns as declared friends or allies
+    int32_t promisesBroken = 0;  // promises the human made it and broke
 };
 // This game's share of a memory, kept in the game state until the human's file is written.
 struct RivalTally {
@@ -654,6 +655,7 @@ enum class EventKind : uint8_t {
     Succession,      // actor crowned a ruler; value: the Succession kind + 16 x the heir's place in the dynasty
     AssassinKilledDouble,  // actor's assassin struck target's body double instead of its ruler
     AssassinKilledGuard,   // actor's assassin struck down one of target's bodyguards instead of its ruler
+    RulerRansomed,         // actor released target's captive ruler for a ransom
 };
 struct GameEvent {
     int32_t turn = 0;

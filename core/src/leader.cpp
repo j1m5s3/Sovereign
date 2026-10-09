@@ -516,6 +516,7 @@ std::optional<Hex> Game::throneCity(PlayerId player) const {
 void Game::ransomRuler(PlayerId owner) {
     // The captive comes home to the capital with its loadout and promotions; the interregnum ends next turn (§5).
     Player& p = state_.players[static_cast<size_t>(owner)];
+    pushEvent(EventKind::RulerRansomed, p.captor, owner, 0);
     p.captor = kNoPlayer;
     spawnLeader(owner, throneCity(owner).value_or(p.startPos));
     Unit& l = state_.units.back();

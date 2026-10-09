@@ -138,8 +138,8 @@ const RivalMemory* Game::rivalMemory(PlayerId ai, PlayerId human) const {
 int Game::rivalGrudge(PlayerId ai, PlayerId human) const {
     const RivalMemory* m = rivalMemory(ai, human);
     if (!m) return 0;
-    // Its rulers taken and its cities lost weigh most, then betrayals, then plain wars.
-    return std::min(30, 6 * m->leadersLost + 3 * m->citiesLost + 5 * m->betrayals + 2 * m->wars);
+    // Its rulers taken and its cities lost weigh most, then betrayals and broken promises, then plain wars.
+    return std::min(30, 6 * m->leadersLost + 3 * m->citiesLost + 5 * m->betrayals + 4 * m->promisesBroken + 2 * m->wars);
 }
 
 int Game::rivalRespect(PlayerId ai, PlayerId human) const {
@@ -172,12 +172,16 @@ void Game::processRivals() {
                     ++m.wars;
                     if (e.actor == h.id && e.value == 1) ++m.betrayals;
                 }
-                if (e.kind == EventKind::LeaderLost && between) ++(e.actor == a.id ? m.leadersTaken : m.leadersLost);
+                // A ruler taken in battle or killed by an assassin (player-retention: "captured or assassinated leaders").
+                if ((e.kind == EventKind::LeaderLost || e.kind == EventKind::AssassinKilledLeader) && between)
+                    ++(e.actor == a.id ? m.leadersTaken : m.leadersLost);
             }
+            for (const Promise& pr : state_.promises) m.promisesBroken += pr.by == h.id && pr.to == a.id && pr.brokenOn == state_.turn - 1 ? 1 : 0;
             int taken = 0;
             for (const City& c : state_.cities) taken += c.owner == h.id && c.originalOwner == a.id ? 1 : 0;
             m.citiesLost = std::max(m.citiesLost, taken);
-            if (friends(h.id, a.id)) ++m.friendTurns;
+            // A long alliance counts as much as friendship (player-retention: "long alliances carry over").
+            if (friends(h.id, a.id) || alliance(h.id, a.id) != AllianceType::None) ++m.friendTurns;
         }
     }
 }
@@ -201,6 +205,7 @@ std::vector<RivalMemory> Game::rivalMemories(PlayerId human) const {
         it->leadersLost += t.memory.leadersLost;
         it->citiesLost += t.memory.citiesLost;
         it->friendTurns += t.memory.friendTurns;
+        it->promisesBroken += t.memory.promisesBroken;
     }
     return out;
 }

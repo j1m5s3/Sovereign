@@ -925,6 +925,46 @@ TEST(a_captured_ruler_is_ransomed_home) {
     CHECK_EQ(p.interregnumTurns, 1);
     CHECK_EQ(p.gold, Fixed::fromInt(200));
     CHECK_EQ(p.leaderName, std::string("Elizabeth I"));  // the same ruler, not an heir
+    // The chronicle keeps the ransom (player-retention: "captures and ransoms").
+    const std::vector<std::string> lines = g->chronicleLines(0);
+    CHECK(std::any_of(lines.begin(), lines.end(), [&](const std::string& s) {
+        return s.find(rules().civs[at(g->state().players[1].civ)].name + " released the ruler of") != std::string::npos;
+    }));
+}
+
+// A failed assassin's death is in the chronicle, and the Hall of Sovereigns says how the last ruler fell.
+TEST(the_chronicle_and_hall_tell_how_a_ruler_fell) {
+    auto g = duel([](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        s.chronicle.push_back({3, EventKind::AssassinKilled, 1, 0, 0});
+        s.chronicle.push_back({5, EventKind::LeaderLost, 1, 0, 0});
+        s.chronicle.push_back({7, EventKind::AssassinKilledLeader, 1, 0, 40});
+        s.chronicle.push_back({8, EventKind::AssassinKilledLeader, 0, 1, 40});  // the other way round: not player 0's fall
+    }, false);
+    const std::string me = rules().civs[0].name, them = rules().civs[1].name;
+    const std::vector<std::string> lines = g->chronicleLines(0);
+    CHECK(std::find(lines.begin(), lines.end(), "Turn 3: An assassin from " + them + " died in an attempt on the ruler of " + me + ".") != lines.end());
+    REQUIRE(!g->leaderOf(0));
+    CHECK(g->hallEntry(0).find("The ruler was killed by an assassin from " + them) != std::string::npos);
+    CHECK(Game::chronicleWorthy(EventKind::AssassinKilled) && Game::chronicleWorthy(EventKind::RulerRansomed));
+    auto h = duel([](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        s.chronicle.push_back({5, EventKind::LeaderLost, 1, 0, 0});
+        s.chronicle.push_back({6, EventKind::LeaderLost, 1, 0, 1});  // a capture is not a death
+    }, false);
+    CHECK(h->hallEntry(0).find("The ruler fell in battle against " + them) != std::string::npos);
+    auto taken = duel([](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        s.chronicle.push_back({6, EventKind::LeaderLost, 1, 0, 1});  // captured only
+    }, false);
+    CHECK(taken->hallEntry(0).find("fell in battle") == std::string::npos);
+    // A living ruler has no cause of death.
+    auto k = duel([](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        addLeader(s, 0, hx(5, 5));
+        s.chronicle.push_back({5, EventKind::LeaderLost, 1, 0, 0});
+    }, false);
+    CHECK(k->hallEntry(0).find("fell in battle") == std::string::npos);
 }
 
 TEST(the_ai_ransoms_its_ruler_or_gives_it_up) {

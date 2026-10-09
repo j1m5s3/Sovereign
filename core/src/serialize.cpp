@@ -101,11 +101,11 @@ void readProfile(ByteReader& r, PlayerProfile& p) {
 
 void writeRival(ByteWriter& w, const RivalMemory& m) {
     w.str(m.civ);
-    for (int32_t v : {m.games, m.wars, m.betrayals, m.leadersTaken, m.leadersLost, m.citiesLost, m.friendTurns}) w.i32(v);
+    for (int32_t v : {m.games, m.wars, m.betrayals, m.leadersTaken, m.leadersLost, m.citiesLost, m.friendTurns, m.promisesBroken}) w.i32(v);
 }
 void readRival(ByteReader& r, RivalMemory& m) {
     m.civ = r.str();
-    for (int32_t* v : {&m.games, &m.wars, &m.betrayals, &m.leadersTaken, &m.leadersLost, &m.citiesLost, &m.friendTurns}) *v = r.i32();
+    for (int32_t* v : {&m.games, &m.wars, &m.betrayals, &m.leadersTaken, &m.leadersLost, &m.citiesLost, &m.friendTurns, &m.promisesBroken}) *v = r.i32();
 }
 
 void writeEvents(ByteWriter& w, const std::vector<GameEvent>& events) {
@@ -1602,7 +1602,7 @@ const RivalField kRivalFields[] = {
     {"games", &RivalMemory::games},           {"wars", &RivalMemory::wars},
     {"betrayals", &RivalMemory::betrayals},   {"leadersTaken", &RivalMemory::leadersTaken},
     {"leadersLost", &RivalMemory::leadersLost}, {"citiesLost", &RivalMemory::citiesLost},
-    {"friendTurns", &RivalMemory::friendTurns},
+    {"friendTurns", &RivalMemory::friendTurns}, {"promisesBroken", &RivalMemory::promisesBroken},
 };
 }  // namespace
 
