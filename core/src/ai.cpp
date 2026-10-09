@@ -2305,7 +2305,8 @@ void pantheon(View& v) {
 // A religion founded on a copy of the game with these beliefs, scored by our cities' yields, Amenities and
 // Housing and the founder's own yields.
 int64_t religionScore(const View& v, UnitId prophetId, TypeIndex religion, TypeIndex founder, TypeIndex follower) {
-    auto trial = Game::fromScenario(v.r, v.s());
+    // The game as it stands, on our turn: Game::fromScenario would begin player 0's, where our command fails.
+    auto trial = std::make_unique<Game>(v.r, v.s(), std::vector<Command>{});
     if (trial->submit(Command::foundReligion(v.me, prophetId, religion, founder, follower)) != CommandError::Ok) return INT64_MIN;
     int64_t score = worth(v, trial->founderYields(v.me));
     for (CityId cid : v.cities) {
