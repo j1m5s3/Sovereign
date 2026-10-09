@@ -41,6 +41,7 @@ constexpr int kWarRange = 9;            // a war target's city must be this clos
 constexpr int kWarMargin = 50;          // added to the posture's war ratio to start a war (not to keep one going)
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
+constexpr int kEnvoyStrategyBonus = 12;  // an envoy's pull toward a city-state of a kind our strategy wants, short of a tier's 20
 constexpr int kProposalGap = 10;        // an alliance's last turns, when it is renewed
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
@@ -2896,8 +2897,8 @@ void trader(View& v, UnitId id) {
     g.submit(Command::setActivity(v.me, id, Activity::Skip));
 }
 
-// Envoys (08): toward a city-state where we are close to the next tier or to suzerainty,
-// then the nearest one we have met.
+// Envoys (08): toward a city-state where we are close to the next tier or to suzerainty, then one whose kind
+// serves our strategy (10: "envoy allocation to reach thresholds/suzerainty aligned with strategy").
 void envoys(View& v) {
     Game& g = v.game;
     // At war, a city-state's army is levied while Gold allows (08: Levy Military).
@@ -2907,6 +2908,13 @@ void envoys(View& v) {
             if (cost >= 0 && v.s().players[at(v.me)].gold >= Fixed::fromInt(cost + 100)) g.submit(Command::levyMilitary(v.me, cs.id));
         }
     }
+    // The city-state kinds our strategy wants.
+    std::vector<CityStateKind> wanted;
+    if (v.posture.has(Strategy::ScienceVictory)) wanted.push_back(CityStateKind::Scientific);
+    if (v.posture.has(Strategy::CultureVictory)) wanted.push_back(CityStateKind::Cultural);
+    if (v.posture.has(Strategy::ReligiousVictory)) wanted.push_back(CityStateKind::Religious);
+    if (v.posture.has(Strategy::DominationVictory) || v.majorWar) wanted.push_back(CityStateKind::Militaristic);
+    if (v.posture.has(Strategy::WonderObsessed)) wanted.push_back(CityStateKind::Industrial);
     for (int guard = 0; guard < 8 && v.s().players[at(v.me)].envoyTokens > 0; ++guard) {
         PlayerId best = kNoPlayer;
         int bestScore = INT_MIN;
@@ -2917,6 +2925,7 @@ void envoys(View& v) {
             int score = mine == 0 || mine == 2 || mine == 5 ? 30 : 10;  // the next tier or suzerainty
             if (suz != kNoPlayer && suz != v.me) score -= 5;
             score -= mine > 6 ? 40 : 0;
+            if (cs.cityState != kNone && std::find(wanted.begin(), wanted.end(), v.r.cityStates[at(cs.cityState)].kind) != wanted.end()) score += kEnvoyStrategyBonus;
             if (score > bestScore) {
                 bestScore = score;
                 best = cs.id;
