@@ -934,6 +934,132 @@ int policyValue(const View& v, TypeIndex policy) {
     return value;
 }
 
+// What our cities are worth on a copy of the game: their yields, Amenities and Housing.
+int64_t citiesWorth(const View& v, const Game& trial) {
+    int64_t score = 0;
+    for (const CityReport& r : trial.cityReports(v.me)) score += worth(v, r.yields) + 3 * r.amenities + static_cast<int64_t>((r.housing * 2).round());
+    return score;
+}
+
+// Policy cards that may change a city's yields, Amenities or Housing: Dark Age cards, cards without modifiers (their
+// effects are in code) but for Military ones, whose code acts on units, strategic resources, plunder, upkeep and city
+// defence, and cards with a modifier of any other kind than these, which touch units, production toward items, great
+// people, religion, loyalty, tourism or diplomacy.
+std::vector<uint8_t> cardsForCities(const Rules& r) {
+    const auto blind = [](ModEffect e) {
+        switch (e) {
+            case ModEffect::CityGrowthPercent: case ModEffect::CityDefense: case ModEffect::UnitProductionPercent:
+            case ModEffect::PlotPurchaseCostPercent: case ModEffect::UnitMaintenanceDiscount: case ModEffect::GrantAbility:
+            case ModEffect::UnitXpPercent: case ModEffect::UnitStrength: case ModEffect::CityLoyalty:
+            case ModEffect::FounderYieldPerCity: case ModEffect::FounderYieldPerFollowers: case ModEffect::FounderYieldPerDistrict:
+            case ModEffect::ReligionPressureRange: case ModEffect::ReligionPressurePercent: case ModEffect::ReligiousUnitDiscountPercent:
+            case ModEffect::UnitStrengthNearFollowingCity: case ModEffect::ReligiousUnitsIgnoreTerrain: case ModEffect::NoCombatPressureLoss:
+            case ModEffect::ReligionColonizes: case ModEffect::CityGreatPersonPercent: case ModEffect::CityHarvestPercent:
+            case ModEffect::CityBorderGrowthPercent: case ModEffect::CityDistrictProductionPercent: case ModEffect::CityReligionPressurePercent:
+            case ModEffect::SettlerNoPopCost: case ModEffect::BuilderExtraCharges: case ModEffect::WarWearinessPercent:
+            case ModEffect::ItemProductionPercent: case ModEffect::GreatPersonPoints: case ModEffect::CityGreatPersonPoints:
+            case ModEffect::FavorPerTurn: case ModEffect::CityFavorPerTurn: case ModEffect::InfluencePerTurn:
+            case ModEffect::RouteTourismPercent: case ModEffect::DistrictTourism: case ModEffect::CityTourism: case ModEffect::EmbarkedMoves:
+                return true;
+            default: return false;
+        }
+    };
+    std::vector<uint8_t> mods(r.policies.size(), 0), out(r.policies.size(), 0);
+    for (const Modifier& m : r.modifiers) {
+        if (m.sourceKind != ModSource::Policy || m.sourceIndex == kNone) continue;
+        mods[at(m.sourceIndex)] = 1;
+        if (!blind(m.effect)) out[at(m.sourceIndex)] = 1;
+    }
+    for (size_t i = 0; i < out.size(); ++i) {
+        const PolicyType& card = r.policies[i];
+        out[i] |= static_cast<uint8_t>(card.darkAge || (!mods[i] && card.slot != PolicySlot::Military));
+    }
+    return out;
+}
+
+// Our policy cards while changes are free (04: Policies). A major civ weighs each card that may change its cities on
+// a copy of the game by what it does for them: a slotted card by taking it out, any other by putting it in a slot it
+// fits, in place of that slot's card. Other cards, and every card of a city-state, rank by policyValue. The best take
+// the slots, each a slot of its own kind if one is left, else a Wildcard slot; a card that costs our cities stays out.
+void choosePolicies(View& v) {
+    Game& g = v.game;
+    const Player& p = v.s().players[at(v.me)];
+    if (!p.freeChanges || p.policies.empty()) return;
+    const std::vector<TypeIndex> current = p.policies;
+    const size_t slots = current.size();
+    const auto slot = [](size_t i) { return static_cast<int>(i); };
+    std::vector<PolicySlot> kinds(slots);
+    for (size_t i = 0; i < slots; ++i) kinds[i] = g.policySlotType(v.me, slot(i));
+    struct Card {
+        TypeIndex pol;
+        size_t slot;    // the slot it holds or is tried in
+        int64_t value;  // what it adds to our cities' worth
+        int tie;        // policyValue
+    };
+    std::vector<Card> cards;
+    for (size_t i = 0; i < slots; ++i) {
+        if (current[i] != kNone) cards.push_back({current[i], i, 0, policyValue(v, current[i])});
+    }
+    const size_t slotted = cards.size();
+    for (size_t k = 0; k < v.r.policies.size(); ++k) {
+        // An unslotted card is tried in a slot of its own kind if there is one, else in a Wildcard slot.
+        const auto pol = static_cast<TypeIndex>(k);
+        for (int wild = 0; wild < 2; ++wild) {
+            size_t i = 0;
+            while (i < slots && !((kinds[i] == PolicySlot::Wildcard) == (wild == 1) && g.canSetPolicy(v.me, slot(i), pol))) ++i;
+            if (i < slots) {
+                cards.push_back({pol, i, 0, policyValue(v, pol)});
+                break;
+            }
+        }
+    }
+    if (g.isMajorCiv(v.me)) {
+        const std::vector<uint8_t> forCities = cardsForCities(v.r);
+        std::unique_ptr<Game> trial;
+        int64_t base = 0;
+        std::vector<int64_t> held(slots, 0);  // what each slot's card adds
+        for (size_t c = 0; c < cards.size(); ++c) {
+            Card& card = cards[c];
+            if (!forCities[at(card.pol)]) continue;
+            if (!trial) {
+                trial = std::make_unique<Game>(v.r, v.s(), std::vector<Command>{});
+                base = citiesWorth(v, *trial);
+            }
+            const TypeIndex was = current[card.slot];
+            if (trial->submit(Command::setPolicy(v.me, slot(card.slot), c < slotted ? kNone : card.pol)) != CommandError::Ok) continue;
+            const int64_t worthNow = citiesWorth(v, *trial);
+            // A card that may not be slotted again (no longer available) leaves the copy changed: start over.
+            if (trial->submit(Command::setPolicy(v.me, slot(card.slot), was)) != CommandError::Ok) trial.reset();
+            if (c < slotted) card.value = held[card.slot] = base - worthNow;
+            else card.value = worthNow - base + held[card.slot];
+        }
+    }
+    std::sort(cards.begin(), cards.end(), [](const Card& a, const Card& b) {
+        if (a.value != b.value) return a.value > b.value;
+        if (a.tie != b.tie) return a.tie > b.tie;
+        return a.pol < b.pol;
+    });
+    std::vector<TypeIndex> chosen(slots, kNone);
+    for (const Card& c : cards) {
+        if (c.value < 0 || (c.value == 0 && c.tie <= 0)) continue;
+        const PolicySlot kind = v.r.policies[at(c.pol)].slot;
+        size_t pick = slots;
+        for (int wild = 0; wild < 2 && pick == slots; ++wild) {
+            for (size_t i = 0; i < slots && pick == slots; ++i) {
+                if (chosen[i] == kNone && kinds[i] == (wild == 0 ? kind : PolicySlot::Wildcard)) pick = i;
+            }
+        }
+        if (pick < slots) chosen[pick] = c.pol;
+    }
+    // Take out the cards that move or go, then slot the new ones.
+    for (size_t i = 0; i < slots; ++i) {
+        if (chosen[i] != current[i] && current[i] != kNone) g.submit(Command::setPolicy(v.me, slot(i), kNone));
+    }
+    for (size_t i = 0; i < slots; ++i) {
+        if (chosen[i] != current[i] && chosen[i] != kNone) g.submit(Command::setPolicy(v.me, slot(i), chosen[i]));
+    }
+}
+
 void research(View& v) {
     Game& g = v.game;
     const Player& pl = v.s().players[at(v.me)];
@@ -952,25 +1078,7 @@ void research(View& v) {
         if (v.r.governments[gi].tier > current && g.submit(Command::changeGovernment(v.me, static_cast<TypeIndex>(gi))) == CommandError::Ok)
             break;
     }
-    // Fill empty slots; when changes are free, upgrade a slot to a better card.
-    const size_t slots = v.s().players[at(v.me)].policies.size();
-    for (size_t slot = 0; slot < slots; ++slot) {
-        const Player& p = v.s().players[at(v.me)];
-        const TypeIndex current = p.policies[slot];
-        if (current != kNone && !p.freeChanges) continue;
-        TypeIndex best = kNone;
-        int bestValue = current == kNone ? 0 : policyValue(v, current);
-        for (size_t k = 0; k < v.r.policies.size(); ++k) {
-            const auto pol = static_cast<TypeIndex>(k);
-            if (pol == current || !g.canSetPolicy(v.me, static_cast<int>(slot), pol)) continue;
-            const int value = policyValue(v, pol);
-            if (value > bestValue) {
-                bestValue = value;
-                best = pol;
-            }
-        }
-        if (best != kNone) g.submit(Command::setPolicy(v.me, static_cast<int>(slot), best));
-    }
+    choosePolicies(v);
 }
 
 // --- settling ----------------------------------------------------------------------

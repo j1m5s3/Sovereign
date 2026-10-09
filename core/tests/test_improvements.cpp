@@ -352,6 +352,16 @@ TEST(luxuries_reach_the_cities_that_need_them_most) {
         for (const City& c : g->state().cities) {
             if (c.owner == 0) out.push_back(g->luxuryAmenities(c));
         }
+        // The player's reports in one run share the deal and come out as each city's own report.
+        const std::vector<CityReport> all = g->cityReports(0);
+        CHECK_EQ(all.size(), out.size());
+        size_t k = 0;
+        for (const City& c : g->state().cities) {
+            if (c.owner != 0 || k >= all.size()) continue;
+            const CityReport one = g->cityReport(c.id);
+            CHECK(all[k].amenities == one.amenities && all[k].yields == one.yields && all[k].housing == one.housing);
+            ++k;
+        }
         return out;
     };
     // One luxury: the largest cities, and of those as large the first founded.
