@@ -337,6 +337,50 @@ Visibility Game::visibility(PlayerId player, Hex h) const {
     return static_cast<Visibility>(state_.players[static_cast<size_t>(player)].visibility[static_cast<size_t>(state_.grid.index(h))]);
 }
 
+const PlotMemory* Game::lastSeen(PlayerId player, Hex h) const {
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size() || !state_.grid.normalize(h)) return nullptr;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const size_t i = static_cast<size_t>(state_.grid.index(h));
+    if (i >= p.seen.size() || p.visibility[i] != static_cast<uint8_t>(Visibility::Revealed) || !p.seen[i].known) return nullptr;
+    return &p.seen[i];
+}
+
+void Game::rememberPlot(PlotMemory& m, size_t i) const {
+    const Plot& pl = state_.plots[i];
+    const Hex h = state_.grid.at(static_cast<int>(i));
+    m = PlotMemory{};
+    m.known = true;
+    m.terrain = pl.terrain;
+    m.feature = pl.feature;
+    m.improvement = pl.improvement;
+    m.owner = pl.owner;
+    m.route = pl.route;
+    m.routePillaged = pl.routePillaged;
+    m.pillaged = pl.pillagedTurns > 0;
+    m.village = pl.village;
+    m.antiquity = pl.antiquity;
+    const City* c = pl.city == kNoCity ? nullptr : state_.city(pl.city);
+    if (!c) return;
+    if (c->pos == h) {
+        m.city = c->id;
+        m.cityOwner = c->owner;
+        m.cityName = c->name;
+        m.cityPopulation = c->population;
+        m.capital = c->capital;
+    }
+    for (const CityDistrict& d : c->districts) {
+        if (d.pos != h || d.pos == c->pos) continue;
+        m.district = d.type;
+        m.districtComplete = d.complete;
+        m.districtPillaged = d.pillagedTurns > 0;
+    }
+    for (const CityWonder& w : c->wonders) {
+        if (w.pos != h) continue;
+        m.wonder = w.building;
+        m.wonderComplete = c->has(w.building);
+    }
+}
+
 // ---------------------------------------------------------------- validation
 
 CommandError Game::validate(const Command& c) const {
@@ -1218,6 +1262,9 @@ void Game::refreshVisibility(PlayerId pid) {
         std::fill(p.visibility.begin(), p.visibility.end(), static_cast<uint8_t>(Visibility::Visible));
         return;
     }
+    // A human player remembers what it saw of plots leaving its sight (world-scale: last-seen state).
+    std::vector<uint8_t> before;
+    if (p.human) before = p.visibility;
     // Written as a select rather than a conditional store so the compiler can do many plots at once.
     for (uint8_t& v : p.visibility) v = v == static_cast<uint8_t>(Visibility::Visible) ? static_cast<uint8_t>(Visibility::Revealed) : v;
     std::vector<TypeIndex> discovered;  // natural wonders this player sees for the first time (01)
@@ -1318,6 +1365,13 @@ void Game::refreshVisibility(PlayerId pid) {
         if (!c) continue;
         for (const Hex& h : state_.grid.within(c->pos, a.mission == SpyMission::ListeningPost ? 2 : 1))
             p.visibility[static_cast<size_t>(state_.grid.index(h))] = static_cast<uint8_t>(Visibility::Visible);
+    }
+    if (!before.empty()) {
+        p.seen.resize(p.visibility.size());
+        for (size_t i = 0; i < before.size(); ++i) {
+            if (before[i] == static_cast<uint8_t>(Visibility::Visible) && p.visibility[i] == static_cast<uint8_t>(Visibility::Revealed))
+                rememberPlot(p.seen[i], i);
+        }
     }
     // A natural wonder discovered (01; 09: historic moments): era score (more for the world's first), and
     // the Astrology Eureka.

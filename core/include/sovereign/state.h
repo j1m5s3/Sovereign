@@ -406,6 +406,26 @@ struct Bodyguard {
     int32_t level = 1;
 };
 
+// What a human player last saw of a plot now out of its sight (world-scale: "revealed hexes use their last-seen
+// state"): taken as the plot leaves sight, so a city founded or razed in the fog stays as it was seen.
+struct PlotMemory {
+    bool known = false;  // a snapshot was taken; a revealed plot without one shows the live state
+    TypeIndex terrain = 0, feature = kNone, improvement = kNone;
+    PlayerId owner = kNoPlayer;
+    int8_t route = -1;
+    bool routePillaged = false, pillaged = false, village = false;
+    uint8_t antiquity = 0;
+    TypeIndex district = kNone;  // a district here other than a City Center
+    bool districtComplete = false, districtPillaged = false;
+    TypeIndex wonder = kNone;    // a wonder here, built or being built
+    bool wonderComplete = false;
+    CityId city = kNoCity;       // a city centre here, as it was
+    PlayerId cityOwner = kNoPlayer;
+    std::string cityName;
+    int32_t cityPopulation = 0;
+    bool capital = false;
+};
+
 struct Player {
     PlayerId id = kNoPlayer;
     TypeIndex civ = kNone;
@@ -491,6 +511,7 @@ struct Player {
     std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
     std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
     std::vector<Bodyguard> bodyguards;       // the ruler's named companions (§8.3)
+    std::vector<PlotMemory> seen;            // human players: per plot index, what it last saw (empty for others)
     std::vector<int32_t> leaderVisits;       // plot indices of its city centers and districts a ruler has visited, sorted (§3)
 };
 
