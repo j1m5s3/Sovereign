@@ -34,6 +34,7 @@ struct FSovTile
 	bool bImproved = false;
 	bool bPillaged = false;
 	FString Improvement;     // its rules id (IMPROVEMENT_FARM), for the model the map draws
+	FString Resource;        // the visible resource's rules id (RESOURCE_WHEAT), likewise
 };
 
 // One edge between two neighbouring plots: a river, or a territory border drawn on the owner's side.

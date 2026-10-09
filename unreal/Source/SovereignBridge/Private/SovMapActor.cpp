@@ -108,6 +108,71 @@ const TCHAR* WonderModel(const FString& Id)
 	return nullptr;
 }
 
+// The Resources kit's model for a resource and the colour its accent is tinted (tools/art/blender/kit_resources.py).
+struct FResourceLook
+{
+	const TCHAR* Model;
+	FLinearColor Accent;
+};
+const FResourceLook* ResourceLook(const FString& Id)
+{
+	static const TMap<FString, FResourceLook> Looks = {
+		{TEXT("BANANAS"), {TEXT("Shrub"), FLinearColor(0.85f, 0.75f, 0.2f)}},
+		{TEXT("CATTLE"), {TEXT("Beast"), FLinearColor(0.45f, 0.3f, 0.2f)}},
+		{TEXT("COPPER"), {TEXT("Ore"), FLinearColor(0.75f, 0.45f, 0.25f)}},
+		{TEXT("CRABS"), {TEXT("Shell"), FLinearColor(0.85f, 0.35f, 0.25f)}},
+		{TEXT("DEER"), {TEXT("Beast"), FLinearColor(0.6f, 0.45f, 0.3f)}},
+		{TEXT("FISH"), {TEXT("Fish"), FLinearColor(0.6f, 0.65f, 0.7f)}},
+		{TEXT("MAIZE"), {TEXT("Sheaf"), FLinearColor(0.9f, 0.75f, 0.25f)}},
+		{TEXT("RICE"), {TEXT("Sheaf"), FLinearColor(0.85f, 0.85f, 0.7f)}},
+		{TEXT("SHEEP"), {TEXT("Beast"), FLinearColor(0.92f, 0.9f, 0.85f)}},
+		{TEXT("STONE"), {TEXT("Blocks"), FLinearColor(0.7f, 0.68f, 0.64f)}},
+		{TEXT("WHEAT"), {TEXT("Sheaf"), FLinearColor(0.85f, 0.65f, 0.3f)}},
+		{TEXT("AMBER"), {TEXT("Ore"), FLinearColor(0.85f, 0.55f, 0.15f)}},
+		{TEXT("CINNAMON"), {TEXT("Shrub"), FLinearColor(0.6f, 0.35f, 0.2f)}},
+		{TEXT("CITRUS"), {TEXT("Shrub"), FLinearColor(0.95f, 0.6f, 0.15f)}},
+		{TEXT("CLOVES"), {TEXT("Shrub"), FLinearColor(0.45f, 0.25f, 0.2f)}},
+		{TEXT("COCOA"), {TEXT("Shrub"), FLinearColor(0.5f, 0.3f, 0.15f)}},
+		{TEXT("COFFEE"), {TEXT("Shrub"), FLinearColor(0.6f, 0.15f, 0.12f)}},
+		{TEXT("COSMETICS"), {TEXT("Goods"), FLinearColor(0.9f, 0.6f, 0.7f)}},
+		{TEXT("COTTON"), {TEXT("Shrub"), FLinearColor(0.95f, 0.95f, 0.92f)}},
+		{TEXT("DIAMONDS"), {TEXT("Ore"), FLinearColor(0.85f, 0.92f, 0.98f)}},
+		{TEXT("DYES"), {TEXT("Shrub"), FLinearColor(0.5f, 0.2f, 0.6f)}},
+		{TEXT("FURS"), {TEXT("Beast"), FLinearColor(0.35f, 0.25f, 0.18f)}},
+		{TEXT("GYPSUM"), {TEXT("Blocks"), FLinearColor(0.92f, 0.9f, 0.85f)}},
+		{TEXT("HONEY"), {TEXT("Hive"), FLinearColor(0.85f, 0.6f, 0.15f)}},
+		{TEXT("INCENSE"), {TEXT("Shrub"), FLinearColor(0.75f, 0.7f, 0.55f)}},
+		{TEXT("IVORY"), {TEXT("Beast"), FLinearColor(0.6f, 0.6f, 0.62f)}},
+		{TEXT("JADE"), {TEXT("Ore"), FLinearColor(0.3f, 0.7f, 0.45f)}},
+		{TEXT("JEANS"), {TEXT("Goods"), FLinearColor(0.25f, 0.35f, 0.6f)}},
+		{TEXT("MARBLE"), {TEXT("Blocks"), FLinearColor(0.95f, 0.93f, 0.9f)}},
+		{TEXT("MERCURY"), {TEXT("Ore"), FLinearColor(0.7f, 0.2f, 0.2f)}},
+		{TEXT("OLIVES"), {TEXT("Shrub"), FLinearColor(0.4f, 0.45f, 0.2f)}},
+		{TEXT("PEARLS"), {TEXT("Shell"), FLinearColor(0.95f, 0.92f, 0.88f)}},
+		{TEXT("PERFUME"), {TEXT("Goods"), FLinearColor(0.7f, 0.5f, 0.8f)}},
+		{TEXT("SALT"), {TEXT("Ore"), FLinearColor(0.95f, 0.95f, 0.95f)}},
+		{TEXT("SILK"), {TEXT("Shrub"), FLinearColor(0.92f, 0.88f, 0.75f)}},
+		{TEXT("SILVER"), {TEXT("Ore"), FLinearColor(0.8f, 0.82f, 0.85f)}},
+		{TEXT("SPICES"), {TEXT("Shrub"), FLinearColor(0.8f, 0.3f, 0.1f)}},
+		{TEXT("SUGAR"), {TEXT("Sheaf"), FLinearColor(0.6f, 0.75f, 0.35f)}},
+		{TEXT("TEA"), {TEXT("Shrub"), FLinearColor(0.35f, 0.55f, 0.25f)}},
+		{TEXT("TOBACCO"), {TEXT("Shrub"), FLinearColor(0.6f, 0.55f, 0.3f)}},
+		{TEXT("TOYS"), {TEXT("Goods"), FLinearColor(0.85f, 0.25f, 0.2f)}},
+		{TEXT("TRUFFLES"), {TEXT("Ore"), FLinearColor(0.25f, 0.2f, 0.18f)}},
+		{TEXT("TURTLES"), {TEXT("Shell"), FLinearColor(0.35f, 0.5f, 0.3f)}},
+		{TEXT("WHALES"), {TEXT("Fish"), FLinearColor(0.3f, 0.35f, 0.45f)}},
+		{TEXT("WINE"), {TEXT("Shrub"), FLinearColor(0.4f, 0.15f, 0.35f)}},
+		{TEXT("ALUMINUM"), {TEXT("Ore"), FLinearColor(0.75f, 0.78f, 0.8f)}},
+		{TEXT("COAL"), {TEXT("Ore"), FLinearColor(0.15f, 0.15f, 0.15f)}},
+		{TEXT("HORSES"), {TEXT("Beast"), FLinearColor(0.55f, 0.32f, 0.18f)}},
+		{TEXT("IRON"), {TEXT("Ore"), FLinearColor(0.5f, 0.3f, 0.25f)}},
+		{TEXT("NITER"), {TEXT("Ore"), FLinearColor(0.9f, 0.88f, 0.8f)}},
+		{TEXT("OIL"), {TEXT("OilPool"), FLinearColor(0.7f, 0.2f, 0.15f)}},
+		{TEXT("URANIUM"), {TEXT("Ore"), FLinearColor(0.4f, 0.85f, 0.25f)}},
+	};
+	return Looks.Find(Id.RightChop(9));
+}
+
 // Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
 void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 {
@@ -359,7 +424,18 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (const FSovTile& Tile : Mirror.Tiles)
 	{
 		const FVector At = SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y));
-		if (Tile.ResourceClass > 0)
+		const FResourceLook* Look = Tile.ResourceClass > 0 ? ResourceLook(Tile.Resource) : nullptr;
+		if (Look && SovArt::Mesh(TEXT("Resources"), Look->Model))
+		{
+			const uint32 H = static_cast<uint32>(Tile.X * 40503) ^ static_cast<uint32>(Tile.Y * 2654435761u);
+			UStaticMeshComponent* C = Marker(ResourcePieces, ResourceCount++, nullptr);
+			SovArt::SetKitMesh(C, TEXT("Resources"), Look->Model, Look->Accent);
+			ShadeKit(C, FLinearColor(0.6f, 0.58f, 0.55f));
+			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(-30.0, 26.0), 0.0));
+			C->SetRelativeRotation(FRotator(0.f, static_cast<float>(H % 360), 0.f));
+			C->SetRelativeScale3D(FVector(Tile.Resource == TEXT("RESOURCE_WHALES") ? 0.13 : 0.1));
+		}
+		else if (Tile.ResourceClass > 0)
 		{
 			static const FLinearColor Colors[] = {FLinearColor::White, FLinearColor(0.35f, 0.8f, 0.3f), FLinearColor(0.7f, 0.35f, 0.9f), FLinearColor(0.9f, 0.25f, 0.2f)};
 			UStaticMeshComponent* C = Marker(ResourcePieces, ResourceCount++, SphereMesh.Get());
@@ -502,11 +578,19 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		WonderPieces[i]->SetVisibility(false);
 	}
-	// Tribal villages (01): a small hut.
+	// Tribal villages (01): the Fields kit's camp, or a small hut.
 	int32 VillageCount = 0;
 	for (const FIntPoint& V : Mirror.Villages)
 	{
 		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, CubeMesh.Get());
+		if (SovArt::SetKitMesh(C, TEXT("Fields"), TEXT("Camp"), FLinearColor::White))
+		{
+			ShadeKit(C, FLinearColor(0.5f, 0.45f, 0.4f));
+			C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)));
+			C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
+			C->SetRelativeScale3D(FVector(0.09));
+			continue;
+		}
 		C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)) + FVector(0, 0, 10));
 		C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
 		C->SetRelativeScale3D(FVector(0.22, 0.22, 0.18));
@@ -516,11 +600,19 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		VillagePieces[i]->SetVisibility(false);
 	}
-	// Antiquity sites (07): a pale stone.
+	// Antiquity sites (07): the Resources kit's blocks, pale like old ruins, or a pale stone.
 	int32 SiteCount = 0;
 	for (const FIntPoint& A : Mirror.Antiquity)
 	{
 		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, CubeMesh.Get());
+		if (SovArt::SetKitMesh(C, TEXT("Resources"), TEXT("Blocks"), FLinearColor(0.8f, 0.78f, 0.7f)))
+		{
+			ShadeKit(C, FLinearColor(0.6f, 0.58f, 0.55f));
+			C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 0));
+			C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
+			C->SetRelativeScale3D(FVector(0.09));
+			continue;
+		}
 		C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 4));
 		C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
 		C->SetRelativeScale3D(FVector(0.16, 0.1, 0.08));

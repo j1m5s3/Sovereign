@@ -179,6 +179,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		{
 			const sov::ResourceClass Cls = Rules.resources[static_cast<size_t>(Pl.resource)].cls;
 			T.ResourceClass = Cls == sov::ResourceClass::Luxury ? 2 : Cls == sov::ResourceClass::Strategic ? 3 : 1;
+			T.Resource = UTF8_TO_TCHAR(Rules.resources[static_cast<size_t>(Pl.resource)].id.c_str());
 		}
 		T.bImproved = Pl.improvement != sov::kNone;
 		T.bPillaged = T.bImproved && Pl.pillagedTurns > 0;
