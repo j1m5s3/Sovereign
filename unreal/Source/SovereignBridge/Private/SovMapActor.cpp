@@ -22,6 +22,11 @@ struct FSection
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
 	TArray<FVector> Normals;
+	// For the art kit's material (M_SovKit): the colour as sRGB bytes it squares back, the detail tile in alpha,
+	// and UVs laid flat across the map so the tile repeats about once a plot.
+	TArray<FColor> Colors;
+	TArray<FVector2D> UVs;
+	FColor Paint = FColor::White;
 
 	// Adds the triangle with both windings, so it shows whichever way it faces.
 	void Tri(int32 A, int32 B, int32 C)
@@ -31,6 +36,8 @@ struct FSection
 	int32 Vert(const FVector& P, const FVector& N)
 	{
 		Normals.Add(N);
+		Colors.Add(Paint);
+		UVs.Add(FVector2D(P.Y + P.Z * 0.5, P.Z * 0.5 - P.X) / 170.0);
 		return Vertices.Add(P);
 	}
 };
@@ -38,6 +45,21 @@ struct FSection
 uint32 ColorKey(const FLinearColor& C)
 {
 	return C.ToFColor(false).ToPackedRGBA();
+}
+
+// The kit sheet's tile for a plot: stone on hills and mountains, leaves under woods, plain water, plaster elsewhere.
+int32 TileFor(ESovRelief Relief, bool bWoods)
+{
+	if (Relief == ESovRelief::Water) return 0;
+	if (Relief == ESovRelief::Hills || Relief == ESovRelief::Mountain) return 7;
+	return bWoods ? 10 : 8;
+}
+
+// A linear colour as the sRGB-ish bytes M_SovKit squares back to linear, with the tile index in alpha.
+FColor KitPaint(const FLinearColor& Linear, int32 Tile)
+{
+	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
+	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile / 15.f * 255.f)));
 }
 }  // namespace
 
@@ -50,6 +72,9 @@ ASovMapActor::ASovMapActor()
 	RootComponent = Terrain;
 
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	// The art kit's material paints the terrain (vertex colour times a detail tile); without it the plain one does.
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Kit(TEXT("/Game/Art/M_SovKit.M_SovKit"));
+	KitMaterial = Kit.Succeeded() ? Kit.Object : nullptr;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone.Cone"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -126,15 +151,17 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	TArray<FLinearColor> SectionColors;
 	TMap<uint32, int32> SectionOf;
 
-	auto SectionFor = [&](const FLinearColor& Color) -> FSection& {
-		const uint32 Key = ColorKey(Color);
+	auto SectionFor = [&](const FLinearColor& Color, int32 Tile = 0) -> FSection& {
+		const uint32 Key = ColorKey(Color) ^ (static_cast<uint32>(Tile) * 2654435761u);
 		if (const int32* Found = SectionOf.Find(Key))
 		{
 			return Sections[*Found];
 		}
 		SectionOf.Add(Key, Sections.Num());
 		SectionColors.Add(Color);
-		return Sections.AddDefaulted_GetRef();
+		FSection& S = Sections.AddDefaulted_GetRef();
+		S.Paint = KitPaint(Color, Tile);
+		return S;
 	};
 
 	// A dark floor under the whole map shows through the seams between hexes.
@@ -156,7 +183,7 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		const double Top = ReliefHeight(Tile.Relief);
 		Heights[Tile.Y * Mirror.Width + Tile.X] = Top;
 		const FLinearColor Color = Tile.bVisible ? Tile.Color : Tile.Color * FogFactor;
-		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f));
+		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), TileFor(Tile.Relief, Tile.bWoods));
 
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
 		FVector2D Corners[6];
@@ -193,13 +220,11 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	}
 
 	Terrain->ClearAllMeshSections();
-	const TArray<FVector2D> NoUVs;
-	const TArray<FColor> NoColors;
 	const TArray<FProcMeshTangent> NoTangents;
 	for (int32 i = 0; i < Sections.Num(); ++i)
 	{
-		Terrain->CreateMeshSection(i, Sections[i].Vertices, Sections[i].Triangles, Sections[i].Normals, NoUVs, NoColors, NoTangents, false);
-		Terrain->SetMaterial(i, MaterialFor(SectionColors[i]));
+		Terrain->CreateMeshSection(i, Sections[i].Vertices, Sections[i].Triangles, Sections[i].Normals, Sections[i].UVs, Sections[i].Colors, NoTangents, false);
+		Terrain->SetMaterial(i, KitMaterial ? KitMaterial.Get() : static_cast<UMaterialInterface*>(MaterialFor(SectionColors[i])));
 	}
 }
 

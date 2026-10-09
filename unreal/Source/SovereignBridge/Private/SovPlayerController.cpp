@@ -647,12 +647,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					Stats += FString::Printf(TEXT(", %d %s"), Gear.strategicCost, *Str(R.resources[static_cast<size_t>(Gear.strategicResource)].name));
 				}
-				Choices.Add({FString::Printf(TEXT("%s: %s, %d gold"), *Str(Gear.name), *Stats, G.gearCost(Id)), sov::Command::equipGear(Me(), U->id, Id)});
+				static const TCHAR* const Slots[] = {TEXT("Weapons"), TEXT("Armor"), TEXT("Mounts")};
+				static const FName Icons[] = {"attack", "fortify", "moves"};
+				const int32 SlotIndex = FMath::Clamp(static_cast<int32>(Gear.slot), 0, 2);
+				FChoice Ch{FString::Printf(TEXT("%s: %s"), *Str(Gear.name), *Stats), sov::Command::equipGear(Me(), U->id, Id), {}, FString::Printf(TEXT("%d gold"), G.gearCost(Id)),
+					Icons[SlotIndex], Slots[SlotIndex]};
+				Choices.Add(Ch);
 			}
 			if (U->gear[static_cast<size_t>(sov::GearSlot::Mount)] != sov::kNone)
 			{
-				Choices.Add({TEXT("Dismount"), sov::Command::removeGear(Me(), U->id, sov::GearSlot::Mount)});
+				Choices.Add({TEXT("Dismount"), sov::Command::removeGear(Me(), U->id, sov::GearSlot::Mount), {}, TEXT(""), "moves", TEXT("Mounts")});
 			}
+			Choices.StableSort([](const FChoice& A, const FChoice& B) {
+				auto Rank = [](const FString& S) { return S == TEXT("Weapons") ? 0 : S == TEXT("Armor") ? 1 : 2; };
+				return Rank(A.Section) < Rank(B.Section);
+			});
 			break;
 		}
 		case EChooser::Throne:
@@ -667,23 +676,27 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				const sov::Dynasty* D = R.dynastyOf(P.civ);
 				const FString Heir = Str(D->names[static_cast<size_t>(P.dynastyNext)]);
-				Choices.Add({FString::Printf(TEXT("The heir, %s"), *Heir), sov::Command::chooseSuccessor(Me(), sov::Succession::Heir)});
+				const FString Trait = static_cast<size_t>(P.dynastyNext) < D->traits.size() ? Str(D->traits[static_cast<size_t>(P.dynastyNext)].name) : FString();
+				FChoice HeirCh{FString::Printf(TEXT("The heir, %s"), *Heir), sov::Command::chooseSuccessor(Me(), sov::Succession::Heir), {}, Trait, "government", TEXT("The dynasty")};
+				Choices.Add(HeirCh);
 				// The heir may keep one of the fallen leader's promotions (leader doc §5).
 				for (sov::TypeIndex Kept : P.savedPromotions)
 				{
-					Choices.Add({FString::Printf(TEXT("The heir, %s, keeping %s"), *Heir, *Str(R.promotions[static_cast<size_t>(Kept)].name)),
-						sov::Command::chooseSuccessor(Me(), sov::Succession::Heir, sov::kNoUnit, Kept)});
+					FChoice KeepCh{FString::Printf(TEXT("The heir, %s, keeping %s"), *Heir, *Str(R.promotions[static_cast<size_t>(Kept)].name)),
+						sov::Command::chooseSuccessor(Me(), sov::Succession::Heir, sov::kNoUnit, Kept), {}, Trait, "promote", TEXT("The dynasty")};
+					KeepCh.Tip = SovPromotionText(R, Kept);
+					Choices.Add(KeepCh);
 				}
 			}
 			for (sov::UnitId Id : G.successorUnits(Me()))
 			{
 				const sov::Unit* U = G.state().unit(Id);
-				Choices.Add({FString::Printf(TEXT("%s, level %d (the unit is lost)"), *Str(R.units[static_cast<size_t>(U->type)].name), U->level()),
-					sov::Command::chooseSuccessor(Me(), sov::Succession::Unit, Id)});
+				Choices.Add({FString::Printf(TEXT("%s, level %d"), *Str(R.units[static_cast<size_t>(U->type)].name), U->level()),
+					sov::Command::chooseSuccessor(Me(), sov::Succession::Unit, Id), {}, TEXT("the unit is lost"), "strength", TEXT("A warlord from the army")});
 			}
 			if (G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
 			{
-				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent)});
+				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent), {}, TEXT(""), "government", TEXT("A regent")});
 			}
 			break;
 		}
@@ -862,23 +875,22 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					continue;
 				}
-				const FString Offer = OfferFrom(O.id) ? FString(TEXT("  [an offer waits]")) : FString();
-				Choices.Add({FString::Printf(TEXT("%s of %s: %s (%+d)%s"), *Str(O.leaderName), *Str(R.civs[static_cast<size_t>(O.civ)].name),
-								 UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer),
-					sov::Command::denounce(Me(), O.id)});  // only arg is used: Pick opens the screen
+				const FString Offer = OfferFrom(O.id) ? FString(TEXT(", an offer waits")) : FString();
+				Choices.Add({FString::Printf(TEXT("Speak with %s of %s"), *Str(O.leaderName), *Str(R.civs[static_cast<size_t>(O.civ)].name)),
+					sov::Command::denounce(Me(), O.id),  // only arg is used: Pick opens the screen
+					{}, FString::Printf(TEXT("%s %+d%s"), UTF8_TO_TCHAR(sov::relationshipName(G.relationship(O.id, Me()))), G.opinionOf(O.id, Me()), *Offer), "favor", TEXT("Leaders")});
 			}
 			// Barbarian Clans mode (01): buy peace from a camp we have seen, or hire its best unit.
 			for (const sov::Camp& K : G.state().camps)
 			{
 				const sov::Command Bribe = sov::Command::bribeCamp(Me(), K.id);
 				if (G.validate(Bribe) == sov::CommandError::Ok)
-					Choices.Add({FString::Printf(TEXT("Bribe the clan at (%d,%d) to leave us alone (%d gold, progress %d/100)"), K.pos.x, K.pos.y,
-									 G.clanCost(Me(), K.id, sov::CommandType::BribeCamp), K.progress),
-						Bribe});
+					Choices.Add({FString::Printf(TEXT("Bribe the clan at (%d,%d) to leave us alone (progress %d/100)"), K.pos.x, K.pos.y, K.progress), Bribe, {},
+						FString::Printf(TEXT("%d gold"), G.clanCost(Me(), K.id, sov::CommandType::BribeCamp)), "gold", TEXT("Barbarian clans")});
 				const sov::Command Hire = sov::Command::hireFromCamp(Me(), K.id);
 				if (G.validate(Hire) == sov::CommandError::Ok)
-					Choices.Add({FString::Printf(TEXT("Hire a unit from the clan at (%d,%d) (%d gold)"), K.pos.x, K.pos.y, G.clanCost(Me(), K.id, sov::CommandType::HireFromCamp)),
-						Hire});
+					Choices.Add({FString::Printf(TEXT("Hire a unit from the clan at (%d,%d)"), K.pos.x, K.pos.y), Hire, {},
+						FString::Printf(TEXT("%d gold"), G.clanCost(Me(), K.id, sov::CommandType::HireFromCamp)), "strength", TEXT("Barbarian clans")});
 			}
 			// War and peace (08): a declaration (with any casus belli held), or peace once the war allows.
 			static const TCHAR* const Reasons[] = {TEXT(""), TEXT("Holy War"), TEXT("War of Liberation"), TEXT("Reconquest War"), TEXT("Protectorate War"),
@@ -887,6 +899,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			{
 				if (O.id == Me() || !G.isMajorCiv(O.id) || !G.hasMet(Me(), O.id)) continue;
 				const FString Who = Str(R.civs[static_cast<size_t>(O.civ)].name);
+				const int32 FirstOfCiv = Choices.Num();
 				if (G.canDeclareWar(Me(), O.id))
 				{
 					const bool bFormal = G.denouncing(Me(), O.id);
@@ -906,25 +919,31 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					const sov::Command Send = sov::Command::sendDelegation(Me(), O.id, bEmbassy);
 					if (G.validate(Send) == sov::CommandError::Ok)
-						Choices.Add({FString::Printf(TEXT("Send %s to %s (%d gold; access now %s)"), bEmbassy ? TEXT("a resident embassy") : TEXT("a delegation"), *Who,
-										 bEmbassy ? 50 : 25, UTF8_TO_TCHAR(sov::Game::accessName(G.accessLevel(Me(), O.id)))),
-							Send});
+						Choices.Add({FString::Printf(TEXT("Send %s to %s (access now %s)"), bEmbassy ? TEXT("a resident embassy") : TEXT("a delegation"), *Who,
+										 UTF8_TO_TCHAR(sov::Game::accessName(G.accessLevel(Me(), O.id)))),
+							Send, {}, FString::Printf(TEXT("%d gold"), bEmbassy ? 50 : 25)});
 				}
 				// Barbarian Clans mode (01): set a camp we have seen on this civ.
 				for (const sov::Camp& K : G.state().camps)
 				{
 					const sov::Command Incite = sov::Command::inciteCamp(Me(), K.id, O.id);
 					if (G.validate(Incite) == sov::CommandError::Ok)
-						Choices.Add({FString::Printf(TEXT("Incite the clan at (%d,%d) against %s (%d gold)"), K.pos.x, K.pos.y, *Who,
-										 G.clanCost(Me(), K.id, sov::CommandType::InciteCamp)),
-							Incite});
+						Choices.Add({FString::Printf(TEXT("Incite the clan at (%d,%d) against %s"), K.pos.x, K.pos.y, *Who), Incite, {},
+							FString::Printf(TEXT("%d gold"), G.clanCost(Me(), K.id, sov::CommandType::InciteCamp))});
 				}
 				// Promises [GS] (30 favor each).
 				static const TCHAR* const Promises[] = {TEXT("not to settle near us"), TEXT("not to convert our cities"), TEXT("not to spy on us"), TEXT("not to dig in our lands")};
 				for (int32 K = 0; K < sov::kNumPromiseKinds; ++K)
 				{
 					const sov::Command Ask = sov::Command::askPromise(Me(), O.id, static_cast<sov::PromiseKind>(K));
-					if (G.validate(Ask) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Ask %s to promise %s (30 favor)"), *Who, Promises[K]), Ask});
+					if (G.validate(Ask) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Ask %s to promise %s"), *Who, Promises[K]), Ask, {}, TEXT("30 favor")});
+				}
+				// One section per civ, an icon for each kind of act.
+				for (int32 i = FirstOfCiv; i < Choices.Num(); ++i)
+				{
+					FChoice& Ch = Choices[i];
+					Ch.Section = FString::Printf(TEXT("%s: war, peace and envoys"), *Who);
+					Ch.Icon = Ch.Label.StartsWith(TEXT("Declare")) || Ch.Label.StartsWith(TEXT("Incite")) ? FName("attack") : Ch.Label.StartsWith(TEXT("Send")) ? FName("link") : FName("favor");
 				}
 			}
 			break;
@@ -1096,6 +1115,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						sov::Command::sendAssassin(Me(), A.id, T.id)});
 				}
 			}
+			// Spies first, then assassins.
+			for (FChoice& Ch : Choices)
+			{
+				const bool bSpy = Ch.Label.StartsWith(TEXT("Spy"));
+				Ch.Section = bSpy ? TEXT("Spies") : TEXT("Assassins");
+				Ch.Icon = bSpy ? FName("link") : FName("attack");
+			}
+			Choices.StableSort([](const FChoice& A, const FChoice& B) { return A.Section > B.Section; });
 			break;
 		}
 		case EChooser::Congress:
@@ -1112,15 +1139,15 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (!G.canJoinEmergency(Me(), static_cast<int32>(k))) continue;
 				const sov::Player& T = G.state().players[static_cast<size_t>(E.target)];
 				const FString Who = T.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(T.civ)].name);
-				Choices.Add({FString::Printf(TEXT("Join the %s Emergency against %s (until turn %d)"), Kinds[static_cast<int32>(E.kind)], *Who, E.endTurn),
-					sov::Command::joinEmergency(Me(), static_cast<int32>(k))});
+				Choices.Add({FString::Printf(TEXT("Join the %s Emergency against %s"), Kinds[static_cast<int32>(E.kind)], *Who), sov::Command::joinEmergency(Me(), static_cast<int32>(k)), {},
+					FString::Printf(TEXT("until turn %d"), E.endTurn), "attack", TEXT("Emergencies")});
 			}
 			if (!G.congressInSession())
 			{
 				break;
 			}
 			sov::Command More = sov::Command::congressVote(Me(), -1, 0, 0);  // id -1: buy one more vote for the next cast
-			Choices.Add({FString::Printf(TEXT("Buy another vote (total %d favor)"), sov::Game::extraVoteCost(CongressExtraVotes + 1)), More});
+			Choices.Add({TEXT("Buy another vote for the next one you cast"), More, {}, FString::Printf(TEXT("%d favor in all"), sov::Game::extraVoteCost(CongressExtraVotes + 1)), "favor", TEXT("Votes")});
 			for (size_t k = 0; k < G.state().congress.size(); ++k)
 			{
 				if (G.hasVoted(Me(), static_cast<int32>(k)))
@@ -1133,9 +1160,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					for (size_t c = 0; c < Item.candidates.size(); ++c)
 					{
-						Choices.Add({FString::Printf(TEXT("%s, %s: %s (%s)"), *Str(Res.name), Opt == 0 ? TEXT("A") : TEXT("B"),
-										 *Str(G.candidateName(Item, static_cast<int32>(c))), *Str(Opt == 0 ? Res.optionA : Res.optionB)),
-							sov::Command::congressVote(Me(), static_cast<int32>(k), Opt, static_cast<int32>(c), CongressExtraVotes)});
+						FChoice Ch{FString::Printf(TEXT("%s: %s"), Opt == 0 ? TEXT("A") : TEXT("B"), *Str(G.candidateName(Item, static_cast<int32>(c)))),
+							sov::Command::congressVote(Me(), static_cast<int32>(k), Opt, static_cast<int32>(c), CongressExtraVotes), {},
+							FString::Printf(TEXT("%d vote(s)"), 1 + CongressExtraVotes), "favor", Str(Res.name)};
+						Ch.Tip = Str(Opt == 0 ? Res.optionA : Res.optionB);
+						Choices.Add(Ch);
 					}
 				}
 			}
@@ -1154,7 +1183,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				for (size_t Pr = 0; Pr < R.spyPromotions.size(); ++Pr)
 				{
 					const sov::Command Promote = sov::Command::promoteSpy(Me(), SpyAgent, static_cast<sov::TypeIndex>(Pr));
-					if (G.validate(Promote) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("Promote: %s"), *Str(R.spyPromotions[Pr].name)), Promote});
+					if (G.validate(Promote) == sov::CommandError::Ok) Choices.Add({Str(R.spyPromotions[Pr].name), Promote, {}, TEXT(""), "promote", TEXT("Promote the spy first")});
 				}
 			}
 			for (const sov::City& Cty : G.state().cities)
@@ -1171,8 +1200,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						continue;
 					}
 					const int32 Odds = G.spySuccessPercent(SpyAgent, Mission, Cty.id);
-					Choices.Add({FString::Printf(TEXT("%s in %s%s"), Missions[M], *Str(Cty.name), Odds < 100 ? *FString::Printf(TEXT(" (%d%%)"), Odds) : TEXT("")),
-						sov::Command::spyMission(Me(), SpyAgent, Mission, Cty.id)});
+					Choices.Add({Missions[M], sov::Command::spyMission(Me(), SpyAgent, Mission, Cty.id), {}, Odds < 100 ? FString::Printf(TEXT("%d%% to succeed"), Odds) : FString(),
+						"link", FString::Printf(TEXT("In %s"), *Str(Cty.name))});
 				}
 			}
 			break;
