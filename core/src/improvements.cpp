@@ -60,6 +60,11 @@ bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool 
     // improvements that work it.
     if (!(resourceSeen ? contains(im.validResources, p.resource) : p.feature != kNone ? contains(im.validFeatures, p.feature) : contains(im.validTerrains, p.terrain)))
         return false;
+    // Some land needs more first (a Farm on Hills: Civil Engineering, 03).
+    if (!resourceSeen && p.feature == kNone) {
+        for (const auto& [terrain, unlock] : im.terrainUnlocks)
+            if (terrain == p.terrain && !hasUnlocked(player, unlock)) return false;
+    }
     // Sea improvements on water, the others on land: Amber and Oil are found on both, each with an improvement of its own.
     if (im.water != rules_->terrains[static_cast<size_t>(p.terrain)].water) return false;
     if (!ownUnit && !hasUnlocked(player, im.unlock)) return false;
@@ -142,6 +147,7 @@ Yields Game::improvementYields(Hex at, PlayerId owner) const {
     if (p.improvement == kNone) return y;
     const ImprovementType& im = rules_->improvements[static_cast<size_t>(p.improvement)];
     y = im.yields;
+    if (im.appealYield) y[static_cast<size_t>(*im.appealYield)] += Fixed::fromInt(std::max(0, plotAppeal(at)));  // the Seaside Resort's Gold (03)
     for (const ImprovementBonus& b : im.bonuses) {
         if (hasUnlocked(owner, b.unlock)) y[static_cast<size_t>(b.yield)] += b.amount;
     }

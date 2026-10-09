@@ -1082,6 +1082,24 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 if (j["tourism"].has("after") && !readUnlock(j["tourism"]["after"], im.tourismAfter, "improvement " + id)) return false;
             }
             im.minAppeal = j.has("minAppeal") ? static_cast<int>(j["minAppeal"].integer(0)) : -100;
+            if (j.has("appealYield")) {
+                YieldType t;
+                if (!parseYieldName(j["appealYield"].str(), t)) {
+                    *error = where + ": bad appeal yield";
+                    return false;
+                }
+                im.appealYield = t;
+            }
+            for (const Json& t : j["terrainUnlocks"].items()) {
+                const TypeIndex terrain = findTerrain(t["terrain"].str());
+                Unlock u;
+                if (terrain == kNone) {
+                    *error = where + ": unknown terrain " + t["terrain"].str();
+                    return false;
+                }
+                if (!readUnlock(t["unlock"], u, where)) return false;
+                im.terrainUnlocks.emplace_back(terrain, u);
+            }
             im.coastal = j["coastal"].boolean(false);
             im.water = j["water"].boolean(false);
             im.airSlots = static_cast<int>(j["airSlots"].integer(0));
@@ -1171,6 +1189,17 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             }
             b.powerProvided = static_cast<int>(j["powerProvided"].integer(0));
             b.projectChargePercent = static_cast<int>(j["projectChargePercent"].integer(0));
+            for (const Json& a : j["appealYields"].items()) {
+                BuildingType::AppealYield ay;
+                if (!parseYieldName(a["yield"].str(), ay.yield)) {
+                    *error = "building " + id + ": bad appeal yield";
+                    return false;
+                }
+                ay.amount = static_cast<int>(a["amount"].integer(0));
+                ay.minAppeal = static_cast<int>(a["minAppeal"].integer(0));
+                ay.maxAppeal = static_cast<int>(a["maxAppeal"].integer(0));
+                b.appealYields.push_back(ay);
+            }
             b.defense = static_cast<int>(j["defense"].integer(0));
             b.needsRiver = j["needsRiver"].boolean(false);
             b.purchasable = j["purchasable"].boolean(false);

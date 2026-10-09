@@ -172,7 +172,33 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
     }
     // Earth Goddess (06): +1 Faith on plots of Appeal 4 or more.
     if (earthGoddess && plotAppeal(at) >= 4) y[idx(YieldType::Faith)] += Fixed::fromInt(1);
+    if (p.improvement == kNone && at != city.pos) preserveYields(at, city.owner, y);
     return y;
+}
+
+// The Preserve's Grove and Sanctuary (03): an unimproved plot beside a working Preserve of its owner's gains yields by its
+// Appeal, once for each such building among the Preserves beside it. Water plots only on a natural wonder.
+void Game::preserveYields(Hex at, PlayerId owner, Yields& y) const {
+    std::array<TypeIndex, 6> from{};
+    size_t n = 0;
+    state_.grid.forEachWithin(at, 1, [&](Hex h) {
+        const Plot& np = state_.plot(h);
+        if (h == at || np.city == kNoCity || np.owner != owner || np.improvement != kNone) return;
+        const CityDistrict* d = state_.districtAt(h);
+        if (!d || d->type != preserve_ || !d->complete || d->pillagedTurns > 0) return;
+        for (TypeIndex b : state_.city(np.city)->buildings) {
+            if (rules_->buildings[static_cast<size_t>(b)].appealYields.empty() || n == from.size()) continue;
+            if (std::find(from.begin(), from.begin() + static_cast<std::ptrdiff_t>(n), b) == from.begin() + static_cast<std::ptrdiff_t>(n)) from[n++] = b;
+        }
+    });
+    if (n == 0) return;
+    const Plot& p = state_.plot(at);
+    if (rules_->terrains[static_cast<size_t>(p.terrain)].water && !(p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder)) return;
+    const int appeal = plotAppeal(at);
+    for (size_t k = 0; k < n; ++k) {
+        for (const BuildingType::AppealYield& a : rules_->buildings[static_cast<size_t>(from[k])].appealYields)
+            if (appeal >= a.minAppeal && appeal <= a.maxAppeal) y[idx(a.yield)] += Fixed::fromInt(a.amount);
+    }
 }
 
 std::vector<Hex> Game::workablePlots(const City& city) const {

@@ -239,6 +239,29 @@ TEST(a_seaside_resort_needs_breathtaking_appeal) {
     CHECK(resortFits(2, 4));
 }
 
+// A Seaside Resort's Gold equals its plot's Appeal (03).
+TEST(a_seaside_resort_yields_its_appeal_in_gold) {
+    const Hex plot{7, 6};
+    const auto resort = [&](int woods) {
+        auto g = builderGame([&](GameState& s) {
+            std::vector<Hex> around;  // the plot's neighbours but the city
+            for (int d = 0; d < kNumDirs; ++d) {
+                const std::optional<Hex> n = s.grid.neighbor(plot, static_cast<Dir>(d));
+                if (n && *n != Hex{6, 6}) around.push_back(*n);
+            }
+            s.plot(around[0]).terrain = rules().terrain("TERRAIN_COAST");
+            for (size_t i = 1; i <= static_cast<size_t>(woods); ++i) s.plot(around[i]).feature = rules().feature("FEATURE_FOREST");
+            s.plot(plot).improvement = improvement("IMPROVEMENT_SEASIDE_RESORT");
+        });
+        return std::make_pair(g->plotAppeal(plot), g->improvementYields(plot, 0)[static_cast<size_t>(YieldType::Gold)]);
+    };
+    for (int woods : {2, 4}) {
+        const auto [appeal, gold] = resort(woods);
+        CHECK(appeal >= 4);
+        CHECK_EQ(gold, Fixed::fromInt(appeal));
+    }
+}
+
 TEST(farm_adjacency_after_feudalism) {
     auto g = builderGame([](GameState& s) {
         for (Hex h : {Hex{7, 6}, Hex{7, 7}, Hex{6, 7}}) s.plot(h).improvement = improvement("IMPROVEMENT_FARM");
@@ -252,12 +275,37 @@ TEST(farm_adjacency_after_feudalism) {
     CHECK_EQ(g2->improvementYields({7, 6}, 0)[F], Fixed::fromInt(2));  // +1 per 2 adjacent farms
 }
 
+// A Farm goes on Grassland and Plains Hills only with Civil Engineering (03), unless it is for the plot's resource.
+TEST(a_farm_on_hills_needs_civil_engineering) {
+    GameState base = flatState(20, 14, 1);
+    base.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+    base.plot({6, 7}).terrain = rules().terrain("TERRAIN_PLAINS_HILLS");
+    base.plot({6, 5}).terrain = rules().terrain("TERRAIN_PLAINS_HILLS");
+    base.plot({6, 5}).resource = rules().resource("RESOURCE_WHEAT");
+    const auto game = [&](bool engineering) {
+        return builderGame([&](GameState& s) {
+            if (engineering) s.players[0].civics.done[at(rules().civic("CIVIC_CIVIL_ENGINEERING"))] = 1;
+        }, base);
+    };
+    const TypeIndex farm = improvement("IMPROVEMENT_FARM");
+    auto before = game(false), after = game(true);
+    CHECK(!before->canImproveAt(0, {7, 6}, farm));
+    CHECK(!before->canImproveAt(0, {6, 7}, farm));
+    CHECK(before->canImproveAt(0, {5, 6}, farm));  // flat land
+    CHECK(before->canImproveAt(0, {6, 5}, farm));  // the Wheat
+    CHECK(after->canImproveAt(0, {7, 6}, farm));
+    CHECK(after->canImproveAt(0, {6, 7}, farm));
+}
+
 TEST(resources_take_only_their_improvement_and_fire_boosts) {
     GameState base = flatState(20, 14, 1);
     base.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
     base.plot({7, 6}).resource = rules().resource("RESOURCE_IRON");
-    // Before Bronze Working the iron is hidden: the hill takes a farm or a mine.
-    auto hidden = builderGame([](GameState& s) { know(s, "TECH_MINING"); }, base);
+    // Before Bronze Working the iron is hidden: the hill takes a farm (with Civil Engineering) or a mine.
+    auto hidden = builderGame([](GameState& s) {
+        know(s, "TECH_MINING");
+        s.players[0].civics.done[at(rules().civic("CIVIC_CIVIL_ENGINEERING"))] = 1;
+    }, base);
     CHECK(hidden->canImproveAt(0, {7, 6}, improvement("IMPROVEMENT_FARM")));
     CHECK(hidden->canImproveAt(0, {7, 6}, improvement("IMPROVEMENT_MINE")));
 
@@ -305,7 +353,10 @@ TEST(sea_and_land_resources_take_improvements_of_their_own_kind) {
 TEST(a_plot_improved_over_again_counts_as_one_improved_tile) {
     GameState base = flatState(20, 14, 1);
     base.plot({7, 6}).terrain = rules().terrain("TERRAIN_GRASS_HILLS");
-    auto g = builderGame([](GameState& s) { know(s, "TECH_MINING"); }, base);
+    auto g = builderGame([](GameState& s) {
+        know(s, "TECH_MINING");
+        s.players[0].civics.done[at(rules().civic("CIVIC_CIVIL_ENGINEERING"))] = 1;  // a farm on the hill
+    }, base);
     const size_t crafts = at(rules().civic("CIVIC_CRAFTSMANSHIP"));  // its Inspiration: improve 3 tiles
     const UnitId b = builderOf(*g);
     // A farm, a mine in its place, then a farm again: three builds on one tile.

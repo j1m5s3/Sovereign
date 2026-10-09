@@ -1041,6 +1041,7 @@ private:
         IbnKhaldun, KenzoTange, Raskova, Spilsbury, Rubinstein, Strauss, Lauder, JamesYoung, Goddard, Medici, Count
     };
     TypeIndex oil_ = kNone;  // James Young reveals it (07)
+    TypeIndex preserve_ = kNone;  // its buildings feed the plots beside it by their Appeal (03)
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
     // City-states whose suzerain bonuses are in code, looked up once (08: City-States).
     enum class Cs : uint8_t {
@@ -1158,6 +1159,8 @@ private:
     CityReport cityReport(const City& city, ReportShare& shared) const;
     // plotYields, told whether the city follows Earth Goddess (cityFollows), for a pass over many of its plots.
     Yields plotYields(Hex plot, const City& city, bool earthGoddess) const;
+    // Adds what the Preserves beside an unimproved plot give it by its Appeal (the Grove and Sanctuary, 03).
+    void preserveYields(Hex plot, PlayerId owner, Yields& y) const;
     // `report`, when given, gets the report the change was worked out from (none for a city-state's or a Free City's).
     Fixed loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<CityReport>* report = nullptr) const;
     int luxuryAmenities(const City& city, ReportShare& shared) const;
