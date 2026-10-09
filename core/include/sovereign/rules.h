@@ -1293,7 +1293,7 @@ struct GearType {
     int combat = 0;           // melee strength (weapons)
     int ranged = 0, range = 0;  // ranged weapons
     int defense = 0;          // added when the leader defends (armor)
-    int moves = 0;            // movement change (mounts add, heavy armor may subtract)
+    int moves = 0;            // map movement change (heavy armor may subtract); a mount's is its walking speed inside a hex
     TypeIndex strategicResource = kNone;
     int strategicCost = 0;    // spent once when equipped
     int goldCost = 0;         // at Standard speed

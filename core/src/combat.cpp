@@ -349,8 +349,10 @@ int Game::maxMoves(const Unit& unit) const {
         if (ut.unitClass == "NAVAL_RAIDER" && policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE")) moves += 2;  // 09
     }
     if (!isLeader(unit)) return moves;
+    // Heavy armor subtracts. A mount speeds up walking inside a hex but does not change map moves (world-scale:
+    // "Walking is for inside a hex"), so its moves are left to the street scene.
     for (TypeIndex g : unit.gear) {
-        if (g != kNone) moves += rules_->gear[static_cast<size_t>(g)].moves;  // mounts add, heavy armor subtracts
+        if (g != kNone && rules_->gear[static_cast<size_t>(g)].slot != GearSlot::Mount) moves += rules_->gear[static_cast<size_t>(g)].moves;
     }
     return std::max(1, moves);
 }

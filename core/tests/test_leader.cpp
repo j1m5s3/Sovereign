@@ -122,6 +122,12 @@ TEST(leader_strength_comes_from_gear) {
     CHECK_EQ(g->combatStrength(l, e, false, false), 19);  // Club + Hide when defending
     CHECK_EQ(g->maxMoves(l), 2);
     CHECK_EQ(g->unitRange(l), 0);
+    // Plate costs a move; a horse adds none on the map.
+    GameState s = g->state();
+    s.unit(leader)->gear[static_cast<size_t>(GearSlot::Armor)] = gear("GEAR_PLATE");
+    s.unit(leader)->gear[static_cast<size_t>(GearSlot::Mount)] = gear("GEAR_HORSE");
+    auto plated = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(plated->maxMoves(*plated->state().unit(leader)), 1);
 }
 
 TEST(equip_gear_needs_city_tech_and_gold) {
@@ -149,7 +155,8 @@ TEST(equip_gear_needs_city_tech_and_gold) {
     CHECK(g->state().unit(leader)->movesLeft == Fixed());  // it took the turn
     CHECK_EQ(g->submit(Command::equipGear(0, leader, gear("GEAR_BRONZE_SCALE"))), CommandError::CannotEquip);  // no moves
 
-    // A horse needs Horses in the stockpile, adds 2 moves and costs twice a Horseman's upkeep.
+    // A horse needs Horses in the stockpile and costs twice a Horseman's upkeep; it speeds walking inside a hex, not
+    // map moves (world-scale: "does not change map moves").
     pass(*g, 2);
     const TypeIndex horse = gear("GEAR_HORSE");
     CHECK_EQ(g->submit(Command::equipGear(0, leader, horse)), CommandError::NotEnoughResources);
@@ -159,7 +166,8 @@ TEST(equip_gear_needs_city_tech_and_gold) {
     const Fixed upkeepBefore = g2->goldPerTurn(0);
     CHECK_EQ(g2->submit(Command::equipGear(0, leader, horse)), CommandError::Ok);
     CHECK_EQ(g2->state().players[0].stockpile[at(rules().resource("RESOURCE_HORSES"))], 10);
-    CHECK_EQ(g2->maxMoves(*g2->state().unit(leader)), 4);
+    CHECK_EQ(g2->maxMoves(*g2->state().unit(leader)), 2);
+    CHECK_EQ(rules().gear[at(horse)].moves, 2);  // its walking speed in the street scene
     CHECK_EQ(g2->leaderUpkeep(0), 2 * rules().units[at(rules().unit("UNIT_HORSEMAN"))].maintenance);
     CHECK_EQ(g2->goldPerTurn(0), upkeepBefore - Fixed::fromInt(g2->leaderUpkeep(0)));
     (void)city;
