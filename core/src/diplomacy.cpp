@@ -400,6 +400,12 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
     if (denouncing(holder, about)) add(OpinionReasonKind::WeDenounced, -6);
     if (friends(holder, about)) add(OpinionReasonKind::Friends, 12);
     if (grantsOpenBorders(about, holder)) add(OpinionReasonKind::OpenBorders, 3);
+    // Tier 3 and 4 governments are intolerant of other governments (04: OtherGovernmentIntolerance -20 in Civ VI's
+    // units; Sovereign reads it as a denouncement's weight here).
+    {
+        const TypeIndex mine = state_.players[at(holder)].government, theirs = state_.players[at(about)].government;
+        if (mine != kNone && theirs != kNone && mine != theirs && rules_->governments[static_cast<size_t>(mine)].tier >= 3) add(OpinionReasonKind::OtherGovernment, -6);
+    }
     // Religion: the same majority faith draws civs together; theirs taking our cities does not.
     {
         const Player& x = state_.players[at(about)];
@@ -1558,6 +1564,7 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::UsedWmd: return "Used nuclear weapons";
         case OpinionReasonKind::Demanded: return "Made demands of us";
         case OpinionReasonKind::PastGames: return "Our earlier wars and friendships";
+        case OpinionReasonKind::OtherGovernment: return "Their government differs from ours";
     }
     return "?";
 }

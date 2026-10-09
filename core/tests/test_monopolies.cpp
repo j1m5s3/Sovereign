@@ -125,7 +125,7 @@ TEST(a_great_merchant_makes_a_product_in_a_corporation_city) {
     CHECK_EQ(g->state().cities[0].greatWorks[0].type, product);
     CHECK_EQ(g->state().cities[0].greatWorks[0].building, rules().building("BUILDING_STOCK_EXCHANGE"));
     CHECK_EQ(g->state().plot({6, 5}).products, 1);
-    CHECK_EQ(g->tourismPerTurn(0), tourism + 4);
+    CHECK_EQ(g->tourismPerTurn(0), tourism + 4 * 125 / 100);  // with every tech, Computers adds 25% (04)
     CHECK(g->cityReport(g->state().cities[0].id).yields[static_cast<size_t>(YieldType::Gold)] > gold);
     std::string err;
     auto loaded = loadGame(rules(), saveGame(*g), &err);

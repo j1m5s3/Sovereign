@@ -1722,6 +1722,22 @@ def gen_tree(kind, name_col, prefix, key):
         m = re.search(r"\+(\d+) Movement while embarked", other)
         if m:
             n["embarkedMoves"] = int(m.group(1))
+        m = re.search(r"\+(\d+) Movement for naval units", other)
+        if m:
+            n["navalMoves"] = int(m.group(1))  # Mathematics (04)
+        m = re.search(r"Tourism from Writing scaled (\d+)%", other)
+        if m:
+            n["writingTourismPercent"] = int(m.group(1))  # Printing (04)
+        m = re.search(r"(?:^|; )\+(\d+)% Tourism(?:;|$)", other)
+        if m:
+            n["tourismPercent"] = int(m.group(1))  # Computers, Environmentalism (04)
+        # Conservation (04): Tourism from walls and the Arena. Lines with a further condition (Georgia's Tsikhe in a
+        # Golden Age) are left out.
+        built = [{"building": "BUILDING_" + snake(b), "amount": int(a)} for a, b in
+                 re.findall(r"\+(\d+) Tourism from the district for your districts where district is [^;]+? and city has ([^;]+?)(?=;|$)", other)
+                 if " and " not in b]
+        if built:
+            n["buildingTourism"] = built
         if row["Boost %"]:
             n["boost"] = {"percent": num(row["Boost %"]), "text": row["Boost condition"],
                           **boost_trigger(row["Boost condition"], era)}

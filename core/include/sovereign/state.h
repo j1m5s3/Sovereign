@@ -169,6 +169,7 @@ enum class OpinionReasonKind : uint8_t {
     TradeRoutes, MadePeace, Gifts, Deals, BrokeDeal, CapturedCity, Assassin, PlunderedTrader, Warmonger, Agenda, SpyCaught, Grievances,
     UsedWmd, Demanded,
     PastGames,  // what an AI leader remembers of a human from earlier games (player-retention §1)
+    OtherGovernment,  // a tier 3 or 4 government's intolerance of a different one (04)
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;

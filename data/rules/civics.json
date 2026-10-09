@@ -551,6 +551,24 @@
     "CIVIC_NATURAL_HISTORY"
    ],
    "envoys": 3,
+   "buildingTourism": [
+    {
+     "building": "BUILDING_ANCIENT_WALLS",
+     "amount": 1
+    },
+    {
+     "building": "BUILDING_MEDIEVAL_WALLS",
+     "amount": 2
+    },
+    {
+     "building": "BUILDING_RENAISSANCE_WALLS",
+     "amount": 3
+    },
+    {
+     "building": "BUILDING_ARENA",
+     "amount": 1
+    }
+   ],
    "boost": {
     "percent": 40,
     "text": "have a Neighborhood with appeal 4+",
@@ -769,6 +787,7 @@
     "CIVIC_CULTURAL_HERITAGE",
     "CIVIC_RAPID_DEPLOYMENT"
    ],
+   "tourismPercent": 25,
    "boost": {
     "percent": 40,
     "text": "build 2 Solar Farms",

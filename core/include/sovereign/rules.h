@@ -862,6 +862,10 @@ struct TreeNode {
     int envoys = 0;                // envoys granted on completion (civics)
     int spies = 0;                 // spy capacity it grants (08: Espionage)
     int victoryPoints = 0;         // Diplomatic Victory points on completion (08: Diplomatic Victory)
+    int navalMoves = 0;            // + movement for naval units (Mathematics)
+    int writingTourismPercent = 0; // Writing Great Works' tourism scaled to this percent (Printing: 200)
+    int tourismPercent = 0;        // + tourism percent (Computers, Environmentalism)
+    std::vector<std::pair<TypeIndex, int>> buildingTourism;  // tourism from each city with the building (Conservation: walls, Arena)
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };
@@ -1362,6 +1366,7 @@ public:
     std::vector<ImprovementType> improvements;
     std::vector<EraType> eras;
     std::vector<TreeNode> techs;
+    std::vector<TypeIndex> navalMoveTechs;  // techs with navalMoves, found at load (maxMoves runs often)
     std::vector<TreeNode> civics;
     std::vector<GovernmentType> governments;
     std::vector<PolicyType> policies;
