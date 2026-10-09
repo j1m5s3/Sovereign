@@ -708,6 +708,10 @@ bool Game::isEmbarked(const Unit& unit) const {
     return typeOf(*rules_, unit).domain == Domain::Land && terrainOf(*rules_, state_.plot(unit.pos)).water && !bridgeAt(unit.pos);
 }
 
+bool Game::atSea(const Unit& unit) const {
+    return typeOf(*rules_, unit).domain == Domain::Sea || isEmbarked(unit);
+}
+
 bool Game::isEmbarkTransition(const Unit& unit, Hex from, Hex to) const {
     if (typeOf(*rules_, unit).domain != Domain::Land) return false;
     const auto afloat = [&](Hex h) { return terrainOf(*rules_, state_.plot(h)).water && !bridgeAt(h); };
