@@ -771,6 +771,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 08: each city-state we have met, its kind, our envoys and its suzerain; picking sends an envoy.
 			ChooserTitle = FString::Printf(TEXT("City-states (%d envoys to send). Pick one to send an envoy"), P.envoyTokens);
 			static const TCHAR* Kinds[] = {TEXT("Scientific"), TEXT("Cultural"), TEXT("Religious"), TEXT("Trade"), TEXT("Industrial"), TEXT("Militaristic")};
+			const int32 FirstCs = Choices.Num();
 			for (const sov::Player& Cs : G.state().players)
 			{
 				if (Cs.cityState == sov::kNone || !Cs.alive)
@@ -791,14 +792,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const FString SuzName = Suz == sov::kNoPlayer ? FString(TEXT("none"))
 					: Suz == Me() ? FString(TEXT("you"))
 					: Str(G.state().players[static_cast<size_t>(Suz)].leaderName);
-				Choices.Add({FString::Printf(TEXT("%s (%s): your envoys %d, suzerain %s"), *Str(T.name), Kinds[static_cast<size_t>(T.kind) % 6],
-								 G.envoysAt(Me(), Cs.id), *SuzName),
-					sov::Command::sendEnvoy(Me(), Cs.id)});
+				const FString Section = FString::Printf(TEXT("%s city-states"), Kinds[static_cast<size_t>(T.kind) % 6]);
+				Choices.Add({FString::Printf(TEXT("Send an envoy to %s"), *Str(T.name)), sov::Command::sendEnvoy(Me(), Cs.id), {},
+					FString::Printf(TEXT("yours %d, suzerain %s"), G.envoysAt(Me(), Cs.id), *SuzName), "favor", Section});
 				// Levy Military (08): its army serves us for a while, as its suzerain.
 				if (const int32 Cost = G.levyCost(Me(), Cs.id); Cost >= 0)
 				{
-					Choices.Add({FString::Printf(TEXT("  Levy %s's military for %d Gold"), *Str(T.name), Cost), sov::Command::levyMilitary(Me(), Cs.id)});
+					Choices.Add({FString::Printf(TEXT("Levy %s's military"), *Str(T.name)), sov::Command::levyMilitary(Me(), Cs.id), {}, FString::Printf(TEXT("%d gold"), Cost), "strength", Section});
 				}
+			}
+			// One section per kind.
+			{
+				TArray<FChoice> Made(Choices.GetData() + FirstCs, Choices.Num() - FirstCs);
+				Made.StableSort([](const FChoice& A, const FChoice& B) { return A.Section < B.Section; });
+				Choices.SetNum(FirstCs);
+				Choices.Append(Made);
 			}
 			break;
 		}
@@ -818,24 +826,27 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					if (G.canAppointGovernor(Me(), T))
 					{
-						Choices.Add({FString::Printf(TEXT("Appoint %s the %s: %s"), *Str(Gt.name), *Str(Gt.title),
-										 *Str(R.governorPromotions[static_cast<size_t>(Gt.promotions.front())].effects)),
-							sov::Command::appointGovernor(Me(), T)});
+						FChoice Ch{FString::Printf(TEXT("Appoint %s"), *Str(Gt.name)), sov::Command::appointGovernor(Me(), T), {}, TEXT("1 title"), "government",
+							FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))};
+						Ch.Tip = Str(R.governorPromotions[static_cast<size_t>(Gt.promotions.front())].effects);
+						Choices.Add(Ch);
 					}
 					continue;
 				}
 				if (Sel && G.canAssignGovernor(Me(), T, Sel->id))
 				{
-					Choices.Add({FString::Printf(TEXT("Send %s to %s (%d turns to establish)"), *Str(Gt.name), *Str(Sel->name), G.governorEstablishTurns(T)),
-						sov::Command::assignGovernor(Me(), T, Sel->id)});
+					Choices.Add({FString::Printf(TEXT("Send %s to %s"), *Str(Gt.name), *Str(Sel->name)), sov::Command::assignGovernor(Me(), T, Sel->id), {},
+						FString::Printf(TEXT("%d turns to establish"), G.governorEstablishTurns(T)), "found", FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))});
 				}
 				for (sov::TypeIndex Promo : Gt.promotions)
 				{
 					if (G.canPromoteGovernor(Me(), T, Promo))
 					{
 						const sov::GovernorPromotionType& Pt = R.governorPromotions[static_cast<size_t>(Promo)];
-						Choices.Add({FString::Printf(TEXT("Promote %s: %s (%s)"), *Str(Gt.name), *Str(Pt.name), *Str(Pt.effects)),
-							sov::Command::promoteGovernor(Me(), T, Promo)});
+						FChoice Ch{FString::Printf(TEXT("Promote: %s"), *Str(Pt.name)), sov::Command::promoteGovernor(Me(), T, Promo), {}, TEXT("1 title"), "promote",
+							FString::Printf(TEXT("%s the %s"), *Str(Gt.name), *Str(Gt.title))};
+						Ch.Tip = Str(Pt.effects);
+						Choices.Add(Ch);
 					}
 				}
 			}
@@ -923,6 +934,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 07: the Trader's destinations in range, with what each pays its city per turn.
 			ChooserTitle = FString::Printf(TEXT("Trade route (%d of %d in use, %d turns)"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me()), G.tradeRouteLength());
 			const sov::City* From = G.tradeOrigin(ReligionUnit);
+			const int32 FirstRoute = Choices.Num();
 			for (sov::CityId Dest : G.tradeDestinations(ReligionUnit))
 			{
 				const sov::City& D = *G.state().city(Dest);
@@ -936,15 +948,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						Pays += FString::Printf(TEXT(" +%s %s"), *Str(Y[k].toString()), Names[k]);
 					}
 				}
-				Choices.Add({FString::Printf(TEXT("%s%s:%s"), *Str(D.name), D.owner == Me() ? TEXT("") : TEXT(" (abroad)"), *Pays),
-					sov::Command::startTradeRoute(Me(), ReligionUnit, Dest)});
+				Choices.Add({Str(D.name), sov::Command::startTradeRoute(Me(), ReligionUnit, Dest), {}, Pays.TrimStart(), "trade",
+					D.owner == Me() ? TEXT("Domestic") : TEXT("International")});
+			}
+			{
+				TArray<FChoice> Made(Choices.GetData() + FirstRoute, Choices.Num() - FirstRoute);
+				Made.StableSort([](const FChoice& A, const FChoice& B) { return A.Section < B.Section; });
+				Choices.SetNum(FirstRoute);
+				Choices.Append(Made);
 			}
 			break;
 		}
 		case EChooser::GreatPeople:
 		{
 			// 07: each class offers one person to everyone; points earn them, gold or faith buys them now.
-			ChooserTitle = TEXT("Great people (points / cost, +per turn). Pick one to buy it now");
+			ChooserTitle = TEXT("Great people: buy one now, or pass on one");
 			for (size_t c = 0; c < R.greatPersonClasses.size(); ++c)
 			{
 				const sov::TypeIndex Cls = static_cast<sov::TypeIndex>(c);
@@ -956,20 +974,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				}
 				const sov::GreatPersonType& Gp = R.greatPeople[static_cast<size_t>(Who)];
 				const int32 Have = c < P.greatPersonPoints.size() ? P.greatPersonPoints[c] : 0;
-				const FString Head = FString::Printf(TEXT("%s: %s (%s) %d/%d, +%d"), *ClassName, *Str(Gp.name), *Str(R.eras[static_cast<size_t>(Gp.era)].name), Have,
-					G.greatPersonCost(Who), G.greatPersonPointsPerTurn(Me(), Cls));
+				// A section per class: who is on offer, and our points toward them.
+				const FString Section = FString::Printf(TEXT("%s: %d of %d points, +%d a turn"), *ClassName, Have, G.greatPersonCost(Who), G.greatPersonPointsPerTurn(Me(), Cls));
+				const FString Who2 = FString::Printf(TEXT("%s (%s)"), *Str(Gp.name), *Str(R.eras[static_cast<size_t>(Gp.era)].name));
 				const int32 Gold = G.patronageCost(Me(), Cls, false);
 				const int32 Faith = G.patronageCost(Me(), Cls, true);
 				if (Gold > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("%s   buy %d gold"), *Head, Gold), sov::Command::patronizeGreatPerson(Me(), Cls, false)});
+					Choices.Add({TEXT("Buy ") + Who2, sov::Command::patronizeGreatPerson(Me(), Cls, false), {}, FString::Printf(TEXT("%d gold"), Gold), "gold", Section});
 				}
 				if (Faith > 0 && P.faith >= sov::Fixed::fromInt(Faith))
 				{
-					Choices.Add({FString::Printf(TEXT("%s   buy %d faith"), *Head, Faith), sov::Command::patronizeGreatPerson(Me(), Cls, true)});
+					Choices.Add({TEXT("Buy ") + Who2, sov::Command::patronizeGreatPerson(Me(), Cls, true), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", Section});
 				}
 				const sov::Command Pass = sov::Command::passGreatPerson(Me(), Cls);
-				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({FString::Printf(TEXT("%s   pass on %s"), *ClassName, *Str(Gp.name)), Pass});
+				if (G.validate(Pass) == sov::CommandError::Ok) Choices.Add({TEXT("Pass on ") + Who2, Pass, {}, TEXT(""), "skip", Section});
 			}
 			// 07: Great Works move between our slots (for theming); every move the rules allow.
 			for (const sov::City& From : G.state().cities)
@@ -987,7 +1006,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						{
 							const sov::Command Move = sov::Command::moveGreatWork(Me(), From.id, static_cast<int>(W), To.id, B);
 							if (G.validate(Move) != sov::CommandError::Ok) continue;
-							Choices.Add({FString::Printf(TEXT("Move %s from %s to the %s in %s"), *WorkName, *Str(From.name), *Str(R.buildings[static_cast<size_t>(B)].name), *Str(To.name)), Move});
+							Choices.Add({FString::Printf(TEXT("Move %s from %s to the %s in %s"), *WorkName, *Str(From.name), *Str(R.buildings[static_cast<size_t>(B)].name), *Str(To.name)), Move, {}, TEXT(""), "culture", TEXT("Great Works")});
 						}
 					}
 				}
@@ -1169,15 +1188,19 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			for (sov::TypeIndex Pr : G.availablePromotions(U->id))
 			{
 				const sov::PromotionType& T = R.promotions[static_cast<size_t>(Pr)];
-				const FString Branch = T.branch.empty() ? FString() : FString::Printf(TEXT(" [%s]"), *Str(T.branch));
-				Choices.Add({FString::Printf(TEXT("%s%s"), *Str(T.name), *Branch), sov::Command::promote(Me(), U->id, Pr)});
+				FChoice Ch{Str(T.name), sov::Command::promote(Me(), U->id, Pr), {}, FString::Printf(TEXT("tier %d"), T.tier), "promote",
+					T.branch.empty() ? FString(TEXT("Promotions")) : Str(T.branch)};
+				Ch.Tip = SovPromotionText(R, Pr);
+				Choices.Add(Ch);
 			}
 			// Upgrade to the next unit in the line (05: Upgrades), in our territory for gold.
 			const sov::TypeIndex To = R.units[static_cast<size_t>(U->type)].upgradesTo;
 			if (To != sov::kNone && G.upgradeProblem(U->id) == sov::CommandError::Ok)
 			{
-				Choices.Add({FString::Printf(TEXT("Upgrade to %s (%d gold)"), *Str(R.units[static_cast<size_t>(To)].name), G.upgradeCost(*U)),
-					sov::Command::upgradeUnit(Me(), U->id)});
+				FChoice Ch{FString::Printf(TEXT("Upgrade to %s"), *Str(R.units[static_cast<size_t>(To)].name)), sov::Command::upgradeUnit(Me(), U->id), {},
+					FString::Printf(TEXT("%d gold"), G.upgradeCost(*U)), "gold", TEXT("Upgrade")};
+				Ch.Tip = SovUnitText(R, To);
+				Choices.Add(Ch);
 			}
 			break;
 		}
@@ -1200,7 +1223,9 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, static_cast<sov::TypeIndex>(I));
 				if (G.validate(Build) == sov::CommandError::Ok)
 				{
-					Choices.Add({Str(R.improvements[I].name), Build});
+					FChoice Ch{Str(R.improvements[I].name), Build, {}, TEXT(""), "build", TEXT("Improvements")};
+					Ch.Tip = SovImprovementText(R, static_cast<sov::TypeIndex>(I));
+					Choices.Add(Ch);
 				}
 			}
 			const sov::Command Harvest = sov::Command::harvest(Me(), U->id);
@@ -1584,6 +1609,8 @@ void ASovPlayerController::StartReplay(const FString& Path)
 
 void ASovPlayerController::UpdateBattle(float DeltaTime)
 {
+	// The battle screen's buttons press the same keys.
+	auto BattleKey = [this](const FKey& K) { return WasInputKeyJustPressed(K) || UIKeys.Contains(K); };
 	LookAround(DeltaTime);
 	if (bReplay)
 	{
@@ -1594,7 +1621,7 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		FSovBattleSnapshot Snap;
 		if (Snap.Decode(Recording.Frames[static_cast<size_t>(Frame)])) Sim.ApplySnapshot(Snap);
 		Battle->Sync(Sim);
-		if (WasInputKeyJustPressed(EKeys::Escape) || ReplayTime * 10.f > Count + 20)
+		if (BattleKey(EKeys::Escape) || ReplayTime * 10.f > Count + 20)
 		{
 			ExitBattle();
 			bReplay = false;
@@ -1611,20 +1638,20 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		auto SendOrder = [&](int32 Squad, sov::battle::Order Order) {
 			Session.SendRelay(BattlePeer, {3, static_cast<uint8_t>(static_cast<int8>(Squad)), static_cast<uint8_t>(Order)});
 		};
-		if (WasInputKeyJustPressed(EKeys::Tab)) SendOrder(-1, Sim.Charging(Side) ? sov::battle::Order::Hold : sov::battle::Order::Advance);
+		if (BattleKey(EKeys::Tab)) SendOrder(-1, Sim.Charging(Side) ? sov::battle::Order::Hold : sov::battle::Order::Advance);
 		const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
 		for (int32 k = 0; k < 4; ++k)
 		{
-			if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+			if (BattleKey(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
 		}
 		const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
 		for (int32 k = 0; k < sov::battle::kOrders; ++k)
 		{
-			if (WasInputKeyJustPressed(OrderKeys[k])) SendOrder(BattleSquad, static_cast<sov::battle::Order>(k));
+			if (BattleKey(OrderKeys[k])) SendOrder(BattleSquad, static_cast<sov::battle::Order>(k));
 		}
 		Battle->Sync(Sim);
 		// The battle ends when its result arrives in the game; Esc hands our men back to the AI.
-		if (!Sub->GetGame().battlePending() || WasInputKeyJustPressed(EKeys::Escape))
+		if (!Sub->GetGame().battlePending() || BattleKey(EKeys::Escape))
 		{
 			if (Sub->GetGame().battlePending()) Session.SendRelay(BattlePeer, {4});
 			Sub->LastMessage = Sub->GetGame().battlePending() ? TEXT("Your generals lead your men.") : TEXT("The battle is over.");
@@ -1648,21 +1675,21 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Move -= FVector2D(F3);
 	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Move += FVector2D(R3);
 	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Move -= FVector2D(R3);
-	const bool bStrike = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::F);
+	const bool bStrike = BattleKey(EKeys::LeftMouseButton) || BattleKey(EKeys::F);
 	const int32 Side = Sim.GetSpec().HumanSide;
-	if (WasInputKeyJustPressed(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
+	if (BattleKey(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
 	// Squad orders: 7 8 9 pick the left, centre or right squad (0: all), 1 to 6 give the order.
 	const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
 	for (int32 k = 0; k < 4; ++k)
 	{
-		if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+		if (BattleKey(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
 	}
 	const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
 	for (int32 k = 0; k < sov::battle::kOrders; ++k)
 	{
-		if (WasInputKeyJustPressed(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
+		if (BattleKey(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
 	}
-	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
+	const bool bSettleNow = BattleKey(EKeys::Escape);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);
 	RecordTimer += DeltaTime;
@@ -2202,6 +2229,78 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		// The online lobby.
+		if (Sub && Sub->GetSession().InLobby() && !Menu.IsValid())
+		{
+			const FSovSession& Ses = Sub->GetSession();
+			M.bLobby = true;
+			M.bLobbyHost = Ses.NetMode() == ESovNet::Host;
+			M.bLobbySteam = Ses.UsesSteam();
+			M.LobbyTitle = M.bLobbyHost ? (M.bLobbySteam ? TEXT("Hosting a game for Steam friends") : TEXT("Hosting a game on your network"))
+										: TEXT("In the host's lobby: waiting for the game to start");
+			M.LobbySeats = Ses.LobbyLines();
+			M.LobbyNews = Sub->NetLines;
+			if (!Sub->LastMessage.IsEmpty()) M.LobbyNews.Add(Sub->LastMessage);
+		}
+		// Walking a City Center.
+		if (InStreet() && Street && !Menu.IsValid())
+		{
+			const FSovStreetLayout& L = Street->GetLayout();
+			static const TCHAR* const Moods[] = {TEXT("content"), TEXT("happy: banners in the square"), TEXT("unhappy: shutters closed"), TEXT("under Fear: guards at every corner")};
+			M.bStreet = true;
+			M.StreetTitle = FString::Printf(TEXT("%s, City Center"), *L.CityName);
+			M.StreetSub = Moods[FMath::Clamp(static_cast<int32>(L.Mood), 0, 3)];
+			if (const sov::City* C = Sub->GetGame().state().city(L.CityId))
+			{
+				const sov::CityReport Rep = Sub->GetGame().cityReport(L.CityId);
+				M.StreetSub += FString::Printf(TEXT("   Population %d   Amenities %d/%d   Loyalty %d"), C->population, Rep.amenities, Rep.amenitiesNeeded, C->loyalty);
+			}
+			M.StreetPrompt = StreetPrompt();
+			// Messages show as the toast here too.
+			if (Sub->LastMessage != ShownMessage)
+			{
+				ShownMessage = Sub->LastMessage;
+				MessageTime = GetWorld()->GetRealTimeSeconds();
+			}
+			M.Message = ShownMessage;
+			M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
+		}
+		// A live battle or a replay: its own screen.
+		if (InBattle() && !Menu.IsValid())
+		{
+			FSovBattleModel& B = M.Battle;
+			const FSovBattleSpec& Spec = Sim.GetSpec();
+			B.bOpen = true;
+			B.bReplay = bReplay;
+			B.Attacker = Spec.Attacker.Name;
+			B.Defender = Spec.Defender.Name;
+			B.Title = bReplay ? TEXT("Replay: ") + Recording.Title : FString::Printf(TEXT("%s attacks %s"), *Spec.Attacker.Name, *Spec.Defender.Name);
+			B.AttackerAlive = Sim.Alive(0);
+			B.AttackerStarted = Sim.Started(0);
+			B.DefenderAlive = Sim.Alive(1);
+			B.DefenderStarted = Sim.Started(1);
+			B.Seconds = static_cast<int32>(Sim.TimeLeft());
+			if (Sim.LeaderIndex() != INDEX_NONE)
+			{
+				const FSovSoldier& L = Sim.Soldiers()[Sim.LeaderIndex()];
+				B.LeaderHealth = L.bAlive && L.MaxHp > 0 ? FMath::Clamp(static_cast<float>(L.Hp) / L.MaxHp, 0.01f, 1.f) : 0.f;
+			}
+			for (int32 s = 0; s < 3; ++s) B.Orders[s] = UTF8_TO_TCHAR(sov::battle::orderName(Sim.GetOrder(Spec.HumanSide, s)));
+			B.Squad = BattleSquad;
+			B.bCharging = Sim.Charging(Spec.HumanSide);
+			B.bRemoteView = Sim.RemoteView();
+			B.Foe = Sim.RemoteView() ? TEXT("Your rival fights this battle as their leader; you command your squads.")
+				: Sim.RemoteEnemy()  ? TEXT("Your rival commands the enemy's squads.")
+				: Sim.EnemyTrained() ? TEXT("The enemy is led by the trained battle AI.")
+									 : TEXT("The enemy charges (no trained battle AI found).");
+			if (bBattleSent)
+			{
+				B.bWon = Outcome.Winner == Spec.HumanSide;
+				B.ResultTitle = B.bWon ? TEXT("Victory") : Outcome.Winner < 0 ? TEXT("Stalemate") : TEXT("Defeat");
+				B.Result = FString::Printf(TEXT("Attacker lost %d HP, defender %d HP%s. The rules hold the result within 25%% of the expected Civ result."), Outcome.ToAttacker,
+					Outcome.ToDefender, Outcome.LeaderWound > 0 ? *FString::Printf(TEXT("; your leader was wounded %d"), Outcome.LeaderWound) : TEXT(""));
+			}
+		}
 		if (Sub && Sub->IsRunning() && Sub->GetSession().HandoverPending() && !Menu.IsValid())
 		{
 			M.bHandover = true;
@@ -2928,6 +3027,23 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
 		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
 	}
+	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit attacks the enemy beside it once,
+	// so the live battle can be opened (B) without a mouse.
+	if (!bBattleNowDone && Subsystem()->IsRunning() && MyTurn() && FParse::Param(FCommandLine::Get(), TEXT("SovBattleNow")))
+	{
+		bBattleNowDone = true;
+		const sov::Game& G = Subsystem()->GetGame();
+		for (const sov::Unit& U : G.state().units)
+		{
+			if (U.owner != Me() || G.rules().units[static_cast<size_t>(U.type)].combat <= 0) continue;
+			for (const sov::Unit& E : G.state().units)
+			{
+				if (E.owner == Me() || G.state().grid.distance(U.pos, E.pos) != 1) continue;
+				if (Send(sov::Command::attack(Me(), U.id, E.pos))) break;
+			}
+			break;
+		}
+	}
 	// F8 opens or closes the Empire panel (plan E, step 1).
 	if (Pressed(EKeys::F8)) bEmpireOpen = !bEmpireOpen;
 	// F7 steps through the map lenses (plan D, step 6), back to none after the last.
@@ -3191,18 +3307,18 @@ bool ASovPlayerController::HandleSessionScreens()
 		if (WasInputKeyJustPressed(EKeys::Escape)) CloseChat();
 		return true;  // typing: the map takes no keys
 	}
-	if (Session.NetMode() != ESovNet::Local && WasInputKeyJustPressed(EKeys::M))
+	if (Session.NetMode() != ESovNet::Local && (WasInputKeyJustPressed(EKeys::M) || UIKeys.Contains(EKeys::M)))
 	{
 		OpenChat();
 		return true;
 	}
 	if (Session.InLobby())
 	{
-		if (Session.UsesSteam() && Session.NetMode() == ESovNet::Host && WasInputKeyJustPressed(EKeys::F))
+		if (Session.UsesSteam() && Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::F) || UIKeys.Contains(EKeys::F)))
 		{
 			Session.InviteFriends();
 		}
-		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar)))
+		if (Session.NetMode() == ESovNet::Host && (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar) || UIKeys.Contains(EKeys::Enter)))
 		{
 			FString Error;
 			if (!Session.StartHostedGame(Error))

@@ -155,7 +155,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Center).Padding(0, 54, 0, 0)
 		[
 			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(14, 6))
-			.Visibility_Lambda([this]() { return Model.bVisible && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.Visibility_Lambda([this]() { return (Model.bVisible || Model.bStreet) && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 			.ColorAndOpacity_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			.BorderBackgroundColor_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.Message); })]
@@ -421,6 +421,86 @@ void SSovGameUI::Construct(const FArguments& Args)
 			})
 			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
 		]
+		// The online lobby.
+		+ SOverlay::Slot()
+		[
+			SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.012f, 0.011f, 0.01f, 0.85f))
+			.HAlign(HAlign_Center).VAlign(VAlign_Center)
+			.Visibility_Lambda([this]() { return Model.bLobby ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBox).WidthOverride(760).MinDesiredHeight(380)
+				[
+					SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(20, 14))
+					[
+						SNew(SVerticalBox)
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(20, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.LobbyTitle); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 4)
+						[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("SEATS")))]
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(FString::Join(Model.LobbySeats, TEXT("\n"))); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 4)
+						[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("NEWS AND CHAT")))]
+						+ SVerticalBox::Slot().FillHeight(1.f)
+						[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(FString::Join(Model.LobbyNews, TEXT("\n"))); })]
+						+ SVerticalBox::Slot().AutoHeight().Padding(0, 12, 0, 0)
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot().AutoWidth()
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::M); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Chat (M)")))]
+							]
+							+ SHorizontalBox::Slot().AutoWidth().Padding(8, 0, 0, 0)
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+								.Visibility_Lambda([this]() { return Model.bLobbyHost && Model.bLobbySteam ? EVisibility::Visible : EVisibility::Collapsed; })
+								.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Invite friends (F)")))]
+							]
+							+ SHorizontalBox::Slot().FillWidth(1.f)
+							+ SHorizontalBox::Slot().AutoWidth()
+							[
+								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary())
+								.Visibility_Lambda([this]() { return Model.bLobbyHost ? EVisibility::Visible : EVisibility::Collapsed; })
+								.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Enter); return FReply::Handled(); })
+								[SNew(STextBlock).Font(FSovStyle::Font(14, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Start the game (Enter)")))]
+							]
+						]
+					]
+				]
+			]
+		]
+		// Walking a City Center: the city at the top left, a prompt when someone will listen, the keys at the bottom.
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(16, 16, 0, 0)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 8))
+			.Visibility_Lambda([this]() { return Model.bStreet ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.StreetTitle); })]
+				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.StreetSub); })]
+			]
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0, 0, 0, 120)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(16, 8))
+			.Visibility_Lambda([this]() { return Model.bStreet && !Model.StreetPrompt.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.StreetPrompt); })]
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0, 0, 0, 16)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 5))
+			.Visibility_Lambda([this]() { return Model.bStreet ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("WASD walk   hold right mouse or Q/E to look   F talk   Esc back to the map")))]
+		]
+		// A live battle or a replay.
+		+ SOverlay::Slot()
+		[
+			SAssignNew(BattleHud, SSovBattleHud)
+			.Visibility_Lambda([this]() { return Model.Battle.bOpen ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; })
+			.OnKey_Lambda([this](FKey Key) { OnKey.ExecuteIfBound(Key); })
+		]
 		// Hot seat: the next player's turn, the map hidden until they take over.
 		+ SOverlay::Slot()
 		[
@@ -517,6 +597,7 @@ void SSovGameUI::Tick(const FGeometry& Geometry, const double Time, const float 
 void SSovGameUI::SetModel(const FSovUIModel& InModel)
 {
 	Model = InModel;
+	if (Model.Battle.bOpen) BattleHud->SetModel(Model.Battle);
 	FString Rd = Model.bReader ? Model.ReaderTitle : FString();
 	for (const FString& L : Model.ReaderLines) Rd += L + TEXT("|");
 	if (Rd != ReaderKeyText)

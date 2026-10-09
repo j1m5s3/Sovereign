@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovBattleHud.h"
 #include "SovGovernmentView.h"
 #include "SovLens.h"
 #include "SovMinimap.h"
@@ -54,6 +55,16 @@ struct FSovUIChoice
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// The online lobby (shown even when bVisible is false): the seats, the network's lines, and the host's buttons.
+	bool bLobby = false;
+	bool bLobbyHost = false, bLobbySteam = false;
+	FString LobbyTitle;
+	TArray<FString> LobbySeats, LobbyNews;
+	// Walking a City Center (shown even when bVisible is false): the city, its mood, and who is near to talk to.
+	bool bStreet = false;
+	FString StreetTitle, StreetSub, StreetPrompt;
+	// A live battle or a replay (shown even when bVisible is false).
+	FSovBattleModel Battle;
 	// Hot seat: the screen hides the map until the next player takes over (shown even when bVisible is false).
 	bool bHandover = false;
 	FString HandoverName;
@@ -196,6 +207,7 @@ private:
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
 	TSharedPtr<SSovGovernmentView> GovView;
+	TSharedPtr<SSovBattleHud> BattleHud;
 	TDelegate<void(int32)> OnGovAdopt, OnGovSlot, OnGovCard, OnGovDedication;
 	TDelegate<void()> OnGovBuy;
 };
