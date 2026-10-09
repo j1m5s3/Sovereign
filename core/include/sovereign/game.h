@@ -120,6 +120,8 @@ public:
 
     // ---- cities (02-cities.md)
     CityReport cityReport(CityId city) const;
+    // Taken from a civ still at war with the original owner (02: Occupied cities).
+    bool occupied(const City& city) const;
     // The reports of all the player's cities, in state order: one run shares the work, as a turn's processing does.
     std::vector<CityReport> cityReports(PlayerId player) const;
     // Yields of a plot as worked by `city` (city center rules when it is the center).
@@ -624,7 +626,7 @@ public:
     int religiousTourism(const City& city) const;       // its owner's Holy City: TOURISM_FROM_HOLY_CITY, doubled by St. Basil's (03)
     Fixed allianceShare(PlayerId player, YieldType yield) const;  // Research/Cultural level 3: 10% of the ally's yield
     int warWeariness(PlayerId player) const;            // points against every opponent together
-    int warWearinessAmenities(PlayerId player) const;   // amenities each of its cities loses (1 per 400 points)
+    int warWearinessAmenities(PlayerId player) const;   // amenities weariness would take (1 per 400), before the city-kind floor
     void addWarWeariness(PlayerId player, PlayerId against, int points);  // scaled by policies and grievances
     void processWarWeariness(PlayerId player);          // decays as the player's turn begins
     // Why a launch cannot happen (Ok: it can): a held device, a delivery in range with moves (a bomber's

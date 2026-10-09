@@ -399,7 +399,8 @@ TEST(war_weariness_costs_amenities_and_fades) {
     s.players[0].warWeariness = {0, 850};
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g->warWearinessAmenities(0), 2);
-    CHECK_EQ(g->cityReport(g->state().cities[0].id).amenities, before - 2);
+    const CityReport tired = g->cityReport(g->state().cities[0].id);
+    CHECK_EQ(tired.amenities, std::max(before - 2, tired.amenitiesNeeded));  // founded cities stop at the requirement
     g->processWarWeariness(0);
     CHECK_EQ(g->state().players[0].warWeariness[1], 800);  // -50 a turn at war
     GameState st = g->state();

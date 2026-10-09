@@ -66,6 +66,58 @@ TEST(occupied_cities_do_not_grow) {
     CHECK(foodAfter(true) < foodAfter(false));
 }
 
+TEST(war_weariness_amenities_stop_at_the_city_kind_floor) {
+    const auto report = [](bool captured, bool war, int weariness = 0) {
+        GameState s = flatState(20, 12, 2);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        addCity(s, 0, {4, 5}, true, 3);
+        const CityId taken = addCity(s, 0, {10, 5}, false, 5);
+        addCity(s, 1, {16, 5}, true, 3);
+        City& city = *s.city(taken);
+        if (captured) city.originalOwner = 1;
+        city.districts.push_back({rules().district("DISTRICT_ENTERTAINMENT_COMPLEX"), {11, 5}, true});
+        city.buildings.push_back(rules().building("BUILDING_ARENA"));
+        std::sort(city.buildings.begin(), city.buildings.end());
+        claimFor(s, city, {11, 5});
+        s.players[0].relations.resize(2);
+        s.players[1].relations.resize(2);
+        s.players[0].relations[1].war = s.players[1].relations[0].war = war;
+        if (weariness > 0) s.players[0].warWeariness = {0, weariness};
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->cityReport(taken);
+    };
+    const int per = std::max(1, rules().globalInt("WAR_WEARINESS_POINTS_FOR_AMENITY_LOSS"));
+    const int heavy = per * 20;
+    const CityReport noneFounded = report(false, true);
+    const CityReport noneOccupied = report(true, true);
+    const CityReport noneConquered = report(true, false);
+    CHECK_EQ(noneFounded.amenities, noneOccupied.amenities);  // no weariness: no loss in any case
+    CHECK_EQ(noneFounded.amenities, noneConquered.amenities);
+    CHECK(noneFounded.amenities > noneFounded.amenitiesNeeded);  // surplus so the floor is a stop, not a raise
+
+    const CityReport founded = report(false, true, heavy);
+    CHECK_EQ(founded.amenities, founded.amenitiesNeeded);  // founded: at its requirement
+
+    const CityReport conquered = report(true, false, heavy);
+    CHECK_EQ(conquered.amenities, conquered.amenitiesNeeded - rules().globalInt("WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_NONFOUNDED_CITY"));
+
+    const CityReport occupied = report(true, true, heavy);
+    CHECK_EQ(occupied.amenities, occupied.amenitiesNeeded - rules().globalInt("WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_AT_WAR_CITY"));
+
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {4, 5}, true, 3);
+    const CityId taken = addCity(s, 0, {10, 5}, false, 5);
+    addCity(s, 1, {16, 5}, true, 3);
+    s.city(taken)->originalOwner = 1;
+    s.players[0].relations.resize(2);
+    s.players[1].relations.resize(2);
+    s.players[0].relations[1].war = s.players[1].relations[0].war = true;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->occupied(*g->state().city(taken)));
+    CHECK(!g->occupied(g->state().cities[0]));
+}
+
 TEST(theocracy_buys_land_units_with_faith) {
     GameState s = flatState(20, 12, 1);
     Game::fitPlayerToRules(s.players[0], rules());
