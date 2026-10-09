@@ -248,6 +248,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			WM.Y = W.pos.y;
 			WM.bComplete = C.has(W.building);
 			WM.Name = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(W.building)].name.c_str());
+			WM.Id = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(W.building)].id.c_str());
 		}
 		for (const sov::CityDistrict& D : C.districts)
 		{

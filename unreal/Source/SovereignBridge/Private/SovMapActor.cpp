@@ -81,6 +81,33 @@ FString DistrictModel(const FString& Id)
 	return Out;
 }
 
+// The Wonders kit's model for a wonder (tools/art/blender/kit_wonders.py), by kind; null for the classical temple.
+const TCHAR* WonderModel(const FString& Id)
+{
+	// Each model and the wonders (their ids without BUILDING_) drawn with it.
+	static const TPair<const TCHAR*, const TCHAR*> Kinds[] = {
+		{TEXT("Pyramid"), TEXT("PYRAMIDS JEBEL_BARKAL")},
+		{TEXT("StepPyramid"), TEXT("ETEMENANKI CHICHEN_ITZA HUEY_TEOCALLI MAHABODHI_TEMPLE MEENAKSHI_TEMPLE ANGKOR_WAT")},
+		{TEXT("StoneCircle"), TEXT("STONEHENGE")},
+		{TEXT("Gardens"), TEXT("HANGING_GARDENS GREAT_BATH BIOSPH_RE")},
+		{TEXT("Statue"), TEXT("COLOSSUS STATUE_OF_ZEUS STATUE_OF_LIBERTY CRISTO_REDENTOR TERRACOTTA_ARMY KOTOKU_IN")},
+		{TEXT("Tower"), TEXT("GREAT_LIGHTHOUSE TORRE_DE_BEL_M BIG_BEN KILWA_KISIWANI")},
+		{TEXT("LatticeTower"), TEXT("EIFFEL_TOWER")},
+		{TEXT("DomedHall"), TEXT("HAGIA_SOPHIA TAJ_MAHAL ST_BASIL_S_CATHEDRAL UNIVERSITY_OF_SANKORE OXFORD_UNIVERSITY HERMITAGE")},
+		{TEXT("Arena"), TEXT("COLOSSEUM EST_DIO_DO_MARACAN BOLSHOI_THEATRE BROADWAY SYDNEY_OPERA_HOUSE")},
+		{TEXT("Citadel"), TEXT("PETRA MACHU_PICCHU ALHAMBRA MONT_ST_MICHEL GREAT_ZIMBABWE FORBIDDEN_CITY POTALA_PALACE ORSZ_GH_Z")},
+		{TEXT("Arsenal"), TEXT("VENETIAN_ARSENAL RUHR_VALLEY PANAMA_CANAL CASA_DE_CONTRATACI_N GOLDEN_GATE_BRIDGE AMUNDSEN_SCOTT_RESEARCH_STATION")},
+	};
+	const FString Key = Id.RightChop(9);
+	for (const auto& K : Kinds)
+	{
+		TArray<FString> Ids;
+		FString(K.Value).ParseIntoArray(Ids, TEXT(" "));
+		if (Ids.Contains(Key)) return K.Key;
+	}
+	return nullptr;
+}
+
 // Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
 void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 {
@@ -449,8 +476,19 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, CubeMesh.Get());
 		const FVector At = SovHex::Center(W.X, W.Y, SurfaceZ(W.X, W.Y));
+		// Its kind's model from the Wonders kit, grey and smaller while it is being built.
+		const TCHAR* Kind = WonderModel(W.Id);
+		if (Kind && SovArt::SetKitMesh(C, TEXT("Wonders"), Kind, FLinearColor::White))
+		{
+			ShadeKit(C, W.bComplete ? FLinearColor(0.62f, 0.6f, 0.57f) : FLinearColor(0.32f, 0.31f, 0.3f));
+			C->SetRelativeLocation(At);
+			C->SetRelativeScale3D(FVector(W.bComplete ? 0.1 : 0.07));
+			C->SetRelativeRotation(FRotator::ZeroRotator);
+			continue;
+		}
 		if (SovArt::SetKitMesh(C, TEXT("Classical"), W.bComplete ? TEXT("Temple") : TEXT("Monument"), FLinearColor::White))
 		{
+			ShadeKit(C, W.bComplete ? FLinearColor::White : FLinearColor(0.6f, 0.6f, 0.6f));
 			C->SetRelativeLocation(At);
 			C->SetRelativeScale3D(FVector(W.bComplete ? 0.07 : 0.06));
 			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));

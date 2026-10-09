@@ -77,6 +77,7 @@ struct FSovWonderMarker
 	int32 X = 0, Y = 0;
 	bool bComplete = false;
 	FString Name;
+	FString Id;  // its rules id (BUILDING_PYRAMIDS), for the model the map draws
 };
 
 // A specialty district's plot (not the City Center, which the city marker draws).

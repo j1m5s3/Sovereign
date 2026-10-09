@@ -65,7 +65,7 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Crowns;
 
-	// Wonders: a temple when built, a monument while building.
+	// Wonders: the Wonders kit's model for its kind, or a temple (a monument while building).
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> WonderPieces;
 	// Districts (the Districts kit) and the houses round a city centre, more as it grows.
