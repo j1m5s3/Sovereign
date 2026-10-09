@@ -2141,6 +2141,19 @@ void ASovPlayerController::UpdateGameUI()
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
 			.OnEndClose_Lambda([this]() { bEndClosed = true; })
+			.OnLens_Lambda([this](int32 Lens) {
+				// A lens is this machine's view: the map redraws with it (again: off).
+				USovGameSubsystem* S = Subsystem();
+				S->Lens = S->Lens == static_cast<ESovLens>(Lens) ? ESovLens::None : static_cast<ESovLens>(Lens);
+				S->OnStateChanged.Broadcast();
+			})
+			.OnMinimap_Lambda([this](FVector2D At) {
+				const TSharedPtr<const FSovMinimapData> D = Subsystem()->Minimap;
+				if (!D.IsValid() || !CameraPawn()) return;
+				const FVector2D Size(SovHex::Size * SovHex::Sqrt3 * (D->Width + 0.5), SovHex::Size * (1.5 * FMath::Max(0, D->Height - 1) + 2.0));
+				const FVector2D Half(SovHex::Size * SovHex::Sqrt3 * 0.5, SovHex::Size);
+				CameraPawn()->LookAt(SovHex::ToWorld(At * Size - Half));
+			})
 			.OnDismiss_Lambda([this](int32 Index) {
 				if (Notices.IsValidIndex(Index)) DismissedNotices.Add(Notices[Index].Id);
 			})
@@ -2463,6 +2476,19 @@ void ASovPlayerController::UpdateGameUI()
 		Notices.Add({Id, SovEventIcon(E), Text, FString::Printf(TEXT("Turn %d%s"), E.turn, Key.IsValid() ? TEXT(": click to open") : TEXT("")), Key, -1, false});
 	}
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The lens and the minimap, with the camera's place on it (plan D, step 6).
+	M.Lens = static_cast<int32>(Sub->Lens);
+	M.LensLegend = Sub->LensLegend;
+	M.Minimap = Sub->Minimap;
+	if (M.Minimap.IsValid() && M.Minimap->Width > 0 && CameraPawn())
+	{
+		const FVector W = CameraPawn()->FocusPoint();
+		const FVector2D Size(SovHex::Size * SovHex::Sqrt3 * (M.Minimap->Width + 0.5), SovHex::Size * (1.5 * FMath::Max(0, M.Minimap->Height - 1) + 2.0));
+		const FVector2D Half(SovHex::Size * SovHex::Sqrt3 * 0.5, SovHex::Size);
+		const double MapW = SovHex::MapWorldWidth(M.Minimap->Width);
+		const double East = FMath::Fmod(FMath::Fmod(W.Y, MapW) + MapW, MapW);  // the wrapped copy on the map
+		M.MinimapFocus = (FVector2D(East, -W.X) + Half) / Size;
+	}
 	// The end of the game, or of this player's part in it (plan D, step 5).
 	if (!G.gameOver() && P.alive) bEndClosed = false;
 	else if (!bEndClosed)
@@ -2764,6 +2790,13 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
+	// F7 steps through the map lenses (plan D, step 6), back to none after the last.
+	if (Pressed(EKeys::F7) && Subsystem()->IsRunning())
+	{
+		USovGameSubsystem* S = Subsystem();
+		S->Lens = static_cast<ESovLens>((static_cast<int32>(S->Lens) + 1) % static_cast<int32>(ESovLens::Count));
+		S->OnStateChanged.Broadcast();
+	}
 	if (InBattle())
 	{
 		UpdateBattle(DeltaTime);
