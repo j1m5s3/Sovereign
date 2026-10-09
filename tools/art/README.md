@@ -15,6 +15,10 @@ Needs Blender 5.2 (`BLENDER` overrides the path) and Unreal Engine 5.8
 imported `.uasset` files in `unreal/Content/Art/` are committed, so a fresh clone runs
 with art. The game falls back to primitives for anything missing.
 
+## Painted detail
+
+Each kit maps its colours to a pattern (`kitlib.patterns({...})` at the top of the kit; `Piece.wear(...)` overrides it for the next solids). `Piece.build` stores the pattern's tile in the vertex colour's alpha and gives every face UVs by box projection in metres (`kitlib.REPEAT`), so detail is the same size on every piece. The material multiplies vertex colour, the team tint and the tile (doubled, so mid grey is no change). `portrait.py` renders with the same maths.
+
 ## Files
 
 | File | What it does |
@@ -23,7 +27,8 @@ with art. The game falls back to primitives for anything missing.
 | `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
 | `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), a war galley (team sail) for ships and a boat (team strakes) under embarked units; static, team-coloured cloth. The people are lofted anatomy with faces (brows, eyes, nose, ears, beards) and layered costumes: cuirass, leather strips, greaves, crested helmets, folded cloaks |
-| `blender/generate.py` | Builds every piece and exports FBX |
+| `blender/textures.py` | The painted detail sheet: a 4x4 sheet of seamless greyscale patterns (cloth weave, leather, worn metal, skin, hair, wood, stone, plaster, roof tiles, foliage, thatch), built from periodic noise. Mid grey is no change |
+| `blender/generate.py` | Builds every piece and exports FBX, and writes the detail sheet to `Textures/T_SovDetail.png` |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
 | `blender/portrait.py` | Renders the Figures kit's people lit (Eevee), team cloth tinted, whole or `close` (upper bodies): `blender -b --python tools/art/blender/portrait.py -- out.png "#2f4f9a" close` |
 | `ue_import.py` | Imports FBX into `/Game/Art/<Kit>/` and assigns the master material `M_SovKit` (vertex colour × `Tint`) |
