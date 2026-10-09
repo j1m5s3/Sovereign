@@ -42,6 +42,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnGovDedication = Args._OnGovDedication;
 	OnGovBuy = Args._OnGovBuy;
 	OnEmpireCity = Args._OnEmpireCity;
+	OnEmpireUnit = Args._OnEmpireUnit;
 	OnLens = Args._OnLens;
 	OnMinimap = Args._OnMinimap;
 	auto Visible = [this](TFunction<bool()> Test) {
@@ -656,6 +657,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	FString Em = Model.bEmpire ? FString(TEXT("E")) : FString();
 	for (const FSovUIStat& L : Model.EmpireLines) Em += L.Text + TEXT("|");
 	for (const FSovUIChoice& Ci : Model.EmpireCities) Em += Ci.Label + Ci.Right + TEXT("|");
+	for (const FSovUIChoice& Un : Model.EmpireUnits) Em += Un.Label + Un.Right + TEXT("|");
 	if (Em != EmpireKey)
 	{
 		EmpireKey = Em;
@@ -674,6 +676,25 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(Ci.Label))]
 					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(Ci.Right))]
+				]
+			];
+		}
+		// Then our units, those needing orders first.
+		if (Model.EmpireUnits.Num() > 0)
+			EmpireCityBox->AddSlot().AutoHeight().Padding(0, 8, 0, 3)[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("UNITS")))];
+		for (int32 i = 0; i < Model.EmpireUnits.Num(); ++i)
+		{
+			const FSovUIChoice& Un = Model.EmpireUnits[i];
+			const int32 Id = Model.EmpireUnitIds.IsValidIndex(i) ? Model.EmpireUnitIds[i] : -1;
+			EmpireCityBox->AddSlot().AutoHeight().Padding(0, 1)
+			[
+				SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+				.OnClicked_Lambda([this, Id]() { OnEmpireUnit.ExecuteIfBound(Id); return FReply::Handled(); })
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(Un.Label))]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+					[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(Un.Section == TEXT("!") ? FSovStyle::Gold : FSovStyle::Dim).Text(FText::FromString(Un.Right))]
 				]
 			];
 		}

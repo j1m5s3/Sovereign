@@ -2350,6 +2350,7 @@ void ASovPlayerController::UpdateGameUI()
 			.OnGovDedication_Lambda([this](int32 D) { Send(sov::Command::chooseDedication(Me(), static_cast<sov::TypeIndex>(D))); })
 			.OnGovBuy_Lambda([this]() { Send(sov::Command::buyPolicyChanges(Me())); })
 			.OnEmpireCity_Lambda([this](int32 Id) { SelectCity(Id, true); })
+			.OnEmpireUnit_Lambda([this](int32 Id) { SelectUnit(Id, true); })
 			.OnLens_Lambda([this](int32 Lens) {
 				// A lens is this machine's view: the map redraws with it (again: off).
 				USovGameSubsystem* S = Subsystem();
@@ -2869,6 +2870,28 @@ void ASovPlayerController::UpdateGameUI()
 	if (bEmpireOpen)
 	{
 		for (const FSovStatusLine& L : SovStatusLines(G, Me())) M.EmpireLines.Add({NAME_None, L.Text, TEXT(""), L.Color});
+		// Our units, those waiting on orders first ("!" in Section marks them), then by type.
+		{
+			const std::vector<sov::UnitId> Waiting = G.unitsNeedingOrders(Me());
+			TArray<TPair<int32, int32>> Order;  // (rank, unit id)
+			for (const sov::Unit& Un : S.units)
+				if (Un.owner == Me()) Order.Add({std::find(Waiting.begin(), Waiting.end(), Un.id) != Waiting.end() ? 0 : 1, Un.id});
+			Order.StableSort([&](const TPair<int32, int32>& A, const TPair<int32, int32>& B) {
+				if (A.Key != B.Key) return A.Key < B.Key;
+				return S.unit(A.Value)->type < S.unit(B.Value)->type;
+			});
+			for (const TPair<int32, int32>& O : Order)
+			{
+				const sov::Unit* Un = S.unit(O.Value);
+				FSovUIChoice Row;
+				Row.Label = Str(R.units[static_cast<size_t>(Un->type)].name) + (Un->hp < 100 ? FString::Printf(TEXT("  %d HP"), Un->hp) : FString());
+				Row.Right = O.Key == 0 ? TEXT("needs orders") : Un->moveTarget ? TEXT("moving") : Un->activity == sov::Activity::Fortify ? TEXT("fortified")
+					: Un->activity == sov::Activity::Sleep ? TEXT("asleep") : Un->activity == sov::Activity::Skip ? TEXT("skipping") : TEXT("done");
+				if (O.Key == 0) Row.Section = TEXT("!");
+				M.EmpireUnits.Add(Row);
+				M.EmpireUnitIds.Add(Un->id);
+			}
+		}
 		// Our cities, the capital first: population, what each builds; yields on hover. A click selects one.
 		for (const sov::City& Ci : S.cities)
 		{
