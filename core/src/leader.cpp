@@ -27,15 +27,15 @@ const Unit* Game::leaderOf(PlayerId player) const {
     return nullptr;
 }
 
-const Unit* Game::escortOf(const Unit& leader) const {
+const Unit* Game::escortOf(const Unit& escorted) const {
     for (const Unit& u : state_.units) {
-        if (u.escorting == leader.id && u.owner == leader.owner && u.pos == leader.pos) return &u;
+        if (u.escorting == escorted.id && u.owner == escorted.owner && u.pos == escorted.pos) return &u;
     }
     return nullptr;
 }
 
-Unit* Game::escortMut(const Unit& leader) {
-    const Unit* e = escortOf(leader);
+Unit* Game::escortMut(const Unit& escorted) {
+    const Unit* e = escortOf(escorted);
     return e ? state_.unit(e->id) : nullptr;
 }
 
@@ -190,11 +190,12 @@ CommandError Game::validateLeader(const Command& c) const {
         if (static_cast<GearSlot>(c.arg2) != GearSlot::Mount) return CommandError::CannotEquip;  // weapons and armor are swapped, not removed
         return CommandError::Ok;
     }
-    // LinkEscort: a military unit and its own leader on the same plot.
+    // LinkEscort: a military unit and its own leader or civilian on the same plot (05: Formations).
     if (typeOf(*rules_, *u).layer != UnitLayer::Military) return CommandError::CannotEscort;
     if (c.arg == -1) return CommandError::Ok;
     const Unit* l = state_.unit(c.arg);
-    if (!l || !isLeader(*l) || l->owner != c.player || l->pos != u->pos) return CommandError::CannotEscort;
+    if (!l || !(isLeader(*l) || typeOf(*rules_, *l).layer == UnitLayer::Civilian) || l->owner != c.player || l->pos != u->pos)
+        return CommandError::CannotEscort;
     return CommandError::Ok;
 }
 
@@ -277,7 +278,7 @@ void Game::applyLeader(const Command& c) {
     if (c.type == CommandType::LinkEscort) {
         if (c.arg != -1) {
             for (Unit& o : state_.units) {
-                if (o.escorting == c.arg) o.escorting = kNoUnit;  // one escort per leader
+                if (o.escorting == c.arg) o.escorting = kNoUnit;  // one escort per unit
             }
         }
         u->escorting = c.arg;

@@ -190,11 +190,12 @@ TEST(ranged_attack_hits_only_the_target) {
 }
 
 TEST(kill_advances_and_captures_civilians) {
-    UnitId a = kNoUnit, d = kNoUnit, b = kNoUnit, settlerA = kNoUnit, settler = kNoUnit, third = kNoUnit, trader = kNoUnit;
+    UnitId a = kNoUnit, d = kNoUnit, b = kNoUnit, ram = kNoUnit, settlerA = kNoUnit, settler = kNoUnit, third = kNoUnit, trader = kNoUnit;
     auto g = duel([&](GameState& s) {
         a = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
         d = addUnit(s, "UNIT_WARRIOR", 1, {6, 5});
         b = addUnit(s, "UNIT_BUILDER", 1, {6, 5});
+        ram = addUnit(s, "UNIT_BATTERING_RAM", 1, {6, 5});
         s.unit(d)->hp = 1;
         settlerA = addUnit(s, "UNIT_WARRIOR", 0, {5, 8});
         settler = addUnit(s, "UNIT_SETTLER", 1, {6, 8});
@@ -206,6 +207,7 @@ TEST(kill_advances_and_captures_civilians) {
     CHECK_EQ(unit(*g, a).pos, (Hex{6, 5}));
     CHECK_EQ(unit(*g, a).xp, 2 * 20 / 20 + 2 + 1);  // kill bonus doubles the strength ratio
     CHECK_EQ(unit(*g, b).owner, 0);                  // the escorted Builder is captured
+    CHECK(g->state().unit(ram) == nullptr);           // and the Battering Ram with it, not capturable: destroyed (05: Stacking)
     CombatPreview pv = g->previewAttack(settlerA, {6, 8}, false);
     CHECK(pv.valid && pv.capture);
     CHECK_EQ(g->submit(Command::attack(0, settlerA, {6, 8})), CommandError::Ok);

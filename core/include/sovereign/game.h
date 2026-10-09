@@ -97,7 +97,7 @@ public:
     // overland: a land unit does not embark on the way (it may still leave the water).
     std::optional<std::vector<PathStep>> findPath(UnitId unit, Hex target, bool overland = false) const;
     // The plots a move order for the unit finds a path to (1, the rest 0), planned as the order is (a linked escort's
-    // for its leader): an order to any other plot fails.
+    // for the leader or civilian it escorts): an order to any other plot fails.
     std::vector<uint8_t> moveReach(UnitId unit, bool overland = false) const;
     // Movement points needed for this unit to enter `to` from adjacent `from`, also where it may only pass (05:
     // Stacking); nullopt when it cannot enter.
@@ -703,7 +703,7 @@ public:
     bool isLeader(const Unit& unit) const;
     const Unit* leaderOf(PlayerId player) const;
     // The military unit linked to escort this leader, while they share a plot.
-    const Unit* escortOf(const Unit& leader) const;
+    const Unit* escortOf(const Unit& escorted) const;  // the military unit linked to a leader or civilian, on its plot
     // The unit that fights for a plot: its military unit, else a leader standing there.
     const Unit* defenderAt(Hex plot) const;
     // Melee and ranged base strength (a leader's come from its weapon).
@@ -993,7 +993,7 @@ private:
     void pushEvent(EventKind kind, PlayerId actor, PlayerId target, int value);
     // Regicide: the player is out and its cities pass to whoever took the leader.
     void regicide(PlayerId loser, PlayerId by);
-    Unit* escortMut(const Unit& leader);
+    Unit* escortMut(const Unit& escorted);
     void applyMove(const Command& c);
     void applyFoundCity(const Command& c);
     void applyEndTurn(const Command& c);

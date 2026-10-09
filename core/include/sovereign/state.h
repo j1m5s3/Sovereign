@@ -76,7 +76,7 @@ struct Unit {
     int32_t camp = 0;      // barbarian camp id that spawned it (0: none)
     // The leader's loadout per GearSlot (kNone: empty); unused by other units.
     std::array<TypeIndex, kNumGearSlots> gear{{kNone, kNone, kNone}};
-    UnitId escorting = kNoUnit;  // military unit linked to this leader; moves with it while they share a plot
+    UnitId escorting = kNoUnit;  // the leader or civilian this military unit is linked to; moves with it while they share a plot
     uint8_t formation = 0;       // 0 single, 1 Corps/Fleet, 2 Army/Armada (05: Formations)
     // Permanent abilities from natural wonders (01): bit 0 Everest (hills cost as flat ground), bit 1
     // Fountain of Youth (+10 HP healing a turn), bit 2 Bermuda Triangle (+1 movement).
