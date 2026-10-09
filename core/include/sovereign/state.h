@@ -170,6 +170,9 @@ enum class OpinionReasonKind : uint8_t {
     UsedWmd, Demanded,
     PastGames,  // what an AI leader remembers of a human from earlier games (player-retention §1)
     OtherGovernment,  // a tier 3 or 4 government's intolerance of a different one (04)
+    SharedEnemy,      // at war with the same major civ (10: diplomacy layer)
+    NearBorder,       // cities close to ours, at peace and not allied (10; NEAR_BORDER_WARNING)
+    Disposition,      // the fixed random part, with the difficulty's offset toward humans (10; DIPLOMACY_RANDOM)
 };
 struct OpinionReason {
     OpinionReasonKind kind = OpinionReasonKind::Agenda;

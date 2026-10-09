@@ -33,6 +33,15 @@ GameState diploState(int players = 2) {
     s.players[0].human = true;
     for (int i = 0; i < players; ++i) addCity(s, static_cast<PlayerId>(i), {4 + 10 * i, 6}, true, 3);
     s.majorsAtStart = players;
+    // A seed whose random opinions are all 0, so tests see only the reasons they set up.
+    const int range = rules().globalInt("OPINION_RANDOM_RANGE");
+    const auto neutral = [&](uint64_t seed) {
+        for (PlayerId a = 0; a < players; ++a)
+            for (PlayerId b = 0; b < players; ++b)
+                if (a != b && Game::dispositionRoll(seed, a, b, range) != 0) return false;
+        return true;
+    };
+    while (!neutral(s.setup.seed)) ++s.setup.seed;
     return s;
 }
 
@@ -1219,4 +1228,67 @@ TEST(a_tier_three_government_dislikes_other_governments) {
     CHECK_EQ(opinion("GOVERNMENT_DEMOCRACY", "GOVERNMENT_DEMOCRACY"), 0);
     CHECK_EQ(opinion("GOVERNMENT_MONARCHY", "GOVERNMENT_DEMOCRACY"), 0);  // tier 2 holds no grudge
     CHECK(std::string(opinionReasonName(OpinionReasonKind::OtherGovernment)).size() > 0);
+}
+
+// 10 (diplomacy layer): opinion counts shared enemies, cities crowding one's own at peace, and a fixed random part
+// with the difficulty's offset toward humans (00: Settler +3 .. Deity -4).
+TEST(opinion_counts_shared_enemies_crowded_borders_and_disposition) {
+    GameState s = diploState(3);
+    s.players[1].human = false;
+    s.players[2].human = false;
+    for (Player& p : s.players) p.relations.resize(3);
+    for (auto [a, b] : {std::pair{0, 2}, std::pair{1, 2}}) {
+        s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(b)].war = true;
+        s.players[static_cast<size_t>(b)].relations[static_cast<size_t>(a)].war = true;
+    }
+    const uint64_t seed = s.setup.seed;
+    auto g = Game::fromScenario(rules(), GameState(s));
+    const int shared = rules().globalInt("OPINION_SHARED_ENEMY");
+    REQUIRE(shared > 0);
+    CHECK_EQ(reason(*g, 1, 0, OpinionReasonKind::SharedEnemy), shared);
+    CHECK_EQ(reason(*g, 0, 1, OpinionReasonKind::SharedEnemy), shared);
+    CHECK_EQ(reason(*g, 1, 2, OpinionReasonKind::SharedEnemy), 0);  // the enemy itself
+    CHECK_EQ(reason(*g, 1, 0, OpinionReasonKind::NearBorder), 0);    // capitals 10 plots apart
+    CHECK_EQ(reason(*g, 1, 0, OpinionReasonKind::Disposition), 0);   // a neutral seed at Prince
+    // A city of the human's within range of the AI's capital crowds it, at peace and unallied only.
+    const int range = rules().globalInt("OPINION_NEAR_BORDER_RANGE");
+    GameState near = s;
+    addCity(near, 0, {14 - range, 6}, false, 1);  // just in range
+    addCity(near, 0, {21, 6}, false, 1);  // beside the enemy's capital
+    REQUIRE(near.grid.distance({14 - range, 6}, {14, 6}) == range);
+    auto n = Game::fromScenario(rules(), GameState(near));
+    CHECK_EQ(reason(*n, 1, 0, OpinionReasonKind::NearBorder), rules().globalInt("OPINION_NEAR_BORDER"));
+    CHECK_EQ(reason(*n, 0, 1, OpinionReasonKind::NearBorder), rules().globalInt("OPINION_NEAR_BORDER"));
+    REQUIRE(near.grid.distance({21, 6}, {24, 6}) <= range);
+    CHECK_EQ(reason(*n, 2, 0, OpinionReasonKind::NearBorder), 0);  // at war: no warning
+    near.players[0].relations[1].alliance = near.players[1].relations[0].alliance = AllianceType::Research;
+    near.players[0].relations[1].allianceUntil = near.players[1].relations[0].allianceUntil = near.turn + 10;
+    CHECK_EQ(reason(*Game::fromScenario(rules(), GameState(near)), 1, 0, OpinionReasonKind::NearBorder), 0);
+    // The difficulty's offset toward a human, from an AI only.
+    GameState deity = s;
+    deity.setup.difficulty = 7;
+    auto d = Game::fromScenario(rules(), GameState(deity));
+    CHECK_EQ(reason(*d, 1, 0, OpinionReasonKind::Disposition), -4);
+    CHECK_EQ(reason(*d, 1, 2, OpinionReasonKind::Disposition), 0);
+    deity.players[2].human = true;  // a human's view of another human takes no offset
+    CHECK_EQ(reason(*Game::fromScenario(rules(), GameState(deity)), 0, 2, OpinionReasonKind::Disposition), 0);
+    deity.players[2].human = false;
+    deity.setup.difficulty = 0;
+    CHECK_EQ(reason(*Game::fromScenario(rules(), GameState(deity)), 1, 0, OpinionReasonKind::Disposition), 3);
+    // The random part is fixed for a pair in one game, within its range, and differs between seeds.
+    const int r = rules().globalInt("OPINION_RANDOM_RANGE");
+    REQUIRE(r > 0);
+    bool low = false, high = false;
+    for (uint64_t k = seed + 1; k < seed + 60; ++k) {
+        const int v = Game::dispositionRoll(k, 1, 2, r);
+        CHECK(v >= -r && v <= r);
+        low = low || v == -r;
+        high = high || v == r;
+    }
+    CHECK(low && high);
+    GameState other = s;
+    uint64_t k = seed + 1;
+    while (Game::dispositionRoll(k, 1, 2, r) == 0) ++k;
+    other.setup.seed = k;
+    CHECK_EQ(reason(*Game::fromScenario(rules(), GameState(other)), 1, 2, OpinionReasonKind::Disposition), Game::dispositionRoll(k, 1, 2, r));
 }
