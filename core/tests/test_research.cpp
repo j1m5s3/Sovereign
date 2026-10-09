@@ -1293,3 +1293,22 @@ TEST(left_out_building_effects) {
         CHECK_EQ(g->plotYields({7, 6}, g->state().cities[0])[S], bare->plotYields({7, 6}, bare->state().cities[0])[S] + Fixed::fromInt(1));
     }
 }
+
+// An Inspiration's culture counts toward domestic tourists like culture earned (07: Tourism, "lifetime culture
+// generated, including culture from Inspirations"); a Eureka's science does not.
+TEST(inspirations_count_toward_lifetime_culture) {
+    const auto with = [](int population) {
+        return capitalWith([population](GameState& s) {
+            s.cities[0].population = population;
+            s.cities[0].buildings.push_back(rules().building("BUILDING_WATER_MILL"));  // Construction's Eureka
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        });
+    };
+    auto plain = with(5);
+    auto inspired = with(6);  // Early Empire's Inspiration
+    REQUIRE(plain->state().players[0].techs.boosted[at(tech("TECH_CONSTRUCTION"))] == 1);
+    REQUIRE(plain->state().players[0].civics.boosted[at(civic("CIVIC_EARLY_EMPIRE"))] == 0);
+    REQUIRE(inspired->state().players[0].civics.boosted[at(civic("CIVIC_EARLY_EMPIRE"))] == 1);
+    CHECK_EQ(plain->state().players[0].lifetimeCulture, Fixed());
+    CHECK_EQ(inspired->state().players[0].lifetimeCulture, Fixed::fromInt(inspired->civicCost(civic("CIVIC_EARLY_EMPIRE"))) * 40 / 100);
+}

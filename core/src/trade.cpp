@@ -350,6 +350,15 @@ int Game::tradeRouteLength() const {
     return std::max(1, turns * speedPercent(state_, *rules_) / 100);
 }
 
+// The Trader shuttles between the two cities, a round trip twice the way's length in plots, and the route ends when it
+// is back home once the minimum has passed: the fewest whole round trips that reach the minimum (07: Duration;
+// Sovereign reading of "exceeds" as "reaches", so a round trip that divides the minimum ends with it).
+int Game::tradeRouteDuration(int steps) const {
+    const int least = tradeRouteLength();
+    const int trip = 2 * std::max(1, steps);
+    return (least + trip - 1) / trip * trip;
+}
+
 TypeIndex Game::roadFor(PlayerId player) const {
     const int era = playerEra(player);
     TypeIndex best = kNone;
@@ -369,10 +378,11 @@ void Game::applyTradeRoute(const Command& c) {
     r.origin = origin.id;
     r.destination = dest.id;
     r.traderType = u.type;
-    r.turnsLeft = tradeRouteLength();
+    const std::vector<Hex> way = tradePath(c.player, u.type, origin, dest);
+    r.turnsLeft = tradeRouteDuration(static_cast<int>(way.size()) - 1);  // the way runs from the origin's plot
     // Roads along the land part of the way (TRADE_ROUTE_PLACES_ROADS), upgraded to the owner's era.
     const TypeIndex road = roadFor(c.player);
-    for (const Hex& h : tradePath(c.player, u.type, origin, dest)) {
+    for (const Hex& h : way) {
         r.path.push_back(state_.grid.index(h));
         Plot& p = state_.plot(h);
         if (road != kNone && rules_->globalInt("TRADE_ROUTE_PLACES_ROADS") > 0 && !rules_->terrains[at(p.terrain)].water && p.route < road) {

@@ -242,7 +242,8 @@ public:
     bool canStartTradeRoute(UnitId trader, CityId destination) const;
     const City* tradeOrigin(UnitId trader) const;  // the city a Trader would start from (in it or beside it), or null
     std::vector<CityId> tradeDestinations(UnitId trader) const;
-    int tradeRouteLength() const;  // turns, scaled by game speed, longer in later world eras
+    int tradeRouteLength() const;  // the minimum turns, scaled by game speed, longer in later world eras
+    int tradeRouteDuration(int steps) const;  // a route's turns for a way of this many plots: whole round trips (07)
     // The road a player lays now (its era's tier).
     TypeIndex roadFor(PlayerId player) const;
 
