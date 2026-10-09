@@ -249,6 +249,21 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			WM.bComplete = C.has(W.building);
 			WM.Name = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(W.building)].name.c_str());
 		}
+		for (const sov::CityDistrict& D : C.districts)
+		{
+			const std::string& Type = Rules.districts[static_cast<size_t>(D.type)].id;
+			if (D.pos == C.pos || Type == "DISTRICT_CITY_CENTER" || Game.visibility(View, D.pos) == sov::Visibility::Unrevealed)
+			{
+				continue;
+			}
+			FSovDistrictMarker& DM = M.Districts.AddDefaulted_GetRef();
+			DM.X = D.pos.x;
+			DM.Y = D.pos.y;
+			DM.Type = UTF8_TO_TCHAR(Type.c_str());
+			DM.Color = Marker.Color;
+			DM.bComplete = D.complete;
+			DM.bPillaged = D.pillagedTurns > 0;
+		}
 	}
 
 	for (int32 I = 0; I < S.grid.size(); ++I)
