@@ -25,6 +25,14 @@ SOV_API bool chooseStartPositions(GameState& state, const Rules& rules, std::str
 // a coast.
 SOV_API int startScore(const GameState& state, const Rules& rules, Hex h);
 
+// The least a major civ's start has on the six plots beside it (01, Map generation, step 7: "guarantee minimum
+// food/production"; the base game's start script, __AddBonusFoodProduction): Food in all and on the best plot, and
+// Production the same.
+constexpr int kStartFood = 7, kStartBestFood = 3, kStartProduction = 5, kStartBestProduction = 2;
+// For each major civ's start short of them, one Bonus resource that gives Food, and one that gives Production, on a
+// plot beside it that has none and fits it.
+SOV_API void addStartBonuses(GameState& state, const Rules& rules);
+
 // True if a land unit can stand on this plot.
 SOV_API bool isLandPassable(const GameState& state, const Rules& rules, Hex h);
 // The same for a plot already in hand.

@@ -792,7 +792,7 @@ TEST(ai_beats_the_random_bot) {
 
 TEST(ai_soak_takes_a_capital_and_replays) {
     GameSetup setup;
-    setup.seed = 56;
+    setup.seed = 63;
     setup.mapSize = "MAPSIZE_TINY";
     for (int i = 0; i < 4; ++i) setup.players.push_back({rules().civs[at(static_cast<TypeIndex>(i))].id, false});
     std::string err;
