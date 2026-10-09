@@ -11,52 +11,52 @@
 #include "Widgets/Text/STextBlock.h"
 
 #include "SovDiplomacy.h"
+#include "SovStyle.h"
 
 #define LOCTEXT_NAMESPACE "SovDiplomacy"
 
 namespace
 {
-const FLinearColor kPanel(0.015f, 0.015f, 0.02f, 0.97f);
-const FLinearColor kGold(1.f, 0.85f, 0.45f);
+// The game screen's look (SovStyle; plan E).
 const FLinearColor kPlayer(0.75f, 0.85f, 1.f);
-const FLinearColor kNote(0.65f, 0.65f, 0.65f);
+const FLinearColor& kNote = FSovStyle::Dim;
 
-FSlateFontInfo Font(int32 Size) { return FCoreStyle::GetDefaultFontStyle("Regular", Size); }
+FSlateFontInfo Font(int32 Size, bool bBold = false) { return FSovStyle::Font(Size, bBold); }
 }  // namespace
 
 void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 {
 	Args = InArgs;
-	auto Button = [](const FText& Label, TFunction<void()> Click, TFunction<bool()> Enabled, TFunction<bool()> Shown) {
+	auto Button = [](const FText& Label, TFunction<void()> Click, TFunction<bool()> Enabled, TFunction<bool()> Shown, bool bPrimary = false) {
 		return SNew(SBox).Padding(FMargin(4.f, 2.f))[
-			SNew(SButton)
-				.Text(Label)
+			SNew(SButton).IsFocusable(false).ButtonStyle(bPrimary ? &FSovStyle::Primary() : &FSovStyle::Button()).ContentPadding(FMargin(12.f, 5.f))
 				.IsEnabled_Lambda([Enabled]() { return !Enabled || Enabled(); })
 				.Visibility_Lambda([Shown]() { return !Shown || Shown() ? EVisibility::Visible : EVisibility::Collapsed; })
 				.OnClicked_Lambda([Click]() {
 					if (Click) Click();
 					return FReply::Handled();
-				})];
+				})[SNew(STextBlock).Font(Font(11, true)).ColorAndOpacity(FSovStyle::Text).Text(Label)]];
 	};
 	FSovDiplomacyTalk* Talk = Args._Talk;
 	const auto NotBusy = [Talk]() { return Talk && !Talk->IsBusy(); };
 	const auto HasOffer = [this]() { return Args._TheirOffer && !Args._TheirOffer().IsEmpty(); };
 
 	ChildSlot
-	.HAlign(HAlign_Center)
-	.VAlign(VAlign_Center)
 	[
+		// The map dims behind the audience.
+		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.01f, 0.01f, 0.01f, 0.6f)).Padding(0)
+		.HAlign(HAlign_Center).VAlign(VAlign_Center)
+		[
 		SNew(SBox).WidthOverride(1100.f).HeightOverride(640.f)
 		[
 			SNew(SBorder)
-			.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
-			.BorderBackgroundColor(kPanel)
-			.Padding(16.f)
+			.BorderImage(FSovStyle::Panel())
+			.Padding(18.f)
 			[
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight()
 				[
-					SNew(STextBlock).Font(Font(16)).ColorAndOpacity(kGold).AutoWrapText(true)
+					SNew(STextBlock).Font(Font(17, true)).ColorAndOpacity(FSovStyle::Gold).AutoWrapText(true)
 					.Text_Lambda([this]() { return Args._Header ? Args._Header() : FText::GetEmpty(); })
 				]
 				+ SVerticalBox::Slot().FillHeight(1.f).Padding(0.f, 10.f)
@@ -71,20 +71,20 @@ void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 						SNew(SScrollBox)
 						+ SScrollBox::Slot()
 						[
-							SNew(STextBlock).Font(Font(11)).AutoWrapText(true).ColorAndOpacity(FLinearColor(0.85f, 0.85f, 0.9f))
+							SNew(STextBlock).Font(Font(11)).AutoWrapText(true).ColorAndOpacity(FSovStyle::Text)
 							.Text_Lambda([this]() { return Args._Reasons ? Args._Reasons() : FText::GetEmpty(); })
 						]
 					]
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
-					SNew(STextBlock).Font(Font(12)).AutoWrapText(true).ColorAndOpacity(kGold)
+					SNew(STextBlock).Font(Font(12, true)).AutoWrapText(true).ColorAndOpacity(FSovStyle::Gold)
 					.Text_Lambda([this]() { return Args._Proposal ? Args._Proposal() : FText::GetEmpty(); })
 					.Visibility_Lambda([this]() { return Args._Proposal && !Args._Proposal().IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed; })
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
-					SNew(STextBlock).Font(Font(12)).AutoWrapText(true).ColorAndOpacity(FLinearColor(0.6f, 1.f, 0.7f))
+					SNew(STextBlock).Font(Font(12, true)).AutoWrapText(true).ColorAndOpacity(FSovStyle::Good)
 					.Text_Lambda([this]() { return Args._TheirOffer ? Args._TheirOffer() : FText::GetEmpty(); })
 					.Visibility_Lambda([HasOffer]() { return HasOffer() ? EVisibility::Visible : EVisibility::Collapsed; })
 				]
@@ -109,7 +109,7 @@ void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot().AutoWidth()[Button(LOCTEXT("Propose", "Put the proposal forward"), Args._OnPropose, Args._CanPropose, nullptr)]
 					+ SHorizontalBox::Slot().AutoWidth()[Button(LOCTEXT("AcceptOffer", "Accept their offer"),
-						[this]() { if (Args._OnAnswerOffer) Args._OnAnswerOffer(true); }, nullptr, HasOffer)]
+						[this]() { if (Args._OnAnswerOffer) Args._OnAnswerOffer(true); }, nullptr, HasOffer, true)]
 					+ SHorizontalBox::Slot().AutoWidth()[Button(LOCTEXT("RejectOffer", "Reject their offer"),
 						[this]() { if (Args._OnAnswerOffer) Args._OnAnswerOffer(false); }, nullptr, HasOffer)]
 					+ SHorizontalBox::Slot().AutoWidth()[Button(LOCTEXT("Denounce", "Denounce"), Args._OnDenounce, Args._CanDenounce, nullptr)]
@@ -126,6 +126,7 @@ void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 					+ SHorizontalBox::Slot().AutoWidth()[Button(LOCTEXT("Leave", "Leave (Esc)"), Args._OnLeave, NotBusy, nullptr)]
 				]
 			]
+		]
 		]
 	];
 	RebuildLines();
@@ -160,7 +161,7 @@ void SSovDiplomacyPanel::RebuildLines()
 		else if (L.Kind == FSovTalkLine::EKind::Leader)
 		{
 			Text = LeaderName + TEXT(": ") + L.Text;
-			Color = FLinearColor::White;
+			Color = FSovStyle::Text;
 		}
 		Scroll->AddSlot().Padding(0.f, 3.f)[SNew(STextBlock).Font(Font(12)).AutoWrapText(true).ColorAndOpacity(Color).Text(FText::FromString(Text))];
 	}
