@@ -12,6 +12,7 @@ Status: part 1 done, 2026-10-09. Previous: `2026-10-09-theater-square.md`. A rea
 
 Results:
 - 128 AI games (Small, 6 AI, turn 200) against main: 13 games change; the averages dip slightly (science 130.0 to 129.7, culture 76.1 to 75.9, gold 219 to 216; t about -2). Inferred: allies can no longer trade Open Borders to each other, and some units now take other paths.
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 7 of them play out differently.
 - Tests: `medics_and_supply_convoys_heal_the_units_beside_them`, `an_alliance_opens_borders`, Traders and Great People in `units_that_ignore_borders_cross_closed_ones`, the struck unit's XP in `walled_city_strikes_once_per_turn`. Mutation check: 9 mutants, all caught (a unit two plots from a Medic was added to catch the last).
 
 ## Left open
