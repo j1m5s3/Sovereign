@@ -88,13 +88,40 @@ bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString
 	return true;
 }
 
-TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName)
+const TCHAR* CivStyle(const FString& CivId)
 {
-	const TCHAR* Style = Era >= 6 ? TEXT("Modern_") : Era >= 4 ? TEXT("Industrial_") : Era >= 2 ? TEXT("Medieval_") : nullptr;
-	const bool bCity = ClassicalName == TEXT("Palace") || ClassicalName == TEXT("Landmark") || ClassicalName.StartsWith(TEXT("House_"));
-	if (Style && bCity && ClassicalName != TEXT("House_Boarded"))
+	// Two launch civs per architectural style (leaders-and-art-style.md); city-states and the rest are Mediterranean.
+	static const TPair<const TCHAR*, const TCHAR*> Styles[] = {
+		{TEXT("ENGLAND"), TEXT("European")}, {TEXT("FRANCE"), TEXT("European")}, {TEXT("ROME"), TEXT("Mediterranean")},
+		{TEXT("GREECE"), TEXT("Mediterranean")}, {TEXT("PERSIA"), TEXT("MiddleEast")}, {TEXT("ARABIA"), TEXT("MiddleEast")},
+		{TEXT("CHINA"), TEXT("Asian")}, {TEXT("JAPAN"), TEXT("Asian")}, {TEXT("EGYPT"), TEXT("African")}, {TEXT("MALI"), TEXT("African")},
+		{TEXT("AZTEC"), TEXT("American")}, {TEXT("INCA"), TEXT("American")}};
+	for (const auto& S : Styles)
 	{
-		const FString Name = FString(Style) + (ClassicalName == TEXT("Landmark") ? FString(TEXT("Hall")) : ClassicalName);
+		if (CivId.EndsWith(S.Key)) return S.Value;
+	}
+	return TEXT("Mediterranean");
+}
+
+TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName, const FString& CivId)
+{
+	const bool bCity = ClassicalName == TEXT("Palace") || ClassicalName == TEXT("Landmark") || ClassicalName.StartsWith(TEXT("House_"));
+	if (!bCity || ClassicalName == TEXT("House_Boarded"))
+	{
+		return {TEXT("Classical"), ClassicalName};
+	}
+	const FString Part = ClassicalName == TEXT("Landmark") ? FString(TEXT("Hall")) : ClassicalName;
+	const FString Culture = CivStyle(CivId);
+	// Until the Industrial era a city is built in its culture's style; from then on in the world's.
+	if (Era < 4 && Culture != TEXT("Mediterranean") && Culture != TEXT("European"))
+	{
+		const FString Name = Culture + TEXT("_") + Part;
+		if (Mesh(TEXT("Styles"), Name)) return {TEXT("Styles"), Name};
+	}
+	const TCHAR* Style = Era >= 6 ? TEXT("Modern_") : Era >= 4 ? TEXT("Industrial_") : Era >= 2 || Culture == TEXT("European") ? TEXT("Medieval_") : nullptr;
+	if (Style)
+	{
+		const FString Name = FString(Style) + Part;
 		if (Mesh(TEXT("Towns"), Name)) return {TEXT("Towns"), Name};
 	}
 	return {TEXT("Classical"), ClassicalName};
@@ -113,6 +140,13 @@ TArray<FString> RequiredAssets()
 			 TEXT("Granary"), TEXT("Temple"), TEXT("Landmark"), TEXT("Wall"), TEXT("MarketStall"), TEXT("Banner")})
 	{
 		Out.Add(MeshPath(TEXT("Classical"), Name));
+	}
+	for (const TCHAR* Style : {TEXT("MiddleEast_"), TEXT("Asian_"), TEXT("African_"), TEXT("American_")})
+	{
+		for (const TCHAR* Part : {TEXT("House_A"), TEXT("House_B"), TEXT("House_C"), TEXT("Hall"), TEXT("Palace")})
+		{
+			Out.Add(MeshPath(TEXT("Styles"), FString(Style) + Part));
+		}
 	}
 	for (const TCHAR* Style : {TEXT("Medieval_"), TEXT("Industrial_"), TEXT("Modern_")})
 	{

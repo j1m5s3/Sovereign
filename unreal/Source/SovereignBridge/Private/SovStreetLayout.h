@@ -59,6 +59,7 @@ struct FSovStreetLayout
 	FVector Entry = FVector::ZeroVector;    // where the leader appears
 	FLinearColor CivColor = FLinearColor::White;  // the owner's colour (banners, herald, guards)
 	int32 Era = 0;  // the owner's era (Game::playerEra): the style its houses and palace are built in
+	FString Civ;    // the owner's civilization's rules id, likewise (its culture's style)
 
 	int32 Count(ESovStreetPiece Kind) const;
 };

@@ -257,6 +257,10 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.bCapital = C.capital;
 		Marker.Loyalty = C.loyalty;
 		Marker.Era = Game.playerEra(C.owner);
+		if (const sov::TypeIndex Civ = S.players[static_cast<size_t>(C.owner)].civ; Civ != sov::kNone)
+		{
+			Marker.Civ = UTF8_TO_TCHAR(Rules.civs[static_cast<size_t>(Civ)].id.c_str());
+		}
 		for (const sov::CityWonder& W : C.wonders)
 		{
 			if (Game.visibility(View, W.pos) == sov::Visibility::Unrevealed)

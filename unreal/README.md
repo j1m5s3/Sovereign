@@ -143,5 +143,5 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 ## Not yet
 
 - Sound: there is none yet (music, ambience and effects wait on a direction).
-- The art is one temperate look for every civ: city kits change with the era, not the culture, and each wonder and natural wonder is drawn by kind rather than as itself.
+- City centres follow the six architectural styles only until the Industrial era (then every civ shares the Industrial and Modern kits); districts, improvements and units are one look for every civ; each wonder and natural wonder is drawn by kind rather than as itself.
 - Live battles draw each side's men as its unit's figure only on foot (spearman, archer, musketeer, rifleman); horsemen, engines and vehicles fight as spearmen there.
