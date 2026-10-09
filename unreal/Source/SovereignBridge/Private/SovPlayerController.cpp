@@ -1519,12 +1519,14 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	{
 		Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrength(*A, *D, true, false), A->hp, G.isLeader(*A)};
 		Spec.Defender = {Str(R.units[static_cast<size_t>(D->type)].name), D->owner, G.combatStrength(*D, *A, false, false), D->hp, G.isLeader(*D)};
+		Spec.Defender.Figure = SovUnitFigure(R.units[static_cast<size_t>(D->type)], false, false);
 	}
 	else
 	{
 		Spec.Attacker = {Str(R.units[static_cast<size_t>(A->type)].name), A->owner, G.combatStrengthVsCity(*A, *C, true, false), A->hp, G.isLeader(*A)};
 		Spec.Defender = {Str(C->name), C->owner, G.cityStrength(*C), FMath::Clamp(C->hp, 1, 100), false};
 	}
+	Spec.Attacker.Figure = SovUnitFigure(R.units[static_cast<size_t>(A->type)], false, false);
 	Spec.HumanSide = A->owner == Me() ? 0 : 1;
 	Spec.bLeaderPresent = L != nullptr;
 	if (L)
