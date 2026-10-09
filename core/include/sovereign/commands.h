@@ -89,6 +89,8 @@ enum class CommandType : uint8_t {
     HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
     BuildRoad = 77,             // id = Military Engineer (until railroads), Legionary or Qin's Builder: a road on its plot for a charge (none for Qin's)
     SetCityFocus = 78,          // id = city, arg = CityFocus: the yield its citizens favour (02: Citizens)
+    AppointBodyguard = 80,      // id = a military unit of BODYGUARD_MIN_LEVEL+ or a Great General/Admiral on the ruler's plot, or -1
+                                // with arg = an appointed governor's type: the ruler's named bodyguard (leader doc §8.3)
     CreateProduct = 79,         // id = Great Merchant in a Corporation's city (Monopolies mode): a Product Great Work (07)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
@@ -205,6 +207,9 @@ struct Command {
     static Command autoResolveBattle(PlayerId p) { return {CommandType::AutoResolveBattle, p, -1, {}, 0, 0}; }
     static Command sendAssassin(PlayerId p, int32_t agent, PlayerId target) {
         return {CommandType::SendAssassin, p, agent, {}, target, 0};
+    }
+    static Command appointBodyguard(PlayerId p, UnitId unit, TypeIndex governor = kNone) {
+        return {CommandType::AppointBodyguard, p, unit, {}, governor, 0};
     }
     static Command abandonLeader(PlayerId p) { return {CommandType::AbandonLeader, p, -1, {}, 0, 0}; }
     static Command patronizeGreatPerson(PlayerId p, TypeIndex cls, bool faith) {
@@ -344,6 +349,7 @@ enum class CommandError : uint8_t {
     CannotVote,
     CannotUpgrade,
     CannotTreatWithClan,
+    CannotGuard,
 };
 
 // The items a ProposeDeal command carries (empty when its payload is malformed).

@@ -745,6 +745,10 @@ public:
     int assassinPower(const Agent& agent) const;
     // The leader's defence against an assassin: gear, terrain, wounds, promotions and guards.
     int leaderDefenseVsAssassin(const Unit& leader) const;
+    // Bodyguards (§8.3): a military unit of BODYGUARD_MIN_LEVEL+ or a Great General or Admiral on the ruler's plot
+    // (unit), or an appointed governor (unit kNoUnit, governor its type), up to BODYGUARD_MAX.
+    bool canAppointBodyguard(PlayerId player, UnitId unit, TypeIndex governor = kNone) const;
+    int bodyguardDefense(PlayerId player) const;  // what the ruler's bodyguards add against an assassin
     // An opening: the leader is outside a city, or in one with no own military unit on or next to its plot.
     bool leaderExposed(const Unit& leader) const;
     int assassinSuccessPercent(const Agent& agent, const Unit& leader) const;

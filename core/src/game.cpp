@@ -383,6 +383,7 @@ CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePa
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:
+        case CommandType::AppointBodyguard:
         case CommandType::AbandonLeader:
         case CommandType::SendAssassin:
         case CommandType::CityStance:
@@ -1412,6 +1413,7 @@ void Game::apply(const Command& c) {
         case CommandType::EquipGear:
         case CommandType::LinkEscort:
         case CommandType::ChooseSuccessor:
+        case CommandType::AppointBodyguard:
         case CommandType::AbandonLeader:
         case CommandType::SendAssassin:
         case CommandType::CityStance: applyLeader(c); break;

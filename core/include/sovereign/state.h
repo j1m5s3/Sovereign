@@ -397,6 +397,15 @@ struct Relation {
     uint8_t delegation = 0;       // this player keeps 1 a delegation, 2 a resident embassy, with that one (08)
 };
 
+// A named companion sworn to guard the ruler (leader doc §8.3): it travels with the ruler, off the map, stands
+// against assassins and dies when a blow falls on it. Its kind is its trait.
+enum class BodyguardKind : uint8_t { Soldier = 0, Commander = 1, Steward = 2 };
+struct Bodyguard {
+    std::string name;
+    BodyguardKind kind = BodyguardKind::Soldier;
+    int32_t level = 1;
+};
+
 struct Player {
     PlayerId id = kNoPlayer;
     TypeIndex civ = kNone;
@@ -481,6 +490,7 @@ struct Player {
     int capturedTurn = 0;           // when the captor took it
     std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
     std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
+    std::vector<Bodyguard> bodyguards;       // the ruler's named companions (§8.3)
     std::vector<int32_t> leaderVisits;       // plot indices of its city centers and districts a ruler has visited, sorted (§3)
 };
 
@@ -643,6 +653,7 @@ enum class EventKind : uint8_t {
     LeaderLost,      // actor captured (value 1) or killed (value 0) target's ruler in battle
     Succession,      // actor crowned a ruler; value: the Succession kind + 16 x the heir's place in the dynasty
     AssassinKilledDouble,  // actor's assassin struck target's body double instead of its ruler
+    AssassinKilledGuard,   // actor's assassin struck down one of target's bodyguards instead of its ruler
 };
 struct GameEvent {
     int32_t turn = 0;

@@ -1785,6 +1785,15 @@ void leader(View& v) {
         }
         if (best != kNone && v.game.submit(Command::equipGear(v.me, id, best)) == CommandError::Ok) return;  // that took its turn
     }
+    // Bodyguards once an assassin has come for our ruler (§8.3): a veteran or a Great General at its side swears in.
+    const std::vector<OpinionMemory>& mem = s.players[at(v.me)].memories;
+    if (std::any_of(mem.begin(), mem.end(), [](const OpinionMemory& m) { return m.kind == MemoryKind::Assassin; })) {
+        std::vector<UnitId> beside;
+        for (const Unit& u : s.units) {
+            if (u.owner == v.me && u.pos == capital->pos && u.id != id && v.game.canAppointBodyguard(v.me, u.id)) beside.push_back(u.id);
+        }
+        for (UnitId u : beside) v.game.submit(Command::appointBodyguard(v.me, u));
+    }
     // Stances in the capital (§4): Fear when loyalty slips, Benevolence when amenities run short and gold allows.
     const CityReport rep = v.game.cityReport(capital->id);
     if (capital->loyalty < 60 && v.game.canTakeStance(v.me, capital->id, Stance::Fear))

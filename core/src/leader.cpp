@@ -27,6 +27,32 @@ const Unit* Game::leaderOf(PlayerId player) const {
     return nullptr;
 }
 
+bool Game::canAppointBodyguard(PlayerId player, UnitId unit, TypeIndex governor) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    const Unit* leader = leaderOf(player);
+    if (!leader || static_cast<int>(p.bodyguards.size()) >= rules_->globalInt("BODYGUARD_MAX")) return false;
+    if (unit == kNoUnit) {
+        // An appointed governor, wherever it serves.
+        return std::any_of(p.governors.begin(), p.governors.end(), [&](const Governor& g) { return g.type == governor && governor != kNone; });
+    }
+    const Unit* u = state_.unit(unit);
+    if (!u || u->owner != player || u->pos != leader->pos || governor != kNone) return false;
+    if (u->greatPerson != kNone) {
+        const std::vector<UnitId> commanders = successorGreatPeople(player);  // Great Generals and Admirals
+        return std::find(commanders.begin(), commanders.end(), unit) != commanders.end();
+    }
+    return typeOf(*rules_, *u).layer == UnitLayer::Military && u->level() >= rules_->globalInt("BODYGUARD_MIN_LEVEL");
+}
+
+int Game::bodyguardDefense(PlayerId player) const {
+    int d = 0;
+    for (const Bodyguard& b : state_.players[static_cast<size_t>(player)].bodyguards) {
+        const char* base = b.kind == BodyguardKind::Commander ? "BODYGUARD_COMMANDER_DEFENSE" : b.kind == BodyguardKind::Steward ? "BODYGUARD_STEWARD_DEFENSE" : "BODYGUARD_SOLDIER_DEFENSE";
+        d += rules_->globalInt(base) + rules_->globalInt("BODYGUARD_DEFENSE_PER_LEVEL") * (b.level - 1);
+    }
+    return d;
+}
+
 const Unit* Game::escortOf(const Unit& escorted) const {
     for (const Unit& u : state_.units) {
         if (u.escorting == escorted.id && u.owner == escorted.owner && u.pos == escorted.pos) return &u;
@@ -200,6 +226,7 @@ CommandError Game::validateLeader(const Command& c) const {
         canSucceed(c.player, static_cast<Succession>(c.arg), c.id, &why);
         return why;
     }
+    if (c.type == CommandType::AppointBodyguard) return canAppointBodyguard(c.player, c.id, static_cast<TypeIndex>(c.arg)) ? CommandError::Ok : CommandError::CannotGuard;
     if (c.type == CommandType::CityStance) {
         if (c.arg < 0 || c.arg > static_cast<int32_t>(Stance::Fear)) return CommandError::CannotTakeStance;
         CommandError why = CommandError::Ok;
@@ -242,6 +269,25 @@ CommandError Game::validateLeader(const Command& c) const {
 
 void Game::applyLeader(const Command& c) {
     Player& p = state_.players[static_cast<size_t>(c.player)];
+    if (c.type == CommandType::AppointBodyguard) {
+        // Sworn to the ruler (§8.3): the unit, Great Person or governor leaves its post for good.
+        Bodyguard b;
+        if (c.id == kNoUnit) {
+            const TypeIndex type = static_cast<TypeIndex>(c.arg);
+            auto& govs = p.governors;
+            const auto g = std::find_if(govs.begin(), govs.end(), [&](const Governor& x) { return x.type == type; });
+            b = {rules_->governors[static_cast<size_t>(type)].name, BodyguardKind::Steward, 1 + static_cast<int32_t>(g->promotions.size())};
+            govs.erase(g);
+        } else {
+            const Unit& u = *state_.unit(c.id);
+            if (u.greatPerson != kNone) b = {rules_->greatPeople[static_cast<size_t>(u.greatPerson)].name, BodyguardKind::Commander, 1};
+            else b = {typeOf(*rules_, u).name + " veteran", BodyguardKind::Soldier, u.level()};
+            removeUnit(c.id);
+        }
+        b.level = std::min(b.level, rules_->globalInt("BODYGUARD_MAX_LEVEL"));
+        p.bodyguards.push_back(b);
+        return;
+    }
     if (c.type == CommandType::AbandonLeader) {
         // The captive is given up; the empire crowns someone else at a heavier loyalty cost (§5).
         p.captor = kNoPlayer;
@@ -369,6 +415,7 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) 
     Player& p = state_.players[static_cast<size_t>(owner)];
     p.savedGear = l->gear;
     p.savedPromotions = l->promotions;
+    p.bodyguards.clear();  // they fall or are taken with their ruler
     for (Unit& o : state_.units) {
         if (o.escorting == leader) o.escorting = kNoUnit;
     }
@@ -636,6 +683,7 @@ int Game::leaderDefenseVsAssassin(const Unit& leader) const {
     const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     d -= rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER") * (maxHp - leader.hp) / std::max(1, maxHp);
     d += unitEffectTotal(leader, UnitEffectKind::AssassinDefense);
+    d += bodyguardDefense(leader.owner);  // sworn companions, always at its side (§8.3)
     // Guards on or next to its plot join the fight.
     for (const Unit& u : state_.units) {
         if (u.owner != leader.owner || typeOf(*rules_, u).layer != UnitLayer::Military) continue;
@@ -707,6 +755,18 @@ void Game::processAgents() {
                 pushEvent(EventKind::AssassinKilledDouble, sender, victim, 0);
                 continue;
             }
+            if (!prey.bodyguards.empty() && static_cast<int>(rng.below(100)) < rules_->globalInt("BODYGUARD_SHIELD_PERCENT")) {
+                // A bodyguard throws themself in the way (§8.3): the lowest-level one dies, and the sender is known.
+                const auto weakest = std::min_element(prey.bodyguards.begin(), prey.bodyguards.end(),
+                                                      [](const Bodyguard& x, const Bodyguard& y) { return x.level < y.level; });
+                prey.bodyguards.erase(weakest);
+                a.target = kNoPlayer;
+                ++state_.players[static_cast<size_t>(sender)].assassinsSent;
+                remember(victim, sender, MemoryKind::Assassin, -15, 60);
+                addGrievance(victim, sender, rules_->globalInt("ASSASSIN_SENDER_GRIEVANCES"));
+                pushEvent(EventKind::AssassinKilledGuard, sender, victim, 0);
+                continue;
+            }
             const int diff = assassinPower(a) - leaderDefenseVsAssassin(*leader);
             const int dmg = combatDamage(diff, rng.range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE")));
             Unit* l = state_.unit(leaderId);
@@ -727,6 +787,8 @@ void Game::processAgents() {
         // A miss: the assassin dies in the attempt or is taken alive (the sender is revealed).
         const bool killed = static_cast<int>(rng.below(100)) < rules_->globalInt("ASSASSIN_KILLED_PERCENT");
         state_.agents.erase(it);
+        // Each bodyguard who saw off an assassin grows in skill.
+        for (Bodyguard& b : state_.players[static_cast<size_t>(victim)].bodyguards) b.level = std::min(b.level + 1, rules_->globalInt("BODYGUARD_MAX_LEVEL"));
         if (killed) {
             awardXp(*state_.unit(leaderId), rules_->globalInt("ASSASSIN_LEADER_XP"), false);
             pushEvent(EventKind::AssassinKilled, sender, victim, 0);

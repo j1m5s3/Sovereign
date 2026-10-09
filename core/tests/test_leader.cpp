@@ -380,9 +380,11 @@ TEST(fallen_leader_starts_an_interregnum_and_a_succession) {
     Game& g = *f.game;
     CHECK_EQ(g.state().players[0].leaderName, std::string("Elizabeth I"));
     const int before = g.grievances(0, 1);
+    g.stateMutForTests().players[0].bodyguards = {{"Guard", BodyguardKind::Soldier, 2}};
     REQUIRE(g.submit(Command::rangedAttack(1, f.archer, {8, 5})) == CommandError::Ok);  // killed, not captured
     const Player& p = g.state().players[0];
     CHECK(!g.leaderOf(0));
+    CHECK(p.bodyguards.empty());  // they fall with their ruler (§8.3)
     CHECK_EQ(g.grievances(0, 1), before + rules().globalInt("LEADER_KILLED_GRIEVANCES"));  // the killer is known (§5)
     CHECK(p.successionPending);
     CHECK_EQ(p.interregnumTurns, rules().globalInt("LEADER_INTERREGNUM_TURNS"));
@@ -1482,4 +1484,178 @@ TEST(an_ai_hears_a_ruler_who_came_in_person) {
     CHECK(accepts(1, false));
     CHECK(!accepts(2, false));  // the capital, not any city
     CHECK(!accepts(1, true));   // a human judge gets nothing from a visit
+}
+
+// ---- leader part 8: bodyguards (leader doc §8.3)
+
+namespace {
+TypeIndex aGreatGeneral() {
+    const TypeIndex general = rules().greatPersonClass("GREAT_PERSON_CLASS_GENERAL");
+    for (size_t i = 0; i < rules().greatPeople.size(); ++i) {
+        if (rules().greatPeople[i].cls == general) return static_cast<TypeIndex>(i);
+    }
+    return kNone;
+}
+}  // namespace
+
+TEST(a_ruler_swears_in_bodyguards) {
+    UnitId veteran = 0, green = 0, apart = 0, general = 0, foreign = 0, scientist = 0;
+    const TypeIndex victor = rules().governor("GOVERNOR_VICTOR");
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {2, 2}, true);
+            addLeader(s, 0, {5, 5});
+            veteran = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            s.units.back().promotions = {promo("PROMOTION_BATTLECRY"), promo("PROMOTION_TORTOISE")};  // level 3
+            green = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            s.units.back().promotions = {promo("PROMOTION_BATTLECRY")};  // level 2: too green
+            apart = addUnit(s, "UNIT_WARRIOR", 0, {6, 5});
+            s.units.back().promotions = {promo("PROMOTION_BATTLECRY"), promo("PROMOTION_TORTOISE")};
+            general = addUnit(s, "UNIT_GREAT_GENERAL", 0, {5, 5});
+            s.units.back().greatPerson = aGreatGeneral();
+            foreign = addUnit(s, "UNIT_WARRIOR", 1, {5, 5});
+            s.units.back().promotions = {promo("PROMOTION_BATTLECRY"), promo("PROMOTION_TORTOISE")};
+            scientist = addUnit(s, "UNIT_GREAT_SCIENTIST", 0, {5, 5});
+            for (size_t i = 0; i < rules().greatPeople.size(); ++i) {
+                if (rules().greatPeople[i].cls == rules().greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST")) s.units.back().greatPerson = static_cast<TypeIndex>(i);
+            }
+            Game::fitPlayerToRules(s.players[0], rules());
+            Governor gov;
+            gov.type = victor;
+            gov.promotions = {rules().governorPromotion("GOVERNOR_PROMOTION_REDOUBT")};
+            s.players[0].governors.push_back(gov);
+        },
+        false);
+    REQUIRE(aGreatGeneral() != kNone);
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, green)), CommandError::CannotGuard);
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, apart)), CommandError::CannotGuard);  // not at the ruler's side
+    CHECK(!g->canAppointBodyguard(1, veteran));  // not theirs
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, foreign)), CommandError::CannotGuard);
+    REQUIRE(g->state().unit(scientist)->greatPerson != kNone);
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, scientist)), CommandError::CannotGuard);  // a General or Admiral only
+    const Unit& leader = *g->leaderOf(0);
+    const int before = g->leaderDefenseVsAssassin(leader);
+    REQUIRE(g->submit(Command::appointBodyguard(0, veteran)) == CommandError::Ok);
+    CHECK(!g->state().unit(veteran));
+    REQUIRE(g->state().players[0].bodyguards.size() == 1u);
+    const Bodyguard soldier = g->state().players[0].bodyguards[0];
+    CHECK(soldier.kind == BodyguardKind::Soldier);
+    CHECK_EQ(soldier.level, 3);
+    const int soldierDefense = rules().globalInt("BODYGUARD_SOLDIER_DEFENSE") + 2 * rules().globalInt("BODYGUARD_DEFENSE_PER_LEVEL");
+    CHECK_EQ(g->bodyguardDefense(0), soldierDefense);
+    // Sworn in, the veteran no longer stands beside the ruler as a guard on the map, but at its side for good.
+    CHECK(g->leaderDefenseVsAssassin(*g->leaderOf(0)) > before - soldierDefense);
+    REQUIRE(g->submit(Command::appointBodyguard(0, general)) == CommandError::Ok);
+    const Bodyguard commander = g->state().players[0].bodyguards[1];
+    CHECK(commander.kind == BodyguardKind::Commander);
+    CHECK_EQ(commander.name, rules().greatPeople[static_cast<size_t>(aGreatGeneral())].name);
+    CHECK_EQ(commander.level, 1);
+    CHECK_EQ(g->bodyguardDefense(0), soldierDefense + rules().globalInt("BODYGUARD_COMMANDER_DEFENSE"));
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, kNoUnit, victor)), CommandError::CannotGuard);  // two at most
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    REQUIRE(back->state().players[0].bodyguards.size() == 2u);
+    CHECK_EQ(back->state().players[0].bodyguards[0].name, soldier.name);
+    CHECK(back->state().players[0].bodyguards[1].kind == BodyguardKind::Commander);
+    CHECK_EQ(back->bodyguardDefense(0), g->bodyguardDefense(0));
+}
+
+TEST(a_governor_can_guard_the_ruler) {
+    const TypeIndex victor = rules().governor("GOVERNOR_VICTOR");
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {2, 2}, true);
+            addLeader(s, 0, {5, 5});
+            Game::fitPlayerToRules(s.players[0], rules());
+            Governor gov;
+            gov.type = victor;
+            gov.promotions = {rules().governorPromotion("GOVERNOR_PROMOTION_REDOUBT")};
+            s.players[0].governors.push_back(gov);
+        },
+        false);
+    CHECK_EQ(g->submit(Command::appointBodyguard(0, kNoUnit, rules().governor("GOVERNOR_AMANI"))), CommandError::CannotGuard);  // not appointed
+    REQUIRE(g->submit(Command::appointBodyguard(0, kNoUnit, victor)) == CommandError::Ok);
+    CHECK(g->state().players[0].governors.empty());
+    const Bodyguard b = g->state().players[0].bodyguards.at(0);
+    CHECK(b.kind == BodyguardKind::Steward);
+    CHECK_EQ(b.name, rules().governors[static_cast<size_t>(victor)].name);
+    CHECK_EQ(b.level, 2);
+    CHECK_EQ(g->bodyguardDefense(0), rules().globalInt("BODYGUARD_STEWARD_DEFENSE") + rules().globalInt("BODYGUARD_DEFENSE_PER_LEVEL"));
+}
+
+TEST(bodyguards_take_blows_and_grow) {
+    // Over many seeds, a strike that would have hit a lone, hurt leader sometimes kills the weakest bodyguard;
+    // a failed attempt raises each one's level, and a fallen ruler takes them all.
+    int guards = 0, others = 0;
+    for (uint64_t seed = 1; seed <= 30; ++seed) {
+        auto g = duel(
+            [&](GameState& s) {
+                s.rng.seed(seed);
+                addCity(s, 0, {2, 2}, true);
+                addLeader(s, 0, {9, 6});
+                s.units.back().hp = 40;
+                addAgent(s, 1, 0, 1);
+                s.players[0].bodyguards = {{"Old guard", BodyguardKind::Soldier, 5}, {"New guard", BodyguardKind::Soldier, 1}};
+            },
+            false);
+        pass(*g, 2);
+        REQUIRE(g->state().events.size() == 1u);
+        const GameEvent& e = g->state().events.back();
+        const std::vector<Bodyguard>& left = g->state().players[0].bodyguards;
+        if (e.kind == EventKind::AssassinKilledGuard) {
+            ++guards;
+            REQUIRE(left.size() == 1u);
+            CHECK_EQ(left[0].name, "Old guard");  // the weakest fell
+            CHECK(g->leaderOf(0));
+            CHECK(g->grievances(0, 1) > 0);
+        } else if (e.kind == EventKind::AssassinKilled || e.kind == EventKind::AssassinCaptured) {
+            ++others;
+            REQUIRE(left.size() == 2u);
+            CHECK_EQ(left[0].level, 5);  // already at BODYGUARD_MAX_LEVEL
+            CHECK_EQ(left[1].level, 2);
+        } else if (e.kind == EventKind::AssassinKilledLeader) {
+            ++others;
+            CHECK(left.empty());
+        } else {
+            ++others;
+            CHECK_EQ(left.size(), 2u);
+        }
+    }
+    CHECK(guards > 0);
+    CHECK(others > 0);
+}
+
+TEST(an_ai_swears_in_a_bodyguard_once_assassins_come) {
+    for (const bool assassinCame : {false, true}) {
+        UnitId veteran = 0;
+        auto g = duel(
+            [&](GameState& s) {
+                addCity(s, 0, {5, 5}, true);
+                addLeader(s, 0, {5, 5});
+                veteran = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+                s.units.back().promotions = {promo("PROMOTION_BATTLECRY"), promo("PROMOTION_TORTOISE")};
+                if (assassinCame) s.players[0].memories.push_back({1, MemoryKind::Assassin, -15, 60});
+            },
+            false);
+        ai::playTurn(*g);
+        CHECK_EQ(g->state().players[0].bodyguards.size(), assassinCame ? 1u : 0u);
+        CHECK_EQ(g->state().unit(veteran) == nullptr, assassinCame);
+    }
+}
+
+TEST(a_bodyguard_starts_no_higher_than_the_cap) {
+    UnitId veteran = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {2, 2}, true);
+            addLeader(s, 0, {5, 5});
+            veteran = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            s.units.back().promotions = {promo("PROMOTION_BATTLECRY"), promo("PROMOTION_TORTOISE"), promo("PROMOTION_AMPHIBIOUS"),
+                                         promo("PROMOTION_COMMANDO"), promo("PROMOTION_ZWEIHANDER"), promo("PROMOTION_URBAN_WARFARE")};
+        },
+        false);
+    REQUIRE(g->state().unit(veteran)->level() > rules().globalInt("BODYGUARD_MAX_LEVEL"));
+    REQUIRE(g->submit(Command::appointBodyguard(0, veteran)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].bodyguards.at(0).level, rules().globalInt("BODYGUARD_MAX_LEVEL"));
 }
