@@ -360,6 +360,7 @@ struct ImprovementType {
     Unlock tourismAfter;
     int minAppeal = -100;  // the plot's appeal it needs (Seaside Resort 4)
     bool coastal = false;  // on the coast only
+    bool water = false;    // works the sea (Fishing Boats, Offshore Oil Rig ...): on water only, and the others on land only
     // Civ unique improvements (leaders-and-art-style).
     TypeIndex uniqueTo = kNone;
     std::string uniqueToId;  // (loading only)

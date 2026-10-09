@@ -57,6 +57,8 @@ bool Game::improvementFits(PlayerId player, Hex at, TypeIndex improvement, bool 
     // improvements that work it.
     if (!(resourceSeen ? contains(im.validResources, p.resource) : p.feature != kNone ? contains(im.validFeatures, p.feature) : contains(im.validTerrains, p.terrain)))
         return false;
+    // Sea improvements on water, the others on land: Amber and Oil are found on both, each with an improvement of its own.
+    if (im.water != rules_->terrains[static_cast<size_t>(p.terrain)].water) return false;
     if (!ownUnit && !hasUnlocked(player, im.unlock)) return false;
     // Civ unique improvements: their civ only, some on a river or at the edge of its land.
     if (im.uniqueTo != kNone && im.uniqueTo != state_.players[static_cast<size_t>(player)].civ) return false;

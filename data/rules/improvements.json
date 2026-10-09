@@ -186,7 +186,8 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "water": true
   },
   {
    "id": "IMPROVEMENT_FORT",
@@ -393,7 +394,8 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "water": true
   },
   {
    "id": "IMPROVEMENT_OFFSHORE_WIND_FARM",
@@ -411,7 +413,8 @@
     "kind": "GOLD",
     "amount": 25
    },
-   "powerProvided": 2
+   "powerProvided": 2,
+   "water": true
   },
   {
    "id": "IMPROVEMENT_OIL_WELL",
@@ -626,7 +629,8 @@
    "tourism": {
     "source": "CULTURE",
     "percent": 100
-   }
+   },
+   "water": true
   },
   {
    "id": "IMPROVEMENT_SKI_RESORT",
@@ -911,7 +915,8 @@
    "plunder": {
     "kind": "GOLD",
     "amount": 25
-   }
+   },
+   "water": true
   },
   {
    "id": "IMPROVEMENT_MAHAVIHARA",
