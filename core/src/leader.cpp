@@ -132,6 +132,38 @@ std::vector<UnitId> Game::successorUnits(PlayerId player) const {
     return out;
 }
 
+std::vector<UnitId> Game::successorGreatPeople(PlayerId player) const {
+    std::vector<UnitId> out;
+    const TypeIndex general = rules_->greatPersonClass("GREAT_PERSON_CLASS_GENERAL");
+    const TypeIndex admiral = rules_->greatPersonClass("GREAT_PERSON_CLASS_ADMIRAL");
+    for (const Unit& u : state_.units) {
+        if (u.owner != player || u.greatPerson == kNone) continue;
+        const TypeIndex cls = rules_->greatPeople[static_cast<size_t>(u.greatPerson)].cls;
+        if (cls != kNone && (cls == general || cls == admiral)) out.push_back(u.id);
+    }
+    return out;
+}
+
+std::vector<TypeIndex> Game::successorGovernors(PlayerId player) const {
+    std::vector<TypeIndex> out;
+    for (const Governor& g : state_.players[static_cast<size_t>(player)].governors) out.push_back(g.type);
+    return out;
+}
+
+std::vector<TypeIndex> Game::successorPromotions(PlayerId /*player*/, Succession kind, UnitId unit) const {
+    // Sovereign tuning (§5): a veteran unit brings the Warlord's first promotion, a Great General or Admiral
+    // both (a higher level and a stronger aura), and a governor the first of the branch its specialty seeds:
+    // Victor Warlord; Amani, Pingala and Moksha Statesman; Magnus, Liang and Reyna Builder-King.
+    const TypeIndex warlord = rules_->promotion("PROMOTION_SOVEREIGN_WEAPON_MASTER");
+    if (kind == Succession::Unit) return {warlord};
+    if (kind == Succession::GreatPerson) return {warlord, rules_->promotion("PROMOTION_SOVEREIGN_MARSHAL")};
+    if (kind != Succession::Governor || unit < 0 || static_cast<size_t>(unit) >= rules_->governors.size()) return {};
+    const std::string& id = rules_->governors[static_cast<size_t>(unit)].id;
+    if (id == "GOVERNOR_VICTOR") return {warlord};
+    if (id == "GOVERNOR_AMANI" || id == "GOVERNOR_PINGALA" || id == "GOVERNOR_MOKSHA") return {rules_->promotion("PROMOTION_SOVEREIGN_WARY")};
+    return {rules_->promotion("PROMOTION_SOVEREIGN_OVERSEER")};
+}
+
 bool Game::canSucceed(PlayerId player, Succession kind, UnitId unit, CommandError* why) const {
     auto result = [&](bool ok) {
         if (why) *why = ok ? CommandError::Ok : CommandError::CannotSucceed;
@@ -142,7 +174,16 @@ bool Game::canSucceed(PlayerId player, Succession kind, UnitId unit, CommandErro
     switch (kind) {
         case Succession::Heir: return result(hasHeir(player));
         case Succession::Unit: return result(std::find(units.begin(), units.end(), unit) != units.end());
+        // Governors and great people do not bar a regent: giving one up is a choice (§5).
         case Succession::Regent: return result(!hasHeir(player) && units.empty());
+        case Succession::Governor: {
+            const std::vector<TypeIndex> govs = successorGovernors(player);
+            return result(std::find(govs.begin(), govs.end(), static_cast<TypeIndex>(unit)) != govs.end());
+        }
+        case Succession::GreatPerson: {
+            const std::vector<UnitId> people = successorGreatPeople(player);
+            return result(std::find(people.begin(), people.end(), unit) != people.end());
+        }
     }
     return result(false);
 }
@@ -150,7 +191,7 @@ bool Game::canSucceed(PlayerId player, Succession kind, UnitId unit, CommandErro
 CommandError Game::validateLeader(const Command& c) const {
     const Player& p = state_.players[static_cast<size_t>(c.player)];
     if (c.type == CommandType::ChooseSuccessor) {
-        if (c.arg < 0 || c.arg > static_cast<int32_t>(Succession::Regent)) return CommandError::CannotSucceed;
+        if (c.arg < 0 || c.arg > static_cast<int32_t>(Succession::GreatPerson)) return CommandError::CannotSucceed;
         // An heir may keep one of the fallen leader's promotions (§5).
         if (c.arg2 != kNone && (static_cast<Succession>(c.arg) != Succession::Heir ||
                                 std::find(p.savedPromotions.begin(), p.savedPromotions.end(), c.arg2) == p.savedPromotions.end()))
@@ -241,12 +282,22 @@ void Game::applyLeader(const Command& c) {
         const Succession kind = static_cast<Succession>(c.arg);
         const CivType& civ = rules_->civs[static_cast<size_t>(p.civ)];
         std::optional<Hex> at = throneCity(c.player);
-        if (kind == Succession::Unit) {
+        const std::vector<TypeIndex> seeded = successorPromotions(c.player, kind, c.id);
+        if (kind == Succession::Unit || kind == Succession::GreatPerson) {
             const Unit* u = state_.unit(c.id);
             if (!at) at = u->pos;
-            p.leaderName = civ.name + " Warlord";
+            p.leaderName = civ.name + (kind == Succession::Unit ? " Warlord" : " Marshal");
             p.rulingHeir = -1;
-            removeUnit(c.id);
+            removeUnit(c.id);  // the unit or the Great Person is gone
+        } else if (kind == Succession::Governor) {
+            // The governor leaves their post; the titles spent on them are lost with them.
+            const TypeIndex type = static_cast<TypeIndex>(c.id);
+            auto& govs = p.governors;
+            const auto g = std::find_if(govs.begin(), govs.end(), [&](const Governor& x) { return x.type == type; });
+            if (const City* seat = g->city != kNoCity ? state_.city(g->city) : nullptr; !at && seat) at = seat->pos;
+            p.leaderName = rules_->governors[static_cast<size_t>(type)].name;
+            p.rulingHeir = -1;
+            govs.erase(g);
         } else if (kind == Succession::Heir) {
             p.rulingHeir = p.dynastyNext;  // the heir's trait rules with them
             p.leaderName = rules_->dynastyOf(p.civ)->names[static_cast<size_t>(p.dynastyNext++)];
@@ -268,6 +319,9 @@ void Game::applyLeader(const Command& c) {
             if (p.savedGear[slot] != kNone) l.gear[slot] = p.savedGear[slot];  // the throne's armory passes on
         }
         if (c.arg2 != kNone) l.promotions = {static_cast<TypeIndex>(c.arg2)};
+        for (TypeIndex promo : seeded) {
+            if (promo != kNone) l.promotions.push_back(promo);
+        }
         l.movesLeft = Fixed();
         p.successionPending = false;
         refreshVisibility(c.player);

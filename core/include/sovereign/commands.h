@@ -107,9 +107,10 @@ enum class CommandType : uint8_t {
 enum class CasusBelli : int32_t { None = 0, HolyWar, Liberation, Reconquest, Protectorate, Colonial, TerritorialExpansion, Ideological, Retribution, GoldenAge, JointWar };
 constexpr int kNumCasusBelli = 11;  // JointWar only through a deal (08: Joint War)
 
-// Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit,
-// or a regent when neither exists (a stand-in until governors and Great Generals exist).
-enum class Succession : int32_t { Heir = 0, Unit = 1, Regent = 2 };
+// Who takes the throne (leader doc §5): the dynasty's next heir, a level-4+ military unit, a regent
+// when neither exists, an appointed governor (the command's unit is its governor type), or a Great
+// General or Admiral (the command's unit).
+enum class Succession : int32_t { Heir = 0, Unit = 1, Regent = 2, Governor = 3, GreatPerson = 4 };
 
 // The leader's stance toward a city's citizens (leader doc §4).
 enum class Stance : int32_t { Benevolence = 0, Fear = 1 };

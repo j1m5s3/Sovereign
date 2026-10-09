@@ -727,6 +727,10 @@ public:
     // Succession (§5): the dynasty still has an heir; units that may take the throne (level 4+).
     bool hasHeir(PlayerId player) const;
     std::vector<UnitId> successorUnits(PlayerId player) const;
+    std::vector<UnitId> successorGreatPeople(PlayerId player) const;   // Great Generals and Admirals held
+    std::vector<TypeIndex> successorGovernors(PlayerId player) const;  // governor types appointed
+    // The promotions a successor from the empire's pool takes the throne with (§5).
+    std::vector<TypeIndex> successorPromotions(PlayerId player, Succession kind, UnitId unit) const;
     bool canSucceed(PlayerId player, Succession kind, UnitId unit, CommandError* why = nullptr) const;
     // Presence aura (§1): range in plots of the leader's strength bonus to nearby units.
     int auraRange(const Unit& leader) const;
