@@ -448,6 +448,7 @@ struct Player {
     bool inquisition = false;     // Launch Inquisition done: Inquisitors may be bought (06)
     int16_t futureTechs = 0;      // Future Tech and Future Civic completions: they repeat [GS] (04)
     int16_t futureCivics = 0;
+    int16_t districtsCounted = 0;  // specialty districts it had finished when its last tech or civic was done (03: district discount)
     std::vector<uint8_t> fuelShort; // per resource: unit maintenance went unpaid this turn [GS]
     std::vector<Relation> relations;  // per player
     std::vector<OpinionMemory> memories;  // what this player remembers of others (diplomacy)

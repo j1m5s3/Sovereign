@@ -42,31 +42,29 @@ int Game::districtLimit(const City& city) const {
     return 1 + std::max(0, city.population - 1) / per + cityGreatPersonEffectTotal(city, GreatPersonEffectKind::DistrictCapacity);
 }
 
-int Game::districtCost(PlayerId player, TypeIndex type) const {
+int Game::districtCost(PlayerId player, TypeIndex type, const City* building) const {
     const DistrictType& d = rules_->districts[static_cast<size_t>(type)];
     Fixed cost = Fixed::fromInt(d.cost * speedPercent(state_, *rules_)) / 100;
     // x (1 + 9 x the larger share of the tech or civic tree completed).
     if (d.costProgression != DistrictCostProgression::None) cost = cost * (Fixed::fromInt(1) + treeProgress(player) * 9);
     if (d.costProgression == DistrictCostProgression::NumUnderAvgPlusTech && d.costDiscountPercent > 0) {
-        // Discount for a type built less than the player's own average: A types unlocked,
-        // B districts completed, discounted while B >= A and B / A > this type's count.
-        int unlocked = 0, completed = 0, ofType = 0;
+        // Discount for a type built less than the player's own average (03): A specialty district types unlocked (those
+        // under the population limit, the Preserve too), B specialty districts finished as of the player's last tech or
+        // civic; discounted while B >= A and B / A > the districts of this type already placed, finished or not (the
+        // one `building` has placed is the one priced, so it does not count).
+        int unlocked = 0, ofType = 0;
         for (size_t i = 0; i < rules_->districts.size(); ++i) {
             const DistrictType& o = rules_->districts[i];
-            if (o.needsPopulation && o.costProgression == DistrictCostProgression::NumUnderAvgPlusTech &&
-                hasUnlocked(player, o.unlock))
-                ++unlocked;
+            if (o.needsPopulation && hasUnlocked(player, o.unlock)) ++unlocked;
         }
-        for (const City& c : state_.cities) {
-            if (c.owner != player) continue;
-            for (const CityDistrict& cd : c.districts) {
-                if (!cd.complete || !rules_->districts[static_cast<size_t>(cd.type)].needsPopulation) continue;
-                ++completed;
-                ofType += cd.type == type ? 1 : 0;
+        const int completed = state_.players[static_cast<size_t>(player)].districtsCounted;
+        if (unlocked > 0 && completed >= unlocked) {
+            for (const City& c : state_.cities) {
+                if (c.owner != player) continue;
+                for (const CityDistrict& cd : c.districts) ofType += cd.type == type && !(building && c.id == building->id && !cd.complete) ? 1 : 0;
             }
+            if (completed > ofType * unlocked) cost = cost * (100 - d.costDiscountPercent) / 100;
         }
-        if (unlocked > 0 && completed >= unlocked && completed > ofType * unlocked)
-            cost = cost * (100 - d.costDiscountPercent) / 100;
     }
     return std::max(1, static_cast<int>(cost.toInt()));
 }

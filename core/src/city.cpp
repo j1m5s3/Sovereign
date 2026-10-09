@@ -784,7 +784,7 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
         if (item.formation > 0)
             base = static_cast<int>((Fixed::fromInt(base) * rules_->global(item.formation == 1 ? "UNIT_CORPS_COST_MODIFIER" : "UNIT_ARMY_COST_MODIFIER")).toInt());
     } else if (item.kind == ProductionKind::District) {
-        return districtCost(player, item.type);  // already scaled by game speed
+        return districtCost(player, item.type, city);  // already scaled by game speed
     } else if (item.kind == ProductionKind::Project) {
         // GAME_PROGRESS: x (1 + param/100 x the larger share of the tech or civic tree completed).
         const ProjectType& pj = rules_->projects[static_cast<size_t>(item.type)];
@@ -859,7 +859,7 @@ int Game::districtPurchaseCost(const City& city, TypeIndex district, bool faith)
     const CityDistrict* d = districtInWork(city, *rules_, district);
     if (!d || d->complete) return -1;
     const ProductionItem item{ProductionKind::District, district};
-    int cost = productionCost(city.owner, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
+    int cost = productionCost(city.owner, item, &city) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
     cost = cost * std::max(0, 100 - purchaseDiscount(city.owner, faith ? YieldType::Faith : YieldType::Gold)) / 100;  // Theocracy, Democracy (04)
     return cost / 5 * 5;
 }

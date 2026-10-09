@@ -1,6 +1,6 @@
 # Record: district, building and wonder rules the spec audit found off (03)
 
-Status: in progress, 2026-10-09 (parts 1 to 3 done; part 4 planned). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
+Status: done, 2026-10-09 (four parts, #253 to #256). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
 
 ## Part 1: pillage, mountains, the Golden Gate and Government Plaza tiers
 
@@ -38,9 +38,18 @@ Results:
 - 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 4 play out differently.
 - Tests: `a_city_holds_several_neighborhoods_and_canals` (a second of each placed, resumed after switching away, offered only with a free plot, bought by a Contractor, its Housing counted, a second Canal's moment counted once, a Campus still one per city), `the_panama_canal_links_water_and_lets_ships_through` (both links, dry land, hills, finished and unfinished); `wonder_rules_data` counts 53 wonders. Mutation check: 16 mutants, all caught (a queued second Canal on dry land was added to catch the last).
 
-## Planned
+## Part 4: the district discount
 
-- **Part 4: the district discount** (03: District cost, `COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH`): count placed districts, keep B (completed districts) as of the last tech or civic finished, and count the Preserve in A.
+The discount for a district type built less than the player's own average (03: District cost, `COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH`) now follows the spec in three ways (`Game::districtCost`):
+- **A counts every specialty district type unlocked**, those under the population limit, so the Preserve too; before, only the types with that cost model counted, which left the Preserve out.
+- **B is the count of specialty districts finished as of the player's last tech or civic** (a Future Tech or Future Civic too), kept in `Player::districtsCounted` (save version 88) and set by `Game::completeNode`. Before, a district counted the moment it was finished.
+- **A type's count takes in districts placed but unfinished.** The district a city has placed and is building does not count against itself, so its cost is the one it was offered (`productionCost` and district purchase pass the city; Sovereign reading, as Civ VI fixes a district's cost when it is placed and the core does not). The AI prices districts the same way.
+- Follow-up for the Unreal front end: its production chooser shows `districtCost(Me(), Item.type)`, the price of one more; for a district the city has already placed it should pass the city.
+
+Results:
+- 128 AI games (Small, 6 AI, turn 200) against part 3: no clear change (population +0.2 ± 0.2, science +0.3 ± 0.6, Gold -5.1 ± 4.6). A 150-turn 6-AI game takes the same time.
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; all 8 play out differently.
+- Tests: `the_district_discount_counts_placed_districts_and_waits_for_research` (no discount until a tech is done, then the discount; the count saved and loaded; the Preserve's type in A; an unfinished Holy Site elsewhere counts, its own city's does not; production and purchase cost), and `district_cost_grows_with_progress_and_discounts` sets the count. Mutation check: 10 mutants, all caught (the save round trip was added to catch the last).
 
 ## Unsure, not changed
 

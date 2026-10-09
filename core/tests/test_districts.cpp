@@ -233,10 +233,69 @@ TEST(district_cost_grows_with_progress_and_discounts) {
     learn(s, 0, {"TECH_WRITING", "TECH_ASTROLOGY"});
     s.city(1)->districts.push_back({district("DISTRICT_CAMPUS"), {8, 6}, true});
     s.city(2)->districts.push_back({district("DISTRICT_CAMPUS"), {16, 6}, true});
+    s.players[0].districtsCounted = 2;
     auto d = Game::fromScenario(rules(), std::move(s));
     const int full = d->districtCost(0, district("DISTRICT_CAMPUS"));
     const int holy = d->districtCost(0, district("DISTRICT_HOLY_SITE"));
     CHECK(holy >= full * 60 / 100 - 1 && holy <= full * 60 / 100 + 1);
+}
+
+TEST(the_district_discount_counts_placed_districts_and_waits_for_research) {
+    // 03: B counts the specialty districts finished as of the last tech or civic; A every specialty district type unlocked,
+    // the Preserve too; a type's count takes in districts placed but unfinished. Two Campuses done, Writing and Astrology
+    // known (A = 2).
+    const TypeIndex campus = district("DISTRICT_CAMPUS"), holy = district("DISTRICT_HOLY_SITE");
+    GameState s = flatState(20, 14, 1);
+    addCity(s, 0, kCenter, true, 4);
+    addCity(s, 0, {14, 6}, false, 4);
+    learn(s, 0, {"TECH_WRITING", "TECH_ASTROLOGY"});
+    Game::fitPlayerToRules(s.players[0], rules());
+    s.city(1)->districts.push_back({campus, {8, 6}, true});
+    s.city(2)->districts.push_back({campus, {16, 6}, true});
+    const auto discounted = [&](const Game& g, const City* building) {
+        return g.districtCost(0, holy, building) < g.districtCost(0, campus);  // the same base cost
+    };
+    // Finished since the last tech: not counted yet.
+    GameState waiting = s;
+    waiting.players[0].techs.progress[at(rules().tech("TECH_POTTERY"))] = Fixed::fromInt(1000);
+    auto g = Game::fromScenario(rules(), std::move(waiting));
+    CHECK(!discounted(*g, nullptr));
+    REQUIRE(g->submit(Command::chooseResearch(0, rules().tech("TECH_POTTERY"))) == CommandError::Ok);
+    endTurns(*g, 1);
+    REQUIRE(g->state().players[0].techs.has(rules().tech("TECH_POTTERY")));
+    CHECK_EQ(g->state().players[0].districtsCounted, 2);
+    CHECK(discounted(*g, nullptr));
+    {
+        // Saved and loaded, it keeps the count.
+        const std::vector<uint8_t> bytes = serializeState(g->state());
+        ByteReader r(bytes);
+        GameState loaded;
+        REQUIRE(deserializeState(r, loaded));
+        CHECK_EQ(loaded.players[0].districtsCounted, 2);
+    }
+    // The Preserve's type counts in A: with Mysticism, A = 3 > B.
+    s.players[0].districtsCounted = 2;
+    GameState mystic = s;
+    mystic.players[0].civics.done[at(rules().civic("CIVIC_MYSTICISM"))] = 1;
+    auto m = Game::fromScenario(rules(), std::move(mystic));
+    CHECK(!discounted(*m, nullptr));
+    // A Holy Site placed in the second city counts against another; its own cost keeps the discount.
+    s.city(2)->districts.push_back({holy, {16, 8}, false});
+    auto h = Game::fromScenario(rules(), std::move(s));
+    const City& second = *h->state().city(2);
+    CHECK(!discounted(*h, nullptr));
+    CHECK(!discounted(*h, h->state().city(1)));
+    CHECK(discounted(*h, &second));
+    CHECK_EQ(h->productionCost(0, item("DISTRICT_HOLY_SITE"), &second), h->districtCost(0, holy, &second));
+    // A Contractor there buys it at that cost (4x, rounded down to 5).
+    GameState t = h->state();
+    Governor reyna;
+    reyna.type = rules().governor("GOVERNOR_REYNA");
+    reyna.city = 2;
+    reyna.promotions = {rules().governorPromotion("GOVERNOR_PROMOTION_LAND_ACQUISITION"), rules().governorPromotion("GOVERNOR_PROMOTION_CONTRACTOR")};
+    t.players[0].governors.push_back(reyna);
+    auto k = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(k->districtPurchaseCost(*k->state().city(2), holy, false), k->districtCost(0, holy, k->state().city(2)) * 4 / 5 * 5);
 }
 
 TEST(finished_district_yields_and_unlocks_buildings) {

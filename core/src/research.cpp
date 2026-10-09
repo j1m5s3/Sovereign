@@ -652,6 +652,13 @@ void Game::applyResearch(const Command& c) {
 void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
     Player& p = state_.players[static_cast<size_t>(pid)];
     TreeProgress& tree = civic ? p.civics : p.techs;
+    // The district discount counts the specialty districts finished by now, until the next tech or civic (03: B).
+    int finished = 0;
+    for (const City& c : state_.cities) {
+        if (c.owner != pid) continue;
+        for (const CityDistrict& cd : c.districts) finished += cd.complete && rules_->districts[static_cast<size_t>(cd.type)].needsPopulation ? 1 : 0;
+    }
+    p.districtsCounted = static_cast<int16_t>(finished);
     // Future Tech and Future Civic repeat [GS] (04): +5% toward projects each time; +50 Diplomatic Favor and a
     // Governor title each time.
     if ((civic ? rules_->civics : rules_->techs)[static_cast<size_t>(node)].id == (civic ? "CIVIC_FUTURE_CIVIC" : "TECH_FUTURE_TECH")) {
