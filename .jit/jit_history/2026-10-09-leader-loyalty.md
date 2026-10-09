@@ -21,6 +21,6 @@ Status: done, 2026-10-09. Previous: `2026-10-09-city-rules.md`. The cities audit
 
 ## Left open
 
-- **Ransom (§5):** a captured leader is a deal-screen item to be ransomed for gold, cities or peace. Not built yet: today the only way out is abandoning the captive, and the AI does so at once. The next PR.
+- **Ransom (§5):** a captured leader is a deal-screen item to be ransomed for gold, cities or peace. Done next, in `2026-10-09-leader-ransom.md`.
 - **Statesman's better citizen interactions (§3, §4)** and **governor-seeded successors (§5)** are not built.
 - **Unreal:** the city panel shows the loyalty total, which now includes the aura; nothing names the aura as its source.

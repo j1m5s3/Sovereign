@@ -105,7 +105,7 @@ Three outcomes, plus an optional game mode:
     - **a high-level military unit** (level 4+): starts with combat-heavy promotions; the unit is gone.
 
     Pool candidates trade a stronger start against losing something you already had. The heir is the "free" option.
-- **Captured.** An enemy that beats the leader in combat while it has no escort takes it prisoner instead of killing it. The captive becomes a deal-screen item (07 "Diplomatic deals", like Civ VI's captured spies): ransom for gold, cities or peace. While held, your empire is in interregnum. You may also abandon the captive and crown a successor (above) at a heavier loyalty cost (30 loyalty in every city, and the same era score). Until the ransom deal item is built, abandoning is the only way out.
+- **Captured.** An enemy that beats the leader in combat while it has no escort takes it prisoner instead of killing it. The captive becomes a deal-screen item (07 "Diplomatic deals", like Civ VI's captured spies): ransom for gold, cities or peace. While held, your empire is in interregnum. You may also abandon the captive and crown a successor (above) at a heavier loyalty cost (30 loyalty in every city, and the same era score). Built on 2026-10-09 as the Ruler deal item: the freed ruler comes home to the capital with its loadout and promotions, and the interregnum ends the next turn. The AI offers 100 + 50 per level Gold for its own ruler (up to three times that) and gives the captive up after 10 turns without a ransom, or at once when its captor is no major civ; an AI captor offers a human's ruler back for twice that price (Sovereign tuning).
 - **Regicide (optional game mode):** losing the leader eliminates you.
 
 ## 6. Assassins [decided]

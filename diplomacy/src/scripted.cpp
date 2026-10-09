@@ -84,6 +84,7 @@ void readPart(const std::string& part, const char* from, const Persona& p, std::
         if (has(part, lower(name).c_str())) add("{\"kind\":\"resource\"," + who + ",\"resource\":" + jsonString(name) + ",\"amount\":" + std::to_string(n > 0 ? n : 1) + "}");
     }
     if (has(part, "border") || has(part, "passage")) add("{\"kind\":\"open_borders\"," + who + "}");
+    if (has(part, "ruler") || has(part, "captive")) add("{\"kind\":\"ruler\"," + who + "}");  // its giver is settled on reading
 }
 }  // namespace
 

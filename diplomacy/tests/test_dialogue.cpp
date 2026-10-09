@@ -164,6 +164,36 @@ TEST(the_scripted_reader_finds_offers_in_plain_words) {
     CHECK_EQ(in.items[0].amount, static_cast<int32_t>(AllianceType::Research));
 }
 
+TEST(a_captured_ruler_is_asked_for_in_words) {
+    // France's ruler is England's captive (leader doc §5): whichever side the words give it, England is the one to free it.
+    GameState s = talkGame()->state();
+    s.players[1].captor = 0;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const Persona p = buildPersona(*g, 1, 0);
+    Interpretation in;
+    REQUIRE(parseInterpretation(R"({"intent":"propose","items":[{"kind":"ruler","from":"leader"}]})", *g, p, in));
+    REQUIRE(in.items.size() == 1u);
+    CHECK(in.items[0].kind == DealItemKind::Ruler);
+    CHECK_EQ(in.items[0].from, 0);
+    CHECK_EQ(in.items[0].amount, 1);
+    ScriptedModel m;
+    std::string json;
+    REQUIRE(m.interpret(p, {}, "Give me 200 gold for your ruler", json));
+    REQUIRE(parseInterpretation(json, *g, p, in));
+    REQUIRE(in.items.size() == 2u);
+    CHECK(in.items[0].kind == DealItemKind::Gold && in.items[0].from == 1 && in.items[0].amount == 200);
+    CHECK(in.items[1].kind == DealItemKind::Ruler && in.items[1].from == 0 && in.items[1].amount == 1);
+    // And the other way about: France holding England's ruler frees it.
+    GameState t = talkGame()->state();
+    t.players[0].captor = 1;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    const Persona q = buildPersona(*h, 1, 0);
+    REQUIRE(parseInterpretation(R"({"intent":"propose","items":[{"kind":"ruler","from":"player"}]})", *h, q, in));
+    REQUIRE(in.items.size() == 1u);
+    CHECK_EQ(in.items[0].from, 1);
+    CHECK_EQ(in.items[0].amount, 0);
+}
+
 TEST(input_is_cleaned_and_injection_neutralised) {
     bool flagged = false;
     CHECK_EQ(filterInput("  Hello\tthere \n friend ", &flagged), std::string("Hello there friend"));
