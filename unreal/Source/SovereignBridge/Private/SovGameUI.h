@@ -29,6 +29,15 @@ struct FSovUIAction
 	bool bEnabled = true;
 };
 
+// A notification: an event heard, or something waiting on the player (plan D, step 4).
+struct FSovUINotice
+{
+	FName Icon;
+	FString Text;
+	FString Sub;  // "Turn 12", "Click to choose"
+	bool bUrgent = false;  // waits on the player
+};
+
 struct FSovUIModel
 {
 	bool bVisible = false;
@@ -64,6 +73,8 @@ struct FSovUIModel
 	TArray<FString> Choices;
 	// The tech or civic tree, open in place of their list (plan D, step 3).
 	FSovTreeModel Tree;
+	// Notifications, newest first, above the end-turn button.
+	TArray<FSovUINotice> Notices;
 	// End turn.
 	bool bMyTurn = false;
 	bool bTurnReady = false;  // nothing blocks it
@@ -80,6 +91,8 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnFocus)    // a city focus (sov::CityFocus)
 	SLATE_EVENT(TDelegate<void(bool)>, OnBuy)       // buy what the city builds: true with faith
 	SLATE_EVENT(TDelegate<void(int32)>, OnTreeNode) // a tech or civic clicked in the tree
+	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
+	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
@@ -92,6 +105,7 @@ private:
 	void RebuildUnit();
 	void RebuildChooser();
 	void RebuildCity();
+	void RebuildNotices();
 
 	FSovUIModel Model;
 	FString StatsKey, UnitKey, ChooserKey;  // what each list was last built from
@@ -109,5 +123,8 @@ private:
 	TDelegate<void(int32)> OnFocus;
 	TDelegate<void(bool)> OnBuy;
 	TDelegate<void(int32)> OnTreeNode;
+	TDelegate<void(int32)> OnNotice, OnDismiss;
+	TSharedPtr<SVerticalBox> NoticesBox;
+	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
 };

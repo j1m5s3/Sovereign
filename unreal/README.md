@@ -51,6 +51,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 - **City panel** (bottom left, for the selected city): population, health and loyalty, yields per turn, growth with housing and amenities, what it builds (click to choose) with buy buttons for gold or faith, the citizens' focus, its buildings, districts, religion and timers, and buttons for production, Benevolence, Fear, governors and plot yields (F3; Shift+click a plot to lock a citizen there).
 - **Tech and civic trees** (T, C, or the top bar): the whole tree by era with prerequisite lines, turns, boosts and unlocks. Click an open node to start it, or a later one to make it your goal: the path toward it is started step by step.
 - **Choosers:** every list (production, research, civics, government, promotions, great people, governors, diplomacy...) opens as a clickable, scrolling panel on the right. The number keys still pick, and Esc or X closes it.
+- **Notifications** (above end turn): cities waiting for production, then news from the last two turns. Click one to open its screen (diplomacy, great people, World Congress, the chronicle), or X to dismiss it. Hover the top bar's yields for a city-by-city breakdown.
 - **End turn** (bottom right): names what stands in the way (a unit needing orders, production, research, a civic, a successor). Clicking it does what Space does: ends the turn, or opens what is needed.
 
 ## Controls

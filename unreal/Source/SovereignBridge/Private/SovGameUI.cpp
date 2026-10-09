@@ -31,6 +31,8 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnFocus = Args._OnFocus;
 	OnBuy = Args._OnBuy;
 	OnTreeNode = Args._OnTreeNode;
+	OnNotice = Args._OnNotice;
+	OnDismiss = Args._OnDismiss;
 	auto Visible = [this](TFunction<bool()> Test) {
 		return TAttribute<EVisibility>::CreateLambda([Test]() { return Test() ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; });
 	};
@@ -233,6 +235,12 @@ void SSovGameUI::Construct(const FArguments& Args)
 			.OnNode_Lambda([this](int32 Node) { OnTreeNode.ExecuteIfBound(Node); })
 			.OnClose_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); })
 		]
+		// Notifications, stacked above the end-turn button.
+		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 96)
+		[
+			SNew(SBox).WidthOverride(340).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.bChooser; }))
+			[SAssignNew(NoticesBox, SVerticalBox)]
+		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
 		[
@@ -302,6 +310,13 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildCity();
 	}
 	if (Model.Tree.bOpen) TreeView->SetModel(Model.Tree);
+	FString N;
+	for (const FSovUINotice& No : Model.Notices) N += No.Icon.ToString() + No.Text + No.Sub + (No.bUrgent ? TEXT("!") : TEXT("")) + TEXT("|");
+	if (N != NoticesKey)
+	{
+		NoticesKey = N;
+		RebuildNotices();
+	}
 	FString C = Model.bChooser ? Model.ChooserTitle : FString();
 	for (const FString& L : Model.Choices) C += L + TEXT("|");
 	if (C != ChooserKey)
@@ -356,6 +371,44 @@ void SSovGameUI::RebuildCity()
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[SNew(SBox).WidthOverride(22).HeightOverride(22)[SNew(SImage).Image(FSovStyle::Icon(A.Icon))]]
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(6, 0, 2, 0)
 				[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(A.Label.Left(A.Label.Find(TEXT(" (")) > 0 ? A.Label.Find(TEXT(" (")) : A.Label.Len())))]
+			]
+		];
+	}
+}
+
+void SSovGameUI::RebuildNotices()
+{
+	NoticesBox->ClearChildren();
+	for (int32 i = 0; i < Model.Notices.Num(); ++i)
+	{
+		const FSovUINotice& No = Model.Notices[i];
+		NoticesBox->AddSlot().AutoHeight().Padding(0, 3)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().FillWidth(1.f)
+			[
+				SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(No.Text + TEXT("\n") + No.Sub))
+				.OnClicked_Lambda([this, i]() { OnNotice.ExecuteIfBound(i); return FReply::Handled(); })
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 8, 0)
+					[SNew(SBox).WidthOverride(24).HeightOverride(24)[SNew(SImage).Image(FSovStyle::Icon(No.Icon))]]
+					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+					[
+						SNew(SVerticalBox)
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(10, No.bUrgent)).ColorAndOpacity(No.bUrgent ? FSovStyle::Gold : FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(No.Text))]
+						+ SVerticalBox::Slot().AutoHeight()
+						[SNew(STextBlock).Font(FSovStyle::Font(8)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(No.Sub))]
+					]
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(3, 0, 0, 0)
+			[
+				SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Dismiss")))
+				.Visibility(No.bUrgent ? EVisibility::Collapsed : EVisibility::Visible)
+				.OnClicked_Lambda([this, i]() { OnDismiss.ExecuteIfBound(i); return FReply::Handled(); })
+				[SNew(STextBlock).Font(FSovStyle::Font(8, true)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("X")))]
 			]
 		];
 	}
