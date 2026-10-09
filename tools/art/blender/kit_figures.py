@@ -340,5 +340,175 @@ def boat(seed=37):
     return p
 
 
-PIECES = [citizen, herald, captain, soldier, leader, ship, boat]
+# ---------------------------------------------------------------------------------- later and other arms (map tokens)
+
+OLIVE = "#5a5f3a"
+STEEL = "#6f7478"
+NAVY = "#2e3440"
+HORSE = ["#6b4226", "#4a2f1c"]
+
+
+def _bow(p, x, s=1.0):
+    """A self bow held upright in the left hand, its string toward the body."""
+    pts = [(x * s, -0.06 * s, (0.95 + 0.62 * math.sin(a)) * s, a) for a in [(-0.5 + i / 8.0) * math.pi * 0.9 for i in range(9)]]
+    for (x0, y0, z0, a0), (x1, y1, z1, a1) in zip(pts, pts[1:]):
+        b0, b1 = 0.08 * math.cos(a0) * s, 0.08 * math.cos(a1) * s
+        p.segment((x0, y0 - b0, z0), (x1, y1 - b1, z1), 0.016 * s, 0.016 * s, WOOD, segments=6, caps=False)
+    p.segment(pts[0][:3], pts[-1][:3], 0.004 * s, 0.004 * s, LINEN, segments=4, caps=False)
+
+
+def archer(seed=38):
+    p = _figure("SM_Archer", seed)
+    _body(p, SKIN[3])
+    _sandals(p)
+    _tunic(p, LINEN, hem=0.68, team=True)
+    _belt(p, LEATHER, 1.0)
+    p.cylinder((0.12, 0.14, 0.95), 0.06, 0.5, LEATHER, segments=8)  # quiver on the back
+    for i in range(4):
+        p.segment((0.1 + 0.015 * i, 0.14, 1.4), (0.1 + 0.015 * i, 0.14, 1.52), 0.01, 0.01, CREST, segments=4, caps=False)
+    _bow(p, -0.3)
+    z = _head(p, SKIN[3], HAIR[1])
+    p.loft([(z + 0.19, 0.095, 0.105), (z + 0.26, 0.07, 0.08), (z + 0.31, 0.01, 0.01)], DARK_LEATHER, segments=12, cap_bottom=False)  # leather cap
+    return p
+
+
+def rider(seed=39):
+    """A horseman: the horse side-on along X, the rider astride with a lance, a team saddle cloth."""
+    p = _figure("SM_Rider", seed)
+    p.segment((-0.75, 0, 1.2), (0.75, 0, 1.25), 0.3, 0.32, HORSE[0], segments=12)  # barrel
+    p.segment((0.75, 0, 1.3), (1.05, 0, 1.75), 0.17, 0.12, HORSE[0], segments=10)  # neck
+    p.segment((1.05, 0, 1.78), (1.38, 0, 1.6), 0.11, 0.07, HORSE[0], segments=10)  # head
+    p.segment((0.82, 0, 1.6), (1.02, 0, 1.92), 0.04, 0.03, HORSE[1], segments=6)  # mane
+    for x in (-0.6, 0.6):
+        for y in (-0.15, 0.15):
+            p.segment((x, y, 1.0), (x + 0.03, y, 0.5), 0.08, 0.06, HORSE[0], segments=8)
+            p.segment((x + 0.03, y, 0.5), (x, y, 0.05), 0.05, 0.04, HORSE[0], segments=8)
+            p.cylinder((x, y, 0.0), 0.055, 0.08, DARK_LEATHER, segments=8)  # hooves
+    p.segment((-0.78, 0, 1.3), (-1.0, 0, 0.8), 0.07, 0.03, HORSE[1], segments=6)  # tail
+    p.team_color(True)
+    p.box((-0.05, 0, 1.5), (0.7, 0.72, 0.05), LINEN)  # saddle cloth
+    p.team_color(False)
+    # The rider, seated: torso, legs down the flanks, arms, head and helmet, a lance.
+    off = 0.63
+    p.loft([(0.92 + off, 0.16, 0.105), (1.06 + off, 0.145, 0.095), (1.24 + off, 0.18, 0.115), (1.38 + off, 0.205, 0.105),
+            (1.45 + off, 0.09, 0.07)], LINEN, segments=14)
+    for side in (-1, 1):
+        p.segment((0.0, side * 0.12, 1.55), (0.12, side * 0.36, 1.15), 0.07, 0.055, LEATHER, segments=8)
+        p.segment((0.12, side * 0.36, 1.15), (0.05, side * 0.36, 0.8), 0.05, 0.04, LEATHER, segments=8)
+        p.segment((0.0, side * 0.215, 1.37 + off), (0.15, side * 0.26, 1.15 + off), 0.045, 0.035, SKIN[1], segments=8)
+    hz = 1.49 + off
+    p.segment((0, 0, 1.4 + off), (0, 0, hz + 0.03), 0.05, 0.045, SKIN[1])
+    p.blob((0, 0, hz + 0.13), 0.1, SKIN[1], squash=1.25, subdiv=2, wobble=0.0)
+    p.loft([(hz + 0.1, 0.1, 0.11), (hz + 0.2, 0.09, 0.1), (hz + 0.27, 0.01, 0.01)], BRONZE, segments=12, cap_bottom=False)
+    p.segment((0.2, -0.3, 0.9), (1.1, -0.3, 3.0), 0.02, 0.015, WOOD, segments=6, caps=False)  # lance
+    p.cone((1.1, -0.3, 3.0), 0.03, 0.2, IRON, segments=6)
+    return p
+
+
+def siege(seed=40):
+    """A wooden siege engine (catapult) on wheels, a team pennant on its frame."""
+    p = Piece("SM_Siege", seed)
+    for y in (-0.5, 0.5):
+        p.box((0, y, 0.45), (2.4, 0.14, 0.14), WOOD)
+        for x in (-0.8, 0.8):
+            p.disc((x, y * 1.25, 0.32), 0.32, 0.08, WOOD, segments=12)
+        p.segment((-0.2, y, 0.5), (0.1, y, 1.4), 0.07, 0.06, WOOD, segments=6, caps=False)
+    p.box((0.1, 0, 1.4), (0.16, 1.1, 0.16), WOOD)
+    p.segment((0.9, 0, 0.6), (-0.9, 0, 1.9), 0.06, 0.05, WOOD, segments=6, caps=False)  # the arm, cocked
+    p.box((-0.95, 0, 1.95), (0.35, 0.35, 0.15), LEATHER)  # the cup
+    p.blob((-0.95, 0, 2.1), 0.14, "#8a857b", squash=0.9)
+    p.cylinder((1.1, 0.5, 0.5), 0.025, 1.6, WOOD, segments=5)
+    p.team_color(True)
+    p.box((1.35, 0.5, 1.9), (0.5, 0.03, 0.32), LINEN)
+    p.team_color(False)
+    return p
+
+
+def musketeer(seed=41):
+    """Gunpowder infantry: a long team-coloured coat, a tricorne, a musket shouldered upright."""
+    p = _figure("SM_Musketeer", seed)
+    _body(p, SKIN[0], legs="#d8d0bc")
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.55, team=True)
+    _belt(p, "#e8e2d6", 1.0, buckle=GOLD)
+    p.segment((0.16, -0.11, 1.4), (-0.15, -0.12, 0.98), 0.018, 0.018, "#e8e2d6", segments=6)  # cross belt
+    z = _head(p, SKIN[0], HAIR[3], moustache=HAIR[3])
+    p.loft([(z + 0.18, 0.15, 0.15), (z + 0.21, 0.16, 0.16), (z + 0.23, 0.09, 0.1), (z + 0.31, 0.08, 0.09), (z + 0.33, 0.02, 0.02)], NAVY,
+           segments=3)  # tricorne: three corners
+    p.cylinder((0.3, -0.04, 0.6), 0.022, 1.25, WOOD, segments=8)  # stock and barrel
+    p.cylinder((0.3, -0.04, 1.85), 0.014, 0.12, IRON, segments=6)
+    p.cone((0.3, -0.04, 1.97), 0.012, 0.25, IRON, segments=4)  # bayonet
+    return p
+
+
+def rifleman(seed=42):
+    """Modern infantry: a team-coloured field tunic, olive trousers, a steel helmet, a rifle."""
+    p = _figure("SM_Rifleman", seed)
+    _body(p, SKIN[1], legs=OLIVE)
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.78, team=True)
+    _belt(p, OLIVE, 1.0, buckle=STEEL)
+    p.box((0.0, 0.16, 1.15), (0.3, 0.14, 0.3), OLIVE)  # pack
+    z = _head(p, SKIN[1], HAIR[0])
+    p.loft([(z + 0.13, 0.13, 0.14), (z + 0.15, 0.12, 0.13), (z + 0.22, 0.1, 0.11), (z + 0.28, 0.05, 0.06), (z + 0.3, 0.01, 0.01)], OLIVE,
+           segments=14)  # steel helmet
+    p.segment((0.28, -0.12, 0.8), (0.34, -0.05, 1.75), 0.022, 0.016, WOOD, segments=6, caps=False)  # rifle at the slope
+    p.segment((0.33, -0.06, 1.55), (0.35, -0.04, 1.95), 0.012, 0.012, STEEL, segments=6, caps=False)
+    return p
+
+
+def tank(seed=43):
+    """An armoured fighting vehicle along X: tracks, hull, turret and gun; team panels on the turret."""
+    p = Piece("SM_Tank", seed)
+    for y in (-0.95, 0.95):
+        p.box((0, y, 0.45), (4.6, 0.6, 0.9), "#3a3a36", taper=0.9)  # tracks
+        for x in (-1.7, -0.85, 0.0, 0.85, 1.7):
+            p.disc((x, y * 1.12, 0.42), 0.33, 0.06, STEEL, segments=10)
+    p.box((0, 0, 1.1), (4.4, 1.9, 0.6), OLIVE, taper=0.9)  # hull
+    p.box((-0.2, 0, 1.65), (1.8, 1.4, 0.55), OLIVE, taper=0.85)  # turret
+    p.team_color(True)
+    for y in (-0.71, 0.71):
+        p.box((-0.2, y, 1.65), (1.0, 0.03, 0.35), LINEN)
+    p.team_color(False)
+    p.segment((0.6, 0, 1.7), (3.2, 0, 1.75), 0.09, 0.07, STEEL, segments=8, caps=False)  # gun
+    return p
+
+
+def plane(seed=44):
+    """A propeller fighter along X, team roundels on the wings."""
+    p = Piece("SM_Plane", seed)
+    p.segment((-2.6, 0, 1.0), (2.2, 0, 1.0), 0.18, 0.42, OLIVE, segments=12)  # fuselage
+    p.box((0.6, 0, 0.95), (1.4, 6.4, 0.1), OLIVE)  # wings
+    p.box((-2.4, 0, 1.05), (0.6, 2.0, 0.06), OLIVE)  # tailplane
+    p.box((-2.4, 0, 1.5), (0.7, 0.06, 0.9), OLIVE, taper=0.6)  # fin
+    p.blob((0.9, 0, 1.38), 0.32, "#8fb3c9", squash=0.7)  # canopy
+    p.box((2.45, 0, 1.0), (0.05, 0.12, 1.8), DARK_LEATHER)  # propeller
+    p.team_color(True)
+    for y in (-2.3, 2.3):
+        p.cylinder((0.6, y, 1.0), 0.42, 0.02, LINEN, segments=14)  # roundels
+    p.team_color(False)
+    for y in (-0.9, 0.9):
+        p.segment((0.8, y, 0.95), (0.8, y * 1.1, 0.25), 0.04, 0.04, STEEL, segments=6, caps=False)  # undercarriage
+        p.disc((0.8, y * 1.1, 0.2), 0.17, 0.08, "#222222", segments=10)
+    return p
+
+
+def steamship(seed=45):
+    """An ironclad steamer along X: steel hull, deckhouse, a funnel banded in the owner's colour, a gun turret."""
+    p = Piece("SM_Steamship", seed)
+    p.box((0, 0, 0.5), (7.0, 1.5, 1.0), "#4b4f55", taper=1.2)  # hull
+    p.box((3.7, 0, 0.6), (0.6, 0.6, 0.6), "#4b4f55", taper=0.4)  # bow
+    p.box((0, 0, 1.05), (6.6, 1.6, 0.1), "#8a6a48")  # deck
+    p.box((-0.6, 0, 1.5), (2.0, 1.1, 0.8), "#c9c6bf")  # deckhouse
+    p.cylinder((-0.3, 0, 1.9), 0.3, 1.5, NAVY, segments=10)  # funnel
+    p.team_color(True)
+    p.cylinder((-0.3, 0, 2.9), 0.31, 0.3, LINEN, segments=10)
+    p.team_color(False)
+    p.cylinder((2.0, 0, 1.1), 0.5, 0.45, STEEL, segments=10)  # turret
+    p.segment((2.2, 0, 1.35), (3.4, 0, 1.4), 0.07, 0.06, STEEL, segments=6, caps=False)
+    p.cylinder((-2.2, 0, 1.1), 0.05, 2.6, WOOD, segments=6)  # mast
+    return p
+
+
+PIECES = [citizen, herald, captain, soldier, leader, ship, boat, archer, rider, siege, musketeer, rifleman, tank, plane, steamship]
 PEOPLE = [citizen, herald, captain, soldier, leader]
