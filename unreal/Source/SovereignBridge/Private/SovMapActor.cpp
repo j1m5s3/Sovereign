@@ -68,6 +68,53 @@ const TCHAR* FieldsModel(const FString& Id)
 		if (Id == M.Key) return M.Value;
 	return TEXT("Works");
 }
+// The Districts kit's model for a district id: DISTRICT_HOLY_SITE -> HolySite (tools/art/blender/kit_districts.py).
+FString DistrictModel(const FString& Id)
+{
+	FString Out;
+	TArray<FString> Words;
+	Id.RightChop(9).ParseIntoArray(Words, TEXT("_"));
+	for (const FString& W : Words)
+	{
+		Out += W.Left(1) + W.RightChop(1).ToLower();
+	}
+	return Out;
+}
+
+// The Wonders kit's model for a wonder (tools/art/blender/kit_wonders.py), by kind; null for the classical temple.
+const TCHAR* WonderModel(const FString& Id)
+{
+	// Each model and the wonders (their ids without BUILDING_) drawn with it.
+	static const TPair<const TCHAR*, const TCHAR*> Kinds[] = {
+		{TEXT("Pyramid"), TEXT("PYRAMIDS JEBEL_BARKAL")},
+		{TEXT("StepPyramid"), TEXT("ETEMENANKI CHICHEN_ITZA HUEY_TEOCALLI MAHABODHI_TEMPLE MEENAKSHI_TEMPLE ANGKOR_WAT")},
+		{TEXT("StoneCircle"), TEXT("STONEHENGE")},
+		{TEXT("Gardens"), TEXT("HANGING_GARDENS GREAT_BATH BIOSPH_RE")},
+		{TEXT("Statue"), TEXT("COLOSSUS STATUE_OF_ZEUS STATUE_OF_LIBERTY CRISTO_REDENTOR TERRACOTTA_ARMY KOTOKU_IN")},
+		{TEXT("Tower"), TEXT("GREAT_LIGHTHOUSE TORRE_DE_BEL_M BIG_BEN KILWA_KISIWANI")},
+		{TEXT("LatticeTower"), TEXT("EIFFEL_TOWER")},
+		{TEXT("DomedHall"), TEXT("HAGIA_SOPHIA TAJ_MAHAL ST_BASIL_S_CATHEDRAL UNIVERSITY_OF_SANKORE OXFORD_UNIVERSITY HERMITAGE")},
+		{TEXT("Arena"), TEXT("COLOSSEUM EST_DIO_DO_MARACAN BOLSHOI_THEATRE BROADWAY SYDNEY_OPERA_HOUSE")},
+		{TEXT("Citadel"), TEXT("PETRA MACHU_PICCHU ALHAMBRA MONT_ST_MICHEL GREAT_ZIMBABWE FORBIDDEN_CITY POTALA_PALACE ORSZ_GH_Z")},
+		{TEXT("Arsenal"), TEXT("VENETIAN_ARSENAL RUHR_VALLEY PANAMA_CANAL CASA_DE_CONTRATACI_N GOLDEN_GATE_BRIDGE AMUNDSEN_SCOTT_RESEARCH_STATION")},
+	};
+	const FString Key = Id.RightChop(9);
+	for (const auto& K : Kinds)
+	{
+		TArray<FString> Ids;
+		FString(K.Value).ParseIntoArray(Ids, TEXT(" "));
+		if (Ids.Contains(Key)) return K.Key;
+	}
+	return nullptr;
+}
+
+// Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
+void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
+{
+	UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0));
+	if (!Mid || Mid->GetOuter() != C) Mid = C->CreateAndSetMaterialInstanceDynamic(0);
+	if (Mid) Mid->SetVectorParameterValue(TEXT("Tint"), Tint);
+}
 }  // namespace
 
 ASovMapActor::ASovMapActor()
@@ -325,10 +372,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			const uint32 H = static_cast<uint32>(Tile.X * 19349663) ^ static_cast<uint32>(Tile.Y * 83492791);
 			UStaticMeshComponent* C = Marker(ImprovementPieces, ImprovementCount++, nullptr);
 			SovArt::SetKitMesh(C, TEXT("Fields"), FieldsModel(Tile.Improvement), FLinearColor::White);
-			UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0));
-			if (!Mid || Mid->GetOuter() != C) Mid = C->CreateAndSetMaterialInstanceDynamic(0);
-			// Darker than the kit, which washes out under the map's light (as the rocks do); browner still when pillaged.
-			if (Mid) Mid->SetVectorParameterValue(TEXT("Tint"), Tile.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : FLinearColor(0.55f, 0.53f, 0.5f));
+			ShadeKit(C, Tile.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : FLinearColor(0.55f, 0.53f, 0.5f));  // browner when pillaged
 			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(14.0, -12.0), 0.0));
 			C->SetRelativeRotation(FRotator(0.f, static_cast<float>(H % 6 * 60), 0.f));
 			C->SetRelativeScale3D(FVector(0.09));
@@ -432,8 +476,19 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, CubeMesh.Get());
 		const FVector At = SovHex::Center(W.X, W.Y, SurfaceZ(W.X, W.Y));
+		// Its kind's model from the Wonders kit, grey and smaller while it is being built.
+		const TCHAR* Kind = WonderModel(W.Id);
+		if (Kind && SovArt::SetKitMesh(C, TEXT("Wonders"), Kind, FLinearColor::White))
+		{
+			ShadeKit(C, W.bComplete ? FLinearColor(0.62f, 0.6f, 0.57f) : FLinearColor(0.32f, 0.31f, 0.3f));
+			C->SetRelativeLocation(At);
+			C->SetRelativeScale3D(FVector(W.bComplete ? 0.1 : 0.07));
+			C->SetRelativeRotation(FRotator::ZeroRotator);
+			continue;
+		}
 		if (SovArt::SetKitMesh(C, TEXT("Classical"), W.bComplete ? TEXT("Temple") : TEXT("Monument"), FLinearColor::White))
 		{
+			ShadeKit(C, W.bComplete ? FLinearColor::White : FLinearColor(0.6f, 0.6f, 0.6f));
 			C->SetRelativeLocation(At);
 			C->SetRelativeScale3D(FVector(W.bComplete ? 0.07 : 0.06));
 			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
@@ -485,7 +540,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		if (SovArt::SetKitMesh(C, TEXT("Classical"), City.bCapital ? TEXT("Palace") : TEXT("Landmark"), FLinearColor::White))
 		{
 			C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z));
-			C->SetRelativeScale3D(FVector(City.bCapital ? 0.055 : 0.075));
+			C->SetRelativeScale3D(FVector(City.bCapital ? 0.045 : 0.06));
 			continue;
 		}
 		C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z + CityHeight * 0.5));
@@ -495,6 +550,56 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = Mirror.Cities.Num(); i < CityMarkers.Num(); ++i)
 	{
 		CityMarkers[i]->SetVisibility(false);
+	}
+
+	// Houses round each city centre: one more for every two citizens, up to eight, placed by the city's hash.
+	int32 HouseCount = 0;
+	if (SovArt::Mesh(TEXT("Classical"), TEXT("House_A")))
+	{
+		static const TCHAR* Kinds[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+		for (const FSovCityMarker& City : Mirror.Cities)
+		{
+			const FVector At = SovHex::Center(City.X, City.Y, SurfaceZ(City.X, City.Y));
+			const uint32 H = static_cast<uint32>(City.X * 2654435761u) ^ static_cast<uint32>(City.Y * 40503);
+			const int32 Count = FMath::Clamp(1 + City.Population / 2, 1, 8);
+			for (int32 k = 0; k < Count; ++k)
+			{
+				// Round the ring, filling it in a scattered order; the front (toward the camera, +Y) stays clear.
+				const double A = PI * (0.78 + 1.44 * ((k * 3) % 8) / 7.0) + ((H >> k) % 7) * 0.03;
+				const double R = 64.0 + ((H >> (k + 3)) % 4) * 3.0;
+				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
+				SovArt::SetKitMesh(C, TEXT("Classical"), Kinds[(H + k) % 3], FLinearColor::White);
+				ShadeKit(C, FLinearColor(0.7f, 0.68f, 0.65f));
+				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
+				C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(A)) + 90.f, 0.f));
+				C->SetRelativeScale3D(FVector(0.034));
+			}
+		}
+	}
+	for (int32 i = HouseCount; i < CityHouses.Num(); ++i)
+	{
+		CityHouses[i]->SetVisibility(false);
+	}
+
+	// Districts: the kit's model with the owner's pennant; smaller and greyer while being built, browner when pillaged.
+	int32 DistrictCount = 0;
+	for (const FSovDistrictMarker& D : Mirror.Districts)
+	{
+		const FString Model = DistrictModel(D.Type);
+		if (!SovArt::Mesh(TEXT("Districts"), Model))
+		{
+			continue;
+		}
+		UStaticMeshComponent* C = Marker(DistrictPieces, DistrictCount++, nullptr);
+		SovArt::SetKitMesh(C, TEXT("Districts"), Model, D.Color);
+		ShadeKit(C, D.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : D.bComplete ? FLinearColor(0.6f, 0.58f, 0.55f) : FLinearColor(0.32f, 0.31f, 0.3f));
+		C->SetRelativeLocation(SovHex::Center(D.X, D.Y, SurfaceZ(D.X, D.Y)));
+		C->SetRelativeRotation(FRotator::ZeroRotator);
+		C->SetRelativeScale3D(FVector(D.bComplete ? 0.1 : 0.075));
+	}
+	for (int32 i = DistrictCount; i < DistrictPieces.Num(); ++i)
+	{
+		DistrictPieces[i]->SetVisibility(false);
 	}
 
 	int32 CrownCount = 0, BoatCount = 0;

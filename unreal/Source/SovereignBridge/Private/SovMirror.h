@@ -77,6 +77,17 @@ struct FSovWonderMarker
 	int32 X = 0, Y = 0;
 	bool bComplete = false;
 	FString Name;
+	FString Id;  // its rules id (BUILDING_PYRAMIDS), for the model the map draws
+};
+
+// A specialty district's plot (not the City Center, which the city marker draws).
+struct FSovDistrictMarker
+{
+	int32 X = 0, Y = 0;
+	FString Type;        // its rules id (DISTRICT_CAMPUS), for the model the map draws
+	FLinearColor Color;  // owner colour
+	bool bComplete = false;
+	bool bPillaged = false;
 };
 
 struct FSovMirror
@@ -89,6 +100,7 @@ struct FSovMirror
 	TArray<FSovCityMarker> Cities;  // on revealed plots
 	TArray<TPair<FIntPoint, FIntPoint>> Roads;  // neighbouring revealed plots joined by a road
 	TArray<FSovWonderMarker> Wonders;           // on revealed plots
+	TArray<FSovDistrictMarker> Districts;       // on revealed plots
 	TArray<FIntPoint> Villages;                 // tribal villages on revealed plots (01)
 	TArray<FIntPoint> Antiquity;                // antiquity sites and shipwrecks, once the viewer knows Natural History (07)
 	TArray<FSovEdge> Rivers;                    // river edges between revealed plots (01)
