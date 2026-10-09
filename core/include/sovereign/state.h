@@ -405,6 +405,7 @@ struct Player {
     bool barbarian = false;   // the barbarian player: at war with all, plays in the world turn
     bool freeCity = false;    // the Free Cities (also flagged barbarian: not a major, at war with all, takes no turns)
     int reputation = 0;       // -100 Feared .. +100 Beloved (leader doc §8.1)
+    int bodyDoubles = 0;      // body doubles kept for the ruler (leader doc §8.6)
     int strongestUnit = 0;    // highest melee strength of any unit it has had (city defence)
     int citiesFounded = 0;  // drives city naming
     Fixed gold;
@@ -640,6 +641,7 @@ enum class EventKind : uint8_t {
     GoodyHut,        // actor entered a tribal village; value: the reward (Rules::goodies)
     LeaderLost,      // actor captured (value 1) or killed (value 0) target's ruler in battle
     Succession,      // actor crowned a ruler; value: the Succession kind + 16 x the heir's place in the dynasty
+    AssassinKilledDouble,  // actor's assassin struck target's body double instead of its ruler
 };
 struct GameEvent {
     int32_t turn = 0;

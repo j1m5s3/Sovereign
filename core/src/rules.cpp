@@ -958,6 +958,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         u.trainable = j["trainable"].boolean(true);
         u.agent = j["agent"].boolean(false);
         u.spy = j["spy"].boolean(false);
+        u.bodyDouble = j["bodyDouble"].boolean(false);
         u.purchaseYield = j["purchaseYield"].str();
         u.religiousStrength = static_cast<int>(j["religiousStrength"].integer(0));
         u.spreadCharges = static_cast<int>(j["spreadCharges"].integer(0));

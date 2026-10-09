@@ -44,6 +44,7 @@ bool Game::chronicleWorthy(EventKind kind) {
         case EventKind::AssassinKilledLeader:
         case EventKind::AssassinWoundedLeader:
         case EventKind::AssassinCaptured:
+        case EventKind::AssassinKilledDouble:
         case EventKind::Rebellion:
         case EventKind::HistoricMoment:
         case EventKind::NewAge:
@@ -75,6 +76,7 @@ std::vector<std::string> Game::chronicleLines(PlayerId viewer) const {
             case EventKind::AssassinKilledLeader: text = "an assassin from " + a + " killed the ruler of " + t; break;
             case EventKind::AssassinWoundedLeader: text = "an assassin from " + a + " wounded the ruler of " + t; break;
             case EventKind::AssassinCaptured: text = t + " caught an assassin sent by " + a; break;
+            case EventKind::AssassinKilledDouble: text = "an assassin from " + a + " killed a body double of the ruler of " + t; break;
             case EventKind::Rebellion: text = "rebels rose against " + t; break;
             case EventKind::HistoricMoment:
                 if (e.value >= 0 && at(e.value) < rules_->moments.size()) text = a + ": " + rules_->moments[at(e.value)].name;

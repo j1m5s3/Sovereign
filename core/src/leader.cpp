@@ -651,6 +651,17 @@ void Game::processAgents() {
         const PlayerId sender = a.owner, victim = a.target;
         const UnitId leaderId = leader->id;
         if (static_cast<int>(rng.below(100)) < success) {
+            Player& prey = state_.players[static_cast<size_t>(victim)];
+            if (prey.bodyDoubles > 0 && static_cast<int>(rng.below(100)) < rules_->globalInt("BODY_DOUBLE_PERCENT")) {
+                // The blow falls on a body double (§8.6): it dies, the ruler is unhurt, and the sender is known.
+                --prey.bodyDoubles;
+                a.target = kNoPlayer;
+                ++state_.players[static_cast<size_t>(sender)].assassinsSent;
+                remember(victim, sender, MemoryKind::Assassin, -15, 60);
+                addGrievance(victim, sender, rules_->globalInt("ASSASSIN_SENDER_GRIEVANCES"));
+                pushEvent(EventKind::AssassinKilledDouble, sender, victim, 0);
+                continue;
+            }
             const int diff = assassinPower(a) - leaderDefenseVsAssassin(*leader);
             const int dmg = combatDamage(diff, rng.range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE")));
             Unit* l = state_.unit(leaderId);
