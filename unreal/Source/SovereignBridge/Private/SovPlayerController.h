@@ -92,6 +92,10 @@ protected:
 		FString Label;
 		sov::Command Command;
 		std::vector<sov::Command> Then;  // sent after Command, in order (e.g. the rest of a theming)
+		// How the game screen shows it (plan E): a value on the right, an icon, its section (all optional).
+		FString Right;
+		FName Icon;
+		FString Section;
 	};
 
 	USovGameSubsystem* Subsystem() const;

@@ -481,6 +481,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			ChooserTitle = FString::Printf(TEXT("Production in %s"), *Str(City->name));
 			const int32 PerTurn = static_cast<int32>(G.cityReport(City->id).yields[static_cast<size_t>(sov::YieldType::Production)].toInt());
+			const int32 First = Choices.Num();
 			for (const sov::ProductionItem& Item : G.buildableItems(City->id))
 			{
 				sov::Hex Plot{};
@@ -522,8 +523,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Where = FString::Printf(TEXT(" (wonder) at (%d,%d)"), Plot.x, Plot.y);
 				}
 				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item, City);
-				Choices.Add({FString::Printf(TEXT("%s (%d turns)%s"), *ItemName(R, Item), TurnsFor(Cost, PerTurn), *Where),
-					sov::Command::setProduction(Me(), City->id, Item, Plot)});
+				const bool bWonder = Item.kind == sov::ProductionKind::Building && R.buildings[static_cast<size_t>(Item.type)].wonder;
+				FChoice& Ch = Choices.Add_GetRef({ItemName(R, Item) + Where, sov::Command::setProduction(Me(), City->id, Item, Plot)});
+				Ch.Right = FString::Printf(TEXT("%d turns"), TurnsFor(Cost, PerTurn));
+				Ch.Section = Item.kind == sov::ProductionKind::District ? TEXT("Districts") : Item.kind == sov::ProductionKind::Unit ? TEXT("Units")
+					: Item.kind == sov::ProductionKind::Building ? (bWonder ? TEXT("Wonders") : TEXT("Buildings")) : TEXT("Projects");
+				Ch.Icon = Item.kind == sov::ProductionKind::District ? FName("streets") : Item.kind == sov::ProductionKind::Unit ? FName("strength")
+					: Item.kind == sov::ProductionKind::Building ? (bWonder ? FName("era") : FName("build")) : FName("science");
+			}
+			// Grouped by kind: districts, buildings, wonders, units, projects.
+			{
+				auto Rank = [](const FString& S) { return S == TEXT("Districts") ? 0 : S == TEXT("Buildings") ? 1 : S == TEXT("Wonders") ? 2 : S == TEXT("Units") ? 3 : 4; };
+				TArray<FChoice> Made(Choices.GetData() + First, Choices.Num() - First);
+				Made.StableSort([&](const FChoice& A, const FChoice& B) { return Rank(A.Section) < Rank(B.Section); });
+				Choices.SetNum(First);
+				Choices.Append(Made);
 			}
 			// Religious units and worship buildings are bought with Faith (06).
 			for (size_t u = 0; u < R.units.size(); ++u)
@@ -532,7 +546,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
 				if (Faith > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.units[u].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+					Choices.Add({FString::Printf(TEXT("Buy %s"), *Str(R.units[u].name)), sov::Command::purchaseWithFaith(Me(), City->id, Item), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", TEXT("Buy with faith")});
 				}
 			}
 			for (size_t b = 0; b < R.buildings.size(); ++b)
@@ -541,7 +555,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
 				if (Faith > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.buildings[b].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+					Choices.Add({FString::Printf(TEXT("Buy %s"), *Str(R.buildings[b].name)), sov::Command::purchaseWithFaith(Me(), City->id, Item), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", TEXT("Buy with faith")});
 				}
 			}
 			// Gold buys units and buildings outright (02: Purchasing), and plots next to the city's border.
@@ -550,7 +564,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (Item.kind != sov::ProductionKind::Unit && Item.kind != sov::ProductionKind::Building) continue;
 				const sov::Command Buy = sov::Command::purchase(Me(), City->id, Item);
 				if (G.validate(Buy) != sov::CommandError::Ok) continue;
-				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item, City)), Buy});
+				Choices.Add({FString::Printf(TEXT("Buy %s"), *ItemName(R, Item)), Buy, {}, FString::Printf(TEXT("%d gold"), G.purchaseCost(Me(), Item, City)), "gold", TEXT("Buy with gold")});
 			}
 			// A placed district, with Reyna's Contractor (Gold) or Moksha's Divine Architect (Faith) here (08: Governors).
 			for (const sov::CityDistrict& D : City->districts)
@@ -561,17 +575,18 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					const sov::Command Buy = bFaith ? sov::Command::purchaseWithFaith(Me(), City->id, Item) : sov::Command::purchase(Me(), City->id, Item);
 					if (G.validate(Buy) == sov::CommandError::Ok)
-						Choices.Add({FString::Printf(TEXT("Buy the %s for %d %s"), *ItemName(R, Item), G.districtPurchaseCost(*City, D.type, bFaith), bFaith ? TEXT("faith") : TEXT("gold")), Buy});
+						Choices.Add({FString::Printf(TEXT("Buy the %s"), *ItemName(R, Item)), Buy, {}, FString::Printf(TEXT("%d %s"), G.districtPurchaseCost(*City, D.type, bFaith), bFaith ? TEXT("faith") : TEXT("gold")),
+							bFaith ? FName("faith") : FName("gold"), bFaith ? TEXT("Buy with faith") : TEXT("Buy with gold")});
 				}
 			}
 			for (const sov::Hex& H : G.state().grid.within(City->pos, 3))
 			{
 				const sov::Command Buy = sov::Command::buyPlot(Me(), City->id, H);
 				if (G.validate(Buy) == sov::CommandError::Ok)
-					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
+					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d"), H.x, H.y), Buy, {}, FString::Printf(TEXT("%d gold"), G.plotPurchaseCost(City->id, H)), "found", TEXT("Tiles")});
 			}
-			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
-			if (G.canLiberateCity(Me(), City->id)) Choices.Add({TEXT("Liberate this city (back to its original owner, +100 Diplomatic Favor)"), sov::Command::liberateCity(Me(), City->id)});
+			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id), {}, TEXT(""), "attack", TEXT("The city")});
+			if (G.canLiberateCity(Me(), City->id)) Choices.Add({TEXT("Liberate this city (back to its original owner, +100 Diplomatic Favor)"), sov::Command::liberateCity(Me(), City->id), {}, TEXT(""), "favor", TEXT("The city")});
 			// Theming (07): gather our Great Works into a museum here that they can theme.
 			for (const sov::TypeIndex B : City->buildings)
 			{
@@ -2390,7 +2405,7 @@ void ASovPlayerController::UpdateGameUI()
 	{
 		M.bChooser = true;
 		M.ChooserTitle = ChooserTitle;
-		for (const FChoice& Ch : Choices) M.Choices.Add(Ch.Label);
+		for (const FChoice& Ch : Choices) M.Choices.Add({Ch.Label, Ch.Right, Ch.Icon, Ch.Section});
 	}
 	// Research and civics open as their whole tree (plan D, step 3).
 	if (Chooser == EChooser::Research || Chooser == EChooser::Civic)

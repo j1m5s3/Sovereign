@@ -40,6 +40,15 @@ struct FSovUINotice
 	bool bUrgent = false;  // waits on the player
 };
 
+// A chooser line: its text, and optionally an icon, the section it starts or belongs to, and a value on the right.
+struct FSovUIChoice
+{
+	FString Label;
+	FString Right;    // "9 turns", "200 gold"
+	FName Icon;
+	FString Section;  // a header shows where it changes
+};
+
 struct FSovUIModel
 {
 	bool bVisible = false;
@@ -75,7 +84,7 @@ struct FSovUIModel
 	// The open chooser.
 	bool bChooser = false;
 	FString ChooserTitle;
-	TArray<FString> Choices;
+	TArray<FSovUIChoice> Choices;
 	// The tech or civic tree, open in place of their list (plan D, step 3).
 	FSovTreeModel Tree;
 	// The end of the game (plan D, step 5): who won and how, the scores, and the player's chronicle.

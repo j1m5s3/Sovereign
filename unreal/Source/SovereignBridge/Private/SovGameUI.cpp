@@ -584,7 +584,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildNotices();
 	}
 	FString C = Model.bChooser ? Model.ChooserTitle : FString();
-	for (const FString& L : Model.Choices) C += L + TEXT("|");
+	for (const FSovUIChoice& L : Model.Choices) C += L.Section + L.Icon.ToString() + L.Label + L.Right + TEXT("|");
 	if (C != ChooserKey)
 	{
 		ChooserKey = C;
@@ -703,18 +703,28 @@ void SSovGameUI::RebuildNotices()
 void SSovGameUI::RebuildChooser()
 {
 	ChoicesBox->ClearChildren();
+	FString Section;
 	for (int32 i = 0; i < Model.Choices.Num(); ++i)
 	{
+		const FSovUIChoice& Ch = Model.Choices[i];
+		if (!Ch.Section.IsEmpty() && Ch.Section != Section)
+		{
+			Section = Ch.Section;
+			ChoicesBox->AddSlot().AutoHeight().Padding(2, i == 0 ? 0 : 8, 0, 2)
+			[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(Section.ToUpper()))];
+		}
+		const TSharedRef<SHorizontalBox> Row = SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2, 0, 8, 0)
+			[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(i < 9 ? FString::FromInt(i + 1) : FString(TEXT(" "))))];
+		if (!Ch.Icon.IsNone())
+			Row->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 8, 0)[SNew(SBox).WidthOverride(20).HeightOverride(20)[SNew(SImage).Image(FSovStyle::Icon(Ch.Icon))]];
+		Row->AddSlot().FillWidth(1.f).VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Ch.Label))];
+		if (!Ch.Right.IsEmpty())
+			Row->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(10, 0, 2, 0)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(Ch.Right))];
 		ChoicesBox->AddSlot().AutoHeight().Padding(0, 2)
 		[
 			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, i]() { OnPick.ExecuteIfBound(i); return FReply::Handled(); })
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(2, 0, 8, 0)
-				[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(i < 9 ? FString::FromInt(i + 1) : FString(TEXT(" "))))]
-				+ SHorizontalBox::Slot().FillWidth(1.f)
-				[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Model.Choices[i]))]
-			]
+			[Row]
 		];
 	}
 }
