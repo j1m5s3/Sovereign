@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovTreeView.h"
 
 class SVerticalBox;
 class SHorizontalBox;
@@ -61,6 +62,8 @@ struct FSovUIModel
 	bool bChooser = false;
 	FString ChooserTitle;
 	TArray<FString> Choices;
+	// The tech or civic tree, open in place of their list (plan D, step 3).
+	FSovTreeModel Tree;
 	// End turn.
 	bool bMyTurn = false;
 	bool bTurnReady = false;  // nothing blocks it
@@ -76,6 +79,7 @@ public:
 	SLATE_EVENT(TDelegate<void()>, OnEndTurn)
 	SLATE_EVENT(TDelegate<void(int32)>, OnFocus)    // a city focus (sov::CityFocus)
 	SLATE_EVENT(TDelegate<void(bool)>, OnBuy)       // buy what the city builds: true with faith
+	SLATE_EVENT(TDelegate<void(int32)>, OnTreeNode) // a tech or civic clicked in the tree
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
@@ -104,4 +108,6 @@ private:
 	TDelegate<void()> OnEndTurn;
 	TDelegate<void(int32)> OnFocus;
 	TDelegate<void(bool)> OnBuy;
+	TDelegate<void(int32)> OnTreeNode;
+	TSharedPtr<SSovTreeView> TreeView;
 };

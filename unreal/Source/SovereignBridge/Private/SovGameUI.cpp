@@ -30,6 +30,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnEndTurn = Args._OnEndTurn;
 	OnFocus = Args._OnFocus;
 	OnBuy = Args._OnBuy;
+	OnTreeNode = Args._OnTreeNode;
 	auto Visible = [this](TFunction<bool()> Test) {
 		return TAttribute<EVisibility>::CreateLambda([Test]() { return Test() ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; });
 	};
@@ -203,7 +204,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// The open chooser.
 		+ SOverlay::Slot().VAlign(VAlign_Center).HAlign(HAlign_Right).Padding(0, 50, 16, 110)
 		[
-			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser; }))
+			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser && !Model.Tree.bOpen; }))
 			[
 				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
 				[
@@ -223,6 +224,14 @@ void SSovGameUI::Construct(const FArguments& Args)
 					+ SVerticalBox::Slot().FillHeight(1.f)[SNew(SScrollBox) + SScrollBox::Slot()[SAssignNew(ChoicesBox, SVerticalBox)]]
 				]
 			]
+		]
+		// The tech or civic tree, over the map below the top bar.
+		+ SOverlay::Slot().Padding(12, 52, 12, 12)
+		[
+			SAssignNew(TreeView, SSovTreeView)
+			.Visibility_Lambda([this]() { return Model.bVisible && Model.Tree.bOpen ? EVisibility::Visible : EVisibility::Collapsed; })
+			.OnNode_Lambda([this](int32 Node) { OnTreeNode.ExecuteIfBound(Node); })
+			.OnClose_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); })
 		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
@@ -292,6 +301,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		CityKey = Y;
 		RebuildCity();
 	}
+	if (Model.Tree.bOpen) TreeView->SetModel(Model.Tree);
 	FString C = Model.bChooser ? Model.ChooserTitle : FString();
 	for (const FString& L : Model.Choices) C += L + TEXT("|");
 	if (C != ChooserKey)
