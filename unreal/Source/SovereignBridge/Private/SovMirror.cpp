@@ -337,5 +337,21 @@ TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int
 			if (!Yl.IsEmpty()) Out.Add(Yl);
 		}
 	}
+	// The units on it, where the viewer sees them now (plan E, step 3).
+	if (Game.visibility(static_cast<sov::PlayerId>(Viewer), H) == sov::Visibility::Visible)
+	{
+		for (const sov::Unit& U : S.units)
+		{
+			if (U.pos.x != H.x || U.pos.y != H.y || U.type == sov::kNone) continue;
+			const sov::UnitType& T = R.units[static_cast<size_t>(U.type)];
+			const sov::Player& O = S.players[static_cast<size_t>(U.owner)];
+			const FString Who = O.barbarian ? FString(TEXT("Barbarian")) : O.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(O.cityState)].name)
+				: O.civ != sov::kNone ? Str(R.civs[static_cast<size_t>(O.civ)].name) : FString(TEXT("?"));
+			FString Line = FString::Printf(TEXT("%s (%s), %d HP"), *Str(T.name), *Who, U.hp);
+			if (T.combat > 0) Line += FString::Printf(TEXT(", strength %d"), Game.meleeStrength(U));
+			if (T.ranged > 0) Line += FString::Printf(TEXT(", ranged %d"), T.ranged);
+			Out.Add(Line);
+		}
+	}
 	return Out;
 }

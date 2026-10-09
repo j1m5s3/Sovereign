@@ -1,5 +1,6 @@
 #include "SovGameUI.h"
 
+#include "Framework/Application/SlateApplication.h"
 #include "SovStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Images/SImage.h"
@@ -367,6 +368,19 @@ void SSovGameUI::Construct(const FArguments& Args)
 				]
 			]
 		]
+		// The plot under the cursor, beside it.
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(TAttribute<FMargin>::CreateLambda([this]() {
+			const FVector2D Size = LastGeometry.GetLocalSize();
+			const FVector2D At = LastGeometry.AbsoluteToLocal(FSlateApplication::Get().GetCursorPos()) + FVector2D(18.0, 18.0);
+			const double H = 10.0 + 17.0 * Model.Hover.Num();
+			return FMargin(FMath::Min(At.X, Size.X - 330.0), FMath::Min(At.Y, Size.Y - H - 8.0), 0.f, 0.f);
+		}))
+		[
+			SNew(SBox).MaxDesiredWidth(320).Visibility_Lambda([this]() {
+				return Model.bVisible && bOverMap && Model.Hover.Num() > 0 && !Model.Tree.bOpen && !Model.bEnd ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+			})
+			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
+		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
 		[
@@ -412,9 +426,31 @@ TSharedRef<SWidget> SSovGameUI::StatWidget(const FSovUIStat& Stat, int32 Size)
 	return Out;
 }
 
+void SSovGameUI::Tick(const FGeometry& Geometry, const double Time, const float Delta)
+{
+	SCompoundWidget::Tick(Geometry, Time, Delta);
+	LastGeometry = Geometry;
+	// Over the map when nothing of ours lies under the cursor: the topmost widget there is this one (or the viewport).
+	bOverMap = false;
+	if (FSlateApplication::IsInitialized())
+	{
+		const FWidgetPath Path = FSlateApplication::Get().LocateWindowUnderMouse(FSlateApplication::Get().GetCursorPos(), FSlateApplication::Get().GetInteractiveTopLevelWindows());
+		bOverMap = Path.IsValid() && (Path.Widgets.Last().Widget == AsShared() || !Path.ContainsWidget(this));
+	}
+}
+
 void SSovGameUI::SetModel(const FSovUIModel& InModel)
 {
 	Model = InModel;
+	FString Hv;
+	for (const FString& L : Model.Hover) Hv += L + TEXT("|");
+	if (Hv != HoverKey)
+	{
+		HoverKey = Hv;
+		HoverBox->ClearChildren();
+		for (int32 i = 0; i < Model.Hover.Num(); ++i)
+			HoverBox->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(i == 0 ? 10 : 9, i == 0)).ColorAndOpacity(i == 0 ? FSovStyle::Gold : FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Model.Hover[i]))];
+	}
 	if (const FString K = StatKey(Model.Stats); K != StatsKey)
 	{
 		StatsKey = K;

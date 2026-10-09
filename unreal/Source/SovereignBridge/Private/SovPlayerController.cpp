@@ -2494,6 +2494,8 @@ void ASovPlayerController::UpdateGameUI()
 	}
 	if (Notices.Num() > 8) Notices.SetNum(8);  // the most pressing; the rest wait their turn
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The plot under the cursor.
+	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
 	// The Empire panel.
 	M.bEmpire = bEmpireOpen;
 	if (bEmpireOpen)

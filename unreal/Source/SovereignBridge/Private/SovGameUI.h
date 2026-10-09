@@ -81,6 +81,8 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// The plot under the cursor (plan E, step 3): terrain, owner, yields and units; shown only over the map.
+	TArray<FString> Hover;
 	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).
 	bool bEmpire = false;
 	TArray<FSovUIStat> EmpireLines;
@@ -115,6 +117,7 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
+	virtual void Tick(const FGeometry& Geometry, const double Time, const float Delta) override;
 	// The latest state; rebuilds only the lists whose contents changed.
 	void SetModel(const FSovUIModel& InModel);
 
@@ -149,6 +152,10 @@ private:
 	FString EndKey;
 	TSharedPtr<SVerticalBox> LegendBox;
 	TSharedPtr<SVerticalBox> EmpireBox;
+	TSharedPtr<SVerticalBox> HoverBox;
+	FString HoverKey;
+	FGeometry LastGeometry;   // for placing the tooltip by the cursor
+	bool bOverMap = false;    // the cursor is over the map, not one of the panels
 	FString EmpireKey;
 	FString LegendKey;
 	TDelegate<void(int32)> OnLens;

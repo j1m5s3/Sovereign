@@ -415,7 +415,7 @@ void ASovHUD::DrawHUD()
 	// The plot under the cursor: terrain, resource, improvement, owner and yields.
 	int32 TX = 0, TY = 0;
 	float MX = 0.f, MY = 0.f;
-	if (PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))
+	if (TopInset <= 0.f && PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))  // the widgets show it themselves
 	{
 		const TArray<FString> Tip = SovPlotTooltip(Sub->GetGame(), Sub->GetSession().ViewPlayer(), TX, TY);
 		if (Tip.Num() > 0)
