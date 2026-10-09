@@ -27,7 +27,7 @@ This fits Civ VI's Great General model (05: a person on the map with a 2-tile au
 
 - **Stacking (05, 1UPT):** the Sovereign uses the civilian layer like a Great Person, so one military escort can share its tile, linked so they move together. Linked, the pair does not move through other civs' units; alone, the Sovereign passes them as any unit may. Because the leader can now fight (decision 3), it defends itself when attacked rather than being captured instantly. An enemy military unit only captures it after beating it in combat while it has no escort (section 5).
 - **No cost:** the leader cannot be built and has no maintenance.
-- **Presence aura (2 tiles, grows with level) [decided, James 2026-10-05]:** +combat strength to nearby friendly units (does not stack with a Great General: the higher one applies), and loyalty per turn to a city whose tiles it stands on. Built in step 3 with the strength part; loyalty arrives with the loyalty system.
+- **Presence aura (2 tiles, grows with level) [decided, James 2026-10-05]:** +combat strength to nearby friendly units (does not stack with a Great General: the higher one applies), and loyalty per turn to a city whose tiles it stands on. Built in step 3 with the strength part; the loyalty part (+4 a turn to the city whose land it stands on, Sovereign tuning) was added on 2026-10-09.
 - **Leader abilities stay empire-wide (09):** each Civ VI leader's ability is unchanged. The unit adds a separate layer on top.
 - **Game start and early safety [decided, James 2026-10-04, gap review]:** the leader starts on the Settler's tile in addition to Civ's normal starting units. Barbarians can wound the leader but never kill or capture it; at low HP it retreats to the capital. Assassins unlock in the Classical era (section 6). If the capital falls while the leader is elsewhere, the leader stays free and the Palace moves as in Civ.
 - **At sea and in the air [decided, James 2026-10-04, gap review]:** the leader embarks like a land unit and is vulnerable while embarked, as land units are in Civ, so naval escorts matter. Naval and air fights involving the leader auto-resolve with Civ math. A transport sunk with the leader aboard means the leader dies.
@@ -59,7 +59,7 @@ Proposal: the leader's combat stats come mostly from gear, not from its unit typ
 
 ## 3. Levelling with the Civ VI XP and promotion system [decided, James 2026-10-05]
 
-Built in step 3 with the effects the core can model (strength, aura, assassin defence, production and amenities in the city the leader stands in). Loyalty, governor and Great Person effects arrive with those systems. Each branch has two promotions; only one branch's second promotion can be taken per reign.
+Built in step 3 with the effects the core can model (strength, aura, assassin defence, production and amenities in the city the leader stands in). Statesman loyalty was added on 2026-10-09; governor and Great Person effects arrive with those systems. Each branch has two promotions; only one branch's second promotion can be taken per reign.
 
 Reuses 05 "XP and promotions" directly: 15 × current level XP to the next level, excess lost, promotion heals 50 HP, 7-node trees in 4 tiers.
 
@@ -67,7 +67,7 @@ Reuses 05 "XP and promotions" directly: 15 × current level XP to the next level
 - **Barbarian cap (05: level 2)** still applies to XP from barbarians.
 - **Own promotion class `SOVEREIGN`**, three branches; only one can be finished per reign:
   - **Warlord:** better weapon handling (+strength with the current weapon type), stronger aura, bonus vs assassins in melee, can lead a Corps/Army with its escort.
-  - **Statesman:** more loyalty pressure, better outcomes from citizen interactions (section 4), harder to assassinate (raises the assassin's difficulty, see section 6).
+  - **Statesman:** more loyalty pressure (each Statesman promotion adds +2 to the aura's loyalty, Sovereign tuning), better outcomes from citizen interactions (section 4), harder to assassinate (raises the assassin's difficulty, see section 6).
   - **Builder-King:** production and amenities in the city it visits, faster governor establishment (08: normally 5 turns), extra Great Person points while present.
 
 ## 4. Interiors as a real gameplay layer [decided]
@@ -95,7 +95,7 @@ Other interior actions (front door to existing systems): appoint or move a gover
 
 Three outcomes, plus an optional game mode:
 
-- **Assassinated or killed in battle → succession.** The empire takes a hit: an interregnum where policy slots are empty for a few turns (like Civ VI's government-change anarchy), a loyalty drop in every city (02), and lost era score that can tip you toward a Dark Age (09). The killer's civ takes grievances (08) if it's identified.
+- **Assassinated or killed in battle → succession.** The empire takes a hit: an interregnum where policy slots are empty for a few turns (like Civ VI's government-change anarchy), a loyalty drop in every city (02; 20 loyalty), and lost era score that can tip you toward a Dark Age (09; 3 points). Both amounts are Sovereign tuning. The killer's civ takes grievances (08) if it's identified.
 - **The leader ability belongs to the throne [decided, James 2026-10-04, gap review]:** every successor keeps the civ's leader ability. The heir or pool successor adds a small personal trait on top. The cost of losing a leader is the interregnum, loyalty loss, era score and lost levels, not the ability.
 - **Choosing the successor [decided]:** the player picks either
   - **the heir [decided, James 2026-10-04, gap review]:** each civ ships a short historical dynasty (starting leader plus 2 successors) as hand-made heirs (see leaders-and-art-style.md). The heir starts at level 1, keeps one promotion of the dead leader's choice, inherits the loadout; or
@@ -105,7 +105,7 @@ Three outcomes, plus an optional game mode:
     - **a high-level military unit** (level 4+): starts with combat-heavy promotions; the unit is gone.
 
     Pool candidates trade a stronger start against losing something you already had. The heir is the "free" option.
-- **Captured.** An enemy that beats the leader in combat while it has no escort takes it prisoner instead of killing it. The captive becomes a deal-screen item (07 "Diplomatic deals", like Civ VI's captured spies): ransom for gold, cities or peace. While held, your empire is in interregnum. You may also abandon the captive and crown a successor (above) at a heavier loyalty cost.
+- **Captured.** An enemy that beats the leader in combat while it has no escort takes it prisoner instead of killing it. The captive becomes a deal-screen item (07 "Diplomatic deals", like Civ VI's captured spies): ransom for gold, cities or peace. While held, your empire is in interregnum. You may also abandon the captive and crown a successor (above) at a heavier loyalty cost (30 loyalty in every city, and the same era score). Until the ransom deal item is built, abandoning is the only way out.
 - **Regicide (optional game mode):** losing the leader eliminates you.
 
 ## 6. Assassins [decided]

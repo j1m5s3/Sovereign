@@ -114,6 +114,9 @@ Fixed Game::loyaltyPerTurn(const City& city, ReportShare& shared, std::optional<
     PlayerId govOwner = kNoPlayer;
     if (const Governor* g = establishedGovernor(*c, &govOwner); g && govOwner == c->owner)
         change += Fixed::fromInt(rules_->governors[static_cast<size_t>(g->type)].loyalty + civAbility(c->owner).governorLoyalty);
+    // The leader's presence aura steadies the city whose land it stands on; Statesman promotions add to it (leader doc §1, §3).
+    if (const Unit* l = leaderOf(c->owner); l && state_.plot(l->pos).city == c->id)
+        change += Fixed::fromInt(rules_->globalInt("LEADER_AURA_LOYALTY") + unitEffectTotal(*l, UnitEffectKind::AuraLoyalty));
     // Hic Sunt Dracones in a Golden Age (09): +2 a turn in cities off the capital's continent.
     if (goldenDedication(c->owner, "DEDICATION_HIC_SUNT_DRACONES")) {
         for (const City& home : state_.cities) {

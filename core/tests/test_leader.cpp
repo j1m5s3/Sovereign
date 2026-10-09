@@ -402,16 +402,24 @@ TEST(a_veteran_unit_can_take_the_throne) {
 TEST(a_captured_leader_holds_the_throne_until_abandoned) {
     Fall f = fallScenario();
     Game& g = *f.game;
+    const int capitalLoyalty = g.state().city(f.capital)->loyalty, eraScore = g.state().players[0].eraScore;
     REQUIRE(g.submit(Command::attack(1, f.sword, {8, 5})) == CommandError::Ok);
     const Player& p = g.state().players[0];
     CHECK_EQ(p.captor, 1);
     CHECK(!p.successionPending);
+    CHECK_EQ(g.state().city(f.capital)->loyalty, capitalLoyalty);  // a capture costs nothing while the ransom is open
+    CHECK_EQ(p.eraScore, eraScore);
     pass(g, 1);
     CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::CannotSucceed);
     pass(g, 6);
     CHECK_EQ(g.state().players[0].interregnumTurns, rules().globalInt("LEADER_INTERREGNUM_TURNS"));  // frozen while held
+    const int held = g.state().city(f.capital)->loyalty, era = g.state().players[0].eraScore;
     CHECK_EQ(g.submit(Command::abandonLeader(0)), CommandError::Ok);
     CHECK(g.state().players[0].captor == kNoPlayer && g.state().players[0].successionPending);
+    // Abandoning the captive costs more loyalty than a killed leader (§5).
+    REQUIRE(rules().globalInt("LEADER_ABANDON_LOYALTY") > rules().globalInt("LEADER_LOSS_LOYALTY"));
+    CHECK_EQ(g.state().city(f.capital)->loyalty, std::max(0, held - rules().globalInt("LEADER_ABANDON_LOYALTY")));
+    CHECK_EQ(g.state().players[0].eraScore, era - std::min(era, rules().globalInt("LEADER_LOSS_ERA_SCORE")));
     CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Heir)), CommandError::Ok);
     CHECK(g.leaderOf(0));
 }
@@ -605,6 +613,69 @@ TEST(presence_aura_and_builder_king) {
     s.unit(leader)->promotions = {promo("PROMOTION_SOVEREIGN_OVERSEER")};
     auto g2 = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g2->cityReport(city).yields[static_cast<size_t>(YieldType::Production)], before + Fixed::fromInt(2));
+}
+
+TEST(presence_aura_steadies_the_city_it_stands_in) {
+    // The city whose land the leader stands on gains loyalty; Statesman promotions add to it (§1, §3).
+    CityId home = kNoCity, other = kNoCity, theirs = kNoCity;
+    auto at = [&](Hex pos, std::vector<TypeIndex> promos) {
+        return duel(
+            [&](GameState& s) {
+                home = addCity(s, 0, {3, 4}, true);
+                other = addCity(s, 0, {9, 4}, false);
+                theirs = addCity(s, 1, {13, 9}, true);
+                addLeader(s, 0, pos);
+                s.units.back().promotions = promos;
+            },
+            false);
+    };
+    const auto away = at({6, 8}, {});
+    const auto near = at({4, 4}, {});  // home's land beside the center
+    const int aura = rules().globalInt("LEADER_AURA_LOYALTY");
+    REQUIRE(aura > 0);
+    CHECK_EQ(near->loyaltyPerTurn(home), away->loyaltyPerTurn(home) + Fixed::fromInt(aura));
+    CHECK_EQ(near->loyaltyPerTurn(other), away->loyaltyPerTurn(other));
+    CHECK_EQ(near->loyaltyPerTurn(theirs), away->loyaltyPerTurn(theirs));
+    const auto wary = at({9, 4}, {promo("PROMOTION_SOVEREIGN_WARY")});  // in the other city now
+    CHECK_EQ(wary->loyaltyPerTurn(other), away->loyaltyPerTurn(other) + Fixed::fromInt(aura + 2));
+    CHECK_EQ(wary->loyaltyPerTurn(home), away->loyaltyPerTurn(home));
+    const auto spymaster = at({4, 4}, {promo("PROMOTION_SOVEREIGN_WARY"), promo("PROMOTION_SOVEREIGN_SPYMASTER")});
+    CHECK_EQ(spymaster->loyaltyPerTurn(home), away->loyaltyPerTurn(home) + Fixed::fromInt(aura + 4));
+    const auto builder = at({4, 4}, {promo("PROMOTION_SOVEREIGN_OVERSEER")});  // not a Statesman promotion
+    CHECK_EQ(builder->loyaltyPerTurn(home), near->loyaltyPerTurn(home));
+}
+
+TEST(a_slain_leader_shakes_every_city_and_the_era) {
+    // §5: a killed leader costs every city loyalty at once and the empire era score; the enemy's cities are untouched.
+    for (const int score : {9, 1}) {
+        UnitId archer = 0;
+        CityId home = kNoCity, shaky = kNoCity, theirs = kNoCity;
+        auto g = duel([&](GameState& s) {
+            home = addCity(s, 0, {2, 2}, true);
+            shaky = addCity(s, 0, {2, 8}, false);
+            s.cities.back().loyalty = 4;
+            theirs = addCity(s, 1, {13, 9}, true);
+            s.cities.back().loyalty = 90;
+            addLeader(s, 0, {8, 5});
+            s.units.back().hp = 1;
+            archer = addUnit(s, "UNIT_ARCHER", 1, {10, 5});
+            Player& p = s.players[0];
+            p.eraScore = score;
+            p.eraScoreTotal = score + 40;
+        });
+        pass(*g, 1);
+        const int homeLoyalty = g->state().city(home)->loyalty, theirLoyalty = g->state().city(theirs)->loyalty;
+        const int era = g->state().players[0].eraScore, total = g->state().players[0].eraScoreTotal;
+        REQUIRE(g->submit(Command::rangedAttack(1, archer, {8, 5})) == CommandError::Ok);
+        REQUIRE(!g->leaderOf(0));
+        const int drop = rules().globalInt("LEADER_LOSS_LOYALTY"), lost = std::min(era, rules().globalInt("LEADER_LOSS_ERA_SCORE"));
+        REQUIRE(g->state().city(shaky)->loyalty < drop && lost > 0);
+        CHECK_EQ(g->state().city(home)->loyalty, homeLoyalty - drop);
+        CHECK_EQ(g->state().city(shaky)->loyalty, 0);  // never below 0
+        CHECK_EQ(g->state().city(theirs)->loyalty, theirLoyalty);
+        CHECK_EQ(g->state().players[0].eraScore, era - lost);
+        CHECK_EQ(g->state().players[0].eraScoreTotal, total - lost);
+    }
 }
 
 TEST(an_heir_keeps_one_promotion) {

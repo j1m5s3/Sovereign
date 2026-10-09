@@ -977,6 +977,8 @@ private:
     // After a barbarian fight: never below 1 HP, and home to the capital when badly hurt.
     void barbarianWound(Unit& leader);
     void startInterregnum(Player& p);
+    // A new ruler is crowned after a loss: every city's loyalty drops and the era's score shrinks (leader doc §5).
+    void successionShock(PlayerId owner, int loyaltyDrop);
     void processLoyalty(PlayerId p);
     void rebellion(City& city);  // a pretender's rebels appear next to the city
     void processFreeCities();
