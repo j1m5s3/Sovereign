@@ -11,6 +11,7 @@
 #include "SovBattleSim.h"
 #include "SovDiplomacy.h"
 #include "SovGameUI.h"
+#include "SovKeys.h"
 
 #include "SovPlayerController.generated.h"
 
@@ -129,7 +130,8 @@ protected:
 	// The game screen's widgets (plan D): filled each frame; their buttons press keys (UIKeys) that the
 	// order handling reads through Pressed, as if typed.
 	void UpdateGameUI();
-	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(Key) || UIKeys.Contains(Key); }
+	// An order key (by its default) pressed this frame: on the key it is bound to now (SovKeys), or by a widget.
+	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(SovKeys::Physical(Key)) || UIKeys.Contains(Key); }
 	void UpdatePanel();
 	// Online and hot seat: the lobby, the hand-over screen, and the chat line (M).
 	// True when they took this frame's input.

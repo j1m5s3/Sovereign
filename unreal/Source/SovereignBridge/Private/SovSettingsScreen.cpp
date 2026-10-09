@@ -2,11 +2,14 @@
 
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
+#include "UnrealClient.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "Widgets/SWindow.h"
 #include "GameFramework/GameUserSettings.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Framework/Application/SlateApplication.h"
+#include "SovKeys.h"
 #include "SovStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Input/SButton.h"
@@ -22,32 +25,15 @@ const TCHAR* const kQualities[] = {TEXT("Low"), TEXT("Medium"), TEXT("High"), TE
 const TCHAR* const kModes[] = {TEXT("Fullscreen"), TEXT("Windowed fullscreen"), TEXT("Windowed")};
 const int32 kLimits[] = {0, 30, 60, 120, 144, 240};  // 0: no limit
 
-// The controls, for reference (the README's table has the details).
-const TCHAR* const kControls[][2] = {
+// The controls that stay where they are (the order keys, which can be rebound, come from SovKeys).
+const TCHAR* const kFixed[][2] = {
 	{TEXT("Left click"), TEXT("Select a unit or city; click again to cycle")},
 	{TEXT("Right click"), TEXT("Move or attack with the selected unit; city strike")},
 	{TEXT("Space / Enter"), TEXT("End the turn (or open what blocks it)")},
 	{TEXT("Esc"), TEXT("Close a list, clear the selection, then the menu")},
 	{TEXT("WASD / arrows, wheel, Home"), TEXT("Pan, zoom, back to your capital")},
-	{TEXT("."), TEXT("Next unit needing orders")},
-	{TEXT("F"), TEXT("Found a city; use a great person; trade route; talk in the street")},
-	{TEXT("B"), TEXT("Builder: improve the plot; a battle: fight it live")},
-	{TEXT("K / G"), TEXT("Skip the unit / fortify or sleep")},
-	{TEXT("U"), TEXT("Promote the unit or leader")},
-	{TEXT("E / L / H"), TEXT("Leader's gear / escort link / the throne")},
-	{TEXT("Q"), TEXT("Walk the City Center with your leader")},
-	{TEXT("V / X"), TEXT("Benevolence / Fear in the leader's city")},
-	{TEXT("P / T / C"), TEXT("Production / research tree / civics tree")},
-	{TEXT("F2"), TEXT("Government, policies and dedications")},
-	{TEXT("Y / Z / J"), TEXT("Great people / governors / agents")},
-	{TEXT("I"), TEXT("Pantheon")},
-	{TEXT("N / O / ,"), TEXT("Diplomacy / city-states / World Congress")},
 	{TEXT("1-9, 0"), TEXT("Pick from an open list, next page")},
-	{TEXT("Shift+click"), TEXT("With a city selected: lock or free a citizen")},
-	{TEXT("F1 / F3"), TEXT("How to play / plot yields")},
-	{TEXT("F4 / F6"), TEXT("The chronicle / have it written up")},
-	{TEXT("F5 / F9"), TEXT("Quicksave / quickload")},
-	{TEXT("M"), TEXT("Chat (online)")}};
+	{TEXT("Shift+click"), TEXT("With a city selected: lock or free a citizen")}};
 
 void SetInterfaceScale(float Scale)
 {
@@ -71,8 +57,7 @@ void SSovSettingsScreen::Construct(const FArguments& Args)
 		if (S->GetOverallScalabilityLevel() < 0) Quality = 3;  // custom: show Epic
 		WindowMode = FMath::Clamp(static_cast<int32>(S->GetFullscreenMode()), 0, 2);
 		// The window as it is now (the saved setting can differ when the game was started with -windowed).
-		if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWindow().IsValid())
-			WindowMode = FMath::Clamp(static_cast<int32>(GEngine->GameViewport->GetWindow()->GetWindowMode()), 0, 2);
+		WindowMode = FMath::Clamp(static_cast<int32>(GSystemResolution.WindowMode), 0, 2);
 		bVSync = S->IsVSyncEnabled();
 		const float Limit = S->GetFrameRateLimit();
 		for (int32 i = 0; i < UE_ARRAY_COUNT(kLimits); ++i)
@@ -100,10 +85,48 @@ void SSovSettingsScreen::Construct(const FArguments& Args)
 	Add(Option(TEXT("Interface scale"), [this]() { return FString::Printf(TEXT("%d%%"), Scale * 10); }, [this](int32 D) { Scale = FMath::Clamp(Scale + D, 7, 16); }));
 	Options->AddSlot().AutoHeight().Padding(0, 10, 0, 0)
 	[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true)
-		.Text(FText::FromString(TEXT("Sound: none yet. The keys are fixed for now; rebinding comes later.")))];
+		.Text(FText::FromString(TEXT("Sound: none yet. Click a key on the right to rebind it (Esc cancels); an action already on the new key takes the old one.")))];
 
 	TSharedRef<SVerticalBox> Keys = SNew(SVerticalBox);
-	for (const auto& Row : kControls)
+	// The order keys: click one, then press its new key.
+	for (const FSovKeyAction& A : SovKeys::Actions())
+	{
+		const FKey Logical = A.Logical;
+		Keys->AddSlot().AutoHeight().Padding(0, 1)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 10, 0)
+			[
+				SNew(SBox).WidthOverride(130)
+				[
+					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center)
+					.ButtonColorAndOpacity_Lambda([this, Logical]() { return Capturing == Logical ? FSovStyle::Gold : FLinearColor::White; })
+					.OnClicked_Lambda([this, Logical]() {
+						Capturing = Logical;
+						FSlateApplication::Get().SetKeyboardFocus(SharedThis(this));
+						return FReply::Handled();
+					})
+					[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this, Logical]() {
+						return Capturing == Logical ? FText::FromString(TEXT("Press a key...")) : SovKeys::Physical(Logical).GetDisplayName();
+					})]
+				]
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+			[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(A.Label))]
+		];
+	}
+	Keys->AddSlot().AutoHeight().Padding(0, 4)
+	[
+		SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this]() {
+			SovKeys::ResetAll();
+			SovKeys::Save();
+			Capturing = FKey();
+			Status = TEXT("Keys reset to their defaults.");
+			return FReply::Handled();
+		})
+		[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Reset the keys")))]
+	];
+	for (const auto& Row : kFixed)
 	{
 		Keys->AddSlot().AutoHeight().Padding(0, 2)
 		[
@@ -155,6 +178,27 @@ void SSovSettingsScreen::Construct(const FArguments& Args)
 			]
 		]
 	];
+}
+
+FReply SSovSettingsScreen::OnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
+{
+	if (!Capturing.IsValid()) return SCompoundWidget::OnKeyDown(Geometry, Event);
+	const FKey Key = Event.GetKey();
+	if (Key == EKeys::Escape)
+	{
+		Capturing = FKey();
+		return FReply::Handled();
+	}
+	if (!SovKeys::CanBind(Key))
+	{
+		Status = FString::Printf(TEXT("%s stays as it is; pick another key."), *Key.GetDisplayName().ToString());
+		return FReply::Handled();
+	}
+	SovKeys::Bind(Capturing, Key);
+	SovKeys::Save();
+	Status = FString::Printf(TEXT("Bound to %s and saved."), *Key.GetDisplayName().ToString());
+	Capturing = FKey();
+	return FReply::Handled();
 }
 
 TSharedRef<SWidget> SSovSettingsScreen::Option(const FString& Label, TFunction<FString()> Value, TFunction<void(int32)> Step)

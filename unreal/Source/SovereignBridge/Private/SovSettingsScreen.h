@@ -1,6 +1,6 @@
 // The settings screen (plan D, step 5): graphics quality, window mode, resolution, vsync, frame limit and
-// interface scale, kept in GameUserSettings, and the controls for reference. There is no sound yet, and the
-// keys are fixed (no rebinding yet).
+// interface scale, kept in GameUserSettings, and the controls: the order keys can be rebound (SovKeys; plan E,
+// step 2). There is no sound yet.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -14,6 +14,8 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
+	virtual bool SupportsKeyboardFocus() const override { return true; }
+	virtual FReply OnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 
 	// The interface scale saved last time, put back at start-up.
 	static void ApplySavedInterfaceScale();
@@ -30,5 +32,6 @@ private:
 	int32 FrameLimit = 0;   // index into the limits list
 	int32 Scale = 10;       // interface scale in tenths
 	FString Status;
+	FKey Capturing;  // the action waiting for its new key (none: not rebinding)
 	TDelegate<void()> OnBack;
 };

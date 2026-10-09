@@ -106,6 +106,7 @@ void ASovPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	SSovSettingsScreen::ApplySavedInterfaceScale();
+	SovKeys::Load();
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	SetInputMode(Mode);
