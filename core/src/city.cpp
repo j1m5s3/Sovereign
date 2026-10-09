@@ -125,7 +125,9 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
         y[idx(YieldType::Production)] += Fixed::fromInt(civAbility(city.owner).mountainProduction);
     // Ground a disaster left fertile; a drought takes 1 Food (09: Climate and Disasters).
     for (size_t i = 0; i < kNumYields; ++i) y[i] += Fixed::fromInt(p.fertility[i]);
-    if (!state_.droughts.empty() && inDrought(at)) y[idx(YieldType::Food)] = std::max(Fixed(), y[idx(YieldType::Food)] - rules_->global("DROUGHT_FOOD_LOSS_PER_TILE"));
+    // A city whose Aqueduct or Bath prevents droughts keeps its plots' Food.
+    if (!state_.droughts.empty() && inDrought(at) && !cityPrevents(p.city, false))
+        y[idx(YieldType::Food)] = std::max(Fixed(), y[idx(YieldType::Food)] - rules_->global("DROUGHT_FOOD_LOSS_PER_TILE"));
     if (p.improvement != kNone && p.pillagedTurns == 0 && at != city.pos) {
         const Yields imp = improvementYields(at, city.owner);
         for (size_t i = 0; i < kNumYields; ++i) y[i] += imp[i];

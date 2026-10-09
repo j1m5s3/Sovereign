@@ -1373,6 +1373,8 @@ def gen_disasters():
         e = {"id": "DISASTER_" + snake(name), "name": name, "kind": kind, "severity": num(r["Severity"]),
              "hexes": num(r["Hexes"]), "duration": num(r["Duration"]), "chancePerDegree": num(r["ChanceIncreasePerDegree"]),
              "frequency": {}, "damage": [], "fertility": []}
+        if num(r["Spacing"]):
+            e["spacing"] = num(r["Spacing"])  # plots from a running event of its family (09: storms 15 tiles apart)
         if kind == "NUCLEAR":
             e["minTurnAtRisk"] = num(r["MinTurnAtRisk"])
         if r["NaturalWonder"]:
@@ -1410,8 +1412,10 @@ def gen_disasters():
             continue
         if r["Damage type"] == "radiation leaked":
             e["fallout"] = num(r["Fallout turns"])  # nuclear accidents (09)
-        damage.setdefault(e["id"], {})[r["Damage type"]] = {"type": snake(r["Damage type"]), "percent": num(r["%"]),
-                                                             "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
+        row = {"type": snake(r["Damage type"]), "percent": num(r["%"]), "minHp": num(r["Min HP"]), "maxHp": num(r["Max HP"])}
+        if r["Coastal lowland %"] and num(r["Coastal lowland %"]):
+            row["lowlandPercent"] = num(r["Coastal lowland %"])  # the chance on a coastal lowland plot (09: hurricanes)
+        damage.setdefault(e["id"], {})[r["Damage type"]] = row
     fert = {}
     for e, r in runs(table(path, "Event yield changes (fertility)")):
         if not e:
@@ -2512,6 +2516,8 @@ def gen_wonders():
             w["housing"] = num(row["Housing"])
         if row["Amenity"]:
             w["amenities"] = num(row["Amenity"])
+        if "PreventsFloods" in (row["Flags [GS]"] or ""):
+            w["preventsFloods"] = True  # no floods in its city (09: the Great Bath)
         if row.get("Regional range") and num(row["Regional range"]):
             # Its yields and Amenities reach the owner's cities this near its plot (03: the Colosseum and Jebel Barkal 6
             # tiles; the Estadio do Maracana's 100000 is every city).

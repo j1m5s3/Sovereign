@@ -1213,6 +1213,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
                 for (size_t k = 0; k < 4; ++k) b.policySlots[k] = static_cast<int>(j["policySlots"][slotNames[k]].integer(0));
             }
             b.meleeCannotDamageWalls = j["meleeCannotDamageWalls"].boolean(false);
+            b.preventsFloods = j["preventsFloods"].boolean(false);
             b.wallsCannotBeBypassed = j["wallsCannotBeBypassed"].boolean(false);
             b.wonder = j.has("placement");
             b.text = j["text"].str();
@@ -1860,6 +1861,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.chancePerDegree = static_cast<int>(j["chancePerDegree"].integer(0));
         d.minTurnAtRisk = static_cast<int>(j["minTurnAtRisk"].integer(0));
         d.fallout = static_cast<int>(j["fallout"].integer(0));
+        d.spacing = static_cast<int>(j["spacing"].integer(0));
         if (j.has("naturalWonder")) {
             d.naturalWonder = feature(j["naturalWonder"].str());
             if (d.naturalWonder == kNone) {
@@ -1873,7 +1875,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"IMPROVEMENT_DESTROYED", DisasterDamageType::ImprovementDestroyed}, {"IMPROVEMENT_PILLAGED", DisasterDamageType::ImprovementPillaged},
             {"POPULATION_LOSS", DisasterDamageType::PopulationLoss},             {"UNIT_KILLED_CIVILIAN", DisasterDamageType::CivilianKilled},
             {"UNIT_DAMAGE_LAND", DisasterDamageType::UnitDamageLand},           {"UNIT_DAMAGE_NAVAL", DisasterDamageType::UnitDamageNaval},
-            {"SPECIFIC_IMPROVEMENT_DESTROYED", DisasterDamageType::ImprovementDestroyed}, {"SPECIFIC_IMPROVEMENT_PILLAGED", DisasterDamageType::ImprovementPillaged},
+            {"SPECIFIC_IMPROVEMENT_DESTROYED", DisasterDamageType::FarmDestroyed}, {"SPECIFIC_IMPROVEMENT_PILLAGED", DisasterDamageType::FarmPillaged},
             {"CITY_GARRISON", DisasterDamageType::CityGarrison},                 {"CITY_WALLS", DisasterDamageType::CityWalls},
             {"DISTRICT_PILLAGED", DisasterDamageType::DistrictPillaged},         {"BUILDING_PILLAGED", DisasterDamageType::BuildingPillaged},
             {"BUILDING_DESTROYED", DisasterDamageType::BuildingDestroyed},       {"SPREAD", DisasterDamageType::Spread}};
@@ -1885,6 +1887,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             dd.percent = static_cast<int>(dj["percent"].integer(0));
             dd.minHp = static_cast<int>(dj["minHp"].integer(0));
             dd.maxHp = static_cast<int>(dj["maxHp"].integer(0));
+            dd.lowlandPercent = static_cast<int>(dj["lowlandPercent"].integer(0));
             if (dd.type != DisasterDamageType::Other) d.damage.push_back(dd);
         }
         for (const Json& fj : j["fertility"].items()) {

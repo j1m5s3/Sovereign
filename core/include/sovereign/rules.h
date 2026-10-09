@@ -525,6 +525,7 @@ struct BuildingType {
     bool faithOnly = false;  // a worship building: bought with Faith by a religion holding its belief
     TypeIndex districtType = kNone;  // Rules::districts; kNone while its district is not modelled
     bool meleeCannotDamageWalls = false;
+    bool preventsFloods = false;  // no floods in its city's plots [GS] (the Great Bath)
     bool wallsCannotBeBypassed = false;
     std::vector<std::pair<TypeIndex, int>> greatPersonPoints;  // (great person class, points per turn)
     std::vector<std::pair<std::string, int>> greatWorkSlots;   // (slot type, count): "WRITING", "ART", ...
@@ -1087,11 +1088,14 @@ struct DifficultyType {
 enum class DisasterKind : uint8_t { Flood = 0, Eruption, Blizzard, DustStorm, Tornado, Hurricane, Drought, Fire, Nuclear, Meteor };
 enum class DisasterDamageType : uint8_t {
     ImprovementDestroyed = 0, ImprovementPillaged, PopulationLoss, CivilianKilled, UnitDamageLand, UnitDamageNaval, CityGarrison, CityWalls,
-    DistrictPillaged, BuildingPillaged, BuildingDestroyed, Spread, Other,
+    DistrictPillaged, BuildingPillaged, BuildingDestroyed, Spread,
+    FarmDestroyed, FarmPillaged,  // the data's specific improvement (droughts): Farms (09)
+    Other,
 };
 struct DisasterDamage {
     DisasterDamageType type = DisasterDamageType::Other;
     int percent = 0, minHp = 0, maxHp = 0;
+    int lowlandPercent = 0;  // the chance instead on a coastal lowland plot, when set (09: hurricanes)
 };
 struct DisasterFertility {
     YieldType yield = YieldType::Food;
@@ -1105,6 +1109,7 @@ struct DisasterType {
     DisasterKind kind = DisasterKind::Flood;
     int severity = 0, hexes = 0, duration = 0, chancePerDegree = 0;
     int minTurnAtRisk = 0, fallout = 0;  // Nuclear: a reactor's age before it is at risk; fallout turns
+    int spacing = 0;                     // plots it keeps from a running storm (storms) or drought (droughts)
     TypeIndex naturalWonder = kNone;     // Eruption: only this volcano natural wonder erupts (Mount Vesuvius...)
     std::array<int, kNumDisasterIntensities> frequencyTenths{};  // expected occurrences per game, x10
     std::vector<DisasterDamage> damage;
