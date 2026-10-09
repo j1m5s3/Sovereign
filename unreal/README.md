@@ -48,6 +48,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 
 - **Top bar:** science, culture, gold, faith, favor and tourism per turn (click science or culture for research or civics, favor for the World Congress). Research and civic in progress with turns left and a progress line (click to choose). Government (F2), the turn and era, and the menu.
 - **Unit panel** (bottom left, for the selected unit): name, health bar, moves, strength, level and XP, and a button for each action (found, build, trade, religion, great person, promote, gear, escort, streets, fortify or sleep, skip). Each button presses the action's key.
+- **City panel** (bottom left, for the selected city): population, health and loyalty, yields per turn, growth with housing and amenities, what it builds (click to choose) with buy buttons for gold or faith, the citizens' focus, its buildings, districts, religion and timers, and buttons for production, Benevolence, Fear, governors and plot yields (F3; Shift+click a plot to lock a citizen there).
 - **Choosers:** every list (production, research, civics, government, promotions, great people, governors, diplomacy...) opens as a clickable, scrolling panel on the right. The number keys still pick, and Esc or X closes it.
 - **End turn** (bottom right): names what stands in the way (a unit needing orders, production, research, a civic, a successor). Clicking it does what Space does: ends the turn, or opens what is needed.
 

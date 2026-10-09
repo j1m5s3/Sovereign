@@ -28,6 +28,8 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnKey = Args._OnKey;
 	OnPick = Args._OnPick;
 	OnEndTurn = Args._OnEndTurn;
+	OnFocus = Args._OnFocus;
+	OnBuy = Args._OnBuy;
 	auto Visible = [this](TFunction<bool()> Test) {
 		return TAttribute<EVisibility>::CreateLambda([Test]() { return Test() ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; });
 	};
@@ -51,6 +53,37 @@ void SSovGameUI::Construct(const FArguments& Args)
 			[SNew(SBox).HeightOverride(3)[SNew(SProgressBar).Style(&FSovStyle::Progress()).FillColorAndOpacity(Fill).Percent_Lambda([this, Value]() { return Model.*Value; })]]
 		];
 	};
+
+	// Buy what the city builds, with gold or with faith.
+	auto Buy = [this](bool bFaith) -> TSharedRef<SWidget> {
+		return SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+			.Visibility_Lambda([this, bFaith]() { return (bFaith ? Model.BuyFaith : Model.BuyGold).IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+			.IsEnabled_Lambda([this, bFaith]() { return bFaith ? Model.bBuyFaith : Model.bBuyGold; })
+			.ToolTipText(FText::FromString(bFaith ? TEXT("Buy it now with faith") : TEXT("Buy it now with gold")))
+			.OnClicked_Lambda([this, bFaith]() { OnBuy.ExecuteIfBound(bFaith); return FReply::Handled(); })
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 4, 0)[SNew(SBox).WidthOverride(18).HeightOverride(18)[SNew(SImage).Image(FSovStyle::Icon(bFaith ? "faith" : "gold"))]]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+				[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this, bFaith]() { return FText::FromString(bFaith ? Model.BuyFaith : Model.BuyGold); })]
+			];
+	};
+	// The city focus: which yield its citizens favour when they pick plots.
+	TSharedRef<SHorizontalBox> Focus = SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 6, 0)
+		[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("Citizens favour")))];
+	static const TPair<FName, const TCHAR*> Focuses[] = {{"civic", TEXT("Balanced: no yield favoured")}, {"food", TEXT("Food")}, {"production", TEXT("Production")},
+		{"gold", TEXT("Gold")}, {"science", TEXT("Science")}, {"culture", TEXT("Culture")}, {"faith", TEXT("Faith")}};
+	for (int32 f = 0; f < UE_ARRAY_COUNT(Focuses); ++f)
+	{
+		Focus->AddSlot().AutoWidth().Padding(0, 0, 3, 0)
+		[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(Focuses[f].Value))
+			.ButtonColorAndOpacity_Lambda([this, f]() { return Model.CityFocus == f ? FSovStyle::Gold : FLinearColor::White; })
+			.OnClicked_Lambda([this, f]() { OnFocus.ExecuteIfBound(f); return FReply::Handled(); })
+			[SNew(SBox).WidthOverride(18).HeightOverride(18)[SNew(SImage).Image(FSovStyle::Icon(Focuses[f].Key))]]
+		];
+	}
 
 	ChildSlot
 	[
@@ -99,6 +132,71 @@ void SSovGameUI::Construct(const FArguments& Args)
 						.FillColorAndOpacity_Lambda([this]() { return Model.UnitHealth > 0.5f ? FSovStyle::Good : Model.UnitHealth > 0.25f ? FSovStyle::Gold : FSovStyle::Bad; })]]
 					+ SVerticalBox::Slot().AutoHeight()[SAssignNew(UnitStatsBox, SHorizontalBox)]
 					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)[SAssignNew(ActionsBox, SWrapBox).PreferredSize(450.f).InnerSlotPadding(FVector2D(4, 4))]
+				]
+			]
+		]
+		// The selected city.
+		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Left).Padding(12, 0, 0, 12)
+		[
+			SNew(SBox).WidthOverride(470).Visibility(Visible([this]() { return Model.bVisible && Model.bCity; }))
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[SNew(STextBlock).Font(FSovStyle::Font(18, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.CityName); })]
+					+ SVerticalBox::Slot().AutoHeight()
+					[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(Model.CitySub); })]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 5)
+					[SNew(SBox).HeightOverride(6)[SNew(SProgressBar).Style(&FSovStyle::Progress()).Percent_Lambda([this]() { return Model.CityHealth; })
+						.FillColorAndOpacity_Lambda([this]() { return Model.CityHealth > 0.5f ? FSovStyle::Good : FSovStyle::Bad; })]]
+					+ SVerticalBox::Slot().AutoHeight()[SAssignNew(CityStatsBox, SHorizontalBox)]
+					// Growth.
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 6, 0)[SNew(SBox).WidthOverride(22).HeightOverride(22)[SNew(SImage).Image(FSovStyle::Icon("food"))]]
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[
+							SNew(SVerticalBox)
+							+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.GrowthText); })]
+							+ SVerticalBox::Slot().AutoHeight().Padding(0, 2, 0, 0)
+							[SNew(SBox).HeightOverride(5)[SNew(SProgressBar).Style(&FSovStyle::Progress()).FillColorAndOpacity(FLinearColor(0.5f, 0.85f, 0.35f)).Percent_Lambda([this]() { return Model.GrowthProgress; })]]
+						]
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(10, 0, 0, 0)[SAssignNew(CityLivingBox, SHorizontalBox)]
+					]
+					// Production: click it to choose; buy it beside.
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f)
+						[
+						SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Choose what to build, or buy it (P)")))
+						.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::P); return FReply::Handled(); })
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 8, 0)
+							[SNew(SBox).WidthOverride(28).HeightOverride(28)[SNew(SImage).Image_Lambda([this]() { return FSovStyle::Icon(Model.ProductionIcon); })]]
+							+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+							[
+								SNew(SVerticalBox)
+								+ SVerticalBox::Slot().AutoHeight()
+								[
+									SNew(SHorizontalBox)
+									+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.ProductionName); })]
+									+ SHorizontalBox::Slot().AutoWidth()[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text_Lambda([this]() { return FText::FromString(Model.ProductionText); })]
+								]
+								+ SVerticalBox::Slot().AutoHeight().Padding(0, 3, 0, 0)
+								[SNew(SBox).HeightOverride(5)[SNew(SProgressBar).Style(&FSovStyle::Progress()).FillColorAndOpacity(FLinearColor(0.95f, 0.6f, 0.25f)).Percent_Lambda([this]() { return Model.ProductionProgress; })]]
+							]
+						]
+						]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(4, 0, 0, 0)[Buy(false)]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(4, 0, 0, 0)[Buy(true)]
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 6, 0, 0)[Focus]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 6, 0, 0)[SAssignNew(CityLinesBox, SVerticalBox)]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)[SAssignNew(CityActionsBox, SWrapBox).PreferredSize(450.f).InnerSlotPadding(FVector2D(4, 4))]
 				]
 			]
 		]
@@ -186,6 +284,14 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		UnitKey = U;
 		RebuildUnit();
 	}
+	FString Y = Model.bCity ? StatKey(Model.CityStats) + StatKey(Model.CityLiving) : FString();
+	for (const FString& L : Model.CityLines) Y += L + TEXT("|");
+	for (const FSovUIAction& A : Model.CityActions) Y += A.Icon.ToString() + A.Label + (A.bEnabled ? TEXT("1") : TEXT("0"));
+	if (Y != CityKey)
+	{
+		CityKey = Y;
+		RebuildCity();
+	}
 	FString C = Model.bChooser ? Model.ChooserTitle : FString();
 	for (const FString& L : Model.Choices) C += L + TEXT("|");
 	if (C != ChooserKey)
@@ -214,6 +320,33 @@ void SSovGameUI::RebuildUnit()
 			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).IsEnabled(A.bEnabled).ToolTipText(FText::FromString(A.Label))
 			.OnClicked_Lambda([this, Key]() { OnKey.ExecuteIfBound(Key); return FReply::Handled(); })
 			[SNew(SBox).WidthOverride(34).HeightOverride(34)[SNew(SImage).Image(FSovStyle::Icon(A.Icon))]]
+		];
+	}
+}
+
+void SSovGameUI::RebuildCity()
+{
+	CityStatsBox->ClearChildren();
+	for (const FSovUIStat& S : Model.CityStats) CityStatsBox->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 12, 0)[StatWidget(S, 11)];
+	CityLivingBox->ClearChildren();
+	for (const FSovUIStat& S : Model.CityLiving) CityLivingBox->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 10, 0)[StatWidget(S, 10)];
+	CityLinesBox->ClearChildren();
+	for (const FString& L : Model.CityLines)
+		CityLinesBox->AddSlot().AutoHeight().Padding(0, 1)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(L))];
+	CityActionsBox->ClearChildren();
+	for (const FSovUIAction& A : Model.CityActions)
+	{
+		const FKey Key = A.Key;
+		CityActionsBox->AddSlot()
+		[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).IsEnabled(A.bEnabled).ToolTipText(FText::FromString(A.Label))
+			.OnClicked_Lambda([this, Key]() { OnKey.ExecuteIfBound(Key); return FReply::Handled(); })
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[SNew(SBox).WidthOverride(22).HeightOverride(22)[SNew(SImage).Image(FSovStyle::Icon(A.Icon))]]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(6, 0, 2, 0)
+				[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(A.Label.Left(A.Label.Find(TEXT(" (")) > 0 ? A.Label.Find(TEXT(" (")) : A.Label.Len())))]
+			]
 		];
 	}
 }

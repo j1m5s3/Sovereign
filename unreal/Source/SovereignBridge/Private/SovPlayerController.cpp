@@ -2045,7 +2045,17 @@ void ASovPlayerController::UpdateGameUI()
 		SAssignNew(GameUI, SSovGameUI)
 			.OnKey_Lambda([this](FKey Key) { UIKeys.Add(Key); })
 			.OnPick_Lambda([this](int32 Index) { PickAbsolute(Index); })
-			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); });
+			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); })
+			.OnFocus_Lambda([this](int32 Focus) {
+				if (Focus >= 0 && Focus < sov::kNumCityFocuses) Send(sov::Command::setCityFocus(Me(), SelectedCity, static_cast<sov::CityFocus>(Focus)));
+			})
+			.OnBuy_Lambda([this](bool bFaith) {
+				const sov::City* C = Subsystem()->GetGame().state().city(SelectedCity);
+				if (!C || C->queue.empty()) return;
+				const sov::ProductionItem Item = C->queue.front();
+				const sov::Command Buy = bFaith ? sov::Command::purchaseWithFaith(Me(), C->id, Item) : sov::Command::purchase(Me(), C->id, Item);
+				if (Send(Buy)) Subsystem()->LastMessage = TEXT("Bought.");
+			});
 		GEngine->GameViewport->AddViewportWidgetContent(GameUI.ToSharedRef(), 5);
 	}
 	FSovUIModel M;
@@ -2143,7 +2153,97 @@ void ASovPlayerController::UpdateGameUI()
 		Act(T.layer == sov::UnitLayer::Military ? FName("fortify") : FName("sleep"), T.layer == sov::UnitLayer::Military ? TEXT("Fortify (G)") : TEXT("Sleep (G)"), EKeys::G);
 		Act("skip", TEXT("Skip this unit's turn (K)"), EKeys::K);
 	}
-	// The open chooser, every line clickable.
+	// The selected city: yields, growth, production and what it holds (plan D, step 2).
+	if (const sov::City* C = S.city(SelectedCity); C && C->owner == Me() && !M.bUnit)
+	{
+		const sov::CityReport Rep = G.cityReport(C->id);
+		auto Yield = [&](sov::YieldType T) { return Rep.yields[static_cast<size_t>(T)]; };
+		M.bCity = true;
+		M.CityName = Str(C->name);
+		M.CitySub = FString::Printf(TEXT("%sPopulation %d   Health %d/%d   Loyalty %d (%+d a turn)"), C->capital ? TEXT("Capital   ") : TEXT(""), C->population, C->hp,
+			G.cityMaxHp(), C->loyalty, static_cast<int32>(G.loyaltyPerTurn(C->id).round()));
+		M.CityHealth = G.cityMaxHp() > 0 ? FMath::Clamp(static_cast<float>(C->hp) / G.cityMaxHp(), 0.f, 1.f) : 1.f;
+		static const TPair<sov::YieldType, const TCHAR*> Shown[] = {{sov::YieldType::Food, TEXT("food")}, {sov::YieldType::Production, TEXT("production")},
+			{sov::YieldType::Gold, TEXT("gold")}, {sov::YieldType::Science, TEXT("science")}, {sov::YieldType::Culture, TEXT("culture")}, {sov::YieldType::Faith, TEXT("faith")}};
+		static const TCHAR* const YieldNames[] = {TEXT("Food"), TEXT("Production"), TEXT("Gold"), TEXT("Science"), TEXT("Culture"), TEXT("Faith")};
+		for (const auto& [T, Icon] : Shown)
+			M.CityStats.Add({Icon, Str(Yield(T).toString()), FString::Printf(TEXT("%s per turn"), YieldNames[static_cast<size_t>(T)]), FSovStyle::Text});
+		// Growth.
+		const sov::Fixed Surplus = Yield(sov::YieldType::Food) - Rep.foodConsumption;
+		const int32 Need = G.growthThreshold(C->population);
+		const int64 Have = C->food.toInt();
+		M.GrowthProgress = Need > 0 ? FMath::Clamp(static_cast<float>(Have) / Need, 0.f, 1.f) : 0.f;
+		M.GrowthText = Surplus > sov::Fixed()
+			? FString::Printf(TEXT("Grows in %lld turns (%s food a turn, %lld of %d)"), FMath::Max<int64>(1, (Need - Have + FMath::Max<int64>(1, Surplus.toInt()) - 1) / FMath::Max<int64>(1, Surplus.toInt())),
+				  *Signed(Surplus), Have, Need)
+			: FString::Printf(TEXT("Not growing (%s food a turn)"), *Signed(Surplus));
+		M.CityLiving.Add({"housing", FString::Printf(TEXT("%s/%d"), *Str(Rep.housing.toString()), C->population), TEXT("Housing: room for this many citizens")});
+		M.CityLiving.Add({"amenity", FString::Printf(TEXT("%d/%d"), Rep.amenities, Rep.amenitiesNeeded), TEXT("Amenities: have, and needed to stay content"),
+			Rep.amenities >= Rep.amenitiesNeeded ? FSovStyle::Text : FSovStyle::Bad});
+		// Production in hand.
+		if (C->queue.empty())
+		{
+			M.ProductionIcon = "production";
+			M.ProductionName = TEXT("Choose production");
+			M.ProductionText = TEXT("");
+		}
+		else
+		{
+			const sov::ProductionItem& Item = C->queue.front();
+			sov::Fixed Done;
+			for (const sov::ProductionProgress& Pr : C->progress)
+			{
+				if (Pr.item == Item) Done = Pr.amount;
+			}
+			const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item, C);
+			const int32 PerTurn = FMath::Max(1, static_cast<int32>(Yield(sov::YieldType::Production).toInt()));
+			const int32 Left = FMath::Max(0, Cost - static_cast<int32>(Done.toInt()));
+			M.ProductionIcon = Item.kind == sov::ProductionKind::Unit ? FName("strength") : Item.kind == sov::ProductionKind::District ? FName("streets") : FName("build");
+			M.ProductionName = ItemName(R, Item);
+			M.ProductionText = FString::Printf(TEXT("%d turns"), FMath::Max(1, (Left + PerTurn - 1) / PerTurn));
+			M.ProductionProgress = Cost > 0 ? FMath::Clamp(static_cast<float>(Done.toInt()) / Cost, 0.f, 1.f) : 0.f;
+			// Buy it outright: shown when the price exists, enabled when it is affordable now.
+			for (const bool bFaith : {false, true})
+			{
+				const int32 Price = Item.kind == sov::ProductionKind::District ? G.districtPurchaseCost(*C, Item.type, bFaith)
+					: bFaith ? G.faithPurchaseCost(Me(), *C, Item) : G.purchaseCost(Me(), Item, C);
+				const sov::CommandError Why = G.validate(bFaith ? sov::Command::purchaseWithFaith(Me(), C->id, Item) : sov::Command::purchase(Me(), C->id, Item));
+				if (Price < 0 || (Why != sov::CommandError::Ok && Why != sov::CommandError::NotEnoughGold && Why != sov::CommandError::NotEnoughFaith)) continue;
+				(bFaith ? M.BuyFaith : M.BuyGold) = FString::Printf(TEXT("%d"), Price);
+				(bFaith ? M.bBuyFaith : M.bBuyGold) = MyTurn() && Why == sov::CommandError::Ok;
+			}
+			if (C->queue.size() > 1)
+			{
+				FString Then;
+				for (size_t q = 1; q < C->queue.size(); ++q) Then += (Then.IsEmpty() ? TEXT("") : TEXT(", ")) + ItemName(R, C->queue[q]);
+				M.CityLines.Add(TEXT("Then: ") + Then);
+			}
+		}
+		FString Built;
+		for (sov::TypeIndex B : C->buildings) Built += (Built.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.buildings[static_cast<size_t>(B)].name);
+		M.CityLines.Add(TEXT("Buildings: ") + (Built.IsEmpty() ? FString(TEXT("none")) : Built));
+		FString Districts;
+		for (const sov::CityDistrict& D : C->districts)
+		{
+			Districts += (Districts.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.districts[static_cast<size_t>(D.type)].name) + (D.complete ? TEXT("") : TEXT(" (building)"));
+			if (D.specialists > 0) Districts += FString::Printf(TEXT(" %d/%d specialists"), D.specialists, G.specialistSlots(*C, D));
+		}
+		if (!Districts.IsEmpty()) M.CityLines.Add(TEXT("Districts: ") + Districts);
+		const int32 Maj = G.cityMajorityReligion(*C);
+		if (Maj >= 0) M.CityLines.Add(TEXT("Religion: ") + Str(R.religions[static_cast<size_t>(S.religions[static_cast<size_t>(Maj)].type)].name));
+		if (C->powerDemand > 0 || C->powerSupply > 0) M.CityLines.Add(FString::Printf(TEXT("Power %d of %d needed"), C->powerSupply, C->powerDemand));
+		if (S.turn < C->benevolenceUntil) M.CityLines.Add(FString::Printf(TEXT("Benevolence: %d more turn(s)"), C->benevolenceUntil - S.turn));
+		if (G.fearActive(*C)) M.CityLines.Add(FString::Printf(TEXT("Fear: order for %d more turn(s)"), C->fearUntil - S.turn));
+		const bool bTurn = MyTurn();
+		M.CityActions.Add({"production", TEXT("Production (P): choose, queue with Shift, or buy with gold or faith"), EKeys::P, bTurn});
+		const sov::Unit* Leader = G.leaderOf(Me());
+		const bool bLeaderHere = Leader && Leader->pos == C->pos && rules_cooldown(G, *C) == 0;
+		M.CityActions.Add({"amenity", FString::Printf(TEXT("Benevolence (V): %d gold, more amenities; needs your leader here"), G.benevolenceCost(*C)), EKeys::V, bTurn && bLeaderHere});
+		M.CityActions.Add({"fortify", TEXT("Fear (X): order and loyalty now, resentment later; needs your leader and a garrison"), EKeys::X, bTurn && bLeaderHere});
+		M.CityActions.Add({"government", TEXT("Governors (Z): appoint, promote or send one here"), EKeys::Z, bTurn});
+		M.CityActions.Add({"food", TEXT("Citizens (F3): show what each plot yields, * where a citizen works; Shift+click a plot to lock or free a citizen"), EKeys::F3, true});
+		M.CityFocus = static_cast<int32>(C->focus);
+	}	// The open chooser, every line clickable.
 	if (Chooser != EChooser::None)
 	{
 		M.bChooser = true;
@@ -2179,7 +2279,7 @@ void ASovPlayerController::UpdateGameUI()
 	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
 	{
 		Hud->TopInset = 46.f;
-		Hud->BottomInset = M.bUnit ? 236.f : 0.f;
+		Hud->BottomInset = M.bUnit ? 236.f : M.bCity ? 370.f : 0.f;
 	}
 }
 
@@ -2240,7 +2340,7 @@ void ASovPlayerController::UpdatePanel()
 		if (T.buildCharges > 0) Keys += TEXT("   B build");
 		L.Add(Keys);
 	}
-	else if (const sov::City* C = S.city(SelectedCity))
+	else if (const sov::City* C = GameUI.IsValid() ? nullptr : S.city(SelectedCity))
 	{
 		const sov::CityReport Rep = G.cityReport(C->id);
 		auto Y = [&](sov::YieldType T) { return Str(Rep.yields[static_cast<size_t>(T)].toString()); };

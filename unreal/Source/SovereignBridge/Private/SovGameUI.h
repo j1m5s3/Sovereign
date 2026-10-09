@@ -41,6 +41,22 @@ struct FSovUIModel
 	float UnitHealth = 1.f;
 	TArray<FSovUIStat> UnitStats;
 	TArray<FSovUIAction> UnitActions;
+	// The selected city (plan D, step 2): what it makes, how it grows, what it builds and holds.
+	bool bCity = false;
+	FString CityName, CitySub;
+	float CityHealth = 1.f;
+	TArray<FSovUIStat> CityStats;      // yields per turn
+	float GrowthProgress = 0.f;
+	FString GrowthText;
+	TArray<FSovUIStat> CityLiving;     // housing, amenities
+	FName ProductionIcon;
+	FString ProductionName, ProductionText;
+	float ProductionProgress = 0.f;
+	FString BuyGold, BuyFaith;         // "Buy: 120" for what is being built (empty: no button)
+	bool bBuyGold = false, bBuyFaith = false;  // affordable and allowed now
+	int32 CityFocus = 0;               // sov::CityFocus: the yield its citizens favour
+	TArray<FString> CityLines;         // queue, buildings, loyalty, religion...
+	TArray<FSovUIAction> CityActions;
 	// The open chooser.
 	bool bChooser = false;
 	FString ChooserTitle;
@@ -58,6 +74,8 @@ public:
 	SLATE_EVENT(TDelegate<void(FKey)>, OnKey)       // a button pressed a key
 	SLATE_EVENT(TDelegate<void(int32)>, OnPick)     // a chooser line, by index
 	SLATE_EVENT(TDelegate<void()>, OnEndTurn)
+	SLATE_EVENT(TDelegate<void(int32)>, OnFocus)    // a city focus (sov::CityFocus)
+	SLATE_EVENT(TDelegate<void(bool)>, OnBuy)       // buy what the city builds: true with faith
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
@@ -69,6 +87,7 @@ private:
 	void RebuildStats();
 	void RebuildUnit();
 	void RebuildChooser();
+	void RebuildCity();
 
 	FSovUIModel Model;
 	FString StatsKey, UnitKey, ChooserKey;  // what each list was last built from
@@ -76,7 +95,13 @@ private:
 	TSharedPtr<SHorizontalBox> UnitStatsBox;
 	TSharedPtr<SWrapBox> ActionsBox;
 	TSharedPtr<SVerticalBox> ChoicesBox;
+	TSharedPtr<SHorizontalBox> CityStatsBox, CityLivingBox;
+	TSharedPtr<SVerticalBox> CityLinesBox;
+	TSharedPtr<SWrapBox> CityActionsBox;
+	FString CityKey;
 	TDelegate<void(FKey)> OnKey;
 	TDelegate<void(int32)> OnPick;
 	TDelegate<void()> OnEndTurn;
+	TDelegate<void(int32)> OnFocus;
+	TDelegate<void(bool)> OnBuy;
 };
