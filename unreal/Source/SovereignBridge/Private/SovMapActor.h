@@ -26,6 +26,8 @@ public:
 	void Sync(const FSovMirror& Mirror);
 	// Highlights a plot (selection); X < 0 hides the highlight.
 	void SetHighlight(int32 X, int32 Y);
+	// Outlines where the selected unit can go this turn (empty: none).
+	void SetReach(const TArray<FSovEdge>& Edges);
 
 	// Height of a plot's top surface (0 when it is not drawn).
 	double SurfaceZ(int32 X, int32 Y) const;
@@ -74,6 +76,7 @@ private:
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> BorderPieces;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ResourcePieces;
 	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ImprovementPieces;
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ReachPieces;
 
 	// A strip along the edge between two neighbouring plots, pulled `Inset` toward A's centre.
 	int32 EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<UStaticMeshComponent>>& Pool, double Inset, double StripWidth, double Lift);

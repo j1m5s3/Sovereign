@@ -232,6 +232,9 @@ protected:
 	TSet<FString> DismissedNotices;
 	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
 	void OpenNotice(int32 Index);
+	// The selected unit's reach this turn, outlined on the map.
+	void UpdateReach();
+	FString ReachKey;
 	bool bEmpireOpen = false;  // the Empire panel (F8)
 	bool bBattleNowDone = false;  // -SovBattleNow has attacked
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for

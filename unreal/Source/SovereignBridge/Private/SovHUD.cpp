@@ -120,7 +120,7 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 	for (int32 i = 0; i < S.grid.size(); ++i)
 	{
 		const sov::Plot& P = S.plots[static_cast<size_t>(i)];
-		if (P.owner != View || P.city == sov::kNoCity)
+		if (P.owner != View || P.city == sov::kNoCity || (!bShowYields && P.city != YieldCity))
 		{
 			continue;
 		}
@@ -137,17 +137,21 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 		}
 		const sov::Yields Y = G.plotYields(H, *C);
 		const bool bWorked = std::find(C->worked.begin(), C->worked.end(), i) != C->worked.end();
-		float X = Screen.X - 30.f;
+		// The yields on a dark backing, centred on the plot; a worked plot's backing is edged in gold.
+		int32 Shown = 0;
+		for (size_t k = 0; k < sov::kNumYields && k < UE_ARRAY_COUNT(Letters); ++k) Shown += Y[k].toInt() > 0;
+		if (Shown == 0 && !bWorked) continue;
+		const float W = FMath::Max(1, Shown) * 18.f + 6.f;
+		float X = Screen.X - W / 2 + 3.f;
+		if (bWorked) DrawRect(FLinearColor(1.f, 0.78f, 0.32f, 0.9f), Screen.X - W / 2 - 1.f, Screen.Y - 2.f, W + 2.f, 18.f);
+		DrawRect(FLinearColor(0.02f, 0.018f, 0.016f, 0.78f), Screen.X - W / 2, Screen.Y - 1.f, W, 16.f);
 		for (size_t k = 0; k < sov::kNumYields && k < UE_ARRAY_COUNT(Letters); ++k)
 		{
 			const int32 V = static_cast<int32>(Y[k].toInt());
 			if (V <= 0) continue;
-			const FString T = FString::Printf(TEXT("%d%s"), V, Letters[k]);
-			DrawText(T, FLinearColor(0, 0, 0, 0.9f), X + 1, Screen.Y + 1, Font, 1.0f);
-			DrawText(T, Colors[k], X, Screen.Y, Font, 1.0f);
+			DrawText(FString::Printf(TEXT("%d%s"), V, Letters[k]), Colors[k], X, Screen.Y, Font, 1.0f);
 			X += 18.f;
 		}
-		if (bWorked) DrawText(TEXT("*"), FLinearColor::White, Screen.X - 8.f, Screen.Y - 14.f, Font, 1.2f);
 	}
 }
 
@@ -428,7 +432,7 @@ void ASovHUD::DrawHUD()
 		DrawStreet(*Sub, *PC);
 		return;
 	}
-	if (bShowYields) DrawYields(*Sub);
+	if (bShowYields || YieldCity >= 0) DrawYields(*Sub);
 	DrawLabels(*Sub);
 	DrawStatus(*Sub, Y);
 	// The plot under the cursor: terrain, resource, improvement, owner and yields.

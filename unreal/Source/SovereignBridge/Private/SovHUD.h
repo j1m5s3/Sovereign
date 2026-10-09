@@ -21,6 +21,8 @@ public:
 	TArray<FString> PanelLines;
 	// F3: what each plot of the viewer's territory yields its city (* worked). F1: the keys.
 	bool bShowYields = false;
+	// With a city of ours selected, its plots' yields show anyway (and only its own); -1: none.
+	int32 YieldCity = -1;
 	bool bShowHelp = false;
 	// F4: the chronicle of the viewer's reign so far (player-retention §2).
 	bool bShowChronicle = false;

@@ -228,6 +228,11 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	}
 }
 
+void ASovMapActor::SetReach(const TArray<FSovEdge>& Edges)
+{
+	EdgeStrips(Edges, ReachPieces, 6.0, 5.0, 3.0);
+}
+
 int32 ASovMapActor::EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<UStaticMeshComponent>>& Pool, double Inset, double StripWidth, double Lift)
 {
 	int32 Count = 0;
