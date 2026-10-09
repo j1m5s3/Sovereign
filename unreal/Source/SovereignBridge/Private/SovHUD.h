@@ -42,4 +42,9 @@ protected:
 	void DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerController& PC);
 	void DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerController& PC);
 	void Line(const FString& Text, float X, float& Y, const FLinearColor& Color = FLinearColor::White);
+	// A UI icon (unreal/Content/Slate/Icons) as a texture for the canvas, loaded once.
+	class UTexture2D* IconTexture(FName Name);
+
+	UPROPERTY()
+	TMap<FName, TObjectPtr<class UTexture2D>> Icons;
 };
