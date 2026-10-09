@@ -4,6 +4,7 @@
 #include "InputCoreTypes.h"
 
 #include "SovCameraPawn.h"
+#include "SovEvents.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
 #include "SovHexLayout.h"
@@ -2084,6 +2085,20 @@ TSet<int32> ASovPlayerController::TreePath(bool bCivics) const
 	return Path;
 }
 
+void ASovPlayerController::OpenNotice(int32 Index)
+{
+	if (!Notices.IsValidIndex(Index)) return;
+	const FNotice No = Notices[Index];
+	if (No.City >= 0)
+	{
+		SelectCity(No.City, true);
+		OpenChooser(EChooser::Production);
+		return;
+	}
+	if (No.Key.IsValid()) UIKeys.Add(No.Key);
+	DismissedNotices.Add(No.Id);
+}
+
 void ASovPlayerController::PickTreeNode(int32 Node)
 {
 	const bool bCivics = Chooser == EChooser::Civic;
@@ -2121,6 +2136,10 @@ void ASovPlayerController::UpdateGameUI()
 			.OnPick_Lambda([this](int32 Index) { PickAbsolute(Index); })
 			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); })
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
+			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
+			.OnDismiss_Lambda([this](int32 Index) {
+				if (Notices.IsValidIndex(Index)) DismissedNotices.Add(Notices[Index].Id);
+			})
 			.OnFocus_Lambda([this](int32 Focus) {
 				if (Focus >= 0 && Focus < sov::kNumCityFocuses) Send(sov::Command::setCityFocus(Me(), SelectedCity, static_cast<sov::CityFocus>(Focus)));
 			})
@@ -2148,11 +2167,39 @@ void ASovPlayerController::UpdateGameUI()
 	auto Signed = [](const sov::Fixed& V) { return (V >= sov::Fixed() ? TEXT("+") : TEXT("")) + Str(V.toString()); };
 	// The top bar: what the empire makes and holds.
 	const sov::Fixed Gpt = G.goldPerTurn(Me());
-	M.Stats.Add({"science", Signed(G.sciencePerTurn(Me())), TEXT("Science per turn"), FLinearColor(0.55f, 0.8f, 1.f), EKeys::T});
-	M.Stats.Add({"culture", Signed(G.culturePerTurn(Me())), TEXT("Culture per turn"), FLinearColor(0.8f, 0.6f, 1.f), EKeys::C});
-	M.Stats.Add({"gold", FString::Printf(TEXT("%s (%s)"), *Str(P.gold.toString()), *Signed(Gpt)), TEXT("Gold in the treasury, and per turn"),
+	const sov::Game::Output Made = G.outputPerTurn(Me());
+	// Tooltips: where each yield comes from, city by city (plan D, step 4); refreshed twice a second.
+	if (YieldTips.Num() != 4 || GFrameCounter % 30 == 0)
+	{
+		static const sov::YieldType Kinds[] = {sov::YieldType::Science, sov::YieldType::Culture, sov::YieldType::Gold, sov::YieldType::Faith};
+		const sov::Fixed Totals[] = {Made.science, Made.culture, Gpt, Made.faith};
+		static const TCHAR* const Heads[] = {TEXT("Science per turn (T: research)"), TEXT("Culture per turn (C: civics)"), TEXT("Gold in the treasury, and per turn"),
+			TEXT("Faith in hand, and per turn")};
+		YieldTips.Init(FString(), 4);
+		sov::Fixed Sums[4];
+		for (const sov::City& C : S.cities)
+		{
+			if (C.owner != Me()) continue;
+			const sov::CityReport Rep = G.cityReport(C.id);
+			for (int32 k = 0; k < 4; ++k)
+			{
+				const sov::Fixed V = Rep.yields[static_cast<size_t>(Kinds[k])];
+				Sums[k] = Sums[k] + V;
+				YieldTips[k] += FString::Printf(TEXT("\n  %s: %s"), *Str(C.name), *Signed(V));
+			}
+		}
+		for (int32 k = 0; k < 4; ++k)
+		{
+			const sov::Fixed Rest = Totals[k] - Sums[k];
+			if (Rest != sov::Fixed()) YieldTips[k] += FString::Printf(TEXT("\n  %s: %s"), k == 2 ? TEXT("Upkeep, trade, deals and policies") : TEXT("Other sources and modifiers"), *Signed(Rest));
+			YieldTips[k] = FString(Heads[k]) + FString::Printf(TEXT(": %s"), *Signed(Totals[k])) + YieldTips[k];
+		}
+	}
+	M.Stats.Add({"science", Signed(Made.science), YieldTips[0], FLinearColor(0.55f, 0.8f, 1.f), EKeys::T});
+	M.Stats.Add({"culture", Signed(Made.culture), YieldTips[1], FLinearColor(0.8f, 0.6f, 1.f), EKeys::C});
+	M.Stats.Add({"gold", FString::Printf(TEXT("%s (%s)"), *Str(P.gold.toString()), *Signed(Gpt)), YieldTips[2],
 		Gpt < sov::Fixed() ? FSovStyle::Bad : FSovStyle::Gold, EKeys::Invalid});
-	M.Stats.Add({"faith", FString::Printf(TEXT("%s (%s)"), *Str(P.faith.toString()), *Signed(G.outputPerTurn(Me()).faith)), TEXT("Faith, and per turn"),
+	M.Stats.Add({"faith", FString::Printf(TEXT("%s (%s)"), *Str(P.faith.toString()), *Signed(Made.faith)), YieldTips[3],
 		FLinearColor(0.85f, 0.93f, 1.f), EKeys::Invalid});
 	M.Stats.Add({"favor", FString::Printf(TEXT("%d (%+d)"), P.favor, G.favorPerTurn(Me())), TEXT("Diplomatic Favor, and per turn (World Congress: ,)"),
 		FSovStyle::Text, EKeys::Comma});
@@ -2372,6 +2419,46 @@ void ASovPlayerController::UpdateGameUI()
 		T.Detail += FString::Printf(TEXT("%s a turn. Click an open node to start it, or a later one to make it your goal. Hover for details."),
 			*Signed(bCivics ? G.culturePerTurn(Me()) : G.sciencePerTurn(Me())));
 	}
+	// Notifications: cities waiting for orders, then what was heard these last turns (plan D, step 4).
+	Notices.Reset();
+	for (sov::CityId Id : G.citiesNeedingProduction(Me()))
+	{
+		if (const sov::City* C = S.city(Id))
+			Notices.Add({FString::Printf(TEXT("P%d"), Id), "production", FString::Printf(TEXT("%s needs something to build"), *Str(C->name)), TEXT("Click to choose"), FKey(), Id, true});
+	}
+	int32 Gossip = 0;
+	for (auto It = S.events.rbegin(); It != S.events.rend() && Notices.Num() < 6; ++It)
+	{
+		const sov::GameEvent& E = *It;
+		if (E.turn < S.turn - 2) break;
+		if (!SovEventHeard(G, Me(), E)) continue;
+		if (E.actor != Me() && E.target != Me() && !SovEventIsWorldNews(E) && ++Gossip > 4) continue;
+		const FString Id = FString::Printf(TEXT("E%d:%d:%d:%d:%d:%d"), Me(), E.turn, static_cast<int32>(E.kind), E.actor, E.target, E.value);
+		if (DismissedNotices.Contains(Id)) continue;
+		const FString Text = SovEventText(G, Me(), E);
+		if (Text.IsEmpty()) continue;
+		// Where a click takes the player.
+		FKey Key;
+		switch (E.kind)
+		{
+			case sov::EventKind::GreatPersonRecruited: Key = EKeys::Y; break;
+			case sov::EventKind::CongressSession:
+			case sov::EventKind::ResolutionPassed: Key = EKeys::Comma; break;
+			case sov::EventKind::DealProposed:
+			case sov::EventKind::DealAccepted:
+			case sov::EventKind::DealRejected:
+			case sov::EventKind::Denounced:
+			case sov::EventKind::FriendshipDeclared:
+			case sov::EventKind::WarDeclared:
+			case sov::EventKind::PeaceMade:
+			case sov::EventKind::DealBroken: Key = EKeys::N; break;
+			case sov::EventKind::HistoricMoment:
+			case sov::EventKind::NewAge: Key = EKeys::F4; break;
+			default: break;
+		}
+		Notices.Add({Id, SovEventIcon(E), Text, FString::Printf(TEXT("Turn %d%s"), E.turn, Key.IsValid() ? TEXT(": click to open") : TEXT("")), Key, -1, false});
+	}
+	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
 	// End turn: what stands in the way, if anything.
 	M.bMyTurn = MyTurn();
 	if (!M.bMyTurn)
