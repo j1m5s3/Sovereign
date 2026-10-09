@@ -502,6 +502,61 @@ TEST(barbarian_camps_appear_out_of_sight_and_release_units) {
 
 // ---- the Encampment (03: Defense)
 
+// The camp target counts major civs only (01: "at most 3 camps per major civ"): city-states add none, and their sight
+// does not keep camps away.
+TEST(barbarian_camps_count_only_the_major_civs) {
+    std::string err;
+    GameSetup setup = sovtest::duelSetup(11);
+    setup.mapSize = "MAPSIZE_SMALL";
+    setup.cityStates = 4;
+    setup.players = {{"CIVILIZATION_ROME", true}, {"CIVILIZATION_EGYPT", false}, {"CIVILIZATION_CHINA", false},
+                     {"CIVILIZATION_INCA", false}};
+    auto g = Game::create(rules(), setup, &err);
+    REQUIRE(g);
+    int cityStates = 0;
+    for (const Player& p : g->state().players) cityStates += p.cityState != kNone ? 1 : 0;
+    REQUIRE(cityStates == 4);
+    for (int guard = 0; guard < 40 && g->state().turn < 3; ++guard) {
+        const PlayerId me = g->state().currentPlayer;
+        for (UnitId id : g->unitsNeedingOrders(me)) g->submit(Command::setActivity(me, id, Activity::Sleep));
+        for (const City& c : g->state().cities) {
+            if (c.owner == me && c.queue.empty()) g->submit(Command::setProduction(me, c.id, ProductionItem{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")}));
+        }
+        endTurns(*g, 1);
+    }
+    REQUIRE(g->state().turn == 3);
+    CHECK_EQ(g->state().camps.size(), 3u);  // 4 majors x 3 x 33%, as with no city-states
+}
+
+// A plot only a city-state sees can still take a camp: camps keep out of the major civs' sight (01: Barbarians).
+TEST(a_city_states_sight_does_not_keep_camps_away) {
+    GameState s = flatState(20, 12, 4);
+    for (Plot& p : s.plots) p.terrain = rules().terrain("TERRAIN_OCEAN");
+    s.players[2].barbarian = true;
+    s.players[2].civ = kNone;
+    s.players[3].cityState = rules().cityState("CITYSTATE_MITLA");
+    s.players[3].civ = kNone;
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    const Hex patch{12, 6};
+    for (const Hex& h : s.grid.within(patch, 2)) s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
+    for (const Hex& c : {Hex{2, 2}, Hex{2, 9}, Hex{17, 1}}) {
+        for (const Hex& h : s.grid.within(c, 1)) s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
+    }
+    addCity(s, 0, {2, 2}, true, 3);
+    addCity(s, 1, {2, 9}, true, 3);
+    addCity(s, 3, {17, 1}, true, 3);
+    for (City& c : s.cities) c.queue = {{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")}};
+    addUnit(s, "UNIT_SCOUT", 3, patch);  // the city-state's Scout sees the whole patch
+    s.units.back().activity = Activity::Sleep;
+    s.turn = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    for (const Hex& h : g->state().grid.within(patch, 2)) REQUIRE(g->visibility(3, h) == Visibility::Visible);
+    sovtest::endTurns(*g, 3);  // both majors and the city-state end their turns: the world turn follows
+    REQUIRE(g->state().turn == 2);
+    REQUIRE(g->state().camps.size() == 1u);  // 2 majors x 3 x 33%
+    CHECK(g->state().grid.distance(g->state().camps[0].pos, patch) <= 2);
+}
+
 TEST(an_encampment_strikes_and_holds_ground) {
     UnitId foe = kNoUnit;
     auto g = siege([&](GameState& s) {
@@ -592,6 +647,38 @@ TEST(an_encampment_stops_planned_moves_only_finished_and_at_war) {
         REQUIRE(path && path->size() == 2u);
         CHECK_EQ(path->back().movesLeft, c == 0 ? Fixed() : Fixed::fromInt(1));
     }
+}
+
+// Barbarian units follow the tech of the major civs, half of them knowing it (BARBARIAN_TECH_PERCENT; 01: Barbarians):
+// a city-state's tech does not count, nor does a city-state count as a civ that does not know it.
+TEST(barbarian_units_follow_the_major_civs_tech) {
+    const auto raised = [&](bool majorKnows, bool cityStateKnows) {
+        GameState s = flatState(16, 12, 4);
+        s.players[2].barbarian = true;
+        s.players[2].civ = kNone;
+        s.players[3].cityState = rules().cityState("CITYSTATE_MITLA");
+        s.players[3].civ = kNone;
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        if (majorKnows) s.players[1].techs.done[at(rules().tech("TECH_IRON_WORKING"))] = 1;
+        if (cityStateKnows) s.players[3].techs.done[at(rules().tech("TECH_IRON_WORKING"))] = 1;
+        Camp camp;
+        camp.id = s.nextCampId++;
+        camp.pos = {11, 5};
+        camp.tribe = 0;
+        camp.spawnTimer = 1;
+        s.camps.push_back(camp);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 3);  // both majors and the city-state end their turns: the world turn follows
+        std::string type;
+        for (const Unit& u : g->state().units) {
+            if (u.camp == g->state().camps[0].id) type = g->rules().units[at(u.type)].id;
+        }
+        return type;
+    };
+    const std::string none = raised(false, false);
+    REQUIRE(!none.empty());
+    CHECK(raised(false, true) == none);  // the city-state's Iron Working does not count
+    CHECK(raised(true, false) != none);  // one of the two majors is half of them
 }
 
 TEST(a_coastal_camp_puts_ships_to_sea) {

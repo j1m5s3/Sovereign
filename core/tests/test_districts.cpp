@@ -325,6 +325,13 @@ TEST(districts_wonders_and_the_biosphere_beside_a_plot_change_its_appeal) {
         s.camps.push_back(c);
     });
     CHECK_EQ(camped->plotAppeal(plot), plain->plotAppeal(plot) - 1);
+    // A pillaged district beside it: -1, whatever its own Appeal (01: "pillaged tiles").
+    auto pillaged = town(3, [](GameState& s) {
+        CityDistrict d{district("DISTRICT_HOLY_SITE"), {6, 7}, true};
+        d.pillagedTurns = 1;
+        s.cities[0].districts.push_back(d);
+    });
+    CHECK_EQ(pillaged->plotAppeal(plot), plain->plotAppeal(plot) - 1);
 }
 
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {

@@ -32,7 +32,7 @@ enum class CommandType : uint8_t {
     ChangeGovernment = 12,  // id = government
     SetPolicy = 13,       // id = slot of the current government, arg = policy (-1 empties the slot)
     BuildImprovement = 14,  // id = builder, arg = improvement: build it where the builder stands
-    Harvest = 15,         // id = builder: harvest the feature or bonus resource where it stands
+    Harvest = 15,         // id = builder: harvest the feature where it stands, else its bonus resource; arg 1: the resource, leaving the feature
     DeclareWar = 16,      // arg = the player to declare war on
     MakePeace = 17,       // arg = the player to offer peace; peace comes once both have offered
     Attack = 18,          // id = unit, target = adjacent plot: melee attack (or capture a civilian)
@@ -160,7 +160,7 @@ struct Command {
     static Command buildImprovement(PlayerId p, UnitId u, TypeIndex improvement) {
         return {CommandType::BuildImprovement, p, u, {}, improvement, 0};
     }
-    static Command harvest(PlayerId p, UnitId u) { return {CommandType::Harvest, p, u, {}, 0, 0}; }
+    static Command harvest(PlayerId p, UnitId u, bool resource = false) { return {CommandType::Harvest, p, u, {}, resource ? 1 : 0, 0}; }
     static Command declareWar(PlayerId p, PlayerId target) { return {CommandType::DeclareWar, p, -1, {}, target, 0}; }
     // A war with a casus belli (08: War types; arg2 = CasusBelli), its grievances scaled down.
     static Command declareWarFor(PlayerId p, PlayerId target, CasusBelli why) { return {CommandType::DeclareWar, p, -1, {}, target, static_cast<int32_t>(why)}; }

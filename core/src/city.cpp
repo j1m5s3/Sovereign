@@ -1,6 +1,7 @@
 // City rules (specs/civ6/02-cities.md): yields, citizens, growth, housing,
 // amenities, border growth, production, purchases, gold and maintenance.
 #include <algorithm>
+#include <array>
 #include <tuple>
 
 #include "sovereign/game.h"
@@ -133,8 +134,11 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
     }
     const Yields mods = sumPlotModifiers(state_, *rules_, city, at, &lakes_);
     for (size_t i = 0; i < kNumYields; ++i) y[i] += mods[i];
-    // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), and an
-    // improvement that feeds its owner's plots beside it (the Nazca Line; 08).
+    // Next door: natural wonders' adjacent yields, or the terrain's yields again (Torres del Paine; 01), once for each
+    // wonder however many of its plots touch this one, and an improvement that feeds its owner's plots beside it (the
+    // Nazca Line; 08).
+    std::array<TypeIndex, 6> wondersBeside{};
+    size_t nWonders = 0;
     state_.grid.forEachWithin(at, 1, [&](Hex n) {
         if (n == at) return;
         const Plot& np = state_.plot(n);
@@ -150,6 +154,10 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
         if (np.feature == kNone || np.feature == p.feature) return;
         const FeatureType& nw = rules_->features[static_cast<size_t>(np.feature)];
         if (!nw.naturalWonder) return;
+        if (std::find(wondersBeside.begin(), wondersBeside.begin() + static_cast<std::ptrdiff_t>(nWonders), np.feature) !=
+            wondersBeside.begin() + static_cast<std::ptrdiff_t>(nWonders))
+            return;
+        wondersBeside[nWonders++] = np.feature;
         for (size_t i = 0; i < kNumYields; ++i) y[i] += nw.adjacentYields[i];
         if (nw.doublesAdjacentTerrain) {
             const Yields& ty = rules_->terrains[static_cast<size_t>(p.terrain)].yields;

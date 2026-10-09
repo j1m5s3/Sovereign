@@ -306,7 +306,9 @@ public:
     std::vector<TypeIndex> improvementsAt(PlayerId player, Hex plot) const;
     // improvementsAt holds one a Builder makes (no builtBy unit), found with no more checks than it takes.
     bool builderCanImprove(PlayerId player, Hex plot) const;
-    bool canHarvestAt(PlayerId player, Hex plot) const;
+    // A Builder can harvest the plot: its removable feature (or, with none, its bonus resource), or with `resource` the
+    // resource alone, leaving the feature (01: Harvest).
+    bool canHarvestAt(PlayerId player, Hex plot, bool resource = false) const;
     // Yields the plot's improvement adds for its owner (base, tech bonuses, adjacency).
     Yields improvementYields(Hex plot, PlayerId owner) const;
     Fixed improvementHousing(const City& city) const;

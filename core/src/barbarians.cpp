@@ -279,8 +279,9 @@ void Game::processBarbarians() {
 }
 
 void Game::placeCamps(PlayerId bp) {
+    // At most 3 camps per major civ, city-states and Free Cities not counted (01: Barbarians).
     int majors = 0;
-    for (const Player& p : state_.players) majors += p.alive && !p.barbarian ? 1 : 0;
+    for (const Player& p : state_.players) majors += isMajorCiv(p.id) ? 1 : 0;
     const int target = rules_->globalInt("BARBARIAN_CAMP_MAX_PER_MAJOR_CIV") * majors;
     if (static_cast<int>(state_.camps.size()) >= target) return;
     Rng& rng = state_.rng.get(RngStream::Gameplay);
@@ -304,8 +305,8 @@ void Game::placeCamps(PlayerId bp) {
         bool ok = true;
         for (const Unit& u : state_.units) ok = ok && u.pos != h;
         for (const Player& p : state_.players) {
-            if (!p.barbarian && p.alive && p.visibility[static_cast<size_t>(i)] == static_cast<uint8_t>(Visibility::Visible))
-                ok = false;
+            if (isMajorCiv(p.id) && p.visibility[static_cast<size_t>(i)] == static_cast<uint8_t>(Visibility::Visible))
+                ok = false;  // out of every major civ's sight
         }
         for (const City& c : state_.cities) ok = ok && state_.grid.distance(c.pos, h) >= cityGap;
         for (const Camp& c : state_.camps) ok = ok && state_.grid.distance(c.pos, h) >= campGap;
@@ -379,13 +380,13 @@ TypeIndex Game::campUnitType(const Camp& camp, bool ranged, Domain& domain) cons
     auto best = [&](const std::string& cls) {
         TypeIndex pick = kNone;
         int majors = 0;
-        for (const Player& p : state_.players) majors += p.alive && !p.barbarian ? 1 : 0;
+        for (const Player& p : state_.players) majors += isMajorCiv(p.id) ? 1 : 0;
         for (size_t i = 0; i < rules_->units.size(); ++i) {
             const UnitType& ut = rules_->units[i];
             if (ut.unitClass != cls || ut.domain != domain || ut.layer != UnitLayer::Military || ut.cityState != kNone) continue;
             int knowing = 0;
             for (const Player& p : state_.players) {
-                if (p.alive && !p.barbarian && hasUnlocked(p.id, ut.unlock)) ++knowing;
+                if (isMajorCiv(p.id) && hasUnlocked(p.id, ut.unlock)) ++knowing;
             }
             if (knowing * 100 < majors * rules_->globalInt("BARBARIAN_TECH_PERCENT")) continue;
             const int strength = ranged ? ut.ranged : ut.combat;

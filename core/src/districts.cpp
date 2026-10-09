@@ -186,7 +186,7 @@ int Game::plotAppeal(Hex plot) const {
             appeal += f.appeal + (biosphere && (f.id == "FEATURE_JUNGLE" || f.id == "FEATURE_MARSH") ? 1 : 0);
         }
         if (np.improvement != kNone) appeal += np.pillagedTurns > 0 ? -1 : rules_->improvements[static_cast<size_t>(np.improvement)].appeal;
-        if (const CityDistrict* d = state_.districtAt(*n)) appeal += rules_->districts[static_cast<size_t>(d->type)].appeal;
+        if (const CityDistrict* d = state_.districtAt(*n)) appeal += d->pillagedTurns > 0 ? -1 : rules_->districts[static_cast<size_t>(d->type)].appeal;
         if (state_.wonderAt(*n) != kNone) appeal += 1;
         if (campAt(*n)) appeal -= 1;
     }
