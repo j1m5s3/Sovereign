@@ -683,6 +683,7 @@ struct SOV_API GameState {
     std::vector<TradeRoute> tradeRoutes;      // sorted by id
     int gameEra = 0;                          // the world era (09: Global era transitions)
     int gameEraStart = 1;                     // turn it began
+    int eraEndsOn = 0;                        // the turn the countdown to the next era ends (0: none running)
     std::vector<int8_t> worldMoments;         // per moment: 1 + the era it was claimed for (world's firsts)
     int majorsAtStart = 0;                    // tourism divisor (07: Visiting tourists)
     int32_t nextTradeRouteId = 1;

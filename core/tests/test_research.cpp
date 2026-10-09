@@ -894,6 +894,7 @@ TEST(dark_age_cards_come_with_a_dark_age_and_go_with_it) {
     GameState s = g->state();
     s.players[0].eraScore = 200;
     s.gameEraStart = s.turn - 1000;
+    s.eraEndsOn = s.turn;  // its countdown has run
     auto later = Game::fromScenario(rules(), std::move(s));
     endTurns(*later, 1);
     REQUIRE(later->state().gameEra == 2);

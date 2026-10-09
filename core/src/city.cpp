@@ -1619,15 +1619,18 @@ void Game::completeProject(City& city, TypeIndex project) {
 }
 
 int Game::expeditionSpeed(PlayerId player) const {
-    // The expedition itself gives 1 light-year a turn; each laser station adds its own (repeatable).
+    // The expedition itself gives 1 light-year a turn; each laser station adds its own (repeatable). A Terrestrial
+    // Laser Station counts only while its city is powered (09), up to the number the civ built.
     const Player& p = state_.players[static_cast<size_t>(player)];
+    int powered = 0;
+    for (const City& c : state_.cities) powered += c.owner == player && c.powerSupply >= c.powerDemand ? c.laserStations : 0;
     int speed = 0;
     bool launched = false;
     for (size_t i = 0; i < rules_->projects.size() && i < p.projectsDone.size(); ++i) {
         const ProjectType& pj = rules_->projects[i];
         for (const ProjectEffect& e : pj.effects) {
             if (e.kind != ProjectEffectKind::ExpeditionSpeed || p.projectsDone[i] == 0) continue;
-            speed += e.amount * p.projectsDone[i];
+            speed += e.amount * (pj.id == "PROJECT_BUILD_TERRESTRIAL_LASER_STATION" ? std::min(powered, p.projectsDone[i]) : p.projectsDone[i]);
             launched |= pj.maxPerPlayer == 1;  // the expedition itself (the stations are repeatable)
         }
     }

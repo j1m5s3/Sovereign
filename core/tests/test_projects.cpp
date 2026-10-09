@@ -138,9 +138,22 @@ TEST(the_spaceport_needs_flat_land) {
     CHECK(!g->canPlaceDistrict(c, port, {6, 8}));  // hills
 }
 
+namespace {
+// Solar Farms on the first `n` open plots of the city's: 2 Power each.
+void solarFarms(GameState& s, int n) {
+    for (const Hex& h : s.grid.within(s.cities[0].pos, 2)) {
+        if (n == 0) break;
+        if (h == s.cities[0].pos || s.districtAt(h)) continue;
+        s.plot(h).improvement = rules().improvement("IMPROVEMENT_SOLAR_FARM");
+        --n;
+    }
+}
+}  // namespace
+
 TEST(the_space_race_and_the_science_victory) {
     GameState s = campusTown();
     s.cities[0].districts.push_back({rules().district("DISTRICT_SPACEPORT"), {6, 7}, true});
+    solarFarms(s, 5);  // 10 Power for two laser stations
     Player& p = s.players[0];
     for (const char* t : {"TECH_ROCKETRY", "TECH_SATELLITES"}) p.techs.done[at(rules().tech(t))] = 1;
     p.visibility.assign(static_cast<size_t>(s.grid.size()), 0);
@@ -165,6 +178,27 @@ TEST(the_space_race_and_the_science_victory) {
     REQUIRE(g->gameOver());
     CHECK(g->state().victory == Victory::Science);
     CHECK_EQ(g->state().winner, 0);
+}
+
+// A Terrestrial Laser Station speeds the expedition only while its city is powered (09: "only counts if the city is
+// powered"), and a civ counts no more stations than it built.
+TEST(a_terrestrial_laser_station_needs_its_city_powered) {
+    const auto speed = [](int farms, int stationsHere) {
+        GameState s = campusTown();
+        s.cities[0].districts.push_back({rules().district("DISTRICT_SPACEPORT"), {6, 7}, true});
+        solarFarms(s, farms);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        for (const char* pj : {"PROJECT_LAUNCH_MOON_LANDING", "PROJECT_LAUNCH_MARS_COLONY", "PROJECT_LAUNCH_EXOPLANET_EXPEDITION",
+                               "PROJECT_BUILD_TERRESTRIAL_LASER_STATION", "PROJECT_BUILD_TERRESTRIAL_LASER_STATION"})
+            g->completeProject(g->stateMutForTests().cities[0], rules().project(pj));
+        g->stateMutForTests().cities[0].laserStations = stationsHere;
+        endTurns(*g, 1);  // the city's power is counted as its owner's turn begins
+        CHECK_EQ(g->state().cities[0].powerDemand, 5 * stationsHere);
+        return g->expeditionSpeed(0);
+    };
+    CHECK_EQ(speed(5, 2), 3);  // 10 Power for 10 wanted
+    CHECK_EQ(speed(4, 2), 1);  // 8 Power: neither station counts
+    CHECK_EQ(speed(8, 3), 3);  // a third station here the civ did not build
 }
 
 // The Royal Society (03; data: each charge completes 2% of a project): a Builder's charge speeds the project its city

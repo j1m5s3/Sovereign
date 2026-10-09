@@ -214,6 +214,8 @@ std::pair<int, int> Game::ageThresholds(PlayerId pid) const {
     return {rules_->globalInt("DARK_AGE_SCORE_BASE_THRESHOLD") + shift, rules_->globalInt("GOLDEN_AGE_SCORE_BASE_THRESHOLD") + shift};
 }
 
+int Game::eraCountdown() const { return state_.eraEndsOn > 0 ? std::max(0, state_.eraEndsOn - state_.turn) : -1; }
+
 void Game::processEras() {
     if (state_.gameEra + 1 >= static_cast<int>(rules_->eras.size())) return;
     const EraType& era = rules_->eras[at(static_cast<TypeIndex>(state_.gameEra))];
@@ -227,9 +229,18 @@ void Game::processEras() {
         ahead += playerEra(p.id) > state_.gameEra ? 1 : 0;
     }
     // Between the era's minimum and maximum length, the world moves on once half the civs have
-    // (the trigger between those bounds is engine; Sovereign's reading).
-    const bool advance = majors > 0 && ((minTurns > 0 && turns >= minTurns && ahead * 2 >= majors) || (maxTurns > 0 && turns >= maxTurns));
-    if (!advance) return;
+    // (the trigger between those bounds is engine; Sovereign's reading), after a countdown that warns
+    // every civ (09: NEXT_ERA_TURN_COUNTDOWN). The countdown starts in time for the era to end at its
+    // minimum, or at its maximum when too few civs are ahead (Sovereign's reading).
+    if (state_.eraEndsOn == 0) {
+        const int countdown = std::max(0, rules_->globalInt("NEXT_ERA_TURN_COUNTDOWN"));
+        const bool due = majors > 0 && ((minTurns > 0 && turns + countdown >= minTurns && ahead * 2 >= majors) ||
+                                        (maxTurns > 0 && turns + countdown >= maxTurns));
+        if (!due) return;
+        state_.eraEndsOn = state_.turn + countdown;
+    }
+    if (state_.turn < state_.eraEndsOn) return;
+    state_.eraEndsOn = 0;
     for (Player& p : state_.players) {
         if (!isMajor(p)) continue;
         const auto [dark, golden] = ageThresholds(p.id);
@@ -298,8 +309,9 @@ int Game::tourismBase(PlayerId pid) const {
     const int era = playerEra(pid);
     const bool wish = goldenDedication(pid, "DEDICATION_WISH_YOU_WERE_HERE");
     total += 2 * monopolySources(pid);  // 07: Monopolies
-    // 07: resorts, improvements after Flight, National Parks; the Golden Gate Bridge (03) doubles them.
-    total += (improvementTourism(pid) + parkTourism(pid)) * (holdsWonder(pid, W::GoldenGate) ? 2 : 1);
+    // 07: resorts, improvements after Flight, National Parks; the Golden Gate Bridge (03) doubles them. Wish You Were
+    // Here (Golden Age) doubles the National Parks' (09).
+    total += (improvementTourism(pid) + parkTourism(pid) * (wish ? 2 : 1)) * (holdsWonder(pid, W::GoldenGate) ? 2 : 1);
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
     const bool biosphere = holdsWonder(pid, W::Biosphere);
     for (const City& c : state_.cities) {
