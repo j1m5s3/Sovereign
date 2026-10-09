@@ -577,6 +577,30 @@ TEST(ai_declares_war_on_a_weak_neighbour) {
     CHECK(!blind->atWar(0, 1));
 }
 
+// A peace holds kPeaceHolds (30) turns: the AI declares no war on a civ it made peace with more recently.
+TEST(ai_keeps_a_peace_30_turns_before_declaring_war_again) {
+    const auto declares = [](int peaceSince, int turn = 60) {
+        GameState s = flatState(24, 14, 2);
+        addCity(s, 0, {4, 6}, true);
+        addCity(s, 0, {4, 10}, false);
+        addCity(s, 1, {12, 6}, true);
+        learn(s, 0, "TECH_BRONZE_WORKING");
+        for (int i = 0; i < 6; ++i) addUnit(s, "UNIT_WARRIOR", 0, {static_cast<int32_t>(3 + i), 3});
+        addUnit(s, "UNIT_WARRIOR", 1, {12, 6});
+        addUnit(s, "UNIT_SCOUT", 0, {10, 6});  // has seen the neighbour's city
+        s.turn = turn;
+        for (Player& p : s.players) p.relations.resize(2);
+        s.players[0].relations[1].since = s.players[1].relations[0].since = peaceSince;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        return g->atWar(0, 1);
+    };
+    CHECK(!declares(31));  // 29 turns of peace
+    CHECK(declares(30));
+    CHECK(declares(0));      // never at war
+    CHECK(declares(0, 20));  // never at war, before turn 30
+}
+
 // Called to arms by an ally that was attacked (08: Alliance), the AI joins its ally's war and marches on the attacker:
 // it starts no war of its own that turn on the weak neighbour it would attack otherwise.
 TEST(ai_called_to_arms_marches_on_its_allys_attacker) {
