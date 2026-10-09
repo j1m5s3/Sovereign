@@ -400,6 +400,13 @@ void Game::leaderVisit(const Unit& leader) {
     leaderXp(leader.owner, rules_->globalInt("LEADER_XP_FIRST_VISIT"));
 }
 
+void Game::duelWon(PlayerId winner, PlayerId loser) {
+    const int points = rules_->globalInt("DUEL_WAR_WEARINESS");
+    addWarWeariness(loser, winner, points);
+    std::vector<int32_t>& mine = state_.players[static_cast<size_t>(winner)].warWeariness;
+    if (static_cast<size_t>(loser) < mine.size()) mine[static_cast<size_t>(loser)] = std::max(0, mine[static_cast<size_t>(loser)] - points);
+}
+
 void Game::leaderXp(PlayerId player, int xp) {
     if (xp <= 0 || player < 0) return;
     if (const Unit* l = leaderOf(player)) awardXp(*state_.unit(l->id), xp, false);

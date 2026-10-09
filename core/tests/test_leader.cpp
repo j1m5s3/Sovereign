@@ -1354,3 +1354,58 @@ TEST(a_marshal_leads_its_escort_as_a_formation) {
         CHECK_EQ(strength(*apart, escort), strength(*apart, plain));
     }
 }
+
+TEST(a_ruler_who_wins_a_duel_wins_war_score) {
+    // Leader doc §8.5: a duel's winner gains a large war score, read as war weariness.
+    UnitId mine = 0, theirs = 0;
+    auto g = duel([&](GameState& s) {
+        addCity(s, 0, {2, 2}, true);
+        addCity(s, 1, {13, 9}, true);
+        mine = addLeader(s, 0, {8, 5});
+        s.units.back().gear[0] = gear("GEAR_SWORD");
+        theirs = addLeader(s, 1, {9, 5});
+        s.units.back().hp = 1;
+        Player& p = s.players[0];
+        p.warWeariness.assign(s.players.size(), 0);
+        p.warWeariness[1] = 1000;
+    });
+    const int duelPoints = rules().globalInt("DUEL_WAR_WEARINESS");
+    REQUIRE(duelPoints > 0);
+    REQUIRE(g->submit(Command::attack(0, mine, {9, 5})) == CommandError::Ok);
+    REQUIRE(!g->leaderOf(1));  // beaten: killed or captured
+    const auto& loser = g->state().players[1].warWeariness;
+    REQUIRE(loser.size() > 0);
+    // At most halved by the loser's grievances over the war declared on it (Game::addWarWeariness).
+    CHECK(loser[0] >= duelPoints / 2);
+    CHECK(loser[0] < duelPoints + 20);
+    const int winner = g->state().players[0].warWeariness[1];
+    CHECK(winner <= 1000 - duelPoints + 20);
+    CHECK(winner >= 1000 - duelPoints);
+}
+
+TEST(no_duel_without_a_beaten_ruler) {
+    // A ruler beating an ordinary unit, or two rulers both standing after a fight, is no duel.
+    for (const bool rulerDefends : {false, true}) {
+        UnitId mine = 0;
+        auto g = duel([&](GameState& s) {
+            addCity(s, 0, {2, 2}, true);
+            addCity(s, 1, {13, 9}, true);
+            mine = addLeader(s, 0, {8, 5});
+            if (rulerDefends) {
+                addLeader(s, 1, {9, 5});  // at full health: it survives one blow
+            } else {
+                addUnit(s, "UNIT_WARRIOR", 1, {9, 5});
+                s.units.back().hp = 1;
+            }
+            Player& p = s.players[0];
+            p.warWeariness.assign(s.players.size(), 0);
+            p.warWeariness[1] = 1000;
+        });
+        REQUIRE(g->submit(Command::attack(0, mine, {9, 5})) == CommandError::Ok);
+        REQUIRE(g->leaderOf(0));
+        if (rulerDefends) REQUIRE(g->leaderOf(1));
+        CHECK(g->state().players[0].warWeariness[1] >= 1000 && g->state().players[0].warWeariness[1] < 1020);
+        const auto& theirs = g->state().players[1].warWeariness;
+        CHECK(theirs.empty() || theirs[0] < 20);
+    }
+}
