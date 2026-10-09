@@ -1254,6 +1254,7 @@ struct CivAbility {
     int nearFollowingCityStrength = 0, nearFollowingCityRange = 0;
     int extraBuilderCharges = 0;
     bool builderRoads = false;          // its Builders lay roads by hand for no charge
+    bool floodSafeDistricts = false;    // floods do not pillage its districts or buildings (Gift of the Nile)
     Yields peaceYieldPercent{};         // while at peace with every major civ
     int wonderCulture = 0;              // per wonder in the city
     TypeIndex faithPurchaseDistrict = kNone;  // that district's buildings can be bought with Faith
@@ -1422,6 +1423,7 @@ public:
     TypeIndex resource(const std::string& id) const;
     TypeIndex ability(const std::string& id) const;
     TypeIndex promotion(const std::string& id) const;
+    TypeIndex leaningPromotion(TypeIndex civ) const;  // tier 1 of the SOVEREIGN branch its leader leans to, or kNone
     TypeIndex unit(const std::string& id) const;
     TypeIndex building(const std::string& id) const;
     TypeIndex district(const std::string& id) const;

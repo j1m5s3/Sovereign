@@ -80,7 +80,7 @@ Yields Game::tradeRouteDestinationYields(const City& origin, const City& destina
     return out;
 }
 
-Yields Game::tradeRouteYields(const City& origin, const City& destination) const {
+Yields Game::tradeRouteYields(const City& origin, const City& destination, const std::vector<int32_t>* way) const {
     Yields out{};
     const bool domestic = origin.owner == destination.owner;
     auto add = [&](TypeIndex district) {
@@ -232,8 +232,13 @@ Yields Game::tradeRouteYields(const City& origin, const City& destination) const
     }
     // Civ ability: routes whose way crosses desert (Arabia).
     if (const int gold = civAbility(origin.owner).desertRouteGold; gold > 0) {
+        auto isDesert = [&](Hex h) { return rules_->terrains[at(state_.plot(h).terrain)].base == "DESERT"; };
         bool desert = false;
-        for (const Hex& h : state_.grid.line(origin.pos, destination.pos)) desert = desert || rules_->terrains[at(state_.plot(h).terrain)].base == "DESERT";
+        if (way) {
+            for (int32_t i : *way) desert = desert || isDesert(state_.grid.at(i));
+        } else {
+            for (const Hex& h : state_.grid.line(origin.pos, destination.pos)) desert = desert || isDesert(h);
+        }
         if (desert) out[static_cast<size_t>(YieldType::Gold)] += Fixed::fromInt(gold);
     }
     return out;
