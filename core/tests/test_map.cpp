@@ -73,6 +73,30 @@ TEST(map_start_positions_are_spaced_and_valid) {
     }
 }
 
+// The best-scoring start plots go to the players in a shuffled order. Handed out best first, the first seat (the
+// human's) always had the best start: by turn 150 of all-AI games it made 60% more science than the last.
+TEST(map_the_best_start_goes_to_any_seat) {
+    const Rules& r = rules();
+    std::vector<int> best(6, 0);  // games in which each seat holds the best-scoring start
+    for (uint64_t seed = 1; seed <= 24; ++seed) {
+        GameSetup setup;
+        setup.seed = seed;
+        setup.mapSize = "MAPSIZE_SMALL";
+        setup.cityStates = 0;
+        for (size_t i = 0; i < 6; ++i) setup.players.push_back({r.civs[i].id, false});
+        std::string err;
+        auto g = Game::create(r, setup, &err);
+        REQUIRE(g);
+        size_t seat = 0;
+        for (size_t i = 1; i < 6; ++i) {
+            if (startScore(g->state(), r, g->state().players[i].startPos) > startScore(g->state(), r, g->state().players[seat].startPos)) seat = i;
+        }
+        ++best[seat];
+    }
+    CHECK(best[0] < 12);
+    CHECK(best[5] > 0);
+}
+
 TEST(map_river_edges_are_shared) {
     GameState s = sovtest::flatState(8, 8, 1);
     setRiver(s, {3, 3}, Dir::W);
