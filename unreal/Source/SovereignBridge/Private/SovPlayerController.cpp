@@ -2229,6 +2229,29 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		// Walking a City Center.
+		if (InStreet() && Street && !Menu.IsValid())
+		{
+			const FSovStreetLayout& L = Street->GetLayout();
+			static const TCHAR* const Moods[] = {TEXT("content"), TEXT("happy: banners in the square"), TEXT("unhappy: shutters closed"), TEXT("under Fear: guards at every corner")};
+			M.bStreet = true;
+			M.StreetTitle = FString::Printf(TEXT("%s, City Center"), *L.CityName);
+			M.StreetSub = Moods[FMath::Clamp(static_cast<int32>(L.Mood), 0, 3)];
+			if (const sov::City* C = Sub->GetGame().state().city(L.CityId))
+			{
+				const sov::CityReport Rep = Sub->GetGame().cityReport(L.CityId);
+				M.StreetSub += FString::Printf(TEXT("   Population %d   Amenities %d/%d   Loyalty %d"), C->population, Rep.amenities, Rep.amenitiesNeeded, C->loyalty);
+			}
+			M.StreetPrompt = StreetPrompt();
+			// Messages show as the toast here too.
+			if (Sub->LastMessage != ShownMessage)
+			{
+				ShownMessage = Sub->LastMessage;
+				MessageTime = GetWorld()->GetRealTimeSeconds();
+			}
+			M.Message = ShownMessage;
+			M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
+		}
 		// A live battle or a replay: its own screen.
 		if (InBattle() && !Menu.IsValid())
 		{

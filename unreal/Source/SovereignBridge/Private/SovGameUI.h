@@ -55,6 +55,9 @@ struct FSovUIChoice
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// Walking a City Center (shown even when bVisible is false): the city, its mood, and who is near to talk to.
+	bool bStreet = false;
+	FString StreetTitle, StreetSub, StreetPrompt;
 	// A live battle or a replay (shown even when bVisible is false).
 	FSovBattleModel Battle;
 	// Hot seat: the screen hides the map until the next player takes over (shown even when bVisible is false).

@@ -270,15 +270,16 @@ void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerControlle
 	const FSovStreetLayout& L = Scene->GetLayout();
 	UFont* Font = GEngine->GetSmallFont();
 	float Y = 12.f;
+	const bool bText = !PC.UsesWidgets();  // the street panel shows the city, the prompt and the keys
 	const TCHAR* Moods[] = {TEXT("content"), TEXT("happy: banners in the square"), TEXT("unhappy: shutters closed"), TEXT("under Fear: guards at every corner")};
-	Line(FString::Printf(TEXT("%s, City Center  (%s)"), *L.CityName, Moods[static_cast<int32>(L.Mood)]), 16, Y);
+	if (bText) Line(FString::Printf(TEXT("%s, City Center  (%s)"), *L.CityName, Moods[static_cast<int32>(L.Mood)]), 16, Y);
 	const sov::City* City = Sub.GetGame().state().city(L.CityId);
-	if (City)
+	if (City && bText)
 	{
 		const sov::CityReport Rep = Sub.GetGame().cityReport(L.CityId);
 		Line(FString::Printf(TEXT("Population %d   Amenities %d/%d   Loyalty %d"), City->population, Rep.amenities, Rep.amenitiesNeeded, City->loyalty), 16, Y);
 	}
-	if (!Sub.LastMessage.IsEmpty())
+	if (!Sub.LastMessage.IsEmpty() && bText)
 	{
 		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.8f, 0.4f));
 	}
@@ -307,7 +308,7 @@ void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerControlle
 		}
 	}
 	const FString Prompt = PC.StreetPrompt();
-	if (!Prompt.IsEmpty())
+	if (!Prompt.IsEmpty() && bText)
 	{
 		float W = 0, H = 0;
 		GetTextSize(Prompt, W, H, Font, 1.4f);
@@ -315,7 +316,7 @@ void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerControlle
 		DrawText(Prompt, FLinearColor::White, Canvas->ClipX / 2 - W / 2, Canvas->ClipY * 0.7f, Font, 1.4f);
 	}
 	float PY = Canvas->ClipY - 26.f;
-	Line(TEXT("WASD walk   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
+	if (bText) Line(TEXT("WASD walk   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
 }
 
 void ASovHUD::DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerController& PC)

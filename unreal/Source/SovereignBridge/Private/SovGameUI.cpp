@@ -155,7 +155,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Center).Padding(0, 54, 0, 0)
 		[
 			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(14, 6))
-			.Visibility_Lambda([this]() { return Model.bVisible && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.Visibility_Lambda([this]() { return (Model.bVisible || Model.bStreet) && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 			.ColorAndOpacity_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			.BorderBackgroundColor_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.Message); })]
@@ -420,6 +420,29 @@ void SSovGameUI::Construct(const FArguments& Args)
 				return Model.bVisible && bOverMap && Model.Hover.Num() > 0 && !Model.Tree.bOpen && !Model.bEnd ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
 			})
 			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
+		]
+		// Walking a City Center: the city at the top left, a prompt when someone will listen, the keys at the bottom.
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(16, 16, 0, 0)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 8))
+			.Visibility_Lambda([this]() { return Model.bStreet ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.StreetTitle); })]
+				+ SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.StreetSub); })]
+			]
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0, 0, 0, 120)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(16, 8))
+			.Visibility_Lambda([this]() { return Model.bStreet && !Model.StreetPrompt.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(Model.StreetPrompt); })]
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0, 0, 0, 16)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 5))
+			.Visibility_Lambda([this]() { return Model.bStreet ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("WASD walk   hold right mouse or Q/E to look   F talk   Esc back to the map")))]
 		]
 		// A live battle or a replay.
 		+ SOverlay::Slot()
