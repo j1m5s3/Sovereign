@@ -2145,7 +2145,7 @@ void production(View& v) {
             }
             if (value <= 0) continue;
             // Value per cost, and long builds lose value in a weak city (it should grow first).
-            const int cost = g.productionCost(v.me, it);
+            const int cost = g.productionCost(v.me, it, it.kind == ProductionKind::District ? &c : nullptr);
             int64_t score = static_cast<int64_t>(value) * 1000 / (cost + 40);
             const int turns = cost / std::max(1, static_cast<int>(rep.yields[yi(YieldType::Production)].toInt()));
             if (turns > kLongBuild) score = score * kLongBuild / turns;

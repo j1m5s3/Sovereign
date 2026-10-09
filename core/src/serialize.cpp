@@ -430,6 +430,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.inquisition);
         w.i16(p.futureTechs);
         w.i16(p.futureCivics);
+        w.i16(p.districtsCounted);
         w.i16(p.cityState);
         writeI32s(w, std::vector<int32_t>(p.envoys.begin(), p.envoys.end()));
         w.i32(p.envoyTokens);
@@ -893,6 +894,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.inquisition = r.boolean();
         p.futureTechs = r.i16();
         p.futureCivics = r.i16();
+        p.districtsCounted = r.i16();
         p.cityState = r.i16();
         if (!readI32s(r, trained)) return false;
         p.envoys.assign(trained.begin(), trained.end());

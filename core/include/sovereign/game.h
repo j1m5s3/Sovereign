@@ -155,7 +155,9 @@ public:
     // ---- districts (03-districts-buildings-wonders.md)
     // Districts needing population this city may hold: 1 + (pop - 1) / DISTRICT_POPULATION_REQUIRED_PER.
     int districtLimit(const City& city) const;
-    int districtCost(PlayerId player, TypeIndex district) const;
+    // With `building`, the cost of the district of this type that city has placed (it does not count itself toward the
+    // discount); without, of one more.
+    int districtCost(PlayerId player, TypeIndex district, const City* building = nullptr) const;
     bool canPlaceDistrict(const City& city, TypeIndex district, Hex plot, CommandError* why = nullptr) const;
     // Plots where this city could place the district now.
     std::vector<Hex> districtPlots(CityId city, TypeIndex district) const;
