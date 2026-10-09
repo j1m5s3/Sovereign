@@ -630,3 +630,201 @@ TEST(st_basils_doubles_religious_tourism_and_cristo_keeps_it_whole) {
     CHECK_EQ(sent(false, true), sent(false, false) - holy / 4);
     CHECK_EQ(sent(true, true), sent(true, false));
 }
+
+namespace {
+// religionState with Buddhism (player 0's, its Holy City the capital) and Islam (player 1's, its Holy City player 1's
+// city), each the majority in its Holy City; the given beliefs in Buddhism.
+GameState twoReligions(std::initializer_list<const char*> buddhist) {
+    GameState s = religionState();
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {}});
+    for (const char* b : buddhist) s.religions[0].beliefs.push_back(belief(b));
+    s.religions.push_back({rules().religion("RELIGION_ISLAM"), 1, s.cities[2].id, {belief("BELIEF_PILGRIMAGE")}});
+    s.players[0].religion = 0;
+    s.players[1].religion = 1;
+    for (City& c : s.cities) c.pressure.assign(2, 0);
+    s.cities[0].pressure[0] = 1000;
+    s.cities[2].pressure[1] = 1000;
+    return s;
+}
+}  // namespace
+
+// Trade routes carry pressure both ways (06): the origin's religion into the destination at 1.0 a turn, and the
+// destination's into the origin at 0.5 (a point every other turn).
+TEST(trade_routes_carry_pressure_both_ways) {
+    GameState s = twoReligions({"BELIEF_TITHE"});
+    TradeRoute r;
+    r.id = s.nextTradeRouteId++;
+    r.owner = 0;
+    r.origin = s.cities[0].id;
+    r.destination = s.cities[2].id;
+    r.traderType = rules().unit("UNIT_TRADER");
+    r.turnsLeft = 4;
+    s.tradeRoutes.push_back(r);
+    const CityId home = s.cities[0].id, away = s.cities[2].id;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->cityMajorityReligion(*g->state().city(home)) == 0);
+    REQUIRE(g->cityMajorityReligion(*g->state().city(away)) == 1);
+    const int buddhistAway = g->state().city(away)->pressure[0], islamHome = g->state().city(home)->pressure[1];
+    // The two cities lie 12 plots apart, beyond each other's passive pressure.
+    const int expectAway[] = {1, 2, 3, 4}, expectHome[] = {1, 1, 2, 2};
+    for (int turn = 0; turn < 4; ++turn) {
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().city(away)->pressure[0] - buddhistAway, expectAway[turn]);
+        CHECK_EQ(g->state().city(home)->pressure[1] - islamHome, expectHome[turn]);
+    }
+    CHECK(g->state().tradeRoutes.empty());  // the route is over
+}
+
+// A Great Prophet founds a religion on its civ's Stonehenge as on a Holy Site (06); that city becomes the Holy City.
+TEST(a_great_prophet_founds_a_religion_on_stonehenge) {
+    const TypeIndex stonehenge = rules().building("BUILDING_STONEHENGE");
+    const auto found = [&](bool finished, PlayerId owner) {
+        GameState s = religionState();
+        City& second = s.cities[1];  // no Holy Site
+        second.owner = owner;
+        s.plot({12, 6}).owner = owner;
+        s.plot({12, 6}).city = second.id;
+        second.wonders.push_back({stonehenge, {12, 6}});
+        if (finished) {
+            second.buildings.push_back(stonehenge);
+            std::sort(second.buildings.begin(), second.buildings.end());
+        }
+        const CityId holy = second.id;
+        const UnitId prophet = addProphet(s, {12, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const CommandError e = g->submit(Command::foundReligion(0, prophet, rules().religion("RELIGION_BUDDHISM"), belief("BELIEF_TITHE"),
+                                                               belief("BELIEF_FEED_THE_WORLD")));
+        return e == CommandError::Ok && g->state().religions.size() == 1u && g->state().religions[0].holyCity == holy &&
+               g->cityMajorityReligion(*g->state().city(holy)) == 0;
+    };
+    CHECK(found(true, 0));
+    CHECK(!found(false, 0));  // still being built
+    CHECK(!found(true, 1));   // another civ's
+}
+
+// Holy Order (06): Missionaries and Apostles 30% cheaper; no other unit bought with Faith.
+TEST(holy_order_discounts_missionaries_and_apostles_only) {
+    const auto cost = [](bool order, const char* unit) {
+        GameState s = religionState();
+        s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.players[0].civics.done[at(rules().civic("CIVIC_CONSERVATION"))] = 1;
+        s.players[0].inquisition = true;
+        auto g = withReligion(std::move(s));
+        GameState t = g->state();
+        if (order) t.religions[0].beliefs.push_back(belief("BELIEF_HOLY_ORDER"));
+        auto h = Game::fromScenario(rules(), std::move(t));
+        return h->faithPurchaseCost(0, h->state().cities[0], {ProductionKind::Unit, rules().unit(unit)});
+    };
+    CHECK_EQ(cost(true, "UNIT_MISSIONARY"), cost(false, "UNIT_MISSIONARY") * 70 / 100);
+    CHECK_EQ(cost(true, "UNIT_APOSTLE"), cost(false, "UNIT_APOSTLE") * 70 / 100);
+    for (const char* unit : {"UNIT_GURU", "UNIT_INQUISITOR", "UNIT_NATURALIST"}) {
+        CHECK(cost(false, unit) > 0);
+        CHECK_EQ(cost(true, unit), cost(false, unit));
+    }
+}
+
+// Monastic Isolation (06): a religion holding it loses no pressure when its units fall in theological combat, whoever
+// owns them; another religion's units lose it though their owner's religion holds it. Player 1's Buddhist Missionary
+// falls to player 0's Islamic Apostle beside player 0's second city.
+TEST(monastic_isolation_spares_its_religion_whoever_owns_the_unit) {
+    const auto lost = [](int isolated) {
+        GameState s = twoReligions({"BELIEF_TITHE"});
+        s.religions[static_cast<size_t>(isolated)].beliefs.push_back(belief("BELIEF_MONASTIC_ISOLATION"));
+        s.cities[1].pressure = {500, 500};
+        const UnitId loser = addUnit(s, "UNIT_MISSIONARY", 1, {12, 6});
+        s.units.back().religion = 0;
+        s.units.back().charges = 3;
+        s.units.back().hp = 1;
+        const UnitId winner = addUnit(s, "UNIT_APOSTLE", 0, {13, 6});
+        s.units.back().religion = 1;
+        s.units.back().charges = 3;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        if (g->submit(Command::attack(0, winner, {12, 6})) != CommandError::Ok || g->state().unit(loser)) return -1;
+        CHECK_EQ(g->state().cities[1].pressure[1], 750);  // the winner's religion gains
+        return 500 - g->state().cities[1].pressure[0];
+    };
+    CHECK_EQ(lost(0), 0);    // Buddhism holds it, though player 1's Islam does not
+    CHECK_EQ(lost(1), 250);  // player 1's Islam holds it, Buddhism does not
+}
+
+// Religious Unity (06): the founder gains an envoy the first time each city-state follows its religion, however it
+// turned; not again when it turns away and back.
+TEST(religious_unity_pays_once_per_city_state) {
+    GameState s = flatState(30, 14, 3);
+    s.players[2].civ = kNone;
+    s.players[2].cityState = rules().cityState("CITYSTATE_MITLA");
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.envoys.assign(s.players.size(), 0);
+    }
+    addCity(s, 0, {4, 6}, true, 4);
+    addCity(s, 1, {26, 6}, true, 4);
+    const CityId cs = addCity(s, 2, {15, 6}, true, 4);
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_RELIGIOUS_UNITY")}});
+    s.religions.push_back({rules().religion("RELIGION_ISLAM"), 1, s.cities[1].id, {belief("BELIEF_PILGRIMAGE")}});
+    s.players[0].religion = 0;
+    s.players[1].religion = 1;
+    for (City& c : s.cities) c.pressure.assign(2, 0);
+    s.city(cs)->pressure[0] = 1000;  // already following Buddhism (a Missionary turned it)
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int tokens = g->state().players[0].envoyTokens;
+    sovtest::endTurns(*g, 3);
+    CHECK_EQ(g->state().players[0].envoyTokens, tokens + 1);
+    CHECK_EQ(g->state().players[0].unityCityStates.size(), 1u);
+    // Islam takes it, then Buddhism again: no second envoy, and the record survives a save.
+    GameState t = g->state();
+    t.city(cs)->pressure = {0, 5000};
+    auto h = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*h, 3);
+    REQUIRE(h->cityMajorityReligion(*h->state().city(cs)) == 1);
+    const std::vector<uint8_t> bytes = serializeState(h->state());
+    ByteReader reader(bytes);
+    GameState u;
+    REQUIRE(deserializeState(reader, u));
+    u.city(cs)->pressure = {50000, 0};
+    auto k = Game::fromScenario(rules(), std::move(u));
+    sovtest::endTurns(*k, 3);
+    REQUIRE(k->cityMajorityReligion(*k->state().city(cs)) == 0);
+    CHECK_EQ(k->state().players[0].envoyTokens, tokens + 1);
+}
+
+// Monumentality in a Golden Age (09; 06: Faith): civilian land units bought with Faith at their Gold price, finished as
+// if bought with Gold (a Builder's charges, a Settler's population); military units are not.
+TEST(monumentality_buys_civilians_with_faith) {
+    const auto setup = [](bool monumentality, int population) {
+        GameState s = religionState();
+        s.cities[0].population = population;
+        Player& p = s.players[0];
+        p.faith = Fixed::fromInt(2000);
+        if (monumentality) {
+            p.age = Age::Golden;
+            p.dedications = {rules().dedication("DEDICATION_MONUMENTALITY")};
+        }
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    const ProductionItem builder{ProductionKind::Unit, rules().unit("UNIT_BUILDER")};
+    const ProductionItem settler{ProductionKind::Unit, rules().unit("UNIT_SETTLER")};
+    const ProductionItem warrior{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")};
+    auto plain = setup(false, 4);
+    const City& c0 = plain->state().cities[0];
+    CHECK_EQ(plain->faithPurchaseCost(0, c0, builder), -1);
+    CHECK_EQ(plain->submit(Command::purchaseWithFaith(0, c0.id, builder)), CommandError::CannotBuild);
+    auto g = setup(true, 4);
+    const City& c = g->state().cities[0];
+    const int price = g->purchaseCost(0, builder, &c);
+    CHECK(price > 0);
+    CHECK_EQ(g->faithPurchaseCost(0, c, builder), price);
+    CHECK_EQ(g->faithPurchaseCost(0, c, warrior), -1);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, c.id, builder)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].faith, Fixed::fromInt(2000 - price));
+    CHECK_EQ(g->state().units.back().type, builder.type);
+    CHECK_EQ(g->state().units.back().charges, rules().units[at(builder.type)].buildCharges);
+    const int settlerPrice = g->faithPurchaseCost(0, g->state().cities[0], settler);
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, c.id, settler)) == CommandError::Ok);
+    CHECK_EQ(g->state().players[0].faith, Fixed::fromInt(2000 - price - settlerPrice));
+    CHECK_EQ(g->state().cities[0].population, 4 - rules().units[at(settler.type)].popCost);
+    // A Settler needs the population, bought with Faith as with Gold.
+    auto small = setup(true, 1);
+    CHECK_EQ(small->submit(Command::purchaseWithFaith(0, small->state().cities[0].id, settler)), CommandError::CannotBuild);
+}

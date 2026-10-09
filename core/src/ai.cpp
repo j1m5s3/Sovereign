@@ -2573,14 +2573,23 @@ void prophet(View& v, UnitId id) {
         g.submit(Command::foundReligion(v.me, id, religion, founder, follower));
         return;
     }
+    // The nearest of our finished Holy Sites, or our Stonehenge (06).
     const TypeIndex holySite = v.r.district("DISTRICT_HOLY_SITE");
+    const TypeIndex stonehenge = v.r.building("BUILDING_STONEHENGE");
     std::optional<Hex> best;
     int bestDist = INT_MAX;
+    const auto consider = [&](Hex at) {
+        if (at != u->pos && v.s().grid.distance(u->pos, at) < bestDist) {
+            bestDist = v.s().grid.distance(u->pos, at);
+            best = at;
+        }
+    };
     for (CityId cid : v.cities) {
-        const CityDistrict* d = v.s().city(cid)->district(holySite, true);
-        if (d && d->pos != u->pos && v.s().grid.distance(u->pos, d->pos) < bestDist) {
-            bestDist = v.s().grid.distance(u->pos, d->pos);
-            best = d->pos;
+        const City& c = *v.s().city(cid);
+        if (const CityDistrict* d = c.district(holySite, true)) consider(d->pos);
+        if (stonehenge == kNone || !c.has(stonehenge)) continue;
+        for (const CityWonder& w : c.wonders) {
+            if (w.building == stonehenge) consider(w.pos);
         }
     }
     if (!best || g.submit(Command::move(v.me, id, *best, true)) != CommandError::Ok)
