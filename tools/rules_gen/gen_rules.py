@@ -1720,6 +1720,7 @@ def gen_tree(kind, name_col, prefix, key):
 
 def gen_governments():
     ids = node_names()
+    pids = policy_refs()
     out = []
     for row in table(SPEC / "governments-policies.md", "Governments"):
         g = {"id": "GOVERNMENT_" + snake(row["Government"]), "name": row["Government"],
@@ -1733,6 +1734,14 @@ def gen_governments():
         g["influenceThreshold"] = num(row["Influence threshold"])
         g["envoysPerThreshold"] = num(row["Envoys per threshold"])
         g["favor"] = num(row["Favor/turn [GS]"])  # Diplomatic Favor per turn (08) [GS]
+        # Its own bonuses while adopted (04: Governments), read like a policy card's effects. The rest are in code:
+        # Monarchy's envoys, Democracy's alliance points, Corporate Libertarianism's strategic resources, Synthetic
+        # Technocracy's Power, projects and Tourism.
+        mods, untracked = policy_modifiers(g["id"], row["Inherent effects"], pids)
+        if mods:
+            g["modifiers"] = mods
+        if untracked:
+            g["untrackedEffects"] = untracked
         out.append(g)
     return {"governments": out}
 
@@ -1957,6 +1966,28 @@ def policy_modifiers(pid, text, ids):
         m = re.fullmatch(r"\+(\d+) Influence points per turn", body)
         if m:
             add("PLAYER", "ADJUST_INFLUENCE_PER_TURN", {"amount": int(m.group(1))})
+            continue
+        # Governments' flat bonuses (04: Governments): production toward wonders, districts and units, great person
+        # points from every city, combat XP, and a discount on what Gold or Faith buys.
+        m = re.fullmatch(r"\+(\d+)% (wonder construction|district production|unit production|great people)", body)
+        if m and not where:
+            effect, args = {"wonder construction": ("ADJUST_ITEM_PRODUCTION_PERCENT", {"scope": "WONDERS"}),
+                            "district production": ("ADJUST_CITY_DISTRICT_PRODUCTION_PERCENT", {}),
+                            "unit production": ("ADJUST_UNIT_PRODUCTION_PERCENT", {}),
+                            "great people": ("ADJUST_CITY_GREAT_PERSON_PERCENT", {})}[m.group(2)]
+            add("PLAYER_CITIES", effect, {**args, "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% combat experience", body)
+        if m and not where:
+            add("PLAYER", "ADJUST_UNIT_XP_PERCENT", {"amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+)% (faith|gold) purchases", body)
+        if m and not where:
+            add("PLAYER", "ADJUST_PURCHASE_DISCOUNT_PERCENT", {"yield": m.group(2).upper(), "amount": int(m.group(1))})
+            continue
+        m = re.fullmatch(r"\+(\d+) (\w+) per district in all your cities", body)
+        if m and m.group(2) in YIELD_WORDS:
+            add("PLAYER_CITIES", "ADJUST_CITY_YIELD_PER_DISTRICT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))}, where)
             continue
         untracked.append(part)
     for (cls, amount), eras in sorted(unit_eras.items()):

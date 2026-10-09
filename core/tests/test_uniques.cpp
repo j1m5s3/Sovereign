@@ -364,6 +364,18 @@ TEST(leader_abilities_golden_pilgrimage_faith_purchase) {
     const ProductionItem market{ProductionKind::Building, rules().building("BUILDING_MARKET")};
     CHECK(g->faithPurchaseCost(0, g->state().cities[0], market) > 0);
     CHECK(g->faithPurchaseCost(1, g->state().cities[1], market) < 0);
+    // At the Market's Gold price, less Theocracy's 15% off Faith purchases; Democracy's off Gold purchases leaves it (04).
+    const int gold = g->purchaseCost(0, market);
+    CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[0], market), gold);
+    const auto under = [&](const char* government) {
+        GameState t = g->state();
+        t.players[0].government = rules().government(government);
+        t.players[0].policies.assign(static_cast<size_t>(rules().governments[static_cast<size_t>(t.players[0].government)].totalSlots()), kNone);
+        auto u = Game::fromScenario(rules(), std::move(t));
+        return u->faithPurchaseCost(0, u->state().cities[0], market);
+    };
+    CHECK(under("GOVERNMENT_THEOCRACY") < gold);
+    CHECK_EQ(under("GOVERNMENT_DEMOCRACY"), gold);
 }
 
 TEST(heirs_bring_their_traits_to_the_throne) {

@@ -756,6 +756,11 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
 
+// Percent off a player's purchases with Gold or Faith: Theocracy, Democracy (04: Governments).
+int Game::purchaseDiscount(PlayerId player, YieldType currency) const {
+    return sumPurchaseDiscountPercent(state_, *rules_, state_.players[static_cast<size_t>(player)], currency);
+}
+
 int Game::purchaseCost(PlayerId player, ProductionItem item, const City* city, YieldType currency) const {
     if (item.kind == ProductionKind::District || item.kind == ProductionKind::Project) return -1;  // built, never bought
     if (item.kind == ProductionKind::Unit) {
@@ -792,6 +797,7 @@ int Game::purchasePrice(PlayerId player, ProductionItem item, const City* city, 
     if (item.kind == ProductionKind::Unit && policyIs(player, "POLICY_FLOWER_POWER") && rules_->units[static_cast<size_t>(item.type)].id != "UNIT_ROCK_BAND")
         cost *= 2;
     if (item.kind == ProductionKind::Unit) cost = cost * mercenaryPercent(player, item.type, currency) / 100;  // Mercenary Companies (World Congress)
+    cost = cost * std::max(0, 100 - purchaseDiscount(player, currency)) / 100;  // Theocracy, Democracy (04)
     return cost / 5 * 5;
 }
 
@@ -805,6 +811,7 @@ int Game::districtPurchaseCost(const City& city, TypeIndex district, bool faith)
     if (!d || d->complete) return -1;
     const ProductionItem item{ProductionKind::District, district};
     int cost = productionCost(city.owner, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
+    cost = cost * std::max(0, 100 - purchaseDiscount(city.owner, faith ? YieldType::Faith : YieldType::Gold)) / 100;  // Theocracy, Democracy (04)
     return cost / 5 * 5;
 }
 

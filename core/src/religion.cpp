@@ -182,10 +182,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && buildingsOwned(player, "BUILDING_GRAND_MASTER_S_CHAPEL") > 0 &&
             std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
             return purchaseCost(player, item, &city, YieldType::Faith);
-        // Theocracy (02: Faith purchase; 04): land combat units for Faith, 15% under their Gold price.
+        // Theocracy (02: Faith purchase; 04): land combat units for Faith, at their Gold price less its Faith discount.
         if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && governmentIs(player, "GOVERNMENT_THEOCRACY") &&
             std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
-            return std::max(1, purchaseCost(player, item, &city, YieldType::Faith) * 85 / 100);
+            return std::max(1, purchaseCost(player, item, &city, YieldType::Faith));
         if (u.purchaseYield != "FAITH" || !hasUnlocked(player, u.unlock)) return -1;
         // A civ's unique building counts as the one it replaces (Mali's Sahel Mosque as the Temple an Apostle needs).
         if (!u.needsBuilding.empty() &&
@@ -209,6 +209,7 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         cost = cost * std::max(0, 100 - discount) / 100;
         if (u.id == "UNIT_GURU" && buildingsOwned(player, "BUILDING_MEENAKSHI_TEMPLE") > 0) cost = cost * 70 / 100;  // Meenakshi Temple (03)
         cost = cost * mercenaryPercent(player, item.type, YieldType::Faith) / 100;  // Mercenary Companies (World Congress): Warrior Monks
+        cost = cost * std::max(0, 100 - purchaseDiscount(player, YieldType::Faith)) / 100;  // Theocracy (04)
         return std::max(1, cost);
     }
     if (item.kind == ProductionKind::Building) {
@@ -222,10 +223,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         // Jesuit Education (06): Campus and Theater Square buildings for Faith, at their Gold price.
         if ((b.district == "DISTRICT_CAMPUS" || b.district == "DISTRICT_THEATER_SQUARE") && !b.wonder && cityFollows(city, Bf::JesuitEducation) &&
             canProduce(city, item, nullptr, true))
-            return purchaseCost(player, item);
+            return purchaseCost(player, item, nullptr, YieldType::Faith);
         // Leader ability: a district's buildings for Faith at their gold price (Golden Pilgrimage).
         if (const TypeIndex d = civAbility(player).faithPurchaseDistrict; d != kNone && b.districtType == d && !b.faithOnly && canProduce(city, item)) {
-            const int gold = purchaseCost(player, item);
+            const int gold = purchaseCost(player, item, nullptr, YieldType::Faith);
             if (gold > 0) return gold;
         }
         if (!b.faithOnly || city.has(item.type)) return -1;
@@ -238,7 +239,7 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (!b.prereqs.empty() &&
             std::none_of(b.prereqs.begin(), b.prereqs.end(), [&](TypeIndex req) { return cityHasBuilding(city, *rules_, req); }))
             return -1;
-        return std::max(1, b.cost * speed / 100);
+        return std::max(1, b.cost * speed / 100 * std::max(0, 100 - purchaseDiscount(player, YieldType::Faith)) / 100);  // Theocracy (04)
     }
     return -1;
 }

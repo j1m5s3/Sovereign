@@ -944,7 +944,7 @@ int64_t citiesWorth(const View& v, const Game& trial) {
 // Policy cards that may change a city's yields, Amenities or Housing: Dark Age cards, cards without modifiers (their
 // effects are in code) but for Military ones, whose code acts on units, strategic resources, plunder, upkeep and city
 // defence, and cards with a modifier of any other kind than these, which touch units, production toward items, great
-// people, religion, loyalty, tourism or diplomacy.
+// people, religion, loyalty, tourism, diplomacy or purchase prices.
 std::vector<uint8_t> cardsForCities(const Rules& r) {
     const auto blind = [](ModEffect e) {
         switch (e) {
@@ -960,6 +960,7 @@ std::vector<uint8_t> cardsForCities(const Rules& r) {
             case ModEffect::ItemProductionPercent: case ModEffect::GreatPersonPoints: case ModEffect::CityGreatPersonPoints:
             case ModEffect::FavorPerTurn: case ModEffect::CityFavorPerTurn: case ModEffect::InfluencePerTurn:
             case ModEffect::RouteTourismPercent: case ModEffect::DistrictTourism: case ModEffect::CityTourism: case ModEffect::EmbarkedMoves:
+            case ModEffect::PurchaseDiscountPercent:
                 return true;
             default: return false;
         }

@@ -485,6 +485,27 @@ TEST(allies_strike_harder_at_a_common_foe_and_route_yields) {
     CHECK(y1[static_cast<size_t>(YieldType::Science)] == y0[static_cast<size_t>(YieldType::Science)] + Fixed::fromInt(2));
 }
 
+// Democracy (04: Governments): +1 alliance point a turn with each ally.
+TEST(democracy_adds_an_alliance_point_a_turn) {
+    const auto points = [](const char* government) {
+        GameState s = friendsState();
+        for (PlayerId x : {0, 1}) {
+            Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+            r.alliance = AllianceType::Research;
+            r.allianceUntil = s.turn + 30;
+        }
+        Player& p = s.players[0];
+        p.government = rules().government(government);
+        p.policies.assign(static_cast<size_t>(rules().governments[static_cast<size_t>(p.government)].totalSlots()), kNone);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 2);  // both civs, back to ours
+        return g->state().players[0].relations[1].alliancePoints;
+    };
+    const int chiefdom = points("GOVERNMENT_CHIEFDOM");
+    REQUIRE(chiefdom > 0);
+    CHECK_EQ(points("GOVERNMENT_DEMOCRACY"), chiefdom + 1);
+}
+
 TEST(alliances_survive_a_save) {
     GameState s = friendsState();
     for (PlayerId x : {0, 1}) {

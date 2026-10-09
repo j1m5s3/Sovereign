@@ -197,8 +197,39 @@ TEST(worship_buildings_need_their_belief_and_faith) {
     REQUIRE(g->submit(Command::evangelizeBelief(0, a, belief("BELIEF_CATHEDRAL"))) == CommandError::Ok);
     CHECK(!g->state().unit(a));
     CHECK_EQ(g->faithPurchaseCost(0, *g->state().city(holy), cathedral), 190);
+    {
+        // Theocracy takes 15% off Faith purchases (04).
+        GameState t = g->state();
+        t.players[0].government = rules().government("GOVERNMENT_THEOCRACY");
+        t.players[0].policies.assign(static_cast<size_t>(rules().governments[at(t.players[0].government)].totalSlots()), kNone);
+        auto theocracy = Game::fromScenario(rules(), std::move(t));
+        CHECK_EQ(theocracy->faithPurchaseCost(0, *theocracy->state().city(holy), cathedral), 190 * 85 / 100);
+    }
     REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, cathedral)) == CommandError::Ok);
     CHECK(g->state().city(holy)->has(cathedral.type));
+}
+
+// Jesuit Education (06): Campus and Theater Square buildings for Faith at their Gold price, less Theocracy's 15% off
+// Faith purchases; Democracy's off Gold purchases leaves it (04).
+TEST(jesuit_education_buys_campus_buildings_with_faith) {
+    GameState s = religionState();
+    s.players[0].techs.done[at(rules().tech("TECH_WRITING"))] = 1;
+    s.cities[0].districts.push_back({rules().district("DISTRICT_CAMPUS"), {4, 6}, true});
+    auto g = withFollowerBelief(std::move(s), "BELIEF_JESUIT_EDUCATION");
+    const ProductionItem library{ProductionKind::Building, rules().building("BUILDING_LIBRARY")};
+    const int gold = g->purchaseCost(0, library);
+    REQUIRE(gold > 0);
+    CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[0], library), gold);
+    CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[1], library), -1);  // no Campus there
+    const auto under = [&](const char* government) {
+        GameState t = g->state();
+        t.players[0].government = rules().government(government);
+        t.players[0].policies.assign(static_cast<size_t>(rules().governments[at(t.players[0].government)].totalSlots()), kNone);
+        auto u = Game::fromScenario(rules(), std::move(t));
+        return u->faithPurchaseCost(0, u->state().cities[0], library);
+    };
+    CHECK(under("GOVERNMENT_THEOCRACY") < gold);
+    CHECK_EQ(under("GOVERNMENT_DEMOCRACY"), gold);
 }
 
 TEST(a_temple_s_replacement_buys_apostles_and_worship_buildings) {

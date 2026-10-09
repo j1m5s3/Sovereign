@@ -30,7 +30,811 @@
    "influencePerTurn": 3,
    "influenceThreshold": 100,
    "envoysPerThreshold": 1,
-   "favor": 1
+   "favor": 1,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_AUTOCRACY_1",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_2",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_3",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_4",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_5",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_6",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_PALACE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_7",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_8",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_9",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_10",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_11",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_12",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_AUDIENCE_CHAMBER"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCESTRAL_HALL"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WARLORD_S_THRONE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_13",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_14",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_15",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_16",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_17",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_18",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_FOREIGN_MINISTRY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_INTELLIGENCE_AGENCY"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_GRAND_MASTER_S_CHAPEL"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_19",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_20",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_21",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_22",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_23",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_24",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "any": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_WAR_DEPARTMENT"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_NATIONAL_HISTORY_MUSEUM"
+       },
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ROYAL_SOCIETY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_25",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
+     "arguments": {
+      "scope": "WONDERS",
+      "amount": 10
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_26",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_27",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_28",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_29",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_30",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_31",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CONSULATE"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_32",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_33",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_34",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_35",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_36",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_AUTOCRACY_37",
+     "source": "GOVERNMENT_AUTOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_CHANCERY"
+       }
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_OLIGARCHY",
@@ -46,7 +850,27 @@
    "influencePerTurn": 3,
    "influenceThreshold": 100,
    "envoysPerThreshold": 1,
-   "favor": 1
+   "favor": 1,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_OLIGARCHY_1",
+     "source": "GOVERNMENT_OLIGARCHY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_OLIGARCHY_MELEE_BUFF"
+     }
+    },
+    {
+     "id": "GOVERNMENT_OLIGARCHY_2",
+     "source": "GOVERNMENT_OLIGARCHY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_UNIT_XP_PERCENT",
+     "arguments": {
+      "amount": 20
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_CLASSICAL_REPUBLIC",
@@ -62,7 +886,52 @@
    "influencePerTurn": 3,
    "influenceThreshold": 100,
    "envoysPerThreshold": 1,
-   "favor": 1
+   "favor": 1,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_CLASSICAL_REPUBLIC_1",
+     "source": "GOVERNMENT_CLASSICAL_REPUBLIC",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_CLASSICAL_REPUBLIC_2",
+     "source": "GOVERNMENT_CLASSICAL_REPUBLIC",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_MIN_SPECIALTY_DISTRICTS",
+        "value": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_CLASSICAL_REPUBLIC_3",
+     "source": "GOVERNMENT_CLASSICAL_REPUBLIC",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_GREAT_PERSON_PERCENT",
+     "arguments": {
+      "amount": 15
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_MONARCHY",
@@ -78,7 +947,80 @@
    "influencePerTurn": 5,
    "influenceThreshold": 150,
    "envoysPerThreshold": 2,
-   "favor": 2
+   "favor": 2,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_MONARCHY_1",
+     "source": "GOVERNMENT_MONARCHY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_ANCIENT_WALLS"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_MONARCHY_2",
+     "source": "GOVERNMENT_MONARCHY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_MEDIEVAL_WALLS"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_MONARCHY_3",
+     "source": "GOVERNMENT_MONARCHY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_HOUSING",
+     "arguments": {
+      "amount": 1
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RENAISSANCE_WALLS"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_MONARCHY_4",
+     "source": "GOVERNMENT_MONARCHY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_FAVOR_PER_TURN",
+     "arguments": {
+      "amount": 2
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_BUILDING",
+        "ref": "BUILDING_RENAISSANCE_WALLS"
+       }
+      ]
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+50% envoys"
+   ]
   },
   {
    "id": "GOVERNMENT_THEOCRACY",
@@ -94,7 +1036,45 @@
    "influencePerTurn": 5,
    "influenceThreshold": 150,
    "envoysPerThreshold": 2,
-   "favor": 2
+   "favor": 2,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_THEOCRACY_1",
+     "source": "GOVERNMENT_THEOCRACY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_THEOCRACY_RELIGIOUS_BUFF"
+     }
+    },
+    {
+     "id": "GOVERNMENT_THEOCRACY_2",
+     "source": "GOVERNMENT_THEOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PER_POP",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 0.5
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_THEOCRACY_3",
+     "source": "GOVERNMENT_THEOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_PURCHASE_DISCOUNT_PERCENT",
+     "arguments": {
+      "yield": "FAITH",
+      "amount": 15
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_MERCHANT_REPUBLIC",
@@ -110,7 +1090,35 @@
    "influencePerTurn": 5,
    "influenceThreshold": 150,
    "envoysPerThreshold": 2,
-   "favor": 2
+   "favor": 2,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_MERCHANT_REPUBLIC_1",
+     "source": "GOVERNMENT_MERCHANT_REPUBLIC",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 10
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_MERCHANT_REPUBLIC_2",
+     "source": "GOVERNMENT_MERCHANT_REPUBLIC",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_DISTRICT_PRODUCTION_PERCENT",
+     "arguments": {
+      "amount": 15
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_FASCISM",
@@ -126,7 +1134,36 @@
    "influencePerTurn": 7,
    "influenceThreshold": 200,
    "envoysPerThreshold": 3,
-   "favor": 3
+   "favor": 3,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_FASCISM_1",
+     "source": "GOVERNMENT_FASCISM",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_FASCISM_ATTACK_BUFF"
+     }
+    },
+    {
+     "id": "GOVERNMENT_FASCISM_2",
+     "source": "GOVERNMENT_FASCISM",
+     "collection": "PLAYER",
+     "effect": "ADJUST_WAR_WEARINESS_PERCENT",
+     "arguments": {
+      "amount": 20
+     }
+    },
+    {
+     "id": "GOVERNMENT_FASCISM_3",
+     "source": "GOVERNMENT_FASCISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_UNIT_PRODUCTION_PERCENT",
+     "arguments": {
+      "amount": 50
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_COMMUNISM",
@@ -142,7 +1179,36 @@
    "influencePerTurn": 7,
    "influenceThreshold": 200,
    "envoysPerThreshold": 3,
-   "favor": 3
+   "favor": 3,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_COMMUNISM_1",
+     "source": "GOVERNMENT_COMMUNISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PER_POP",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 0.6
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_GOVERNOR"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_COMMUNISM_2",
+     "source": "GOVERNMENT_COMMUNISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": 10
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_DEMOCRACY",
@@ -158,7 +1224,114 @@
    "influencePerTurn": 7,
    "influenceThreshold": 200,
    "envoysPerThreshold": 3,
-   "favor": 3
+   "favor": 3,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_DEMOCRACY_1",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_PURCHASE_DISCOUNT_PERCENT",
+     "arguments": {
+      "yield": "GOLD",
+      "amount": 15
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_2",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "ALLY",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_3",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "ALLY",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_4",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_5",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "ALLY"
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_6",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_7",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "SUZERAIN",
+      "toDestination": true
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_8",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "FOOD",
+      "amount": 4,
+      "scope": "SUZERAIN"
+     }
+    },
+    {
+     "id": "GOVERNMENT_DEMOCRACY_9",
+     "source": "GOVERNMENT_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "ADJUST_TRADE_ROUTE_YIELD",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 4,
+      "scope": "SUZERAIN"
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+1 alliance points per turn"
+   ]
   },
   {
    "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
@@ -174,7 +1347,58 @@
    "influencePerTurn": 9,
    "influenceThreshold": 250,
    "envoysPerThreshold": 4,
-   "favor": 4
+   "favor": 4,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM_1",
+     "source": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 10
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_DISTRICT",
+        "ref": "DISTRICT_COMMERCIAL_HUB"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM_2",
+     "source": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "PRODUCTION",
+      "amount": 10
+     },
+     "subjectRequirements": {
+      "all": [
+       {
+        "type": "CITY_HAS_DISTRICT",
+        "ref": "DISTRICT_ENCAMPMENT"
+       }
+      ]
+     }
+    },
+    {
+     "id": "GOVERNMENT_CORPORATE_LIBERTARIANISM_3",
+     "source": "GOVERNMENT_CORPORATE_LIBERTARIANISM",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PERCENT",
+     "arguments": {
+      "yield": "SCIENCE",
+      "amount": -10
+     }
+    }
+   ],
+   "untrackedEffects": [
+    "+1 strategic accumulation per source in all your cities"
+   ]
   },
   {
    "id": "GOVERNMENT_DIGITAL_DEMOCRACY",
@@ -190,7 +1414,37 @@
    "influencePerTurn": 9,
    "influenceThreshold": 250,
    "envoysPerThreshold": 4,
-   "favor": 4
+   "favor": 4,
+   "modifiers": [
+    {
+     "id": "GOVERNMENT_DIGITAL_DEMOCRACY_1",
+     "source": "GOVERNMENT_DIGITAL_DEMOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_AMENITIES",
+     "arguments": {
+      "amount": 2
+     }
+    },
+    {
+     "id": "GOVERNMENT_DIGITAL_DEMOCRACY_2",
+     "source": "GOVERNMENT_DIGITAL_DEMOCRACY",
+     "collection": "PLAYER_CITIES",
+     "effect": "ADJUST_CITY_YIELD_PER_DISTRICT",
+     "arguments": {
+      "yield": "CULTURE",
+      "amount": 2
+     }
+    },
+    {
+     "id": "GOVERNMENT_DIGITAL_DEMOCRACY_3",
+     "source": "GOVERNMENT_DIGITAL_DEMOCRACY",
+     "collection": "PLAYER",
+     "effect": "GRANT_ABILITY",
+     "arguments": {
+      "ability": "ABILITY_DIGITAL_DEMOCRACY_DEBUFF"
+     }
+    }
+   ]
   },
   {
    "id": "GOVERNMENT_SYNTHETIC_TECHNOCRACY",
@@ -206,7 +1460,12 @@
    "influencePerTurn": 9,
    "influenceThreshold": 250,
    "envoysPerThreshold": 4,
-   "favor": 4
+   "favor": 4,
+   "untrackedEffects": [
+    "+3 Power (Free Power Source Misc) in all your cities",
+    "+30% Production toward projects in all your cities",
+    "-10% Tourism"
+   ]
   }
  ]
 }
