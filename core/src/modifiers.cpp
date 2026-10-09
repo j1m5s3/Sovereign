@@ -172,6 +172,14 @@ bool testOne(const Requirement& q, const ReqContext& c) {
         }
         case ReqType::CityCaptured: ok = c.city && c.city->originalOwner != c.city->owner; break;
         case ReqType::CityFullLoyalty: ok = c.city && c.rules && c.city->loyalty >= c.rules->globalInt("LOYALTY_MAXIMUM"); break;
+        case ReqType::CityIsCoastal:
+            if (c.city && c.state && c.rules) {
+                for (int d = 0; d < kNumDirs && !ok; ++d) {
+                    const auto n = c.state->grid.neighbor(c.city->pos, static_cast<Dir>(d));
+                    ok = n && c.rules->terrains[static_cast<size_t>(c.state->plot(*n).terrain)].shallowWater;
+                }
+            }
+            break;
         case ReqType::CityDistrictNextToRiver:
             if (c.city && c.state) {
                 for (const CityDistrict& d : c.city->districts) ok = ok || (d.complete && d.type == q.ref && isRiverAdjacent(*c.state, d.pos));

@@ -226,6 +226,39 @@ TEST(ranged_units_cannot_take_a_city) {
     CHECK_EQ(unit(*g, warrior).hp, 100);
 }
 
+// Ships take coastal cities too (02: City combat): a Galley beats a city beside the water and sails into it.
+TEST(a_ship_takes_a_beaten_coastal_city) {
+    UnitId galley = kNoUnit;
+    auto g = siege([&](GameState& s) {
+        s.city(1)->hp = 1;
+        for (int y = 0; y < 12; ++y) s.plot({9, y}).terrain = rules().terrain("TERRAIN_COAST");
+        galley = addUnit(s, "UNIT_GALLEY", 0, {9, 5});
+        addCity(s, 1, {3, 10}, false);
+        addCity(s, 2, {14, 2}, true);  // a third civ, so taking one capital is not Domination
+    }, true, 3);
+    CHECK_EQ(g->submit(Command::attack(0, galley, kCity)), CommandError::Ok);
+    CHECK_EQ(cityAt(*g, kCity).owner, 0);
+    CHECK(unit(*g, galley).pos == kCity);
+}
+
+// A pillaged district adds nothing to its city's strength (02: City combat).
+TEST(a_pillaged_district_adds_no_city_strength) {
+    auto g = siege([&](GameState& s) {
+        addUnit(s, "UNIT_WARRIOR", 1, {12, 10});
+        CityDistrict camp;
+        camp.type = rules().district("DISTRICT_ENCAMPMENT");
+        camp.pos = {10, 5};
+        camp.complete = true;
+        s.city(1)->districts.push_back(camp);
+        sovtest::claimFor(s, *s.city(1), camp.pos);
+    }, false);
+    CHECK_EQ(g->cityStrength(cityAt(*g, kCity)), 13 + 2);  // the Encampment's +2
+    GameState s = g->state();
+    s.city(1)->districts[0].pillagedTurns = 1;
+    auto pillaged = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(pillaged->cityStrength(cityAt(*pillaged, kCity)), 13);
+}
+
 TEST(captured_city_can_be_razed_that_turn) {
     UnitId warrior = kNoUnit;
     auto g = siege([&](GameState& s) {
@@ -285,20 +318,42 @@ TEST(walled_city_strikes_once_per_turn) {
     CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::Ok);
 }
 
-TEST(cities_heal_and_walls_repair_after_a_quiet_spell) {
+TEST(cities_heal_and_walls_wait_for_the_repair_project) {
     GameState s = flatState(16, 12, 2);
     const CityId id = addCity(s, 0, {4, 5}, true);
     addBuilding(s, id, "BUILDING_ANCIENT_WALLS");
     s.city(id)->hp = 150;
     s.city(id)->wallHp = 50;
     s.city(id)->lastAttackedTurn = 1;
+    CityDistrict camp;
+    camp.type = rules().district("DISTRICT_ENCAMPMENT");
+    camp.pos = {6, 5};
+    camp.complete = true;
+    camp.wallDamage = 30;
+    s.city(id)->districts.push_back(camp);
+    sovtest::claimFor(s, *s.city(id), camp.pos);
     auto g = Game::fromScenario(rules(), std::move(s));
+    const ProductionItem repair{ProductionKind::Project, rules().project("PROJECT_REPAIR_OUTER_DEFENSES")};
     endTurns(*g, 2);  // turn 2
     CHECK_EQ(g->state().city(id)->hp, 170);
-    CHECK_EQ(g->state().city(id)->wallHp, 50);
-    endTurns(*g, 6);  // turn 5: more than COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN turns since the attack
+    CHECK(!g->canProduce(*g->state().city(id), repair));  // within COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN (3) turns of the attack
+    endTurns(*g, 4);  // turn 4: three turns on
+    CHECK(!g->canProduce(*g->state().city(id), repair));
+    endTurns(*g, 2);  // turn 5
     CHECK_EQ(g->state().city(id)->hp, 200);
-    CHECK_EQ(g->state().city(id)->wallHp, 60);
+    CHECK_EQ(g->state().city(id)->wallHp, 50);  // walls never mend on their own
+    CHECK_EQ(g->state().city(id)->districts[0].wallDamage, 30);
+    REQUIRE(g->canProduce(*g->state().city(id), repair));
+    REQUIRE(g->submit(Command::setProduction(0, id, repair)) == CommandError::Ok);
+    endTurns(*g, 2);
+    CHECK_EQ(g->state().city(id)->wallHp, 100);  // the project mends the city's walls and its Encampment's
+    CHECK_EQ(g->state().city(id)->districts[0].wallDamage, 0);
+    CHECK(!g->canProduce(*g->state().city(id), repair));  // offered only while walls are down
+    // The Encampment's walls alone down: offered too.
+    GameState s3 = g->state();
+    s3.city(id)->districts[0].wallDamage = 10;
+    auto g3 = Game::fromScenario(rules(), std::move(s3));
+    CHECK(g3->canProduce(*g3->state().city(id), repair));
 
     // Surrounded by enemies: no healing.
     GameState s2 = flatState(16, 12, 2);

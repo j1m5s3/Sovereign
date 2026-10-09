@@ -43,6 +43,12 @@ inline bool isLandPassable(const Rules& rules, const Plot& p) {
     if (t.impassable && !(p.improvement != kNone && rules.improvements[static_cast<size_t>(p.improvement)].tunnel)) return false;
     return p.feature == kNone || !rules.features[static_cast<size_t>(p.feature)].impassable;
 }
+// True if a city may stand on this plot (02: Founding): land, but not a Mountain (a tunnel through it or not), an Oasis or
+// a natural wonder.
+inline bool canHoldCity(const Rules& rules, const Plot& p) {
+    if (!isLandPassable(rules, p) || rules.terrains[static_cast<size_t>(p.terrain)].impassable) return false;
+    return p.feature == kNone || !rules.features[static_cast<size_t>(p.feature)].noCity;
+}
 // Places the map size's natural wonders on clusters of valid plots away from every start (01).
 SOV_API void placeNaturalWonders(GameState& state, const Rules& rules);
 // Scatters tribal villages over open land away from every start (01: Tribal Villages).

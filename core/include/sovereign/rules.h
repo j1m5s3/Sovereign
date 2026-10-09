@@ -86,6 +86,7 @@ struct FeatureType {
     int tiles = 1;
     Yields adjacentYields{};
     bool doublesAdjacentTerrain = false;
+    bool noCity = false;  // no city is founded on it: a natural wonder or an Oasis (02: Founding)
 };
 
 struct ResourceType {
@@ -975,6 +976,7 @@ enum class ReqType : uint8_t {
     PlotIsLake,      // 01: Lake (Huey Teocalli, Mausoleum)
     PlotNextToLake,  // a lake plot beside it (Aztec Chinampas)
     CityFullLoyalty,  // the city's loyalty is at LOYALTY_MAXIMUM (the Monument [R&F])
+    CityIsCoastal,    // the city center lies beside Coast or a lake (the Lighthouse's Housing)
 };
 
 struct Requirement {

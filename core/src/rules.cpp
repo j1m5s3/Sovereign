@@ -206,6 +206,7 @@ bool parseRequirements(const Json& j, RequirementSet& set, const Rules& rules, s
         else if (type == "CITY_MIN_POPULATION") { q.type = ReqType::CityMinPopulation; }
         else if (type == "PLAYER_IS_HUMAN") { q.type = ReqType::PlayerIsHuman; }
         else if (type == "CITY_FULL_LOYALTY") { q.type = ReqType::CityFullLoyalty; }
+        else if (type == "CITY_IS_COASTAL") { q.type = ReqType::CityIsCoastal; }
         else {
             *error = "unknown requirement type " + type;
             return false;
@@ -728,6 +729,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         f.name = j["name"].str(id);
         f.yields = readYields(j["yields"]);
         f.naturalWonder = j["naturalWonder"].boolean(false);
+        f.noCity = f.naturalWonder || id == "FEATURE_OASIS";
         f.tiles = static_cast<int>(j["tiles"].integer(1));
         f.adjacentYields = readYields(j["adjacentYields"]);
         f.doublesAdjacentTerrain = j["doublesAdjacentTerrain"].boolean(false);

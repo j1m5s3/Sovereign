@@ -1844,6 +1844,16 @@ int growthQuarters(const Rules& r, Fixed room) {
 void production(View& v) {
     const GameState& s = v.s();
     Game& g = v.game;
+    // Walls do not mend on their own (02: City combat): a city whose walls are down repairs them as soon as it may, ahead
+    // of whatever it was making (the project takes a turn; the work on the rest is kept).
+    const TypeIndex repairWalls = v.r.project("PROJECT_REPAIR_OUTER_DEFENSES");
+    for (CityId cid : v.cities) {
+        const City& c = *s.city(cid);
+        const CityDistrict* camp = g.encampmentOf(c);
+        if (repairWalls == kNone || (c.wallHp >= g.cityMaxWallHp(c) && (!camp || camp->wallDamage == 0))) continue;
+        const ProductionItem repair{ProductionKind::Project, repairWalls};
+        if ((c.queue.empty() || !(c.queue.front() == repair)) && g.canProduce(c, repair)) g.submit(Command::setProduction(v.me, cid, repair));
+    }
     // Gold per turn looks at every city: it is worked out only when a city needs something to make.
     const std::vector<CityId> needing = g.citiesNeedingProduction(v.me);
     if (needing.empty()) return;
