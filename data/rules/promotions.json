@@ -2201,7 +2201,7 @@
     {
      "kind": "BAND_LEVEL",
      "amount": 2,
-     "at": "DISTRICT_THEATER"
+     "at": "DISTRICT_THEATER_SQUARE"
     },
     {
      "kind": "UNTRACKED",

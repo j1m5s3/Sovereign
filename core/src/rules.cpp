@@ -2565,6 +2565,28 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             return false;
         }
     }
+    // A Rock Band's concert bonus names where it applies (07: Rock Bands): a district or improvement, or
+    // WONDER, NATIONAL_PARK or NATURAL_WONDER (Game::performConcert). A misspelt place would never match.
+    const auto badPlace = [this](const std::vector<UnitEffect>& effects) -> const std::string* {
+        for (const UnitEffect& e : effects) {
+            if (e.kind != UnitEffectKind::BandLevel && e.kind != UnitEffectKind::BandBurst) continue;
+            if (e.at != "WONDER" && e.at != "NATIONAL_PARK" && e.at != "NATURAL_WONDER" && district(e.at) == kNone && improvement(e.at) == kNone)
+                return &e.at;
+        }
+        return nullptr;
+    };
+    for (const PromotionType& pr : promotions) {
+        if (const std::string* place = badPlace(pr.effects)) {
+            *error = "promotion " + pr.id + ": unknown concert place " + *place;
+            return false;
+        }
+    }
+    for (const AbilityType& a : abilities) {
+        if (const std::string* place = badPlace(a.effects)) {
+            *error = "ability " + a.id + ": unknown concert place " + *place;
+            return false;
+        }
+    }
     static const char* required[] = {"CITY_MIN_RANGE", "START_DISTANCE_MAJOR_CIVILIZATION", "MOVEMENT_RIVER_COST",
                                      "CITY_SIGHT_RANGE", "COMBAT_MAX_HIT_POINTS",
                                      "CITY_FOOD_CONSUMPTION_PER_POPULATION", "CITY_GROWTH_THRESHOLD",

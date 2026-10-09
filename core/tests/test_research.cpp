@@ -1211,6 +1211,24 @@ TEST(policy_cards_in_code_military_and_economy) {
         auto plain = with(nullptr, campus);
         CHECK(g->cityReport(g->state().cities[0].id).yields[S] > plain->cityReport(plain->state().cities[0].id).yields[S]);
     }
+    // Grand Opera: +50% of a Theater Square's building culture in a city of 15.
+    {
+        auto theater = [](GameState& s) {
+            CityDistrict d;
+            d.type = rules().district("DISTRICT_THEATER_SQUARE");
+            d.pos = {7, 7};
+            d.complete = true;
+            s.cities[0].districts.push_back(d);
+            claimFor(s, s.cities[0], d.pos);
+            s.cities[0].buildings.push_back(rules().building("BUILDING_AMPHITHEATER"));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+            s.cities[0].population = 15;
+        };
+        constexpr size_t C = static_cast<size_t>(YieldType::Culture);
+        auto g = with("POLICY_GRAND_OPERA", theater);
+        auto plain = with(nullptr, theater);
+        CHECK(g->cityReport(g->state().cities[0].id).yields[C] > plain->cityReport(plain->state().cities[0].id).yields[C]);
+    }
 }
 
 TEST(policy_cards_in_code_tourism_and_diplomacy) {
