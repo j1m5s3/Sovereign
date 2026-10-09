@@ -295,6 +295,21 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.bEmbarked = Game.isEmbarked(U);
 		Marker.Hp = U.hp;
 		Marker.Name = UTF8_TO_TCHAR(Type.name.c_str());
+		{
+			// The flag's icon, by what the unit does.
+			const std::string& Cls = Type.unitClass;
+			Marker.Icon = Type.foundCity ? FName("found")
+				: Type.id.find("GREAT_") != std::string::npos ? FName("greatperson")
+				: Type.id == "UNIT_TRADER" ? FName("trade")
+				: Type.religiousStrength > 0 || Cls.rfind("RELIGIOUS", 0) == 0 ? FName("religion")
+				: Type.buildCharges > 0 ? FName("build")
+				: Cls == "ROCK_BAND" ? FName("tourism")
+				: Cls == "CIVILIAN" || Cls == "ESPIONAGE" ? FName("culture")
+				: Cls == "RANGED" || Cls == "SIEGE" || Cls == "NAVAL_RANGED" || Cls.rfind("AIR_", 0) == 0 ? FName("ranged")
+				: Cls == "RECON" ? FName("moves")
+				: Cls == "SUPPORT" ? FName("fortify")
+				: FName("attack");
+		}
 		if (Marker.bLeader)
 		{
 			Marker.Name = UTF8_TO_TCHAR(S.players[static_cast<size_t>(U.owner)].leaderName.c_str());

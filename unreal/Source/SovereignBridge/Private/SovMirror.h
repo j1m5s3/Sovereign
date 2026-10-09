@@ -57,6 +57,7 @@ struct FSovUnitMarker
 	bool bEmbarked = false;  // a land unit afloat
 	int32 Hp = 100;
 	FString Name;  // unit type, or the ruler's name for a leader
+	FName Icon;    // its flag's icon (unreal/Content/Slate/Icons): attack, ranged, found, build, religion...
 };
 
 struct FSovCityMarker

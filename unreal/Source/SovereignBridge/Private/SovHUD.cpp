@@ -6,6 +6,9 @@
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
 #include "Engine/GameInstance.h"
+#include "Engine/Texture2D.h"
+#include "ImageUtils.h"
+#include "Misc/Paths.h"
 
 #include "SovCameraPawn.h"
 #include "SovEvents.h"
@@ -284,21 +287,58 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 				GetTextSize(U.Name, W, H, Font, 1.0f);
 				DrawRect(FLinearColor(0, 0, 0, 0.6f), At.X - W / 2 - 3, At.Y - H - 1, W + 6, H + 2);
 				DrawText(U.Name, FLinearColor(1.f, 0.85f, 0.3f), At.X - W / 2, At.Y - H, Font, 1.0f);
+				if (U.Hp < 100)
+				{
+					const float Frac = FMath::Clamp(U.Hp / 100.f, 0.f, 1.f);
+					DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), At.X - W / 2 - 3, At.Y + 2, W + 6, 3.f);
+					DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), At.X - W / 2 - 3, At.Y + 2, (W + 6) * Frac, 3.f);
+				}
 			}
+			continue;
+		}
+		// The unit's flag above its figure (where the map stands it): its icon on the owner's colour, with its
+		// health beneath when hurt.
+		const FVector2D Offset = U.bNaval ? FVector2D(0.0, 0.0) : U.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
+		// In a city, the flags stand above its banner (projected from the same point), side by side.
+		const FVector Screen = U.bInCity ? Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 60.0)))
+			: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 75.0) + SovHex::ToWorld(Offset, 0.0)));
+		if (Screen.Z <= 0)
+		{
+			continue;
+		}
+		const float S = 20.f;
+		const float FX = Screen.X - S / 2 + (U.bInCity ? (U.bCivilian ? 12.f : -12.f) : 0.f);
+		const float FY = Screen.Y - S - (U.bInCity ? 32.f : 0.f);
+		DrawRect(FLinearColor(0.02f, 0.02f, 0.02f, 0.9f), FX - 1.5f, FY - 1.5f, S + 3.f, S + 3.f);
+		DrawRect(FLinearColor(U.Color.R * 0.8f, U.Color.G * 0.8f, U.Color.B * 0.8f, 0.95f), FX, FY, S, S);
+		if (UTexture2D* Tex = IconTexture(U.Icon))
+		{
+			DrawTexture(Tex, FX + 2.f, FY + 2.f, S - 4.f, S - 4.f, 0.f, 0.f, 1.f, 1.f, FLinearColor::White);
 		}
 		if (U.Hp >= 100)
 		{
 			continue;
 		}
-		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 80.0)));
-		if (Screen.Z <= 0)
-		{
-			continue;
-		}
 		const float Frac = FMath::Clamp(U.Hp / 100.f, 0.f, 1.f);
-		DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), Screen.X - 16, Screen.Y, 32, 4);
-		DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), Screen.X - 16, Screen.Y, 32 * Frac, 4);
+		DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), FX - 1.5f, FY + S + 2.f, S + 3.f, 3.f);
+		DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), FX - 1.5f, FY + S + 2.f, (S + 3.f) * Frac, 3.f);
 	}
+}
+
+UTexture2D* ASovHUD::IconTexture(FName Name)
+{
+	if (Name.IsNone())
+	{
+		return nullptr;
+	}
+	if (const TObjectPtr<UTexture2D>* Found = Icons.Find(Name))
+	{
+		return Found->Get();
+	}
+	const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Slate/Icons") / (Name.ToString() + TEXT(".png")));
+	UTexture2D* Tex = FImageUtils::ImportFileAsTexture2D(File);
+	Icons.Add(Name, Tex);  // a missing file is remembered as null, so it is not looked for every frame
+	return Tex;
 }
 
 void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerController& PC)
