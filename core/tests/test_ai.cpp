@@ -240,33 +240,67 @@ TEST(ai_builders_split_up_over_the_work) {
     }
 }
 
-// A Builder whose best plots are out of its reach (six Wheat plots on an island, before it may embark) works the best
-// plot it can reach, rather than wait on the Wheat for good: one failed move is enough to look for the plots in reach.
+// A Builder whose best plots are out of its reach (six Wheat plots on an island: it goes to a plot on land over land,
+// before it may embark and after) works the best plot it can reach, rather than wait on the Wheat for good: one failed
+// move is enough to look for the plots in reach.
 TEST(ai_builders_work_what_they_can_reach) {
-    GameState s = flatState(20, 14, 1);
-    for (int y = 0; y < 14; ++y) {
-        for (int x = 7; x < 20; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    for (const bool sailing : {false, true}) {
+        GameState s = flatState(20, 14, 1);
+        for (int y = 0; y < 14; ++y) {
+            for (int x = 7; x < 20; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+        }
+        addCity(s, 0, {6, 6}, true);
+        std::vector<Hex> island;
+        for (const Hex& h : s.grid.within({6, 6}, 3)) {
+            sovtest::claimFor(s, s.cities[0], h);
+            if (h.x < 8) continue;
+            s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
+            s.plot(h).resource = rules().resource("RESOURCE_WHEAT");
+            island.push_back(h);
+        }
+        REQUIRE(island.size() >= 6);
+        if (sailing) learn(s, 0, "TECH_SAILING");
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(builder);
+        REQUIRE(u);
+        CHECK(u->pos.x < 7);
+        CHECK(u->pos != (Hex{6, 6}));
+        CHECK(g->state().plot(u->pos).improvement != kNone);
+        for (const Hex& h : island) CHECK(g->state().plot(h).improvement == kNone);
     }
-    addCity(s, 0, {6, 6}, true);
-    std::vector<Hex> island;
-    for (const Hex& h : s.grid.within({6, 6}, 3)) {
-        sovtest::claimFor(s, s.cities[0], h);
-        if (h.x < 8) continue;
-        s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
-        s.plot(h).resource = rules().resource("RESOURCE_WHEAT");
-        island.push_back(h);
+}
+
+// A Builder embarks for a sea resource (Builders may after Sailing; 05: Embarkation) and builds Fishing Boats there, also
+// once its moves to better plots have failed (Horses on an island, out of reach over land).
+TEST(ai_builders_embark_for_sea_resources) {
+    for (const bool withIsland : {false, true}) {
+        GameState s = flatState(20, 14, 1);
+        for (int y = 0; y < 14; ++y) {
+            for (int x = 7; x < 20; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+        }
+        addCity(s, 0, {6, 6}, true);
+        int island = 0;
+        for (const Hex& h : s.grid.within({6, 6}, 3)) {
+            sovtest::claimFor(s, s.cities[0], h);
+            if (!withIsland || h.x < 8) continue;
+            s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
+            s.plot(h).resource = rules().resource("RESOURCE_HORSES");
+            ++island;
+        }
+        REQUIRE(island >= (withIsland ? 6 : 0));
+        const Hex fish{7, 6};
+        s.plot(fish).resource = rules().resource("RESOURCE_FISH");
+        learn(s, 0, "TECH_SAILING");
+        learn(s, 0, "TECH_ANIMAL_HUSBANDRY");
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        for (int i = 0; i < 2; ++i) ai::playTurn(*g);
+        CHECK(g->state().plot(fish).improvement == rules().improvement("IMPROVEMENT_FISHING_BOATS"));
     }
-    REQUIRE(island.size() >= 6);
-    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
-    const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
-    auto g = Game::fromScenario(rules(), std::move(s));
-    ai::playTurn(*g);
-    const Unit* u = g->state().unit(builder);
-    REQUIRE(u);
-    CHECK(u->pos.x < 7);
-    CHECK(u->pos != (Hex{6, 6}));
-    CHECK(g->state().plot(u->pos).improvement != kNone);
-    for (const Hex& h : island) CHECK(g->state().plot(h).improvement == kNone);
 }
 
 // A Builder out of moves on a plot to improve waits there and improves it next turn, rather than set off for the next
