@@ -1789,9 +1789,9 @@ void production(View& v) {
     const std::vector<CityId> needing = g.citiesNeedingProduction(v.me);
     if (needing.empty()) return;
     const Fixed goldPerTurn = g.goldPerTurn(v.me);
-    // Plots our Builders could still improve, and the charges they already carry (those in training too): a Builder
-    // beyond the work only waits for the borders to grow.
-    int work = 0, charges = 0;
+    // Plots our Builders could still improve, those of them our cities work, and the charges our Builders already carry
+    // (those in training too): a Builder beyond the work only waits for the borders to grow.
+    int work = 0, workedWork = 0, charges = 0;
     for (const Unit& u : s.units) charges += u.owner == v.me && isBuilder(v.r.units[at(u.type)]) ? u.charges : 0;
     for (CityId cid : v.cities) {
         const City& c = *s.city(cid);
@@ -1802,7 +1802,10 @@ void production(View& v) {
         const Plot& p = s.plots[static_cast<size_t>(i)];
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone) continue;
         const Hex h = s.grid.at(i);
-        if (s.grid.distance(s.city(p.city)->pos, h) <= 3 && g.builderCanImprove(v.me, h)) ++work;
+        const City& c = *s.city(p.city);
+        if (s.grid.distance(c.pos, h) > 3 || !g.builderCanImprove(v.me, h)) continue;
+        ++work;
+        if (std::binary_search(c.worked.begin(), c.worked.end(), i)) ++workedWork;
     }
     for (CityId cid : needing) {
         const City& c = *s.city(cid);
@@ -1896,7 +1899,9 @@ void production(View& v) {
                         value = sites > 0 && diggers == 0 ? 200 : 0;
                     }
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
-                    else if (isBuilder(t)) value = wantBuilder ? 160 + 40 * std::min(unimproved, 6) : 0;
+                    // A Builder works for all our cities: it is worth the plots this city works unimproved, or those all
+                    // our cities work beyond the charges our Builders carry, whichever are more.
+                    else if (isBuilder(t)) value = wantBuilder ? 160 + 40 * std::min(std::max(unimproved, workedWork - charges), 6) : 0;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
                     else if (t.domain == Domain::Air) {
                         int aircraft = 0, fighters = 0;
