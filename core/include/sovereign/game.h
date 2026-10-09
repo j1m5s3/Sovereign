@@ -1000,6 +1000,7 @@ private:
     void successionShock(PlayerId owner, int loyaltyDrop);
     // XP for the leader from the civ's deeds (leader doc section 3: quests, historic moments, founding cities).
     void leaderXp(PlayerId player, int xp);
+    void duelWon(PlayerId winner, PlayerId loser);  // one ruler beat another in battle (§8.5)
     // A small grievance for a Fear stance from civs sharing the ruler's religion or allied with the city's original owner (§4).
     void fearGrievances(PlayerId ruler, const City& city);
     std::optional<Hex> throneCity(PlayerId player) const;  // the capital, else any city of the player's

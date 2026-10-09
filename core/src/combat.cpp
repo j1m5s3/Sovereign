@@ -1416,6 +1416,9 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
         if (ground != them) addWarWeariness(them, me, alliance(them, ground) != AllianceType::None ? allied : foreign);
         if (defenderDied) addWarWeariness(them, me, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
         if (attackerDied) addWarWeariness(me, them, rules_->globalInt("WAR_WEARINESS_PER_UNIT_KILLED"));
+        // A duel (leader doc §8.5): a ruler who beats another ruler wins a large war score, read here as war
+        // weariness: the loser's civ takes DUEL_WAR_WEARINESS and the winner's sheds as much against it.
+        if (leaderA && leaderD && attackerDied != defenderDied) duelWon(defenderDied ? me : them, defenderDied ? them : me);
     }
     if (defenderDied && !leaderD) noteKill(*def, attackerDied ? nullptr : a);
     if (attackerDied && !leaderA) noteKill(*a, defenderDied ? nullptr : def);
