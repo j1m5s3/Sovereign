@@ -526,6 +526,26 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             w.u8(static_cast<uint8_t>(b.kind));
             w.i32(b.level);
         }
+        // Plots remembered out of sight: only those with a snapshot, by index.
+        uint32_t known = 0;
+        for (const PlotMemory& m : p.seen) known += m.known ? 1 : 0;
+        w.u32(known);
+        for (size_t i = 0; i < p.seen.size(); ++i) {
+            const PlotMemory& m = p.seen[i];
+            if (!m.known) continue;
+            w.u32(static_cast<uint32_t>(i));
+            for (TypeIndex t : {m.terrain, m.feature, m.improvement, m.district, m.wonder}) w.i16(t);
+            w.i8(m.owner);
+            w.i8(m.route);
+            w.u8(static_cast<uint8_t>(m.routePillaged | m.pillaged << 1 | m.village << 2 | m.districtComplete << 3 | m.districtPillaged << 4 |
+                                      m.wonderComplete << 5 | m.capital << 6));
+            w.u8(m.antiquity);
+            w.i32(m.city);
+            if (m.city == kNoCity) continue;
+            w.i8(m.cityOwner);
+            w.str(m.cityName);
+            w.i32(m.cityPopulation);
+        }
     }
     w.u32(static_cast<uint32_t>(s.units.size()));
     for (const Unit& u : s.units) {
@@ -1047,6 +1067,33 @@ bool deserializeState(ByteReader& r, GameState& s) {
             if (kind > static_cast<uint8_t>(BodyguardKind::Steward)) return false;
             b.kind = static_cast<BodyguardKind>(kind);
             b.level = r.i32();
+        }
+        const uint32_t known = r.u32();
+        if (known > s.plots.size()) return false;
+        p.seen.clear();
+        if (known > 0 || p.human) p.seen.resize(s.plots.size());
+        for (uint32_t k = 0; k < known; ++k) {
+            const uint32_t i = r.u32();
+            if (i >= p.seen.size() || p.seen[i].known) return false;
+            PlotMemory& m = p.seen[i];
+            m.known = true;
+            for (TypeIndex* t : {&m.terrain, &m.feature, &m.improvement, &m.district, &m.wonder}) *t = r.i16();
+            m.owner = r.i8();
+            m.route = r.i8();
+            const uint8_t f = r.u8();
+            m.routePillaged = f & 1;
+            m.pillaged = f & 2;
+            m.village = f & 4;
+            m.districtComplete = f & 8;
+            m.districtPillaged = f & 16;
+            m.wonderComplete = f & 32;
+            m.capital = f & 64;
+            m.antiquity = r.u8();
+            m.city = r.i32();
+            if (m.city == kNoCity) continue;
+            m.cityOwner = r.i8();
+            m.cityName = r.str();
+            m.cityPopulation = r.i32();
         }
     }
     uint32_t nu = r.u32();

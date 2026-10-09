@@ -1,6 +1,7 @@
 #include "helpers.h"
 #include "../tools/random_bot.h"
 #include "sovereign/mapgen.h"
+#include "sovereign/serialize.h"
 
 using namespace sov;
 using sovtest::addUnit;
@@ -533,4 +534,80 @@ TEST(game_replay_reproduces_state) {
     auto r = Game::replay(rules(), setup, g->log(), &err);
     REQUIRE(r);
     CHECK_EQ(r->stateHash(), g->stateHash());
+}
+
+// A human player sees fogged plots as it last saw them (world-scale: "revealed hexes use their last-seen state"): a
+// city that grew or was razed in the fog, or a farm taken away, stays as it was until seen again.
+TEST(fogged_plots_keep_their_last_seen_state) {
+    GameState s = flatState(30, 14, 2);
+    s.players[0].human = true;
+    const CityId theirs = sovtest::addCity(s, 1, {12, 6}, true, 3);
+    const TypeIndex farm = rules().improvement("IMPROVEMENT_FARM");
+    s.plot({11, 7}).improvement = farm;
+    sovtest::claimFor(s, *s.city(theirs), {11, 7});
+    CityDistrict campus;
+    campus.type = rules().district("DISTRICT_CAMPUS");
+    campus.pos = {11, 6};
+    campus.complete = true;
+    s.city(theirs)->districts.push_back(campus);
+    sovtest::claimFor(s, *s.city(theirs), {11, 6});
+    const UnitId scout = addUnit(s, "UNIT_WARRIOR", 0, {10, 6});
+    for (Unit& u : s.units) u.activity = Activity::Sleep;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->visibility(0, {12, 6}) == Visibility::Visible);
+    REQUIRE(g->visibility(0, {11, 7}) == Visibility::Visible);
+    CHECK(g->lastSeen(0, {12, 6}) == nullptr);  // in sight: the live plot
+    const std::string name = g->state().city(theirs)->name;
+    // The scout walks off; the city and its lands fall out of sight.
+    g->stateMutForTests().unit(scout)->pos = {3, 6};
+    sovtest::endTurns(*g, 2);
+    REQUIRE(g->visibility(0, {12, 6}) == Visibility::Revealed);
+    const int popThen = g->state().city(theirs)->population;
+    // Meanwhile the city grows and is renamed, the farm goes and the campus is pillaged, all out of sight.
+    GameState& live = g->stateMutForTests();
+    live.city(theirs)->population = 9;
+    live.city(theirs)->name = "Elsewhere";
+    live.plot({11, 7}).improvement = kNone;
+    live.city(theirs)->districts.back().pillagedTurns = 30;
+    const PlotMemory* center = g->lastSeen(0, {12, 6});
+    REQUIRE(center != nullptr);
+    CHECK_EQ(center->city, theirs);
+    CHECK_EQ(center->cityOwner, 1);
+    CHECK_EQ(center->cityName, name);
+    CHECK_EQ(center->cityPopulation, popThen);
+    CHECK(center->capital);
+    CHECK_EQ(center->owner, 1);
+    const PlotMemory* field = g->lastSeen(0, {11, 7});
+    REQUIRE(field != nullptr);
+    CHECK_EQ(field->improvement, farm);
+    CHECK_EQ(field->city, kNoCity);
+    const PlotMemory* lab = g->lastSeen(0, {11, 6});
+    REQUIRE(lab != nullptr);
+    CHECK_EQ(lab->district, rules().district("DISTRICT_CAMPUS"));
+    CHECK(lab->districtComplete && !lab->districtPillaged);
+    CHECK(g->lastSeen(0, {28, 6}) == nullptr);  // never revealed
+    CHECK(g->lastSeen(1, {10, 6}) == nullptr);  // an AI keeps no memory
+    // The memory lives in the save.
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    CHECK_EQ(back->stateHash(), g->stateHash());
+    REQUIRE(back->lastSeen(0, {12, 6}) != nullptr);
+    CHECK_EQ(back->lastSeen(0, {12, 6})->cityName, name);
+    CHECK_EQ(back->lastSeen(0, {11, 7})->improvement, farm);
+    // Further turns out of sight keep the old snapshot.
+    sovtest::endTurns(*g, 2);
+    REQUIRE(g->lastSeen(0, {12, 6}) != nullptr);
+    CHECK_EQ(g->lastSeen(0, {12, 6})->cityName, name);
+    CHECK_EQ(g->lastSeen(0, {11, 7})->improvement, farm);
+    // Seen again, the plot is live once more, and leaving sight again takes a new snapshot.
+    g->stateMutForTests().unit(scout)->pos = {10, 6};
+    sovtest::endTurns(*g, 2);
+    CHECK(g->lastSeen(0, {12, 6}) == nullptr);
+    g->stateMutForTests().unit(scout)->pos = {3, 6};
+    sovtest::endTurns(*g, 2);
+    REQUIRE(g->lastSeen(0, {12, 6}) != nullptr);
+    CHECK_EQ(g->lastSeen(0, {12, 6})->cityPopulation, g->state().city(theirs)->population);
+    CHECK_EQ(g->lastSeen(0, {11, 7})->improvement, kNone);
+    CHECK(g->lastSeen(0, {11, 6})->districtPillaged);
 }

@@ -117,6 +117,9 @@ public:
     std::vector<UnitId> unitsNeedingOrders(PlayerId player) const;
     bool canFoundCityAt(PlayerId player, Hex at, CommandError* why = nullptr) const;
     Visibility visibility(PlayerId player, Hex h) const;
+    // A human player's memory of a revealed plot out of sight, or nullptr when it is in sight, unrevealed or was never
+    // seen up close (draw the live plot then).
+    const PlotMemory* lastSeen(PlayerId player, Hex h) const;
 
     // ---- cities (02-cities.md)
     CityReport cityReport(CityId city) const;
@@ -905,6 +908,7 @@ private:
     void killReward(Player& to, const UnitEffect& effect, const UnitType& victim);  // a KillYield effect's reward
     // A unit entered this plot: natural wonders' abilities, a goody hut, a barbarian camp.
     void enterPlot(Unit& unit);
+    void rememberPlot(PlotMemory& m, size_t plot) const;  // what a player sees of a plot now
     void leaderVisit(const Unit& leader);  // XP for the first visit to each own city center and district (leader doc §3)
     void inPersonVisit(const Unit& leader);  // envoys for the ruler's first visit to each city-state's city (leader doc §8.4)
     void clearCamp(Unit& unit);  // a civ's military unit entering a barbarian camp clears it
