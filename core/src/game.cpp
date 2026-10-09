@@ -70,6 +70,7 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     for (Player& p : s.players) p.relations.resize(s.players.size());
     generateMap(s, rules);
     if (!chooseStartPositions(s, rules, error)) return nullptr;
+    addStartBonuses(s, rules);
     placeCityStates(s, rules);
     placeNaturalWonders(s, rules);
     if (setup.tribalVillages) placeVillages(s, rules);

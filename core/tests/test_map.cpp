@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <array>
+#include <utility>
 
 #include "helpers.h"
 #include "sovereign/mapgen.h"
@@ -95,6 +97,63 @@ TEST(map_the_best_start_goes_to_any_seat) {
     }
     CHECK(best[0] < 12);
     CHECK(best[5] > 0);
+}
+
+// A major civ's start short of Food or Production on the plots beside it gets one Bonus resource of each kind there
+// (01, step 7): under 7 Food or no plot with 3, under 5 Production or no plot with 2.
+TEST(map_a_poor_start_gets_food_and_production_beside_it) {
+    const Rules& r = rules();
+    const Hex start{5, 5};
+    // A start on grassland with these plots beside it (Cattle on the first if asked, woods on all if asked), given its
+    // bonuses: the resources beside it that give Food, and those that give Production. Nothing else on the map has one,
+    // not even beside a city-state's start on bare grassland.
+    const auto bonuses = [&](std::array<const char*, kNumDirs> ring, bool cattle, bool woods = false) {
+        GameState s = sovtest::flatState(12, 12, 2);
+        s.players[0].startPos = start;
+        s.players[1].cityState = 0;
+        s.players[1].startPos = {9, 9};
+        for (int d = 0; d < kNumDirs; ++d) {
+            Plot& p = s.plot(*s.grid.neighbor(start, static_cast<Dir>(d)));
+            p.terrain = r.terrain(ring[static_cast<size_t>(d)]);
+            if (woods) p.feature = r.feature("FEATURE_FOREST");
+        }
+        if (cattle) s.plot(*s.grid.neighbor(start, static_cast<Dir>(0))).resource = r.resource("RESOURCE_CATTLE");
+        addStartBonuses(s, r);
+        std::pair<int, int> n{0, 0};
+        for (int i = 0; i < s.grid.size(); ++i) {
+            const Plot& p = s.plots[static_cast<size_t>(i)];
+            if (p.resource == kNone) continue;
+            CHECK_EQ(s.grid.distance(s.grid.at(i), start), 1);
+            const Yields& y = r.resources[static_cast<size_t>(p.resource)].yields;
+            n.first += y[static_cast<size_t>(YieldType::Food)] > Fixed() ? 1 : 0;
+            n.second += y[static_cast<size_t>(YieldType::Production)] > Fixed() ? 1 : 0;
+        }
+        return n;
+    };
+    const char* grass = "TERRAIN_GRASS";
+    const char* plains = "TERRAIN_PLAINS";
+    const char* plainsHills = "TERRAIN_PLAINS_HILLS";
+    const char* desert = "TERRAIN_DESERT";
+    const char* desertHills = "TERRAIN_DESERT_HILLS";
+    const char* grassHills = "TERRAIN_GRASS_HILLS";
+    using Got = std::pair<int, int>;
+    // Grassland: 12 Food, but no plot with 3, and no Production.
+    CHECK((bonuses({grass, grass, grass, grass, grass, grass}, false) == Got{1, 1}));
+    // Plains: 6 Food and 6 Production, no plot with 3 or 2; Wheat fits, no Production resource does.
+    CHECK((bonuses({plains, plains, plains, plains, plains, plains}, false) == Got{1, 0}));
+    // Just enough: Cattle on grassland (3 Food), grassland, two plains hills (1 Food, 2 Production), desert hills
+    // (1 Production) and desert: 7 Food and 5 Production, with grassland and desert left to take more.
+    CHECK((bonuses({grass, grass, plainsHills, plainsHills, desertHills, desert}, true) == Got{1, 0}));
+    // Cattle and desert hills: a plot with 3 Food but 3 in all (Sheep fits the hills); no plot with 2 Production.
+    CHECK((bonuses({grass, desertHills, desertHills, desertHills, desertHills, desertHills}, true) == Got{2, 0}));
+    // Cattle, three plains hills and desert: a plot with 3 Food but 6 in all (Sheep fits the hills).
+    CHECK((bonuses({grass, plainsHills, plainsHills, plainsHills, desert, desertHills}, true) == Got{2, 0}));
+    // Two plains hills and grassland: a plot with 2 Production but 4 in all (Stone fits the grassland).
+    CHECK((bonuses({plainsHills, plainsHills, grass, grass, grass, grass}, false) == Got{1, 1}));
+    // Grassland hills and grassland: 5 Production, but no plot with 2 (Stone fits either).
+    CHECK((bonuses({grassHills, grassHills, grassHills, grassHills, grassHills, grass}, false) == Got{1, 1}));
+    // Wooded grassland: the woods decide what fits, so Deer and no Food resource (Cattle and Rice need open grassland).
+    CHECK((bonuses({grass, grass, grass, grass, grass, grass}, false, true) == Got{0, 1}));
 }
 
 TEST(map_river_edges_are_shared) {

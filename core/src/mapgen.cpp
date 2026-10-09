@@ -577,4 +577,54 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
     return false;
 }
 
+void addStartBonuses(GameState& state, const Rules& rules) {
+    const HexGrid& g = state.grid;
+    Rng& rng = state.rng.get(RngStream::MapGen);
+    // The Bonus resources that give Food, and those that give Production.
+    std::vector<TypeIndex> food, production;
+    for (size_t r = 0; r < rules.resources.size(); ++r) {
+        const ResourceType& res = rules.resources[r];
+        if (res.cls != ResourceClass::Bonus) continue;
+        if (res.yields[static_cast<size_t>(YieldType::Food)] > Fixed()) food.push_back(static_cast<TypeIndex>(r));
+        if (res.yields[static_cast<size_t>(YieldType::Production)] > Fixed()) production.push_back(static_cast<TypeIndex>(r));
+    }
+    // One of them on a plot beside the start: the plots in turn from a random one, each trying the list in a fresh
+    // shuffled order, the first that fits its plot placed.
+    const auto add = [&](Hex start, std::vector<TypeIndex> list) {
+        const int from = static_cast<int>(rng.below(static_cast<uint32_t>(kNumDirs)));
+        for (int k = 0; k < kNumDirs; ++k) {
+            const auto n = g.neighbor(start, static_cast<Dir>((from + k) % kNumDirs));
+            if (!n) continue;
+            for (size_t i = list.size(); i > 1; --i) std::swap(list[i - 1], list[rng.below(static_cast<uint32_t>(i))]);
+            Plot& p = state.plot(*n);
+            if (p.resource != kNone) continue;
+            for (TypeIndex r : list) {
+                const ResourceType& res = rules.resources[static_cast<size_t>(r)];
+                // On a featured plot the feature decides; otherwise the terrain (as the map's resources are placed).
+                if (!(p.feature != kNone ? listHas(res.validFeatures, p.feature) : listHas(res.validTerrains, p.terrain))) continue;
+                p.resource = r;
+                p.resourceAmount = 1;
+                return;
+            }
+        }
+    };
+    for (const Player& pl : state.players) {
+        if (pl.barbarian || pl.cityState != kNone) continue;
+        int foodSum = 0, productionSum = 0, maxFood = 0, maxProduction = 0;
+        for (int d = 0; d < kNumDirs; ++d) {
+            const auto n = g.neighbor(pl.startPos, static_cast<Dir>(d));
+            if (!n) continue;
+            const Yields y = plotYields(state, rules, state.plot(*n));
+            const int f = static_cast<int>(y[static_cast<size_t>(YieldType::Food)].toInt());
+            const int pr = static_cast<int>(y[static_cast<size_t>(YieldType::Production)].toInt());
+            foodSum += f;
+            productionSum += pr;
+            maxFood = std::max(maxFood, f);
+            maxProduction = std::max(maxProduction, pr);
+        }
+        if (foodSum < kStartFood || maxFood < kStartBestFood) add(pl.startPos, food);
+        if (productionSum < kStartProduction || maxProduction < kStartBestProduction) add(pl.startPos, production);
+    }
+}
+
 }  // namespace sov
