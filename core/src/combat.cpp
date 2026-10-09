@@ -636,6 +636,16 @@ int Game::cityMaxHp() const {
 int Game::cityMaxWallHp(const City& city) const {
     int hp = 0;
     for (TypeIndex b : city.buildings) hp += rules_->buildings[static_cast<size_t>(b)].outerDefenseHp;
+    return std::max(hp, urbanDefenseHp(city.owner));  // urban defenses do not add to walls (04: Steel)
+}
+
+int Game::urbanDefenseHp(PlayerId player) const {
+    if (player < 0 || static_cast<size_t>(player) >= state_.players.size()) return 0;
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    int hp = 0;
+    for (TypeIndex t : rules_->urbanDefenseTechs) {
+        if (p.techs.has(t)) hp = std::max(hp, rules_->techs[static_cast<size_t>(t)].urbanDefenseHp);
+    }
     return hp;
 }
 

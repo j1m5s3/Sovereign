@@ -863,6 +863,7 @@ struct TreeNode {
     int spies = 0;                 // spy capacity it grants (08: Espionage)
     int victoryPoints = 0;         // Diplomatic Victory points on completion (08: Diplomatic Victory)
     int navalMoves = 0;            // + movement for naval units (Mathematics)
+    int urbanDefenseHp = 0;        // every city's outer defense is at least this (Steel's urban defenses)
     int writingTourismPercent = 0; // Writing Great Works' tourism scaled to this percent (Printing: 200)
     int tourismPercent = 0;        // + tourism percent (Computers, Environmentalism)
     std::vector<std::pair<TypeIndex, int>> buildingTourism;  // tourism from each city with the building (Conservation: walls, Arena)
@@ -1367,6 +1368,7 @@ public:
     std::vector<EraType> eras;
     std::vector<TreeNode> techs;
     std::vector<TypeIndex> navalMoveTechs;  // techs with navalMoves, found at load (maxMoves runs often)
+    std::vector<TypeIndex> urbanDefenseTechs;  // techs with urbanDefenseHp
     std::vector<TreeNode> civics;
     std::vector<GovernmentType> governments;
     std::vector<PolicyType> policies;

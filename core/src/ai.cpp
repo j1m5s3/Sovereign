@@ -1360,7 +1360,7 @@ void archaeologist(View& v, UnitId id) {
     for (int i = 0; i < s.grid.size(); ++i) {
         const Hex h = s.grid.at(i);
         const Plot& p = s.plot(h);
-        if (p.antiquity == 0 || promisedNot(p.owner) || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
+        if (p.antiquity == 0 || !v.game.seesAntiquity(v.me, p.antiquity) || promisedNot(p.owner) || (p.owner != kNoPlayer && p.owner != v.me && !v.game.grantsOpenBorders(p.owner, v.me))) continue;
         if (!best || s.grid.distance(u->pos, h) < s.grid.distance(u->pos, *best)) best = h;
     }
     if (!best || !approach(v, id, *best, true)) v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
@@ -1980,7 +1980,7 @@ void production(View& v) {
                     else if (t.excavations > 0) {
                         // An Archaeologist while sites lie open and none is out digging (07).
                         int sites = 0, diggers = 0;
-                        for (const Plot& pl : s.plots) sites += pl.antiquity != 0 && (pl.owner == kNoPlayer || pl.owner == v.me) ? 1 : 0;
+                        for (const Plot& pl : s.plots) sites += pl.antiquity != 0 && v.game.seesAntiquity(v.me, pl.antiquity) && (pl.owner == kNoPlayer || pl.owner == v.me) ? 1 : 0;
                         for (const Unit& o : s.units) diggers += o.owner == v.me && v.r.units[at(o.type)].excavations > 0 ? 1 : 0;
                         value = sites > 0 && diggers == 0 ? 200 : 0;
                     }

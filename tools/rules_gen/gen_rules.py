@@ -1725,6 +1725,9 @@ def gen_tree(kind, name_col, prefix, key):
         m = re.search(r"\+(\d+) Movement for naval units", other)
         if m:
             n["navalMoves"] = int(m.group(1))  # Mathematics (04)
+        m = re.search(r"urban defenses \(DefenseValue=(\d+)\)", other)
+        if m:
+            n["urbanDefenseHp"] = int(m.group(1))  # Steel (04)
         m = re.search(r"Tourism from Writing scaled (\d+)%", other)
         if m:
             n["writingTourismPercent"] = int(m.group(1))  # Printing (04)

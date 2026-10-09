@@ -718,6 +718,7 @@
    "prereqs": [
     "TECH_RIFLING"
    ],
+   "urbanDefenseHp": 400,
    "boost": {
     "percent": 40,
     "text": "have a Ironclad and a Mine",
