@@ -163,6 +163,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::CannotEscort: return "CannotEscort";
         case CommandError::LeaderNeeded: return "LeaderNeeded";
         case CommandError::CannotSucceed: return "CannotSucceed";
+        case CommandError::CannotGuard: return "CannotGuard";
         case CommandError::CannotSendAgent: return "CannotSendAgent";
         case CommandError::CannotTakeStance: return "CannotTakeStance";
         case CommandError::BattlePending: return "BattlePending";
@@ -232,6 +233,7 @@ std::string describe(const Command& c) {
         case CommandType::BattleResult:
             return s + "BattleResult def" + std::to_string(c.arg) + " att" + std::to_string(c.arg2) + " leader" + std::to_string(c.target.x);
         case CommandType::AutoResolveBattle: return s + "AutoResolveBattle";
+        case CommandType::AppointBodyguard: return s + "AppointBodyguard u" + std::to_string(c.id) + " governor" + std::to_string(c.arg);
         case CommandType::CityStance: return s + "CityStance city" + std::to_string(c.id) + " stance" + std::to_string(c.arg);
         case CommandType::SendAssassin: return s + "SendAssassin agent" + std::to_string(c.id) + " -> p" + std::to_string(c.arg);
         case CommandType::PatronizeGreatPerson:

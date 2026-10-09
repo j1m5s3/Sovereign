@@ -520,6 +520,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         for (TypeIndex g : p.savedGear) w.i32(g);
         writeI32s(w, std::vector<int32_t>(p.savedPromotions.begin(), p.savedPromotions.end()));
         writeI32s(w, p.leaderVisits);
+        w.u32(static_cast<uint32_t>(p.bodyguards.size()));
+        for (const Bodyguard& b : p.bodyguards) {
+            w.str(b.name);
+            w.u8(static_cast<uint8_t>(b.kind));
+            w.i32(b.level);
+        }
     }
     w.u32(static_cast<uint32_t>(s.units.size()));
     for (const Unit& u : s.units) {
@@ -1032,6 +1038,16 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.savedPromotions.clear();
         for (int32_t v : saved) p.savedPromotions.push_back(static_cast<TypeIndex>(v));
         if (!readI32s(r, p.leaderVisits)) return false;
+        const uint32_t nb = r.u32();
+        if (!r.checkCount(nb, 8)) return false;
+        p.bodyguards.resize(nb);
+        for (Bodyguard& b : p.bodyguards) {
+            b.name = r.str();
+            const uint8_t kind = r.u8();
+            if (kind > static_cast<uint8_t>(BodyguardKind::Steward)) return false;
+            b.kind = static_cast<BodyguardKind>(kind);
+            b.level = r.i32();
+        }
     }
     uint32_t nu = r.u32();
     if (!r.checkCount(nu, 30)) return false;
