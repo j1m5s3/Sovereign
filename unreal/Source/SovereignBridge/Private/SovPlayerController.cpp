@@ -2730,6 +2730,8 @@ void ASovPlayerController::UpdateGameUI()
 			M.ReaderKey = EKeys::F4;
 		}
 	}
+	// The selected city's plots show what they yield (and which are worked) while its panel is open.
+	if (ASovHUD* YH = Cast<ASovHUD>(GetHUD())) YH->YieldCity = M.bCity ? SelectedCity : -1;
 	// The Empire panel.
 	M.bEmpire = bEmpireOpen;
 	if (bEmpireOpen)
