@@ -29,6 +29,7 @@ constexpr int kTravelPenalty = 8;     // site value lost per turn of travel
 constexpr int kMaxCities = 16;
 constexpr int kSiteSurvey = 8;
 constexpr int kEarlyTurns = 200;      // the expansion phase: settlers weigh more (pace benchmark: 120 left sites unclaimed)
+constexpr int kImprovementPlots = 16;  // an improvement's research value counts this many plots at most (a worked one twice)
 constexpr int kLongBuild = 12;        // turns beyond which an item loses value in proportion        // plots around our cities searched for a free site
 constexpr int kWarRatioPercent = 130;   // own strength vs target's to declare war
 constexpr int kPeaceRatioPercent = 80;  // below this, offer peace
@@ -904,8 +905,45 @@ int unlockValue(const View& v, Unlock node) {
     for (const DistrictType& d : r.districts) {
         if (is(d.unlock)) value += 6 * districtPercent(v, d) / 100;
     }
-    for (const ImprovementType& im : r.improvements) {
-        if (is(im.unlock)) value += 3;
+    // An improvement is worth half its yields for each plot our cities hold that it would take, a plot they work counting
+    // twice, up to kImprovementPlots; a bonus to one, for each plot that has it. Those only a special unit builds (Forts,
+    // Airstrips), those for some plots only (beside a river or the coast, at the border, a governor's) and those of other
+    // civs or of city-states count 3 alone.
+    const GameState& s = v.s();
+    for (size_t i = 0; i < r.improvements.size(); ++i) {
+        const ImprovementType& im = r.improvements[i];
+        const bool unlocks = is(im.unlock);
+        int bonus = 0;
+        for (const ImprovementBonus& b : im.bonuses) {
+            if (!is(b.unlock)) continue;
+            Yields y{};
+            y[yi(b.yield)] = b.amount;
+            bonus += worth(v, y);
+        }
+        if (unlocks) value += 3;
+        if ((!unlocks && bonus <= 0) || im.builtBy != kNone || im.cityState != kNone || im.governorPromotion != kNone || im.needsRiver ||
+            im.coastal || im.borderOnly || (im.uniqueTo != kNone && im.uniqueTo != s.players[at(v.me)].civ))
+            continue;
+        const auto has = [](const std::vector<TypeIndex>& list, TypeIndex t) { return std::find(list.begin(), list.end(), t) != list.end(); };
+        int plots = 0;
+        for (int pi = 0; pi < s.grid.size() && plots < kImprovementPlots; ++pi) {
+            const Plot& p = s.plots[static_cast<size_t>(pi)];
+            if (p.owner != v.me || p.city == kNoCity) continue;
+            if (unlocks) {
+                // The plot's land, as Game::improvementFits looks at it: a seen resource takes only its own improvements.
+                if (p.improvement != kNone) continue;
+                const Hex h = s.grid.at(pi);
+                const bool seen = p.resource != kNone && v.game.resourceVisible(v.me, h);
+                if (!(seen ? has(im.validResources, p.resource) : p.feature != kNone ? has(im.validFeatures, p.feature) : has(im.validTerrains, p.terrain)))
+                    continue;
+                if (im.water != r.terrains[at(p.terrain)].water || s.cityAt(h) || s.districtAt(h) || s.wonderAt(h) != kNone) continue;
+            } else if (p.improvement != static_cast<TypeIndex>(i)) {
+                continue;
+            }
+            const City* c = s.city(p.city);
+            plots += c && std::binary_search(c->worked.begin(), c->worked.end(), pi) ? 2 : 1;
+        }
+        value += ((unlocks ? worth(v, im.yields) : 0) + bonus) * std::min(plots, kImprovementPlots) / 2;
     }
     for (const ResourceType& res : r.resources) {
         if (is(res.reveal)) value += 2;
