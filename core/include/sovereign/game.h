@@ -109,6 +109,7 @@ public:
     bool bridgeAt(Hex plot) const;
     // A land unit standing on water (not on a land bridge).
     bool isEmbarked(const Unit& unit) const;
+    bool atSea(const Unit& unit) const;  // a ship, or a land unit embarked
     // Embarking or disembarking: allowed with any movement left, which it then uses up.
     bool isEmbarkTransition(const Unit& unit, Hex from, Hex to) const;
     // A city next to Coast or Lake: it trains ships.

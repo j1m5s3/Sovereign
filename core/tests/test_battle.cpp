@@ -155,7 +155,7 @@ struct Siege {
 };
 
 // Player 0 (human) keeps its leader in a walled-off city at (6,6); player 1's Swordsman stands next to it.
-Siege siege(bool live = true) {
+Siege siege(bool live = true, bool fromSea = false) {
     Siege f;
     GameState s = flatState(16, 12, 2);
     s.setup.liveBattles = live;
@@ -163,7 +163,8 @@ Siege siege(bool live = true) {
     f.city = addCity(s, 0, {6, 6}, true, 3);
     addCity(s, 1, {13, 9}, true);
     f.leader = addLeader(s, 0, {6, 6});
-    f.attacker = addUnit(s, "UNIT_SWORDSMAN", 1, {7, 6});
+    if (fromSea) s.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    f.attacker = addUnit(s, fromSea ? "UNIT_GALLEY" : "UNIT_SWORDSMAN", 1, {7, 6});
     s.players[0].human = true;
     s.players[1].human = false;
     f.game = Game::fromScenario(rules(), std::move(s));
@@ -233,4 +234,67 @@ TEST(live_battle_habits_feed_the_profile) {
     REQUIRE(f2.game->submit(Command::attack(0, f2.escort, {7, 6})) == CommandError::Ok);
     REQUIRE(f2.game->submit(Command::battleResult(0, 30, 20, 0)) == CommandError::Ok);
     CHECK(f2.game->profile(0) == nullptr || f2.game->profile(0)->battles == 0);
+}
+
+// Open gaps review 13: naval fights with the leader auto-resolve, and a leader beaten at sea dies with its transport.
+TEST(naval_fights_with_the_leader_auto_resolve) {
+    GameState s = flatState(16, 12, 2);
+    s.setup.liveBattles = true;
+    for (Hex h : {hx(6, 6), hx(7, 6)}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+    addCity(s, 0, {2, 2}, true);
+    addCity(s, 1, {13, 9}, true);
+    const UnitId leader = addLeader(s, 0, {6, 6});
+    s.units.back().hp = 5;
+    const UnitId galley = addUnit(s, "UNIT_GALLEY", 1, {7, 6});
+    for (Player& p : s.players) p.human = s.setup.players[static_cast<size_t>(p.id)].human;
+    REQUIRE(s.players[0].human);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    REQUIRE(g->isEmbarked(*g->state().unit(leader)));
+    CHECK_EQ(g->liveBattleSide(*g->state().unit(galley), *g->state().unit(leader)), kNoPlayer);
+    for (UnitId id : g->unitsNeedingOrders(0)) g->submit(Command::setActivity(0, id, Activity::Sleep));
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().currentPlayer == 1);
+    REQUIRE(g->submit(Command::attack(1, galley, {6, 6})) == CommandError::Ok);
+    CHECK(!g->battlePending());  // resolved with Civ math at once
+    CHECK(g->state().unit(leader) == nullptr);
+    // Sunk, not taken: no captor, and the succession starts.
+    CHECK_EQ(g->state().players[0].captor, kNoPlayer);
+    CHECK(g->state().players[0].successionPending);
+}
+
+// Open gaps review 8: barbarians wound the leader in a live battle too, and a badly hurt leader goes home.
+TEST(a_leader_hurt_in_a_live_battle_with_barbarians_goes_home) {
+    GameState s = flatState(16, 12, 2);
+    s.setup.liveBattles = true;
+    addCity(s, 0, {2, 2}, true);
+    addCity(s, 1, {13, 9}, true);
+    const UnitId leader = addLeader(s, 0, {6, 6});
+    s.units.back().hp = 40;
+    const UnitId escort = addUnit(s, "UNIT_SWORDSMAN", 0, {6, 6});
+    Player b;
+    b.id = 2;
+    b.barbarian = true;
+    s.players.push_back(b);
+    addUnit(s, "UNIT_SWORDSMAN", 2, {7, 6});
+    for (Player& p : s.players) p.human = p.id == 0;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->atWar(0, 2));
+    REQUIRE(g->submit(Command::attack(0, escort, {7, 6})) == CommandError::Ok);
+    REQUIRE(g->battlePending());
+    REQUIRE(g->submit(Command::battleResult(0, 50, 50, 30)) == CommandError::Ok);
+    const Unit* l = g->state().unit(leader);
+    REQUIRE(l);
+    CHECK_EQ(l->hp, 10);
+    CHECK(l->pos == hx(2, 2));
+}
+
+TEST(an_assault_from_the_sea_on_the_leaders_city_auto_resolves) {
+    Siege f = siege(true, true);
+    Game& g = *f.game;
+    REQUIRE(g.state().currentPlayer == 1);
+    const int hp = g.state().city(f.city)->hp;
+    REQUIRE(g.submit(Command::attack(1, f.attacker, {6, 6})) == CommandError::Ok);
+    CHECK(!g.battlePending());
+    CHECK(g.state().city(f.city)->hp < hp);
 }

@@ -1303,6 +1303,8 @@ void Game::applyCombat(const Command& c) {
 }
 
 PlayerId Game::liveBattleSide(const Unit& attacker, const Unit& defender) const {
+    // Naval fights auto-resolve, a ship or an embarked unit on either side (open gaps review 13).
+    if (atSea(attacker) || atSea(defender)) return kNoPlayer;
     // A side's leader stack: the leader itself, or a unit on the same plot as its own leader.
     auto stackOf = [&](const Unit& u, Hex at) -> PlayerId {
         const Player& p = state_.players[static_cast<size_t>(u.owner)];
@@ -1380,11 +1382,20 @@ void Game::applyBattle(const Command& c) {
     const int toDefender = clampToBand(c.arg, b.expectedToDefender);
     const int toAttacker = clampToBand(c.arg2, b.expectedToAttacker);
     const int wound = std::clamp(c.target.x, 0, rules_->globalInt("LIVE_BATTLE_LEADER_MAX_WOUND"));
+    // Barbarians on the other side: the wound sends a badly hurt leader home (open gaps review 8).
+    bool barbarianFoe = false;
+    for (UnitId id : {b.attacker, b.defender}) {
+        const Unit* u = state_.unit(id);
+        if (u && u->owner != b.liveFor && state_.players[static_cast<size_t>(u->owner)].barbarian) barbarianFoe = true;
+    }
     if (b.city != kNoCity) resolveCityAssault(b.attacker, b.city, false, toDefender, toAttacker);
     else resolveUnitFight(b.attacker, b.defender, b.target, false, toDefender, toAttacker);
     // The leader fought in person: it may come out hurt, never killed by the wound alone.
     Unit* l = state_.unit(b.leader);
-    if (l && l->id != b.attacker && l->id != b.defender) l->hp = std::max(1, l->hp - wound);
+    if (l && l->id != b.attacker && l->id != b.defender) {
+        l->hp = std::max(1, l->hp - wound);
+        if (barbarianFoe) barbarianWound(*l);
+    }
 }
 
 void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bool ranged, int toDefender, int toAttacker) {
@@ -1425,9 +1436,10 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     if (defenderDied && !leaderD) noteKill(*def, attackerDied ? nullptr : a);
     if (attackerDied && !leaderA) noteKill(*a, defenderDied ? nullptr : def);
 
-    // A beaten leader is captured by a melee victor and killed otherwise (leader doc §5).
+    // A beaten leader is captured by a melee victor and killed otherwise (leader doc §5); one beaten at sea goes
+    // down with its transport (open gaps review 13).
     if (defenderDied) {
-        if (leaderD) leaderLost(defenderId, me, !ranged && !attackerDied);
+        if (leaderD) leaderLost(defenderId, me, !ranged && !attackerDied && !isEmbarked(*def));
         else removeUnit(defenderId);
     }
     if (attackerDied) {
@@ -1533,6 +1545,7 @@ void Game::attackEncampment(const Command& c, City& city) {
 }
 
 PlayerId Game::liveAssaultSide(const Unit& attacker, const City& city) const {
+    if (atSea(attacker)) return kNoPlayer;  // an assault from the sea auto-resolves (open gaps review 13)
     const Player& ap = state_.players[static_cast<size_t>(attacker.owner)];
     if (ap.human) {
         if (isLeader(attacker)) return attacker.owner;
