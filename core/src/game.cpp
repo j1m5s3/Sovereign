@@ -1759,6 +1759,7 @@ void Game::applyFoundCity(const Command& c) {
         }
         if (ab.foundBuilding != kNone && !made.has(ab.foundBuilding))
             made.buildings.insert(std::lower_bound(made.buildings.begin(), made.buildings.end(), ab.foundBuilding), ab.foundBuilding);
+        made.wallHp = cityMaxWallHp(made);  // walls from the era start and urban defenses (04: Steel) stand at full HP
     }
     // Ancestral Hall (03): a Builder in every city it founds.
     if (buildingsOwned(owner, "BUILDING_ANCESTRAL_HALL") > 0) {

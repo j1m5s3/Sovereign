@@ -559,7 +559,8 @@ public:
     void placeAntiquity();                  // once any civ has Natural History
     CommandError excavateProblem(PlayerId player, UnitId archaeologist) const;
     void excavate(UnitId archaeologist);
-    bool seesAntiquity(PlayerId player) const;  // it knows Natural History
+    // It knows Natural History; for a Shipwreck (kind 2), Cultural Heritage (04).
+    bool seesAntiquity(PlayerId player, int kind = 1) const;
 
     // ---- tribal villages (01: Tribal Villages)
     void enterVillage(Unit& unit);   // the reward: a category, then a reward in it, by weight
@@ -666,6 +667,7 @@ public:
     int cityStrength(const City& city) const;
     int cityMaxHp() const;
     int cityMaxWallHp(const City& city) const;
+    int urbanDefenseHp(PlayerId player) const;  // the outer defense every city of the player has at least (Steel, 04)
     // All six neighbours hold enemy units or lie in enemy ZOC: the city cannot heal.
     bool cityUnderSiege(const City& city) const;
     bool canCityStrike(CityId city, Hex target) const;

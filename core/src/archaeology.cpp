@@ -16,8 +16,8 @@ namespace {
 size_t at(int i) { return static_cast<size_t>(i); }
 }  // namespace
 
-bool Game::seesAntiquity(PlayerId player) const {
-    const TypeIndex nh = rules_->civic("CIVIC_NATURAL_HISTORY");
+bool Game::seesAntiquity(PlayerId player, int kind) const {
+    const TypeIndex nh = rules_->civic(kind == 2 ? "CIVIC_CULTURAL_HERITAGE" : "CIVIC_NATURAL_HISTORY");
     return nh != kNone && player >= 0 && state_.players[at(player)].civics.has(nh);
 }
 
@@ -278,7 +278,7 @@ CommandError Game::excavateProblem(PlayerId player, UnitId id) const {
     if (!u || u->owner != player) return CommandError::NotYourUnit;
     if (rules_->units[at(u->type)].excavations <= 0 || u->charges <= 0 || u->movesLeft <= Fixed()) return CommandError::BadUnit;
     const Plot& p = state_.plot(u->pos);
-    if (p.antiquity == 0 || !seesAntiquity(player)) return CommandError::BadTarget;
+    if (p.antiquity == 0 || !seesAntiquity(player, p.antiquity)) return CommandError::BadTarget;
     if (p.owner != kNoPlayer && p.owner != player && !grantsOpenBorders(p.owner, player)) return CommandError::BadTarget;
     TypeIndex artifact = kNone;
     for (size_t w = 0; w < rules_->greatWorkTypes.size(); ++w) artifact = rules_->greatWorkTypes[w].id == "ARTIFACT" ? static_cast<TypeIndex>(w) : artifact;

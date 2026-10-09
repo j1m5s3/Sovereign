@@ -1338,3 +1338,38 @@ TEST(seasteads_and_global_warming_mitigation_give_victory_points) {
     CHECK_EQ(points("TECH_SEASTEADS", "CIVIC_CODE_OF_LAWS"), 1);
     CHECK_EQ(points("TECH_SEASTEADS", "CIVIC_GLOBAL_WARMING_MITIGATION"), 2);
 }
+
+TEST(steel_gives_every_city_urban_defenses) {
+    const TypeIndex steel = tech("TECH_STEEL");
+    UnitId settler = kNoUnit, early = kNoUnit;
+    auto g = capitalWith([&](GameState& s) {
+        City& walled = s.cities[0];
+        for (const char* b : {"BUILDING_ANCIENT_WALLS", "BUILDING_MEDIEVAL_WALLS"}) walled.buildings.push_back(rules().building(b));
+        std::sort(walled.buildings.begin(), walled.buildings.end());
+        walled.wallHp = 150;  // damaged
+        s.players[0].techs.current = steel;
+        s.players[0].techs.progress[at(steel)] = Fixed::fromInt(100000);
+        early = sovtest::addUnit(s, "UNIT_SETTLER", 0, {12, 10});
+        settler = sovtest::addUnit(s, "UNIT_SETTLER", 0, {14, 4});
+    });
+    const int urban = rules().techs[at(steel)].urbanDefenseHp;
+    REQUIRE(urban == 400);
+    CHECK_EQ(g->cityMaxWallHp(g->state().cities[0]), 200);
+    REQUIRE(g->submit(Command::foundCity(0, early)) == CommandError::Ok);
+    const CityId open = g->state().cities.back().id;
+    CHECK_EQ(g->state().city(open)->wallHp, 0);
+    REQUIRE(g->submit(Command::setProduction(0, open, warrior())) == CommandError::Ok);
+    REQUIRE(g->submit(Command::setActivity(0, settler, Activity::Sleep)) == CommandError::Ok);
+    endTurns(*g, 1);
+    REQUIRE(g->state().players[0].techs.has(steel));
+    // Walls do not add to urban defenses, and damage stays.
+    CHECK_EQ(g->cityMaxWallHp(g->state().cities[0]), urban);
+    CHECK_EQ(g->state().cities[0].wallHp, 150 + urban - 200);
+    CHECK_EQ(g->state().city(open)->wallHp, urban);  // where there were no walls, at full HP
+    // Walls built later count only past the urban defenses: three levels (300 HP) add nothing.
+    g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::Building, rules().building("BUILDING_RENAISSANCE_WALLS")});
+    CHECK_EQ(g->state().cities[0].wallHp, 150 + urban - 200);
+    // A city founded later has them at full HP.
+    REQUIRE(g->submit(Command::foundCity(0, settler)) == CommandError::Ok);
+    CHECK_EQ(g->state().cities.back().wallHp, urban);
+}

@@ -693,8 +693,18 @@ void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
                        civic ? "MOMENT_FIRST_CIVIC_OF_NEW_ERA" : "MOMENT_FIRST_TECHNOLOGY_OF_NEW_ERA", era);
         }
     }
+    const int urbanBefore = civic ? 0 : urbanDefenseHp(pid);
     tree.done[static_cast<size_t>(node)] = 1;
     if (tree.current == node) tree.current = kNone;
+    // Steel's urban defenses stand at full HP in every city (04).
+    if (const int urban = civic ? 0 : urbanDefenseHp(pid); urban > urbanBefore) {
+        for (City& c : state_.cities) {
+            if (c.owner != pid) continue;
+            int walls = 0;
+            for (TypeIndex b : c.buildings) walls += rules_->buildings[static_cast<size_t>(b)].outerDefenseHp;
+            c.wallHp += std::max(0, std::max(walls, urban) - std::max(walls, urbanBefore));
+        }
+    }
     p.diplomaticVictoryPoints += (civic ? rules_->civics : rules_->techs)[static_cast<size_t>(node)].victoryPoints;  // 08: Diplomatic Victory
     if (civic) {
         // A finished civic opens a free window to change government and

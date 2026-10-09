@@ -665,6 +665,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.spies = static_cast<int>(j["spies"].integer(0));
             n.victoryPoints = static_cast<int>(j["victoryPoints"].integer(0));
             n.navalMoves = static_cast<int>(j["navalMoves"].integer(0));
+            n.urbanDefenseHp = static_cast<int>(j["urbanDefenseHp"].integer(0));
             n.writingTourismPercent = static_cast<int>(j["writingTourismPercent"].integer(0));
             n.tourismPercent = static_cast<int>(j["tourismPercent"].integer(0));
             for (const Json& e : j["effects"].items()) {
@@ -684,8 +685,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     };
     if (!readNodes("techs", techs) || !readNodes("civics", civics)) return false;
     navalMoveTechs.clear();
+    urbanDefenseTechs.clear();
     for (size_t i = 0; i < techs.size(); ++i) {
         if (techs[i].navalMoves != 0) navalMoveTechs.push_back(static_cast<TypeIndex>(i));
+        if (techs[i].urbanDefenseHp != 0) urbanDefenseTechs.push_back(static_cast<TypeIndex>(i));
     }
     auto findTech = [this](const std::string& id) { return tech(id); };
     auto findCivic = [this](const std::string& id) { return civic(id); };

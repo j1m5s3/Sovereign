@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/ai.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -152,4 +153,50 @@ TEST(a_great_work_that_completes_a_theme_is_worth_buying) {
     // A work in a themed museum is not for sale.
     const std::vector<DealItem> back = {{DealItemKind::GreatWork, 1, theirs, 0}, {DealItemKind::Gold, 0, 600, kNone}};
     CHECK(!g->wouldAccept(1, Deal{0, 0, 1, 1, back}));
+}
+
+TEST(shipwrecks_wait_for_cultural_heritage) {
+    GameState s = flatState(20, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.majorsAtStart = 2;
+    addCity(s, 0, {4, 6}, true, 6);
+    addCity(s, 1, {14, 6}, true, 6);
+    City& home = s.cities[0];
+    home.buildings.push_back(rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM"));
+    std::sort(home.buildings.begin(), home.buildings.end());
+    s.plot({8, 3}).terrain = rules().terrain("TERRAIN_COAST");
+    s.plot({8, 3}).antiquity = 2;
+    s.plot({8, 8}).antiquity = 1;
+    s.antiquityPlaced = true;
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATURAL_HISTORY"))] = 1;
+    const UnitId wreck = addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {8, 3});
+    const UnitId site = addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {8, 8});
+    GameState later = s;
+    later.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_CULTURAL_HERITAGE"))] = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->seesAntiquity(0) && !g->seesAntiquity(0, 2));
+    CHECK(g->excavateProblem(0, wreck) == CommandError::BadTarget);
+    CHECK(g->excavateProblem(0, site) == CommandError::Ok);
+    auto h = Game::fromScenario(rules(), std::move(later));
+    CHECK(h->seesAntiquity(0, 2));
+    CHECK(h->excavateProblem(0, wreck) == CommandError::Ok);
+}
+
+TEST(an_ai_archaeologist_passes_a_shipwreck_it_cannot_dig) {
+    GameState s = flatState(20, 12, 1);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {3, 6}, true, 6);
+    s.cities[0].buildings.push_back(rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.plot({7, 6}).terrain = rules().terrain("TERRAIN_COAST");
+    s.plot({7, 6}).antiquity = 2;  // a Shipwreck beside it
+    s.plot({12, 6}).antiquity = 1;  // an Antiquity Site further on
+    s.antiquityPlaced = true;
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATURAL_HISTORY"))] = 1;
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId dig = addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {8, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    REQUIRE(g->state().unit(dig));
+    CHECK(g->state().grid.distance(g->state().unit(dig)->pos, {12, 6}) < 4);  // on its way to the site it can dig
 }

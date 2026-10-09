@@ -1527,8 +1527,9 @@ bool Game::completeItem(City& city, ProductionItem item) {
     } else {
         auto it = std::lower_bound(city.buildings.begin(), city.buildings.end(), item.type);
         if (it == city.buildings.end() || *it != item.type) {
+            const int wallsBefore = cityMaxWallHp(city);
             city.buildings.insert(it, item.type);
-            city.wallHp += rules_->buildings[static_cast<size_t>(item.type)].outerDefenseHp;  // new walls stand at full HP
+            city.wallHp += std::max(0, cityMaxWallHp(city) - wallsBefore);  // new walls stand at full HP (above urban defenses, 04)
             if (!policyIs(city.owner, "POLICY_ROGUE_STATE"))  // Rogue State: no envoys (09)
                 state_.players[static_cast<size_t>(city.owner)].envoyTokens += rules_->buildings[static_cast<size_t>(item.type)].envoysOnBuild;
             if (rules_->buildings[static_cast<size_t>(item.type)].wonder) completeWonder(city, item.type);
