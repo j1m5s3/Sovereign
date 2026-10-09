@@ -24,21 +24,6 @@ FString Str(const std::string& S)
 	return UTF8_TO_TCHAR(S.c_str());
 }
 
-const TCHAR* VictoryName(sov::Victory V)
-{
-	switch (V)
-	{
-		case sov::Victory::Domination: return TEXT("Domination");
-		case sov::Victory::Score: return TEXT("Score");
-		case sov::Victory::LastStanding: return TEXT("Last civ standing");
-		case sov::Victory::Religious: return TEXT("Religious");
-		case sov::Victory::Culture: return TEXT("Culture");
-		case sov::Victory::Diplomatic: return TEXT("Diplomatic");
-		case sov::Victory::Science: return TEXT("Science");
-		default: return TEXT("");
-	}
-}
-
 // On a wrapping map, the copy of a map point nearest the camera (the one on screen).
 FVector NearCamera(const APlayerController* PC, const FVector& P)
 {
@@ -343,7 +328,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	{
 		const sov::Player& W = S.players[static_cast<size_t>(S.winner)];
 		const FString Winner = W.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(W.civ)].name);
-		Line(FString::Printf(TEXT("%s wins: %s victory. Esc opens the menu."), *Winner, VictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
+		Line(FString::Printf(TEXT("%s wins: %s victory. Esc opens the menu."), *Winner, SovVictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
 	}
 	if (!Sub.LastMessage.IsEmpty())
 	{

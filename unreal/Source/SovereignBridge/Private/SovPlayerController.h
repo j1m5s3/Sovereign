@@ -139,10 +139,16 @@ protected:
 public:
 	// The main menu (single player, hot seat, host or join on the network or through Steam).
 	void OpenMenu();
+	// The new-game setup screen (plan D, step 5): civ, leader and options, then start.
+	void OpenSetup(const struct FSovSetup& Base);
+	// The settings screen (plan D, step 5): graphics, interface scale and the controls.
+	void OpenSettings();
 	// The plot under the mouse, for the HUD's tooltip.
 	bool CursorHex(int32& OutX, int32& OutY) const { return HexUnderCursor(OutX, OutY); }
 protected:
 	void CloseMenu();
+	void CloseSetup();
+	void CloseSettings();
 	void StartFromMenu(const struct FSovSetup& Setup);
 	void OpenDiplomacy(sov::PlayerId Leader);
 	void UpdateDiplomacy();
@@ -217,9 +223,12 @@ protected:
 	TSet<FString> DismissedNotices;
 	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
 	void OpenNotice(int32 Index);
+	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
 	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
+	TSharedPtr<class SWidget> SetupScreen;
+	TSharedPtr<class SWidget> SettingsScreen;
 	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
 	bool bMenuRivals = true;   // AI leaders remember you from earlier games (player-retention §1)
 	FString MenuHall;          // the Hall of Sovereigns as shown on the menu (empty: hidden)

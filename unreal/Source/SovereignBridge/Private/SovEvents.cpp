@@ -7,6 +7,21 @@ namespace
 FString Str(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 }  // namespace
 
+const TCHAR* SovVictoryName(sov::Victory V)
+{
+	switch (V)
+	{
+		case sov::Victory::Domination: return TEXT("Domination");
+		case sov::Victory::Score: return TEXT("Score");
+		case sov::Victory::LastStanding: return TEXT("Last civ standing");
+		case sov::Victory::Religious: return TEXT("Religious");
+		case sov::Victory::Culture: return TEXT("Culture");
+		case sov::Victory::Diplomatic: return TEXT("Diplomatic");
+		case sov::Victory::Science: return TEXT("Science");
+		default: return TEXT("");
+	}
+}
+
 bool SovEventIsWorldNews(const sov::GameEvent& E)
 {
 	return E.kind == sov::EventKind::CongressSession || E.kind == sov::EventKind::ResolutionPassed || E.kind == sov::EventKind::ClimatePhase;
