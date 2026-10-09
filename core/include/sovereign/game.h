@@ -727,6 +727,7 @@ public:
     int auraRange(const Unit& leader) const;
     // ---- assassins (§6; numbers in leader.json)
     int playerEra(PlayerId player) const;  // highest era among its finished techs and civics
+    int techEra(PlayerId player) const;    // highest era among its finished techs
     int agentCapacity(PlayerId player) const;  // one per finished Encampment
     int agentsOf(PlayerId player) const;
     const Agent* agent(int32_t id) const;

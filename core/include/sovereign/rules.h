@@ -860,6 +860,7 @@ struct TreeNode {
     bool tradeCapacity = false;    // +1 trade route capacity (Foreign Trade)
     int envoys = 0;                // envoys granted on completion (civics)
     int spies = 0;                 // spy capacity it grants (08: Espionage)
+    int victoryPoints = 0;         // Diplomatic Victory points on completion (08: Diplomatic Victory)
 };
 
 enum class PolicySlot : uint8_t { Military = 0, Economic, Diplomatic, Wildcard, GreatPerson };

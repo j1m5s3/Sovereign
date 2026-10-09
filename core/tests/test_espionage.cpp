@@ -495,3 +495,40 @@ TEST(a_consulate_lowers_foreign_spies_in_its_city_and_encampment_cities) {
     CHECK_EQ(odds(true, true, false), 37);   // another city with one
     CHECK_EQ(odds(false, true, false), 50);  // no Consulate anywhere
 }
+
+// Spies cost their upkeep though they are off the map (08: Espionage, 4 Gold), and so do assassins (2); Conscription
+// takes 1 off each, as off a unit's.
+TEST(spies_and_assassins_cost_their_upkeep) {
+    const auto income = [](int spies, int assassins, bool conscription, bool foreignSpy = true) {
+        GameState s = spyState();
+        s.agents.clear();
+        for (int k = 0; k < spies + assassins; ++k) {
+            Agent a;
+            a.id = s.nextAgentId++;
+            a.owner = 0;
+            a.spy = k < spies;
+            s.agents.push_back(a);
+        }
+        if (foreignSpy) {
+            Agent theirs;  // another civ's spy costs player 0 nothing
+            theirs.id = s.nextAgentId++;
+            theirs.owner = 1;
+            theirs.spy = true;
+            s.agents.push_back(theirs);
+        }
+        if (conscription) {
+            Player& p = s.players[0];
+            p.government = rules().government("GOVERNMENT_CHIEFDOM");
+            p.policies.assign(static_cast<size_t>(rules().governments[at(p.government)].totalSlots()), kNone);
+            p.policies[0] = rules().policy("POLICY_CONSCRIPTION");
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->goldPerTurn(0);
+    };
+    const Fixed none = income(0, 0, false);
+    CHECK_EQ(income(0, 0, false, false), none);
+    CHECK_EQ(income(1, 0, false), none - Fixed::fromInt(4));
+    CHECK_EQ(income(2, 0, false), none - Fixed::fromInt(8));
+    CHECK_EQ(income(1, 1, false), none - Fixed::fromInt(6));
+    CHECK_EQ(income(1, 1, true), income(0, 0, true) - Fixed::fromInt(4));
+}

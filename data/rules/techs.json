@@ -1078,6 +1078,7 @@
    "name": "Seasteads",
    "era": "ERA_FUTURE",
    "cost": 2200,
+   "victoryPoints": 1,
    "boost": {
     "percent": 40,
     "text": "none (only via Great Scientist / spy / effects)",

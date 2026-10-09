@@ -688,6 +688,7 @@ void Game::completeNode(PlayerId pid, bool civic, TypeIndex node) {
     }
     tree.done[static_cast<size_t>(node)] = 1;
     if (tree.current == node) tree.current = kNone;
+    p.diplomaticVictoryPoints += (civic ? rules_->civics : rules_->techs)[static_cast<size_t>(node)].victoryPoints;  // 08: Diplomatic Victory
     if (civic) {
         // A finished civic opens a free window to change government and
         // policies, and retires obsolete cards.

@@ -464,6 +464,7 @@ int Game::opinionOf(PlayerId holder, PlayerId about) const {
 Relationship Game::relationship(PlayerId holder, PlayerId about) const {
     if (atWar(holder, about)) return Relationship::AtWar;
     if (denouncing(holder, about) || denouncing(about, holder)) return Relationship::Denounced;
+    if (alliance(holder, about) != AllianceType::None) return Relationship::Allied;
     if (friends(holder, about)) return Relationship::DeclaredFriend;
     const int o = opinionOf(holder, about);
     if (o >= kFriendlyOpinion) return Relationship::Friendly;
@@ -554,11 +555,13 @@ CommandError Game::dealProblem(const Deal& d) const {
                 friendship = true;
                 break;
             case DealItemKind::Alliance: {
-                // Declared friends who both have Civil Service, not allied already (08: Alliance).
+                // Declared friends who both have Civil Service (08: Alliance). Allies renew theirs, of the same type, at
+                // any time and without friendship (08: "30 turns, renewable"); another type waits for it to lapse.
                 const TypeIndex civil = rules_->civic("CIVIC_CIVIL_SERVICE");
                 const auto has = [&](PlayerId x) { return civil != kNone && state_.players[at(x)].civics.has(civil); };
-                if (alliance || war || i.amount < 0 || i.amount >= kNumAllianceTypes || !friends(d.from, d.to) || !has(d.from) || !has(d.to) ||
-                    this->alliance(d.from, d.to) != AllianceType::None)
+                const AllianceType now = this->alliance(d.from, d.to);
+                if (alliance || war || i.amount < 0 || i.amount >= kNumAllianceTypes || !has(d.from) || !has(d.to) ||
+                    (now == AllianceType::None ? !friends(d.from, d.to) : now != static_cast<AllianceType>(i.amount)))
                     return CommandError::CannotDeal;
                 alliance = true;
                 break;
@@ -949,7 +952,8 @@ void Game::executeDeal(const Deal& d) {
             case DealItemKind::Alliance:
                 for (PlayerId x : {d.from, d.to}) {
                     Relation& rel = state_.players[at(x)].relations[at(x == d.from ? d.to : d.from)];
-                    if (rel.alliance != static_cast<AllianceType>(i.amount)) rel.alliancePoints = 0;  // a new type starts over
+                    // A new alliance starts over; a renewal keeps its points.
+                    if (rel.alliance != static_cast<AllianceType>(i.amount) || rel.allianceUntil < state_.turn) rel.alliancePoints = 0;
                     rel.alliance = static_cast<AllianceType>(i.amount);
                     rel.allianceUntil = state_.turn + rules_->globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT");
                 }
@@ -1188,7 +1192,8 @@ bool Game::hasCasusBelli(PlayerId player, PlayerId target, CasusBelli why) const
             }
             return false;
         case CasusBelli::Colonial:
-            return has("CIVIC_NATIONALISM") && denounced && playerEra(player) - playerEra(target) >= 2;
+            // The target is two technology eras behind (08: Colonial War).
+            return has("CIVIC_NATIONALISM") && denounced && techEra(player) - techEra(target) >= 2;
         case CasusBelli::TerritorialExpansion: {
             // Two of our cities within range of two of theirs (DIPLOMACY_ADJACENT_EMPIRE_*).
             if (!has("CIVIC_MOBILIZATION") || !denounced) return false;
@@ -1522,6 +1527,7 @@ const char* relationshipName(Relationship r) {
         case Relationship::Neutral: return "Neutral";
         case Relationship::Friendly: return "Friendly";
         case Relationship::DeclaredFriend: return "Declared Friend";
+        case Relationship::Allied: return "Allied";
     }
     return "?";
 }

@@ -1312,3 +1312,24 @@ TEST(inspirations_count_toward_lifetime_culture) {
     CHECK_EQ(plain->state().players[0].lifetimeCulture, Fixed());
     CHECK_EQ(inspired->state().players[0].lifetimeCulture, Fixed::fromInt(inspired->civicCost(civic("CIVIC_EARLY_EMPIRE"))) * 40 / 100);
 }
+
+// Seasteads and Global Warming Mitigation each give a Diplomatic Victory point (08: Diplomatic Victory).
+TEST(seasteads_and_global_warming_mitigation_give_victory_points) {
+    const auto points = [](const char* t, const char* c) {
+        auto g = capitalWith([t, c](GameState& s) {
+            Player& p = s.players[0];
+            p.techs.current = tech(t);
+            p.techs.progress[at(p.techs.current)] = Fixed::fromInt(100000);
+            p.civics.current = civic(c);
+            p.civics.progress[at(p.civics.current)] = Fixed::fromInt(100000);
+        });
+        endTurns(*g, 1);
+        const Player& p = g->state().players[0];
+        REQUIRE(p.techs.has(tech(t)));
+        REQUIRE(p.civics.has(civic(c)));
+        return p.diplomaticVictoryPoints;
+    };
+    CHECK_EQ(points("TECH_POTTERY", "CIVIC_CODE_OF_LAWS"), 0);
+    CHECK_EQ(points("TECH_SEASTEADS", "CIVIC_CODE_OF_LAWS"), 1);
+    CHECK_EQ(points("TECH_SEASTEADS", "CIVIC_GLOBAL_WARMING_MITIGATION"), 2);
+}

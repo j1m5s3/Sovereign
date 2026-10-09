@@ -312,3 +312,19 @@ TEST(the_scripted_leader_speaks_its_agenda_in_the_first_person) {
     REQUIRE(m.reply(p, {}, "What do you want?", "", Verdict::None, text));
     CHECK(contains(text, "I dislike civs with more wonders than I have."));
 }
+
+// An ally speaks as warmly as a declared friend (08: relationship states).
+TEST(an_ally_is_greeted_as_a_friend) {
+    auto g = talkGame();
+    Persona p = buildPersona(*g, 1, 0);
+    ScriptedModel m;
+    std::string text;
+    for (Relationship r : {Relationship::DeclaredFriend, Relationship::Allied}) {
+        p.relationship = r;
+        REQUIRE(m.reply(p, {}, "A trade?", "", Verdict::Accept, text));
+        CHECK(contains(text, "It is good to deal with a friend."));
+    }
+    p.relationship = Relationship::Neutral;
+    REQUIRE(m.reply(p, {}, "A trade?", "", Verdict::Accept, text));
+    CHECK(!contains(text, "friend"));
+}
