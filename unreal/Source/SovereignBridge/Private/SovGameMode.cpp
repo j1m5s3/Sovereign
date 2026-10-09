@@ -150,6 +150,7 @@ void ASovGameMode::OnStateChanged()
 			if (Mini->Colors.IsValidIndex(Tile.Y * Mirror.Width + Tile.X)) Mini->Colors[Tile.Y * Mirror.Width + Tile.X] = C;
 		}
 		Sub->Minimap = Mini;
+		Sub->Mirror = MakeShared<FSovMirror>(Mirror);
 		Map->Sync(Mirror);
 	}
 }

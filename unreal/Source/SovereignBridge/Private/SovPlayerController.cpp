@@ -4,8 +4,10 @@
 #include "InputCoreTypes.h"
 
 #include "SovCameraPawn.h"
+#include "SovDescribe.h"
 #include "SovEvents.h"
 #include "SovSettingsScreen.h"
+#include "SovStatus.h"
 #include "SovSetupScreen.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
@@ -105,6 +107,7 @@ void ASovPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	SSovSettingsScreen::ApplySavedInterfaceScale();
+	SovKeys::Load();
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	SetInputMode(Mode);
@@ -479,6 +482,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			}
 			ChooserTitle = FString::Printf(TEXT("Production in %s"), *Str(City->name));
 			const int32 PerTurn = static_cast<int32>(G.cityReport(City->id).yields[static_cast<size_t>(sov::YieldType::Production)].toInt());
+			const int32 First = Choices.Num();
 			for (const sov::ProductionItem& Item : G.buildableItems(City->id))
 			{
 				sov::Hex Plot{};
@@ -520,8 +524,22 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Where = FString::Printf(TEXT(" (wonder) at (%d,%d)"), Plot.x, Plot.y);
 				}
 				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(Me(), Item.type) : G.productionCost(Me(), Item, City);
-				Choices.Add({FString::Printf(TEXT("%s (%d turns)%s"), *ItemName(R, Item), TurnsFor(Cost, PerTurn), *Where),
-					sov::Command::setProduction(Me(), City->id, Item, Plot)});
+				const bool bWonder = Item.kind == sov::ProductionKind::Building && R.buildings[static_cast<size_t>(Item.type)].wonder;
+				FChoice& Ch = Choices.Add_GetRef({ItemName(R, Item) + Where, sov::Command::setProduction(Me(), City->id, Item, Plot)});
+				Ch.Right = FString::Printf(TEXT("%d turns"), TurnsFor(Cost, PerTurn));
+				Ch.Section = Item.kind == sov::ProductionKind::District ? TEXT("Districts") : Item.kind == sov::ProductionKind::Unit ? TEXT("Units")
+					: Item.kind == sov::ProductionKind::Building ? (bWonder ? TEXT("Wonders") : TEXT("Buildings")) : TEXT("Projects");
+				Ch.Icon = Item.kind == sov::ProductionKind::District ? FName("streets") : Item.kind == sov::ProductionKind::Unit ? FName("strength")
+					: Item.kind == sov::ProductionKind::Building ? (bWonder ? FName("era") : FName("build")) : FName("science");
+				Ch.Tip = Item.kind == sov::ProductionKind::Building ? SovBuildingText(R, Item.type) : Item.kind == sov::ProductionKind::Unit ? SovUnitText(R, Item.type) : FString();
+			}
+			// Grouped by kind: districts, buildings, wonders, units, projects.
+			{
+				auto Rank = [](const FString& S) { return S == TEXT("Districts") ? 0 : S == TEXT("Buildings") ? 1 : S == TEXT("Wonders") ? 2 : S == TEXT("Units") ? 3 : 4; };
+				TArray<FChoice> Made(Choices.GetData() + First, Choices.Num() - First);
+				Made.StableSort([&](const FChoice& A, const FChoice& B) { return Rank(A.Section) < Rank(B.Section); });
+				Choices.SetNum(First);
+				Choices.Append(Made);
 			}
 			// Religious units and worship buildings are bought with Faith (06).
 			for (size_t u = 0; u < R.units.size(); ++u)
@@ -530,7 +548,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
 				if (Faith > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.units[u].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+					Choices.Add({FString::Printf(TEXT("Buy %s"), *Str(R.units[u].name)), sov::Command::purchaseWithFaith(Me(), City->id, Item), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", TEXT("Buy with faith")});
 				}
 			}
 			for (size_t b = 0; b < R.buildings.size(); ++b)
@@ -539,7 +557,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const int32 Faith = G.faithPurchaseCost(Me(), *City, Item);
 				if (Faith > 0)
 				{
-					Choices.Add({FString::Printf(TEXT("Buy %s for %d faith"), *Str(R.buildings[b].name), Faith), sov::Command::purchaseWithFaith(Me(), City->id, Item)});
+					Choices.Add({FString::Printf(TEXT("Buy %s"), *Str(R.buildings[b].name)), sov::Command::purchaseWithFaith(Me(), City->id, Item), {}, FString::Printf(TEXT("%d faith"), Faith), "faith", TEXT("Buy with faith")});
 				}
 			}
 			// Gold buys units and buildings outright (02: Purchasing), and plots next to the city's border.
@@ -548,7 +566,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (Item.kind != sov::ProductionKind::Unit && Item.kind != sov::ProductionKind::Building) continue;
 				const sov::Command Buy = sov::Command::purchase(Me(), City->id, Item);
 				if (G.validate(Buy) != sov::CommandError::Ok) continue;
-				Choices.Add({FString::Printf(TEXT("Buy %s for %d gold"), *ItemName(R, Item), G.purchaseCost(Me(), Item, City)), Buy});
+				Choices.Add({FString::Printf(TEXT("Buy %s"), *ItemName(R, Item)), Buy, {}, FString::Printf(TEXT("%d gold"), G.purchaseCost(Me(), Item, City)), "gold", TEXT("Buy with gold")});
 			}
 			// A placed district, with Reyna's Contractor (Gold) or Moksha's Divine Architect (Faith) here (08: Governors).
 			for (const sov::CityDistrict& D : City->districts)
@@ -559,17 +577,18 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					const sov::Command Buy = bFaith ? sov::Command::purchaseWithFaith(Me(), City->id, Item) : sov::Command::purchase(Me(), City->id, Item);
 					if (G.validate(Buy) == sov::CommandError::Ok)
-						Choices.Add({FString::Printf(TEXT("Buy the %s for %d %s"), *ItemName(R, Item), G.districtPurchaseCost(*City, D.type, bFaith), bFaith ? TEXT("faith") : TEXT("gold")), Buy});
+						Choices.Add({FString::Printf(TEXT("Buy the %s"), *ItemName(R, Item)), Buy, {}, FString::Printf(TEXT("%d %s"), G.districtPurchaseCost(*City, D.type, bFaith), bFaith ? TEXT("faith") : TEXT("gold")),
+							bFaith ? FName("faith") : FName("gold"), bFaith ? TEXT("Buy with faith") : TEXT("Buy with gold")});
 				}
 			}
 			for (const sov::Hex& H : G.state().grid.within(City->pos, 3))
 			{
 				const sov::Command Buy = sov::Command::buyPlot(Me(), City->id, H);
 				if (G.validate(Buy) == sov::CommandError::Ok)
-					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d for %d gold"), H.x, H.y, G.plotPurchaseCost(City->id, H)), Buy});
+					Choices.Add({FString::Printf(TEXT("Buy the tile at %d,%d"), H.x, H.y), Buy, {}, FString::Printf(TEXT("%d gold"), G.plotPurchaseCost(City->id, H)), "found", TEXT("Tiles")});
 			}
-			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id)});
-			if (G.canLiberateCity(Me(), City->id)) Choices.Add({TEXT("Liberate this city (back to its original owner, +100 Diplomatic Favor)"), sov::Command::liberateCity(Me(), City->id)});
+			if (G.canRazeCity(Me(), City->id)) Choices.Add({TEXT("Raze this city"), sov::Command::razeCity(Me(), City->id), {}, TEXT(""), "attack", TEXT("The city")});
+			if (G.canLiberateCity(Me(), City->id)) Choices.Add({TEXT("Liberate this city (back to its original owner, +100 Diplomatic Favor)"), sov::Command::liberateCity(Me(), City->id), {}, TEXT(""), "favor", TEXT("The city")});
 			// Theming (07): gather our Great Works into a museum here that they can theme.
 			for (const sov::TypeIndex B : City->buildings)
 			{
@@ -676,14 +695,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 06: a pantheon belief; a religion's Founder then Follower belief; an Apostle's new belief.
 			auto Note = [&](sov::TypeIndex B) {
 				const sov::BeliefType& Bt = R.beliefs[static_cast<size_t>(B)];
-				return FString::Printf(TEXT("%s: %s%s"), *Str(Bt.name), *Str(Bt.text).Left(110), G.beliefModelled(B) ? TEXT("") : TEXT(" (not in the game yet)"));
+				return Str(Bt.name) + (G.beliefModelled(B) ? TEXT("") : TEXT(" (not in the game yet)"));
+			};
+			// The whole text on hover (the list shows the name).
+			auto Belief = [&](sov::TypeIndex B, const sov::Command& Cmd) {
+				FChoice Ch{Note(B), Cmd};
+				Ch.Icon = "religion";
+				Ch.Tip = Str(R.beliefs[static_cast<size_t>(B)].text);
+				Choices.Add(Ch);
 			};
 			if (Kind == EChooser::Pantheon)
 			{
 				ChooserTitle = TEXT("Choose a pantheon");
 				for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Pantheon))
 				{
-					Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});
+					Belief(B, sov::Command::foundPantheon(Me(), B));
 				}
 			}
 			else if (Kind == EChooser::Evangelize)
@@ -699,7 +725,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					{
 						if (G.canEvangelize(ReligionUnit, B))
 						{
-							Choices.Add({Note(B), sov::Command::evangelizeBelief(Me(), ReligionUnit, B)});
+							Belief(B, sov::Command::evangelizeBelief(Me(), ReligionUnit, B));
 						}
 					}
 				}
@@ -726,7 +752,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Founder belief"), *Name);
 					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Founder))
 					{
-						Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});  // placeholder: picking moves on to the Follower
+						Belief(B, sov::Command::foundPantheon(Me(), B));  // placeholder: picking moves on to the Follower
 					}
 				}
 				else
@@ -734,7 +760,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Follower belief"), *Name);
 					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Follower))
 					{
-						Choices.Add({Note(B), sov::Command::foundReligion(Me(), ReligionUnit, Religion, PendingFounder, B)});
+						Belief(B, sov::Command::foundReligion(Me(), ReligionUnit, Religion, PendingFounder, B));
 					}
 				}
 			}
@@ -1901,11 +1927,6 @@ void ASovPlayerController::HandleOrders()
 	if (Pressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (Pressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (Pressed(EKeys::F2)) OpenChooser(EChooser::Government);
-	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
-	{
-		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
-		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
-	}
 	// Quicksave and quickload (local games; online the host's game is the only copy that counts).
 	if (Subsystem()->GetSession().NetMode() == ESovNet::Local)
 	{
@@ -2141,6 +2162,13 @@ void ASovPlayerController::UpdateGameUI()
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
 			.OnEndClose_Lambda([this]() { bEndClosed = true; })
+			.OnGovAdopt_Lambda([this](int32 G) { Send(sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(G))); })
+			.OnGovSlot_Lambda([this](int32 Slot) { GovSlot = Slot; })
+			.OnGovCard_Lambda([this](int32 Policy) {
+				if (GovSlot >= 0) Send(sov::Command::setPolicy(Me(), GovSlot, static_cast<sov::TypeIndex>(Policy)));
+			})
+			.OnGovDedication_Lambda([this](int32 D) { Send(sov::Command::chooseDedication(Me(), static_cast<sov::TypeIndex>(D))); })
+			.OnGovBuy_Lambda([this]() { Send(sov::Command::buyPolicyChanges(Me())); })
 			.OnLens_Lambda([this](int32 Lens) {
 				// A lens is this machine's view: the map redraws with it (again: off).
 				USovGameSubsystem* S = Subsystem();
@@ -2174,6 +2202,11 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		if (Sub && Sub->IsRunning() && Sub->GetSession().HandoverPending() && !Menu.IsValid())
+		{
+			M.bHandover = true;
+			M.HandoverName = Sub->GetSession().HandoverName();
+		}
 		GameUI->SetModel(M);
 		return;
 	}
@@ -2388,7 +2421,50 @@ void ASovPlayerController::UpdateGameUI()
 	{
 		M.bChooser = true;
 		M.ChooserTitle = ChooserTitle;
-		for (const FChoice& Ch : Choices) M.Choices.Add(Ch.Label);
+		for (const FChoice& Ch : Choices) M.Choices.Add({Ch.Label, Ch.Right, Ch.Icon, Ch.Section, Ch.Tip});
+	}
+	// The government screen in place of the F2 list (plan E).
+	if (Chooser == EChooser::Government)
+	{
+		FSovGovModel& V = M.Gov;
+		V.bOpen = true;
+		const sov::TypeIndex Cur = P.government;
+		V.Title = Cur == sov::kNone ? FString(TEXT("No government yet")) : FString::Printf(TEXT("%s (tier %d)"), *Str(R.governments[static_cast<size_t>(Cur)].name), R.governments[static_cast<size_t>(Cur)].tier);
+		V.Note = P.anarchyTurns > 0 ? FString::Printf(TEXT("Anarchy: %d more turn(s) without policies"), P.anarchyTurns)
+			: TEXT("Pick a slot, then a card for it. A new civic opens free changes for one turn; gold opens them otherwise.");
+		for (size_t g = 0; g < R.governments.size(); ++g)
+		{
+			const sov::GovernmentType& Gt = R.governments[g];
+			FSovGovOption& O = V.Governments.AddDefaulted_GetRef();
+			O.Index = static_cast<int32>(g);
+			O.Name = Str(Gt.name);
+			for (int32 k = 0; k < 4; ++k) O.Slots[k] = Gt.slots[static_cast<size_t>(k)];
+			O.Detail = FString::Printf(TEXT("Tier %d"), Gt.tier);
+			if (Gt.favor) O.Detail += FString::Printf(TEXT(", +%d favor a turn"), Gt.favor);
+			if (Gt.influencePerTurn) O.Detail += FString::Printf(TEXT(", +%d influence a turn"), Gt.influencePerTurn);
+			if (const FString Bonus = SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g)); !Bonus.IsEmpty()) O.Detail += TEXT(". ") + Bonus;
+			O.bCurrent = static_cast<sov::TypeIndex>(g) == Cur;
+			O.bCanAdopt = !O.bCurrent && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g));
+		}
+		for (int32 Slot = 0; Slot < static_cast<int32>(P.policies.size()); ++Slot)
+		{
+			const sov::TypeIndex In = P.policies[static_cast<size_t>(Slot)];
+			V.Slots.Add({static_cast<int32>(G.policySlotType(Me(), Slot)), In == sov::kNone ? FString() : Str(R.policies[static_cast<size_t>(In)].name),
+				In == sov::kNone ? FString() : SovSourceText(R, sov::ModSource::Policy, In)});
+		}
+		if (GovSlot >= V.Slots.Num()) GovSlot = -1;
+		V.Selected = GovSlot;
+		if (GovSlot >= 0)
+		{
+			for (size_t pol = 0; pol < R.policies.size(); ++pol)
+			{
+				if (static_cast<sov::TypeIndex>(pol) == P.policies[static_cast<size_t>(GovSlot)] || !G.canSetPolicy(Me(), GovSlot, static_cast<sov::TypeIndex>(pol))) continue;
+				V.Cards.Add({static_cast<int32>(pol), Str(R.policies[pol].name), static_cast<int32>(R.policies[pol].slot), SovSourceText(R, sov::ModSource::Policy, static_cast<sov::TypeIndex>(pol))});
+			}
+		}
+		if (const sov::Command Buy = sov::Command::buyPolicyChanges(Me()); G.validate(Buy) == sov::CommandError::Ok)
+			V.BuyChanges = FString::Printf(TEXT("Open changes this turn (%d gold)"), G.policyChangeCost(Me()));
+		for (const sov::TypeIndex D : G.availableDedications(Me())) V.Dedications.Add({static_cast<int32>(D), Str(R.dedications[static_cast<size_t>(D)].name)});
 	}
 	// Research and civics open as their whole tree (plan D, step 3).
 	if (Chooser == EChooser::Research || Chooser == EChooser::Civic)
@@ -2443,6 +2519,21 @@ void ASovPlayerController::UpdateGameUI()
 		if (const sov::City* C = S.city(Id))
 			Notices.Add({FString::Printf(TEXT("P%d"), Id), "production", FString::Printf(TEXT("%s needs something to build"), *Str(C->name)), TEXT("Click to choose"), FKey(), Id, true});
 	}
+	// What waits on the player beyond production (plan E, step 1: these were status lines).
+	auto Ask = [&](const FString& Id, FName Icon, const FString& Text, const FKey& Key) {
+		Notices.Add({FString::Printf(TEXT("A%d:%s"), Me(), *Id), Icon, Text, TEXT("Click to open"), Key, -1, true});
+	};
+	for (const sov::Deal& D : S.deals)
+	{
+		if (D.to == Me()) Ask(TEXT("deal"), "favor", FString::Printf(TEXT("%s offers: %s"), *Str(S.players[static_cast<size_t>(D.from)].leaderName), *Str(sov::describeDeal(R, S, D))), EKeys::N);
+	}
+	if (P.successionPending) Ask(TEXT("throne"), "government", TEXT("The throne is empty: choose a successor"), EKeys::H);
+	else if (P.captor != sov::kNoPlayer) Ask(TEXT("captive"), "government", FString::Printf(TEXT("%s is held captive"), *Str(P.leaderName)), EKeys::H);
+	if (P.pantheon == sov::kNone && P.faith >= sov::Fixed::fromInt(R.globalInt("RELIGION_PANTHEON_MIN_FAITH")))
+		Ask(TEXT("pantheon"), "religion", TEXT("Choose a pantheon"), EKeys::I);
+	if (!G.availableDedications(Me()).empty()) Ask(TEXT("dedication"), "era", FString::Printf(TEXT("Choose %d dedication(s) for this era"), P.dedicationsPending), EKeys::F2);
+	if (G.governorTitlesLeft(Me()) > 0) Ask(TEXT("governor"), "government", FString::Printf(TEXT("%d governor title(s) to spend"), G.governorTitlesLeft(Me())), EKeys::Z);
+	if (P.envoyTokens > 0) Ask(TEXT("envoy"), "favor", FString::Printf(TEXT("%d envoy(s) to send"), P.envoyTokens), EKeys::O);
 	int32 Gossip = 0;
 	for (auto It = S.events.rbegin(); It != S.events.rend() && Notices.Num() < 6; ++It)
 	{
@@ -2475,7 +2566,48 @@ void ASovPlayerController::UpdateGameUI()
 		}
 		Notices.Add({Id, SovEventIcon(E), Text, FString::Printf(TEXT("Turn %d%s"), E.turn, Key.IsValid() ? TEXT(": click to open") : TEXT("")), Key, -1, false});
 	}
+	if (Notices.Num() > 8) Notices.SetNum(8);  // the most pressing; the rest wait their turn
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The latest message: shown for six seconds after it changes, fading over the last two.
+	if (Sub->LastMessage != ShownMessage)
+	{
+		ShownMessage = Sub->LastMessage;
+		MessageTime = GetWorld()->GetRealTimeSeconds();
+	}
+	M.Message = ShownMessage;
+	M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
+	// The plot under the cursor.
+	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
+	// How to play (F1) or the chronicle (F4), as a page over the map.
+	if (const ASovHUD* H = Cast<ASovHUD>(GetHUD()))
+	{
+		if (H->bShowHelp)
+		{
+			TArray<FString> Lines = SovHelpLines();
+			M.bReader = true;
+			M.ReaderTitle = Lines.Num() > 0 ? Lines[0].Replace(TEXT(" (F1 closes)"), TEXT("")) : FString(TEXT("How to play"));
+			if (Lines.Num() > 0) Lines.RemoveAt(0);
+			M.ReaderLines = Lines;
+			M.ReaderFoot = TEXT("F1 closes. The keys can be changed in Settings.");
+			M.ReaderKey = EKeys::F1;
+		}
+		else if (H->bShowChronicle)
+		{
+			const std::vector<std::string> All = G.chronicleLines(Me());
+			M.bReader = true;
+			M.ReaderTitle = FString::Printf(TEXT("The chronicle of your reign (%d events)"), static_cast<int32>(All.size()));
+			for (const std::string& L : All) M.ReaderLines.Add(Str(L));
+			if (All.empty()) M.ReaderLines.Add(TEXT("Nothing of note has happened yet."));
+			M.ReaderFoot = Sub->WritingChronicle() ? TEXT("The court historian is writing...") : TEXT("F6: have the court historian write it up (a file in Saved/Sovereign/Chronicles). F4 closes.");
+			M.ReaderKey = EKeys::F4;
+		}
+	}
+	// The Empire panel.
+	M.bEmpire = bEmpireOpen;
+	if (bEmpireOpen)
+	{
+		for (const FSovStatusLine& L : SovStatusLines(G, Me())) M.EmpireLines.Add({NAME_None, L.Text, TEXT(""), L.Color});
+	}
 	// The lens and the minimap, with the camera's place on it (plan D, step 6).
 	M.Lens = static_cast<int32>(Sub->Lens);
 	M.LensLegend = Sub->LensLegend;
@@ -2790,6 +2922,14 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
+	// Help and plot yields, whoever's turn it is.
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && Subsystem()->IsRunning())
+	{
+		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
+		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
+	}
+	// F8 opens or closes the Empire panel (plan E, step 1).
+	if (Pressed(EKeys::F8)) bEmpireOpen = !bEmpireOpen;
 	// F7 steps through the map lenses (plan D, step 6), back to none after the last.
 	if (Pressed(EKeys::F7) && Subsystem()->IsRunning())
 	{
@@ -3076,7 +3216,7 @@ bool ASovPlayerController::HandleSessionScreens()
 	if (Session.HandoverPending())
 	{
 		// Hot seat: the next human presses Enter when the screen is theirs.
-		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar))
+		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar) || UIKeys.Contains(EKeys::Enter))
 		{
 			Session.TakeOver();
 			SelectedUnit = SelectedCity = -1;
@@ -3147,11 +3287,11 @@ void ASovPlayerController::OpenMenu()
 	}
 	TSharedPtr<SEditableTextBox> Address;
 	auto Item = [this](const FString& Label, TFunction<void()> Click) {
-		return SNew(SBox).Padding(FMargin(0.f, 4.f)).WidthOverride(420.f)[
-			SNew(SButton).HAlign(HAlign_Center).Text(FText::FromString(Label)).OnClicked_Lambda([Click]() {
+		return SNew(SBox).Padding(FMargin(0.f, 3.f)).WidthOverride(440.f)[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 6.f)).OnClicked_Lambda([Click]() {
 				Click();
 				return FReply::Handled();
-			})];
+			})[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Justification(ETextJustify::Center).AutoWrapText(true).Text(FText::FromString(Label))]];
 	};
 	const FString Name = FPlatformProcess::UserName();
 	auto Base = [this, Name]() {
@@ -3186,12 +3326,12 @@ void ASovPlayerController::OpenMenu()
 	{
 		const FString Id = Mod.Id;
 		const FString Label = FString::Printf(TEXT("%s %s: %s"), *Mod.Name, *Mod.Version, *Mod.Description);
-		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Id]() {
+		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, Id]() {
 			if (MenuModsOn.Contains(Id)) MenuModsOn.Remove(Id);
 			else MenuModsOn.Add(Id);
 			SovMods::SetEnabled(MenuModsOn);
 			return FReply::Handled();
-		})[SNew(STextBlock).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
+		})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
 			return FText::FromString((MenuModsOn.Contains(Id) ? TEXT("[on]  ") : TEXT("[off]  ")) + Label);
 		})]];
 	}
@@ -3237,13 +3377,13 @@ void ASovPlayerController::OpenMenu()
 		for (int32 i = 0; i < Files.Num() && i < 8; ++i)
 		{
 			const FString Path = FPaths::Combine(Dir, Files[i]);
-			Replays->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Path]() {
+			Replays->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, Path]() {
 				CloseMenu();
 				StartReplay(Path);
 				return FReply::Handled();
-			})[SNew(STextBlock).Text(FText::FromString(FPaths::GetBaseFilename(Files[i])))]];
+			})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(FPaths::GetBaseFilename(Files[i])))]];
 		}
-		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
+		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
 	}
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
@@ -3262,53 +3402,59 @@ void ASovPlayerController::OpenMenu()
 				})];
 		}
 	}
-	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
-		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
+	Menu = SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.01f, 0.01f, 0.01f, 0.72f)).Padding(0)
+		.HAlign(HAlign_Center).VAlign(VAlign_Center)[
+		SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(28.f, 20.f))[
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
-				SNew(STextBlock).Text(FText::FromString(TEXT("Sovereign"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28))
-				.ColorAndOpacity(FLinearColor(1.f, 0.85f, 0.45f))]
+				SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Sovereign"))).Font(FSovStyle::Font(34, true))
+				.ColorAndOpacity(FSovStyle::Gold)]
 			+ SVerticalBox::Slot().AutoHeight()[InGame]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 3.f)[
+				SNew(SBox).WidthOverride(440.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 8.f))
+					.OnClicked_Lambda([this, Base]() { OpenSetup(Base()); return FReply::Handled(); })
+					[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("New game")))]]]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 8.f, 0.f, 2.f)[
+				SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("For hot seat and online games:")))]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
 					MenuDifficulty = FMath::Max(0, MenuDifficulty - 1);
 					return FReply::Handled();
 				})]
 				+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)[
-					SNew(STextBlock).Text_Lambda([this]() {
+					SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 						return FText::FromString(FString::Printf(TEXT("Difficulty: %s"), Levels[FMath::Clamp(MenuDifficulty, 0, 7)]));
 					})]
-				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT(">"))).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT(">"))).OnClicked_Lambda([this]() {
 					MenuDifficulty = FMath::Min(7, MenuDifficulty + 1);
 					return FReply::Handled();
 				})]]
 			// Shorter games (player-retention §5): the game's length and the era it begins in.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuSpeed = (MenuSpeed + 1) % UE_ARRAY_COUNT(kMenuSpeeds);
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
-				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuEra = (MenuEra + 1) % UE_ARRAY_COUNT(kMenuEras);
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					bMenuRivals = !bMenuRivals;
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 					return FText::FromString(bMenuRivals ? TEXT("Rivals remember you: on") : TEXT("Rivals remember you: off"));
 				})]]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).Text(FText::FromString(TEXT("Forget your rivals"))).OnClicked_Lambda([this, Name]() {
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("Forget your rivals"))).OnClicked_Lambda([this, Name]() {
 					const FString Path = FSovSession::RivalsPath(Name.IsEmpty() ? FString(TEXT("Player")) : Name);
 					if (USovGameSubsystem* S = Subsystem())
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { OpenSetup(Base()); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
 				FSovSetup S = Base();
 				S.ChallengeWeek = Week;
@@ -3330,7 +3476,7 @@ void ASovPlayerController::OpenMenu()
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().FillWidth(1.f)[SAssignNew(Address, SEditableTextBox).Text(FText::FromString(TEXT("127.0.0.1")))]
 				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[
-					SNew(SButton).Text(FText::FromString(TEXT("Join by address"))).OnClicked_Lambda([this, Base, Address]() {
+					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("Join by address"))).OnClicked_Lambda([this, Base, Address]() {
 						FSovSetup S = Base();
 						S.Net = ESovNet::Join;
 						S.JoinAddress = Address->GetText().ToString().TrimStartAndEnd();
@@ -3357,20 +3503,20 @@ void ASovPlayerController::OpenMenu()
 			// Achievements and the ruler's colour (player-retention §7).
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuAchievements = MenuAchievements.IsEmpty() ? MenuAchievementsText : FString();
 					return FReply::Handled();
-				})[SNew(STextBlock).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
-				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuCosmetic = (MenuCosmetic + 1) % FMath::Max(1, MenuCosmetics.Num());
 					USovGameSubsystem::SetCosmetic(MenuCosmetics[MenuCosmetic].Key);
 					if (USovGameSubsystem* S = Subsystem(); S && S->IsRunning()) S->OnStateChanged.Broadcast();
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 					return FText::FromString(FString(TEXT("Ruler's colour: ")) + (MenuCosmetics.IsValidIndex(MenuCosmetic) ? MenuCosmetics[MenuCosmetic].Value : FString()));
 				})]]]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
-				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuAchievements); })]]
 			// Battle replays (player-retention §2): the latest live battles, played back in the battle scene.
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Battle replays"), [this]() { bMenuReplays = !bMenuReplays; })]
@@ -3389,12 +3535,12 @@ void ASovPlayerController::OpenMenu()
 				if (MenuHall.IsEmpty()) MenuHall = TEXT("No reign has ended yet.");
 			})]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
-				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuHall); })]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Settings"), [this]() { OpenSettings(); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
-				SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
+				SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
 				.Text_Lambda([this]() {
 					const USovGameSubsystem* S = Subsystem();
 					return FText::FromString(S ? S->LastMessage : FString());

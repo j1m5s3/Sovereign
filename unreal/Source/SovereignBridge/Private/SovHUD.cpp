@@ -12,6 +12,7 @@
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
 #include "SovMirror.h"
+#include "SovStatus.h"
 #include "SovPlayerController.h"
 #include "SovStreetScene.h"
 
@@ -56,22 +57,6 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s   (F1 how to play)"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
 			 Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")),
 		16, Y);
-	// Our civ's identity (leaders-and-art-style): its ability, its leader's, and its uniques.
-	if (P.civ != sov::kNone)
-	{
-		const sov::CivType& C = R.civs[static_cast<size_t>(P.civ)];
-		FString Uniques;
-		for (const sov::UnitType& U : R.units) if (U.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(U.name);
-		for (const sov::BuildingType& B : R.buildings) if (B.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(B.name);
-		for (const sov::ImprovementType& I : R.improvements) if (I.uniqueTo == P.civ) Uniques += TEXT(", ") + Str(I.name);
-		// The ruler, and the personal trait an heir of the dynasty brings (leaders-and-art-style: Dynasties).
-		FString Ruler = Str(P.leaderName);
-		if (const sov::Dynasty* D = R.dynastyOf(P.civ); D && P.rulingHeir > 0 && static_cast<size_t>(P.rulingHeir) < D->traits.size())
-			Ruler += FString::Printf(TEXT(" (%s)"), *Str(D->traits[static_cast<size_t>(P.rulingHeir)].name));
-		Line(FString::Printf(TEXT("%s: %s   Leader: %s   Ruler: %s   Uniques: %s"), *Str(C.name), *Str(C.ability.name), *Str(C.leaderAbility.name), *Ruler,
-				 Uniques.IsEmpty() ? TEXT("-") : *Uniques.RightChop(2)),
-			16, Y, FLinearColor(0.85f, 0.8f, 0.6f));
-	}
 	if (TopInset <= 0.f)  // the top bar shows these
 	Line(FString::Printf(TEXT("Gold %s (%+s)   Science %s   Culture %s   Score %d"), *Str(P.gold.toString()),
 			 *Str(G.goldPerTurn(Me).toString()), *Str(G.sciencePerTurn(Me).toString()), *Str(G.culturePerTurn(Me).toString()), G.score(Me)),
@@ -80,207 +65,10 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
 	const FString Gov = P.government == sov::kNone ? TEXT("none") : Str(R.governments[static_cast<size_t>(P.government)].name);
 	if (TopInset <= 0.f) Line(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov), 16, Y);
-	// Faith and religion (06).
+	// The empire's standing (SovStatus; the widgets show it in the Empire panel).
+	if (TopInset <= 0.f)
 	{
-		FString Faith = FString::Printf(TEXT("Faith %s"), *Str(P.faith.toString()));
-		if (P.pantheon != sov::kNone)
-		{
-			Faith += FString::Printf(TEXT("   Pantheon: %s"), *Str(R.beliefs[static_cast<size_t>(P.pantheon)].name));
-		}
-		else if (P.faith >= sov::Fixed::fromInt(R.globalInt("RELIGION_PANTHEON_MIN_FAITH")))
-		{
-			Faith += TEXT("   I: choose a pantheon");
-		}
-		if (P.religion >= 0)
-		{
-			const sov::FoundedReligion& Rel = S.religions[static_cast<size_t>(P.religion)];
-			int32 Cities = 0;
-			for (const sov::City& C : S.cities)
-			{
-				Cities += G.cityMajorityReligion(C) == P.religion;
-			}
-			Faith += FString::Printf(TEXT("   Religion: %s, followed in %d cities"), *Str(R.religions[static_cast<size_t>(Rel.type)].name), Cities);
-		}
-		Line(Faith, 16, Y);
-	}
-	// The world era, this civ's age and era score (09), and tourism (07).
-	{
-		static const TCHAR* Ages[] = {TEXT("Normal Age"), TEXT("Golden Age"), TEXT("Dark Age"), TEXT("Heroic Age")};
-		const auto [Dark, Golden] = G.ageThresholds(Me);
-		const int32 EraIndex = FMath::Clamp(S.gameEra, 0, static_cast<int32>(R.eras.size()) - 1);
-		Line(FString::Printf(TEXT("%s Era, %s   Era score %d (Dark below %d, Golden at %d)   Tourism %d: %d visitors, %d at home"),
-				 *Str(R.eras[static_cast<size_t>(EraIndex)].name), Ages[static_cast<size_t>(P.age) % 4], P.eraScore, Dark, Golden,
-				 G.tourismPerTurn(Me), G.visitingTourists(Me), G.domesticTourists(Me)),
-			16, Y, FLinearColor(0.85f, 0.85f, 1.f));
-	}
-	// Diplomatic Favor, victory points and the World Congress (08 [GS]).
-	{
-		FString Text = FString::Printf(TEXT("Diplomatic Favor %d (%+d/turn)   Diplomatic Victory %d/%d"), P.favor, G.favorPerTurn(Me), P.diplomaticVictoryPoints,
-			R.globalInt("DIPLOMATIC_VICTORY_POINTS_REQUIRED"));
-		if (G.congressInSession()) Text += TEXT("   World Congress in session: , to vote");
-		else if (S.nextCongressTurn > 0) Text += FString::Printf(TEXT("   Congress meets on turn %d"), S.nextCongressTurn);
-		for (const sov::PassedResolution& Pr : S.passedResolutions)
-		{
-			Text += FString::Printf(TEXT("   [%s %s]"), *Str(R.resolutions[static_cast<size_t>(Pr.resolution)].name), Pr.option == 0 ? TEXT("A") : TEXT("B"));
-		}
-		Line(Text, 16, Y, FLinearColor(0.75f, 0.95f, 1.f));
-	}
-	// The space race (09: Science victory): every civ whose exoplanet expedition is under way.
-	{
-		FString Race;
-		for (const sov::Player& O : S.players)
-		{
-			const int32 Speed = O.alive && !O.barbarian ? G.expeditionSpeed(O.id) : 0;
-			if (Speed <= 0) continue;
-			const FString Who = O.id == Me ? FString(TEXT("we")) : (O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name));
-			Race += FString::Printf(TEXT("   %s %d/%d ly (+%d)"), *Who, O.lightYears, R.globalInt("SCIENCE_VICTORY_POINTS_REQUIRED"), Speed);
-		}
-		if (!Race.IsEmpty()) Line(TEXT("Exoplanet expeditions:") + Race, 16, Y, FLinearColor(0.7f, 0.9f, 1.f));
-	}
-	// Alliances (08 [R&F]): type, level and turns left with each ally.
-	{
-		static const TCHAR* const Types[] = {TEXT("Research"), TEXT("Military"), TEXT("Economic"), TEXT("Cultural"), TEXT("Religious")};
-		FString Allies;
-		for (const sov::Player& O : S.players)
-		{
-			const sov::AllianceType T = G.alliance(Me, O.id);
-			if (T == sov::AllianceType::None) continue;
-			const FString Who = O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name);
-			Allies += FString::Printf(TEXT("   %s (%s, level %d, %d turns)"), *Who, Types[static_cast<int32>(T)], G.allianceLevel(Me, O.id),
-				P.relations[static_cast<size_t>(O.id)].allianceUntil - S.turn);
-		}
-		if (!Allies.IsEmpty()) Line(TEXT("Alliances:") + Allies, 16, Y, FLinearColor(0.6f, 1.f, 0.7f));
-	}
-	// City-state quests (08): what each city-state we have met asks of us.
-	{
-		FString Text;
-		for (const sov::Quest& Q : S.quests)
-		{
-			if (Q.major != Me) continue;
-			const sov::Player& CS = S.players[static_cast<size_t>(Q.cityState)];
-			const FString Name = CS.cityState == sov::kNone ? FString(TEXT("?")) : Str(R.cityStates[static_cast<size_t>(CS.cityState)].name);
-			Text += FString::Printf(TEXT("   %s: %s"), *Name, *Str(G.questText(Q)));
-		}
-		if (!Text.IsEmpty()) Line(TEXT("Quests:") + Text, 16, Y, FLinearColor(0.8f, 0.95f, 0.8f));
-	}
-	// Scored competitions (08 [GS]): the one running, with our standing and the leader's.
-	for (const sov::Competition& C : S.competitions)
-	{
-		if (C.settled) continue;
-		static const TCHAR* const Kinds[] = {TEXT("World's Fair"), TEXT("World Games"), TEXT("Nobel Prize in Literature"), TEXT("Nobel Peace Prize"),
-			TEXT("Nobel Prize in Physics"), TEXT("Climate Accords"), TEXT("International Space Station"), TEXT("Aid Request"), TEXT("Military Aid Request")};
-		int32 Best = INT32_MIN;
-		sov::PlayerId Leader = sov::kNoPlayer;
-		for (const sov::Player& O : S.players)
-		{
-			if (!G.isMajorCiv(O.id) || !O.alive) continue;
-			const int32 Score = G.competitionStanding(C, O.id);
-			if (Score > Best) { Best = Score; Leader = O.id; }
-		}
-		const sov::Player* LP = Leader == sov::kNoPlayer ? nullptr : &S.players[static_cast<size_t>(Leader)];
-		const FString Who = Leader == Me ? FString(TEXT("us")) : (!LP || LP->civ == sov::kNone ? FString(TEXT("-")) : Str(R.civs[static_cast<size_t>(LP->civ)].name));
-		Line(FString::Printf(TEXT("%s: %d turns left; our score %d, leading %s (%d)"), Kinds[static_cast<int32>(C.kind)], C.endTurn - S.turn,
-				 G.competitionStanding(C, Me), *Who, Best),
-			16, Y, FLinearColor(0.85f, 0.8f, 1.f));
-	}
-	// Emergencies (08): the running ones, and whether we are in them (join from the , chooser).
-	{
-		static const TCHAR* const Kinds[] = {TEXT("Military"), TEXT("City-State"), TEXT("Religious"), TEXT("Nuclear"), TEXT("Betrayal")};
-		FString Text;
-		for (size_t k = 0; k < S.emergencies.size(); ++k)
-		{
-			const sov::Emergency& E = S.emergencies[k];
-			if (E.outcome != 0) continue;
-			const sov::Player& T = S.players[static_cast<size_t>(E.target)];
-			const FString Who = E.target == Me ? FString(TEXT("us")) : (T.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(T.civ)].name));
-			const bool bIn = static_cast<size_t>(Me) < E.members.size() && E.members[static_cast<size_t>(Me)];
-			Text += FString::Printf(TEXT("   %s vs %s (%d turns%s)"), Kinds[static_cast<int32>(E.kind)], *Who, E.endTurn - S.turn, bIn ? TEXT(", joined") : TEXT(""));
-		}
-		if (!Text.IsEmpty()) Line(TEXT("Emergencies:") + Text, 16, Y, FLinearColor(1.f, 0.55f, 0.55f));
-	}
-	// War weariness (08): points and the amenities every city loses to them.
-	if (G.warWeariness(Me) > 0)
-	{
-		Line(FString::Printf(TEXT("War weariness %d (-%d amenities in every city)"), G.warWeariness(Me), G.warWearinessAmenities(Me)), 16, Y, FLinearColor(1.f, 0.7f, 0.5f));
-	}
-	// Nuclear weapons (05): devices held by anyone (Ctrl+right-click with a bomber or Nuclear Submarine delivers ours).
-	{
-		FString Arsenal;
-		for (const sov::Player& O : S.players)
-		{
-			if (!O.alive || O.barbarian || G.wmdsHeld(O.id) == 0) continue;
-			const FString Who = O.id == Me ? FString(TEXT("we")) : (O.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(O.civ)].name));
-			Arsenal += TEXT("   ") + Who;
-			for (size_t W = 0; W < O.wmds.size() && W < R.wmds.size(); ++W)
-			{
-				if (O.wmds[W] > 0) Arsenal += FString::Printf(TEXT(" %dx %s"), O.wmds[W], *Str(R.wmds[W].name));
-			}
-		}
-		if (!Arsenal.IsEmpty()) Line(TEXT("Nuclear arsenals:") + Arsenal, 16, Y, FLinearColor(1.f, 0.6f, 0.5f));
-	}
-	// Climate (09: Climate and Disasters [GS]): the world's warming, its phase, our share of the CO2.
-	if (S.co2 > 0 || S.climatePhase > 0)
-	{
-		static const TCHAR* const Roman[] = {TEXT("none"), TEXT("I"), TEXT("II"), TEXT("III"), TEXT("IV"), TEXT("V"), TEXT("VI"), TEXT("VII")};
-		const int32 Tenths = G.temperatureTenths();
-		Line(FString::Printf(TEXT("Climate: +%d.%d degrees, phase %s   World CO2 %lld (ours %lld%%)"), Tenths / 10, Tenths % 10,
-				 Roman[FMath::Clamp(S.climatePhase, 0, 7)], static_cast<long long>(S.co2), S.co2 > 0 ? static_cast<long long>(P.co2 * 100 / S.co2) : 0LL),
-			16, Y, FLinearColor(1.f, 0.85f, 0.6f));
-	}
-	// Governors (08): where each serves and whether it has established, and titles to spend.
-	if (!P.governors.empty() || G.governorTitlesLeft(Me) > 0)
-	{
-		FString Text = FString::Printf(TEXT("Governor titles %d"), G.governorTitlesLeft(Me));
-		for (const sov::Governor& Gv : P.governors)
-		{
-			const sov::City* At = S.city(Gv.city);
-			Text += FString::Printf(TEXT("   %s: %s"), *Str(R.governors[static_cast<size_t>(Gv.type)].name),
-				!At ? TEXT("unassigned") : Gv.establishTurns > 0 ? *FString::Printf(TEXT("%s in %d"), *Str(At->name), Gv.establishTurns) : *Str(At->name));
-		}
-		Line(Text + TEXT("   Z: governors"), 16, Y, FLinearColor(0.85f, 0.8f, 1.f));
-	}
-	// Offers from other leaders wait for an answer on the diplomacy screen (08; leader doc §10).
-	for (const sov::Deal& D : S.deals)
-	{
-		if (D.to != Me)
-		{
-			continue;
-		}
-		const sov::Player& From = S.players[static_cast<size_t>(D.from)];
-		Line(FString::Printf(TEXT("%s offers: %s   N: diplomacy"), *Str(From.leaderName), *Str(sov::describeDeal(R, S, D))), 16, Y,
-			FLinearColor(0.6f, 1.f, 0.7f));
-	}
-	if (P.envoyTokens > 0)
-	{
-		Line(FString::Printf(TEXT("Envoys to send: %d   O: city-states"), P.envoyTokens), 16, Y, FLinearColor(0.6f, 0.9f, 1.f));
-	}
-	if (G.tradeRouteCapacity(Me) > 0)
-	{
-		Line(FString::Printf(TEXT("Trade routes: %d of %d"), G.tradeRoutesOf(Me), G.tradeRouteCapacity(Me)), 16, Y);
-	}
-	// The throne (leader doc §5).
-	if (const sov::Unit* L = G.leaderOf(Me))
-	{
-		FString Gear;
-		for (sov::TypeIndex GearId : L->gear)
-		{
-			if (GearId != sov::kNone)
-			{
-				Gear += (Gear.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.gear[static_cast<size_t>(GearId)].name);
-			}
-		}
-		Line(FString::Printf(TEXT("Leader: %s  HP %d   %s"), *Str(P.leaderName), L->hp, *Gear), 16, Y, FLinearColor(1.f, 0.85f, 0.3f));
-	}
-	else if (P.captor != sov::kNoPlayer)
-	{
-		const sov::Player& C = S.players[static_cast<size_t>(P.captor)];
-		Line(FString::Printf(TEXT("%s is held captive by %s. H: abandon and crown a successor"), *Str(P.leaderName),
-				 C.civ == sov::kNone ? TEXT("?") : *Str(R.civs[static_cast<size_t>(C.civ)].name)),
-			16, Y, FLinearColor(1.f, 0.4f, 0.3f));
-	}
-	else if (P.successionPending)
-	{
-		Line(TEXT("The throne is empty. H: choose a successor"), 16, Y, FLinearColor(1.f, 0.4f, 0.3f));
+		for (const FSovStatusLine& L : SovStatusLines(G, Me)) Line(L.Text, 16, Y, L.Color);
 	}
 	// Assassination news involving us from the last two turns (leader doc §6).
 	int32 GossipShown = 0;
@@ -300,23 +88,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		const FString Text = SovEventText(G, Me, E);
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
 	}
-	// Dedications (09): this era's, and a reminder while one is still to choose.
-	{
-		FString Text;
-		for (const sov::TypeIndex D : P.dedications) Text += (Text.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.dedications[static_cast<size_t>(D)].name);
-		if (!G.availableDedications(Me).empty()) Text += FString::Printf(TEXT("%sF2: choose %d dedication(s)"), Text.IsEmpty() ? TEXT("") : TEXT("   "), P.dedicationsPending);
-		if (!Text.IsEmpty()) Line(TEXT("Dedications: ") + Text, 16, Y, FLinearColor(1.f, 0.85f, 0.5f));
-	}
-	// Reputation (leader doc §8.1).
-	{
-		const TCHAR* Standing = G.beloved(Me) ? TEXT("Beloved") : G.feared(Me) ? TEXT("Feared") : TEXT("Neither loved nor feared");
-		Line(FString::Printf(TEXT("Reputation %+d: %s"), P.reputation, Standing), 16, Y, FLinearColor(0.8f, 0.85f, 1.f));
-	}
-	if (P.interregnumTurns > 0)
-	{
-		Line(FString::Printf(TEXT("Interregnum: policy slots empty for %d more turn(s)"), P.interregnumTurns), 16, Y, FLinearColor(1.f, 0.6f, 0.4f));
-	}
-	if (S.currentPlayer != Me)
+	if (S.currentPlayer != Me && TopInset <= 0.f)  // the end-turn button says so with the widgets
 	{
 		Line(FString::Printf(TEXT("%s is playing..."), *CurrentName), 16, Y, FLinearColor(1.f, 0.8f, 0.3f));
 	}
@@ -330,7 +102,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		const FString Winner = W.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(W.civ)].name);
 		Line(FString::Printf(TEXT("%s wins: %s victory. Esc opens the menu."), *Winner, SovVictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
 	}
-	if (!Sub.LastMessage.IsEmpty())
+	if (!Sub.LastMessage.IsEmpty() && TopInset <= 0.f)  // the widgets show it as a toast
 	{
 		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.6f, 0.4f));
 	}
@@ -381,23 +153,12 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 
 void ASovHUD::DrawHelp()
 {
-	static const TCHAR* const Lines[] = {
-		TEXT("How to play (F1 closes)"),
-		TEXT("Goal: win by science, culture, religion, diplomacy or conquest, or hold the best score at the turn limit."),
-		TEXT("Left-click a unit or city to select it; right-click a plot to move or attack there. '.' next unit needing orders."),
-		TEXT("Settler: F founds a city. Builder: B builds an improvement. U promotes a unit with enough XP."),
-		TEXT("P production, T research, C civics, F2 government and policies, Y great people, Z governors."),
-		TEXT("N diplomacy (talk to leaders, trade, demand), O city-states, J agents, ',' World Congress, I pantheon."),
-		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
-		TEXT("F3 yields on your plots (* worked). F4 the chronicle of your reign, F6 has it written up. Rest the cursor on a plot for its details."),
-		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
-		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser, then the menu (save, load, new game, quit)."),
-	};
-	const float W = 860.f, H = 16.f + 20.f * UE_ARRAY_COUNT(Lines);
+	const TArray<FString> Lines = SovHelpLines();
+	const float W = 860.f, H = 16.f + 20.f * Lines.Num();
 	const float Left = (Canvas->ClipX - W) * 0.5f, Top = (Canvas->ClipY - H) * 0.5f;
 	DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f), Left, Top, W, H);
 	float Y = Top + 8.f;
-	for (int32 i = 0; i < UE_ARRAY_COUNT(Lines); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
+	for (int32 i = 0; i < Lines.Num(); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
 }
 
 void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
@@ -421,8 +182,11 @@ void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
 void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 {
 	const sov::Game& G = Sub.GetGame();
-	const FSovMirror M = BuildMirror(G, Sub.GetSession().ViewPlayer());
+	if (!Sub.Mirror.IsValid()) return;
+	const FSovMirror& M = *Sub.Mirror;
+	const sov::PlayerId View = static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer());
 	UFont* Font = GEngine->GetSmallFont();
+	const FLinearColor Ink(0.03f, 0.027f, 0.024f, 0.88f), Edge(0.42f, 0.28f, 0.11f, 1.f);
 	for (const FSovCityMarker& C : M.Cities)
 	{
 		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(C.X, C.Y, 60.0)));
@@ -430,19 +194,45 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		// Loyalty shows once it slips below Loyal [R&F].
-		const FString Loyalty = C.Loyalty <= 75 ? FString::Printf(TEXT("  L%d"), C.Loyalty) : FString();
-		const FString Label = FString::Printf(TEXT("%s%s  %d%s"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name, C.Population, *Loyalty);
-		float W = 0, H = 0;
-		GetTextSize(Label, W, H, Font, 1.2f);
-		DrawRect(FLinearColor(0, 0, 0, 0.7f), Screen.X - W / 2 - 8, Screen.Y - H - 2, W + 12, H + 4);
-		DrawRect(C.Color, Screen.X - W / 2 - 8, Screen.Y - H - 2, 4, H + 4);
-		DrawText(Label, FLinearColor::White, Screen.X - W / 2, Screen.Y - H, Font, 1.2f);
+		// A banner: the population in the owner's colour, the name (a star on a capital), loyalty once it slips
+		// below Loyal [R&F]; under it, our own city's production and, when hurt, its health.
+		const FString Name = FString::Printf(TEXT("%s%s"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name);
+		const FString Pop = FString::FromInt(C.Population);
+		const FString Loyalty = C.Loyalty <= 75 ? FString::Printf(TEXT("L%d"), C.Loyalty) : FString();
+		float NW = 0, NH = 0, PW = 0, PH = 0, LW = 0, LH = 0;
+		GetTextSize(Name, NW, NH, Font, 1.2f);
+		GetTextSize(Pop, PW, PH, Font, 1.2f);
+		if (!Loyalty.IsEmpty()) GetTextSize(Loyalty, LW, LH, Font, 1.0f);
+		const float BoxW = FMath::Max(PW + 10.f, NH + 4.f), H = NH + 6.f;
+		const float W = BoxW + NW + 14.f + (LW > 0 ? LW + 8.f : 0.f);
+		const float L = Screen.X - W / 2, T = Screen.Y - H - 2.f;
+		DrawRect(Edge, L - 1, T - 1, W + 2, H + 2);
+		DrawRect(Ink, L, T, W, H);
+		DrawRect(C.Color, L, T, BoxW, H);
+		DrawText(Pop, FLinearColor::White, L + (BoxW - PW) / 2, T + 3.f, Font, 1.2f);
+		DrawText(Name, FLinearColor(0.93f, 0.89f, 0.8f), L + BoxW + 7.f, T + 3.f, Font, 1.2f);
+		if (LW > 0) DrawText(Loyalty, FLinearColor(0.95f, 0.5f, 0.4f), L + BoxW + NW + 14.f, T + 5.f, Font, 1.0f);
+		float BarY = T + H + 1.f;
+		if (C.Owner == View)
+		{
+			if (const sov::City* City = G.state().city(C.Id); City && !City->queue.empty())
+			{
+				const sov::ProductionItem& Item = City->queue.front();
+				sov::Fixed Done;
+				for (const sov::ProductionProgress& Pr : City->progress)
+					if (Pr.item == Item) Done = Pr.amount;
+				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(View, Item.type) : G.productionCost(View, Item, City);
+				const float Frac = Cost > 0 ? FMath::Clamp(static_cast<float>(Done.toInt()) / Cost, 0.f, 1.f) : 0.f;
+				DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.7f), L, BarY, W, 3.f);
+				DrawRect(FLinearColor(0.95f, 0.6f, 0.25f, 0.95f), L, BarY, W * Frac, 3.f);
+				BarY += 4.f;
+			}
+		}
 		if (C.MaxHp > 0 && C.Hp < C.MaxHp)
 		{
 			const float Frac = static_cast<float>(C.Hp) / C.MaxHp;
-			DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), Screen.X - 30, Screen.Y + 4, 60, 5);
-			DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), Screen.X - 30, Screen.Y + 4, 60 * Frac, 5);
+			DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), L, BarY, W, 4.f);
+			DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), L, BarY, W * Frac, 4.f);
 		}
 	}
 	for (const FSovUnitMarker& U : M.Units)
@@ -643,7 +433,7 @@ void ASovHUD::DrawHUD()
 	// The plot under the cursor: terrain, resource, improvement, owner and yields.
 	int32 TX = 0, TY = 0;
 	float MX = 0.f, MY = 0.f;
-	if (PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))
+	if (TopInset <= 0.f && PC && PC->CursorHex(TX, TY) && PC->GetMousePosition(MX, MY))  // the widgets show it themselves
 	{
 		const TArray<FString> Tip = SovPlotTooltip(Sub->GetGame(), Sub->GetSession().ViewPlayer(), TX, TY);
 		if (Tip.Num() > 0)
@@ -666,6 +456,7 @@ void ASovHUD::DrawHUD()
 	{
 		Line(L, 16, PY);
 	}
-	if (bShowHelp) DrawHelp();
-	if (bShowChronicle && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
+	// With the widgets up, the reader panel shows these.
+	if (bShowHelp && TopInset <= 0.f) DrawHelp();
+	if (bShowChronicle && TopInset <= 0.f && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
 }

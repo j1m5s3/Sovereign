@@ -2,7 +2,10 @@
 //   UnrealEditor-Cmd.exe Sovereign.uproject -ExecCmds="Automation RunTests Sovereign; Quit" -nullrhi -unattended
 #include "Misc/AutomationTest.h"
 
+#include "SovDescribe.h"
 #include "SovHexLayout.h"
+#include "SovKeys.h"
+#include "SovLens.h"
 #include "SovMirror.h"
 #include "SovMods.h"
 #include "SovSession.h"
@@ -1139,6 +1142,90 @@ bool FSovHumanLongGameTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("the game reached turn 250 or its end"), S.turn >= 250 || Session->IsGameOver() || !S.players[0].alive);
 		TestTrue(TEXT("seat 0 founded its capital"), Human.Founded >= 1);
 	}
+	return true;
+}
+
+// Key rebinding (plan E, step 2) swaps: no two actions ever share a key, and movement keys stay fixed.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovKeyRebindTest, "Sovereign.Bridge.KeyRebindingSwaps", kSovTestFlags)
+bool FSovKeyRebindTest::RunTest(const FString& Parameters)
+{
+	SovKeys::ResetAll();
+	TestEqual(TEXT("unbound keys are themselves"), SovKeys::Physical(EKeys::F), EKeys::F);
+	SovKeys::Bind(EKeys::F, EKeys::G);  // Found onto Fortify's key: Fortify takes F
+	TestEqual(TEXT("found moves to G"), SovKeys::Physical(EKeys::F), EKeys::G);
+	TestEqual(TEXT("fortify takes F"), SovKeys::Physical(EKeys::G), EKeys::F);
+	SovKeys::Bind(EKeys::F, EKeys::Semicolon);  // onto a free key: Fortify keeps F
+	TestEqual(TEXT("found on a free key"), SovKeys::Physical(EKeys::F), EKeys::Semicolon);
+	TestEqual(TEXT("fortify keeps F"), SovKeys::Physical(EKeys::G), EKeys::F);
+	SovKeys::Bind(EKeys::G, EKeys::G);  // back to its own key
+	TestEqual(TEXT("fortify back on G"), SovKeys::Physical(EKeys::G), EKeys::G);
+	TestFalse(TEXT("movement stays fixed"), SovKeys::CanBind(EKeys::W));
+	TestFalse(TEXT("the mouse stays fixed"), SovKeys::CanBind(EKeys::LeftMouseButton));
+	SovKeys::Bind(EKeys::P, EKeys::Escape);
+	TestEqual(TEXT("a fixed key is refused"), SovKeys::Physical(EKeys::P), EKeys::P);
+	// Every action still has its own key.
+	TSet<FKey> Seen;
+	for (const FSovKeyAction& A : SovKeys::Actions())
+	{
+		const FKey K = SovKeys::Physical(A.Logical);
+		TestFalse(*FString::Printf(TEXT("%s shares a key"), *A.Logical.ToString()), Seen.Contains(K));
+		Seen.Add(K);
+	}
+	SovKeys::ResetAll();
+	return true;
+}
+
+// Every lens recolours a real game's mirror and gives a legend.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovLensTest, "Sovereign.Bridge.LensesTintTheMirror", kSovTestFlags)
+bool FSovLensTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;
+	Setup.bHumanSeat0 = false;
+	FString Error;
+	if (!TestTrue(TEXT("game starts: ") + Error, Session.Start(Setup, Error))) return false;
+	PlayAITurns(Session, 30);
+	const FSovMirror Plain = BuildMirror(Session.GetGame(), 0);
+	for (int32 L = 1; L < static_cast<int32>(ESovLens::Count); ++L)
+	{
+		FSovMirror M = Plain;
+		TArray<FSovLensKey> Legend;
+		SovApplyLens(M, Session.GetGame(), 0, static_cast<ESovLens>(L), &Legend);
+		int32 Changed = 0;
+		for (int32 i = 0; i < M.Tiles.Num(); ++i) Changed += !M.Tiles[i].Color.Equals(Plain.Tiles[i].Color);
+		TestTrue(*FString::Printf(TEXT("%s lens recolours plots"), SovLensName(static_cast<ESovLens>(L))), Changed > 0);
+		TestTrue(*FString::Printf(TEXT("%s lens has a legend"), SovLensName(static_cast<ESovLens>(L))), Legend.Num() > 0);
+	}
+	return true;
+}
+
+// Every policy card and government reads as words, not as a modifier id (plan E: the government screen).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovDescribeTest, "Sovereign.Bridge.PoliciesAreDescribed", kSovTestFlags)
+bool FSovDescribeTest::RunTest(const FString& Parameters)
+{
+	sov::Rules R;
+	std::string Error;
+	if (!TestTrue(TEXT("rules load"), R.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Error))) return false;
+	int32 Described = 0;
+	for (size_t p = 0; p < R.policies.size(); ++p)
+	{
+		const FString T = SovSourceText(R, sov::ModSource::Policy, static_cast<sov::TypeIndex>(p));
+		if (T.IsEmpty()) continue;
+		++Described;
+		TestFalse(*FString::Printf(TEXT("%s reads as words: %s"), UTF8_TO_TCHAR(R.policies[p].name.c_str()), *T), T.Contains(TEXT("POLICY_")) || T.Contains(TEXT("MODIFIER")));
+		if (p % 10 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.policies[p].name.c_str()), *T));
+	}
+	TestTrue(TEXT("most cards have a description"), Described * 2 > static_cast<int32>(R.policies.size()));
+	// Buildings and units too: every building says something, and samples are logged for review.
+	for (size_t b = 0; b < R.buildings.size(); ++b)
+	{
+		const FString T = SovBuildingText(R, static_cast<sov::TypeIndex>(b));
+		TestFalse(*FString::Printf(TEXT("%s reads as words: %s"), UTF8_TO_TCHAR(R.buildings[b].name.c_str()), *T), T.Contains(TEXT("BUILDING_")));
+		if (b % 15 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.buildings[b].name.c_str()), *T));
+	}
+	for (size_t u = 0; u < R.units.size(); u += 20) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.units[u].name.c_str()), *SovUnitText(R, static_cast<sov::TypeIndex>(u))));
+	for (size_t g = 0; g < R.governments.size(); ++g)
+		AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.governments[g].name.c_str()), *SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g))));
 	return true;
 }
 

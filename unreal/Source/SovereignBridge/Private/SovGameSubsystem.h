@@ -63,6 +63,8 @@ public:
 	ESovLens Lens = ESovLens::None;
 	TArray<FSovLensKey> LensLegend;
 	TSharedPtr<const FSovMinimapData> Minimap;
+	// The mirror the map was last drawn from (the HUD's labels read it rather than building one each frame).
+	TSharedPtr<const struct FSovMirror> Mirror;
 
 	FString LastMessage;
 	// Online notices and chat, newest last (a few kept for the HUD).

@@ -11,6 +11,7 @@
 #include "SovBattleSim.h"
 #include "SovDiplomacy.h"
 #include "SovGameUI.h"
+#include "SovKeys.h"
 
 #include "SovPlayerController.generated.h"
 
@@ -91,6 +92,11 @@ protected:
 		FString Label;
 		sov::Command Command;
 		std::vector<sov::Command> Then;  // sent after Command, in order (e.g. the rest of a theming)
+		// How the game screen shows it (plan E): a value on the right, an icon, its section (all optional).
+		FString Right;
+		FName Icon;
+		FString Section;
+		FString Tip;
 	};
 
 	USovGameSubsystem* Subsystem() const;
@@ -129,7 +135,8 @@ protected:
 	// The game screen's widgets (plan D): filled each frame; their buttons press keys (UIKeys) that the
 	// order handling reads through Pressed, as if typed.
 	void UpdateGameUI();
-	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(Key) || UIKeys.Contains(Key); }
+	// An order key (by its default) pressed this frame: on the key it is bound to now (SovKeys), or by a widget.
+	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(SovKeys::Physical(Key)) || UIKeys.Contains(Key); }
 	void UpdatePanel();
 	// Online and hot seat: the lobby, the hand-over screen, and the chat line (M).
 	// True when they took this frame's input.
@@ -223,6 +230,10 @@ protected:
 	TSet<FString> DismissedNotices;
 	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
 	void OpenNotice(int32 Index);
+	bool bEmpireOpen = false;  // the Empire panel (F8)
+	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
+	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
+	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
 	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none
 	TSharedPtr<class SWidget> ChatBox;

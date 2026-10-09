@@ -1,5 +1,6 @@
 #include "SovGameUI.h"
 
+#include "Framework/Application/SlateApplication.h"
 #include "SovStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Images/SImage.h"
@@ -35,6 +36,11 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnNotice = Args._OnNotice;
 	OnDismiss = Args._OnDismiss;
 	OnEndClose = Args._OnEndClose;
+	OnGovAdopt = Args._OnGovAdopt;
+	OnGovSlot = Args._OnGovSlot;
+	OnGovCard = Args._OnGovCard;
+	OnGovDedication = Args._OnGovDedication;
+	OnGovBuy = Args._OnGovBuy;
 	OnLens = Args._OnLens;
 	OnMinimap = Args._OnMinimap;
 	auto Visible = [this](TFunction<bool()> Test) {
@@ -122,6 +128,14 @@ void SSovGameUI::Construct(const FArguments& Args)
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)[Progress(&FSovUIModel::Civic, &FSovUIModel::CivicProgress, FLinearColor(0.7f, 0.45f, 0.9f))]
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)
 				[
+					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+					.ToolTipText(FText::FromString(TEXT("Empire (F8): your civ, faith, era and age, diplomacy, the world's contests, climate, governors and leader")))
+					.ButtonColorAndOpacity_Lambda([this]() { return Model.bEmpire ? FSovStyle::Gold : FLinearColor::White; })
+					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
+					[StatWidget(FSovUIStat{"era", TEXT(""), TEXT("")}, 11)]
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)
+				[
 					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText_Lambda([this]() { return FText::FromString(Model.Government.Tip); })
 					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(Model.Government.Key); return FReply::Handled(); })
 					[StatWidget(FSovUIStat{"government", TEXT(""), TEXT("")}, 11)]
@@ -134,6 +148,39 @@ void SSovGameUI::Construct(const FArguments& Args)
 					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Menu: save, load, new game, quit (Esc)")))
 					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); return FReply::Handled(); })
 					[SNew(SBox).WidthOverride(20).HeightOverride(20)[SNew(SImage).Image(FSovStyle::Icon("menu"))]]
+				]
+			]
+		]
+		// The latest message, under the top bar.
+		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Center).Padding(0, 54, 0, 0)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(14, 6))
+			.Visibility_Lambda([this]() { return Model.bVisible && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.ColorAndOpacity_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
+			.BorderBackgroundColor_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
+			[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.Message); })]
+		]
+		// The Empire panel, top left under the bar.
+		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Left).Padding(12, 52, 0, 0)
+		[
+			SNew(SBox).WidthOverride(560).MaxDesiredHeight(600).Visibility(Visible([this]() { return Model.bVisible && Model.bEmpire && !Model.Tree.bOpen && !Model.bEnd; }))
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 6)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[SNew(STextBlock).Font(FSovStyle::Font(14, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("Empire")))]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Close (F8)")))
+							.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
+						]
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)[SNew(SScrollBox) + SScrollBox::Slot()[SAssignNew(EmpireBox, SVerticalBox)]]
 				]
 			]
 		]
@@ -225,7 +272,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// The open chooser.
 		+ SOverlay::Slot().VAlign(VAlign_Center).HAlign(HAlign_Right).Padding(0, 50, 16, 110)
 		[
-			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser && !Model.Tree.bOpen; }))
+			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser && !Model.Tree.bOpen && !Model.Gov.bOpen; }))
 			[
 				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
 				[
@@ -257,7 +304,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// Notifications, the lenses and the minimap, stacked above the end-turn button.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 92)
 		[
-			SNew(SBox).WidthOverride(300).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.bChooser && !Model.bEnd; }))
+			SNew(SBox).WidthOverride(300).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.Gov.bOpen && !Model.bChooser && !Model.bEnd; }))
 			[
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight()[SAssignNew(NoticesBox, SVerticalBox)]
@@ -335,6 +382,80 @@ void SSovGameUI::Construct(const FArguments& Args)
 				]
 			]
 		]
+		// A page to read: how to play, or the chronicle.
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(0, 50, 0, 20)
+		[
+			SNew(SBox).WidthOverride(880).MaxDesiredHeight(640).Visibility_Lambda([this]() { return Model.bVisible && Model.bReader && !Model.bEnd ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(16, 12))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[SNew(STextBlock).Font(FSovStyle::Font(16, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.ReaderTitle); })]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Close")))
+							.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(Model.ReaderKey); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
+						]
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)[SAssignNew(ReaderScroll, SScrollBox) + SScrollBox::Slot()[SAssignNew(ReaderBox, SVerticalBox)]]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)
+					[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(Model.ReaderFoot); })]
+				]
+			]
+		]
+		// The plot under the cursor, beside it.
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(TAttribute<FMargin>::CreateLambda([this]() {
+			const FVector2D Size = LastGeometry.GetLocalSize();
+			const FVector2D At = LastGeometry.AbsoluteToLocal(FSlateApplication::Get().GetCursorPos()) + FVector2D(18.0, 18.0);
+			const double H = 10.0 + 17.0 * Model.Hover.Num();
+			return FMargin(FMath::Min(At.X, Size.X - 330.0), FMath::Min(At.Y, Size.Y - H - 8.0), 0.f, 0.f);
+		}))
+		[
+			SNew(SBox).MaxDesiredWidth(320).Visibility_Lambda([this]() {
+				return Model.bVisible && bOverMap && Model.Hover.Num() > 0 && !Model.Tree.bOpen && !Model.bEnd ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+			})
+			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
+		]
+		// Hot seat: the next player's turn, the map hidden until they take over.
+		+ SOverlay::Slot()
+		[
+			SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.012f, 0.011f, 0.01f, 1.f))
+			.HAlign(HAlign_Center).VAlign(VAlign_Center)
+			.Visibility_Lambda([this]() { return Model.bHandover ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(40, 26))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[SNew(STextBlock).Font(FSovStyle::Font(28, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.HandoverName + TEXT("'s turn")); })]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0, 8, 0, 18)
+					[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Hand over the seat. The map stays hidden so nobody sees another player's lands.")))]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary()).ContentPadding(FMargin(28, 8))
+						.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Enter); return FReply::Handled(); })
+						[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Take over (Enter)")))]
+					]
+				]
+			]
+		]
+		// The government screen.
+		+ SOverlay::Slot().Padding(0, 46, 0, 0)
+		[
+			SAssignNew(GovView, SSovGovernmentView)
+			.Visibility_Lambda([this]() { return Model.bVisible && Model.Gov.bOpen && !Model.bEnd ? EVisibility::Visible : EVisibility::Collapsed; })
+			.OnAdopt_Lambda([this](int32 I) { OnGovAdopt.ExecuteIfBound(I); })
+			.OnSlot_Lambda([this](int32 I) { OnGovSlot.ExecuteIfBound(I); })
+			.OnCard_Lambda([this](int32 I) { OnGovCard.ExecuteIfBound(I); })
+			.OnDedication_Lambda([this](int32 I) { OnGovDedication.ExecuteIfBound(I); })
+			.OnBuyChanges_Lambda([this]() { OnGovBuy.ExecuteIfBound(); })
+			.OnClose_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); })
+		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
 		[
@@ -380,9 +501,41 @@ TSharedRef<SWidget> SSovGameUI::StatWidget(const FSovUIStat& Stat, int32 Size)
 	return Out;
 }
 
+void SSovGameUI::Tick(const FGeometry& Geometry, const double Time, const float Delta)
+{
+	SCompoundWidget::Tick(Geometry, Time, Delta);
+	LastGeometry = Geometry;
+	// Over the map when nothing of ours lies under the cursor: the topmost widget there is this one (or the viewport).
+	bOverMap = false;
+	if (FSlateApplication::IsInitialized())
+	{
+		const FWidgetPath Path = FSlateApplication::Get().LocateWindowUnderMouse(FSlateApplication::Get().GetCursorPos(), FSlateApplication::Get().GetInteractiveTopLevelWindows());
+		bOverMap = Path.IsValid() && (Path.Widgets.Last().Widget == AsShared() || !Path.ContainsWidget(this));
+	}
+}
+
 void SSovGameUI::SetModel(const FSovUIModel& InModel)
 {
 	Model = InModel;
+	FString Rd = Model.bReader ? Model.ReaderTitle : FString();
+	for (const FString& L : Model.ReaderLines) Rd += L + TEXT("|");
+	if (Rd != ReaderKeyText)
+	{
+		ReaderKeyText = Rd;
+		ReaderBox->ClearChildren();
+		for (const FString& L : Model.ReaderLines)
+			ReaderBox->AddSlot().AutoHeight().Padding(0, 2)[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(L))];
+		ReaderScroll->ScrollToEnd();  // the chronicle's latest lines first in view
+	}
+	FString Hv;
+	for (const FString& L : Model.Hover) Hv += L + TEXT("|");
+	if (Hv != HoverKey)
+	{
+		HoverKey = Hv;
+		HoverBox->ClearChildren();
+		for (int32 i = 0; i < Model.Hover.Num(); ++i)
+			HoverBox->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(i == 0 ? 10 : 9, i == 0)).ColorAndOpacity(i == 0 ? FSovStyle::Gold : FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Model.Hover[i]))];
+	}
 	if (const FString K = StatKey(Model.Stats); K != StatsKey)
 	{
 		StatsKey = K;
@@ -404,6 +557,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildCity();
 	}
 	if (Model.Tree.bOpen) TreeView->SetModel(Model.Tree);
+	if (Model.Gov.bOpen) GovView->SetModel(Model.Gov);
 	FString E = Model.bEnd ? Model.EndTitle + Model.EndSub : FString();
 	for (const FString& L : Model.EndScores) E += L + TEXT("|");
 	E += FString::FromInt(Model.EndChronicle.Num());
@@ -411,6 +565,15 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	{
 		EndKey = E;
 		RebuildEnd();
+	}
+	FString Em = Model.bEmpire ? FString(TEXT("E")) : FString();
+	for (const FSovUIStat& L : Model.EmpireLines) Em += L.Text + TEXT("|");
+	if (Em != EmpireKey)
+	{
+		EmpireKey = Em;
+		EmpireBox->ClearChildren();
+		for (const FSovUIStat& L : Model.EmpireLines)
+			EmpireBox->AddSlot().AutoHeight().Padding(0, 2)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(L.Color).AutoWrapText(true).Text(FText::FromString(L.Text))];
 	}
 	FString G = FString::FromInt(Model.Lens);
 	for (const FSovLensKey& K : Model.LensLegend) G += K.Label + K.Color.ToString();
@@ -439,7 +602,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildNotices();
 	}
 	FString C = Model.bChooser ? Model.ChooserTitle : FString();
-	for (const FString& L : Model.Choices) C += L + TEXT("|");
+	for (const FSovUIChoice& L : Model.Choices) C += L.Section + L.Icon.ToString() + L.Label + L.Right + TEXT("|");
 	if (C != ChooserKey)
 	{
 		ChooserKey = C;
@@ -558,18 +721,29 @@ void SSovGameUI::RebuildNotices()
 void SSovGameUI::RebuildChooser()
 {
 	ChoicesBox->ClearChildren();
+	FString Section;
 	for (int32 i = 0; i < Model.Choices.Num(); ++i)
 	{
+		const FSovUIChoice& Ch = Model.Choices[i];
+		if (!Ch.Section.IsEmpty() && Ch.Section != Section)
+		{
+			Section = Ch.Section;
+			ChoicesBox->AddSlot().AutoHeight().Padding(2, i == 0 ? 0 : 8, 0, 2)
+			[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(Section.ToUpper()))];
+		}
+		const TSharedRef<SHorizontalBox> Row = SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2, 0, 8, 0)
+			[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(i < 9 ? FString::FromInt(i + 1) : FString(TEXT(" "))))];
+		if (!Ch.Icon.IsNone())
+			Row->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 8, 0)[SNew(SBox).WidthOverride(20).HeightOverride(20)[SNew(SImage).Image(FSovStyle::Icon(Ch.Icon))]];
+		Row->AddSlot().FillWidth(1.f).VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Ch.Label))];
+		if (!Ch.Right.IsEmpty())
+			Row->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(10, 0, 2, 0)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(Ch.Right))];
 		ChoicesBox->AddSlot().AutoHeight().Padding(0, 2)
 		[
-			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, i]() { OnPick.ExecuteIfBound(i); return FReply::Handled(); })
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(2, 0, 8, 0)
-				[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(i < 9 ? FString::FromInt(i + 1) : FString(TEXT(" "))))]
-				+ SHorizontalBox::Slot().FillWidth(1.f)
-				[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(Model.Choices[i]))]
-			]
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(Ch.Tip.IsEmpty() ? Ch.Label : Ch.Label + TEXT("\n") + Ch.Tip))
+			.OnClicked_Lambda([this, i]() { OnPick.ExecuteIfBound(i); return FReply::Handled(); })
+			[Row]
 		];
 	}
 }

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovGovernmentView.h"
 #include "SovLens.h"
 #include "SovMinimap.h"
 #include "SovTreeView.h"
@@ -40,9 +41,22 @@ struct FSovUINotice
 	bool bUrgent = false;  // waits on the player
 };
 
+// A chooser line: its text, and optionally an icon, the section it starts or belongs to, and a value on the right.
+struct FSovUIChoice
+{
+	FString Label;
+	FString Right;    // "9 turns", "200 gold"
+	FName Icon;
+	FString Section;  // a header shows where it changes
+	FString Tip;      // shown on hover
+};
+
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// Hot seat: the screen hides the map until the next player takes over (shown even when bVisible is false).
+	bool bHandover = false;
+	FString HandoverName;
 	// Top bar.
 	TArray<FSovUIStat> Stats;  // yields and banks, left to right
 	FSovUIStat Research, Civic, Government, Turn;
@@ -72,15 +86,30 @@ struct FSovUIModel
 	// The open chooser.
 	bool bChooser = false;
 	FString ChooserTitle;
-	TArray<FString> Choices;
+	TArray<FSovUIChoice> Choices;
 	// The tech or civic tree, open in place of their list (plan D, step 3).
 	FSovTreeModel Tree;
+	// The government screen, open in place of the F2 list.
+	FSovGovModel Gov;
 	// The end of the game (plan D, step 5): who won and how, the scores, and the player's chronicle.
 	bool bEnd = false;
 	bool bWon = false;
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// A page to read over the map: how to play (F1) or the chronicle (F4).
+	bool bReader = false;
+	FString ReaderTitle, ReaderFoot;
+	TArray<FString> ReaderLines;
+	FKey ReaderKey;  // closes it
+	// The latest message (saved, bought, refused...), under the top bar for a few seconds; Toast fades it out.
+	FString Message;
+	float MessageAlpha = 0.f;
+	// The plot under the cursor (plan E, step 3): terrain, owner, yields and units; shown only over the map.
+	TArray<FString> Hover;
+	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).
+	bool bEmpire = false;
+	TArray<FSovUIStat> EmpireLines;
 	// The map lens (ESovLens) with its legend, and the minimap with the camera's place on it (plan D, step 6).
 	int32 Lens = 0;
 	TArray<FSovLensKey> LensLegend;
@@ -107,11 +136,17 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
 	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
 	SLATE_EVENT(TDelegate<void()>, OnEndClose)      // look at the map after the game
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovAdopt)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovSlot)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovCard)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovDedication)
+	SLATE_EVENT(TDelegate<void()>, OnGovBuy)
 	SLATE_EVENT(TDelegate<void(int32)>, OnLens)     // a lens button (ESovLens)
 	SLATE_EVENT(TDelegate<void(FVector2D)>, OnMinimap)  // the minimap clicked, 0..1 across and down
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
+	virtual void Tick(const FGeometry& Geometry, const double Time, const float Delta) override;
 	// The latest state; rebuilds only the lists whose contents changed.
 	void SetModel(const FSovUIModel& InModel);
 
@@ -145,10 +180,22 @@ private:
 	TSharedPtr<SVerticalBox> EndScoresBox, EndChronicleBox;
 	FString EndKey;
 	TSharedPtr<SVerticalBox> LegendBox;
+	TSharedPtr<SVerticalBox> EmpireBox;
+	TSharedPtr<SVerticalBox> HoverBox;
+	TSharedPtr<SVerticalBox> ReaderBox;
+	TSharedPtr<class SScrollBox> ReaderScroll;
+	FString ReaderKeyText;
+	FString HoverKey;
+	FGeometry LastGeometry;   // for placing the tooltip by the cursor
+	bool bOverMap = false;    // the cursor is over the map, not one of the panels
+	FString EmpireKey;
 	FString LegendKey;
 	TDelegate<void(int32)> OnLens;
 	TDelegate<void(FVector2D)> OnMinimap;
 	TDelegate<void()> OnEndClose;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
+	TSharedPtr<SSovGovernmentView> GovView;
+	TDelegate<void(int32)> OnGovAdopt, OnGovSlot, OnGovCard, OnGovDedication;
+	TDelegate<void()> OnGovBuy;
 };

@@ -7,7 +7,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/SlateStyle.h"
 
-const FLinearColor FSovStyle::Ink(0.018f, 0.016f, 0.014f, 0.93f);
+const FLinearColor FSovStyle::Ink(0.018f, 0.016f, 0.014f, 0.98f);
 const FLinearColor FSovStyle::Edge(0.42f, 0.28f, 0.11f, 1.f);
 const FLinearColor FSovStyle::Text(0.93f, 0.89f, 0.80f, 1.f);
 const FLinearColor FSovStyle::Dim(0.62f, 0.58f, 0.50f, 1.f);
