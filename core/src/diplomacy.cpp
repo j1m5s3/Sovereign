@@ -765,7 +765,9 @@ bool Game::wouldAccept(PlayerId judge, const Deal& d) const {
     }
     const int opinion = opinionOf(judge, other);
     // Liked civs get a little leeway; disliked ones must overpay.
-    const int bar = opinion >= 0 ? -std::min(25, opinion) : std::min(150, -3 * opinion);
+    int bar = opinion >= 0 ? -std::min(25, opinion) : std::min(150, -3 * opinion);
+    // A ruler who came in person to an AI's capital is heard more kindly; a human judge gets nothing (leader doc §8.4).
+    if (!state_.players[static_cast<size_t>(judge)].human && rulerVisiting(other, judge)) bar -= rules_->globalInt("IN_PERSON_DEAL_VALUE");
     return dealValue(judge, d) >= bar;
 }
 

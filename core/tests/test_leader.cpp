@@ -1409,3 +1409,77 @@ TEST(no_duel_without_a_beaten_ruler) {
         CHECK(theirs.empty() || theirs[0] < 20);
     }
 }
+
+// ---- leader part 7: diplomacy in person (leader doc §8.4)
+
+TEST(a_ruler_in_person_wins_envoys_from_a_city_state) {
+    const int each = rules().globalInt("IN_PERSON_ENVOYS");
+    REQUIRE(each > 0);
+    for (const bool war : {false, true}) {
+        GameState s = flatState(16, 12, 3);
+        addCity(s, 0, {2, 6}, true);
+        s.players[2].civ = kNone;
+        s.players[2].cityState = rules().cityState("CITYSTATE_MITLA");
+        s.players[2].firstMetBy = 1;  // no first-meeting envoy to blur the count
+        addCity(s, 2, {12, 6}, true);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.envoys.assign(s.players.size(), 0);
+            p.met.assign(s.players.size(), 1);
+        }
+        const UnitId leader = addLeader(s, 0, {8, 6});
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        auto g = Game::fromScenario(rules(), std::move(s));
+        if (war) REQUIRE(g->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+        REQUIRE(g->submit(Command::move(0, leader, {10, 6})) == CommandError::Ok);  // two plots off: not yet there
+        REQUIRE(g->state().unit(leader)->pos == hx(10, 6));
+        CHECK_EQ(g->state().players[0].envoys[2], 0);
+        pass(*g, 3);
+        REQUIRE(g->submit(Command::move(0, leader, {11, 6})) == CommandError::Ok);  // beside the city-state's city
+        REQUIRE(g->state().unit(leader)->pos == hx(11, 6));
+        CHECK_EQ(g->state().players[0].envoys[2], war ? 0 : each);  // no envoys to a city-state at war
+        CHECK_EQ(g->state().unit(leader)->xp, 0);                   // a foreign city earns no visit XP
+        if (war) continue;
+        pass(*g, 3);
+        REQUIRE(g->submit(Command::move(0, leader, {10, 6})) == CommandError::Ok);
+        pass(*g, 3);
+        REQUIRE(g->submit(Command::move(0, leader, {11, 5})) == CommandError::Ok);  // back again: once a game
+        CHECK_EQ(g->state().players[0].envoys[2], each);
+    }
+}
+
+TEST(an_ai_hears_a_ruler_who_came_in_person) {
+    UnitId leader = 0;
+    // Where player 0's ruler stands: 0 far off, 1 beside the AI's capital, 2 beside its other city.
+    const auto accepts = [&](int where, bool humanJudge) {
+        const bool visiting = where == 1;
+        auto g = duel(
+            [&](GameState& s) {
+                addCity(s, 0, {2, 6}, true);
+                addCity(s, 1, {12, 2}, false);  // listed first, so the capital must be looked for
+                addCity(s, 1, {12, 6}, true);
+                leader = addLeader(s, 0, where == 1 ? Hex{11, 6} : where == 2 ? Hex{11, 2} : Hex{10, 6});
+                s.players[0].gold = Fixed::fromInt(500);
+                s.players[1].gold = Fixed::fromInt(500);
+                s.players[1].human = humanJudge;
+                for (Player& p : s.players) {
+                    Game::fitPlayerToRules(p, rules());
+                    p.met.assign(s.players.size(), 1);
+                }
+            },
+            false);
+        REQUIRE(g->state().players[1].human == humanJudge);
+        REQUIRE(g->hasMet(1, 0));
+        CHECK_EQ(g->rulerVisiting(0, 1), visiting);
+        CHECK(!g->rulerVisiting(1, 0));
+        // The AI is asked for 100 Gold for 70: 30 short of a fair trade, inside the in-person allowance.
+        const Deal d{0, 0, 1, 0, {{DealItemKind::Gold, 0, 70, kNone}, {DealItemKind::Gold, 1, 100, kNone}}};
+        const int value = g->dealValue(1, d);
+        REQUIRE(value < 0 && value > -rules().globalInt("IN_PERSON_DEAL_VALUE"));
+        return g->wouldAccept(1, d);
+    };
+    CHECK(!accepts(0, false));
+    CHECK(accepts(1, false));
+    CHECK(!accepts(2, false));  // the capital, not any city
+    CHECK(!accepts(1, true));   // a human judge gets nothing from a visit
+}

@@ -182,7 +182,10 @@ void Game::spawnCaptures() {
 }
 
 void Game::enterPlot(Unit& unit) {
-    if (isLeader(unit)) leaderVisit(unit);
+    if (isLeader(unit)) {
+        leaderVisit(unit);
+        inPersonVisit(unit);
+    }
     // Natural wonders' permanent abilities (01): land units beside Everest, land units entering the
     // Fountain of Youth, ships entering the Bermuda Triangle.
     {
