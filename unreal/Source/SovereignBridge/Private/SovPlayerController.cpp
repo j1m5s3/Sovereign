@@ -3175,11 +3175,11 @@ void ASovPlayerController::OpenMenu()
 	}
 	TSharedPtr<SEditableTextBox> Address;
 	auto Item = [this](const FString& Label, TFunction<void()> Click) {
-		return SNew(SBox).Padding(FMargin(0.f, 4.f)).WidthOverride(420.f)[
-			SNew(SButton).HAlign(HAlign_Center).Text(FText::FromString(Label)).OnClicked_Lambda([Click]() {
+		return SNew(SBox).Padding(FMargin(0.f, 3.f)).WidthOverride(440.f)[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 6.f)).OnClicked_Lambda([Click]() {
 				Click();
 				return FReply::Handled();
-			})];
+			})[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Justification(ETextJustify::Center).AutoWrapText(true).Text(FText::FromString(Label))]];
 	};
 	const FString Name = FPlatformProcess::UserName();
 	auto Base = [this, Name]() {
@@ -3214,12 +3214,12 @@ void ASovPlayerController::OpenMenu()
 	{
 		const FString Id = Mod.Id;
 		const FString Label = FString::Printf(TEXT("%s %s: %s"), *Mod.Name, *Mod.Version, *Mod.Description);
-		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Id]() {
+		ModList->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, Id]() {
 			if (MenuModsOn.Contains(Id)) MenuModsOn.Remove(Id);
 			else MenuModsOn.Add(Id);
 			SovMods::SetEnabled(MenuModsOn);
 			return FReply::Handled();
-		})[SNew(STextBlock).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
+		})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this, Id, Label]() {
 			return FText::FromString((MenuModsOn.Contains(Id) ? TEXT("[on]  ") : TEXT("[off]  ")) + Label);
 		})]];
 	}
@@ -3265,13 +3265,13 @@ void ASovPlayerController::OpenMenu()
 		for (int32 i = 0; i < Files.Num() && i < 8; ++i)
 		{
 			const FString Path = FPaths::Combine(Dir, Files[i]);
-			Replays->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).OnClicked_Lambda([this, Path]() {
+			Replays->AddSlot().AutoHeight().Padding(0.f, 1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, Path]() {
 				CloseMenu();
 				StartReplay(Path);
 				return FReply::Handled();
-			})[SNew(STextBlock).Text(FText::FromString(FPaths::GetBaseFilename(Files[i])))]];
+			})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(FPaths::GetBaseFilename(Files[i])))]];
 		}
-		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
+		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
 	}
 	// Saved games, newest first (the four latest): continue one.
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
@@ -3290,53 +3290,59 @@ void ASovPlayerController::OpenMenu()
 				})];
 		}
 	}
-	Menu = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)[
-		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.95f)).Padding(24.f)[
+	Menu = SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.01f, 0.01f, 0.01f, 0.72f)).Padding(0)
+		.HAlign(HAlign_Center).VAlign(VAlign_Center)[
+		SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(28.f, 20.f))[
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
-				SNew(STextBlock).Text(FText::FromString(TEXT("Sovereign"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28))
-				.ColorAndOpacity(FLinearColor(1.f, 0.85f, 0.45f))]
+				SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Sovereign"))).Font(FSovStyle::Font(34, true))
+				.ColorAndOpacity(FSovStyle::Gold)]
 			+ SVerticalBox::Slot().AutoHeight()[InGame]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 3.f)[
+				SNew(SBox).WidthOverride(440.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 8.f))
+					.OnClicked_Lambda([this, Base]() { OpenSetup(Base()); return FReply::Handled(); })
+					[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("New game")))]]]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 8.f, 0.f, 2.f)[
+				SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("For hot seat and online games:")))]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
 					MenuDifficulty = FMath::Max(0, MenuDifficulty - 1);
 					return FReply::Handled();
 				})]
 				+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)[
-					SNew(STextBlock).Text_Lambda([this]() {
+					SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 						return FText::FromString(FString::Printf(TEXT("Difficulty: %s"), Levels[FMath::Clamp(MenuDifficulty, 0, 7)]));
 					})]
-				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).Text(FText::FromString(TEXT(">"))).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT(">"))).OnClicked_Lambda([this]() {
 					MenuDifficulty = FMath::Min(7, MenuDifficulty + 1);
 					return FReply::Handled();
 				})]]
 			// Shorter games (player-retention §5): the game's length and the era it begins in.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuSpeed = (MenuSpeed + 1) % UE_ARRAY_COUNT(kMenuSpeeds);
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
-				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Length: ")) + kMenuSpeeds[MenuSpeed].Label); })]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuEra = (MenuEra + 1) % UE_ARRAY_COUNT(kMenuEras);
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() { return FText::FromString(FString(TEXT("Begin in: ")) + kMenuEras[MenuEra].Label + TEXT(" era")); })]]]			// Rivals who remember you (player-retention §1): on or off for new games, or forgotten.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					bMenuRivals = !bMenuRivals;
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 					return FText::FromString(bMenuRivals ? TEXT("Rivals remember you: on") : TEXT("Rivals remember you: off"));
 				})]]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).Text(FText::FromString(TEXT("Forget your rivals"))).OnClicked_Lambda([this, Name]() {
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("Forget your rivals"))).OnClicked_Lambda([this, Name]() {
 					const FString Path = FSovSession::RivalsPath(Name.IsEmpty() ? FString(TEXT("Player")) : Name);
 					if (USovGameSubsystem* S = Subsystem())
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { OpenSetup(Base()); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
 				FSovSetup S = Base();
 				S.ChallengeWeek = Week;
@@ -3358,7 +3364,7 @@ void ASovPlayerController::OpenMenu()
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().FillWidth(1.f)[SAssignNew(Address, SEditableTextBox).Text(FText::FromString(TEXT("127.0.0.1")))]
 				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f, 0.f, 0.f, 0.f)[
-					SNew(SButton).Text(FText::FromString(TEXT("Join by address"))).OnClicked_Lambda([this, Base, Address]() {
+					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("Join by address"))).OnClicked_Lambda([this, Base, Address]() {
 						FSovSetup S = Base();
 						S.Net = ESovNet::Join;
 						S.JoinAddress = Address->GetText().ToString().TrimStartAndEnd();
@@ -3385,20 +3391,20 @@ void ASovPlayerController::OpenMenu()
 			// Achievements and the ruler's colour (player-retention §7).
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuAchievements = MenuAchievements.IsEmpty() ? MenuAchievementsText : FString();
 					return FReply::Handled();
-				})[SNew(STextBlock).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
-				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(FString::Printf(TEXT("Achievements (%d of %d)"), HeldCount, AllCount)))]]
+				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(6.f, 0.f, 0.f, 0.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).OnClicked_Lambda([this]() {
 					MenuCosmetic = (MenuCosmetic + 1) % FMath::Max(1, MenuCosmetics.Num());
 					USovGameSubsystem::SetCosmetic(MenuCosmetics[MenuCosmetic].Key);
 					if (USovGameSubsystem* S = Subsystem(); S && S->IsRunning()) S->OnStateChanged.Broadcast();
 					return FReply::Handled();
-				})[SNew(STextBlock).Text_Lambda([this]() {
+				})[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text_Lambda([this]() {
 					return FText::FromString(FString(TEXT("Ruler's colour: ")) + (MenuCosmetics.IsValidIndex(MenuCosmetic) ? MenuCosmetics[MenuCosmetic].Value : FString()));
 				})]]]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
-				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuAchievements); })]]
 			// Battle replays (player-retention §2): the latest live battles, played back in the battle scene.
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Battle replays"), [this]() { bMenuReplays = !bMenuReplays; })]
@@ -3417,12 +3423,12 @@ void ASovPlayerController::OpenMenu()
 				if (MenuHall.IsEmpty()) MenuHall = TEXT("No reign has ended yet.");
 			})]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
-				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuHall); })]]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Settings"), [this]() { OpenSettings(); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
-				SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
+				SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
 				.Text_Lambda([this]() {
 					const USovGameSubsystem* S = Subsystem();
 					return FText::FromString(S ? S->LastMessage : FString());

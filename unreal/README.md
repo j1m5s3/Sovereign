@@ -60,7 +60,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 
 ## Menu screens
 
-- **New game** (Single player): pick a civ (or Random) and read its abilities, uniques and agenda; set the map size, number of civs, difficulty, length, start era, natural disasters, Barbarian Clans, Monopolies and rival memory. `-SovSetup` opens it at launch, `-SovCiv=CIVILIZATION_EGYPT` picks the civ for a command-line game.
+- **New game** (the first button on the menu): pick a civ (or Random) and read its abilities, uniques and agenda; set the map size, number of civs, difficulty, length, start era, natural disasters, Barbarian Clans, Monopolies and rival memory. `-SovSetup` opens it at launch, `-SovCiv=CIVILIZATION_EGYPT` picks the civ for a command-line game.
 - **Settings:** graphics quality, window mode, resolution, vsync, frame limit and interface scale, and the controls: click an order key, then press its new key (an action already on that key swaps to the old one; movement, digits, Esc, Enter and Space stay fixed). Saved in GameUserSettings. `-SovSettings` opens it at launch.
 
 ## Controls
