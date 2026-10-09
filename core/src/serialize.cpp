@@ -519,6 +519,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.i32(p.capturedTurn);
         for (TypeIndex g : p.savedGear) w.i32(g);
         writeI32s(w, std::vector<int32_t>(p.savedPromotions.begin(), p.savedPromotions.end()));
+        writeI32s(w, p.leaderVisits);
     }
     w.u32(static_cast<uint32_t>(s.units.size()));
     for (const Unit& u : s.units) {
@@ -1030,6 +1031,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (!readI32s(r, saved)) return false;
         p.savedPromotions.clear();
         for (int32_t v : saved) p.savedPromotions.push_back(static_cast<TypeIndex>(v));
+        if (!readI32s(r, p.leaderVisits)) return false;
     }
     uint32_t nu = r.u32();
     if (!r.checkCount(nu, 30)) return false;

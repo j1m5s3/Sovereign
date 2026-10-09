@@ -254,14 +254,17 @@ void Game::applyLeader(const Command& c) {
         City& city = *state_.city(c.id);
         const int effect = rules_->globalInt("STANCE_EFFECT_TURNS");
         const int step = rules_->globalInt("REPUTATION_PER_STANCE");
+        // A Statesman handles citizens better (§3): each of its promotions strengthens the outcome.
+        const Unit* ruler = leaderOf(c.player);
+        const int power = 100 + (ruler ? unitEffectTotal(*ruler, UnitEffectKind::StancePower) : 0);
         if (static_cast<Stance>(c.arg) == Stance::Benevolence) {
             // Hear petitions, give alms, hold a feast: amenities for a while (§4).
             p.gold -= Fixed::fromInt(benevolenceCost(city));
-            city.benevolenceUntil = state_.turn + effect;
+            city.benevolenceUntil = state_.turn + effect * power / 100;
             p.reputation = std::min(100, p.reputation + step);
         } else {
             // Punishments, a show of force, curfews: order now, resentment later (§4).
-            city.loyalty = std::min(rules_->globalInt("LOYALTY_MAXIMUM"), city.loyalty + rules_->globalInt("STANCE_FEAR_LOYALTY"));
+            city.loyalty = std::min(rules_->globalInt("LOYALTY_MAXIMUM"), city.loyalty + rules_->globalInt("STANCE_FEAR_LOYALTY") * power / 100);
             city.fearUntil = state_.turn + effect;
             city.fearAfterUntil = city.fearUntil + rules_->globalInt("STANCE_FEAR_AFTER_TURNS");
             p.reputation = std::max(-100, p.reputation - step);
@@ -384,6 +387,17 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) 
         addGrievance(owner, by, rules_->globalInt("LEADER_KILLED_GRIEVANCES"));  // the killer is known (§5)
     }
     startInterregnum(p);
+}
+
+void Game::leaderVisit(const Unit& leader) {
+    const City* c = state_.landCity(leader.pos);
+    if (!c || c->owner != leader.owner || (c->pos != leader.pos && !state_.districtAt(leader.pos))) return;
+    std::vector<int32_t>& seen = state_.players[static_cast<size_t>(leader.owner)].leaderVisits;
+    const int32_t key = static_cast<int32_t>(state_.grid.index(leader.pos));
+    const auto it = std::lower_bound(seen.begin(), seen.end(), key);
+    if (it != seen.end() && *it == key) return;
+    seen.insert(it, key);
+    leaderXp(leader.owner, rules_->globalInt("LEADER_XP_FIRST_VISIT"));
 }
 
 void Game::leaderXp(PlayerId player, int xp) {
