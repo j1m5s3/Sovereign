@@ -160,6 +160,8 @@ public:
 	virtual void Tick(const FGeometry& Geometry, const double Time, const float Delta) override;
 	// The latest state; rebuilds only the lists whose contents changed.
 	void SetModel(const FSovUIModel& InModel);
+	// The cursor is over the map, not over one of the panels.
+	bool IsOverMap() const { return bOverMap; }
 
 private:
 	TSharedRef<SWidget> StatWidget(const FSovUIStat& Stat, int32 Size = 14);

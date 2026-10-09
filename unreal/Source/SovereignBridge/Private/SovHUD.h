@@ -23,6 +23,9 @@ public:
 	bool bShowYields = false;
 	// With a city of ours selected, its plots' yields show anyway (and only its own); -1: none.
 	int32 YieldCity = -1;
+	// The selected unit's path to the plot under the cursor: plots, and the turn each is reached (0: this turn).
+	TArray<FIntPoint> PathPlots;
+	TArray<int32> PathTurns;
 	bool bShowHelp = false;
 	// F4: the chronicle of the viewer's reign so far (player-retention §2).
 	bool bShowChronicle = false;
@@ -32,6 +35,7 @@ public:
 protected:
 	void DrawStatus(const USovGameSubsystem& Sub, float& Y);
 	void DrawLabels(const USovGameSubsystem& Sub);
+	void DrawPath();
 	void DrawYields(const USovGameSubsystem& Sub);
 	void DrawHelp();
 	void DrawChronicle(const USovGameSubsystem& Sub);

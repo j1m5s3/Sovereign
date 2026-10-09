@@ -2165,6 +2165,38 @@ TSet<int32> ASovPlayerController::TreePath(bool bCivics) const
 	return Path;
 }
 
+double ASovPlayerController::SurfaceZ(int32 X, int32 Y) const
+{
+	return Map ? Map->SurfaceZ(X, Y) : 0.0;
+}
+
+void ASovPlayerController::UpdatePath()
+{
+	// With a unit of ours selected and the cursor on another plot of the map: the way it would go, and when.
+	ASovHUD* Hud = Cast<ASovHUD>(GetHUD());
+	if (!Hud) return;
+	const sov::Game& G = Subsystem()->GetGame();
+	const sov::Unit* U = G.state().unit(SelectedUnit);
+	int32 X = 0, Y = 0;
+	const bool bShow = U && U->owner == Me() && MyTurn() && (!GameUI.IsValid() || GameUI->IsOverMap()) && HexUnderCursor(X, Y) && (X != U->pos.x || Y != U->pos.y);
+	const FString Key = bShow ? FString::Printf(TEXT("%d:%d,%d>%d,%d:%s:%d"), U->id, U->pos.x, U->pos.y, X, Y, UTF8_TO_TCHAR(U->movesLeft.toString().c_str()), G.state().turn) : FString();
+	if (Key == PathKey) return;
+	PathKey = Key;
+	Hud->PathPlots.Reset();
+	Hud->PathTurns.Reset();
+	if (!bShow) return;
+	const std::optional<std::vector<sov::PathStep>> Path = G.findPath(U->id, sov::Hex{X, Y});
+	if (!Path || Path->empty()) return;
+	Hud->PathPlots.Add(FIntPoint(U->pos.x, U->pos.y));
+	Hud->PathTurns.Add(0);
+	for (const sov::PathStep& Step : *Path)
+	{
+		if (Step.pos.x == U->pos.x && Step.pos.y == U->pos.y) continue;
+		Hud->PathPlots.Add(FIntPoint(Step.pos.x, Step.pos.y));
+		Hud->PathTurns.Add(Step.turn);
+	}
+}
+
 void ASovPlayerController::UpdateReach()
 {
 	// Where the selected unit of ours can go this turn, outlined on the map (recomputed only when it changes).
@@ -3204,6 +3236,7 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		else if (const sov::City* C = Now.city(SelectedCity)) Map->SetHighlight(C->pos.x, C->pos.y);
 		else Map->SetHighlight(-1, -1);
 		UpdateReach();
+		UpdatePath();
 	}
 	UpdatePanel();
 }
