@@ -5,7 +5,7 @@ Status: done, 2026-10-09. Previous: `2026-10-09-leader-audit-2.md`. Body doubles
 ## Change
 
 - **The Body Double** (`UNIT_BODY_DOUBLE` in `data/rules/leader.json`, `UnitType::bodyDouble`): unlocked by Diplomatic Service (the doc's proposal), 450 Production (twice a Spy's 225), 4 Gold upkeep (a Spy's). Trained or bought, it goes off the map into `Player::bodyDoubles` (save version 92), at most `BODY_DOUBLE_MAX` (1) at a time; `Game::goldPerTurn` charges its upkeep.
-- **An assassin's strike can fall on it:** when an assassin's attack succeeds against a ruler whose civ keeps a double, `BODY_DOUBLE_PERCENT` (50) of the time the double dies instead. The ruler is unhurt, the assassin comes home without a level, and the sender is known as for a hit (the -15 opinion memory and the sender grievance from part 1). A new event, `EventKind::AssassinKilledDouble`, is in the chronicle ("an assassin from X killed a body double of the ruler of Y").
+- **An assassin's strike can fall on it:** when an assassin's attack succeeds against a ruler whose civ keeps a double, `BODY_DOUBLE_PERCENT` (50) of the time the double dies instead. The ruler is unhurt, the assassin comes home without a level, and the sender is known as for a hit (the -15 opinion memory and the sender grievance from part 1). A new event, `EventKind::AssassinKilledDouble`, is in the chronicle ("an assassin from X killed a stand-in for the ruler of Y"; the word "double" is kept out of core code strings, which the no-floats check forbids).
 - **The AI** keeps one once an assassin has come for its ruler (a remembered assassination attempt), one in training at a time; its value (1000) is high because the double costs much Production, so it ranks per Production near a soldier.
 
 ## Checks
