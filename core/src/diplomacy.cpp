@@ -400,6 +400,34 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
     if (denouncing(holder, about)) add(OpinionReasonKind::WeDenounced, -6);
     if (friends(holder, about)) add(OpinionReasonKind::Friends, 12);
     if (grantsOpenBorders(about, holder)) add(OpinionReasonKind::OpenBorders, 3);
+    // 10 (diplomacy layer): shared enemies draw civs together; cities crowding ours at peace push them apart (Civ VI's
+    // near-border warning, read here as a city of theirs within OPINION_NEAR_BORDER_RANGE plots of one of ours).
+    {
+        bool shared = false;
+        for (const Player& o : state_.players) {
+            if (o.id != holder && o.id != about && isMajorCiv(o.id) && atWar(holder, o.id) && atWar(about, o.id)) shared = true;
+        }
+        if (shared) add(OpinionReasonKind::SharedEnemy, rules_->globalInt("OPINION_SHARED_ENEMY"));
+        if (!atWar(holder, about) && alliance(holder, about) == AllianceType::None) {
+            const int range = rules_->globalInt("OPINION_NEAR_BORDER_RANGE");
+            bool near = false;
+            for (const City& a : state_.cities) {
+                if (a.owner != about) continue;
+                for (const City& b : state_.cities) {
+                    if (b.owner == holder && state_.grid.distance(a.pos, b.pos) <= range) near = true;
+                }
+                if (near) break;
+            }
+            if (near) add(OpinionReasonKind::NearBorder, rules_->globalInt("OPINION_NEAR_BORDER"));
+        }
+    }
+    // The random part (DIPLOMACY_RANDOM): fixed for each pair in a game, -R..+R; toward a human it also takes the
+    // difficulty's offset (00: Settler +3 .. Deity -4), so higher levels make AIs less friendly.
+    {
+        int v = dispositionRoll(state_.setup.seed, holder, about, rules_->globalInt("OPINION_RANDOM_RANGE"));
+        if (state_.players[at(about)].human && !state_.players[at(holder)].human) v += difficulty().diplomacyOffset;
+        add(OpinionReasonKind::Disposition, v);
+    }
     // Tier 3 and 4 governments are intolerant of other governments (04: OtherGovernmentIntolerance -20 in Civ VI's
     // units; Sovereign reads it as a denouncement's weight here).
     {
@@ -459,6 +487,12 @@ std::vector<OpinionReason> Game::opinionReasons(PlayerId holder, PlayerId about)
     // An AI leader's memory of this human from earlier games: grudges and respect (player-retention §1).
     add(OpinionReasonKind::PastGames, rivalRespect(holder, about) - rivalGrudge(holder, about));
     return out;
+}
+
+int Game::dispositionRoll(uint64_t seed, PlayerId holder, PlayerId about, int range) {
+    if (range <= 0) return 0;
+    uint64_t x = seed ^ (0x9E3779B97F4A7C15ull * static_cast<uint64_t>(holder * 64 + about + 1));
+    return static_cast<int>(splitmix64(x) % static_cast<uint64_t>(2 * range + 1)) - range;
 }
 
 int Game::opinionOf(PlayerId holder, PlayerId about) const {
@@ -1570,6 +1604,9 @@ const char* opinionReasonName(OpinionReasonKind k) {
         case OpinionReasonKind::Demanded: return "Made demands of us";
         case OpinionReasonKind::PastGames: return "Our earlier wars and friendships";
         case OpinionReasonKind::OtherGovernment: return "Their government differs from ours";
+        case OpinionReasonKind::SharedEnemy: return "We fight the same enemy";
+        case OpinionReasonKind::NearBorder: return "Their cities crowd our borders";
+        case OpinionReasonKind::Disposition: return "Our leader's disposition";
     }
     return "?";
 }

@@ -2442,6 +2442,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.humanCombat = num("humanCombat");
         d.humanXpPercent = num("humanXpPercent");
         d.humanCampGoldPercent = num("humanCampGoldPercent");
+        d.diplomacyOffset = num("diplomacyOffset");
         difficulties.push_back(std::move(d));
     }
     for (const auto& [id, j] : m.tables["startingUnits"]) {

@@ -1090,6 +1090,7 @@ struct DifficultyType {
     int aiCombat = 0, aiXpPercent = 0, aiFreeBoosts = 0;  // free Eurekas and Inspirations as each era begins
     int aiExtraWarriors = 0, aiExtraBuilders = 0, aiExtraSettlers = 0;
     int humanCombat = 0, humanXpPercent = 0, humanCampGoldPercent = 0;
+    int diplomacyOffset = 0;  // added to every AI's opinion of a human (00: STANDARD_DIPLOMACY_RANDOM, DifficultyOffset)
 };
 
 // Natural disasters and climate (09: Climate and Disasters [GS]; data: climate-disasters.md).

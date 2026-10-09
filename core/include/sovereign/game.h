@@ -438,6 +438,8 @@ public:
     // How `holder` feels about `about`: the sum of its reasons, clamped to -100..100.
     int opinionOf(PlayerId holder, PlayerId about) const;
     std::vector<OpinionReason> opinionReasons(PlayerId holder, PlayerId about) const;
+    // The fixed random part of one civ's opinion of another in a game with this seed, -range..+range (10).
+    static int dispositionRoll(uint64_t seed, PlayerId holder, PlayerId about, int range);
     int agendaOpinion(PlayerId holder, PlayerId about) const;
     Relationship relationship(PlayerId holder, PlayerId about) const;
     bool canDenounce(PlayerId by, PlayerId target) const;
