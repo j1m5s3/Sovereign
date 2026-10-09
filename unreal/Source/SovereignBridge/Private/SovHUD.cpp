@@ -193,8 +193,11 @@ void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
 void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 {
 	const sov::Game& G = Sub.GetGame();
-	const FSovMirror M = BuildMirror(G, Sub.GetSession().ViewPlayer());
+	if (!Sub.Mirror.IsValid()) return;
+	const FSovMirror& M = *Sub.Mirror;
+	const sov::PlayerId View = static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer());
 	UFont* Font = GEngine->GetSmallFont();
+	const FLinearColor Ink(0.03f, 0.027f, 0.024f, 0.88f), Edge(0.42f, 0.28f, 0.11f, 1.f);
 	for (const FSovCityMarker& C : M.Cities)
 	{
 		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(C.X, C.Y, 60.0)));
@@ -202,19 +205,45 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		{
 			continue;
 		}
-		// Loyalty shows once it slips below Loyal [R&F].
-		const FString Loyalty = C.Loyalty <= 75 ? FString::Printf(TEXT("  L%d"), C.Loyalty) : FString();
-		const FString Label = FString::Printf(TEXT("%s%s  %d%s"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name, C.Population, *Loyalty);
-		float W = 0, H = 0;
-		GetTextSize(Label, W, H, Font, 1.2f);
-		DrawRect(FLinearColor(0, 0, 0, 0.7f), Screen.X - W / 2 - 8, Screen.Y - H - 2, W + 12, H + 4);
-		DrawRect(C.Color, Screen.X - W / 2 - 8, Screen.Y - H - 2, 4, H + 4);
-		DrawText(Label, FLinearColor::White, Screen.X - W / 2, Screen.Y - H, Font, 1.2f);
+		// A banner: the population in the owner's colour, the name (a star on a capital), loyalty once it slips
+		// below Loyal [R&F]; under it, our own city's production and, when hurt, its health.
+		const FString Name = FString::Printf(TEXT("%s%s"), C.bCapital ? TEXT("* ") : TEXT(""), *C.Name);
+		const FString Pop = FString::FromInt(C.Population);
+		const FString Loyalty = C.Loyalty <= 75 ? FString::Printf(TEXT("L%d"), C.Loyalty) : FString();
+		float NW = 0, NH = 0, PW = 0, PH = 0, LW = 0, LH = 0;
+		GetTextSize(Name, NW, NH, Font, 1.2f);
+		GetTextSize(Pop, PW, PH, Font, 1.2f);
+		if (!Loyalty.IsEmpty()) GetTextSize(Loyalty, LW, LH, Font, 1.0f);
+		const float BoxW = FMath::Max(PW + 10.f, NH + 4.f), H = NH + 6.f;
+		const float W = BoxW + NW + 14.f + (LW > 0 ? LW + 8.f : 0.f);
+		const float L = Screen.X - W / 2, T = Screen.Y - H - 2.f;
+		DrawRect(Edge, L - 1, T - 1, W + 2, H + 2);
+		DrawRect(Ink, L, T, W, H);
+		DrawRect(C.Color, L, T, BoxW, H);
+		DrawText(Pop, FLinearColor::White, L + (BoxW - PW) / 2, T + 3.f, Font, 1.2f);
+		DrawText(Name, FLinearColor(0.93f, 0.89f, 0.8f), L + BoxW + 7.f, T + 3.f, Font, 1.2f);
+		if (LW > 0) DrawText(Loyalty, FLinearColor(0.95f, 0.5f, 0.4f), L + BoxW + NW + 14.f, T + 5.f, Font, 1.0f);
+		float BarY = T + H + 1.f;
+		if (C.Owner == View)
+		{
+			if (const sov::City* City = G.state().city(C.Id); City && !City->queue.empty())
+			{
+				const sov::ProductionItem& Item = City->queue.front();
+				sov::Fixed Done;
+				for (const sov::ProductionProgress& Pr : City->progress)
+					if (Pr.item == Item) Done = Pr.amount;
+				const int32 Cost = Item.kind == sov::ProductionKind::District ? G.districtCost(View, Item.type) : G.productionCost(View, Item, City);
+				const float Frac = Cost > 0 ? FMath::Clamp(static_cast<float>(Done.toInt()) / Cost, 0.f, 1.f) : 0.f;
+				DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.7f), L, BarY, W, 3.f);
+				DrawRect(FLinearColor(0.95f, 0.6f, 0.25f, 0.95f), L, BarY, W * Frac, 3.f);
+				BarY += 4.f;
+			}
+		}
 		if (C.MaxHp > 0 && C.Hp < C.MaxHp)
 		{
 			const float Frac = static_cast<float>(C.Hp) / C.MaxHp;
-			DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), Screen.X - 30, Screen.Y + 4, 60, 5);
-			DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), Screen.X - 30, Screen.Y + 4, 60 * Frac, 5);
+			DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), L, BarY, W, 4.f);
+			DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), L, BarY, W * Frac, 4.f);
 		}
 	}
 	for (const FSovUnitMarker& U : M.Units)
