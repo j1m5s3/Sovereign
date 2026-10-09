@@ -512,6 +512,26 @@ void generateMap(GameState& state, const Rules& rules) {
     }
 }
 
+int startScore(const GameState& state, const Rules& rules, Hex h) {
+    const HexGrid& g = state.grid;
+    bool coastal = false;
+    for (int d = 0; d < kNumDirs; ++d) {
+        auto n = g.neighbor(h, static_cast<Dir>(d));
+        if (n) coastal = coastal || rules.terrains[static_cast<size_t>(state.plot(*n).terrain)].shallowWater;
+    }
+    int score = 0;
+    for (const Hex& n : g.within(h, 2)) {
+        const Plot& p = state.plot(n);
+        if (rules.terrains[static_cast<size_t>(p.terrain)].impassable) continue;
+        Yields y = plotYields(state, rules, p);
+        score += static_cast<int>((y[0] * 3 + y[1] * 2 + y[2]).toInt());
+    }
+    for (const Hex& n : g.within(h, 3)) score += isLandPassable(state, rules, n) ? 2 : 0;
+    if (hasFreshWater(state, rules, h)) score += 15;
+    if (coastal) score += 6;
+    return score;
+}
+
 bool chooseStartPositions(GameState& state, const Rules& rules, std::string* error) {
     const HexGrid& g = state.grid;
     struct Cand { int index; int score; };
@@ -524,26 +544,12 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
         int edge = std::min(hx.y, g.height() - 1 - hx.y);
         if (edge < 3) continue;
         int freeNeighbors = 0;
-        bool coastal = false;
         for (int d = 0; d < kNumDirs; ++d) {
             auto n = g.neighbor(hx, static_cast<Dir>(d));
-            if (!n) continue;
-            if (isLandPassable(state, rules, *n)) ++freeNeighbors;
-            const TerrainType& nt = rules.terrains[static_cast<size_t>(state.plot(*n).terrain)];
-            coastal = coastal || nt.shallowWater;
+            if (n && isLandPassable(state, rules, *n)) ++freeNeighbors;
         }
         if (freeNeighbors == 0) continue;
-        int score = 0;
-        for (const Hex& n : g.within(hx, 2)) {
-            const Plot& p = state.plot(n);
-            if (rules.terrains[static_cast<size_t>(p.terrain)].impassable) continue;
-            Yields y = plotYields(state, rules, p);
-            score += static_cast<int>((y[0] * 3 + y[1] * 2 + y[2]).toInt());
-        }
-        for (const Hex& n : g.within(hx, 3)) score += isLandPassable(state, rules, n) ? 2 : 0;
-        if (hasFreshWater(state, rules, hx)) score += 15;
-        if (coastal) score += 6;
-        cands.push_back({i, score});
+        cands.push_back({i, startScore(state, rules, hx)});
     }
     std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) {
         return a.score != b.score ? a.score > b.score : a.index < b.index;
@@ -560,6 +566,9 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
             if (chosen.size() == need) break;
         }
         if (chosen.size() == need) {
+            // The plots come best first; they go to the players in a shuffled order, so no seat has the best start.
+            Rng& rng = state.rng.get(RngStream::MapGen);
+            for (size_t i = need; i > 1; --i) std::swap(chosen[i - 1], chosen[rng.below(static_cast<uint32_t>(i))]);
             for (size_t i = 0; i < need; ++i) state.players[i].startPos = chosen[i];
             return true;
         }

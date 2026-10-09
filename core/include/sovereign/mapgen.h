@@ -17,8 +17,13 @@ namespace sov {
 SOV_API void generateMap(GameState& state, const Rules& rules);
 
 // Picks one start plot per player, spaced START_DISTANCE_MAJOR_CIVILIZATION
-// apart when the map allows (the spacing relaxes until everyone fits).
+// apart when the map allows (the spacing relaxes until everyone fits): the
+// best-scoring plots, handed to the players in a shuffled order.
 SOV_API bool chooseStartPositions(GameState& state, const Rules& rules, std::string* error);
+// How good a start h is: the food (x3), production (x2) and gold of the plots
+// within 2, 2 for each passable land plot within 3, 15 for fresh water, 6 for
+// a coast.
+SOV_API int startScore(const GameState& state, const Rules& rules, Hex h);
 
 // True if a land unit can stand on this plot.
 SOV_API bool isLandPassable(const GameState& state, const Rules& rules, Hex h);
