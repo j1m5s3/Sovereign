@@ -88,6 +88,8 @@ public:
     }
     // All valid hexes with distance <= radius, in a fixed order.
     std::vector<Hex> within(Hex center, int radius) const;
+    // The same hexes nearest first: the center, then each ring in within()'s order.
+    std::vector<Hex> nearestFirst(Hex center, int radius) const;
     // Calls fn(hex) for each hex of within(center, radius), in the same order, without building the list.
     template <typename Fn>
     void forEachWithin(Hex center, int radius, Fn&& fn) const {

@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "helpers.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/serialize.h"
 
 using namespace sov;
@@ -483,6 +484,14 @@ TEST(a_game_can_begin_in_a_later_era) {
     }
     CHECK_EQ(settlers, 3);
     CHECK_EQ(traders, 1);
+    // They stand as near the start as the land allows: every plot nearer it than one of them holds another.
+    const GameState& gs = g->state();
+    for (const Unit& u : gs.units) {
+        if (u.owner != 0 || rules().units[at(u.type)].layer != UnitLayer::Civilian) continue;
+        for (const Hex& h : gs.grid.within(p.startPos, gs.grid.distance(u.pos, p.startPos) - 1)) {
+            if (isLandPassable(gs, rules(), h)) CHECK(gs.unitAt(h, UnitLayer::Civilian, rules()) != nullptr);
+        }
+    }
     // Cities founded in it start larger, with the era's buildings.
     UnitId first = kNoUnit;
     for (const Unit& u : g->state().units) {

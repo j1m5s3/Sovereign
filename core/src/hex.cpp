@@ -75,6 +75,18 @@ std::vector<Hex> HexGrid::within(Hex center, int radius) const {
     return out;
 }
 
+std::vector<Hex> HexGrid::nearestFirst(Hex center, int radius) const {
+    const std::vector<Hex> all = within(center, radius);
+    std::vector<Hex> out;
+    out.reserve(all.size());
+    for (int d = 0; d <= radius; ++d) {
+        for (const Hex& h : all) {
+            if (distance(center, h) == d) out.push_back(h);
+        }
+    }
+    return out;
+}
+
 std::vector<Hex> HexGrid::line(Hex a, Hex b) const {
     Axial aa = toAxial(a);
     Axial bb = nearestAxial(aa, b);

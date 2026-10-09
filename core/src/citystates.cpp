@@ -110,13 +110,20 @@ bool Game::levied(const Unit& unit) const {
 void Game::processLevies(PlayerId player) {
     for (const Levy& lv : state_.levies) {
         if (lv.player != player || state_.turn < lv.until) continue;
-        const bool home = state_.players[at(lv.cityState)].alive;
+        // The units go back to the city-state's city, to the nearest plot they may stand on; with none near it, or
+        // with the city-state gone, they are disbanded.
+        const City* home = nullptr;
+        for (const City& c : state_.cities) {
+            if (c.owner == lv.cityState && (!home || c.capital)) home = &c;
+        }
         std::vector<UnitId> disband;
         for (UnitId id : lv.units) {
             Unit* u = state_.unit(id);
             if (!u || u->owner != player) continue;
             if (home) u->owner = lv.cityState;
-            else disband.push_back(id);  // nowhere to go back to
+            const std::optional<Hex> spot = home ? standingPlotNear(*u, home->pos, kLevyPlacement) : std::nullopt;
+            if (spot) relocateUnit(*u, *spot);
+            else disband.push_back(id);
         }
         for (UnitId id : disband) removeUnit(id);
         if (home) refreshVisibility(lv.cityState);

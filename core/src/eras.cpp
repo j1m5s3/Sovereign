@@ -512,7 +512,7 @@ void Game::applyEraStart() {
         for (const auto& [type, count] : es->units) {
             const UnitLayer layer = rules_->units[at(type)].layer;
             for (int k = 0; k < count; ++k) {
-                for (const Hex& h : state_.grid.within(p.startPos, 3)) {
+                for (const Hex& h : state_.grid.nearestFirst(p.startPos, 3)) {
                     if (isLandPassable(state_, *rules_, h) && !state_.unitAt(h, layer, *rules_) && !state_.foreignUnitAt(h, p.id)) {
                         spawnUnit(type, p.id, h);
                         break;

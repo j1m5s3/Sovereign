@@ -202,6 +202,59 @@ TEST(a_suzerain_levies_a_city_states_army) {
     CHECK(h->state().levies.empty());
 }
 
+// Levied units never share a plot with the city-state's units or stand in its city, and when the levy ends they go
+// back to the city-state's city (05: Stacking; Sovereign).
+TEST(levied_units_stand_alone_and_go_home) {
+    GameState s = csState();
+    s.players[0].envoys[2] = 3;
+    s.players[0].gold = Fixed::fromInt(1000);
+    const Hex city{16, 6}, field{17, 7};
+    const UnitId garrison = addUnit(s, "UNIT_WARRIOR", 2, city);
+    const UnitId guard = addUnit(s, "UNIT_WARRIOR", 2, field);
+    const UnitId builder = addUnit(s, "UNIT_BUILDER", 2, field);
+    const Hex sea{20, 10};  // an embarked Warrior alone on the water stays there
+    s.plot(sea).terrain = rules().terrain("TERRAIN_COAST");
+    const UnitId swimmer = addUnit(s, "UNIT_WARRIOR", 2, sea);
+    const Hex bay{20, 4};  // one embarked on its Builder's plot steps ashore, past the water north of it
+    for (Hex h : {bay, Hex{19, 3}, Hex{20, 3}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+    const UnitId wader = addUnit(s, "UNIT_WARRIOR", 2, bay);
+    addUnit(s, "UNIT_BUILDER", 2, bay);
+    auto g = Game::fromScenario(rules(), s);
+    REQUIRE(g->submit(Command::levyMilitary(0, 2)) == CommandError::Ok);
+    const HexGrid& grid = g->state().grid;
+    const Unit& out = *g->state().unit(garrison);
+    CHECK_EQ(out.owner, 0);
+    CHECK_EQ(grid.distance(out.pos, city), 1);
+    CHECK(g->mayStand(out, out.pos));
+    const Unit& off = *g->state().unit(guard);
+    CHECK_EQ(grid.distance(off.pos, field), 1);
+    CHECK(g->mayStand(off, off.pos));
+    CHECK(g->state().unit(builder)->pos == field);
+    CHECK(!g->state().foreignUnitAt(out.pos, 0) && !g->state().foreignUnitAt(off.pos, 0));
+    CHECK(g->state().unit(swimmer)->pos == sea);
+    const Unit& ashore = *g->state().unit(wader);
+    CHECK_EQ(grid.distance(ashore.pos, bay), 1);
+    CHECK(!rules().terrains[at(g->state().plot(ashore.pos).terrain)].water);
+    // The levy runs out with one of them far off, on its suzerain's Builder: both go back to the city-state's city.
+    GameState t = g->state();
+    t.levies[0].until = t.turn;
+    t.unit(guard)->pos = {5, 6};
+    addUnit(t, "UNIT_BUILDER", 0, {5, 6});
+    for (Unit& u : t.units) u.activity = Activity::Sleep;
+    auto h = Game::fromScenario(rules(), std::move(t));
+    sovtest::endTurns(*h, 3);
+    std::vector<Hex> held;
+    for (UnitId id : {garrison, guard}) {
+        const Unit& u = *h->state().unit(id);
+        CHECK_EQ(u.owner, 2);
+        CHECK(grid.distance(u.pos, city) <= 1);
+        CHECK(!h->state().foreignUnitAt(u.pos, 2));
+        held.push_back(u.pos);
+    }
+    CHECK(held[0] != held[1]);
+    CHECK(h->state().unit(builder)->pos == field);
+}
+
 TEST(a_suzerain_enjoys_its_city_states_bonus) {
     // Geneva: +15% Science in every city while at peace with all majors.
     GameState s = csState();
