@@ -14,12 +14,14 @@ import kit_districts  # noqa: E402
 import kit_fields  # noqa: E402
 import kit_nature  # noqa: E402
 import kit_resources  # noqa: E402
+import kit_towns  # noqa: E402
 import kit_wonders  # noqa: E402
 import kitlib  # noqa: E402
 import textures  # noqa: E402
 
 KITS = {"Nature": kit_nature, "Classical": kit_classical, "Fields": kit_fields, "Districts": kit_districts,
-        "Wonders": kit_wonders, "Resources": kit_resources}
+        "Wonders": kit_wonders, "Resources": kit_resources,
+        "Towns": kit_towns}
 try:
     import kit_figures  # noqa: E402
 

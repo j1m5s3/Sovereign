@@ -71,6 +71,7 @@ struct FSovCityMarker
 	int32 Hp = 0, MaxHp = 0;
 	bool bCapital = false;
 	int32 Loyalty = 100;
+	int32 Era = 0;  // its owner's era (Game::playerEra), for the style the map draws it in
 };
 
 // A wonder's plot: built, or reserved while it is being built.

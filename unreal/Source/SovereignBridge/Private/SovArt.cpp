@@ -100,6 +100,13 @@ TArray<FString> RequiredAssets()
 	{
 		Out.Add(MeshPath(TEXT("Classical"), Name));
 	}
+	for (const TCHAR* Style : {TEXT("Medieval_"), TEXT("Industrial_"), TEXT("Modern_")})
+	{
+		for (const TCHAR* Part : {TEXT("House_A"), TEXT("House_B"), TEXT("House_C"), TEXT("Hall"), TEXT("Palace")})
+		{
+			Out.Add(MeshPath(TEXT("Towns"), FString(Style) + Part));
+		}
+	}
 	for (const TCHAR* Name : {TEXT("Sheaf"), TEXT("Beast"), TEXT("Fish"), TEXT("Shell"), TEXT("Ore"), TEXT("Blocks"), TEXT("Shrub"),
 			 TEXT("OilPool"), TEXT("Hive"), TEXT("Goods")})
 	{

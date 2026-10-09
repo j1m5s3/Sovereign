@@ -238,6 +238,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		Marker.MaxHp = Game.cityMaxHp();
 		Marker.bCapital = C.capital;
 		Marker.Loyalty = C.loyalty;
+		Marker.Era = Game.playerEra(C.owner);
 		for (const sov::CityWonder& W : C.wonders)
 		{
 			if (Game.visibility(View, W.pos) == sov::Visibility::Unrevealed)

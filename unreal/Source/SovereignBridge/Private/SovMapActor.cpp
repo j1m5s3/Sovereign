@@ -173,6 +173,22 @@ const FResourceLook* ResourceLook(const FString& Id)
 	return Looks.Find(Id.RightChop(9));
 }
 
+// A city's buildings in its owner's era (tools/art/blender/kit_towns.py): the Classical kit through the Classical
+// era, then Medieval (Medieval, Renaissance), Industrial (Industrial, Modern) and Modern (Atomic on). Kit and the
+// mesh name for a palace (capital), hall (other cities) or house 0-2; the Classical kit when the Towns art is missing.
+TPair<const TCHAR*, FString> CityPiece(int32 Era, int32 Kind)
+{
+	static const TCHAR* Classical[] = {TEXT("Palace"), TEXT("Landmark"), TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+	static const TCHAR* Parts[] = {TEXT("Palace"), TEXT("Hall"), TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+	const TCHAR* Style = Era >= 6 ? TEXT("Modern_") : Era >= 4 ? TEXT("Industrial_") : Era >= 2 ? TEXT("Medieval_") : nullptr;
+	if (Style)
+	{
+		const FString Name = FString(Style) + Parts[Kind];
+		if (SovArt::Mesh(TEXT("Towns"), Name)) return {TEXT("Towns"), Name};
+	}
+	return {TEXT("Classical"), Classical[Kind]};
+}
+
 // Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
 void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 {
@@ -629,7 +645,8 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(CityMarkers, i, CubeMesh);
 		const double Z = SurfaceZ(City.X, City.Y);
 		// A small Palace for capitals and a hall for other cities, when the art exists.
-		if (SovArt::SetKitMesh(C, TEXT("Classical"), City.bCapital ? TEXT("Palace") : TEXT("Landmark"), FLinearColor::White))
+		const TPair<const TCHAR*, FString> Centre = CityPiece(City.Era, City.bCapital ? 0 : 1);
+		if (SovArt::SetKitMesh(C, Centre.Key, Centre.Value, City.Color))
 		{
 			C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z));
 			C->SetRelativeScale3D(FVector(City.bCapital ? 0.045 : 0.06));
@@ -648,7 +665,6 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	int32 HouseCount = 0;
 	if (SovArt::Mesh(TEXT("Classical"), TEXT("House_A")))
 	{
-		static const TCHAR* Kinds[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
 		for (const FSovCityMarker& City : Mirror.Cities)
 		{
 			const FVector At = SovHex::Center(City.X, City.Y, SurfaceZ(City.X, City.Y));
@@ -660,7 +676,8 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				const double A = PI * (0.78 + 1.44 * ((k * 3) % 8) / 7.0) + ((H >> k) % 7) * 0.03;
 				const double R = 64.0 + ((H >> (k + 3)) % 4) * 3.0;
 				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
-				SovArt::SetKitMesh(C, TEXT("Classical"), Kinds[(H + k) % 3], FLinearColor::White);
+				const TPair<const TCHAR*, FString> House = CityPiece(City.Era, 2 + (H + k) % 3);
+				SovArt::SetKitMesh(C, House.Key, House.Value, FLinearColor::White);
 				ShadeKit(C, FLinearColor(0.7f, 0.68f, 0.65f));
 				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
 				C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(A)) + 90.f, 0.f));
