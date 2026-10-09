@@ -3,5 +3,8 @@ core/build*/
 /build*/
 __pycache__/
 
+# Challenge board test data (written next to the test binary)
+/board_test/
+
 # Art pipeline intermediates (tools/art/build_art.py)
 /art/build/
