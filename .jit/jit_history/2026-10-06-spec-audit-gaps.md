@@ -43,4 +43,4 @@ Status: done, 2026-10-06. Previous: `jit_history/2026-10-06-ai-pace.md`. Two rea
 ## Decisions (Claude's recommendations; James gave standing consent)
 
 - City strength from districts: 02 (+2 per specialty district) and 03 (+2 for Encampment, Government Plaza and Diplomatic Quarter only) disagree. The core keeps 03's list.
-- 05 says the Amphibious promotion removes the river-crossing cost; Civ VI does not, so the core leaves it.
+- 05 says the Amphibious promotion removes the river-crossing cost; Civ VI does not, so the core leaves it. (Superseded by #198: Amphibious units cross rivers at no extra cost, as 05 and the promotion's data say.)

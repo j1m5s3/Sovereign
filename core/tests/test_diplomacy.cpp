@@ -201,10 +201,46 @@ TEST(units_that_ignore_borders_cross_closed_ones) {
     s.players[1].civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
     const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {12, 6});
     const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, {12, 7});
+    const UnitId trader = addUnit(s, "UNIT_TRADER", 0, {12, 8});
+    const UnitId general = addUnit(s, "UNIT_GREAT_GENERAL", 0, {12, 9});
+    s.units.back().greatPerson = rules().greatPerson("GREAT_PERSON_BOUDICA");
+    const UnitId plainGeneral = addUnit(s, "UNIT_GREAT_GENERAL", 0, {12, 10});  // no great person in it
     auto g = Game::fromScenario(rules(), std::move(s));
-    // After Early Empire only units at war, or able to ignore borders like religious units (06), may enter.
-    CHECK(!g->moveCost(*g->state().unit(scout), {12, 6}, {13, 6}));
+    // After Early Empire only units at war, or able to ignore borders like religious units (06), Traders and Great People
+    // (05: Borders), may enter.
+    const auto enters = [&](UnitId id) { return g->moveCost(*g->state().unit(id), {12, 6}, {13, 6}).has_value(); };
+    CHECK(!enters(scout));
     CHECK_EQ(g->moveCost(*g->state().unit(missionary), {12, 6}, {13, 6}).value_or(Fixed()), Fixed::fromInt(1));
+    CHECK(enters(trader));
+    CHECK(enters(general));
+    CHECK(!enters(plainGeneral));
+}
+
+// An alliance opens the allies' borders to each other (05: Borders), for as long as it lasts.
+TEST(an_alliance_opens_borders) {
+    GameState s = diploState();
+    for (Player& p : s.players) p.civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;
+    const UnitId scout = addUnit(s, "UNIT_SCOUT", 0, {12, 6});
+    const auto ally = [](GameState& st, int until) {
+        for (int a = 0; a < 2; ++a) {
+            st.players[static_cast<size_t>(a)].relations.resize(2);
+            Relation& r = st.players[static_cast<size_t>(a)].relations[static_cast<size_t>(1 - a)];
+            r.alliance = AllianceType::Research;
+            r.allianceUntil = until;
+        }
+    };
+    const auto enters = [&](const GameState& st) {
+        auto g = Game::fromScenario(rules(), st);
+        return g->moveCost(*g->state().unit(scout), {12, 6}, {13, 6}).has_value();
+    };
+    CHECK(!enters(s));
+    ally(s, s.turn + 30);
+    CHECK(enters(s));
+    auto g = Game::fromScenario(rules(), s);
+    CHECK(g->grantsOpenBorders(0, 1));
+    CHECK(g->grantsOpenBorders(1, 0));
+    ally(s, s.turn - 1);  // over
+    CHECK(!enters(s));
 }
 
 TEST(a_losing_ai_takes_peace) {

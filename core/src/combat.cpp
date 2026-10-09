@@ -290,12 +290,14 @@ Game::MoveTraits Game::moveTraits(const Unit& unit) const {
     t.ignoreHills = hills > 0;
     t.ignoreForest = forest > 0;
     t.ignoreTerrain = terrain > 0;
-    t.ignoreBorders = borders > 0;
+    const UnitType& ut = typeOf(*rules_, unit);
+    // Great People and Traders enter foreign lands like the units with the ability (05: Borders).
+    t.ignoreBorders = borders > 0 || unit.greatPerson != kNone || ut.id == "UNIT_TRADER";
     t.noRiver = rivers > 0;
     // Missionary Zeal: religious units ignore terrain (06).
-    t.zeal = typeOf(*rules_, unit).religiousStrength > 0 &&
+    t.zeal = ut.religiousStrength > 0 &&
              sumPlayerModifiers(state_, *rules_, state_.players[static_cast<size_t>(unit.owner)], ModEffect::ReligiousUnitsIgnoreTerrain) > Fixed();
-    t.rockBand = typeOf(*rules_, unit).id == "UNIT_ROCK_BAND";
+    t.rockBand = ut.id == "UNIT_ROCK_BAND";
     return t;
 }
 
@@ -1149,6 +1151,8 @@ void Game::applyCombat(const Command& c) {
             } else if (target->hp <= 0) {
                 noteKill(*target, nullptr);
                 removeUnit(target->id);
+            } else {
+                awardXp(*target, rules_->globalInt("EXPERIENCE_DISTRICT_VS_UNIT"), false);  // a unit a district fires on (05: XP)
             }
             refreshVisibility(them);
             return;
@@ -1722,12 +1726,11 @@ void Game::healAndFortify(PlayerId pid) {
     const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
     const int fortifyMax = rules_->globalInt("FORTIFY_TURN_MAX");
     const Player& owner = state_.players[static_cast<size_t>(pid)];
-    // Chaplains (06): Apostles that heal the units next to them.
-    std::vector<std::pair<Hex, int>> chaplains;
+    // Medics and Supply Convoys (05) and Chaplains (06: Apostles) heal the units on and next to their plot.
+    std::vector<std::pair<Hex, int>> healers;
     for (const Unit& o : state_.units) {
-        if (o.owner == pid && !o.promotions.empty() && typeOf(*rules_, o).spreadCharges > 0) {
-            if (const int extra = unitEffectTotal(o, UnitEffectKind::HealAura); extra > 0) chaplains.push_back({o.pos, extra});
-        }
+        if (o.owner != pid) continue;
+        if (const int extra = unitEffectTotal(o, UnitEffectKind::HealAura); extra > 0) healers.push_back({o.pos, extra});
     }
     // Pantheon and religion (06): extra healing in and next to the player's Holy Sites.
     std::vector<std::pair<Hex, int>> holySites;
@@ -1763,8 +1766,11 @@ void Game::healAndFortify(PlayerId pid) {
             else heal = rules_->globalInt(naval ? "COMBAT_HEAL_NAVAL_NEUTRAL" : "COMBAT_HEAL_LAND_NEUTRAL") + unitEffectTotal(u, UnitEffectKind::HealNeutral);
             if (u.wonderAbilities & 2) heal += 10;  // the Fountain of Youth (01)
             if (zahrawi && ut.domain == Domain::Land) heal += 5;  // Abu al-Qasim al-Zahrawi (07)
-            // Chaplain (06): a friendly Apostle next to it.
-            for (const auto& [pos, extra] : chaplains) heal += state_.grid.distance(pos, u.pos) <= 1 ? extra : 0;
+            // The best healer within a plot; healers do not add up (Sovereign reading of the base game, where two Medics
+            // heal no more than one).
+            int aura = 0;
+            for (const auto& [pos, extra] : healers) aura = std::max(aura, state_.grid.distance(pos, u.pos) <= 1 ? extra : 0);
+            heal += aura;
             int holyExtra = 0;
             for (const auto& [pos, extra] : holySites) holyExtra = std::max(holyExtra, state_.grid.distance(pos, u.pos) <= 1 ? extra : 0);
             u.hp = std::min(maxHp, u.hp + heal + holyExtra);

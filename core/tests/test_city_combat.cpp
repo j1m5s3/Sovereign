@@ -313,6 +313,7 @@ TEST(walled_city_strikes_once_per_turn) {
     CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::Ok);
     const int hp = unit(*g, enemy).hp;
     CHECK(hp < 100);
+    CHECK_EQ(unit(*g, enemy).xp, rules().globalInt("EXPERIENCE_DISTRICT_VS_UNIT"));  // 05: XP for the unit fired on
     CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::CannotStrike);
     endTurns(*g, 2);
     CHECK_EQ(g->submit(Command::cityStrike(0, mine, {6, 5})), CommandError::Ok);
