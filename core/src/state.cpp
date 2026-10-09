@@ -250,6 +250,7 @@ std::string describe(const Command& c) {
         case CommandType::BribeCamp: return s + "BribeCamp camp" + std::to_string(c.id);
         case CommandType::HireFromCamp: return s + "HireFromCamp camp" + std::to_string(c.id);
         case CommandType::BuildIndustry: return s + "BuildIndustry u" + std::to_string(c.id);
+        case CommandType::CreateProduct: return s + "CreateProduct u" + std::to_string(c.id);
         case CommandType::LiberateCity: return s + "LiberateCity city" + std::to_string(c.id);
         case CommandType::Airlift: return s + "Airlift " + std::to_string(c.id) + " -> " + std::to_string(c.target.x) + "," + std::to_string(c.target.y);
         case CommandType::BuyPolicyChanges: return s + "BuyPolicyChanges";

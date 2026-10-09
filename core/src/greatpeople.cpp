@@ -172,11 +172,18 @@ int Game::extraPalaceSlots(const City& city, TypeIndex building) const {
     return rules_->buildings[at(building)].id == "BUILDING_BANK" && usedBy(city.owner, Gp::Medici) ? 2 : 0;
 }
 
+int Game::extraProductSlots(TypeIndex building) const {
+    if (!state_.setup.monopolies) return 0;
+    const std::string& id = rules_->buildings[at(building)].id;
+    return id == "BUILDING_STOCK_EXCHANGE" || id == "BUILDING_SEAPORT" ? 3 : 0;
+}
+
 int Game::greatWorkSlots(const City& city, const std::string& slot) const {
     int n = 0;
     for (TypeIndex b : city.buildings) {
         for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) n += s == slot ? count : 0;
         if (slot == "PALACE") n += extraPalaceSlots(city, b);
+        if (slot == "PRODUCT") n += extraProductSlots(b);
     }
     return n;
 }
@@ -184,8 +191,9 @@ int Game::greatWorkSlots(const City& city, const std::string& slot) const {
 TypeIndex Game::freeGreatWorkSlot(const City& city, TypeIndex workType) const {
     const GreatWorkType& w = rules_->greatWorkTypes[at(workType)];
     const bool palace = std::find(w.slots.begin(), w.slots.end(), "PALACE") != w.slots.end();
+    const bool product = std::find(w.slots.begin(), w.slots.end(), "PRODUCT") != w.slots.end();
     for (TypeIndex b : city.buildings) {
-        int free = palace ? extraPalaceSlots(city, b) : 0;
+        int free = (palace ? extraPalaceSlots(city, b) : 0) + (product ? extraProductSlots(b) : 0);
         for (const auto& [s, count] : rules_->buildings[at(b)].greatWorkSlots) {
             if (std::find(w.slots.begin(), w.slots.end(), s) != w.slots.end()) free += count;
         }

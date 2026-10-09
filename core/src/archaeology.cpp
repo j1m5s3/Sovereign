@@ -62,6 +62,7 @@ int Game::freeSlotsFor(const City& city, TypeIndex building, TypeIndex workType)
     if (building < 0 || static_cast<size_t>(building) >= rules_->buildings.size() || !city.has(building)) return 0;
     const GreatWorkType& w = rules_->greatWorkTypes[at(workType)];
     int free = std::find(w.slots.begin(), w.slots.end(), "PALACE") != w.slots.end() ? extraPalaceSlots(city, building) : 0;  // Medici (07)
+    if (std::find(w.slots.begin(), w.slots.end(), "PRODUCT") != w.slots.end()) free += extraProductSlots(building);  // Monopolies (07)
     for (const auto& [slot, count] : rules_->buildings[at(building)].greatWorkSlots) {
         if (std::find(w.slots.begin(), w.slots.end(), slot) != w.slots.end()) free += count;
     }

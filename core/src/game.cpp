@@ -225,6 +225,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     for (size_t i = 0; i < static_cast<size_t>(Cs::Count); ++i) cityStates_[i] = rules_->cityState(kCityStates[i]);
     static const char* const kProducts[] = {"RESOURCE_TOYS", "RESOURCE_COSMETICS", "RESOURCE_JEANS", "RESOURCE_PERFUME"};
     for (size_t i = 0; i < 4; ++i) products_[i] = rules_->resource(kProducts[i]);
+    productWork_ = rules_->greatWorkType("PRODUCT");
     oil_ = rules_->resource("RESOURCE_OIL");
     preserve_ = rules_->district("DISTRICT_PRESERVE");
     spices_[0] = rules_->resource("RESOURCE_CINNAMON");
@@ -512,6 +513,7 @@ CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePa
             if (u->charges <= 0 || !isBuilder(rules_->units[static_cast<size_t>(u->type)]) || u->movesLeft <= Fixed()) return CommandError::CannotImprove;
             return industryProblem(c.player, u->pos);
         }
+        case CommandType::CreateProduct: return productProblem(c.player, c.id);
         case CommandType::SetActivity: {
             if (c.arg < 0 || c.arg > static_cast<int32_t>(Activity::Skip)) return CommandError::BadActivity;
             auto a = static_cast<Activity>(c.arg);
@@ -1398,6 +1400,7 @@ void Game::apply(const Command& c) {
         case CommandType::BuildImprovement:
         case CommandType::Harvest: applyBuilder(c); break;
         case CommandType::BuildIndustry: applyIndustry(c); break;
+        case CommandType::CreateProduct: applyProduct(c); break;
         case CommandType::DeclareWar:
         case CommandType::MakePeace:
         case CommandType::Attack:

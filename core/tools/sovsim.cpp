@@ -269,13 +269,18 @@ int main(int argc, char** argv) {
                     wars, attacks, promotions, strikes, captured, capitals, razed, eliminated, camps,
                     static_cast<long>(game->state().nextCampId - 1) - camps);
         if (game->state().setup.monopolies) {
-            long industries = 0, corporations = 0, monopolies = 0;
+            long industries = 0, corporations = 0, monopolies = 0, products = 0;
             for (const Plot& pl : game->state().plots) {
                 industries += pl.industry == 1;
                 corporations += pl.industry == 2;
             }
+            const TypeIndex product = game->rules().greatWorkType("PRODUCT");
+            for (const City& c : game->state().cities) {
+                for (const GreatWork& w : c.greatWorks) products += w.type == product ? 1 : 0;
+            }
             for (const Player& p : game->state().players) monopolies += game->monopolySources(p.id);
-            std::printf("monopolies: %ld industries, %ld corporations, %ld luxury sources under a monopoly\n", industries, corporations, monopolies);
+            std::printf("monopolies: %ld industries, %ld corporations, %ld products, %ld luxury sources under a monopoly\n", industries,
+                        corporations, products, monopolies);
         }
         if (game->state().setup.barbarianClans) {
             long fromClans = 0;
