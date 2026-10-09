@@ -537,8 +537,13 @@ std::vector<uint8_t> serializeState(const GameState& s) {
             for (TypeIndex t : {m.terrain, m.feature, m.improvement, m.district, m.wonder}) w.i16(t);
             w.i8(m.owner);
             w.i8(m.route);
-            w.u8(static_cast<uint8_t>(m.routePillaged | m.pillaged << 1 | m.village << 2 | m.districtComplete << 3 | m.districtPillaged << 4 |
-                                      m.wonderComplete << 5 | m.capital << 6));
+            uint8_t flags = 0;
+            int bit = 0;
+            for (bool on : {m.routePillaged, m.pillaged, m.village, m.districtComplete, m.districtPillaged, m.wonderComplete, m.capital}) {
+                if (on) flags = static_cast<uint8_t>(flags | 1 << bit);
+                ++bit;
+            }
+            w.u8(flags);
             w.u8(m.antiquity);
             w.i32(m.city);
             if (m.city == kNoCity) continue;
