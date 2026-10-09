@@ -1235,14 +1235,21 @@ void build(View& v, UnitId id) {
     std::stable_sort(targets.begin(), targets.end(), [](const std::pair<int, Hex>& a, const std::pair<int, Hex>& b) { return a.first > b.first; });
     // The best plot it can reach. A move to one out of its reach (a sea resource before it may embark, another
     // landmass) fails, and the Builder would wait on it for good: so once a move fails, the reach is found, and only
-    // the plots in it are tried after (a failed move changes nothing).
-    std::vector<uint8_t> reach;
+    // the plots in it are tried after (a failed move changes nothing). A plot at sea is reached by embarking (Builders
+    // may after Sailing; 05: Embarkation), any other over land.
+    std::vector<uint8_t> reach[2];  // over land; embarking
+    bool failed = false;
     int tries = 0;
     for (const std::pair<int, Hex>& target : targets) {
         const Hex h = target.second;
         if (h == u->pos) break;  // out of moves on the plot to improve: it builds there next turn
-        if (!reach.empty() && !reach[static_cast<size_t>(s.grid.index(h))]) continue;
-        if (v.game.submit(Command::move(v.me, id, h, true)) == CommandError::Ok) {
+        const bool sea = v.r.terrains[at(s.plot(h).terrain)].water;
+        if (failed) {
+            std::vector<uint8_t>& known = reach[sea ? 1 : 0];
+            if (known.empty()) known = v.game.moveReach(id, !sea);
+            if (!known[static_cast<size_t>(s.grid.index(h))]) continue;
+        }
+        if (v.game.submit(Command::move(v.me, id, h, !sea)) == CommandError::Ok) {
             v.works.push_back(h);
             u = s.unit(id);
             if (u && u->pos == h && u->movesLeft > Fixed()) {
@@ -1254,7 +1261,7 @@ void build(View& v, UnitId id) {
             return;
         }
         if (++tries == 6) break;
-        if (reach.empty()) reach = v.game.moveReach(id, true);
+        failed = true;
     }
     v.game.submit(Command::setActivity(v.me, id, Activity::Skip));
 }
