@@ -2349,6 +2349,7 @@ void ASovPlayerController::UpdateGameUI()
 			})
 			.OnGovDedication_Lambda([this](int32 D) { Send(sov::Command::chooseDedication(Me(), static_cast<sov::TypeIndex>(D))); })
 			.OnGovBuy_Lambda([this]() { Send(sov::Command::buyPolicyChanges(Me())); })
+			.OnEmpireCity_Lambda([this](int32 Id) { SelectCity(Id, true); })
 			.OnLens_Lambda([this](int32 Lens) {
 				// A lens is this machine's view: the map redraws with it (again: off).
 				USovGameSubsystem* S = Subsystem();
@@ -2868,6 +2869,29 @@ void ASovPlayerController::UpdateGameUI()
 	if (bEmpireOpen)
 	{
 		for (const FSovStatusLine& L : SovStatusLines(G, Me())) M.EmpireLines.Add({NAME_None, L.Text, TEXT(""), L.Color});
+		// Our cities, the capital first: population, what each builds; yields on hover. A click selects one.
+		for (const sov::City& Ci : S.cities)
+		{
+			if (Ci.owner != Me()) continue;
+			const sov::CityReport Rep = G.cityReport(Ci.id);
+			FSovUIChoice Row;
+			Row.Label = FString::Printf(TEXT("%s%s  %d"), Ci.capital ? TEXT("* ") : TEXT(""), *Str(Ci.name), Ci.population);
+			Row.Right = Ci.queue.empty() ? FString(TEXT("needs production")) : ItemName(R, Ci.queue.front());
+			static const TCHAR* const Names[] = {TEXT("Food"), TEXT("Production"), TEXT("Gold"), TEXT("Science"), TEXT("Culture"), TEXT("Faith")};
+			for (size_t y = 0; y < sov::kNumYields; ++y)
+				Row.Tip += FString::Printf(TEXT("%s%s %s"), y ? TEXT(", ") : TEXT(""), *Str(Rep.yields[y].toString()), Names[y]);
+			Row.Tip += FString::Printf(TEXT("\nLoyalty %d, amenities %d of %d"), Ci.loyalty, Rep.amenities, Rep.amenitiesNeeded);
+			if (Ci.capital)
+			{
+				M.EmpireCities.Insert(Row, 0);
+				M.EmpireCityIds.Insert(Ci.id, 0);
+			}
+			else
+			{
+				M.EmpireCities.Add(Row);
+				M.EmpireCityIds.Add(Ci.id);
+			}
+		}
 	}
 	// The lens and the minimap, with the camera's place on it (plan D, step 6).
 	M.Lens = static_cast<int32>(Sub->Lens);

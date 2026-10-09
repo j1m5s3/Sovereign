@@ -121,6 +121,9 @@ struct FSovUIModel
 	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).
 	bool bEmpire = false;
 	TArray<FSovUIStat> EmpireLines;
+	// Our cities in the Empire panel: Label the city, Right what it builds, Tip its yields; EmpireCityIds by index.
+	TArray<FSovUIChoice> EmpireCities;
+	TArray<int32> EmpireCityIds;
 	// The map lens (ESovLens) with its legend, and the minimap with the camera's place on it (plan D, step 6).
 	int32 Lens = 0;
 	TArray<FSovLensKey> LensLegend;
@@ -152,6 +155,7 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnGovCard)
 	SLATE_EVENT(TDelegate<void(int32)>, OnGovDedication)
 	SLATE_EVENT(TDelegate<void()>, OnGovBuy)
+	SLATE_EVENT(TDelegate<void(int32)>, OnEmpireCity)  // a city in the Empire panel (its id)
 	SLATE_EVENT(TDelegate<void(int32)>, OnLens)     // a lens button (ESovLens)
 	SLATE_EVENT(TDelegate<void(FVector2D)>, OnMinimap)  // the minimap clicked, 0..1 across and down
 	SLATE_END_ARGS()
@@ -194,6 +198,8 @@ private:
 	FString EndKey;
 	TSharedPtr<SVerticalBox> LegendBox;
 	TSharedPtr<SVerticalBox> EmpireBox;
+	TSharedPtr<SVerticalBox> EmpireCityBox;
+	TDelegate<void(int32)> OnEmpireCity;
 	TSharedPtr<SVerticalBox> HoverBox;
 	TSharedPtr<SVerticalBox> ReaderBox;
 	TSharedPtr<class SScrollBox> ReaderScroll;

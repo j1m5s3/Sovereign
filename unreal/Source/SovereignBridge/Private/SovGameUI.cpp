@@ -41,6 +41,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnGovCard = Args._OnGovCard;
 	OnGovDedication = Args._OnGovDedication;
 	OnGovBuy = Args._OnGovBuy;
+	OnEmpireCity = Args._OnEmpireCity;
 	OnLens = Args._OnLens;
 	OnMinimap = Args._OnMinimap;
 	auto Visible = [this](TFunction<bool()> Test) {
@@ -180,7 +181,12 @@ void SSovGameUI::Construct(const FArguments& Args)
 							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
 						]
 					]
-					+ SVerticalBox::Slot().FillHeight(1.f)[SNew(SScrollBox) + SScrollBox::Slot()[SAssignNew(EmpireBox, SVerticalBox)]]
+					+ SVerticalBox::Slot().FillHeight(1.f)
+					[
+						SNew(SScrollBox)
+						+ SScrollBox::Slot()[SAssignNew(EmpireCityBox, SVerticalBox)]
+						+ SScrollBox::Slot().Padding(0, 8, 0, 0)[SAssignNew(EmpireBox, SVerticalBox)]
+					]
 				]
 			]
 		]
@@ -649,9 +655,28 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	}
 	FString Em = Model.bEmpire ? FString(TEXT("E")) : FString();
 	for (const FSovUIStat& L : Model.EmpireLines) Em += L.Text + TEXT("|");
+	for (const FSovUIChoice& Ci : Model.EmpireCities) Em += Ci.Label + Ci.Right + TEXT("|");
 	if (Em != EmpireKey)
 	{
 		EmpireKey = Em;
+		EmpireCityBox->ClearChildren();
+		if (Model.EmpireCities.Num() > 0)
+			EmpireCityBox->AddSlot().AutoHeight().Padding(0, 0, 0, 3)[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("CITIES")))];
+		for (int32 i = 0; i < Model.EmpireCities.Num(); ++i)
+		{
+			const FSovUIChoice& Ci = Model.EmpireCities[i];
+			const int32 Id = Model.EmpireCityIds.IsValidIndex(i) ? Model.EmpireCityIds[i] : -1;
+			EmpireCityBox->AddSlot().AutoHeight().Padding(0, 1)
+			[
+				SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(Ci.Tip))
+				.OnClicked_Lambda([this, Id]() { OnEmpireCity.ExecuteIfBound(Id); return FReply::Handled(); })
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(11, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(Ci.Label))]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(Ci.Right))]
+				]
+			];
+		}
 		EmpireBox->ClearChildren();
 		for (const FSovUIStat& L : Model.EmpireLines)
 			EmpireBox->AddSlot().AutoHeight().Padding(0, 2)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(L.Color).AutoWrapText(true).Text(FText::FromString(L.Text))];
