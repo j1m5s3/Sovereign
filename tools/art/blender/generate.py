@@ -10,11 +10,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import kit_classical  # noqa: E402
+import kit_fields  # noqa: E402
 import kit_nature  # noqa: E402
 import kitlib  # noqa: E402
 import textures  # noqa: E402
 
-KITS = {"Nature": kit_nature, "Classical": kit_classical}
+KITS = {"Nature": kit_nature, "Classical": kit_classical, "Fields": kit_fields}
 try:
     import kit_figures  # noqa: E402
 

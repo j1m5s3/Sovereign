@@ -182,6 +182,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		}
 		T.bImproved = Pl.improvement != sov::kNone;
 		T.bPillaged = T.bImproved && Pl.pillagedTurns > 0;
+		if (T.bImproved) T.Improvement = UTF8_TO_TCHAR(Rules.improvements[static_cast<size_t>(Pl.improvement)].id.c_str());
 		for (int32 D = 0; D < sov::kNumDirs; ++D)
 		{
 			const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));
