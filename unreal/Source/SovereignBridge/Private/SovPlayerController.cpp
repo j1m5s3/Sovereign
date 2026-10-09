@@ -2036,6 +2036,80 @@ void ASovPlayerController::PickAbsolute(int32 Index)
 	Pick(Index % PageSize);
 }
 
+const TArray<FString>& ASovPlayerController::TreeUnlocks(bool bCivics)
+{
+	const sov::Rules& R = Subsystem()->GetGame().rules();
+	TArray<FString>& Out = bCivics ? CivicUnlocks : TechUnlocks;
+	const size_t Count = bCivics ? R.civics.size() : R.techs.size();
+	if (Out.Num() == static_cast<int32>(Count)) return Out;
+	Out.Init(FString(), static_cast<int32>(Count));
+	auto Add = [&](const auto& Types, auto Field) {
+		for (const auto& Type : Types)
+		{
+			const sov::Unlock& U = Type.*Field;
+			if (U.none() || U.civic != bCivics || !Out.IsValidIndex(U.index)) continue;
+			FString& Line = Out[U.index];
+			Line += (Line.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(Type.name);
+		}
+	};
+	Add(R.units, &sov::UnitType::unlock);
+	Add(R.buildings, &sov::BuildingType::unlock);
+	Add(R.districts, &sov::DistrictType::unlock);
+	Add(R.improvements, &sov::ImprovementType::unlock);
+	Add(R.projects, &sov::ProjectType::unlock);
+	Add(R.governments, &sov::GovernmentType::unlock);
+	Add(R.policies, &sov::PolicyType::unlock);
+	Add(R.gear, &sov::GearType::unlock);
+	Add(R.resources, &sov::ResourceType::reveal);
+	return Out;
+}
+
+TSet<int32> ASovPlayerController::TreePath(bool bCivics) const
+{
+	// The goal and every prerequisite of it not yet done.
+	TSet<int32> Path;
+	const sov::Game& G = Subsystem()->GetGame();
+	const std::vector<sov::TreeNode>& Nodes = bCivics ? G.rules().civics : G.rules().techs;
+	const sov::TreeProgress& Prog = bCivics ? G.state().players[static_cast<size_t>(Me())].civics : G.state().players[static_cast<size_t>(Me())].techs;
+	const int32 Goal = (bCivics ? CivicGoals : TechGoals).FindRef(Me(), -1);
+	TArray<int32> Stack;
+	if (Goal >= 0 && static_cast<size_t>(Goal) < Nodes.size()) Stack.Add(Goal);
+	while (Stack.Num() > 0)
+	{
+		const int32 N = Stack.Pop();
+		if (Prog.has(N) || Path.Contains(N)) continue;
+		Path.Add(N);
+		for (sov::TypeIndex Pre : Nodes[static_cast<size_t>(N)].prereqs) Stack.Add(Pre);
+	}
+	return Path;
+}
+
+void ASovPlayerController::PickTreeNode(int32 Node)
+{
+	const bool bCivics = Chooser == EChooser::Civic;
+	(bCivics ? CivicGoals : TechGoals).Add(Me(), Node);
+	if (StepTowardGoal(bCivics)) Chooser = EChooser::None;
+}
+
+bool ASovPlayerController::StepTowardGoal(bool bCivics)
+{
+	// Start the cheapest open node on the way to the goal; the goal is forgotten once reached.
+	const sov::Game& G = Subsystem()->GetGame();
+	const TSet<int32> Path = TreePath(bCivics);
+	if (Path.Num() == 0)
+	{
+		(bCivics ? CivicGoals : TechGoals).Remove(Me());
+		return false;
+	}
+	int32 Best = -1, BestCost = INT32_MAX;
+	for (sov::TypeIndex Id : bCivics ? G.availableCivics(Me()) : G.availableTechs(Me()))
+	{
+		const int32 Cost = bCivics ? G.civicCost(Id) : G.techCost(Id);
+		if (Path.Contains(Id) && Cost < BestCost) Best = Id, BestCost = Cost;
+	}
+	return Best >= 0 && Send(bCivics ? sov::Command::chooseCivic(Me(), Best) : sov::Command::chooseResearch(Me(), Best));
+}
+
 void ASovPlayerController::UpdateGameUI()
 {
 	USovGameSubsystem* Sub = Subsystem();
@@ -2046,6 +2120,7 @@ void ASovPlayerController::UpdateGameUI()
 			.OnKey_Lambda([this](FKey Key) { UIKeys.Add(Key); })
 			.OnPick_Lambda([this](int32 Index) { PickAbsolute(Index); })
 			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); })
+			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnFocus_Lambda([this](int32 Focus) {
 				if (Focus >= 0 && Focus < sov::kNumCityFocuses) Send(sov::Command::setCityFocus(Me(), SelectedCity, static_cast<sov::CityFocus>(Focus)));
 			})
@@ -2243,12 +2318,59 @@ void ASovPlayerController::UpdateGameUI()
 		M.CityActions.Add({"government", TEXT("Governors (Z): appoint, promote or send one here"), EKeys::Z, bTurn});
 		M.CityActions.Add({"food", TEXT("Citizens (F3): show what each plot yields, * where a citizen works; Shift+click a plot to lock or free a citizen"), EKeys::F3, true});
 		M.CityFocus = static_cast<int32>(C->focus);
-	}	// The open chooser, every line clickable.
+	}
+	// The open chooser, every line clickable.
 	if (Chooser != EChooser::None)
 	{
 		M.bChooser = true;
 		M.ChooserTitle = ChooserTitle;
 		for (const FChoice& Ch : Choices) M.Choices.Add(Ch.Label);
+	}
+	// Research and civics open as their whole tree (plan D, step 3).
+	if (Chooser == EChooser::Research || Chooser == EChooser::Civic)
+	{
+		const bool bCivics = Chooser == EChooser::Civic;
+		const sov::Player& Pl = S.players[static_cast<size_t>(Me())];
+		const std::vector<sov::TreeNode>& Nodes = bCivics ? R.civics : R.techs;
+		const sov::TreeProgress& Prog = bCivics ? Pl.civics : Pl.techs;
+		const std::vector<sov::TypeIndex> Open = bCivics ? G.availableCivics(Me()) : G.availableTechs(Me());
+		const int32 PerTurn = FMath::Max(1, static_cast<int32>((bCivics ? G.culturePerTurn(Me()) : G.sciencePerTurn(Me())).toInt()));
+		const TSet<int32> Path = TreePath(bCivics);
+		const TArray<FString>& Unlocks = TreeUnlocks(bCivics);
+		FSovTreeModel& T = M.Tree;
+		T.bOpen = true;
+		T.bCivics = bCivics;
+		T.Title = bCivics ? TEXT("Civics") : TEXT("Technology");
+		for (const sov::EraType& E : R.eras) T.Eras.Add(Str(E.name));
+		for (size_t i = 0; i < Nodes.size(); ++i)
+		{
+			const sov::TreeNode& Nd = Nodes[i];
+			const sov::TypeIndex Id = static_cast<sov::TypeIndex>(i);
+			FSovTreeNode& Out = T.Nodes.AddDefaulted_GetRef();
+			Out.Name = Str(Nd.name);
+			Out.Era = Nd.era;
+			for (sov::TypeIndex Pre : Nd.prereqs) Out.Prereqs.Add(Pre);
+			const int32 Cost = bCivics ? G.civicCost(Id) : G.techCost(Id);
+			const int32 Have = i < Prog.progress.size() ? static_cast<int32>(Prog.progress[i].toInt()) : 0;
+			Out.State = Prog.has(Id) ? ESovTreeState::Done
+				: Prog.current == Id ? ESovTreeState::Current
+				: Path.Contains(Id) ? ESovTreeState::Goal
+				: std::find(Open.begin(), Open.end(), Id) != Open.end() ? ESovTreeState::Available : ESovTreeState::Locked;
+			if (Out.State != ESovTreeState::Done) Out.Turns = FString::Printf(TEXT("%d turns"), TurnsFor(FMath::Max(0, Cost - Have), PerTurn));
+			Out.Progress = Cost > 0 ? FMath::Clamp(static_cast<float>(Have) / Cost, 0.f, 1.f) : 0.f;
+			if (Nd.boost.percent > 0) Out.Boost = Str(Nd.boost.text.empty() ? Nd.boost.type : Nd.boost.text);
+			Out.bBoosted = i < Prog.boosted.size() && Prog.boosted[i] != 0;
+			if (Unlocks.IsValidIndex(static_cast<int32>(i))) Out.Unlocks = Unlocks[i];
+		}
+		if (Prog.current != sov::kNone)
+		{
+			const int32 Cur = Prog.current;
+			T.Detail = FString::Printf(TEXT("%s %s: %s.  "), bCivics ? TEXT("Developing") : TEXT("Researching"), *T.Nodes[Cur].Name, *T.Nodes[Cur].Turns);
+		}
+		const int32 Goal = (bCivics ? CivicGoals : TechGoals).FindRef(Me(), -1);
+		if (T.Nodes.IsValidIndex(Goal) && !Prog.has(Goal)) T.Detail += FString::Printf(TEXT("Goal: %s (%d to go).  "), *T.Nodes[Goal].Name, Path.Num());
+		T.Detail += FString::Printf(TEXT("%s a turn. Click an open node to start it, or a later one to make it your goal. Hover for details."),
+			*Signed(bCivics ? G.culturePerTurn(Me()) : G.sciencePerTurn(Me())));
 	}
 	// End turn: what stands in the way, if anything.
 	M.bMyTurn = MyTurn();
@@ -2497,6 +2619,13 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	// The widgets show the state as this frame begins; the keys their buttons pressed are read below, then let go.
+	// A tree goal picks the next step as soon as the last one is done (plan D, step 3).
+	if (MyTurn())
+	{
+		const sov::Player& Pl = Subsystem()->GetGame().state().players[static_cast<size_t>(Me())];
+		if (Pl.techs.current == sov::kNone && TechGoals.Contains(Me())) StepTowardGoal(false);
+		if (Pl.civics.current == sov::kNone && CivicGoals.Contains(Me())) StepTowardGoal(true);
+	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
 	if (InBattle())

@@ -198,6 +198,12 @@ protected:
 	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
 	TSharedPtr<SSovGameUI> GameUI;
 	TSet<FKey> UIKeys;  // keys pressed by the widgets this frame
+	TMap<int32, int32> TechGoals, CivicGoals;  // per player: the node the tree path leads to
+	TArray<FString> TechUnlocks, CivicUnlocks;  // per node: what it opens (built once)
+	const TArray<FString>& TreeUnlocks(bool bCivics);
+	TSet<int32> TreePath(bool bCivics) const;
+	void PickTreeNode(int32 Node);
+	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
 	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
