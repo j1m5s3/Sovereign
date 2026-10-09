@@ -137,6 +137,7 @@ enum class UnitEffectKind : uint8_t {
     CityAmenities,      // +amount amenities in the city the leader stands in
     AuraLoyalty,        // +amount loyalty per turn to the city whose land the leader stands on
     StancePower,        // +amount % to a stance's outcome: Benevolence lasts longer, Fear gives more loyalty (Statesman)
+    LeadsEscort,        // the leader's linked escort fights as a formation amount steps larger (Marshal)
     // Civ uniques (leaders-and-art-style: Civ abilities, uniques and dynasties).
     HealOnKill,         // +amount HP when it destroys a unit
     MeleeAndRanged,     // a ranged unit that may also attack in melee
