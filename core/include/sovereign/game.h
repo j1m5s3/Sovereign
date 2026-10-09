@@ -440,6 +440,8 @@ public:
     int dealValue(PlayerId judge, const Deal& deal) const;
     // Rules-only acceptance: value against a bar its opinion of the proposer raises or lowers.
     bool wouldAccept(PlayerId judge, const Deal& deal) const;
+    // The player's ruler stands on or next to the host's capital (leader doc §8.4: diplomacy in person).
+    bool rulerVisiting(PlayerId player, PlayerId host) const;
     // Items `from` could put into a deal with `to` now (amounts at their most).
     std::vector<DealItem> offerableItems(PlayerId from, PlayerId to) const;
     // Luxuries: improved copies owned, and access after deals (luxury amenities follow access).
@@ -896,6 +898,7 @@ private:
     // A unit entered this plot: natural wonders' abilities, a goody hut, a barbarian camp.
     void enterPlot(Unit& unit);
     void leaderVisit(const Unit& leader);  // XP for the first visit to each own city center and district (leader doc §3)
+    void inPersonVisit(const Unit& leader);  // envoys for the ruler's first visit to each city-state's city (leader doc §8.4)
     void clearCamp(Unit& unit);  // a civ's military unit entering a barbarian camp clears it
     void linkBarbarians();
     void processBarbarians();

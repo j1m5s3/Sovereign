@@ -400,6 +400,30 @@ void Game::leaderVisit(const Unit& leader) {
     leaderXp(leader.owner, rules_->globalInt("LEADER_XP_FIRST_VISIT"));
 }
 
+void Game::inPersonVisit(const Unit& leader) {
+    Player& p = state_.players[static_cast<size_t>(leader.owner)];
+    for (const City& c : state_.cities) {
+        if (state_.grid.distance(c.pos, leader.pos) > 1 || !isCityState(c.owner) || atWar(leader.owner, c.owner)) continue;
+        // Once per city-state city a game, kept with the ruler's visits (a city center plot is never also its own).
+        std::vector<int32_t>& seen = p.leaderVisits;
+        const int32_t key = static_cast<int32_t>(state_.grid.index(c.pos));
+        const auto it = std::lower_bound(seen.begin(), seen.end(), key);
+        if (it != seen.end() && *it == key) continue;
+        seen.insert(it, key);
+        if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
+        p.envoys[static_cast<size_t>(c.owner)] += rules_->globalInt("IN_PERSON_ENVOYS");
+    }
+}
+
+bool Game::rulerVisiting(PlayerId player, PlayerId host) const {
+    const Unit* l = leaderOf(player);
+    if (!l) return false;
+    for (const City& c : state_.cities) {
+        if (c.owner == host && c.capital) return state_.grid.distance(c.pos, l->pos) <= 1;
+    }
+    return false;
+}
+
 void Game::duelWon(PlayerId winner, PlayerId loser) {
     const int points = rules_->globalInt("DUEL_WAR_WEARINESS");
     addWarWeariness(loser, winner, points);
