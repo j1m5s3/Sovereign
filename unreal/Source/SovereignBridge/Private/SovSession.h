@@ -73,6 +73,12 @@ struct FSovSetup
 	uint64 SteamLobby = 0;  // joining: this lobby (0: wait for an invite)
 	// AI leaders remember this player from earlier games (player-retention §1); -SovNoRivals turns it off.
 	bool bRivalMemory = true;
+	// The setup screen (plan D, step 5): seat 0's civ (a Rules civ id; empty: in roster order), natural disasters
+	// (-1 none, 0 Minimal .. 4 Hyperreal) and the optional modes. -SovCiv=, -SovDisasters=, -SovClans, -SovMonopolies.
+	FString Civ;
+	int32 Disasters = 2;
+	bool bClans = false;
+	bool bMonopolies = false;
 
 	// Defaults overridden by -SovSeed=, -SovPlayers=, -SovSize=, -SovSpectate, -SovBattleDemo, -SovNavalDemo,
 	// -SovDiploDemo, -SovHotSeat=N (N human seats), -SovHost (with -SovHumans=N), -SovJoin=address, -SovPort=, -SovName=, -SovAutoStart=N,

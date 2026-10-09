@@ -52,7 +52,13 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 - **Tech and civic trees** (T, C, or the top bar): the whole tree by era with prerequisite lines, turns, boosts and unlocks. Click an open node to start it, or a later one to make it your goal: the path toward it is started step by step.
 - **Choosers:** every list (production, research, civics, government, promotions, great people, governors, diplomacy...) opens as a clickable, scrolling panel on the right. The number keys still pick, and Esc or X closes it.
 - **Notifications** (above end turn): cities waiting for production, then news from the last two turns. Click one to open its screen (diplomacy, great people, World Congress, the chronicle), or X to dismiss it. Hover the top bar's yields for a city-by-city breakdown.
+- **End of game:** Victory or Defeat with who won and how, the scores and your chronicle; look at the map, write the chronicle up, or go to the menu.
 - **End turn** (bottom right): names what stands in the way (a unit needing orders, production, research, a civic, a successor). Clicking it does what Space does: ends the turn, or opens what is needed.
+
+## Menu screens
+
+- **New game** (Single player): pick a civ (or Random) and read its abilities, uniques and agenda; set the map size, number of civs, difficulty, length, start era, natural disasters, Barbarian Clans, Monopolies and rival memory. `-SovSetup` opens it at launch, `-SovCiv=CIVILIZATION_EGYPT` picks the civ for a command-line game.
+- **Settings:** graphics quality, window mode, resolution, vsync, frame limit and interface scale, and the controls. `-SovSettings` opens it at launch.
 
 ## Controls
 

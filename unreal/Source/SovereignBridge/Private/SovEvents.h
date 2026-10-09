@@ -16,3 +16,5 @@ bool SovEventHeard(const sov::Game& G, sov::PlayerId Me, const sov::GameEvent& E
 // One line for it, as the player would hear it (empty: nothing to say).
 FString SovEventText(const sov::Game& G, sov::PlayerId Me, const sov::GameEvent& E);
 FName SovEventIcon(const sov::GameEvent& E);
+// "Science", "Last civ standing"... (empty for none).
+const TCHAR* SovVictoryName(sov::Victory V);

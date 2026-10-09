@@ -90,6 +90,14 @@ void ASovGameMode::StartPlay()
 		{
 			PC->StartReplay(Replay);  // the menu opens when it ends
 		}
+		else if (bMenu && FParse::Param(FCommandLine::Get(), TEXT("SovSettings")))
+		{
+			PC->OpenSettings();
+		}
+		else if (bMenu && FParse::Param(FCommandLine::Get(), TEXT("SovSetup")))
+		{
+			PC->OpenSetup(FSovSetup());  // straight to the new-game screen
+		}
 		else if (bMenu)
 		{
 			PC->OpenMenu();  // no start options: the player chooses

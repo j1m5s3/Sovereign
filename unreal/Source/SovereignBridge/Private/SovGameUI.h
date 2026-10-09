@@ -73,6 +73,12 @@ struct FSovUIModel
 	TArray<FString> Choices;
 	// The tech or civic tree, open in place of their list (plan D, step 3).
 	FSovTreeModel Tree;
+	// The end of the game (plan D, step 5): who won and how, the scores, and the player's chronicle.
+	bool bEnd = false;
+	bool bWon = false;
+	FString EndTitle, EndSub;
+	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
+	TArray<FString> EndChronicle;  // the reign's key lines, latest last
 	// Notifications, newest first, above the end-turn button.
 	TArray<FSovUINotice> Notices;
 	// End turn.
@@ -93,6 +99,7 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnTreeNode) // a tech or civic clicked in the tree
 	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
 	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
+	SLATE_EVENT(TDelegate<void()>, OnEndClose)      // look at the map after the game
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
@@ -106,6 +113,7 @@ private:
 	void RebuildChooser();
 	void RebuildCity();
 	void RebuildNotices();
+	void RebuildEnd();
 
 	FSovUIModel Model;
 	FString StatsKey, UnitKey, ChooserKey;  // what each list was last built from
@@ -125,6 +133,9 @@ private:
 	TDelegate<void(int32)> OnTreeNode;
 	TDelegate<void(int32)> OnNotice, OnDismiss;
 	TSharedPtr<SVerticalBox> NoticesBox;
+	TSharedPtr<SVerticalBox> EndScoresBox, EndChronicleBox;
+	FString EndKey;
+	TDelegate<void()> OnEndClose;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
 };

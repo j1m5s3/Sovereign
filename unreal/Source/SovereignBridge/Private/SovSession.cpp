@@ -28,6 +28,7 @@ FSovSetup FSovSetup::FromCommandLine()
 	FParse::Value(Cmd, TEXT("SovSize="), Setup.MapSize);
 	FParse::Value(Cmd, TEXT("SovSpeed="), Setup.Speed);
 	FParse::Value(Cmd, TEXT("SovEra="), Setup.StartEra);
+	FParse::Value(Cmd, TEXT("SovCiv="), Setup.Civ);
 	FString ModList;
 	Setup.Mods = FParse::Value(Cmd, TEXT("SovMods="), ModList) ? TArray<FString>() : SovMods::Enabled();
 	if (!ModList.IsEmpty()) ModList.ParseIntoArray(Setup.Mods, TEXT(","));
@@ -67,7 +68,7 @@ bool FSovSetup::HasStartOptions()
 {
 	static const TCHAR* const Options[] = {TEXT("SovSeed="), TEXT("SovPlayers="), TEXT("SovSize="), TEXT("SovSpectate"), TEXT("SovBattleDemo"),
 		TEXT("SovNavalDemo"), TEXT("SovDiploDemo"), TEXT("SovHotSeat="), TEXT("SovHost"), TEXT("SovJoin="), TEXT("SovSteam"), TEXT("SovQuickStart"),
-		TEXT("SovSpeed="), TEXT("SovEra=")};
+		TEXT("SovSpeed="), TEXT("SovEra="), TEXT("SovCiv=")};
 	const FString Cmd = FCommandLine::Get();
 	for (const TCHAR* O : Options)
 	{
@@ -206,19 +207,26 @@ bool FSovSession::Start(const FSovSetup& Setup, FString& OutError)
 	}
 	CoreSetup->liveBattles = Setup.bHumanSeat0;  // melee with the human's leader stack can be fought live
 	// Natural disasters: -SovDisasters=0..4 (Minimal..Hyperreal), -1 for none; Moderate by default.
+	CoreSetup->disasterIntensity = FMath::Clamp(Setup.Disasters, -1, 4);
 	int32 Disasters = CoreSetup->disasterIntensity;
 	if (FParse::Value(FCommandLine::Get(), TEXT("SovDisasters="), Disasters)) CoreSetup->disasterIntensity = FMath::Clamp(Disasters, -1, 4);
 	// Barbarian Clans mode: -SovClans (camps can be bribed, hired, incited and grow into city-states).
-	CoreSetup->barbarianClans = FParse::Param(FCommandLine::Get(), TEXT("SovClans"));
+	CoreSetup->barbarianClans = Setup.bClans || FParse::Param(FCommandLine::Get(), TEXT("SovClans"));
 	// Monopolies and Corporations mode: -SovMonopolies (Industries and Corporations on luxuries, Monopolies).
-	CoreSetup->monopolies = FParse::Param(FCommandLine::Get(), TEXT("SovMonopolies"));
+	CoreSetup->monopolies = Setup.bMonopolies || FParse::Param(FCommandLine::Get(), TEXT("SovMonopolies"));
 	// Difficulty: -SovDifficulty=0..7 (Settler .. Prince 3 .. Deity); Prince by default.
 	CoreSetup->difficulty = FMath::Clamp(Setup.Difficulty, 0, 7);
 	int32 Difficulty = CoreSetup->difficulty;
 	if (FParse::Value(FCommandLine::Get(), TEXT("SovDifficulty="), Difficulty)) CoreSetup->difficulty = FMath::Clamp(Difficulty, 0, 7);
+	// Seat 0 may pick its civ; the others take the roster in order, skipping it.
+	const sov::TypeIndex Picked = Setup.Civ.IsEmpty() ? sov::kNone : Rules->civ(TCHAR_TO_UTF8(*Setup.Civ));
+	std::vector<size_t> Order;
+	if (Picked != sov::kNone) Order.push_back(static_cast<size_t>(Picked));
+	for (size_t c = 0; c < Rules->civs.size(); ++c)
+		if (static_cast<sov::TypeIndex>(c) != Picked) Order.push_back(c);
 	for (int32 i = 0; i < Setup.Players; ++i)
 	{
-		const sov::CivType& Civ = Rules->civs[static_cast<size_t>(i) % Rules->civs.size()];
+		const sov::CivType& Civ = Rules->civs[Order[static_cast<size_t>(i) % Order.size()]];
 		CoreSetup->players.push_back({Civ.id, Setup.bHumanSeat0 && i < Setup.HumanSeats});
 	}
 	CoreSetup->rivalMemory = Setup.bRivalMemory;
