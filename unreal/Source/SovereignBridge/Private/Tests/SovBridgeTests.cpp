@@ -160,6 +160,20 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(TEXT("no marker on unrevealed plots"), G.visibility(Me, sov::Hex{U.X, U.Y}) != sov::Visibility::Unrevealed);
 	}
+	TestEqual(TEXT("unexplored = the rest"), M.Unexplored.Num(), S.grid.size() - Revealed);
+
+	// Each arm and era gets its figure (kit_figures.py).
+	const sov::Rules& R = G.rules();
+	for (const auto& [Id, Want] : {std::pair<const char*, const TCHAR*>{"UNIT_WARRIOR", TEXT("Soldier")}, {"UNIT_ARCHER", TEXT("Archer")},
+			 {"UNIT_MUSKETMAN", TEXT("Musketeer")}, {"UNIT_INFANTRY", TEXT("Rifleman")}, {"UNIT_HORSEMAN", TEXT("Rider")},
+			 {"UNIT_TANK", TEXT("Tank")}, {"UNIT_CATAPULT", TEXT("Siege")}, {"UNIT_GALLEY", TEXT("Ship")}, {"UNIT_IRONCLAD", TEXT("Steamship")},
+			 {"UNIT_FIGHTER", TEXT("Plane")}, {"UNIT_SETTLER", TEXT("Citizen")}})
+	{
+		const sov::TypeIndex T = R.unit(Id);
+		if (!TestTrue(FString(TEXT("unit exists: ")) + Id, T != sov::kNone)) continue;
+		const sov::UnitType& Type = R.units[static_cast<size_t>(T)];
+		TestEqual(FString(TEXT("figure of ")) + Id, SovUnitFigure(Type, false, Type.layer == sov::UnitLayer::Civilian || Type.layer == sov::UnitLayer::Support).ToString(), FString(Want));
+	}
 	return true;
 }
 

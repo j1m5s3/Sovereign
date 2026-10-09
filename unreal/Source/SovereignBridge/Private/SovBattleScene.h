@@ -38,6 +38,8 @@ private:
 	UStaticMeshComponent* Add(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, const FLinearColor& Color);
 
 	FLinearColor SideColor[2];
+	// Each side's soldier figure: its unit's, when that is one on foot (archer, musketeer, rifleman), else the spearman.
+	FString SideFigure[2] = {TEXT("Soldier"), TEXT("Soldier")};
 	TArray<bool> Figure;  // per soldier: drawn by a kit figure
 
 	UPROPERTY()

@@ -54,6 +54,12 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 {
 	SideColor[0] = AttackerColor;
 	SideColor[1] = DefenderColor;
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		const FName F = Side == 0 ? Spec.Attacker.Figure : Spec.Defender.Figure;
+		const bool bOnFoot = F == FName("Archer") || F == FName("Musketeer") || F == FName("Rifleman");
+		SideFigure[Side] = bOnFoot && SovArt::Mesh(TEXT("Figures"), F.ToString()) ? F.ToString() : FString(TEXT("Soldier"));
+	}
 	UStaticMeshComponent* Floor = Add(CubeMesh, FVector(0, 0, -50), FVector(90.0, 60.0, 1.0), Ground);
 	Floor->SetCollisionProfileName(TEXT("BlockAll"));
 	FRandomStream Rng(Spec.Seed + 101);
@@ -112,7 +118,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		UStaticMeshComponent* Head = Add(S.bLeader ? SphereMesh.Get() : ConeMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.35) : FVector(0.3, 0.3, 0.45),
 			S.bLeader ? FLinearColor(1.f, 0.75f, 0.1f) : FLinearColor(0.6f, 0.6f, 0.62f));
 		// Kit figures when the art exists: soldiers (and leaders) in their side's colour.
-		if (SovArt::SetKitMesh(Body, TEXT("Figures"), S.bLeader ? TEXT("Leader") : TEXT("Soldier"), C))
+		if (SovArt::SetKitMesh(Body, TEXT("Figures"), S.bLeader ? FString(TEXT("Leader")) : SideFigure[S.Side], C))
 		{
 			Body->SetRelativeScale3D(FVector(1.0));
 			Head->SetVisibility(false);

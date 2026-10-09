@@ -8,6 +8,7 @@
 namespace sov
 {
 class Game;
+struct UnitType;
 }
 
 enum class ESovRelief : uint8
@@ -120,6 +121,10 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer);
 
 // A plot's plain-map colour (terrain and feature) and whether it is wooded.
 FLinearColor SovPlotColor(const sov::Game& Game, int32 X, int32 Y, bool* bWoods = nullptr);
+
+// A unit type's Figures kit model (kit_figures.py): Soldier, Archer, Musketeer, Rifleman, Rider, Siege, Tank, Plane,
+// Ship, Steamship, Citizen or Leader.
+FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian);
 
 // Owner colour for markers and labels (barbarians are always the last seat).
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player);
