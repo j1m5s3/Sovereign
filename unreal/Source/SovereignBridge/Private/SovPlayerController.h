@@ -52,6 +52,8 @@ public:
 	// Battle replays (player-retention §2): a recorded battle played back in the battle scene.
 	bool InReplay() const { return bReplay; }
 	const FString& ReplayTitle() const { return Recording.Title; }
+	// The Slate screens are up (the canvas HUD then leaves the battle to them).
+	bool UsesWidgets() const { return GameUI.IsValid(); }
 	void StartReplay(const FString& Path);
 	// Centres the camera on the viewer's capital, else their first unit.
 	void CenterOnHome();
@@ -231,6 +233,7 @@ protected:
 	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
 	void OpenNotice(int32 Index);
 	bool bEmpireOpen = false;  // the Empire panel (F8)
+	bool bBattleNowDone = false;  // -SovBattleNow has attacked
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
 	double MessageTime = -100.0;

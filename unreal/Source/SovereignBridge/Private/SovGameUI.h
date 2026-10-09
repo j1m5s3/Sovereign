@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovBattleHud.h"
 #include "SovGovernmentView.h"
 #include "SovLens.h"
 #include "SovMinimap.h"
@@ -54,6 +55,8 @@ struct FSovUIChoice
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// A live battle or a replay (shown even when bVisible is false).
+	FSovBattleModel Battle;
 	// Hot seat: the screen hides the map until the next player takes over (shown even when bVisible is false).
 	bool bHandover = false;
 	FString HandoverName;
@@ -196,6 +199,7 @@ private:
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
 	TSharedPtr<SSovGovernmentView> GovView;
+	TSharedPtr<SSovBattleHud> BattleHud;
 	TDelegate<void(int32)> OnGovAdopt, OnGovSlot, OnGovCard, OnGovDedication;
 	TDelegate<void()> OnGovBuy;
 };

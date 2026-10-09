@@ -398,7 +398,7 @@ void ASovHUD::DrawHUD()
 	// A battle replay plays with or without a game (player-retention §2).
 	if (const ASovPlayerController* RPC = Cast<ASovPlayerController>(PlayerOwner); Sub && RPC && RPC->InBattle() && RPC->InReplay())
 	{
-		DrawBattle(*Sub, *RPC);
+		if (!RPC->UsesWidgets()) DrawBattle(*Sub, *RPC);  // else the battle screen shows it
 		return;
 	}
 	if (!Sub || !Sub->IsRunning())
@@ -419,7 +419,7 @@ void ASovHUD::DrawHUD()
 	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
 	if (PC && PC->InBattle())
 	{
-		DrawBattle(*Sub, *PC);
+		if (!PC->UsesWidgets()) DrawBattle(*Sub, *PC);
 		return;
 	}
 	if (PC && PC->InStreet())

@@ -421,6 +421,13 @@ void SSovGameUI::Construct(const FArguments& Args)
 			})
 			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
 		]
+		// A live battle or a replay.
+		+ SOverlay::Slot()
+		[
+			SAssignNew(BattleHud, SSovBattleHud)
+			.Visibility_Lambda([this]() { return Model.Battle.bOpen ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; })
+			.OnKey_Lambda([this](FKey Key) { OnKey.ExecuteIfBound(Key); })
+		]
 		// Hot seat: the next player's turn, the map hidden until they take over.
 		+ SOverlay::Slot()
 		[
@@ -517,6 +524,7 @@ void SSovGameUI::Tick(const FGeometry& Geometry, const double Time, const float 
 void SSovGameUI::SetModel(const FSovUIModel& InModel)
 {
 	Model = InModel;
+	if (Model.Battle.bOpen) BattleHud->SetModel(Model.Battle);
 	FString Rd = Model.bReader ? Model.ReaderTitle : FString();
 	for (const FString& L : Model.ReaderLines) Rd += L + TEXT("|");
 	if (Rd != ReaderKeyText)

@@ -1609,6 +1609,8 @@ void ASovPlayerController::StartReplay(const FString& Path)
 
 void ASovPlayerController::UpdateBattle(float DeltaTime)
 {
+	// The battle screen's buttons press the same keys.
+	auto BattleKey = [this](const FKey& K) { return WasInputKeyJustPressed(K) || UIKeys.Contains(K); };
 	LookAround(DeltaTime);
 	if (bReplay)
 	{
@@ -1619,7 +1621,7 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		FSovBattleSnapshot Snap;
 		if (Snap.Decode(Recording.Frames[static_cast<size_t>(Frame)])) Sim.ApplySnapshot(Snap);
 		Battle->Sync(Sim);
-		if (WasInputKeyJustPressed(EKeys::Escape) || ReplayTime * 10.f > Count + 20)
+		if (BattleKey(EKeys::Escape) || ReplayTime * 10.f > Count + 20)
 		{
 			ExitBattle();
 			bReplay = false;
@@ -1636,20 +1638,20 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		auto SendOrder = [&](int32 Squad, sov::battle::Order Order) {
 			Session.SendRelay(BattlePeer, {3, static_cast<uint8_t>(static_cast<int8>(Squad)), static_cast<uint8_t>(Order)});
 		};
-		if (WasInputKeyJustPressed(EKeys::Tab)) SendOrder(-1, Sim.Charging(Side) ? sov::battle::Order::Hold : sov::battle::Order::Advance);
+		if (BattleKey(EKeys::Tab)) SendOrder(-1, Sim.Charging(Side) ? sov::battle::Order::Hold : sov::battle::Order::Advance);
 		const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
 		for (int32 k = 0; k < 4; ++k)
 		{
-			if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+			if (BattleKey(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
 		}
 		const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
 		for (int32 k = 0; k < sov::battle::kOrders; ++k)
 		{
-			if (WasInputKeyJustPressed(OrderKeys[k])) SendOrder(BattleSquad, static_cast<sov::battle::Order>(k));
+			if (BattleKey(OrderKeys[k])) SendOrder(BattleSquad, static_cast<sov::battle::Order>(k));
 		}
 		Battle->Sync(Sim);
 		// The battle ends when its result arrives in the game; Esc hands our men back to the AI.
-		if (!Sub->GetGame().battlePending() || WasInputKeyJustPressed(EKeys::Escape))
+		if (!Sub->GetGame().battlePending() || BattleKey(EKeys::Escape))
 		{
 			if (Sub->GetGame().battlePending()) Session.SendRelay(BattlePeer, {4});
 			Sub->LastMessage = Sub->GetGame().battlePending() ? TEXT("Your generals lead your men.") : TEXT("The battle is over.");
@@ -1673,21 +1675,21 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Move -= FVector2D(F3);
 	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Move += FVector2D(R3);
 	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Move -= FVector2D(R3);
-	const bool bStrike = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::F);
+	const bool bStrike = BattleKey(EKeys::LeftMouseButton) || BattleKey(EKeys::F);
 	const int32 Side = Sim.GetSpec().HumanSide;
-	if (WasInputKeyJustPressed(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
+	if (BattleKey(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
 	// Squad orders: 7 8 9 pick the left, centre or right squad (0: all), 1 to 6 give the order.
 	const FKey PickKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
 	for (int32 k = 0; k < 4; ++k)
 	{
-		if (WasInputKeyJustPressed(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
+		if (BattleKey(PickKeys[k])) BattleSquad = k < 3 ? k : -1;
 	}
 	const FKey OrderKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
 	for (int32 k = 0; k < sov::battle::kOrders; ++k)
 	{
-		if (WasInputKeyJustPressed(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
+		if (BattleKey(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
 	}
-	const bool bSettleNow = WasInputKeyJustPressed(EKeys::Escape);
+	const bool bSettleNow = BattleKey(EKeys::Escape);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);
 	RecordTimer += DeltaTime;
@@ -2227,6 +2229,42 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		// A live battle or a replay: its own screen.
+		if (InBattle() && !Menu.IsValid())
+		{
+			FSovBattleModel& B = M.Battle;
+			const FSovBattleSpec& Spec = Sim.GetSpec();
+			B.bOpen = true;
+			B.bReplay = bReplay;
+			B.Attacker = Spec.Attacker.Name;
+			B.Defender = Spec.Defender.Name;
+			B.Title = bReplay ? TEXT("Replay: ") + Recording.Title : FString::Printf(TEXT("%s attacks %s"), *Spec.Attacker.Name, *Spec.Defender.Name);
+			B.AttackerAlive = Sim.Alive(0);
+			B.AttackerStarted = Sim.Started(0);
+			B.DefenderAlive = Sim.Alive(1);
+			B.DefenderStarted = Sim.Started(1);
+			B.Seconds = static_cast<int32>(Sim.TimeLeft());
+			if (Sim.LeaderIndex() != INDEX_NONE)
+			{
+				const FSovSoldier& L = Sim.Soldiers()[Sim.LeaderIndex()];
+				B.LeaderHealth = L.bAlive && L.MaxHp > 0 ? FMath::Clamp(static_cast<float>(L.Hp) / L.MaxHp, 0.01f, 1.f) : 0.f;
+			}
+			for (int32 s = 0; s < 3; ++s) B.Orders[s] = UTF8_TO_TCHAR(sov::battle::orderName(Sim.GetOrder(Spec.HumanSide, s)));
+			B.Squad = BattleSquad;
+			B.bCharging = Sim.Charging(Spec.HumanSide);
+			B.bRemoteView = Sim.RemoteView();
+			B.Foe = Sim.RemoteView() ? TEXT("Your rival fights this battle as their leader; you command your squads.")
+				: Sim.RemoteEnemy()  ? TEXT("Your rival commands the enemy's squads.")
+				: Sim.EnemyTrained() ? TEXT("The enemy is led by the trained battle AI.")
+									 : TEXT("The enemy charges (no trained battle AI found).");
+			if (bBattleSent)
+			{
+				B.bWon = Outcome.Winner == Spec.HumanSide;
+				B.ResultTitle = B.bWon ? TEXT("Victory") : Outcome.Winner < 0 ? TEXT("Stalemate") : TEXT("Defeat");
+				B.Result = FString::Printf(TEXT("Attacker lost %d HP, defender %d HP%s. The rules hold the result within 25%% of the expected Civ result."), Outcome.ToAttacker,
+					Outcome.ToDefender, Outcome.LeaderWound > 0 ? *FString::Printf(TEXT("; your leader was wounded %d"), Outcome.LeaderWound) : TEXT(""));
+			}
+		}
 		if (Sub && Sub->IsRunning() && Sub->GetSession().HandoverPending() && !Menu.IsValid())
 		{
 			M.bHandover = true;
@@ -2952,6 +2990,23 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	{
 		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
 		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
+	}
+	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit attacks the enemy beside it once,
+	// so the live battle can be opened (B) without a mouse.
+	if (!bBattleNowDone && Subsystem()->IsRunning() && MyTurn() && FParse::Param(FCommandLine::Get(), TEXT("SovBattleNow")))
+	{
+		bBattleNowDone = true;
+		const sov::Game& G = Subsystem()->GetGame();
+		for (const sov::Unit& U : G.state().units)
+		{
+			if (U.owner != Me() || G.rules().units[static_cast<size_t>(U.type)].combat <= 0) continue;
+			for (const sov::Unit& E : G.state().units)
+			{
+				if (E.owner == Me() || G.state().grid.distance(U.pos, E.pos) != 1) continue;
+				if (Send(sov::Command::attack(Me(), U.id, E.pos))) break;
+			}
+			break;
+		}
 	}
 	// F8 opens or closes the Empire panel (plan E, step 1).
 	if (Pressed(EKeys::F8)) bEmpireOpen = !bEmpireOpen;
