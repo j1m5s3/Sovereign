@@ -73,10 +73,7 @@ void Game::enterVillage(Unit& unit) {
         for (TypeIndex n : open) {
             if (count <= 0) break;
             if (t.boosted[at(n)]) continue;
-            const Boost& b = (civic ? rules_->civics : rules_->techs)[at(n)].boost;
-            const int pct = b.percent > 0 ? b.percent : 40;
-            t.boosted[at(n)] = 1;
-            t.progress[at(n)] += Fixed::fromInt(civic ? civicCost(n) : techCost(n)) * pct / 100;
+            grantBoost(pid, civic, at(n));
             --count;
         }
     };

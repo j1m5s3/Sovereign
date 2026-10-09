@@ -46,22 +46,23 @@ void Game::fitPlayerToRules(Player& p, const Rules& rules) {
 // ------------------------------------------------------------------ queries
 
 namespace {
-// Nodes of eras before the world's cost less, of later eras more (04: [GS] TECH_COST_PERCENT_CHANGE_*).
-int worldEraPercent(const GameState& s, const Rules& r, int nodeEra) {
-    if (nodeEra < s.gameEra) return 100 + r.globalInt("TECH_COST_PERCENT_CHANGE_BEFORE_GAME_ERA");
-    if (nodeEra > s.gameEra) return 100 + r.globalInt("TECH_COST_PERCENT_CHANGE_AFTER_GAME_ERA");
+// Nodes of eras before the world's cost less, of later eras more (04: [GS] TECH_COST_PERCENT_CHANGE_*, and
+// CIVIC_COST_PERCENT_CHANGE_* for civics).
+int worldEraPercent(const GameState& s, const Rules& r, int nodeEra, bool civic) {
+    if (nodeEra < s.gameEra) return 100 + r.globalInt(civic ? "CIVIC_COST_PERCENT_CHANGE_BEFORE_GAME_ERA" : "TECH_COST_PERCENT_CHANGE_BEFORE_GAME_ERA");
+    if (nodeEra > s.gameEra) return 100 + r.globalInt(civic ? "CIVIC_COST_PERCENT_CHANGE_AFTER_GAME_ERA" : "TECH_COST_PERCENT_CHANGE_AFTER_GAME_ERA");
     return 100;
 }
 }  // namespace
 
 int Game::techCost(TypeIndex tech) const {
     const TreeNode& n = rules_->techs[static_cast<size_t>(tech)];
-    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era) / 100);
+    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era, false) / 100);
 }
 
 int Game::civicCost(TypeIndex civic) const {
     const TreeNode& n = rules_->civics[static_cast<size_t>(civic)];
-    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era) / 100);
+    return std::max(1, n.cost * speedPercent(state_, *rules_) / 100 * worldEraPercent(state_, *rules_, n.era, true) / 100);
 }
 
 bool Game::hasUnlocked(PlayerId player, Unlock u) const {
@@ -226,7 +227,8 @@ bool Game::boostScanned(PlayerId player, const Boost& b, BoostScan& scan) const 
             std::vector<size_t> last(n, state_.cities.size());
             for (size_t i : mine(scan.cities, state_.cities)) {
                 for (const CityDistrict& d : state_.cities[i].districts) {
-                    if (!d.complete || !inRange(d.type, n) || last[static_cast<size_t>(d.type)] == i) continue;
+                    // A city counts once, but each of its Neighborhoods or Canals counts (04: Sanitation, "build 2 Neighborhoods").
+                    if (!d.complete || !inRange(d.type, n) || (last[static_cast<size_t>(d.type)] == i && !rules_->districts[static_cast<size_t>(d.type)].repeatable)) continue;
                     last[static_cast<size_t>(d.type)] = i;
                     ++cities[static_cast<size_t>(d.type)];
                 }
@@ -355,9 +357,12 @@ bool Game::boostScanned(PlayerId player, const Boost& b, BoostScan& scan) const 
             return countUnits([&](const Unit& u) { return u.formation == formation; }) >= b.count;
         }
         case BoostKind::DistrictAppeal:
+            // Any of the city's districts of the type: a second Neighborhood may be the Breathtaking one (04: Conservation).
             for (const City& c : state_.cities) {
-                const CityDistrict* d = c.owner == player ? c.district(b.ref, true) : nullptr;
-                if (d && plotAppeal(d->pos) >= b.count) return true;
+                if (c.owner != player) continue;
+                for (const CityDistrict& d : c.districts) {
+                    if (d.type == b.ref && d.complete && plotAppeal(d.pos) >= b.count) return true;
+                }
             }
             return false;
         case BoostKind::ThemedBuildings: {
@@ -505,6 +510,8 @@ void Game::syncPolicySlots(PlayerId player) {
     if (const PassedResolution* wi = passed(ResolutionKind::WorldIdeology); wi && wi->target == p.government)
         want = wi->option == 0 ? want + 1 : (want > 0 ? want - 1 : 0);
     if (p.policies.size() == want) return;
+    // A slot gained opens a free change window, as a civic does (04: "a new slot is gained").
+    if (want > p.policies.size() && p.anarchyTurns == 0 && p.interregnumTurns == 0) p.freeChanges = true;
     p.policies.resize(want, kNone);
     // A wonder lost reorders the extra slots: a card left in a slot of another type comes out.
     for (size_t i = 0; i < p.policies.size(); ++i) {

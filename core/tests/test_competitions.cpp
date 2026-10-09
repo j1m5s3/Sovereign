@@ -164,3 +164,25 @@ TEST(train_athletes_scores_the_world_games_and_a_plant_can_be_decommissioned) {
     h->completeProject(h->stateMutForTests().cities[1], decommission.type);
     CHECK(!h->state().cities[1].has(coal));
 }
+
+// The Nobel Prize in Physics's Eureka is earned like any other (04): Free Inquiry makes it 50% in a Golden Age.
+TEST(the_nobel_prize_eureka_counts_free_inquiry) {
+    const auto gained = [](Age age) {
+        GameState s = world("ERA_MODERN");
+        Competition nobel = running(CompetitionKind::NobelPhysics, s.turn, 3);
+        nobel.scores = {3, 0, 0};
+        s.competitions.push_back(nobel);
+        s.players[0].dedications.push_back(rules().dedication("DEDICATION_FREE_INQUIRY"));
+        s.players[0].age = age;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const std::vector<uint8_t> before = g->state().players[0].techs.boosted;
+        g->processCompetitions();
+        const TreeProgress& t = g->state().players[0].techs;
+        for (size_t i = 0; i < t.boosted.size(); ++i) {
+            if (t.boosted[i] && !before[i]) return t.progress[i] * 100 / Fixed::fromInt(g->techCost(static_cast<TypeIndex>(i)));
+        }
+        return Fixed();
+    };
+    CHECK_EQ(gained(Age::Normal), Fixed::fromInt(40));
+    CHECK_EQ(gained(Age::Golden), Fixed::fromInt(50));
+}

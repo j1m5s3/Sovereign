@@ -323,9 +323,7 @@ void Game::greatLibraryEurekas(PlayerId recruiter) {
         }
         if (open.empty()) continue;
         const TypeIndex t = open[state_.rng.get(RngStream::Gameplay).below(static_cast<uint32_t>(open.size()))];
-        const int pct = rules_->techs[at(t)].boost.percent > 0 ? rules_->techs[at(t)].boost.percent : 40;
-        o.techs.boosted[at(t)] = 1;
-        o.techs.progress[at(t)] += Fixed::fromInt(techCost(t)) * pct / 100;
+        grantBoost(o.id, false, at(t));
     }
 }
 
@@ -547,9 +545,7 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
                     }
                     return;
                 }
-                tree.boosted[at(node)] = 1;
-                const int pct = nodes[at(node)].boost.percent > 0 ? nodes[at(node)].boost.percent : 40;
-                tree.progress[at(node)] += Fixed::fromInt(cost) * pct / 100;
+                grantBoost(pid, civic, at(node));
             };
             if (fx.kind == GreatPersonEffectKind::Boost) {
                 boost(fx.ref, fx.orComplete);
