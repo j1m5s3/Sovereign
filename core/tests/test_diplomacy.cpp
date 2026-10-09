@@ -1081,7 +1081,7 @@ TEST(an_ai_losing_badly_offers_a_city_for_peace) {
     CHECK(white->state().players[1].relations[0].peaceOffered);
     CHECK(offer(true, 12, 12, true)->state().deals.empty());
     CHECK(offer(true, 1, 4, true, 5)->state().deals.empty());  // losing, but not badly
-    // Turned down, it asks again kProposalGap turns later.
+    // Turned down, it asks again AI_TURNS_BETWEEN_PEACE_OFFERS turns later (10).
     const auto again = offer(true, 1, 4, true);
     REQUIRE(again->state().deals.size() == 1u);
     CHECK_EQ(again->state().deals[0].turn, 30);
@@ -1092,7 +1092,7 @@ TEST(an_ai_losing_badly_offers_a_city_for_peace) {
         ai::playTurn(*again);
         if (!again->state().deals.empty()) next = again->state().deals[0].turn;
     }
-    CHECK_EQ(next, 40);
+    CHECK_EQ(next, 30 + rules().globalInt("AI_TURNS_BETWEEN_PEACE_OFFERS"));
     // An AI winning the war turns the town down but takes the larger city at once.
     const auto ai = offer(true, 1, 4, false);
     CHECK(!ai->atWar(0, 1));
@@ -1291,4 +1291,39 @@ TEST(opinion_counts_shared_enemies_crowded_borders_and_disposition) {
     while (Game::dispositionRoll(k, 1, 2, r) == 0) ++k;
     other.setup.seed = k;
     CHECK_EQ(reason(*Game::fromScenario(rules(), GameState(other)), 1, 2, OpinionReasonKind::Disposition), Game::dispositionRoll(k, 1, 2, r));
+}
+
+// 10 (AI tuning constants): a civ hears a friendship offer at most every AI_TURNS_BETWEEN_FRIENDSHIP_OFFERS turns and
+// any other deal at most every AI_TURNS_BETWEEN_TRADES turns.
+TEST(ai_offers_are_paced_by_kind) {
+    const int friendGap = rules().globalInt("AI_TURNS_BETWEEN_FRIENDSHIP_OFFERS");
+    const int tradeGap = rules().globalInt("AI_TURNS_BETWEEN_TRADES");
+    REQUIRE(friendGap < tradeGap);
+    // What player 1 puts to player 0 on its turn, its last proposal `ago` turns back; liked or not.
+    const auto offer = [](int ago, bool liked, bool friends = false) {
+        GameState s = diploState();
+        s.turn = 40;
+        if (liked) s.players[1].memories.push_back({0, MemoryKind::Gift, 30, 30, 39});
+        for (Player& p : s.players) p.civics.done[static_cast<size_t>(rules().civic("CIVIC_EARLY_EMPIRE"))] = 1;  // open borders
+        s.players[1].relations.resize(2);
+        s.players[1].relations[0].lastProposal = ago > 0 ? s.turn - ago : 0;
+        if (friends) {
+            s.players[0].relations.resize(2);
+            s.players[0].relations[1].friendsUntil = s.players[1].relations[0].friendsUntil = s.turn + 20;
+            for (Player& p : s.players) p.civics.done[static_cast<size_t>(rules().civic("CIVIC_CIVIL_SERVICE"))] = 1;  // alliances
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        REQUIRE(g->state().currentPlayer == 1);
+        ai::playTurn(*g);
+        return g->state().deals.empty() ? DealItemKind::Gold : g->state().deals[0].items[0].kind;
+    };
+    CHECK(offer(friendGap, true) == DealItemKind::Friendship);
+    CHECK(offer(friendGap - 1, true) == DealItemKind::Gold);  // nothing yet
+    CHECK(offer(friendGap, true, true) == DealItemKind::Alliance);  // to a friend, an alliance on the same pace
+    const DealItemKind other = offer(0, false);
+    REQUIRE(other != DealItemKind::Gold && other != DealItemKind::Friendship);  // some trade, when nothing was asked before
+    CHECK(offer(tradeGap, false) == other);
+    CHECK(offer(tradeGap - 1, false) == DealItemKind::Gold);
+    CHECK(offer(friendGap, false) == DealItemKind::Gold);
 }

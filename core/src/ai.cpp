@@ -41,7 +41,7 @@ constexpr int kWarRange = 9;            // a war target's city must be this clos
 constexpr int kWarMargin = 50;          // added to the posture's war ratio to start a war (not to keep one going)
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
-constexpr int kProposalGap = 10;        // turns between deals put to the same civ
+constexpr int kProposalGap = 10;        // an alliance's last turns, when it is renewed
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
 constexpr int kThreatRange = 4;
@@ -456,11 +456,11 @@ int districtPercent(const View& v, const DistrictType& d) {
 // --- diplomacy ---------------------------------------------------------------------
 // Losing badly to a civ that has not taken its white peace, it offers a city for peace (08: peace deals include ceding
 // cities): the one it parts with most easily, never one dearer to it than peace (dealValue), to an AI only one that AI
-// would take, at most every kProposalGap turns. True once peace is made.
+// would take, at most every AI_TURNS_BETWEEN_PEACE_OFFERS turns (10). True once peace is made.
 bool offerCityForPeace(View& v, PlayerId e) {
     const GameState& s = v.s();
     const Relation& rel = s.players[at(v.me)].relations[at(e)];
-    if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) return false;
+    if (rel.lastProposal > 0 && s.turn - rel.lastProposal < v.r.globalInt("AI_TURNS_BETWEEN_PEACE_OFFERS")) return false;
     std::vector<std::pair<int, std::vector<DealItem>>> offers;  // the deal's value to us, and its items
     for (CityId id : v.cities) {
         std::vector<DealItem> idea{{DealItemKind::Peace, v.me, 0, kNone}, {DealItemKind::City, v.me, id, kNone}};
@@ -606,7 +606,8 @@ void diplomacy(View& v) {
 
 // Deals with civs at peace: friendship with those it likes, luxury swaps, open borders; and
 // denouncing those it loathes. It asks only for deals it gains from, and asks an AI only when
-// that AI would say yes (a human always hears the offer, at most every kProposalGap turns).
+// that AI would say yes. A civ hears a friendship or alliance offer at most every AI_TURNS_BETWEEN_FRIENDSHIP_OFFERS
+// turns and any other deal every AI_TURNS_BETWEEN_TRADES turns (10: AI tuning constants).
 void deals(View& v) {
     const GameState& s = v.s();
     for (const Player& o : s.players) {
@@ -637,7 +638,9 @@ void deals(View& v) {
             if (crowding && v.game.validate(ask) == CommandError::Ok) v.game.submit(ask);
         }
         const Relation& rel = s.players[at(v.me)].relations[at(o.id)];
-        if (rel.lastProposal > 0 && s.turn - rel.lastProposal < kProposalGap) continue;
+        const int since = rel.lastProposal > 0 ? s.turn - rel.lastProposal : 1 << 30;
+        const bool tradeDue = since >= v.r.globalInt("AI_TURNS_BETWEEN_TRADES");
+        if (!tradeDue && since < v.r.globalInt("AI_TURNS_BETWEEN_FRIENDSHIP_OFFERS")) continue;
         std::vector<std::vector<DealItem>> ideas;
         const bool distrusted = std::find(v.posture.distrust.begin(), v.posture.distrust.end(), o.id) != v.posture.distrust.end();
         // A neighbour it dislikes and is at least twice as strong as is asked for gold (08: Make Demand), on one turn in
@@ -718,6 +721,8 @@ void deals(View& v) {
         if (o.captor == v.me && o.human && o.gold >= Fixed::fromInt(2 * ransom(o.id)))
             ideas.insert(ideas.begin(), {{DealItemKind::Ruler, v.me, o.id, kNone}, {DealItemKind::Gold, o.id, 2 * ransom(o.id), kNone}});
         for (const std::vector<DealItem>& idea : ideas) {
+            const bool friendly = idea.size() == 1 && (idea[0].kind == DealItemKind::Friendship || idea[0].kind == DealItemKind::Alliance);
+            if (!tradeDue && !friendly) continue;
             const Deal d{0, v.me, o.id, s.turn, idea};
             if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;
             if (!o.human && !v.game.wouldAccept(o.id, d)) continue;
