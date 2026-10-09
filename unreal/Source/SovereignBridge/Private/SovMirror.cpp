@@ -166,6 +166,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		{
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
 			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
+			T.Feature = UTF8_TO_TCHAR(Id.c_str());
 		}
 		{
 			const std::string& Ground = Rules.terrains[static_cast<size_t>(Pl.terrain)].id;
