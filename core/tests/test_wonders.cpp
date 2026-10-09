@@ -208,12 +208,21 @@ TEST(wonders_add_policy_slots) {
     me.government = rules().government("GOVERNMENT_CHIEFDOM");
     const int base = rules().governments[at(me.government)].totalSlots();
     me.policies.assign(static_cast<size_t>(base), kNone);
+    GameState anarchy = s;
+    anarchy.players[0].anarchyTurns = 2;
     auto g = Game::fromScenario(rules(), std::move(s));
     const CityId mine = g->state().cities[0].id;
+    CHECK(!g->state().players[0].freeChanges);
     g->wonderCompleted(mine, wonder("BUILDING_ALHAMBRA"));
 
     REQUIRE(g->state().players[0].policies.size() == static_cast<size_t>(base + 1));
     CHECK(g->policySlotType(0, base) == PolicySlot::Military);
+    CHECK(g->state().players[0].freeChanges);  // a slot gained opens a free change window (04)
+    // Not during anarchy: the window opens as it ends.
+    auto a = Game::fromScenario(rules(), std::move(anarchy));
+    a->wonderCompleted(a->state().cities[0].id, wonder("BUILDING_ALHAMBRA"));
+    CHECK_EQ(a->state().players[0].policies.size(), static_cast<size_t>(base + 1));
+    CHECK(!a->state().players[0].freeChanges);
     // Saved and loaded with the extra slot.
     std::string err;
     auto loaded = loadGame(rules(), saveGame(*g), &err);

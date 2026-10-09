@@ -179,9 +179,7 @@ void Game::processCompetitions() {
                 const TypeIndex industrial = rules_->era("ERA_INDUSTRIAL");
                 for (size_t t = 0; t < rules_->techs.size(); ++t) {
                     if (p.techs.done[t] || p.techs.boosted[t] || rules_->techs[t].era < industrial) continue;
-                    const int pct = rules_->techs[t].boost.percent > 0 ? rules_->techs[t].boost.percent : 40;
-                    p.techs.boosted[t] = 1;
-                    p.techs.progress[t] += Fixed::fromInt(techCost(static_cast<TypeIndex>(t))) * pct / 100;
+                    grantBoost(p.id, false, t);
                     break;
                 }
             }

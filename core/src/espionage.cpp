@@ -288,9 +288,7 @@ void Game::resolveSpyOperation(Agent& a) {
                 const size_t pick = rng.below(static_cast<uint32_t>(options.size()));
                 const size_t t = options[pick];
                 options.erase(options.begin() + static_cast<std::ptrdiff_t>(pick));
-                const int boostPct = rules_->techs[t].boost.percent > 0 ? rules_->techs[t].boost.percent : 40;
-                thief.techs.boosted[t] = 1;
-                thief.techs.progress[t] += Fixed::fromInt(techCost(static_cast<TypeIndex>(t))) * boostPct / 100;
+                grantBoost(sender, false, t);
             }
             break;
         }

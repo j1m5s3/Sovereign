@@ -400,8 +400,12 @@ TEST(boosts_from_wonders_places_and_continents) {
     s.plot(peak).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
     CHECK(boostIn(s, techBoost("TECH_ASTRONOMY")));
 
+    // Two Neighborhoods in one city: both count toward Sanitation, and the second may be Conservation's Breathtaking one.
     const Hex home = {13, 7};
+    s.cities[1].districts.push_back({rules().district("DISTRICT_NEIGHBORHOOD"), {10, 4}, true});
+    CHECK(!boostIn(s, techBoost("TECH_SANITATION")));
     s.cities[1].districts.push_back({rules().district("DISTRICT_NEIGHBORHOOD"), home, true});
+    CHECK(boostIn(s, techBoost("TECH_SANITATION")));
     CHECK(!boostIn(s, civicBoost("CIVIC_CONSERVATION")));
     for (const Hex& h : s.grid.within(home, 1)) {
         if (h != home && h != s.cities[1].pos) s.plot(h).feature = rules().feature("FEATURE_FOREST");
