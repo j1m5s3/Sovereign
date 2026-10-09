@@ -238,10 +238,7 @@ void Game::applyLeader(const Command& c) {
     if (c.type == CommandType::ChooseSuccessor) {
         const Succession kind = static_cast<Succession>(c.arg);
         const CivType& civ = rules_->civs[static_cast<size_t>(p.civ)];
-        std::optional<Hex> at;
-        for (const City& city : state_.cities) {
-            if (city.owner == c.player && (city.capital || !at)) at = city.pos;
-        }
+        std::optional<Hex> at = throneCity(c.player);
         if (kind == Succession::Unit) {
             const Unit* u = state_.unit(c.id);
             if (!at) at = u->pos;
@@ -324,6 +321,7 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) 
     }
     if (captured) {
         p.captor = by;  // held for ransom; the throne stands empty meanwhile
+        p.capturedTurn = state_.turn;
     } else {
         p.successionPending = true;
         successionShock(owner, rules_->globalInt("LEADER_LOSS_LOYALTY"));
@@ -339,6 +337,29 @@ void Game::successionShock(PlayerId owner, int loyaltyDrop) {
     const int lost = std::clamp(p.eraScore, 0, rules_->globalInt("LEADER_LOSS_ERA_SCORE"));
     p.eraScore -= lost;
     p.eraScoreTotal -= lost;
+}
+
+std::optional<Hex> Game::throneCity(PlayerId player) const {
+    std::optional<Hex> at;
+    for (const City& city : state_.cities) {
+        if (city.owner == player && (city.capital || !at)) at = city.pos;
+    }
+    return at;
+}
+
+void Game::ransomRuler(PlayerId owner) {
+    // The captive comes home to the capital with its loadout and promotions; the interregnum ends next turn (§5).
+    Player& p = state_.players[static_cast<size_t>(owner)];
+    p.captor = kNoPlayer;
+    spawnLeader(owner, throneCity(owner).value_or(p.startPos));
+    Unit& l = state_.units.back();
+    for (size_t slot = 0; slot < l.gear.size(); ++slot) {
+        if (p.savedGear[slot] != kNone) l.gear[slot] = p.savedGear[slot];
+    }
+    l.promotions = p.savedPromotions;
+    l.movesLeft = Fixed();
+    p.interregnumTurns = std::min(p.interregnumTurns, 1);
+    refreshVisibility(owner);
 }
 
 void Game::regicide(PlayerId loser, PlayerId by) {

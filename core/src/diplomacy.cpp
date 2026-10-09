@@ -498,7 +498,7 @@ CommandError Game::dealProblem(const Deal& d) const {
     if (d.from == d.to || !isMajorCiv(d.from) || !isMajorCiv(d.to) || !hasMet(d.from, d.to)) return CommandError::CannotDeal;
     if (d.items.empty() || d.items.size() > static_cast<size_t>(kMaxItems)) return CommandError::CannotDeal;
     const bool war = atWar(d.from, d.to);
-    bool peace = false, friendship = false, alliance = false, jointWar = false;
+    bool peace = false, friendship = false, alliance = false, jointWar = false, ruler = false;
     std::vector<int> openBorders(2, 0);
     std::vector<TypeIndex> luxuries;
     int gold[2] = {0, 0}, perTurn[2] = {0, 0}, favor[2] = {0, 0}, ceded[2] = {0, 0};
@@ -617,6 +617,11 @@ CommandError Game::dealProblem(const Deal& d) const {
                 favor[side] += i.amount;
                 if (i.amount <= 0 || favor[side] > giver.favor) return CommandError::CannotDeal;
                 break;
+            case DealItemKind::Ruler:
+                // The other side's leader, held by the giver (leader doc §5), once per deal.
+                if (ruler || i.amount != other || state_.players[at(other)].captor != i.from) return CommandError::CannotDeal;
+                ruler = true;
+                break;
             case DealItemKind::Peace: {
                 if (peace || !war) return CommandError::CannotDeal;
                 const Relation& rel = state_.players[at(d.from)].relations[at(d.to)];
@@ -713,6 +718,13 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
                 break;
             }
             case DealItemKind::Favor: value += gives ? -2 * i.amount : 2 * i.amount; break;  // a point of favor is worth 2 Gold
+            case DealItemKind::Ruler: {
+                // Its own ruler back spares it the abandonment's loyalty loss and a reign started over; the captor
+                // gives up a lever (Sovereign's values).
+                const int level = 1 + static_cast<int>(state_.players[at(gives ? other : judge)].savedPromotions.size());
+                value += gives ? -(50 + 25 * level) : 150 + 30 * std::min(cities, 10) + 75 * level;
+                break;
+            }
             case DealItemKind::Peace: {
                 const int mine = ai::militaryStrength(*this, judge), theirs = ai::militaryStrength(*this, other);
                 const int turns = state_.turn - state_.players[at(judge)].relations[at(other)].since;
@@ -771,6 +783,7 @@ std::vector<DealItem> Game::offerableItems(PlayerId from, PlayerId to) const {
     for (const CapturedSpy& c : state_.capturedSpies) {
         if (c.captor == from && c.spy.owner == to) tryItem({DealItemKind::Captive, from, c.spy.id, kNone});
     }
+    if (state_.players[at(to)].captor == from) tryItem({DealItemKind::Ruler, from, to, kNone});
     for (const Player& t : state_.players) tryItem({DealItemKind::JointWar, from, t.id, kNone});
     if (p.favor > 0) tryItem({DealItemKind::Favor, from, p.favor, kNone});
     for (const City& c : state_.cities) {
@@ -947,6 +960,7 @@ void Game::executeDeal(const Deal& d) {
                 giver.favor -= i.amount;
                 taker.favor += i.amount;
                 break;
+            case DealItemKind::Ruler: ransomRuler(other); break;
             case DealItemKind::Captive: {
                 // The spy comes home, idle, keeping its level and promotions.
                 auto it = std::find_if(state_.capturedSpies.begin(), state_.capturedSpies.end(),
@@ -1483,6 +1497,10 @@ std::string describeDealItem(const Rules& r, const GameState& s, const DealItem&
                 if (c.spy.id == i.amount) return who + " returns a captured spy (level " + std::to_string(c.spy.level) + ")";
             }
             return who + " returns a captured spy";
+        }
+        case DealItemKind::Ruler: {
+            const bool known = i.amount >= 0 && static_cast<size_t>(i.amount) < s.players.size();
+            return who + " frees " + (known ? s.players[static_cast<size_t>(i.amount)].leaderName : std::string("a captured ruler"));
         }
     }
     return "?";

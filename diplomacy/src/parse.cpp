@@ -82,6 +82,14 @@ bool parseInterpretation(const std::string& json, const Game& game, const Person
         else if (kind == "alliance") d.kind = DealItemKind::Alliance;
         else if (kind == "peace") d.kind = DealItemKind::Peace;
         else if (kind == "favor") d.kind = DealItemKind::Favor;
+        else if (kind == "ruler") {
+            // A captured ruler goes home (leader doc §5): whichever side holds the other's captive gives it.
+            d.kind = DealItemKind::Ruler;
+            const std::vector<Player>& players = game.state().players;
+            if (players[static_cast<size_t>(persona.player)].captor == persona.leader) d.from = persona.leader;
+            else if (players[static_cast<size_t>(persona.leader)].captor == persona.player) d.from = persona.player;
+            d.amount = d.from == persona.leader ? persona.player : persona.leader;
+        }
         else if (kind == "city") {
             // A city of the giver's, by name (ceded with peace; 08).
             d.kind = DealItemKind::City;
@@ -95,7 +103,7 @@ bool parseInterpretation(const std::string& json, const Game& game, const Person
         } else continue;
         const bool counted = d.kind == DealItemKind::Gold || d.kind == DealItemKind::GoldPerTurn || d.kind == DealItemKind::Favor;
         if (counted && d.amount <= 0) continue;
-        if (!counted && d.kind != DealItemKind::Resource && d.kind != DealItemKind::City) d.amount = 0;
+        if (!counted && d.kind != DealItemKind::Resource && d.kind != DealItemKind::City && d.kind != DealItemKind::Ruler) d.amount = 0;
         // An alliance's type rides in its amount (08: Alliance); Economic when none is named.
         if (d.kind == DealItemKind::Alliance) {
             static const char* const kTypes[] = {"research", "military", "economic", "cultural", "religious"};

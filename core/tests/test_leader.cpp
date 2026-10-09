@@ -406,6 +406,7 @@ TEST(a_captured_leader_holds_the_throne_until_abandoned) {
     REQUIRE(g.submit(Command::attack(1, f.sword, {8, 5})) == CommandError::Ok);
     const Player& p = g.state().players[0];
     CHECK_EQ(p.captor, 1);
+    CHECK_EQ(p.capturedTurn, g.state().turn);
     CHECK(!p.successionPending);
     CHECK_EQ(g.state().city(f.capital)->loyalty, capitalLoyalty);  // a capture costs nothing while the ransom is open
     CHECK_EQ(p.eraScore, eraScore);
@@ -696,6 +697,122 @@ TEST(an_heir_keeps_one_promotion) {
     REQUIRE(g->leaderOf(0));
     CHECK(g->leaderOf(0)->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WARY")});
     (void)leader;
+}
+
+namespace {
+// Player 1 holds player 0's ruler; the throne stands empty, its loadout and promotions put by (§5).
+std::unique_ptr<Game> heldRuler(int gold, int capturedTurn, bool humanOwner = false) {
+    return duel(
+        [&](GameState& s) {
+            addCity(s, 0, {2, 2}, true);
+            addCity(s, 1, {13, 9}, true);
+            s.turn = 20;
+            Player& p = s.players[0];
+            Game::fitPlayerToRules(p, rules());
+            p.captor = 1;
+            p.capturedTurn = capturedTurn;
+            p.savedGear = {gear("GEAR_SPEAR"), gear("GEAR_HIDE"), kNone};
+            p.savedPromotions = {promo("PROMOTION_SOVEREIGN_WARY")};
+            p.interregnumTurns = rules().globalInt("LEADER_INTERREGNUM_TURNS");
+            p.gold = Fixed::fromInt(gold);
+            p.human = humanOwner;
+            for (Player& x : s.players) x.met.assign(s.players.size(), 1);
+        },
+        false);
+}
+}  // namespace
+
+TEST(a_captured_ruler_is_ransomed_home) {
+    auto g = heldRuler(500, 17);
+    REQUIRE(!g->leaderOf(0));
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().players[0].captor, 1);
+    CHECK_EQ(loaded->state().players[0].capturedTurn, 17);
+    // Only the captor offers it, and only to the captive's own civ.
+    const DealItem ruler{DealItemKind::Ruler, 1, 0, kNone};
+    const std::vector<DealItem> offer = g->offerableItems(1, 0);
+    CHECK(std::any_of(offer.begin(), offer.end(), [](const DealItem& i) { return i.kind == DealItemKind::Ruler && i.amount == 0; }));
+    const std::vector<DealItem> back = g->offerableItems(0, 1);
+    CHECK(std::none_of(back.begin(), back.end(), [](const DealItem& i) { return i.kind == DealItemKind::Ruler; }));
+    CHECK(g->dealProblem({0, 0, 1, 0, {{DealItemKind::Ruler, 0, 1, kNone}}}) != CommandError::Ok);
+    CHECK(g->dealProblem({0, 0, 1, 0, {{DealItemKind::Ruler, 1, 1, kNone}}}) != CommandError::Ok);
+    CHECK(g->dealProblem({0, 0, 1, 0, {ruler, ruler}}) != CommandError::Ok);
+    CHECK(describeDealItem(rules(), g->state(), ruler).find("frees " + g->state().players[0].leaderName) != std::string::npos);
+    // Bought back for gold: home in the capital with its loadout and promotions; the interregnum ends next turn.
+    const std::vector<DealItem> terms = {ruler, {DealItemKind::Gold, 0, 300, kNone}};
+    CHECK(g->dealValue(0, {0, 0, 1, 0, terms}) > 0);
+    CHECK(!g->wouldAccept(1, {0, 0, 1, 0, {ruler, {DealItemKind::Gold, 0, 50, kNone}}}));  // too cheap for the captor
+    REQUIRE(g->wouldAccept(1, {0, 0, 1, 0, terms}));
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, terms)) == CommandError::Ok);
+    const Unit* l = g->leaderOf(0);
+    REQUIRE(l);
+    CHECK(l->pos == hx(2, 2));
+    CHECK_EQ(l->gear[0], gear("GEAR_SPEAR"));
+    CHECK(l->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WARY")});
+    const Player& p = g->state().players[0];
+    CHECK_EQ(p.captor, kNoPlayer);
+    CHECK(!p.successionPending);
+    CHECK_EQ(p.interregnumTurns, 1);
+    CHECK_EQ(p.gold, Fixed::fromInt(200));
+    CHECK_EQ(p.leaderName, std::string("Elizabeth I"));  // the same ruler, not an heir
+}
+
+TEST(the_ai_ransoms_its_ruler_or_gives_it_up) {
+    // Waiting, it buys its ruler back at the lowest price the captor takes.
+    auto g = heldRuler(1000, 19);
+    const Fixed captorGold = g->state().players[1].gold;
+    ai::playTurn(*g);
+    REQUIRE(g->leaderOf(0));
+    CHECK_EQ(g->state().players[0].captor, kNoPlayer);
+    const int price = 100 + 50 * 2;  // a level 2 ruler
+    const Fixed gained = g->state().players[1].gold - captorGold;  // the ransom, and whatever else the turn brought
+    CHECK(gained >= Fixed::fromInt(price) && gained < Fixed::fromInt(2 * price));
+    CHECK_EQ(g->state().players[0].leaderName, std::string("Elizabeth I"));
+    // Without the gold it waits, then gives the captive up after kRansomPatience (10) turns and crowns the heir.
+    auto poor = heldRuler(0, 11);
+    ai::playTurn(*poor);
+    CHECK_EQ(poor->state().players[0].captor, 1);
+    CHECK(!poor->leaderOf(0));
+    auto spent = heldRuler(0, 10);
+    ai::playTurn(*spent);
+    CHECK_EQ(spent->state().players[0].captor, kNoPlayer);
+    REQUIRE(spent->leaderOf(0));
+    CHECK_EQ(spent->state().players[0].leaderName, std::string("James I"));
+}
+
+TEST(the_ai_gives_up_a_ruler_no_one_will_ransom) {
+    // A captor that is no major civ (here a barbarian player) takes no ransom: the captive is given up at once.
+    GameState s = flatState(16, 12, 3);
+    addCity(s, 0, {2, 2}, true);
+    addCity(s, 1, {13, 9}, true);
+    s.players[2].barbarian = true;
+    Player& p = s.players[0];
+    Game::fitPlayerToRules(p, rules());
+    p.captor = 2;
+    p.capturedTurn = s.turn;
+    p.gold = Fixed::fromInt(1000);
+    p.interregnumTurns = rules().globalInt("LEADER_INTERREGNUM_TURNS");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    CHECK_EQ(g->state().players[0].captor, kNoPlayer);
+    CHECK(g->leaderOf(0));
+}
+
+TEST(the_ai_offers_a_human_its_ruler_back) {
+    auto g = heldRuler(1000, 19, true);
+    pass(*g, 1);  // the human ends its turn; the captor plays
+    REQUIRE(g->state().currentPlayer == 1);
+    ai::playTurn(*g);
+    const auto offered = std::find_if(g->state().deals.begin(), g->state().deals.end(), [](const Deal& d) {
+        return d.from == 1 && d.to == 0 && std::any_of(d.items.begin(), d.items.end(), [](const DealItem& i) { return i.kind == DealItemKind::Ruler && i.amount == 0; });
+    });
+    REQUIRE(offered != g->state().deals.end());
+    const auto gold = std::find_if(offered->items.begin(), offered->items.end(), [](const DealItem& i) { return i.kind == DealItemKind::Gold; });
+    REQUIRE(gold != offered->items.end());
+    CHECK_EQ(gold->from, 0);
+    CHECK_EQ(gold->amount, 2 * (100 + 50 * 2));
 }
 
 TEST(leader_goals_put_the_most_pressing_first) {

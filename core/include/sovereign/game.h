@@ -979,6 +979,8 @@ private:
     void startInterregnum(Player& p);
     // A new ruler is crowned after a loss: every city's loyalty drops and the era's score shrinks (leader doc §5).
     void successionShock(PlayerId owner, int loyaltyDrop);
+    std::optional<Hex> throneCity(PlayerId player) const;  // the capital, else any city of the player's
+    void ransomRuler(PlayerId owner);                        // a Ruler deal item: the captive leader goes home
     void processLoyalty(PlayerId p);
     void rebellion(City& city);  // a pretender's rebels appear next to the city
     void processFreeCities();

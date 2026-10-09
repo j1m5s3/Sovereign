@@ -123,8 +123,8 @@ constexpr uint8_t kPillagedUntilRepaired = 255;
 
 // ---- diplomacy (08: Diplomatic actions; leader doc §10, language-model diplomacy)
 // What one side of a deal gives. Friendship and Peace bind both sides; `from` is either.
-enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork, Captive, JointWar, City, Favor };
-constexpr int kNumDealItemKinds = 12;
+enum class DealItemKind : uint8_t { Gold = 0, GoldPerTurn, Resource, OpenBorders, Friendship, Peace, Alliance, GreatWork, Captive, JointWar, City, Favor, Ruler };
+constexpr int kNumDealItemKinds = 13;
 // Alliance types [R&F] (08: Alliance); a DealItemKind::Alliance item carries one as its amount.
 enum class AllianceType : int8_t { None = -1, Research = 0, Military, Economic, Cultural, Religious };
 constexpr int kNumAllianceTypes = 5;
@@ -132,7 +132,7 @@ struct DealItem {
     DealItemKind kind = DealItemKind::Gold;
     PlayerId from = kNoPlayer;
     int32_t amount = 0;         // gold, gold per turn, or strategic copies per turn; GreatWork: the city holding it; Captive: the spy's id; JointWar: the target;
-                                // City: the city ceded (peace deals only); Favor: Diplomatic Favor [GS]
+                                // City: the city ceded (peace deals only); Favor: Diplomatic Favor [GS]; Ruler: the civ whose captured leader goes home
     TypeIndex resource = kNone; // Resource: a luxury (access) or strategic resource; GreatWork: its index in that city
 };
 // A deal one player put to another; it waits here only while a human must answer.
@@ -461,7 +461,8 @@ struct Player {
     int rulingHeir = 0;             // the dynasty member on the throne (0: the starting leader; -1: not of the dynasty)
     bool successionPending = false; // the leader died or was abandoned: a successor must be chosen
     int interregnumTurns = 0;
-    PlayerId captor = kNoPlayer;    // holds this player's captured leader
+    PlayerId captor = kNoPlayer;    // holds this player's captured leader, to be ransomed (Ruler deal item) or abandoned
+    int capturedTurn = 0;           // when the captor took it
     std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
     std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
 };

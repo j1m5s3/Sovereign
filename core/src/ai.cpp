@@ -43,6 +43,7 @@ constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never 
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kProposalGap = 10;        // turns between deals put to the same civ
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
+constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
 constexpr int kThreatRange = 4;
 constexpr int kHealBelow = 40;
 constexpr int kStageDistance = 4;     // an operation gathers this far from its target city
@@ -700,6 +701,18 @@ void deals(View& v) {
             if (s.players[at(v.me)].gold < Fixed::fromInt(price)) continue;
             ideas.insert(ideas.begin(), {{DealItemKind::Captive, o.id, c.spy.id, kNone}, {DealItemKind::Gold, v.me, price, kNone}});
         }
+        // A captured ruler (leader doc §5): ours bought back at the lowest price they take; theirs offered to a human.
+        const auto ransom = [&](PlayerId owner) { return 100 + 50 * (1 + static_cast<int>(s.players[at(owner)].savedPromotions.size())); };
+        if (s.players[at(v.me)].captor == o.id) {
+            std::vector<std::vector<DealItem>> offers;
+            for (int times = 1; times <= 3; ++times) {
+                const int price = ransom(v.me) * times;
+                if (s.players[at(v.me)].gold >= Fixed::fromInt(price)) offers.push_back({{DealItemKind::Ruler, o.id, v.me, kNone}, {DealItemKind::Gold, v.me, price, kNone}});
+            }
+            ideas.insert(ideas.begin(), offers.begin(), offers.end());
+        }
+        if (o.captor == v.me && o.human && o.gold >= Fixed::fromInt(2 * ransom(o.id)))
+            ideas.insert(ideas.begin(), {{DealItemKind::Ruler, v.me, o.id, kNone}, {DealItemKind::Gold, o.id, 2 * ransom(o.id), kNone}});
         for (const std::vector<DealItem>& idea : ideas) {
             const Deal d{0, v.me, o.id, s.turn, idea};
             if (v.game.dealProblem(d) != CommandError::Ok || v.game.dealValue(v.me, d) < 0) continue;
@@ -2920,9 +2933,12 @@ int settleScore(const Game& game, PlayerId player, Hex plot) {
 }
 
 // Crowns a successor (leader doc §5): the dynasty's heir, else the most seasoned unit,
-// else a regent. A captured leader is given up at once (no ransom until deals exist).
+// else a regent. A captured leader is given up when no ransom is to be had: its captor is
+// no major civ, or kRansomPatience turns have passed (deals() offers the ransom meanwhile).
 void succession(Game& game, PlayerId me) {
-    if (game.state().players[at(me)].captor != kNoPlayer) game.submit(Command::abandonLeader(me));
+    const Player& p = game.state().players[at(me)];
+    if (p.captor != kNoPlayer && (!game.isMajorCiv(p.captor) || game.state().turn - p.capturedTurn >= kRansomPatience))
+        game.submit(Command::abandonLeader(me));
     if (!game.state().players[at(me)].successionPending) return;
     if (game.submit(Command::chooseSuccessor(me, Succession::Heir)) == CommandError::Ok) return;
     UnitId best = kNoUnit;
