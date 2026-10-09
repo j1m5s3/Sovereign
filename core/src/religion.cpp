@@ -75,11 +75,13 @@ bool Game::canFoundReligion(UnitId prophet, TypeIndex religion, TypeIndex founde
     if (!u || !rules_->units[at(u->type)].foundReligion) return fail(CommandError::BadUnit);
     const Player& p = state_.players[at(u->owner)];
     if (p.religion >= 0 || static_cast<int>(state_.religions.size()) >= maxReligions()) return fail(CommandError::CannotFoundReligion);
-    // On a finished Holy Site of one of the player's cities: that city becomes the Holy City.
+    // On a finished Holy Site of one of the player's cities, or on its Stonehenge (06): that city becomes the Holy City.
     const CityDistrict* d = state_.districtAt(u->pos);
     const City* city = state_.plot(u->pos).city != kNoCity ? state_.city(state_.plot(u->pos).city) : nullptr;
-    if (!d || !d->complete || rules_->districts[at(d->type)].id != "DISTRICT_HOLY_SITE" || !city || city->owner != u->owner)
-        return fail(CommandError::CannotFoundReligion);
+    const bool holySite = d && d->complete && rules_->districts[at(d->type)].id == "DISTRICT_HOLY_SITE";
+    const TypeIndex wonder = state_.wonderAt(u->pos);
+    const bool stonehenge = wonder != kNone && rules_->buildings[at(wonder)].id == "BUILDING_STONEHENGE" && city && city->has(wonder);
+    if ((!holySite && !stonehenge) || !city || city->owner != u->owner) return fail(CommandError::CannotFoundReligion);
     if (religion < 0 || at(religion) >= rules_->religions.size() || typeTaken(state_, religion)) return fail(CommandError::CannotFoundReligion);
     auto ok = [&](TypeIndex b, BeliefClass cls) {
         return b >= 0 && at(b) < rules_->beliefs.size() && rules_->beliefs[at(b)].cls == cls && !beliefTaken(state_, b);
@@ -186,6 +188,10 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && governmentIs(player, "GOVERNMENT_THEOCRACY") &&
             std::any_of(std::begin(kChapel), std::end(kChapel), [&](const char* cls) { return u.unitClass == cls; }) && canProduce(city, item, nullptr, true))
             return std::max(1, purchaseCost(player, item, &city, YieldType::Faith));
+        // Monumentality in a Golden Age (09; 06: Faith): civilian land units for Faith, at their Gold price.
+        if (u.purchaseYield == "GOLD" && u.domain == Domain::Land && u.layer == UnitLayer::Civilian &&
+            goldenDedication(player, "DEDICATION_MONUMENTALITY") && canProduce(city, item, nullptr, true))
+            return purchaseCost(player, item, &city, YieldType::Faith);
         if (u.purchaseYield != "FAITH" || !hasUnlocked(player, u.unlock)) return -1;
         // A civ's unique building counts as the one it replaces (Mali's Sahel Mosque as the Temple an Apostle needs).
         if (!u.needsBuilding.empty() &&
@@ -204,8 +210,9 @@ int Game::faithPurchaseCost(PlayerId player, const City& city, ProductionItem it
         if (!secular && !monk && !inquisitor && u.id != "UNIT_MISSIONARY" && u.id != "UNIT_APOSTLE" && u.id != "UNIT_GURU") return -1;
         if (!secular && majority < 0) return -1;
         int cost = unitCost(player, item.type) * speed / 100;
-        // Holy Order's discount is for religious units, which a city-state's soldiers are not.
-        const int discount = u.cityState != kNone ? 0 : static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt());
+        // Holy Order's discount is for Missionaries and Apostles (06; data: one modifier for each).
+        const bool ordered = u.id == "UNIT_MISSIONARY" || u.id == "UNIT_APOSTLE";
+        const int discount = ordered ? static_cast<int>(sumPlayerModifiers(state_, *rules_, p, ModEffect::ReligiousUnitDiscountPercent).toInt()) : 0;
         cost = cost * std::max(0, 100 - discount) / 100;
         if (u.id == "UNIT_GURU" && buildingsOwned(player, "BUILDING_MEENAKSHI_TEMPLE") > 0) cost = cost * 70 / 100;  // Meenakshi Temple (03)
         cost = cost * mercenaryPercent(player, item.type, YieldType::Faith) / 100;  // Mercenary Companies (World Congress): Warrior Monks
@@ -545,11 +552,14 @@ void Game::theologicalCombat(Unit& attacker, Unit& defender) {
     const int win = rules_->globalInt("RELIGION_SPREAD_COMBAT_VICTORY");
     const int range = rules_->globalInt("RELIGION_SPREAD_RANGE_COMBAT_VICTORY");
     const Hex where = defender.pos;
-    // The winner's religion gains pressure nearby and the loser's loses it (06: Theological combat).
+    // The winner's religion gains pressure nearby and the loser's loses it (06: Theological combat), unless the
+    // loser's religion holds Monastic Isolation, whoever owns the unit.
     auto settle = [&](Unit& loser, const Unit& winner) {
         shiftPressure(where, range, winner.religion, win);
-        const Player& lp = state_.players[at(loser.owner)];
-        if (sumPlayerModifiers(state_, *rules_, lp, ModEffect::NoCombatPressureLoss) <= Fixed()) shiftPressure(where, range, loser.religion, -win);
+        const bool isolated = std::any_of(rules_->modifiers.begin(), rules_->modifiers.end(), [&](const Modifier& m) {
+            return m.effect == ModEffect::NoCombatPressureLoss && m.sourceKind == ModSource::Belief && religionHas(state_, loser.religion, m.sourceIndex);
+        });
+        if (!isolated) shiftPressure(where, range, loser.religion, -win);
     };
     const UnitId aid = attacker.id, did = defender.id;
     const bool defenderDies = defender.hp <= 0, attackerDies = attacker.hp <= 0;
@@ -598,10 +608,6 @@ void Game::processReligion() {
         const int range = baseRange + static_cast<int>(sumPlayerModifiers(state_, *rules_, founder, ModEffect::ReligionPressureRange).toInt());
         sources.push_back({c.pos, maj, amount, range, c.owner});
     }
-    std::vector<std::pair<CityId, int>> before;  // city-states' cities and their religion before the pressure
-    for (const City& c : state_.cities) {
-        if (isCityState(c.owner)) before.push_back({c.id, cityMajorityReligion(c)});
-    }
     for (const Source& src : sources) {
         for (City& c : state_.cities) {
             if (c.pos == src.pos || state_.grid.distance(c.pos, src.pos) > src.range) continue;
@@ -609,13 +615,18 @@ void Game::processReligion() {
             c.pressure[static_cast<size_t>(src.religion)] += src.amount / 10;
         }
     }
-    // Religious Unity (06): converting a city-state awards its founder an envoy.
-    for (const auto& [id, was] : before) {
-        const City* c = state_.city(id);
-        const int now = c ? cityMajorityReligion(*c) : -1;
-        if (now < 0 || now == was) continue;
+    // Religious Unity (06): the first time a city-state follows a religion holding it, the founder gains an envoy
+    // (none under Rogue State), however the city turned.
+    for (const City& c : state_.cities) {
+        if (!isCityState(c.owner)) continue;
+        const int now = cityMajorityReligion(c);
+        if (now < 0) continue;
         const PlayerId founder = state_.religions[static_cast<size_t>(now)].founder;
-        if (playerHasBelief(founder, Bf::ReligiousUnity) && !policyIs(founder, "POLICY_ROGUE_STATE")) ++state_.players[at(founder)].envoyTokens;
+        if (!playerHasBelief(founder, Bf::ReligiousUnity)) continue;
+        std::vector<PlayerId>& adopted = state_.players[at(founder)].unityCityStates;
+        if (std::find(adopted.begin(), adopted.end(), c.owner) != adopted.end()) continue;
+        adopted.push_back(c.owner);
+        if (!policyIs(founder, "POLICY_ROGUE_STATE")) ++state_.players[at(founder)].envoyTokens;
     }
 }
 

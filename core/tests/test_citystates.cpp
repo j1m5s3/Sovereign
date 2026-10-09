@@ -451,7 +451,7 @@ TEST(lahores_suzerain_buys_nihangs_that_military_buildings_strengthen) {
     auto g = Game::fromScenario(rules(), suzerainOf("CITYSTATE_LAHORE"));
     const City& c = *g->state().city(mine);
     CHECK(!g->canProduce(c, nihang));
-    CHECK_EQ(g->faithPurchaseCost(0, c, naturalist), rules().units[at(naturalist.type)].cost * 70 / 100);  // Holy Order
+    CHECK_EQ(g->faithPurchaseCost(0, c, naturalist), rules().units[at(naturalist.type)].cost);  // Holy Order: Missionaries and Apostles only
     const int price = g->productionCost(0, nihang);  // its cost, Conservation's share of the civic tree included
     CHECK(price > rules().units[at(nihang.type)].cost);
     CHECK_EQ(g->faithPurchaseCost(0, c, nihang), price);

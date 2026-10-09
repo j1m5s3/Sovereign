@@ -1207,7 +1207,9 @@ CommandError Game::validateCity(const Command& c) const {
                 // Religious units and worship buildings, bought with Faith (06).
                 const int faith = faithPurchaseCost(c.player, *city, item);
                 if (faith < 0) return CommandError::CannotBuild;
-                if (item.kind == ProductionKind::Unit && !unitSpawnPlot(*city, item.type)) return CommandError::CannotBuild;
+                if (item.kind == ProductionKind::Unit &&
+                    (!unitSpawnPlot(*city, item.type) || city->population < rules_->units[static_cast<size_t>(item.type)].minPopulation))
+                    return CommandError::CannotBuild;
                 if (state_.players[static_cast<size_t>(c.player)].faith < Fixed::fromInt(faith)) return CommandError::NotEnoughFaith;
                 return CommandError::Ok;
             }
@@ -1287,7 +1289,10 @@ void Game::applyCity(const Command& c) {
             }
             if (c.target.x == 1) {
                 p.faith -= Fixed::fromInt(faithPurchaseCost(c.player, city, item));
-                if (item.kind == ProductionKind::Unit) {
+                // A civilian bought with Faith under Monumentality (09) is finished as one bought with Gold, below.
+                const bool civilian = item.kind == ProductionKind::Unit && rules_->units[static_cast<size_t>(item.type)].purchaseYield == "GOLD" &&
+                                      rules_->units[static_cast<size_t>(item.type)].layer == UnitLayer::Civilian;
+                if (item.kind == ProductionKind::Unit && !civilian) {
                     const int religion = cityMajorityReligion(city);
                     if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
                     ++p.unitsTrained[static_cast<size_t>(item.type)];

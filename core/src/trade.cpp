@@ -414,13 +414,23 @@ void Game::processTrade(PlayerId pid) {
             }
         }
         if (!cut) {
-            // Religion travels with the caravans (06: Trade routes carry pressure).
-            const int maj = cityMajorityReligion(*origin);
-            if (maj >= 0) {
-                City& d = *state_.city(r.destination);
-                if (d.pressure.size() < state_.religions.size()) d.pressure.resize(state_.religions.size(), 0);
-                d.pressure[static_cast<size_t>(maj)] += static_cast<int32_t>(rules_->global("RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_DESTINATION").round());
-            }
+            // Religion travels with the caravans both ways (06: Trade routes carry pressure): the origin's into the
+            // destination at RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_DESTINATION times the base passive pressure, and
+            // the destination's into the origin at _FOR_ORIGIN. A fraction is counted over the route's turns (half a
+            // point a turn is a point every other turn). Both majorities are read before either city gains.
+            City& start = *state_.city(r.origin);
+            City& end = *state_.city(r.destination);
+            const int fromOrigin = cityMajorityReligion(start), fromDestination = cityMajorityReligion(end);
+            const int base = rules_->globalInt("RELIGION_SPREAD_ADJACENT_PER_TURN_PRESSURE");
+            const auto carry = [&](City& to, int religion, const char* factor) {
+                if (religion < 0) return;
+                const Fixed per = rules_->global(factor) * base;
+                const int64_t amount = (per * r.turnsLeft).floor() - (per * (r.turnsLeft - 1)).floor();
+                if (to.pressure.size() < state_.religions.size()) to.pressure.resize(state_.religions.size(), 0);
+                to.pressure[static_cast<size_t>(religion)] += static_cast<int32_t>(amount);
+            };
+            carry(end, fromOrigin, "RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_DESTINATION");
+            carry(start, fromDestination, "RELIGION_SPREAD_TRADE_ROUTE_PRESSURE_FOR_ORIGIN");
             if (--r.turnsLeft > 0) continue;
             dedicationScore(pid, "DEDICATION_REFORM_THE_COINAGE", 1);  // 09: a route completed
             // A completed route leaves the owner a Trading Post at its destination (07).

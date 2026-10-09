@@ -336,6 +336,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (TypeIndex lux : p.luxuryGrants) if (!inRange(lux, rules.resources.size(), false)) return false;
         for (TypeIndex im : p.improvementGrants) if (!inRange(im, rules.improvements.size(), false)) return false;
         for (CityId id : p.convertedCities) if (id < 0) return false;
+        for (PlayerId cs : p.unityCityStates) if (cs < 0 || static_cast<size_t>(cs) >= s.players.size()) return false;
         if (!inRange(p.pantheon, rules.beliefs.size(), true) || p.religion < -1 || p.religion >= static_cast<int>(s.religions.size())) return false;
         if (p.relations.size() != s.players.size()) return false;
         if (p.techs.done.size() != rules.techs.size() || p.civics.done.size() != rules.civics.size()) return false;
@@ -424,6 +425,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeI32s(w, std::vector<int32_t>(p.luxuryGrants.begin(), p.luxuryGrants.end()));
         writeI32s(w, std::vector<int32_t>(p.improvementGrants.begin(), p.improvementGrants.end()));
         writeI32s(w, p.convertedCities);
+        writeI32s(w, std::vector<int32_t>(p.unityCityStates.begin(), p.unityCityStates.end()));
         writeI32s(w, std::vector<int32_t>(p.projectsDone.begin(), p.projectsDone.end()));
         w.i16(p.pantheon);
         w.i16(p.religion);
@@ -887,6 +889,12 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.improvementGrants.clear();
         for (int32_t v : trained) p.improvementGrants.push_back(static_cast<TypeIndex>(v));
         if (!readI32s(r, p.convertedCities)) return false;
+        if (!readI32s(r, trained)) return false;
+        p.unityCityStates.clear();
+        for (int32_t v : trained) {
+            if (v < INT8_MIN || v > INT8_MAX) return false;
+            p.unityCityStates.push_back(static_cast<PlayerId>(v));
+        }
         if (!readI32s(r, trained)) return false;
         p.projectsDone.assign(trained.begin(), trained.end());
         p.pantheon = r.i16();
