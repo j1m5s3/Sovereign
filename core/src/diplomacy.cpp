@@ -721,7 +721,7 @@ int Game::dealValue(PlayerId judge, const Deal& d) const {
             case DealItemKind::Ruler: {
                 // Its own ruler back spares it the abandonment's loyalty loss and a reign started over; the captor
                 // gives up a lever (Sovereign's values).
-                const int level = 1 + static_cast<int>(state_.players[at(i.amount)].savedPromotions.size());
+                const int level = 1 + static_cast<int>(state_.players[at(gives ? other : judge)].savedPromotions.size());
                 value += gives ? -(50 + 25 * level) : 150 + 30 * std::min(cities, 10) + 75 * level;
                 break;
             }
