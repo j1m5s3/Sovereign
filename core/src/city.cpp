@@ -174,6 +174,15 @@ CityReport Game::cityReport(CityId id) const {
     return cityReport(*c, shared);
 }
 
+std::vector<CityReport> Game::cityReports(PlayerId player) const {
+    std::vector<CityReport> out;
+    ReportShare shared;
+    for (const City& c : state_.cities) {
+        if (c.owner == player) out.push_back(cityReport(c, shared));
+    }
+    return out;
+}
+
 CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     CityReport rep;
     const City* c = &city;

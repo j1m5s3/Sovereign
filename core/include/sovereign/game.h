@@ -120,6 +120,8 @@ public:
 
     // ---- cities (02-cities.md)
     CityReport cityReport(CityId city) const;
+    // The reports of all the player's cities, in state order: one run shares the work, as a turn's processing does.
+    std::vector<CityReport> cityReports(PlayerId player) const;
     // Yields of a plot as worked by `city` (city center rules when it is the center).
     Yields plotYields(Hex plot, const City& city) const;
     // Plots this city's citizens may work: owned by it, within 3, workable terrain.

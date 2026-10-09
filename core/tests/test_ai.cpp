@@ -833,6 +833,112 @@ TEST(ai_weighs_religion_beliefs_on_its_own_turn) {
     CHECK(one == zero);
 }
 
+// While changes are free, the AI slots the policy cards worth most to its cities, tried on a copy of the game; cards
+// that do nothing for them (every military card here) rank by their modifiers, as all cards once did, and a card that
+// costs them stays out.
+TEST(ai_slots_the_policy_cards_worth_most_to_its_cities) {
+    // The chooser's three cities and a rival civ's city far off. Returns the chooser's cards after its turn.
+    struct Setup {
+        const char* government = "GOVERNMENT_CHIEFDOM";  // a Military and an Economic slot
+        std::vector<TypeIndex> cards{kNone, kNone};
+        std::vector<const char*> civics{"CIVIC_CODE_OF_LAWS", "CIVIC_CRAFTSMANSHIP", "CIVIC_EARLY_EMPIRE"};
+        int pop = 3, capitalPop = 0;  // capitalPop: the capital's, when not pop
+        int districts = 0;            // in each city: a Campus with a Library, then a Holy Site
+        bool free = true, cityState = false;
+        PlayerId who = 0;  // the chooser; player 1 plays after player 0
+    };
+    const auto slotted = [](const Setup& set) {
+        GameState s = flatState(36, 14, 2);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        if (set.cityState) {
+            s.players[at(set.who)].civ = kNone;
+            s.players[at(set.who)].cityState = rules().cityState("CITYSTATE_MITLA");
+        }
+        for (Player& p : s.players) {
+            p.envoys.assign(2, 0);
+            p.met.assign(2, 0);
+        }
+        for (int i = 0; i < 3; ++i) {
+            const Hex pos{5 + 7 * i, 6};
+            addCity(s, set.who, pos, i == 0, i == 0 && set.capitalPop > 0 ? set.capitalPop : set.pop);
+            City& c = s.cities.back();
+            if (set.districts >= 1) {
+                c.districts.push_back({rules().district("DISTRICT_CAMPUS"), {pos.x + 1, pos.y}, true});
+                c.buildings.push_back(rules().building("BUILDING_LIBRARY"));
+            }
+            if (set.districts >= 2) c.districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {pos.x - 1, pos.y}, true});
+        }
+        addCity(s, static_cast<PlayerId>(1 - set.who), {31, 6}, true, 3);
+        Player& p = s.players[at(set.who)];
+        for (const char* c : set.civics) p.civics.done[at(rules().civic(c))] = 1;
+        p.government = rules().government(set.government);
+        p.policies = set.cards;
+        p.freeChanges = set.free;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        for (PlayerId turn = 0; turn <= set.who; ++turn) ai::playTurn(*g);
+        return g->state().players[at(set.who)].policies;
+    };
+    const TypeIndex urbanPlanning = rules().policy("POLICY_URBAN_PLANNING"), godKing = rules().policy("POLICY_GOD_KING");
+    const auto military = [](TypeIndex card) { return card != kNone && rules().policies[at(card)].slot == PolicySlot::Military; };
+    // Urban Planning's +1 Production in each city is worth more than God King's +1 Faith and +1 Gold in the capital,
+    // which has more modifiers: it takes the Economic slot, empty or God King's, as the second player too (its copy of
+    // the game is on its own turn).
+    for (const PlayerId who : {PlayerId{0}, PlayerId{1}}) {
+        for (const TypeIndex economic : {kNone, godKing}) {
+            Setup set;
+            set.cards = {kNone, economic};
+            set.who = who;
+            const std::vector<TypeIndex> cards = slotted(set);
+            REQUIRE(cards.size() == 2u);
+            CHECK_EQ(cards[1], urbanPlanning);
+            CHECK(military(cards[0]));
+        }
+    }
+    // Insulae's +1 Housing in cities of two specialty districts beats Ilkum, whose Builders the copy does not weigh
+    // (listed first, with as many modifiers).
+    Setup housing;
+    housing.civics = {"CIVIC_CRAFTSMANSHIP", "CIVIC_GAMES_AND_RECREATION"};
+    housing.districts = 2;
+    CHECK_EQ(slotted(housing)[1], rules().policy("POLICY_INSULAE"));
+    // There Liberalism's +1 Amenity, with which cities of 2 and a capital of 3 stay Content, their yields unchanged,
+    // is worth more than Insulae's Housing, and takes its slot though it gains less over Insulae than Insulae is
+    // worth: each card weighs against an empty slot.
+    Setup amenity;
+    amenity.cards = {kNone, rules().policy("POLICY_INSULAE")};
+    amenity.civics = {"CIVIC_CRAFTSMANSHIP", "CIVIC_GAMES_AND_RECREATION", "CIVIC_THE_ENLIGHTENMENT"};
+    amenity.districts = 2;
+    amenity.pop = 2;
+    amenity.capitalPop = 3;
+    CHECK_EQ(slotted(amenity)[1], rules().policy("POLICY_LIBERALISM"));
+    // Rationalism, whose effect is in code, adds half a Library's Science in a city of 15: it beats Ilkum and
+    // Liberalism, whose Amenity needs a second specialty district.
+    Setup rationalism;
+    rationalism.civics = {"CIVIC_CRAFTSMANSHIP", "CIVIC_THE_ENLIGHTENMENT"};
+    rationalism.districts = 1;
+    rationalism.pop = 15;
+    CHECK_EQ(slotted(rationalism)[1], rules().policy("POLICY_RATIONALISM"));
+    // A city-state ranks every card by its modifiers.
+    Setup cityState;
+    cityState.cityState = true;
+    CHECK_EQ(slotted(cityState)[1], godKing);
+    // In cities of 10, with God King and Music Censorship slotted: Urban Planning takes the Economic slot and God King
+    // moves to the Wildcard one, ahead of Insulae, which does nothing for cities without districts. Music Censorship's
+    // -1 Amenity goes, though no other Diplomatic card is known; nor is Space Race, so the copy of the game cannot take
+    // it back and starts over.
+    Setup censored;
+    censored.government = "GOVERNMENT_AUTOCRACY";  // Military, Economic, Diplomatic and Wildcard slots
+    censored.cards = {kNone, godKing, rules().policy("POLICY_MUSIC_CENSORSHIP"), kNone};
+    censored.civics.push_back("CIVIC_GAMES_AND_RECREATION");
+    censored.pop = 10;
+    const std::vector<TypeIndex> cards = slotted(censored);
+    REQUIRE(cards.size() == 4u);
+    CHECK(military(cards[0]) && cards[1] == urbanPlanning && cards[2] == kNone && cards[3] == godKing);
+    // No change outside a free window.
+    Setup locked;
+    locked.free = false;
+    CHECK((slotted(locked) == std::vector<TypeIndex>{kNone, kNone}));
+}
+
 TEST(ai_buys_the_building_worth_most_per_gold) {
     enum { MonumentQueued = 1, HasMonument = 2 };
     // Player 0's two cities build Ancient Walls (never bought with gold) and can buy a Monument or a Granary; the AI
