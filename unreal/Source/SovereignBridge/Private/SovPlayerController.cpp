@@ -2153,6 +2153,13 @@ void ASovPlayerController::UpdateGameUI()
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
 			.OnEndClose_Lambda([this]() { bEndClosed = true; })
+			.OnGovAdopt_Lambda([this](int32 G) { Send(sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(G))); })
+			.OnGovSlot_Lambda([this](int32 Slot) { GovSlot = Slot; })
+			.OnGovCard_Lambda([this](int32 Policy) {
+				if (GovSlot >= 0) Send(sov::Command::setPolicy(Me(), GovSlot, static_cast<sov::TypeIndex>(Policy)));
+			})
+			.OnGovDedication_Lambda([this](int32 D) { Send(sov::Command::chooseDedication(Me(), static_cast<sov::TypeIndex>(D))); })
+			.OnGovBuy_Lambda([this]() { Send(sov::Command::buyPolicyChanges(Me())); })
 			.OnLens_Lambda([this](int32 Lens) {
 				// A lens is this machine's view: the map redraws with it (again: off).
 				USovGameSubsystem* S = Subsystem();
@@ -2406,6 +2413,47 @@ void ASovPlayerController::UpdateGameUI()
 		M.bChooser = true;
 		M.ChooserTitle = ChooserTitle;
 		for (const FChoice& Ch : Choices) M.Choices.Add({Ch.Label, Ch.Right, Ch.Icon, Ch.Section});
+	}
+	// The government screen in place of the F2 list (plan E).
+	if (Chooser == EChooser::Government)
+	{
+		FSovGovModel& V = M.Gov;
+		V.bOpen = true;
+		const sov::TypeIndex Cur = P.government;
+		V.Title = Cur == sov::kNone ? FString(TEXT("No government yet")) : FString::Printf(TEXT("%s (tier %d)"), *Str(R.governments[static_cast<size_t>(Cur)].name), R.governments[static_cast<size_t>(Cur)].tier);
+		V.Note = P.anarchyTurns > 0 ? FString::Printf(TEXT("Anarchy: %d more turn(s) without policies"), P.anarchyTurns)
+			: TEXT("Pick a slot, then a card for it. A new civic opens free changes for one turn; gold opens them otherwise.");
+		for (size_t g = 0; g < R.governments.size(); ++g)
+		{
+			const sov::GovernmentType& Gt = R.governments[g];
+			FSovGovOption& O = V.Governments.AddDefaulted_GetRef();
+			O.Index = static_cast<int32>(g);
+			O.Name = Str(Gt.name);
+			for (int32 k = 0; k < 4; ++k) O.Slots[k] = Gt.slots[static_cast<size_t>(k)];
+			O.Detail = FString::Printf(TEXT("Tier %d"), Gt.tier);
+			if (Gt.favor) O.Detail += FString::Printf(TEXT(", +%d favor a turn"), Gt.favor);
+			if (Gt.influencePerTurn) O.Detail += FString::Printf(TEXT(", +%d influence a turn"), Gt.influencePerTurn);
+			O.bCurrent = static_cast<sov::TypeIndex>(g) == Cur;
+			O.bCanAdopt = !O.bCurrent && G.canAdoptGovernment(Me(), static_cast<sov::TypeIndex>(g));
+		}
+		for (int32 Slot = 0; Slot < static_cast<int32>(P.policies.size()); ++Slot)
+		{
+			const sov::TypeIndex In = P.policies[static_cast<size_t>(Slot)];
+			V.Slots.Add({static_cast<int32>(G.policySlotType(Me(), Slot)), In == sov::kNone ? FString() : Str(R.policies[static_cast<size_t>(In)].name)});
+		}
+		if (GovSlot >= V.Slots.Num()) GovSlot = -1;
+		V.Selected = GovSlot;
+		if (GovSlot >= 0)
+		{
+			for (size_t pol = 0; pol < R.policies.size(); ++pol)
+			{
+				if (static_cast<sov::TypeIndex>(pol) == P.policies[static_cast<size_t>(GovSlot)] || !G.canSetPolicy(Me(), GovSlot, static_cast<sov::TypeIndex>(pol))) continue;
+				V.Cards.Add({static_cast<int32>(pol), Str(R.policies[pol].name), static_cast<int32>(R.policies[pol].slot)});
+			}
+		}
+		if (const sov::Command Buy = sov::Command::buyPolicyChanges(Me()); G.validate(Buy) == sov::CommandError::Ok)
+			V.BuyChanges = FString::Printf(TEXT("Open changes this turn (%d gold)"), G.policyChangeCost(Me()));
+		for (const sov::TypeIndex D : G.availableDedications(Me())) V.Dedications.Add({static_cast<int32>(D), Str(R.dedications[static_cast<size_t>(D)].name)});
 	}
 	// Research and civics open as their whole tree (plan D, step 3).
 	if (Chooser == EChooser::Research || Chooser == EChooser::Civic)

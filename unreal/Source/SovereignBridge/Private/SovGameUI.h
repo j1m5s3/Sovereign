@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovGovernmentView.h"
 #include "SovLens.h"
 #include "SovMinimap.h"
 #include "SovTreeView.h"
@@ -87,6 +88,8 @@ struct FSovUIModel
 	TArray<FSovUIChoice> Choices;
 	// The tech or civic tree, open in place of their list (plan D, step 3).
 	FSovTreeModel Tree;
+	// The government screen, open in place of the F2 list.
+	FSovGovModel Gov;
 	// The end of the game (plan D, step 5): who won and how, the scores, and the player's chronicle.
 	bool bEnd = false;
 	bool bWon = false;
@@ -132,6 +135,11 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
 	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
 	SLATE_EVENT(TDelegate<void()>, OnEndClose)      // look at the map after the game
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovAdopt)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovSlot)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovCard)
+	SLATE_EVENT(TDelegate<void(int32)>, OnGovDedication)
+	SLATE_EVENT(TDelegate<void()>, OnGovBuy)
 	SLATE_EVENT(TDelegate<void(int32)>, OnLens)     // a lens button (ESovLens)
 	SLATE_EVENT(TDelegate<void(FVector2D)>, OnMinimap)  // the minimap clicked, 0..1 across and down
 	SLATE_END_ARGS()
@@ -186,4 +194,7 @@ private:
 	TDelegate<void()> OnEndClose;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
+	TSharedPtr<SSovGovernmentView> GovView;
+	TDelegate<void(int32)> OnGovAdopt, OnGovSlot, OnGovCard, OnGovDedication;
+	TDelegate<void()> OnGovBuy;
 };

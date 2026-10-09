@@ -36,6 +36,11 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnNotice = Args._OnNotice;
 	OnDismiss = Args._OnDismiss;
 	OnEndClose = Args._OnEndClose;
+	OnGovAdopt = Args._OnGovAdopt;
+	OnGovSlot = Args._OnGovSlot;
+	OnGovCard = Args._OnGovCard;
+	OnGovDedication = Args._OnGovDedication;
+	OnGovBuy = Args._OnGovBuy;
 	OnLens = Args._OnLens;
 	OnMinimap = Args._OnMinimap;
 	auto Visible = [this](TFunction<bool()> Test) {
@@ -267,7 +272,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// The open chooser.
 		+ SOverlay::Slot().VAlign(VAlign_Center).HAlign(HAlign_Right).Padding(0, 50, 16, 110)
 		[
-			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser && !Model.Tree.bOpen; }))
+			SNew(SBox).WidthOverride(560).MaxDesiredHeight(640).Visibility(Visible([this]() { return Model.bVisible && Model.bChooser && !Model.Tree.bOpen && !Model.Gov.bOpen; }))
 			[
 				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
 				[
@@ -299,7 +304,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// Notifications, the lenses and the minimap, stacked above the end-turn button.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 92)
 		[
-			SNew(SBox).WidthOverride(300).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.bChooser && !Model.bEnd; }))
+			SNew(SBox).WidthOverride(300).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.Gov.bOpen && !Model.bChooser && !Model.bEnd; }))
 			[
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight()[SAssignNew(NoticesBox, SVerticalBox)]
@@ -439,6 +444,18 @@ void SSovGameUI::Construct(const FArguments& Args)
 				]
 			]
 		]
+		// The government screen.
+		+ SOverlay::Slot().Padding(0, 46, 0, 0)
+		[
+			SAssignNew(GovView, SSovGovernmentView)
+			.Visibility_Lambda([this]() { return Model.bVisible && Model.Gov.bOpen && !Model.bEnd ? EVisibility::Visible : EVisibility::Collapsed; })
+			.OnAdopt_Lambda([this](int32 I) { OnGovAdopt.ExecuteIfBound(I); })
+			.OnSlot_Lambda([this](int32 I) { OnGovSlot.ExecuteIfBound(I); })
+			.OnCard_Lambda([this](int32 I) { OnGovCard.ExecuteIfBound(I); })
+			.OnDedication_Lambda([this](int32 I) { OnGovDedication.ExecuteIfBound(I); })
+			.OnBuyChanges_Lambda([this]() { OnGovBuy.ExecuteIfBound(); })
+			.OnClose_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); })
+		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
 		[
@@ -540,6 +557,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 		RebuildCity();
 	}
 	if (Model.Tree.bOpen) TreeView->SetModel(Model.Tree);
+	if (Model.Gov.bOpen) GovView->SetModel(Model.Gov);
 	FString E = Model.bEnd ? Model.EndTitle + Model.EndSub : FString();
 	for (const FString& L : Model.EndScores) E += L + TEXT("|");
 	E += FString::FromInt(Model.EndChronicle.Num());
