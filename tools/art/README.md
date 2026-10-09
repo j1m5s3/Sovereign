@@ -25,9 +25,10 @@ Each kit maps its colours to a pattern (`kitlib.patterns({...})` at the top of t
 |---|---|
 | `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses; lofts through elliptical rings, limbs between two points, flat profiles, two-sided rippled sheets for cloth) and the painted look: vertex colours darkened at the foot and lightened at the crown, of the whole piece and of each part; flat shading, or smooth for figures |
 | `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
+| `blender/kit_fields.py` | Fields kit, the map's tile improvements: farm, mine, quarry, pasture, plantation, camp, fishing boats, lumber mill, oil well, fort, wind farm, solar farm, and a walled yard for the rest |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
 | `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), a war galley (team sail) for ships and a boat (team strakes) under embarked units; static, team-coloured cloth. The people are lofted anatomy with faces (brows, eyes, nose, ears, beards) and layered costumes: cuirass, leather strips, greaves, crested helmets, folded cloaks |
-| `blender/textures.py` | The painted detail sheet: a 4x4 sheet of seamless greyscale patterns (cloth weave, leather, worn metal, skin, hair, wood, stone, plaster, roof tiles, foliage, thatch), built from periodic noise. Mid grey is no change |
+| `blender/textures.py` | The painted detail sheet: a 4x4 sheet of seamless greyscale patterns (cloth weave, leather, worn metal, skin, hair, wood, stone, plaster, roof tiles, foliage, thatch, and for the map's ground water ripples, grass and sand dunes), built from periodic noise. Mid grey is no change |
 | `blender/generate.py` | Builds every piece and exports FBX, and writes the detail sheet to `Textures/T_SovDetail.png` |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
 | `blender/portrait.py` | Renders the Figures kit's people lit (Eevee), team cloth tinted, whole or `close` (upper bodies): `blender -b --python tools/art/blender/portrait.py -- out.png "#2f4f9a" close` |

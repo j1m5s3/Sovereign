@@ -167,6 +167,12 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
 			T.bWoods = Id.rfind("FEATURE_FOREST", 0) == 0 || Id.rfind("FEATURE_JUNGLE", 0) == 0;
 		}
+		{
+			const std::string& Ground = Rules.terrains[static_cast<size_t>(Pl.terrain)].id;
+			auto Has = [&](const char* Part) { return Ground.find(Part) != std::string::npos; };
+			T.Detail = T.Relief == ESovRelief::Water ? 12 : T.Relief != ESovRelief::Flat ? 7 : T.bWoods ? 10 : Has("DESERT") ? 14
+				: Has("GRASS") || Has("PLAINS") ? 13 : 8;
+		}
 		// Territory, the resource the viewer can see, and the improvement.
 		T.Owner = Pl.owner;
 		if (Pl.resource != sov::kNone && Game.resourceVisible(View, H))
@@ -176,6 +182,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		}
 		T.bImproved = Pl.improvement != sov::kNone;
 		T.bPillaged = T.bImproved && Pl.pillagedTurns > 0;
+		if (T.bImproved) T.Improvement = UTF8_TO_TCHAR(Rules.improvements[static_cast<size_t>(Pl.improvement)].id.c_str());
 		for (int32 D = 0; D < sov::kNumDirs; ++D)
 		{
 			const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));

@@ -47,19 +47,26 @@ uint32 ColorKey(const FLinearColor& C)
 	return C.ToFColor(false).ToPackedRGBA();
 }
 
-// The kit sheet's tile for a plot: stone on hills and mountains, leaves under woods, plain water, plaster elsewhere.
-int32 TileFor(ESovRelief Relief, bool bWoods)
-{
-	if (Relief == ESovRelief::Water) return 0;
-	if (Relief == ESovRelief::Hills || Relief == ESovRelief::Mountain) return 7;
-	return bWoods ? 10 : 8;
-}
-
 // A linear colour as the sRGB-ish bytes M_SovKit squares back to linear, with the tile index in alpha.
 FColor KitPaint(const FLinearColor& Linear, int32 Tile)
 {
 	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
 	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile / 15.f * 255.f)));
+}
+// The Fields kit's model for an improvement (tools/art/blender/kit_fields.py); the rest share a walled yard.
+const TCHAR* FieldsModel(const FString& Id)
+{
+	static const TPair<const TCHAR*, const TCHAR*> Models[] = {
+		{TEXT("IMPROVEMENT_FARM"), TEXT("Farm")}, {TEXT("IMPROVEMENT_MINE"), TEXT("Mine")}, {TEXT("IMPROVEMENT_QUARRY"), TEXT("Quarry")},
+		{TEXT("IMPROVEMENT_PASTURE"), TEXT("Pasture")}, {TEXT("IMPROVEMENT_PLANTATION"), TEXT("Plantation")},
+		{TEXT("IMPROVEMENT_CAMP"), TEXT("Camp")}, {TEXT("IMPROVEMENT_FISHING_BOATS"), TEXT("FishingBoats")},
+		{TEXT("IMPROVEMENT_FISHERY"), TEXT("FishingBoats")}, {TEXT("IMPROVEMENT_LUMBER_MILL"), TEXT("LumberMill")},
+		{TEXT("IMPROVEMENT_OIL_WELL"), TEXT("OilWell")}, {TEXT("IMPROVEMENT_OFFSHORE_OIL_RIG"), TEXT("OilWell")},
+		{TEXT("IMPROVEMENT_FORT"), TEXT("Fort")}, {TEXT("IMPROVEMENT_WIND_FARM"), TEXT("WindFarm")},
+		{TEXT("IMPROVEMENT_OFFSHORE_WIND_FARM"), TEXT("WindFarm")}, {TEXT("IMPROVEMENT_SOLAR_FARM"), TEXT("SolarFarm")}};
+	for (const auto& M : Models)
+		if (Id == M.Key) return M.Value;
+	return TEXT("Works");
 }
 }  // namespace
 
@@ -72,9 +79,6 @@ ASovMapActor::ASovMapActor()
 	RootComponent = Terrain;
 
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-	// The art kit's material paints the terrain (vertex colour times a detail tile); without it the plain one does.
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Kit(TEXT("/Game/Art/M_SovKit.M_SovKit"));
-	KitMaterial = Kit.Succeeded() ? Kit.Object : nullptr;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone.Cone"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -183,7 +187,7 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		const double Top = ReliefHeight(Tile.Relief);
 		Heights[Tile.Y * Mirror.Width + Tile.X] = Top;
 		const FLinearColor Color = Tile.bVisible ? Tile.Color : Tile.Color * FogFactor;
-		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), TileFor(Tile.Relief, Tile.bWoods));
+		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), Tile.Detail);
 
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
 		FVector2D Corners[6];
@@ -224,7 +228,10 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	for (int32 i = 0; i < Sections.Num(); ++i)
 	{
 		Terrain->CreateMeshSection(i, Sections[i].Vertices, Sections[i].Triangles, Sections[i].Normals, Sections[i].UVs, Sections[i].Colors, NoTangents, false);
-		Terrain->SetMaterial(i, KitMaterial ? KitMaterial.Get() : static_cast<UMaterialInterface*>(MaterialFor(SectionColors[i])));
+		// The art kit's material paints the terrain (vertex colour times a detail tile); without it the plain one does.
+		// Loaded here, not in the constructor: a constructor load roots it, and the art import could not rebuild it.
+		UMaterialInterface* Kit = SovArt::KitMaterial();
+		Terrain->SetMaterial(i, Kit ? Kit : static_cast<UMaterialInterface*>(MaterialFor(SectionColors[i])));
 	}
 }
 
@@ -299,8 +306,8 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	EdgeStrips(Mirror.Rivers, RiverPieces, 0.0, 9.0, 1.0);
 	EdgeStrips(Mirror.Borders, BorderPieces, 7.0, 4.0, 2.0);
 
-	// Resources the viewer sees (a small ball: green bonus, violet luxury, red strategic) and improvements (a flat tile,
-	// dark red when pillaged).
+	// Resources the viewer sees (a small ball: green bonus, violet luxury, red strategic) and improvements (the Fields
+	// kit's model, darkened when pillaged; without the art, a flat tile, dark red when pillaged).
 	int32 ResourceCount = 0, ImprovementCount = 0;
 	for (const FSovTile& Tile : Mirror.Tiles)
 	{
@@ -313,9 +320,23 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			C->SetRelativeScale3D(FVector(0.14));
 			C->SetMaterial(0, MaterialFor(Colors[Tile.ResourceClass & 3]));
 		}
-		if (Tile.bImproved)
+		if (Tile.bImproved && SovArt::Mesh(TEXT("Fields"), FieldsModel(Tile.Improvement)))
+		{
+			const uint32 H = static_cast<uint32>(Tile.X * 19349663) ^ static_cast<uint32>(Tile.Y * 83492791);
+			UStaticMeshComponent* C = Marker(ImprovementPieces, ImprovementCount++, nullptr);
+			SovArt::SetKitMesh(C, TEXT("Fields"), FieldsModel(Tile.Improvement), FLinearColor::White);
+			UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0));
+			if (!Mid || Mid->GetOuter() != C) Mid = C->CreateAndSetMaterialInstanceDynamic(0);
+			// Darker than the kit, which washes out under the map's light (as the rocks do); browner still when pillaged.
+			if (Mid) Mid->SetVectorParameterValue(TEXT("Tint"), Tile.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : FLinearColor(0.55f, 0.53f, 0.5f));
+			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(14.0, -12.0), 0.0));
+			C->SetRelativeRotation(FRotator(0.f, static_cast<float>(H % 6 * 60), 0.f));
+			C->SetRelativeScale3D(FVector(0.09));
+		}
+		else if (Tile.bImproved)
 		{
 			UStaticMeshComponent* C = Marker(ImprovementPieces, ImprovementCount++, CubeMesh.Get());
+			C->SetRelativeRotation(FRotator::ZeroRotator);
 			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(30.0, -26.0), 2.0));
 			C->SetRelativeScale3D(FVector(0.26, 0.26, 0.03));
 			C->SetMaterial(0, MaterialFor(Tile.bPillaged ? FLinearColor(0.45f, 0.08f, 0.06f) : FLinearColor(0.78f, 0.66f, 0.35f)));

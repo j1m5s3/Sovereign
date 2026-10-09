@@ -16,9 +16,11 @@ from mathutils import Matrix, Vector
 
 # Painted detail patterns (textures.py builds the sheet in this order): the pattern's tile index goes
 # into the vertex colour's alpha, and the face's UVs repeat it every so many metres.
-PATTERNS = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch"]
+PATTERNS = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch",
+            "water", "grass", "sand"]  # the last three are the map's (the Unreal map actor picks them by terrain)
 REPEAT = {"plain": 1.0, "cloth": 0.45, "leather": 0.5, "metal": 0.6, "skin": 0.5, "hair": 0.35, "wood": 1.2,
-          "stone": 1.6, "plaster": 2.4, "rooftile": 1.4, "foliage": 1.4, "thatch": 1.1}
+          "stone": 1.6, "plaster": 2.4, "rooftile": 1.4, "foliage": 1.4, "thatch": 1.1, "water": 1.0, "grass": 1.0,
+          "sand": 1.0}
 GRID = 4  # the sheet holds GRID x GRID tiles
 # Which pattern a colour wears, by its '#rrggbb' (kits fill this in; unknown colours are plain).
 PATTERN_OF = {}

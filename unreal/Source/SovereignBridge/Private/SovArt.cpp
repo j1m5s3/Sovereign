@@ -100,6 +100,11 @@ TArray<FString> RequiredAssets()
 	{
 		Out.Add(MeshPath(TEXT("Classical"), Name));
 	}
+	for (const TCHAR* Name : {TEXT("Farm"), TEXT("Mine"), TEXT("Quarry"), TEXT("Pasture"), TEXT("Plantation"), TEXT("Camp"),
+			 TEXT("FishingBoats"), TEXT("LumberMill"), TEXT("OilWell"), TEXT("Fort"), TEXT("WindFarm"), TEXT("SolarFarm"), TEXT("Works")})
+	{
+		Out.Add(MeshPath(TEXT("Fields"), Name));
+	}
 	for (const TCHAR* Name : {TEXT("Citizen"), TEXT("Herald"), TEXT("Captain"), TEXT("Soldier"), TEXT("Leader"), TEXT("Ship"), TEXT("Boat")})
 	{
 		Out.Add(MeshPath(TEXT("Figures"), Name));
