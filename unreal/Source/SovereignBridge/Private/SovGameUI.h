@@ -43,6 +43,9 @@ struct FSovUINotice
 struct FSovUIModel
 {
 	bool bVisible = false;
+	// Hot seat: the screen hides the map until the next player takes over (shown even when bVisible is false).
+	bool bHandover = false;
+	FString HandoverName;
 	// Top bar.
 	TArray<FSovUIStat> Stats;  // yields and banks, left to right
 	FSovUIStat Research, Civic, Government, Turn;

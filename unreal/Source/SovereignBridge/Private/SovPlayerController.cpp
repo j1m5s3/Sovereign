@@ -2171,6 +2171,11 @@ void ASovPlayerController::UpdateGameUI()
 				 !Sub->GetSession().InLobby();
 	if (!M.bVisible)
 	{
+		if (Sub && Sub->IsRunning() && Sub->GetSession().HandoverPending() && !Menu.IsValid())
+		{
+			M.bHandover = true;
+			M.HandoverName = Sub->GetSession().HandoverName();
+		}
 		GameUI->SetModel(M);
 		return;
 	}
@@ -3137,7 +3142,7 @@ bool ASovPlayerController::HandleSessionScreens()
 	if (Session.HandoverPending())
 	{
 		// Hot seat: the next human presses Enter when the screen is theirs.
-		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar))
+		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar) || UIKeys.Contains(EKeys::Enter))
 		{
 			Session.TakeOver();
 			SelectedUnit = SelectedCity = -1;

@@ -416,6 +416,29 @@ void SSovGameUI::Construct(const FArguments& Args)
 			})
 			[SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(8, 5))[SAssignNew(HoverBox, SVerticalBox)]]
 		]
+		// Hot seat: the next player's turn, the map hidden until they take over.
+		+ SOverlay::Slot()
+		[
+			SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.012f, 0.011f, 0.01f, 1.f))
+			.HAlign(HAlign_Center).VAlign(VAlign_Center)
+			.Visibility_Lambda([this]() { return Model.bHandover ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(40, 26))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[SNew(STextBlock).Font(FSovStyle::Font(28, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.HandoverName + TEXT("'s turn")); })]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0, 8, 0, 18)
+					[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Hand over the seat. The map stays hidden so nobody sees another player's lands.")))]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary()).ContentPadding(FMargin(28, 8))
+						.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Enter); return FReply::Handled(); })
+						[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Take over (Enter)")))]
+					]
+				]
+			]
+		]
 		// End turn.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 16)
 		[
