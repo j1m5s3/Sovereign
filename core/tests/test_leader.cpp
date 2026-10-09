@@ -439,8 +439,10 @@ TEST(a_veteran_unit_can_take_the_throne) {
     CHECK(!g->state().unit(veteran));
     REQUIRE(g->leaderOf(0));
     CHECK_EQ(g->state().players[0].leaderName, std::string("England Warlord"));
+    CHECK(g->leaderOf(0)->promotions == std::vector<TypeIndex>{rules().promotion("PROMOTION_SOVEREIGN_WEAPON_MASTER")});  // combat-heavy (§5)
     (void)leader;
 }
+
 
 TEST(a_captured_leader_holds_the_throne_until_abandoned) {
     Fall f = fallScenario();
@@ -1054,4 +1056,94 @@ TEST(achievements_follow_how_a_game_ended) {
     for (const char* id : {"ACH_CROWNED_IN_GLORY", "ACH_STARGAZER", "ACH_SWIFT_REIGN"}) CHECK(std::find(won.begin(), won.end(), id) != won.end());
     CHECK(std::find(won.begin(), won.end(), "ACH_PATRON") == won.end());
     CHECK(g->achievementsEarned(1).empty());
+}
+
+namespace {
+// A leader killed with no heir left; player 0 also holds Hannibal Barca and has appointed Victor and Magnus.
+struct Pool {
+    std::unique_ptr<Game> game;
+    UnitId general = 0, veteran = 0;
+    CityId seat = kNoCity;
+};
+Pool poolScenario() {
+    Pool f;
+    UnitId archer = 0;
+    f.game = duel([&](GameState& s) {
+        addCity(s, 0, {2, 2}, true);
+        f.seat = addCity(s, 0, {6, 9}, false);
+        addLeader(s, 0, {8, 5});
+        s.units.back().hp = 1;
+        const GreatPersonType& h = rules().greatPeople[at(rules().greatPerson("GREAT_PERSON_HANNIBAL_BARCA"))];
+        f.general = addUnit(s, rules().units[at(rules().greatPersonClasses[at(h.cls)].unit)].id.c_str(), 0, {3, 3});
+        s.units.back().greatPerson = rules().greatPerson("GREAT_PERSON_HANNIBAL_BARCA");
+        addUnit(s, rules().units[at(rules().greatPersonClasses[at(h.cls)].unit)].id.c_str(), 0, {4, 3});  // no great person in it
+        f.veteran = addUnit(s, "UNIT_WARRIOR", 0, {3, 4});
+        s.units.back().promotions = {rules().promotion("PROMOTION_BATTLECRY"), rules().promotion("PROMOTION_TORTOISE"),
+                                     rules().promotion("PROMOTION_COMMANDO")};
+        archer = addUnit(s, "UNIT_ARCHER", 1, {10, 5});
+        Player& p = s.players[0];
+        Game::fitPlayerToRules(p, rules());
+        p.dynastyNext = 3;
+        Governor victor;
+        victor.type = rules().governor("GOVERNOR_VICTOR");
+        victor.city = f.seat;
+        Governor magnus;
+        magnus.type = rules().governor("GOVERNOR_MAGNUS");
+        p.governors = {victor, magnus};
+        p.governorTitlesSpent = 2;
+    });
+    pass(*f.game, 1);
+    REQUIRE(f.game->submit(Command::rangedAttack(1, archer, {8, 5})) == CommandError::Ok);
+    pass(*f.game, 1);
+    return f;
+}
+}  // namespace
+
+TEST(a_great_general_can_take_the_throne) {
+    Pool f = poolScenario();
+    Game& g = *f.game;
+    CHECK(g.successorGreatPeople(0) == std::vector<UnitId>{f.general});  // not the one with no great person in it
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::GreatPerson, f.veteran)), CommandError::CannotSucceed);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::GreatPerson, f.general)), CommandError::Ok);
+    CHECK(!g.state().unit(f.general));  // the Great Person is spent
+    REQUIRE(g.leaderOf(0));
+    CHECK_EQ(g.leaderOf(0)->level(), 3);  // a higher start, with Marshal's stronger aura
+    CHECK(g.leaderOf(0)->promotions ==
+          (std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WEAPON_MASTER"), promo("PROMOTION_SOVEREIGN_MARSHAL")}));
+    const std::vector<std::string> lines = g.chronicleLines(0);
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("A great commander took the throne") != std::string::npos; }));
+}
+
+TEST(a_governor_can_take_the_throne) {
+    Pool f = poolScenario();
+    Game& g = *f.game;
+    const TypeIndex victor = rules().governor("GOVERNOR_VICTOR"), magnus = rules().governor("GOVERNOR_MAGNUS");
+    CHECK(g.successorGovernors(0) == (std::vector<TypeIndex>{victor, magnus}));
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Governor, rules().governor("GOVERNOR_AMANI"))), CommandError::CannotSucceed);
+    // Magnus seeds Builder-King; Victor, below, Warlord.
+    GameState copy = g.state();
+    auto g2 = Game::fromScenario(rules(), std::move(copy));
+    CHECK_EQ(g2->submit(Command::chooseSuccessor(0, Succession::Governor, magnus)), CommandError::Ok);
+    CHECK(g2->leaderOf(0)->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_OVERSEER")});
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Governor, victor)), CommandError::Ok);
+    REQUIRE(g.leaderOf(0));
+    CHECK(g.leaderOf(0)->promotions == std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WEAPON_MASTER")});
+    CHECK(g.leaderOf(0)->pos == hx(2, 2));  // crowned in the capital
+    CHECK_EQ(g.state().players[0].leaderName, std::string("Victor"));
+    CHECK(!g.governor(0, victor));  // gone from his post, and the title with him
+    CHECK_EQ(g.governorTitlesLeft(0), g.governorTitles(0) - 2);
+    CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Governor, magnus)), CommandError::CannotSucceed);  // crowned already
+    const std::vector<std::string> lines = g.chronicleLines(0);
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("A governor took the throne") != std::string::npos; }));
+}
+
+TEST(an_ai_crowns_a_great_general_before_a_veteran) {
+    Pool f = poolScenario();
+    Game& g = *f.game;
+    REQUIRE(g.state().currentPlayer == 0);
+    ai::playTurn(g);
+    REQUIRE(g.leaderOf(0));
+    CHECK(!g.state().unit(f.general));
+    CHECK(g.state().unit(f.veteran));
+    CHECK(g.governor(0, rules().governor("GOVERNOR_VICTOR")));  // never a governor
 }

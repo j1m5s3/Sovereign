@@ -87,6 +87,8 @@ std::vector<std::string> Game::chronicleLines(PlayerId viewer) const {
                 const int heir = e.value / 16;
                 if (kind == Succession::Heir && d && heir >= 0 && at(heir) < d->names.size()) text = d->names[at(heir)] + " took the throne of " + a;
                 else if (kind == Succession::Unit) text = "a general took the throne of " + a;
+                else if (kind == Succession::Governor) text = "a governor took the throne of " + a;
+                else if (kind == Succession::GreatPerson) text = "a great commander took the throne of " + a;
                 else text = "a regent took the throne of " + a;
                 break;
             }
