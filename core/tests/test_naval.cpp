@@ -75,6 +75,27 @@ TEST(land_units_embark_after_shipbuilding_and_reach_the_ocean_after_cartography)
     CHECK(!g2->findPath(w, {9, 5}, true));
 }
 
+// An embarked unit defends with its era's strength and the usual modifiers on top (a Corps' +10 here); a land unit
+// attacking from the water takes -10 (05: COMBAT_AMPHIBIOUS_ATTACK_PENALTY).
+TEST(embarked_units_keep_their_modifiers_and_attack_from_the_water_weaker) {
+    GameState s = seaState();
+    const UnitId afloat = addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
+    const UnitId corps = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+    s.unit(corps)->formation = 1;
+    const UnitId robot = addUnit(s, "UNIT_GIANT_DEATH_ROBOT", 0, {8, 7});
+    const UnitId ashore = addUnit(s, "UNIT_GIANT_DEATH_ROBOT", 0, {6, 7});
+    const UnitId foe = addUnit(s, "UNIT_WARRIOR", 1, {7, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->isEmbarked(unit(*g, afloat)) && g->isEmbarked(unit(*g, robot)) && !g->isEmbarked(unit(*g, ashore)));
+    const int era = rules().eras[0].embarkedStrength;
+    CHECK_EQ(g->combatStrength(unit(*g, afloat), unit(*g, foe), false, false), era);
+    CHECK_EQ(g->combatStrength(unit(*g, corps), unit(*g, foe), false, false), era + rules().globalInt("COMBAT_CORPS_STRENGTH_MODIFIER"));
+    for (const bool ranged : {false, true}) {
+        CHECK_EQ(g->combatStrength(unit(*g, robot), unit(*g, foe), true, ranged),
+                 g->combatStrength(unit(*g, ashore), unit(*g, foe), true, ranged) + rules().globalInt("COMBAT_AMPHIBIOUS_ATTACK_PENALTY"));
+    }
+}
+
 // Afloat, an overland order may still go by water (it is only kept from embarking). Once ashore it keeps dry, so an
 // order that lands where only a way over the water is left ends at once, not on the next turn.
 TEST(an_overland_order_that_lands_with_only_a_wet_way_left_ends_at_once) {

@@ -1,6 +1,6 @@
 # Record: units and combat rules the spec audit found off (05)
 
-Status: part 1 done, 2026-10-09. Previous: `2026-10-09-theater-square.md`. A read-only audit compared specs/civ6/05-units-and-combat.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md` and the decisions already settle, and confirmed 12 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
+Status: parts 1 and 2 done, 2026-10-09. Previous: `2026-10-09-theater-square.md`. A read-only audit compared specs/civ6/05-units-and-combat.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md` and the decisions already settle, and confirmed 12 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
 
 ## Part 1: healing, XP and borders
 
@@ -19,13 +19,19 @@ Results:
 
 - **City-states' borders:** spec 05 says city-states let everyone in unless at war, but Gunboat Diplomacy ("open borders with city-states you sent an Envoy to") and Portugal's ability ("Open Borders with all city-states", 09) only make sense if they close. The core keeps them closing at Early Empire, like majors'.
 
-## Part 2 (planned): combat strength
+## Part 2: combat strength
 
-1. Attacks on an Encampment measure the river and flanking at the city center, not the Encampment (`unitStrength`'s `oppPos`, `attackEncampment`).
-2. Interception multiplies strength by health instead of the strength formula (`air.cpp`, the aircraft's defence in `combat.cpp`).
-3. Corps and Armies get +10/+17 against aircraft too; the spec gives +7 for either (`COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER`, `COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER`, never read).
-4. No −10 for a land unit attacking from the water (`COMBAT_AMPHIBIOUS_ATTACK_PENALTY`, never read).
-5. An embarked defender's era strength replaces the bonuses added before it (difficulty, formation, alliance, Military Advisory).
+- **Attacks on an Encampment** count the river and flanking at the Encampment, not at the city center (`unitStrength`'s new `at`, passed by `previewAttack` and `attackEncampment`).
+- **Interception uses the strength formula** (05): a patrolling fighter fights with its full strength less the wounded penalty, an anti-air gun with its anti-air strength (+25 with Air Defense Initiative) less the same penalty, and the aircraft it hits defends with its own (`Game::interception`, `applyCombat`). Before, both sides scaled by health. The wounded penalty is now one function, `Game::woundedPenalty`.
+- **Aircraft fight in the air:** no terrain, fortification, river, flanking or support counts for an aircraft (`unitStrength`'s `air`).
+- **Corps and Armies get +7 against aircraft** instead of +10/+17 (05; `COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER`, `COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER`).
+- **A land unit attacking from the water gets -10** (05; `COMBAT_AMPHIBIOUS_ATTACK_PENALTY`), melee or ranged.
+- **An embarked defender starts from its era's strength** and keeps the bonuses after it (difficulty, formation, Military Advisory and the rest); before, the era strength replaced the ones added ahead of it.
+
+Results:
+- 128 AI games (Small, 6 AI, turn 200) against part 1: all 128 play out exactly the same (inferred: these fights are rare before turn 200, with no aircraft yet).
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 5 of them play out differently from part 1.
+- Tests: `an_encampment_attack_counts_the_river_and_flanks_at_the_encampment` (the preview and the attack), `interception_uses_the_strength_formula`, `corps_and_armies_get_less_against_aircraft`, `embarked_units_keep_their_modifiers_and_attack_from_the_water_weaker`. Mutation check: 11 mutants, all caught (the attack itself was added to the Encampment test to catch the last); a 12th, dropping `at` entirely, does not build.
 
 ## Part 3 (planned): plots and escorts
 

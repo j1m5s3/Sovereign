@@ -651,8 +651,9 @@ public:
     // The same for a melee assault on a city: the attacker's leader stack, or a human leader inside.
     PlayerId liveAssaultSide(const Unit& attacker, const City& city) const;
     bool battlePending() const { return state_.pendingBattle.active; }
-    // Strength of `unit` attacking (or, for a city strike, defending against) a city.
-    int combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const;
+    // Strength of `unit` attacking (or, for a city strike, defending against) a city; `at`, the plot attacked when it
+    // is not the city center (its Encampment).
+    int combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged, const Hex* at = nullptr) const;
     // City defence and strike strength (02-cities.md, City combat).
     int cityStrength(const City& city) const;
     int cityMaxHp() const;
@@ -856,7 +857,8 @@ private:
     std::pair<int, bool> unitSightAndSentry(const Unit& unit) const;
     void gainXp(Unit& unit, int ownBase, int enemyBase, bool ranged, bool attacker, bool killed, bool vsBarbarian);
     void awardXp(Unit& unit, int xp, bool vsBarbarian);
-    int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const;
+    int unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged, const Hex* at = nullptr) const;
+    int woundedPenalty(const Unit& unit) const;  // strength lost to damage (05: COMBAT_WOUNDED_DAMAGE_MULTIPLIER)
     // Percent of a hit on this city that lands on its walls; -1 when it lands on the city.
     int wallDamagePercent(const Unit& attacker, const City& city, bool ranged) const;
     int wallDamagePercent(const Unit& attacker, const City& city, bool ranged, Hex at, int wallHp) const;

@@ -455,17 +455,32 @@ int Game::combatStrength(const Unit& unit, const Unit& opponent, bool attacking,
     return unitStrength(unit, &opponent, nullptr, attacking, ranged);
 }
 
-int Game::combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged) const {
-    return unitStrength(unit, nullptr, &city, attacking, ranged);
+int Game::combatStrengthVsCity(const Unit& unit, const City& city, bool attacking, bool ranged, const Hex* at) const {
+    return unitStrength(unit, nullptr, &city, attacking, ranged, at);
 }
 
-int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged) const {
+int Game::woundedPenalty(const Unit& unit) const {
+    // round(10 - hp/10) at 100 max HP (COMBAT_WOUNDED_DAMAGE_MULTIPLIER).
+    const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
+    if (unit.hp >= maxHp) return 0;
+    const int wound = roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER")) * (maxHp - unit.hp), maxHp);
+    return policyIs(unit.owner, "POLICY_NATIONAL_IDENTITY") ? wound / 2 : wound;  // National Identity (04): half the loss
+}
+
+int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCity, bool attacking, bool ranged, const Hex* at) const {
     const UnitType& ut = typeOf(*rules_, unit);
     const Player& owner = state_.players[static_cast<size_t>(unit.owner)];
-    const Hex oppPos = oppUnit ? oppUnit->pos : oppCity->pos;
+    const Hex oppPos = at ? *at : oppUnit ? oppUnit->pos : oppCity->pos;
     const PlayerId oppOwner = oppUnit ? oppUnit->owner : oppCity->owner;
     const bool bombard = attacking && ranged && ut.ranged == 0 && ut.bombard > 0;
-    int s = !(attacking && ranged) ? meleeStrength(unit) : bombard ? ut.bombard : rangedStrength(unit);
+    const bool embarked = isEmbarked(unit);
+    // Aircraft fight in the air: no terrain, fortification, river or neighbours count for them.
+    const bool air = ut.domain == Domain::Air;
+    // An embarked unit defends with a strength set by its owner's era (05: Embarkation); the modifiers below still apply.
+    int s = !attacking && embarked ? rules_->eras[static_cast<size_t>(std::clamp(playerEra(unit.owner), 0, static_cast<int>(rules_->eras.size()) - 1))].embarkedStrength
+            : !(attacking && ranged) ? meleeStrength(unit)
+            : bombard                ? ut.bombard
+                                     : rangedStrength(unit);
     // Military Advisory (World Congress, option A): +5 for its promotion class.
     if (const PassedResolution* ma = passed(ResolutionKind::MilitaryAdvisory);
         ma && ma->option == 0 && rules_->promotionClasses[static_cast<size_t>(ma->target)] == ut.promotionClass)
@@ -511,17 +526,14 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     // Difficulty: AI civs at Immortal and Deity, humans at Settler and Chieftain.
     // Natural wonders (01): land units beside the Giant's Causeway +5.
     if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_GIANT_S_CAUSEWAY")) s += 5;
-    // Formations (05): a Corps or Fleet +10, an Army or Armada +17.
-    if (unit.formation == 1) s += rules_->globalInt("COMBAT_CORPS_STRENGTH_MODIFIER");
-    if (unit.formation >= 2) s += rules_->globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
+    // Formations (05): a Corps or Fleet +10, an Army or Armada +17; either +7 against aircraft.
+    const bool vsAir = oppUnit && isAircraft(*oppUnit);
+    if (unit.formation == 1) s += rules_->globalInt(vsAir ? "COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_CORPS_STRENGTH_MODIFIER");
+    if (unit.formation >= 2) s += rules_->globalInt(vsAir ? "COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_ARMY_STRENGTH_MODIFIER");
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
-    const bool embarked = isEmbarked(unit);
-    if (!attacking && embarked) {
-        // An embarked unit defends with a strength set by its owner's era (05: Embarkation).
-        const int era = std::clamp(playerEra(unit.owner), 0, static_cast<int>(rules_->eras.size()) - 1);
-        s = rules_->eras[static_cast<size_t>(era)].embarkedStrength;
-    }
+    // A land unit attacking from the water (05: COMBAT_AMPHIBIOUS_ATTACK_PENALTY, -10).
+    if (attacking && embarked && ut.domain == Domain::Land) s += rules_->globalInt("COMBAT_AMPHIBIOUS_ATTACK_PENALTY");
     if (!attacking && isLeader(unit) && !embarked) {
         const TypeIndex armor = unit.gear[static_cast<size_t>(GearSlot::Armor)];
         if (armor != kNone) s += rules_->gear[static_cast<size_t>(armor)].defense;  // armor counts when defending
@@ -568,20 +580,20 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     s += sumUnitStrength(state_, *rules_, owner, ut.unitClass,
                          oppOwner >= 0 && state_.players[static_cast<size_t>(oppOwner)].barbarian);
 
-    if (!attacking) {
+    if (!attacking && !air) {
         // Terrain defence (hills, woods, marsh...) and fortification.
         const Plot& p = state_.plot(unit.pos);
         s += rules_->terrains[static_cast<size_t>(p.terrain)].defense;
         if (p.feature != kNone) s += rules_->features[static_cast<size_t>(p.feature)].defense;
         s += std::min(unit.fortifyTurns, rules_->globalInt("FORTIFY_TURN_MAX")) * rules_->globalInt("FORTIFY_BONUS_PER_TURN");
-    } else if (!ranged) {
+    } else if (attacking && !ranged && !air) {
         // Attacking across a river (05: COMBAT_RIVER_DEFENSE).
         auto d = state_.grid.directionTo(unit.pos, oppPos);
         if (d && !noRiver && hasRiver(state_, unit.pos, *d)) s -= rules_->globalInt("COMBAT_RIVER_DEFENSE");
     }
 
     // Flanking (melee attacker) and support (defender), once Military Tradition is known.
-    if (hasCivicFlag(*rules_, owner, &TreeNode::combatAdjacency) && (!attacking || !ranged)) {
+    if (!air && hasCivicFlag(*rules_, owner, &TreeNode::combatAdjacency) && (!attacking || !ranged)) {
         const Hex around = attacking ? oppPos : unit.pos;
         int friends = 0;
         for (const Unit& u : state_.units) {
@@ -592,12 +604,7 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
         s += friends * per * (attacking ? flankPercent : supportPercent) / 100;
     }
 
-    // Wounded: round(10 - hp/10) at 100 max HP (COMBAT_WOUNDED_DAMAGE_MULTIPLIER).
-    const int maxHp = rules_->globalInt("COMBAT_MAX_HIT_POINTS");
-    if (!noWounded && unit.hp < maxHp) {
-        const int wound = roundDiv(static_cast<int64_t>(rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER")) * (maxHp - unit.hp), maxHp);
-        s -= policyIs(unit.owner, "POLICY_NATIONAL_IDENTITY") ? wound / 2 : wound;  // National Identity (04): half the loss
-    }
+    if (!noWounded) s -= woundedPenalty(unit);
     // Foreign Ministry (03): levied units +4.
     if (buildingsOwned(unit.owner, "BUILDING_FOREIGN_MINISTRY") > 0 && levied(unit)) s += 4;
     // Wars of Religion (04): +4 against the units of a civ of another religion, for all but religious units.
@@ -818,7 +825,7 @@ CombatPreview Game::previewAttack(UnitId attackerId, Hex target, bool ranged) co
     if (const City* camp = encampmentTargetAt(target)) {
         out.city = camp->id;
         out.encampment = true;
-        out.attackerStrength = combatStrengthVsCity(*a, *camp, true, ranged);
+        out.attackerStrength = combatStrengthVsCity(*a, *camp, true, ranged, &target);
         out.defenderStrength = encampmentStrength(*camp);
         const int diff = out.attackerStrength - out.defenderStrength;
         const int wallPercent = wallDamagePercent(*a, *camp, ranged, target, encampmentWallHp(*camp));
@@ -1191,7 +1198,7 @@ void Game::applyCombat(const Command& c) {
         const auto [aa, by] = interception(*air, c.target);
         if (aa > 0) {
             const int roll = state_.rng.get(RngStream::Combat).range(0, rules_->globalInt("COMBAT_MAX_EXTRA_DAMAGE"));
-            air->hp -= combatDamage(aa - typeOf(*rules_, *air).combat * air->hp / 100, roll);
+            air->hp -= combatDamage(aa - combatStrength(*air, *state_.unit(by), false, false), roll);
             if (air->hp <= 0) {
                 const PlayerId owner = air->owner;
                 if (Unit* killer = state_.unit(by)) noteKill(*air, killer);
@@ -1465,7 +1472,7 @@ void Game::attackEncampment(const Command& c, City& city) {
     }
     const PlayerId them = city.owner;
     const PlayerId me = a->owner;
-    const int sa = combatStrengthVsCity(*a, city, true, ranged);
+    const int sa = combatStrengthVsCity(*a, city, true, ranged, &camp->pos);  // the river and flanking at the Encampment
     const int sd = encampmentStrength(city);
     const int maxHp = encampmentMaxHp(city);
     Rng& rng = state_.rng.get(RngStream::Combat);
