@@ -563,14 +563,15 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     });
     if (bombard && bombardPenalty && oppUnit) s -= rules_->globalInt("COMBAT_BOMBARD_VS_UNIT_STRENGTH_MODIFIER");
     if (attacking && ranged && districtPenalty && oppCity) s -= rules_->globalInt("COMBAT_RANGED_VS_DISTRICT_STRENGTH_MODIFIER");
-    // The leader's presence aura for its military units nearby (leader doc §1).
+    // The leader's presence aura for its military units nearby (leader doc §1), and a Great General
+    // or Admiral nearby (05: +5 for units of its era or the next). They do not stack: the higher applies.
+    int leaderAura = 0;
     if (ut.layer == UnitLayer::Military) {
         const Unit* leader = leaderOf(unit.owner);
         if (leader && state_.grid.distance(leader->pos, unit.pos) <= auraRange(*leader))
-            s += rules_->globalInt("LEADER_AURA_STRENGTH") + unitEffectTotal(*leader, UnitEffectKind::AuraStrength);
+            leaderAura = rules_->globalInt("LEADER_AURA_STRENGTH") + unitEffectTotal(*leader, UnitEffectKind::AuraStrength);
     }
-    // A Great General or Admiral nearby (05: +5 for units of its era or the next).
-    s += greatPersonAuraStrength(unit);
+    s += std::max(leaderAura, greatPersonAuraStrength(unit));
     // Defender of the Faith / Crusade: in the lands of a city following the player's religion (06).
     if (owner.religion >= 0 && ut.layer == UnitLayer::Military) {
         const CityId cid = state_.plot(unit.pos).city;

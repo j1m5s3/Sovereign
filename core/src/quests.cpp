@@ -81,6 +81,7 @@ void Game::questDone(PlayerId major, QuestKind kind, int32_t arg) {
                                            return true;
                                        }),
                         state_.quests.end());
+    leaderXp(major, static_cast<int>(rewarded.size()) * rules_->globalInt("LEADER_XP_QUEST"));  // leader doc section 3
     Player& p = state_.players[at(major)];
     if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
     if (policyIs(major, "POLICY_ROGUE_STATE")) return;  // Rogue State: no envoys (09)

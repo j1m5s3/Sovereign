@@ -1769,6 +1769,7 @@ void Game::applyFoundCity(const Command& c) {
         }
     }
     assignCitizens(*state_.city(newId));
+    leaderXp(owner, rules_->globalInt("LEADER_XP_FOUND_CITY"));  // leader doc section 3
 
     state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
                                       [&](const Unit& x) { return x.id == c.id; }),

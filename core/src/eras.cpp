@@ -32,6 +32,7 @@ void Game::awardMoment(PlayerId pid, const char* id) {
     const int gained = mt.eraScore + (mt.eraScore >= 2 && buildingsOwned(pid, "BUILDING_TAJ_MAHAL") > 0 ? 1 : 0);
     p.eraScore += gained;
     p.eraScoreTotal += gained;
+    leaderXp(pid, gained * rules_->globalInt("LEADER_XP_PER_ERA_SCORE"));  // leader doc section 3
     pushEvent(EventKind::HistoricMoment, pid, kNoPlayer, m);
 }
 
