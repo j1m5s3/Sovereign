@@ -531,6 +531,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					: Item.kind == sov::ProductionKind::Building ? (bWonder ? TEXT("Wonders") : TEXT("Buildings")) : TEXT("Projects");
 				Ch.Icon = Item.kind == sov::ProductionKind::District ? FName("streets") : Item.kind == sov::ProductionKind::Unit ? FName("strength")
 					: Item.kind == sov::ProductionKind::Building ? (bWonder ? FName("era") : FName("build")) : FName("science");
+				Ch.Tip = Item.kind == sov::ProductionKind::Building ? SovBuildingText(R, Item.type) : Item.kind == sov::ProductionKind::Unit ? SovUnitText(R, Item.type) : FString();
 			}
 			// Grouped by kind: districts, buildings, wonders, units, projects.
 			{
@@ -694,14 +695,21 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 06: a pantheon belief; a religion's Founder then Follower belief; an Apostle's new belief.
 			auto Note = [&](sov::TypeIndex B) {
 				const sov::BeliefType& Bt = R.beliefs[static_cast<size_t>(B)];
-				return FString::Printf(TEXT("%s: %s%s"), *Str(Bt.name), *Str(Bt.text).Left(110), G.beliefModelled(B) ? TEXT("") : TEXT(" (not in the game yet)"));
+				return Str(Bt.name) + (G.beliefModelled(B) ? TEXT("") : TEXT(" (not in the game yet)"));
+			};
+			// The whole text on hover (the list shows the name).
+			auto Belief = [&](sov::TypeIndex B, const sov::Command& Cmd) {
+				FChoice Ch{Note(B), Cmd};
+				Ch.Icon = "religion";
+				Ch.Tip = Str(R.beliefs[static_cast<size_t>(B)].text);
+				Choices.Add(Ch);
 			};
 			if (Kind == EChooser::Pantheon)
 			{
 				ChooserTitle = TEXT("Choose a pantheon");
 				for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Pantheon))
 				{
-					Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});
+					Belief(B, sov::Command::foundPantheon(Me(), B));
 				}
 			}
 			else if (Kind == EChooser::Evangelize)
@@ -717,7 +725,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					{
 						if (G.canEvangelize(ReligionUnit, B))
 						{
-							Choices.Add({Note(B), sov::Command::evangelizeBelief(Me(), ReligionUnit, B)});
+							Belief(B, sov::Command::evangelizeBelief(Me(), ReligionUnit, B));
 						}
 					}
 				}
@@ -744,7 +752,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Founder belief"), *Name);
 					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Founder))
 					{
-						Choices.Add({Note(B), sov::Command::foundPantheon(Me(), B)});  // placeholder: picking moves on to the Follower
+						Belief(B, sov::Command::foundPantheon(Me(), B));  // placeholder: picking moves on to the Follower
 					}
 				}
 				else
@@ -752,7 +760,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					ChooserTitle = FString::Printf(TEXT("Found %s: choose a Follower belief"), *Name);
 					for (sov::TypeIndex B : G.availableBeliefs(sov::BeliefClass::Follower))
 					{
-						Choices.Add({Note(B), sov::Command::foundReligion(Me(), ReligionUnit, Religion, PendingFounder, B)});
+						Belief(B, sov::Command::foundReligion(Me(), ReligionUnit, Religion, PendingFounder, B));
 					}
 				}
 			}
@@ -2413,7 +2421,7 @@ void ASovPlayerController::UpdateGameUI()
 	{
 		M.bChooser = true;
 		M.ChooserTitle = ChooserTitle;
-		for (const FChoice& Ch : Choices) M.Choices.Add({Ch.Label, Ch.Right, Ch.Icon, Ch.Section});
+		for (const FChoice& Ch : Choices) M.Choices.Add({Ch.Label, Ch.Right, Ch.Icon, Ch.Section, Ch.Tip});
 	}
 	// The government screen in place of the F2 list (plan E).
 	if (Chooser == EChooser::Government)

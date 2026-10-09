@@ -48,6 +48,7 @@ struct FSovUIChoice
 	FString Right;    // "9 turns", "200 gold"
 	FName Icon;
 	FString Section;  // a header shows where it changes
+	FString Tip;      // shown on hover
 };
 
 struct FSovUIModel

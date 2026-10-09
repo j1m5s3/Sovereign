@@ -741,7 +741,8 @@ void SSovGameUI::RebuildChooser()
 			Row->AddSlot().AutoWidth().VAlign(VAlign_Center).Padding(10, 0, 2, 0)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(Ch.Right))];
 		ChoicesBox->AddSlot().AutoHeight().Padding(0, 2)
 		[
-			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this, i]() { OnPick.ExecuteIfBound(i); return FReply::Handled(); })
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(Ch.Tip.IsEmpty() ? Ch.Label : Ch.Label + TEXT("\n") + Ch.Tip))
+			.OnClicked_Lambda([this, i]() { OnPick.ExecuteIfBound(i); return FReply::Handled(); })
 			[Row]
 		];
 	}

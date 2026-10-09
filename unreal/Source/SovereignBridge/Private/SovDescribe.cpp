@@ -103,7 +103,7 @@ FString SovModifierText(const sov::Rules& R, const sov::Modifier& M)
 			T = FString::Printf(TEXT("%s%% Production toward %s%s"), *A, M.military ? TEXT("military units") : *Units, *In);
 			break;
 		case sov::ModEffect::PlotPurchaseCostPercent: T = FString::Printf(TEXT("%s%% to the gold cost of tiles%s"), *A, *In); break;
-		case sov::ModEffect::UnitMaintenanceDiscount: T = FString::Printf(TEXT("%s gold off each unit's upkeep"), *Amount(sov::Fixed() - M.amount)); break;
+		case sov::ModEffect::UnitMaintenanceDiscount: T = FString::Printf(TEXT("%s Gold off each unit's upkeep"), *Str((M.amount < sov::Fixed() ? sov::Fixed() - M.amount : M.amount).toString())); break;
 		case sov::ModEffect::GrantAbility:
 			T = M.ability >= 0 && static_cast<size_t>(M.ability) < R.abilities.size() ? FString::Printf(TEXT("%s gain %s"), *Units, *Str(R.abilities[static_cast<size_t>(M.ability)].name))
 																					   : Units + TEXT(" gain an ability");
@@ -208,4 +208,39 @@ FString SovSourceText(const sov::Rules& R, sov::ModSource Kind, sov::TypeIndex I
 		Parts.Add(AmountPart + TEXT(" ") + List + Rest);
 	}
 	return FString::Join(Parts, TEXT("; "));
+}
+
+FString SovBuildingText(const sov::Rules& R, sov::TypeIndex Building)
+{
+	if (Building < 0 || static_cast<size_t>(Building) >= R.buildings.size()) return FString();
+	const sov::BuildingType& B = R.buildings[static_cast<size_t>(Building)];
+	TArray<FString> Parts;
+	for (size_t y = 0; y < sov::kNumYields; ++y)
+		if (B.yields[y] != sov::Fixed()) Parts.Add(Amount(B.yields[y]) + TEXT(" ") + YieldName(static_cast<sov::YieldType>(y)));
+	if (B.housing != sov::Fixed()) Parts.Add(Amount(B.housing) + TEXT(" Housing"));
+	if (B.amenities) Parts.Add(FString::Printf(TEXT("%+d Amenities"), B.amenities));
+	if (B.citizenSlots) Parts.Add(FString::Printf(TEXT("%d specialist slot(s)"), B.citizenSlots));
+	if (B.defense) Parts.Add(FString::Printf(TEXT("+%d city defense"), B.defense));
+	if (B.outerDefenseHp) Parts.Add(FString::Printf(TEXT("+%d wall HP"), B.outerDefenseHp));
+	if (B.goldPerTradeRoute) Parts.Add(FString::Printf(TEXT("+%d Gold per trade route from the city"), B.goldPerTradeRoute));
+	if (B.envoysOnBuild) Parts.Add(FString::Printf(TEXT("+%d envoy(s) when built"), B.envoysOnBuild));
+	if (B.powerProvided) Parts.Add(FString::Printf(TEXT("+%d power to the city"), B.powerProvided));
+	if (B.requiredPower) Parts.Add(FString::Printf(TEXT("needs %d power"), B.requiredPower));
+	const FString Mods = SovSourceText(R, sov::ModSource::Building, Building);
+	if (!Mods.IsEmpty()) Parts.Add(Mods);
+	if (B.maintenance) Parts.Add(FString::Printf(TEXT("%d Gold upkeep"), B.maintenance));
+	if (B.replaces != sov::kNone && static_cast<size_t>(B.replaces) < R.buildings.size()) Parts.Add(TEXT("replaces the ") + Str(R.buildings[static_cast<size_t>(B.replaces)].name));
+	return FString::Join(Parts, TEXT("; "));
+}
+
+FString SovUnitText(const sov::Rules& R, sov::TypeIndex Unit)
+{
+	if (Unit < 0 || static_cast<size_t>(Unit) >= R.units.size()) return FString();
+	const sov::UnitType& U = R.units[static_cast<size_t>(Unit)];
+	TArray<FString> Parts;
+	if (U.combat) Parts.Add(FString::Printf(TEXT("strength %d"), U.combat));
+	if (U.ranged) Parts.Add(FString::Printf(TEXT("ranged %d"), U.ranged));
+	Parts.Add(FString::Printf(TEXT("%d move%s"), U.moves, U.moves == 1 ? TEXT("") : TEXT("s")));
+	if (U.replaces != sov::kNone && static_cast<size_t>(U.replaces) < R.units.size()) Parts.Add(TEXT("replaces the ") + Str(R.units[static_cast<size_t>(U.replaces)].name));
+	return FString::Join(Parts, TEXT(", "));
 }

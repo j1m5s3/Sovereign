@@ -96,6 +96,7 @@ protected:
 		FString Right;
 		FName Icon;
 		FString Section;
+		FString Tip;
 	};
 
 	USovGameSubsystem* Subsystem() const;

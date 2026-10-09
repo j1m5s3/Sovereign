@@ -1216,6 +1216,14 @@ bool FSovDescribeTest::RunTest(const FString& Parameters)
 		if (p % 10 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.policies[p].name.c_str()), *T));
 	}
 	TestTrue(TEXT("most cards have a description"), Described * 2 > static_cast<int32>(R.policies.size()));
+	// Buildings and units too: every building says something, and samples are logged for review.
+	for (size_t b = 0; b < R.buildings.size(); ++b)
+	{
+		const FString T = SovBuildingText(R, static_cast<sov::TypeIndex>(b));
+		TestFalse(*FString::Printf(TEXT("%s reads as words: %s"), UTF8_TO_TCHAR(R.buildings[b].name.c_str()), *T), T.Contains(TEXT("BUILDING_")));
+		if (b % 15 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.buildings[b].name.c_str()), *T));
+	}
+	for (size_t u = 0; u < R.units.size(); u += 20) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.units[u].name.c_str()), *SovUnitText(R, static_cast<sov::TypeIndex>(u))));
 	for (size_t g = 0; g < R.governments.size(); ++g)
 		AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.governments[g].name.c_str()), *SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g))));
 	return true;
