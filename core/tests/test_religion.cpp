@@ -675,6 +675,55 @@ TEST(trade_routes_carry_pressure_both_ways) {
     CHECK(g->state().tradeRoutes.empty());  // the route is over
 }
 
+// A Religious alliance at level 3 (08): +20 pressure of the ally's religion in cities with none of its followers.
+TEST(a_religious_alliance_presses_cities_with_no_ally_followers) {
+    const int three = rules().globalInt("ALLIANCE_LEVEL_THREE_XP");
+    const int two = rules().globalInt("ALLIANCE_LEVEL_TWO_XP");
+    auto allied = [&](int points, bool islamInSecond) {
+        GameState s = twoReligions({"BELIEF_TITHE"});
+        for (Player& p : s.players) p.relations.resize(s.players.size());
+        for (int a = 0; a < 2; ++a) {
+            Relation& r = s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(1 - a)];
+            r.alliance = AllianceType::Religious;
+            r.allianceUntil = 1000;
+            r.alliancePoints = points;
+            r.friendsUntil = 1000;
+        }
+        if (islamInSecond) s.cities[1].pressure[1] = 1000;
+        return Game::fromScenario(rules(), std::move(s));
+    };
+    {
+        auto g = allied(three, false);
+        REQUIRE(g->cityFollowers(g->state().cities[0], 1) == 0);
+        REQUIRE(g->cityFollowers(g->state().cities[2], 0) == 0);
+        REQUIRE(g->cityFollowers(g->state().cities[1], 1) == 0);
+        const int islamHoly = g->state().cities[0].pressure[1];
+        const int buddhistAway = g->state().cities[2].pressure[0];
+        const int islamSecond = g->state().cities[1].pressure[1];
+        const int buddhistSecond = g->state().cities[1].pressure[0];
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().cities[0].pressure[1] - islamHoly, 20);
+        CHECK_EQ(g->state().cities[2].pressure[0] - buddhistAway, 20);
+        CHECK_EQ(g->state().cities[1].pressure[1] - islamSecond, 20);
+        CHECK_EQ(g->state().cities[1].pressure[0] - buddhistSecond, 8);  // its own Holy City still presses
+    }
+    {
+        auto g = allied(three, true);
+        REQUIRE(g->cityFollowers(g->state().cities[1], 1) > 0);
+        const int islamSecond = g->state().cities[1].pressure[1];
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().cities[1].pressure[1], islamSecond);  // already has followers: no +20
+    }
+    {
+        auto g = allied(two, false);
+        const int islamHoly = g->state().cities[0].pressure[1];
+        const int buddhistAway = g->state().cities[2].pressure[0];
+        sovtest::endTurns(*g, 2);
+        CHECK_EQ(g->state().cities[0].pressure[1], islamHoly);  // level 2: no +20
+        CHECK_EQ(g->state().cities[2].pressure[0], buddhistAway);
+    }
+}
+
 // A Great Prophet founds a religion on its civ's Stonehenge as on a Holy Site (06); that city becomes the Holy City.
 TEST(a_great_prophet_founds_a_religion_on_stonehenge) {
     const TypeIndex stonehenge = rules().building("BUILDING_STONEHENGE");
