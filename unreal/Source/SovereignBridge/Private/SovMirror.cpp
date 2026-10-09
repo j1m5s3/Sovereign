@@ -154,6 +154,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		const sov::Visibility V = Game.visibility(View, H);
 		if (V == sov::Visibility::Unrevealed)
 		{
+			M.Unexplored.Add(FIntPoint(H.x, H.y));
 			continue;
 		}
 		FSovTile& T = M.Tiles.AddDefaulted_GetRef();

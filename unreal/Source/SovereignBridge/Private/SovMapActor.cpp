@@ -230,7 +230,7 @@ bool IsLandform(const TCHAR* Model)
 		&& FCString::Strcmp(Model, TEXT("IceFloe")) && FCString::Strcmp(Model, TEXT("Fumarole")) && FCString::Strcmp(Model, TEXT("BurntTree"));
 }
 
-// Darkens a kit piece's first material (the kit washes out under the map's light) or tints it.
+// Tints a kit piece's first material: white as painted, grey while being built, brown when pillaged.
 void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 {
 	UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0));
@@ -349,6 +349,29 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		const int32 D = Floor.Vert(SovHex::ToWorld(FVector2D(-Pad, Far.Y + Pad), BaseZ + 5), Up);
 		Floor.Tri(A, B, C);
 		Floor.Tri(A, C, D);
+	}
+
+	// Unexplored plots: blank parchment, a little below the sea, so the known world stands up out of the map. Drawn a
+	// touch larger than a plot, so they join into one sheet with no seams.
+	{
+		FSection& Blank = SectionFor(FLinearColor(0.2f, 0.17f, 0.12f), 1);
+		const FVector Up(0, 0, 1);
+		const double Z = ReliefHeight(ESovRelief::Water) - 6.0;
+		for (const FIntPoint& P : Mirror.Unexplored)
+		{
+			const FVector2D Center = SovHex::MapPos(P.X, P.Y);
+			const int32 Mid = Blank.Vert(SovHex::ToWorld(Center, Z), Up);
+			int32 Ring[6];
+			for (int32 i = 0; i < 6; ++i)
+			{
+				const double Angle = FMath::DegreesToRadians(60.0 * i + 30.0);
+				Ring[i] = Blank.Vert(SovHex::ToWorld(Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * SovHex::Size * 1.02, Z), Up);
+			}
+			for (int32 i = 0; i < 6; ++i)
+			{
+				Blank.Tri(Mid, Ring[i], Ring[(i + 1) % 6]);
+			}
+		}
 	}
 
 	for (const FSovTile& Tile : Mirror.Tiles)
@@ -487,7 +510,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			const uint32 H = static_cast<uint32>(Tile.X * 40503) ^ static_cast<uint32>(Tile.Y * 2654435761u);
 			UStaticMeshComponent* C = Marker(ResourcePieces, ResourceCount++, nullptr);
 			SovArt::SetKitMesh(C, TEXT("Resources"), Look->Model, Look->Accent);
-			ShadeKit(C, FLinearColor(0.6f, 0.58f, 0.55f));
+			ShadeKit(C, FLinearColor::White);
 			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(-30.0, 26.0), 0.0));
 			C->SetRelativeRotation(FRotator(0.f, static_cast<float>(H % 360), 0.f));
 			C->SetRelativeScale3D(FVector(Tile.Resource == TEXT("RESOURCE_WHALES") ? 0.13 : 0.1));
@@ -505,7 +528,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			const uint32 H = static_cast<uint32>(Tile.X * 19349663) ^ static_cast<uint32>(Tile.Y * 83492791);
 			UStaticMeshComponent* C = Marker(ImprovementPieces, ImprovementCount++, nullptr);
 			SovArt::SetKitMesh(C, TEXT("Fields"), FieldsModel(Tile.Improvement), FLinearColor::White);
-			ShadeKit(C, Tile.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : FLinearColor(0.55f, 0.53f, 0.5f));  // browner when pillaged
+			ShadeKit(C, Tile.bPillaged ? FLinearColor(0.45f, 0.3f, 0.25f) : FLinearColor::White);  // browner when pillaged
 			C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(14.0, -12.0), 0.0));
 			C->SetRelativeRotation(FRotator(0.f, static_cast<float>(H % 6 * 60), 0.f));
 			C->SetRelativeScale3D(FVector(0.09));
@@ -569,7 +592,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			const double R = bLandform ? 0.0 : bBurnt ? 32.0 + ((H >> (k * 3)) & 7) * 3.0 : 22.0;
 			UStaticMeshComponent* C = Marker(FeaturePieces, FeatureCount++, nullptr);
 			SovArt::SetKitMesh(C, TEXT("Nature"), Model, FLinearColor::White);
-			ShadeKit(C, FLinearColor(0.62f, 0.6f, 0.58f));
+			ShadeKit(C, FLinearColor::White);
 			C->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
 			C->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 5) % 360), 0.f));
 			C->SetRelativeScale3D(FVector(bLandform ? 0.13 : bBurnt ? 0.075 : !FCString::Strcmp(Model, TEXT("IceFloe")) ? 0.12 : 0.09));
@@ -598,10 +621,6 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				const double Scale = bMountain ? (k == 0 ? 0.34 : 0.2) : 0.12;
 				UStaticMeshComponent* Rk = Marker(Rocks, RockCount++, nullptr);
 				SovArt::SetKitMesh(Rk, TEXT("Nature"), TEXT("Rocks"), FLinearColor::White);
-				// Darker than the kit's stone, which reads as snow on the map: a tinted instance of its one material.
-				UMaterialInstanceDynamic* Dark = Cast<UMaterialInstanceDynamic>(Rk->GetMaterial(0));
-				if (!Dark || Dark->GetOuter() != Rk) Dark = Rk->CreateAndSetMaterialInstanceDynamic(0);
-				if (Dark) Dark->SetVectorParameterValue(TEXT("Tint"), FLinearColor(0.5f, 0.48f, 0.45f));
 				Rk->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
 				Rk->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 4) % 360 + k * 97), 0.f));
 				Rk->SetRelativeScale3D(FVector(Scale));
@@ -645,7 +664,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		const TCHAR* Kind = WonderModel(W.Id);
 		if (Kind && SovArt::SetKitMesh(C, TEXT("Wonders"), Kind, FLinearColor::White))
 		{
-			ShadeKit(C, W.bComplete ? FLinearColor(0.62f, 0.6f, 0.57f) : FLinearColor(0.32f, 0.31f, 0.3f));
+			ShadeKit(C, W.bComplete ? FLinearColor::White : FLinearColor(0.55f, 0.55f, 0.55f));
 			C->SetRelativeLocation(At);
 			C->SetRelativeScale3D(FVector(W.bComplete ? 0.1 : 0.07));
 			C->SetRelativeRotation(FRotator::ZeroRotator);
@@ -674,7 +693,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, CubeMesh.Get());
 		if (SovArt::SetKitMesh(C, TEXT("Fields"), TEXT("Camp"), FLinearColor::White))
 		{
-			ShadeKit(C, FLinearColor(0.5f, 0.45f, 0.4f));
+			ShadeKit(C, FLinearColor::White);
 			C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)));
 			C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
 			C->SetRelativeScale3D(FVector(0.09));
@@ -696,7 +715,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, CubeMesh.Get());
 		if (SovArt::SetKitMesh(C, TEXT("Resources"), TEXT("Blocks"), FLinearColor(0.8f, 0.78f, 0.7f)))
 		{
-			ShadeKit(C, FLinearColor(0.6f, 0.58f, 0.55f));
+			ShadeKit(C, FLinearColor::White);
 			C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 0));
 			C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
 			C->SetRelativeScale3D(FVector(0.09));
@@ -751,7 +770,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
 				const TPair<const TCHAR*, FString> House = CityPiece(City.Era, 2 + (H + k) % 3);
 				SovArt::SetKitMesh(C, House.Key, House.Value, FLinearColor::White);
-				ShadeKit(C, FLinearColor(0.7f, 0.68f, 0.65f));
+				ShadeKit(C, FLinearColor::White);
 				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
 				C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(A)) + 90.f, 0.f));
 				C->SetRelativeScale3D(FVector(0.034));
@@ -774,7 +793,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		}
 		UStaticMeshComponent* C = Marker(DistrictPieces, DistrictCount++, nullptr);
 		SovArt::SetKitMesh(C, TEXT("Districts"), Model, D.Color);
-		ShadeKit(C, D.bPillaged ? FLinearColor(0.24f, 0.16f, 0.13f) : D.bComplete ? FLinearColor(0.6f, 0.58f, 0.55f) : FLinearColor(0.32f, 0.31f, 0.3f));
+		ShadeKit(C, D.bPillaged ? FLinearColor(0.45f, 0.3f, 0.25f) : D.bComplete ? FLinearColor::White : FLinearColor(0.55f, 0.55f, 0.55f));
 		C->SetRelativeLocation(SovHex::Center(D.X, D.Y, SurfaceZ(D.X, D.Y)));
 		C->SetRelativeRotation(FRotator::ZeroRotator);
 		C->SetRelativeScale3D(FVector(D.bComplete ? 0.1 : 0.075));
