@@ -309,6 +309,8 @@ public:
     int plotAppeal(Hex plot) const;
     // Housing and amenities from the city's finished districts (Aqueduct, Neighborhood, Dam, ...).
     Fixed districtHousing(const City& city) const;
+    // The Housing an Aqueduct gives the city: CITY_POPULATION_AQUEDUCT_BOOST by fresh water, else up to CITY_POPULATION_AQUEDUCT_MIN.
+    Fixed aqueductHousing(const City& city) const;
     int districtAmenities(const City& city) const;
     // A finished district of the city that prevents droughts (or floods) on its plots [GS].
     bool cityPrevents(CityId city, bool floods) const;

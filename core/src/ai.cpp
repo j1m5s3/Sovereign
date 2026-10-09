@@ -1767,6 +1767,14 @@ Hex districtSpot(const View& v, CityId cid, TypeIndex district) {
     return spot;
 }
 
+// Quarters of a city's food surplus that go to growth with `room` Housing to spare (02: Housing).
+int growthQuarters(const Rules& r, Fixed room) {
+    const int half = r.globalInt("CITY_HOUSING_LEFT_50PCT_GROWTH");
+    if (room >= Fixed::fromInt(half + 1)) return 4;
+    if (room >= Fixed::fromInt(half)) return 2;
+    return room >= Fixed::fromInt(r.globalInt("CITY_HOUSING_LEFT_ZERO_GROWTH")) ? 1 : 0;
+}
+
 void production(View& v) {
     const GameState& s = v.s();
     Game& g = v.game;
@@ -1828,6 +1836,15 @@ void production(View& v) {
                                  (v.builders < (static_cast<int>(v.cities.size()) + 1) * 2 / 3 + 1 - (s.turn < 10 ? 1 : 0) ||
                                   (unimproved >= 2 && v.builders < static_cast<int>(v.cities.size()) * 3 / 2));
         const Fixed popRoom = rep.housing - Fixed::fromInt(c.population);
+        // Housing is worth the growth it gives back (02: Housing): the food the cap would hold back once the next
+        // citizen is in, weighed as food.
+        const Fixed surplus = rep.yields[yi(YieldType::Food)] - rep.foodConsumption;
+        const auto housingValue = [&](Fixed housing) {
+            if (housing <= Fixed() || surplus <= Fixed()) return 0;
+            const Fixed room = popRoom - Fixed::fromInt(1);
+            const int quarters = growthQuarters(v.r, room + housing) - growthQuarters(v.r, room);
+            return static_cast<int>((surplus * (quarters * v.posture.yield[yi(YieldType::Food)] * 25) / 4).round());
+        };
         // Assassins for wars against civs with a leader (leader doc §6), one in training at a time.
         bool assassinQueued = false;
         for (CityId other : v.cities) {
@@ -1895,7 +1912,7 @@ void production(View& v) {
                     // Upkeep the treasury cannot carry (07): it waits while gold per turn would fall below zero, unless it pays its own way.
                     if (b.maintenance > 0 && goldPerTurn < Fixed::fromInt(b.maintenance) && b.yields[static_cast<size_t>(YieldType::Gold)] < Fixed::fromInt(b.maintenance))
                         value /= 4;
-                    if (popRoom <= Fixed::fromInt(2)) value += static_cast<int>((b.housing * 30).round());
+                    value += housingValue(b.housing);
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
@@ -1960,7 +1977,7 @@ void production(View& v) {
                             std::none_of(v.cities.begin(), v.cities.end(), [&](CityId o) { return s.city(o)->district(it.type, false) != nullptr; }))
                             value += 150;
                         // Housing and amenities when the city runs short (Aqueduct, Neighborhood, Entertainment Complex ...).
-                        if (popRoom <= Fixed::fromInt(2)) value += (d.aqueduct ? 6 : d.housing + (d.appealHousing.empty() ? 0 : 2)) * 40;
+                        value += housingValue(d.aqueduct ? g.aqueductHousing(c) : Fixed::fromInt(d.housing + (d.appealHousing.empty() ? 0 : 1)));
                         if (rep.amenities < rep.amenitiesNeeded) value += d.amenities * 80;
                         // At war, the first Encampment also opens assassins (leader doc §6).
                         if (d.id == "DISTRICT_ENCAMPMENT") value = v.enemies.empty() ? 10 : g.agentCapacity(v.me) == 0 ? 120 : 40;
