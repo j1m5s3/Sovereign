@@ -29,7 +29,7 @@ void placeCityStates(GameState& s, const Rules& rules) {
     std::vector<int> cands;
     for (int i = 0; i < g.size(); ++i) {
         const Hex h = g.at(i);
-        if (!isLandPassable(s, rules, h) || rules.terrains[at(s.plot(h).terrain)].base == "SNOW") continue;
+        if (!canHoldCity(rules, s.plot(h)) || rules.terrains[at(s.plot(h).terrain)].base == "SNOW") continue;
         if (std::min(h.y, g.height() - 1 - h.y) < 2) continue;
         cands.push_back(i);
     }

@@ -81,17 +81,18 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
         const Yields& f = rules_->features[static_cast<size_t>(p.feature)].yields;
         for (size_t i = 0; i < kNumYields; ++i) y[i] += f[i];
     }
+    // The city center's own plot is raised to at least 2 Food and 1 Production before its resource adds to it (02: Founding).
+    if (at == city.pos) {
+        y[idx(YieldType::Food)] = std::max(y[idx(YieldType::Food)], rules_->global(HotGlobal::YieldFoodCityTerrainReplace));
+        y[idx(YieldType::Production)] =
+            std::max(y[idx(YieldType::Production)], rules_->global(HotGlobal::YieldProductionCityTerrainReplace));
+    }
     if (p.resource != kNone) {
         const ResourceType& res = rules_->resources[static_cast<size_t>(p.resource)];
         // A resource yields nothing until the owner has the tech that reveals it.
         if (hasUnlocked(city.owner, res.reveal)) {
             for (size_t i = 0; i < kNumYields; ++i) y[i] += res.yields[i];
         }
-    }
-    if (at == city.pos) {
-        y[idx(YieldType::Food)] = std::max(y[idx(YieldType::Food)], rules_->global(HotGlobal::YieldFoodCityTerrainReplace));
-        y[idx(YieldType::Production)] =
-            std::max(y[idx(YieldType::Production)], rules_->global(HotGlobal::YieldProductionCityTerrainReplace));
     }
     // Civ unique buildings: a yield on adjacent improvements of a type next to its district (Mill Town).
     if (p.improvement != kNone && p.pillagedTurns == 0) {
@@ -939,9 +940,14 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (pj.prerequisite != kNone && (static_cast<size_t>(pj.prerequisite) >= p.projectsDone.size() || p.projectsDone[static_cast<size_t>(pj.prerequisite)] == 0))
             return fail(CommandError::CannotBuild);
         if (pj.resource != kNone && p.stockpile[static_cast<size_t>(pj.resource)] < pj.resourceAmount) return fail(CommandError::NotEnoughResources);
-        // Repair Outer Defenses: only with walls that are down. Send Aid: only while another civ asks for aid.
+        // Repair Outer Defenses: only with walls (the city's or its Encampment's) that are down, after 3 full turns without
+        // an attack (02: City combat; COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN). Send Aid: only while another civ asks for aid.
         for (const ProjectEffect& e : pj.effects) {
-            if (e.kind == ProjectEffectKind::RepairWalls && c.wallHp >= cityMaxWallHp(c)) return fail(CommandError::CannotBuild);
+            if (e.kind == ProjectEffectKind::RepairWalls) {
+                const CityDistrict* camp = encampmentOf(c);
+                if (c.wallHp >= cityMaxWallHp(c) && (!camp || camp->wallDamage == 0)) return fail(CommandError::CannotBuild);
+                if (state_.turn - c.lastAttackedTurn <= rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN")) return fail(CommandError::CannotBuild);
+            }
             if (e.kind == ProjectEffectKind::Competition) {
                 bool running = false;
                 for (const Competition& cp : state_.competitions) running = running || (!cp.settled && static_cast<TypeIndex>(cp.kind) == e.weapon);
@@ -1409,14 +1415,16 @@ bool Game::completeItem(City& city, ProductionItem item) {
             const int envoys = rules_->districts[static_cast<size_t>(d.type)].envoysNextToCityCenter;
             if (envoys > 0 && state_.grid.distance(d.pos, city.pos) == 1 && !policyIs(city.owner, "POLICY_ROGUE_STATE"))
                 state_.players[static_cast<size_t>(city.owner)].envoyTokens += envoys;
-            // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it; Mimar Sinan (07) an Industrial Zone.
+            // Warrior Monks (06): a new Holy Site of the religion's founder claims the unowned plots around it; Mimar Sinan (07) an
+            // Industrial Zone; a major civ's Preserve [GS] always (02: Border growth, culture bombs).
             const std::string& kind = rules_->districts[static_cast<size_t>(d.type)].id;
             // Historic moments (09).
             if (kind == "DISTRICT_NEIGHBORHOOD") awardFirst(city.owner, "MOMENT_WORLD_S_FIRST_NEIGHBORHOOD", "MOMENT_FIRST_NEIGHBORHOOD_COMPLETED", 0);
             if (kind == "DISTRICT_CANAL") awardMoment(city.owner, "MOMENT_CANAL_COMPLETED");
             if (kind == "DISTRICT_DAM") awardMoment(city.owner, "MOMENT_RIVER_FLOOD_MITIGATED");
             const bool bomb = resolutionHits(ResolutionKind::BorderControl, 0, city.owner);  // Border Control Treaty A (World Congress)
-            if (bomb || (kind == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) || (kind == "DISTRICT_INDUSTRIAL_ZONE" && usedBy(city.owner, Gp::MimarSinan))) {
+            if (bomb || (kind == "DISTRICT_HOLY_SITE" && playerHasBelief(city.owner, Bf::WarriorMonks)) || (kind == "DISTRICT_INDUSTRIAL_ZONE" && usedBy(city.owner, Gp::MimarSinan)) ||
+                (kind == "DISTRICT_PRESERVE" && isMajorCiv(city.owner))) {
                 for (const Hex& h : state_.grid.within(d.pos, 1)) {
                     Plot& q = state_.plot(h);
                     if (q.owner != kNoPlayer) continue;
@@ -1466,7 +1474,12 @@ void Game::completeProject(City& city, TypeIndex project) {
     }
     for (const ProjectEffect& e : pj.effects) {
         switch (e.kind) {
-            case ProjectEffectKind::RepairWalls: city.wallHp = cityMaxWallHp(city); break;
+            case ProjectEffectKind::RepairWalls:
+                city.wallHp = cityMaxWallHp(city);
+                for (CityDistrict& d : city.districts) {
+                    if (&d == encampmentOf(city)) d.wallDamage = 0;
+                }
+                break;
             case ProjectEffectKind::Loyalty: city.loyalty = std::min(rules_->globalInt("LOYALTY_MAXIMUM"), city.loyalty + e.amount); break;
             case ProjectEffectKind::Favor: p.favor += e.amount; break;
             case ProjectEffectKind::RemoveCo2: {
@@ -1560,6 +1573,8 @@ bool Game::growBorders(City& city) {
         const TerrainType& t = rules_->terrains[static_cast<size_t>(p.terrain)];
         if (t.water) score += rules_->globalInt("PLOT_INFLUENCE_WATER_COST");
         if (p.resource != kNone) score += rules_->globalInt("PLOT_INFLUENCE_RESOURCE_COST");
+        if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) score += rules_->globalInt("PLOT_INFLUENCE_NW_COST");
+        if (p.improvement != kNone) score += rules_->globalInt("PLOT_INFLUENCE_IMPROVEMENT_COST");
         Yields y = plotYields(h, city);
         Fixed total;
         for (const Fixed& v : y) total += v;
@@ -1641,6 +1656,8 @@ void Game::processCities(PlayerId pid) {
             // Migration Treaty (World Congress) on its target: +20% (A) or -20% (B) growth.
             if (const PassedResolution* mt = passed(ResolutionKind::MigrationTreaty); mt && mt->target == city.owner) pct += mt->option == 0 ? 20 : -20;
             surplus = surplus * std::max(0, pct) / 100;
+            // Unrest and Revolt: no growth at all, whatever else adds to it (02: Amenities).
+            if (mood && mood->growthPercent <= -100) surplus = Fixed();
             if (const LoyaltyLevel* loyal = loyaltyLevel(city)) surplus = surplus * loyal->growthPercent / 100;
             const Fixed room = rep.housing - Fixed::fromInt(city.population);
             if (room >= Fixed::fromInt(rules_->globalInt("CITY_HOUSING_LEFT_50PCT_GROWTH") + 1)) {

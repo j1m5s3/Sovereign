@@ -937,6 +937,24 @@ TEST(ai_grand_strategy_agendas) {
     CHECK(holds(*g, 0, ai::Strategy::WonderObsessed));
 }
 
+// Walls do not mend on their own (02: City combat): an AI city whose walls are down repairs them once it may, ahead of
+// what it was making.
+TEST(ai_repairs_its_walls) {
+    GameState s = flatState(20, 12, 2);
+    addCity(s, 0, {4, 6}, true, 3);
+    addCity(s, 1, {15, 6}, true, 3);
+    City& c = s.cities[0];
+    c.buildings.push_back(rules().building("BUILDING_ANCIENT_WALLS"));
+    std::sort(c.buildings.begin(), c.buildings.end());
+    c.wallHp = 40;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->cityMaxWallHp(g->state().cities[0]) == 100);
+    REQUIRE(!g->state().cities[0].queue.empty());
+    ai::playTurn(*g);
+    while (g->state().currentPlayer != 0 && !g->gameOver()) ai::playTurn(*g);
+    CHECK_EQ(g->state().cities[0].wallHp, 100);
+}
+
 TEST(ai_gathers_before_assaulting_walls) {
     GameState s = flatState(30, 14, 2);
     addCity(s, 0, {4, 6}, true, 3);

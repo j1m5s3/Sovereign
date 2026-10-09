@@ -526,11 +526,10 @@ bool Game::canFoundCityAt(PlayerId player, Hex at, CommandError* why) const {
         if (why) *why = e;
         return e == CommandError::Ok;
     };
-    if (!isLandPassable(state_, *rules_, at)) return set(CommandError::CannotFoundHere);
-    if (policyIs(player, "POLICY_ISOLATIONISM")) return set(CommandError::CannotFoundHere);  // Isolationism (09)
     const Plot& p = state_.plot(at);
+    if (!canHoldCity(*rules_, p)) return set(CommandError::CannotFoundHere);
+    if (policyIs(player, "POLICY_ISOLATIONISM")) return set(CommandError::CannotFoundHere);  // Isolationism (09)
     if (p.owner != kNoPlayer && p.owner != player) return set(CommandError::CannotFoundHere);
-    if (p.feature != kNone && rules_->features[static_cast<size_t>(p.feature)].naturalWonder) return set(CommandError::CannotFoundHere);
     // Nor on a district or wonder (03): one across the water three plots from its city is as far as founding asks.
     if (state_.districtAt(at) || state_.wonderAt(at) != kNone) return set(CommandError::CannotFoundHere);
     const int minRange = rules_->globalInt(HotGlobal::CityMinRange);

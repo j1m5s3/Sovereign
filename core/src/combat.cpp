@@ -134,7 +134,8 @@ const Unit* religiousFoeAt(const GameState& s, const Rules& r, const Unit& attac
 }
 
 bool capturesCities(const UnitType& ut) {
-    return ut.unitClass == "MELEE" || ut.unitClass == "ANTI_CAVALRY" || ut.unitClass == "LIGHT_CAVALRY" ||
+    // Melee units take cities, ships among them (02: City combat; naval melee units take coastal cities).
+    return ut.unitClass == "MELEE" || ut.unitClass == "NAVAL_MELEE" || ut.unitClass == "ANTI_CAVALRY" || ut.unitClass == "LIGHT_CAVALRY" ||
            ut.unitClass == "HEAVY_CAVALRY";
 }
 
@@ -633,10 +634,11 @@ int Game::cityStrength(const City& city) const {
     for (TypeIndex b : city.buildings) s += rules_->buildings[static_cast<size_t>(b)].defense;
     s += static_cast<int>(sumCityModifiers(state_, *rules_, city, ModEffect::CityDefense).toInt());
     if (policyIs(city.owner, "POLICY_BASTIONS")) s += 6;  // Bastions (04)
-    // CityStrengthModifier 2 (03: Defense; not in the extracted tables): Encampment, Government Plaza, Diplomatic Quarter.
+    // CityStrengthModifier 2 (03: Defense; not in the extracted tables): Encampment, Government Plaza, Diplomatic Quarter,
+    // while not pillaged (02: City combat).
     for (const CityDistrict& d : city.districts) {
         const std::string& id = rules_->districts[static_cast<size_t>(d.type)].id;
-        if (d.complete && (id == "DISTRICT_ENCAMPMENT" || id == "DISTRICT_GOVERNMENT_PLAZA" || id == "DISTRICT_DIPLOMATIC_QUARTER")) s += 2;
+        if (d.complete && d.pillagedTurns == 0 && (id == "DISTRICT_ENCAMPMENT" || id == "DISTRICT_GOVERNMENT_PLAZA" || id == "DISTRICT_DIPLOMATIC_QUARTER")) s += 2;
     }
     const Plot& p = state_.plot(city.pos);
     s += rules_->terrains[static_cast<size_t>(p.terrain)].defense;
@@ -1667,21 +1669,16 @@ void Game::checkElimination(PlayerId pid) {
 }
 
 void Game::healCities(PlayerId pid) {
-    // City HP heals unless besieged; walls repair after a quiet spell (02-cities.md, City combat).
+    // City HP heals unless besieged; walls do not: the Repair Outer Defenses project mends them (02-cities.md, City combat).
     const int maxHp = cityMaxHp();
     for (City& c : state_.cities) {
         if (c.owner != pid) continue;
         if (c.hp < maxHp && !cityUnderSiege(c)) c.hp = std::min(maxHp, c.hp + rules_->globalInt("COMBAT_HEAL_CITY_GARRISON"));
-        const int maxWalls = cityMaxWallHp(c);
-        if (c.wallHp < maxWalls && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
-            c.wallHp = std::min(maxWalls, c.wallHp + rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES"));
-        // A standing Encampment heals and repairs its outer defences as its city does.
+        // A standing Encampment heals as its city does.
         for (CityDistrict& d : c.districts) {
             if (&d != encampmentOf(c)) continue;
             if (d.damage > 0 && !cityUnderSiege(c))
                 d.damage = static_cast<int16_t>(std::max(0, d.damage - rules_->globalInt("COMBAT_HEAL_CITY_GARRISON")));
-            if (d.wallDamage > 0 && state_.turn - c.lastAttackedTurn > rules_->globalInt("COMBAT_HEAL_OUTER_DEFENSES_COOLDOWN"))
-                d.wallDamage = static_cast<int16_t>(std::max(0, d.wallDamage - rules_->globalInt("COMBAT_HEAL_CITY_OUTER_DEFENSES")));
         }
         c.struck = false;
         c.encampmentStruck = false;

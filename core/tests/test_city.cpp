@@ -402,3 +402,154 @@ TEST(regional_buildings_reach_the_owners_cities_in_range) {
     CHECK(g->cityReport(near).yields[prod] > plain->cityReport(near).yields[prod]);
     CHECK_EQ(g->cityReport(far).yields[prod], plain->cityReport(far).yields[prod]);
 }
+
+// The center's plot is raised to 2 Food and 1 Production before its resource adds to it (02: Founding).
+TEST(city_center_floor_comes_before_its_resource) {
+    const auto center = [](const char* terrain, const char* resource) {
+        GameState s = flatState(20, 14, 1);
+        s.plot({6, 6}).terrain = rules().terrain(terrain);
+        s.plot({6, 6}).resource = rules().resource(resource);
+        auto sc = capitalScenario(std::move(s));
+        REQUIRE(sc.city != kNoCity);
+        const City& c = *sc.game->state().city(sc.city);
+        return sc.game->plotYields(c.pos, c);
+    };
+    const Yields wheat = center("TERRAIN_PLAINS", "RESOURCE_WHEAT");
+    CHECK_EQ(wheat[F], Fixed::fromInt(3));  // plains' 1 Food raised to 2, then Wheat's 1
+    CHECK_EQ(wheat[P], Fixed::fromInt(1));
+    const Yields stone = center("TERRAIN_GRASS", "RESOURCE_STONE");
+    CHECK_EQ(stone[F], Fixed::fromInt(2));
+    CHECK_EQ(stone[P], Fixed::fromInt(2));  // grassland's 0 Production raised to 1, then Stone's 1
+}
+
+// No city on an Oasis, a natural wonder, or a Mountain even with a tunnel through it (02: Founding); nor does a start or
+// a city-state stand on one.
+TEST(city_not_founded_on_an_oasis_or_a_mountain) {
+    for (int k = 0; k < 3; ++k) {
+        GameState s = flatState(20, 14, 1);
+        Plot& p = s.plot({6, 6});
+        if (k == 0) {
+            p.terrain = rules().terrain("TERRAIN_DESERT");
+            p.feature = rules().feature("FEATURE_OASIS");
+        } else if (k == 1) {
+            p.terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+            p.improvement = rules().improvement("IMPROVEMENT_MOUNTAIN_TUNNEL");
+        } else {
+            p.feature = rules().feature("FEATURE_PANTANAL");  // a natural wonder a unit may stand on
+        }
+        const UnitId settler = addUnit(s, "UNIT_SETTLER", 0, {6, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(g->submit(Command::foundCity(0, settler)), CommandError::CannotFoundHere);
+    }
+    // A land of oases with two plain desert plots: the start takes one, the city-state the other.
+    GameState s = flatState(30, 20, 1);
+    s.setup.cityStates = 1;
+    for (Plot& p : s.plots) {
+        p.terrain = rules().terrain("TERRAIN_DESERT");
+        p.feature = rules().feature("FEATURE_OASIS");
+    }
+    const Hex major{6, 10}, minor{20, 10};
+    s.plot(major).feature = kNone;
+    s.plot(minor).feature = kNone;
+    std::string err;
+    REQUIRE(chooseStartPositions(s, rules(), &err));
+    CHECK(s.players[0].startPos == major);
+    placeCityStates(s, rules());
+    REQUIRE(s.players.size() == 2u);
+    CHECK(s.players[1].startPos == minor);
+}
+
+// The Lighthouse: +1 Housing, and +2 more in a city whose center lies beside the coast (02: Housing).
+TEST(city_lighthouse_housing_by_the_coast) {
+    const auto housing = [](int coastColumn, bool lighthouse) {
+        GameState s = flatState(20, 14, 1);
+        for (int y = 0; y < 14; ++y) s.plot({coastColumn, y}).terrain = rules().terrain("TERRAIN_COAST");
+        auto sc = capitalScenario(std::move(s));
+        REQUIRE(sc.city != kNoCity);
+        GameState t = sc.game->state();
+        if (lighthouse) {
+            t.cities[0].buildings.push_back(rules().building("BUILDING_LIGHTHOUSE"));
+            std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+        }
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->cityReport(sc.city).housing;
+    };
+    CHECK_EQ(housing(7, true), housing(7, false) + Fixed::fromInt(3));  // the coast beside the center
+    CHECK_EQ(housing(8, true), housing(8, false) + Fixed::fromInt(1));  // two plots off
+}
+
+// Border growth weighs a natural wonder (-105) and an improvement (-5) as well (02: Border growth; PLOT_INFLUENCE_*).
+TEST(city_borders_reach_for_wonders_and_improvements) {
+    const auto next = [](auto edit) {
+        GameState s = flatState(20, 14, 1);
+        edit(s);
+        auto sc = capitalScenario(std::move(s));
+        REQUIRE(sc.city != kNoCity);
+        Game& g = *sc.game;
+        REQUIRE(g.submit(Command::setProduction(0, sc.city, buildingItem("BUILDING_MONUMENT"))) == CommandError::Ok);
+        g.stateMutForTests().cities[0].borderCulture = Fixed::fromInt(rules().globalInt("CULTURE_COST_FIRST_PLOT"));
+        endTurns(g, 1);  // one plot more
+        for (int i = 0; i < g.state().grid.size(); ++i) {
+            const Hex h = g.state().grid.at(i);
+            if (g.state().plots[static_cast<size_t>(i)].city == sc.city && g.state().grid.distance(h, {6, 6}) == 2) return h;
+        }
+        return Hex{-1, -1};
+    };
+    // Uluru on bare desert (no yields) against grassland (2): only its -105 makes it first.
+    CHECK((next([](GameState& s) {
+               s.plot({8, 6}).terrain = rules().terrain("TERRAIN_DESERT");
+               s.plot({8, 6}).feature = rules().feature("FEATURE_ULURU");
+           }) == Hex{8, 6}));
+    // A farmed plot against wooded plains hills with a yield more: only the farm's -5 makes it first.
+    CHECK((next([](GameState& s) {
+               s.plot({8, 6}).improvement = rules().improvement("IMPROVEMENT_FARM");
+               s.plot({4, 6}).terrain = rules().terrain("TERRAIN_PLAINS_HILLS");
+               s.plot({4, 6}).feature = rules().feature("FEATURE_FOREST");
+           }) == Hex{8, 6}));
+}
+
+// Unrest and Revolt: no growth, whatever growth bonuses the city has (02: Amenities).
+TEST(city_in_unrest_does_not_grow) {
+    const auto food = [](int gold) {
+        auto sc = capitalScenario();
+        GameState s = sc.game->state();
+        s.cities[0].buildings.push_back(rules().building("BUILDING_HANGING_GARDENS"));  // +15% growth
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        s.players[0].gold = Fixed::fromInt(gold);  // 1 Amenity lost per 10 Gold of debt
+        s.cities[0].queue.push_back(buildingItem("BUILDING_MONUMENT"));
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const CityReport r = g->cityReport(sc.city);
+        CHECK(r.yields[F] > r.foodConsumption);
+        if (gold < 0) CHECK(rules().happiness[static_cast<size_t>(r.happiness)].growthPercent <= -100);
+        endTurns(*g, 1);
+        return g->state().city(sc.city)->food;
+    };
+    CHECK(food(0) > Fixed());
+    CHECK_EQ(food(-90), Fixed());
+}
+
+// A major civ's Preserve [GS] claims the unowned plots around it when it is done (02: Border growth, culture bombs); a
+// city-state's does not.
+TEST(city_preserve_claims_the_plots_around_it) {
+    for (const bool cityState : {false, true}) {
+        auto sc = capitalScenario();
+        GameState s = sc.game->state();
+        if (cityState) s.players[0].cityState = 0;
+        const Hex at{8, 6};
+        sovtest::claimFor(s, s.cities[0], at);
+        CityDistrict d;
+        d.type = rules().district("DISTRICT_PRESERVE");
+        d.pos = at;
+        s.cities[0].districts.push_back(d);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const auto claimed = [&] {
+            int n = 0;
+            for (const Hex& h : g->state().grid.within(at, 1)) n += g->state().plot(h).city == sc.city ? 1 : 0;
+            return n;
+        };
+        const int before = claimed();
+        REQUIRE(before < 7);
+        REQUIRE(g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::District, rules().district("DISTRICT_PRESERVE")}));
+        CHECK_EQ(claimed(), cityState ? before : 7);
+    }
+}

@@ -70,6 +70,8 @@
   {"id": "LIGHTHOUSE_COAST_FOOD", "source": "BUILDING_LIGHTHOUSE", "collection": "OWNER_CITY_PLOTS",
    "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FOOD", "amount": 1},
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}]}, "_note": "Coast covers lakes (01: Lake)"},
+  {"id": "LIGHTHOUSE_COASTAL_HOUSING", "source": "BUILDING_LIGHTHOUSE", "collection": "OWNER_CITY", "effect": "ADJUST_CITY_HOUSING",
+   "arguments": {"amount": 2}, "subjectRequirements": {"all": [{"type": "CITY_IS_COASTAL"}]}, "_note": "02: Housing; +2 more if the city center is adjacent to coast"},
   {"id": "SHIPYARD_COAST_PRODUCTION", "source": "BUILDING_SHIPYARD", "collection": "OWNER_CITY_PLOTS",
    "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "PRODUCTION", "amount": 1},
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_TERRAIN", "ref": "TERRAIN_COAST"}, {"type": "PLOT_HAS_IMPROVEMENT", "negate": true}]}},

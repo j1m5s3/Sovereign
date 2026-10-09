@@ -538,7 +538,7 @@ bool chooseStartPositions(GameState& state, const Rules& rules, std::string* err
     std::vector<Cand> cands;
     for (int i = 0; i < g.size(); ++i) {
         Hex hx = g.at(i);
-        if (!isLandPassable(state, rules, hx)) continue;
+        if (!canHoldCity(rules, state.plot(hx))) continue;
         const TerrainType& t = rules.terrains[static_cast<size_t>(state.plot(hx).terrain)];
         if (t.base == "SNOW") continue;
         int edge = std::min(hx.y, g.height() - 1 - hx.y);
