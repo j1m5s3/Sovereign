@@ -473,6 +473,15 @@ int Game::playerEra(PlayerId player) const {
     return latest(p.civics.done, civicEras_, latest(p.techs.done, techEras_, 0));
 }
 
+int Game::techEra(PlayerId player) const {
+    const std::vector<uint8_t>& done = state_.players[static_cast<size_t>(player)].techs.done;
+    int era = 0;
+    for (size_t i = 0; i < done.size() && i < techEras_.size(); ++i) {
+        if (done[i]) era = std::max(era, static_cast<int>(techEras_[i]));
+    }
+    return era;
+}
+
 int Game::agentCapacity(PlayerId player) const {
     const TypeIndex encampment = rules_->district("DISTRICT_ENCAMPMENT");
     int n = 0;

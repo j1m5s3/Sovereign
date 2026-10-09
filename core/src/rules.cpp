@@ -663,6 +663,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.embarkedMoves = static_cast<int>(j["embarkedMoves"].integer(0));
             n.envoys = static_cast<int>(j["envoys"].integer(0));
             n.spies = static_cast<int>(j["spies"].integer(0));
+            n.victoryPoints = static_cast<int>(j["victoryPoints"].integer(0));
             for (const Json& e : j["effects"].items()) {
                 if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;

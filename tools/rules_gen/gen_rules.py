@@ -1712,6 +1712,9 @@ def gen_tree(kind, name_col, prefix, key):
         m = re.search(r"grants (\d+) Spy\b", other)
         if m:
             n["spies"] = int(m.group(1))
+        m = re.search(r"\+(\d+) Diplomatic Victory Points", other)
+        if m:
+            n["victoryPoints"] = int(m.group(1))  # 08: Diplomatic Victory (Seasteads, Global Warming Mitigation)
         m = re.search(r"\+(\d+) Movement while embarked", other)
         if m:
             n["embarkedMoves"] = int(m.group(1))

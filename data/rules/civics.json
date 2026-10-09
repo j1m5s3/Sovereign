@@ -882,6 +882,7 @@
    "era": "ERA_FUTURE",
    "cost": 3200,
    "envoys": 3,
+   "victoryPoints": 1,
    "prereqs": [
     "CIVIC_ENVIRONMENTALISM",
     "CIVIC_GLOBALIZATION",

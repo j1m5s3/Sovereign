@@ -452,11 +452,70 @@ TEST(friends_with_civil_service_form_an_alliance) {
     CHECK(g->alliance(0, 1) == AllianceType::Research);
     CHECK(g->alliance(1, 0) == AllianceType::Research);
     CHECK_EQ(g->allianceLevel(0, 1), 1);
-    // Not twice, and not without friendship.
-    CHECK(g->submit(Command::proposeDeal(0, 1, alliance)) != CommandError::Ok);
+    CHECK(g->relationship(0, 1) == Relationship::Allied);
+    CHECK(std::string(relationshipName(g->relationship(1, 0))) == "Allied");
+    // Not of another type while it lasts, and not without friendship.
+    const std::vector<DealItem> military{{DealItemKind::Alliance, 0, static_cast<int32_t>(AllianceType::Military), kNone}};
+    CHECK(g->submit(Command::proposeDeal(0, 1, military)) != CommandError::Ok);
     s.players[0].relations[1].friendsUntil = s.players[1].relations[0].friendsUntil = 0;
     auto h = Game::fromScenario(rules(), std::move(s));
     CHECK(h->submit(Command::proposeDeal(0, 1, alliance)) != CommandError::Ok);
+    CHECK(h->relationship(0, 1) != Relationship::Allied);
+}
+
+// "30 turns, renewable" (08: Alliance): allies renew theirs without friendship, and it keeps its points; a lapsed
+// alliance is gone with its points.
+TEST(allies_renew_their_alliance_and_keep_its_level) {
+    const auto allied = [](int turnsLeft) {
+        GameState s = friendsState();
+        for (PlayerId x : {0, 1}) {
+            Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+            r.friendsUntil = 0;  // the friendship has run out
+            r.alliance = AllianceType::Military;
+            r.allianceUntil = s.turn + turnsLeft;
+            r.alliancePoints = rules().globalInt("ALLIANCE_LEVEL_TWO_XP");
+        }
+        return s;
+    };
+    const std::vector<DealItem> military{{DealItemKind::Alliance, 0, static_cast<int32_t>(AllianceType::Military), kNone}};
+    auto g = Game::fromScenario(rules(), allied(2));
+    REQUIRE(g->allianceLevel(0, 1) == 2);
+    REQUIRE(g->submit(Command::proposeDeal(0, 1, military)) == CommandError::Ok);
+    const int until = g->state().turn + rules().globalInt("DIPLOMACY_ALLIANCE_TIME_LIMIT");
+    for (PlayerId x : {0, 1}) {
+        const Relation& r = g->state().players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        CHECK(r.alliance == AllianceType::Military);
+        CHECK_EQ(r.allianceUntil, until);
+        CHECK_EQ(r.alliancePoints, rules().globalInt("ALLIANCE_LEVEL_TWO_XP"));
+    }
+    CHECK_EQ(g->allianceLevel(0, 1), 2);
+    // Lapsed: a new alliance needs friendship again and starts from nothing.
+    GameState s = allied(-1);
+    auto lapsed = Game::fromScenario(rules(), s);
+    CHECK(lapsed->submit(Command::proposeDeal(0, 1, military)) != CommandError::Ok);
+    s.players[0].relations[1].friendsUntil = s.players[1].relations[0].friendsUntil = s.turn + 30;
+    auto again = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(again->submit(Command::proposeDeal(0, 1, military)) == CommandError::Ok);
+    CHECK_EQ(again->state().players[0].relations[1].alliancePoints, 0);
+    CHECK_EQ(again->allianceLevel(0, 1), 1);
+}
+
+// An AI renews an alliance with a civ it likes before it runs out, so its level carries on.
+TEST(an_ai_renews_its_alliance_before_it_lapses) {
+    GameState s = friendsState();
+    s.players[0].human = false;
+    for (PlayerId x : {0, 1}) {
+        Relation& r = s.players[static_cast<size_t>(x)].relations[static_cast<size_t>(1 - x)];
+        r.alliance = AllianceType::Research;
+        r.allianceUntil = s.turn + 3;
+        r.alliancePoints = 100;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const int start = g->state().turn;
+    while (g->state().turn < start + 6) ai::playTurn(*g);
+    CHECK(g->alliance(0, 1) == AllianceType::Research);
+    CHECK(g->state().players[0].relations[1].allianceUntil > start + 3);
+    CHECK(g->state().players[0].relations[1].alliancePoints > 100);
 }
 
 TEST(alliance_points_raise_the_level_and_the_alliance_lapses) {
@@ -561,6 +620,35 @@ TEST(alliances_survive_a_save) {
 }
 
 // ---- casus belli (08: War types)
+
+// Colonial War (08): the target is two technology eras behind; civics do not count.
+TEST(a_colonial_war_counts_technology_eras) {
+    const auto colonial = [](int techEra, int theirCivicEra) {
+        GameState s = diploState();
+        s.turn = 40;
+        for (Player& p : s.players) p.relations.resize(2);
+        s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATIONALISM"))] = 1;  // an Industrial civic
+        s.players[0].relations[1].denouncedOn = 30;
+        for (size_t i = 0; i < rules().techs.size(); ++i) {
+            if (rules().techs[i].era == techEra) {
+                s.players[0].techs.done[i] = 1;
+                break;
+            }
+        }
+        for (size_t i = 0; i < rules().civics.size(); ++i) {
+            if (rules().civics[i].era == theirCivicEra) {
+                s.players[1].civics.done[i] = 1;
+                break;
+            }
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->denouncing(0, 1));
+        return g->hasCasusBelli(0, 1, CasusBelli::Colonial);
+    };
+    CHECK(!colonial(1, 0));  // Nationalism puts its civics four eras ahead, its techs only one
+    CHECK(colonial(2, 0));
+    CHECK(colonial(2, 3));   // their civics do not help them either
+}
 
 TEST(a_reconquest_war_costs_no_grievances) {
     GameState s = diploState();

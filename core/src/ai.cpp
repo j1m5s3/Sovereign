@@ -652,8 +652,12 @@ void deals(View& v) {
             if (near && mine >= 2 * theirs && gold >= 50) ideas.push_back({{DealItemKind::Gold, o.id, std::min(gold, 200 + 100 * (mine / theirs - 2)) / 10 * 10, kNone}});
         }
         if (opinion >= kFriendOpinion && !distrusted) ideas.push_back({{DealItemKind::Friendship, v.me, 0, kNone}});
-        // An alliance with a friend it likes, of the kind its strategy wants (08: Alliance).
-        if (opinion >= kFriendOpinion && !distrusted && v.game.friends(v.me, o.id)) {
+        // An alliance with a friend it likes, of the kind its strategy wants (08: Alliance), and its renewal in the
+        // alliance's last kProposalGap turns, which keeps its level.
+        const AllianceType allied = v.game.alliance(v.me, o.id);
+        if (allied != AllianceType::None && opinion >= kFriendOpinion && !distrusted && rel.allianceUntil - s.turn < kProposalGap) {
+            ideas.insert(ideas.begin(), {{DealItemKind::Alliance, v.me, static_cast<int32_t>(allied), kNone}});
+        } else if (allied == AllianceType::None && opinion >= kFriendOpinion && !distrusted && v.game.friends(v.me, o.id)) {
             AllianceType type = AllianceType::Economic;
             if (v.posture.has(Strategy::ScienceVictory)) type = AllianceType::Research;
             else if (v.posture.has(Strategy::DominationVictory) || v.majorWar) type = AllianceType::Military;

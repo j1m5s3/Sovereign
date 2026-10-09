@@ -183,8 +183,8 @@ struct TalkRecord {
 constexpr size_t kMaxTalkText = 400;  // characters kept per summary
 constexpr int kTalksKept = 6;         // summaries kept per pair
 
-// Relationship states (08: Meeting and relationship states; Allied waits for alliances).
-enum class Relationship : uint8_t { AtWar = 0, Denounced, Unfriendly, Neutral, Friendly, DeclaredFriend };
+// Relationship states (08: Meeting and relationship states).
+enum class Relationship : uint8_t { AtWar = 0, Denounced, Unfriendly, Neutral, Friendly, DeclaredFriend, Allied };
 
 // An appointed governor (08: Governors [R&F]).
 struct Governor {

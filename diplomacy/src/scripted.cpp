@@ -146,7 +146,8 @@ bool ScriptedModel::reply(const Persona& p, const std::vector<ChatMessage>& hist
     const bool warlord = p.leaning == "Warlord", builder = p.leaning == "Builder-King";
     const bool hostile = p.relationship == Relationship::AtWar || p.relationship == Relationship::Denounced ||
                          p.relationship == Relationship::Unfriendly;
-    const bool warm = p.relationship == Relationship::Friendly || p.relationship == Relationship::DeclaredFriend;
+    const bool warm = p.relationship == Relationship::Friendly || p.relationship == Relationship::DeclaredFriend ||
+                      p.relationship == Relationship::Allied;
     switch (verdict) {
         case Verdict::Accept: {
             static const char* const lines[] = {

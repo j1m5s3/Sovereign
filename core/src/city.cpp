@@ -2,6 +2,7 @@
 // amenities, border growth, production, purchases, gold and maintenance.
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <tuple>
 
 #include "sovereign/game.h"
@@ -1102,6 +1103,22 @@ Fixed Game::goldPerTurn(PlayerId player, const std::vector<CityReport>* reports)
         if (u.owner != player) continue;
         const Fixed m = Fixed::fromInt(rules_->units[static_cast<size_t>(u.type)].maintenance) - discount;
         if (m > Fixed()) net -= m;
+    }
+    // Spies and assassins are off the map but kept like units (08: Espionage, a Spy's 4 Gold).
+    std::optional<Fixed> upkeep[2];
+    for (const Agent& a : state_.agents) {
+        if (a.owner != player) continue;
+        std::optional<Fixed>& m = upkeep[a.spy ? 1 : 0];
+        if (!m) {
+            m = Fixed();
+            for (const UnitType& u : rules_->units) {
+                if (u.agent && u.spy == a.spy) {
+                    m = Fixed::fromInt(u.maintenance) - discount;
+                    break;
+                }
+            }
+        }
+        if (*m > Fixed()) net -= *m;
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
     // Second Strike Capability (04): nuclear devices cost half as much again to keep.
