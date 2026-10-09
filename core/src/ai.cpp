@@ -35,7 +35,9 @@ constexpr int kPeaceRatioPercent = 80;  // below this, offer peace
 constexpr int kWarWeariness = 50;       // turns of war before peace is offered anyway
 constexpr int kStalledWar = 5;          // turns with no city of either side attacked: the war has stalled
 constexpr int kPeaceHolds = 30;         // turns after a peace before war is declared on that civ again
-constexpr int kNeighbourRange = 14;     // a target's city must be this close to one of ours
+constexpr int kNeighbourRange = 14;     // a civ with a city this close to one of ours is a neighbour
+constexpr int kWarRange = 9;            // a war target's city must be this close to one of ours
+constexpr int kWarMargin = 50;          // added to the posture's war ratio to start a war (not to keep one going)
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kProposalGap = 10;        // turns between deals put to the same civ
@@ -555,16 +557,18 @@ void diplomacy(View& v) {
         bool near = false;
         for (const City& c : s.cities) {
             if (c.owner != p.id || v.game.visibility(v.me, c.pos) == Visibility::Unrevealed) continue;
-            if (distanceToCity(s, v.me, c.pos) <= kNeighbourRange) near = true;
+            if (distanceToCity(s, v.me, c.pos) <= kWarRange) near = true;
         }
         const int theirs = militaryStrength(v.game, p.id);
         if (v.game.wmdsHeld(p.id) > 0 && v.game.wmdsHeld(v.me) == 0) continue;  // deterred (05: Nuclear weapons)
         if (v.game.friends(v.me, p.id) || v.game.alliance(v.me, p.id) != AllianceType::None) continue;  // no betrayal
+        // A war needs kWarMargin more than the posture's ratio: closer wars took a city, the rest mostly stalled.
         // An emergency's target is fair game at three quarters of the usual margin (an Emergency War costs no grievances).
         // A grudge from earlier games lowers the margin it needs against that human and puts them first
         // among equals, by up to 30% (player-retention §1).
         const int grudge = v.game.rivalGrudge(v.me, p.id);
-        const int ratio = (v.game.inEmergencyAgainst(v.me, p.id) ? v.posture.warRatio * 3 / 4 : v.posture.warRatio) * (100 - grudge) / 100;
+        const int needed = v.posture.warRatio + kWarMargin;
+        const int ratio = (v.game.inEmergencyAgainst(v.me, p.id) ? needed * 3 / 4 : needed) * (100 - grudge) / 100;
         const int score = theirs * (100 - grudge) / 100;
         if (near && mine * 100 >= theirs * ratio && score < pickScore && v.game.opinionOf(v.me, p.id) < kFriendOpinion) {
             pick = p.id;
