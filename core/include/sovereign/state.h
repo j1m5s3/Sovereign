@@ -481,6 +481,7 @@ struct Player {
     int capturedTurn = 0;           // when the captor took it
     std::array<TypeIndex, kNumGearSlots> savedGear{{kNone, kNone, kNone}};  // the fallen leader's loadout
     std::vector<TypeIndex> savedPromotions;  // the fallen leader's; an heir keeps one
+    std::vector<int32_t> leaderVisits;       // plot indices of its city centers and districts a ruler has visited, sorted (§3)
 };
 
 // How a major civ plays (leader doc §10, AI layer 2: player modelling), built each world turn

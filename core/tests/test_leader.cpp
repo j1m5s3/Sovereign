@@ -1240,3 +1240,79 @@ TEST(an_ai_keeps_a_body_double_once_assassins_come) {
         CHECK_EQ(c.queue.front() == (ProductionItem{ProductionKind::Unit, rules().unit("UNIT_BODY_DOUBLE")}), assassinCame);
     }
 }
+
+// ---- leader part 4: first visits and Statesman stances (leader doc §3)
+
+TEST(the_ruler_earns_xp_for_first_visits) {
+    UnitId leader = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {4, 4}, true);
+            s.cities.back().districts.push_back({rules().district("DISTRICT_CAMPUS"), Hex{5, 4}, true});
+            addCity(s, 1, {12, 8}, true);
+            leader = addLeader(s, 0, {2, 4});
+            s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        },
+        false);
+    const int each = rules().globalInt("LEADER_XP_FIRST_VISIT");
+    REQUIRE(each > 0);
+    auto xp = [&] { return g->state().unit(leader)->xp; };
+    REQUIRE(g->submit(Command::move(0, leader, {4, 4})) == CommandError::Ok);  // the city center
+    CHECK_EQ(xp(), each);
+    pass(*g, 2);
+    REQUIRE(g->submit(Command::move(0, leader, {5, 4})) == CommandError::Ok);  // the Campus
+    CHECK_EQ(xp(), 2 * each);
+    pass(*g, 2);
+    REQUIRE(g->submit(Command::move(0, leader, {4, 4})) == CommandError::Ok);  // been here
+    CHECK_EQ(xp(), 2 * each);
+    pass(*g, 2);
+    REQUIRE(g->submit(Command::move(0, leader, {3, 4})) == CommandError::Ok);  // the city's land, not a district
+    CHECK_EQ(xp(), 2 * each);
+    CHECK_EQ(g->state().players[0].leaderVisits.size(), 2u);
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(back);
+    CHECK(back->state().players[0].leaderVisits == g->state().players[0].leaderVisits);
+}
+
+TEST(a_visit_to_a_foreign_district_earns_nothing) {
+    UnitId leader = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {2, 8}, true);
+            addCity(s, 1, {11, 4}, true);
+            s.cities.back().districts.push_back({rules().district("DISTRICT_CAMPUS"), Hex{10, 4}, true});
+            leader = addLeader(s, 0, {8, 4});
+            s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        },
+        false);
+    REQUIRE(g->submit(Command::move(0, leader, {10, 4})) == CommandError::Ok);
+    REQUIRE(g->state().unit(leader)->pos == hx(10, 4));
+    CHECK_EQ(g->state().unit(leader)->xp, 0);
+    CHECK(g->state().players[0].leaderVisits.empty());
+}
+
+TEST(a_statesman_handles_citizens_better) {
+    // Each Statesman promotion makes a Benevolence last 25% longer and a Fear give 25% more loyalty.
+    for (const int statesman : {0, 1, 2}) {
+        CityId c = kNoCity;
+        auto g = duel(
+            [&](GameState& s) {
+                c = addCity(s, 0, {5, 5}, true, 4);
+                s.cities.back().loyalty = 20;
+                addLeader(s, 0, {5, 5});
+                if (statesman >= 1) s.units.back().promotions.push_back(promo("PROMOTION_SOVEREIGN_WARY"));
+                if (statesman >= 2) s.units.back().promotions.push_back(promo("PROMOTION_SOVEREIGN_SPYMASTER"));
+                addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+                s.players[0].gold = Fixed::fromInt(1000);
+            },
+            false);
+        GameState copy = g->state();
+        auto fear = Game::fromScenario(rules(), std::move(copy));
+        const int power = 100 + 25 * statesman;
+        REQUIRE(g->submit(Command::cityStance(0, c, Stance::Benevolence)) == CommandError::Ok);
+        CHECK_EQ(g->state().city(c)->benevolenceUntil, g->state().turn + rules().globalInt("STANCE_EFFECT_TURNS") * power / 100);
+        REQUIRE(fear->submit(Command::cityStance(0, c, Stance::Fear)) == CommandError::Ok);
+        CHECK_EQ(fear->state().city(c)->loyalty, 20 + rules().globalInt("STANCE_FEAR_LOYALTY") * power / 100);
+    }
+}

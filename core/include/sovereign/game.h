@@ -895,6 +895,7 @@ private:
     void killReward(Player& to, const UnitEffect& effect, const UnitType& victim);  // a KillYield effect's reward
     // A unit entered this plot: natural wonders' abilities, a goody hut, a barbarian camp.
     void enterPlot(Unit& unit);
+    void leaderVisit(const Unit& leader);  // XP for the first visit to each own city center and district (leader doc §3)
     void clearCamp(Unit& unit);  // a civ's military unit entering a barbarian camp clears it
     void linkBarbarians();
     void processBarbarians();
