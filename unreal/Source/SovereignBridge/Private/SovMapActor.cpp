@@ -291,7 +291,9 @@ UStaticMeshComponent* ASovMapActor::Marker(TArray<TObjectPtr<UStaticMeshComponen
 		Pool.Add(C);
 	}
 	UStaticMeshComponent* C = Pool[Index];
-	if (C->GetStaticMesh() != Mesh)
+	// Null leaves the mesh for SovArt::SetKitMesh, which keeps a kit piece's tinted materials while its mesh is the
+	// same; setting a primitive first would make every redraw rebuild them.
+	if (Mesh && C->GetStaticMesh() != Mesh)
 	{
 		C->SetStaticMesh(Mesh);
 	}
@@ -642,7 +644,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	int32 WonderCount = 0;
 	for (const FSovWonderMarker& W : Mirror.Wonders)
 	{
-		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, CubeMesh.Get());
+		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, nullptr);
 		const FVector At = SovHex::Center(W.X, W.Y, SurfaceZ(W.X, W.Y));
 		// Its kind's model from the Wonders kit, grey and smaller while it is being built.
 		const TCHAR* Kind = WonderModel(W.Id);
@@ -662,6 +664,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 			continue;
 		}
+		C->SetStaticMesh(CubeMesh.Get());
 		C->SetRelativeLocation(At + FVector(0, 0, 20));
 		C->SetRelativeScale3D(FVector(0.4, 0.4, W.bComplete ? 0.4 : 0.15));
 		C->SetMaterial(0, MaterialFor(FLinearColor(0.85f, 0.8f, 0.6f)));
@@ -674,7 +677,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	int32 VillageCount = 0;
 	for (const FIntPoint& V : Mirror.Villages)
 	{
-		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, CubeMesh.Get());
+		UStaticMeshComponent* C = Marker(VillagePieces, VillageCount++, nullptr);
 		if (SovArt::SetKitMesh(C, TEXT("Fields"), TEXT("Camp"), FLinearColor::White))
 		{
 			ShadeKit(C, FLinearColor::White);
@@ -683,6 +686,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			C->SetRelativeScale3D(FVector(0.09));
 			continue;
 		}
+		C->SetStaticMesh(CubeMesh.Get());
 		C->SetRelativeLocation(SovHex::Center(V.X, V.Y, SurfaceZ(V.X, V.Y)) + FVector(0, 0, 10));
 		C->SetRelativeRotation(FRotator(0.f, 30.f, 0.f));
 		C->SetRelativeScale3D(FVector(0.22, 0.22, 0.18));
@@ -696,7 +700,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	int32 SiteCount = 0;
 	for (const FIntPoint& A : Mirror.Antiquity)
 	{
-		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, CubeMesh.Get());
+		UStaticMeshComponent* C = Marker(AntiquityPieces, SiteCount++, nullptr);
 		if (SovArt::SetKitMesh(C, TEXT("Resources"), TEXT("Blocks"), FLinearColor(0.8f, 0.78f, 0.7f)))
 		{
 			ShadeKit(C, FLinearColor::White);
@@ -705,6 +709,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			C->SetRelativeScale3D(FVector(0.09));
 			continue;
 		}
+		C->SetStaticMesh(CubeMesh.Get());
 		C->SetRelativeLocation(SovHex::Center(A.X, A.Y, SurfaceZ(A.X, A.Y)) + FVector(18, 0, 4));
 		C->SetRelativeRotation(FRotator(0.f, 15.f, 0.f));
 		C->SetRelativeScale3D(FVector(0.16, 0.1, 0.08));
@@ -718,7 +723,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = 0; i < Mirror.Cities.Num(); ++i)
 	{
 		const FSovCityMarker& City = Mirror.Cities[i];
-		UStaticMeshComponent* C = Marker(CityMarkers, i, CubeMesh);
+		UStaticMeshComponent* C = Marker(CityMarkers, i, nullptr);
 		const double Z = SurfaceZ(City.X, City.Y);
 		// A small Palace for capitals and a hall for other cities, when the art exists.
 		const TPair<const TCHAR*, FString> Centre = SovArt::EraPiece(City.Era, City.bCapital ? TEXT("Palace") : TEXT("Landmark"), City.Civ);
@@ -728,6 +733,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			C->SetRelativeScale3D(FVector(City.bCapital ? 0.045 : 0.06));
 			continue;
 		}
+		C->SetStaticMesh(CubeMesh.Get());
 		C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z + CityHeight * 0.5));
 		C->SetRelativeScale3D(City.bCapital ? FVector(1.0, 1.0, CityHeight / 100.0) : FVector(0.8, 0.8, CityHeight / 100.0));
 		C->SetMaterial(0, MaterialFor(City.Color));
@@ -793,7 +799,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		const FSovUnitMarker& Unit = Mirror.Units[i];
 		UStaticMesh* Mesh = Unit.bLeader ? CylinderMesh.Get() : Unit.bCivilian ? SphereMesh.Get() : ConeMesh.Get();
-		UStaticMeshComponent* C = Marker(UnitMarkers, i, Mesh);
+		UStaticMeshComponent* C = Marker(UnitMarkers, i, nullptr);
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
 		// Kit figures in the owner's colour when the art exists; a figure stands about 45 cm tall on the map.
@@ -821,7 +827,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			if (Unit.bEmbarked)
 			{
 				// An embarked unit rides in a boat in its owner's colour.
-				UStaticMeshComponent* B = Marker(Boats, BoatCount++, CubeMesh.Get());
+				UStaticMeshComponent* B = Marker(Boats, BoatCount++, nullptr);
 				if (SovArt::SetKitMesh(B, TEXT("Figures"), TEXT("Boat"), Unit.Color))
 				{
 					B->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
@@ -832,6 +838,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			}
 			continue;
 		}
+		if (C->GetStaticMesh() != Mesh) C->SetStaticMesh(Mesh);
 		if (Unit.bLeader)
 		{
 			// The leader stands to the north-west of its escort: an owner-coloured pillar with a gold crown.
