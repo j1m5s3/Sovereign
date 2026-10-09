@@ -81,17 +81,18 @@ TEST(ai_settle_score_prefers_good_sites) {
     CHECK(ai::settleScore(*dry, 0, {12, 6}) < ai::settleScore(*dry, 0, {6, 6}));
 }
 
-// A Builder heads for the best plot no other player's unit stands on: a stranger stands on the Wheat east of the
-// capital, so it farms the Wheat to the west, where one of its own units stands, or else a plain plot.
+// A Builder heads for the best plot no other player's unit stands on: a stranger stands on the Wine east of the
+// capital, so it plants the Wine to the west, where one of its own units stands, or else improves a plain plot.
 TEST(ai_builders_pass_over_plots_others_stand_on) {
-    const auto farmed = [](bool ownWest) {
+    const auto improved = [](bool ownWest) {
         GameState s = flatState(20, 14, 2);
+        learn(s, 0, "TECH_IRRIGATION");
         addCity(s, 0, {6, 6}, true);
         addCity(s, 1, {16, 6}, true);
-        s.plot({7, 6}).resource = rules().resource("RESOURCE_WHEAT");
+        s.plot({7, 6}).resource = rules().resource("RESOURCE_WINE");
         addUnit(s, "UNIT_WARRIOR", 1, {7, 6});
         if (ownWest) {
-            s.plot({5, 6}).resource = rules().resource("RESOURCE_WHEAT");
+            s.plot({5, 6}).resource = rules().resource("RESOURCE_WINE");
             addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
         }
         const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
@@ -103,10 +104,10 @@ TEST(ai_builders_pass_over_plots_others_stand_on) {
         CHECK(g->state().plot(u->pos).improvement != kNone);  // it improved the plot it went to
         return u->pos;
     };
-    const Hex plain = farmed(false);
+    const Hex plain = improved(false);
     CHECK(plain != (Hex{6, 6}));
     CHECK(plain != (Hex{7, 6}));
-    CHECK(farmed(true) == (Hex{5, 6}));
+    CHECK(improved(true) == (Hex{5, 6}));
 }
 
 // Two of the AI's units of a type side by side merge into a Corps once it has Nationalism (05); another player's unit
@@ -214,15 +215,16 @@ TEST(ai_scouts_explore_past_ground_they_cannot_reach) {
     CHECK(u->pos.x < 6);
 }
 
-// Two Builders split the work: the first heads for the Wheat (on land already seen), and the second leaves it to the
+// Two Builders split the work: the first heads for the Wine (on land already seen), and the second leaves it to the
 // first, in the turn they set off and in the turns after, while the first is on its way. They start off the city's land,
-// too far out to reach the Wheat before the fourth turn begins.
+// too far out to reach the Wine before the fourth turn begins.
 TEST(ai_builders_split_up_over_the_work) {
     GameState s = flatState(20, 14, 1);
+    learn(s, 0, "TECH_IRRIGATION");
     addCity(s, 0, {6, 6}, true);
     for (const Hex& h : s.grid.within({6, 6}, 3)) sovtest::claimFor(s, s.cities[0], h);
-    const Hex wheat{9, 6};
-    s.plot(wheat).resource = rules().resource("RESOURCE_WHEAT");
+    const Hex wine{9, 6};
+    s.plot(wine).resource = rules().resource("RESOURCE_WINE");
     s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
     const UnitId first = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
     const UnitId second = addUnit(s, "UNIT_BUILDER", 0, {1, 6});
@@ -233,15 +235,15 @@ TEST(ai_builders_split_up_over_the_work) {
         for (const UnitId id : {first, second}) {
             const Unit* u = g->state().unit(id);
             REQUIRE(u);
-            bound += u->pos == wheat || u->moveTarget == wheat ? 1 : 0;
+            bound += u->pos == wine || u->moveTarget == wine ? 1 : 0;
         }
         CHECK_EQ(bound, 1);
-        CHECK(g->state().plot(wheat).improvement == kNone);  // not reached yet
+        CHECK(g->state().plot(wine).improvement == kNone);  // not reached yet
     }
 }
 
-// A Builder whose best plots are out of its reach (six Wheat plots on an island: it goes to a plot on land over land,
-// before it may embark and after) works the best plot it can reach, rather than wait on the Wheat for good: one failed
+// A Builder whose best plots are out of its reach (six Wine plots on an island: it goes to a plot on land over land,
+// before it may embark and after) works the best plot it can reach, rather than wait on the Wine for good: one failed
 // move is enough to look for the plots in reach.
 TEST(ai_builders_work_what_they_can_reach) {
     for (const bool sailing : {false, true}) {
@@ -255,10 +257,11 @@ TEST(ai_builders_work_what_they_can_reach) {
             sovtest::claimFor(s, s.cities[0], h);
             if (h.x < 8) continue;
             s.plot(h).terrain = rules().terrain("TERRAIN_GRASS");
-            s.plot(h).resource = rules().resource("RESOURCE_WHEAT");
+            s.plot(h).resource = rules().resource("RESOURCE_WINE");
             island.push_back(h);
         }
         REQUIRE(island.size() >= 6);
+        learn(s, 0, "TECH_IRRIGATION");
         if (sailing) learn(s, 0, "TECH_SAILING");
         s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
         const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
@@ -273,7 +276,7 @@ TEST(ai_builders_work_what_they_can_reach) {
     }
 }
 
-// A Builder embarks for a sea resource (Builders may after Sailing; 05: Embarkation) and builds Fishing Boats there, also
+// A Builder embarks for a sea luxury (Builders may after Sailing; 05: Embarkation) and builds Fishing Boats there, also
 // once its moves to better plots have failed (Horses on an island, out of reach over land).
 TEST(ai_builders_embark_for_sea_resources) {
     for (const bool withIsland : {false, true}) {
@@ -291,16 +294,39 @@ TEST(ai_builders_embark_for_sea_resources) {
             ++island;
         }
         REQUIRE(island >= (withIsland ? 6 : 0));
-        const Hex fish{7, 6};
-        s.plot(fish).resource = rules().resource("RESOURCE_FISH");
+        const Hex pearls{7, 6};
+        s.plot(pearls).resource = rules().resource("RESOURCE_PEARLS");
         learn(s, 0, "TECH_SAILING");
         learn(s, 0, "TECH_ANIMAL_HUSBANDRY");
         s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
         addUnit(s, "UNIT_BUILDER", 0, {6, 6});
         auto g = Game::fromScenario(rules(), std::move(s));
         for (int i = 0; i < 2; ++i) ai::playTurn(*g);
-        CHECK(g->state().plot(fish).improvement == rules().improvement("IMPROVEMENT_FISHING_BOATS"));
+        CHECK(g->state().plot(pearls).improvement == rules().improvement("IMPROVEMENT_FISHING_BOATS"));
     }
+}
+
+// A Builder improves a plot its city works before an unworked Bonus resource: Wheat yields its Food farmed or not, so a
+// Farm there gains no more than one on the worked plot, where it pays at once. An unworked luxury still comes first: its
+// Amenities come once it is improved, worked or not.
+TEST(ai_builders_improve_worked_plots_before_bonus_resources) {
+    const auto target = [](const char* resource) {
+        GameState s = flatState(20, 14, 1);
+        learn(s, 0, "TECH_IRRIGATION");
+        addCity(s, 0, {6, 6}, true);
+        for (const Hex& h : s.grid.within({6, 6}, 3)) sovtest::claimFor(s, s.cities[0], h);
+        s.cities[0].worked = {s.grid.index({8, 6})};
+        s.plot({5, 6}).resource = rules().resource(resource);
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(builder);
+        REQUIRE(u);
+        return u->moveTarget ? *u->moveTarget : u->pos;
+    };
+    CHECK(target("RESOURCE_WHEAT") == (Hex{8, 6}));
+    CHECK(target("RESOURCE_WINE") == (Hex{5, 6}));
 }
 
 // A Builder out of moves on a plot to improve waits there and improves it next turn, rather than set off for the next
