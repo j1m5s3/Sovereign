@@ -19,12 +19,13 @@ with art. The game falls back to primitives for anything missing.
 
 | File | What it does |
 |---|---|
-| `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses) and the painted look: vertex colours darkened at the foot and lightened at the crown, flat shading |
+| `blender/kitlib.py` | Modelling helpers (boxes, cylinders, cones, roofs, rounded masses; lofts through elliptical rings, limbs between two points, flat profiles, two-sided rippled sheets for cloth) and the painted look: vertex colours darkened at the foot and lightened at the crown, of the whole piece and of each part; flat shading, or smooth for figures |
 | `blender/kit_nature.py` | Nature kit: broadleaf tree, conifer, bush, rocks |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
-| `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), a war galley (team sail) for ships and a boat (team strakes) under embarked units; static, team-coloured cloth |
+| `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), a war galley (team sail) for ships and a boat (team strakes) under embarked units; static, team-coloured cloth. The people are lofted anatomy with faces (brows, eyes, nose, ears, beards) and layered costumes: cuirass, leather strips, greaves, crested helmets, folded cloaks |
 | `blender/generate.py` | Builds every piece and exports FBX |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
+| `blender/portrait.py` | Renders the Figures kit's people lit (Eevee), team cloth tinted, whole or `close` (upper bodies): `blender -b --python tools/art/blender/portrait.py -- out.png "#2f4f9a" close` |
 | `ue_import.py` | Imports FBX into `/Game/Art/<Kit>/` and assigns the master material `M_SovKit` (vertex colour × `Tint`) |
 | `build_art.py` | Runs both steps |
 

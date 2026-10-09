@@ -33,6 +33,12 @@ class Piece:
         self.tint_next = False
         self.rng = random.Random(seed)
         self.height = 1.0
+        # Smooth pieces (figures) shade softly; each solid also keeps its own height range so the paint
+        # darkens toward the foot of every part, as a painter shades each fold and limb.
+        self.smooth = False
+        self.part_z = {}  # face -> (z0, z1) of the solid it belongs to
+        self.part_shade = 0.0  # how much of the shading follows each part rather than the whole piece
+        self.shade_low, self.shade_range = 0.72, 0.36  # paint at the foot, and the rise to the crown
 
     # ------------------------------------------------------------------ solids
     def team_color(self, on=True):
@@ -41,7 +47,10 @@ class Piece:
 
     def _tag(self, faces, color, jitter=0.04):
         c = srgb(color)
+        zs = [v.co.z for f in faces for v in f.verts] or [0.0]
+        span = (min(zs), max(zs))
         for f in faces:
+            self.part_z[f] = span
             if self.tint_next:
                 self.team.add(f)
             j = 1.0 + self.rng.uniform(-jitter, jitter)
@@ -127,6 +136,73 @@ class Piece:
         self._tag(faces, color)
         return vs
 
+    def loft(self, rings, color, segments=16, cap_bottom=True, cap_top=True, arc=None, folds=0, fold_depth=0.0, two_sided=False):
+        """A shape through stacked elliptical rings, bottom to top: each ring is (z, rx, ry) or
+        (z, rx, ry, cx, cy). `arc` (a0, a1) in radians keeps only part of the ring (an open sheet,
+        e.g. a cloak; angle 0 is +X, pi/2 is +Y, the back); `folds` ripples the outline like cloth;
+        `two_sided` adds the back faces of an open sheet so it shows from behind."""
+        closed = arc is None
+        a0, a1 = (0.0, 2 * math.pi) if closed else arc
+        n = segments if closed else segments + 1
+        grid = []
+        for ring in rings:
+            z, rx, ry = ring[0], ring[1], ring[2]
+            cx, cy = (ring[3], ring[4]) if len(ring) > 4 else (0.0, 0.0)
+            row = []
+            for i in range(n):
+                a = a0 + (a1 - a0) * i / (segments if closed else segments)
+                k = 1.0 + (fold_depth * math.sin(folds * a) if folds else 0.0)
+                row.append(self.bm.verts.new((cx + rx * k * math.cos(a), cy + ry * k * math.sin(a), z)))
+            grid.append(row)
+        faces = []
+        # The back of a two-sided sheet needs its own vertices (a face may not repeat another's).
+        back = [[self.bm.verts.new(v.co) for v in row] for row in grid] if two_sided else None
+        for r in range(len(grid) - 1):
+            lo, hi = grid[r], grid[r + 1]
+            for i in range(n if closed else n - 1):
+                j = (i + 1) % n
+                faces.append(self.bm.faces.new((lo[i], lo[j], hi[j], hi[i])))
+                if two_sided:
+                    blo, bhi = back[r], back[r + 1]
+                    faces.append(self.bm.faces.new((bhi[i], bhi[j], blo[j], blo[i])))
+        if closed and cap_bottom:
+            faces.append(self.bm.faces.new(list(reversed(grid[0]))))
+        if closed and cap_top:
+            faces.append(self.bm.faces.new(grid[-1]))
+        self._tag(faces, color)
+        return [v for row in grid for v in row]
+
+    def segment(self, p0, p1, r0, r1, color, segments=10, caps=True):
+        """A tapered limb between two points (radius r0 at p0, r1 at p1), with rounded ends."""
+        a, b = Vector(p0), Vector(p1)
+        d = b - a
+        # With rounded ends the flat caps would poke through the spheres at the joints.
+        new = bmesh.ops.create_cone(self.bm, cap_ends=not caps, segments=segments, radius1=r0, radius2=r1, depth=d.length)
+        verts = new["verts"]
+        rot = d.normalized().to_track_quat("Z", "Y").to_matrix().to_4x4()
+        bmesh.ops.transform(self.bm, matrix=Matrix.Translation((a + b) / 2) @ rot, verts=verts)
+        self._tag(self._faces_of(verts), color)
+        if caps:
+            self.blob(tuple(a), r0 * 1.03, color, subdiv=2, wobble=0.0)
+            self.blob(tuple(b), r1 * 1.03, color, subdiv=2, wobble=0.0)
+        return verts
+
+    def slab(self, profile, thickness, color, plane="YZ", offset=0.0):
+        """A flat shape: a 2D outline (u, v) extruded `thickness` across the plane. In "YZ" the outline lies
+        along Y (u) and Z (v) and is centred on x = offset; in "XZ" along X and Z, centred on y = offset."""
+        front, back = [], []
+        for u, v in profile:
+            for side, out in ((-0.5, front), (0.5, back)):
+                w = offset + side * thickness
+                out.append(self.bm.verts.new((w, u, v) if plane == "YZ" else (u, w, v)))
+        faces = [self.bm.faces.new(front), self.bm.faces.new(list(reversed(back)))]
+        n = len(profile)
+        for i in range(n):
+            j = (i + 1) % n
+            faces.append(self.bm.faces.new((front[i], back[i], back[j], front[j])))
+        self._tag(faces, color)
+        return front + back
+
     def plane_quad(self, corners, color):
         vs = [self.bm.verts.new(c) for c in corners]
         f = self.bm.faces.new(vs)
@@ -154,18 +230,23 @@ class Piece:
         order = list(self.bm.faces)
         colors = [self.colors.get(f, (0.8, 0.8, 0.8)) for f in order]
         team = [f in self.team for f in order]
+        spans = [self.part_z.get(f, (z0, z1)) for f in order]
         self.bm.to_mesh(mesh)
         self.bm.free()
         attr = mesh.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
-        for poly, base in zip(mesh.polygons, colors):
+        w = self.part_shade
+        for poly, base, (p0, p1) in zip(mesh.polygons, colors, spans):
             for li in poly.loop_indices:
                 z = mesh.vertices[mesh.loops[li].vertex_index].co.z
                 t = (z - z0) / self.height
-                # Painted light: darker at the foot, brighter at the crown; faces turned up glow a little.
-                shade = 0.72 + 0.36 * t + (0.08 if poly.normal.z > 0.6 else 0.0) - (0.06 if poly.normal.z < -0.6 else 0.0)
+                tp = (z - p0) / max(p1 - p0, 0.01)
+                # Painted light: darker at the foot, brighter at the crown (of the piece, and with part_shade of
+                # each solid); faces turned up glow a little.
+                grad = (1.0 - w) * t + w * tp
+                shade = self.shade_low + self.shade_range * grad +(0.08 if poly.normal.z > 0.6 else 0.0) - (0.06 if poly.normal.z < -0.6 else 0.0)
                 attr.data[li].color = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), 1.0)
         for poly in mesh.polygons:
-            poly.use_smooth = False
+            poly.use_smooth = self.smooth
         # Slot 0: the piece's own colours; slot 1 (only when used): team colour.
         mesh.materials.append(bpy.data.materials.new("Base"))
         if any(team):
