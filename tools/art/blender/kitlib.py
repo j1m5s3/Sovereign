@@ -14,6 +14,23 @@ import bpy
 from mathutils import Matrix, Vector
 
 
+# Painted detail patterns (textures.py builds the sheet in this order): the pattern's tile index goes
+# into the vertex colour's alpha, and the face's UVs repeat it every so many metres.
+PATTERNS = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch"]
+REPEAT = {"plain": 1.0, "cloth": 0.45, "leather": 0.5, "metal": 0.6, "skin": 0.5, "hair": 0.35, "wood": 1.2,
+          "stone": 1.6, "plaster": 2.4, "rooftile": 1.4, "foliage": 1.4, "thatch": 1.1}
+GRID = 4  # the sheet holds GRID x GRID tiles
+# Which pattern a colour wears, by its '#rrggbb' (kits fill this in; unknown colours are plain).
+PATTERN_OF = {}
+
+
+def patterns(mapping):
+    """A kit registers its colours' patterns: {pattern: [colours]}."""
+    for name, colors in mapping.items():
+        for c in colors if isinstance(colors, (list, tuple)) else [colors]:
+            PATTERN_OF[c.lower()] = name
+
+
 def srgb(hex_or_tuple):
     """'#RRGGBB' or (r, g, b) in 0..1 -> (r, g, b) in 0..1."""
     if isinstance(hex_or_tuple, str):
@@ -39,14 +56,24 @@ class Piece:
         self.part_z = {}  # face -> (z0, z1) of the solid it belongs to
         self.part_shade = 0.0  # how much of the shading follows each part rather than the whole piece
         self.shade_low, self.shade_range = 0.72, 0.36  # paint at the foot, and the rise to the crown
+        self.pattern = {}  # face -> pattern name
+        self.pattern_next = None  # a pattern for the solids added next, over the colour's own
+        self.scale = 1.0  # how small the patterns repeat (figures: smaller)
 
     # ------------------------------------------------------------------ solids
     def team_color(self, on=True):
         """Solids added while on go to the team slot (owner colour); paint them light."""
         self.tint_next = on
 
+    def wear(self, pattern=None):
+        """Solids added next wear this pattern whatever their colour (None: back to the colour's own)."""
+        self.pattern_next = pattern
+
     def _tag(self, faces, color, jitter=0.04):
         c = srgb(color)
+        pat = self.pattern_next or (PATTERN_OF.get(color.lower(), "plain") if isinstance(color, str) else "plain")
+        for f in faces:
+            self.pattern[f] = pat
         zs = [v.co.z for f in faces for v in f.verts] or [0.0]
         span = (min(zs), max(zs))
         for f in faces:
@@ -231,20 +258,30 @@ class Piece:
         colors = [self.colors.get(f, (0.8, 0.8, 0.8)) for f in order]
         team = [f in self.team for f in order]
         spans = [self.part_z.get(f, (z0, z1)) for f in order]
+        pats = [self.pattern.get(f, "plain") for f in order]
         self.bm.to_mesh(mesh)
         self.bm.free()
         attr = mesh.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
         w = self.part_shade
-        for poly, base, (p0, p1) in zip(mesh.polygons, colors, spans):
+        uv = mesh.uv_layers.new(name="UVMap")
+        for poly, base, (p0, p1), pat in zip(mesh.polygons, colors, spans, pats):
+            # The pattern's tile in the alpha; UVs by box projection on the face's main axis, in metres.
+            alpha = PATTERNS.index(pat) / float(GRID * GRID - 1)
+            rep = REPEAT[pat] * self.scale
+            n = poly.normal
+            axis = max(range(3), key=lambda k: abs(n[k]))
             for li in poly.loop_indices:
+                co = mesh.vertices[mesh.loops[li].vertex_index].co
+                u, v = (co.y, co.z) if axis == 0 else (co.x, co.z) if axis == 1 else (co.x, co.y)
+                uv.data[li].uv = (u / rep, v / rep)
                 z = mesh.vertices[mesh.loops[li].vertex_index].co.z
                 t = (z - z0) / self.height
                 tp = (z - p0) / max(p1 - p0, 0.01)
                 # Painted light: darker at the foot, brighter at the crown (of the piece, and with part_shade of
                 # each solid); faces turned up glow a little.
                 grad = (1.0 - w) * t + w * tp
-                shade = self.shade_low + self.shade_range * grad +(0.08 if poly.normal.z > 0.6 else 0.0) - (0.06 if poly.normal.z < -0.6 else 0.0)
-                attr.data[li].color = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), 1.0)
+                shade = self.shade_low + self.shade_range * grad + (0.08 if poly.normal.z > 0.6 else 0.0) - (0.06 if poly.normal.z < -0.6 else 0.0)
+                attr.data[li].color = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), alpha)
         for poly in mesh.polygons:
             poly.use_smooth = self.smooth
         # Slot 0: the piece's own colours; slot 1 (only when used): team colour.

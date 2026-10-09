@@ -4,6 +4,7 @@ banners through the material's Tint, so the buildings themselves stay neutral.
 """
 import math
 
+import kitlib
 from kitlib import Piece
 
 WALL = ["#e3d9c3", "#d9cdb2", "#ece4d2"]
@@ -14,6 +15,8 @@ WOOD = "#6b4c33"
 DARK = "#3a2f28"
 THATCH = "#b89b5e"
 CLOTH = ["#c9b27a", "#a8452f", "#e8e2d6"]
+
+kitlib.patterns({"plaster": WALL, "rooftile": ROOF, "stone": MARBLE + STONE, "wood": WOOD, "thatch": THATCH, "cloth": CLOTH})
 
 
 def _door_and_windows(p, w, d, h, rng_floor=0.0):

@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit_classical  # noqa: E402
 import kit_nature  # noqa: E402
 import kitlib  # noqa: E402
+import textures  # noqa: E402
 
 KITS = {"Nature": kit_nature, "Classical": kit_classical}
 try:
@@ -36,7 +37,10 @@ def main():
             kitlib.export_fbx(obj, os.path.join(out, kit, piece.name + ".fbx"))
             count += 1
             print("piece %s/%s: %d faces, %.1f m tall" % (kit, piece.name, len(obj.data.polygons), piece.height))
-    print("exported %d pieces to %s" % (count, out))
+    # The detail sheet every kit's material samples (textures.py).
+    os.makedirs(os.path.join(out, "Textures"), exist_ok=True)
+    textures.save(os.path.join(out, "Textures", "T_SovDetail.png"))
+    print("exported %d pieces and the detail sheet to %s" % (count, out))
 
 
 if __name__ == "__main__":

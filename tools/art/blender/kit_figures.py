@@ -8,6 +8,7 @@ Rigging and animation come later (art plan: static figures stand in).
 """
 import math
 
+import kitlib
 from kitlib import Piece
 
 SKIN = ["#c27a52", "#a2643f", "#7a4a2e", "#d69a72"]
@@ -23,6 +24,15 @@ WOOD = "#6b4c33"
 CREST = "#9a1f1a"
 EYE = "#2a1e16"
 EYE_WHITE = "#e6dccb"
+
+kitlib.patterns({
+    "skin": SKIN,
+    "hair": HAIR + [CREST],
+    "cloth": [LINEN, WOOL, "#6f7a3a", "#7a3b22", "#8b2a22", "#8f2f24", "#4a2a6a", "#6a1420"],
+    "leather": [LEATHER, DARK_LEATHER, "#7d6448"],
+    "metal": [BRONZE, GOLD, IRON],
+    "wood": [WOOD],
+})
 
 
 def _figure(name, seed):

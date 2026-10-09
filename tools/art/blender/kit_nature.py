@@ -1,10 +1,13 @@
 """Nature kit: trees, bushes and rocks shared by every civ and era (world doc, The model sets)."""
+import kitlib
 from kitlib import Piece
 
 BARK = "#5b4330"
 LEAF = ["#4f7a35", "#5c8a3c", "#46702f"]
 NEEDLE = ["#2f5b3a", "#356543", "#2a5233"]
 STONE = ["#8a857b", "#7d786f", "#968f84"]
+
+kitlib.patterns({"wood": BARK, "foliage": LEAF + NEEDLE, "stone": STONE})
 
 
 def tree_broadleaf(seed=1):
