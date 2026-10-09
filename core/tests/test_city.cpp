@@ -324,6 +324,39 @@ TEST(city_bankruptcy_disbands_units) {
     CHECK(g->state().unit(spear) == nullptr);
 }
 
+// Each further 10 Gold of debt disbands one more unit a turn (07: at -10 one, at -20 two, and so on).
+TEST(deeper_debt_disbands_more_units) {
+    // The units left after a turn that ends with `after` Gold in the treasury.
+    const auto left = [](Fixed after) {
+        const auto make = [](Fixed gold, std::vector<UnitId>& spears) {
+            auto sc = capitalScenario();
+            GameState s = sc.game->state();
+            s.players[0].gold = gold;
+            spears.clear();
+            for (int k = 0; k < 4; ++k) spears.push_back(addUnit(s, "UNIT_SPEARMAN", 0, {8 + k, 8}));
+            s.cities[0].queue.push_back(buildingItem("BUILDING_MONUMENT"));
+            auto g = Game::fromScenario(rules(), s);
+            for (UnitId id : spears) REQUIRE(g->submit(Command::setActivity(0, id, Activity::Fortify)) == CommandError::Ok);
+            return g;
+        };
+        std::vector<UnitId> spears;
+        Fixed start = after;  // debt costs Amenities, which costs Gold, so find the start that ends on `after`
+        for (int k = 0; k < 4; ++k) start = after - make(start, spears)->goldPerTurn(0);
+        auto g = make(start, spears);
+        endTurns(*g, 1);
+        CHECK_EQ(g->state().players[0].gold, after);
+        int n = 0;
+        for (UnitId id : spears) n += g->state().unit(id) ? 1 : 0;
+        return n;
+    };
+    CHECK_EQ(left(Fixed::fromInt(-9)), 4);   // above the line: none
+    CHECK_EQ(left(Fixed::fromInt(-10)), 3);  // on the line: one
+    CHECK_EQ(left(Fixed::fromInt(-19)), 3);
+    CHECK_EQ(left(Fixed::fromInt(-20)), 2);  // ten more: two
+    CHECK_EQ(left(Fixed::fromInt(-29)), 2);
+    CHECK_EQ(left(Fixed::fromInt(-60)), 0);  // four and more: all four
+}
+
 // The turn's income counts each city's own gold once: the capital's with the Palace, and a second city's, which is less.
 TEST(city_turn_income_counts_every_city) {
     auto sc = capitalScenario();

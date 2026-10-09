@@ -799,7 +799,9 @@ void Game::grantBoost(PlayerId pid, bool civic, size_t node) {
     const char* const ded = civic ? "DEDICATION_PEN_BRUSH_AND_VOICE" : "DEDICATION_FREE_INQUIRY";
     const int pct = (b.percent > 0 ? b.percent : 40) + (goldenDedication(pid, ded) ? 10 : 0);
     t.boosted[node] = 1;
-    t.progress[node] += Fixed::fromInt(cost) * pct / 100;
+    const Fixed gained = Fixed::fromInt(cost) * pct / 100;
+    t.progress[node] += gained;
+    if (civic) state_.players[static_cast<size_t>(pid)].lifetimeCulture += gained;  // domestic tourists count Inspirations (07: Tourism)
     dedicationScore(pid, ded, 1);
     questDone(pid, civic ? QuestKind::Inspiration : QuestKind::Eureka, static_cast<int32_t>(node));  // 08: Quests
 }

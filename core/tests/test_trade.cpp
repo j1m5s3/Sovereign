@@ -135,14 +135,22 @@ TEST(a_trader_runs_a_route_lays_roads_and_comes_home) {
     CHECK_EQ(g->tradeRoutesOf(0), 1);
     CHECK_EQ(g->cityReport(origin).yields[yi(YieldType::Food)], before + Fixed::fromInt(1));
     CHECK(g->state().plot({8, 6}).route >= 0);  // a road along the way
-    CHECK_EQ(g->state().tradeRoutes[0].turnsLeft, 20);
-    endTurnsAuto(*g, 2 * 20);
+    // Whole round trips of 16 turns that reach the 20-turn minimum (07: Duration).
+    CHECK_EQ(g->tradeRouteLength(), 20);
+    CHECK_EQ(g->state().tradeRoutes[0].turnsLeft, 32);
+    const auto traders = [&] {
+        int n = 0;
+        for (const Unit& u : g->state().units) n += rules().units[at(u.type)].id == "UNIT_TRADER";
+        return n;
+    };
+    endTurnsAuto(*g, 2 * 31);
+    CHECK_EQ(g->state().tradeRoutes.size(), 1u);  // still on the road
+    const int waiting = traders();
+    endTurnsAuto(*g, 2);
     CHECK(g->state().tradeRoutes.empty());
     CHECK(g->state().city(home)->hasTradingPost(0));  // the route left a Trading Post (07)
     CHECK(!sovtest::hasMoment(*g, 0, "MOMENT_TRADING_POST_ESTABLISHED_IN_NEW_CIVILIZATION"));  // its own city: no new civ
-    int traders = 0;
-    for (const Unit& u : g->state().units) traders += rules().units[at(u.type)].id == "UNIT_TRADER";
-    CHECK_EQ(traders, 1);  // back home
+    CHECK_EQ(traders(), waiting + 1);  // back home
 }
 
 TEST(trading_posts_extend_range_and_pay_on_the_way) {
@@ -283,4 +291,15 @@ TEST(trade_routes_survive_a_save) {
     REQUIRE(loaded);
     CHECK_EQ(loaded->state().tradeRoutes.size(), 1u);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
+}
+
+// A route lasts the fewest whole round trips, twice the way's length each, that reach the minimum (07: Duration).
+TEST(trade_routes_last_whole_round_trips) {
+    auto g = Game::fromScenario(rules(), tradeState());
+    REQUIRE(g->tradeRouteLength() == 20);
+    CHECK_EQ(g->tradeRouteDuration(1), 20);   // 10 trips of 2
+    CHECK_EQ(g->tradeRouteDuration(3), 24);   // 4 trips of 6
+    CHECK_EQ(g->tradeRouteDuration(10), 20);  // one trip of 20
+    CHECK_EQ(g->tradeRouteDuration(11), 22);  // one trip of 22
+    CHECK_EQ(g->tradeRouteDuration(0), 20);   // no shorter than a step
 }

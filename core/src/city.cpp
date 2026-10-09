@@ -1686,16 +1686,20 @@ void Game::processCities(PlayerId pid) {
     player.lifetimeCulture += culture;  // domestic tourists (07: Tourism)
     processResearch(pid, science, culture);
     accumulateStrategics(pid);
-    if (player.gold <= rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE")) {
-        // Disband the costliest unit (ties: newest) while the treasury is underwater.
-        const Unit* worst = nullptr;
-        for (const Unit& u : state_.units) {
-            if (u.owner != pid) continue;
-            int m = rules_->units[static_cast<size_t>(u.type)].maintenance;
-            if (m <= 0) continue;
-            if (!worst || m >= rules_->units[static_cast<size_t>(worst->type)].maintenance) worst = &u;
-        }
-        if (worst) {
+    if (const Fixed line = rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE"); player.gold <= line) {
+        // Disband the costliest unit (ties: newest) while the treasury is underwater: one at the line and one more for
+        // each further GOLD_NEGATIVE_BALANCE_SUBSEQUENT_DISBAND_UNIT (07: at -10 one, at -20 two, and so on).
+        const int step = std::max(1, -rules_->globalInt("GOLD_NEGATIVE_BALANCE_SUBSEQUENT_DISBAND_UNIT"));
+        const int64_t count = 1 + ((line - player.gold) / step).floor();
+        for (int64_t k = 0; k < count; ++k) {
+            const Unit* worst = nullptr;
+            for (const Unit& u : state_.units) {
+                if (u.owner != pid) continue;
+                int m = rules_->units[static_cast<size_t>(u.type)].maintenance;
+                if (m <= 0) continue;
+                if (!worst || m >= rules_->units[static_cast<size_t>(worst->type)].maintenance) worst = &u;
+            }
+            if (!worst) break;
             UnitId gone = worst->id;
             state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(),
                                               [&](const Unit& u) { return u.id == gone; }),
