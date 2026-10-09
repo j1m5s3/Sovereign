@@ -266,6 +266,47 @@ TEST(a_linked_pair_keeps_out_of_other_players_units) {
     CHECK(g->findPath(leader, {7, 5}).has_value());
 }
 
+// A military unit can be linked to a civilian on its plot, as to the leader (05: Formations): the pair moves together
+// and keeps out of other players' units.
+TEST(a_civilian_moves_with_its_linked_escort) {
+    UnitId settler = 0, escort = 0, other = 0, ram = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            for (int y = 0; y < 12; ++y) {
+                if (y != 5 && y != 7) s.plot({8, y}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+            }
+            addUnit(s, "UNIT_WARRIOR", 1, {8, 5});  // the other player's Warrior holds the gap at (8,5)
+            settler = addUnit(s, "UNIT_SETTLER", 0, {5, 5});
+            escort = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            ram = addUnit(s, "UNIT_BATTERING_RAM", 0, {5, 5});
+            other = addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
+            s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        },
+        false);
+    CHECK_EQ(g->submit(Command::linkEscort(0, settler, escort)), CommandError::CannotEscort);  // a civilian escorts no one
+    CHECK_EQ(g->submit(Command::linkEscort(0, escort, ram)), CommandError::CannotEscort);      // nor is a support unit escorted
+    CHECK_EQ(g->submit(Command::linkEscort(0, other, settler)), CommandError::CannotEscort);   // not on its plot
+    CHECK_EQ(g->submit(Command::linkEscort(0, escort, settler)), CommandError::Ok);
+    CHECK_EQ(g->escortOf(*g->state().unit(settler))->id, escort);
+    auto waiting = g->unitsNeedingOrders(0);
+    CHECK(std::find(waiting.begin(), waiting.end(), escort) == waiting.end());
+    REQUIRE(g->submit(Command::move(0, settler, {6, 5})) == CommandError::Ok);
+    CHECK(g->state().unit(settler)->pos == hx(6, 5));
+    CHECK(g->state().unit(escort)->pos == hx(6, 5));
+    REQUIRE(g->submit(Command::move(0, escort, {7, 5})) == CommandError::Ok);  // an order to the escort moves the pair
+    CHECK(g->state().unit(settler)->pos == hx(7, 5));
+    CHECK(g->state().unit(escort)->pos == hx(7, 5));
+    // Through the gap at (8,5) only alone; linked, the path goes round by the gap at (8,7).
+    const std::optional<std::vector<PathStep>> linked = g->findPath(settler, {9, 5});
+    REQUIRE(linked.has_value());
+    CHECK(std::none_of(linked->begin(), linked->end(), [](const PathStep& p) { return p.pos == hx(8, 5); }));
+    REQUIRE(g->submit(Command::linkEscort(0, escort, -1)) == CommandError::Ok);
+    CHECK(!g->escortOf(*g->state().unit(settler)));
+    const std::optional<std::vector<PathStep>> alone = g->findPath(settler, {9, 5});
+    REQUIRE(alone.has_value());
+    CHECK(std::any_of(alone->begin(), alone->end(), [](const PathStep& p) { return p.pos == hx(8, 5); }));
+}
+
 TEST(city_capture_takes_the_leader) {
     UnitId leader = 0, enemy = 0;
     CityId city = kNoCity;

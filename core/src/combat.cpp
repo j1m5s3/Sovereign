@@ -1409,13 +1409,10 @@ void Game::resolveUnitFight(UnitId attackerId, UnitId defenderId, Hex target, bo
     // The victor does not advance while an enemy leader still stands on the plot.
     const Unit* leaderLeft = state_.unitAt(target, UnitLayer::Leader, *rules_);
     if (defenderDied && !attackerDied && !ranged && !leaderLeft) {
-        // The melee victor advances, capturing any civilians the defender escorted.
-        for (const Unit& o : state_.units) {
-            if (o.pos == target && o.owner == them) {
-                seizeCivilian(o.id, me);
-                break;
-            }
-        }
+        // The melee victor advances, capturing (or destroying) every unit the defender escorted (05: Stacking).
+        std::vector<UnitId> there;
+        for (const Unit& o : state_.units) if (o.pos == target && o.owner == them) there.push_back(o.id);
+        for (UnitId id : there) seizeCivilian(id, me);
         Unit* winner = state_.unit(attackerId);
         winner->pos = target;
         winner->moved = true;

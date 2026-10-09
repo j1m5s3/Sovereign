@@ -41,7 +41,7 @@ enum class CommandType : uint8_t {
     CityStrike = 21,      // id = city with walls, target = enemy unit in range: the city's ranged strike
     RazeCity = 22,        // id = city captured this turn (not an original capital): burn it down
     EquipGear = 23,       // id = leader, arg = gear (or -1 with arg2 = slot to take that item off)
-    LinkEscort = 24,      // id = military unit, arg = leader on its plot to escort (-1 ends the link)
+    LinkEscort = 24,      // id = military unit, arg = leader or civilian on its plot to escort (-1 ends the link)
     ChooseSuccessor = 25, // arg = Succession kind; id = the unit for Succession::Unit; arg2 = promotion an heir keeps (-1: none)
     AbandonLeader = 26,   // give up the captured leader and crown a successor
     SendAssassin = 27,    // id = agent, arg = target player (-1 calls it home)
@@ -186,8 +186,8 @@ struct Command {
     static Command removeGear(PlayerId p, UnitId leader, GearSlot slot) {
         return {CommandType::EquipGear, p, leader, {}, -1, static_cast<int32_t>(slot)};
     }
-    static Command linkEscort(PlayerId p, UnitId escort, UnitId leader) {
-        return {CommandType::LinkEscort, p, escort, {}, leader, 0};
+    static Command linkEscort(PlayerId p, UnitId escort, UnitId escorted) {
+        return {CommandType::LinkEscort, p, escort, {}, escorted, 0};
     }
     static Command chooseSuccessor(PlayerId p, Succession kind, UnitId unit = kNoUnit, TypeIndex keepPromotion = kNone) {
         return {CommandType::ChooseSuccessor, p, unit, {}, static_cast<int32_t>(kind), keepPromotion};

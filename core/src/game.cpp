@@ -847,9 +847,9 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
             flags[static_cast<size_t>(state_.grid.index(o.pos))] |= kPass;
         }
     }
-    // A leader moves with its escort, and the pair shares no plot with another military unit (advanceUnit): it keeps
-    // out of other players' units.
-    if (isLeader(*u) && escortOf(*u)) {
+    // A leader or civilian moves with its escort, and the pair shares no plot with another military unit (advanceUnit):
+    // it keeps out of other players' units.
+    if (escortOf(*u)) {
         for (uint8_t& f : flags) {
             if (f & kTheirs) f |= kBlocked;
         }
@@ -1125,8 +1125,8 @@ void Game::advanceUnit(UnitId id) {
             }
             if (past == 0) return;
         }
-        // A linked escort steps with its leader, at the slower unit's pace.
-        Unit* escort = isLeader(*u) ? escortMut(*u) : nullptr;
+        // A linked escort steps with its leader or civilian, at the slower unit's pace.
+        Unit* escort = escortMut(*u);
         Fixed escortAfter;
         if (escort) {
             const auto ecost = moveCost(*escort, escort->pos, next);

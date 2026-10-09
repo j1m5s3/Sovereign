@@ -1,6 +1,6 @@
 # Record: units and combat rules the spec audit found off (05)
 
-Status: parts 1 and 2 done, 2026-10-09. Previous: `2026-10-09-theater-square.md`. A read-only audit compared specs/civ6/05-units-and-combat.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md` and the decisions already settle, and confirmed 12 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
+Status: done, 2026-10-09 (parts 1, 2 and 3). Previous: `2026-10-09-theater-square.md`. A read-only audit compared specs/civ6/05-units-and-combat.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md` and the decisions already settle, and confirmed 12 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
 
 ## Part 1: healing, XP and borders
 
@@ -33,7 +33,17 @@ Results:
 - 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 5 of them play out differently from part 1.
 - Tests: `an_encampment_attack_counts_the_river_and_flanks_at_the_encampment` (the preview and the attack), `interception_uses_the_strength_formula`, `corps_and_armies_get_less_against_aircraft`, `embarked_units_keep_their_modifiers_and_attack_from_the_water_weaker`. Mutation check: 11 mutants, all caught (the attack itself was added to the Encampment test to catch the last); a 12th, dropping `at` entirely, does not build.
 
-## Part 3 (planned): plots and escorts
+## Part 3: plots and escorts
 
-1. A melee winner seizes only the first enemy unit left on the plot, so it can share a plot with another (05: Stacking).
-2. Civilians cannot be linked to a military escort (05: Formations); only the leader can.
+- **A melee victor takes every unit left on the plot** (05: Stacking): each civilian or support unit the defender escorted is captured (Settlers and Builders) or destroyed (the rest), as when a unit walks onto unguarded civilians. Before, only the first was, and our unit could end up sharing the plot with another civ's (`Game::applyCombat`).
+- **Civilians can be linked to a military escort** (05: Formations), as the leader could: `LinkEscort` takes a leader or a civilian on the escort's plot, never a support unit. The pair moves together at the slower unit's pace, an order to either moves both, the escort needs no orders of its own, and the linked pair keeps out of other players' units (`Game::escortOf`, `advanceUnit`, the path search).
+
+Results:
+- 128 AI games (Small, 6 AI, turn 200) against part 2: all 128 play out exactly the same (inferred: a melee kill on a plot holding a civilian and a support unit is rare, and the AI links no escorts).
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; all 8 end exactly as with part 2.
+- Tests: the Battering Ram in `kill_advances_and_captures_civilians`, `a_civilian_moves_with_its_linked_escort`. Mutation check: 8 mutants, all caught.
+
+## Left for later
+
+- The Unreal L key still links an escort to the leader only; a civilian's link needs the same key on civilians (Unreal side).
+- The AI links no escorts: whether escorted Settlers would settle more cities is untested.
