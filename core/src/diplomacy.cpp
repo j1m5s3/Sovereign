@@ -1327,7 +1327,10 @@ void Game::onWarDeclared(PlayerId by, PlayerId target, CasusBelli why) {
 // War weariness (08: War weariness): points against each opponent from fighting away from home
 // (2 a combat on foreign ground), units lost (3 each) and nuclear weapons launched (10). Policies
 // and the government scale it (Propaganda -25%, Fascism +20%), and grievances held against the
-// enemy soften it (Sovereign: -1% per 10, at most -50%). Each city loses an amenity per 400 points.
+// enemy soften it (Sovereign: -1% per 10, at most -50%). Every city loses an amenity per 400 points,
+// down to a floor of (required − WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_*) by city kind: a founded
+// city 0 below, a captured city at peace 1 below, an occupied city 3 below. Weariness never raises
+// a city already under that floor.
 // It decays as the player's turn begins: 50 a turn at war with that player, 200 at peace.
 int Game::warWeariness(PlayerId player) const {
     int total = 0;

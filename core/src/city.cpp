@@ -219,6 +219,10 @@ std::vector<Hex> Game::workablePlots(const City& city) const {
     return out;
 }
 
+bool Game::occupied(const City& city) const {
+    return city.originalOwner != kNoPlayer && city.originalOwner != city.owner && atWar(city.owner, city.originalOwner);
+}
+
 CityReport Game::cityReport(CityId id) const {
     const City* c = state_.city(id);
     if (!c) return CityReport();
@@ -590,9 +594,23 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     if (beloved(c->owner)) rep.amenities += rules_->globalInt("REPUTATION_BELOVED_AMENITIES");
     if (feared(c->owner)) rep.amenities -= rules_->globalInt("REPUTATION_FEARED_AMENITIES");
     if (owner.gold < Fixed()) rep.amenities -= static_cast<int>((-owner.gold).ceil() + 9) / 10;
-    rep.amenities -= warWearinessAmenities(c->owner);  // 08: War weariness
     const int perAmenity = std::max(1, rules_->globalInt("CITY_POP_PER_AMENITY"));
     rep.amenitiesNeeded = std::max(0, (c->population + perAmenity - 1) / perAmenity - 1);
+    // War weariness (08): −1 Amenity per 400 points, but not past the city-kind floor
+    // (WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_*): a founded city stops at its requirement,
+    // a captured city at peace 1 below, an occupied city 3 below. Weariness never raises
+    // a city already under that floor, so a captured city at peace with none loses nothing.
+    {
+        const int weariness = warWearinessAmenities(c->owner);
+        if (weariness > 0) {
+            const char* key = "WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_FOUNDED_CITY";
+            if (occupied(*c)) key = "WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_AT_WAR_CITY";
+            else if (c->originalOwner != kNoPlayer && c->originalOwner != c->owner)
+                key = "WAR_WEARINESS_LOSS_OVER_REQ_AMENITIES_NONFOUNDED_CITY";
+            const int floor = rep.amenitiesNeeded - rules_->globalInt(key);
+            if (rep.amenities > floor) rep.amenities = std::max(floor, rep.amenities - weariness);
+        }
+    }
     const int balance = rep.amenities - rep.amenitiesNeeded;
     rep.happiness = 0;
     for (size_t i = 0; i < rules_->happiness.size(); ++i) {
@@ -1758,8 +1776,7 @@ void Game::processCities(PlayerId pid) {
         // Growth (02-cities.md, Population and food; Housing).
         Fixed surplus = rep.yields[idx(YieldType::Food)] - rep.foodConsumption;
         // Occupied cities do not grow (02: CITY_GROWTH_OCCUPATION_MULTIPLIER): taken from a civ still at war with the owner.
-        const bool occupied = city.originalOwner != kNoPlayer && city.originalOwner != city.owner && atWar(city.owner, city.originalOwner);
-        if (occupied && surplus > Fixed()) surplus = surplus * static_cast<int>(rules_->global("CITY_GROWTH_OCCUPATION_MULTIPLIER").toInt());
+        if (occupied(city) && surplus > Fixed()) surplus = surplus * static_cast<int>(rules_->global("CITY_GROWTH_OCCUPATION_MULTIPLIER").toInt());
         if (surplus > Fixed()) {
             const HappinessLevel* mood = rules_->happiness.empty() ? nullptr : &rules_->happiness[static_cast<size_t>(rep.happiness)];
             int pct = 100 + (mood ? mood->growthPercent : 0) +
