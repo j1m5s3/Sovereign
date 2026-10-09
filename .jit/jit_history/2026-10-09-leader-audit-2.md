@@ -12,7 +12,7 @@ Status: done, 2026-10-09. Previous: `2026-10-09-leader-audit.md` (part 1, which 
 - **What is lost:** the unit or the Great Person is removed; the governor leaves its post and `Player::governors`, and the titles spent on it stay spent. The governor type may be appointed again for a new title, starting over (Sovereign reading of "you lose them as a governor").
 - A governor or great person on hand does not stop a regent: giving one up is the player's choice, and a regent stays open when there is no heir and no veteran unit, as before.
 - **The AI** crowns the heir, else a Great General or Admiral, else its most seasoned unit, else a regent; never a governor.
-- The ruler's name: "<civ> Marshal" for a great person, the governor's own name for a governor.
+- The ruler's name: "<civ> Marshal" for a great person, the governor's own name for a governor. The chronicle says "A governor" or "A great commander took the throne" (before, any successor but an heir or a unit read as a regent).
 
 ## Checks
 

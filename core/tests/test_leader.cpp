@@ -1110,6 +1110,8 @@ TEST(a_great_general_can_take_the_throne) {
     CHECK_EQ(g.leaderOf(0)->level(), 3);  // a higher start, with Marshal's stronger aura
     CHECK(g.leaderOf(0)->promotions ==
           (std::vector<TypeIndex>{promo("PROMOTION_SOVEREIGN_WEAPON_MASTER"), promo("PROMOTION_SOVEREIGN_MARSHAL")}));
+    const std::vector<std::string> lines = g.chronicleLines(0);
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("A great commander took the throne") != std::string::npos; }));
 }
 
 TEST(a_governor_can_take_the_throne) {
@@ -1131,6 +1133,8 @@ TEST(a_governor_can_take_the_throne) {
     CHECK(!g.governor(0, victor));  // gone from his post, and the title with him
     CHECK_EQ(g.governorTitlesLeft(0), g.governorTitles(0) - 2);
     CHECK_EQ(g.submit(Command::chooseSuccessor(0, Succession::Governor, magnus)), CommandError::CannotSucceed);  // crowned already
+    const std::vector<std::string> lines = g.chronicleLines(0);
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("A governor took the throne") != std::string::npos; }));
 }
 
 TEST(an_ai_crowns_a_great_general_before_a_veteran) {
