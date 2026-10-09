@@ -6,6 +6,7 @@
 #include "SovCameraPawn.h"
 #include "SovEvents.h"
 #include "SovSettingsScreen.h"
+#include "SovStatus.h"
 #include "SovSetupScreen.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
@@ -2443,6 +2444,21 @@ void ASovPlayerController::UpdateGameUI()
 		if (const sov::City* C = S.city(Id))
 			Notices.Add({FString::Printf(TEXT("P%d"), Id), "production", FString::Printf(TEXT("%s needs something to build"), *Str(C->name)), TEXT("Click to choose"), FKey(), Id, true});
 	}
+	// What waits on the player beyond production (plan E, step 1: these were status lines).
+	auto Ask = [&](const FString& Id, FName Icon, const FString& Text, const FKey& Key) {
+		Notices.Add({FString::Printf(TEXT("A%d:%s"), Me(), *Id), Icon, Text, TEXT("Click to open"), Key, -1, true});
+	};
+	for (const sov::Deal& D : S.deals)
+	{
+		if (D.to == Me()) Ask(TEXT("deal"), "favor", FString::Printf(TEXT("%s offers: %s"), *Str(S.players[static_cast<size_t>(D.from)].leaderName), *Str(sov::describeDeal(R, S, D))), EKeys::N);
+	}
+	if (P.successionPending) Ask(TEXT("throne"), "government", TEXT("The throne is empty: choose a successor"), EKeys::H);
+	else if (P.captor != sov::kNoPlayer) Ask(TEXT("captive"), "government", FString::Printf(TEXT("%s is held captive"), *Str(P.leaderName)), EKeys::H);
+	if (P.pantheon == sov::kNone && P.faith >= sov::Fixed::fromInt(R.globalInt("RELIGION_PANTHEON_MIN_FAITH")))
+		Ask(TEXT("pantheon"), "religion", TEXT("Choose a pantheon"), EKeys::I);
+	if (!G.availableDedications(Me()).empty()) Ask(TEXT("dedication"), "era", FString::Printf(TEXT("Choose %d dedication(s) for this era"), P.dedicationsPending), EKeys::F2);
+	if (G.governorTitlesLeft(Me()) > 0) Ask(TEXT("governor"), "government", FString::Printf(TEXT("%d governor title(s) to spend"), G.governorTitlesLeft(Me())), EKeys::Z);
+	if (P.envoyTokens > 0) Ask(TEXT("envoy"), "favor", FString::Printf(TEXT("%d envoy(s) to send"), P.envoyTokens), EKeys::O);
 	int32 Gossip = 0;
 	for (auto It = S.events.rbegin(); It != S.events.rend() && Notices.Num() < 6; ++It)
 	{
@@ -2475,7 +2491,14 @@ void ASovPlayerController::UpdateGameUI()
 		}
 		Notices.Add({Id, SovEventIcon(E), Text, FString::Printf(TEXT("Turn %d%s"), E.turn, Key.IsValid() ? TEXT(": click to open") : TEXT("")), Key, -1, false});
 	}
+	if (Notices.Num() > 8) Notices.SetNum(8);  // the most pressing; the rest wait their turn
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The Empire panel.
+	M.bEmpire = bEmpireOpen;
+	if (bEmpireOpen)
+	{
+		for (const FSovStatusLine& L : SovStatusLines(G, Me())) M.EmpireLines.Add({NAME_None, L.Text, TEXT(""), L.Color});
+	}
 	// The lens and the minimap, with the camera's place on it (plan D, step 6).
 	M.Lens = static_cast<int32>(Sub->Lens);
 	M.LensLegend = Sub->LensLegend;
@@ -2790,6 +2813,8 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
+	// F8 opens or closes the Empire panel (plan E, step 1).
+	if (Pressed(EKeys::F8)) bEmpireOpen = !bEmpireOpen;
 	// F7 steps through the map lenses (plan D, step 6), back to none after the last.
 	if (Pressed(EKeys::F7) && Subsystem()->IsRunning())
 	{

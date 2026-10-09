@@ -81,6 +81,9 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).
+	bool bEmpire = false;
+	TArray<FSovUIStat> EmpireLines;
 	// The map lens (ESovLens) with its legend, and the minimap with the camera's place on it (plan D, step 6).
 	int32 Lens = 0;
 	TArray<FSovLensKey> LensLegend;
@@ -145,6 +148,8 @@ private:
 	TSharedPtr<SVerticalBox> EndScoresBox, EndChronicleBox;
 	FString EndKey;
 	TSharedPtr<SVerticalBox> LegendBox;
+	TSharedPtr<SVerticalBox> EmpireBox;
+	FString EmpireKey;
 	FString LegendKey;
 	TDelegate<void(int32)> OnLens;
 	TDelegate<void(FVector2D)> OnMinimap;

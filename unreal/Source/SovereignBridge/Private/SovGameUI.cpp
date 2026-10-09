@@ -122,6 +122,14 @@ void SSovGameUI::Construct(const FArguments& Args)
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)[Progress(&FSovUIModel::Civic, &FSovUIModel::CivicProgress, FLinearColor(0.7f, 0.45f, 0.9f))]
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)
 				[
+					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
+					.ToolTipText(FText::FromString(TEXT("Empire (F8): your civ, faith, era and age, diplomacy, the world's contests, climate, governors and leader")))
+					.ButtonColorAndOpacity_Lambda([this]() { return Model.bEmpire ? FSovStyle::Gold : FLinearColor::White; })
+					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
+					[StatWidget(FSovUIStat{"era", TEXT(""), TEXT("")}, 11)]
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)
+				[
 					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText_Lambda([this]() { return FText::FromString(Model.Government.Tip); })
 					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(Model.Government.Key); return FReply::Handled(); })
 					[StatWidget(FSovUIStat{"government", TEXT(""), TEXT("")}, 11)]
@@ -134,6 +142,30 @@ void SSovGameUI::Construct(const FArguments& Args)
 					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Menu: save, load, new game, quit (Esc)")))
 					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); return FReply::Handled(); })
 					[SNew(SBox).WidthOverride(20).HeightOverride(20)[SNew(SImage).Image(FSovStyle::Icon("menu"))]]
+				]
+			]
+		]
+		// The Empire panel, top left under the bar.
+		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Left).Padding(12, 52, 0, 0)
+		[
+			SNew(SBox).WidthOverride(560).MaxDesiredHeight(600).Visibility(Visible([this]() { return Model.bVisible && Model.bEmpire && !Model.Tree.bOpen && !Model.bEnd; }))
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 6)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[SNew(STextBlock).Font(FSovStyle::Font(14, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("Empire")))]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Close (F8)")))
+							.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
+						]
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)[SNew(SScrollBox) + SScrollBox::Slot()[SAssignNew(EmpireBox, SVerticalBox)]]
 				]
 			]
 		]
@@ -411,6 +443,15 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	{
 		EndKey = E;
 		RebuildEnd();
+	}
+	FString Em = Model.bEmpire ? FString(TEXT("E")) : FString();
+	for (const FSovUIStat& L : Model.EmpireLines) Em += L.Text + TEXT("|");
+	if (Em != EmpireKey)
+	{
+		EmpireKey = Em;
+		EmpireBox->ClearChildren();
+		for (const FSovUIStat& L : Model.EmpireLines)
+			EmpireBox->AddSlot().AutoHeight().Padding(0, 2)[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(L.Color).AutoWrapText(true).Text(FText::FromString(L.Text))];
 	}
 	FString G = FString::FromInt(Model.Lens);
 	for (const FSovLensKey& K : Model.LensLegend) G += K.Label + K.Color.ToString();
