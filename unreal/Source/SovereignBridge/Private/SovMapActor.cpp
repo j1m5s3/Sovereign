@@ -47,14 +47,6 @@ uint32 ColorKey(const FLinearColor& C)
 	return C.ToFColor(false).ToPackedRGBA();
 }
 
-// The kit sheet's tile for a plot: stone on hills and mountains, leaves under woods, plain water, plaster elsewhere.
-int32 TileFor(ESovRelief Relief, bool bWoods)
-{
-	if (Relief == ESovRelief::Water) return 0;
-	if (Relief == ESovRelief::Hills || Relief == ESovRelief::Mountain) return 7;
-	return bWoods ? 10 : 8;
-}
-
 // A linear colour as the sRGB-ish bytes M_SovKit squares back to linear, with the tile index in alpha.
 FColor KitPaint(const FLinearColor& Linear, int32 Tile)
 {
@@ -72,9 +64,6 @@ ASovMapActor::ASovMapActor()
 	RootComponent = Terrain;
 
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-	// The art kit's material paints the terrain (vertex colour times a detail tile); without it the plain one does.
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Kit(TEXT("/Game/Art/M_SovKit.M_SovKit"));
-	KitMaterial = Kit.Succeeded() ? Kit.Object : nullptr;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone.Cone"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -183,7 +172,7 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		const double Top = ReliefHeight(Tile.Relief);
 		Heights[Tile.Y * Mirror.Width + Tile.X] = Top;
 		const FLinearColor Color = Tile.bVisible ? Tile.Color : Tile.Color * FogFactor;
-		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), TileFor(Tile.Relief, Tile.bWoods));
+		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), Tile.Detail);
 
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
 		FVector2D Corners[6];
@@ -224,7 +213,10 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	for (int32 i = 0; i < Sections.Num(); ++i)
 	{
 		Terrain->CreateMeshSection(i, Sections[i].Vertices, Sections[i].Triangles, Sections[i].Normals, Sections[i].UVs, Sections[i].Colors, NoTangents, false);
-		Terrain->SetMaterial(i, KitMaterial ? KitMaterial.Get() : static_cast<UMaterialInterface*>(MaterialFor(SectionColors[i])));
+		// The art kit's material paints the terrain (vertex colour times a detail tile); without it the plain one does.
+		// Loaded here, not in the constructor: a constructor load roots it, and the art import could not rebuild it.
+		UMaterialInterface* Kit = SovArt::KitMaterial();
+		Terrain->SetMaterial(i, Kit ? Kit : static_cast<UMaterialInterface*>(MaterialFor(SectionColors[i])));
 	}
 }
 

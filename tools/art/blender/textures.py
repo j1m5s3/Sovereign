@@ -11,7 +11,8 @@ import numpy as np
 TILE = 256
 GRID = 4
 # Pattern name -> tile index (kitlib.PATTERNS mirrors this order).
-NAMES = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch"]
+NAMES = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch",
+         "water", "grass", "sand"]
 
 
 def _noise(seed, cutoff, aniso=(1.0, 1.0)):
@@ -109,7 +110,28 @@ def thatch():
     return _noise(111, 70, (0.3, 8.0)) * 0.2 + _noise(112, 5) * 0.06
 
 
-PATTERNS = [plain, cloth, leather, metal, skin, hair, wood, stone, plaster, rooftile, foliage, thatch]
+def water():
+    """Soft ripples running across the tile, broken up so they do not read as stripes."""
+    x, y = _grid()
+    waves = np.sin((y / TILE) * 2 * np.pi * 6 + _noise(121, 6) * 2.5) * 0.08
+    return waves + _noise(122, 18, (2.5, 1.0)) * 0.07 + _noise(123, 4) * 0.05
+
+
+def grass():
+    """Fine blades in tufts over gentle patches of lighter and darker ground (the map's open land)."""
+    blades = _noise(131, 90, (6.0, 0.4)) * 0.035
+    tufts = _noise(132, 16) * 0.13
+    return blades + tufts + _noise(133, 4) * 0.08
+
+
+def sand():
+    """Wind ripples on dunes: long soft bands and a fine grain."""
+    x, y = _grid()
+    dunes = np.sin((x + y * 0.35) / TILE * 2 * np.pi * 3 + _noise(141, 5) * 1.8) * 0.07
+    return dunes + _noise(142, 110) * 0.05 + _noise(143, 6) * 0.06
+
+
+PATTERNS = [plain, cloth, leather, metal, skin, hair, wood, stone, plaster, rooftile, foliage, thatch, water, grass, sand]
 
 
 def atlas():

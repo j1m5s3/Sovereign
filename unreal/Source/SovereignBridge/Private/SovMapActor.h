@@ -95,10 +95,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> BaseMaterial;
 
-	// The art kit's material (vertex colour x detail tile) for the terrain; null when the art is not imported.
-	UPROPERTY()
-	TObjectPtr<UMaterialInterface> KitMaterial;
-
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> ConeMesh;
 

@@ -24,6 +24,9 @@ struct FSovTile
 	ESovRelief Relief = ESovRelief::Flat;
 	bool bVisible = false;  // false: revealed earlier, drawn fogged
 	bool bWoods = false;    // woods or rainforest: trees on the tile
+	// The art kit's detail tile its ground wears (tools/art/blender/kitlib.py PATTERNS): water 12, grass 13, sand 14,
+	// stone 7 (hills, mountains), foliage 10 (woods), plaster 8 (tundra, snow).
+	uint8 Detail = 8;
 	FLinearColor Color;     // terrain and feature, before fog
 	int32 Owner = -1;       // the civ whose territory it is (-1: none)
 	// A resource the viewer can see (0 none, 1 bonus, 2 luxury, 3 strategic) and the plot's improvement.
