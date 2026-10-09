@@ -89,6 +89,7 @@ enum class CommandType : uint8_t {
     HealReligious = 76,         // id = Guru: a heal charge restores its own and adjacent religious units (06)
     BuildRoad = 77,             // id = Military Engineer (until railroads), Legionary or Qin's Builder: a road on its plot for a charge (none for Qin's)
     SetCityFocus = 78,          // id = city, arg = CityFocus: the yield its citizens favour (02: Citizens)
+    CreateProduct = 79,         // id = Great Merchant in a Corporation's city (Monopolies mode): a Product Great Work (07)
     LevyMilitary = 65,          // arg = a city-state it is suzerain of: its military units serve the player for LEVY_MILITARY_TURN_DURATION (08)
     ChooseDedication = 62,      // arg = Rules::dedications (09: Dedications)
     MoveGreatWork = 61,         // id = the city holding it, arg = its index there, arg2 = the city it goes to, target.x = the building (07)
@@ -224,6 +225,7 @@ struct Command {
     static Command hireFromCamp(PlayerId p, int32_t camp) { return {CommandType::HireFromCamp, p, camp, {}, 0, 0}; }
     static Command inciteCamp(PlayerId p, int32_t camp, PlayerId against) { return {CommandType::InciteCamp, p, camp, {}, against, 0}; }
     static Command buildIndustry(PlayerId p, UnitId builder) { return {CommandType::BuildIndustry, p, builder, {}, 0, 0}; }
+    static Command createProduct(PlayerId p, UnitId merchant) { return {CommandType::CreateProduct, p, merchant, {}, 0, 0}; }
     static Command startTradeRoute(PlayerId p, UnitId trader, CityId destination) {
         return {CommandType::StartTradeRoute, p, trader, {}, destination, 0};
     }

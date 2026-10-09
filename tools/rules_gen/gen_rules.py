@@ -2110,6 +2110,10 @@ GREAT_WORK_TYPES = {
     "MUSIC": {"yield": "CULTURE", "amount": 4, "tourism": 4, "slots": ["MUSIC", "PALACE"]},
     "ARTIFACT": {"yield": "CULTURE", "amount": 3, "tourism": 3, "slots": ["ARTIFACT"]},
     "RELIC": {"yield": "FAITH", "amount": 4, "tourism": 8, "slots": ["RELIC", "PALACE"]},
+    # Monopolies and Corporations (optional; not in the Civ VI extract). A Great Merchant makes one in a
+    # Corporation's city; it occupies PRODUCT slots on the Stock Exchange and Seaport (those slots are
+    # granted in code while the mode is on).
+    "PRODUCT": {"yield": "GOLD", "amount": 2, "tourism": 4, "slots": ["PRODUCT"]},
 }
 
 

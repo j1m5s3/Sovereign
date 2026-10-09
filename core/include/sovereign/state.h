@@ -49,6 +49,7 @@ struct Plot {
     uint8_t antiquity = 0; // 1 an antiquity site, 2 a shipwreck (07: Archaeology)
     bool park = false;     // part of a National Park (07: National Parks)
     uint8_t industry = 0;  // Monopolies and Corporations mode (07): 1 an Industry, 2 a Corporation on its luxury
+    uint8_t products = 0;  // Products that Corporation has made (max 3; 07)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
