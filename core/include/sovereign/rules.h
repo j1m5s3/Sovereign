@@ -471,6 +471,7 @@ struct WonderPlacement {
     bool river = false, coastal = false, lake = false, notLake = false;
     bool nextToLand = false, nextToCapital = false, nextToMountain = false, nextToCityCenter = false;
     TypeIndex nextToDistrict = kNone, nextToResource = kNone, nextToImprovement = kNone;
+    bool canal = false;  // links water as a Canal district does, and ships sail through once built (the Panama Canal, 03)
 };
 
 struct BuildingType {
@@ -677,6 +678,7 @@ struct DistrictType {
     std::vector<std::pair<int, int>> appealHousing;
     bool aqueduct = false;          // next to the City Center and a River, Lake, Oasis or Mountain; housing to 6 or +2
     bool onePerPlayer = false;      // Government Plaza, Diplomatic Quarter
+    bool repeatable = false;        // a city may hold several (Neighborhood, Canal: no OnePerCity flag, 03)
     bool floodplainsRiver = false;  // on Floodplains along a river (Dam)
     bool preventsDrought = false, preventsFloods = false;  // for its city's plots [GS]
     std::vector<TypeIndex> exclusiveWith;  // not in a city that has one of these

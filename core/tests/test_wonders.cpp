@@ -41,7 +41,8 @@ TEST(wonder_rules_data) {
     const Rules& r = rules();
     int wonders = 0;
     for (const BuildingType& b : r.buildings) wonders += b.wonder;
-    CHECK_EQ(wonders, 52);
+    CHECK_EQ(wonders, 53);
+    CHECK(r.buildings[at(wonder("BUILDING_PANAMA_CANAL"))].placement.canal);
     const BuildingType& stonehenge = r.buildings[at(wonder("BUILDING_STONEHENGE"))];
     CHECK_EQ(stonehenge.placement.nextToResource, r.resource("RESOURCE_STONE"));
     CHECK_EQ(stonehenge.placement.terrains.size(), 5u);
@@ -50,6 +51,36 @@ TEST(wonder_rules_data) {
     REQUIRE(colossus.wonderEffects.size() == 1u);
     CHECK_EQ(colossus.wonderEffects[0].ref, r.unit("UNIT_TRADER"));
     CHECK(r.buildings[at(wonder("BUILDING_HANGING_GARDENS"))].placement.river);
+}
+
+TEST(the_panama_canal_links_water_and_lets_ships_through) {
+    // 03: "as a canal": flat land between two bodies of water, here (3,8) and (5,8), or between water and the City Center.
+    const TypeIndex panama = wonder("BUILDING_PANAMA_CANAL");
+    GameState s = wonderState();
+    giveTech(s, 0, "TECH_STEAM_POWER");
+    for (const Hex& h : {Hex{3, 8}, Hex{5, 8}}) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+    GameState hills = s;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const City& c = g->state().cities[0];
+    CHECK(g->canPlaceWonder(c, panama, {4, 8}));
+    CHECK(g->canPlaceWonder(c, panama, {4, 7}));   // water and the City Center
+    CHECK(!g->canPlaceWonder(c, panama, {7, 6}));  // dry land
+    hills.plot({4, 8}).terrain = rules().terrain("TERRAIN_DESERT_HILLS");
+    auto gh = Game::fromScenario(rules(), std::move(hills));
+    CHECK(!gh->canPlaceWonder(gh->state().cities[0], panama, {4, 8}));  // flat land only
+    // Finished, it carries a ship across the land; reserved but unfinished, it does not.
+    GameState built = g->state();
+    built.cities[0].wonders.push_back({panama, {4, 8}});
+    for (Player& p : built.players) p.techs.done[at(rules().tech("TECH_SAILING"))] = 1;
+    const UnitId ship = sovtest::addUnit(built, "UNIT_GALLEY", 0, {3, 8});
+    GameState unfinished = built;
+    built.cities[0].buildings.insert(std::lower_bound(built.cities[0].buildings.begin(), built.cities[0].buildings.end(), panama), panama);
+    auto g2 = Game::fromScenario(rules(), std::move(built));
+    auto path = g2->findPath(ship, {5, 8}, false);
+    REQUIRE(path.has_value());
+    CHECK(std::any_of(path->begin(), path->end(), [](const PathStep& st) { return st.pos == Hex{4, 8}; }));
+    auto g3 = Game::fromScenario(rules(), std::move(unfinished));
+    CHECK(!g3->findPath(ship, {5, 8}, false).has_value());
 }
 
 TEST(wonders_need_their_ground) {

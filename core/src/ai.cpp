@@ -2058,7 +2058,7 @@ void production(View& v) {
                     const DistrictType& d = v.r.districts[at(it.type)];
                     int gpp = 0;  // a specialty district also earns great people and opens its buildings
                     for (const auto& p : d.greatPersonPoints) gpp += p.second;
-                    if (const CityDistrict* placed = c.district(it.type, false)) {
+                    if (const CityDistrict* placed = districtInWork(c, v.r, it.type)) {
                         value = 100 + 40 * gpp + worth(v, g.districtAdjacency(v.me, it.type, placed->pos)) * 25;
                         where = placed->pos;
                     } else {

@@ -1277,6 +1277,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
         d.aqueduct = j["aqueduct"].boolean(false);
         d.onePerPlayer = j["onePerPlayer"].boolean(false);
+        d.repeatable = j["repeatable"].boolean(false);
         d.floodplainsRiver = j["floodplainsRiver"].boolean(false);
         d.preventsDrought = j["preventsDrought"].boolean(false);
         d.preventsFloods = j["preventsFloods"].boolean(false);
@@ -1348,6 +1349,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             w.lake = p["lake"].boolean(false);
             w.notLake = p["notLake"].boolean(false);
             w.nextToLand = p["nextToLand"].boolean(false);
+            w.canal = p["canal"].boolean(false);
             w.nextToCapital = p["nextToCapital"].boolean(false);
             w.nextToMountain = p["nextToMountain"].boolean(false);
             w.nextToCityCenter = p["nextToCityCenter"].boolean(false);

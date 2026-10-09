@@ -1131,6 +1131,8 @@ private:
     // canPlaceDistrict with `cityChecks` false: the district's checks that do not depend on the plot (districtOpenIn,
     // districtUnblockedIn) are taken as passed.
     bool canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandError* why, bool cityChecks) const;
+    // The plot links two bodies of water, or water and the City Center (03: Canal [GS], the Panama Canal).
+    bool canalLinks(const City& city, Hex plot) const;
     // canPlaceDistrict's checks that do not depend on the plot: those it makes before the plot's (the district is
     // unlocked, not yet placed here, and the city's population allows another) and after them (no district it
     // excludes here, and none of a one-per-civ kind anywhere).

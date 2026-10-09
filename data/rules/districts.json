@@ -504,6 +504,7 @@
    "adjacency": [],
    "housing": 4,
    "appeal": 0,
+   "repeatable": true,
    "appealHousing": [
     [
      4,
@@ -766,6 +767,7 @@
    "maintenance": 0,
    "adjacency": [],
    "appeal": 1,
+   "repeatable": true,
    "canal": true,
    "validTerrains": [
     "TERRAIN_GRASS",

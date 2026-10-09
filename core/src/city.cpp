@@ -856,7 +856,7 @@ int Game::purchasePrice(PlayerId player, ProductionItem item, const City* city, 
 int Game::districtPurchaseCost(const City& city, TypeIndex district, bool faith) const {
     if (district < 0 || static_cast<size_t>(district) >= rules_->districts.size()) return -1;
     if (!cityGovernorHas(city, faith ? "GOVERNOR_PROMOTION_DIVINE_ARCHITECT" : "GOVERNOR_PROMOTION_CONTRACTOR")) return -1;
-    const CityDistrict* d = city.district(district, false);
+    const CityDistrict* d = districtInWork(city, *rules_, district);
     if (!d || d->complete) return -1;
     const ProductionItem item{ProductionKind::District, district};
     int cost = productionCost(city.owner, item) * rules_->globalInt("GOLD_PURCHASE_MULTIPLIER") * std::max(1, rules_->globalInt("GOLD_PURCHASE_ENGINE_FACTOR"));
@@ -975,7 +975,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);
         const DistrictType& d = rules_->districts[static_cast<size_t>(item.type)];
         if (d.cost <= 0 || !hasUnlocked(c.owner, d.unlock)) return fail(CommandError::CannotBuild);
-        const CityDistrict* placed = c.district(item.type, false);
+        const CityDistrict* placed = districtInWork(c, *rules_, item.type);
         if (placed && placed->complete) return fail(CommandError::CannotBuild);
         if (!placed && d.needsPopulation) {
             // A new district needs room under the population limit.
@@ -1055,7 +1055,7 @@ std::vector<ProductionItem> Game::buildableItems(CityId id) const {
     for (size_t i = 0; i < rules_->districts.size(); ++i) {
         ProductionItem it{ProductionKind::District, static_cast<TypeIndex>(i)};
         if (!canProduce(*c, it) || std::find(c->queue.begin(), c->queue.end(), it) != c->queue.end()) continue;
-        if (c->district(it.type, false) || anyDistrictPlot(id, it.type)) out.push_back(it);
+        if (districtInWork(*c, *rules_, it.type) || anyDistrictPlot(id, it.type)) out.push_back(it);
     }
     for (size_t i = 0; i < rules_->projects.size(); ++i) {
         ProductionItem it{ProductionKind::Project, static_cast<TypeIndex>(i)};
@@ -1167,7 +1167,7 @@ CommandError Game::validateCity(const Command& c) const {
         case CommandType::SetProduction:
             if (c.arg < 0 || (c.arg & 15) > 3 || (c.arg >> 4) > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
-            if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
+            if (item.kind == ProductionKind::District && !districtInWork(*city, *rules_, item.type) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
                 return why;
             if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
@@ -1179,7 +1179,7 @@ CommandError Game::validateCity(const Command& c) const {
         case CommandType::QueueProduction:
             if (c.arg < 0 || (c.arg & 15) > 3 || (c.arg >> 4) > 2 || c.arg2 < INT16_MIN || c.arg2 > INT16_MAX) return CommandError::CannotBuild;
             if (!canProduce(*city, item, &why)) return why;
-            if (item.kind == ProductionKind::District && !city->district(item.type, false) &&
+            if (item.kind == ProductionKind::District && !districtInWork(*city, *rules_, item.type) &&
                 !canPlaceDistrict(*city, item.type, c.target, &why))
                 return why;
             if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
@@ -1255,7 +1255,7 @@ void Game::applyCity(const Command& c) {
     switch (c.type) {
         case CommandType::SetProduction:
         case CommandType::QueueProduction:
-            if (item.kind == ProductionKind::District && !city.district(item.type, false))
+            if (item.kind == ProductionKind::District && !districtInWork(city, *rules_, item.type))
                 placeDistrict(city, item.type, c.target);
             if (item.kind == ProductionKind::Building && rules_->buildings[static_cast<size_t>(item.type)].wonder &&
                 std::none_of(city.wonders.begin(), city.wonders.end(), [&](const CityWonder& w) { return w.building == item.type; })) {
@@ -1468,7 +1468,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         refreshVisibility(city.owner);
     } else if (item.kind == ProductionKind::District) {
         for (CityDistrict& d : city.districts) {
-            if (d.type != item.type) continue;
+            if (d.type != item.type || d.complete) continue;  // a repeatable type's earlier ones are already done
             d.complete = true;
             // The Diplomatic Quarter [GS]: an envoy when it is built beside the City Center (Rogue State: none, 09).
             const int envoys = rules_->districts[static_cast<size_t>(d.type)].envoysNextToCityCenter;

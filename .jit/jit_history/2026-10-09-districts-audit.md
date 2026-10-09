@@ -1,6 +1,6 @@
 # Record: district, building and wonder rules the spec audit found off (03)
 
-Status: in progress, 2026-10-09 (parts 1 and 2 done; parts 3 and 4 planned). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
+Status: in progress, 2026-10-09 (parts 1 to 3 done; part 4 planned). Previous: `2026-10-09-map-audit.md`. A read-only audit compared specs/civ6/03-districts-buildings-wonders.md with the core, leaving out what `2026-10-06-spec-audit-gaps.md`, `2026-10-06-spec-audit-part-2.md`, `2026-10-09-city-rules.md` and the decisions already settle, and confirmed 11 rules that differ in code. Chosen by Claude under James's standing consent; one PR per part.
 
 ## Part 1: pillage, mountains, the Golden Gate and Government Plaza tiers
 
@@ -26,9 +26,20 @@ Results:
 - 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; all 8 play out differently.
 - Tests: `the_preserves_buildings_feed_its_neighbours_by_appeal` (both bands, both buildings, a lake, a Farm, a pillaged and an unfinished Preserve, a second city's Preserve), `a_seaside_resort_yields_its_appeal_in_gold`, `a_farm_on_hills_needs_civil_engineering`; two hill Farms in older tests now come with Civil Engineering. Mutation check: 11 mutants, all caught (the pillaged Preserve case got two more Woods to catch the last: a pillaged district lowers the plot's Appeal by 2, so the plot was no longer Charming).
 
+## Part 3: several Neighborhoods and Canals, and the Panama Canal
+
+- **A city may hold several Neighborhoods and Canals** (03: placement flags come from data; the Neighborhood and the Canal have no `OnePerCity`). `tools/rules_gen/gen_rules.py` marks a district with neither "one per city" nor "one per river" as `repeatable`. A city places one at a time: while one is unfinished, producing that type resumes it (production progress stays keyed by type), and once it is done another may go on a free plot (`districtInWork` in state.h, used by `Game::canProduce`, `Game::buildableItems`, `Game::districtOpenIn`, `Game::districtPurchaseCost`, the production commands, the AI and the random bot). Finishing one leaves the earlier ones alone, so moments and culture bombs count once each (`Game::completeItem`). A building of the type's district (the Food Market) sits in the first finished one.
+- **The Dam stays one per city** (Sovereign reading). The data allows one per river; rivers carry no identity in the core, so a second Dam on the same river could not be told apart.
+- **The Panama Canal is placed and sailed as a canal** (03: "as a canal"): on flat land linking two bodies of water, or water and the City Center, like the Canal district (`Game::canalLinks`, `WonderPlacement::canal`); once built, ships sail through its plot (`Game::stepInto`); +10 Gold. Sovereign reading: it covers one plot; the data's multi-plot span is not modelled. Before, `tools/rules_gen/gen_rules.py` left it out; all 53 world wonders are now in the rules.
+- Follow-up for the Unreal front end: its production chooser places a new district only when the city has none of the type (`SovPlayerController.cpp`, `City->district(Item.type, false)`), so a second Neighborhood or Canal needs `sov::districtInWork` there before a human can place one.
+
+Results:
+- 128 AI games (Small, 6 AI, turn 200) against part 2: no change worth the name (population -0.01, Gold +0.2 ± 0.4); the AI seldom fills a city's Neighborhood before turn 200 and values a canal low. A 150-turn 6-AI game takes the same time.
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 4 play out differently.
+- Tests: `a_city_holds_several_neighborhoods_and_canals` (a second of each placed, resumed after switching away, offered only with a free plot, bought by a Contractor, its Housing counted, a second Canal's moment counted once, a Campus still one per city), `the_panama_canal_links_water_and_lets_ships_through` (both links, dry land, hills, finished and unfinished); `wonder_rules_data` counts 53 wonders. Mutation check: 16 mutants, all caught (a queued second Canal on dry land was added to catch the last).
+
 ## Planned
 
-- **Part 3: repeatable districts and the Panama Canal.** A city may hold more than one Neighborhood, Canal or Dam. Production progress is keyed by district type today, so this changes how a placed district is tracked. The Panama Canal wonder acts as a canal (03), and `tools/rules_gen/gen_rules.py` leaves it out because it cannot place it.
 - **Part 4: the district discount** (03: District cost, `COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH`): count placed districts, keep B (completed districts) as of the last tech or civic finished, and count the Preserve in A.
 
 ## Unsure, not changed

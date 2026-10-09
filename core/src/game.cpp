@@ -713,6 +713,9 @@ Game::StepInto Game::stepInto(StepUnit& su, Hex to) const {
             if (sailable()) s.kind = StepKind::Sail;
         } else if (const CityDistrict* cd = state_.districtAt(to); cd && cd->complete && rules_->districts[static_cast<size_t>(cd->type)].canal) {
             s.kind = StepKind::Sail;  // a finished Canal carries ships across the land (03: Canal [GS])
+        } else if (const TypeIndex wb = state_.wonderAt(to); wb != kNone && rules_->buildings[static_cast<size_t>(wb)].placement.canal &&
+                   state_.landCity(to)->has(wb)) {
+            s.kind = StepKind::Sail;  // ...and so does a finished Panama Canal (03)
         } else if (state_.cityAt(to)) {
             s.kind = StepKind::Port;  // ships put into a city from the water and sail out again (a coastal city is a port)
         }

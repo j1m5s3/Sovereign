@@ -73,6 +73,7 @@ bool Game::wonderFits(const City& city, TypeIndex building, Hex plot) const {
         (w.nextToCapital && !capital))
         return false;
     if (w.nextToDistrict != kNone && !district) return false;
+    if (w.canal && !canalLinks(city, plot)) return false;  // the Panama Canal (03)
     // The Golden Gate Bridge spans two opposite land plots (03).
     if (building == wonderType(W::GoldenGate) && !(landDirs & (landDirs >> 3) & 7u)) return false;
     // A building the city needs first, any one of them (03: BuildingPrereqs); a civ's unique building counts as

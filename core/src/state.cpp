@@ -24,6 +24,15 @@ bool buildingIdle(const City& city, const Rules& rules, TypeIndex building) {
     return home && home->pillagedTurns > 0;
 }
 
+const CityDistrict* districtInWork(const City& city, const Rules& rules, TypeIndex type) {
+    if (type < 0 || static_cast<size_t>(type) >= rules.districts.size()) return nullptr;
+    if (!rules.districts[static_cast<size_t>(type)].repeatable) return city.district(type, false);
+    for (const CityDistrict& d : city.districts) {
+        if (d.type == type && !d.complete) return &d;
+    }
+    return nullptr;
+}
+
 namespace {
 // The place of the element with this id in a list sorted by id, or the list's size: lower_bound, with each halving
 // picked by a select rather than a branch (a lookup's halvings go either way at random, which a branch mispredicts).
