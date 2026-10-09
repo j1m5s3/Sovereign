@@ -2494,6 +2494,14 @@ void ASovPlayerController::UpdateGameUI()
 	}
 	if (Notices.Num() > 8) Notices.SetNum(8);  // the most pressing; the rest wait their turn
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The latest message: shown for six seconds after it changes, fading over the last two.
+	if (Sub->LastMessage != ShownMessage)
+	{
+		ShownMessage = Sub->LastMessage;
+		MessageTime = GetWorld()->GetRealTimeSeconds();
+	}
+	M.Message = ShownMessage;
+	M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
 	// The plot under the cursor.
 	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
 	// The Empire panel.

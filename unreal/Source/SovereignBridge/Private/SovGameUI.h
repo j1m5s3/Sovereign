@@ -81,6 +81,9 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// The latest message (saved, bought, refused...), under the top bar for a few seconds; Toast fades it out.
+	FString Message;
+	float MessageAlpha = 0.f;
 	// The plot under the cursor (plan E, step 3): terrain, owner, yields and units; shown only over the map.
 	TArray<FString> Hover;
 	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).

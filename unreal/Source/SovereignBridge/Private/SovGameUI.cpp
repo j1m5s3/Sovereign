@@ -146,6 +146,15 @@ void SSovGameUI::Construct(const FArguments& Args)
 				]
 			]
 		]
+		// The latest message, under the top bar.
+		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Center).Padding(0, 54, 0, 0)
+		[
+			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(14, 6))
+			.Visibility_Lambda([this]() { return Model.bVisible && Model.MessageAlpha > 0.f && !Model.Message.IsEmpty() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.ColorAndOpacity_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
+			.BorderBackgroundColor_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
+			[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.Message); })]
+		]
 		// The Empire panel, top left under the bar.
 		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Left).Padding(12, 52, 0, 0)
 		[

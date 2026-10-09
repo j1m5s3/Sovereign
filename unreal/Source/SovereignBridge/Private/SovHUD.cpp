@@ -102,7 +102,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		const FString Winner = W.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(W.civ)].name);
 		Line(FString::Printf(TEXT("%s wins: %s victory. Esc opens the menu."), *Winner, SovVictoryName(S.victory)), 16, Y, FLinearColor(1.f, 0.9f, 0.2f));
 	}
-	if (!Sub.LastMessage.IsEmpty())
+	if (!Sub.LastMessage.IsEmpty() && TopInset <= 0.f)  // the widgets show it as a toast
 	{
 		Line(Sub.LastMessage, 16, Y, FLinearColor(1.f, 0.6f, 0.4f));
 	}

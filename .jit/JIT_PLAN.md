@@ -82,5 +82,6 @@ With plan D done, the screenshots still show the canvas HUD's status block (a do
 4. **Sound:** needs an audio direction first; not started (asked James: generated, CC0 libraries, or later).
 5. **Done: the main menu restyled.** The menu uses the game's style (panel, buttons, fonts) over a dimmed backdrop; `New game` (the setup screen) comes first in gold; the difficulty, length, era and rival rows are captioned as being for hot seat and online games; long labels (the weekly challenge) wrap.
 6. **Done: the diplomacy screen restyled.** The same panel, fonts and buttons (Accept their offer in gold) over a dimmed map. Panels are more solid everywhere (the shared fill's alpha 0.93 to 0.98: the map showed through too much).
+7. **Done: messages as a toast.** The subsystem's latest message (saved, bought, refused...) shows under the top bar for six seconds, fading over the last two, instead of a line at the map's top-left. With that, the canvas HUD draws nothing over the map while the widgets are up, apart from map labels and the street and battle scenes' own text.
 
 Plan E is done except sound, which waits on a decision.

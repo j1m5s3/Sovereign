@@ -226,6 +226,8 @@ protected:
 	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
 	void OpenNotice(int32 Index);
 	bool bEmpireOpen = false;  // the Empire panel (F8)
+	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
+	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
 	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none
 	TSharedPtr<class SWidget> ChatBox;
