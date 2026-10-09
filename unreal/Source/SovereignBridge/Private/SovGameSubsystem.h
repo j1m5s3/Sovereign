@@ -7,6 +7,8 @@
 #include "Tickable.h"
 
 #include "SovDiplomacy.h"
+#include "SovLens.h"
+#include "SovMinimap.h"
 #include "SovSession.h"
 
 #include "SovGameSubsystem.generated.h"
@@ -55,6 +57,12 @@ public:
 
 	// Fires after every change to the game (player command or an AI seat's turn).
 	FSovStateChanged OnStateChanged;
+
+	// Map lenses and the minimap (plan D, step 6): this machine's view, not part of the game. The game mode
+	// fills the legend and the minimap whenever it redraws the map.
+	ESovLens Lens = ESovLens::None;
+	TArray<FSovLensKey> LensLegend;
+	TSharedPtr<const FSovMinimapData> Minimap;
 
 	FString LastMessage;
 	// Online notices and chat, newest last (a few kept for the HUD).

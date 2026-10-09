@@ -15,6 +15,8 @@
 #include "SovCameraPawn.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
+#include "SovLens.h"
+#include "SovMinimap.h"
 #include "SovMapActor.h"
 #include "SovPlayerController.h"
 
@@ -133,6 +135,21 @@ void ASovGameMode::OnStateChanged()
 				if (U.bLeader && U.Owner == Mirror.Viewer) U.Color = FLinearColor(FColor(C.color[0], C.color[1], C.color[2]));
 			}
 		}
+		Sub->LensLegend.Reset();
+		SovApplyLens(Mirror, Sub->GetGame(), Mirror.Viewer, Sub->Lens, &Sub->LensLegend);
+		// The minimap: owners' colours over the ground (or the lens's), fogged plots darker.
+		TSharedPtr<FSovMinimapData> Mini = MakeShared<FSovMinimapData>();
+		Mini->Width = Mirror.Width;
+		Mini->Height = Mirror.Height;
+		Mini->Colors.Init(FLinearColor::Transparent, Mirror.Width * Mirror.Height);
+		for (const FSovTile& Tile : Mirror.Tiles)
+		{
+			FLinearColor C = Sub->Lens == ESovLens::None && Tile.Owner >= 0 ? FMath::Lerp(Tile.Color, SovPlayerColor(Sub->GetGame(), Tile.Owner), 0.6f) : Tile.Color;
+			if (!Tile.bVisible) C *= 0.55f;
+			C.A = 1.f;
+			if (Mini->Colors.IsValidIndex(Tile.Y * Mirror.Width + Tile.X)) Mini->Colors[Tile.Y * Mirror.Width + Tile.X] = C;
+		}
+		Sub->Minimap = Mini;
 		Map->Sync(Mirror);
 	}
 }

@@ -6,6 +6,8 @@
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SovLens.h"
+#include "SovMinimap.h"
 #include "SovTreeView.h"
 
 class SVerticalBox;
@@ -79,6 +81,11 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// The map lens (ESovLens) with its legend, and the minimap with the camera's place on it (plan D, step 6).
+	int32 Lens = 0;
+	TArray<FSovLensKey> LensLegend;
+	TSharedPtr<const FSovMinimapData> Minimap;
+	FVector2D MinimapFocus = FVector2D(0.5, 0.5);
 	// Notifications, newest first, above the end-turn button.
 	TArray<FSovUINotice> Notices;
 	// End turn.
@@ -100,6 +107,8 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
 	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
 	SLATE_EVENT(TDelegate<void()>, OnEndClose)      // look at the map after the game
+	SLATE_EVENT(TDelegate<void(int32)>, OnLens)     // a lens button (ESovLens)
+	SLATE_EVENT(TDelegate<void(FVector2D)>, OnMinimap)  // the minimap clicked, 0..1 across and down
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
@@ -135,6 +144,10 @@ private:
 	TSharedPtr<SVerticalBox> NoticesBox;
 	TSharedPtr<SVerticalBox> EndScoresBox, EndChronicleBox;
 	FString EndKey;
+	TSharedPtr<SVerticalBox> LegendBox;
+	FString LegendKey;
+	TDelegate<void(int32)> OnLens;
+	TDelegate<void(FVector2D)> OnMinimap;
 	TDelegate<void()> OnEndClose;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;

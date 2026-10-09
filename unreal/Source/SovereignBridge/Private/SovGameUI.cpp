@@ -1,6 +1,7 @@
 #include "SovGameUI.h"
 
 #include "SovStyle.h"
+#include "Styling/CoreStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -34,6 +35,8 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnNotice = Args._OnNotice;
 	OnDismiss = Args._OnDismiss;
 	OnEndClose = Args._OnEndClose;
+	OnLens = Args._OnLens;
+	OnMinimap = Args._OnMinimap;
 	auto Visible = [this](TFunction<bool()> Test) {
 		return TAttribute<EVisibility>::CreateLambda([Test]() { return Test() ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; });
 	};
@@ -86,6 +89,21 @@ void SSovGameUI::Construct(const FArguments& Args)
 			.ButtonColorAndOpacity_Lambda([this, f]() { return Model.CityFocus == f ? FSovStyle::Gold : FLinearColor::White; })
 			.OnClicked_Lambda([this, f]() { OnFocus.ExecuteIfBound(f); return FReply::Handled(); })
 			[SNew(SBox).WidthOverride(18).HeightOverride(18)[SNew(SImage).Image(FSovStyle::Icon(Focuses[f].Key))]]
+		];
+	}
+
+	// The lens buttons: click one to show it, again to clear it.
+	TSharedRef<SHorizontalBox> Lenses = SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 6, 0)
+		[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("Lenses")))];
+	for (int32 l = 1; l < static_cast<int32>(ESovLens::Count); ++l)
+	{
+		Lenses->AddSlot().AutoWidth().Padding(0, 0, 3, 0)
+		[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(FString(SovLensName(static_cast<ESovLens>(l))) + TEXT(" lens")))
+			.ButtonColorAndOpacity_Lambda([this, l]() { return Model.Lens == l ? FSovStyle::Gold : FLinearColor::White; })
+			.OnClicked_Lambda([this, l]() { OnLens.ExecuteIfBound(l); return FReply::Handled(); })
+			[SNew(SBox).WidthOverride(18).HeightOverride(18)[SNew(SImage).Image(FSovStyle::Icon(SovLensIcon(static_cast<ESovLens>(l))))]]
 		];
 	}
 
@@ -236,11 +254,26 @@ void SSovGameUI::Construct(const FArguments& Args)
 			.OnNode_Lambda([this](int32 Node) { OnTreeNode.ExecuteIfBound(Node); })
 			.OnClose_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::Escape); })
 		]
-		// Notifications, stacked above the end-turn button.
-		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 96)
+		// Notifications, the lenses and the minimap, stacked above the end-turn button.
+		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Right).Padding(0, 0, 16, 92)
 		[
-			SNew(SBox).WidthOverride(340).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.bChooser && !Model.bEnd; }))
-			[SAssignNew(NoticesBox, SVerticalBox)]
+			SNew(SBox).WidthOverride(300).Visibility(Visible([this]() { return Model.bVisible && !Model.Tree.bOpen && !Model.bChooser && !Model.bEnd; }))
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()[SAssignNew(NoticesBox, SVerticalBox)]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 6, 0, 0)[SAssignNew(LegendBox, SVerticalBox)]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 4)[Lenses]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SBox).HeightOverride(180)
+					[
+						SNew(SSovMinimap)
+						.Data_Lambda([this]() { return Model.Minimap; })
+						.Focus_Lambda([this]() { return Model.MinimapFocus; })
+						.OnPoint_Lambda([this](FVector2D At) { OnMinimap.ExecuteIfBound(At); })
+					]
+				]
+			]
 		]
 		// The end of the game: over everything else.
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
@@ -378,6 +411,25 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	{
 		EndKey = E;
 		RebuildEnd();
+	}
+	FString G = FString::FromInt(Model.Lens);
+	for (const FSovLensKey& K : Model.LensLegend) G += K.Label + K.Color.ToString();
+	if (G != LegendKey)
+	{
+		LegendKey = G;
+		LegendBox->ClearChildren();
+		if (Model.Lens > 0)
+			LegendBox->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(FString(SovLensName(static_cast<ESovLens>(Model.Lens))) + TEXT(" lens")))];
+		for (const FSovLensKey& K : Model.LensLegend)
+		{
+			LegendBox->AddSlot().AutoHeight().Padding(0, 1)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0, 0, 6, 0)
+				[SNew(SBox).WidthOverride(12).HeightOverride(12)[SNew(SImage).Image(FCoreStyle::Get().GetBrush("WhiteBrush")).ColorAndOpacity(K.Color)]]
+				+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(K.Label))]
+			];
+		}
 	}
 	FString N;
 	for (const FSovUINotice& No : Model.Notices) N += No.Icon.ToString() + No.Text + No.Sub + (No.bUrgent ? TEXT("!") : TEXT("")) + TEXT("|");

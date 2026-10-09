@@ -52,6 +52,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 - **Tech and civic trees** (T, C, or the top bar): the whole tree by era with prerequisite lines, turns, boosts and unlocks. Click an open node to start it, or a later one to make it your goal: the path toward it is started step by step.
 - **Choosers:** every list (production, research, civics, government, promotions, great people, governors, diplomacy...) opens as a clickable, scrolling panel on the right. The number keys still pick, and Esc or X closes it.
 - **Notifications** (above end turn): cities waiting for production, then news from the last two turns. Click one to open its screen (diplomacy, great people, World Congress, the chronicle), or X to dismiss it. Hover the top bar's yields for a city-by-city breakdown.
+- **Lenses and minimap** (bottom right): the lens buttons recolour the map for religion, loyalty, appeal, where a city can be founded, or your trade routes, with a legend; click again (or `F7` to step through them) to clear. The minimap shows what you have revealed, in owners' colours or the lens's; click or drag on it to move the camera.
 - **End of game:** Victory or Defeat with who won and how, the scores and your chronicle; look at the map, write the chronicle up, or go to the menu.
 - **End turn** (bottom right): names what stands in the way (a unit needing orders, production, research, a civic, a successor). Clicking it does what Space does: ends the turn, or opens what is needed.
 
@@ -100,6 +101,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 | `Space` / `Enter` | End turn. If the core refuses, the HUD shows why and opens what is needed |
 | `WASD` / arrows, wheel, `Home` | Pan, zoom, back to your capital |
 | `F1` / `F3` | How to play (the main keys) / yields on your territory's plots, `*` on the ones worked |
+| `F7` | Step through the map lenses (religion, loyalty, appeal, settler, trade, none) |
 | `F4` / `F6` | The chronicle of your reign so far (wars, assassinations, rulers captured or slain, successions, rebellions, historic moments, new ages) / have the court historian write it up: the local model (as for talks) or, without one, the scripted chronicle, saved to `Saved/Sovereign/Chronicles/`. When the game ends for you the chronicle is written and the reign enters the Hall of Sovereigns (`Saved/Sovereign/Hall.txt`, shown from the menu) |
 | `F5` / `F9` | Quicksave / quickload (local games). Saves live in `Saved/Sovereign/*.sov`; the main menu offers to continue the four latest (the autosave a live battle writes among them) |
 | Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city. The map wraps east-west: panning past one edge carries on into the other, drawn as a copy on each side |
