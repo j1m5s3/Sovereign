@@ -2184,7 +2184,22 @@ void ASovPlayerController::UpdatePath()
 	PathKey = Key;
 	Hud->PathPlots.Reset();
 	Hud->PathTurns.Reset();
+	CombatLines.Reset();
 	if (!bShow) return;
+	// An attack there: both strengths and the damage each side would take, before the dice.
+	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
+	const sov::CombatPreview Pv = G.previewAttack(U->id, sov::Hex{X, Y}, T.ranged > 0);
+	if (Pv.valid)
+	{
+		CombatLines.Add(Pv.capture ? FString(TEXT("Capture: no fight")) : Pv.captureCity ? FString(TEXT("Take the city: no fight"))
+			: FString::Printf(TEXT("%s: strength %d against %d"), Pv.ranged ? TEXT("Ranged attack") : TEXT("Attack"), Pv.attackerStrength, Pv.defenderStrength));
+		if (!Pv.capture && !Pv.captureCity)
+		{
+			CombatLines.Add(FString::Printf(TEXT("%s take %d-%d damage%s"), Pv.city != sov::kNoCity ? (Pv.hitsWalls ? TEXT("Their walls") : TEXT("The city")) : TEXT("They"),
+				Pv.damageToDefenderMin, Pv.damageToDefenderMax, Pv.encampment ? TEXT(" (Encampment)") : TEXT("")));
+			if (!Pv.ranged) CombatLines.Add(FString::Printf(TEXT("You take %d-%d damage"), Pv.damageToAttackerMin, Pv.damageToAttackerMax));
+		}
+	}
 	const std::optional<std::vector<sov::PathStep>> Path = G.findPath(U->id, sov::Hex{X, Y});
 	if (!Path || Path->empty()) return;
 	Hud->PathPlots.Add(FIntPoint(U->pos.x, U->pos.y));
@@ -2815,6 +2830,13 @@ void ASovPlayerController::UpdateGameUI()
 	M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
 	// The plot under the cursor.
 	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
+	if (M.Hover.Num() > 0 && CombatLines.Num() > 0)
+	{
+		// An attack on the plot under the cursor comes first.
+		TArray<FString> Lines = CombatLines;
+		Lines.Append(M.Hover);
+		M.Hover = Lines;
+	}
 	// How to play (F1) or the chronicle (F4), as a page over the map.
 	if (const ASovHUD* H = Cast<ASovHUD>(GetHUD()))
 	{
