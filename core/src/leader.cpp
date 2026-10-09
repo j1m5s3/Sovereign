@@ -224,6 +224,7 @@ void Game::applyLeader(const Command& c) {
             city.fearUntil = state_.turn + effect;
             city.fearAfterUntil = city.fearUntil + rules_->globalInt("STANCE_FEAR_AFTER_TURNS");
             p.reputation = std::max(-100, p.reputation - step);
+            fearGrievances(c.player, city);
         }
         city.stanceTurn = state_.turn;
         return;
@@ -326,8 +327,26 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) 
     } else {
         p.successionPending = true;
         successionShock(owner, rules_->globalInt("LEADER_LOSS_LOYALTY"));
+        addGrievance(owner, by, rules_->globalInt("LEADER_KILLED_GRIEVANCES"));  // the killer is known (§5)
     }
     startInterregnum(p);
+}
+
+void Game::leaderXp(PlayerId player, int xp) {
+    if (xp <= 0 || player < 0) return;
+    if (const Unit* l = leaderOf(player)) awardXp(*state_.unit(l->id), xp, false);
+}
+
+void Game::fearGrievances(PlayerId ruler, const City& city) {
+    const int amount = rules_->globalInt("STANCE_FEAR_GRIEVANCES");
+    const int faith = civReligion(ruler);
+    for (const Player& o : state_.players) {
+        if (o.id == ruler || !isMajorCiv(o.id)) continue;  // alliance() is None for the original owner with itself
+        const bool coreligionist = faith >= 0 && civReligion(o.id) == faith;
+        const bool ally = city.originalOwner >= 0 && city.originalOwner != ruler &&
+                          alliance(o.id, city.originalOwner) != AllianceType::None;
+        if (coreligionist || ally) addGrievance(o.id, ruler, amount);
+    }
 }
 
 void Game::successionShock(PlayerId owner, int loyaltyDrop) {
@@ -586,6 +605,7 @@ void Game::processAgents() {
             a.target = kNoPlayer;
             ++state_.players[static_cast<size_t>(sender)].assassinsSent;  // the sender is known
             remember(victim, sender, MemoryKind::Assassin, -15, 60);
+            addGrievance(victim, sender, rules_->globalInt("ASSASSIN_SENDER_GRIEVANCES"));  // §6
             if (l->hp <= 0) {
                 pushEvent(EventKind::AssassinKilledLeader, sender, victim, dmg);
                 leaderLost(leaderId, sender, false, false);
@@ -603,6 +623,7 @@ void Game::processAgents() {
         } else {
             ++state_.players[static_cast<size_t>(sender)].assassinsSent;
             remember(victim, sender, MemoryKind::Assassin, -15, 60);
+            addGrievance(victim, sender, rules_->globalInt("ASSASSIN_SENDER_GRIEVANCES"));  // the captive names its sender (§6)
             pushEvent(EventKind::AssassinCaptured, sender, victim, 0);
         }
     }
