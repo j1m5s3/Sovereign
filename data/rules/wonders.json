@@ -58,6 +58,7 @@
    "text": "adjust city yield per flood (YieldType=Faith, Amount=1)",
    "housing": 3,
    "amenities": 1,
+   "preventsFloods": true,
    "codeEffects": [
     "adjust city yield per flood (YieldType=Faith, Amount=1)"
    ]

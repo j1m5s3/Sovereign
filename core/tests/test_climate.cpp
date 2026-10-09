@@ -635,3 +635,148 @@ TEST(volcano_natural_wonders_erupt_with_their_own_numbers) {
     CHECK(soil > 0);
     CHECK(g->state().plot(mountain).feature == r.feature("FEATURE_MOUNT_VESUVIUS"));
 }
+
+// A Dam or the Great Bath prevents floods in its city's plots (09), wherever the flood began: a flood beside a guarded
+// city wrecks only the unguarded city's floodplains.
+TEST(floods_spare_the_plots_a_dam_or_the_great_bath_guards) {
+    const auto flooded = [](const char* guard) {
+        GameState s = flatState(20, 12, 1);
+        const CityId open = addCity(s, 0, {5, 6}, true, 3);
+        const CityId guarded = addCity(s, 0, {13, 6}, false, 3);
+        const TypeIndex plains = rules().feature("FEATURE_FLOODPLAINS_GRASSLAND"), farm = rules().improvement("IMPROVEMENT_FARM");
+        for (int x = 7; x <= 11; ++x) {
+            Plot& p = s.plot({x, 6});
+            p.feature = plains;
+            p.improvement = farm;
+            claimFor(s, *s.city(x <= 9 ? open : guarded), {x, 6});
+        }
+        City& g = *s.city(guarded);
+        if (std::string(guard) == "BUILDING_GREAT_BATH") {
+            g.buildings.push_back(rules().building(guard));
+            std::sort(g.buildings.begin(), g.buildings.end());
+        } else if (*guard) {
+            CityDistrict dam;
+            dam.type = rules().district(guard);
+            dam.pos = {12, 7};
+            dam.complete = true;
+            g.districts.push_back(dam);
+        }
+        auto game = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(game->cityPrevents(guarded, true), *guard != 0);
+        CHECK(!game->cityPrevents(open, true));
+        game->strikeDisaster(disaster("DISASTER_MODERATE_FLOOD"), {9, 6});  // 100% of improvements pillaged
+        std::vector<bool> out;
+        for (int x = 7; x <= 11; ++x) out.push_back(game->state().plot({x, 6}).pillagedTurns > 0);
+        return out;
+    };
+    const std::vector<bool> all{true, true, true, true, true}, spared{true, true, true, false, false};
+    CHECK(flooded("") == all);
+    CHECK(flooded("DISTRICT_DAM") == spared);
+    CHECK(flooded("BUILDING_GREAT_BATH") == spared);
+}
+
+// A drought pillages or destroys Farms only (09: "pillages farms"), and a city whose Aqueduct prevents droughts loses
+// neither Farms nor Food to one that began next door.
+TEST(a_drought_pillages_farms_and_spares_a_city_with_an_aqueduct) {
+    GameState s = flatState(20, 12, 1);
+    const CityId dry = addCity(s, 0, {5, 6}, true, 3);
+    const CityId watered = addCity(s, 0, {9, 6}, false, 3);
+    const TypeIndex farm = rules().improvement("IMPROVEMENT_FARM"), mine = rules().improvement("IMPROVEMENT_MINE");
+    s.plot({6, 6}).improvement = farm;
+    s.plot({6, 7}).improvement = mine;
+    s.plot({8, 6}).improvement = farm;
+    for (const Hex& h : {Hex{6, 6}, Hex{6, 7}}) claimFor(s, *s.city(dry), h);
+    claimFor(s, *s.city(watered), {8, 6});
+    CityDistrict aqueduct;
+    aqueduct.type = rules().district("DISTRICT_AQUEDUCT");
+    aqueduct.pos = {10, 6};
+    aqueduct.complete = true;
+    s.city(watered)->districts.push_back(aqueduct);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->cityPrevents(watered, false));
+    const Fixed food = g->plotYields({8, 6}, *g->state().city(watered))[static_cast<size_t>(YieldType::Food)];
+    const Fixed dryFood = g->plotYields({6, 6}, *g->state().city(dry))[static_cast<size_t>(YieldType::Food)];
+    g->strikeDisaster(disaster("DISASTER_MAJOR_DROUGHT"), {7, 6});  // farms pillaged at 100%
+    REQUIRE(g->inDrought({8, 6}));
+    CHECK(g->state().plot({6, 6}).pillagedTurns > 0);   // the dry city's Farm
+    CHECK_EQ(g->state().plot({6, 7}).pillagedTurns, 0);  // its Mine
+    CHECK_EQ(g->state().plot({8, 6}).pillagedTurns, 0);  // the watered city's Farm
+    CHECK(g->plotYields({8, 6}, *g->state().city(watered))[static_cast<size_t>(YieldType::Food)] == food);
+    CHECK(g->plotYields({6, 6}, *g->state().city(dry))[static_cast<size_t>(YieldType::Food)] < dryFood);
+
+    // A Withering Drought destroys some Farms outright (30%) and pillages the rest; the Mine among them stands.
+    GameState w = flatState(20, 12, 1);
+    for (const Hex& h : w.grid.within({8, 6}, 1)) w.plot(h).improvement = h == Hex{8, 6} ? mine : farm;
+    auto wg = Game::fromScenario(rules(), std::move(w));
+    for (int i = 0; i < 3; ++i) wg->strikeDisaster(disaster("DISASTER_WITHERING_DROUGHT"), {8, 6});
+    int destroyed = 0, pillaged = 0;
+    for (const Hex& h : wg->state().grid.within({8, 6}, 1)) {
+        if (h == Hex{8, 6}) continue;
+        destroyed += wg->state().plot(h).improvement == kNone ? 1 : 0;
+        pillaged += wg->state().plot(h).improvement == farm && wg->state().plot(h).pillagedTurns > 0 ? 1 : 0;
+    }
+    CHECK(destroyed > 0);
+    CHECK_EQ(destroyed + pillaged, 6);
+    CHECK(wg->state().plot({8, 6}).improvement == mine);
+    CHECK_EQ(wg->state().plot({8, 6}).pillagedTurns, 0);
+}
+
+// A storm strikes no nearer than 15 plots to a running storm, a drought no nearer to a running drought (09: "spaced at
+// least 15 tiles apart"; data: Spacing). On a map with no plot that far, the one already running keeps the next away.
+TEST(storms_and_droughts_keep_their_spacing) {
+    const auto strikes = [](DisasterKind kind, bool running) {
+        GameState s = flatState(20, 10, 1, true);  // grassland: tornadoes are the only storms
+        s.setup.disasterIntensity = 4;             // Hyperreal: a Tornado Family and a Major Drought roll every turn
+        s.setup.turnLimit = 10;
+        s.setup.scoreVictory = false;
+        if (kind == DisasterKind::Drought) {
+            const CityId c = addCity(s, 0, {3, 5}, true, 3);
+            for (int i = 0; i < s.grid.size(); ++i) claimFor(s, *s.city(c), s.grid.at(i));
+            if (running) s.droughts.push_back({{10, 5}, 1, 50});
+        } else if (running) {
+            s.ongoing.push_back({disaster("DISASTER_TORNADO_OUTBREAK"), {10, 5}, static_cast<int8_t>(Dir::E), 50});
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 8);
+        int n = 0;
+        for (const GameEvent& e : g->state().events) n += e.kind == EventKind::Disaster && rules().disasters[at(e.value)].kind == kind ? 1 : 0;
+        return n;
+    };
+    CHECK(strikes(DisasterKind::Tornado, false) > 0);
+    CHECK_EQ(strikes(DisasterKind::Tornado, true), 0);
+    CHECK(strikes(DisasterKind::Drought, false) > 0);
+    CHECK_EQ(strikes(DisasterKind::Drought, true), 0);
+}
+
+// A Category 4 hurricane pillages half the improvements it reaches, and all of them on coastal lowlands (09; data:
+// Coastal lowland %).
+TEST(a_hurricane_pillages_every_lowland_improvement) {
+    GameState s = coastState(12, 24, 1);
+    const TypeIndex farm = rules().improvement("IMPROVEMENT_FARM");
+    for (int i = 0; i < s.grid.size(); ++i) {
+        Plot& p = s.plots[static_cast<size_t>(i)];
+        if (!rules().terrains[at(p.terrain)].water) p.improvement = farm;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    std::vector<Hex> struck;
+    for (int y = 0; y < 24; ++y) {
+        if (g->lowlandBand({1, y}) == 0) continue;
+        g->strikeDisaster(disaster("DISASTER_CATEGORY_4_HURRICANE"), {1, y});
+        for (const Hex& h : g->state().grid.within({1, y}, 1)) struck.push_back(h);
+    }
+    REQUIRE(struck.size() >= 14u);
+    int lowland = 0, pillaged = 0, spared = 0;
+    for (const Hex& h : struck) {
+        const Plot& p = g->state().plot(h);
+        if (p.improvement == kNone) continue;
+        if (g->lowlandBand(h) > 0) {
+            ++lowland;
+            pillaged += p.pillagedTurns > 0 ? 1 : 0;
+        } else {
+            spared += p.pillagedTurns == 0 ? 1 : 0;
+        }
+    }
+    CHECK(lowland > 0);
+    CHECK_EQ(pillaged, lowland);
+    CHECK(spared > 0);
+}

@@ -252,6 +252,12 @@ bool Game::cityPrevents(CityId id, bool floods) const {
         const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
         if (cd.complete && cd.pillagedTurns == 0 && (floods ? d.preventsFloods : d.preventsDrought)) return true;
     }
+    // A wonder may guard it too (09: the Great Bath prevents floods).
+    if (floods) {
+        for (TypeIndex b : c->buildings) {
+            if (rules_->buildings[static_cast<size_t>(b)].preventsFloods) return true;
+        }
+    }
     return false;
 }
 

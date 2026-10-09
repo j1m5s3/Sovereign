@@ -38,6 +38,11 @@ int64_t co2PerResource(const std::string& id) {
 
 // Area radius of an event's hex count (1, 3, 7, 19 hexes).
 int radiusOf(int hexes) { return hexes >= 19 ? 2 : hexes >= 3 ? 1 : 0; }
+
+// Storms move on for their duration (09: blizzards, dust storms, tornadoes, hurricanes).
+bool isStorm(DisasterKind k) {
+    return k == DisasterKind::Blizzard || k == DisasterKind::DustStorm || k == DisasterKind::Tornado || k == DisasterKind::Hurricane;
+}
 }  // namespace
 
 // ------------------------------------------------------------------ queries
@@ -294,6 +299,20 @@ void Game::processClimate() {
         const int64_t odds = static_cast<int64_t>(freq) * (1000 + temp * dt.chancePerDegree);
         const int64_t scale = static_cast<int64_t>(limit) * 10 * 1000;
         if (static_cast<int64_t>(rng.below(static_cast<uint32_t>(std::min<int64_t>(scale, 0x7FFFFFFF)))) >= odds) continue;
+        // Storms keep their spacing from a running storm, droughts from a running drought (09: "spaced at least 15 tiles
+        // apart"; data: Spacing).
+        std::vector<Hex> running;
+        if (dt.spacing > 0) {
+            if (dt.kind == DisasterKind::Drought) {
+                for (const GameState::Drought& r : state_.droughts) {
+                    if (r.turnsLeft > 0) running.push_back(r.center);
+                }
+            } else if (isStorm(dt.kind)) {
+                for (const GameState::Ongoing& o : state_.ongoing) {
+                    if (o.turnsLeft > 0 && isStorm(rules_->disasters[at(o.disaster)].kind)) running.push_back(o.center);
+                }
+            }
+        }
         // Where it can strike.
         const DisasterIntensityType* setting = at(intensity) < rules_->disasterIntensities.size() ? &rules_->disasterIntensities[at(intensity)] : nullptr;
         std::vector<Hex> sites;
@@ -331,6 +350,7 @@ void Game::processClimate() {
                     break;
                 }
             }
+            for (const Hex& r : running) ok = ok && state_.grid.distance(r, h) >= dt.spacing;
             if (ok) sites.push_back(h);
         }
         if (sites.empty()) continue;
@@ -349,9 +369,11 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     switch (dt.kind) {
         case DisasterKind::Flood:
             // The floodplains along the river near the center.
+            // A city whose Dam or Great Bath prevents floods is spared, wherever the flood began (09).
             for (const Hex& h : state_.grid.within(center, 2 + extra)) {
-                const TypeIndex f = state_.plot(h).feature;
-                if (f != kNone && rules_->features[at(f)].id.rfind("FEATURE_FLOODPLAINS", 0) == 0) area.push_back(h);
+                const Plot& p = state_.plot(h);
+                if (p.feature != kNone && rules_->features[at(p.feature)].id.rfind("FEATURE_FLOODPLAINS", 0) == 0 && !cityPrevents(p.city, true))
+                    area.push_back(h);
             }
             break;
         case DisasterKind::Eruption: area = state_.grid.within(center, 1 + extra); break;
@@ -376,8 +398,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     const PlayerId victim = state_.plot(center).owner;
     if (!follow) pushEvent(EventKind::Disaster, kNoPlayer, victim, static_cast<int>(disaster));
     // Storms move on for their duration; fires may spread (09: storms last 3 turns, a forest fire 9).
-    const bool storm = dt.kind == DisasterKind::Blizzard || dt.kind == DisasterKind::DustStorm || dt.kind == DisasterKind::Tornado ||
-                       dt.kind == DisasterKind::Hurricane;
+    const bool storm = isStorm(dt.kind);
     if (!follow && (storm || dt.kind == DisasterKind::Fire) && dt.duration > 1)
         state_.ongoing.push_back({disaster, center, static_cast<int8_t>(rng.below(kNumDirs)), dt.duration - 1});
     if (dt.kind == DisasterKind::Drought) {
@@ -385,6 +406,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     }
 
     const TypeIndex volcanicSoil = rules_->feature("FEATURE_VOLCANIC_SOIL");
+    const TypeIndex farm = rules_->improvement("IMPROVEMENT_FARM");
     const TypeIndex forest = rules_->feature("FEATURE_FOREST"), jungle = rules_->feature("FEATURE_JUNGLE");
     const TypeIndex burntForest = rules_->feature("FEATURE_BURNT_FOREST"), burntJungle = rules_->feature("FEATURE_BURNT_JUNGLE");
     // From phase IV storms and floods leave no fertility; from phase V storms and droughts may wash earlier fertility away.
@@ -410,11 +432,14 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
         // The Great Bath (03): +1 Faith to its owner for each of their plots a flood reaches.
         if (dt.kind == DisasterKind::Flood && p.owner != kNoPlayer && buildingsOwned(p.owner, "BUILDING_GREAT_BATH") > 0)
             state_.players[at(p.owner)].faith += Fixed::fromInt(1);
-        // Damage (none where Liang's Reinforced Materials guards the city).
+        // Damage (none where Liang's Reinforced Materials guards the city, nor from a drought where its Aqueduct or Bath
+        // prevents droughts).
         const City* guarded = p.city == kNoCity ? nullptr : state_.city(p.city);
         const bool reinforced = guarded && cityGovernorHas(*guarded, "GOVERNOR_PROMOTION_REINFORCED_MATERIALS");
+        const bool spared = dt.kind == DisasterKind::Drought && guarded && cityPrevents(guarded->id, false);
         for (DisasterDamage dd : dt.damage) {
-            if (reinforced) continue;
+            if (reinforced || spared) continue;
+            if (dd.lowlandPercent > 0 && lowlandBand(h) > 0) dd.percent = dd.lowlandPercent;  // coastal lowlands (hurricanes)
             if (sheltered) dd.percent /= 2;
             switch (dd.type) {
                 case DisasterDamageType::ImprovementDestroyed:
@@ -425,6 +450,18 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
                     break;
                 case DisasterDamageType::ImprovementPillaged:
                     if (p.improvement != kNone && rng.chance(static_cast<uint32_t>(dd.percent))) p.pillagedTurns = kPillagedUntilRepaired;
+                    break;
+                case DisasterDamageType::FarmDestroyed:
+                case DisasterDamageType::FarmPillaged:
+                    // A drought's damage falls on Farms only (09: "pillages farms").
+                    if (p.improvement != kNone && p.improvement == farm && rng.chance(static_cast<uint32_t>(dd.percent))) {
+                        if (dd.type == DisasterDamageType::FarmDestroyed) {
+                            p.improvement = kNone;
+                            p.pillagedTurns = 0;
+                        } else {
+                            p.pillagedTurns = kPillagedUntilRepaired;
+                        }
+                    }
                     break;
                 case DisasterDamageType::PopulationLoss:
                     if (city && city->population > 1) {
