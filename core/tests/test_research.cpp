@@ -691,6 +691,123 @@ TEST(government_bonus_and_anarchy) {
     REQUIRE(g2->submit(Command::setPolicy(0, 0, policy("POLICY_SURVEY"))) == CommandError::Ok);
 }
 
+// Each government's own bonuses (04: Governments), generated in governments.json like the policy cards' effects; none
+// in anarchy.
+TEST(governments_give_their_own_bonuses) {
+    const Rules& r = rules();
+    constexpr size_t C = static_cast<size_t>(YieldType::Culture);
+    auto under = [](const char* government, auto&& edit) {
+        return capitalWith([&](GameState& s) {
+            chiefdom(s);
+            Player& p = s.players[0];
+            p.government = gov(government);
+            p.governmentUses[at(p.government)] = 1;
+            p.policies.assign(static_cast<size_t>(rules().governments[at(p.government)].totalSlots()), kNone);
+            edit(s);
+        });
+    };
+    const auto nothing = [](GameState&) {};
+    const auto building = [](const char* id) {
+        return [id](GameState& s) {
+            s.cities[0].buildings.push_back(rules().building(id));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        };
+    };
+    const auto campus = [](GameState& s) {
+        CityDistrict d;
+        d.type = rules().district("DISTRICT_CAMPUS");
+        d.pos = {7, 6};
+        d.complete = true;
+        s.cities[0].districts.push_back(d);
+        claimFor(s, s.cities[0], d.pos);
+    };
+    auto plain = under("GOVERNMENT_CHIEFDOM", nothing);
+    const CityId city = plain->state().cities[0].id;
+    const auto cityPercent = [&](const Game& g, ModEffect e) { return sumCityModifiers(g.state(), r, g.state().cities[0], e); };
+    // Autocracy: +1 to all yields in a city with a government building as in the capital; +10% toward wonders.
+    {
+        auto base = under("GOVERNMENT_CHIEFDOM", building("BUILDING_AUDIENCE_CHAMBER"));
+        auto g = under("GOVERNMENT_AUTOCRACY", building("BUILDING_AUDIENCE_CHAMBER"));
+        CHECK_EQ(g->cityReport(city).yields[S], base->cityReport(city).yields[S] + Fixed::fromInt(2));
+        CHECK_EQ(sumItemProductionPercent(g->state(), r, g->state().cities[0], {ProductionKind::Building, r.building("BUILDING_PYRAMIDS")}), Fixed::fromInt(10));
+        // Not in anarchy.
+        GameState s = g->state();
+        s.players[0].anarchyTurns = 2;
+        auto anarchy = Game::fromScenario(r, std::move(s));
+        CHECK_EQ(sumItemProductionPercent(anarchy->state(), r, anarchy->state().cities[0], {ProductionKind::Building, r.building("BUILDING_PYRAMIDS")}), Fixed());
+    }
+    // Classical Republic: +1 Amenity and +1 Housing in a city with a specialty district; +15% great person points.
+    {
+        auto base = under("GOVERNMENT_CHIEFDOM", campus);
+        auto g = under("GOVERNMENT_CLASSICAL_REPUBLIC", campus);
+        CHECK_EQ(g->cityReport(city).amenities, base->cityReport(city).amenities + 1);
+        CHECK_EQ(g->cityReport(city).housing, base->cityReport(city).housing + Fixed::fromInt(1));
+        CHECK_EQ(cityPercent(*g, ModEffect::CityGreatPersonPercent), Fixed::fromInt(15));
+        auto bare = under("GOVERNMENT_CLASSICAL_REPUBLIC", nothing);
+        CHECK_EQ(bare->cityReport(city).amenities, plain->cityReport(city).amenities);
+    }
+    // Monarchy: +1 Housing for each level of walls; +2 Favor a turn for each city with Renaissance Walls, on top of the
+    // government's own Favor.
+    {
+        const auto walls = [&](GameState& s) {
+            for (const char* id : {"BUILDING_ANCIENT_WALLS", "BUILDING_MEDIEVAL_WALLS", "BUILDING_RENAISSANCE_WALLS"}) building(id)(s);
+        };
+        auto base = under("GOVERNMENT_CHIEFDOM", walls);
+        auto g = under("GOVERNMENT_MONARCHY", walls);
+        CHECK_EQ(g->cityReport(city).housing, base->cityReport(city).housing + Fixed::fromInt(3));
+        CHECK_EQ(g->favorPerTurn(0), base->favorPerTurn(0) + r.governments[at(gov("GOVERNMENT_MONARCHY"))].favor + 2);
+    }
+    // Merchant Republic: +15% toward districts. Fascism: +50% toward units. Oligarchy: +20% combat XP.
+    {
+        CHECK_EQ(cityPercent(*under("GOVERNMENT_MERCHANT_REPUBLIC", nothing), ModEffect::CityDistrictProductionPercent), Fixed::fromInt(15));
+        auto f = under("GOVERNMENT_FASCISM", nothing);
+        CHECK_EQ(sumUnitProductionPercent(f->state(), r, f->state().cities[0], r.unit("UNIT_SETTLER")), Fixed::fromInt(50));
+        auto o = under("GOVERNMENT_OLIGARCHY", nothing);
+        CHECK_EQ(sumPlayerModifiers(o->state(), r, o->state().players[0], ModEffect::UnitXpPercent), Fixed::fromInt(20));
+    }
+    // Democracy: 15% off what Gold buys. Theocracy: 15% off what Faith buys (a Naturalist here), not Gold.
+    {
+        const ProductionItem monument{ProductionKind::Building, r.building("BUILDING_MONUMENT")};
+        const int price = plain->purchaseCost(0, monument);
+        REQUIRE(price > 0);
+        CHECK_EQ(under("GOVERNMENT_DEMOCRACY", nothing)->purchaseCost(0, monument), price * 85 / 100 / 5 * 5);
+        const auto conservation = [](GameState& s) { s.players[0].civics.done[at(civic("CIVIC_CONSERVATION"))] = 1; };
+        auto devout = under("GOVERNMENT_THEOCRACY", conservation);
+        auto secular = under("GOVERNMENT_CHIEFDOM", conservation);
+        const ProductionItem naturalist{ProductionKind::Unit, r.unit("UNIT_NATURALIST")};
+        const int faith = secular->faithPurchaseCost(0, secular->state().cities[0], naturalist);
+        REQUIRE(faith > 0);
+        CHECK_EQ(devout->faithPurchaseCost(0, devout->state().cities[0], naturalist), faith * 85 / 100);
+        CHECK_EQ(devout->purchaseCost(0, monument), price);
+    }
+    // Digital Democracy: +2 Amenities, +2 Culture for each district (and more with the Amenities' mood bonus).
+    {
+        auto base = under("GOVERNMENT_CHIEFDOM", campus);
+        auto g = under("GOVERNMENT_DIGITAL_DEMOCRACY", campus);
+        CHECK_EQ(g->cityReport(city).amenities, base->cityReport(city).amenities + 2);
+        CHECK_EQ(sumCityModifiers(g->state(), r, g->state().cities[0], ModEffect::CityYieldPerDistrict, YieldType::Culture), Fixed::fromInt(2));
+        CHECK(g->cityReport(city).yields[C] >= base->cityReport(city).yields[C] + Fixed::fromInt(2));
+    }
+    // Corporate Libertarianism: +1 a turn from each source of a strategic resource.
+    {
+        const auto horses = [](GameState& s) {
+            const Hex h{5, 7};
+            s.plot(h).resource = rules().resource("RESOURCE_HORSES");
+            s.plot(h).improvement = rules().improvement("IMPROVEMENT_PASTURE");
+            claimFor(s, s.cities[0], h);
+            s.players[0].techs.done[at(tech("TECH_ANIMAL_HUSBANDRY"))] = 1;
+        };
+        auto base = under("GOVERNMENT_CHIEFDOM", horses);
+        auto g = under("GOVERNMENT_CORPORATE_LIBERTARIANISM", horses);
+        const size_t res = at(r.resource("RESOURCE_HORSES"));
+        const int before = base->state().players[0].stockpile[res];
+        endTurns(*base, 1);
+        endTurns(*g, 1);
+        REQUIRE(base->state().players[0].stockpile[res] > before);
+        CHECK_EQ(g->state().players[0].stockpile[res], base->state().players[0].stockpile[res] + 1);
+    }
+}
+
 TEST(policy_effects_and_obsolescence) {
     // Agoge: +50% production toward Ancient and Classical melee units.
     auto g = capitalWith([](GameState& s) {

@@ -77,14 +77,18 @@ TEST(rules_index_every_modifier_by_effect) {
     CHECK_EQ(misplaced(again), 0);
 }
 
-// The city modifiers no policy brings, by effect, and each policy's own: between them each city modifier once, in
-// load order, a policy's under the policy that brings it.
-TEST(rules_index_city_modifiers_by_policy) {
+// The city modifiers no policy or government brings, by effect, each policy's own and each government's by effect:
+// between them each city modifier once, in load order, a policy's under the policy that brings it and a government's
+// under its government and effect.
+TEST(rules_index_city_modifiers_by_policy_and_government) {
     auto misplaced = [](const Rules& r) {
         int wrong = 0;
         std::vector<int> listed(r.modifiers.size(), 0);
         const auto ofPolicy = [&](const Modifier& m) {
             return m.sourceKind == ModSource::Policy && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < r.policies.size();
+        };
+        const auto ofGovernment = [&](const Modifier& m) {
+            return m.sourceKind == ModSource::Government && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < r.governments.size();
         };
         const auto inOrder = [&](const std::vector<uint32_t>& list) {
             for (size_t k = 1; k < list.size(); ++k) wrong += list[k - 1] < list[k] ? 0 : 1;
@@ -95,7 +99,7 @@ TEST(rules_index_city_modifiers_by_policy) {
             inOrder(list);
             for (uint32_t i : list) {
                 const Modifier& m = r.modifiers[i];
-                wrong += m.effect == effect && m.collection != ModCollection::Player && !ofPolicy(m) ? 0 : 1;
+                wrong += m.effect == effect && m.collection != ModCollection::Player && !ofPolicy(m) && !ofGovernment(m) ? 0 : 1;
                 ++listed[i];
             }
         }
@@ -112,6 +116,23 @@ TEST(rules_index_city_modifiers_by_policy) {
                 ++listed[i];
             }
         }
+        for (size_t g = 0; g < r.governments.size(); ++g) {
+            for (int e = 0; e < 256; ++e) {
+                const ModEffect effect = static_cast<ModEffect>(e);
+                const std::vector<uint32_t>* list = r.governmentCityModifiers(static_cast<TypeIndex>(g), effect);
+                if (!list) continue;
+                wrong += list->empty() ? 1 : 0;
+                inOrder(*list);
+                for (uint32_t i : *list) {
+                    const Modifier& m = r.modifiers[i];
+                    wrong += m.effect == effect && m.collection != ModCollection::Player && ofGovernment(m) &&
+                                     m.sourceIndex == static_cast<TypeIndex>(g)
+                                 ? 0
+                                 : 1;
+                    ++listed[i];
+                }
+            }
+        }
         for (size_t i = 0; i < r.modifiers.size(); ++i) wrong += listed[i] == (r.modifiers[i].collection == ModCollection::Player ? 0 : 1) ? 0 : 1;
         return wrong;
     };
@@ -123,6 +144,12 @@ TEST(rules_index_city_modifiers_by_policy) {
     CHECK(!r.policyCityModifiers(feudal)->empty());
     CHECK(r.policyCityModifiers(kNone) == nullptr);
     CHECK(r.policyCityModifiers(static_cast<TypeIndex>(r.policies.size())) == nullptr);
+    const TypeIndex autocracy = r.government("GOVERNMENT_AUTOCRACY");
+    REQUIRE(r.governmentCityModifiers(autocracy, ModEffect::CityYield) != nullptr);
+    CHECK(!r.governmentCityModifiers(autocracy, ModEffect::CityYield)->empty());
+    CHECK(r.governmentCityModifiers(autocracy, ModEffect::PlotYield) == nullptr);
+    CHECK(r.governmentCityModifiers(kNone, ModEffect::CityYield) == nullptr);
+    CHECK(r.governmentCityModifiers(static_cast<TypeIndex>(r.governments.size()), ModEffect::CityYield) == nullptr);
     // A policy's modifier added later is listed under it once the modifiers are indexed again.
     Rules again = r;
     Modifier m;
@@ -468,6 +495,27 @@ TEST(rules_reject_a_governor_promotion_listed_twice) {
     CHECK_EQ(apart.governorPromotions.size(), 2u);
     CHECK(!twice.loadFromText({withPromotions("PROMOTION_A")}, &err));
     CHECK(err.find("PROMOTION_A") != std::string::npos);
+}
+
+// A government's own modifiers load like a policy card's (04: Governments); a purchase discount names Gold or Faith.
+TEST(rules_load_government_modifiers) {
+    const auto withDiscount = [](const std::string& yield) {
+        std::map<std::string, std::string> docs = minimalRules();
+        docs["governments.json"] = R"({"governments": [{"id": "GOVERNMENT_A", "slots": {"WILDCARD": 1}, "modifiers": [
+            {"id": "GOVERNMENT_A_1", "collection": "PLAYER", "effect": "ADJUST_PURCHASE_DISCOUNT_PERCENT",
+             "arguments": {"yield": ")" + yield + R"(", "amount": 15}}]}]})";
+        return docs;
+    };
+    Rules gold, food;
+    std::string err;
+    REQUIRE(gold.loadFromText({withDiscount("GOLD")}, &err));
+    const auto it = std::find_if(gold.modifiers.begin(), gold.modifiers.end(), [](const Modifier& m) { return m.id == "GOVERNMENT_A_1"; });
+    REQUIRE(it != gold.modifiers.end());
+    CHECK(it->sourceKind == ModSource::Government);
+    CHECK_EQ(it->sourceIndex, gold.government("GOVERNMENT_A"));
+    CHECK(it->effect == ModEffect::PurchaseDiscountPercent);
+    CHECK(!food.loadFromText({withDiscount("FOOD")}, &err));
+    CHECK(err.find("GOVERNMENT_A") != std::string::npos);
 }
 
 TEST(rules_checksum_ignores_line_endings) {

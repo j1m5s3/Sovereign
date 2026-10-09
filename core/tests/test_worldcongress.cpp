@@ -257,14 +257,15 @@ TEST(mercenary_companies_change_what_military_units_cost) {
     REQUIRE(faithPrice > 0);
     CHECK_EQ(devout->faithPurchaseCost(0, devout->state().cities[0], warrior), 2 * faithPrice);
     CHECK_EQ(devout->purchaseCost(0, warrior), price);
-    // Grand Master's Chapel: land combat units for Faith at their Gold price, which only Faith's resolution changes.
+    // Grand Master's Chapel: land combat units for Faith at their Gold price (less Theocracy's 15% on Faith purchases),
+    // which only Faith's resolution changes.
     GameState chapel = s;
     chapel.cities[0].buildings.push_back(rules().building("BUILDING_GRAND_MASTER_S_CHAPEL"));
     std::sort(chapel.cities[0].buildings.begin(), chapel.cities[0].buildings.end());
     auto chapelFaith = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, faith, chapel);
     auto chapelGold = withResolution("RESOLUTION_MERCENARY_COMPANIES", 0, gold, chapel);
-    CHECK_EQ(chapelFaith->faithPurchaseCost(0, chapelFaith->state().cities[0], warrior), 2 * price);
-    CHECK_EQ(chapelGold->faithPurchaseCost(0, chapelGold->state().cities[0], warrior), price);
+    CHECK_EQ(chapelFaith->faithPurchaseCost(0, chapelFaith->state().cities[0], warrior), 2 * price * 85 / 100 / 5 * 5);
+    CHECK_EQ(chapelGold->faithPurchaseCost(0, chapelGold->state().cities[0], warrior), price * 85 / 100 / 5 * 5);
     // Production: the Warrior comes at half speed (A) or twice (B); Gold chosen leaves it alone.
     const auto progress = [&](Game& g) {
         sovtest::endTurns(g, 2);

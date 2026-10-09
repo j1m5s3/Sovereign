@@ -369,13 +369,16 @@ void forEachApplyingIn(std::initializer_list<const std::vector<uint32_t>*> lists
     }
 }
 
-// forEachApplyingIn over every city (not plot) modifier with this effect: those no policy brings, then those of each
-// policy the city's owner has slotted (each policy once; none in anarchy, when no policy is in force).
+// forEachApplyingIn over every city (not plot) modifier with this effect: those no policy or government brings, then
+// those of the city owner's government and of each policy it has slotted (each policy once; none in anarchy, when no
+// government or policy is in force).
 template <typename Pre, typename Fn>
 void forEachApplying(const GameState& s, const Rules& r, const City& city, ModEffect effect, Pre&& pre, Fn&& fn) {
     forEachApplyingIn({&r.cityModifiersBesidePolicies(effect)}, s, r, city, false, nullptr, nullptr, pre, fn);
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     if (owner.anarchyTurns > 0) return;
+    if (const std::vector<uint32_t>* mods = r.governmentCityModifiers(owner.government, effect))
+        forEachApplyingIn({mods}, s, r, city, false, nullptr, nullptr, pre, fn);
     const auto ofEffect = [&](const Modifier& m) { return m.effect == effect && pre(m); };
     for (auto slot = owner.policies.begin(); slot != owner.policies.end(); ++slot) {
         const std::vector<uint32_t>* mods = r.policyCityModifiers(*slot);
@@ -471,6 +474,12 @@ void sumCityModifiers(const GameState& s, const Rules& r, const City& city, std:
     }
     const Player& owner = s.players[static_cast<size_t>(city.owner)];
     if (owner.anarchyTurns > 0) return;
+    // The owner's government's, of each sum's effect.
+    for (const CityEffectSum& e : sums) {
+        if (const std::vector<uint32_t>* mods = r.governmentCityModifiers(owner.government, e.effect))
+            forEachApplyingIn({mods}, s, r, city, false, nullptr, nullptr, [&](const Modifier& m) { return counts(e, m); },
+                              [&](const Modifier& m) { add(e, m); }, holders);
+    }
     // `pre` finds the sum a policy's modifier counts toward; fn, called next for that same modifier when it applies,
     // adds to it.
     const CityEffectSum* into = nullptr;
@@ -585,6 +594,14 @@ int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, co
     Fixed total;
     forEachPlayerModifier(
         s, r, player, ModEffect::UnitStrength, [&](const Modifier& m) { return (m.unitClass.empty() || m.unitClass == unitClass) && (!m.vsBarbarians || vsBarbarian); },
+        [&](const Modifier& m) { total += m.amount; });
+    return static_cast<int>(total.toInt());
+}
+
+int sumPurchaseDiscountPercent(const GameState& s, const Rules& r, const Player& player, YieldType currency) {
+    Fixed total;
+    forEachPlayerModifier(
+        s, r, player, ModEffect::PurchaseDiscountPercent, [&](const Modifier& m) { return m.yield == currency; },
         [&](const Modifier& m) { total += m.amount; });
     return static_cast<int>(total.toInt());
 }

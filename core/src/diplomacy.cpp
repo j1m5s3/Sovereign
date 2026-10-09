@@ -1393,8 +1393,9 @@ void Game::processDiplomacy(PlayerId pid) {
             in = in || (tr.owner == static_cast<PlayerId>(o) && dest->owner == pid);
         }
         points += (out ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0) + (in ? rules_->globalInt("ALLIANCE_POINTS_FOR_TRADE") : 0);
-        // Wisselbanken, Democratic Legacy (04): +1 a turn each.
-        points += (policyIs(pid, "POLICY_WISSELBANKEN") ? 1 : 0) + (policyIs(pid, "POLICY_DEMOCRATIC_LEGACY") ? 1 : 0);
+        // Wisselbanken, Democracy and its Legacy card (04): +1 a turn each.
+        points += (policyIs(pid, "POLICY_WISSELBANKEN") ? 1 : 0) + (policyIs(pid, "POLICY_DEMOCRATIC_LEGACY") ? 1 : 0) +
+                  (governmentIs(pid, "GOVERNMENT_DEMOCRACY") ? 1 : 0);
         rel.alliancePoints += points;
     }
     allianceEurekas(pid);

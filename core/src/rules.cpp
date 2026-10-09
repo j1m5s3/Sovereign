@@ -273,6 +273,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         {"ADJUST_CITY_APPEAL", ModEffect::CityAppeal},
         {"ADJUST_CITY_TOURISM", ModEffect::CityTourism},
         {"ADJUST_EMBARKED_MOVES", ModEffect::EmbarkedMoves},
+        {"ADJUST_PURCHASE_DISCOUNT_PERCENT", ModEffect::PurchaseDiscountPercent},
     };
     const std::string& c = j["collection"].str();
     const std::string& e = j["effect"].str();
@@ -313,6 +314,10 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
         *error = "ADJUST_DISTRICT_ADJACENCY_PERCENT needs a district";
         return false;
     }
+    if (mod.effect == ModEffect::PurchaseDiscountPercent && mod.yield != YieldType::Gold && mod.yield != YieldType::Faith) {
+        *error = "ADJUST_PURCHASE_DISCOUNT_PERCENT needs a GOLD or FAITH yield";
+        return false;
+    }
     if (mod.effect == ModEffect::GrantAbility && mod.ability == kNone) {
         *error = "GRANT_ABILITY needs an ability";
         return false;
@@ -324,7 +329,7 @@ bool parseModifier(const Json& j, Modifier& mod, const Rules& rules, std::string
                               mod.effect == ModEffect::TradeRouteYield || mod.effect == ModEffect::GreatPersonPoints ||
                               mod.effect == ModEffect::FavorPerTurn || mod.effect == ModEffect::InfluencePerTurn ||
                               mod.effect == ModEffect::RouteTourismPercent || mod.effect == ModEffect::DistrictTourism ||
-                              mod.effect == ModEffect::EmbarkedMoves ||
+                              mod.effect == ModEffect::EmbarkedMoves || mod.effect == ModEffect::PurchaseDiscountPercent ||
                               (mod.effect >= ModEffect::FounderYieldPerCity && mod.effect <= ModEffect::ReligionColonizes);
     mod.vsBarbarians = args["vsBarbarians"].boolean(false);
     mod.scope = args["scope"].str();
@@ -2270,6 +2275,21 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             modifiers.push_back(std::move(mod));
         }
     }
+    // Governments' own bonuses while adopted (04: Governments; governments.json, each government's `modifiers`).
+    for (const auto& [gid, gj] : m.tables["governments"]) {
+        for (const Json& j : gj["modifiers"].items()) {
+            Modifier mod;
+            mod.id = j["id"].str();
+            mod.source = gid;
+            if (!parseModifier(j, mod, *this, error)) {
+                *error = "government " + gid + " modifier " + mod.id + ": " + *error;
+                return false;
+            }
+            mod.sourceKind = ModSource::Government;
+            mod.sourceIndex = government(gid);
+            modifiers.push_back(std::move(mod));
+        }
+    }
     // Great people's lasting activation effects (07; greatpeople.json, each individual's `modifiers`).
     for (const auto& [gid, gj] : m.tables["greatPeople"]) {
         for (const Json& j : gj["modifiers"].items()) {
@@ -2611,6 +2631,7 @@ void Rules::indexModifiers() {
     cityModsByEffect_.clear();
     cityModsBesidePolicies_.clear();
     policyCityMods_.assign(policies.size(), {});
+    governmentCityMods_.assign(governments.size(), {});
     for (size_t i = 0; i < modifiers.size(); ++i) {
         const Modifier& m = modifiers[i];
         const auto add = [&](std::vector<std::vector<uint32_t>>& byEffect) {
@@ -2625,6 +2646,8 @@ void Rules::indexModifiers() {
         add(cityModsByEffect_);
         if (m.sourceKind == ModSource::Policy && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < policyCityMods_.size())
             policyCityMods_[static_cast<size_t>(m.sourceIndex)].push_back(static_cast<uint32_t>(i));
+        else if (m.sourceKind == ModSource::Government && m.sourceIndex >= 0 && static_cast<size_t>(m.sourceIndex) < governmentCityMods_.size())
+            add(governmentCityMods_[static_cast<size_t>(m.sourceIndex)]);
         else
             add(cityModsBesidePolicies_);
     }

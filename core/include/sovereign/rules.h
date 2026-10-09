@@ -947,6 +947,8 @@ enum class ModEffect : uint8_t {
     CityAppeal,                    // city: + appeal on its plots
     CityTourism,                   // city: + tourism (Shopping Mall, Ferris Wheel)
     EmbarkedMoves,                 // player: + movement for its embarked units (Great Lighthouse)
+    // Governments (04; generated in governments.json):
+    PurchaseDiscountPercent,       // player: % off what `yield` (GOLD or FAITH) buys (Theocracy, Democracy)
 };
 enum class ReqType : uint8_t {
     PlotHasResource = 0,
@@ -1402,11 +1404,19 @@ public:
     // Built when the rules load; call indexModifiers() again after changing `modifiers`.
     const std::vector<uint32_t>& playerModifiers(ModEffect effect) const;
     const std::vector<uint32_t>& cityModifiers(ModEffect effect) const;
-    // The same city modifiers split by whether a policy brings them: those no policy brings, by effect, and each
-    // policy's, of every effect (null for an index the rules lack). A pass over a city's modifiers looks at a policy's
-    // only when the city's owner has slotted it. Built by indexModifiers().
+    // The same city modifiers split by whether a policy or a government brings them: those neither brings, by effect;
+    // each policy's, of every effect (null for an index the rules lack); and each government's by effect (null for an
+    // index the rules lack or an effect it has none of). A pass over a city's modifiers looks at a policy's only when
+    // the city's owner has slotted it, and at a government's only while the owner has adopted it. Built by
+    // indexModifiers().
     const std::vector<uint32_t>& cityModifiersBesidePolicies(ModEffect effect) const;
     const std::vector<uint32_t>* policyCityModifiers(TypeIndex policy) const;
+    const std::vector<uint32_t>* governmentCityModifiers(TypeIndex government, ModEffect effect) const {
+        if (government < 0 || static_cast<size_t>(government) >= governmentCityMods_.size()) return nullptr;
+        const std::vector<std::vector<uint32_t>>& byEffect = governmentCityMods_[static_cast<size_t>(government)];
+        const size_t e = static_cast<size_t>(effect);
+        return e < byEffect.size() && !byEffect[e].empty() ? &byEffect[e] : nullptr;
+    }
     // The city modifiers of plot yields, each listed once: under the improvement, resource, feature or terrain (in
     // that order of preference) its subject requirements all need, or as unkeyed when they need none of those. Only a
     // plot's own lists and the unkeyed one can hold modifiers that apply to it. Built by indexModifiers().
@@ -1480,6 +1490,7 @@ private:
     std::vector<std::vector<uint32_t>> playerModsByEffect_, cityModsByEffect_;  // by ModEffect (indexModifiers)
     std::vector<std::vector<uint32_t>> cityModsBesidePolicies_;                  // by ModEffect (indexModifiers)
     std::vector<std::vector<uint32_t>> policyCityMods_;                          // by policy (indexModifiers)
+    std::vector<std::vector<std::vector<uint32_t>>> governmentCityMods_;         // by government, then ModEffect (indexModifiers)
     PlotModifiers plotYieldMods_;
     std::vector<std::vector<TypeIndex>> buildingsReplacing_, unitsReplacing_;  // by building and unit (indexUniques)
     static const std::vector<TypeIndex>* replacing(const std::vector<std::vector<TypeIndex>>& by, size_t count, TypeIndex i) {

@@ -1,6 +1,7 @@
 // Governors (08: Governors [R&F]): titles from civics, appointing, promoting along the tree,
 // establishing, loyalty, promotion effects in the city, Amani as envoys, losing a city, saves.
 #include <algorithm>
+#include <cstdlib>
 
 #include "helpers.h"
 #include "sovereign/ai.h"
@@ -303,6 +304,16 @@ TEST(contractor_buys_a_placed_district_with_gold_and_divine_architect_with_faith
     REQUIRE(cost > 0);
     CHECK_EQ(cost % 5, 0);
     CHECK(h->districtPurchaseCost(*h->state().city(city), campus, true) < 0);  // Faith needs Moksha
+    {
+        // Democracy takes 15% off Gold purchases (04), districts' too.
+        GameState d = h->state();
+        d.players[0].government = rules().government("GOVERNMENT_DEMOCRACY");
+        d.players[0].policies.assign(static_cast<size_t>(rules().governments[at(d.players[0].government)].totalSlots()), kNone);
+        auto democracy = Game::fromScenario(rules(), std::move(d));
+        const int less = democracy->districtPurchaseCost(*democracy->state().city(city), campus, false);
+        CHECK(less < cost);
+        CHECK(std::abs(less - cost * 85 / 100) <= 5);
+    }
     REQUIRE(h->submit(Command::purchase(0, city, item)) == CommandError::Ok);
     CHECK(h->state().players[0].gold == Fixed::fromInt(5000 - cost));
     REQUIRE(h->state().city(city)->district(campus, true));

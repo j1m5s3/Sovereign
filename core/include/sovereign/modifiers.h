@@ -81,6 +81,9 @@ SOV_API bool playerModifierApplies(const GameState& s, const Rules& r, const Pla
 int sumUnitStrength(const GameState& s, const Rules& r, const Player& player, const std::string& unitClass,
                     bool vsBarbarian);
 
+// Percent off the player's purchases with this currency (Gold or Faith; Theocracy, Democracy).
+SOV_API int sumPurchaseDiscountPercent(const GameState& s, const Rules& r, const Player& player, YieldType currency);
+
 // Adjacency bonus percent for the player's districts of this type (Natural Philosophy...).
 SOV_API int sumDistrictAdjacencyPercent(const GameState& s, const Rules& r, const Player& player, TypeIndex district);
 

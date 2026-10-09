@@ -687,6 +687,7 @@ void Game::accumulateStrategics(PlayerId pid) {
     for (const Player& cs : state_.players) {
         if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id)) holders.push_back(cs.id);
     }
+    const bool corporate = governmentIs(pid, "GOVERNMENT_CORPORATE_LIBERTARIANISM");  // 04: +1 a source in its own cities
     for (const int32_t i : resourcePlots_) {
         const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
@@ -701,6 +702,7 @@ void Game::accumulateStrategics(PlayerId pid) {
             {"POLICY_DRILL_MANUALS", "RESOURCE_NITER"}, {"POLICY_DRILL_MANUALS", "RESOURCE_COAL"}, {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_HORSES"},
             {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_IRON"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_ALUMINUM"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_OIL"}};
         for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
+        extra += corporate && p.owner == pid ? 1 : 0;
         // Foreign Investor (08: Amani): her city-state's strategics come in twice over.
         int copies = 1;
         if (home && p.owner != pid) {

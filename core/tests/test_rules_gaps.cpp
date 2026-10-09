@@ -76,7 +76,8 @@ TEST(theocracy_buys_land_units_with_faith) {
     auto g = Game::fromScenario(rules(), std::move(s));
     const ProductionItem warrior{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")};
     CHECK_EQ(plain->faithPurchaseCost(0, plain->state().cities[0], warrior), -1);
-    CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[0], warrior), g->purchaseCost(0, warrior) * 85 / 100);
+    // 15% under the Gold price (Theocracy's discount on Faith purchases), in fives like every price.
+    CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[0], warrior), g->purchaseCost(0, warrior) * 85 / 100 / 5 * 5);
 }
 
 TEST(support_units_and_open_ground) {
