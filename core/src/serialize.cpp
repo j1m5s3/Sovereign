@@ -283,6 +283,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (const ProductionProgress& pp : c.progress) if (!itemOk(pp.item)) return false;
         for (int32_t pi : c.worked) if (pi < 0 || pi >= s.grid.size()) return false;
         for (int32_t pi : c.locked) if (pi < 0 || pi >= s.grid.size()) return false;
+        if (static_cast<int>(c.focus) >= kNumCityFocuses) return false;
         for (const CityDistrict& d : c.districts) {
             if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
         }
@@ -567,6 +568,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         }
         writeI32s(w, c.worked);
         writeI32s(w, c.locked);
+        w.u8(static_cast<uint8_t>(c.focus));
         w.i32(c.hp);
         w.i32(c.wallHp);
         w.i32(c.lastAttackedTurn);
@@ -1080,6 +1082,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             pp.amount = readFixed(r);
         }
         if (!readI32s(r, c.worked) || !readI32s(r, c.locked)) return false;
+        c.focus = static_cast<CityFocus>(r.u8());
         c.hp = r.i32();
         c.wallHp = r.i32();
         c.lastAttackedTurn = r.i32();

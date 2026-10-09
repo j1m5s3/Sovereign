@@ -26,10 +26,27 @@ bool eraseSorted(std::vector<int32_t>& v, int32_t x) {
     return true;
 }
 
-// Weighting for the default (balanced) citizen focus.
-Fixed citizenScore(const Yields& y) {
-    return y[idx(YieldType::Food)] * 4 + y[idx(YieldType::Production)] * 3 + y[idx(YieldType::Gold)] * 2 +
-           y[idx(YieldType::Science)] * 2 + y[idx(YieldType::Culture)] * 2 + y[idx(YieldType::Faith)];
+// Weights for citizen assignment: balanced Food 4, Production 3, Gold, Science and Culture 2, Faith 1; a city focus
+// (02: Citizens) raises its yield's weight to 8 (Sovereign reading; the spec gives no numbers).
+using CitizenWeights = std::array<int, kNumYields>;
+CitizenWeights citizenWeights(CityFocus focus) {
+    static constexpr YieldType kFocusYield[kNumCityFocuses] = {YieldType::Food, YieldType::Food, YieldType::Production, YieldType::Gold,
+                                                                YieldType::Science, YieldType::Culture, YieldType::Faith};
+    CitizenWeights w{};
+    w[idx(YieldType::Food)] = 4;
+    w[idx(YieldType::Production)] = 3;
+    w[idx(YieldType::Gold)] = 2;
+    w[idx(YieldType::Science)] = 2;
+    w[idx(YieldType::Culture)] = 2;
+    w[idx(YieldType::Faith)] = 1;
+    if (focus != CityFocus::Balanced) w[idx(kFocusYield[static_cast<size_t>(focus)])] = 8;
+    return w;
+}
+
+Fixed citizenScore(const Yields& y, const CitizenWeights& w) {
+    Fixed score;
+    for (size_t i = 0; i < kNumYields; ++i) score += y[i] * w[i];
+    return score;
 }
 
 int speedPercent(const GameState& s, const Rules& r) {
@@ -1189,6 +1206,7 @@ CommandError Game::validateCity(const Command& c) const {
             if (static_cast<int>(city->locked.size()) >= city->population) return CommandError::CannotWorkPlot;
             return CommandError::Ok;
         }
+        case CommandType::SetCityFocus: return c.arg >= 0 && c.arg < kNumCityFocuses ? CommandError::Ok : CommandError::BadTarget;
         default: break;
     }
     return CommandError::BadTarget;
@@ -1294,6 +1312,10 @@ void Game::applyCity(const Command& c) {
             assignCitizens(city);
             break;
         }
+        case CommandType::SetCityFocus:
+            city.focus = static_cast<CityFocus>(c.arg);
+            assignCitizens(city);
+            break;
         default: break;
     }
 }
@@ -1314,16 +1336,17 @@ void Game::assignCitizens(City& city) {
     struct Cand { int32_t index; Fixed score; };
     std::vector<Cand> cands;
     const bool earthGoddess = cityFollows(city, Bf::EarthGoddess);
+    const CitizenWeights weights = citizenWeights(city.focus);
     for (const Hex& h : plots) {
         int32_t pi = state_.grid.index(h);
         if (std::binary_search(city.locked.begin(), city.locked.end(), pi)) continue;
-        cands.push_back({pi, citizenScore(plotYields(h, city, earthGoddess))});
+        cands.push_back({pi, citizenScore(plotYields(h, city, earthGoddess), weights)});
     }
     for (size_t k = 0; k < city.districts.size(); ++k) {
         CityDistrict& d = city.districts[k];
         d.specialists = 0;
         if (!d.complete || d.pillagedTurns > 0) continue;
-        const Fixed score = citizenScore(specialistYield(city, d));
+        const Fixed score = citizenScore(specialistYield(city, d), weights);
         for (int slot = 0; slot < specialistSlots(city, d); ++slot) cands.push_back({-1 - static_cast<int32_t>(k), score});
     }
     std::stable_sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) {
