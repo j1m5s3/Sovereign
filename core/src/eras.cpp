@@ -307,6 +307,7 @@ int Game::tourismBase(PlayerId pid) const {
         const int before = total;
         const int curator = cityGovernorHas(c, "GOVERNOR_PROMOTION_CURATOR") ? 2 : 1;  // Pingala
         for (const GreatWork& w : c.greatWorks) {
+            if (buildingIdle(c, *rules_, w.building)) continue;  // its building idles in a pillaged district (03)
             const int pct = themed(c, w.building) ? 100 + rules_->buildings[at(w.building)].theming->tourismPercent : 100;  // 07: Theming
             // Heritage Tourism doubles art and artifacts; Satellite Broadcasts triples music (04).
             const std::string& kind = rules_->greatWorkTypes[at(w.type)].id;

@@ -147,11 +147,13 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
         }
         // The Oracle (03: Wonders): +2 from each district of its city that earns points.
         const int oracle = c.has(wonderType(W::Oracle)) ? 2 : 0;
+        // A pillaged district and its buildings earn none (03).
         for (const CityDistrict& d : c.districts) {
-            if (!d.complete) continue;
+            if (!d.complete || d.pillagedTurns > 0) continue;
             for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v + (toAlly ? 1 : 0) + oracle : 0;
         }
         for (TypeIndex b : c.buildings) {
+            if (buildingIdle(c, *rules_, b)) continue;
             for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;
         }
         city += static_cast<int>(sumCityGreatPersonPoints(state_, *rules_, c, cls).toInt());  // policy cards (04)

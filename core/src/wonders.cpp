@@ -38,7 +38,8 @@ bool Game::wonderFits(const City& city, TypeIndex building, Hex plot) const {
     const TerrainType& t = rules_->terrains[at(p.terrain)];
     const bool water = std::any_of(w.terrains.begin(), w.terrains.end(), [&](TypeIndex x) { return rules_->terrains[at(x)].water; });
     if (t.water != water) return false;
-    if (!water && !isLandPassable(state_, *rules_, plot) && !(w.mountain && t.relief == Relief::Mountain)) return false;
+    // Land wonders need open land; a Mountain, tunnelled or not, only for a wonder built on one (Machu Picchu).
+    if (!water && (!isLandPassable(state_, *rules_, plot) || t.relief == Relief::Mountain) && !(w.mountain && t.relief == Relief::Mountain)) return false;
     if (!w.terrains.empty() || w.mountain || !w.features.empty()) {
         const bool ok = std::find(w.terrains.begin(), w.terrains.end(), p.terrain) != w.terrains.end() ||
                         (w.mountain && t.relief == Relief::Mountain) ||
@@ -49,12 +50,14 @@ bool Game::wonderFits(const City& city, TypeIndex building, Hex plot) const {
     if (w.river && !isRiverAdjacent(state_, plot)) return false;
     if ((w.lake || w.notLake) && isLake(state_, *rules_, plot, &lakes_) != w.lake) return false;  // Huey Teocalli on a lake; harbour wonders on the sea
     bool land = false, coast = false, capital = false, mountain = false, center = false, district = false, resource = false, improvement = false;
+    unsigned landDirs = 0;  // a bit per neighbouring land plot
     for (int d = 0; d < kNumDirs; ++d) {
         auto n = state_.grid.neighbor(plot, static_cast<Dir>(d));
         if (!n) continue;
         const Plot& np = state_.plot(*n);
         const TerrainType& nt = rules_->terrains[at(np.terrain)];
         land |= !nt.water;
+        landDirs |= nt.water ? 0u : 1u << d;
         coast |= nt.water;
         mountain |= nt.relief == Relief::Mountain;
         center |= *n == city.pos;
@@ -70,6 +73,8 @@ bool Game::wonderFits(const City& city, TypeIndex building, Hex plot) const {
         (w.nextToCapital && !capital))
         return false;
     if (w.nextToDistrict != kNone && !district) return false;
+    // The Golden Gate Bridge spans two opposite land plots (03).
+    if (building == wonderType(W::GoldenGate) && !(landDirs & (landDirs >> 3) & 7u)) return false;
     // A building the city needs first, any one of them (03: BuildingPrereqs); a civ's unique building counts as
     // the one it replaces (the Aztec Calmecac as the Library the Great Library needs).
     const std::vector<TypeIndex>& any = rules_->buildings[at(building)].prereqsAny;

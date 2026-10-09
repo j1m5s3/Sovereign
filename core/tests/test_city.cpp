@@ -352,6 +352,7 @@ TEST(exclusive_buildings_and_either_prerequisite) {
     s.cities[0].districts.push_back({rules().district("DISTRICT_GOVERNMENT_PLAZA"), {3, 3}, true});
     s.cities[0].districts.push_back({rules().district("DISTRICT_INDUSTRIAL_ZONE"), {5, 7}, true});
     s.cities[0].districts.push_back({rules().district("DISTRICT_COMMERCIAL_HUB"), {3, 7}, true});
+    s.players[0].government = rules().government("GOVERNMENT_DEMOCRACY");  // every Government Plaza tier
     const auto can = [&](std::vector<const char*> buildings, const char* b) {
         GameState t = s;
         for (const char* x : buildings) t.cities[0].buildings.push_back(rules().building(x));
@@ -381,6 +382,35 @@ TEST(exclusive_buildings_and_either_prerequisite) {
     CHECK(!can({}, "BUILDING_BANK"));
     CHECK(can({"BUILDING_MARKET"}, "BUILDING_BANK"));
     CHECK(can({"BUILDING_FORUM"}, "BUILDING_BANK"));
+}
+
+// Each Government Plaza building needs a government of its tier (03; Sovereign: or a higher one).
+TEST(government_plaza_buildings_need_a_government_of_their_tier) {
+    const auto tier = [](const char* b) { return rules().buildings[static_cast<size_t>(rules().building(b))].plazaTier; };
+    CHECK_EQ(tier("BUILDING_ANCESTRAL_HALL"), 1);
+    CHECK_EQ(tier("BUILDING_INTELLIGENCE_AGENCY"), 2);
+    CHECK_EQ(tier("BUILDING_ROYAL_SOCIETY"), 3);
+    CHECK_EQ(tier("BUILDING_LIBRARY"), 0);
+    GameState s = flatState(16, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    sovtest::addCity(s, 0, {4, 5}, true, 8);
+    s.cities[0].districts.push_back({rules().district("DISTRICT_GOVERNMENT_PLAZA"), {3, 3}, true});
+    const auto can = [&](const char* government, std::vector<const char*> buildings, const char* b) {
+        GameState t = s;
+        t.players[0].government = government ? rules().government(government) : kNone;
+        for (const char* x : buildings) t.cities[0].buildings.push_back(rules().building(x));
+        std::sort(t.cities[0].buildings.begin(), t.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(t));
+        return g->canProduce(g->state().cities[0], buildingItem(b));
+    };
+    CHECK(!can(nullptr, {}, "BUILDING_AUDIENCE_CHAMBER"));
+    CHECK(!can("GOVERNMENT_CHIEFDOM", {}, "BUILDING_AUDIENCE_CHAMBER"));
+    CHECK(can("GOVERNMENT_AUTOCRACY", {}, "BUILDING_AUDIENCE_CHAMBER"));
+    CHECK(!can("GOVERNMENT_AUTOCRACY", {"BUILDING_AUDIENCE_CHAMBER"}, "BUILDING_FOREIGN_MINISTRY"));
+    CHECK(can("GOVERNMENT_MONARCHY", {"BUILDING_AUDIENCE_CHAMBER"}, "BUILDING_FOREIGN_MINISTRY"));
+    CHECK(!can("GOVERNMENT_MONARCHY", {"BUILDING_AUDIENCE_CHAMBER", "BUILDING_FOREIGN_MINISTRY"}, "BUILDING_ROYAL_SOCIETY"));
+    CHECK(can("GOVERNMENT_DEMOCRACY", {"BUILDING_AUDIENCE_CHAMBER", "BUILDING_FOREIGN_MINISTRY"}, "BUILDING_ROYAL_SOCIETY"));
+    CHECK(can("GOVERNMENT_DIGITAL_DEMOCRACY", {}, "BUILDING_ANCESTRAL_HALL"));
 }
 
 TEST(regional_buildings_reach_the_owners_cities_in_range) {

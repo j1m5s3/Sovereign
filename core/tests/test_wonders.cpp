@@ -296,6 +296,17 @@ TEST(huey_teocalli_and_the_lakes) {
     CHECK_EQ(g->plotYields({17, 6}, gs.cities[1])[food], plain->plotYields({17, 6}, ps.cities[1])[food]);  // a rival's lake
 }
 
+// The Golden Gate Bridge spans two opposite land plots (03: "coast tile spanning two opposite land tiles").
+TEST(the_golden_gate_bridge_spans_opposite_land) {
+    GameState s = lakeState();
+    const TypeIndex bridge = wonder("BUILDING_GOLDEN_GATE_BRIDGE");
+    auto across = Game::fromScenario(rules(), s);
+    CHECK(across->canPlaceWonder(across->state().cities[0], bridge, {2, 6}));  // desert west and east of it
+    s.plot({3, 6}).terrain = rules().terrain("TERRAIN_COAST");                // now land on the west side only
+    auto shore = Game::fromScenario(rules(), std::move(s));
+    CHECK(!shore->canPlaceWonder(shore->state().cities[0], bridge, {2, 6}));
+}
+
 TEST(the_mausoleum_reaches_the_sea_not_lakes) {
     GameState s = lakeState();
     auto plain = Game::fromScenario(rules(), s);

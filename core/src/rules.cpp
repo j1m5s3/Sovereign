@@ -1273,6 +1273,16 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         }
     }
     for (BuildingType& b : buildings) b.districtType = district(b.district);
+    // Government Plaza tiers (03): 1 for a building needing none first, else one more than the buildings it needs.
+    const TypeIndex plaza = district("DISTRICT_GOVERNMENT_PLAZA");
+    for (int pass = 0; plaza != kNone && pass < 8; ++pass) {
+        for (BuildingType& b : buildings) {
+            if (b.districtType != plaza || b.wonder) continue;
+            int tier = 1;
+            for (TypeIndex pre : b.prereqs) tier = std::max(tier, buildings[static_cast<size_t>(pre)].plazaTier + 1);
+            b.plazaTier = tier;
+        }
+    }
     // Wonder placement and one-time effects name terrains, features, resources, districts and units.
     {
         size_t i = 0;
