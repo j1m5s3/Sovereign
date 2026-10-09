@@ -13,6 +13,8 @@ Status: done, 2026-10-09. Previous: `2026-10-09-city-focus.md`, which found the 
 ## Results
 
 - The 30-turn golden game's state hash is unchanged; only its rules checksum moves, with `promotions.json`.
+- 128 AI games (Small, 6 AI, turn 200) against main: identical results (inferred: none of the three effects comes up that early).
+- 8 long AI games in 8 setups (up to Huge, 400 turns): no crash or replay mismatch; 7 end exactly as before, and one (seed 77, 300 turns, difficulty 8) with 8 fewer commands and the same cities and units (inferred: one of the three effects came up).
 
 ## Tests
 
