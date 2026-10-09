@@ -240,3 +240,52 @@ TEST(rivals_tally_this_game_and_survive_a_save) {
     CHECK_EQ(back->rivalMemories(0)[0].betrayals, 1);
     CHECK_EQ(back->rivalGrudge(1, 0), 2);
 }
+// Rival memory also counts rulers killed by assassins, promises the human broke, and turns as allies (player-retention:
+// "captured or assassinated leaders", "broken promises", "long alliances carry over").
+TEST(rivals_remember_assassinations_broken_promises_and_alliances) {
+    GameState s = twoCivs();
+    s.players[0].human = true;
+    for (Player& p : s.players) {
+        p.met.assign(s.players.size(), 1);
+        p.relations.resize(s.players.size());
+    }
+    sleepAll(s);
+    const int turn = s.turn;
+    s.events.push_back({turn, EventKind::AssassinKilledLeader, 1, 0, 50});  // its assassin killed the human's ruler
+    s.events.push_back({turn, EventKind::AssassinKilledLeader, 0, 1, 50});  // and the human's killed its ruler
+    s.events.push_back({turn, EventKind::AssassinWoundedLeader, 0, 1, 20});  // a wound takes no one
+    s.promises.push_back({0, 1, PromiseKind::NoSettling, turn + 30, turn});  // broken by the human
+    s.promises.push_back({1, 0, PromiseKind::NoSettling, turn + 30, turn});  // broken by the AI: not the human's
+    s.promises.push_back({0, 1, PromiseKind::NoSettling, turn + 30, 0});     // kept
+    for (int i = 0; i < 2; ++i) {
+        Relation& r = s.players[static_cast<size_t>(i)].relations[static_cast<size_t>(1 - i)];
+        r.alliance = AllianceType::Research;
+        r.allianceUntil = turn + 100;
+    }
+    RivalMemory carried;  // from an earlier game
+    carried.civ = rules().civs[static_cast<size_t>(s.players[1].civ)].id;
+    carried.promisesBroken = 1;
+    s.setup.players[0].rivals = {carried};
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(!g->friends(0, 1));
+    REQUIRE(g->alliance(0, 1) == AllianceType::Research);
+    endTurns(*g, 4);  // two turns
+    const std::vector<RivalMemory> mem = g->rivalMemories(0);
+    REQUIRE(mem.size() == 1u);
+    CHECK_EQ(mem[0].leadersTaken, 1);
+    CHECK_EQ(mem[0].leadersLost, 1);
+    CHECK_EQ(mem[0].promisesBroken, 2);  // one carried, one this game
+    CHECK_EQ(mem[0].friendTurns, 2);
+    // The text file carries the new count; a broken promise weighs 4 in the grudge.
+    std::vector<RivalMemory> back;
+    REQUIRE(rivalsFromText(rivalsToText(mem), back));
+    CHECK_EQ(back[0].promisesBroken, 2);
+    RivalMemory m;
+    m.civ = mem[0].civ;
+    m.promisesBroken = 2;
+    GameState t = twoCivs();
+    t.players[0].human = true;
+    t.setup.players[0].rivals = {m};
+    auto h = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(h->rivalGrudge(1, 0), 8);
+}

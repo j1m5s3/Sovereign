@@ -692,6 +692,7 @@ public:
     // 2 per finished district, 1 per population. Cost scaling of techs and civics is unverified and not applied.
     int score(PlayerId player) const;
     int turnLimit() const;  // last turn played; Score decides after it
+    int lightYearsRequired() const;  // for the Science victory, scaled by the game speed
     bool gameOver() const { return state_.winner != kNoPlayer; }  // kNoPlayer when the game has no barbarians
     const Camp* campAt(Hex h) const;
     int xpForNextLevel(const Unit& unit) const;

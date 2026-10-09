@@ -46,6 +46,8 @@ bool Game::chronicleWorthy(EventKind kind) {
         case EventKind::AssassinCaptured:
         case EventKind::AssassinKilledDouble:
         case EventKind::AssassinKilledGuard:
+        case EventKind::AssassinKilled:
+        case EventKind::RulerRansomed:
         case EventKind::Rebellion:
         case EventKind::HistoricMoment:
         case EventKind::NewAge:
@@ -79,6 +81,8 @@ std::vector<std::string> Game::chronicleLines(PlayerId viewer) const {
             case EventKind::AssassinCaptured: text = t + " caught an assassin sent by " + a; break;
             case EventKind::AssassinKilledDouble: text = "an assassin from " + a + " killed a stand-in for the ruler of " + t; break;
             case EventKind::AssassinKilledGuard: text = "an assassin from " + a + " struck down a bodyguard of the ruler of " + t; break;
+            case EventKind::AssassinKilled: text = "an assassin from " + a + " died in an attempt on the ruler of " + t; break;
+            case EventKind::RulerRansomed: text = a + " released the ruler of " + t + " for a ransom"; break;
             case EventKind::Rebellion: text = "rebels rose against " + t; break;
             case EventKind::HistoricMoment:
                 if (e.value >= 0 && at(e.value) < rules_->moments.size()) text = a + ": " + rules_->moments[at(e.value)].name;
@@ -134,6 +138,19 @@ std::string Game::hallEntry(PlayerId player) const {
         if (!promotions.empty()) s += "; " + promotions;
     } else if (p.captor != kNoPlayer) {
         s += ". The ruler is a captive";
+    } else {
+        // How the last ruler fell (player-retention: the Hall shows "cause of death").
+        for (auto e = state_.chronicle.rbegin(); e != state_.chronicle.rend(); ++e) {
+            if (e->target != player) continue;
+            if (e->kind == EventKind::LeaderLost && e->value == 0) {
+                s += ". The ruler fell in battle against " + playerName(*rules_, state_, e->actor);
+                break;
+            }
+            if (e->kind == EventKind::AssassinKilledLeader) {
+                s += ". The ruler was killed by an assassin from " + playerName(*rules_, state_, e->actor);
+                break;
+            }
+        }
     }
     // Rivals made: the AI civs it fought, most wars first.
     std::vector<std::pair<int, std::string>> fought;

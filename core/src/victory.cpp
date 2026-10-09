@@ -7,6 +7,14 @@
 
 namespace sov {
 
+int Game::lightYearsRequired() const {
+    // Short Reign's 100 turns leave no room for Standard's 50 light-years (player-retention: "scaled costs and victory
+    // conditions"); the speed names its share.
+    const TypeIndex speed = rules_->speed(state_.setup.speed);
+    const int percent = speed == kNone ? 100 : rules_->speeds[static_cast<size_t>(speed)].scienceVictoryPercent;
+    return std::max(1, rules_->globalInt(HotGlobal::ScienceVictoryPointsRequired) * percent / 100);
+}
+
 int Game::turnLimit() const {
     if (state_.setup.turnLimit > 0) return state_.setup.turnLimit;
     return rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].turns;
@@ -78,7 +86,7 @@ void Game::checkVictory() {
         // The exoplanet expedition arrives (SCIENCE_VICTORY_POINTS_REQUIRED light-years).
         const PlayerId arrived = [&] {
             PlayerId best = kNoPlayer;
-            const int required = rules_->globalInt(HotGlobal::ScienceVictoryPointsRequired);
+            const int required = lightYearsRequired();
             for (const Player& p : state_.players) {
                 if (p.alive && p.lightYears >= required &&
                     (best == kNoPlayer || p.lightYears > state_.players[static_cast<size_t>(best)].lightYears))

@@ -9,7 +9,7 @@
   {"id": "MAPSIZE_HUGE", "width": 106, "height": 66, "defaultPlayers": 12, "maxReligions": 7, "defaultCityStates": 18, "co2PerDegree": 3000000}
  ],
  "gameSpeeds": [
-  {"id": "GAMESPEED_SHORT_REIGN", "costPercent": 20, "turns": 100},
+  {"id": "GAMESPEED_SHORT_REIGN", "costPercent": 20, "turns": 100, "scienceVictoryPercent": 20},
   {"id": "GAMESPEED_ONLINE", "costPercent": 50, "turns": 250},
   {"id": "GAMESPEED_QUICK", "costPercent": 67, "turns": 330},
   {"id": "GAMESPEED_STANDARD", "costPercent": 100, "turns": 500},

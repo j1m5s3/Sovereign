@@ -180,6 +180,24 @@ TEST(the_space_race_and_the_science_victory) {
     CHECK_EQ(g->state().winner, 0);
 }
 
+// Short Reign's 100 turns scale the expedition's 50 light-years to 10 (player-retention: "scaled costs and victory
+// conditions").
+TEST(a_short_reign_expedition_arrives_sooner) {
+    GameState s = campusTown();
+    auto standard = Game::fromScenario(rules(), s);
+    CHECK_EQ(standard->lightYearsRequired(), 50);
+    s.setup.speed = "GAMESPEED_SHORT_REIGN";
+    s.players[0].lightYears = 9;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->lightYearsRequired(), 10);
+    endTurns(*g, 1);
+    CHECK(!g->gameOver());
+    g->stateMutForTests().players[0].lightYears = 10;
+    endTurns(*g, 1);
+    REQUIRE(g->gameOver());
+    CHECK(g->state().victory == Victory::Science);
+}
+
 // A Terrestrial Laser Station speeds the expedition only while its city is powered (09: "only counts if the city is
 // powered"), and a civ counts no more stations than it built.
 TEST(a_terrestrial_laser_station_needs_its_city_powered) {

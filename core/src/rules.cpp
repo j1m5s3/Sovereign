@@ -2421,6 +2421,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         s.id = id;
         s.costPercent = static_cast<int>(j["costPercent"].integer(100));
         s.turns = static_cast<int>(j["turns"].integer(500));
+        s.scienceVictoryPercent = static_cast<int>(j["scienceVictoryPercent"].integer(100));
         speeds.push_back(std::move(s));
     }
     for (const auto& [id, row] : m.tables["difficulties"]) {

@@ -1323,6 +1323,7 @@ struct GameSpeedType {
     std::string id;
     int costPercent = 100;
     int turns = 500;
+    int scienceVictoryPercent = 100;  // of SCIENCE_VICTORY_POINTS_REQUIRED (Short Reign scales its victories)
 };
 
 // Named constants read on hot paths (Rules::global(HotGlobal)), each the one of the same name in capitals.
