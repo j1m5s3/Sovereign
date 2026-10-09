@@ -155,7 +155,7 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		// Houses and the Palace in the owner's era's style (SovArt::EraPiece); here the Landmark stands for other
 		// buildings, so it stays.
 		const TPair<const TCHAR*, FString> Piece = P.Kind == ESovStreetPiece::Tree ? TPair<const TCHAR*, FString>(TEXT("Nature"), P.Recipe)
-			: P.Recipe == TEXT("Landmark") ? TPair<const TCHAR*, FString>(TEXT("Classical"), P.Recipe) : SovArt::EraPiece(Layout.Era, P.Recipe);
+			: P.Recipe == TEXT("Landmark") ? TPair<const TCHAR*, FString>(TEXT("Classical"), P.Recipe) : SovArt::EraPiece(Layout.Era, P.Recipe, Layout.Civ);
 		const TCHAR* Kit = Piece.Key;
 		if (UStaticMesh* Mesh = P.Recipe.IsEmpty() ? nullptr : SovArt::Mesh(Kit, Piece.Value))
 		{

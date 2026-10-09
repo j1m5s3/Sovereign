@@ -721,7 +721,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(CityMarkers, i, CubeMesh);
 		const double Z = SurfaceZ(City.X, City.Y);
 		// A small Palace for capitals and a hall for other cities, when the art exists.
-		const TPair<const TCHAR*, FString> Centre = SovArt::EraPiece(City.Era, City.bCapital ? TEXT("Palace") : TEXT("Landmark"));
+		const TPair<const TCHAR*, FString> Centre = SovArt::EraPiece(City.Era, City.bCapital ? TEXT("Palace") : TEXT("Landmark"), City.Civ);
 		if (SovArt::SetKitMesh(C, Centre.Key, Centre.Value, City.Color))
 		{
 			C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z));
@@ -753,7 +753,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				const double R = 64.0 + ((H >> (k + 3)) % 4) * 3.0;
 				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
 				static const TCHAR* Houses[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
-				const TPair<const TCHAR*, FString> House = SovArt::EraPiece(City.Era, Houses[(H + k) % 3]);
+				const TPair<const TCHAR*, FString> House = SovArt::EraPiece(City.Era, Houses[(H + k) % 3], City.Civ);
 				SovArt::SetKitMesh(C, House.Key, House.Value, FLinearColor::White);
 				ShadeKit(C, FLinearColor::White);
 				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
