@@ -457,6 +457,37 @@ void generateMap(GameState& state, const Rules& rules) {
         }
     }
 
+    // 4b. Volcanoes and Geothermal Fissures [GS] (01: features; 09: eruptions). Sovereign reading of the map scripts'
+    //     density (unverified in the specs): one Volcano per MAPGEN_MOUNTAINS_PER_VOLCANO Mountains and one Geothermal
+    //     Fissure per MAPGEN_LAND_PER_FISSURE land plots, each at least 4 plots from another of its kind.
+    {
+        int land = 0, mountains = 0;
+        for (const Plot& p : state.plots) {
+            const TerrainType& t = rules.terrains[static_cast<size_t>(p.terrain)];
+            land += t.water ? 0 : 1;
+            mountains += t.relief == Relief::Mountain ? 1 : 0;
+        }
+        auto scatter = [&](TypeIndex f, int count) {
+            if (f == kNone || count <= 0) return;
+            std::vector<int32_t> spots;
+            for (int32_t i = 0; i < g.size(); ++i) {
+                const Plot& p = state.plots[static_cast<size_t>(i)];
+                if (p.feature == kNone && featureAllowed(rules, f, p.terrain)) spots.push_back(i);
+            }
+            for (size_t k = spots.size(); k > 1; --k) std::swap(spots[k - 1], spots[rng.below(static_cast<uint32_t>(k))]);
+            std::vector<Hex> placed;
+            for (int32_t i : spots) {
+                if (static_cast<int>(placed.size()) >= count) break;
+                const Hex at = g.at(i);
+                if (std::any_of(placed.begin(), placed.end(), [&](const Hex& o) { return g.distance(o, at) < 4; })) continue;
+                state.plots[static_cast<size_t>(i)].feature = f;
+                placed.push_back(at);
+            }
+        };
+        scatter(featureId("FEATURE_VOLCANO"), mountains / std::max(1, rules.globalInt("MAPGEN_MOUNTAINS_PER_VOLCANO")));
+        scatter(featureId("FEATURE_GEOTHERMAL_FISSURE"), land / std::max(1, rules.globalInt("MAPGEN_LAND_PER_FISSURE")));
+    }
+
     // 5. Resources, weighted by each resource's frequency on its valid plots.
     for (int i = 0; i < g.size(); ++i) {
         Plot& p = state.plots[static_cast<size_t>(i)];

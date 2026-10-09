@@ -246,3 +246,43 @@ TEST(maps_have_lakes) {
     }
     CHECK(lakes >= 4);
 }
+
+TEST(maps_have_volcanoes_and_geothermal_fissures) {
+    // 01, 09 [GS]: Volcanoes on Mountains, Geothermal Fissures on open land; Sovereign density: one Volcano per
+    // MAPGEN_MOUNTAINS_PER_VOLCANO Mountains, one Fissure per MAPGEN_LAND_PER_FISSURE land plots, 4 apart (four Duel
+    // maps and two Standard ones).
+    const Rules& r = rules();
+    const TypeIndex volcano = r.feature("FEATURE_VOLCANO"), fissure = r.feature("FEATURE_GEOTHERMAL_FISSURE");
+    for (uint64_t seed : {1ull, 2ull, 3ull, 4ull, 5ull, 6ull}) {
+        std::string err;
+        GameSetup setup = sovtest::duelSetup(seed);
+        if (seed > 4) setup.mapSize = "MAPSIZE_STANDARD";  // more of each, closer together
+        auto g = Game::create(r, setup, &err);
+        REQUIRE(g);
+        const GameState& s = g->state();
+        int land = 0, mountains = 0;
+        std::vector<Hex> volcanoes, fissures;
+        for (int i = 0; i < s.grid.size(); ++i) {
+            const Plot& p = s.plots[static_cast<size_t>(i)];
+            const TerrainType& t = r.terrains[static_cast<size_t>(p.terrain)];
+            land += t.water ? 0 : 1;
+            mountains += t.relief == Relief::Mountain ? 1 : 0;
+            if (p.feature == volcano) {
+                CHECK(t.relief == Relief::Mountain);
+                volcanoes.push_back(s.grid.at(i));
+            }
+            if (p.feature == fissure) {
+                CHECK(!t.water && t.relief != Relief::Mountain);
+                fissures.push_back(s.grid.at(i));
+            }
+        }
+        CHECK_EQ(static_cast<int>(volcanoes.size()), mountains / r.globalInt("MAPGEN_MOUNTAINS_PER_VOLCANO"));
+        CHECK_EQ(static_cast<int>(fissures.size()), land / r.globalInt("MAPGEN_LAND_PER_FISSURE"));
+        CHECK(!volcanoes.empty() && !fissures.empty());
+        for (const std::vector<Hex>* list : {&volcanoes, &fissures}) {
+            for (size_t a = 0; a < list->size(); ++a) {
+                for (size_t b = a + 1; b < list->size(); ++b) CHECK(s.grid.distance((*list)[a], (*list)[b]) >= 4);
+            }
+        }
+    }
+}
