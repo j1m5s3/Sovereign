@@ -10,11 +10,13 @@
 #include "SovMapActor.h"
 #include "SovMods.h"
 #include "SovStreetScene.h"
+#include "SovStyle.h"
 #include "SovBattleScene.h"
 #include "SovDiplomacyPanel.h"
 #include "Engine/GameViewportClient.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Misc/CommandLine.h"
+#include "Misc/ScopeExit.h"
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBox.h"
@@ -1827,23 +1829,23 @@ void ASovPlayerController::HandleOrders()
 	{
 		if (Gm.state().pendingBattle.liveFor == Me())
 		{
-			if (WasInputKeyJustPressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
-			else if (WasInputKeyJustPressed(EKeys::B)) StartBattle();
+			if (Pressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
+			else if (Pressed(EKeys::B)) StartBattle();
 		}
 		else if (BattleOpponent() == Me())
 		{
 			// Online: the other side's player may command their men in the live battle, or settle it.
-			if (WasInputKeyJustPressed(EKeys::B)) StartBattle(true);
-			else if (WasInputKeyJustPressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
+			if (Pressed(EKeys::B)) StartBattle(true);
+			else if (Pressed(EKeys::R)) Send(sov::Command::autoResolveBattle(Me()));
 		}
 		return;
 	}
 	int32 X = 0, Y = 0;
-	if (WasInputKeyJustPressed(EKeys::LeftMouseButton) && HexUnderCursor(X, Y))
+	if (Pressed(EKeys::LeftMouseButton) && HexUnderCursor(X, Y))
 	{
 		ClickSelect(X, Y);
 	}
-	if (WasInputKeyJustPressed(EKeys::Escape))
+	if (Pressed(EKeys::Escape))
 	{
 		// Esc steps back: the chooser, then the selection, then the menu (also the way out once the game is over).
 		if (Chooser != EChooser::None) Chooser = EChooser::None;
@@ -1855,19 +1857,19 @@ void ASovPlayerController::HandleOrders()
 		}
 	}
 	// The chronicle of the reign, at any time (player-retention §2): F4 shows it, F6 has it written up.
-	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && WasInputKeyJustPressed(EKeys::F4)) Hud->bShowChronicle = !Hud->bShowChronicle;
-	if (WasInputKeyJustPressed(EKeys::F6)) Subsystem()->WriteChronicle();
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && Pressed(EKeys::F4)) Hud->bShowChronicle = !Hud->bShowChronicle;
+	if (Pressed(EKeys::F6)) Subsystem()->WriteChronicle();
 	if (Chooser != EChooser::None)
 	{
 		for (int32 i = 0; i < PageSize; ++i)
 		{
-			if (WasInputKeyJustPressed(DigitKeys[i]))
+			if (Pressed(DigitKeys[i]))
 			{
 				Pick(i);
 				return;
 			}
 		}
-		if (WasInputKeyJustPressed(EKeys::Zero))
+		if (Pressed(EKeys::Zero))
 		{
 			const int32 Pages = (Choices.Num() + PageSize - 1) / PageSize;
 			ChooserPage = Pages > 0 ? (ChooserPage + 1) % Pages : 0;
@@ -1877,50 +1879,50 @@ void ASovPlayerController::HandleOrders()
 	{
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::RightMouseButton) && HexUnderCursor(X, Y))
+	if (Pressed(EKeys::RightMouseButton) && HexUnderCursor(X, Y))
 	{
 		ClickOrder(X, Y);
 	}
-	if (WasInputKeyJustPressed(EKeys::SpaceBar) || WasInputKeyJustPressed(EKeys::Enter))
+	if (Pressed(EKeys::SpaceBar) || Pressed(EKeys::Enter))
 	{
 		EndTurn();
 	}
-	if (WasInputKeyJustPressed(EKeys::Period)) SelectNextUnit();
-	if (WasInputKeyJustPressed(EKeys::P)) OpenChooser(EChooser::Production);
-	if (WasInputKeyJustPressed(EKeys::T)) OpenChooser(EChooser::Research);
-	if (WasInputKeyJustPressed(EKeys::C)) OpenChooser(EChooser::Civic);
-	if (WasInputKeyJustPressed(EKeys::H)) OpenChooser(EChooser::Throne);
-	if (WasInputKeyJustPressed(EKeys::J)) OpenChooser(EChooser::Assassins);
-	if (WasInputKeyJustPressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
-	if (WasInputKeyJustPressed(EKeys::O)) OpenChooser(EChooser::CityStates);
-	if (WasInputKeyJustPressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
-	if (WasInputKeyJustPressed(EKeys::F2)) OpenChooser(EChooser::Government);
+	if (Pressed(EKeys::Period)) SelectNextUnit();
+	if (Pressed(EKeys::P)) OpenChooser(EChooser::Production);
+	if (Pressed(EKeys::T)) OpenChooser(EChooser::Research);
+	if (Pressed(EKeys::C)) OpenChooser(EChooser::Civic);
+	if (Pressed(EKeys::H)) OpenChooser(EChooser::Throne);
+	if (Pressed(EKeys::J)) OpenChooser(EChooser::Assassins);
+	if (Pressed(EKeys::Y)) OpenChooser(EChooser::GreatPeople);
+	if (Pressed(EKeys::O)) OpenChooser(EChooser::CityStates);
+	if (Pressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
+	if (Pressed(EKeys::F2)) OpenChooser(EChooser::Government);
 	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
 	{
-		if (WasInputKeyJustPressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
-		if (WasInputKeyJustPressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
+		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
+		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
 	}
 	// Quicksave and quickload (local games; online the host's game is the only copy that counts).
 	if (Subsystem()->GetSession().NetMode() == ESovNet::Local)
 	{
-		if (WasInputKeyJustPressed(EKeys::F5))
+		if (Pressed(EKeys::F5))
 		{
 			Subsystem()->LastMessage = Subsystem()->SaveGame(TEXT("quicksave")) ? FString(TEXT("Game saved (quicksave). F9 loads it."))
 																				: FString(TEXT("Could not save the game"));
 		}
-		if (WasInputKeyJustPressed(EKeys::F9) && Subsystem()->LoadGame(TEXT("quicksave")))
+		if (Pressed(EKeys::F9) && Subsystem()->LoadGame(TEXT("quicksave")))
 		{
 			bCenteredOnGame = false;
 		}
 	}
-	if (WasInputKeyJustPressed(EKeys::Z)) OpenChooser(EChooser::Governors);
-	if (WasInputKeyJustPressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
-	if (WasInputKeyJustPressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
+	if (Pressed(EKeys::Z)) OpenChooser(EChooser::Governors);
+	if (Pressed(EKeys::Comma)) OpenChooser(EChooser::Congress);
+	if (Pressed(EKeys::I) && Subsystem()->GetGame().state().players[static_cast<size_t>(Me())].pantheon == sov::kNone)
 		OpenChooser(EChooser::Pantheon);
 	// Citizen stances in the selected city where the leader stands (classic control's panel, leader doc §4).
-	if (SelectedCity >= 0 && (WasInputKeyJustPressed(EKeys::V) || WasInputKeyJustPressed(EKeys::X)))
+	if (SelectedCity >= 0 && (Pressed(EKeys::V) || Pressed(EKeys::X)))
 	{
-		const sov::Stance St = WasInputKeyJustPressed(EKeys::V) ? sov::Stance::Benevolence : sov::Stance::Fear;
+		const sov::Stance St = Pressed(EKeys::V) ? sov::Stance::Benevolence : sov::Stance::Fear;
 		if (Send(sov::Command::cityStance(Me(), SelectedCity, St)))
 		{
 			Subsystem()->LastMessage = St == sov::Stance::Benevolence ? TEXT("Petitions heard, alms given: the city warms to you.")
@@ -1936,20 +1938,20 @@ void ASovPlayerController::HandleOrders()
 	}
 	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
 	const sov::Hex Pos = U->pos;
-	if (WasInputKeyJustPressed(EKeys::F) && T.id == "UNIT_TRADER")
+	if (Pressed(EKeys::F) && T.id == "UNIT_TRADER")
 	{
 		ReligionUnit = U->id;
 		OpenChooser(EChooser::TradeRoute);
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::F) && T.foundReligion)
+	if (Pressed(EKeys::F) && T.foundReligion)
 	{
 		// A Great Prophet founds a religion on a Holy Site (06).
 		ReligionUnit = U->id;
 		OpenChooser(EChooser::ReligionFounder);
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::F) && U->religion >= 0)
+	if (Pressed(EKeys::F) && U->religion >= 0)
 	{
 		// Religious units: Apostles may add a belief; everyone spreads where they stand.
 		ReligionUnit = U->id;
@@ -1971,7 +1973,7 @@ void ASovPlayerController::HandleOrders()
 		}
 		return;
 	}
-	if (U->greatPerson != sov::kNone && WasInputKeyJustPressed(EKeys::F))
+	if (U->greatPerson != sov::kNone && Pressed(EKeys::F))
 	{
 		// A great person is used where it stands (07): an effect, or a Great Work in a free slot.
 		const FString Who = Str(G.rules().greatPeople[static_cast<size_t>(U->greatPerson)].name);
@@ -1981,7 +1983,7 @@ void ASovPlayerController::HandleOrders()
 		}
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::F) && Send(sov::Command::foundCity(Me(), U->id)))
+	if (Pressed(EKeys::F) && Send(sov::Command::foundCity(Me(), U->id)))
 	{
 		// The new city needs something to build first.
 		if (const sov::City* City = G.state().cityAt(Pos))
@@ -1991,12 +1993,12 @@ void ASovPlayerController::HandleOrders()
 		}
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::K) && Send(sov::Command::setActivity(Me(), U->id, sov::Activity::Skip)))
+	if (Pressed(EKeys::K) && Send(sov::Command::setActivity(Me(), U->id, sov::Activity::Skip)))
 	{
 		AfterUnitOrder();
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::G))
+	if (Pressed(EKeys::G))
 	{
 		const sov::Activity A = T.layer == sov::UnitLayer::Military ? sov::Activity::Fortify : sov::Activity::Sleep;
 		if (Send(sov::Command::setActivity(Me(), U->id, A)))
@@ -2005,11 +2007,11 @@ void ASovPlayerController::HandleOrders()
 		}
 		return;
 	}
-	if (WasInputKeyJustPressed(EKeys::B)) OpenChooser(EChooser::Improvement);
-	if (WasInputKeyJustPressed(EKeys::E) && G.isLeader(*U)) OpenChooser(EChooser::Gear);
-	if (WasInputKeyJustPressed(EKeys::U)) OpenChooser(EChooser::Promotion);
-	if (WasInputKeyJustPressed(EKeys::Q) && G.isLeader(*U)) EnterStreet();
-	if (WasInputKeyJustPressed(EKeys::L))
+	if (Pressed(EKeys::B)) OpenChooser(EChooser::Improvement);
+	if (Pressed(EKeys::E) && G.isLeader(*U)) OpenChooser(EChooser::Gear);
+	if (Pressed(EKeys::U)) OpenChooser(EChooser::Promotion);
+	if (Pressed(EKeys::Q) && G.isLeader(*U)) EnterStreet();
+	if (Pressed(EKeys::L))
 	{
 		// Link the leader and the military unit on its plot, or end the link.
 		const sov::Unit* Leader = G.isLeader(*U) ? U : G.state().unitAt(U->pos, sov::UnitLayer::Leader, G.rules());
@@ -2027,6 +2029,160 @@ void ASovPlayerController::HandleOrders()
 	}
 }
 
+void ASovPlayerController::PickAbsolute(int32 Index)
+{
+	if (!Choices.IsValidIndex(Index)) return;
+	ChooserPage = Index / PageSize;
+	Pick(Index % PageSize);
+}
+
+void ASovPlayerController::UpdateGameUI()
+{
+	USovGameSubsystem* Sub = Subsystem();
+	if (!GameUI.IsValid())
+	{
+		if (!GEngine || !GEngine->GameViewport) return;
+		SAssignNew(GameUI, SSovGameUI)
+			.OnKey_Lambda([this](FKey Key) { UIKeys.Add(Key); })
+			.OnPick_Lambda([this](int32 Index) { PickAbsolute(Index); })
+			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); });
+		GEngine->GameViewport->AddViewportWidgetContent(GameUI.ToSharedRef(), 5);
+	}
+	FSovUIModel M;
+	M.bVisible = Sub && Sub->IsRunning() && !Menu.IsValid() && !InBattle() && !InStreet() && !InDiplomacy() && !Sub->GetSession().HandoverPending() &&
+				 !Sub->GetSession().InLobby();
+	if (!M.bVisible)
+	{
+		GameUI->SetModel(M);
+		return;
+	}
+	const sov::Game& G = Sub->GetGame();
+	const sov::Rules& R = G.rules();
+	const sov::GameState& S = G.state();
+	const sov::Player& P = S.players[static_cast<size_t>(Me())];
+	auto Signed = [](const sov::Fixed& V) { return (V >= sov::Fixed() ? TEXT("+") : TEXT("")) + Str(V.toString()); };
+	// The top bar: what the empire makes and holds.
+	const sov::Fixed Gpt = G.goldPerTurn(Me());
+	M.Stats.Add({"science", Signed(G.sciencePerTurn(Me())), TEXT("Science per turn"), FLinearColor(0.55f, 0.8f, 1.f), EKeys::T});
+	M.Stats.Add({"culture", Signed(G.culturePerTurn(Me())), TEXT("Culture per turn"), FLinearColor(0.8f, 0.6f, 1.f), EKeys::C});
+	M.Stats.Add({"gold", FString::Printf(TEXT("%s (%s)"), *Str(P.gold.toString()), *Signed(Gpt)), TEXT("Gold in the treasury, and per turn"),
+		Gpt < sov::Fixed() ? FSovStyle::Bad : FSovStyle::Gold, EKeys::Invalid});
+	M.Stats.Add({"faith", FString::Printf(TEXT("%s (%s)"), *Str(P.faith.toString()), *Signed(G.outputPerTurn(Me()).faith)), TEXT("Faith, and per turn"),
+		FLinearColor(0.85f, 0.93f, 1.f), EKeys::Invalid});
+	M.Stats.Add({"favor", FString::Printf(TEXT("%d (%+d)"), P.favor, G.favorPerTurn(Me())), TEXT("Diplomatic Favor, and per turn (World Congress: ,)"),
+		FSovStyle::Text, EKeys::Comma});
+	M.Stats.Add({"tourism", FString::FromInt(G.tourismPerTurn(Me())), FString::Printf(TEXT("Tourism per turn: %d visitors, %d at home"), G.visitingTourists(Me()),
+		G.domesticTourists(Me())), FSovStyle::Text, EKeys::Invalid});
+	auto Tree = [&](bool bCivic, FSovUIStat& Out, float& Progress) {
+		const sov::TypeIndex Cur = bCivic ? P.civics.current : P.techs.current;
+		Out.Icon = bCivic ? FName("civic") : FName("research");
+		Out.Key = bCivic ? EKeys::C : EKeys::T;
+		if (Cur == sov::kNone)
+		{
+			Out.Text = bCivic ? TEXT("Choose a civic") : TEXT("Choose research");
+			Out.Tip = TEXT("Click to choose");
+			Progress = 0.f;
+			return;
+		}
+		const int32 Cost = bCivic ? G.civicCost(Cur) : G.techCost(Cur);
+		const int32 Have = static_cast<int32>((bCivic ? P.civics.progress : P.techs.progress)[static_cast<size_t>(Cur)].toInt());
+		const int32 Rate = FMath::Max(1, static_cast<int32>((bCivic ? G.culturePerTurn(Me()) : G.sciencePerTurn(Me())).toInt()));
+		Out.Text = FString::Printf(TEXT("%s  %d"), *Str((bCivic ? R.civics : R.techs)[static_cast<size_t>(Cur)].name), FMath::Max(1, (Cost - Have + Rate - 1) / Rate));
+		Out.Tip = FString::Printf(TEXT("%d of %d; turns left shown. Click to change"), Have, Cost);
+		Progress = Cost > 0 ? FMath::Clamp(static_cast<float>(Have) / Cost, 0.f, 1.f) : 0.f;
+	};
+	Tree(false, M.Research, M.ResearchProgress);
+	Tree(true, M.Civic, M.CivicProgress);
+	M.Government = {"government", TEXT(""), FString::Printf(TEXT("Government: %s. Policies and dedications (F2)"),
+		P.government == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(P.government)].name)), FSovStyle::Text, EKeys::F2};
+	const int32 EraIndex = FMath::Clamp(S.gameEra, 0, static_cast<int32>(R.eras.size()) - 1);
+	M.Turn = {"era", FString::Printf(TEXT("Turn %d   %s"), S.turn, *Str(R.eras[static_cast<size_t>(EraIndex)].name)),
+		FString::Printf(TEXT("Turn %d of %d; the world is in the %s era. F1: how to play"), S.turn, G.turnLimit(), *Str(R.eras[static_cast<size_t>(EraIndex)].name))};
+	// The selected unit, and a button for each thing it can do.
+	if (const sov::Unit* U = S.unit(SelectedUnit); U && U->owner == Me())
+	{
+		const sov::UnitType& T = R.units[static_cast<size_t>(U->type)];
+		M.bUnit = true;
+		M.UnitName = G.isLeader(*U) ? Str(P.leaderName) : U->greatPerson != sov::kNone ? Str(R.greatPeople[static_cast<size_t>(U->greatPerson)].name) : Str(T.name);
+		M.UnitSub = Str(T.name);
+		if (!T.promotionClass.empty()) M.UnitSub += FString::Printf(TEXT(", level %d"), U->level());
+		if (const sov::Unit* E = G.isLeader(*U) ? G.escortOf(*U) : nullptr) M.UnitSub += FString::Printf(TEXT(", escorted by %s"), *Str(R.units[static_cast<size_t>(E->type)].name));
+		if (!U->promotions.empty())
+		{
+			FString Promos;
+			for (sov::TypeIndex Pr : U->promotions) Promos += (Promos.IsEmpty() ? TEXT("") : TEXT(", ")) + Str(R.promotions[static_cast<size_t>(Pr)].name);
+			M.UnitSub += TEXT(". ") + Promos;
+		}
+		M.UnitHealth = FMath::Clamp(U->hp / 100.f, 0.f, 1.f);
+		M.UnitStats.Add({"health", FString::FromInt(U->hp), TEXT("Health")});
+		M.UnitStats.Add({"moves", FString::Printf(TEXT("%s/%d"), *Str(U->movesLeft.toString()), G.maxMoves(*U)), TEXT("Moves left this turn")});
+		if (G.meleeStrength(*U) > 0) M.UnitStats.Add({"strength", FString::FromInt(G.meleeStrength(*U)), TEXT("Combat strength")});
+		if (G.rangedStrength(*U) > 0) M.UnitStats.Add({"ranged", FString::Printf(TEXT("%d (range %d)"), G.rangedStrength(*U), G.unitRange(*U)), TEXT("Ranged strength")});
+		if (!T.promotionClass.empty()) M.UnitStats.Add({"experience", FString::Printf(TEXT("%d/%d"), U->xp, G.xpForNextLevel(*U)), TEXT("Experience toward the next promotion")});
+		if (T.buildCharges > 0) M.UnitStats.Add({"build", FString::FromInt(U->charges), TEXT("Build charges left")});
+		const bool bTurn = MyTurn();
+		auto Act = [&](FName Icon, const FString& Label, FKey Key, bool bOn = true) { M.UnitActions.Add({Icon, Label, Key, bOn && bTurn}); };
+		if (T.foundCity) Act("found", TEXT("Found a city here (F)"), EKeys::F);
+		if (T.buildCharges > 0) Act("build", TEXT("Build an improvement or harvest here (B)"), EKeys::B);
+		if (T.id == "UNIT_TRADER") Act("trade", FString::Printf(TEXT("Start a trade route (F): %d of %d in use"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me())), EKeys::F);
+		if (T.foundReligion) Act("religion", TEXT("Found a religion, on a Holy Site (F)"), EKeys::F);
+		if (U->religion >= 0) Act("religion", TEXT("Spread the religion here (F)"), EKeys::F);
+		if (U->greatPerson != sov::kNone) Act("greatperson", TEXT("Use this great person here (F)"), EKeys::F, G.canActivateGreatPerson(U->id));
+		const bool bCanPromote = !G.availablePromotions(U->id).empty() || (T.upgradesTo != sov::kNone && G.upgradeProblem(U->id) == sov::CommandError::Ok);
+		if (!T.promotionClass.empty() || G.isLeader(*U)) Act("promote", TEXT("Promote or upgrade (U)"), EKeys::U, bCanPromote);
+		if (G.isLeader(*U))
+		{
+			Act("gear", TEXT("Change weapon, armour or mount, in your city (E)"), EKeys::E);
+			Act("link", TEXT("Link or release the escort on this plot (L)"), EKeys::L);
+			Act("streets", TEXT("Walk this city's streets (Q)"), EKeys::Q, S.cityAt(U->pos) && S.cityAt(U->pos)->owner == Me());
+		}
+		else if (T.layer == sov::UnitLayer::Military && S.unitAt(U->pos, sov::UnitLayer::Leader, R))
+		{
+			Act("link", TEXT("Escort the leader on this plot (L)"), EKeys::L);
+		}
+		Act(T.layer == sov::UnitLayer::Military ? FName("fortify") : FName("sleep"), T.layer == sov::UnitLayer::Military ? TEXT("Fortify (G)") : TEXT("Sleep (G)"), EKeys::G);
+		Act("skip", TEXT("Skip this unit's turn (K)"), EKeys::K);
+	}
+	// The open chooser, every line clickable.
+	if (Chooser != EChooser::None)
+	{
+		M.bChooser = true;
+		M.ChooserTitle = ChooserTitle;
+		for (const FChoice& Ch : Choices) M.Choices.Add(Ch.Label);
+	}
+	// End turn: what stands in the way, if anything.
+	M.bMyTurn = MyTurn();
+	if (!M.bMyTurn)
+	{
+		const sov::Player& Cur = S.players[static_cast<size_t>(S.currentPlayer)];
+		M.TurnLabel = TEXT("Please wait");
+		M.TurnDetail = FString::Printf(TEXT("%s is playing"), Cur.leaderName.empty() ? TEXT("Another player") : *Str(Cur.leaderName));
+	}
+	else
+	{
+		switch (G.validate(sov::Command::endTurn(Me())))
+		{
+			case sov::CommandError::Ok: M.TurnLabel = TEXT("End turn"); M.bTurnReady = true; break;
+			case sov::CommandError::UnitsNeedOrders:
+				M.TurnLabel = TEXT("Unit needs orders");
+				M.TurnDetail = FString::Printf(TEXT("%d unit(s) waiting: click to select the next"), static_cast<int32>(G.unitsNeedingOrders(Me()).size()));
+				break;
+			case sov::CommandError::ProductionNeeded: M.TurnLabel = TEXT("Choose production"); M.TurnDetail = TEXT("A city has nothing to build"); break;
+			case sov::CommandError::ResearchNeeded: M.TurnLabel = TEXT("Choose research"); break;
+			case sov::CommandError::CivicNeeded: M.TurnLabel = TEXT("Choose a civic"); break;
+			case sov::CommandError::LeaderNeeded: M.TurnLabel = TEXT("Choose a successor"); M.TurnDetail = TEXT("The throne is empty"); break;
+			default: M.TurnLabel = TEXT("End turn"); break;
+		}
+		if (M.bTurnReady) M.TurnDetail = FString::Printf(TEXT("Turn %d"), S.turn);
+	}
+	GameUI->SetModel(M);
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
+	{
+		Hud->TopInset = 46.f;
+		Hud->BottomInset = M.bUnit ? 236.f : 0.f;
+	}
+}
+
 void ASovPlayerController::UpdatePanel()
 {
 	ASovHUD* Hud = Cast<ASovHUD>(GetHUD());
@@ -2039,7 +2195,8 @@ void ASovPlayerController::UpdatePanel()
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::Rules& R = G.rules();
 	const sov::GameState& S = G.state();
-	if (const sov::Unit* U = S.unit(SelectedUnit))
+	// With the game screen's widgets up, the unit panel and the chooser are theirs (plan D).
+	if (const sov::Unit* U = GameUI.IsValid() ? nullptr : S.unit(SelectedUnit))
 	{
 		const sov::UnitType& T = R.units[static_cast<size_t>(U->type)];
 		const FString Name = G.isLeader(*U)                     ? Str(S.players[static_cast<size_t>(U->owner)].leaderName)
@@ -2154,7 +2311,7 @@ void ASovPlayerController::UpdatePanel()
 		if (G.fearActive(*C)) L.Add(FString::Printf(TEXT("Fear: order for %d more turn(s)"), C->fearUntil - G.state().turn));
 		else if (G.state().turn < C->fearAfterUntil) L.Add(FString::Printf(TEXT("Resentment after Fear: %d more turn(s)"), C->fearAfterUntil - G.state().turn));
 	}
-	if (Chooser != EChooser::None)
+	if (Chooser != EChooser::None && !GameUI.IsValid())
 	{
 		const int32 Pages = (Choices.Num() + PageSize - 1) / PageSize;
 		L.Add(FString::Printf(TEXT("%s%s  (1-9 pick, Esc close)"), *ChooserTitle,
@@ -2194,7 +2351,7 @@ void ASovPlayerController::UpdatePanel()
 		L.Add(TEXT("B fight it live   R auto-resolve"));
 		return;
 	}
-	if (MyTurn())
+	if (MyTurn() && !GameUI.IsValid())  // the widgets show the turn, the unit's actions and the end-turn button
 	{
 		const size_t Waiting = G.unitsNeedingOrders(Me()).size();
 		L.Add(FString::Printf(TEXT("Your turn. %d unit(s) need orders.   Space end turn   . next unit   T research   C civics   Y great people   O city-states   N diplomacy   F2 government   Z governors   I pantheon   J assassins   WASD/wheel camera"),
@@ -2239,6 +2396,9 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	// The widgets show the state as this frame begins; the keys their buttons pressed are read below, then let go.
+	UpdateGameUI();
+	ON_SCOPE_EXIT { UIKeys.Reset(); };
 	if (InBattle())
 	{
 		UpdateBattle(DeltaTime);

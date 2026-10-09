@@ -24,6 +24,8 @@ public:
 	bool bShowHelp = false;
 	// F4: the chronicle of the viewer's reign so far (player-retention §2).
 	bool bShowChronicle = false;
+	// Room the game screen's widgets take (plan D): the top bar, and the unit panel at the bottom left.
+	float TopInset = 0.f, BottomInset = 0.f;
 
 protected:
 	void DrawStatus(const USovGameSubsystem& Sub, float& Y);

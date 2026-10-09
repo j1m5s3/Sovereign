@@ -66,6 +66,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString CurrentName = Current.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(Current.cityState)].name)
 		: Current.civ == sov::kNone ? FString(TEXT("Barbarians")) : Str(R.civs[static_cast<size_t>(Current.civ)].name);
 
+	if (TopInset <= 0.f)  // the top bar shows the turn
 	Line(FString::Printf(TEXT("Turn %d / %d   %s   %s%s   (F1 how to play)"), S.turn, G.turnLimit(), *Civ, *Str(G.difficulty().name),
 			 Sub.GetSession().IsHumanTurn() ? TEXT("") : TEXT("   (spectating)")),
 		16, Y);
@@ -85,13 +86,14 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 				 Uniques.IsEmpty() ? TEXT("-") : *Uniques.RightChop(2)),
 			16, Y, FLinearColor(0.85f, 0.8f, 0.6f));
 	}
+	if (TopInset <= 0.f)  // the top bar shows these
 	Line(FString::Printf(TEXT("Gold %s (%+s)   Science %s   Culture %s   Score %d"), *Str(P.gold.toString()),
 			 *Str(G.goldPerTurn(Me).toString()), *Str(G.sciencePerTurn(Me).toString()), *Str(G.culturePerTurn(Me).toString()), G.score(Me)),
 		16, Y);
 	const FString Research = P.techs.current == sov::kNone ? TEXT("none") : Str(R.techs[static_cast<size_t>(P.techs.current)].name);
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
 	const FString Gov = P.government == sov::kNone ? TEXT("none") : Str(R.governments[static_cast<size_t>(P.government)].name);
-	Line(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov), 16, Y);
+	if (TopInset <= 0.f) Line(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov), 16, Y);
 	// Faith and religion (06).
 	{
 		FString Faith = FString::Printf(TEXT("Faith %s"), *Str(P.faith.toString()));
@@ -677,7 +679,7 @@ void ASovHUD::DrawHUD()
 	Super::DrawHUD();
 	const UGameInstance* GI = GetGameInstance();
 	const USovGameSubsystem* Sub = GI ? GI->GetSubsystem<USovGameSubsystem>() : nullptr;
-	float Y = 12.f;
+	float Y = 12.f + TopInset;
 	// Online: the lobby until the host starts the game.
 	if (Sub && Sub->GetSession().InLobby())
 	{
@@ -749,7 +751,7 @@ void ASovHUD::DrawHUD()
 		float NY = Canvas->ClipY - 210.f;
 		for (const FString& L : Sub->NetLines) Line(L, Canvas->ClipX - 620.f, NY, FLinearColor(0.7f, 0.85f, 1.f));
 	}
-	float PY = Canvas->ClipY - 20.f - 18.f * PanelLines.Num();
+	float PY = Canvas->ClipY - 20.f - BottomInset - 18.f * PanelLines.Num();
 	for (const FString& L : PanelLines)
 	{
 		Line(L, 16, PY);

@@ -7,6 +7,8 @@ public class SovereignBridge : ModuleRules
 	public SovereignBridge(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// Each file builds on its own: several keep same-named helpers in anonymous namespaces.
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 		PrivateDependencyModuleNames.AddRange(new string[] { "SovereignCore", "ProceduralMeshComponent", "Slate", "SlateCore", "HTTP", "Sockets", "Networking" });

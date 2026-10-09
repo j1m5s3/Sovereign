@@ -10,6 +10,7 @@
 
 #include "SovBattleSim.h"
 #include "SovDiplomacy.h"
+#include "SovGameUI.h"
 
 #include "SovPlayerController.generated.h"
 
@@ -124,6 +125,11 @@ protected:
 	void ExitStreet();
 	void UpdateStreet(float DeltaTime);
 	void Pick(int32 Index);
+	void PickAbsolute(int32 Index);  // a chooser line by its place in the whole list (the clickable list)
+	// The game screen's widgets (plan D): filled each frame; their buttons press keys (UIKeys) that the
+	// order handling reads through Pressed, as if typed.
+	void UpdateGameUI();
+	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(Key) || UIKeys.Contains(Key); }
 	void UpdatePanel();
 	// Online and hot seat: the lobby, the hand-over screen, and the chat line (M).
 	// True when they took this frame's input.
@@ -190,6 +196,8 @@ protected:
 	TUniquePtr<FSovDiplomacyTalk> Talk;
 	TSharedPtr<SSovDiplomacyPanel> DiplomacyPanel;
 	bool bLeavingTalk = false;  // the summary is being written; the screen closes when it is in
+	TSharedPtr<SSovGameUI> GameUI;
+	TSet<FKey> UIKeys;  // keys pressed by the widgets this frame
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
 	int32 MenuDifficulty = 3;  // chosen on the main menu (Prince)
