@@ -934,6 +934,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			// 07: the Trader's destinations in range, with what each pays its city per turn.
 			ChooserTitle = FString::Printf(TEXT("Trade route (%d of %d in use, %d turns)"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me()), G.tradeRouteLength());
 			const sov::City* From = G.tradeOrigin(ReligionUnit);
+			const int32 FirstRoute = Choices.Num();
 			for (sov::CityId Dest : G.tradeDestinations(ReligionUnit))
 			{
 				const sov::City& D = *G.state().city(Dest);
@@ -947,8 +948,14 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						Pays += FString::Printf(TEXT(" +%s %s"), *Str(Y[k].toString()), Names[k]);
 					}
 				}
-				Choices.Add({FString::Printf(TEXT("%s%s:%s"), *Str(D.name), D.owner == Me() ? TEXT("") : TEXT(" (abroad)"), *Pays),
-					sov::Command::startTradeRoute(Me(), ReligionUnit, Dest)});
+				Choices.Add({Str(D.name), sov::Command::startTradeRoute(Me(), ReligionUnit, Dest), {}, Pays.TrimStart(), "trade",
+					D.owner == Me() ? TEXT("Domestic") : TEXT("International")});
+			}
+			{
+				TArray<FChoice> Made(Choices.GetData() + FirstRoute, Choices.Num() - FirstRoute);
+				Made.StableSort([](const FChoice& A, const FChoice& B) { return A.Section < B.Section; });
+				Choices.SetNum(FirstRoute);
+				Choices.Append(Made);
 			}
 			break;
 		}
@@ -1181,15 +1188,19 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 			for (sov::TypeIndex Pr : G.availablePromotions(U->id))
 			{
 				const sov::PromotionType& T = R.promotions[static_cast<size_t>(Pr)];
-				const FString Branch = T.branch.empty() ? FString() : FString::Printf(TEXT(" [%s]"), *Str(T.branch));
-				Choices.Add({FString::Printf(TEXT("%s%s"), *Str(T.name), *Branch), sov::Command::promote(Me(), U->id, Pr)});
+				FChoice Ch{Str(T.name), sov::Command::promote(Me(), U->id, Pr), {}, FString::Printf(TEXT("tier %d"), T.tier), "promote",
+					T.branch.empty() ? FString(TEXT("Promotions")) : Str(T.branch)};
+				Ch.Tip = SovPromotionText(R, Pr);
+				Choices.Add(Ch);
 			}
 			// Upgrade to the next unit in the line (05: Upgrades), in our territory for gold.
 			const sov::TypeIndex To = R.units[static_cast<size_t>(U->type)].upgradesTo;
 			if (To != sov::kNone && G.upgradeProblem(U->id) == sov::CommandError::Ok)
 			{
-				Choices.Add({FString::Printf(TEXT("Upgrade to %s (%d gold)"), *Str(R.units[static_cast<size_t>(To)].name), G.upgradeCost(*U)),
-					sov::Command::upgradeUnit(Me(), U->id)});
+				FChoice Ch{FString::Printf(TEXT("Upgrade to %s"), *Str(R.units[static_cast<size_t>(To)].name)), sov::Command::upgradeUnit(Me(), U->id), {},
+					FString::Printf(TEXT("%d gold"), G.upgradeCost(*U)), "gold", TEXT("Upgrade")};
+				Ch.Tip = SovUnitText(R, To);
+				Choices.Add(Ch);
 			}
 			break;
 		}
@@ -1212,7 +1223,9 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				const sov::Command Build = sov::Command::buildImprovement(Me(), U->id, static_cast<sov::TypeIndex>(I));
 				if (G.validate(Build) == sov::CommandError::Ok)
 				{
-					Choices.Add({Str(R.improvements[I].name), Build});
+					FChoice Ch{Str(R.improvements[I].name), Build, {}, TEXT(""), "build", TEXT("Improvements")};
+					Ch.Tip = SovImprovementText(R, static_cast<sov::TypeIndex>(I));
+					Choices.Add(Ch);
 				}
 			}
 			const sov::Command Harvest = sov::Command::harvest(Me(), U->id);

@@ -244,3 +244,104 @@ FString SovUnitText(const sov::Rules& R, sov::TypeIndex Unit)
 	if (U.replaces != sov::kNone && static_cast<size_t>(U.replaces) < R.units.size()) Parts.Add(TEXT("replaces the ") + Str(R.units[static_cast<size_t>(U.replaces)].name));
 	return FString::Join(Parts, TEXT(", "));
 }
+
+namespace
+{
+// One combat condition as words, or empty when it has none worth saying.
+FString Situation(const sov::Rules& R, const sov::CombatCondition& C)
+{
+	FString S;
+	switch (C.atom)
+	{
+		case sov::CombatAtom::Attacking: return C.negate ? TEXT("when defending") : TEXT("when attacking");
+		case sov::CombatAtom::VsClass: S = TEXT("against ") + ClassName(C.value) + TEXT(" units"); break;
+		case sov::CombatAtom::VsDistrict: S = TEXT("against cities and districts"); break;
+		case sov::CombatAtom::CombatType: S = C.arg == 0 ? TEXT("in melee") : TEXT("in ranged combat"); break;
+		case sov::CombatAtom::TileHills: S = TEXT("on hills"); break;
+		case sov::CombatAtom::TileFeature:
+			S = C.ref >= 0 && static_cast<size_t>(C.ref) < R.features.size() ? TEXT("in ") + Str(R.features[static_cast<size_t>(C.ref)].name).ToLower() : FString(TEXT("in woods or rainforest"));
+			break;
+		case sov::CombatAtom::OpponentFortified: S = TEXT("against fortified units"); break;
+		case sov::CombatAtom::OpponentWounded: S = TEXT("against wounded units"); break;
+		case sov::CombatAtom::DistrictTile: S = TEXT("in a district"); break;
+		case sov::CombatAtom::OwnTerritory: S = TEXT("in your territory"); break;
+		case sov::CombatAtom::AdjacentSameUnit: S = TEXT("next to a unit of its kind"); break;
+		case sov::CombatAtom::InFormation: S = TEXT("as a Corps or Army"); break;
+		case sov::CombatAtom::TileFort: S = TEXT("in a fort"); break;
+		case sov::CombatAtom::CoastalTile: S = TEXT("on the coast"); break;
+		case sov::CombatAtom::TileFlat: S = TEXT("on flat land"); break;
+		case sov::CombatAtom::TileRoad: S = TEXT("on a road"); break;
+		case sov::CombatAtom::NearOwnTerritory: S = TEXT("near your territory"); break;
+		default: return FString();
+	}
+	return C.negate ? TEXT("not ") + S : S;
+}
+}  // namespace
+
+FString SovPromotionText(const sov::Rules& R, sov::TypeIndex Promotion)
+{
+	if (Promotion < 0 || static_cast<size_t>(Promotion) >= R.promotions.size()) return FString();
+	TArray<FString> Parts;
+	for (const sov::UnitEffect& E : R.promotions[static_cast<size_t>(Promotion)].effects)
+	{
+		FString T;
+		const FString A = FString::Printf(TEXT("%+d"), E.amount);
+		switch (E.kind)
+		{
+			case sov::UnitEffectKind::Strength: T = A + TEXT(" Combat Strength"); break;
+			case sov::UnitEffectKind::Moves: T = A + TEXT(" movement"); break;
+			case sov::UnitEffectKind::Range: T = A + TEXT(" range"); break;
+			case sov::UnitEffectKind::Sight: T = A + TEXT(" sight"); break;
+			case sov::UnitEffectKind::Attacks: T = A + TEXT(" attack(s) a turn"); break;
+			case sov::UnitEffectKind::XpPercent: T = A + TEXT("% experience"); break;
+			case sov::UnitEffectKind::FlankingPercent: T = A + TEXT("% flanking bonus"); break;
+			case sov::UnitEffectKind::SupportPercent: T = A + TEXT("% support bonus"); break;
+			case sov::UnitEffectKind::MoveAfterAttack: T = TEXT("can move after attacking"); break;
+			case sov::UnitEffectKind::AttackAfterMove: T = TEXT("can attack after moving"); break;
+			case sov::UnitEffectKind::IgnoreZoc: T = TEXT("ignores zones of control"); break;
+			case sov::UnitEffectKind::NoRiverPenalty: T = TEXT("no penalty attacking across rivers"); break;
+			case sov::UnitEffectKind::NoWoundedPenalty: T = TEXT("no strength lost when wounded"); break;
+			case sov::UnitEffectKind::HealAfterAction: T = TEXT("heals even after moving or attacking"); break;
+			case sov::UnitEffectKind::IgnoreBorders: T = TEXT("may enter foreign territory"); break;
+			case sov::UnitEffectKind::IgnoreHills: T = TEXT("hills cost 1 movement"); break;
+			case sov::UnitEffectKind::IgnoreForest: T = TEXT("woods cost no extra movement"); break;
+			case sov::UnitEffectKind::IgnoreTerrain: T = TEXT("all land costs 1 movement"); break;
+			case sov::UnitEffectKind::FreeEmbark: T = TEXT("embarking costs no extra movement"); break;
+			case sov::UnitEffectKind::SeesThroughFeatures: T = TEXT("sees through woods and rainforest"); break;
+			case sov::UnitEffectKind::HealNeutral: T = A + TEXT(" healing in neutral land"); break;
+			case sov::UnitEffectKind::HealEnemy: T = A + TEXT(" healing in enemy land"); break;
+			case sov::UnitEffectKind::HealOnKill: T = A + TEXT(" HP when it destroys a unit"); break;
+			case sov::UnitEffectKind::PlunderPercent: T = A + TEXT("% from pillaging"); break;
+			case sov::UnitEffectKind::AuraStrength: T = A + TEXT(" to the leader's aura"); break;
+			case sov::UnitEffectKind::AssassinDefense: T = A + TEXT(" defence against assassins"); break;
+			case sov::UnitEffectKind::CityProduction: T = A + TEXT(" Production in the city the leader is in"); break;
+			case sov::UnitEffectKind::CityAmenities: T = A + TEXT(" Amenities in the city the leader is in"); break;
+			case sov::UnitEffectKind::AuraLoyalty: T = A + TEXT(" Loyalty a turn where the leader stands"); break;
+			case sov::UnitEffectKind::Hidden: T = TEXT("hidden from most units"); break;
+			default: break;
+		}
+		if (T.IsEmpty()) continue;
+		TArray<FString> When;
+		for (const std::vector<sov::CombatCondition>& Group : E.when)
+		{
+			TArray<FString> Any;
+			for (const sov::CombatCondition& C : Group)
+				if (const FString S = Situation(R, C); !S.IsEmpty()) Any.AddUnique(S);
+			if (Any.Num() > 0) When.Add(FString::Join(Any, TEXT(" or ")));
+		}
+		Parts.Add(When.Num() > 0 ? T + TEXT(" ") + FString::Join(When, TEXT(", ")) : T);
+	}
+	return FString::Join(Parts, TEXT("; "));
+}
+
+FString SovImprovementText(const sov::Rules& R, sov::TypeIndex Improvement)
+{
+	if (Improvement < 0 || static_cast<size_t>(Improvement) >= R.improvements.size()) return FString();
+	const sov::ImprovementType& I = R.improvements[static_cast<size_t>(Improvement)];
+	TArray<FString> Parts;
+	for (size_t y = 0; y < sov::kNumYields; ++y)
+		if (I.yields[y] != sov::Fixed()) Parts.Add(Amount(I.yields[y]) + TEXT(" ") + YieldName(static_cast<sov::YieldType>(y)));
+	if (I.housing != sov::Fixed()) Parts.Add(Amount(I.housing) + TEXT(" Housing"));
+	if (I.appeal) Parts.Add(FString::Printf(TEXT("%+d Appeal to its neighbours"), I.appeal));
+	return FString::Join(Parts, TEXT("; "));
+}

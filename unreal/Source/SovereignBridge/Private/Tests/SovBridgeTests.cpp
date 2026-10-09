@@ -1224,6 +1224,15 @@ bool FSovDescribeTest::RunTest(const FString& Parameters)
 		if (b % 15 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.buildings[b].name.c_str()), *T));
 	}
 	for (size_t u = 0; u < R.units.size(); u += 20) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.units[u].name.c_str()), *SovUnitText(R, static_cast<sov::TypeIndex>(u))));
+	// Most promotions say what they do.
+	int32 Promos = 0;
+	for (size_t p = 0; p < R.promotions.size(); ++p)
+	{
+		const FString T = SovPromotionText(R, static_cast<sov::TypeIndex>(p));
+		Promos += !T.IsEmpty();
+		if (p % 25 == 0) AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.promotions[p].name.c_str()), *T));
+	}
+	TestTrue(TEXT("most promotions have a description"), Promos * 2 > static_cast<int32>(R.promotions.size()));
 	for (size_t g = 0; g < R.governments.size(); ++g)
 		AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.governments[g].name.c_str()), *SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g))));
 	return true;

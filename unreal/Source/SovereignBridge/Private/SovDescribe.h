@@ -14,3 +14,7 @@ FString SovSourceText(const sov::Rules& R, sov::ModSource Kind, sov::TypeIndex I
 FString SovBuildingText(const sov::Rules& R, sov::TypeIndex Building);
 // A unit in words: strength, ranged strength and range, moves, and what it replaces.
 FString SovUnitText(const sov::Rules& R, sov::TypeIndex Unit);
+// A promotion in words: each effect, with the situations it holds in ("+7 Combat Strength when attacking").
+FString SovPromotionText(const sov::Rules& R, sov::TypeIndex Promotion);
+// An improvement in words: its yields, housing and appeal.
+FString SovImprovementText(const sov::Rules& R, sov::TypeIndex Improvement);
