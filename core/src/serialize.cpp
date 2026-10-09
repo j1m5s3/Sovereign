@@ -401,6 +401,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.park);
         w.boolean(p.routePillaged);
         w.u8(p.industry);
+        w.u8(p.products);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -851,6 +852,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.routePillaged = r.boolean();
         p.industry = r.u8();
         if (p.industry > 2) return false;
+        p.products = r.u8();
+        if (p.products > 3) return false;
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;

@@ -202,8 +202,10 @@ public:
     // (LEVY_MILITARY_PERCENT_OF_UNIT_PURCHASE_COST of their purchase cost; -1: not possible).
     int levyCost(PlayerId player, PlayerId cityState) const;
     // Monopolies and Corporations mode (07): why an Industry (or a Corporation) may not be made at the plot (Ok when it
-    // may), the luxuries the player holds a monopoly of, and how many of a luxury's improved sources it owns.
+    // may), why a Great Merchant may not make a Product in a Corporation's city, the luxuries the player holds a
+    // monopoly of, and how many of a luxury's improved sources it owns.
     CommandError industryProblem(PlayerId player, Hex plot) const;
+    CommandError productProblem(PlayerId player, UnitId merchant) const;
     bool hasMonopoly(PlayerId player, TypeIndex luxury) const;
     int monopolySources(PlayerId player) const;  // improved sources of all its monopolies
     // Barbarian Clans mode (01: Barbarians): what dealing with a camp costs, and why it may not be done (Ok when it may).
@@ -896,6 +898,7 @@ private:
     TypeIndex campUnitType(const Camp& camp, bool ranged, Domain& domain) const;  // the unit the camp would raise
     void applyClan(const Command& c);
     void applyIndustry(const Command& c);
+    void applyProduct(const Command& c);
     void convertCamp(int32_t camp);  // the camp becomes a city-state  // false when no Scout can be placed
     bool isBarbarianScout(const Unit& u) const;
     void barbarianScoutAct(UnitId id);
@@ -1065,6 +1068,7 @@ private:
     // none).
     const Player* cityStateOfType(TypeIndex type) const;
     TypeIndex products_[4] = {};  // Toys, Cosmetics, Jeans, Perfume: the luxury corporations' products (07)
+    TypeIndex productWork_ = kNone;  // PRODUCT: a Corporation's Great Work (Monopolies mode, 07)
     TypeIndex spices_[2] = {kNone, kNone};  // Cinnamon and Cloves: Zanzibar's suzerain holds a copy of each (08)
     TypeIndex oceanTerrain_ = kNone;          // TERRAIN_OCEAN: sailed once the owner may enter the Ocean
     TypeIndex encampment_ = kNone;            // DISTRICT_ENCAMPMENT: exerts zone of control like a city (markZoc)
@@ -1180,6 +1184,7 @@ private:
     bool usedBy(PlayerId player, Gp g) const;    // the player has used it
     bool codedGreatPerson(TypeIndex person) const;
     int extraPalaceSlots(const City& city, TypeIndex building) const;  // Giovanni de' Medici: +2 in each Bank (07)
+    int extraProductSlots(TypeIndex building) const;  // Stock Exchange and Seaport: +3 PRODUCT slots in Monopolies mode (07)
     static uint32_t bit(W w) { return 1u << static_cast<unsigned>(w); }
     uint32_t heldWonders(PlayerId player, uint32_t which) const;  // bit(w) for each of the wonders in `which` the player holds
     void grantTorreBuildings(PlayerId player);     // Torre de Belém's one-time buildings

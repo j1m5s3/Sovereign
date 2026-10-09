@@ -20,6 +20,7 @@ int speedPercent(const GameState& s, const Rules& r) {
 }
 
 constexpr int kBonusAmenityCities = 4;  // Buenos Aires' bonus resources reach as many cities as most luxuries (Sovereign reading)
+constexpr uint8_t kProductsPerCorporation = 3;  // Products a Corporation may make (07; Sovereign)
 }  // namespace
 
 // ------------------------------------------------------------------ queries
@@ -632,8 +633,10 @@ void Game::applyBuilder(const Command& c) {
 // Monopolies and Corporations mode (07; Sovereign values, the spec gives only the outline). After Economics a Builder
 // makes an Industry on an improved luxury the player owns, one per luxury type; after Electricity it turns the
 // Industry into a Corporation. An Industry gives +2 Gold on its plot and +10% Gold in its city, a Corporation +4 Gold
-// and +2 Production and +20%. Owning 60% or more of a luxury's improved sources in the world (at least 2) is a
-// Monopoly: +3 Gold and +2 Tourism a turn for each of those sources.
+// and +2 Production and +20%. A Great Merchant in a Corporation's city makes a Product, a Great Work (+2 Gold, 4
+// Tourism, +10% Gold in the city that holds it) in a Stock Exchange or Seaport slot; each Corporation makes three.
+// Owning 60% or more of a luxury's improved sources in the world (at least 2) is a Monopoly: +3 Gold and +2 Tourism a
+// turn for each of those sources.
 CommandError Game::industryProblem(PlayerId player, Hex at) const {
     const Plot& p = state_.plot(at);
     if (!state_.setup.monopolies || p.owner != player || p.city == kNoCity || p.resource == kNone || p.pillagedTurns > 0)
@@ -665,6 +668,39 @@ void Game::applyIndustry(const Command& c) {
         state_.units.erase(std::remove_if(state_.units.begin(), state_.units.end(), [&](const Unit& x) { return x.id == gone; }), state_.units.end());
     }
     if (City* city = state_.city(cityId)) assignCitizens(*city);
+}
+
+CommandError Game::productProblem(PlayerId player, UnitId merchant) const {
+    if (!state_.setup.monopolies || productWork_ == kNone) return CommandError::CannotActivate;
+    const Unit* u = state_.unit(merchant);
+    if (!u || u->owner != player || u->greatPerson == kNone || u->charges <= 0) return CommandError::CannotActivate;
+    const GreatPersonType& g = rules_->greatPeople[static_cast<size_t>(u->greatPerson)];
+    if (rules_->greatPersonClasses[static_cast<size_t>(g.cls)].id != "GREAT_PERSON_CLASS_MERCHANT") return CommandError::CannotActivate;
+    const Plot& here = state_.plot(u->pos);
+    const City* city = here.city != kNoCity ? state_.city(here.city) : nullptr;
+    if (!city || city->owner != player || freeGreatWorkSlot(*city, productWork_) == kNone) return CommandError::CannotActivate;
+    for (const Plot& q : state_.plots) {
+        if (q.city == city->id && q.industry == 2 && q.pillagedTurns == 0 && q.products < kProductsPerCorporation) return CommandError::Ok;
+    }
+    return CommandError::CannotActivate;
+}
+
+void Game::applyProduct(const Command& c) {
+    Unit* u = state_.unit(c.id);
+    City& city = *state_.city(state_.plot(u->pos).city);
+    GreatWork w;
+    w.type = productWork_;
+    w.building = freeGreatWorkSlot(city, productWork_);
+    w.creator = u->greatPerson;
+    city.greatWorks.push_back(w);
+    for (Plot& q : state_.plots) {
+        if (q.city == city.id && q.industry == 2 && q.pillagedTurns == 0 && q.products < kProductsPerCorporation) {
+            ++q.products;
+            break;
+        }
+    }
+    removeUnit(c.id);
+    refreshVisibility(c.player);
 }
 
 bool Game::hasMonopoly(PlayerId player, TypeIndex luxury) const {

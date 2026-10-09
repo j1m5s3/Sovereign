@@ -609,12 +609,17 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     const int loyaltyYield = loyal ? loyal->yieldPercent : 0;  // Wavering -25% ... Unrest -100% [R&F]
 
     const bool kilwa = holdsWonder(c->owner, W::Kilwa);
-    int industries = 0;
+    int industries = 0, products = 0;
     if (state_.setup.monopolies) {
         state_.grid.forEachWithin(c->pos, 3, [&](Hex h) {
             const Plot& q = state_.plot(h);
             industries += q.city == c->id && q.pillagedTurns == 0 ? 10 * q.industry : 0;
         });
+        if (productWork_ != kNone) {
+            for (const GreatWork& w : c->greatWorks) {
+                products += w.type == productWork_ && !buildingIdle(*c, *rules_, w.building) ? 10 : 0;
+            }
+        }
     }
     // Ibn Khaldun (07): +4% (Ecstatic) or +2% (Happy) to every yield but Food.
     int khaldun = 0;
@@ -627,7 +632,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     for (size_t i = 0; i < kNumYields; ++i) {
         int pct = 100 + static_cast<int>(percents[i].toInt());
         if (i != idx(YieldType::Food)) pct += khaldun;
-        if (i == idx(YieldType::Gold)) pct += industries;  // 07: +10% per Industry, +20% per Corporation in the city
+        if (i == idx(YieldType::Gold)) pct += industries + products;  // 07: +10% per Industry, +20% per Corporation, +10% per Product
         // Kilwa Kisiwani (03: Wonders): Science, Culture, Faith or Gold by suzerainties of the matching kind.
         if (kilwa) {
             static const std::pair<YieldType, CityStateKind> kKilwa[] = {{YieldType::Science, CityStateKind::Scientific}, {YieldType::Culture, CityStateKind::Cultural},

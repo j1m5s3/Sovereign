@@ -2381,12 +2381,14 @@ void upgrades(View& v) {
     }
 }
 
-// Great people: used where they stand when they can be, otherwise walked to the best of the plots
-// that suit them (a city with a free Great Work slot, their district, a wonder being built, a luxury,
-// the most Mountains or Rainforest beside it, a city-state's land, a city), the nearest among equals.
+// Great people: used where they stand when they can be (a Product first, in Monopolies mode), otherwise
+// walked to the best of the plots that suit them (a Corporation's city, a city with a free Great Work
+// slot, their district, a wonder being built, a luxury, the most Mountains or Rainforest beside it, a
+// city-state's land, a city), the nearest among equals.
 void greatPerson(View& v, UnitId id) {
     Game& g = v.game;
     const Unit* u = v.s().unit(id);
+    if (v.s().setup.monopolies && g.submit(Command::createProduct(v.me, id)) == CommandError::Ok) return;
     if (g.canActivateGreatPerson(id)) {
         g.submit(Command::activateGreatPerson(v.me, id));
         return;
@@ -2425,8 +2427,17 @@ void greatPerson(View& v, UnitId id) {
         const TerrainType& t = v.r.terrains[at(pl.terrain)];
         return !t.impassable && t.water == afloat && (pl.feature == kNone || !v.r.features[at(pl.feature)].impassable);
     };
+    const bool merchant = v.r.greatPersonClasses[at(gp.cls)].id == "GREAT_PERSON_CLASS_MERCHANT";
     for (CityId cid : v.cities) {
         const City& c = *v.s().city(cid);
+        if (v.s().setup.monopolies && merchant) {
+            // A Product in a Corporation's city, before the merchant's own district (07).
+            bool corp = false;
+            for (const Plot& q : v.s().plots) {
+                corp = corp || (q.city == cid && q.industry == 2 && q.pillagedTurns == 0 && q.products < 3);
+            }
+            if (corp && g.freeGreatWorkSlot(c, v.r.greatWorkType("PRODUCT")) != kNone) consider(c.pos, 2);
+        }
         if (gp.greatWorkCount > 0) {
             if (g.freeGreatWorkSlot(c, gp.greatWorkType) != kNone) consider(c.pos, 1);
         } else if (gp.incompleteWonder) {

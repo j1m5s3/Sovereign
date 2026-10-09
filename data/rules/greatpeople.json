@@ -4081,6 +4081,15 @@
     "RELIC",
     "PALACE"
    ]
+  },
+  {
+   "id": "PRODUCT",
+   "yield": "GOLD",
+   "amount": 2,
+   "tourism": 4,
+   "slots": [
+    "PRODUCT"
+   ]
   }
  ]
 }
