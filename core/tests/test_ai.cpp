@@ -40,6 +40,12 @@ void learn(GameState& s, PlayerId p, const char* tech) {
     pl.techs.resize(rules().techs.size());
     pl.techs.done[at(rules().tech(tech))] = 1;
 }
+
+void learnCivic(GameState& s, PlayerId p, const char* civic) {
+    Player& pl = s.players[at(p)];
+    Game::fitPlayerToRules(pl, rules());
+    pl.civics.done[at(rules().civic(civic))] = 1;
+}
 }  // namespace
 
 TEST(ai_founds_capital_and_fills_every_order) {
@@ -365,13 +371,21 @@ TEST(ai_builders_work_what_they_can_reach) {
         s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
         const UnitId builder = addUnit(s, "UNIT_BUILDER", 0, {6, 6});
         auto g = Game::fromScenario(rules(), std::move(s));
-        ai::playTurn(*g);
-        const Unit* u = g->state().unit(builder);
-        REQUIRE(u);
-        CHECK(u->pos.x < 7);
-        CHECK(u->pos != (Hex{6, 6}));
-        CHECK(g->state().plot(u->pos).improvement != kNone);
-        for (const Hex& h : island) CHECK(g->state().plot(h).improvement == kNone);
+        if (sailing) {
+            // After Sailing it embarks for the island's Wine, rather than wait on it or farm the mainland.
+            for (int i = 0; i < 3; ++i) ai::playTurn(*g);
+            bool islandImproved = false;
+            for (const Hex& h : island) islandImproved = islandImproved || g->state().plot(h).improvement != kNone;
+            CHECK(islandImproved);
+        } else {
+            ai::playTurn(*g);
+            const Unit* u = g->state().unit(builder);
+            REQUIRE(u);
+            CHECK(u->pos.x < 7);
+            CHECK(u->pos != (Hex{6, 6}));
+            CHECK(g->state().plot(u->pos).improvement != kNone);
+            for (const Hex& h : island) CHECK(g->state().plot(h).improvement == kNone);
+        }
     }
 }
 
@@ -400,8 +414,17 @@ TEST(ai_builders_embark_for_sea_resources) {
         s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
         addUnit(s, "UNIT_BUILDER", 0, {6, 6});
         auto g = Game::fromScenario(rules(), std::move(s));
-        for (int i = 0; i < 2; ++i) ai::playTurn(*g);
-        CHECK(g->state().plot(pearls).improvement == rules().improvement("IMPROVEMENT_FISHING_BOATS"));
+        for (int i = 0; i < 3; ++i) ai::playTurn(*g);
+        if (withIsland) {
+            // After Sailing the island is in reach by embarking, so the Horses outrank Pearls.
+            bool islandImproved = false;
+            for (const Hex& h : g->state().grid.within({6, 6}, 3)) {
+                if (h.x >= 8) islandImproved = islandImproved || g->state().plot(h).improvement != kNone;
+            }
+            CHECK(islandImproved);
+        } else {
+            CHECK(g->state().plot(pearls).improvement == rules().improvement("IMPROVEMENT_FISHING_BOATS"));
+        }
     }
 }
 
@@ -558,6 +581,79 @@ TEST(ai_trains_builders_for_plots_other_cities_work) {
     CHECK(trainsBuilder(0, 4, false));
     CHECK(!trainsBuilder(0, 4, true));
     CHECK(trainsBuilder(3, 0, true));
+}
+
+// Two spent Builders fill the training floor, so a city does not queue another; with gold it still buys one while
+// plots wait, and without gold it does not.
+TEST(ai_buys_a_builder_when_plots_wait) {
+    const auto bought = [](int gold) {
+        GameState s = flatState(20, 14, 1);
+        s.turn = 20;
+        addCity(s, 0, {6, 6}, true, 4);
+        s.cities[0].queue.clear();
+        s.cities[0].queue.push_back({ProductionKind::Building, rules().building("BUILDING_MONUMENT")});
+        for (const Hex& h : s.grid.within({6, 6}, 1)) {
+            if (h != Hex{6, 6}) s.cities[0].worked.push_back(s.grid.index(h));
+        }
+        std::sort(s.cities[0].worked.begin(), s.cities[0].worked.end());
+        addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+        addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        addUnit(s, "UNIT_BUILDER", 0, {7, 6});
+        for (Unit& u : s.units) {
+            if (isBuilder(rules().units[at(u.type)])) u.charges = 0;
+        }
+        s.players[0].gold = Fixed::fromInt(gold);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        int before = 0;
+        for (const Unit& u : g->state().units) before += u.owner == 0 && isBuilder(rules().units[at(u.type)]) ? 1 : 0;
+        ai::playTurn(*g);
+        int after = 0;
+        for (const Unit& u : g->state().units) after += u.owner == 0 && isBuilder(rules().units[at(u.type)]) ? 1 : 0;
+        return after > before;
+    };
+    CHECK(!bought(0));
+    CHECK(bought(400));
+}
+
+// A Trader with Foreign Trade but only one city, and no one else revealed, has nowhere to go: the city does not train one.
+TEST(ai_does_not_train_traders_with_nowhere_to_go) {
+    GameState s = flatState(20, 14, 1);
+    s.turn = 20;
+    learnCivic(s, 0, "CIVIC_FOREIGN_TRADE");
+    addCity(s, 0, {6, 6}, true, 1);
+    s.cities[0].queue.clear();
+    for (const Hex& h : s.grid.within({6, 6}, 3)) {
+        sovtest::claimFor(s, s.cities[0], h);
+        if (h != Hex{6, 6}) s.plot(h).improvement = rules().improvement("IMPROVEMENT_FARM");
+    }
+    addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->tradeRouteCapacity(0) >= 1);
+    CHECK_EQ(g->tradeRoutesOf(0), 0);
+    ai::playTurn(*g);
+    const City& c = g->state().cities[0];
+    CHECK(!(!c.queue.empty() && c.queue.front().kind == ProductionKind::Unit &&
+            rules().units[at(c.queue.front().type)].id == "UNIT_TRADER"));
+}
+
+// A Trader standing beside its city but not on the city's land walks onto the center and starts a route the same turn.
+TEST(ai_traders_walk_into_the_city_to_start_a_route) {
+    GameState s = flatState(24, 14, 1);
+    s.turn = 20;
+    learnCivic(s, 0, "CIVIC_FOREIGN_TRADE");
+    addCity(s, 0, {6, 6}, true, 3);
+    addCity(s, 0, {14, 6}, false, 3);
+    for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    s.plot({5, 6}).owner = kNoPlayer;
+    s.plot({5, 6}).city = kNoCity;
+    const UnitId trader = addUnit(s, "UNIT_TRADER", 0, {5, 6});
+    addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+    addUnit(s, "UNIT_WARRIOR", 0, {14, 6});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK(g->tradeOrigin(trader) == nullptr);
+    ai::playTurn(*g);
+    CHECK_EQ(g->tradeRoutesOf(0), 1);
+    CHECK(g->state().unit(trader) == nullptr);
 }
 
 // A Builder's work does not keep a Settler off a city site: the Settler heads for the river site by the plot a Builder

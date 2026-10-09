@@ -1312,28 +1312,37 @@ void build(View& v, UnitId id) {
     // The best plot it can reach. A move to one out of its reach (a sea resource before it may embark, another
     // landmass) fails, and the Builder would wait on it for good: so once a move fails, the reach is found, and only
     // the plots in it are tried after (a failed move changes nothing). A plot at sea is reached by embarking (Builders
-    // may after Sailing; 05: Embarkation), any other over land.
+    // may after Sailing; 05: Embarkation). Land a city holds across water is reached the same way, not only over land.
     std::vector<uint8_t> reach[2];  // over land; embarking
     bool failed = false;
     int tries = 0;
+    auto arrive = [&](Hex h) {
+        v.works.push_back(h);
+        u = s.unit(id);
+        if (u && u->pos == h && u->movesLeft > Fixed()) {
+            std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
+            options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
+            pickImprovement(v, u->pos, options);
+            if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
+        }
+    };
     for (const std::pair<int, Hex>& target : targets) {
         const Hex h = target.second;
         if (h == u->pos) break;  // out of moves on the plot to improve: it builds there next turn
         const bool sea = v.r.terrains[at(s.plot(h).terrain)].water;
+        const size_t i = static_cast<size_t>(s.grid.index(h));
         if (failed) {
-            std::vector<uint8_t>& known = reach[sea ? 1 : 0];
-            if (known.empty()) known = v.game.moveReach(id, !sea);
-            if (!known[static_cast<size_t>(s.grid.index(h))]) continue;
+            if (reach[0].empty()) reach[0] = v.game.moveReach(id, true);
+            if (reach[1].empty()) reach[1] = v.game.moveReach(id, false);
+            if (!(sea ? reach[1][i] : (reach[0][i] || reach[1][i]))) continue;
         }
-        if (v.game.submit(Command::move(v.me, id, h, !sea)) == CommandError::Ok) {
-            v.works.push_back(h);
-            u = s.unit(id);
-            if (u && u->pos == h && u->movesLeft > Fixed()) {
-                std::vector<TypeIndex> options = v.game.improvementsAt(v.me, u->pos);
-                options.erase(std::remove_if(options.begin(), options.end(), [&](TypeIndex im) { return v.r.improvements[at(im)].builtBy != kNone; }), options.end());
-                pickImprovement(v, u->pos, options);
-                if (!options.empty()) v.game.submit(Command::buildImprovement(v.me, id, options.front()));
-            }
+        const bool overland = !sea && (!failed || reach[0][i]);
+        if (v.game.submit(Command::move(v.me, id, h, overland)) == CommandError::Ok) {
+            arrive(h);
+            return;
+        }
+        if (!sea && v.game.submit(Command::move(v.me, id, h, false)) == CommandError::Ok) {
+            arrive(h);
             return;
         }
         if (++tries == 6) break;
@@ -1859,6 +1868,53 @@ Hex districtSpot(const View& v, CityId cid, TypeIndex district) {
     return spot;
 }
 
+// Plots our Builders could still improve, those of them our cities work, and the charges our Builders already carry
+// (those in training too): a Builder beyond the work only waits for the borders to grow.
+void builderWork(const View& v, int& work, int& workedWork, int& charges) {
+    const GameState& s = v.s();
+    work = workedWork = charges = 0;
+    for (const Unit& u : s.units) charges += u.owner == v.me && isBuilder(v.r.units[at(u.type)]) ? u.charges : 0;
+    for (CityId cid : v.cities) {
+        const City& c = *s.city(cid);
+        if (!c.queue.empty() && c.queue.front().kind == ProductionKind::Unit && isBuilder(v.r.units[at(c.queue.front().type)]))
+            charges += v.r.units[at(c.queue.front().type)].buildCharges;
+    }
+    for (int i = 0; i < s.grid.size(); ++i) {
+        const Plot& p = s.plots[static_cast<size_t>(i)];
+        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone) continue;
+        const Hex h = s.grid.at(i);
+        const City& c = *s.city(p.city);
+        if (s.grid.distance(c.pos, h) > 3 || !v.game.builderCanImprove(v.me, h)) continue;
+        ++work;
+        if (std::binary_search(c.worked.begin(), c.worked.end(), i)) ++workedWork;
+    }
+}
+
+int tradersOnHand(const View& v) {
+    int n = 0;
+    for (const Unit& u : v.s().units) n += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_TRADER" ? 1 : 0;
+    for (CityId cid : v.cities) {
+        const City& c = *v.s().city(cid);
+        n += !c.queue.empty() && c.queue.front().kind == ProductionKind::Unit && v.r.units[at(c.queue.front().type)].id == "UNIT_TRADER" ? 1 : 0;
+    }
+    return n;
+}
+
+// A Trader only pays once it has somewhere to go: a second city of ours, or a revealed city we are not at war with.
+bool tradeDestOpen(const View& v) {
+    int ours = 0;
+    for (const City& c : v.s().cities) {
+        if (c.owner == v.me) {
+            ++ours;
+            continue;
+        }
+        const Player& them = v.s().players[at(c.owner)];
+        if (!them.alive || them.barbarian || them.freeCity || v.game.atWar(v.me, c.owner)) continue;
+        if (v.game.visibility(v.me, c.pos) != Visibility::Unrevealed) return true;
+    }
+    return ours >= 2;
+}
+
 // Quarters of a city's food surplus that go to growth with `room` Housing to spare (02: Housing).
 int growthQuarters(const Rules& r, Fixed room) {
     const int half = r.globalInt("CITY_HOUSING_LEFT_50PCT_GROWTH");
@@ -1884,24 +1940,10 @@ void production(View& v) {
     const std::vector<CityId> needing = g.citiesNeedingProduction(v.me);
     if (needing.empty()) return;
     const Fixed goldPerTurn = g.goldPerTurn(v.me);
-    // Plots our Builders could still improve, those of them our cities work, and the charges our Builders already carry
-    // (those in training too): a Builder beyond the work only waits for the borders to grow.
     int work = 0, workedWork = 0, charges = 0;
-    for (const Unit& u : s.units) charges += u.owner == v.me && isBuilder(v.r.units[at(u.type)]) ? u.charges : 0;
-    for (CityId cid : v.cities) {
-        const City& c = *s.city(cid);
-        if (!c.queue.empty() && c.queue.front().kind == ProductionKind::Unit && isBuilder(v.r.units[at(c.queue.front().type)]))
-            charges += v.r.units[at(c.queue.front().type)].buildCharges;
-    }
-    for (int i = 0; i < s.grid.size(); ++i) {
-        const Plot& p = s.plots[static_cast<size_t>(i)];
-        if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone) continue;
-        const Hex h = s.grid.at(i);
-        const City& c = *s.city(p.city);
-        if (s.grid.distance(c.pos, h) > 3 || !g.builderCanImprove(v.me, h)) continue;
-        ++work;
-        if (std::binary_search(c.worked.begin(), c.worked.end(), i)) ++workedWork;
-    }
+    builderWork(v, work, workedWork, charges);
+    int traders = tradersOnHand(v);
+    const bool destOpen = tradeDestOpen(v);
     for (CityId cid : needing) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
@@ -1917,13 +1959,8 @@ void production(View& v) {
         const int nCities = static_cast<int>(v.cities.size());
         const bool wantSettler = !minor && nCities + v.settlers < kMaxCities && v.settlers < 1 + nCities / 2 && c.population >= 2 &&
                                  !threatened && !v.majorWar && v.settlers < freeSites(v);
-        int traders = 0;
-        for (const Unit& u : s.units) traders += u.owner == v.me && v.r.units[at(u.type)].id == "UNIT_TRADER";
-        for (CityId other : v.cities) {
-            const City& oc = *s.city(other);
-            traders += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].id == "UNIT_TRADER";
-        }
-        const bool wantTrader = !minor && g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
+        const bool wantTrader = !minor && destOpen && g.tradeRoutesOf(v.me) + traders < g.tradeRouteCapacity(v.me);
+        const bool needCapacity = !minor && destOpen && g.tradeRoutesOf(v.me) + traders >= g.tradeRouteCapacity(v.me);
         // Worked plots a Builder could still improve (farms are housing and food; mines production).
         int unimproved = 0;
         for (int32_t wi : c.worked) {
@@ -2031,6 +2068,8 @@ void production(View& v) {
                     if (b.maintenance > 0 && goldPerTurn < Fixed::fromInt(b.maintenance) && b.yields[static_cast<size_t>(YieldType::Gold)] < Fixed::fromInt(b.maintenance))
                         value /= 4;
                     value += housingValue(b.housing);
+                    // A Market (or Lighthouse) opens another route once the ones we have are filled.
+                    if (needCapacity) value += 100 * b.tradeCapacity;
                     if (rep.amenities < rep.amenitiesNeeded) value += b.amenities * 25;
                     if (b.outerDefenseHp > 0) value += (threatened ? 500 : v.enemies.empty() ? 0 : 60) + v.posture.walls;
                     for (const auto& gpp : b.greatPersonPoints) value += 20 * gpp.second;  // great people (07)
@@ -2089,6 +2128,8 @@ void production(View& v) {
                         where = districtSpot(v, cid, it.type);
                         value = 100 + 40 * gpp + worth(v, g.districtAdjacency(v.me, it.type, where)) * 25;
                         if (c.population >= 4 && d.id == "DISTRICT_CAMPUS") value += 150;  // science cities
+                        // The first Commercial Hub or Harbor while every route is running: a Market or Lighthouse adds capacity.
+                        if (needCapacity && (d.id == "DISTRICT_COMMERCIAL_HUB" || d.id == "DISTRICT_HARBOR")) value += 100;
                         // The first Holy Site while religions remain to be founded (06): the race for a Prophet.
                         if (d.id == "DISTRICT_HOLY_SITE" && s.players[at(v.me)].religion < 0 &&
                             static_cast<int>(s.religions.size()) < g.maxReligions() &&
@@ -2187,6 +2228,7 @@ void production(View& v) {
             v.settlers += t.foundCity;
             v.builders += isBuilder(t);
             if (isBuilder(t)) charges += t.buildCharges;
+            if (t.id == "UNIT_TRADER") ++traders;
             v.military += isArmy(t);
         }
     }
@@ -2205,6 +2247,49 @@ void purchases(View& v) {
     }
     // Savings (DefaultSavings: units 4, slush fund 3): a small reserve, less for growth items.
     const int reserve = 30 + 5 * static_cast<int>(v.cities.size());
+    // Spare gold: a Builder while plots our cities work unimproved (growth, no extra reserve), before other gold
+    // sinks. A Trader while a route slot is open and a destination exists, with the usual reserve kept.
+    {
+        int work = 0, workedWork = 0, charges = 0;
+        builderWork(v, work, workedWork, charges);
+        (void)work;
+        const TypeIndex builder = v.r.unit("UNIT_BUILDER");
+        if (builder != kNone && workedWork > charges) {
+            const ProductionItem item{ProductionKind::Unit, builder};
+            CityId best = kNoCity;
+            int bestNeed = 0;
+            for (CityId cid : v.cities) {
+                const City& c = *v.s().city(cid);
+                if (!g.canProduce(c, item)) continue;
+                const int cost = g.purchaseCost(v.me, item, &c);
+                if (cost <= 0 || v.s().players[at(v.me)].gold < Fixed::fromInt(cost)) continue;
+                int need = 0;
+                for (int32_t wi : c.worked) {
+                    const Hex h = v.s().grid.at(wi);
+                    const Plot& pl = v.s().plot(h);
+                    if (pl.improvement != kNone || v.s().cityAt(h) || v.s().districtAt(h)) continue;
+                    if (g.builderCanImprove(v.me, h)) ++need;
+                }
+                if (need > bestNeed) {
+                    bestNeed = need;
+                    best = cid;
+                }
+            }
+            if (best != kNoCity) g.submit(Command::purchase(v.me, best, item));
+        }
+        const TypeIndex trader = v.r.unit("UNIT_TRADER");
+        if (trader != kNone && !g.isCityState(v.me) && tradeDestOpen(v) &&
+            g.tradeRoutesOf(v.me) + tradersOnHand(v) < g.tradeRouteCapacity(v.me)) {
+            const ProductionItem item{ProductionKind::Unit, trader};
+            for (CityId cid : v.cities) {
+                const City& c = *v.s().city(cid);
+                if (!g.canProduce(c, item)) continue;
+                const int cost = g.purchaseCost(v.me, item, &c);
+                if (cost <= 0 || v.s().players[at(v.me)].gold < Fixed::fromInt(cost + reserve)) continue;
+                if (g.submit(Command::purchase(v.me, cid, item)) == CommandError::Ok) break;
+            }
+        }
+    }
     for (CityId cid : v.cities) {
         const City& c = *v.s().city(cid);
         if (c.queue.empty()) continue;
@@ -2773,7 +2858,7 @@ void trader(View& v, UnitId id) {
     const Unit* u = v.s().unit(id);
     const City* origin = g.tradeOrigin(id);
     if (!origin) {
-        // Walk home to the nearest of our cities first.
+        // Walk into the nearest of our cities so it can start a route (the center, or beside it on our land).
         std::optional<Hex> home;
         int bestDist = INT_MAX;
         for (CityId cid : v.cities) {
@@ -2783,9 +2868,15 @@ void trader(View& v, UnitId id) {
                 home = v.s().city(cid)->pos;
             }
         }
-        if (home && approach(v, id, *home, false)) return;
-        g.submit(Command::setActivity(v.me, id, Activity::Skip));
-        return;
+        if (home) {
+            if (!approach(v, id, *home, true)) approach(v, id, *home, false);
+            u = v.s().unit(id);
+            origin = u ? g.tradeOrigin(id) : nullptr;
+            if (!origin || !u || u->movesLeft <= Fixed()) return;  // still on its way, or arrived out of moves
+        } else {
+            g.submit(Command::setActivity(v.me, id, Activity::Skip));
+            return;
+        }
     }
     std::optional<CityId> best;
     int bestValue = INT_MIN;
@@ -3112,6 +3203,14 @@ void playTurn(Game& game) {
     production(v);
     upgrades(v);
     purchases(v);
+    // Builders and Traders trained or bought this turn still have their moves; send them out the same turn.
+    survey(v);
+    for (const Unit& u : game.state().units) {
+        if (u.owner != v.me || u.movesLeft <= Fixed()) continue;
+        const UnitType& t = v.r.units[at(u.type)];
+        if (t.id == "UNIT_TRADER") trader(v, u.id);
+        else if (isBuilder(t) && u.charges > 0) build(v, u.id);
+    }
     solvency(v);
     clans(v);
     theme(v);

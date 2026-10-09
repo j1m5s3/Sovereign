@@ -5,7 +5,9 @@
 //   sovsim [--rules DIR]... [--seed N] [--turns N] [--players N] [--size MAPSIZE_X] [--save FILE] [--load FILE] [--map] [--cities]
 //          [--ai] [--ai-seats N] [--turn-limit N] [--disasters N] [--difficulty N] [--bench N] [--speed GAMESPEED_X] [--era ERA_X] [--clans] [--monopolies]   (--ai: the AI plays every seat; --ai-seats N: the first N seats, the bot the rest;
 //          --turn-limit: Score victory after this turn instead of the speed's calendar; --disasters N: intensity 0-4, -1 none; --difficulty N: 0 Settler .. 3 Prince .. 7 Deity;
-//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns; --clans: the Barbarian Clans mode; --monopolies: the Monopolies and Corporations mode).
+//          --bench N: the pace benchmark over seeds 1..N, averages at checkpoints up to --turns;
+//          --diag N: Builder and trade-route counts over seeds 1..N, averages at the same checkpoints;
+//          --clans: the Barbarian Clans mode; --monopolies: the Monopolies and Corporations mode).
 //          Stops early when someone wins.
 #include <algorithm>
 #include <cstdio>
@@ -96,11 +98,139 @@ static int runBench(const Rules& rules, GameSetup setup, int n, int turns) {
     return 0;
 }
 
+// How the AI uses Builders and trade routes: averages per living major civ.
+static int runDiag(const Rules& rules, GameSetup setup, int n, int turns) {
+    std::vector<int> checkpoints;
+    for (int t : {25, 50, 75, 100, 150, 200, 250, 300, 400, 500}) {
+        if (t <= turns) checkpoints.push_back(t);
+    }
+    struct Row {
+        int64_t civs = 0, cap = 0, routes = 0, idle = 0, queued = 0, noOrigin = 0, noDest = 0, withDest = 0;
+        int64_t builders = 0, charges = 0, work = 0, worked = 0, heading = 0, lumber = 0, waiting = 0;
+        int64_t hubs = 0, markets = 0, gold = 0;
+    };
+    std::vector<Row> sum(checkpoints.size());
+    const TypeIndex trader = rules.unit("UNIT_TRADER");
+    const TypeIndex hub = rules.district("DISTRICT_COMMERCIAL_HUB");
+    const TypeIndex market = rules.building("BUILDING_MARKET");
+    const TypeIndex forest = rules.feature("FEATURE_FOREST");
+    const TypeIndex jungle = rules.feature("FEATURE_JUNGLE");
+    auto destsFrom = [&](const Game& g, const City& origin) {
+        int nDest = 0;
+        for (const City& dest : g.state().cities) {
+            if (dest.id == origin.id) continue;
+            const Player& them = g.state().players[static_cast<size_t>(dest.owner)];
+            if (!them.alive || them.barbarian || them.freeCity || g.atWar(origin.owner, dest.owner)) continue;
+            if (g.visibility(origin.owner, dest.pos) == Visibility::Unrevealed) continue;
+            if (!g.tradePath(origin.owner, trader, origin, dest).empty()) ++nDest;
+        }
+        return nDest;
+    };
+    for (int seed = 1; seed <= n; ++seed) {
+        setup.seed = static_cast<uint64_t>(seed);
+        std::string err;
+        auto game = Game::create(rules, setup, &err);
+        if (!game) {
+            std::fprintf(stderr, "create: %s\n", err.c_str());
+            return 1;
+        }
+        for (size_t k = 0; k < checkpoints.size(); ++k) {
+            while (game->state().turn < checkpoints[k] && !game->gameOver()) ai::playTurn(*game);
+            if (game->gameOver()) break;
+            const GameState& s = game->state();
+            Row& t = sum[k];
+            for (const Player& pl : s.players) {
+                if (!pl.alive || !game->isMajorCiv(pl.id)) continue;
+                ++t.civs;
+                const int cap = game->tradeRouteCapacity(pl.id);
+                const int routes = game->tradeRoutesOf(pl.id);
+                t.cap += cap;
+                t.routes += routes;
+                t.gold += static_cast<int64_t>(pl.gold.toInt());
+                int idle = 0, queued = 0, builders = 0, charges = 0, hubs = 0, markets = 0;
+                int noOrigin = 0, noDest = 0, withDest = 0;
+                std::vector<Hex> heading;
+                std::vector<const Unit*> ours;
+                for (const Unit& u : s.units) {
+                    if (u.owner != pl.id) continue;
+                    ours.push_back(&u);
+                    const UnitType& ut = rules.units[static_cast<size_t>(u.type)];
+                    if (ut.id == "UNIT_TRADER") {
+                        ++idle;
+                        const City* origin = game->tradeOrigin(u.id);
+                        if (!origin) ++noOrigin;
+                        else if (destsFrom(*game, *origin) == 0) ++noDest;
+                    }
+                    if (isBuilder(ut)) {
+                        ++builders;
+                        charges += u.charges;
+                        if (u.moveTarget) heading.push_back(*u.moveTarget);
+                    }
+                }
+                for (const City& c : s.cities) {
+                    if (c.owner != pl.id) continue;
+                    if (withDest == 0 && destsFrom(*game, c) > 0) withDest = 1;
+                    if (!c.queue.empty() && c.queue.front().kind == ProductionKind::Unit &&
+                        rules.units[static_cast<size_t>(c.queue.front().type)].id == "UNIT_TRADER")
+                        ++queued;
+                    for (const CityDistrict& d : c.districts) hubs += d.complete && d.type == hub ? 1 : 0;
+                    for (TypeIndex b : c.buildings) markets += b == market ? 1 : 0;
+                }
+                t.idle += idle;
+                t.queued += queued;
+                t.noOrigin += noOrigin;
+                t.noDest += noDest;
+                t.withDest += withDest;
+                t.builders += builders;
+                t.charges += charges;
+                t.hubs += hubs;
+                t.markets += markets;
+                int work = 0, worked = 0, lumber = 0, waiting = 0;
+                std::vector<uint8_t> reach(static_cast<size_t>(s.grid.size()), 0);
+                for (const Unit* u : ours) {
+                    if (!isBuilder(rules.units[static_cast<size_t>(u->type)])) continue;
+                    const std::vector<uint8_t> land = game->moveReach(u->id, true);
+                    const std::vector<uint8_t> sea = game->moveReach(u->id, false);
+                    for (size_t i = 0; i < reach.size(); ++i) reach[i] = static_cast<uint8_t>(reach[i] | land[i] | sea[i]);
+                }
+                for (int i = 0; i < s.grid.size(); ++i) {
+                    const Plot& p = s.plots[static_cast<size_t>(i)];
+                    if (p.owner != pl.id || p.city == kNoCity || p.improvement != kNone) continue;
+                    const Hex h = s.grid.at(i);
+                    const City* c = s.city(p.city);
+                    if (!c || s.grid.distance(c->pos, h) > 3 || !game->builderCanImprove(pl.id, h)) continue;
+                    ++work;
+                    if (std::binary_search(c->worked.begin(), c->worked.end(), i)) ++worked;
+                    if (p.feature == forest || p.feature == jungle) ++lumber;
+                    const bool headed = std::find(heading.begin(), heading.end(), h) != heading.end();
+                    if (!headed && builders > 0 && reach[static_cast<size_t>(i)]) ++waiting;
+                }
+                t.work += work;
+                t.worked += worked;
+                t.heading += static_cast<int64_t>(heading.size());
+                t.lumber += lumber;
+                t.waiting += waiting;
+            }
+        }
+    }
+    std::printf("turn civs  cap routes idle queued noOrig noDest withDest builders charges  work worked heading lumber waiting hubs markets gold\n");
+    for (size_t k = 0; k < checkpoints.size(); ++k) {
+        const Row& t = sum[k];
+        if (t.civs == 0) continue;
+        const auto avg = [&](int64_t v) { return static_cast<double>(v) / static_cast<double>(t.civs); };
+        std::printf("%4d %4lld %4.1f %6.1f %4.1f %6.1f %6.1f %6.1f %8.2f %8.1f %7.1f %5.1f %6.1f %7.1f %6.1f %7.1f %4.1f %7.1f %4.0f\n",
+                    checkpoints[k], static_cast<long long>(t.civs), avg(t.cap), avg(t.routes), avg(t.idle), avg(t.queued), avg(t.noOrigin),
+                    avg(t.noDest), avg(t.withDest), avg(t.builders), avg(t.charges), avg(t.work), avg(t.worked), avg(t.heading), avg(t.lumber),
+                    avg(t.waiting), avg(t.hubs), avg(t.markets), avg(t.gold));
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     std::vector<std::string> rulesDirs;
     GameSetup setup;
     setup.seed = 1;
-    int turns = 50, players = 2, aiSeats = 0, bench = 0;
+    int turns = 50, players = 2, aiSeats = 0, bench = 0, diag = 0;
     std::string savePath, loadPath, era;
     bool showMap = false, showCities = false;
     for (int i = 1; i < argc; ++i) {
@@ -125,6 +255,7 @@ int main(int argc, char** argv) {
         else if (a == "--speed") setup.speed = next();
         else if (a == "--era") era = next();
         else if (a == "--bench") bench = std::atoi(next().c_str());
+        else if (a == "--diag") diag = std::atoi(next().c_str());
         else {
             std::fprintf(stderr, "unknown argument %s\n", a.c_str());
             return 2;
@@ -148,6 +279,7 @@ int main(int argc, char** argv) {
         setup.startEra = static_cast<int>(rules.era(era));
     }
     if (bench > 0) return runBench(rules, setup, bench, turns);
+    if (diag > 0) return runDiag(rules, setup, diag, turns);
     std::unique_ptr<Game> game;
     if (!loadPath.empty()) {
         std::ifstream in(loadPath, std::ios::binary | std::ios::ate);
