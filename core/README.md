@@ -22,7 +22,8 @@ check that the generated rules data is current. The same build adds the live bat
 simulation and the trained battle AI ([battle/](../battle/README.md)): `battle_tests`
 and the trainer `battle_train`; and the diplomacy dialogue layer
 ([diplomacy/](../diplomacy/README.md)): `diplomacy_tests` and the `diplo_chat` tool; and
-online play ([net/](../net/README.md)): `net_tests` and the `sovnet` tool.
+online play ([net/](../net/README.md)): `net_tests` and the `sovnet` tool; and the weekly
+challenge board ([board/](../board/README.md)): `board_tests` and the `sovboard` tool.
 
 ## Headless simulator
 
@@ -60,7 +61,7 @@ same command must print the same hash.
 | The leader's goals at turn end (player-retention §4) | `src/leader.cpp` (`leaderGoals`) |
 | Shorter games and era starts (player-retention §5): the Short Reign speed, a game begun in a later era | `src/eras.cpp` (`applyEraStart`), `eraStarts` in `../data/rules/setup.json`; `sovsim --speed --era` |
 | Data mods (player-retention §6): rules layers that replace, `patch` or `delete` rows; a save names its mods | `src/rules.cpp` (`mergeDocument`), `peekSaveSetup` in `src/serialize.cpp`; `../mods/README.md` |
-| The weekly challenge (player-retention §3): the week's setup and goal, a game's check by replay within the battle band | `src/challenge.cpp` |
+| The weekly challenge (player-retention §3): the week's setup and goal, a game's check by replay within the battle band | `src/challenge.cpp`; the server board in [board/](../board/README.md) |
 | Difficulty levels (00-overview: Difficulty levels; Sovereign: AI bonuses only at Immortal and Deity) | `Game::difficulty`, hooks in `src/city.cpp`, `src/combat.cpp`, `src/eras.cpp`, `src/barbarians.cpp`, `Game::create`; data in `../data/rules/setup.json` |
 | Air power (05: air units, air combat): bases and air slots (cities, Aerodromes, Aircraft Carriers, Airstrips), rebasing, air strikes, interception and anti-air; Military Engineer improvements (Fort, Airstrip, Missile Silo) | `src/air.cpp`; strikes through `src/combat.cpp` |
 | Nuclear weapons (05: Nuclear weapons): Manhattan Project and Operation Ivy, Nuclear and Thermonuclear Devices with their upkeep, delivery by bombers, Nuclear Submarines and Missile Silos, blast and fallout; the AI keeps a deterrent and answers in kind | `src/wmd.cpp`; `wmds` in `data/rules/projects.json`; AI `nuclear` in `src/ai.cpp` |
