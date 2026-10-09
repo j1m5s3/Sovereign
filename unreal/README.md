@@ -38,7 +38,7 @@ Or right-click `Sovereign.uproject` > Generate Visual Studio project files and b
 "C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "C:/source/games/Sovereign/unreal/Sovereign.uproject" -game -windowed -ResX=1600 -ResY=900
 ```
 
-Options: `-SovMonopolies` (the Monopolies and Corporations mode: a Builder on an improved luxury founds an Industry after Economics and grows it into a Corporation after Electricity, from `B`; most of a luxury's sources make a Monopoly), `-SovClans` (the Barbarian Clans mode: from the diplomacy chooser `N`, bribe a camp you have seen, hire its best unit, or incite it against a civ; camps grow into city-states), `-SovBattleDemo` (developer start: your warrior on your leader's plot and an enemy warrior next to it, at war, to try a live battle at once), `-SovNavalDemo` (developer start: Shipbuilding, a galley and an embarked warrior on the coast nearest your leader), `-SovSeed=N` (default 7), `-SovPlayers=N` (default 4), `-SovSize=MAPSIZE_TINY`,
+Options: `-SovMonopolies` (the Monopolies and Corporations mode: a Builder on an improved luxury founds an Industry after Economics and grows it into a Corporation after Electricity, from `B`; most of a luxury's sources make a Monopoly), `-SovClans` (the Barbarian Clans mode: from the diplomacy chooser `N`, bribe a camp you have seen, hire its best unit, or incite it against a civ; camps grow into city-states), `-SovBattleDemo` (developer start: your warrior on your leader's plot and an enemy warrior next to it, at war, to try a live battle at once; `-SovBattleUnits=UNIT_HORSEMAN,UNIT_ARCHER` sets the two sides' unit types), `-SovNavalDemo` (developer start: Shipbuilding, a galley and an embarked warrior on the coast nearest your leader), `-SovSeed=N` (default 7), `-SovPlayers=N` (default 4), `-SovSize=MAPSIZE_TINY`,
 `-SovSpectate` (the AI plays every seat while you watch seat 0's view). Rules are read
 from `../data/rules`.
 
@@ -144,4 +144,4 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 
 - Sound: there is none yet (music, ambience and effects wait on a direction).
 - City centres follow the six architectural styles only until the Industrial era (then every civ shares the Industrial and Modern kits); districts, improvements and units are one look for every civ; each wonder and natural wonder is drawn by kind rather than as itself.
-- Live battles draw each side's men as its unit's figure only on foot (spearman, archer, musketeer, rifleman); horsemen, engines and vehicles fight as spearmen there.
+- Live battles draw each side's men as its unit's figure (spearman, archer, musketeer, rifleman, horseman); siege engines and vehicles fight as spearmen there.

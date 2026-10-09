@@ -38,8 +38,10 @@ private:
 	UStaticMeshComponent* Add(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, const FLinearColor& Color);
 
 	FLinearColor SideColor[2];
-	// Each side's soldier figure: its unit's, when that is one on foot (archer, musketeer, rifleman), else the spearman.
+	// Each side's soldier figure: its unit's when that is a man on foot or a horseman, else the spearman.
 	FString SideFigure[2] = {TEXT("Soldier"), TEXT("Soldier")};
+	// Turn added to a side's figures: horsemen are modelled side-on (along X), the people facing the viewer.
+	float SideYaw[2] = {0.f, 0.f};
 	TArray<bool> Figure;  // per soldier: drawn by a kit figure
 
 	UPROPERTY()
