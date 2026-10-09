@@ -615,6 +615,16 @@ void Game::processReligion() {
             c.pressure[static_cast<size_t>(src.religion)] += src.amount / 10;
         }
     }
+    // A Religious alliance at level 3 (08; data: alliance pressure from no ally religion): +20 of the ally's
+    // religion in cities that have none of its followers.
+    for (City& c : state_.cities) {
+        for (const Player& ally : state_.players) {
+            if (ally.religion < 0 || alliance(c.owner, ally.id) != AllianceType::Religious || allianceLevel(c.owner, ally.id) < 3)
+                continue;
+            if (cityFollowers(c, ally.religion) > 0) continue;
+            c.pressure[static_cast<size_t>(ally.religion)] += 20;
+        }
+    }
     // Religious Unity (06): the first time a city-state follows a religion holding it, the founder gains an envoy
     // (none under Rogue State), however the city turned.
     for (const City& c : state_.cities) {
