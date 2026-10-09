@@ -5,6 +5,8 @@
 
 #include "SovCameraPawn.h"
 #include "SovEvents.h"
+#include "SovSettingsScreen.h"
+#include "SovSetupScreen.h"
 #include "SovGameSubsystem.h"
 #include "SovHUD.h"
 #include "SovHexLayout.h"
@@ -102,6 +104,7 @@ ASovPlayerController::ASovPlayerController()
 void ASovPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	SSovSettingsScreen::ApplySavedInterfaceScale();
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	SetInputMode(Mode);
@@ -2137,6 +2140,7 @@ void ASovPlayerController::UpdateGameUI()
 			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); })
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
+			.OnEndClose_Lambda([this]() { bEndClosed = true; })
 			.OnDismiss_Lambda([this](int32 Index) {
 				if (Notices.IsValidIndex(Index)) DismissedNotices.Add(Notices[Index].Id);
 			})
@@ -2459,6 +2463,35 @@ void ASovPlayerController::UpdateGameUI()
 		Notices.Add({Id, SovEventIcon(E), Text, FString::Printf(TEXT("Turn %d%s"), E.turn, Key.IsValid() ? TEXT(": click to open") : TEXT("")), Key, -1, false});
 	}
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
+	// The end of the game, or of this player's part in it (plan D, step 5).
+	if (!G.gameOver() && P.alive) bEndClosed = false;
+	else if (!bEndClosed)
+	{
+		M.bEnd = true;
+		M.bWon = G.gameOver() && S.winner == Me();
+		auto CivName = [&](sov::PlayerId Id) {
+			const sov::Player& X = S.players[static_cast<size_t>(Id)];
+			return X.civ == sov::kNone ? FString(TEXT("?")) : Str(R.civs[static_cast<size_t>(X.civ)].name);
+		};
+		M.EndTitle = M.bWon ? TEXT("Victory") : TEXT("Defeat");
+		M.EndSub = G.gameOver() ? FString::Printf(TEXT("%s wins a %s victory on turn %d."), *CivName(S.winner), SovVictoryName(S.victory), S.turn)
+								: FString::Printf(TEXT("%s has fallen. The world goes on without you."), *CivName(Me()));
+		TArray<TPair<int32, sov::PlayerId>> Ranked;
+		for (size_t i = 0; i < S.players.size(); ++i)
+		{
+			const sov::Player& X = S.players[i];
+			if (X.civ != sov::kNone && X.cityState == sov::kNone) Ranked.Add({G.score(static_cast<sov::PlayerId>(i)), static_cast<sov::PlayerId>(i)});
+		}
+		Ranked.Sort([](const TPair<int32, sov::PlayerId>& A, const TPair<int32, sov::PlayerId>& B) { return A.Key > B.Key; });
+		for (const TPair<int32, sov::PlayerId>& Rk : Ranked)
+		{
+			const sov::Player& X = S.players[static_cast<size_t>(Rk.Value)];
+			M.EndScores.Add(FString::Printf(TEXT("%s (%s)%s%s|%d"), *CivName(Rk.Value), *Str(X.leaderName), Rk.Value == Me() ? TEXT(", you") : TEXT(""),
+				X.alive ? TEXT("") : TEXT(", fallen"), Rk.Key));
+		}
+		const std::vector<std::string> Lines = G.chronicleLines(Me());
+		for (size_t i = Lines.size() > 60 ? Lines.size() - 60 : 0; i < Lines.size(); ++i) M.EndChronicle.Add(Str(Lines[i]));
+	}
 	// End turn: what stands in the way, if anything.
 	M.bMyTurn = MyTurn();
 	if (!M.bMyTurn)
@@ -2705,6 +2738,22 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	// The setup screen's keys, when the viewport rather than the screen has keyboard focus.
+	if (SettingsScreen.IsValid())
+	{
+		if (WasInputKeyJustPressed(EKeys::Escape))
+		{
+			CloseSettings();
+			OpenMenu();
+		}
+		return;
+	}
+	if (SetupScreen.IsValid())
+	{
+		for (const FKey& K : {EKeys::Up, EKeys::Down, EKeys::Enter, EKeys::Escape})
+			if (WasInputKeyJustPressed(K) && StaticCastSharedPtr<SSovSetupScreen>(SetupScreen)->HandleKey(K)) break;
+		return;
+	}
 	// The widgets show the state as this frame begins; the keys their buttons pressed are read below, then let go.
 	// A tree goal picks the next step as soon as the last one is done (plan D, step 3).
 	if (MyTurn())
@@ -3059,7 +3108,7 @@ void ASovPlayerController::CloseChat()
 
 void ASovPlayerController::OpenMenu()
 {
-	if (Menu.IsValid() || !GEngine || !GEngine->GameViewport)
+	if (Menu.IsValid() || SetupScreen.IsValid() || SettingsScreen.IsValid() || !GEngine || !GEngine->GameViewport)
 	{
 		return;
 	}
@@ -3226,7 +3275,7 @@ void ASovPlayerController::OpenMenu()
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { StartFromMenu(Base()); })]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Single player"), [this, Base]() { OpenSetup(Base()); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
 				FSovSetup S = Base();
 				S.ChallengeWeek = Week;
@@ -3309,6 +3358,7 @@ void ASovPlayerController::OpenMenu()
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
 				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuHall); })]]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Settings"), [this]() { OpenSettings(); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
 				SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular", 10)).ColorAndOpacity(FLinearColor(1.f, 0.5f, 0.5f))
@@ -3318,6 +3368,54 @@ void ASovPlayerController::OpenMenu()
 				})]
 		]];
 	GEngine->GameViewport->AddViewportWidgetContent(Menu.ToSharedRef(), 60);
+}
+
+void ASovPlayerController::OpenSetup(const FSovSetup& Base)
+{
+	if (SetupScreen.IsValid() || !GEngine || !GEngine->GameViewport) return;
+	TSharedPtr<sov::Rules> R = MakeShared<sov::Rules>();
+	std::string Error;
+	if (!R->load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Error))
+	{
+		StartFromMenu(Base);  // no rules to show: start as before
+		return;
+	}
+	CloseMenu();
+	SetupScreen = SNew(SSovSetupScreen).Rules(R).Setup(Base)
+		.OnBack_Lambda([this]() {
+			CloseSetup();
+			OpenMenu();
+		})
+		.OnStart_Lambda([this](const FSovSetup& Setup) {
+			CloseSetup();
+			StartFromMenu(Setup);
+			if (!Subsystem() || !Subsystem()->IsRunning()) OpenMenu();
+		});
+	GEngine->GameViewport->AddViewportWidgetContent(SetupScreen.ToSharedRef(), 61);
+	FSlateApplication::Get().SetKeyboardFocus(SetupScreen);  // arrows, Enter and Esc work at once
+}
+
+void ASovPlayerController::OpenSettings()
+{
+	if (SettingsScreen.IsValid() || !GEngine || !GEngine->GameViewport) return;
+	CloseMenu();
+	SettingsScreen = SNew(SSovSettingsScreen).OnBack_Lambda([this]() {
+		CloseSettings();
+		OpenMenu();
+	});
+	GEngine->GameViewport->AddViewportWidgetContent(SettingsScreen.ToSharedRef(), 61);
+}
+
+void ASovPlayerController::CloseSettings()
+{
+	if (SettingsScreen.IsValid() && GEngine && GEngine->GameViewport) GEngine->GameViewport->RemoveViewportWidgetContent(SettingsScreen.ToSharedRef());
+	SettingsScreen.Reset();
+}
+
+void ASovPlayerController::CloseSetup()
+{
+	if (SetupScreen.IsValid() && GEngine && GEngine->GameViewport) GEngine->GameViewport->RemoveViewportWidgetContent(SetupScreen.ToSharedRef());
+	SetupScreen.Reset();
 }
 
 void ASovPlayerController::CloseMenu()

@@ -1220,6 +1220,7 @@ struct CivAdjacency {
 };
 struct CivAbility {
     std::string name;
+    std::string text;  // what it does, in words (the setup screen; rules ignore it)
     std::vector<CivAdjacency> extraAdjacency;
     int wonderProductionPercent = 0, wonderEraMin = 0, wonderEraMax = 0;  // toward wonders of these eras
     int amenityPerWonder = 0;           // in the wonder's city
@@ -1272,6 +1273,7 @@ struct CivType {
     Agenda agenda = Agenda::None;
     std::string agendaId, agendaName, agendaText;
     std::string leaning, voice;  // the leader's leaning and speaking voice (diplomacy personas)
+    std::string uniquesText;     // its unique unit and building or improvement, in words (the setup screen)
 };
 
 // The leader's loadout (leader doc §2, §8.8; data in leader.json). Weapons set melee

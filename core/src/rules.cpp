@@ -1668,6 +1668,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
     // Civ, leader and heir abilities share one reader (leaders-and-art-style).
     auto readAbility = [&](const Json& a, CivAbility& ab, const std::string& where) -> bool {
         ab.name = a["name"].str();
+        ab.text = a["text"].str();
         for (const Json& x : a["extraAdjacency"].items()) {
             CivAdjacency adj;
             adj.district = district(x["district"].str());
@@ -1749,6 +1750,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         c.agendaId = j["agenda"].str();
         c.agendaName = j["agendaName"].str();
         c.agendaText = j["agendaText"].str();
+        c.uniquesText = j["uniquesText"].str();
         c.leaning = j["leaning"].str();
         c.voice = j["voice"].str();
         if (!readAbility(j["ability"], c.ability, "civilization " + id) || !readAbility(j["leaderAbility"], c.leaderAbility, "civilization " + id))
