@@ -1147,3 +1147,96 @@ TEST(an_ai_crowns_a_great_general_before_a_veteran) {
     CHECK(g.state().unit(f.veteran));
     CHECK(g.governor(0, rules().governor("GOVERNOR_VICTOR")));  // never a governor
 }
+
+// ---- body doubles (leader doc §8.6)
+
+TEST(body_doubles_are_trained_kept_and_paid_for) {
+    CityId city = kNoCity;
+    auto g = duel(
+        [&](GameState& s) {
+            city = addCity(s, 0, {5, 5}, true, 4);
+            addLeader(s, 0, {5, 5});
+        },
+        false);
+    const ProductionItem item{ProductionKind::Unit, rules().unit("UNIT_BODY_DOUBLE")};
+    REQUIRE(item.type != kNone);
+    CHECK(!g->canProduce(*g->state().city(city), item));  // needs Diplomatic Service
+    GameState s = g->state();
+    giveCivic(s, 0, "CIVIC_DIPLOMATIC_SERVICE");
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g2->canProduce(*g2->state().city(city), item));
+    const Fixed gold = g2->goldPerTurn(0);
+    const size_t units = g2->state().units.size();
+    REQUIRE(g2->completeItem(g2->stateMutForTests().cities[0], item));
+    CHECK_EQ(g2->state().players[0].bodyDoubles, 1);
+    CHECK_EQ(g2->state().units.size(), units);  // kept off the map
+    CHECK_EQ(g2->goldPerTurn(0), gold - Fixed::fromInt(rules().units[at(item.type)].maintenance));
+    CHECK(!g2->canProduce(*g2->state().city(city), item));  // BODY_DOUBLE_MAX is 1
+    std::string err;
+    auto back = loadGame(rules(), saveGame(*g2), &err);
+    REQUIRE(back);
+    CHECK_EQ(back->state().players[0].bodyDoubles, 1);
+}
+
+TEST(an_assassin_can_strike_a_body_double) {
+    // Over many seeds, a strike that would have hit a lone, hurt leader sometimes falls on the double.
+    int doubles = 0, others = 0;
+    for (uint64_t seed = 1; seed <= 30; ++seed) {
+        UnitId leader = 0;
+        auto g = duel(
+            [&](GameState& s) {
+                s.rng.seed(seed);
+                addCity(s, 0, {2, 2}, true);
+                leader = addLeader(s, 0, {9, 6});
+                s.units.back().hp = 40;
+                addAgent(s, 1, 0, 1);
+                s.players[0].bodyDoubles = 1;
+            },
+            false);
+        pass(*g, 2);
+        REQUIRE(g->state().events.size() == 1u);
+        const GameEvent& e = g->state().events.back();
+        if (e.kind == EventKind::AssassinKilledDouble) {
+            ++doubles;
+            CHECK_EQ(g->state().players[0].bodyDoubles, 0);
+            CHECK(g->leaderOf(0) && g->state().unit(leader)->hp >= 40);  // the ruler is unhurt (it may heal)
+            CHECK(g->grievances(0, 1) > 0);                               // and knows the sender
+        } else {
+            ++others;
+            CHECK_EQ(g->state().players[0].bodyDoubles, 1);
+        }
+    }
+    CHECK(doubles > 0);
+    CHECK(others > 0);
+}
+
+TEST(an_ai_keeps_a_body_double_once_assassins_come) {
+    for (const bool assassinCame : {false, true}) {
+        CityId city = kNoCity;
+        auto g = duel(
+            [&](GameState& s) {
+                city = addCity(s, 0, {5, 5}, true, 1);  // too small for a Settler
+                City& c = s.cities.back();
+                c.queue.clear();
+                c.buildings.push_back(rules().building("BUILDING_MONUMENT"));
+                std::sort(c.buildings.begin(), c.buildings.end());
+                addLeader(s, 0, {5, 5});
+                addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+                addUnit(s, "UNIT_WARRIOR", 0, {5, 6});  // army enough for one city
+                addUnit(s, "UNIT_BUILDER", 0, {4, 5});
+                giveCivic(s, 0, "CIVIC_DIPLOMATIC_SERVICE");
+                OpinionMemory m;
+                m.about = 1;
+                m.kind = MemoryKind::Assassin;
+                m.amount = -15;
+                m.duration = 60;
+                if (assassinCame) s.players[0].memories.push_back(m);
+                s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+            },
+            false);
+        ai::playTurn(*g);
+        const City& c = *g->state().city(city);
+        REQUIRE(!c.queue.empty());
+        CHECK_EQ(c.queue.front() == (ProductionItem{ProductionKind::Unit, rules().unit("UNIT_BODY_DOUBLE")}), assassinCame);
+    }
+}

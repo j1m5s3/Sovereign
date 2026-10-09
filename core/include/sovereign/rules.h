@@ -287,6 +287,7 @@ struct UnitType {
     TypeIndex capturedAs = kNone;  // civilian captured by an enemy becomes this (kNone: destroyed)
     bool agent = false;            // training it creates an off-map agent (assassins), not a map unit
     bool spy = false;              // the agent is a spy (within the spy capacity civics grant)
+    bool bodyDouble = false;       // trained into the player's body doubles, off the map (leader doc §8.6)
     TypeIndex needsDistrict = kNone;  // the training city must have this district finished
     // A city-state's unit (08: Lahore's Nihang): never trained; whoever enjoys the city-state's suzerain bonus buys it.
     TypeIndex cityState = kNone;

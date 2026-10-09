@@ -1949,6 +1949,16 @@ void production(View& v) {
         }
         const bool wantAssassin = !v.enemies.empty() && !assassinQueued && g.agentsOf(v.me) < g.agentCapacity(v.me);
         const bool wantSpy = !assassinQueued && g.spiesOf(v.me) < g.spyCapacity(v.me);
+        // A body double once an assassin has come for our ruler (leader doc §8.6), one in training at a time.
+        bool wantDouble = s.players[at(v.me)].bodyDoubles < g.rules().globalInt("BODY_DOUBLE_MAX");
+        for (CityId other : v.cities) {
+            const City& oc = *s.city(other);
+            wantDouble = wantDouble && !(!oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].bodyDouble);
+        }
+        if (wantDouble) {
+            const std::vector<OpinionMemory>& mem = s.players[at(v.me)].memories;
+            wantDouble = std::any_of(mem.begin(), mem.end(), [](const OpinionMemory& m) { return m.kind == MemoryKind::Assassin; });
+        }
         // One Military Engineer to lay railroads once Steam Power and the Iron and Coal for it are in hand.
         bool wantEngineer = false;
         if (const TypeIndex rr = g.railroad(); rr != kNone && nCities >= 3) {
@@ -1973,7 +1983,8 @@ void production(View& v) {
             switch (it.kind) {
                 case ProductionKind::Unit: {
                     const UnitType& t = v.r.units[at(it.type)];
-                    if (t.spy) value = wantSpy ? 200 : 0;
+                    if (t.bodyDouble) value = wantDouble ? 1000 : 0;  // its cost is high: it ranks with a soldier per Production
+                    else if (t.spy) value = wantSpy ? 200 : 0;
                     else if (t.agent) value = wantAssassin ? 250 + v.posture.assassins : 0;
                     else if (t.id == "UNIT_TRADER") value = wantTrader ? 260 : 0;
                     else if (t.id == "UNIT_MILITARY_ENGINEER") value = wantEngineer ? 220 : 0;

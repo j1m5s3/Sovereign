@@ -412,6 +412,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.barbarian);
         w.boolean(p.freeCity);
         w.i32(p.reputation);
+        w.i32(p.bodyDoubles);
         w.i32(p.strongestUnit);
         w.i32(p.citiesFounded);
         writeFixed(w, p.gold);
@@ -866,6 +867,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
         p.barbarian = r.boolean();
         p.freeCity = r.boolean();
         p.reputation = r.i32();
+        p.bodyDoubles = r.i32();
         p.strongestUnit = r.i32();
         p.citiesFounded = r.i32();
         p.gold = readFixed(r);

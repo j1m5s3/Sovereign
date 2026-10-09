@@ -933,6 +933,7 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (u.uniqueTo != kNone && u.uniqueTo != civ) return fail(CommandError::CannotBuild);
         if (rules_->uniqueUnitFor(civ, item.type) != kNone) return fail(CommandError::CannotBuild);
         if (u.agent && !u.spy && agentsOf(c.owner) >= agentCapacity(c.owner)) return fail(CommandError::CannotBuild);
+        if (u.bodyDouble && state_.players[static_cast<size_t>(c.owner)].bodyDoubles >= rules_->globalInt("BODY_DOUBLE_MAX")) return fail(CommandError::CannotBuild);
         // Dark Age cards (09): Isolationism trains no Settlers; under Flower Power units are only bought.
         if (u.foundCity && policyIs(c.owner, "POLICY_ISOLATIONISM")) return fail(CommandError::CannotBuild);
         if (!purchase && policyIs(c.owner, "POLICY_FLOWER_POWER")) return fail(CommandError::CannotBuild);
@@ -1128,6 +1129,11 @@ Fixed Game::goldPerTurn(PlayerId player, const std::vector<CityReport>* reports)
         if (*m > Fixed()) net -= *m;
     }
     net -= Fixed::fromInt(leaderUpkeep(player));  // the leader's mount (leader doc §8.8)
+    if (const int doubles = state_.players[static_cast<size_t>(player)].bodyDoubles; doubles > 0) {
+        for (const UnitType& u : rules_->units) {
+            if (u.bodyDouble) net -= Fixed::fromInt(doubles * u.maintenance);  // kept like units (§8.6)
+        }
+    }
     // Second Strike Capability (04): nuclear devices cost half as much again to keep.
     const int wmdPercent = policyIs(player, "POLICY_SECOND_STRIKE_CAPABILITY") ? 150 : 100;
     for (size_t i = 0; i < p.wmds.size() && i < rules_->wmds.size(); ++i) net -= Fixed::fromInt(p.wmds[i] * rules_->wmds[i].maintenance * wmdPercent / 100);
@@ -1454,6 +1460,15 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (city.population < u.minPopulation) return false;
         // Training waits while the strategic resource is short.
         if (!hasStrategicFor(city.owner, item.type, &city)) return false;
+        if (u.bodyDouble) {
+            // A body double stands in for the ruler, off the map (leader doc §8.6).
+            Player& owner = state_.players[static_cast<size_t>(city.owner)];
+            if (owner.bodyDoubles >= rules_->globalInt("BODY_DOUBLE_MAX")) return false;
+            ++owner.bodyDoubles;
+            if (owner.unitsTrained.size() < rules_->units.size()) owner.unitsTrained.resize(rules_->units.size(), 0);
+            ++owner.unitsTrained[static_cast<size_t>(item.type)];
+            return true;
+        }
         if (u.agent) {
             // Assassins become off-map agents, within the capacity (leader doc §6).
             if (u.spy ? spiesOf(city.owner) >= spyCapacity(city.owner) : agentsOf(city.owner) >= agentCapacity(city.owner)) return false;
