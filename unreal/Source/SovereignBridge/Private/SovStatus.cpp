@@ -245,3 +245,22 @@ TArray<FSovStatusLine> SovStatusLines(const sov::Game& G, sov::PlayerId Me)
 	}
 	return Out;
 }
+
+TArray<FString> SovHelpLines()
+{
+	static const TCHAR* const Lines[] = {
+		TEXT("How to play (F1 closes)"),
+		TEXT("Goal: win by science, culture, religion, diplomacy or conquest, or hold the best score at the turn limit."),
+		TEXT("Left-click a unit or city to select it; right-click a plot to move or attack there. '.' next unit needing orders."),
+		TEXT("Settler: F founds a city. Builder: B builds an improvement. U promotes a unit with enough XP."),
+		TEXT("P production, T research, C civics, F2 government and policies, Y great people, Z governors."),
+		TEXT("N diplomacy (talk to leaders, trade, demand), O city-states, J agents, ',' World Congress, I pantheon."),
+		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
+		TEXT("F3 yields on your plots (* worked). F4 the chronicle of your reign, F6 has it written up. Rest the cursor on a plot for its details."),
+		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
+		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser, then the menu (save, load, new game, quit)."),
+	};
+	TArray<FString> Out;
+	for (const TCHAR* L : Lines) Out.Add(L);
+	return Out;
+}

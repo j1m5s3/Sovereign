@@ -377,6 +377,32 @@ void SSovGameUI::Construct(const FArguments& Args)
 				]
 			]
 		]
+		// A page to read: how to play, or the chronicle.
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(0, 50, 0, 20)
+		[
+			SNew(SBox).WidthOverride(880).MaxDesiredHeight(640).Visibility_Lambda([this]() { return Model.bVisible && Model.bReader && !Model.bEnd ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(16, 12))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[SNew(STextBlock).Font(FSovStyle::Font(16, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.ReaderTitle); })]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Close")))
+							.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(Model.ReaderKey); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
+						]
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)[SAssignNew(ReaderScroll, SScrollBox) + SScrollBox::Slot()[SAssignNew(ReaderBox, SVerticalBox)]]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)
+					[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(Model.ReaderFoot); })]
+				]
+			]
+		]
 		// The plot under the cursor, beside it.
 		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(TAttribute<FMargin>::CreateLambda([this]() {
 			const FVector2D Size = LastGeometry.GetLocalSize();
@@ -451,6 +477,16 @@ void SSovGameUI::Tick(const FGeometry& Geometry, const double Time, const float 
 void SSovGameUI::SetModel(const FSovUIModel& InModel)
 {
 	Model = InModel;
+	FString Rd = Model.bReader ? Model.ReaderTitle : FString();
+	for (const FString& L : Model.ReaderLines) Rd += L + TEXT("|");
+	if (Rd != ReaderKeyText)
+	{
+		ReaderKeyText = Rd;
+		ReaderBox->ClearChildren();
+		for (const FString& L : Model.ReaderLines)
+			ReaderBox->AddSlot().AutoHeight().Padding(0, 2)[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text(FText::FromString(L))];
+		ReaderScroll->ScrollToEnd();  // the chronicle's latest lines first in view
+	}
 	FString Hv;
 	for (const FString& L : Model.Hover) Hv += L + TEXT("|");
 	if (Hv != HoverKey)

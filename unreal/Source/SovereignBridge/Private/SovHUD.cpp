@@ -88,7 +88,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 		const FString Text = SovEventText(G, Me, E);
 		Line(FString::Printf(TEXT("Turn %d: %s"), E.turn, *Text), 16, Y, FLinearColor(1.f, 0.5f, 0.8f));
 	}
-	if (S.currentPlayer != Me)
+	if (S.currentPlayer != Me && TopInset <= 0.f)  // the end-turn button says so with the widgets
 	{
 		Line(FString::Printf(TEXT("%s is playing..."), *CurrentName), 16, Y, FLinearColor(1.f, 0.8f, 0.3f));
 	}
@@ -153,23 +153,12 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 
 void ASovHUD::DrawHelp()
 {
-	static const TCHAR* const Lines[] = {
-		TEXT("How to play (F1 closes)"),
-		TEXT("Goal: win by science, culture, religion, diplomacy or conquest, or hold the best score at the turn limit."),
-		TEXT("Left-click a unit or city to select it; right-click a plot to move or attack there. '.' next unit needing orders."),
-		TEXT("Settler: F founds a city. Builder: B builds an improvement. U promotes a unit with enough XP."),
-		TEXT("P production, T research, C civics, F2 government and policies, Y great people, Z governors."),
-		TEXT("N diplomacy (talk to leaders, trade, demand), O city-states, J agents, ',' World Congress, I pantheon."),
-		TEXT("Your Sovereign (the crowned leader): E gear, L link an escort, Q walk a city's streets; it can fight battles live."),
-		TEXT("F3 yields on your plots (* worked). F4 the chronicle of your reign, F6 has it written up. Rest the cursor on a plot for its details."),
-		TEXT("F5 quicksave, F9 quickload. Space or Enter ends the turn; if something needs your choice first, it opens."),
-		TEXT("WASD / arrows pan, the wheel zooms, Home returns to your capital. Esc closes a chooser, then the menu (save, load, new game, quit)."),
-	};
-	const float W = 860.f, H = 16.f + 20.f * UE_ARRAY_COUNT(Lines);
+	const TArray<FString> Lines = SovHelpLines();
+	const float W = 860.f, H = 16.f + 20.f * Lines.Num();
 	const float Left = (Canvas->ClipX - W) * 0.5f, Top = (Canvas->ClipY - H) * 0.5f;
 	DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f), Left, Top, W, H);
 	float Y = Top + 8.f;
-	for (int32 i = 0; i < UE_ARRAY_COUNT(Lines); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
+	for (int32 i = 0; i < Lines.Num(); ++i) Line(Lines[i], Left + 14.f, Y, i == 0 ? FLinearColor(1.f, 0.85f, 0.45f) : FLinearColor::White);
 }
 
 void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
@@ -467,6 +456,7 @@ void ASovHUD::DrawHUD()
 	{
 		Line(L, 16, PY);
 	}
-	if (bShowHelp) DrawHelp();
-	if (bShowChronicle && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
+	// With the widgets up, the reader panel shows these.
+	if (bShowHelp && TopInset <= 0.f) DrawHelp();
+	if (bShowChronicle && TopInset <= 0.f && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
 }

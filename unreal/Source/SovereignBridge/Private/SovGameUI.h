@@ -81,6 +81,11 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	// A page to read over the map: how to play (F1) or the chronicle (F4).
+	bool bReader = false;
+	FString ReaderTitle, ReaderFoot;
+	TArray<FString> ReaderLines;
+	FKey ReaderKey;  // closes it
 	// The latest message (saved, bought, refused...), under the top bar for a few seconds; Toast fades it out.
 	FString Message;
 	float MessageAlpha = 0.f;
@@ -156,6 +161,9 @@ private:
 	TSharedPtr<SVerticalBox> LegendBox;
 	TSharedPtr<SVerticalBox> EmpireBox;
 	TSharedPtr<SVerticalBox> HoverBox;
+	TSharedPtr<SVerticalBox> ReaderBox;
+	TSharedPtr<class SScrollBox> ReaderScroll;
+	FString ReaderKeyText;
 	FString HoverKey;
 	FGeometry LastGeometry;   // for placing the tooltip by the cursor
 	bool bOverMap = false;    // the cursor is over the map, not one of the panels

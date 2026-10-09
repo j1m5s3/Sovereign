@@ -19,3 +19,5 @@ struct FSovStatusLine
 };
 
 TArray<FSovStatusLine> SovStatusLines(const sov::Game& G, sov::PlayerId Me);
+// How to play, a line each (the first is the title).
+TArray<FString> SovHelpLines();

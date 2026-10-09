@@ -1903,11 +1903,6 @@ void ASovPlayerController::HandleOrders()
 	if (Pressed(EKeys::O)) OpenChooser(EChooser::CityStates);
 	if (Pressed(EKeys::N)) OpenChooser(EChooser::Diplomacy);
 	if (Pressed(EKeys::F2)) OpenChooser(EChooser::Government);
-	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()))
-	{
-		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
-		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
-	}
 	// Quicksave and quickload (local games; online the host's game is the only copy that counts).
 	if (Subsystem()->GetSession().NetMode() == ESovNet::Local)
 	{
@@ -2504,6 +2499,30 @@ void ASovPlayerController::UpdateGameUI()
 	M.MessageAlpha = FMath::Clamp((MessageTime + 6.0 - GetWorld()->GetRealTimeSeconds()) / 2.0, 0.0, 1.0);
 	// The plot under the cursor.
 	if (int32 HX = 0, HY = 0; CursorHex(HX, HY)) M.Hover = SovPlotTooltip(G, Sub->GetSession().ViewPlayer(), HX, HY);
+	// How to play (F1) or the chronicle (F4), as a page over the map.
+	if (const ASovHUD* H = Cast<ASovHUD>(GetHUD()))
+	{
+		if (H->bShowHelp)
+		{
+			TArray<FString> Lines = SovHelpLines();
+			M.bReader = true;
+			M.ReaderTitle = Lines.Num() > 0 ? Lines[0].Replace(TEXT(" (F1 closes)"), TEXT("")) : FString(TEXT("How to play"));
+			if (Lines.Num() > 0) Lines.RemoveAt(0);
+			M.ReaderLines = Lines;
+			M.ReaderFoot = TEXT("F1 closes. The keys can be changed in Settings.");
+			M.ReaderKey = EKeys::F1;
+		}
+		else if (H->bShowChronicle)
+		{
+			const std::vector<std::string> All = G.chronicleLines(Me());
+			M.bReader = true;
+			M.ReaderTitle = FString::Printf(TEXT("The chronicle of your reign (%d events)"), static_cast<int32>(All.size()));
+			for (const std::string& L : All) M.ReaderLines.Add(Str(L));
+			if (All.empty()) M.ReaderLines.Add(TEXT("Nothing of note has happened yet."));
+			M.ReaderFoot = Sub->WritingChronicle() ? TEXT("The court historian is writing...") : TEXT("F6: have the court historian write it up (a file in Saved/Sovereign/Chronicles). F4 closes.");
+			M.ReaderKey = EKeys::F4;
+		}
+	}
 	// The Empire panel.
 	M.bEmpire = bEmpireOpen;
 	if (bEmpireOpen)
@@ -2824,6 +2843,12 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
+	// Help and plot yields, whoever's turn it is.
+	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && Subsystem()->IsRunning())
+	{
+		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
+		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
+	}
 	// F8 opens or closes the Empire panel (plan E, step 1).
 	if (Pressed(EKeys::F8)) bEmpireOpen = !bEmpireOpen;
 	// F7 steps through the map lenses (plan D, step 6), back to none after the last.
