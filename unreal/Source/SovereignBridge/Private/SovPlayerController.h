@@ -154,6 +154,8 @@ public:
 	void OpenSettings();
 	// The plot under the mouse, for the HUD's tooltip.
 	bool CursorHex(int32& OutX, int32& OutY) const { return HexUnderCursor(OutX, OutY); }
+	// Height of a plot's top on the map (0 when there is no map).
+	double SurfaceZ(int32 X, int32 Y) const;
 protected:
 	void CloseMenu();
 	void CloseSetup();
@@ -235,6 +237,9 @@ protected:
 	// The selected unit's reach this turn, outlined on the map.
 	void UpdateReach();
 	FString ReachKey;
+	// The selected unit's path to the plot under the cursor, for the HUD.
+	void UpdatePath();
+	FString PathKey;
 	bool bEmpireOpen = false;  // the Empire panel (F8)
 	bool bBattleNowDone = false;  // -SovBattleNow has attacked
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for

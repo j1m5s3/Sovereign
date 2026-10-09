@@ -183,6 +183,39 @@ void ASovHUD::DrawChronicle(const USovGameSubsystem& Sub)
 	Line(Sub.WritingChronicle() ? TEXT("The court historian is writing...") : TEXT("F6: have the court historian write it up (a file in Saved/Sovereign/Chronicles)"), Left + 14.f, Y,
 		FLinearColor(0.8f, 0.85f, 1.f));
 }
+void ASovHUD::DrawPath()
+{
+	// Dots along the way, joined; at the end of each turn's stretch, and at the end, the turn number in a box.
+	if (PathPlots.Num() < 2) return;
+	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
+	UFont* Font = GEngine->GetSmallFont();
+	TArray<FVector> At;
+	for (const FIntPoint& P : PathPlots) At.Add(Project(NearCamera(PlayerOwner, SovHex::Center(P.X, P.Y, (PC ? PC->SurfaceZ(P.X, P.Y) : 0.0) + 6.0))));
+	const FLinearColor Line(0.9f, 0.95f, 1.f, 0.85f);
+	for (int32 i = 1; i < At.Num(); ++i)
+	{
+		if (At[i - 1].Z <= 0 || At[i].Z <= 0) continue;
+		DrawLine(At[i - 1].X, At[i - 1].Y, At[i].X, At[i].Y, FLinearColor(0.f, 0.f, 0.f, 0.7f), 5.f);
+		DrawLine(At[i - 1].X, At[i - 1].Y, At[i].X, At[i].Y, Line, 2.5f);
+	}
+	for (int32 i = 1; i < At.Num(); ++i)
+	{
+		if (At[i].Z <= 0) continue;
+		const bool bTurnEnd = i + 1 == At.Num() || PathTurns[i + 1] != PathTurns[i];
+		if (!bTurnEnd)
+		{
+			DrawRect(Line, At[i].X - 3.f, At[i].Y - 3.f, 6.f, 6.f);
+			continue;
+		}
+		const FString T = FString::FromInt(PathTurns[i] + 1);
+		float W = 0, H = 0;
+		GetTextSize(T, W, H, Font, 1.1f);
+		DrawRect(FLinearColor(1.f, 0.78f, 0.32f, 0.95f), At[i].X - W / 2 - 5.f, At[i].Y - H / 2 - 3.f, W + 10.f, H + 6.f);
+		DrawRect(FLinearColor(0.03f, 0.027f, 0.024f, 0.95f), At[i].X - W / 2 - 4.f, At[i].Y - H / 2 - 2.f, W + 8.f, H + 4.f);
+		DrawText(T, FLinearColor(1.f, 0.85f, 0.45f), At[i].X - W / 2, At[i].Y - H / 2, Font, 1.1f);
+	}
+}
+
 void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 {
 	const sov::Game& G = Sub.GetGame();
@@ -433,6 +466,7 @@ void ASovHUD::DrawHUD()
 		return;
 	}
 	if (bShowYields || YieldCity >= 0) DrawYields(*Sub);
+	DrawPath();
 	DrawLabels(*Sub);
 	DrawStatus(*Sub, Y);
 	// The plot under the cursor: terrain, resource, improvement, owner and yields.
