@@ -114,15 +114,21 @@ bool Game::builderCanImprove(PlayerId player, Hex at) const {
     return false;
 }
 
-bool Game::canHarvestAt(PlayerId player, Hex at) const {
+// A harvest takes the plot's feature when it has one that can be removed, else its resource (the Bananas in a
+// Rainforest, the Wheat on Floodplains, the Fish on a Reef): with `resource`, always the resource.
+static bool harvestsFeature(const Rules& rules, const Plot& p, bool resource) {
+    return !resource && p.feature != kNone && rules.features[static_cast<size_t>(p.feature)].removable;
+}
+
+bool Game::canHarvestAt(PlayerId player, Hex at, bool resource) const {
     const Plot& p = state_.plot(at);
     if (p.owner != player || p.city == kNoCity || state_.cityAt(at) || p.improvement != kNone) return false;
-    if (p.feature != kNone) {
+    if (harvestsFeature(*rules_, p, resource)) {
         const FeatureType& f = rules_->features[static_cast<size_t>(p.feature)];
         if (resolutionHits(ResolutionKind::DeforestationTreaty, 0, p.feature)) return false;  // World Congress: no chopping it
-        return f.removable && !f.removeTech.none() && hasUnlocked(player, f.removeTech);
+        return !f.removeTech.none() && hasUnlocked(player, f.removeTech);
     }
-    if (!resourceVisible(player, at)) return false;
+    if (p.resource == kNone || !resourceVisible(player, at)) return false;
     const ResourceType& r = rules_->resources[static_cast<size_t>(p.resource)];
     return !r.harvestTech.none() && hasUnlocked(player, r.harvestTech);
 }
@@ -308,7 +314,8 @@ CommandError Game::validateBuilder(const Command& c) const {
         return c.type == CommandType::Harvest ? CommandError::CannotHarvest : CommandError::CannotImprove;
     }
     if (c.type == CommandType::Harvest) {
-        return isBuilder(ut) && canHarvestAt(c.player, u.pos) ? CommandError::Ok : CommandError::CannotHarvest;
+        if (c.arg != 0 && c.arg != 1) return CommandError::CannotHarvest;
+        return isBuilder(ut) && canHarvestAt(c.player, u.pos, c.arg == 1) ? CommandError::Ok : CommandError::CannotHarvest;
     }
     if (c.arg < 0 || c.arg > INT16_MAX) return CommandError::CannotImprove;
     // Military Engineers build their own improvements (Fort, Airstrip, Missile Silo), a Legionary its Fort; Builders the rest.
@@ -573,7 +580,7 @@ void Game::applyBuilder(const Command& c) {
         // Harvest: the feature (or the bonus resource) goes, its yields go to the owning city.
         Yields gain{};
         bool treaty = false;
-        if (p.feature != kNone) {
+        if (harvestsFeature(*rules_, p, c.arg == 1)) {
             gain = rules_->features[static_cast<size_t>(p.feature)].harvest;
             treaty = resolutionHits(ResolutionKind::DeforestationTreaty, 1, p.feature);  // World Congress: +100% from it
             p.feature = kNone;

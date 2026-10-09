@@ -197,7 +197,7 @@ std::string describe(const Command& c) {
             return s + "SetPolicy slot" + std::to_string(c.id) + " policy" + std::to_string(c.arg);
         case CommandType::BuildImprovement:
             return s + "BuildImprovement u" + std::to_string(c.id) + " improvement" + std::to_string(c.arg);
-        case CommandType::Harvest: return s + "Harvest u" + std::to_string(c.id);
+        case CommandType::Harvest: return s + "Harvest u" + std::to_string(c.id) + (c.arg == 1 ? " resource" : "");
         case CommandType::DeclareWar: return s + "DeclareWar p" + std::to_string(c.arg);
         case CommandType::MakePeace: return s + "MakePeace p" + std::to_string(c.arg);
         case CommandType::Attack:

@@ -437,6 +437,33 @@ TEST(builder_harvests_woods_and_bonus_resources) {
     CHECK_EQ(g2->state().cities[0].food, food + scaled(20));
 }
 
+// A harvest can take a bonus resource under a feature (01: Harvest): the Bananas in a Rainforest, which stays, and the
+// Wheat on Floodplains, which cannot be removed.
+TEST(builder_harvests_a_resource_under_a_feature) {
+    GameState base = flatState(20, 14, 1);
+    base.plot({7, 6}).feature = rules().feature("FEATURE_JUNGLE");
+    base.plot({7, 6}).resource = rules().resource("RESOURCE_BANANAS");
+    auto g = builderGame([](GameState& s) { know(s, "TECH_IRRIGATION"); }, base);
+    const UnitId b = builderOf(*g);
+    CHECK_EQ(g->submit(Command::harvest(0, b)), CommandError::CannotHarvest);  // the Rainforest first: Bronze Working
+    const Fixed food = g->state().cities[0].food;
+    REQUIRE(g->submit(Command::harvest(0, b, true)) == CommandError::Ok);
+    CHECK_EQ(g->state().plot({7, 6}).resource, kNone);
+    CHECK_EQ(g->state().plot({7, 6}).feature, rules().feature("FEATURE_JUNGLE"));
+    CHECK(g->state().cities[0].food > food);
+
+    GameState flood = flatState(20, 14, 1);
+    flood.plot({7, 6}).terrain = rules().terrain("TERRAIN_PLAINS");
+    flood.plot({7, 6}).feature = rules().feature("FEATURE_FLOODPLAINS_PLAINS");
+    flood.plot({7, 6}).resource = rules().resource("RESOURCE_WHEAT");
+    auto g2 = builderGame([](GameState& s) { know(s, "TECH_POTTERY"); }, flood);
+    const UnitId b2 = builderOf(*g2);
+    CHECK_EQ(g2->submit(Command{CommandType::Harvest, 0, b2, {}, 2, 0}), CommandError::CannotHarvest);  // 0 or 1 only
+    REQUIRE(g2->submit(Command::harvest(0, b2)) == CommandError::Ok);
+    CHECK_EQ(g2->state().plot({7, 6}).resource, kNone);
+    CHECK_EQ(g2->state().plot({7, 6}).feature, rules().feature("FEATURE_FLOODPLAINS_PLAINS"));
+}
+
 // ---- Military Engineers [GS]: railroads and Mountain Tunnels (01: Routes, Mountain tunnels)
 
 namespace {

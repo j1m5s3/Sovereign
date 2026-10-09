@@ -40,6 +40,25 @@ TEST(a_natural_wonder_feeds_its_neighbours_and_blocks_building) {
     CHECK(after[static_cast<size_t>(YieldType::Culture)] == before[static_cast<size_t>(YieldType::Culture)] + Fixed::fromInt(2));
     CHECK(!isLandPassable(g->state(), rules(), {8, 6}));  // impassable
     CHECK(!g->canFoundCityAt(0, {8, 6}));
+    // A plot touching both plots of a two-plot wonder gets its yields once (01: "adjacent tiles").
+    Hex second = {8, 6};
+    for (const Hex& h : g->state().grid.within({7, 6}, 1)) {
+        if (h != Hex{7, 6} && h != Hex{8, 6} && h != Hex{6, 6} && g->state().grid.distance(h, {8, 6}) == 1) second = h;
+    }
+    REQUIRE(second != (Hex{8, 6}));
+    GameState both = g->state();
+    both.plot(second).terrain = rules().terrain("TERRAIN_DESERT");
+    both.plot(second).feature = uluru;
+    auto twice = Game::fromScenario(rules(), both);
+    CHECK(twice->plotYields({7, 6}, twice->state().cities[0]) == after);
+    // Torres del Paine doubles the terrain's yields once, not once per plot it touches.
+    GameState torres = both;
+    torres.plot({8, 6}).feature = rules().feature("FEATURE_TORRES_DEL_PAINE");
+    torres.plot(second).feature = rules().feature("FEATURE_TORRES_DEL_PAINE");
+    auto t = Game::fromScenario(rules(), torres);
+    const Yields doubled = t->plotYields({7, 6}, t->state().cities[0]);
+    const Yields& grass = rules().terrains[at(rules().terrain("TERRAIN_GRASS"))].yields;
+    for (size_t i = 0; i < kNumYields; ++i) CHECK(doubled[i] == before[i] + grass[i]);
 }
 
 TEST(the_map_script_places_natural_wonders) {
