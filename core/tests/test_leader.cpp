@@ -379,9 +379,11 @@ TEST(fallen_leader_starts_an_interregnum_and_a_succession) {
     Fall f = fallScenario();
     Game& g = *f.game;
     CHECK_EQ(g.state().players[0].leaderName, std::string("Elizabeth I"));
+    const int before = g.grievances(0, 1);
     REQUIRE(g.submit(Command::rangedAttack(1, f.archer, {8, 5})) == CommandError::Ok);  // killed, not captured
     const Player& p = g.state().players[0];
     CHECK(!g.leaderOf(0));
+    CHECK_EQ(g.grievances(0, 1), before + rules().globalInt("LEADER_KILLED_GRIEVANCES"));  // the killer is known (§5)
     CHECK(p.successionPending);
     CHECK_EQ(p.interregnumTurns, rules().globalInt("LEADER_INTERREGNUM_TURNS"));
     CHECK(std::all_of(p.policies.begin(), p.policies.end(), [](TypeIndex x) { return x == kNone; }));
@@ -585,6 +587,12 @@ TEST(assassins_strike_exposed_leaders) {
         REQUIRE(g->state().events.size() == 1u);
         const GameEvent& e = g->state().events.back();
         CHECK(e.actor == 1 && e.target == 0);
+        // A hit or a captured assassin names the sender (§6); a killed leader adds the killer's grievance (§5).
+        const int sent = rules().globalInt("ASSASSIN_SENDER_GRIEVANCES");
+        const int killed = rules().globalInt("LEADER_KILLED_GRIEVANCES");
+        if (e.kind == EventKind::AssassinKilledLeader) CHECK(g->grievances(0, 1) > killed && g->grievances(0, 1) <= sent + killed);
+        else if (e.kind == EventKind::AssassinKilled) CHECK_EQ(g->grievances(0, 1), 0);
+        else CHECK(g->grievances(0, 1) > 0 && g->grievances(0, 1) <= sent);
         if (e.kind == EventKind::AssassinKilledLeader) {
             ++hits;
             CHECK(!g->leaderOf(0) && g->state().players[0].successionPending);
@@ -655,6 +663,100 @@ TEST(presence_aura_and_builder_king) {
     s.unit(leader)->promotions = {promo("PROMOTION_SOVEREIGN_OVERSEER")};
     auto g2 = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(g2->cityReport(city).yields[static_cast<size_t>(YieldType::Production)], before + Fixed::fromInt(2));
+}
+
+TEST(presence_aura_does_not_stack_with_a_great_general) {
+    // Leader doc section 1: the higher of the leader's aura and a Great General's applies.
+    UnitId both = 0, leaderOnly = 0, generalOnly = 0, neither = 0, enemy = 0;
+    auto g = duel([&](GameState& s) {
+        addLeader(s, 0, {4, 4});
+        const GreatPersonType& h = rules().greatPeople[at(rules().greatPerson("GREAT_PERSON_HANNIBAL_BARCA"))];
+        addUnit(s, rules().units[at(rules().greatPersonClasses[at(h.cls)].unit)].id.c_str(), 0, {4, 8});
+        s.units.back().greatPerson = rules().greatPerson("GREAT_PERSON_HANNIBAL_BARCA");
+        s.units.back().charges = h.charges;
+        both = addUnit(s, "UNIT_SWORDSMAN", 0, {4, 6});
+        leaderOnly = addUnit(s, "UNIT_SWORDSMAN", 0, {3, 3});
+        generalOnly = addUnit(s, "UNIT_SWORDSMAN", 0, {4, 9});
+        neither = addUnit(s, "UNIT_SWORDSMAN", 0, {12, 4});
+        enemy = addUnit(s, "UNIT_WARRIOR", 1, {13, 4});
+    });
+    const Unit& e = *g->state().unit(enemy);
+    auto strength = [&](UnitId id) { return g->combatStrength(*g->state().unit(id), e, true, false); };
+    const int leaderAura = rules().globalInt("LEADER_AURA_STRENGTH");
+    REQUIRE(g->greatPersonAuraStrength(*g->state().unit(both)) == 5);
+    REQUIRE(leaderAura < 5);
+    CHECK_EQ(strength(leaderOnly), strength(neither) + leaderAura);
+    CHECK_EQ(strength(generalOnly), strength(neither) + 5);
+    CHECK_EQ(strength(both), strength(neither) + 5);
+    // A Marshal's aura (3 + 2) ties the general's; with more it would be the leader's that applies.
+    GameState s = g->state();
+    for (Unit& u : s.units)
+        if (u.type == rules().unit("UNIT_SOVEREIGN"))
+            u.promotions = {rules().promotion("PROMOTION_SOVEREIGN_WEAPON_MASTER"), rules().promotion("PROMOTION_SOVEREIGN_MARSHAL")};
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    const Unit& e2 = *g2->state().unit(enemy);
+    CHECK_EQ(g2->combatStrength(*g2->state().unit(both), e2, true, false),
+             g2->combatStrength(*g2->state().unit(neither), e2, true, false) + std::max(leaderAura + 2, 5));
+}
+
+TEST(fear_angers_coreligionists_and_the_old_owners_allies) {
+    // Leader doc section 4: Fear brings a small grievance from civs that share the ruler's religion or are
+    // allied with the city's original owner.
+    CityId c = kNoCity;
+    GameState s = flatState(16, 12, 4);
+    c = addCity(s, 0, {5, 5}, false);
+    s.cities.back().originalOwner = 2;
+    addCity(s, 0, {10, 8}, true);
+    addLeader(s, 0, {5, 5});
+    addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+    s.players[0].religion = 0;
+    s.players[3].religion = 0;  // a coreligionist
+    for (PlayerId a : {1, 2}) {  // 1 and 2 are allies
+        const Relation unused{};
+        s.players[at(a)].relations.assign(4, unused);
+        Relation& ally = s.players[at(a)].relations[at(3 - a)];
+        ally.alliance = AllianceType::Research;
+        ally.allianceUntil = 100;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->alliance(1, 2) == AllianceType::Research);
+    REQUIRE(g->submit(Command::cityStance(0, c, Stance::Fear)) == CommandError::Ok);
+    const int amount = rules().globalInt("STANCE_FEAR_GRIEVANCES");
+    REQUIRE(amount > 0);
+    CHECK_EQ(g->grievances(1, 0), amount);  // allied with the original owner
+    CHECK_EQ(g->grievances(2, 0), 0);       // the original owner itself is not its own ally
+    CHECK_EQ(g->grievances(3, 0), amount);  // shares the ruler's religion
+}
+
+TEST(the_leader_gains_xp_from_the_civs_deeds) {
+    // Leader doc section 3: founding cities, city-state quests and historic moments.
+    UnitId leader = 0, settler = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            addCity(s, 0, {3, 3}, true);
+            leader = addLeader(s, 0, {9, 6});
+            settler = addUnit(s, "UNIT_SETTLER", 0, {9, 8});
+        },
+        false);
+    auto xp = [&] { return g->state().unit(leader)->xp; };
+    REQUIRE(xp() == 0);
+    const int scoreAtStart = g->state().players[0].eraScore;
+    REQUIRE(g->submit(Command::foundCity(0, settler)) == CommandError::Ok);
+    const int founded = xp();
+    CHECK_EQ(founded, rules().globalInt("LEADER_XP_FOUND_CITY") +  // and any historic moment the city made
+                          (g->state().players[0].eraScore - scoreAtStart) * rules().globalInt("LEADER_XP_PER_ERA_SCORE"));
+    const int scoreBefore = g->state().players[0].eraScore;
+    REQUIRE(g->completeItem(g->stateMutForTests().cities[0], {ProductionKind::Building, rules().building("BUILDING_PYRAMIDS")}));
+    const int moment = g->state().players[0].eraScore - scoreBefore;
+    REQUIRE(moment > 0);  // a wonder is a historic moment
+    CHECK_EQ(xp(), founded + moment * rules().globalInt("LEADER_XP_PER_ERA_SCORE"));
+    // A quest from a city-state (none here, so a quest list with one entry is made up for it).
+    GameState s = g->state();
+    s.quests.push_back({1, 0, QuestKind::TrainUnit, rules().unit("UNIT_WARRIOR")});
+    auto g2 = Game::fromScenario(rules(), std::move(s));
+    const int start = g2->state().unit(leader)->xp;
+    g2->questDone(0, QuestKind::TrainUnit, rules().unit("UNIT_WARRIOR"));
+    CHECK_EQ(g2->state().unit(leader)->xp, start + rules().globalInt("LEADER_XP_QUEST"));
 }
 
 TEST(presence_aura_steadies_the_city_it_stands_in) {

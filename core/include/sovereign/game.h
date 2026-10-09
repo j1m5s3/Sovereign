@@ -993,6 +993,10 @@ private:
     void startInterregnum(Player& p);
     // A new ruler is crowned after a loss: every city's loyalty drops and the era's score shrinks (leader doc §5).
     void successionShock(PlayerId owner, int loyaltyDrop);
+    // XP for the leader from the civ's deeds (leader doc section 3: quests, historic moments, founding cities).
+    void leaderXp(PlayerId player, int xp);
+    // A small grievance for a Fear stance from civs sharing the ruler's religion or allied with the city's original owner (§4).
+    void fearGrievances(PlayerId ruler, const City& city);
     std::optional<Hex> throneCity(PlayerId player) const;  // the capital, else any city of the player's
     void ransomRuler(PlayerId owner);                        // a Ruler deal item: the captive leader goes home
     void processLoyalty(PlayerId p);
