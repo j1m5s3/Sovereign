@@ -1316,3 +1316,41 @@ TEST(a_statesman_handles_citizens_better) {
         CHECK_EQ(fear->state().city(c)->loyalty, 20 + rules().globalInt("STANCE_FEAR_LOYALTY") * power / 100);
     }
 }
+
+TEST(a_marshal_leads_its_escort_as_a_formation) {
+    // Leader doc §3, Warlord: the ruler's linked escort fights one formation larger.
+    for (const int formation : {0, 1, 2}) {
+        UnitId escort = 0, plain = 0, enemy = 0, leader = 0;
+        auto g = duel([&](GameState& s) {
+            leader = addLeader(s, 0, {5, 5});
+            s.units.back().promotions = {promo("PROMOTION_SOVEREIGN_WEAPON_MASTER"), promo("PROMOTION_SOVEREIGN_MARSHAL")};
+            escort = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+            s.units.back().escorting = leader;
+            s.units.back().formation = static_cast<uint8_t>(formation);
+            plain = addUnit(s, "UNIT_WARRIOR", 0, {6, 5});
+            s.units.back().formation = static_cast<uint8_t>(formation);
+            enemy = addUnit(s, "UNIT_WARRIOR", 1, {13, 8});
+        });
+        const Unit& e = *g->state().unit(enemy);
+        auto strength = [&](Game& game, UnitId id) { return game.combatStrength(*game.state().unit(id), e, true, false); };
+        const int corps = rules().globalInt("COMBAT_CORPS_STRENGTH_MODIFIER"), army = rules().globalInt("COMBAT_ARMY_STRENGTH_MODIFIER");
+        const int step = formation == 0 ? corps : formation == 1 ? army - corps : 0;
+        CHECK_EQ(strength(*g, escort), strength(*g, plain) + step);
+        // Without Marshal, or not linked, it fights as it is.
+        GameState s = g->state();
+        for (Unit& u : s.units)
+            if (u.id == leader) u.promotions = {promo("PROMOTION_SOVEREIGN_WEAPON_MASTER")};
+        auto noMarshal = Game::fromScenario(rules(), std::move(s));
+        CHECK_EQ(strength(*noMarshal, escort), strength(*noMarshal, plain));
+        GameState s2 = g->state();
+        for (Unit& u : s2.units)
+            if (u.id == escort) u.escorting = kNoUnit;
+        auto unlinked = Game::fromScenario(rules(), std::move(s2));
+        CHECK_EQ(strength(*unlinked, escort), strength(*unlinked, plain));
+        GameState s3 = g->state();  // still linked, but no longer on the ruler's plot
+        for (Unit& u : s3.units)
+            if (u.id == escort) u.pos = {6, 6};
+        auto apart = Game::fromScenario(rules(), std::move(s3));
+        CHECK_EQ(strength(*apart, escort), strength(*apart, plain));
+    }
+}

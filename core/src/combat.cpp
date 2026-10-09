@@ -534,8 +534,14 @@ int Game::unitStrength(const Unit& unit, const Unit* oppUnit, const City* oppCit
     if (ut.domain == Domain::Land && nextToNaturalWonder(unit.pos, "FEATURE_GIANT_S_CAUSEWAY")) s += 5;
     // Formations (05): a Corps or Fleet +10, an Army or Armada +17; either +7 against aircraft.
     const bool vsAir = oppUnit && isAircraft(*oppUnit);
-    if (unit.formation == 1) s += rules_->globalInt(vsAir ? "COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_CORPS_STRENGTH_MODIFIER");
-    if (unit.formation >= 2) s += rules_->globalInt(vsAir ? "COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_ARMY_STRENGTH_MODIFIER");
+    int formation = unit.formation;
+    // A Marshal leads its escort as one formation larger (leader doc §3, Warlord: "can lead a Corps/Army with its escort").
+    if (unit.escorting != kNoUnit) {
+        if (const Unit* led = state_.unit(unit.escorting); led && led->pos == unit.pos && led->owner == unit.owner && isLeader(*led))
+            formation += unitEffectTotal(*led, UnitEffectKind::LeadsEscort);  // an Army at most, below
+    }
+    if (formation == 1) s += rules_->globalInt(vsAir ? "COMBAT_CORPS_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_CORPS_STRENGTH_MODIFIER");
+    if (formation >= 2) s += rules_->globalInt(vsAir ? "COMBAT_ARMY_ANTIAIR_STRENGTH_MODIFIER" : "COMBAT_ARMY_STRENGTH_MODIFIER");
     if (difficultyAi(unit.owner)) s += difficulty().aiCombat;
     else if (difficultyHuman(unit.owner)) s += difficulty().humanCombat;
     // A land unit attacking from the water (05: COMBAT_AMPHIBIOUS_ATTACK_PENALTY, -10).
