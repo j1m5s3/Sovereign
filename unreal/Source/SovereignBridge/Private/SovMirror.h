@@ -59,6 +59,7 @@ struct FSovUnitMarker
 	int32 Hp = 100;
 	FString Name;  // unit type, or the ruler's name for a leader
 	FName Icon;    // its flag's icon (unreal/Content/Slate/Icons): attack, ranged, found, build, religion...
+	FName Figure;  // its Figures kit model (kit_figures.py): Soldier, Archer, Rider, Siege, Musketeer, Tank, Ship...
 };
 
 struct FSovCityMarker

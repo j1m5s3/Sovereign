@@ -312,6 +312,17 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 				: Cls == "RECON" ? FName("moves")
 				: Cls == "SUPPORT" ? FName("fortify")
 				: FName("attack");
+			// The figure on the map, by arm and the era it belongs to (0 Ancient ... 3 Renaissance, 4 Industrial, 5 Modern).
+			const bool bHeli = Type.id.find("HELICOPTER") != std::string::npos;
+			Marker.Figure = Marker.bLeader ? FName("Leader")
+				: Type.domain == sov::Domain::Sea ? (Type.era >= 4 ? FName("Steamship") : FName("Ship"))
+				: Type.domain == sov::Domain::Air || bHeli ? FName("Plane")
+				: Marker.bCivilian ? FName("Citizen")
+				: Cls == "SIEGE" || Type.id.find("CANNON") != std::string::npos ? FName("Siege")
+				: Cls == "RANGED" ? (Type.era >= 4 ? FName("Rifleman") : FName("Archer"))
+				: Cls == "LIGHT_CAVALRY" || Cls == "HEAVY_CAVALRY" ? (Type.era >= 5 ? FName("Tank") : FName("Rider"))
+				: Cls == "GDR" ? FName("Tank")
+				: Type.era >= 5 ? FName("Rifleman") : Type.era >= 3 ? FName("Musketeer") : FName("Soldier");
 		}
 		if (Marker.bLeader)
 		{

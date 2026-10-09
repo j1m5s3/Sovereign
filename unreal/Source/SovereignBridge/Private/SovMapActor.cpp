@@ -797,13 +797,19 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
 		// Kit figures in the owner's colour when the art exists; a figure stands about 45 cm tall on the map.
-		const TCHAR* FigureName = Unit.bNaval ? TEXT("Ship") : Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier");
-		if (SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color))
+		// Its arm's figure (FSovUnitMarker::Figure); the vehicles, several metres long, are drawn smaller.
+		const FString FigureName = Unit.Figure.IsNone() ? FString(Unit.bNaval ? TEXT("Ship") : Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier"))
+			: Unit.Figure.ToString();
+		const bool bFigureOk = SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color)
+			|| SovArt::SetKitMesh(C, TEXT("Figures"), Unit.bNaval ? TEXT("Ship") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier"), Unit.Color);
+		const double Vehicle = FigureName == TEXT("Tank") ? 0.13 : FigureName == TEXT("Plane") ? 0.12 : FigureName == TEXT("Siege") ? 0.2
+			: FigureName == TEXT("Rider") ? 0.22 : FigureName == TEXT("Steamship") ? 0.13 : 0.0;
+		if (bFigureOk)
 		{
-			if (Unit.bNaval)
+			if (Unit.bNaval || Vehicle > 0.0)
 			{
-				C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
-				C->SetRelativeScale3D(FVector(0.14));
+				C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)));
+				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.14));
 				C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // side-on to the camera
 				continue;
 			}
