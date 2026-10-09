@@ -2165,6 +2165,58 @@ TSet<int32> ASovPlayerController::TreePath(bool bCivics) const
 	return Path;
 }
 
+void ASovPlayerController::UpdateReach()
+{
+	// Where the selected unit of ours can go this turn, outlined on the map (recomputed only when it changes).
+	const sov::Game& G = Subsystem()->GetGame();
+	const sov::GameState& S = G.state();
+	const sov::Unit* U = S.unit(SelectedUnit);
+	const bool bShow = U && U->owner == Me() && MyTurn() && U->movesLeft > sov::Fixed();
+	const FString Key = bShow ? FString::Printf(TEXT("%d:%d,%d:%s:%d"), U->id, U->pos.x, U->pos.y, UTF8_TO_TCHAR(U->movesLeft.toString().c_str()), S.turn) : FString();
+	if (Key == ReachKey) return;
+	ReachKey = Key;
+	TArray<FSovEdge> Edges;
+	if (bShow)
+	{
+		// Cheapest moves left on arrival, by plot: a unit with any moves left may always enter (05: Movement).
+		TMap<int32, sov::Fixed> Left;
+		TArray<sov::Hex> Open = {U->pos};
+		Left.Add(S.grid.index(U->pos), U->movesLeft);
+		while (Open.Num() > 0)
+		{
+			const sov::Hex H = Open.Pop();
+			const sov::Fixed Have = Left[S.grid.index(H)];
+			if (Have <= sov::Fixed()) continue;
+			for (int32 d = 0; d < 6; ++d)
+			{
+				const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(d));
+				if (!N) continue;
+				const std::optional<sov::Fixed> Cost = G.moveCost(*U, H, *N);
+				if (!Cost) continue;
+				const sov::Fixed After = *Cost >= Have ? sov::Fixed() : Have - *Cost;
+				const int32 Index = S.grid.index(*N);
+				if (const sov::Fixed* Was = Left.Find(Index); Was && !(*Was < After)) continue;
+				Left.Add(Index, After);
+				Open.Add(*N);
+			}
+		}
+		// The outline: every side of a reachable plot that faces one it cannot reach.
+		for (const TPair<int32, sov::Fixed>& R : Left)
+		{
+			const sov::Hex H = S.grid.at(R.Key);
+			for (int32 d = 0; d < 6; ++d)
+			{
+				const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(d));
+				if (N && Left.Contains(S.grid.index(*N))) continue;
+				if (!N && d != 1 && d != 4) continue;  // past the top or bottom of the map: no outline there
+				const sov::Hex Out = N ? *N : sov::Hex{H.x + (d == 1 ? 1 : d == 4 ? -1 : 0), H.y};
+				Edges.Add({FIntPoint(H.x, H.y), FIntPoint(Out.x, Out.y), FLinearColor(0.55f, 0.85f, 1.f)});
+			}
+		}
+	}
+	Map->SetReach(Edges);
+}
+
 void ASovPlayerController::OpenNotice(int32 Index)
 {
 	if (!Notices.IsValidIndex(Index)) return;
@@ -3151,6 +3203,7 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		if (const sov::Unit* U = Now.unit(SelectedUnit)) Map->SetHighlight(U->pos.x, U->pos.y);
 		else if (const sov::City* C = Now.city(SelectedCity)) Map->SetHighlight(C->pos.x, C->pos.y);
 		else Map->SetHighlight(-1, -1);
+		UpdateReach();
 	}
 	UpdatePanel();
 }
