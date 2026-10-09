@@ -283,7 +283,9 @@ class Piece:
                 # each solid); faces turned up glow a little.
                 grad = (1.0 - w) * t + w * tp
                 shade = self.shade_low + self.shade_range * grad + (0.08 if poly.normal.z > 0.6 else 0.0) - (0.06 if poly.normal.z < -0.6 else 0.0)
-                attr.data[li].color = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), alpha)
+                # The palette is sRGB: write it as sRGB bytes (.color would take it as linear and brighten it a gamma
+                # step); the kit material squares them back to linear.
+                attr.data[li].color_srgb = (min(1, base[0] * shade), min(1, base[1] * shade), min(1, base[2] * shade), alpha)
         for poly in mesh.polygons:
             poly.use_smooth = self.smooth
         # Slot 0: the piece's own colours; slot 1 (only when used): team colour.

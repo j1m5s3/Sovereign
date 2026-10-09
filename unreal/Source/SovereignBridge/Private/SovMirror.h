@@ -106,6 +106,7 @@ struct FSovMirror
 	TArray<FSovWonderMarker> Wonders;           // on revealed plots
 	TArray<FSovDistrictMarker> Districts;       // on revealed plots
 	TArray<FIntPoint> Villages;                 // tribal villages on revealed plots (01)
+	TArray<FIntPoint> Unexplored;               // plots the viewer has never seen (drawn as blank parchment)
 	TArray<FIntPoint> Antiquity;                // antiquity sites and shipwrecks, once the viewer knows Natural History (07)
 	TArray<FSovEdge> Rivers;                    // river edges between revealed plots (01)
 	TArray<FSovEdge> Borders;                   // territory edges, in the owner's colour (02)
