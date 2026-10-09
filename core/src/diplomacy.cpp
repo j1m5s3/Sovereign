@@ -117,6 +117,8 @@ bool Game::grantsOpenBorders(PlayerId owner, PlayerId to) const {
     if (isCityState(owner) && at(owner) < state_.players[at(to)].envoys.size() && state_.players[at(to)].envoys[at(owner)] > 0 &&
         policyIs(to, "POLICY_GUNBOAT_DIPLOMACY"))
         return true;
+    // An alliance opens the allies' borders to each other (05: Borders).
+    if (alliance(owner, to) != AllianceType::None) return true;
     return state_.players[at(owner)].relations[at(to)].openBordersUntil >= state_.turn;
 }
 

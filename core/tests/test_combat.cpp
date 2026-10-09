@@ -336,6 +336,43 @@ TEST(promotion_and_healing) {
     CHECK_EQ(unit(*g3, w).hp, 50 + r.globalInt("COMBAT_HEAL_LAND_FRIENDLY"));
 }
 
+// Medics and Supply Convoys (05: Healing): +20 HP a turn to friendly units within a plot; two healers heal no more
+// than one, and a unit that moved does not heal at all.
+TEST(medics_and_supply_convoys_heal_the_units_beside_them) {
+    const Rules& r = rules();
+    UnitId both = kNoUnit, convoyOnly = kNoUnit, moved = kNoUnit, twoAway = kNoUnit, far = kNoUnit;
+    const Hex medic{6, 5}, convoy{4, 5};
+    auto g = duel([&](GameState& s) {
+        both = addUnit(s, "UNIT_WARRIOR", 0, {5, 5});
+        convoyOnly = addUnit(s, "UNIT_WARRIOR", 0, {3, 5});
+        moved = addUnit(s, "UNIT_WARRIOR", 0, {7, 5});
+        twoAway = addUnit(s, "UNIT_WARRIOR", 0, {8, 5});
+        far = addUnit(s, "UNIT_WARRIOR", 0, {5, 9});
+        for (UnitId id : {both, convoyOnly, moved, twoAway, far}) {
+            s.unit(id)->hp = 40;
+            s.unit(id)->activity = Activity::Sleep;
+        }
+        s.unit(moved)->moved = true;
+        for (const Hex at : {medic, convoy}) {
+            const UnitId healer = addUnit(s, at == medic ? "UNIT_MEDIC" : "UNIT_SUPPLY_CONVOY", 0, at);
+            s.unit(healer)->activity = Activity::Sleep;
+        }
+    });
+    const HexGrid& grid = g->state().grid;
+    REQUIRE(grid.distance(medic, {5, 5}) == 1 && grid.distance(convoy, {5, 5}) == 1);
+    REQUIRE(grid.distance(convoy, {3, 5}) == 1 && grid.distance(medic, {3, 5}) > 1);
+    REQUIRE(grid.distance(medic, {7, 5}) == 1);
+    REQUIRE(grid.distance(medic, {8, 5}) == 2 && grid.distance(convoy, {8, 5}) > 2);
+    REQUIRE(grid.distance(medic, {5, 9}) > 1 && grid.distance(convoy, {5, 9}) > 1);
+    const int neutral = r.globalInt("COMBAT_HEAL_LAND_NEUTRAL");
+    endTurns(*g, 2);
+    CHECK_EQ(unit(*g, both).hp, 40 + neutral + 20);
+    CHECK_EQ(unit(*g, convoyOnly).hp, 40 + neutral + 20);
+    CHECK_EQ(unit(*g, moved).hp, 40);
+    CHECK_EQ(unit(*g, twoAway).hp, 40 + neutral);
+    CHECK_EQ(unit(*g, far).hp, 40 + neutral);
+}
+
 TEST(oligarchy_and_unpaid_fuel_change_strength) {
     const Rules& r = rules();
     UnitId w = kNoUnit, foe = kNoUnit, tank = kNoUnit;
