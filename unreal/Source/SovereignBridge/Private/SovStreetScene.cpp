@@ -152,8 +152,12 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 	{
 		const FVector Scale = P.Size / 100.0;
 		// Kit meshes when the art has been built (tools/art); primitives otherwise.
-		const TCHAR* Kit = P.Kind == ESovStreetPiece::Tree ? TEXT("Nature") : TEXT("Classical");
-		if (UStaticMesh* Mesh = P.Recipe.IsEmpty() ? nullptr : SovArt::Mesh(Kit, P.Recipe))
+		// Houses and the Palace in the owner's era's style (SovArt::EraPiece); here the Landmark stands for other
+		// buildings, so it stays.
+		const TPair<const TCHAR*, FString> Piece = P.Kind == ESovStreetPiece::Tree ? TPair<const TCHAR*, FString>(TEXT("Nature"), P.Recipe)
+			: P.Recipe == TEXT("Landmark") ? TPair<const TCHAR*, FString>(TEXT("Classical"), P.Recipe) : SovArt::EraPiece(Layout.Era, P.Recipe);
+		const TCHAR* Kit = Piece.Key;
+		if (UStaticMesh* Mesh = P.Recipe.IsEmpty() ? nullptr : SovArt::Mesh(Kit, Piece.Value))
 		{
 			if (P.Kind == ESovStreetPiece::Wall)
 			{
@@ -170,7 +174,7 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 			UStaticMeshComponent* C = AddKitPiece(Mesh, FVector(P.Location.X, P.Location.Y, 0), P.Yaw, FLinearColor::White);
 			if (P.Kind == ESovStreetPiece::Banner)
 			{
-				SovArt::SetKitMesh(C, Kit, P.Recipe, P.Color);  // the cloth takes the owner's colour
+				SovArt::SetKitMesh(C, Kit, Piece.Value, P.Color);  // the cloth takes the owner's colour
 			}
 			continue;
 		}

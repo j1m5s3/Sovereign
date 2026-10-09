@@ -88,6 +88,18 @@ bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString
 	return true;
 }
 
+TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName)
+{
+	const TCHAR* Style = Era >= 6 ? TEXT("Modern_") : Era >= 4 ? TEXT("Industrial_") : Era >= 2 ? TEXT("Medieval_") : nullptr;
+	const bool bCity = ClassicalName == TEXT("Palace") || ClassicalName == TEXT("Landmark") || ClassicalName.StartsWith(TEXT("House_"));
+	if (Style && bCity && ClassicalName != TEXT("House_Boarded"))
+	{
+		const FString Name = FString(Style) + (ClassicalName == TEXT("Landmark") ? FString(TEXT("Hall")) : ClassicalName);
+		if (Mesh(TEXT("Towns"), Name)) return {TEXT("Towns"), Name};
+	}
+	return {TEXT("Classical"), ClassicalName};
+}
+
 TArray<FString> RequiredAssets()
 {
 	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit")};
