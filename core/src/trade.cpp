@@ -42,7 +42,7 @@ int Game::tradeRouteCapacity(PlayerId player) const {
         int city = 0;
         for (TypeIndex b : c.buildings) {
             const BuildingType& bt = rules_->buildings[at(b)];
-            if (bt.tradeCapacity > 0 && (bt.tradeCapacityUnless == kNone || !cityHasBuilding(c, *rules_, bt.tradeCapacityUnless))) city += bt.tradeCapacity;
+            if (bt.tradeCapacity > 0 && !buildingIdle(c, *rules_, b) && (bt.tradeCapacityUnless == kNone || !cityHasBuilding(c, *rules_, bt.tradeCapacityUnless))) city += bt.tradeCapacity;
         }
         cap += city;
     }

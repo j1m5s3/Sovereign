@@ -128,7 +128,7 @@ void Game::burnPower(PlayerId pid) {
     for (City& c : state_.cities) {
         if (c.owner != pid) continue;
         c.powerDemand = 0;
-        for (TypeIndex b : c.buildings) c.powerDemand += rules_->buildings[at(b)].requiredPower;
+        for (TypeIndex b : c.buildings) c.powerDemand += buildingIdle(c, *rules_, b) ? 0 : rules_->buildings[at(b)].requiredPower;
         c.powerSupply = renewablePower(c) * renewable;
         if (technocracy) c.powerSupply += 3;
         if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS") && c.district(rules_->district("DISTRICT_SPACEPORT"), true)) c.powerSupply += 3;  // 04
@@ -144,7 +144,7 @@ void Game::burnPower(PlayerId pid) {
             const int d = state_.grid.distance(o->pos, c->pos);
             if (d > plantRange) continue;
             for (TypeIndex b : o->buildings) {
-                if (rules_->buildings[at(b)].burnsResource != kNone) plants.push_back({d, o});
+                if (rules_->buildings[at(b)].burnsResource != kNone && !buildingIdle(*o, *rules_, b)) plants.push_back({d, o});  // not one in a pillaged district
             }
         }
         std::stable_sort(plants.begin(), plants.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
@@ -170,7 +170,7 @@ void Game::burnPower(PlayerId pid) {
 // Wind and Offshore Wind Farms, Geothermal Plants) unpillaged on its plots.
 int Game::renewablePower(const City& city) const {
     int power = 0;
-    for (TypeIndex b : city.buildings) power += rules_->buildings[at(b)].powerProvided;
+    for (TypeIndex b : city.buildings) power += buildingIdle(city, *rules_, b) ? 0 : rules_->buildings[at(b)].powerProvided;
     state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
         const Plot& pl = state_.plot(h);
         if (pl.city == city.id && pl.improvement != kNone && pl.pillagedTurns == 0) power += rules_->improvements[at(pl.improvement)].powerProvided;

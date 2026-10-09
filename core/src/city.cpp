@@ -61,10 +61,7 @@ int trainedXpPercent(const Rules& r, const City& city, const UnitType& u) {
     int total = 0;
     for (TypeIndex bi : city.buildings) {
         const BuildingType& b = r.buildings[static_cast<size_t>(bi)];
-        if (b.districtType != kNone) {
-            const CityDistrict* home = city.district(b.districtType, true);
-            if (home && home->pillagedTurns > 0) continue;
-        }
+        if (buildingIdle(city, r, bi)) continue;
         total += u.promotionClass.empty() ? 0 : b.trainedXpPercent;
         if (b.trainedAbility == kNone) continue;
         const AbilityType& a = r.abilities[static_cast<size_t>(b.trainedAbility)];
@@ -221,11 +218,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     }
     for (TypeIndex b : c->buildings) {
         const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
-        // A pillaged district's buildings stand idle (05: Pillage).
-        if (bt.districtType != kNone) {
-            const CityDistrict* home = c->district(bt.districtType, true);
-            if (home && home->pillagedTurns > 0) continue;
-        }
+        if (buildingIdle(*c, *rules_, b)) continue;  // a pillaged district's buildings stand idle (05: Pillage)
         for (size_t i = 0; i < kNumYields; ++i) raw[i] += bt.yields[i];
         rep.housing += bt.housing;
         rep.amenities += bt.amenities;
@@ -298,6 +291,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     const bool reliquaries = !c->greatWorks.empty() && cityFollows(*c, Bf::Reliquaries);
     const bool kandy = !c->greatWorks.empty() && suzerainBonus(c->owner, Cs::Kandy, shared);
     for (const GreatWork& w : c->greatWorks) {
+        if (buildingIdle(*c, *rules_, w.building)) continue;  // its building idles in a pillaged district (03)
         const GreatWorkType& gw = rules_->greatWorkTypes[static_cast<size_t>(w.type)];
         const int pct = themed(*c, w.building) ? 100 + rules_->buildings[static_cast<size_t>(w.building)].theming->yieldPercent : 100;  // 07: Theming
         // Relics: triple with Reliquaries (06), half again for Kandy's suzerain (08).
@@ -309,7 +303,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     }
     for (TypeIndex person : owner.greatPeopleActivated) {
         for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {
-            if (fx.kind == GreatPersonEffectKind::BuildingYield && c->has(fx.ref)) raw[idx(fx.yield)] += Fixed::fromInt(fx.amount);
+            if (fx.kind == GreatPersonEffectKind::BuildingYield && c->has(fx.ref) && !buildingIdle(*c, *rules_, fx.ref)) raw[idx(fx.yield)] += Fixed::fromInt(fx.amount);
         }
     }
     // Finished districts add their adjacency yields to the city.
@@ -444,7 +438,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (owns) rep.amenities += static_cast<int>(wonders.size());
     }
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
-        for (TypeIndex bi : c->buildings) rep.amenities += rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
+        for (TypeIndex bi : c->buildings) rep.amenities += buildingIdle(*c, *rules_, bi) ? 0 : rules_->buildings[static_cast<size_t>(bi)].poweredAmenities;
     }
     // Regional buildings (03: a Factory, Zoo, Stadium, Aquarium... reaches the owner's cities within its range): a city
     // without one of its own takes the yields and Amenities of the nearest in range, once per building type, and its
@@ -502,6 +496,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         for (TypeIndex b : c->buildings) {
             const BuildingType& bt = rules_->buildings[static_cast<size_t>(b)];
             rep.amenities += bt.wonder ? ab.amenityPerWonder : 0;
+            if (buildingIdle(*c, *rules_, b)) continue;
             for (const auto& [district, n] : ab.districtBuildingAmenities) rep.amenities += bt.districtType == district && district != kNone ? n : 0;
         }
         PlayerId holder = kNoPlayer;
@@ -658,6 +653,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     // Governors: Magnus's Industrialist (+2 Production per power plant), Reyna's Renewable Subsidizer (+2 Gold from a Hydroelectric Dam).
     for (TypeIndex bi : c->buildings) {
         const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
+        if (buildingIdle(*c, *rules_, bi)) continue;
         if (b.burnsResource != kNone && cityGovernorHas(*c, "GOVERNOR_PROMOTION_INDUSTRIALIST")) rep.yields[idx(YieldType::Production)] += Fixed::fromInt(2);
         if (b.powerProvided > 0 && cityGovernorHas(*c, "GOVERNOR_PROMOTION_RENEWABLE_SUBSIDIZER")) rep.yields[idx(YieldType::Gold)] += Fixed::fromInt(2);
     }
@@ -665,7 +661,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
     if (c->powerDemand > 0 && c->powerSupply >= c->powerDemand) {
         for (TypeIndex bi : c->buildings) {
             const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
-            if (b.requiredPower > 0) for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += b.poweredYields[i];
+            if (b.requiredPower > 0 && !buildingIdle(*c, *rules_, bi)) for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += b.poweredYields[i];
         }
     }
     // Civ abilities (leaders-and-art-style): culture per suzerainty and yields per governor title in
@@ -700,6 +696,7 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         const CivAbility& ab = civAbility(c->owner);
         for (TypeIndex bi : c->buildings) {
             const BuildingType& b = rules_->buildings[static_cast<size_t>(bi)];
+            if (buildingIdle(*c, *rules_, bi)) continue;
             for (const auto& [district, y] : ab.districtBuildingYields) {
                 if (b.districtType == district && district != kNone) {
                     for (size_t i = 0; i < kNumYields; ++i) rep.yields[i] += y[i];
@@ -943,6 +940,11 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (!b.prereqs.empty() && std::none_of(b.prereqs.begin(), b.prereqs.end(), inCity)) return fail(CommandError::CannotBuild);
         if (std::any_of(b.exclusiveWith.begin(), b.exclusiveWith.end(), inCity)) return fail(CommandError::CannotBuild);
         if (b.needsRiver && !isRiverAdjacent(state_, c.pos)) return fail(CommandError::CannotBuild);
+        if (b.plazaTier > 0) {
+            // A Government Plaza building needs a government of its tier (03; Sovereign: or a higher one).
+            const TypeIndex gov = state_.players[static_cast<size_t>(c.owner)].government;
+            if (gov == kNone || rules_->governments[static_cast<size_t>(gov)].tier < b.plazaTier) return fail(CommandError::CannotBuild);
+        }
     } else if (item.kind == ProductionKind::District) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->districts.size()) return fail(CommandError::CannotBuild);
         const DistrictType& d = rules_->districts[static_cast<size_t>(item.type)];

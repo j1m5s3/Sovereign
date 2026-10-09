@@ -17,6 +17,13 @@ bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building) {
     return false;
 }
 
+bool buildingIdle(const City& city, const Rules& rules, TypeIndex building) {
+    const TypeIndex district = rules.buildings[static_cast<size_t>(building)].districtType;
+    if (district == kNone) return false;
+    const CityDistrict* home = city.district(district, true);
+    return home && home->pillagedTurns > 0;
+}
+
 namespace {
 // The place of the element with this id in a list sorted by id, or the list's size: lower_bound, with each halving
 // picked by a select rather than a branch (a lookup's halvings go either way at random, which a branch mispredicts).

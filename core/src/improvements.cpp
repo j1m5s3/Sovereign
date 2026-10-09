@@ -35,6 +35,9 @@ bool Game::resourceImproved(Hex at) const {
     const Plot& p = state_.plot(at);
     if (p.resource == kNone) return false;
     if (p.improvement != kNone && contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource)) return true;
+    // A strategic resource still hidden when a district or wonder went over it is granted once revealed (03).
+    if (rules_->resources[static_cast<size_t>(p.resource)].cls == ResourceClass::Strategic && (state_.districtAt(at) || state_.wonderAt(at) != kNone))
+        return true;
     return state_.cityAt(at) != nullptr;  // a city center counts as improving its resource (looked for last: it looks through every city)
 }
 

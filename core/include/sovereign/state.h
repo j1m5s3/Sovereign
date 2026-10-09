@@ -350,6 +350,9 @@ struct SOV_API City {
 
 // The city has the building, or a civ unique that replaces it (leaders-and-art-style).
 SOV_API bool cityHasBuilding(const City& city, const Rules& rules, TypeIndex building);
+// The building stands idle: its district is pillaged (03: "a pillaged district or building stops working until
+// repaired"). City Center buildings and wonders never are.
+SOV_API bool buildingIdle(const City& city, const Rules& rules, TypeIndex building);
 
 // A player's progress through one research tree (techs or civics). Progress
 // is kept per node, so switching away loses nothing (04-tech-civics-government.md).

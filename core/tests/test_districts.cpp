@@ -92,6 +92,56 @@ TEST(district_placement_rules) {
     CHECK_EQ(g->purchaseCost(0, item("DISTRICT_CAMPUS")), -1);
 }
 
+// A Mountain Tunnel opens its mountain to units, not to building: no district goes on a Mountain (03), and a wonder
+// only when it is built on one (Machu Picchu).
+TEST(a_tunnelled_mountain_holds_no_district_and_only_a_mountain_wonder) {
+    const Hex peak{7, 6}, flat{6, 7};  // both beside the City Center
+    auto g = town(1, [&](GameState& s) {
+        s.plot(peak).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+        s.plot(peak).improvement = rules().improvement("IMPROVEMENT_MOUNTAIN_TUNNEL");
+    });
+    const City& c = *g->state().city(1);
+    REQUIRE(isLandPassable(g->state(), rules(), peak));
+    CHECK(!g->canPlaceDistrict(c, district("DISTRICT_CAMPUS"), peak));
+    CHECK(g->canPlaceDistrict(c, district("DISTRICT_CAMPUS"), flat));
+    const TypeIndex basil = rules().building("BUILDING_ST_BASIL_S_CATHEDRAL");  // anywhere beside the City Center
+    CHECK(!g->canPlaceWonder(c, basil, peak));
+    CHECK(g->canPlaceWonder(c, basil, flat));
+    CHECK(g->canPlaceWonder(c, rules().building("BUILDING_MACHU_PICCHU"), peak));
+}
+
+// A district or wonder may go over a strategic resource still hidden (03), and once the resource is revealed its
+// owner gathers it as from an improved plot ("it is granted once revealed").
+TEST(a_hidden_strategic_resource_under_a_district_or_wonder_is_granted_once_revealed) {
+    const Hex spot{7, 6};
+    const TypeIndex coal = rules().resource("RESOURCE_COAL");
+    enum class Over { Nothing, District, Wonder };
+    const auto gathered = [&](bool revealed, Over over) {
+        auto g = town(3, [&](GameState& s) {
+            s.plot(spot).resource = coal;
+            const Unlock& reveal = rules().resources[at(coal)].reveal;
+            if (revealed && reveal.civic) s.players[0].civics.done[at(reveal.index)] = 1;
+            if (revealed && !reveal.civic) s.players[0].techs.done[at(reveal.index)] = 1;
+            City& c = *s.city(1);
+            if (over == Over::District) c.districts.push_back({district("DISTRICT_CAMPUS"), spot, true});
+            if (over == Over::Wonder) c.wonders.push_back({rules().building("BUILDING_ST_BASIL_S_CATHEDRAL"), spot});
+            c.queue = {{ProductionKind::Unit, rules().unit("UNIT_WARRIOR")}};
+        });
+        // Placed only while it is hidden.
+        if (over == Over::Nothing) CHECK_EQ(g->canPlaceDistrict(*g->state().city(1), district("DISTRICT_CAMPUS"), spot), !revealed);
+        const int before = g->state().players[0].stockpile[at(coal)];
+        endTurns(*g, 1);
+        return g->state().players[0].stockpile[at(coal)] - before;
+    };
+    const int perTurn = rules().resources[at(coal)].accumulation;
+    REQUIRE(perTurn > 0);
+    CHECK_EQ(gathered(true, Over::District), perTurn);
+    CHECK_EQ(gathered(true, Over::Wonder), perTurn);
+    CHECK_EQ(gathered(true, Over::Nothing), 0);
+    CHECK_EQ(gathered(false, Over::District), 0);
+    CHECK_EQ(gathered(false, Over::Nothing), 0);
+}
+
 TEST(district_adjacency_yields) {
     const Hex spot{8, 6};
     // Neighbours of (8,6): (7,5) (8,5) (7,6) (9,6) (7,7) (8,7); the center (6,6) is two away.
@@ -332,6 +382,137 @@ TEST(districts_wonders_and_the_biosphere_beside_a_plot_change_its_appeal) {
         s.cities[0].districts.push_back(d);
     });
     CHECK_EQ(pillaged->plotAppeal(plot), plain->plotAppeal(plot) - 1);
+}
+
+// A pillaged district stops working until it is repaired (03: Pillage), and so do its buildings: its Housing, Amenities,
+// great person points, trade route capacity, Great Works' yields and Tourism, its buildings' modifiers and a Dam's
+// flood protection all go, as if the district were not there.
+TEST(a_pillaged_district_and_its_buildings_stop_working) {
+    struct Site {
+        const char* district;
+        Hex pos;
+        std::vector<const char*> buildings;
+    };
+    // No two beside each other, so a pillaged one changes no other's Appeal or adjacency.
+    const std::vector<Site> sites = {
+        {"DISTRICT_CAMPUS", {6, 8}, {"BUILDING_LIBRARY", "BUILDING_UNIVERSITY"}},
+        {"DISTRICT_COMMERCIAL_HUB", {8, 6}, {"BUILDING_MARKET"}},
+        {"DISTRICT_ENTERTAINMENT_COMPLEX", {4, 6}, {"BUILDING_ZOO"}},
+        {"DISTRICT_NEIGHBORHOOD", {6, 3}, {}},
+        {"DISTRICT_THEATER_SQUARE", {4, 8}, {"BUILDING_AMPHITHEATER"}},
+        {"DISTRICT_GOVERNMENT_PLAZA", {8, 4}, {"BUILDING_AUDIENCE_CHAMBER"}},
+        {"DISTRICT_DAM", {4, 4}, {}},
+    };
+    const Hex jungle{7, 5};  // the Zoo: +1 Science on its city's rainforest
+    // Every site built but `drop` (left out with its buildings), with `pillage` pillaged.
+    const auto scene = [&](const std::string& pillage, const std::string& drop) {
+        return town(10, [&](GameState& s) {
+            City& c = s.cities[0];
+            for (const Site& site : sites) {
+                REQUIRE(s.grid.distance(kCenter, site.pos) <= 3);
+                if (drop == site.district) continue;
+                CityDistrict d{district(site.district), site.pos, true};
+                d.pillagedTurns = pillage == site.district ? 3 : 0;
+                c.districts.push_back(d);
+                for (const char* b : site.buildings) c.buildings.push_back(rules().building(b));
+            }
+            std::sort(c.buildings.begin(), c.buildings.end());
+            if (drop != "DISTRICT_THEATER_SQUARE") {
+                GreatWork w;
+                w.type = rules().greatWorkType("WRITING");
+                w.building = rules().building("BUILDING_AMPHITHEATER");
+                c.greatWorks.push_back(w);
+            }
+            s.plot(jungle).feature = rules().feature("FEATURE_JUNGLE");
+        });
+    };
+    const auto measure = [&](const Game& g) {
+        const City& c = g.state().cities[0];
+        const CityReport r = g.cityReport(c.id);
+        std::vector<std::pair<std::string, int64_t>> m = {
+            {"housing", r.housing.raw()},
+            {"amenities", r.amenities},
+            {"culture", r.yields[static_cast<size_t>(YieldType::Culture)].raw()},
+            {"trade capacity", g.tradeRouteCapacity(0)},
+            {"tourism", g.tourismBase(0)},
+            {"loyalty", g.loyaltyPerTurn(c.id).raw()},
+            {"zoo science", g.plotYields(jungle, c)[static_cast<size_t>(YieldType::Science)].raw()},
+            {"flood protection", g.cityPrevents(c.id, true) ? 1 : 0},
+        };
+        for (size_t k = 0; k < rules().greatPersonClasses.size(); ++k)
+            m.emplace_back(rules().greatPersonClasses[k].id, g.greatPersonPointsPerTurn(0, static_cast<TypeIndex>(k)));
+        return m;
+    };
+    const auto all = measure(*scene("", ""));
+    for (const Site& site : sites) {
+        const auto pillaged = measure(*scene(site.district, "")), gone = measure(*scene("", site.district));
+        CHECK(gone != all);  // the site does something while it works
+        for (size_t k = 0; k < gone.size(); ++k) {
+            if (pillaged[k].second != gone[k].second)
+                sovtest::fail(__FILE__, __LINE__, std::string(site.district) + " pillaged: " + gone[k].first + " " +
+                                                      sovtest::showPair(pillaged[k].second, gone[k].second), false);
+        }
+    }
+}
+
+// The rest of a pillaged district's buildings' bonuses go too: their yields and Amenities while the city is powered,
+// great people's yields on them (Hypatia's Libraries, James Watt's Factories), Magnus's Industrialist on a power plant,
+// and civ abilities on district buildings (Charlemagne's Holy Site buildings, Japan's Encampment buildings).
+TEST(a_pillaged_districts_buildings_lose_their_bonuses) {
+    struct Site {
+        const char* district;
+        Hex pos;
+        std::vector<const char*> buildings;
+    };
+    const std::vector<Site> sites = {
+        {"DISTRICT_INDUSTRIAL_ZONE", {8, 6}, {"BUILDING_WORKSHOP", "BUILDING_FACTORY", "BUILDING_COAL_POWER_PLANT"}},
+        {"DISTRICT_ENTERTAINMENT_COMPLEX", {4, 6}, {"BUILDING_ARENA", "BUILDING_STADIUM"}},
+        {"DISTRICT_CAMPUS", {6, 3}, {"BUILDING_LIBRARY"}},
+        {"DISTRICT_HOLY_SITE", {4, 8}, {"BUILDING_SHRINE"}},
+        {"DISTRICT_ENCAMPMENT", {8, 4}, {"BUILDING_BARRACKS"}},
+    };
+    const auto scene = [&](const char* civ, const std::string& pillage, const std::string& drop) {
+        return town(10, [&](GameState& s) {
+            Player& p = s.players[0];
+            p.civ = rules().civ(civ);
+            for (const char* gp : {"GREAT_PERSON_HYPATIA", "GREAT_PERSON_JAMES_WATT"}) p.greatPeopleActivated.push_back(rules().greatPerson(gp));
+            City& c = s.cities[0];
+            for (const Site& site : sites) {
+                REQUIRE(s.grid.distance(kCenter, site.pos) <= 3);
+                if (drop == site.district) continue;
+                CityDistrict d{district(site.district), site.pos, true};
+                d.pillagedTurns = pillage == site.district ? 3 : 0;
+                c.districts.push_back(d);
+                for (const char* b : site.buildings) c.buildings.push_back(rules().building(b));
+            }
+            std::sort(c.buildings.begin(), c.buildings.end());
+            c.powerDemand = 1;  // powered (a turn's end works these out)
+            c.powerSupply = 20;
+            Governor magnus;
+            magnus.type = rules().governor("GOVERNOR_MAGNUS");
+            magnus.city = c.id;
+            magnus.promotions = {rules().governors[at(magnus.type)].promotions.front(), rules().governorPromotion("GOVERNOR_PROMOTION_INDUSTRIALIST")};
+            p.governors.push_back(magnus);
+        });
+    };
+    const auto measure = [](const Game& g) {
+        const CityReport r = g.cityReport(g.state().cities[0].id);
+        std::vector<int64_t> m{r.amenities};
+        for (const Fixed& y : r.yields) m.push_back(y.raw());
+        return m;
+    };
+    for (const char* civ : {"CIVILIZATION_FRANCE", "CIVILIZATION_JAPAN"}) {
+        const auto all = measure(*scene(civ, "", ""));
+        for (const Site& site : sites) {
+            const auto pillaged = measure(*scene(civ, site.district, "")), gone = measure(*scene(civ, "", site.district));
+            CHECK(gone != all);
+            for (size_t k = 0; k < gone.size(); ++k) {
+                if (pillaged[k] != gone[k])
+                    sovtest::fail(__FILE__, __LINE__, std::string(civ) + " " + site.district + " pillaged: " + (k ? "yield " + std::to_string(k - 1) : "amenities") +
+                                                          " " + sovtest::showPair(pillaged[k], gone[k]), false);
+            }
+        }
+    }
 }
 
 TEST(entertainment_districts_are_exclusive_and_bring_amenities) {

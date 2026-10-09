@@ -246,7 +246,7 @@ bool playerHasSource(const Modifier& m, const Player& owner) {
 // building carries the modifiers of the building it replaces.
 const City* buildingHolder(const GameState& s, const Rules& r, PlayerId player, TypeIndex building) {
     for (const City& c : s.cities) {
-        if (c.owner == player && cityHasBuilding(c, r, building)) return &c;
+        if (c.owner == player && cityHasBuilding(c, r, building) && !buildingIdle(c, r, building)) return &c;
     }
     return nullptr;
 }
@@ -275,7 +275,7 @@ const City* holderBeyondPlayer(const Modifier& m, const GameState& s, const Rule
     switch (m.sourceKind) {
         case ModSource::Building:
             // A civ's unique building carries the modifiers of the building it replaces.
-            if (ownerOnly) return cityHasBuilding(subject, r, m.sourceIndex) ? &subject : nullptr;
+            if (ownerOnly) return cityHasBuilding(subject, r, m.sourceIndex) && !buildingIdle(subject, r, m.sourceIndex) ? &subject : nullptr;
             if (holders) return buildingHolder(s, r, owner.id, m.sourceIndex, *holders);
             return buildingHolder(s, r, owner.id, m.sourceIndex);
         case ModSource::Civ:

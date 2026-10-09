@@ -125,8 +125,8 @@ bool Game::canPlaceDistrict(const City& city, TypeIndex type, Hex plot, CommandE
             if (n && !rules_->terrains[static_cast<size_t>(state_.plot(*n).terrain)].water) nearLand = true;
         }
         if (!nearLand) return fail(CommandError::BadTarget);
-    } else if (!isLandPassable(state_, *rules_, plot)) {
-        return fail(CommandError::BadTarget);
+    } else if (!isLandPassable(state_, *rules_, plot) || rules_->terrains[static_cast<size_t>(p.terrain)].relief == Relief::Mountain) {
+        return fail(CommandError::BadTarget);  // 03: never on a Mountain, a tunnel through it or not
     }
     if (resourceVisible(city.owner, plot) &&
         rules_->resources[static_cast<size_t>(p.resource)].cls != ResourceClass::Bonus)
@@ -200,7 +200,7 @@ Fixed Game::districtHousing(const City& city) const {
     Fixed total;
     const bool works = cityGovernorHas(city, "GOVERNOR_PROMOTION_WATER_WORKS");  // Liang
     for (const CityDistrict& cd : city.districts) {
-        if (!cd.complete) continue;
+        if (!cd.complete || cd.pillagedTurns > 0) continue;  // a pillaged district stops working (03)
         const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
         total += Fixed::fromInt(d.housing);
         if (works && (d.id == "DISTRICT_NEIGHBORHOOD" || d.id == "DISTRICT_AQUEDUCT")) total += Fixed::fromInt(2);
@@ -233,7 +233,7 @@ int Game::districtAmenities(const City& city) const {
     int total = 0;
     const bool works = cityGovernorHas(city, "GOVERNOR_PROMOTION_WATER_WORKS");  // Liang
     for (const CityDistrict& cd : city.districts) {
-        if (!cd.complete) continue;
+        if (!cd.complete || cd.pillagedTurns > 0) continue;
         const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
         total += d.amenities;
         if (works && (d.id == "DISTRICT_CANAL" || d.id == "DISTRICT_DAM")) total += 1;
@@ -251,7 +251,7 @@ bool Game::cityPrevents(CityId id, bool floods) const {
     if (!c) return false;
     for (const CityDistrict& cd : c->districts) {
         const DistrictType& d = rules_->districts[static_cast<size_t>(cd.type)];
-        if (cd.complete && (floods ? d.preventsFloods : d.preventsDrought)) return true;
+        if (cd.complete && cd.pillagedTurns == 0 && (floods ? d.preventsFloods : d.preventsDrought)) return true;
     }
     return false;
 }

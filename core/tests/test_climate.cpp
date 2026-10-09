@@ -284,6 +284,56 @@ TEST(power_feeds_buildings_and_a_shortfall_costs_production) {
     CHECK(powered->cityReport(p.id).yields[static_cast<size_t>(YieldType::Production)] > weak);
 }
 
+// A pillaged district's buildings stand idle (03: Pillage): a Factory there draws no Power, a power plant there powers
+// no city and burns nothing, and the Hydroelectric Dam of a pillaged Dam gives none.
+TEST(pillaged_districts_draw_and_give_no_power) {
+    const TypeIndex coal = rules().resource("RESOURCE_COAL");
+    const auto play = [&](bool pillageCapital, bool pillageTown) {
+        GameState s = coastState(24, 12, 1);
+        addCity(s, 0, {6, 6}, true, 8);
+        addCity(s, 0, {11, 6}, false, 6);  // 5 away: within the plant's reach
+        const Hex zone[] = {{6, 7}, {11, 7}};
+        for (size_t i = 0; i < 2; ++i) {
+            CityDistrict d{rules().district("DISTRICT_INDUSTRIAL_ZONE"), zone[i], true};
+            d.pillagedTurns = (i == 0 ? pillageCapital : pillageTown) ? 3 : 0;
+            s.cities[i].districts.push_back(d);
+            s.cities[i].buildings.push_back(rules().building("BUILDING_FACTORY"));
+        }
+        s.cities[0].buildings.push_back(rules().building("BUILDING_COAL_POWER_PLANT"));
+        for (City& c : s.cities) std::sort(c.buildings.begin(), c.buildings.end());
+        s.players[0].stockpile[at(coal)] = 10;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        return g;
+    };
+    auto working = play(false, false);
+    CHECK_EQ(working->state().cities[1].powerDemand, 2);
+    CHECK(working->state().cities[1].powerSupply >= 2);
+    CHECK_EQ(working->state().players[0].stockpile[at(coal)], 8);
+    auto idleTown = play(false, true);
+    CHECK_EQ(idleTown->state().cities[1].powerDemand, 0);
+    CHECK_EQ(idleTown->state().players[0].stockpile[at(coal)], 9);  // the capital's Factory only
+    auto idlePlant = play(true, false);
+    CHECK_EQ(idlePlant->state().cities[0].powerDemand, 0);
+    CHECK_EQ(idlePlant->state().cities[1].powerSupply, 0);
+    CHECK_EQ(idlePlant->state().players[0].stockpile[at(coal)], 10);
+    const auto dam = [](bool pillaged) {
+        GameState s = coastState(24, 12, 1);
+        addCity(s, 0, {6, 6}, true, 8);
+        CityDistrict d{rules().district("DISTRICT_DAM"), {7, 6}, true};
+        d.pillagedTurns = pillaged ? 3 : 0;
+        s.cities[0].districts.push_back(d);
+        s.cities[0].buildings.push_back(rules().building("BUILDING_FOOD_MARKET"));  // needs 1
+        s.cities[0].buildings.push_back(rules().building("BUILDING_HYDROELECTRIC_DAM"));
+        std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        return g->state().cities[0].powerSupply;
+    };
+    CHECK(dam(false) > 0);
+    CHECK_EQ(dam(true), 0);
+}
+
 TEST(renewables_give_free_power) {
     GameState s = coastState(24, 12, 1);
     addCity(s, 0, {6, 6}, true, 8);
