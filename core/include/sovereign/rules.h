@@ -135,6 +135,7 @@ enum class UnitEffectKind : uint8_t {
     AssassinDefense,    // +amount to the leader's defence against assassins
     CityProduction,     // +amount production in the city the leader stands in
     CityAmenities,      // +amount amenities in the city the leader stands in
+    AuraLoyalty,        // +amount loyalty per turn to the city whose land the leader stands on
     // Civ uniques (leaders-and-art-style: Civ abilities, uniques and dynasties).
     HealOnKill,         // +amount HP when it destroys a unit
     MeleeAndRanged,     // a ranged unit that may also attack in melee

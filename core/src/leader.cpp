@@ -201,9 +201,10 @@ CommandError Game::validateLeader(const Command& c) const {
 void Game::applyLeader(const Command& c) {
     Player& p = state_.players[static_cast<size_t>(c.player)];
     if (c.type == CommandType::AbandonLeader) {
-        // The captive is given up; the empire crowns someone else (§5).
+        // The captive is given up; the empire crowns someone else at a heavier loyalty cost (§5).
         p.captor = kNoPlayer;
         p.successionPending = true;
+        successionShock(c.player, rules_->globalInt("LEADER_ABANDON_LOYALTY"));
         startInterregnum(p);
         return;
     }
@@ -321,9 +322,23 @@ void Game::leaderLost(UnitId leader, PlayerId by, bool captured, bool inBattle) 
         regicide(owner, by);
         return;
     }
-    if (captured) p.captor = by;  // held for ransom; the throne stands empty meanwhile
-    else p.successionPending = true;
+    if (captured) {
+        p.captor = by;  // held for ransom; the throne stands empty meanwhile
+    } else {
+        p.successionPending = true;
+        successionShock(owner, rules_->globalInt("LEADER_LOSS_LOYALTY"));
+    }
     startInterregnum(p);
+}
+
+void Game::successionShock(PlayerId owner, int loyaltyDrop) {
+    for (City& c : state_.cities) {
+        if (c.owner == owner) c.loyalty = std::max(0, c.loyalty - loyaltyDrop);
+    }
+    Player& p = state_.players[static_cast<size_t>(owner)];
+    const int lost = std::clamp(p.eraScore, 0, rules_->globalInt("LEADER_LOSS_ERA_SCORE"));
+    p.eraScore -= lost;
+    p.eraScoreTotal -= lost;
 }
 
 void Game::regicide(PlayerId loser, PlayerId by) {

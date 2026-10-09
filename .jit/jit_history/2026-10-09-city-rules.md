@@ -29,4 +29,4 @@ Status: done, 2026-10-09. Previous: `2026-10-09-start-guarantee.md`. A read-only
 
 - **City focus** (02: citizens assigned by a city focus, balanced or a Food, Production, Gold, Science, Culture or Faith emphasis): the core has one fixed weighting and tile locks. It needs a command, a saved field and an Unreal control; a later PR.
 - **Shrine and Temple for Faith** (02: Purchasing says Holy Site buildings are always bought with Faith; the generated buildings table says Gold only). The two sources disagree, so it stays as the data says until checked.
-- **Leader loyalty** (leader doc): the leader's aura, the Statesman branch's loyalty pressure and the loyalty drop when the leader is lost are not built; the next PR.
+- **Leader loyalty** (leader doc): the leader's aura, the Statesman branch's loyalty pressure and the loyalty drop when the leader is lost; done next, in `2026-10-09-leader-loyalty.md`.

@@ -803,6 +803,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             {"WALL_FULL_DAMAGE", UnitEffectKind::WallFullDamage}, {"BYPASS_WALLS", UnitEffectKind::BypassWalls},
             {"AURA_STRENGTH", UnitEffectKind::AuraStrength},     {"ASSASSIN_DEFENSE", UnitEffectKind::AssassinDefense},
             {"CITY_PRODUCTION", UnitEffectKind::CityProduction}, {"CITY_AMENITIES", UnitEffectKind::CityAmenities},
+            {"AURA_LOYALTY", UnitEffectKind::AuraLoyalty},
             {"HEAL_ON_KILL", UnitEffectKind::HealOnKill},        {"MELEE_AND_RANGED", UnitEffectKind::MeleeAndRanged},
             {"CAPTURE_AS_BUILDER", UnitEffectKind::CaptureAsBuilder},
             {"BAND_LEVEL", UnitEffectKind::BandLevel},          {"BAND_BURST", UnitEffectKind::BandBurst},
