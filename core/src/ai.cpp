@@ -33,6 +33,8 @@ constexpr int kLongBuild = 12;        // turns beyond which an item loses value 
 constexpr int kWarRatioPercent = 130;   // own strength vs target's to declare war
 constexpr int kPeaceRatioPercent = 80;  // below this, offer peace
 constexpr int kWarWeariness = 50;       // turns of war before peace is offered anyway
+constexpr int kStalledWar = 5;          // turns with no city of either side attacked: the war has stalled
+constexpr int kPeaceHolds = 30;         // turns after a peace before war is declared on that civ again
 constexpr int kNeighbourRange = 14;     // a target's city must be this close to one of ours
 constexpr int kFriendOpinion = 15;      // at or above: offer friendship, never pick as a war target
 constexpr int kDenounceOpinion = -25;   // at or below: denounce
@@ -485,7 +487,14 @@ void diplomacy(View& v) {
         // Long wars, or war weariness costing two amenities a city, end a war that is not clearly being won.
         const bool tired = (s.turn - rel.since >= kWarWeariness || v.game.warWearinessAmenities(v.me) >= 2) && mine * 100 < theirs * v.posture.warRatio * 2;
         const bool accept = theyOffer && mine * 100 < theirs * v.posture.warRatio;
-        if ((losing || tired || accept) && v.game.canMakePeace(v.me, e))
+        // A war with no city of either side attacked for kStalledWar turns, the march to them included, has stalled
+        // and wins nothing: peace is offered however the strengths compare.
+        int lastSiege = rel.since;
+        for (const City& c : s.cities) {
+            if (c.owner == v.me || c.owner == e) lastSiege = std::max(lastSiege, c.lastAttackedTurn);
+        }
+        const bool stalled = s.turn - lastSiege >= kStalledWar;
+        if ((losing || tired || accept || stalled) && v.game.canMakePeace(v.me, e))
             changed = v.game.submit(Command::makePeace(v.me, e)) == CommandError::Ok || changed;
         else if (mine * 2 < theirs && v.game.isMajorCiv(e))  // losing badly, its white peace already offered
             changed = offerCityForPeace(v, e) || changed;
@@ -538,6 +547,9 @@ void diplomacy(View& v) {
     int pickStrength = INT_MAX, pickScore = INT_MAX;
     for (const Player& p : s.players) {
         if (!p.alive || p.barbarian || p.id == v.me || !v.game.canDeclareWar(v.me, p.id)) continue;
+        // A peace holds kPeaceHolds turns (since: the turn the peace began; 0 when never at war).
+        const Relation& was = s.players[at(v.me)].relations[at(p.id)];
+        if (was.since > 0 && s.turn - was.since < kPeaceHolds) continue;
         // City-states only once there is no more room to settle.
         if (v.game.isCityState(p.id) && freeSites(v) > 0) continue;
         bool near = false;

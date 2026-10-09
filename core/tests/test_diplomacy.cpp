@@ -966,6 +966,28 @@ TEST(an_ai_losing_badly_offers_a_city_for_peace) {
     CHECK_EQ(ai->state().city(city)->owner, 0);
 }
 
+// A war with no city of either side attacked for kStalledWar (5) turns has stalled: the AI offers peace though it is
+// the stronger.
+TEST(an_ai_offers_peace_when_the_war_has_stalled) {
+    // city 0: the human's capital; city 2: the AI's town.
+    const auto offers = [](int city, int lastAttacked) {
+        GameState s = warState(false);  // turn 30
+        s.players[0].relations[1].since = s.players[1].relations[0].since = 15;
+        for (int i = 0; i < 8; ++i) addUnit(s, "UNIT_SWORDSMAN", 1, {22 + i % 4, 1 + i / 4});
+        s.cities[static_cast<size_t>(city)].lastAttackedTurn = lastAttacked;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 1);
+        REQUIRE(g->state().currentPlayer == 1);
+        ai::playTurn(*g);
+        return g->state().players[1].relations[0].peaceOffered;
+    };
+    CHECK(offers(0, -100));  // no city attacked since the war began
+    CHECK(offers(0, 25));    // the last attack five turns ago
+    CHECK(!offers(0, 26));   // four
+    CHECK(!offers(2, 26));   // on its own city too
+    CHECK(offers(2, 25));
+}
+
 // An AI asks a neighbour it dislikes and outmatches twice over for gold, on one turn in 30 (08: Make Demand): as much
 // as an AI that weak would hand over.
 TEST(an_ai_demands_tribute_from_a_weak_neighbour_it_dislikes) {
