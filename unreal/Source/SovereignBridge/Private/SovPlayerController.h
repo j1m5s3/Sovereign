@@ -203,6 +203,20 @@ protected:
 	const TArray<FString>& TreeUnlocks(bool bCivics);
 	TSet<int32> TreePath(bool bCivics) const;
 	void PickTreeNode(int32 Node);
+	// Notifications (plan D, step 4): rebuilt each frame; a dismissed one stays gone.
+	struct FNotice
+	{
+		FString Id;
+		FName Icon;
+		FString Text, Sub;
+		FKey Key;          // pressed when clicked
+		int32 City = -1;   // selected, with its production list, when clicked
+		bool bUrgent = false;
+	};
+	TArray<FNotice> Notices;
+	TSet<FString> DismissedNotices;
+	TArray<FString> YieldTips;  // top bar tooltips: science, culture, gold, faith by city
+	void OpenNotice(int32 Index);
 	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none
 	TSharedPtr<class SWidget> ChatBox;
 	TSharedPtr<class SWidget> Menu;
