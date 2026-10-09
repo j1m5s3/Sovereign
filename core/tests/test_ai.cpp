@@ -242,6 +242,105 @@ TEST(ai_builders_split_up_over_the_work) {
     }
 }
 
+namespace {
+// The player after the AI's first turn with every tech of an era before `era` known, its capital of 6 at (6, 6) holding
+// the plots within 2 of it, once `land` has set the map.
+template <typename Land>
+Player afterFirstTurn(int era, Land land, int players = 1) {
+    GameState s = flatState(20, 14, players);
+    for (size_t t = 0; t < rules().techs.size(); ++t) {
+        if (rules().techs[t].era < era) learn(s, 0, rules().techs[t].id.c_str());
+    }
+    addCity(s, 0, {6, 6}, true, 6);
+    for (const Hex& h : s.grid.within({6, 6}, 2)) sovtest::claimFor(s, s.cities[0], h);
+    land(s);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    return g->state().players[0];
+}
+}  // namespace
+
+// The AI weighs a tech's improvements by the plots its cities would put them on: with woods all around its city (every
+// Ancient tech and Horseback Riding known), it researches Construction for the Lumber Mill, Coal under the woods or not
+// (it cannot see Coal yet). With woods only beyond its borders or in another civ's city, Lumber Mills on them already,
+// or Deer in them (a seen resource takes only its own improvement, a Camp), another tech first.
+TEST(ai_researches_toward_improvements_for_its_plots) {
+    // Woods on the plots `from` to `to` plots from `at`, with `resource` in them and a Lumber Mill if `milled`.
+    const auto woods = [](int from, int to, const char* resource = nullptr, bool milled = false, Hex at = {6, 6}) {
+        return [=](GameState& s) {
+            learn(s, 0, "TECH_HORSEBACK_RIDING");
+            for (const Hex& h : s.grid.within(at, to)) {
+                if (s.grid.distance(h, at) < from) continue;
+                Plot& p = s.plot(h);
+                p.feature = rules().feature("FEATURE_FOREST");
+                if (resource) p.resource = rules().resource(resource);
+                if (milled) p.improvement = rules().improvement("IMPROVEMENT_LUMBER_MILL");
+            }
+        };
+    };
+    const auto foreignWoods = [&](GameState& s) {
+        const CityId theirs = addCity(s, 1, {13, 6}, true, 6);
+        for (const Hex& h : s.grid.within({13, 6}, 2)) sovtest::claimFor(s, *s.city(theirs), h);
+        woods(1, 2, nullptr, false, {13, 6})(s);
+    };
+    const TypeIndex construction = rules().tech("TECH_CONSTRUCTION");
+    CHECK(afterFirstTurn(1, woods(1, 2)).techs.current == construction);
+    CHECK(afterFirstTurn(1, woods(1, 2, "RESOURCE_COAL")).techs.current == construction);
+    CHECK(afterFirstTurn(1, woods(3, 4)).techs.current != construction);
+    CHECK(afterFirstTurn(1, foreignWoods, 2).techs.current != construction);
+    CHECK(afterFirstTurn(1, woods(1, 2, nullptr, true)).techs.current != construction);
+    CHECK(afterFirstTurn(1, woods(1, 2, "RESOURCE_DEER")).techs.current != construction);
+}
+
+// A tech that adds to an improvement counts for each plot that has it: with Pastures on the Sheep around its city
+// (every Ancient and Classical tech, Apprenticeship and Education known), the AI researches Stirrups; with the Sheep
+// unimproved, or Mines on the hills instead, another tech first.
+TEST(ai_researches_toward_bonuses_to_its_improvements) {
+    const auto hills = [](const char* resource, const char* improvement) {
+        return [=](GameState& s) {
+            learn(s, 0, "TECH_APPRENTICESHIP");
+            learn(s, 0, "TECH_EDUCATION");
+            for (const Hex& h : s.grid.within({6, 6}, 2)) {
+                if (h == Hex{6, 6}) continue;
+                Plot& p = s.plot(h);
+                p.terrain = rules().terrain("TERRAIN_GRASS_HILLS");
+                if (resource) p.resource = rules().resource(resource);
+                if (improvement) p.improvement = rules().improvement(improvement);
+            }
+        };
+    };
+    const TypeIndex stirrups = rules().tech("TECH_STIRRUPS");
+    CHECK(afterFirstTurn(2, hills("RESOURCE_SHEEP", "IMPROVEMENT_PASTURE")).techs.current == stirrups);
+    CHECK(afterFirstTurn(2, hills("RESOURCE_SHEEP", nullptr)).techs.current != stirrups);
+    CHECK(afterFirstTurn(2, hills(nullptr, "IMPROVEMENT_MINE")).techs.current != stirrups);
+}
+
+// Only the improvements a civ may build count. With Foreign Trade known, Persia studies Early Empire for the Paradise
+// Garden (its own, on flat land) first, England another civic; with State Workforce and Mysticism known too, England
+// passes over Games and Recreation, whose City Park only a governor's promotion builds. With Construction open, China
+// passes over it for the Beacon Tower, built at its border only.
+TEST(ai_researches_only_toward_improvements_it_may_build) {
+    const auto civ = [](const char* id, std::vector<const char*> civics, const char* tech = nullptr) {
+        return [=](GameState& s) {
+            Player& p = s.players[0];
+            p.civ = rules().civ(id);
+            p.civics.resize(rules().civics.size());
+            for (const char* c : civics) p.civics.done[at(rules().civic(c))] = 1;
+            if (tech) learn(s, 0, tech);
+        };
+    };
+    const std::vector<const char*> trade = {"CIVIC_CODE_OF_LAWS", "CIVIC_FOREIGN_TRADE"};
+    std::vector<const char*> workforce = trade;
+    workforce.insert(workforce.end(), {"CIVIC_CRAFTSMANSHIP", "CIVIC_STATE_WORKFORCE", "CIVIC_MYSTICISM"});
+    const TypeIndex earlyEmpire = rules().civic("CIVIC_EARLY_EMPIRE");
+    const TypeIndex games = rules().civic("CIVIC_GAMES_AND_RECREATION");
+    const TypeIndex construction = rules().tech("TECH_CONSTRUCTION");
+    CHECK(afterFirstTurn(0, civ("CIVILIZATION_PERSIA", trade)).civics.current == earlyEmpire);
+    CHECK(afterFirstTurn(0, civ("CIVILIZATION_ENGLAND", trade)).civics.current != earlyEmpire);
+    CHECK(afterFirstTurn(0, civ("CIVILIZATION_ENGLAND", workforce)).civics.current != games);
+    CHECK(afterFirstTurn(1, civ("CIVILIZATION_CHINA", trade, "TECH_HORSEBACK_RIDING")).techs.current != construction);
+}
+
 // A Builder whose best plots are out of its reach (six Wine plots on an island: it goes to a plot on land over land,
 // before it may embark and after) works the best plot it can reach, rather than wait on the Wine for good: one failed
 // move is enough to look for the plots in reach.
