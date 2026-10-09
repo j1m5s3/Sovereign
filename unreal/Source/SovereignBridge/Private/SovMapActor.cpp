@@ -173,22 +173,6 @@ const FResourceLook* ResourceLook(const FString& Id)
 	return Looks.Find(Id.RightChop(9));
 }
 
-// A city's buildings in its owner's era (tools/art/blender/kit_towns.py): the Classical kit through the Classical
-// era, then Medieval (Medieval, Renaissance), Industrial (Industrial, Modern) and Modern (Atomic on). Kit and the
-// mesh name for a palace (capital), hall (other cities) or house 0-2; the Classical kit when the Towns art is missing.
-TPair<const TCHAR*, FString> CityPiece(int32 Era, int32 Kind)
-{
-	static const TCHAR* Classical[] = {TEXT("Palace"), TEXT("Landmark"), TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
-	static const TCHAR* Parts[] = {TEXT("Palace"), TEXT("Hall"), TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
-	const TCHAR* Style = Era >= 6 ? TEXT("Modern_") : Era >= 4 ? TEXT("Industrial_") : Era >= 2 ? TEXT("Medieval_") : nullptr;
-	if (Style)
-	{
-		const FString Name = FString(Style) + Parts[Kind];
-		if (SovArt::Mesh(TEXT("Towns"), Name)) return {TEXT("Towns"), Name};
-	}
-	return {TEXT("Classical"), Classical[Kind]};
-}
-
 // The Nature kit's piece for a terrain feature or natural wonder (tools/art/blender/kit_nature.py); null for none
 // (woods have their trees, floodplains only their colour).
 const TCHAR* FeatureModel(const FString& Id)
@@ -737,7 +721,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		UStaticMeshComponent* C = Marker(CityMarkers, i, CubeMesh);
 		const double Z = SurfaceZ(City.X, City.Y);
 		// A small Palace for capitals and a hall for other cities, when the art exists.
-		const TPair<const TCHAR*, FString> Centre = CityPiece(City.Era, City.bCapital ? 0 : 1);
+		const TPair<const TCHAR*, FString> Centre = SovArt::EraPiece(City.Era, City.bCapital ? TEXT("Palace") : TEXT("Landmark"));
 		if (SovArt::SetKitMesh(C, Centre.Key, Centre.Value, City.Color))
 		{
 			C->SetRelativeLocation(SovHex::Center(City.X, City.Y, Z));
@@ -768,7 +752,8 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				const double A = PI * (0.78 + 1.44 * ((k * 3) % 8) / 7.0) + ((H >> k) % 7) * 0.03;
 				const double R = 64.0 + ((H >> (k + 3)) % 4) * 3.0;
 				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
-				const TPair<const TCHAR*, FString> House = CityPiece(City.Era, 2 + (H + k) % 3);
+				static const TCHAR* Houses[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
+				const TPair<const TCHAR*, FString> House = SovArt::EraPiece(City.Era, Houses[(H + k) % 3]);
 				SovArt::SetKitMesh(C, House.Key, House.Value, FLinearColor::White);
 				ShadeKit(C, FLinearColor::White);
 				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));

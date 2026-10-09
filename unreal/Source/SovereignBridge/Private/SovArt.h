@@ -21,6 +21,12 @@ UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint);
 // with Tint; returns false when the mesh is missing (callers keep their primitive).
 bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint);
 
+// A Classical kit city piece (Palace, Landmark, House_A/B/C) in a civ's era (Game::playerEra; kit_towns.py): the
+// Classical kit through the Classical era, then the Towns kit's Medieval (Medieval, Renaissance), Industrial
+// (Industrial, Modern) or Modern (Atomic on) piece, the Landmark becoming its Hall. Returns the kit and mesh name;
+// the Classical piece for anything else, or when the Towns art is missing.
+TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName);
+
 // Every asset the game names, for the asset test.
 TArray<FString> RequiredAssets();
 }  // namespace SovArt

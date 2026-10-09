@@ -58,6 +58,7 @@ struct FSovStreetLayout
 	FVector Captain = FVector::ZeroVector;  // Fear: the captain of the guard
 	FVector Entry = FVector::ZeroVector;    // where the leader appears
 	FLinearColor CivColor = FLinearColor::White;  // the owner's colour (banners, herald, guards)
+	int32 Era = 0;  // the owner's era (Game::playerEra): the style its houses and palace are built in
 
 	int32 Count(ESovStreetPiece Kind) const;
 };

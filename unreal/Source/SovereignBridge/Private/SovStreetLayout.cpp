@@ -56,6 +56,7 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 	const sov::Rules& R = Game.rules();
 	L.CityId = CityId;
 	L.CityName = Str(City->name);
+	L.Era = Game.playerEra(City->owner);
 	// Same hex, same result: the seed comes from the map seed and the hex.
 	const uint64 Seed = Game.state().setup.seed * 1000003ull + static_cast<uint64>(City->pos.y) * 4099ull + static_cast<uint64>(City->pos.x);
 	FRandomStream Rng(static_cast<int32>(Seed ^ (Seed >> 32)));
