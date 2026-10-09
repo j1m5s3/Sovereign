@@ -1184,10 +1184,14 @@ void build(View& v, UnitId id) {
         // or wonder plot takes none.
         if (p.owner != v.me || p.city == kNoCity || p.improvement != kNone || !v.game.builderCanImprove(v.me, h)) return -1;
         int w = 10;
+        // A luxury's Amenities and a strategic resource's stock come once it is improved, worked or not. A Bonus resource
+        // yields the same improved or not, so it is worth no more than any other plot, and the plots our cities work come
+        // before it.
         if (p.resource != kNone && v.game.resourceVisible(v.me, h)) {
-            w += 20;
+            const ResourceClass cls = v.r.resources[at(p.resource)].cls;
+            if (cls != ResourceClass::Bonus) w += 20;
             // Strategic resources feed units, power plants and railroads: worth more.
-            if (v.r.resources[at(p.resource)].cls == ResourceClass::Strategic) w += 30;
+            if (cls == ResourceClass::Strategic) w += 30;
         }
         const City* c = s.city(p.city);
         if (c && std::binary_search(c->worked.begin(), c->worked.end(), s.grid.index(h))) w += 10;
