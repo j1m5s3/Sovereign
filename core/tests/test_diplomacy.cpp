@@ -1204,3 +1204,18 @@ TEST(city_states_join_their_suzerains_wars) {
     REQUIRE(!h->atWar(0, 1));
     CHECK(!h->atWar(2, 0));  // and makes peace with it
 }
+
+TEST(a_tier_three_government_dislikes_other_governments) {
+    const auto opinion = [](const char* mine, const char* theirs) {
+        GameState s = diploState();
+        s.players[1].government = rules().government(mine);
+        s.players[0].government = rules().government(theirs);
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return reason(*g, 1, 0, OpinionReasonKind::OtherGovernment);
+    };
+    CHECK_EQ(opinion("GOVERNMENT_DEMOCRACY", "GOVERNMENT_MONARCHY"), -6);
+    CHECK_EQ(opinion("GOVERNMENT_DIGITAL_DEMOCRACY", "GOVERNMENT_FASCISM"), -6);  // tier 4
+    CHECK_EQ(opinion("GOVERNMENT_DEMOCRACY", "GOVERNMENT_DEMOCRACY"), 0);
+    CHECK_EQ(opinion("GOVERNMENT_MONARCHY", "GOVERNMENT_DEMOCRACY"), 0);  // tier 2 holds no grudge
+    CHECK(std::string(opinionReasonName(OpinionReasonKind::OtherGovernment)).size() > 0);
+}

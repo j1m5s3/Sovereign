@@ -664,6 +664,9 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             n.envoys = static_cast<int>(j["envoys"].integer(0));
             n.spies = static_cast<int>(j["spies"].integer(0));
             n.victoryPoints = static_cast<int>(j["victoryPoints"].integer(0));
+            n.navalMoves = static_cast<int>(j["navalMoves"].integer(0));
+            n.writingTourismPercent = static_cast<int>(j["writingTourismPercent"].integer(0));
+            n.tourismPercent = static_cast<int>(j["tourismPercent"].integer(0));
             for (const Json& e : j["effects"].items()) {
                 if (e.str() == "COMBAT_ADJACENCY") n.combatAdjacency = true;
                 if (e.str() == "ENFORCE_BORDERS") n.enforceBorders = true;
@@ -680,6 +683,10 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         return true;
     };
     if (!readNodes("techs", techs) || !readNodes("civics", civics)) return false;
+    navalMoveTechs.clear();
+    for (size_t i = 0; i < techs.size(); ++i) {
+        if (techs[i].navalMoves != 0) navalMoveTechs.push_back(static_cast<TypeIndex>(i));
+    }
     auto findTech = [this](const std::string& id) { return tech(id); };
     auto findCivic = [this](const std::string& id) { return civic(id); };
     {
@@ -1454,6 +1461,21 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
             if (n.embarkUnit == kNone) {
                 *error = "tech " + id + ": unknown embark unit " + j["embarkUnit"].str();
                 return false;
+            }
+        }
+    }
+    // Tourism from buildings a tree node names (Conservation: walls, the Arena).
+    for (auto [name, nodes] : {std::pair<const char*, std::vector<TreeNode>*>{"techs", &techs}, {"civics", &civics}}) {
+        size_t i = 0;
+        for (const auto& [id, j] : m.tables[name]) {
+            TreeNode& n = (*nodes)[i++];
+            for (const Json& e : j["buildingTourism"].items()) {
+                const TypeIndex b = building(e["building"].str());
+                if (b == kNone) {
+                    *error = std::string(name) + " " + id + ": unknown tourism building " + e["building"].str();
+                    return false;
+                }
+                n.buildingTourism.emplace_back(b, static_cast<int>(e["amount"].integer(0)));
             }
         }
     }

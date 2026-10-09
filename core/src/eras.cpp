@@ -314,6 +314,21 @@ int Game::tourismBase(PlayerId pid) const {
     total += (improvementTourism(pid) + parkTourism(pid) * (wish ? 2 : 1)) * (holdsWonder(pid, W::GoldenGate) ? 2 : 1);
     const bool technocracy = governmentIs(pid, "GOVERNMENT_SYNTHETIC_TECHNOCRACY");
     const bool biosphere = holdsWonder(pid, W::Biosphere);
+    // Techs and civics (04): Printing doubles Writing's tourism, Computers and Environmentalism add 25% each, and
+    // Conservation gives tourism for walls and an Arena.
+    int writingPercent = 100, percent = 100;
+    std::vector<std::pair<TypeIndex, int>> fromBuildings;
+    for (bool civic : {false, true}) {
+        const std::vector<TreeNode>& nodes = civic ? rules_->civics : rules_->techs;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            const TreeNode& n = nodes[i];
+            if (n.writingTourismPercent == 0 && n.tourismPercent == 0 && n.buildingTourism.empty()) continue;
+            if (!(civic ? p.civics : p.techs).has(static_cast<TypeIndex>(i))) continue;
+            if (n.writingTourismPercent != 0) writingPercent = std::max(writingPercent, n.writingTourismPercent);
+            percent += n.tourismPercent;
+            fromBuildings.insert(fromBuildings.end(), n.buildingTourism.begin(), n.buildingTourism.end());
+        }
+    }
     for (const City& c : state_.cities) {
         if (c.owner != pid) continue;
         const int before = total;
@@ -332,6 +347,7 @@ int Game::tourismBase(PlayerId pid) const {
             // Heritage Organization (World Congress): option A doubles the kind's tourism, B silences it.
             if (resolutionHits(ResolutionKind::HeritageOrganization, 0, w.type)) scale *= 2;
             if (resolutionHits(ResolutionKind::HeritageOrganization, 1, w.type)) scale = 0;
+            if (kind == "WRITING") scale = scale * writingPercent / 100;  // Printing (04)
             total += rules_->greatWorkTypes[at(w.type)].tourism * curator * pct / 100 * scale;
         }
         for (TypeIndex b : c.buildings) {
@@ -346,6 +362,9 @@ int Game::tourismBase(PlayerId pid) const {
             if (d.complete && d.pillagedTurns == 0) total += districtTourism(state_, *rules_, p, d.type);  // Masaru Ibuka, Jamsetji Tata (07)
         }
         total += static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityTourism).toInt());  // Shopping Mall, Ferris Wheel
+        for (const auto& [b, amount] : fromBuildings) {
+            if (cityHasBuilding(c, *rules_, b) && !buildingIdle(c, *rules_, b)) total += amount;  // Conservation (04)
+        }
         // Kenzo Tange (07): tourism from the city's districts' adjacency (Culture, Production and Science in full, Faith and Gold at half).
         if (const int tange = c.greatPeopleHere.empty() ? 0 : usedHere(c, Gp::KenzoTange); tange > 0) {
             for (const CityDistrict& d : c.districts) {
@@ -360,7 +379,8 @@ int Game::tourismBase(PlayerId pid) const {
         PlayerId holder = kNoPlayer;
         if (wish && establishedGovernor(c, &holder) && holder == pid) total += (total - before) / 2;
     }
-    return technocracy ? total * 90 / 100 : total;  // 04: Synthetic Technocracy, -10% Tourism
+    if (technocracy) percent -= 10;  // 04: Synthetic Technocracy, -10% Tourism
+    return total * percent / 100;
 }
 
 // Religious tourism (07): the Holy City of the religion its owner founded. St. Basil's Cathedral doubles its

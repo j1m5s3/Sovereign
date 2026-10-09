@@ -597,3 +597,55 @@ TEST(wish_you_were_here_doubles_national_park_tourism) {
     REQUIRE(parks > 0);
     CHECK_EQ(tourism(Age::Golden).first, normal + parks);
 }
+
+TEST(techs_and_civics_add_tourism) {
+    enum { Printing = 1, Computers = 2, Environmentalism = 4, Conservation = 8, Technocracy = 16 };
+    const auto tourism = [](int has, bool walls) {
+        GameState s = eraState();
+        GreatWork w;
+        w.type = rules().greatWorkType("WRITING");
+        w.building = rules().building("BUILDING_PALACE");
+        s.cities[0].greatWorks.push_back(w);
+        // Relics too, so the percents show past rounding.
+        w.type = rules().greatWorkType("RELIC");
+        for (int i = 0; i < 2; ++i) s.cities[0].greatWorks.push_back(w);
+        if (walls) {
+            for (const char* b : {"BUILDING_ANCIENT_WALLS", "BUILDING_MEDIEVAL_WALLS"}) s.cities[0].buildings.push_back(rules().building(b));
+            std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+        }
+        Player& p = s.players[0];
+        if (has & Printing) p.techs.done[at(rules().tech("TECH_PRINTING"))] = 1;
+        if (has & Computers) p.techs.done[at(rules().tech("TECH_COMPUTERS"))] = 1;
+        if (has & Environmentalism) p.civics.done[at(rules().civic("CIVIC_ENVIRONMENTALISM"))] = 1;
+        if (has & Conservation) p.civics.done[at(rules().civic("CIVIC_CONSERVATION"))] = 1;
+        if (has & Technocracy) p.government = rules().government("GOVERNMENT_SYNTHETIC_TECHNOCRACY");
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->tourismBase(0);
+    };
+    const int base = tourism(0, false);
+    REQUIRE(base >= 10);
+    const int writing = rules().greatWorkTypes[at(rules().greatWorkType("WRITING"))].tourism;
+    REQUIRE(writing > 0);
+    CHECK_EQ(tourism(Printing, false), base + writing);  // Printing doubles Writing
+    CHECK_EQ(tourism(Computers, false), base * 125 / 100);
+    CHECK_EQ(tourism(Computers | Environmentalism, false), base * 150 / 100);
+    CHECK_EQ(tourism(Computers | Technocracy, false), base * 115 / 100);  // the percents add up
+    CHECK_EQ(tourism(0, true), base);
+    CHECK_EQ(tourism(Conservation, true), base + 1 + 2);  // Ancient and Medieval Walls
+}
+
+TEST(mathematics_speeds_naval_units) {
+    const auto moves = [](bool maths) {
+        GameState s = eraState();
+        for (const Hex& h : s.grid.within({10, 6}, 1)) s.plot(h).terrain = rules().terrain("TERRAIN_COAST");
+        if (maths) s.players[0].techs.done[at(rules().tech("TECH_MATHEMATICS"))] = 1;
+        const UnitId galley = sovtest::addUnit(s, "UNIT_GALLEY", 0, {10, 6});
+        const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {4, 7});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return std::pair<int, int>{g->maxMoves(*g->state().unit(galley)), g->maxMoves(*g->state().unit(warrior))};
+    };
+    const auto [galley, warrior] = moves(false);
+    CHECK_EQ(galley, rules().units[at(rules().unit("UNIT_GALLEY"))].moves);
+    CHECK_EQ(moves(true).first, galley + 1);
+    CHECK_EQ(moves(true).second, warrior);  // land units are not sped up
+}

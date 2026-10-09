@@ -340,6 +340,12 @@ int Game::maxMoves(const Unit& unit) const {
         if (ut.id == "UNIT_BUILDER" && goldenDedication(unit.owner, "DEDICATION_MONUMENTALITY")) moves += 2;
         if ((ut.id == "UNIT_MISSIONARY" || ut.id == "UNIT_APOSTLE" || ut.id == "UNIT_INQUISITOR") && goldenDedication(unit.owner, "DEDICATION_EXODUS_OF_THE_EVANGELISTS")) moves += 2;
         if (ut.domain == Domain::Sea && goldenDedication(unit.owner, "DEDICATION_HIC_SUNT_DRACONES")) moves += 2;
+        if (ut.domain == Domain::Sea) {
+            const Player& p = state_.players[static_cast<size_t>(unit.owner)];
+            for (TypeIndex i : rules_->navalMoveTechs) {
+                if (p.techs.has(i)) moves += rules_->techs[static_cast<size_t>(i)].navalMoves;  // Mathematics (04)
+            }
+        }
         if (ut.unitClass == "NAVAL_RAIDER" && policyIs(unit.owner, "POLICY_LETTERS_OF_MARQUE")) moves += 2;  // 09
     }
     if (!isLeader(unit)) return moves;

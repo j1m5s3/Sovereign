@@ -226,6 +226,7 @@
    "prereqs": [
     "TECH_CURRENCY"
    ],
+   "navalMoves": 1,
    "boost": {
     "percent": 40,
     "text": "have 3 different specialty districts",
@@ -474,6 +475,7 @@
    "prereqs": [
     "TECH_MACHINERY"
    ],
+   "writingTourismPercent": 200,
    "boost": {
     "percent": 40,
     "text": "build 2 Universities",
@@ -893,6 +895,7 @@
     "TECH_RADIO"
    ],
    "spies": 1,
+   "tourismPercent": 25,
    "boost": {
     "percent": 40,
     "text": "adopt a Tier3 government",
