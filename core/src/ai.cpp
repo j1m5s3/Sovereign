@@ -54,6 +54,7 @@ constexpr int kStageDistance = 4;     // an operation gathers this far from its 
 constexpr int kAssaultRatio = 200;    // own strength vs the city's to start an assault (AiOperationTeams: 2x)
 constexpr int kWalledRatio = 300;     // against walls (Civ: 2x to start, 4x to continue, with siege)
 constexpr int kReinforceRange = 6;    // units this close come to a threatened city
+constexpr int kAllyAidRange = 8;      // units this close go to an ally's city threatened by a shared enemy
 
 size_t at(TypeIndex i) { return static_cast<size_t>(i); }
 size_t yi(YieldType y) { return static_cast<size_t>(y); }
@@ -1650,6 +1651,29 @@ void military(View& v) {
             ++sent;
             if (s.grid.distance(u->pos, spot) <= 1) rest(v, army[k]);
             else if (!approach(v, army[k], spot, false)) used[k] = 0;
+        }
+    }
+    // 2b. Called to arms (08: Alliance, shared wars): spare units near an ally's city that a common enemy threatens go
+    // to its side.
+    if (!v.enemies.empty()) {
+        for (const City& c : s.cities) {
+            if (c.owner == v.me || !v.game.isMajorCiv(c.owner) || v.game.alliance(v.me, c.owner) == AllianceType::None) continue;
+            int threat = 0;
+            for (const Unit& e : s.units) {
+                if (!v.hostile(e.owner) || !v.game.atWar(c.owner, e.owner) || s.grid.distance(c.pos, e.pos) > kThreatRange) continue;
+                const UnitType& t = v.r.units[at(e.type)];
+                if (isArmy(t) && v.game.unitVisibleTo(v.me, e)) threat += power(t) * e.hp / 100;
+            }
+            int sent = 0;
+            for (size_t k = 0; k < army.size() && sent * 10 < threat; ++k) {
+                if (used[k]) continue;
+                const Unit* u = s.unit(army[k]);
+                if (!u || u->movesLeft <= Fixed() || u->hp < kHealBelow || s.grid.distance(u->pos, c.pos) > kAllyAidRange) continue;
+                used[k] = 1;
+                ++sent;
+                if (s.grid.distance(u->pos, c.pos) <= 1) rest(v, army[k]);
+                else if (!approach(v, army[k], c.pos, false)) used[k] = 0;
+            }
         }
     }
     // 3. The operation against the target civ (AiOperationDefs: attack city / attack walled city):
