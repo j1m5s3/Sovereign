@@ -345,6 +345,7 @@ struct SOV_API City {
     std::vector<GreatWork> greatWorks;
     std::vector<TypeIndex> greatPeopleHere;  // individuals used here whose lasting effects apply to this city (07)
     int32_t reactorSince = 0;  // the turn its Nuclear Power Plant was built or recommissioned (09: nuclear accidents)
+    int32_t worshipEra = 0;    // the world era its Dar-e Mehr was built or its Holy Site last repaired in (06)
     int laserStations = 0;     // Terrestrial Laser Stations built here: 5 Power of demand each (09: Power)  // in the city's buildings' slots (07: Great Works)
     std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
     std::vector<int32_t> pressureTenths;  // the tenths of passive pressure not yet a whole point, per religion

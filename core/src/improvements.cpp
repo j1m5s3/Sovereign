@@ -742,6 +742,10 @@ void Game::accumulateStrategics(PlayerId pid) {
         if (cs.cityState != kNone && cs.alive && isSuzerain(pid, cs.id)) holders.push_back(cs.id);
     }
     const bool corporate = governmentIs(pid, "GOVERNMENT_CORPORATE_LIBERTARIANISM");  // 04: +1 a source in its own cities
+    // Golden Age dedications (09): Sky and Stars +2 a source of Aluminum, Automaton Warfare +1 a source of Uranium, in
+    // our own cities.
+    const TypeIndex aluminum = rules_->resource("RESOURCE_ALUMINUM"), uranium = rules_->resource("RESOURCE_URANIUM");
+    const bool stars = goldenDedication(pid, "DEDICATION_SKY_AND_STARS"), automaton = goldenDedication(pid, "DEDICATION_AUTOMATON_WARFARE");
     for (const int32_t i : resourcePlots_) {
         const Plot& p = state_.plots[static_cast<size_t>(i)];
         if (p.resource == kNone || std::find(holders.begin(), holders.end(), p.owner) == holders.end()) continue;
@@ -757,6 +761,7 @@ void Game::accumulateStrategics(PlayerId pid) {
             {"POLICY_EQUESTRIAN_ORDERS", "RESOURCE_IRON"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_ALUMINUM"}, {"POLICY_RESOURCE_MANAGEMENT", "RESOURCE_OIL"}};
         for (const auto& [card, res] : kCards) extra += r.id == res && policyIs(pid, card) ? 1 : 0;
         extra += corporate && p.owner == pid ? 1 : 0;
+        if (p.owner == pid) extra += (stars && p.resource == aluminum ? 2 : 0) + (automaton && p.resource == uranium ? 1 : 0);
         // Foreign Investor (08: Amani): her city-state's strategics come in twice over.
         int copies = 1;
         if (home && p.owner != pid) {
@@ -783,9 +788,11 @@ void Game::accumulateStrategics(PlayerId pid) {
     // Great people (07): resources a turn (Douglas MacArthur, Yi Sun-sin, John Rockefeller...).
     for (size_t r = 0; r < rules_->resources.size() && r < player.stockpile.size(); ++r)
         player.stockpile[r] += greatPersonEffectTotal(pid, GreatPersonEffectKind::ResourcePerTurn, static_cast<TypeIndex>(r));
+    // Automaton Warfare (09): +3 Uranium a turn in a Golden Age.
+    if (automaton && uranium != kNone) player.stockpile[static_cast<size_t>(uranium)] += 3;
     // Aerospace Contractors (04): +3 Aluminum a turn in each city with a Spaceport.
     if (policyIs(pid, "POLICY_AEROSPACE_CONTRACTORS")) {
-        const TypeIndex aluminum = rules_->resource("RESOURCE_ALUMINUM"), spaceport = rules_->district("DISTRICT_SPACEPORT");
+        const TypeIndex spaceport = rules_->district("DISTRICT_SPACEPORT");
         for (const City& c : state_.cities) {
             if (aluminum != kNone && c.owner == pid && c.district(spaceport, true)) player.stockpile[static_cast<size_t>(aluminum)] += 3;
         }

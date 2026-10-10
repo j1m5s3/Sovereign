@@ -649,3 +649,42 @@ TEST(mathematics_speeds_naval_units) {
     CHECK_EQ(moves(true).first, galley + 1);
     CHECK_EQ(moves(true).second, warrior);  // land units are not sped up
 }
+
+// Sky and Stars and Automaton Warfare (09) in a Golden Age: +2 Aluminum and +1 Uranium a source in our cities, +3
+// Uranium a turn, and Sky and Stars' Information-era Eurekas.
+TEST(sky_and_stars_and_automaton_warfare_reward_a_golden_age) {
+    struct After {
+        int aluminum, uranium;
+        bool satellites;
+    };
+    const TypeIndex aluminum = rules().resource("RESOURCE_ALUMINUM"), uranium = rules().resource("RESOURCE_URANIUM");
+    const TypeIndex satellites = rules().tech("TECH_SATELLITES");
+    const auto after = [&](const char* dedication, bool golden) {
+        GameState s = eraState();
+        s.gameEra = rules().era("ERA_INFORMATION");
+        Player& p = s.players[0];
+        for (size_t t = 0; t < p.techs.done.size(); ++t) p.techs.done[t] = 1;
+        for (const char* id : {"TECH_SATELLITES", "TECH_NUCLEAR_FUSION", "TECH_NANOTECHNOLOGY"}) p.techs.done[at(rules().tech(id))] = 0;
+        p.techs.current = satellites;
+        p.age = golden ? Age::Golden : Age::Normal;
+        p.dedications = {rules().dedication(dedication)};
+        for (const auto& [h, r] : {std::pair<Hex, TypeIndex>{{5, 6}, aluminum}, {{3, 6}, uranium}}) {
+            s.plot(h).resource = r;
+            s.plot(h).improvement = rules().improvement("IMPROVEMENT_MINE");
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 2);
+        const Player& q = g->state().players[0];
+        return After{q.stockpile[at(aluminum)], q.stockpile[at(uranium)], q.techs.boosted[at(satellites)] != 0};
+    };
+    const After stars = after("DEDICATION_SKY_AND_STARS", true), starsNormal = after("DEDICATION_SKY_AND_STARS", false);
+    REQUIRE(starsNormal.aluminum > 0 && starsNormal.uranium > 0);
+    CHECK_EQ(stars.aluminum, starsNormal.aluminum + 2);
+    CHECK_EQ(stars.uranium, starsNormal.uranium);
+    CHECK(stars.satellites);
+    CHECK(!starsNormal.satellites);
+    const After robots = after("DEDICATION_AUTOMATON_WARFARE", true), robotsNormal = after("DEDICATION_AUTOMATON_WARFARE", false);
+    CHECK_EQ(robots.uranium, robotsNormal.uranium + 1 + 3);
+    CHECK_EQ(robots.aluminum, robotsNormal.aluminum);
+    CHECK(!robots.satellites);
+}

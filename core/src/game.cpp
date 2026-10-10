@@ -235,6 +235,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
     productWork_ = rules_->greatWorkType("PRODUCT");
     oil_ = rules_->resource("RESOURCE_OIL");
     preserve_ = rules_->district("DISTRICT_PRESERVE");
+    darEMehr_ = rules_->building("BUILDING_DAR_E_MEHR");
     spices_[0] = rules_->resource("RESOURCE_CINNAMON");
     spices_[1] = rules_->resource("RESOURCE_CLOVES");
     oceanTerrain_ = rules_->terrain("TERRAIN_OCEAN");
@@ -1943,7 +1944,11 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
             if (city.owner != pid) continue;
             for (CityDistrict& d : city.districts) {
                 // A repaired Encampment stands again at full strength.
-                if (d.pillagedTurns > 0 && --d.pillagedTurns == 0) d.damage = d.wallDamage = 0;
+                if (d.pillagedTurns > 0 && --d.pillagedTurns == 0) {
+                    d.damage = d.wallDamage = 0;
+                    if (darEMehr_ != kNone && rules_->districts[static_cast<size_t>(d.type)].id == rules_->buildings[static_cast<size_t>(darEMehr_)].district)
+                        city.worshipEra = state_.gameEra;  // the Dar-e Mehr starts again (06)
+                }
             }
         }
         processGreatPeople(pid);

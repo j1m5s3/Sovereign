@@ -1805,13 +1805,16 @@ void Game::healAndFortify(PlayerId pid) {
     std::vector<std::pair<Hex, int>> holySites;
     const bool healing = playerHasBelief(pid, Bf::GodOfHealing);
     const bool zahrawi = usedBy(pid, Gp::Zahrawi);
-    if (healing || beliefInPlay(Bf::HolyWaters)) {
+    // God of Healing (06): +30 beside our own Holy Sites. Holy Waters (06): +10 beside the Holy Site of any city, ours or
+    // not, whose majority religion is ours.
+    const bool waters = owner.religion >= 0 && playerHasBelief(pid, Bf::HolyWaters);
+    if (healing || waters) {
         const TypeIndex holy = rules_->district("DISTRICT_HOLY_SITE");
         for (const City& c : state_.cities) {
-            if (c.owner != pid) continue;
-            const int waters = cityFollows(c, Bf::HolyWaters) ? 10 : 0;
+            const int extra = (healing && c.owner == pid ? 30 : 0) + (waters && cityMajorityReligion(c) == owner.religion ? 10 : 0);
+            if (extra == 0) continue;
             for (const CityDistrict& d : c.districts) {
-                if (d.complete && d.type == holy && (healing || waters > 0)) holySites.push_back({d.pos, (healing ? 30 : 0) + waters});
+                if (d.complete && d.type == holy) holySites.push_back({d.pos, extra});
             }
         }
     }
