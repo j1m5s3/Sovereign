@@ -734,6 +734,7 @@ struct EraStartType {
     int capitalPopulation = 1, otherPopulation = 1;
     std::vector<std::pair<TypeIndex, int>> units;  // unit type, how many
     std::vector<TypeIndex> buildings;              // this era's own (earlier eras' rows add theirs)
+    TypeIndex aiDefender = kNone;                  // an AI's extra Warriors become this unit (00: AI starting units)
 };
 
 // Achievements and the cosmetics they unlock (player-retention §7), checked when a game ends for a player.
@@ -1089,6 +1090,8 @@ struct DifficultyType {
     int aiProductionGoldPercent = 0;  // Production, Gold in AI cities
     int aiCombat = 0, aiXpPercent = 0, aiFreeBoosts = 0;  // free Eurekas and Inspirations as each era begins
     int aiExtraWarriors = 0, aiExtraBuilders = 0, aiExtraSettlers = 0;
+    int cityStateExtraWarriors = 0;  // a city-state's Warriors beyond its two
+    bool cityStateWalls = false;     // city-states start with Ancient Walls
     int humanCombat = 0, humanXpPercent = 0, humanCampGoldPercent = 0;
     int diplomacyOffset = 0;  // added to every AI's opinion of a human (00: STANDARD_DIPLOMACY_RANDOM, DifficultyOffset)
 };

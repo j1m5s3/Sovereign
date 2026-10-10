@@ -2439,6 +2439,8 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         d.aiExtraWarriors = num("aiExtraWarriors");
         d.aiExtraBuilders = num("aiExtraBuilders");
         d.aiExtraSettlers = num("aiExtraSettlers");
+        d.cityStateExtraWarriors = num("cityStateExtraWarriors");
+        d.cityStateWalls = num("cityStateWalls") != 0;
         d.humanCombat = num("humanCombat");
         d.humanXpPercent = num("humanXpPercent");
         d.humanCampGoldPercent = num("humanCampGoldPercent");
@@ -2464,6 +2466,13 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         es.faith = static_cast<int>(j["faith"].integer(0));
         es.capitalPopulation = static_cast<int>(j["capitalPopulation"].integer(1));
         es.otherPopulation = static_cast<int>(j["otherPopulation"].integer(1));
+        if (const std::string& d = j["aiDefender"].str(); !d.empty()) {
+            es.aiDefender = unit(d);
+            if (es.aiDefender == kNone) {
+                *error = "era start " + id + ": unknown unit " + d;
+                return false;
+            }
+        }
         for (const auto& [u, count] : j["units"].members()) {
             if (unit(u) == kNone) {
                 *error = "era start " + id + ": unknown unit " + u;
