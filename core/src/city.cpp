@@ -959,6 +959,16 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (!u.needsBuilding.empty() &&
             std::none_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return cityHasBuilding(c, *rules_, b); }))
             return fail(CommandError::CannotBuild);
+        // One Archaeologist per Archaeological Museum the civ has (07: Archaeology; Unit_BuildingPrereqs.NumSupported).
+        if (u.id == "UNIT_ARCHAEOLOGIST") {
+            int museums = 0, diggers = 0;
+            for (const City& o : state_.cities) {
+                if (o.owner == c.owner && std::any_of(u.needsBuilding.begin(), u.needsBuilding.end(), [&](TypeIndex b) { return cityHasBuilding(o, *rules_, b); }))
+                    ++museums;
+            }
+            for (const Unit& o : state_.units) diggers += o.owner == c.owner && o.type == item.type ? 1 : 0;
+            if (diggers >= museums) return fail(CommandError::CannotBuild);
+        }
     } else if (item.kind == ProductionKind::Building) {
         if (item.type < 0 || static_cast<size_t>(item.type) >= rules_->buildings.size()) return fail(CommandError::CannotBuild);
         const BuildingType& b = rules_->buildings[static_cast<size_t>(item.type)];

@@ -250,6 +250,9 @@ std::vector<std::vector<Hex>> Game::tradeWays(PlayerId player, TypeIndex traderT
     const bool sails = canEmbark(player, traderType);
     const bool ocean = canEnterOcean(player);
     // Breadth-first over plots: land, then water too once Traders may embark (07: Range).
+    // Range is 15 plots over land and 30 over water (07: Range): range is kept in units of landRange * waterRange,
+    // a land plot spending waterRange of them and a water plot landRange, so a mixed way spends each leg's share.
+    const int full = landRange * waterRange;
     // Range refuels in the player's own cities and in cities holding its Trading Post (07: Trading Posts):
     // a plot is searched again when reached with more range left. Each arrival is its own entry, so the
     // way back is the walk that reached the destination.
@@ -270,13 +273,13 @@ std::vector<std::vector<Hex>> Game::tradeWays(PlayerId player, TypeIndex traderT
         ++open;
     }
     std::vector<std::vector<Hex>> ways(destinations.size());
-    auto search = [&](bool water, int range) {
+    auto search = [&](bool water) {
         struct Entry { int plot, parent, fuel; };
         std::vector<Entry> entries;  // searched from in turn
         std::vector<int> best(static_cast<size_t>(n), -1);
-        std::vector<int8_t> passable(static_cast<size_t>(n), -1);  // worked out when first looked at
-        entries.push_back({start, -1, range});
-        best[static_cast<size_t>(start)] = range;
+        std::vector<int8_t> passable(static_cast<size_t>(n), -1);  // 0 no, 1 land, 2 water; worked out when first looked at
+        entries.push_back({start, -1, full});
+        best[static_cast<size_t>(start)] = full;
         for (size_t e = 0; e < entries.size() && open > 0; ++e) {
             const Entry cur = entries[e];
             if (cur.fuel <= 0) continue;
@@ -295,19 +298,21 @@ std::vector<std::vector<Hex>> Game::tradeWays(PlayerId player, TypeIndex traderT
                 }
                 if (passable[ni] < 0) {
                     const TerrainType& t = rules_->terrains[at(state_.plot(*nh).terrain)];
-                    const bool ok = bridgeAt(*nh) || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
-                    passable[ni] = static_cast<int8_t>(ok ? 1 : 0);
+                    const bool bridge = bridgeAt(*nh);
+                    const bool ok = bridge || (t.water ? water && !t.impassable && (t.id != "TERRAIN_OCEAN" || ocean) : isLandPassable(state_, *rules_, *nh));
+                    passable[ni] = static_cast<int8_t>(!ok ? 0 : t.water && !bridge ? 2 : 1);
                 }
                 if (!passable[ni]) continue;
-                const int left = refuel[ni] ? range : cur.fuel - 1;
+                const int left = refuel[ni] ? full : cur.fuel - (passable[ni] == 2 ? landRange : waterRange);
+                if (left < 0) continue;
                 if (left <= best[ni]) continue;
                 best[ni] = left;
                 entries.push_back({static_cast<int>(ni), static_cast<int>(e), left});
             }
         }
     };
-    search(false, landRange);
-    if (open > 0 && sails) search(true, waterRange);
+    search(false);
+    if (open > 0 && sails) search(true);
     return ways;
 }
 
