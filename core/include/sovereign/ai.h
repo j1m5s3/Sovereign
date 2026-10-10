@@ -33,7 +33,7 @@ SOV_API int militaryStrength(const Game& game, PlayerId player);
 // turn; at most one victory strategy is active, the situational ones stack.
 enum class Strategy : uint8_t {
     ScienceVictory = 0, CultureVictory, ReligiousVictory, DominationVictory, DiplomaticVictory,
-    RapidExpansion, Naval, WonderObsessed, DarkAge,
+    RapidExpansion, Naval, WonderObsessed, DarkAge, EarlyExploration,
     Count
 };
 SOV_API std::vector<Strategy> strategies(const Game& game, PlayerId player);

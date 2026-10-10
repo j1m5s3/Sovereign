@@ -532,6 +532,7 @@ TEST(ai_trains_builders_only_for_work_left) {
         addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
         addUnit(s, "UNIT_WARRIOR", 0, {5, 6});
         addUnit(s, "UNIT_BUILDER", 0, {6, 7});
+        addUnit(s, "UNIT_SCOUT", 0, {6, 5});  // already out exploring
         auto g = Game::fromScenario(rules(), std::move(s));
         ai::playTurn(*g);
         int n = 0;
@@ -573,6 +574,7 @@ TEST(ai_trains_builders_for_plots_other_cities_work) {
         addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
         addUnit(s, "UNIT_WARRIOR", 0, {14, 6});
         if (builder) addUnit(s, "UNIT_BUILDER", 0, {14, 6});
+        addUnit(s, "UNIT_SCOUT", 0, {6, 5});  // already out exploring
         auto g = Game::fromScenario(rules(), std::move(s));
         ai::playTurn(*g);
         const City& after = g->state().cities[0];
@@ -1390,6 +1392,7 @@ TEST(ai_builds_housing_where_growth_stalls) {
             s.plot({2, 4}).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
         }
         for (const Hex& h : {Hex{4, 4}, Hex{3, 4}, Hex{4, 5}}) addUnit(s, "UNIT_WARRIOR", 0, h);
+        addUnit(s, "UNIT_SCOUT", 0, {5, 4});  // already out exploring
         auto g = Game::fromScenario(rules(), std::move(s));
         ai::playTurn(*g);
         const City& after = g->state().cities[0];
@@ -1596,4 +1599,85 @@ TEST(ai_promotes_a_ship_for_speed_with_no_foes_near) {
     };
     CHECK_EQ(pick(false), std::string("PROMOTION_HELMSMAN"));
     CHECK_EQ(pick(true), std::string("PROMOTION_EMBOLON"));
+}
+
+TEST(ai_trains_a_scout_while_its_lands_are_unexplored) {
+    // An Ancient-era capital with its garrison: while a third of the plots within 8 of it are unexplored, Early
+    // Exploration holds and the city trains a Scout; not once those plots are seen, nor with a Scout already out, nor
+    // past two cities or the Ancient era. A Scout in training elsewhere is enough, and a Scout is not the army: a
+    // second city without a garrison still trains one.
+    enum { Unexplored, Explored, ScoutOut, ThreeCities, Classical, ScoutQueued, SecondCity };
+    struct Result {
+        bool exploring = false;
+        std::vector<std::string> trains;  // each city's first item, by unit class ("" for none or not a unit)
+    };
+    const auto build = [](int setup) {
+        GameState s = flatState(40, 24, 1);
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Unrevealed));
+        addCity(s, 0, {15, 10}, true, 1);
+        addUnit(s, "UNIT_WARRIOR", 0, {15, 10});
+        if (setup == ThreeCities || setup == ScoutQueued || setup == SecondCity) addCity(s, 0, {25, 10}, false, 1);
+        if (setup == ThreeCities) addCity(s, 0, {15, 18}, false, 1);
+        if (setup == ThreeCities) addUnit(s, "UNIT_WARRIOR", 0, {25, 10});
+        if (setup == ThreeCities) addUnit(s, "UNIT_WARRIOR", 0, {15, 18});
+        for (City& c : s.cities) c.queue.clear();
+        if (setup == ScoutQueued) s.cities[0].queue.push_back({ProductionKind::Unit, rules().unit("UNIT_SCOUT")});
+        if (setup == ScoutQueued) addUnit(s, "UNIT_WARRIOR", 0, {25, 10});
+        if (setup == ScoutOut) addUnit(s, "UNIT_SCOUT", 0, {2, 2});
+        if (setup == Classical) learn(s, 0, "TECH_CURRENCY");
+        if (setup == Explored) {
+            for (const Hex& h : s.grid.within({15, 10}, 8))
+                s.players[0].visibility[static_cast<size_t>(s.grid.index(h))] = static_cast<uint8_t>(Visibility::Revealed);
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        Result out;
+        const std::vector<ai::Strategy> on = ai::strategies(*g, 0);
+        out.exploring = std::find(on.begin(), on.end(), ai::Strategy::EarlyExploration) != on.end();
+        ai::playTurn(*g);
+        for (const City& c : g->state().cities) {
+            const bool unit = !c.queue.empty() && c.queue.front().kind == ProductionKind::Unit;
+            out.trains.push_back(unit ? rules().units[at(c.queue.front().type)].unitClass : std::string());
+        }
+        return out;
+    };
+    const Result unexplored = build(Unexplored);
+    CHECK(unexplored.exploring);
+    CHECK_EQ(unexplored.trains[0], std::string("RECON"));
+    const Result explored = build(Explored);
+    CHECK(!explored.exploring);
+    CHECK(explored.trains[0] != "RECON");
+    const Result out = build(ScoutOut);
+    CHECK(out.exploring);
+    CHECK(out.trains[0] != "RECON");
+    CHECK(!build(ThreeCities).exploring);
+    CHECK(!build(Classical).exploring);
+    const Result queued = build(ScoutQueued);
+    CHECK(queued.exploring);
+    CHECK(queued.trains[1] != "RECON");
+    // Two cities, one garrison: the capital trains the Scout and the new city its garrison.
+    const Result second = build(SecondCity);
+    CHECK_EQ(second.trains[0], std::string("RECON"));
+    CHECK(second.trains[1] != "RECON" && !second.trains[1].empty());
+    CHECK_EQ(std::string(ai::strategyName(ai::Strategy::EarlyExploration)), std::string("Early Exploration"));
+}
+
+TEST(ai_does_not_take_a_scout_for_a_garrison) {
+    // Our second city has only a Scout standing in it: it trains a garrison before the Settler its size allows.
+    GameState s = flatState(40, 24, 1);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {10, 10}, true, 2);
+    addCity(s, 0, {22, 10}, false, 3);
+    for (City& c : s.cities) c.queue.clear();
+    s.cities[0].queue.push_back({ProductionKind::Building, rules().building("BUILDING_MONUMENT")});
+    addUnit(s, "UNIT_WARRIOR", 0, {10, 10});
+    addUnit(s, "UNIT_SCOUT", 0, {22, 10});
+    s.players[0].visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));  // sites to settle in sight
+    auto g = Game::fromScenario(rules(), std::move(s));
+    ai::playTurn(*g);
+    const City& c = g->state().cities[1];
+    REQUIRE(!c.queue.empty());
+    REQUIRE(c.queue.front().kind == ProductionKind::Unit);
+    const UnitType& t = rules().units[at(c.queue.front().type)];
+    CHECK(t.layer == UnitLayer::Military && t.unitClass != "RECON");
 }

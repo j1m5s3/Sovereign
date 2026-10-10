@@ -44,6 +44,7 @@ constexpr int kDenounceOpinion = -25;   // at or below: denounce
 constexpr int kEnvoyStrategyBonus = 12;  // an envoy's pull toward a city-state of a kind our strategy wants, short of a tier's 20
 constexpr int kMissionaryPressureWeight = 6;  // a missionary's turn away from a city already full of our religion's pressure
 constexpr int kPromotionFoeRange = 8;  // foreign units a promotion is weighed against
+constexpr int kExploreRadius = 8;  // Early Exploration looks this far around the capital
 constexpr int kProposalGap = 10;        // an alliance's last turns, when it is renewed
 constexpr int kDemandGap = 30;          // a civ is asked for tribute on one turn in this many
 constexpr int kRansomPatience = 10;     // turns a captured ruler waits for a ransom before it is given up
@@ -124,7 +125,7 @@ void survey(View& v) {
     for (const Unit& u : s.units) {
         const UnitType& t = v.r.units[at(u.type)];
         if (u.owner == v.me) {
-            if (isArmy(t)) {
+            if (isArmy(t) && t.unitClass != "RECON") {  // a Scout explores; it is not the army
                 ++v.military;
                 v.ranged += t.range > 0;
             }
@@ -163,7 +164,7 @@ void survey(View& v) {
 
 bool hasGarrison(const View& v, const City& c) {
     const Unit* u = v.s().unitAt(c.pos, UnitLayer::Military, v.r);
-    return u && u->owner == v.me;
+    return u && u->owner == v.me && v.r.units[at(u->type)].unitClass != "RECON";  // a Scout passing through guards nothing
 }
 
 int cityIndex(const View& v, CityId id) {
@@ -360,6 +361,16 @@ Posture assess(const Game& g, PlayerId me, int sites) {
         }
         out.on[static_cast<size_t>(Strategy::Naval)] = (cap && land > 0 && home * 5 < land) ||
                                                        (pl.civ != kNone && r.civs[at(pl.civ)].agenda == Agenda::QueenOfTheSeas);
+        // Early Exploration (10: situational, "fewer cities"): in the Ancient era with at most two cities, while a third
+        // of the plots within kExploreRadius of the capital are still unexplored.
+        if (cap && myCities <= 2 && g.playerEra(me) == 0) {
+            int near = 0, unexplored = 0;
+            for (const Hex& h : s.grid.within(cap->pos, kExploreRadius)) {
+                ++near;
+                unexplored += g.visibility(me, h) == Visibility::Unrevealed ? 1 : 0;
+            }
+            out.on[static_cast<size_t>(Strategy::EarlyExploration)] = unexplored * 3 >= near;
+        }
     }
 
     // What they ask for.
@@ -1952,6 +1963,13 @@ void production(View& v) {
     builderWork(v, work, workedWork, charges);
     int traders = tradersOnHand(v);
     const bool destOpen = tradeDestOpen(v);
+    // One Scout while Early Exploration holds and none is out or in training (10: Scouting).
+    bool wantScout = v.posture.has(Strategy::EarlyExploration);
+    for (const Unit& u : s.units) wantScout = wantScout && !(u.owner == v.me && v.r.units[at(u.type)].unitClass == "RECON");
+    for (CityId other : v.cities) {
+        const City& oc = *s.city(other);
+        wantScout = wantScout && !(!oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].unitClass == "RECON");
+    }
     for (CityId cid : needing) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
@@ -2049,6 +2067,7 @@ void production(View& v) {
                         for (const Unit& o : s.units) diggers += o.owner == v.me && v.r.units[at(o.type)].excavations > 0 ? 1 : 0;
                         value = sites > 0 && diggers == 0 ? 200 : 0;
                     }
+                    else if (t.unitClass == "RECON") value = wantScout ? 250 : 0;
                     else if (t.foundCity) value = wantSettler ? (s.turn < kEarlyTurns ? 600 : 400) * v.posture.settler / 100 : 0;
                     // A Builder works for all our cities: it is worth the plots this city works unimproved, or those all
                     // our cities work beyond the charges our Builders carry, whichever are more.
@@ -2237,7 +2256,7 @@ void production(View& v) {
             v.builders += isBuilder(t);
             if (isBuilder(t)) charges += t.buildCharges;
             if (t.id == "UNIT_TRADER") ++traders;
-            v.military += isArmy(t);
+            v.military += isArmy(t) && t.unitClass != "RECON";
         }
     }
 }
@@ -3009,7 +3028,8 @@ std::vector<Strategy> strategies(const Game& game, PlayerId player) {
 
 const char* strategyName(Strategy s) {
     static const char* const names[] = {"Science Victory", "Culture Victory", "Religious Victory", "Domination Victory", "Diplomatic Victory",
-                                        "Rapid Expansion", "Naval", "Wonder Obsessed", "Dark Age"};
+                                        "Rapid Expansion", "Naval", "Wonder Obsessed", "Dark Age",
+                                        "Early Exploration"};
     return static_cast<size_t>(s) < sizeof(names) / sizeof(names[0]) ? names[static_cast<size_t>(s)] : "?";
 }
 
