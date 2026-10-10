@@ -64,7 +64,7 @@ void Game::recordTurnStats() {
         t.turn = state_.turn;
         t.player = p.id;
         t.score = score(p.id);  // science, culture and Faith are filled in as its cities yield (processCities)
-        t.gold = p.gold.toInt();
+        t.gold = static_cast<int32_t>(p.gold.toInt());
         t.techs = static_cast<int32_t>(std::count(p.techs.done.begin(), p.techs.done.end(), 1));
         t.civics = static_cast<int32_t>(std::count(p.civics.done.begin(), p.civics.done.end(), 1));
         state_.turnStats.push_back(t);

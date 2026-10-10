@@ -1750,9 +1750,9 @@ void Game::processCities(PlayerId pid) {
     for (size_t i = state_.turnStats.size(); i-- > 0 && state_.turnStats[i].turn == state_.turn;) {
         TurnStats& t = state_.turnStats[i];
         if (t.player != pid) continue;
-        t.science = science.toInt();
-        t.culture = culture.toInt();
-        t.faith = (player.faith - faithBefore).toInt();
+        t.science = static_cast<int32_t>(science.toInt());
+        t.culture = static_cast<int32_t>(culture.toInt());
+        t.faith = static_cast<int32_t>((player.faith - faithBefore).toInt());
         break;
     }
     processResearch(pid, science, culture);
