@@ -317,8 +317,14 @@ TEST(james_young_reveals_oil) {
     const UnitId young = addGreatPerson(s, "GREAT_PERSON_JAMES_YOUNG", {7, 6});
     auto g = Game::fromScenario(rules(), std::move(s));
     CHECK(!g->resourceVisible(0, {8, 6}));
+    const size_t prod = static_cast<size_t>(YieldType::Production);
+    const Fixed before = g->plotYields({8, 6}, g->state().cities[0])[prod];
     REQUIRE(g->submit(Command::activateGreatPerson(0, young)) == CommandError::Ok);
     CHECK(g->resourceVisible(0, {8, 6}));
+    // The Oil he shows yields as well (01: a resource yields once its owner sees it).
+    const Fixed oil = rules().resources[static_cast<size_t>(rules().resource("RESOURCE_OIL"))].yields[prod];
+    REQUIRE(oil > Fixed());
+    CHECK(g->plotYields({8, 6}, g->state().cities[0])[prod] == before + oil);
 }
 
 TEST(medici_opens_slots_in_banks) {

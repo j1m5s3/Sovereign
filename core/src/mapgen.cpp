@@ -560,6 +560,15 @@ int startScore(const GameState& state, const Rules& rules, Hex h) {
     for (const Hex& n : g.within(h, 3)) score += isLandPassable(state, rules, n) ? 2 : 0;
     if (hasFreshWater(state, rules, h)) score += 15;
     if (coastal) score += 6;
+    // Nearby luxuries (01: Start positions): each kind within 3 plots (a Sovereign weight, a little under fresh water).
+    std::vector<TypeIndex> luxuries;
+    for (const Hex& n : g.within(h, 3)) {
+        const TypeIndex r = state.plot(n).resource;
+        if (r != kNone && rules.resources[static_cast<size_t>(r)].cls == ResourceClass::Luxury &&
+            std::find(luxuries.begin(), luxuries.end(), r) == luxuries.end())
+            luxuries.push_back(r);
+    }
+    score += 10 * static_cast<int>(luxuries.size());
     return score;
 }
 
