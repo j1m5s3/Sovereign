@@ -244,6 +244,12 @@ std::vector<TypeIndex> Game::unitAbilities(const Unit& unit) const {
     return abilitiesWhere(unit, [](TypeIndex) { return true; });
 }
 
+bool Game::unitHasAbility(const Unit& unit, TypeIndex ability) const {
+    if (ability == kNone) return false;
+    const std::vector<TypeIndex> all = unitAbilities(unit);
+    return std::find(all.begin(), all.end(), ability) != all.end();
+}
+
 std::vector<TypeIndex> Game::abilitiesWithEffects(const Unit& unit, uint64_t kinds) const {
     return abilitiesWhere(unit, [&](TypeIndex a) { return (abilityKinds_[static_cast<size_t>(a)] & kinds) != 0; });
 }
@@ -995,6 +1001,8 @@ CommandError Game::validateCombat(const Command& c) const {
         // Theological combat: an adjacent religious unit of another religion, no war needed (06).
         if (c.type != CommandType::Attack || u->religion < 0 || u->movesLeft <= Fixed() || state_.grid.distance(u->pos, *t) != 1)
             return CommandError::CannotAttack;
+        // Missionaries and Gurus are Peacekeepers (06; data: ABILITY_PEACEKEEPER): they defend but never attack.
+        if (unitHasAbility(*u, rules_->ability("ABILITY_PEACEKEEPER"))) return CommandError::CannotAttack;
         return religiousFoeAt(state_, *rules_, *u, *t) ? CommandError::Ok : CommandError::CannotAttack;
     }
     if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader && ut.layer != UnitLayer::Air) || u->movesLeft <= Fixed() ||

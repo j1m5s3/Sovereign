@@ -327,6 +327,11 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "tags": [
+    "RELIGIOUS",
+    "RELIGIOUS_ALL",
+    "MISSIONARY"
+   ],
    "costProgression": 6,
    "mustPurchase": true,
    "needsBuilding": [
@@ -374,6 +379,10 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "tags": [
+    "RELIGIOUS_ALL",
+    "GURU"
+   ],
    "costProgression": 12,
    "mustPurchase": true,
    "needsBuilding": [
@@ -550,6 +559,10 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "tags": [
+    "RELIGIOUS",
+    "RELIGIOUS_ALL"
+   ],
    "costProgression": 15,
    "mustPurchase": true,
    "needsBuilding": [
@@ -749,6 +762,10 @@
    "range": 0,
    "moves": 4,
    "sight": 2,
+   "tags": [
+    "RELIGIOUS_ALL",
+    "INQUISITOR"
+   ],
    "costProgression": 6,
    "mustPurchase": true,
    "needsBuilding": [

@@ -33,6 +33,7 @@ bool typeTaken(const GameState& s, TypeIndex religion) {
 
 void fitPressure(City& c, size_t n) {
     if (c.pressure.size() < n) c.pressure.resize(n, 0);
+    if (c.pressureTenths.size() < n) c.pressureTenths.resize(n, 0);
 }
 
 }  // namespace
@@ -278,7 +279,8 @@ int Game::religiousStrength(const Unit& unit, bool defending) const {
         for (const UnitEffect& e : rules_->promotions[at(pr)].effects) add(e);
     }
     if (bestAllianceLevel(unit.owner, AllianceType::Religious) >= 2) s += 10;  // a Religious alliance at level 2 (08)
-    if (home && state_.players[at(unit.owner)].inquisition) s += 15;  // the Inquisition ability (06)
+    // The Inquisition ability (06), once launched; the Dark Age card grants the same ability, which then counts above.
+    if (home && state_.players[at(unit.owner)].inquisition && !unitHasAbility(unit, rules_->ability("ABILITY_INQUISITION_FRIENDLY_TERRITORY_BONUS"))) s += 15;
     // Grand Inquisitor (08: Moksha): +10 in the territory of his city (Sovereign reading of "units bought here").
     if (territoryGovernorHas(unit.pos, unit.owner, "GOVERNOR_PROMOTION_GRAND_INQUISITOR")) s += 10;
     if (unit.religion >= 0 && resolutionHits(ResolutionKind::WorldReligion, 0, unit.religion)) s += 10;  // World Religion (World Congress)
@@ -612,7 +614,11 @@ void Game::processReligion() {
         for (City& c : state_.cities) {
             if (c.pos == src.pos || state_.grid.distance(c.pos, src.pos) > src.range) continue;
             if (c.owner != src.owner && alliance(c.owner, src.owner) == AllianceType::Religious) continue;  // 08: no pressure between allies
-            c.pressure[static_cast<size_t>(src.religion)] += src.amount / 10;
+            // Kept in tenths, so Scripture's +25% and the Bishop's percent count on a plain city's 1 too (06).
+            int32_t& tenths = c.pressureTenths[static_cast<size_t>(src.religion)];
+            tenths += src.amount;
+            c.pressure[static_cast<size_t>(src.religion)] += tenths / 10;
+            tenths %= 10;
         }
     }
     // A Religious alliance at level 3 (08; data: alliance pressure from no ally religion): +20 of the ally's

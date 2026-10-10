@@ -104,7 +104,7 @@ TEST(save_rejects_bad_input) {
     badMagic[0] = 'X';
     CHECK(!loadGame(rules(), badMagic, &err));
     std::vector<uint8_t> badVersion = bytes;
-    badVersion[4] = 99;
+    badVersion[4] = 250;  // a version no build writes
     CHECK(!loadGame(rules(), badVersion, &err));
     CHECK(err.find("version") != std::string::npos);
     // Different rules data (a mod layer) must not load this save.

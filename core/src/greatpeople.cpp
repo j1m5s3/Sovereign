@@ -36,10 +36,14 @@ int Game::worldEra() const {
 TypeIndex Game::currentGreatPerson(TypeIndex cls) const { return currentGreatPerson(cls, worldEra()); }
 
 TypeIndex Game::currentGreatPerson(TypeIndex cls, int world) const {
-    // Great Prophets stop once every religion the map allows is founded (06: Founding a religion).
-    if (rules_->units[at(rules_->greatPersonClasses[at(cls)].unit)].foundReligion &&
-        static_cast<int>(state_.religions.size()) >= maxReligions())
-        return kNone;
+    // Great Prophets stop once every religion the map allows is claimed (06: Founding a religion): founded, or
+    // a Prophet recruited toward it.
+    if (rules_->units[at(rules_->greatPersonClasses[at(cls)].unit)].foundReligion) {
+        int prophets = 0;
+        for (size_t i = 0; i < rules_->greatPeople.size(); ++i)
+            prophets += rules_->greatPeople[i].cls == cls && claimed(state_, static_cast<TypeIndex>(i)) ? 1 : 0;
+        if (std::max(prophets, static_cast<int>(state_.religions.size())) >= maxReligions()) return kNone;
+    }
     TypeIndex best = kNone;
     for (size_t i = 0; i < rules_->greatPeople.size(); ++i) {
         const GreatPersonType& g = rules_->greatPeople[i];
