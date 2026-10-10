@@ -299,6 +299,7 @@ Game::Game(const Rules& rules, GameState state, std::vector<Command> log)
         if (state_.plots[i].resource != kNone) resourcePlots_.push_back(static_cast<int32_t>(i));
     }
     lakes_ = lakeMap(state_, *rules_);
+    if (!state_.lowlandsFlagged) flagLowlands();
     terrainImprovements_.resize(rules_->terrains.size());
     featureImprovements_.resize(rules_->features.size());
     resourceImprovements_.resize(rules_->resources.size());

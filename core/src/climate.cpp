@@ -75,20 +75,34 @@ int Game::deforestationPercent() const {
 
 int Game::temperatureTenths() const { return climateChangePoints() * 5; }
 
-int Game::lowlandBand(Hex h, bool built) const {
-    const int32_t i = state_.grid.index(h);
-    const Plot& p = state_.plot(h);
-    const TerrainType& t = rules_->terrains[at(p.terrain)];
-    if (t.water || t.relief != Relief::Flat || p.feature == rules_->feature("FEATURE_VOLCANO")) return 0;
-    if (!built && (state_.cityAt(h) || state_.districtAt(h) || state_.wonderAt(h) != kNone)) return 0;
-    bool coastal = false;  // on the sea: rising water does not reach lakes (01: Lake)
-    for (int d = 0; d < 6 && !coastal; ++d) {
-        const auto n = state_.grid.neighbor(h, static_cast<Dir>(d));
-        coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water && !isLake(state_, *rules_, *n, &lakes_);
+// Coastal lowlands are flagged once, when the game begins (09: "flagged at map generation"): flat land on the sea, not
+// a lake (01: Lake), in 1, 2 and 3 m bands. Plots behind a drowned one never join them.
+void Game::flagLowlands() {
+    const TypeIndex volcano = rules_->feature("FEATURE_VOLCANO");
+    for (int32_t i = 0; i < state_.grid.size(); ++i) {
+        const Hex h = state_.grid.at(i);
+        Plot& p = state_.plot(h);
+        p.lowland = 0;
+        const TerrainType& t = rules_->terrains[at(p.terrain)];
+        if (t.water || t.relief != Relief::Flat || (volcano != kNone && p.feature == volcano)) continue;
+        bool coastal = false;
+        for (int d = 0; d < 6 && !coastal; ++d) {
+            const auto n = state_.grid.neighbor(h, static_cast<Dir>(d));
+            coastal = n && rules_->terrains[at(state_.plot(*n).terrain)].water && !isLake(state_, *rules_, *n, &lakes_);
+        }
+        if (!coastal) continue;
+        if (static_cast<int>(plotHash(i, 0x10A1A9D5u) % 100) >= rules_->globalInt("CLIMATE_CHANGE_PERCENT_COASTAL_LOWLANDS")) continue;
+        p.lowland = static_cast<uint8_t>(1 + plotHash(i, 0xBA9D5u) % 3);
     }
-    if (!coastal) return 0;
-    if (static_cast<int>(plotHash(i, 0x10A1A9D5u) % 100) >= rules_->globalInt("CLIMATE_CHANGE_PERCENT_COASTAL_LOWLANDS")) return 0;
-    return 1 + static_cast<int>(plotHash(i, 0xBA9D5u) % 3);
+    state_.lowlandsFlagged = true;
+}
+
+int Game::lowlandBand(Hex h, bool built) const {
+    const Plot& p = state_.plot(h);
+    if (p.lowland == 0 || rules_->terrains[at(p.terrain)].water) return 0;  // drowned already
+    // The sea floods a built plot but never takes it (a Sovereign reading): cities, districts and wonders stay land.
+    if (!built && (state_.cityAt(h) || state_.districtAt(h) || state_.wonderAt(h) != kNone)) return 0;
+    return p.lowland;
 }
 
 bool Game::inDrought(Hex h) const {
@@ -257,7 +271,7 @@ void Game::processClimate() {
             }
             if (coast == kNone) continue;
             p.terrain = coast;
-            lakes_ = lakeMap(state_, *rules_);  // the next plots' lowland checks see this one drowned
+            lakes_ = lakeMap(state_, *rules_);  // a lake it joins to the sea is sea now
             p.feature = kNone;
             p.improvement = kNone;
             p.resource = kNone;

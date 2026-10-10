@@ -50,6 +50,7 @@ struct Plot {
     bool park = false;     // part of a National Park (07: National Parks)
     uint8_t industry = 0;  // Monopolies and Corporations mode (07): 1 an Industry, 2 a Corporation on its luxury
     uint8_t products = 0;  // Products that Corporation has made (max 3; 07)
+    uint8_t lowland = 0;   // coastal lowland band, 1..3 m (09), flagged once when the game begins (GameState::lowlandsFlagged)
 };
 
 enum class Activity : uint8_t { Awake = 0, Sleep, Fortify, Skip };
@@ -758,6 +759,7 @@ struct SOV_API GameState {
     std::vector<TalkRecord> talks;      // conversation summaries, oldest first
     int64_t co2 = 0;                    // CO2 in the atmosphere from every civ [GS]
     int climatePhase = 0;               // 0: none yet, 1..7 (09: Climate Phases)
+    bool lowlandsFlagged = false;       // Plot::lowland set (09: Coastal Lowlands are flagged at map generation)
     struct Drought {
         Hex center;
         int radius = 1;
