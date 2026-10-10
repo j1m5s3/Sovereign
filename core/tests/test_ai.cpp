@@ -869,6 +869,43 @@ TEST(ai_called_to_arms_marches_on_its_allys_attacker) {
     CHECK(alone->atWar(0, 1));
 }
 
+TEST(ai_sends_help_to_an_allys_city_under_attack) {
+    // Our ally's city to the west is threatened by the foe we share; the spare Warrior goes to it, not east toward
+    // the foe's own cities.
+    auto play = [](bool allied, bool allyAtWar) {
+        GameState s = flatState(48, 14, 3);
+        addCity(s, 0, {24, 6}, true);
+        addCity(s, 1, {14, 6}, true);  // the ally
+        addCity(s, 2, {44, 6}, true);  // the foe
+        addUnit(s, "UNIT_WARRIOR", 0, {24, 6});
+        addUnit(s, "UNIT_WARRIOR", 0, {20, 6});
+        addUnit(s, "UNIT_WARRIOR", 1, {14, 6});
+        addUnit(s, "UNIT_WARRIOR", 2, {11, 6});
+        addUnit(s, "UNIT_WARRIOR", 2, {12, 4});
+        addUnit(s, "UNIT_SCOUT", 0, {13, 6});  // in the ally's city's lands: sees the attackers
+        s.turn = 60;
+        for (Player& p : s.players) {
+            p.relations.resize(3);
+            p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Visible));
+        }
+        for (PlayerId x : {0, 1}) s.players[at(x)].relations[2].war = s.players[2].relations[at(x)].war = x == 0 || allyAtWar;
+        if (allied) {
+            for (PlayerId x : {0, 1}) {
+                Relation& r = s.players[at(x)].relations[at(1 - x)];
+                r.alliance = AllianceType::Military;
+                r.allianceUntil = s.turn + 30;
+            }
+        }
+        auto g = Game::fromScenario(rules(), std::move(s));
+        REQUIRE(g->unitVisibleTo(0, g->state().units[3]));
+        ai::playTurn(*g);
+        return g->state().grid.distance(g->state().units[1].pos, {14, 6});
+    };
+    CHECK(play(true, true) < 6);
+    CHECK(play(false, true) >= 6);  // not our ally
+    CHECK(play(true, false) >= 6);  // the foe's units are not at war with our ally: they threaten nothing of its
+}
+
 TEST(ai_beats_the_random_bot) {
     GameSetup setup;
     setup.seed = 3;
