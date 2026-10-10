@@ -355,7 +355,8 @@ std::vector<CityId> Game::tradeDestinations(UnitId trader) const {
 }
 
 int Game::tradeRouteLength() const {
-    const int era = std::clamp(worldEra(), 0, static_cast<int>(rules_->eras.size()) - 1);
+    // The world (game) era sets it (04: World era; 09: Global era transitions), not the era most civs have entered.
+    const int era = std::clamp(state_.gameEra, 0, static_cast<int>(rules_->eras.size()) - 1);
     const int turns = rules_->globalInt("TRADE_ROUTE_TURN_DURATION_BASE") + rules_->eras[static_cast<size_t>(era)].tradeRouteExtraTurns;
     return std::max(1, turns * speedPercent(state_, *rules_) / 100);
 }

@@ -780,3 +780,32 @@ TEST(a_hurricane_pillages_every_lowland_improvement) {
     CHECK_EQ(pillaged, lowland);
     CHECK(spared > 0);
 }
+
+// A hurricane's coastal-lowland damage reaches districts there too: a Category 4 pillages every one (09; data:
+// Coastal lowland %).
+TEST(a_hurricane_pillages_every_lowland_district) {
+    std::vector<Hex> lowlands;
+    {
+        auto probe = Game::fromScenario(rules(), coastState(12, 24, 1));
+        for (int y = 1; y < 23; ++y) {
+            if (probe->lowlandBand({1, y}) > 0) lowlands.push_back({1, y});
+        }
+    }
+    REQUIRE(lowlands.size() >= 3u);
+    GameState s = coastState(12, 24, 1);
+    addCity(s, 0, {6, 12}, true, 4);
+    for (const Hex& h : lowlands) {
+        s.cities[0].districts.push_back(CityDistrict{rules().district("DISTRICT_CAMPUS"), h, true});
+        s.plot(h).owner = 0;
+        s.plot(h).city = s.cities[0].id;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    for (const Hex& h : lowlands) {
+        CHECK_EQ(g->lowlandBand(h), 0);  // built on: the sea does not take it
+        CHECK(g->lowlandBand(h, true) > 0);
+        g->strikeDisaster(disaster("DISASTER_CATEGORY_4_HURRICANE"), h);
+    }
+    for (const CityDistrict& d : g->state().cities[0].districts) {
+        if (std::find(lowlands.begin(), lowlands.end(), d.pos) != lowlands.end()) CHECK(d.pillagedTurns > 0);
+    }
+}

@@ -79,3 +79,43 @@ TEST(quests_survive_a_save) {
     CHECK(loaded->state().quests[0].kind == QuestKind::TrainUnit);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+// A city-state's first suzerain is a historic moment however the envoys came, here a quest's reward (09).
+TEST(a_quest_envoy_can_make_the_first_suzerain) {
+    GameState s = world();
+    s.players[0].envoys[2] = 2;
+    s.quests.push_back({2, 0, QuestKind::TradeRoute, 2});
+    TradeRoute r;
+    r.owner = 0;
+    r.origin = s.cities[0].id;
+    r.destination = s.cities[2].id;
+    s.tradeRoutes.push_back(r);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->suzerainOf(2) == kNoPlayer);
+    g->checkQuests();
+    REQUIRE(g->suzerainOf(2) == 0);
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN"));
+    CHECK(g->state().players[2].hadSuzerain);  // no later suzerain is the first
+}
+
+// Envoys short of suzerainty claim nothing: the moment waits for the envoy that makes the first suzerain.
+TEST(the_first_suzerain_moment_waits_for_a_suzerain) {
+    GameState s = world();
+    s.players[0].envoys[2] = 1;
+    s.players[0].envoyTokens = 1;
+    s.quests.push_back({2, 0, QuestKind::TradeRoute, 2});
+    TradeRoute r;
+    r.owner = 0;
+    r.origin = s.cities[0].id;
+    r.destination = s.cities[2].id;
+    s.tradeRoutes.push_back(r);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->checkQuests();
+    REQUIRE(g->envoysAt(0, 2) == 2);
+    CHECK(g->suzerainOf(2) == kNoPlayer);
+    CHECK(!g->state().players[2].hadSuzerain);
+    CHECK(!sovtest::hasMoment(*g, 0, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN"));
+    REQUIRE(g->submit(Command::sendEnvoy(0, 2)) == CommandError::Ok);
+    REQUIRE(g->suzerainOf(2) == 0);
+    CHECK(sovtest::hasMoment(*g, 0, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN"));
+}

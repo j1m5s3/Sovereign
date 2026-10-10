@@ -459,6 +459,7 @@ void Game::inPersonVisit(const Unit& leader) {
         seen.insert(it, key);
         if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
         p.envoys[static_cast<size_t>(c.owner)] += rules_->globalInt("IN_PERSON_ENVOYS");
+        noteFirstSuzerain(c.owner);
     }
 }
 

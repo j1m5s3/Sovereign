@@ -67,6 +67,16 @@ int Game::envoysAt(PlayerId player, PlayerId cs) const { return sov::envoysAt(st
 
 PlayerId Game::suzerainOf(PlayerId cs) const { return sov::suzerainOf(state_, *rules_, cs); }
 
+// A city-state's first suzerain is a historic moment (09), however its envoys came: sent, met, quests, great people,
+// visits. Called after each change to a city-state's envoys.
+void Game::noteFirstSuzerain(PlayerId cs) {
+    if (cs == kNoPlayer || !isCityState(cs) || state_.players[at(cs)].hadSuzerain) return;
+    const PlayerId s = suzerainOf(cs);
+    if (s == kNoPlayer) return;
+    state_.players[at(cs)].hadSuzerain = true;
+    awardMoment(s, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN");
+}
+
 bool Game::isSuzerain(PlayerId player, PlayerId cs) const {
     // The suzerain has at least the minimum of envoys there, so a civ with fewer is not it and nobody's need counting.
     if (player >= 0 && at(player) < state_.players.size() && envoysAt(player, cs) < suzerainEnvoys_) return false;
@@ -201,6 +211,7 @@ void Game::processEnvoys(PlayerId pid) {
             if (c.owner == cs.id && visibility(pid, c.pos) != Visibility::Unrevealed) {
                 cs.firstMetBy = pid;
                 p.envoys[at(cs.id)] += rules_->globalInt("INFLUENCE_TOKENS_FREE_FOR_FIRST_PLAYER_MEET");
+                noteFirstSuzerain(cs.id);
                 break;
             }
         }

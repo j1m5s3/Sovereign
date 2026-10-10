@@ -75,12 +75,12 @@ int Game::deforestationPercent() const {
 
 int Game::temperatureTenths() const { return climateChangePoints() * 5; }
 
-int Game::lowlandBand(Hex h) const {
+int Game::lowlandBand(Hex h, bool built) const {
     const int32_t i = state_.grid.index(h);
     const Plot& p = state_.plot(h);
     const TerrainType& t = rules_->terrains[at(p.terrain)];
     if (t.water || t.relief != Relief::Flat || p.feature == rules_->feature("FEATURE_VOLCANO")) return 0;
-    if (state_.cityAt(h) || state_.districtAt(h) || state_.wonderAt(h) != kNone) return 0;
+    if (!built && (state_.cityAt(h) || state_.districtAt(h) || state_.wonderAt(h) != kNone)) return 0;
     bool coastal = false;  // on the sea: rising water does not reach lakes (01: Lake)
     for (int d = 0; d < 6 && !coastal; ++d) {
         const auto n = state_.grid.neighbor(h, static_cast<Dir>(d));
@@ -439,7 +439,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
         const bool spared = dt.kind == DisasterKind::Drought && guarded && cityPrevents(guarded->id, false);
         for (DisasterDamage dd : dt.damage) {
             if (reinforced || spared) continue;
-            if (dd.lowlandPercent > 0 && lowlandBand(h) > 0) dd.percent = dd.lowlandPercent;  // coastal lowlands (hurricanes)
+            if (dd.lowlandPercent > 0 && lowlandBand(h, true) > 0) dd.percent = dd.lowlandPercent;  // coastal lowlands, built on or not (hurricanes)
             if (sheltered) dd.percent /= 2;
             switch (dd.type) {
                 case DisasterDamageType::ImprovementDestroyed:

@@ -375,7 +375,7 @@ public:
     int climateChangePoints() const;   // one per half degree of warming
     int temperatureTenths() const;     // degrees of warming, x10
     // Coastal lowland band of a plot: 1-3 meters, 0 when it is not lowland.
-    int lowlandBand(Hex plot) const;
+    int lowlandBand(Hex plot, bool built = false) const;  // built: count plots under a city, district or wonder too
     bool inDrought(Hex plot) const;
     // Strikes a disaster at a plot (the world turn's roll picks both; tests call it directly).
     // `follow`: a storm moving on or a fire spreading, not a new disaster.
@@ -992,6 +992,7 @@ private:
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn
     // Historic moments: an ordinary one, or a world's first (per key) with the ordinary one as fallback.
     void awardMoment(PlayerId player, const char* moment);
+    void noteFirstSuzerain(PlayerId cityState);
     void awardFirst(PlayerId player, const char* worldMoment, const char* ownMoment, int key = 0);
     void awardOnce(PlayerId pid, const char* id);  // a moment a player earns only once
     void circumnavigationMoment(PlayerId pid);     // a plot seen in every column of a map that wraps (09)

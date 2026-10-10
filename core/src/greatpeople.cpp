@@ -616,6 +616,7 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             if (cs == kNoPlayer || !isCityState(cs) || policyIs(pid, "POLICY_ROGUE_STATE")) break;
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
             p.envoys[at(cs)] += fx.amount;
+            noteFirstSuzerain(cs);
             break;
         }
         case GreatPersonEffectKind::GovernorTitles: p.governorTitlesSpent -= fx.amount; break;
@@ -813,6 +814,7 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             }
             if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
             p.envoys[at(cs)] = std::max(p.envoys[at(cs)], rules_->globalInt(HotGlobal::InfluenceTokensMinimumForSuzerain));
+            noteFirstSuzerain(cs);
             break;
         }
         case GreatPersonEffectKind::GreatPersonPoints: {
