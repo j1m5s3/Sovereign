@@ -2631,6 +2631,9 @@ def wonder_effect(wid, part, w, modifiers, eras):
             m["subjectRequirements"] = {"all": reqs}
         modifiers.append(m)
     t = re.sub(r" \(one-time\)$", "", part)
+    m = re.fullmatch(r"grants (\d+) Envoy\(s\)", t)  # Kilwa Kisiwani (03)
+    if m:
+        return [{"kind": "ENVOYS", "amount": int(m.group(1))}]
     m = re.fullmatch(r"\+(\d+)% (\w+)", t)
     if m and m.group(2) in YIELD_WORDS:
         mod("CITY_" + YIELD_WORDS[m.group(2)], "OWNER_CITY", "ADJUST_CITY_YIELD_PERCENT", {"yield": YIELD_WORDS[m.group(2)], "amount": int(m.group(1))})

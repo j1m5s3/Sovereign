@@ -822,11 +822,8 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
         base = rules_->buildings[static_cast<size_t>(item.type)].cost;
         // The Flood Barrier (09; data: CostMultiplierPerTile, CostMultiplierPerSeaLevel): x the city's coastal lowland
         // plots, and x (1 + the sea level rises already seen). Sovereign reading of the multipliers.
-        if (city && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_FLOOD_BARRIER") {
-            int lowland = 0;
-            for (const Hex& h : state_.grid.within(city->pos, 3)) lowland += state_.plot(h).city == city->id && lowlandBand(h, true) > 0 ? 1 : 0;
-            base = base * std::max(1, lowland) * (1 + std::max(0, state_.climatePhase - 1));
-        }
+        if (city && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_FLOOD_BARRIER")
+            base = base * std::max(1, cityLowlands(*city)) * (1 + std::max(0, state_.climatePhase - 1));
     }
     return std::max(1, base * speedPercent(state_, *rules_) / 100);
 }
@@ -1003,6 +1000,8 @@ bool Game::canProduce(const City& c, ProductionItem item, CommandError* why, boo
         if (!b.prereqs.empty() && std::none_of(b.prereqs.begin(), b.prereqs.end(), inCity)) return fail(CommandError::CannotBuild);
         if (std::any_of(b.exclusiveWith.begin(), b.exclusiveWith.end(), inCity)) return fail(CommandError::CannotBuild);
         if (b.needsRiver && !isRiverAdjacent(state_, c.pos)) return fail(CommandError::CannotBuild);
+        // A Flood Barrier guards a city's coastal lowlands; a city with none has nothing to guard (03, 09).
+        if (b.id == "BUILDING_FLOOD_BARRIER" && cityLowlands(c) == 0) return fail(CommandError::CannotBuild);
         if (b.plazaTier > 0) {
             // A Government Plaza building needs a government of its tier (03; Sovereign: or a higher one).
             const TypeIndex gov = state_.players[static_cast<size_t>(c.owner)].government;
@@ -1175,7 +1174,7 @@ Fixed Game::goldPerTurn(PlayerId player, const std::vector<CityReport>* reports)
     return net;
 }
 
-std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const {
+std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType, int radius) const {
     const UnitType& ut = rules_->units[static_cast<size_t>(unitType)];
     if (ut.domain == Domain::Air) return freeAirBase(c);
     const UnitLayer layer = ut.layer;
@@ -1191,9 +1190,9 @@ std::optional<Hex> Game::unitSpawnPlot(const City& c, TypeIndex unitType) const 
         const City* other = state_.cityAt(h);
         return !other || other->owner == c.owner;
     };
-    // The center first, then its neighbours (in within()'s order, as HexGrid::nearestFirst gives them).
+    // The center first, then its neighbours (in within()'s order, as HexGrid::nearestFirst gives them), out to radius.
     if (fits(c.pos)) return c.pos;
-    for (const Hex& h : state_.grid.within(c.pos, 1)) {
+    for (const Hex& h : state_.grid.within(c.pos, radius)) {
         if (h != c.pos && fits(h)) return h;
     }
     return std::nullopt;

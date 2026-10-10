@@ -147,7 +147,7 @@ public:
     int plotPurchaseCost(CityId city, Hex plot) const;
     bool canProduce(const City& city, ProductionItem item, CommandError* why = nullptr, bool purchase = false) const;
     // Where a unit trained in this city appears (ships: the port or the water beside it); nullopt when full.
-    std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType) const;
+    std::optional<Hex> unitSpawnPlot(const City& city, TypeIndex unitType, int radius = 1) const;
     // The most advanced unit of a class the player can train, its civ's unique one where it has one. With none unlocked
     // yet: kNone, or with orFirst the class's first unit.
     TypeIndex bestUnitOfClass(PlayerId player, const std::string& unitClass, bool orFirst = false) const;
@@ -375,7 +375,8 @@ public:
     int climateChangePoints() const;   // one per half degree of warming
     int temperatureTenths() const;     // degrees of warming, x10
     // Coastal lowland band of a plot: 1-3 meters, 0 when it is not lowland.
-    int lowlandBand(Hex plot, bool built = false) const;  // built: count plots under a city, district or wonder too
+    int lowlandBand(Hex plot, bool built = false) const;
+    int cityLowlands(const City& city) const;  // its coastal lowland plots, built on or not (the Flood Barrier, 09)  // built: count plots under a city, district or wonder too
     bool inDrought(Hex plot) const;
     // Strikes a disaster at a plot (the world turn's roll picks both; tests call it directly).
     // `follow`: a storm moving on or a fire spreading, not a new disaster.

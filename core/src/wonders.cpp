@@ -221,7 +221,9 @@ void Game::completeWonder(City& city, TypeIndex building) {
                 wonderProphet(city, fx.ref);  // Stonehenge: the civ's Prophet, or an Apostle
                 continue;
             }
-            if (auto spot = unitSpawnPlot(city, fx.ref)) spawnUnit(fx.ref, city.owner, *spot);
+            for (int n = 0; n < std::max(1, fx.count); ++n) {  // Kotoku-in's 4 Warrior Monks, Statue of Zeus's 3 Spearmen (03)
+                if (auto spot = unitSpawnPlot(city, fx.ref, 3)) spawnUnit(fx.ref, city.owner, *spot);  // nearest free plot
+            }
         } else {
             applyEffectAt(city.owner, &city, city.pos, fx);
         }
