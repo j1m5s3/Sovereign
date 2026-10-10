@@ -32,6 +32,10 @@ const TCHAR* CivStyle(const FString& CivId);
 // else, or when that art is missing.
 TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName, const FString& CivId = FString());
 
+// The Landmarks kit's piece for a wonder (kit_landmarks.py): its rules id without BUILDING_ in CamelCase
+// (BUILDING_TEMPLE_OF_ARTEMIS: TempleOfArtemis). The map tries it before the wonder's kind in the Wonders kit.
+FString LandmarkName(const FString& WonderId);
+
 // Every asset the game names, for the asset test.
 TArray<FString> RequiredAssets();
 }  // namespace SovArt
