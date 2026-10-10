@@ -208,6 +208,37 @@ TEST(a_captured_city_can_be_liberated) {
     CHECK(!g->canLiberateCity(2, freed));  // its own now
 }
 
+// A city-state conquered by one civ and taken from it by another may be liberated back to life (08: Diplomatic
+// Favor), its city its capital again; a fallen major civ is not revived (Sovereign reading).
+TEST(a_conquered_city_state_is_liberated_back_to_life) {
+    const auto setup = [](bool cityState) {
+        GameState s = flatState(24, 12, 3);
+        if (cityState) s.players[2].cityState = rules().cityState("CITYSTATE_MITLA");
+        for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+        addCity(s, 0, {3, 5}, true, 3);
+        const CityId freed = addCity(s, 0, {12, 5}, false, 3);
+        s.city(freed)->originalOwner = 2;
+        s.city(freed)->originalCapital = true;
+        s.city(freed)->capturedTurn = s.turn;
+        s.players[2].alive = false;
+        for (Player& p : s.players) p.relations.resize(3);
+        return s;
+    };
+    auto major = Game::fromScenario(rules(), setup(false));
+    CHECK(!major->canLiberateCity(0, major->state().cities[1].id));
+    auto g = Game::fromScenario(rules(), setup(true));
+    const CityId freed = g->state().cities[1].id;
+    REQUIRE(g->canLiberateCity(0, freed));
+    REQUIRE(g->submit(Command::liberateCity(0, freed)) == CommandError::Ok);
+    CHECK(g->state().players[2].alive);
+    CHECK_EQ(g->state().city(freed)->owner, 2);
+    CHECK(g->state().city(freed)->capital);
+    CHECK_EQ(g->state().players[0].favor, rules().globalInt("FAVOR_FOR_LIBERATE_CITY_STATE"));
+    sovtest::endTurns(*g, 2);
+    CHECK(g->state().players[2].alive);
+    CHECK_EQ(g->state().city(freed)->owner, 2);
+}
+
 TEST(unhappy_cities_breed_rebels) {
     GameState s = flatState(20, 12, 2);
     s.players[1].barbarian = true;

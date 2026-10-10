@@ -148,6 +148,13 @@ TEST(a_civ_s_unique_building_earns_its_base_s_envoy_bonus) {
     };
     CHECK_EQ(production("BUILDING_FACTORY") - production(nullptr), 2);
     CHECK_EQ(production("BUILDING_MILL_TOWN") - production(nullptr), 2);
+    // Not toward projects (08: districts and buildings).
+    GameState s = csState();
+    s.players[2].cityState = cityStateOf(CityStateKind::Industrial);
+    s.players[0].envoys[2] = 3;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(production(nullptr) > 0);
+    CHECK_EQ(g->envoyProduction(g->state().cities[0], ProductionItem{ProductionKind::Project, rules().project("PROJECT_REPAIR_OUTER_DEFENSES")}), 0);
 }
 
 TEST(city_states_never_win_or_score) {

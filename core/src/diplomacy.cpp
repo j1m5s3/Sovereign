@@ -527,7 +527,7 @@ void Game::remember(PlayerId holder, PlayerId about, MemoryKind kind, int amount
 
 bool Game::canDenounce(PlayerId by, PlayerId target) const {
     return isMajorCiv(by) && isMajorCiv(target) && by != target && hasMet(by, target) && !denouncing(by, target) &&
-           !friends(by, target) && !atWar(by, target);
+           !friends(by, target) && alliance(by, target) == AllianceType::None && !atWar(by, target);  // nor allies (08)
 }
 
 const CapturedSpy* Game::dealCaptive(const DealItem& item) const {

@@ -775,7 +775,9 @@ bool Game::canLiberateCity(PlayerId player, CityId id) const {
     const PlayerId to = c->originalOwner;
     if (to == kNoPlayer || to == player || static_cast<size_t>(to) >= state_.players.size()) return false;
     const Player& o = state_.players[static_cast<size_t>(to)];
-    return o.alive && !o.barbarian && !atWar(player, to);
+    // A conquered city-state may be liberated back to life (08: Diplomatic Favor); a fallen major civ's dynasty has
+    // ended with its ruler, so it is not revived (Sovereign reading).
+    return (o.alive || isCityState(to)) && !o.barbarian && !o.freeCity && !atWar(player, to);
 }
 
 bool Game::canRazeCity(PlayerId player, CityId id) const {
@@ -1197,7 +1199,21 @@ void Game::applyCombat(const Command& c) {
             state_.players[static_cast<size_t>(c.player)].favor +=
                 rules_->globalInt(minor ? "FAVOR_FOR_LIBERATE_CITY_STATE" : "FAVOR_FOR_LIBERATE_PLAYER_CITY");
             remember(to, c.player, MemoryKind::Gift, 30, 60);
+            Player& freed = state_.players[static_cast<size_t>(to)];
+            const bool revived = !freed.alive;
+            freed.alive = true;
             transferCity(c.id, to, rules_->globalInt("LOYALTY_AFTER_TRANSFERRED_BY_LIBERATION"));
+            if (revived) {
+                // Its one city is its capital again, with the buildings a capital is granted.
+                City& home = *state_.city(c.id);
+                home.capital = true;
+                for (size_t b = 0; b < rules_->buildings.size(); ++b) {
+                    if (!rules_->buildings[b].granted) continue;
+                    auto it = std::lower_bound(home.buildings.begin(), home.buildings.end(), static_cast<TypeIndex>(b));
+                    if (it == home.buildings.end() || *it != static_cast<TypeIndex>(b)) home.buildings.insert(it, static_cast<TypeIndex>(b));
+                }
+                assignCitizens(home);
+            }
             awardMoment(to, "MOMENT_CITY_RETURNS_TO_ORIGINAL_OWNER");  // 09
             refreshVisibility(c.player);
             refreshVisibility(to);

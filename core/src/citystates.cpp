@@ -229,7 +229,8 @@ Yields Game::envoyYields(const City& city) const {
 
 int Game::envoyProduction(const City& city, ProductionItem item) const {
     const Player& owner = state_.players[at(city.owner)];
-    if (!isMajor(owner)) return 0;
+    // Industrial and Militaristic envoys speed districts, buildings (wonders too) and units, not projects (08).
+    if (!isMajor(owner) || item.kind == ProductionKind::Project) return 0;
     const EnvoyToward toward = item.kind == ProductionKind::Unit ? EnvoyToward::Units
                                : item.kind == ProductionKind::District ? EnvoyToward::Districts
                                                                        : EnvoyToward::Buildings;
