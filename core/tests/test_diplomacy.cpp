@@ -191,6 +191,23 @@ TEST(friendship_needs_liking_and_rules_out_denouncing) {
     CHECK(!g->canDenounce(0, 1));
 }
 
+// Allies do not denounce each other (08), even once their friendship has lapsed while the alliance runs.
+TEST(allies_do_not_denounce_each_other) {
+    GameState s = diploState();
+    auto strangers = Game::fromScenario(rules(), s);
+    REQUIRE(strangers->canDenounce(0, 1));
+    for (int a = 0; a < 2; ++a) {
+        s.players[static_cast<size_t>(a)].relations.resize(2);
+        Relation& r = s.players[static_cast<size_t>(a)].relations[static_cast<size_t>(1 - a)];
+        r.alliance = AllianceType::Research;
+        r.allianceUntil = s.turn + 30;
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(!g->friends(0, 1));
+    CHECK(!g->canDenounce(0, 1));
+    CHECK(!g->canDenounce(1, 0));
+}
+
 TEST(open_borders_let_units_through) {
     GameState s = diploState();
     const TypeIndex early = rules().civic("CIVIC_EARLY_EMPIRE");
