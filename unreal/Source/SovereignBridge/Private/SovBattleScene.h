@@ -40,9 +40,17 @@ private:
 	FLinearColor SideColor[2];
 	// Each side's soldier figure: its unit's when that is a man on foot or a horseman, else the spearman.
 	FString SideFigure[2] = {TEXT("Soldier"), TEXT("Soldier")};
+	// A siege or armoured side's machine (Siege, Tank), drawn for every third man of a squad, the rest its crew
+	// (SideFigure); empty for the others.
+	FString SideVehicle[2];
 	// Turn added to a side's figures: horsemen are modelled side-on (along X), the people facing the viewer.
 	float SideYaw[2] = {0.f, 0.f};
-	TArray<bool> Figure;  // per soldier: drawn by a kit figure
+	int32 SquadMen[2][3] = {{0, 0, 0}, {0, 0, 0}};  // soldiers drawn so far per squad, for picking the machines
+	TArray<bool> Figure;   // per soldier: drawn by a kit figure
+	TArray<bool> Vehicle;  // per soldier: drawn as its side's machine (side-on, left standing as a dark wreck)
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> WreckMaterial;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Bodies;
