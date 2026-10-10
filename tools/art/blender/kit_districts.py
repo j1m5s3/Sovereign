@@ -1,6 +1,11 @@
 """Districts kit: one map token per specialty district, Classical temperate style like the city kit.
 Like the Fields kit each fits a footprint about 9 m across and the map draws it at a tenth of that.
 A small pennant on each is the team slot, so a district shows whose it is.
+
+The districts with buildings of their own (STYLED) also come in the four other architectural styles of the
+Styles kit, named SM_<District>_<Style>: their houses, halls, colonnades and Holy Site shrine are built
+in that style (flat roofs and domes, curved tiled roofs, mud brick with beams, fitted stone under thatch).
+The map uses them for a civ of that style until the Industrial era, as it does city centres.
 """
 import math
 
@@ -22,7 +27,19 @@ CANVAS = ["#e2d6bc", "#cdbf9f"]
 IRON = ["#5d5f63", "#4a4c50"]
 PAVING = "#c8bfae"
 FLAG = "#e8e2d6"
+# The other styles' materials (kit_styles.py).
+MUD = ["#c9a878", "#bf9b69", "#d4b789"]
+PLASTER = ["#e9e0cc", "#ded2b7"]
+TILE_BLUE = "#2f6f8f"
+RED_LACQUER = "#9a3324"
+ROOF_GREY = ["#4d5560", "#5a626c"]
+THATCH = ["#b89b5e", "#a88c52"]
+INCA_STONE = ["#8f8a80", "#7f7a71"]
 
+STYLES = ("MiddleEast", "Asian", "African", "American")
+_style = None  # the style the pieces are being built in (None: Classical)
+
+kitlib.patterns({"plaster": MUD + PLASTER, "rooftile": ROOF_GREY + [RED_LACQUER], "thatch": THATCH, "stone": INCA_STONE, "metal": [TILE_BLUE]})
 kitlib.patterns({"plaster": WALL, "rooftile": ROOF + BRICK, "stone": MARBLE + STONE + [PAVING], "wood": WOOD,
                  "foliage": LEAF + [LAWN], "cloth": CANVAS + [FLAG], "metal": IRON + [GOLD], "water": WATER})
 
@@ -38,21 +55,79 @@ def _base(p, w=9.0, d=8.0, color=PAVING):
     p.box((0, 0, 0.1), (w, d, 0.2), color)
 
 
+def _beams(p, x, y, w, d, h, rot):
+    """Toron: beam ends standing out of a mud-brick front."""
+    c, s = math.cos(rot), math.sin(rot)
+    for z in (0.2 + h * 0.45, 0.2 + h * 0.85):
+        for i in range(max(1, int(w / 0.9))):
+            u, v = -w / 2 + 0.45 + 0.9 * i, -d / 2 - 0.15
+            p.box((x + u * c - v * s, y + u * s + v * c, z), (0.1, 0.3, 0.1), WOOD[0], rot_z=rot)
+
+
+def _upturn(verts, x, y, length, width, overhang, rise):
+    """Turns up a hip roof's corners (Asian eaves)."""
+    L, W = length / 2 + overhang, width / 2 + overhang
+    for q in verts:
+        if abs(q.co.x - x) > L * 0.9 and abs(q.co.y - y) > W * 0.9:
+            q.co.z += rise * 0.4
+
+
+def _styled(p, x, y, w, d, h, rise, rot, k=0, hall=False):
+    """A building in the current style (walls of its material and its roof); False in the Classical style."""
+    c, s = math.cos(rot), math.sin(rot)
+    if _style == "MiddleEast":
+        p.box((x, y, 0.2 + h / 2), (w, d, h), PLASTER[0] if hall else MUD[k % 3], rot_z=rot)
+        p.box((x, y, 0.3 + h), (w + 0.1, d + 0.1, 0.2), MUD[1], rot_z=rot)  # parapet
+        if hall:
+            v = p.blob((x, y, 0.4 + h), min(w, d) * 0.38, TILE_BLUE, squash=1.15, subdiv=2, wobble=0.0)
+            for q in v:
+                q.co.z = max(q.co.z, 0.4 + h)
+    elif _style == "Asian":
+        p.box((x, y, 0.2 + h / 2), (w, d, h), PLASTER[k % 2], rot_z=rot)
+        roof = p.hip((x, y, 0.2 + h), w, d, rise * 1.1, ROOF_GREY[k % 2], overhang=0.45, rot_z=rot)
+        if rot == 0.0:
+            _upturn(roof, x, y, w, d, 0.45, rise)
+        for u in (-w / 2, w / 2):
+            p.box((x + u * c, y + u * s, 0.2 + h / 2), (0.18, d + 0.1, h), RED_LACQUER, rot_z=rot)  # lacquered posts
+    elif _style == "African":
+        p.box((x, y, 0.2 + h / 2), (w, d, h), MUD[k % 3], rot_z=rot)
+        p.box((x, y, 0.3 + h), (w + 0.1, d + 0.1, 0.2), MUD[2], rot_z=rot)
+        _beams(p, x, y, w, d, h, rot)
+        if hall:
+            for u in (-w / 2, 0.0, w / 2):
+                p.cone((x + u * c, y + u * s, 0.4 + h), 0.22, 0.8, MUD[1], segments=4)
+    elif _style == "American":
+        p.box((x, y, 0.2 + h / 2), (w, d, h), INCA_STONE[k % 2], rot_z=rot, taper=0.94)
+        p.hip((x, y, 0.2 + h), w * 0.95, d * 0.95, rise * 1.8, THATCH[k % 2], overhang=0.3, rot_z=rot)
+    else:
+        return False
+    return True
+
+
 def _house(p, x, y, rot=0.0, s=1.0, k=0):
     w, d, h = 2.2 * s, 1.8 * s, 1.5 * s
+    if _styled(p, x, y, w, d, h, 0.8 * s, rot, k):
+        return
     p.box((x, y, 0.2 + h / 2), (w, d, h), WALL[k % 3], rot_z=rot)
     p.gable((x, y, 0.2 + h), w, d, 0.8 * s, ROOF[k % 3], overhang=0.12, rot_z=rot)
 
 
 def _hall(p, x, y, w, d, h, wall=WALL[0], roof=ROOF[0], rot=0.0):
+    if _styled(p, x, y, w, d, h, 0.9, rot, hall=True):
+        return
     p.box((x, y, 0.2 + h / 2), (w, d, h), wall, rot_z=rot)
     p.hip((x, y, 0.2 + h), w, d, 0.9, roof, overhang=0.15, rot_z=rot)
 
 
 def _colonnade(p, x0, x1, y, h, n, r=0.18):
+    # Columns in the style's material: plaster, red lacquer, mud-brick piers or fitted stone.
+    color = {"MiddleEast": PLASTER[0], "Asian": RED_LACQUER, "African": MUD[1], "American": INCA_STONE[0]}.get(_style, MARBLE[0])
     for i in range(n):
         x = x0 + (x1 - x0) * i / max(1, n - 1)
-        p.cylinder((x, y, 0.2), r, h, MARBLE[0], segments=7)
+        if _style in ("African", "American"):
+            p.box((x, y, 0.2 + h / 2), (r * 2.2, r * 2.2, h), color)
+        else:
+            p.cylinder((x, y, 0.2), r, h, color, segments=7)
 
 
 def _tree(p, x, y, s=1.0):
@@ -81,8 +156,34 @@ def holy_site(seed=42):
     _base(p, color=LAWN)
     p.box((0, 0, 0.45), (5.0, 5.0, 0.5), STONE[0])
     p.box((0, 0, 0.85), (3.8, 3.8, 0.4), STONE[2])
-    p.box((0, 0, 1.05 + 1.2), (2.6, 2.6, 2.4), MARBLE[1])
-    p.cone((0, 0, 3.45), 2.0, 2.6, GOLD, segments=4)
+    if _style == "MiddleEast":  # a domed shrine and a minaret
+        p.box((0, 0, 1.05 + 1.2), (2.6, 2.6, 2.4), PLASTER[0])
+        v = p.blob((0, 0, 3.45), 1.2, TILE_BLUE, squash=1.2, subdiv=2, wobble=0.0)
+        for q in v:
+            q.co.z = max(q.co.z, 3.45)
+        p.cylinder((1.6, 1.6, 1.05), 0.3, 4.2, PLASTER[1], segments=8)
+        p.cone((1.6, 1.6, 5.25), 0.35, 0.8, TILE_BLUE, segments=8)
+    elif _style == "Asian":  # a three-storey pagoda
+        z, w = 1.05, 2.4
+        for i in range(3):
+            p.box((0, 0, z + 0.55), (w, w, 1.1), PLASTER[0])
+            _upturn(p.hip((0, 0, z + 1.1), w, w, 0.5, ROOF_GREY[i % 2], overhang=0.5), 0, 0, w, w, 0.5, 0.5)
+            z += 1.5
+            w *= 0.78
+        p.cylinder((0, 0, z), 0.06, 1.0, GOLD, segments=5)
+    elif _style == "African":  # a mud-brick shrine with a pinnacled front
+        p.box((0, 0, 1.05 + 1.2), (2.8, 2.6, 2.4), MUD[0])
+        _beams(p, 0, 0, 2.8, 2.6, 2.6, 0.0)
+        for x in (-1.2, 0.0, 1.2):
+            p.cone((x, -1.2, 3.45), 0.3, 1.2, MUD[1], segments=4)
+    elif _style == "American":  # a small stepped pyramid and its thatched shrine
+        for i, w in enumerate((3.4, 2.6, 1.8)):
+            p.box((0, 0, 1.05 + 0.45 + 0.9 * i), (w, w, 0.9), INCA_STONE[i % 2])
+        p.box((0, 0, 1.05 + 2.7 + 0.5), (1.4, 1.4, 1.0), PLASTER[0])
+        p.hip((0, 0, 1.05 + 2.7 + 1.0), 1.4, 1.4, 0.9, THATCH[0], overhang=0.2)
+    else:
+        p.box((0, 0, 1.05 + 1.2), (2.6, 2.6, 2.4), MARBLE[1])
+        p.cone((0, 0, 3.45), 2.0, 2.6, GOLD, segments=4)
     p.box((0, -1.32, 1.05 + 0.8), (0.9, 0.1, 1.6), DARK)
     for x, y in ((-3.5, -2.8), (3.4, -2.9), (-3.3, 2.9), (3.5, 2.7)):
         _tree(p, x, y, 1.1)
@@ -311,5 +412,24 @@ def preserve(seed=58):
     return p
 
 
+STYLED = [campus, holy_site, commercial_hub, harbor, theater_square, neighborhood, government_plaza, diplomatic_quarter]
+
+
+def _in_style(make, style):
+    """The piece built in another style, named SM_<District>_<Style>."""
+    def build():
+        global _style
+        _style = style
+        try:
+            p = make()
+        finally:
+            _style = None
+        p.name = p.name + "_" + style
+        return p
+    build.__name__ = make.__name__ + "_" + style.lower()
+    return build
+
+
 PIECES = [campus, holy_site, commercial_hub, harbor, theater_square, encampment, industrial_zone, entertainment_complex,
           aqueduct, neighborhood, spaceport, government_plaza, dam, canal, aerodrome, water_park, diplomatic_quarter, preserve]
+PIECES += [_in_style(make, style) for style in STYLES for make in STYLED]

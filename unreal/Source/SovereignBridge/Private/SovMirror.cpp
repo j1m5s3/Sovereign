@@ -315,6 +315,8 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			DM.Color = Marker.Color;
 			DM.bComplete = D.complete;
 			DM.bPillaged = D.pillagedTurns > 0;
+			DM.Era = Marker.Era;
+			DM.Civ = Marker.Civ;
 		}
 	}
 
@@ -354,6 +356,14 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			DM.Color = SovPlayerColor(Game, Mem->owner);
 			DM.bComplete = Mem->districtComplete;
 			DM.bPillaged = Mem->districtPillaged;
+			if (Mem->owner != sov::kNoPlayer)
+			{
+				DM.Era = Game.playerEra(Mem->owner);
+				if (const sov::TypeIndex Civ = S.players[static_cast<size_t>(Mem->owner)].civ; Civ != sov::kNone)
+				{
+					DM.Civ = UTF8_TO_TCHAR(Rules.civs[static_cast<size_t>(Civ)].id.c_str());
+				}
+			}
 		}
 		if (Mem->wonder != sov::kNone)
 		{

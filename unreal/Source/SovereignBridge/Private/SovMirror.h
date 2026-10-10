@@ -95,6 +95,8 @@ struct FSovDistrictMarker
 	FLinearColor Color;  // owner colour
 	bool bComplete = false;
 	bool bPillaged = false;
+	int32 Era = 0;  // its owner's era and civ id, for the architectural style the map draws it in (as FSovCityMarker)
+	FString Civ;
 };
 
 struct FSovMirror

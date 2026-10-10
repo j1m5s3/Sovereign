@@ -778,7 +778,13 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	int32 DistrictCount = 0;
 	for (const FSovDistrictMarker& D : Mirror.Districts)
 	{
-		const FString Model = DistrictModel(D.Type);
+		// In the owner's architectural style until the Industrial era, as city centres (kit_districts.py STYLED).
+		FString Model = DistrictModel(D.Type);
+		const FString Styled = Model + TEXT("_") + SovArt::CivStyle(D.Civ);
+		if (D.Era < 4 && SovArt::Mesh(TEXT("Districts"), Styled))
+		{
+			Model = Styled;
+		}
 		if (!SovArt::Mesh(TEXT("Districts"), Model))
 		{
 			continue;
