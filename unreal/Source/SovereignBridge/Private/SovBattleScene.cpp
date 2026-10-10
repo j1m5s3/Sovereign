@@ -59,7 +59,14 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 		const FName F = Side == 0 ? Spec.Attacker.Figure : Spec.Defender.Figure;
 		const bool bOnFoot = F == FName("Archer") || F == FName("Musketeer") || F == FName("Rifleman") || F == FName("Rider");
 		SideFigure[Side] = bOnFoot && SovArt::Mesh(TEXT("Figures"), F.ToString()) ? F.ToString() : FString(TEXT("Soldier"));
-		SideYaw[Side] = SideFigure[Side] == TEXT("Rider") ? -90.f : 0.f;
+		SideYaw[Side] = SideFigure[Side] == TEXT("Rider") ? 90.f : 0.f;
+		// Siege engines and tanks fight among their crews: catapult hands as spearmen, tank riders as riflemen.
+		const bool bMachine = (F == FName("Siege") || F == FName("Tank")) && SovArt::Mesh(TEXT("Figures"), F.ToString());
+		SideVehicle[Side] = bMachine ? F.ToString() : FString();
+		if (bMachine && F == FName("Tank") && SovArt::Mesh(TEXT("Figures"), TEXT("Rifleman")))
+		{
+			SideFigure[Side] = TEXT("Rifleman");
+		}
 	}
 	UStaticMeshComponent* Floor = Add(CubeMesh, FVector(0, 0, -50), FVector(90.0, 60.0, 1.0), Ground);
 	Floor->SetCollisionProfileName(TEXT("BlockAll"));
@@ -118,8 +125,12 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		UStaticMeshComponent* Body = Add(CylinderMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.6, 0.6, 1.7) : FVector(0.45, 0.45, 1.5), C);
 		UStaticMeshComponent* Head = Add(S.bLeader ? SphereMesh.Get() : ConeMesh.Get(), FVector::ZeroVector, S.bLeader ? FVector(0.35) : FVector(0.3, 0.3, 0.45),
 			S.bLeader ? FLinearColor(1.f, 0.75f, 0.1f) : FLinearColor(0.6f, 0.6f, 0.62f));
+		// A machine for every third man of a squad on a siege or armoured side (the first of each three).
+		const bool bMachine = !S.bLeader && !SideVehicle[S.Side].IsEmpty() && S.Squad >= 0 && S.Squad < 3
+			&& SquadMen[S.Side][S.Squad]++ % 3 == 0;
 		// Kit figures when the art exists: soldiers (and leaders) in their side's colour.
-		if (SovArt::SetKitMesh(Body, TEXT("Figures"), S.bLeader ? FString(TEXT("Leader")) : SideFigure[S.Side], C))
+		const FString Name = S.bLeader ? FString(TEXT("Leader")) : bMachine ? SideVehicle[S.Side] : SideFigure[S.Side];
+		if (SovArt::SetKitMesh(Body, TEXT("Figures"), Name, C))
 		{
 			Body->SetRelativeScale3D(FVector(1.0));
 			Head->SetVisibility(false);
@@ -129,6 +140,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		{
 			Figure.Add(false);
 		}
+		Vehicle.Add(bMachine && Figure.Last());
 		Bodies.Add(Body);
 		Heads.Add(Head);
 	}
@@ -142,8 +154,8 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Heads[i]->SetVisibility(false);
 			continue;
 		}
-		// Figures face the enemy's side of the field (kit figures face +Y in Unreal).
-		const float Facing = (S.Side == 0 ? -90.f : 90.f) + (S.bLeader ? 0.f : SideYaw[S.Side]);
+		// Figures face the enemy's side of the field (kit figures face +Y in Unreal; riders and machines lie along X).
+		const float Facing = (S.Side == 0 ? -90.f : 90.f) + (S.bLeader ? 0.f : Vehicle[i] ? 90.f : SideYaw[S.Side]);
 		if (S.bAlive)
 		{
 			if (Figure[i])
@@ -153,6 +165,19 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			}
 			Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 75), FRotator::ZeroRotator);
 			Heads[i]->SetRelativeLocation(FVector(S.Pos.X, S.Pos.Y, 175));
+		}
+		else if (Vehicle[i])
+		{
+			// A wrecked machine stays where it stopped, burnt dark and slewed a little.
+			if (!WreckMaterial)
+			{
+				WreckMaterial = SovArt::Tinted(this, FLinearColor(0.18f, 0.17f, 0.16f));
+			}
+			if (WreckMaterial && Bodies[i]->GetMaterial(0) != WreckMaterial)
+			{
+				for (int32 Slot = 0; Slot < Bodies[i]->GetNumMaterials(); ++Slot) Bodies[i]->SetMaterial(Slot, WreckMaterial);
+			}
+			Bodies[i]->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Facing + 20.f, 6.f));
 		}
 		else if (Figure[i])
 		{

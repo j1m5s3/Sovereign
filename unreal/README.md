@@ -144,4 +144,4 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 
 - Sound: there is none yet (music, ambience and effects wait on a direction).
 - City centres follow the six architectural styles only until the Industrial era (then every civ shares the Industrial and Modern kits); districts, improvements and units are one look for every civ; each wonder and natural wonder is drawn by kind rather than as itself.
-- Live battles draw each side's men as its unit's figure (spearman, archer, musketeer, rifleman, horseman); siege engines and vehicles fight as spearmen there.
+- Live battles draw each side's men as its unit's figure (spearman, archer, musketeer, rifleman, horseman; siege engines and tanks among their crews); online views and replays still show spearmen.
