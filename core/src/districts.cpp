@@ -219,7 +219,9 @@ Fixed Game::districtHousing(const City& city) const {
 
 Fixed Game::aqueductHousing(const City& city) const {
     // Up to CITY_POPULATION_AQUEDUCT_MIN without fresh water, else +CITY_POPULATION_AQUEDUCT_BOOST.
-    if (hasFreshWater(state_, *rules_, city.pos, &lakes_)) return rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
+    // Mohenjo-Daro's suzerain has every city as if on a river (08), as cityReport counts its water housing.
+    if (hasFreshWater(state_, *rules_, city.pos, &lakes_) || suzerainBonus(city.owner, Cs::MohenjoDaro))
+        return rules_->global("CITY_POPULATION_AQUEDUCT_BOOST");
     bool coastal = false;
     state_.grid.forEachWithin(city.pos, 1, [&](Hex n) {
         if (n != city.pos && rules_->terrains[static_cast<size_t>(state_.plot(n).terrain)].shallowWater) coastal = true;

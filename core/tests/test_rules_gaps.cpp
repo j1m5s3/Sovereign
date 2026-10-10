@@ -132,6 +132,31 @@ TEST(theocracy_buys_land_units_with_faith) {
     CHECK_EQ(g->faithPurchaseCost(0, g->state().cities[0], warrior), g->purchaseCost(0, warrior) * 85 / 100 / 5 * 5);
 }
 
+// A unit needing a strategic resource needs it on hand when bought with Faith, as when trained or bought with Gold
+// (02 [GS]), and the purchase spends it.
+TEST(a_unit_bought_with_faith_needs_and_spends_its_strategic_resource) {
+    GameState s = flatState(20, 12, 1);
+    Game::fitPlayerToRules(s.players[0], rules());
+    const CityId city = addCity(s, 0, {5, 5}, true, 3);
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_BRONZE_WORKING"))] = 1;
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_MINING"))] = 1;
+    s.players[0].techs.done[static_cast<size_t>(rules().tech("TECH_IRON_WORKING"))] = 1;
+    s.players[0].government = rules().government("GOVERNMENT_THEOCRACY");
+    s.players[0].policies.assign(static_cast<size_t>(rules().governments[static_cast<size_t>(s.players[0].government)].totalSlots()), kNone);
+    s.players[0].faith = Fixed::fromInt(5000);
+    const ProductionItem sword{ProductionKind::Unit, rules().unit("UNIT_SWORDSMAN")};
+    const UnitType& st = rules().units[static_cast<size_t>(sword.type)];
+    REQUIRE(st.strategicResource != kNone && st.strategicCost > 0);
+    auto none = Game::fromScenario(rules(), s);
+    REQUIRE(none->faithPurchaseCost(0, none->state().cities[0], sword) > 0);
+    CHECK_EQ(none->submit(Command::purchaseWithFaith(0, city, sword)), CommandError::NotEnoughResources);
+    s.players[0].stockpile[static_cast<size_t>(st.strategicResource)] = st.strategicCost + 3;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, city, sword)) == CommandError::Ok);
+    CHECK_EQ(g->state().units.back().type, sword.type);
+    CHECK_EQ(g->state().players[0].stockpile[static_cast<size_t>(st.strategicResource)], 3);
+}
+
 TEST(support_units_and_open_ground) {
     GameState s = flatState(20, 12, 1);
     Game::fitPlayerToRules(s.players[0], rules());

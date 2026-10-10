@@ -35,7 +35,9 @@ bool Game::resourceVisible(PlayerId player, Hex at) const {
 bool Game::resourceImproved(Hex at) const {
     const Plot& p = state_.plot(at);
     if (p.resource == kNone) return false;
-    if (p.improvement != kNone && contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource)) return true;
+    // A pillaged improvement stops working until repaired (02: Pillaging): its resource is not improved meanwhile.
+    if (p.improvement != kNone && contains(rules_->improvements[static_cast<size_t>(p.improvement)].validResources, p.resource))
+        return p.pillagedTurns == 0;
     // A strategic resource still hidden when a district or wonder went over it is granted once revealed (03).
     if (rules_->resources[static_cast<size_t>(p.resource)].cls == ResourceClass::Strategic && (state_.districtAt(at) || state_.wonderAt(at) != kNone))
         return true;
@@ -201,7 +203,7 @@ Fixed Game::improvementHousing(const City& city) const {
     Fixed total;
     state_.grid.forEachWithin(city.pos, 3, [&](Hex h) {
         const Plot& p = state_.plot(h);
-        if (p.city == city.id && p.improvement != kNone) {
+        if (p.city == city.id && p.improvement != kNone && p.pillagedTurns == 0) {  // a pillaged one houses nobody (02)
             total += rules_->improvements[static_cast<size_t>(p.improvement)].housing;
             // Civ ability: farms next to a river or lake add housing (Aztec Chinampas).
             if (rules_->improvements[static_cast<size_t>(p.improvement)].id == "IMPROVEMENT_FARM" &&
