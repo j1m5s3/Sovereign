@@ -1913,6 +1913,7 @@ void Game::beginGlobalTurn() {
     processAgents();
     processFreeCities();
     processBarbarians();
+    recordTurnStats();
 }
 
 void Game::beginPlayerTurn(PlayerId pid, bool runCities) {

@@ -681,6 +681,19 @@ enum class EventKind : uint8_t {
     AssassinKilledGuard,   // actor's assassin struck down one of target's bodyguards instead of its ruler
     RulerRansomed,         // actor released target's captive ruler for a ransom
 };
+
+// A major civ's figures as a world turn begins, kept all game for the end-game graphs (10: replay data, "graphs
+// (score, science, culture, military strength, etc.)").
+struct TurnStats {
+    int32_t turn = 0;
+    PlayerId player = kNoPlayer;
+    int32_t score = 0;
+    int32_t science = 0, culture = 0, faith = 0;  // earned this turn (0 until the civ's turn begins)
+    int32_t gold = 0;                            // in the treasury
+    int32_t military = 0;                        // land, sea and air units' strength, at their health
+    int32_t cities = 0, population = 0, techs = 0, civics = 0;
+};
+
 struct GameEvent {
     int32_t turn = 0;
     EventKind kind = EventKind::AssassinKilled;
@@ -761,6 +774,7 @@ struct SOV_API GameState {
     std::vector<PlayerProfile> profiles;  // per player (majors filled; leader doc §10 player modelling)
     std::vector<RivalTally> rivalTally;   // per human and AI civ met: this game's part of the rival memory
     std::vector<GameEvent> chronicle;     // the reign's key events, kept all game (player-retention §2; capped)
+    std::vector<TurnStats> turnStats;     // per world turn, one per major civ alive (end-game graphs)
     int32_t nextCongressTurn = 0;       // when the World Congress next meets (0: not convened yet)
     int32_t lastSpecialSession = 0;     // the turn the last special session (an emergency or an aid request) was called
     int32_t congressOpenedTurn = 0;     // the turn the session in progress opened (0: none in session)
