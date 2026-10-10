@@ -458,6 +458,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 	Choices.Reset();
 	ChooserPage = 0;
 	Chooser = Kind;
+	FString Empty = TEXT("Nothing to choose here.");  // the message when the list comes out empty
 	switch (Kind)
 	{
 		case EChooser::Production:
@@ -672,7 +673,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				Choices.Add({FString::Printf(TEXT("Abandon %s and crown a successor"), *Str(P.leaderName)), sov::Command::abandonLeader(Me())});
 				break;
 			}
-			if (G.hasHeir(Me()))
+			// Successors only while the throne is empty; a reigning ruler's list is its bodyguards.
+			if (P.successionPending && G.hasHeir(Me()))
 			{
 				const sov::Dynasty* D = R.dynastyOf(P.civ);
 				const FString Heir = Str(D->names[static_cast<size_t>(P.dynastyNext)]);
@@ -688,15 +690,77 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 					Choices.Add(KeepCh);
 				}
 			}
-			for (sov::UnitId Id : G.successorUnits(Me()))
+			for (sov::UnitId Id : P.successionPending ? G.successorUnits(Me()) : std::vector<sov::UnitId>())
 			{
 				const sov::Unit* U = G.state().unit(Id);
 				Choices.Add({FString::Printf(TEXT("%s, level %d"), *Str(R.units[static_cast<size_t>(U->type)].name), U->level()),
 					sov::Command::chooseSuccessor(Me(), sov::Succession::Unit, Id), {}, TEXT("the unit is lost"), "strength", TEXT("A warlord from the army")});
 			}
-			if (G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
+			// A Great General or Admiral, or a governor, may take the throne (leader doc §5); the promotions they bring on hover.
+			auto Brings = [&](sov::Succession Kind, sov::UnitId Id) {
+				FString Tip;
+				for (sov::TypeIndex Pr : G.successorPromotions(Me(), Kind, Id))
+				{
+					if (Pr != sov::kNone) Tip += (Tip.IsEmpty() ? TEXT("Takes the throne with ") : TEXT("; ")) + SovPromotionText(R, Pr);
+				}
+				return Tip;
+			};
+			if (P.successionPending)
+			{
+				for (sov::UnitId Id : G.successorGreatPeople(Me()))
+				{
+					const sov::Unit* U = G.state().unit(Id);
+					if (!U || U->greatPerson == sov::kNone) continue;
+					FChoice Ch{Str(R.greatPeople[static_cast<size_t>(U->greatPerson)].name), sov::Command::chooseSuccessor(Me(), sov::Succession::GreatPerson, Id), {},
+						TEXT("the great person is spent"), "greatperson", TEXT("A great commander")};
+					Ch.Tip = Brings(sov::Succession::GreatPerson, Id);
+					Choices.Add(Ch);
+				}
+				for (sov::TypeIndex Gov : G.successorGovernors(Me()))
+				{
+					FChoice Ch{FString::Printf(TEXT("Governor %s"), *Str(R.governors[static_cast<size_t>(Gov)].name)),
+						sov::Command::chooseSuccessor(Me(), sov::Succession::Governor, static_cast<sov::UnitId>(Gov)), {}, TEXT("leaves their post"), "government", TEXT("A governor")};
+					Ch.Tip = Brings(sov::Succession::Governor, static_cast<sov::UnitId>(Gov));
+					Choices.Add(Ch);
+				}
+			}
+			if (P.successionPending && G.canSucceed(Me(), sov::Succession::Regent, sov::kNoUnit))
 			{
 				Choices.Add({TEXT("A regent"), sov::Command::chooseSuccessor(Me(), sov::Succession::Regent), {}, TEXT(""), "government", TEXT("A regent")});
+			}
+			// A reigning ruler's bodyguards (leader doc §8.3): those sworn in the title, and who could be sworn now.
+			if (!P.successionPending && G.leaderOf(Me()))
+			{
+				FString Guards;
+				for (const sov::Bodyguard& B : P.bodyguards) Guards += FString::Printf(TEXT("%s%s (level %d)"), Guards.IsEmpty() ? TEXT("") : TEXT(", "), *Str(B.name), B.level);
+				ChooserTitle = FString::Printf(TEXT("The throne: bodyguards %d of %d%s%s"), static_cast<int32>(P.bodyguards.size()), R.globalInt("BODYGUARD_MAX"),
+					Guards.IsEmpty() ? TEXT("") : TEXT(": "), *Guards);
+				const FString Adds = FString::Printf(TEXT("+%d defence against assassins"), G.bodyguardDefense(Me()));
+				for (const sov::Unit& U : G.state().units)
+				{
+					if (U.owner != Me() || !G.canAppointBodyguard(Me(), U.id)) continue;
+					const FString Name = U.greatPerson != sov::kNone ? Str(R.greatPeople[static_cast<size_t>(U.greatPerson)].name)
+						: FString::Printf(TEXT("%s, level %d"), *Str(R.units[static_cast<size_t>(U.type)].name), U.level());
+					FChoice Ch{FString::Printf(TEXT("Swear in %s"), *Name), sov::Command::appointBodyguard(Me(), U.id), {}, TEXT("leaves the map"),
+						U.greatPerson != sov::kNone ? FName("greatperson") : FName("fortify"), TEXT("Bodyguards")};
+					Ch.Tip = TEXT("Travels with the ruler, guarding against assassins (now ") + Adds + TEXT(")");
+					Choices.Add(Ch);
+				}
+				for (sov::TypeIndex Gov : G.successorGovernors(Me()))
+				{
+					if (!G.canAppointBodyguard(Me(), sov::kNoUnit, Gov)) continue;
+					FChoice Ch{FString::Printf(TEXT("Swear in Governor %s"), *Str(R.governors[static_cast<size_t>(Gov)].name)), sov::Command::appointBodyguard(Me(), sov::kNoUnit, Gov), {},
+						TEXT("leaves their post"), "government", TEXT("Bodyguards")};
+					Ch.Tip = TEXT("Travels with the ruler, guarding against assassins (now ") + Adds + TEXT(")");
+					Choices.Add(Ch);
+				}
+				if (Choices.Num() == 0)
+				{
+					Empty = P.bodyguards.size() >= static_cast<size_t>(R.globalInt("BODYGUARD_MAX"))
+						? ChooserTitle
+						: FString::Printf(TEXT("No one to swear in as a bodyguard: a unit of level %d or more, or a Great General or Admiral, on your ruler's plot, or a governor"),
+							  R.globalInt("BODYGUARD_MIN_LEVEL"));
+				}
 			}
 			break;
 		}
@@ -1333,7 +1397,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 	}
 	if (Choices.Num() == 0)
 	{
-		Subsystem()->LastMessage = TEXT("Nothing to choose here.");
+		Subsystem()->LastMessage = Empty;
 		Chooser = EChooser::None;
 	}
 }
@@ -2573,6 +2637,11 @@ void ASovPlayerController::UpdateGameUI()
 			Act("gear", TEXT("Change weapon, armour or mount, in your city (E)"), EKeys::E);
 			Act("link", TEXT("Link or release the escort on this plot (L)"), EKeys::L);
 			Act("streets", TEXT("Walk this city's streets (Q)"), EKeys::Q, S.cityAt(U->pos) && S.cityAt(U->pos)->owner == Me());
+			Act("fortify", FString::Printf(TEXT("Bodyguards: %d of %d sworn (H)"), static_cast<int32>(P.bodyguards.size()), R.globalInt("BODYGUARD_MAX")), EKeys::H);
+		}
+		else if (G.canAppointBodyguard(Me(), U->id))
+		{
+			Act("fortify", TEXT("Swear in as the ruler's bodyguard (H)"), EKeys::H);
 		}
 		else if (T.layer == sov::UnitLayer::Military && S.unitAt(U->pos, sov::UnitLayer::Leader, R))
 		{

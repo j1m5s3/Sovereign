@@ -18,7 +18,7 @@ const TArray<FSovKeyAction>& SovKeys::Actions()
 		{EKeys::U, TEXT("Promote")},
 		{EKeys::E, TEXT("The leader's gear")},
 		{EKeys::L, TEXT("Escort link")},
-		{EKeys::H, TEXT("The throne")},
+		{EKeys::H, TEXT("The throne and bodyguards")},
 		{EKeys::Q, TEXT("Walk the City Center")},
 		{EKeys::V, TEXT("Benevolence")},
 		{EKeys::X, TEXT("Fear")},

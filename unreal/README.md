@@ -78,7 +78,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 | `B` | Builder: choose an improvement or harvest here |
 | `E` | Leader (in your city): change weapon, armor or mount (costs gold and the leader's turn) |
 | `L` | Link the leader and the military unit on its plot as escort (they move together), or release it |
-| `H` | The throne: choose a successor after the leader falls (an heir may keep one promotion), or abandon a captured leader |
+| `H` | The throne: choose a successor after the leader falls (the heir, who may keep one promotion; a warlord from the army; a Great General or Admiral; a governor; a regent), or abandon a captured leader. While the ruler reigns, its bodyguards: swear in a unit of level 3 or more or a Great General or Admiral on the ruler's plot, or a governor (also the leader's panel button, or the button on a unit that could be sworn) |
 | `U` | Promote the selected unit or leader (the leader has three branches; only one can be finished per reign) |
 | `Q` | Leader in one of your cities: walk its City Center at street level (autosaves first). WASD walk, hold right mouse or Q/E to look, `F` talks to the herald (Benevolence) or the captain of the guard (Fear), `Esc` returns to the map |
 | `V` / `X` | City panel with the leader in that city: Benevolence / Fear without walking (classic control) |
