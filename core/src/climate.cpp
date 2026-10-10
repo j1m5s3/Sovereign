@@ -55,10 +55,11 @@ int Game::climateChangePoints() const {
 }
 
 namespace {
+// Woods and rainforest, burning or burnt ones too: they grow back (09: forest fires; a Sovereign reading).
 int countWoods(const GameState& s, const Rules& r) {
     const TypeIndex forest = r.feature("FEATURE_FOREST"), jungle = r.feature("FEATURE_JUNGLE");
     int n = 0;
-    for (const Plot& p : s.plots) n += p.feature != kNone && (p.feature == forest || p.feature == jungle) ? 1 : 0;
+    for (const Plot& p : s.plots) n += p.feature != kNone && (p.feature == forest || p.feature == jungle || p.regrow > 0) ? 1 : 0;
     return n;
 }
 }  // namespace
@@ -201,6 +202,39 @@ int Game::renewablePower(const City& city) const {
 
 void Game::processClimate() {
     if (state_.woodsAtStart < 0) state_.woodsAtStart = countWoods(state_, *rules_);
+    // Burnt woods (09: forest fires): a plot burns for the fire's duration, lies burnt as long again (a Sovereign
+    // reading: the data gives no time), then its woods or rainforest grow back; each stage takes the fire's fertility
+    // for it (data: Burning 0, Burnt +1 Food, Woods or Rainforest +1 Production).
+    {
+        TypeIndex fire = kNone;
+        for (size_t i = 0; i < rules_->disasters.size() && fire == kNone; ++i)
+            fire = rules_->disasters[i].kind == DisasterKind::Fire ? static_cast<TypeIndex>(i) : kNone;
+        const TypeIndex burning[2] = {rules_->feature("FEATURE_BURNING_FOREST"), rules_->feature("FEATURE_BURNING_JUNGLE")};
+        const TypeIndex burnt[2] = {rules_->feature("FEATURE_BURNT_FOREST"), rules_->feature("FEATURE_BURNT_JUNGLE")};
+        const TypeIndex grown[2] = {rules_->feature("FEATURE_FOREST"), rules_->feature("FEATURE_JUNGLE")};
+        Rng& rng = state_.rng.get(RngStream::Gameplay);
+        for (Plot& p : state_.plots) {
+            if (p.regrow == 0 || --p.regrow > 0 || fire == kNone) continue;
+            const DisasterType& dt = rules_->disasters[at(fire)];
+            for (int k = 0; k < 2; ++k) {
+                if (p.feature == kNone) break;
+                if (p.feature == burning[k]) {
+                    p.feature = burnt[k];
+                    p.regrow = static_cast<uint8_t>(std::clamp(dt.duration, 1, 255));
+                } else if (p.feature == burnt[k]) {
+                    p.feature = grown[k];
+                } else {
+                    continue;
+                }
+                for (const DisasterFertility& f : dt.fertility) {
+                    if (f.feature != p.feature || !rng.chance(static_cast<uint32_t>(std::max(0, f.percent)))) continue;
+                    int8_t& y = p.fertility[at(static_cast<int>(f.yield))];
+                    y = static_cast<int8_t>(std::min(4, y + f.amount));
+                }
+                break;
+            }
+        }
+    }
     // Storms move on, fires may spread (09: Natural disasters).
     {
         std::vector<GameState::Ongoing> running;
@@ -422,7 +456,7 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
     const TypeIndex volcanicSoil = rules_->feature("FEATURE_VOLCANIC_SOIL");
     const TypeIndex farm = rules_->improvement("IMPROVEMENT_FARM");
     const TypeIndex forest = rules_->feature("FEATURE_FOREST"), jungle = rules_->feature("FEATURE_JUNGLE");
-    const TypeIndex burntForest = rules_->feature("FEATURE_BURNT_FOREST"), burntJungle = rules_->feature("FEATURE_BURNT_JUNGLE");
+    const TypeIndex burningForest = rules_->feature("FEATURE_BURNING_FOREST"), burningJungle = rules_->feature("FEATURE_BURNING_JUNGLE");
     // From phase IV storms and floods leave no fertility; from phase V storms and droughts may wash earlier fertility away.
     const bool weather = dt.kind != DisasterKind::Eruption && dt.kind != DisasterKind::Fire && dt.kind != DisasterKind::Meteor;
     const int removal = state_.climatePhase > 0 && at(state_.climatePhase - 1) < rules_->climatePhases.size()
@@ -545,9 +579,11 @@ void Game::strikeDisaster(TypeIndex disaster, Hex center, bool follow) {
         }
         // Fertility left behind (on land only).
         if (t.water || t.impassable) continue;
-        if (dt.kind == DisasterKind::Fire) {
-            if (p.feature == forest && burntForest != kNone) p.feature = burntForest;
-            else if (p.feature == jungle && burntJungle != kNone) p.feature = burntJungle;
+        if (dt.kind == DisasterKind::Fire && p.feature != kNone) {
+            const TypeIndex was = p.feature;
+            if (was == forest && burningForest != kNone) p.feature = burningForest;
+            else if (was == jungle && burningJungle != kNone) p.feature = burningJungle;
+            if (p.feature != was) p.regrow = static_cast<uint8_t>(std::clamp(dt.duration, 1, 255));
         }
         if (weather && dt.kind != DisasterKind::Flood && removal > 0 && rng.chance(static_cast<uint32_t>(removal))) p.fertility = {};
         for (const DisasterFertility& f : dt.fertility) {
