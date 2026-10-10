@@ -510,5 +510,113 @@ def steamship(seed=45):
     return p
 
 
-PIECES = [citizen, herald, captain, soldier, leader, ship, boat, archer, rider, siege, musketeer, rifleman, tank, plane, steamship]
+# ---------------------------------------------------------------------------------- the soldier in each culture's dress
+# SM_Soldier_<Style> for the Styles kit's cultures (SovArt::CivStyle); the map and live battles dress a civ's
+# Ancient to Medieval foot soldiers in its own until the Renaissance brings the musketeer.
+
+LACQUER = ["#2a2226", "#6a1f1c"]
+WICKER = "#b39a62"
+FEATHER = ["#3f7a4a", "#c9a43c", "#8b2a22"]
+OBSIDIAN = "#1c1a1e"
+COTTON = "#ece4cf"
+
+
+def soldier_middleeast(seed=51):
+    """A Persian Immortal: a long robe, a soft felt cap, a wicker shield and a spear with a golden pomegranate."""
+    p = _figure("SM_Soldier_MiddleEast", seed)
+    _body(p, SKIN[1])
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.22, team=True)  # the robe, nearly to the ankle
+    p.team_color(True)
+    for side in (-1, 1):  # long sleeves
+        p.segment((side * 0.24, 0.005, 1.24), (side * 0.262, -0.01, 0.92), 0.056, 0.045, LINEN, caps=False)
+    p.team_color(False)
+    _belt(p, GOLD, 1.0)
+    z = _head(p, SKIN[1], HAIR[2], beard=HAIR[2])
+    p.loft([(z + 0.15, 0.1, 0.11), (z + 0.24, 0.095, 0.105), (z + 0.31, 0.07, 0.08), (z + 0.34, 0.03, 0.04)], WOOL, segments=14)  # the felt cap
+    p.box((-0.36, -0.16, 1.0), (0.42, 0.05, 0.85), WICKER)  # the wicker shield
+    p.box((-0.36, -0.19, 1.0), (0.04, 0.02, 0.8), LEATHER)
+    _spear(p, 0.33, length=2.0)
+    p.blob((0.33, -0.03, 0.02), 0.04, GOLD, subdiv=1, wobble=0.0)  # the pomegranate butt
+    return p
+
+
+def soldier_asian(seed=52):
+    """An East Asian spearman: dark lacquered lamellar over a team-coloured robe, a flared helmet, a long spear."""
+    p = _figure("SM_Soldier_Asian", seed)
+    _body(p, SKIN[3])
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.55, team=True)
+    _cuirass(p, color=LACQUER[0])
+    for z in (1.02, 1.1, 1.18, 1.26):  # the lamellae's lacing rows
+        p.loft([(z - 0.008, 0.2, 0.142), (z + 0.008, 0.2, 0.142)], LACQUER[1], segments=18)
+    n = 10
+    for i in range(n):  # the armoured skirt
+        a = 2 * math.pi * i / n
+        p.box((0.19 * math.cos(a), 0.14 * math.sin(a), 0.86), (0.08, 0.02, 0.24), LACQUER[0], rot_z=a + math.pi / 2, taper=1.15)
+    z = _head(p, SKIN[3], HAIR[2], moustache=HAIR[2])
+    h = z + 0.07
+    p.loft([(h, 0.1, 0.11), (h + 0.1, 0.1, 0.112), (h + 0.17, 0.07, 0.08), (h + 0.22, 0.01, 0.01)], LACQUER[0], segments=16, cap_bottom=False)
+    p.loft([(h - 0.02, 0.16, 0.17), (h + 0.02, 0.11, 0.12)], LACQUER[0], segments=16, cap_bottom=False, cap_top=False, two_sided=True)  # the flared neck guard
+    p.cylinder((0, 0, h + 0.21), 0.012, 0.12, GOLD, segments=6)
+    _spear(p, 0.33, length=2.6)
+    return p
+
+
+def soldier_african(seed=53):
+    """A Nile or Sahel spearman: a white kilt, bare chest with a broad collar, a striped headcloth, a tall round-topped shield."""
+    p = _figure("SM_Soldier_African", seed)
+    _body(p, SKIN[2])
+    _sandals(p)
+    p.loft([(0.62, 0.21, 0.15), (0.8, 0.19, 0.135), (0.94, 0.17, 0.118), (1.0, 0.16, 0.11)], COTTON, segments=18, folds=8, fold_depth=0.03,
+           cap_top=False)  # the kilt
+    _belt(p, LEATHER, 0.99)
+    p.loft([(1.33, 0.2, 0.13, 0, -0.004), (1.4, 0.16, 0.11), (1.43, 0.1, 0.08)], GOLD, segments=16, cap_bottom=False)  # the broad collar
+    z = _head(p, SKIN[2], HAIR[2])
+    p.team_color(True)
+    p.loft([(z + 0.02, 0.12, 0.11, 0, 0.03), (z + 0.12, 0.11, 0.115, 0, 0.01), (z + 0.21, 0.095, 0.105), (z + 0.26, 0.05, 0.06)], LINEN, segments=16,
+           arc=(-0.25, math.pi + 0.25), two_sided=True)  # the headcloth, in the owner's colour
+    p.loft([(z + 0.2, 0.093, 0.104), (z + 0.255, 0.05, 0.06), (z + 0.27, 0.01, 0.01)], LINEN, segments=14, cap_bottom=False)
+    p.team_color(False)
+    p.box((-0.36, -0.16, 0.95), (0.38, 0.05, 0.9), "#7d6448")  # the hide shield
+    p.disc((-0.36, -0.16, 1.4), 0.19, 0.05, "#7d6448", segments=14)
+    p.team_color(True)
+    p.box((-0.36, -0.19, 1.1), (0.16, 0.02, 0.3), LINEN)  # a painted panel in the owner's colour
+    p.team_color(False)
+    _spear(p, 0.33, length=2.0)
+    return p
+
+
+def soldier_american(seed=54):
+    """An eagle warrior: quilted cotton armour, a feathered eagle helm, a round chimalli shield and an obsidian-edged macuahuitl."""
+    p = _figure("SM_Soldier_American", seed)
+    _body(p, SKIN[1])
+    _sandals(p)
+    _tunic(p, LINEN, hem=0.72, team=True)
+    p.loft([(0.96, 0.19, 0.135), (1.14, 0.185, 0.13), (1.3, 0.205, 0.14), (1.38, 0.2, 0.125)], COTTON, segments=18, cap_top=False)  # quilted armour
+    for z in (1.02, 1.12, 1.22, 1.32):
+        p.loft([(z - 0.006, 0.193, 0.137), (z + 0.006, 0.193, 0.137)], WOOL, segments=18)  # the quilting
+    z = _head(p, SKIN[1], HAIR[2])
+    h = z + 0.07
+    p.loft([(h, 0.1, 0.11), (h + 0.1, 0.105, 0.115), (h + 0.18, 0.08, 0.09), (h + 0.22, 0.03, 0.03)], "#6a4a2e", segments=16, cap_bottom=False)  # the eagle helm
+    p.segment((0, -0.1, h + 0.14), (0, -0.17, h + 0.08), 0.035, 0.01, GOLD, segments=6)  # the beak over the face
+    for i in range(5):  # the feather crest
+        a = -0.5 + 0.25 * i
+        p.segment((0, 0.04, h + 0.2), (0.12 * math.sin(a), 0.14, h + 0.42), 0.025, 0.006, FEATHER[i % 3], segments=5)
+    # The chimalli: a round shield with a feather fringe.
+    _round_shield(p, (-0.36, -0.16, 1.0), s=0.85, rim=GOLD)
+    for i in range(8):
+        a = -math.pi * (i + 0.5) / 8
+        p.segment((-0.36 + 0.31 * math.cos(a), -0.16, 1.0 + 0.31 * math.sin(a)), (-0.36 + 0.43 * math.cos(a), -0.16, 1.0 + 0.43 * math.sin(a)), 0.02,
+                  0.008, FEATHER[i % 3], segments=5)
+    # The macuahuitl: a flat wooden club edged with obsidian blades, held upright.
+    p.box((0.3, -0.04, 1.15), (0.06, 0.025, 0.75), WOOD)
+    for side in (-1, 1):
+        for i in range(5):
+            p.box((0.3 + side * 0.04, -0.04, 0.88 + 0.13 * i), (0.03, 0.012, 0.07), OBSIDIAN)
+    return p
+
+
+PIECES = [citizen, herald, captain, soldier, leader, ship, boat, archer, rider, siege, musketeer, rifleman, tank, plane, steamship,
+          soldier_middleeast, soldier_asian, soldier_african, soldier_american]
 PEOPLE = [citizen, herald, captain, soldier, leader]

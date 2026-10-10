@@ -1,5 +1,7 @@
 #include "SovMirror.h"
 
+#include "SovArt.h"
+
 #include "sovereign/game.h"
 #include "sovereign/mapgen.h"
 
@@ -142,6 +144,16 @@ FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian)
 		: Cls == "LIGHT_CAVALRY" || Cls == "HEAVY_CAVALRY" ? (Type.era >= 5 ? FName("Tank") : FName("Rider"))
 		: Cls == "GDR" ? FName("Tank")
 		: Type.era >= 5 ? FName("Rifleman") : Type.era >= 3 ? FName("Musketeer") : FName("Soldier");
+}
+
+FName SovCultureFigure(const sov::Game& Game, int32 Owner, FName Figure)
+{
+	const sov::GameState& S = Game.state();
+	if (Figure != FName("Soldier") || Owner < 0 || Owner >= static_cast<int32>(S.players.size())) return Figure;
+	const sov::TypeIndex Civ = S.players[static_cast<size_t>(Owner)].civ;
+	if (Civ == sov::kNone) return Figure;
+	const FString Style = SovArt::CivStyle(UTF8_TO_TCHAR(Game.rules().civs[static_cast<size_t>(Civ)].id.c_str()));
+	return Style == TEXT("Mediterranean") || Style == TEXT("European") ? Figure : FName(*(TEXT("Soldier_") + Style));
 }
 
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player)
@@ -419,7 +431,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 				: Cls == "RECON" ? FName("moves")
 				: Cls == "SUPPORT" ? FName("fortify")
 				: FName("attack");
-			Marker.Figure = SovUnitFigure(Type, Marker.bLeader, Marker.bCivilian);
+			Marker.Figure = SovCultureFigure(Game, U.owner, SovUnitFigure(Type, Marker.bLeader, Marker.bCivilian));
 		}
 		if (Marker.bLeader)
 		{
