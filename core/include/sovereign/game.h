@@ -1094,6 +1094,7 @@ private:
         IbnKhaldun, KenzoTange, Raskova, Spilsbury, Rubinstein, Strauss, Lauder, JamesYoung, Goddard, Medici, Count
     };
     TypeIndex oil_ = kNone;  // James Young reveals it (07)
+    TypeIndex darEMehr_ = kNone;  // +1 Faith for each era since it was built or repaired (06)
     TypeIndex preserve_ = kNone;  // its buildings feed the plots beside it by their Appeal (03)
     TypeIndex greatPeople_[static_cast<size_t>(Gp::Count)] = {};
     // City-states whose suzerain bonuses are in code, looked up once (08: City-States).

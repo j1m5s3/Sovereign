@@ -660,6 +660,55 @@ GameState twoReligions(std::initializer_list<const char*> buddhist) {
 }
 }  // namespace
 
+// Holy Waters (06): +10 healing beside the Holy Site of any city whose majority religion is ours, a rival's included.
+TEST(holy_waters_heal_beside_a_rivals_holy_site_of_our_religion) {
+    const auto hpAfter = [](bool waters, bool ours) {
+        GameState s = waters ? twoReligions({"BELIEF_HOLY_WATERS"}) : twoReligions({});
+        s.cities[2].districts.push_back({rules().district("DISTRICT_HOLY_SITE"), {16, 6}, true});
+        if (ours) s.cities[2].pressure = {2000, 0};
+        const UnitId w = addUnit(s, "UNIT_WARRIOR", 0, {15, 7});
+        s.units.back().hp = 40;
+        s.units.back().activity = Activity::Sleep;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 2);
+        return g->state().unit(w)->hp;
+    };
+    CHECK_EQ(hpAfter(true, true), hpAfter(false, true) + 10);
+    CHECK_EQ(hpAfter(true, false), hpAfter(false, false));  // their city follows Islam
+}
+
+// Dar-e Mehr (06): +1 Faith for each era since it was built or its Holy Site was last repaired.
+TEST(a_dar_e_mehr_gains_faith_with_the_eras) {
+    GameState s = religionState();
+    s.cities[0].buildings.push_back(rules().building("BUILDING_TEMPLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    s.gameEra = 2;
+    s.players[0].faith = Fixed::fromInt(5000);
+    auto g = withReligion(std::move(s));
+    const int religion = g->state().players[0].religion;
+    REQUIRE(religion >= 0);
+    g->stateMutForTests().religions[static_cast<size_t>(religion)].beliefs.push_back(belief("BELIEF_DAR_E_MEHR"));
+    const CityId holy = g->state().cities[0].id;
+    const size_t faith = static_cast<size_t>(YieldType::Faith);
+    const Fixed before = g->cityReport(holy).yields[faith];
+    const ProductionItem item{ProductionKind::Building, rules().building("BUILDING_DAR_E_MEHR")};
+    REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, item)) == CommandError::Ok);
+    CHECK_EQ(g->state().city(holy)->worshipEra, 2);
+    const Fixed built = g->cityReport(holy).yields[faith];
+    CHECK(built > before);
+    g->stateMutForTests().gameEra = 4;
+    CHECK_EQ(g->cityReport(holy).yields[faith], built + Fixed::fromInt(2));
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->state().city(holy)->worshipEra, 2);
+    // A repaired Holy Site starts it again.
+    for (CityDistrict& d : g->stateMutForTests().cities[0].districts) d.pillagedTurns = 1;
+    for (UnitId id : g->unitsNeedingOrders(0)) g->submit(Command::setActivity(0, id, Activity::Skip));
+    sovtest::endTurns(*g, 2);
+    CHECK_EQ(g->state().city(holy)->worshipEra, 4);
+}
+
 // Trade routes carry pressure both ways (06): the origin's religion into the destination at 1.0 a turn, and the
 // destination's into the origin at 0.5 (a point every other turn).
 TEST(trade_routes_carry_pressure_both_ways) {

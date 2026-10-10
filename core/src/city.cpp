@@ -334,6 +334,9 @@ CityReport Game::cityReport(const City& city, ReportShare& shared) const {
         if (suzerainBonus(c->owner, Cs::Anshan, shared))
             raw[idx(YieldType::Science)] += Fixed::fromInt(gw.id == "WRITING" ? 2 : (gw.id == "ARTIFACT" || gw.id == "RELIC") ? 1 : 0);
     }
+    // Dar-e Mehr (06): +1 Faith for each era since it was built or its Holy Site last repaired.
+    if (darEMehr_ != kNone && c->has(darEMehr_) && !buildingIdle(*c, *rules_, darEMehr_))
+        raw[idx(YieldType::Faith)] += Fixed::fromInt(std::max(0, state_.gameEra - c->worshipEra));
     for (TypeIndex person : owner.greatPeopleActivated) {
         for (const GreatPersonEffect& fx : rules_->greatPeople[static_cast<size_t>(person)].effects) {
             if (fx.kind == GreatPersonEffectKind::BuildingYield && c->has(fx.ref) && !buildingIdle(*c, *rules_, fx.ref)) raw[idx(fx.yield)] += Fixed::fromInt(fx.amount);
@@ -1574,6 +1577,7 @@ bool Game::completeItem(City& city, ProductionItem item) {
         if (it == city.buildings.end() || *it != item.type) {
             const int wallsBefore = cityMaxWallHp(city);
             city.buildings.insert(it, item.type);
+            if (item.type == darEMehr_) city.worshipEra = state_.gameEra;
             city.wallHp += std::max(0, cityMaxWallHp(city) - wallsBefore);  // new walls stand at full HP (above urban defenses, 04)
             if (!policyIs(city.owner, "POLICY_ROGUE_STATE"))  // Rogue State: no envoys (09)
                 state_.players[static_cast<size_t>(city.owner)].envoyTokens += rules_->buildings[static_cast<size_t>(item.type)].envoysOnBuild;
@@ -1766,6 +1770,13 @@ void Game::processCities(PlayerId pid) {
         t.culture = static_cast<int32_t>(culture.toInt());
         t.faith = static_cast<int32_t>((player.faith - faithBefore).toInt());
         break;
+    }
+    // Sky and Stars (09): in a Golden Age of the Information era, the Eurekas of Satellites, Nuclear Fusion and
+    // Nanotechnology (the Future era's three have no techs here).
+    if (goldenDedication(pid, "DEDICATION_SKY_AND_STARS") && state_.gameEra == rules_->era("ERA_INFORMATION")) {
+        for (const char* id : {"TECH_SATELLITES", "TECH_NUCLEAR_FUSION", "TECH_NANOTECHNOLOGY"}) {
+            if (const TypeIndex t = rules_->tech(id); t != kNone) grantBoost(pid, false, static_cast<size_t>(t));
+        }
     }
     processResearch(pid, science, culture);
     accumulateStrategics(pid);
