@@ -824,7 +824,7 @@ int Game::productionCost(PlayerId player, ProductionItem item, const City* city)
         // plots, and x (1 + the sea level rises already seen). Sovereign reading of the multipliers.
         if (city && rules_->buildings[static_cast<size_t>(item.type)].id == "BUILDING_FLOOD_BARRIER") {
             int lowland = 0;
-            for (const Hex& h : state_.grid.within(city->pos, 3)) lowland += state_.plot(h).city == city->id && lowlandBand(h) > 0 ? 1 : 0;
+            for (const Hex& h : state_.grid.within(city->pos, 3)) lowland += state_.plot(h).city == city->id && lowlandBand(h, true) > 0 ? 1 : 0;
             base = base * std::max(1, lowland) * (1 + std::max(0, state_.climatePhase - 1));
         }
     }

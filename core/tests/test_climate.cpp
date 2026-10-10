@@ -809,3 +809,58 @@ TEST(a_hurricane_pillages_every_lowland_district) {
         if (std::find(lowlands.begin(), lowlands.end(), d.pos) != lowlands.end()) CHECK(d.pillagedTurns > 0);
     }
 }
+
+// Coastal lowlands are flagged when the game begins (09): once the sea takes them, the plots behind them stay land,
+// however high the sea rises.
+TEST(the_sea_takes_only_the_lowlands_flagged_at_the_start) {
+    GameState s = coastState(12, 24, 1);
+    s.co2 = 50000000;  // every phase at once
+    auto g = Game::fromScenario(rules(), std::move(s));
+    int lowlands = 0;
+    for (int y = 0; y < 24; ++y) lowlands += g->lowlandBand({1, y}) > 0 ? 1 : 0;
+    REQUIRE(lowlands >= 3);
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().climatePhase == 7);
+    int drowned = 0, inland = 0;
+    for (int y = 0; y < 24; ++y) {
+        drowned += g->state().plot({1, y}).terrain == rules().terrain("TERRAIN_COAST") ? 1 : 0;
+        for (int x = 2; x < 12; ++x) inland += rules().terrains[at(g->state().plot({x, y}).terrain)].water ? 1 : 0;
+    }
+    CHECK_EQ(drowned, lowlands);
+    CHECK_EQ(inland, 0);
+    int left = 0;
+    for (int y = 0; y < 24; ++y) left += g->lowlandBand({1, y}, true) > 0 ? 1 : 0;
+    CHECK_EQ(left, 0);  // drowned plots are sea, no longer lowland
+    auto fresh = Game::fromScenario(rules(), g->state());  // a game picked up again keeps the flags it began with
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    int behind = 0;
+    for (int y = 0; y < 24; ++y) behind += fresh->lowlandBand({2, y}) > 0 || loaded->lowlandBand({2, y}) > 0 ? 1 : 0;
+    CHECK_EQ(behind, 0);
+}
+
+// A Flood Barrier's cost counts the city's lowland plots built on too (09; data: CostMultiplierPerTile).
+TEST(built_lowlands_still_count_toward_a_flood_barrier) {
+    Hex low{-1, -1}, other{-1, -1};  // two lowlands, two rows apart
+    {
+        auto probe = Game::fromScenario(rules(), coastState(12, 24, 1));
+        for (int y = 2; y < 20 && other.x < 0; ++y) {
+            if (probe->lowlandBand({1, y}) > 0 && probe->lowlandBand({1, y + 2}) > 0) low = {1, y}, other = {1, y + 2};
+        }
+    }
+    REQUIRE(other.x == 1);
+    const auto cost = [&](bool built) {
+        GameState s = coastState(12, 24, 1);
+        addCity(s, 0, {3, low.y + 1}, true, 3);
+        for (const Hex& h : {low, other}) {
+            s.plot(h).owner = 0;
+            s.plot(h).city = s.cities[0].id;
+        }
+        if (built) s.cities[0].districts.push_back(CityDistrict{rules().district("DISTRICT_CAMPUS"), low, true});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        const ProductionItem barrier{ProductionKind::Building, rules().building("BUILDING_FLOOD_BARRIER")};
+        return g->productionCost(0, barrier, &g->state().cities[0]);
+    };
+    CHECK_EQ(cost(true), cost(false));
+}

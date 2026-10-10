@@ -993,6 +993,7 @@ private:
     // Historic moments: an ordinary one, or a world's first (per key) with the ordinary one as fallback.
     void awardMoment(PlayerId player, const char* moment);
     void noteFirstSuzerain(PlayerId cityState);
+    void flagLowlands();
     void awardFirst(PlayerId player, const char* worldMoment, const char* ownMoment, int key = 0);
     void awardOnce(PlayerId pid, const char* id);  // a moment a player earns only once
     void circumnavigationMoment(PlayerId pid);     // a plot seen in every column of a map that wraps (09)

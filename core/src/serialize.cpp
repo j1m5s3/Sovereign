@@ -404,6 +404,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         w.boolean(p.routePillaged);
         w.u8(p.industry);
         w.u8(p.products);
+        w.u8(p.lowland);
     }
     w.u32(static_cast<uint32_t>(s.players.size()));
     for (const Player& p : s.players) {
@@ -709,6 +710,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
     }
     w.i64(s.co2);
     w.i32(s.climatePhase);
+    w.boolean(s.lowlandsFlagged);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
     for (const GameState::Drought& d : s.droughts) {
         writeHex(w, d.center);
@@ -896,6 +898,8 @@ bool deserializeState(ByteReader& r, GameState& s) {
         if (p.industry > 2) return false;
         p.products = r.u8();
         if (p.products > 3) return false;
+        p.lowland = r.u8();
+        if (p.lowland > 3) return false;
     }
     uint32_t np = r.u32();
     if (!r.checkCount(np, 16)) return false;
@@ -1308,6 +1312,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
     }
     s.co2 = r.i64();
     s.climatePhase = r.i32();
+    s.lowlandsFlagged = r.boolean();
     uint32_t ndrought = r.u32();
     if (!r.checkCount(ndrought, 16)) return false;
     s.droughts.resize(ndrought);
