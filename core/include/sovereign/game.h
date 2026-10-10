@@ -411,6 +411,15 @@ public:
     bool canSpyMission(PlayerId player, int32_t spy, SpyMission mission, CityId city, CommandError* why = nullptr) const;
     // The chance (in percent) an operation succeeds now; 100 for passive ones.
     int spySuccessPercent(int32_t spy, SpyMission mission, CityId city) const;
+    // The plot an operation aims at: its district's, else the City Center (08: Espionage).
+    Hex spyAim(const City& city, SpyMission mission) const;
+    // Whether a counterspy at work guards `aim`: its district or one beside it (08: Counterspy).
+    bool counterspyGuards(const Agent& counterspy, Hex aim) const;
+    // The plot a counterspy guards in a city when none is chosen: the City Center or complete district covering the
+    // most of the city's districts (the center counted), the center first on ties.
+    Hex counterspyPlot(const City& city) const;
+    // The 3d6 roll a spy failing `m` in `city` needs to escape `victim`'s hands (08: Outcomes).
+    int spyEscapeNeed(const Agent& spy, const City& city, SpyMission m, PlayerId victim) const;
 
     // ---- governors (08: Governors [R&F])
     int governorTitles(PlayerId player) const;          // earned from civics

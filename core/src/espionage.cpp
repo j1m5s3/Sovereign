@@ -135,6 +135,50 @@ bool Game::canSpyMission(PlayerId pid, int32_t spyId, SpyMission m, CityId cityI
     return true;
 }
 
+Hex Game::spyAim(const City& city, SpyMission m) const {
+    const SpyOperationType* op = spyOperationFor(m);
+    const CityDistrict* target = op && op->district != kNone ? city.district(op->district, true) : nullptr;
+    return target ? target->pos : city.pos;
+}
+
+bool Game::counterspyGuards(const Agent& o, Hex aim) const {
+    if (!o.spy || o.travel != 0 || o.mission != SpyMission::Counterspy || o.city == kNoCity) return false;
+    const City* c = state_.city(o.city);
+    const Hex guard = o.guard >= 0 && o.guard < state_.grid.size() ? state_.grid.at(o.guard) : c ? counterspyPlot(*c) : aim;
+    return state_.grid.distance(guard, aim) <= 1;
+}
+
+Hex Game::counterspyPlot(const City& city) const {
+    std::vector<Hex> spots{city.pos};
+    for (const CityDistrict& d : city.districts) {
+        if (d.complete) spots.push_back(d.pos);
+    }
+    Hex best = city.pos;
+    int most = -1;
+    for (const Hex& h : spots) {
+        int covered = 0;
+        for (const Hex& o : spots) covered += state_.grid.distance(h, o) <= 1 ? 1 : 0;
+        if (covered > most) {
+            most = covered;
+            best = h;
+        }
+    }
+    return best;
+}
+
+int Game::spyEscapeNeed(const Agent& a, const City& c, SpyMission m, PlayerId victim) const {
+    // Escape base ESPIONAGE_ESCAPE_BASE_CHANCE, easier by level and promotion; each counterspy guarding the target
+    // changes it by its level (08: Outcomes).
+    int need = rules_->globalInt("ESPIONAGE_ESCAPE_BASE_CHANCE") - (a.level - 1) * rules_->globalInt("ESPIONAGE_ESCAPE_LEVEL_BOOST") -
+               spyPromotionTotal(a, &SpyPromotionType::escape);
+    const Hex aim = spyAim(c, m);
+    for (const Agent& o : state_.agents) {
+        if (o.owner == victim && o.city == c.id && counterspyGuards(o, aim))
+            need -= rules_->globalInt("ESPIONAGE_ESCAPE_COUNTERSPY_LEVEL_MODIFIER") * o.level;
+    }
+    return need;
+}
+
 int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     const Agent* a = agent(spyId);
     const SpyOperationType* op = spyOperationFor(m);
@@ -147,8 +191,7 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     if (policyIs(c->owner, "POLICY_CRYPTOGRAPHY")) need += 2 * op->levelChange;
     // A Diplomatic Quarter [GS]: foreign spies two levels lower against it and the districts beside it. A mission
     // with no target district works from the City Center (Sovereign reading).
-    const CityDistrict* target = op->district != kNone ? c->district(op->district, true) : nullptr;
-    const Hex aim = target ? target->pos : c->pos;
+    const Hex aim = spyAim(*c, m);
     int shield = 0;
     for (const City& own : state_.cities) {
         if (own.owner != c->owner) continue;
@@ -162,10 +205,11 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
     if (consulate != kNone && buildingsOwned(c->owner, "BUILDING_CONSULATE") > 0 &&
         (cityHasBuilding(*c, *rules_, consulate) || (camp != kNone && c->district(camp, true))))
         need += op->levelChange;
-    // The city's best counterspy, and Amani's Local Informants (+3 levels), defend.
+    // The best counterspy guarding the target (its district or one beside it, 08), and Amani's Local Informants
+    // (+3 levels), defend.
     int defender = 0;
     for (const Agent& o : state_.agents) {
-        if (o.spy && o.owner == c->owner && o.city == cityId && o.travel == 0 && o.mission == SpyMission::Counterspy)
+        if (o.owner == c->owner && o.city == cityId && counterspyGuards(o, aim))
             defender = std::max(defender, o.level + spyPromotionTotal(o, &SpyPromotionType::counterspyLevels) + spyPromotionTotal(o, &SpyPromotionType::allLevels));
     }
     PlayerId holder = kNoPlayer;
@@ -229,13 +273,7 @@ void Game::resolveSpyOperation(Agent& a) {
     a.mission = SpyMission::None;
     if (op && op->base > 0 && roll < need) {
         // Failure: escape home, or capture (08: Outcomes; escape base ESPIONAGE_ESCAPE_BASE_CHANCE).
-        int escapeNeed = rules_->globalInt("ESPIONAGE_ESCAPE_BASE_CHANCE") - (a.level - 1) * rules_->globalInt("ESPIONAGE_ESCAPE_LEVEL_BOOST") -
-                         spyPromotionTotal(a, &SpyPromotionType::escape);
-        for (const Agent& o : state_.agents) {
-            if (o.spy && o.owner == victim && o.city == c.id && o.mission == SpyMission::Counterspy)
-                escapeNeed -= rules_->globalInt("ESPIONAGE_ESCAPE_COUNTERSPY_LEVEL_MODIFIER") * o.level;
-        }
-        const bool escaped = roll3d6(rng) >= escapeNeed;
+        const bool escaped = roll3d6(rng) >= spyEscapeNeed(a, c, m, victim);
         remember(victim, sender, MemoryKind::SpyCaught, escaped ? -6 : -12, escaped ? 40 : 60);
         addGrievance(victim, sender, 25);  // espionage caught (Sovereign's base)
         pushEvent(EventKind::SpyCaught, sender, victim, escaped ? 1 : 0);
