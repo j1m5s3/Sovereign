@@ -213,7 +213,7 @@
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE_CLASS", "ref": "STRATEGIC"}, {"type": "PLOT_HAS_IMPROVEMENT"}]}},
   {"id": "GOD_OF_CRAFTSMEN_FAITH", "source": "BELIEF_GOD_OF_CRAFTSMEN", "collection": "OWNER_CITY_PLOTS", "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FAITH", "amount": 1},
    "subjectRequirements": {"all": [{"type": "PLOT_HAS_RESOURCE_CLASS", "ref": "STRATEGIC"}, {"type": "PLOT_HAS_IMPROVEMENT"}]}},
-  {"id": "GOD_OF_THE_FORGE_MILITARY", "source": "BELIEF_GOD_OF_THE_FORGE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"amount": 25, "military": true}},
+  {"id": "GOD_OF_THE_FORGE_MILITARY", "source": "BELIEF_GOD_OF_THE_FORGE", "collection": "PLAYER_CITIES", "effect": "ADJUST_UNIT_PRODUCTION_PERCENT", "arguments": {"amount": 25, "military": true, "maxEra": "ERA_CLASSICAL"}},
   {"id": "MONUMENT_TO_THE_GODS_WONDERS", "source": "BELIEF_MONUMENT_TO_THE_GODS", "collection": "PLAYER_CITIES", "effect": "ADJUST_ITEM_PRODUCTION_PERCENT",
    "arguments": {"scope": "WONDERS", "amount": 15, "minEra": "ERA_ANCIENT", "maxEra": "ERA_CLASSICAL"}},
   {"id": "RELIGIOUS_IDOLS_BONUS", "source": "BELIEF_RELIGIOUS_IDOLS", "collection": "OWNER_CITY_PLOTS", "effect": "ADJUST_PLOT_YIELD", "arguments": {"yield": "FAITH", "amount": 2},

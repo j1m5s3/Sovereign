@@ -542,6 +542,11 @@ TEST(an_apostle_launches_the_inquisition) {
     REQUIRE(g->submit(Command::purchaseWithFaith(0, holy, apostle)) == CommandError::Ok);
     CHECK(!g->canLaunchInquisition(g->state().units.back().id));  // once
     CHECK_EQ(g->religiousStrength(g->state().units.back(), false), before + 15);  // at home, after the Inquisition
+    // The Dark Age Inquisition card grants the same ability: +15 once, not twice.
+    GameState t = g->state();
+    t.players[0].policies.assign(1, rules().policy("POLICY_INQUISITION"));
+    auto card = Game::fromScenario(rules(), std::move(t));
+    CHECK_EQ(card->religiousStrength(card->state().units.back(), false), before + 15);
 }
 
 TEST(a_guru_heals_religious_units_beside_it) {
@@ -876,4 +881,84 @@ TEST(monumentality_buys_civilians_with_faith) {
     // A Settler needs the population, bought with Faith as with Gold.
     auto small = setup(true, 1);
     CHECK_EQ(small->submit(Command::purchaseWithFaith(0, small->state().cities[0].id, settler)), CommandError::CannotBuild);
+}
+
+// Religious units carry the class tags abilities name (06): Theocracy's +5 and the Religious Orders card reach
+// Missionaries and Apostles, Inquisitors too, but not Gurus.
+TEST(theocracy_strengthens_religious_units) {
+    const auto strength = [](const char* unit, bool theocracy) {
+        GameState s = religionState();
+        if (theocracy) {
+            s.players[0].government = rules().government("GOVERNMENT_THEOCRACY");
+            s.players[0].policies.assign(static_cast<size_t>(rules().governments[at(s.players[0].government)].totalSlots()), kNone);
+        }
+        const UnitId u = addUnit(s, unit, 0, {13, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->religiousStrength(*g->state().unit(u), false);
+    };
+    for (const char* unit : {"UNIT_MISSIONARY", "UNIT_APOSTLE", "UNIT_INQUISITOR"}) CHECK_EQ(strength(unit, true), strength(unit, false) + 5);
+    CHECK_EQ(strength("UNIT_GURU", true), strength("UNIT_GURU", false));
+    const UnitType& missionary = rules().units[at(rules().unit("UNIT_MISSIONARY"))];
+    CHECK(std::find(missionary.tags.begin(), missionary.tags.end(), "RELIGIOUS_ALL") != missionary.tags.end());
+}
+
+// Missionaries and Gurus are Peacekeepers (06; data): they never start theological combat; Apostles do.
+TEST(missionaries_do_not_attack) {
+    GameState s = religionState();
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+    s.religions.push_back({rules().religion("RELIGION_ISLAM"), 1, s.cities[2].id, {belief("BELIEF_PILGRIMAGE")}});
+    s.players[0].religion = 0;
+    s.players[1].religion = 1;
+    const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 0, {13, 6});
+    s.units.back().religion = 0;
+    addUnit(s, "UNIT_APOSTLE", 1, {14, 6});
+    s.units.back().religion = 1;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->submit(Command::attack(0, missionary, {14, 6})), CommandError::CannotAttack);
+}
+
+// Passive pressure keeps its tenths (06: Scripture +25%): a plain city of the religion presses 1.2 a turn (1.25 in
+// whole tenths), 6 in 5 turns where it used to stay at 1.
+TEST(scripture_adds_to_a_plain_citys_pressure) {
+    const auto gained = [](bool scripture) {
+        GameState s = religionState();
+        s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+        if (scripture) s.religions.back().beliefs.push_back(belief("BELIEF_SCRIPTURE"));
+        s.players[0].religion = 0;
+        for (City& c : s.cities) c.pressure.assign(1, 0);
+        s.cities[1].pressure[0] = 5000;  // (11,6) follows it; the Holy City is 12 plots from (17,6)
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 10);  // five world turns
+        return g->state().cities[2].pressure[0];
+    };
+    CHECK_EQ(gained(false), 5);
+    CHECK_EQ(gained(true), 6);
+}
+
+// Great Prophets stop once as many are recruited as the map allows religions, founded or not (06).
+TEST(prophets_stop_once_every_religion_is_claimed) {
+    GameState s = religionState();
+    const TypeIndex prophet = rules().greatPersonClass("GREAT_PERSON_CLASS_PROPHET");
+    auto open = Game::fromScenario(rules(), s);
+    const int cap = open->maxReligions();
+    REQUIRE(open->currentGreatPerson(prophet) != kNone);
+    s.greatPeopleClaimed.assign(rules().greatPeople.size(), 0);
+    int marked = 0;
+    for (size_t i = 0; i < rules().greatPeople.size() && marked < cap; ++i) {
+        if (rules().greatPeople[i].cls != prophet) continue;
+        s.greatPeopleClaimed[i] = 1;
+        ++marked;
+    }
+    auto full = Game::fromScenario(rules(), std::move(s));
+    CHECK(full->state().religions.empty());
+    CHECK_EQ(full->currentGreatPerson(prophet), kNone);
+}
+
+// God of the Forge speeds Ancient and Classical military units only (06: Pantheon).
+TEST(god_of_the_forge_is_for_ancient_and_classical_units) {
+    GameState s = religionState();
+    s.players[0].pantheon = belief("BELIEF_GOD_OF_THE_FORGE");
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(sumUnitProductionPercent(g->state(), rules(), g->state().cities[1], rules().unit("UNIT_SWORDSMAN")), Fixed::fromInt(25));
+    CHECK_EQ(sumUnitProductionPercent(g->state(), rules(), g->state().cities[1], rules().unit("UNIT_MUSKETMAN")), Fixed());
 }

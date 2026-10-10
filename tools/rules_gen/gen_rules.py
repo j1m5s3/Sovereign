@@ -313,6 +313,12 @@ def gen_units():
             "combat": combat, "ranged": num(row["RS"]), "range": num(row["Range"]),
             "moves": num(row["Moves"], 0), "sight": num(row["Sight"], 2),
         }
+        # The religious class tags abilities name (06): RELIGIOUS_ALL for every religious unit, RELIGIOUS for the
+        # spreading ones (Missionary, Apostle), and each one's own (Civ VI's TypeTags).
+        religious_tags = {"Missionary": ["RELIGIOUS", "RELIGIOUS_ALL", "MISSIONARY"], "Apostle": ["RELIGIOUS", "RELIGIOUS_ALL"],
+                          "Inquisitor": ["RELIGIOUS_ALL", "INQUISITOR"], "Guru": ["RELIGIOUS_ALL", "GURU"]}
+        if row["Unit"] in religious_tags:
+            u["tags"] = religious_tags[row["Unit"]]
         if combat > 0 and "no ZOC" not in special and row["Domain"] != "Air":
             u["zoneOfControl"] = True
         if row["Unit"] == "Archaeologist":

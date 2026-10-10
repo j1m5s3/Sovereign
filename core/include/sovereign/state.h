@@ -345,6 +345,7 @@ struct SOV_API City {
     int32_t reactorSince = 0;  // the turn its Nuclear Power Plant was built or recommissioned (09: nuclear accidents)
     int laserStations = 0;     // Terrestrial Laser Stations built here: 5 Power of demand each (09: Power)  // in the city's buildings' slots (07: Great Works)
     std::vector<int32_t> pressure;      // per founded religion (06: Spread mechanics)
+    std::vector<int32_t> pressureTenths;  // the tenths of passive pressure not yet a whole point, per religion
     std::vector<CityWonder> wonders;    // wonder plots, reserved when building starts (03: Wonders)
     int powerDemand = 0, powerSupply = 0;  // this turn's power [GS] (09: Power), set as its owner's turn begins
 

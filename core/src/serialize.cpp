@@ -289,7 +289,7 @@ bool stateMatchesRules(const GameState& s, const Rules& rules) {
         for (const CityDistrict& d : c.districts) {
             if (!inRange(d.type, rules.districts.size(), false) || !s.grid.valid(d.pos)) return false;
         }
-        if (c.pressure.size() > s.religions.size()) return false;
+        if (c.pressure.size() > s.religions.size() || c.pressureTenths.size() > s.religions.size()) return false;
         for (const CityWonder& cw : c.wonders) if (!inRange(cw.building, rules.buildings.size(), false) || !s.grid.valid(cw.pos)) return false;
         for (TypeIndex g : c.greatPeopleHere) if (!inRange(g, rules.greatPeople.size(), false)) return false;
         for (const GreatWork& g : c.greatWorks) {
@@ -649,6 +649,7 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         }
         writeI32s(w, std::vector<int32_t>(c.greatPeopleHere.begin(), c.greatPeopleHere.end()));
         writeI32s(w, c.pressure);
+        writeI32s(w, c.pressureTenths);
         w.u32(static_cast<uint32_t>(c.wonders.size()));
         for (const CityWonder& cw : c.wonders) {
             w.i16(cw.building);
@@ -1227,6 +1228,7 @@ bool deserializeState(ByteReader& r, GameState& s) {
             for (int32_t v : here) c.greatPeopleHere.push_back(static_cast<TypeIndex>(v));
         }
         if (!readI32s(r, c.pressure)) return false;
+        if (!readI32s(r, c.pressureTenths)) return false;
         uint32_t nw = r.u32();
         if (!r.checkCount(nw, 10)) return false;
         c.wonders.resize(nw);
