@@ -302,7 +302,9 @@ def gen_units():
             continue  # Sovereign defines its own uniques (leaders-and-art-style.md)
         cls = row["Class"]
         special = row["Special"]
-        layer = "CIVILIAN" if cls == "civilian" else "SUPPORT" if cls == "Support" else "MILITARY"
+        # Religious units (Apostles, Inquisitors) and Rock Bands are on the civilian layer (05: Stacking).
+        layer = ("CIVILIAN" if cls == "civilian" or cls.startswith("Religious") or cls == "Rock Band"
+                 else "SUPPORT" if cls == "Support" else "MILITARY")
         combat = num(row["CS"])
         u = {
             "id": "UNIT_" + snake(row["Unit"]), "name": row["Unit"],

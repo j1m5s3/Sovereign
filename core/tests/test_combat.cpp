@@ -217,6 +217,28 @@ TEST(kill_advances_and_captures_civilians) {
     CHECK(g->state().unit(trader) == nullptr);  // not capturable: destroyed
 }
 
+// Apostles, Inquisitors and Rock Bands are civilians (05: Stacking): a military unit of their own side escorts them
+// on their plot, and an enemy at war condemns them (06: Condemn Heretic) rather than fighting them.
+TEST(religious_units_are_civilians) {
+    for (const char* id : {"UNIT_APOSTLE", "UNIT_INQUISITOR", "UNIT_ROCK_BAND", "UNIT_MISSIONARY"})
+        CHECK(rules().units[static_cast<size_t>(rules().unit(id))].layer == UnitLayer::Civilian);
+    UnitId a = kNoUnit, apostle = kNoUnit, guard = kNoUnit, ours = kNoUnit;
+    auto g = duel([&](GameState& s) {
+        a = addUnit(s, "UNIT_WARRIOR", 0, {5, 8});
+        apostle = addUnit(s, "UNIT_APOSTLE", 1, {6, 8});
+        s.unit(apostle)->religion = 0;
+        ours = addUnit(s, "UNIT_APOSTLE", 0, {9, 2});
+        guard = addUnit(s, "UNIT_WARRIOR", 0, {9, 2});
+    });
+    CHECK_EQ(g->submit(Command::linkEscort(0, guard, ours)), CommandError::Ok);
+    CombatPreview pv = g->previewAttack(a, {6, 8}, false);
+    CHECK(pv.valid && pv.capture);
+    REQUIRE(g->submit(Command::attack(0, a, {6, 8})) == CommandError::Ok);
+    CHECK(g->state().unit(apostle) == nullptr);  // condemned
+    CHECK_EQ(unit(*g, a).pos, (Hex{6, 8}));
+    CHECK_EQ(unit(*g, a).xp, 0);  // no fight
+}
+
 TEST(zone_of_control_stops_movement) {
     UnitId w = kNoUnit, horse = kNoUnit;
     auto setup = [&](bool war) {
