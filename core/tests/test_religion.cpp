@@ -473,9 +473,16 @@ TEST(sacred_places_pays_for_wonders_in_following_cities) {
     std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
     const UnitId prophet = addProphet(s, {6, 6});
     auto g = Game::fromScenario(rules(), std::move(s));
+    const Fixed science = g->outputPerTurn(0).science;
     REQUIRE(g->submit(Command::foundReligion(0, prophet, rules().religion("RELIGION_BUDDHISM"), belief("BELIEF_SACRED_PLACES"),
                                              belief("BELIEF_FEED_THE_WORLD"))) == CommandError::Ok);
     CHECK_EQ(g->founderYields(0)[static_cast<size_t>(YieldType::Science)], Fixed::fromInt(2));  // the Holy City has the Pyramids
+    CHECK_EQ(g->outputPerTurn(0).science, science + Fixed::fromInt(2));  // the research panel counts it too
+    // Anarchy: no Science, Culture or Faith at all, founder beliefs included.
+    CHECK(g->outputPerTurn(0).faith > Fixed());
+    g->stateMutForTests().players[0].anarchyTurns = 2;
+    CHECK_EQ(g->outputPerTurn(0).science, Fixed());
+    CHECK_EQ(g->outputPerTurn(0).faith, Fixed());
 }
 
 TEST(a_founded_religion_steadies_loyalty) {

@@ -661,6 +661,19 @@ TEST(player_modifiers_need_their_requirements) {
     CHECK_EQ(favor(false, true), plain - 4);
 }
 
+// An interregnum (the ruler's death) locks the government as it locks policies.
+TEST(no_government_change_in_an_interregnum) {
+    for (const int interregnum : {0, 2}) {
+        auto g = capitalWith([&](GameState& s) {
+            chiefdom(s);
+            s.players[0].civics.done[at(civic("CIVIC_POLITICAL_PHILOSOPHY"))] = 1;
+            s.players[0].interregnumTurns = interregnum;
+        });
+        CHECK_EQ(g->submit(Command::changeGovernment(0, gov("GOVERNMENT_AUTOCRACY"))),
+                 interregnum > 0 ? CommandError::ChangesLocked : CommandError::Ok);
+    }
+}
+
 TEST(government_bonus_and_anarchy) {
     auto g = capitalWith([](GameState& s) {
         chiefdom(s);

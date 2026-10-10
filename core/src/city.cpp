@@ -1115,7 +1115,7 @@ Fixed Game::goldPerTurn(PlayerId player) const {
 Fixed Game::goldPerTurn(PlayerId player, const std::vector<CityReport>* reports) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     Fixed net;
-    net += Fixed::fromInt(3 * monopolySources(player));  // 07: Monopolies
+    if (p.anarchyTurns == 0) net += Fixed::fromInt(3 * monopolySources(player));  // 07: Monopolies (anarchy: no Gold, 04)
     ReportShare shared;  // by its city reports
     size_t k = 0;        // the player's cities so far
     for (const City& c : state_.cities) {

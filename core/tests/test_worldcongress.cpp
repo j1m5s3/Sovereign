@@ -339,3 +339,38 @@ TEST(ai_votes_on_mercenary_companies_and_arms_control) {
     CHECK_EQ(static_cast<int>(armed.option), 1);
     CHECK_EQ(armed.target, 0);
 }
+
+// World Ideology B: a Wildcard slot fewer under the chosen government, taken from the government's own Wildcard
+// slots (never a wonder's), and none taken from a government that has no Wildcard slot.
+TEST(world_ideology_b_takes_the_governments_wildcard) {
+    const TypeIndex monarchy = rules().government("GOVERNMENT_MONARCHY");
+    const GovernmentType& gov = rules().governments[at(monarchy)];
+    const TypeIndex ben = rules().building("BUILDING_BIG_BEN");
+    size_t kind = 4;
+    for (size_t k = 0; k < 4 && kind == 4; ++k) {
+        if (rules().buildings[at(ben)].policySlots[k] > 0) kind = k;
+    }
+    REQUIRE(kind < 4 && static_cast<PolicySlot>(kind) != PolicySlot::Wildcard);
+    REQUIRE(gov.slots[static_cast<size_t>(PolicySlot::Wildcard)] > 0);
+    GameState s = wcState();
+    s.players[0].government = monarchy;
+    s.players[0].policies.assign(static_cast<size_t>(gov.totalSlots() + 1), kNone);
+    s.cities[0].buildings.push_back(ben);
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = withResolution("RESOLUTION_WORLD_IDEOLOGY", 1, monarchy, s);
+    g->syncPolicySlots(0);
+    const int total = gov.totalSlots();  // the government's less one, plus Big Ben's
+    CHECK_EQ(g->state().players[0].policies.size(), static_cast<size_t>(total));
+    CHECK(g->policySlotType(0, total - 2) == PolicySlot::Wildcard);  // one of Monarchy's two remains
+    CHECK(g->policySlotType(0, total - 1) == static_cast<PolicySlot>(kind));  // Big Ben's slot stays
+    // Chiefdom has no Wildcard slot to lose.
+    const TypeIndex chiefdom = rules().government("GOVERNMENT_CHIEFDOM");
+    const GovernmentType& chief = rules().governments[at(chiefdom)];
+    REQUIRE(chief.slots[static_cast<size_t>(PolicySlot::Wildcard)] == 0);
+    GameState c = wcState();
+    c.players[0].government = chiefdom;
+    c.players[0].policies.assign(static_cast<size_t>(chief.totalSlots()), kNone);
+    auto h = withResolution("RESOLUTION_WORLD_IDEOLOGY", 1, chiefdom, c);
+    h->syncPolicySlots(0);
+    CHECK_EQ(h->state().players[0].policies.size(), static_cast<size_t>(chief.totalSlots()));
+}
