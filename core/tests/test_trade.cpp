@@ -332,3 +332,12 @@ TEST(trade_routes_last_whole_round_trips) {
     CHECK_EQ(g->tradeRouteDuration(11), 22);  // one trip of 22
     CHECK_EQ(g->tradeRouteDuration(0), 20);   // no shorter than a step
 }
+
+// The world (game) era sets the minimum route length, not the era most civs have entered (04: World era; 09).
+TEST(the_world_era_sets_the_trade_route_minimum) {
+    GameState s = tradeState();
+    s.gameEra = rules().era("ERA_MEDIEVAL");  // every civ still in the Ancient era
+    auto g = Game::fromScenario(rules(), std::move(s));
+    CHECK_EQ(g->tradeRouteLength(), 20 + rules().eras[static_cast<size_t>(rules().era("ERA_MEDIEVAL"))].tradeRouteExtraTurns);
+    CHECK_EQ(g->tradeRouteLength(), 30);
+}

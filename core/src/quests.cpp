@@ -85,7 +85,10 @@ void Game::questDone(PlayerId major, QuestKind kind, int32_t arg) {
     Player& p = state_.players[at(major)];
     if (p.envoys.size() < state_.players.size()) p.envoys.resize(state_.players.size(), 0);
     if (policyIs(major, "POLICY_ROGUE_STATE")) return;  // Rogue State: no envoys (09)
-    for (PlayerId cs : rewarded) ++p.envoys[at(cs)];  // the quest's reward: an envoy there
+    for (PlayerId cs : rewarded) {
+        ++p.envoys[at(cs)];  // the quest's reward: an envoy there
+        noteFirstSuzerain(cs);
+    }
 }
 
 void Game::checkQuests() {

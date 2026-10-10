@@ -1709,12 +1709,7 @@ void Game::apply(const Command& c) {
                     city.pressure[static_cast<size_t>(p.religion)] += 200;
                 }
             }
-            // A city-state's first suzerain is a historic moment (09).
-            Player& cs = state_.players[static_cast<size_t>(c.arg)];
-            if (!cs.hadSuzerain && isSuzerain(c.player, cs.id)) {
-                cs.hadSuzerain = true;
-                awardMoment(c.player, "MOMENT_CITY_STATE_S_FIRST_SUZERAIN");
-            }
+            noteFirstSuzerain(static_cast<PlayerId>(c.arg));
             break;
         }
     }
