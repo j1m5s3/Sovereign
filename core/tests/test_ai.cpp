@@ -1638,6 +1638,87 @@ TEST(ai_promotes_a_ship_for_speed_with_no_foes_near) {
     CHECK_EQ(pick(true), std::string("PROMOTION_EMBOLON"));
 }
 
+namespace {
+bool isWarshipType(const UnitType& t) { return t.layer == UnitLayer::Military && t.domain == Domain::Sea && std::max(t.combat, t.ranged) > 0; }
+
+// Two civs on either shore of a strait (x 7..17 coast): ours at (6, 6), theirs at (18, 6). Neither leader is Victoria
+// (whose agenda turns on the Naval strategy).
+GameState strait(bool war, int population = 3) {
+    GameState s = flatState(24, 12, 2);
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.met.assign(2, 1);
+        p.relations.resize(2);
+        p.civ = kNone;
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    for (int y = 0; y < 12; ++y) {
+        for (int x = 7; x < 18; ++x) s.plot({x, y}).terrain = rules().terrain("TERRAIN_COAST");
+    }
+    s.players[0].relations[1].war = s.players[1].relations[0].war = war;
+    addCity(s, 0, {6, 6}, true, population);
+    addCity(s, 1, {18, 6}, true, 3);
+    addUnit(s, "UNIT_WARRIOR", 0, {6, 6});
+    addUnit(s, "UNIT_WARRIOR", 1, {18, 6});
+    return s;
+}
+}  // namespace
+
+TEST(ai_warships_sail_on_the_enemy_and_home_in_peace) {
+    // At war a Galley sails on the enemy Galley in sight, else on the enemy's coastal city; a Quadrireme strikes a ship
+    // in reach; hurt, or at peace, it goes home.
+    enum { EnemyShip, EnemyCity, InReach, Hurt, Peace };
+    struct Out {
+        Hex pos;
+        int foeHp = 100;
+    };
+    const auto after = [](int setup) {
+        GameState s = strait(setup != Peace);
+        const UnitId ours = addUnit(s, setup == InReach ? "UNIT_QUADRIREME" : "UNIT_GALLEY", 0, setup == EnemyShip || setup == EnemyCity ? Hex{8, 6} : setup == InReach ? Hex{13, 2} : Hex{12, 6});
+        if (setup == Hurt) s.units.back().hp = 30;
+        UnitId foe = kNoUnit;
+        if (setup == EnemyShip) foe = addUnit(s, "UNIT_GALLEY", 1, {8, 8});  // away from the city's way
+        if (setup == InReach) foe = addUnit(s, "UNIT_GALLEY", 1, {14, 2});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const Unit* u = g->state().unit(ours);
+        REQUIRE(u != nullptr);
+        Out out{u->pos};
+        if (foe != kNoUnit) out.foeHp = g->state().unit(foe) ? g->state().unit(foe)->hp : 0;
+        return out;
+    };
+    const auto& grid = flatState(24, 12, 2).grid;
+    CHECK(grid.distance(after(EnemyShip).pos, {8, 8}) < grid.distance(Hex{8, 6}, {8, 8}));
+    CHECK(grid.distance(after(EnemyCity).pos, {18, 6}) < grid.distance(Hex{8, 6}, {18, 6}));
+    CHECK(after(InReach).foeHp < 100);
+    CHECK(grid.distance(after(Hurt).pos, {6, 6}) < grid.distance(Hex{12, 6}, {6, 6}));
+    CHECK(grid.distance(after(Peace).pos, {6, 6}) < grid.distance(Hex{12, 6}, {6, 6}));
+}
+
+TEST(ai_trains_warships_at_war_with_a_coastal_civ_or_as_a_naval_power) {
+    // A coastal city with its army complete trains a warship at war with a civ across the water, or at peace under the
+    // Naval strategy (Victoria's agenda); not at peace otherwise, nor with the fleet it wants afloat.
+    enum { War, Peace, Naval, NavalAfloat };
+    const auto first = [](int setup) {
+        GameState s = strait(setup == War, 1);  // too small for a Settler
+        if (setup == Naval || setup == NavalAfloat) s.players[0].civ = rules().civ("CIVILIZATION_ENGLAND");
+        if (setup == NavalAfloat) addUnit(s, "UNIT_GALLEY", 0, {7, 6});
+        learn(s, 0, "TECH_SAILING");
+        for (int i = 0; i < 7; ++i) addUnit(s, "UNIT_WARRIOR", 0, {static_cast<int32_t>(1 + i % 5), 2 + i / 5});
+        addUnit(s, "UNIT_BUILDER", 0, {5, 6});
+        for (City& c : s.cities) c.queue.clear();
+        auto g = Game::fromScenario(rules(), std::move(s));
+        ai::playTurn(*g);
+        const City& c = g->state().cities[0];
+        REQUIRE(!c.queue.empty());
+        return c.queue.front().kind == ProductionKind::Unit && isWarshipType(rules().units[at(c.queue.front().type)]);
+    };
+    CHECK(first(War));
+    CHECK(!first(Peace));
+    CHECK(first(Naval));
+    CHECK(!first(NavalAfloat));
+}
+
 TEST(ai_trains_a_scout_while_its_lands_are_unexplored) {
     // An Ancient-era capital with its garrison: while a third of the plots within 8 of it are unexplored, Early
     // Exploration holds and the city trains a Scout; not once those plots are seen, nor with a Scout already out, nor
