@@ -50,6 +50,7 @@ struct Plot {
     bool park = false;     // part of a National Park (07: National Parks)
     uint8_t industry = 0;  // Monopolies and Corporations mode (07): 1 an Industry, 2 a Corporation on its luxury
     uint8_t products = 0;  // Products that Corporation has made (max 3; 07)
+    uint8_t regrow = 0;    // turns left burning, then burnt, before woods or rainforest grow back (09: forest fires)
     uint8_t lowland = 0;   // coastal lowland band, 1..3 m (09), flagged once when the game begins (GameState::lowlandsFlagged)
 };
 

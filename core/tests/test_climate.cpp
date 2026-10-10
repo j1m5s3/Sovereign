@@ -230,7 +230,7 @@ TEST(disasters_strike_on_their_own_at_high_intensity) {
     sovtest::endTurns(*g, 150);
     CHECK(countEvents(*g, EventKind::Disaster) > 0);
     int burnt = 0;
-    for (const Plot& p : g->state().plots) burnt += p.feature == rules().feature("FEATURE_BURNT_FOREST") ? 1 : 0;
+    for (const Plot& p : g->state().plots) burnt += p.regrow > 0 || p.fertility[static_cast<size_t>(YieldType::Production)] > 0 ? 1 : 0;  // burning, burnt or grown back
     CHECK(burnt > 0);
 }
 
@@ -863,4 +863,38 @@ TEST(built_lowlands_still_count_toward_a_flood_barrier) {
         return g->productionCost(0, barrier, &g->state().cities[0]);
     };
     CHECK_EQ(cost(true), cost(false));
+}
+
+// A forest fire burns its woods for the fire's 9 turns, leaves them burnt (+1 Food) as long again, then they grow back
+// with +1 Production (09; data: Forest Fire fertility). Woods that will grow back are not lost to deforestation.
+TEST(burnt_woods_grow_back) {
+    GameState s = coastState(16, 12, 1);
+    const Hex wood{8, 6};
+    s.plot(wood).feature = rules().feature("FEATURE_FOREST");
+    s.plot({9, 6}).feature = rules().feature("FEATURE_FOREST");  // a neighbour the fire may spread to
+    auto g = Game::fromScenario(rules(), std::move(s));
+    sovtest::endTurns(*g, 1);
+    const int deforested = g->deforestationPercent();
+    const auto food = [&] { return g->state().plot(wood).fertility[static_cast<size_t>(YieldType::Food)]; };
+    const auto prod = [&] { return g->state().plot(wood).fertility[static_cast<size_t>(YieldType::Production)]; };
+    g->strikeDisaster(disaster("DISASTER_FOREST_FIRE"), wood);
+    CHECK(g->state().plot(wood).feature == rules().feature("FEATURE_BURNING_FOREST"));
+    CHECK_EQ(food(), 0);
+    CHECK_EQ(g->deforestationPercent(), deforested);
+    sovtest::endTurns(*g, 8);
+    CHECK(g->state().plot(wood).feature == rules().feature("FEATURE_BURNING_FOREST"));
+    sovtest::endTurns(*g, 1);
+    CHECK(g->state().plot(wood).feature == rules().feature("FEATURE_BURNT_FOREST"));
+    CHECK_EQ(food(), 1);
+    CHECK_EQ(prod(), 0);
+    sovtest::endTurns(*g, 9);
+    CHECK(g->state().plot(wood).feature == rules().feature("FEATURE_FOREST"));
+    CHECK_EQ(g->state().plot(wood).regrow, 0);
+    CHECK_EQ(food(), 1);
+    CHECK_EQ(prod(), 1);
+    CHECK_EQ(g->deforestationPercent(), deforested);
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
