@@ -134,8 +134,45 @@ TEST(wonders_leave_permanent_marks_and_reward_their_discovery) {
     for (int i = 0; i < 3 && !(g->state().unit(warrior)->pos == Hex{7, 9} && g->state().unit(scout)->pos == Hex{8, 6}); ++i) sovtest::endTurns(*g, 2);
     CHECK(g->state().unit(scout)->wonderAbilities & 2);
     REQUIRE((g->state().unit(warrior)->pos == Hex{7, 9}));
+    for (const UnitId u : {scout, warrior}) g->submit(Command::setActivity(0, u, Activity::Skip));
+    sovtest::endTurns(*g, 2);  // its turn ends beside Everest
     CHECK(g->state().unit(warrior)->wonderAbilities & 1);
     const auto after = g->moveCost(*g->state().unit(warrior), {7, 9}, {6, 9});
     REQUIRE(before && after);
     CHECK(*after < *before);
+}
+
+// Mount Everest's mark is for a land unit that ends its turn beside it (01), not one that only passes by.
+TEST(passing_everest_leaves_no_mark) {
+    GameState s = flatState(20, 14, 1);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    addCity(s, 0, {2, 2}, true, 3);
+    const Hex everest{10, 7};
+    s.plot(everest).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+    s.plot(everest).feature = rules().feature("FEATURE_MOUNT_EVEREST");
+    // A walk of three single steps: from 2 plots off, to a plot beside it, to one 2 plots off again.
+    std::optional<Hex> from, by, to;
+    for (const Hex& a : s.grid.within(everest, 1)) {
+        if (a == everest || from) continue;
+        for (const Hex& b : s.grid.within(a, 1)) {
+            if (s.grid.distance(b, everest) != 2 || from) continue;
+            for (const Hex& c : s.grid.within(a, 1)) {
+                if (c != b && s.grid.distance(c, everest) == 2 && s.grid.distance(b, c) == 2) {
+                    from = b, by = a, to = c;
+                    break;
+                }
+            }
+        }
+    }
+    REQUIRE(from.has_value());
+    for (Player& p : s.players) p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    const UnitId scout = sovtest::addUnit(s, "UNIT_SCOUT", 0, *from);
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(g->submit(Command::move(0, scout, *by)) == CommandError::Ok);
+    REQUIRE(g->submit(Command::move(0, scout, *to)) == CommandError::Ok);
+    REQUIRE(g->state().unit(scout)->pos == *to);
+    g->submit(Command::setActivity(0, scout, Activity::Skip));
+    sovtest::endTurns(*g, 1);
+    REQUIRE(g->state().turn > 1);
+    CHECK(!(g->state().unit(scout)->wonderAbilities & 1));
 }

@@ -1959,6 +1959,8 @@ void Game::beginPlayerTurn(PlayerId pid, bool runCities) {
     }
     for (Unit& u : state_.units) {
         if (u.owner != pid) continue;
+        // Mount Everest (01): a land unit that ends its turn beside it climbs hills as flat ground from now on.
+        if (typeOf(*rules_, u).domain == Domain::Land && nextToNaturalWonder(u.pos, "FEATURE_MOUNT_EVEREST")) u.wonderAbilities |= 1;
         u.movesLeft = Fixed::fromInt(maxMoves(u));
         // Logistics (04): +1 starting the turn in its own territory; Integrated Attack Logistics: in an enemy's.
         const PlayerId land = state_.plot(u.pos).owner;

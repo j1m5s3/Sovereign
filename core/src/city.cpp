@@ -105,8 +105,8 @@ Yields Game::plotYields(Hex at, const City& city, bool earthGoddess) const {
     }
     if (p.resource != kNone) {
         const ResourceType& res = rules_->resources[static_cast<size_t>(p.resource)];
-        // A resource yields nothing until the owner has the tech that reveals it.
-        if (hasUnlocked(city.owner, res.reveal)) {
+        // A resource yields nothing until the owner sees it: the tech that reveals it, or James Young's early Oil (07).
+        if (resourceVisible(city.owner, at)) {
             for (size_t i = 0; i < kNumYields; ++i) y[i] += res.yields[i];
         }
     }

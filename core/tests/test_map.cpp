@@ -286,3 +286,21 @@ TEST(maps_have_volcanoes_and_geothermal_fissures) {
         }
     }
 }
+
+// A start's score counts the kinds of luxury within 3 plots (01: Start positions), once per kind.
+TEST(start_scores_count_nearby_luxuries) {
+    GameState s = sovtest::flatState(20, 14, 1);
+    const Hex start{10, 7};
+    const int plain = startScore(s, rules(), start);
+    s.plot({11, 7}).resource = rules().resource("RESOURCE_WINE");
+    const int one = startScore(s, rules(), start);
+    s.plot({12, 8}).resource = rules().resource("RESOURCE_WINE");
+    const int same = startScore(s, rules(), start);
+    s.plot({9, 6}).resource = rules().resource("RESOURCE_SILK");
+    const int two = startScore(s, rules(), start);
+    s.plot({16, 7}).resource = rules().resource("RESOURCE_SALT");  // too far
+    CHECK(one >= plain + 10);
+    CHECK(same - one < 10);  // a second Wine adds its yields only
+    CHECK(two >= same + 10);
+    CHECK_EQ(startScore(s, rules(), start), two);
+}
