@@ -42,6 +42,7 @@ void writeAgent(ByteWriter& w, const Agent& a) {
     w.i32(a.missionTurns);
     w.i32(a.sourcesCity);
     w.i32(a.sourcesUntil);
+    w.i32(a.guard);
     writeI32s(w, std::vector<int32_t>(a.promotions.begin(), a.promotions.end()));
     w.i32(a.promotionsPending);
 }
@@ -59,6 +60,7 @@ bool readAgent(ByteReader& r, Agent& a) {
     a.missionTurns = r.i32();
     a.sourcesCity = r.i32();
     a.sourcesUntil = r.i32();
+    a.guard = r.i32();
     std::vector<int32_t> promos;
     if (!readI32s(r, promos)) return false;
     a.promotions.clear();

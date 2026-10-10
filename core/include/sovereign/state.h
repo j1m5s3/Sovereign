@@ -625,6 +625,7 @@ struct Agent {
     int missionTurns = 0;        // turns left on an operation that ends
     CityId sourcesCity = kNoCity;  // Gain Sources: +2 levels on operations here until sourcesUntil
     int32_t sourcesUntil = 0;
+    int32_t guard = -1;          // Counterspy: the plot (index) of the district it guards, with those beside it (08)
     std::vector<TypeIndex> promotions;  // Rules::spyPromotions it holds
     int promotionsPending = 0;          // levels gained and not yet spent on a promotion
 };

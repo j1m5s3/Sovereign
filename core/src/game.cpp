@@ -1648,6 +1648,17 @@ void Game::apply(const Command& c) {
                     a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100 * (100 - std::min(75, faster)) / 100);
                 }
                 a.mission = m;
+                a.guard = -1;
+                if (m == SpyMission::Counterspy) {
+                    // The district it guards: the one chosen if it is the city's center or a complete district of it,
+                    // else the one covering most (08: Counterspy).
+                    const City& city = *state_.city(c.arg2);
+                    Hex guard = counterspyPlot(city);
+                    if (c.target == city.pos ||
+                        std::any_of(city.districts.begin(), city.districts.end(), [&](const CityDistrict& d) { return d.complete && d.pos == c.target; }))
+                        guard = c.target;
+                    a.guard = state_.grid.index(guard);
+                }
             }
             break;
         }

@@ -93,6 +93,66 @@ TEST(a_counterspy_makes_it_harder) {
     CHECK_EQ(g->spySuccessPercent(g->state().agents[0].id, SpyMission::SiphonFunds, theirCity(*g)), 9);
 }
 
+// A counterspy guards one district and those beside it (08: Counterspy): guarding the Campus it does not reach the
+// Commercial Hub two plots away; guarding the City Center, which both touch, it covers both, and so it does when no
+// district is chosen.
+TEST(a_counterspy_guards_its_district_and_those_beside_it) {
+    const auto odds = [](int guard, int* escape = nullptr) {
+        GameState s = spyState();
+        Agent g;
+        g.id = s.nextAgentId++;
+        g.owner = 1;
+        g.spy = true;
+        g.level = 2;
+        g.city = s.cities[1].id;
+        g.mission = SpyMission::Counterspy;
+        g.guard = guard;
+        s.agents.push_back(g);
+        auto game = Game::fromScenario(rules(), std::move(s));
+        if (escape) *escape = game->spyEscapeNeed(game->state().agents[0], game->state().cities[1], SpyMission::SiphonFunds, 1);
+        return game->spySuccessPercent(game->state().agents[0].id, SpyMission::SiphonFunds, theirCity(*game));
+    };
+    const GameState s = spyState();
+    CHECK_EQ(odds(s.grid.index({17, 6})), 50);  // the Campus: the Hub is out of its reach
+    CHECK_EQ(odds(s.grid.index({15, 6})), 9);   // the Hub itself
+    CHECK_EQ(odds(s.grid.index({16, 6})), 9);   // the City Center, beside it
+    CHECK_EQ(odds(-1), 9);
+    // Escaping too: only a counterspy guarding the target changes it.
+    int far = 0, near = 0;
+    odds(s.grid.index({17, 6}), &far);
+    odds(s.grid.index({16, 6}), &near);
+    CHECK_EQ(far, rules().globalInt("ESPIONAGE_ESCAPE_BASE_CHANCE"));
+    CHECK_EQ(near, far - 2 * rules().globalInt("ESPIONAGE_ESCAPE_COUNTERSPY_LEVEL_MODIFIER"));
+    // With the City Center and one district beside it, either covers both: the center is taken.
+    GameState two = spyState();
+    two.cities[1].districts.pop_back();
+    auto g2 = Game::fromScenario(rules(), std::move(two));
+    CHECK(g2->counterspyPlot(g2->state().cities[1]) == (Hex{16, 6}));
+    // Sent by command: the district chosen, or the plot covering most when the choice is not one of the city's.
+    GameState t = spyState();
+    City& home = t.cities[0];  // ours at (4,6): a Campus east and a Commercial Hub west of it
+    for (const char* d : {"DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB"}) {
+        CityDistrict cd;
+        cd.type = rules().district(d);
+        cd.pos = {home.districts.empty() ? 5 : 3, 6};
+        cd.complete = true;
+        home.districts.push_back(cd);
+    }
+    const int32_t spy = t.agents[0].id;
+    auto g = Game::fromScenario(rules(), std::move(t));
+    const CityId ours = g->state().cities[0].id;
+    CHECK(g->counterspyPlot(*g->state().city(ours)) == (Hex{4, 6}));
+    REQUIRE(g->submit(Command::spyMission(0, spy, SpyMission::Counterspy, ours, Hex{5, 6})) == CommandError::Ok);
+    CHECK_EQ(g->agent(spy)->guard, g->state().grid.index({5, 6}));
+    REQUIRE(g->submit(Command::spyMission(0, spy, SpyMission::Counterspy, ours, Hex{20, 6})) == CommandError::Ok);
+    CHECK_EQ(g->agent(spy)->guard, g->state().grid.index({4, 6}));
+    // Kept through a save.
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    CHECK_EQ(loaded->agent(spy)->guard, g->state().grid.index({4, 6}));
+}
+
 TEST(operations_need_their_district_and_a_met_rival) {
     auto g = Game::fromScenario(rules(), spyState());
     const int32_t spy = g->state().agents[0].id;

@@ -243,8 +243,10 @@ struct Command {
         return {CommandType::PromoteGovernor, p, -1, {}, governor, promotion};
     }
     static Command assignGovernor(PlayerId p, TypeIndex governor, CityId city) { return {CommandType::AssignGovernor, p, city, {}, governor, 0}; }
-    static Command spyMission(PlayerId p, int32_t spy, SpyMission mission, CityId city) {
-        return {CommandType::SpyMission, p, spy, {}, static_cast<int32_t>(mission), city};
+    // A counterspy guards `guard` (the city center or one of the city's districts, with those beside it); any other
+    // plot lets the game pick the one covering most (Game::counterspyPlot).
+    static Command spyMission(PlayerId p, int32_t spy, SpyMission mission, CityId city, Hex guard = Hex{-1, -1}) {
+        return {CommandType::SpyMission, p, spy, guard, static_cast<int32_t>(mission), city};
     }
     static Command upgradeUnit(PlayerId p, UnitId unit) { return {CommandType::UpgradeUnit, p, unit, {}, 0, 0}; }
     static Command rebaseUnit(PlayerId p, UnitId unit, Hex to) { return {CommandType::RebaseUnit, p, unit, to, 0, 0}; }
