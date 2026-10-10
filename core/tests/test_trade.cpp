@@ -170,6 +170,35 @@ TEST(trading_posts_extend_range_and_pay_on_the_way) {
     CHECK_EQ(g->cityReport(origin).yields[yi(YieldType::Gold)], before + route + Fixed::fromInt(1));  // the post in a foreign city
 }
 
+// Range is 15 plots over land and 30 over water (07: Range): a Trader that may embark does not reach 16 plots overland,
+// and reaches across 16 plots of sea.
+TEST(a_traders_range_is_15_over_land_and_30_over_water) {
+    const auto play = [](bool sea, bool sails) {
+        GameState s = flatState(30, 14, 2);
+        for (Player& p : s.players) {
+            Game::fitPlayerToRules(p, rules());
+            p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+        }
+        giveCivic(s, 0, "CIVIC_FOREIGN_TRADE");
+        if (sails) s.players[0].techs.done[at(rules().tech("TECH_CELESTIAL_NAVIGATION"))] = 1;
+        if (sea) {
+            for (Plot& p : s.plots) {
+                const Hex h = s.grid.at(static_cast<int>(&p - s.plots.data()));
+                if (h.x >= 6 && h.x <= 18) p.terrain = rules().terrain("TERRAIN_COAST");
+            }
+        }
+        addCity(s, 0, {4, 6}, true, 3);
+        addCity(s, 1, {20, 6}, true, 3);
+        const UnitId trader = addUnit(s, "UNIT_TRADER", 0, {4, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        return g->canStartTradeRoute(trader, g->state().cities[1].id);
+    };
+    CHECK(!play(false, false));
+    CHECK(!play(false, true));  // 16 plots overland stays out of reach once Traders sail
+    CHECK(!play(true, false));
+    CHECK(play(true, true));    // 13 plots of sea and 3 of land: within reach by sea
+}
+
 // The cities a Trader may start a route to are those canStartTradeRoute allows one by one: not its own city, nor one of
 // a dead, barbarian or free player, of an enemy, never seen, or out of range: overland, or by sea once Traders sail (07),
 // on the Ocean once the civ may enter it.

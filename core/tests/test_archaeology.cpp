@@ -200,3 +200,27 @@ TEST(an_ai_archaeologist_passes_a_shipwreck_it_cannot_dig) {
     REQUIRE(g->state().unit(dig));
     CHECK(g->state().grid.distance(g->state().unit(dig)->pos, {12, 6}) < 4);  // on its way to the site it can dig
 }
+
+// One Archaeologist per Archaeological Museum the civ has (07: Archaeology).
+TEST(one_archaeologist_per_archaeological_museum) {
+    GameState s = flatState(24, 12, 2);
+    for (Player& p : s.players) Game::fitPlayerToRules(p, rules());
+    s.players[0].civics.done[static_cast<size_t>(rules().civic("CIVIC_NATURAL_HISTORY"))] = 1;
+    const CityId a = addCity(s, 0, {4, 6}, true, 6);
+    const CityId b = addCity(s, 0, {14, 6}, false, 6);
+    addUnit(s, "UNIT_ARCHAEOLOGIST", 1, {20, 2});  // another civ's counts against its own museums only
+    for (City& c : s.cities) {
+        c.buildings.push_back(rules().building("BUILDING_ARCHAEOLOGICAL_MUSEUM"));
+        std::sort(c.buildings.begin(), c.buildings.end());
+    }
+    const ProductionItem dig{ProductionKind::Unit, rules().unit("UNIT_ARCHAEOLOGIST")};
+    auto two = Game::fromScenario(rules(), s);
+    CHECK(two->canProduce(*two->state().city(a), dig));
+    addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {6, 6});
+    auto one = Game::fromScenario(rules(), s);
+    CHECK(one->canProduce(*one->state().city(a), dig));  // the other museum still supports one
+    addUnit(s, "UNIT_ARCHAEOLOGIST", 0, {8, 6});
+    auto full = Game::fromScenario(rules(), std::move(s));
+    CHECK(!full->canProduce(*full->state().city(a), dig));
+    CHECK(!full->canProduce(*full->state().city(b), dig));
+}
