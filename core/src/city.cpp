@@ -1258,6 +1258,8 @@ CommandError Game::validateCity(const Command& c) const {
                 if (item.kind == ProductionKind::Unit &&
                     (!unitSpawnPlot(*city, item.type) || city->population < rules_->units[static_cast<size_t>(item.type)].minPopulation))
                     return CommandError::CannotBuild;
+                // A unit needing a strategic resource needs it in the stockpile however it is bought (02 [GS]).
+                if (item.kind == ProductionKind::Unit && !hasStrategicFor(c.player, item.type, city)) return CommandError::NotEnoughResources;
                 if (state_.players[static_cast<size_t>(c.player)].faith < Fixed::fromInt(faith)) return CommandError::NotEnoughFaith;
                 return CommandError::Ok;
             }
@@ -1345,8 +1347,9 @@ void Game::applyCity(const Command& c) {
                     if (p.unitsTrained.size() < rules_->units.size()) p.unitsTrained.resize(rules_->units.size(), 0);
                     ++p.unitsTrained[static_cast<size_t>(item.type)];
                     unitMoments(c.player, item.type);
-                    Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
                     const UnitType& bought = rules_->units[static_cast<size_t>(item.type)];
+                    if (bought.strategicResource != kNone) p.stockpile[static_cast<size_t>(bought.strategicResource)] -= strategicCostIn(&city, item.type);
+                    Unit& u = spawnUnit(item.type, c.player, *unitSpawnPlot(city, item.type));
                     u.xpBonus = static_cast<int16_t>(u.xpBonus + trainedXpPercent(*rules_, city, bought));  // Grand Master's Chapel, Theocracy
                     // Only religious units carry the city's religion (Naturalists and Rock Bands do not).
                     u.religion = static_cast<int16_t>(bought.religiousStrength > 0 || bought.spreadCharges > 0 ? religion : -1);

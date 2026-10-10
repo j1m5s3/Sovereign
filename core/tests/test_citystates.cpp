@@ -354,6 +354,21 @@ TEST(suzerain_bonuses_in_code) {
         CHECK(g->cityReport(mine).housing >= plain->cityReport(mine).housing);
         CHECK_EQ(g->cityReport(mine).housing - plain->cityReport(mine).housing,
                  rules().global("CITY_POPULATION_RIVER_LAKE") - rules().global("CITY_POPULATION_NO_WATER"));
+        // An Aqueduct there adds the fresh-water +2, not the dry city's top-up to 6, on that river housing.
+        const auto withAqueduct = [&](const char* id) {
+            GameState s = suzerainOfType(id);
+            CityDistrict aq;
+            aq.type = rules().district("DISTRICT_AQUEDUCT");
+            aq.pos = {5, 6};
+            aq.complete = true;
+            s.city(mine)->districts.push_back(aq);
+            return s;
+        };
+        auto ga = Game::fromScenario(rules(), withAqueduct("CITYSTATE_MOHENJO_DARO"));
+        auto pa = Game::fromScenario(rules(), withAqueduct("CITYSTATE_MITLA"));
+        CHECK_EQ(ga->cityReport(mine).housing - g->cityReport(mine).housing, rules().global("CITY_POPULATION_AQUEDUCT_BOOST"));
+        CHECK_EQ(pa->cityReport(mine).housing,
+                 plain->cityReport(mine).housing + rules().global("CITY_POPULATION_AQUEDUCT_MIN") - rules().global("CITY_POPULATION_NO_WATER"));
     }
     // Valletta: City Center and Encampment buildings for Faith, at their Gold price.
     {

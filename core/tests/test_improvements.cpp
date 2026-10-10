@@ -415,6 +415,35 @@ TEST(luxury_gives_amenities) {
     CHECK_EQ(g->cityReport(city).amenities, before + 1);
 }
 
+// A pillaged improvement stops working until repaired (02: Pillaging): its luxury gives no amenity and a Farm
+// houses nobody meanwhile.
+TEST(a_pillaged_improvement_gives_no_resource_or_housing) {
+    GameState base = flatState(20, 14, 1);
+    base.plot({7, 6}).terrain = rules().terrain("TERRAIN_PLAINS");
+    base.plot({7, 6}).resource = rules().resource("RESOURCE_WINE");
+    auto g = builderGame([](GameState& s) {
+        know(s, "TECH_POTTERY");
+        know(s, "TECH_IRRIGATION");
+    }, base);
+    const CityId city = g->state().cities[0].id;
+    const int before = g->cityReport(city).amenities;
+    REQUIRE(g->submit(Command::buildImprovement(0, builderOf(*g), improvement("IMPROVEMENT_PLANTATION"))) ==
+            CommandError::Ok);
+    REQUIRE(g->cityReport(city).amenities == before + 1);
+    GameState s = g->state();
+    s.plot({5, 6}).improvement = improvement("IMPROVEMENT_FARM");
+    auto farmed = Game::fromScenario(rules(), s);
+    const Fixed housing = farmed->cityReport(city).housing;
+    REQUIRE(rules().improvements[at(improvement("IMPROVEMENT_FARM"))].housing > Fixed());
+    s.plot({7, 6}).pillagedTurns = 3;
+    s.plot({5, 6}).pillagedTurns = 3;
+    auto pillaged = Game::fromScenario(rules(), std::move(s));
+    CHECK(!pillaged->resourceImproved({7, 6}));
+    CHECK_EQ(pillaged->cityReport(city).amenities, before);
+    CHECK(pillaged->cityReport(city).housing == housing - rules().improvements[at(improvement("IMPROVEMENT_FARM"))].housing -
+                                                      rules().improvements[at(improvement("IMPROVEMENT_PLANTATION"))].housing);
+}
+
 TEST(luxuries_reach_the_cities_that_need_them_most) {
     // Each luxury gives an Amenity to four cities: those whose population asks the most Amenities luxuries have not
     // given yet, then the larger, then the first founded. `luxuries` sit on the first cities' centers (improved).
