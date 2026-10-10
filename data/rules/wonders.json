@@ -646,8 +646,13 @@
     "+15% Culture in all your cities where suzerain of a Minor Civ Cultural city-state (x2)",
     "+15% Production toward all units in all your cities where suzerain of a Minor Civ Militaristic city-state (x2)",
     "adjust all building production modifier (Amount=15) in all your cities where suzerain of a Minor Civ Industrial city-state (x2)",
-    "+15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2)",
-    "grants 3 Envoy(s) (one-time)"
+    "+15% Production toward districts in all your cities where suzerain of a Minor Civ Industrial city-state (x2)"
+   ],
+   "effects": [
+    {
+     "kind": "ENVOYS",
+     "amount": 3
+    }
    ]
   },
   {

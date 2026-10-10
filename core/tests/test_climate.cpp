@@ -898,3 +898,25 @@ TEST(burnt_woods_grow_back) {
     REQUIRE(loaded);
     CHECK_EQ(loaded->stateHash(), g->stateHash());
 }
+
+// A Flood Barrier is for a city with coastal lowlands to guard; an inland city cannot build one (03, 09).
+TEST(only_a_city_with_lowlands_builds_a_flood_barrier) {
+    Hex low{-1, -1};
+    {
+        auto probe = Game::fromScenario(rules(), coastState(16, 24, 1));
+        for (int y = 2; y < 22 && low.x < 0; ++y) {
+            if (probe->lowlandBand({1, y}) > 0) low = {1, y};
+        }
+    }
+    REQUIRE(low.x == 1);
+    GameState s = coastState(16, 24, 1);
+    s.players[0].techs.done[at(rules().tech("TECH_COMPUTERS"))] = 1;
+    addCity(s, 0, {3, low.y}, true, 3);
+    addCity(s, 0, {12, low.y}, true, 3);
+    s.plot(low).owner = 0;
+    s.plot(low).city = s.cities[0].id;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const ProductionItem barrier{ProductionKind::Building, rules().building("BUILDING_FLOOD_BARRIER")};
+    CHECK(g->canProduce(g->state().cities[0], barrier));
+    CHECK(!g->canProduce(g->state().cities[1], barrier));
+}

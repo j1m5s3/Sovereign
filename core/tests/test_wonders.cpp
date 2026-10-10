@@ -578,3 +578,55 @@ TEST(the_golden_gate_bridge_carries_land_units_over_the_water) {
     h->wonderCompleted(h->state().cities[0].id, ggb);
     CHECK(h->submit(Command::attack(0, attacker, {10, 6})) == CommandError::Ok);
 }
+
+// A wonder's free units come in the numbers its data gives (03: Kotoku-in 4 Warrior Monks; Statue of Zeus 3 Spearmen,
+// 3 Archers and a Battering Ram); Kilwa Kisiwani grants 3 Envoys.
+TEST(wonders_grant_every_unit_and_envoy_they_promise) {
+    auto g = Game::fromScenario(rules(), wonderState());
+    const CityId mine = g->state().cities[0].id;
+    const auto count = [&](const char* type) {
+        int n = 0;
+        for (const Unit& u : g->state().units) n += u.owner == 0 && u.type == rules().unit(type) ? 1 : 0;
+        return n;
+    };
+    g->wonderCompleted(mine, wonder("BUILDING_KOTOKU_IN"));
+    CHECK_EQ(count("UNIT_WARRIOR_MONK"), 4);
+    g->wonderCompleted(mine, wonder("BUILDING_STATUE_OF_ZEUS"));
+    CHECK_EQ(count("UNIT_SPEARMAN"), 3);
+    CHECK_EQ(count("UNIT_ARCHER"), 3);
+    CHECK_EQ(count("UNIT_BATTERING_RAM"), 1);
+    const int tokens = g->state().players[0].envoyTokens;
+    g->wonderCompleted(mine, wonder("BUILDING_KILWA_KISIWANI"));
+    CHECK_EQ(g->state().players[0].envoyTokens, tokens + 3);
+}
+
+// The Oracle's +2 from a Theater Square are Great Writer points only (data: Oracle), not Artist or Musician points too.
+TEST(the_oracle_gives_a_theater_square_writer_points) {
+    GameState s = wonderState();
+    s.cities[0].districts.push_back({rules().district("DISTRICT_THEATER_SQUARE"), {6, 6}, true});
+    auto plain = Game::fromScenario(rules(), s);
+    s.cities[0].buildings.push_back(wonder("BUILDING_ORACLE"));
+    std::sort(s.cities[0].buildings.begin(), s.cities[0].buildings.end());
+    auto g = Game::fromScenario(rules(), std::move(s));
+    const auto gain = [&](const char* cls) {
+        const TypeIndex k = rules().greatPersonClass(cls);
+        return g->greatPersonPointsPerTurn(0, k) - plain->greatPersonPointsPerTurn(0, k);
+    };
+    CHECK_EQ(gain("GREAT_PERSON_CLASS_WRITER"), 2);
+    CHECK_EQ(gain("GREAT_PERSON_CLASS_ARTIST"), 0);
+    CHECK_EQ(gain("GREAT_PERSON_CLASS_MUSICIAN"), 0);
+}
+
+// The Terracotta Army promotes land units, not ships (03: "all current land units").
+TEST(the_terracotta_army_promotes_land_units) {
+    GameState s = wonderState();
+    s.plot({8, 9}).terrain = rules().terrain("TERRAIN_COAST");
+    const UnitId warrior = sovtest::addUnit(s, "UNIT_WARRIOR", 0, {7, 6});
+    const UnitId galley = sovtest::addUnit(s, "UNIT_GALLEY", 0, {8, 9});
+    auto g = Game::fromScenario(rules(), std::move(s));
+    g->wonderCompleted(g->state().cities[0].id, wonder("BUILDING_TERRACOTTA_ARMY"));
+    REQUIRE(g->state().unit(warrior));
+    REQUIRE(g->state().unit(galley));
+    CHECK(g->state().unit(warrior)->xp > 0);
+    CHECK_EQ(g->state().unit(galley)->xp, 0);
+}

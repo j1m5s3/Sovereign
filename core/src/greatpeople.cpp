@@ -149,12 +149,15 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
             const City* dest = state_.city(r.destination);
             toAlly = toAlly || (r.origin == c.id && dest && alliance(player, dest->owner) == AllianceType::Cultural && allianceLevel(player, dest->owner) >= 2);
         }
-        // The Oracle (03: Wonders): +2 from each district of its city that earns points.
+        // The Oracle (03: Wonders): +2 from each district of its city that earns points, of the district's first class
+        // only (data: a Theater Square's +2 are Great Writer points).
         const int oracle = c.has(wonderType(W::Oracle)) ? 2 : 0;
         // A pillaged district and its buildings earn none (03).
         for (const CityDistrict& d : c.districts) {
             if (!d.complete || d.pillagedTurns > 0) continue;
-            for (const auto& [k, v] : rules_->districts[at(d.type)].greatPersonPoints) city += k == cls ? v + (toAlly ? 1 : 0) + oracle : 0;
+            const auto& points = rules_->districts[at(d.type)].greatPersonPoints;
+            for (size_t i = 0; i < points.size(); ++i)
+                city += points[i].first == cls ? points[i].second + (toAlly ? 1 : 0) + (i == 0 ? oracle : 0) : 0;
         }
         for (TypeIndex b : c.buildings) {
             if (buildingIdle(c, *rules_, b)) continue;
@@ -645,7 +648,8 @@ void Game::applyEffectAt(PlayerId pid, City* city, Hex here, const GreatPersonEf
             break;
         case GreatPersonEffectKind::PromoteAll:
             for (Unit& m : state_.units) {
-                if (m.owner == pid && rules_->units[at(m.type)].layer == UnitLayer::Military) m.xp = std::max(m.xp, xpForNextLevel(m));
+                if (m.owner == pid && rules_->units[at(m.type)].layer == UnitLayer::Military && rules_->units[at(m.type)].domain == Domain::Land)
+                    m.xp = std::max(m.xp, xpForNextLevel(m));  // Terracotta Army: land units (03)
             }
             break;
         case GreatPersonEffectKind::TreasuryPercent:

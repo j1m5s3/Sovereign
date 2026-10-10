@@ -98,6 +98,12 @@ void Game::flagLowlands() {
     state_.lowlandsFlagged = true;
 }
 
+int Game::cityLowlands(const City& city) const {
+    int n = 0;
+    for (const Hex& h : state_.grid.within(city.pos, 3)) n += state_.plot(h).city == city.id && lowlandBand(h, true) > 0 ? 1 : 0;
+    return n;
+}
+
 int Game::lowlandBand(Hex h, bool built) const {
     const Plot& p = state_.plot(h);
     if (p.lowland == 0 || rules_->terrains[at(p.terrain)].water) return 0;  // drowned already
