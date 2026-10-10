@@ -127,6 +127,15 @@ TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName, c
 	return {TEXT("Classical"), ClassicalName};
 }
 
+FString LandmarkName(const FString& WonderId)
+{
+	TArray<FString> Words;
+	WonderId.RightChop(WonderId.StartsWith(TEXT("BUILDING_")) ? 9 : 0).ParseIntoArray(Words, TEXT("_"));
+	FString Out;
+	for (const FString& W : Words) Out += W.Left(1).ToUpper() + W.RightChop(1).ToLower();
+	return Out;
+}
+
 TArray<FString> RequiredAssets()
 {
 	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit")};
@@ -159,6 +168,20 @@ TArray<FString> RequiredAssets()
 			 TEXT("OilPool"), TEXT("Hive"), TEXT("Goods")})
 	{
 		Out.Add(MeshPath(TEXT("Resources"), Name));
+	}
+	// The wonders modelled one by one (kit_landmarks.py's PIECES): all but Stonehenge and the Hanging Gardens, which are their kind.
+	for (const TCHAR* Id : {TEXT("PYRAMIDS"), TEXT("JEBEL_BARKAL"), TEXT("GREAT_BATH"), TEXT("TEMPLE_OF_ARTEMIS"), TEXT("ORACLE"),
+			 TEXT("GREAT_LIGHTHOUSE"), TEXT("COLOSSUS"), TEXT("PETRA"), TEXT("COLOSSEUM"), TEXT("GREAT_LIBRARY"), TEXT("MAHABODHI_TEMPLE"),
+			 TEXT("TERRACOTTA_ARMY"), TEXT("MACHU_PICCHU"), TEXT("STATUE_OF_ZEUS"), TEXT("APADANA"), TEXT("MAUSOLEUM_AT_HALICARNASSUS"),
+			 TEXT("ETEMENANKI"), TEXT("HAGIA_SOPHIA"), TEXT("ALHAMBRA"), TEXT("CHICHEN_ITZA"), TEXT("MONT_ST_MICHEL"), TEXT("MEENAKSHI_TEMPLE"),
+			 TEXT("UNIVERSITY_OF_SANKORE"), TEXT("HUEY_TEOCALLI"), TEXT("KOTOKU_IN"), TEXT("ANGKOR_WAT"), TEXT("VENETIAN_ARSENAL"), TEXT("GREAT_ZIMBABWE"),
+			 TEXT("FORBIDDEN_CITY"), TEXT("KILWA_KISIWANI"), TEXT("ORSZ_GH_Z"), TEXT("CASA_DE_CONTRATACI_N"), TEXT("PANAMA_CANAL"),
+			 TEXT("ST_BASIL_S_CATHEDRAL"), TEXT("TAJ_MAHAL"), TEXT("TORRE_DE_BEL_M"), TEXT("POTALA_PALACE"), TEXT("RUHR_VALLEY"), TEXT("BOLSHOI_THEATRE"),
+			 TEXT("OXFORD_UNIVERSITY"), TEXT("STATUE_OF_LIBERTY"), TEXT("BIG_BEN"), TEXT("HERMITAGE"), TEXT("EIFFEL_TOWER"), TEXT("BROADWAY"),
+			 TEXT("CRISTO_REDENTOR"), TEXT("GOLDEN_GATE_BRIDGE"), TEXT("AMUNDSEN_SCOTT_RESEARCH_STATION"), TEXT("EST_DIO_DO_MARACAN"), TEXT("BIOSPH_RE"),
+			 TEXT("SYDNEY_OPERA_HOUSE")})
+	{
+		Out.Add(MeshPath(TEXT("Landmarks"), LandmarkName(FString(TEXT("BUILDING_")) + Id)));
 	}
 	for (const TCHAR* Name : {TEXT("Pyramid"), TEXT("StepPyramid"), TEXT("StoneCircle"), TEXT("Gardens"), TEXT("Statue"), TEXT("Tower"),
 			 TEXT("LatticeTower"), TEXT("DomedHall"), TEXT("Arena"), TEXT("Citadel"), TEXT("Arsenal")})

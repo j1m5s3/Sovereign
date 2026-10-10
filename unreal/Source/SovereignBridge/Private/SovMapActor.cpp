@@ -646,9 +646,10 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		UStaticMeshComponent* C = Marker(WonderPieces, WonderCount++, nullptr);
 		const FVector At = SovHex::Center(W.X, W.Y, SurfaceZ(W.X, W.Y));
-		// Its kind's model from the Wonders kit, grey and smaller while it is being built.
+		// Its own model from the Landmarks kit, else its kind's from the Wonders kit; grey and smaller while it is being built.
 		const TCHAR* Kind = WonderModel(W.Id);
-		if (Kind && SovArt::SetKitMesh(C, TEXT("Wonders"), Kind, FLinearColor::White))
+		if (SovArt::SetKitMesh(C, TEXT("Landmarks"), SovArt::LandmarkName(W.Id), FLinearColor::White)
+			|| (Kind && SovArt::SetKitMesh(C, TEXT("Wonders"), Kind, FLinearColor::White)))
 		{
 			ShadeKit(C, W.bComplete ? FLinearColor::White : FLinearColor(0.55f, 0.55f, 0.55f));
 			C->SetRelativeLocation(At);
