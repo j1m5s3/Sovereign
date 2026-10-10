@@ -953,6 +953,7 @@ private:
     void processClimate();             // world turn: warming, climate phases, lowlands; droughts, repairs, disasters
     void processProfiles();            // world turn: update every major civ's play profile
     void processRivals();              // world turn: this game's part of each human's rival memories
+    void recordTurnStats();            // world turn: each major civ's figures for the end-game graphs
     void recordChronicle(const GameEvent& e);  // keeps a chronicle-worthy event for the whole game
     void applyEraStart();  // game creation: the techs, civics, gold, faith and units of the setup's start era
     void processSpaceRace();           // world turn: exoplanet expeditions travel

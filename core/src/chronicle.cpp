@@ -57,6 +57,35 @@ bool Game::chronicleWorthy(EventKind kind) {
     }
 }
 
+void Game::recordTurnStats() {
+    for (const Player& p : state_.players) {
+        if (!p.alive || !isMajorCiv(p.id)) continue;
+        TurnStats t;
+        t.turn = state_.turn;
+        t.player = p.id;
+        t.score = score(p.id);  // science, culture and Faith are filled in as its cities yield (processCities)
+        t.gold = static_cast<int32_t>(p.gold.toInt());
+        t.techs = static_cast<int32_t>(std::count(p.techs.done.begin(), p.techs.done.end(), 1));
+        t.civics = static_cast<int32_t>(std::count(p.civics.done.begin(), p.civics.done.end(), 1));
+        state_.turnStats.push_back(t);
+    }
+    // Cities, population and military strength in one pass over each list.
+    std::vector<int32_t> slot(state_.players.size(), -1);
+    for (size_t i = state_.turnStats.size(); i-- > 0 && state_.turnStats[i].turn == state_.turn;) slot[static_cast<size_t>(state_.turnStats[i].player)] = static_cast<int32_t>(i);
+    for (const City& c : state_.cities) {
+        if (c.owner < 0 || slot[static_cast<size_t>(c.owner)] < 0) continue;
+        TurnStats& t = state_.turnStats[static_cast<size_t>(slot[static_cast<size_t>(c.owner)])];
+        ++t.cities;
+        t.population += c.population;
+    }
+    for (const Unit& u : state_.units) {
+        if (u.owner < 0 || slot[static_cast<size_t>(u.owner)] < 0) continue;
+        const UnitType& type = rules_->units[static_cast<size_t>(u.type)];
+        if (type.layer != UnitLayer::Military) continue;
+        state_.turnStats[static_cast<size_t>(slot[static_cast<size_t>(u.owner)])].military += std::max(type.combat, type.ranged) * u.hp / 100;
+    }
+}
+
 void Game::recordChronicle(const GameEvent& e) {
     state_.chronicle.push_back(e);
     if (state_.chronicle.size() > kChronicleCap) state_.chronicle.erase(state_.chronicle.begin());

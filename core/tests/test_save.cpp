@@ -37,6 +37,51 @@ TEST(save_round_trip_is_exact) {
     CHECK(saveGame(*loaded) == bytes);
 }
 
+TEST(turn_statistics_are_kept_each_turn_and_saved) {
+    // Each world turn records every major civ alive once, for the end-game graphs; a save keeps them.
+    auto g = playedGame(11, 25);
+    REQUIRE(g);
+    const GameState& s = g->state();
+    int majors = 0;
+    for (const Player& p : s.players) majors += p.alive && g->isMajorCiv(p.id) ? 1 : 0;
+    REQUIRE(majors == 2);
+    CHECK_EQ(s.turnStats.size(), static_cast<size_t>(majors * (s.turn - 1)));
+    std::vector<int32_t> techs(s.players.size(), 0);
+    for (size_t i = 0; i < s.turnStats.size(); ++i) {
+        const TurnStats& t = s.turnStats[i];
+        CHECK_EQ(t.turn, static_cast<int32_t>(2 + i / 2));
+        CHECK(g->isMajorCiv(t.player));
+        CHECK(t.techs >= techs[static_cast<size_t>(t.player)]);
+        techs[static_cast<size_t>(t.player)] = t.techs;
+        CHECK(t.cities >= 1);
+        CHECK(t.population >= t.cities);
+        CHECK(t.score > 0);
+        if (t.turn == s.turn && t.player > s.currentPlayer) continue;  // its turn has not begun
+        CHECK(t.science > 0);  // the turn's yields, filled in as the civ's cities yielded
+        CHECK(t.culture > 0);
+    }
+    // The last turn's figures are the game's as that turn began.
+    const TurnStats& last = s.turnStats.back();
+    CHECK_EQ(last.turn, s.turn);
+    int cities = 0, military = 0;
+    for (const City& c : s.cities) cities += c.owner == last.player ? 1 : 0;
+    for (const Unit& u : s.units) {
+        const UnitType& t = rules().units[static_cast<size_t>(u.type)];
+        if (u.owner == last.player && t.layer == UnitLayer::Military) military += std::max(t.combat, t.ranged) * u.hp / 100;
+    }
+    CHECK(military > 0);
+    if (s.currentPlayer < last.player) {  // the civ has not moved yet this turn
+        CHECK_EQ(last.cities, cities);
+        CHECK_EQ(last.military, military);
+    }
+    std::string err;
+    auto loaded = loadGame(rules(), saveGame(*g), &err);
+    REQUIRE(loaded);
+    REQUIRE(loaded->state().turnStats.size() == s.turnStats.size());
+    CHECK_EQ(loaded->state().turnStats.back().military, last.military);
+    CHECK_EQ(loaded->state().turnStats.back().score, last.score);
+}
+
 TEST(save_then_continue_matches_uninterrupted_play) {
     auto a = playedGame(12, 15);
     REQUIRE(a);

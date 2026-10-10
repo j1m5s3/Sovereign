@@ -698,6 +698,12 @@ std::vector<uint8_t> serializeState(const GameState& s) {
         writeRival(w, t.memory);
     }
     writeEvents(w, s.chronicle);
+    w.u32(static_cast<uint32_t>(s.turnStats.size()));
+    for (const TurnStats& t : s.turnStats) {
+        w.i32(t.turn);
+        w.i8(t.player);
+        for (int32_t v : {t.score, t.science, t.culture, t.faith, t.gold, t.military, t.cities, t.population, t.techs, t.civics}) w.i32(v);
+    }
     w.i64(s.co2);
     w.i32(s.climatePhase);
     w.u32(static_cast<uint32_t>(s.droughts.size()));
@@ -1288,6 +1294,14 @@ bool deserializeState(ByteReader& r, GameState& s) {
         readRival(r, t.memory);
     }
     if (!readEvents(r, s.chronicle)) return false;
+    const uint32_t nstats = r.u32();
+    if (!r.checkCount(nstats, 45)) return false;
+    s.turnStats.resize(nstats);
+    for (TurnStats& t : s.turnStats) {
+        t.turn = r.i32();
+        t.player = r.i8();
+        for (int32_t* v : {&t.score, &t.science, &t.culture, &t.faith, &t.gold, &t.military, &t.cities, &t.population, &t.techs, &t.civics}) *v = r.i32();
+    }
     s.co2 = r.i64();
     s.climatePhase = r.i32();
     uint32_t ndrought = r.u32();

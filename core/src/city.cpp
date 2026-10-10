@@ -1730,6 +1730,7 @@ void Game::processCities(PlayerId pid) {
     for (CityId id : ids) reports.push_back(cityReport(*state_.city(id), shared));
     player.gold += goldPerTurn(pid, &reports);  // the same cities in the same order
     Fixed science, culture;
+    const Fixed faithBefore = player.faith;
     if (player.anarchyTurns == 0) {  // anarchy: no gold, science, culture or faith
         for (const CityReport& r : reports) {
             science += r.yields[idx(YieldType::Science)];
@@ -1745,6 +1746,15 @@ void Game::processCities(PlayerId pid) {
         culture += allianceShare(pid, YieldType::Culture);
     }
     player.lifetimeCulture += culture;  // domestic tourists (07: Tourism)
+    // The turn's figures for the end-game graphs (recordTurnStats made the entry as the world turn began).
+    for (size_t i = state_.turnStats.size(); i-- > 0 && state_.turnStats[i].turn == state_.turn;) {
+        TurnStats& t = state_.turnStats[i];
+        if (t.player != pid) continue;
+        t.science = static_cast<int32_t>(science.toInt());
+        t.culture = static_cast<int32_t>(culture.toInt());
+        t.faith = static_cast<int32_t>((player.faith - faithBefore).toInt());
+        break;
+    }
     processResearch(pid, science, culture);
     accumulateStrategics(pid);
     if (const Fixed line = rules_->global("GOLD_NEGATIVE_BALANCE_DISBAND_UNIT_LINE"); player.gold <= line) {
