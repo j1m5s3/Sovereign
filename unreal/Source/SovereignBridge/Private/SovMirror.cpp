@@ -5,6 +5,26 @@
 
 namespace
 {
+// A plot as the viewer knows it: live while in sight, as last seen under the fog (Game::lastSeen: terrain, feature,
+// improvement, owner, road, village, antiquity), live on a revealed plot never snapshotted.
+sov::Plot SeenPlot(const sov::Game& Game, sov::PlayerId View, sov::Hex H)
+{
+	sov::Plot P = Game.state().plot(H);
+	if (const sov::PlotMemory* Mem = Game.lastSeen(View, H))
+	{
+		P.terrain = Mem->terrain;
+		P.feature = Mem->feature;
+		P.improvement = Mem->improvement;
+		P.owner = Mem->owner;
+		P.route = Mem->route;
+		P.routePillaged = Mem->routePillaged;
+		P.pillagedTurns = Mem->pillaged ? 1 : 0;
+		P.village = Mem->village;
+		P.antiquity = Mem->antiquity;
+	}
+	return P;
+}
+
 FLinearColor Srgb(uint8 R, uint8 G, uint8 B)
 {
 	return FLinearColor::FromSRGBColor(FColor(R, G, B));
@@ -177,8 +197,8 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		T.X = H.x;
 		T.Y = H.y;
 		T.bVisible = V == sov::Visibility::Visible;
-		T.Color = PlotColor(Rules, S.plots[static_cast<size_t>(i)], T.Relief);
-		const sov::Plot& Pl = S.plots[static_cast<size_t>(i)];
+		const sov::Plot Pl = SeenPlot(Game, View, H);
+		T.Color = PlotColor(Rules, Pl, T.Relief);
 		if (Pl.feature != sov::kNone)
 		{
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;
@@ -217,7 +237,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 				M.Rivers.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), Srgb(70, 150, 230)});
 			}
 			// A border where the territory ends.
-			if (Pl.owner != sov::kNoPlayer && (!bKnown || S.plot(*N).owner != Pl.owner))
+			if (Pl.owner != sov::kNoPlayer && (!bKnown || SeenPlot(Game, View, *N).owner != Pl.owner))
 			{
 				M.Borders.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), SovPlayerColor(Game, Pl.owner)});
 			}
@@ -229,7 +249,12 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			for (int32 D = 0; D < sov::kNumDirs; ++D)
 			{
 				const std::optional<sov::Hex> N = S.grid.neighbor(H, static_cast<sov::Dir>(D));
-				if (!N || S.grid.index(*N) < i || S.plot(*N).route < 0 || S.plot(*N).routePillaged || Game.visibility(View, *N) == sov::Visibility::Unrevealed)
+				if (!N || S.grid.index(*N) < i || Game.visibility(View, *N) == sov::Visibility::Unrevealed)
+				{
+					continue;
+				}
+				const sov::Plot NP = SeenPlot(Game, View, *N);
+				if (NP.route < 0 || NP.routePillaged)
 				{
 					continue;
 				}
@@ -238,9 +263,11 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		}
 	}
 
+	// Under the fog, a plot the viewer has a snapshot of shows the city, district or wonder that stood there then.
+	auto Remembered = [&](sov::Hex H) { return Game.lastSeen(View, H) != nullptr; };
 	for (const sov::City& C : S.cities)
 	{
-		if (Game.visibility(View, C.pos) == sov::Visibility::Unrevealed)
+		if (Game.visibility(View, C.pos) == sov::Visibility::Unrevealed || Remembered(C.pos))
 		{
 			continue;
 		}
@@ -263,7 +290,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		}
 		for (const sov::CityWonder& W : C.wonders)
 		{
-			if (Game.visibility(View, W.pos) == sov::Visibility::Unrevealed)
+			if (Game.visibility(View, W.pos) == sov::Visibility::Unrevealed || Remembered(W.pos))
 			{
 				continue;
 			}
@@ -277,7 +304,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		for (const sov::CityDistrict& D : C.districts)
 		{
 			const std::string& Type = Rules.districts[static_cast<size_t>(D.type)].id;
-			if (D.pos == C.pos || Type == "DISTRICT_CITY_CENTER" || Game.visibility(View, D.pos) == sov::Visibility::Unrevealed)
+			if (D.pos == C.pos || Type == "DISTRICT_CITY_CENTER" || Game.visibility(View, D.pos) == sov::Visibility::Unrevealed || Remembered(D.pos))
 			{
 				continue;
 			}
@@ -294,8 +321,58 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 	for (int32 I = 0; I < S.grid.size(); ++I)
 	{
 		const sov::Hex H = S.grid.at(I);
-		if (S.plot(H).village && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Villages.Add(FIntPoint(H.x, H.y));
-		if (S.plot(H).antiquity && Game.seesAntiquity(View) && Game.visibility(View, H) != sov::Visibility::Unrevealed) M.Antiquity.Add(FIntPoint(H.x, H.y));
+		const sov::PlotMemory* Mem = Game.lastSeen(View, H);
+		if (!Mem)
+		{
+			continue;
+		}
+		if (Mem->city != sov::kNoCity && Mem->cityOwner != sov::kNoPlayer)
+		{
+			// The city as it was: its name, size and owner then, at full health.
+			FSovCityMarker& Marker = M.Cities.AddDefaulted_GetRef();
+			Marker.Id = Mem->city;
+			Marker.X = H.x;
+			Marker.Y = H.y;
+			Marker.Owner = Mem->cityOwner;
+			Marker.Color = SovPlayerColor(Game, Mem->cityOwner);
+			Marker.Name = UTF8_TO_TCHAR(Mem->cityName.c_str());
+			Marker.Population = Mem->cityPopulation;
+			Marker.Hp = Marker.MaxHp = Game.cityMaxHp();
+			Marker.bCapital = Mem->capital;
+			Marker.Era = Game.playerEra(Mem->cityOwner);
+			if (const sov::TypeIndex Civ = S.players[static_cast<size_t>(Mem->cityOwner)].civ; Civ != sov::kNone)
+			{
+				Marker.Civ = UTF8_TO_TCHAR(Rules.civs[static_cast<size_t>(Civ)].id.c_str());
+			}
+		}
+		if (Mem->district != sov::kNone && Rules.districts[static_cast<size_t>(Mem->district)].id != "DISTRICT_CITY_CENTER")
+		{
+			FSovDistrictMarker& DM = M.Districts.AddDefaulted_GetRef();
+			DM.X = H.x;
+			DM.Y = H.y;
+			DM.Type = UTF8_TO_TCHAR(Rules.districts[static_cast<size_t>(Mem->district)].id.c_str());
+			DM.Color = SovPlayerColor(Game, Mem->owner);
+			DM.bComplete = Mem->districtComplete;
+			DM.bPillaged = Mem->districtPillaged;
+		}
+		if (Mem->wonder != sov::kNone)
+		{
+			FSovWonderMarker& WM = M.Wonders.AddDefaulted_GetRef();
+			WM.X = H.x;
+			WM.Y = H.y;
+			WM.bComplete = Mem->wonderComplete;
+			WM.Name = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(Mem->wonder)].name.c_str());
+			WM.Id = UTF8_TO_TCHAR(Rules.buildings[static_cast<size_t>(Mem->wonder)].id.c_str());
+		}
+	}
+
+	for (int32 I = 0; I < S.grid.size(); ++I)
+	{
+		const sov::Hex H = S.grid.at(I);
+		if (Game.visibility(View, H) == sov::Visibility::Unrevealed) continue;
+		const sov::Plot P = SeenPlot(Game, View, H);
+		if (P.village) M.Villages.Add(FIntPoint(H.x, H.y));
+		if (P.antiquity && Game.seesAntiquity(View)) M.Antiquity.Add(FIntPoint(H.x, H.y));
 	}
 
 	for (const sov::Unit& U : S.units)
@@ -352,7 +429,9 @@ TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int
 	{
 		return Out;
 	}
-	const sov::Plot& P = S.plot(H);
+	// Under the fog it describes the plot as last seen (no yields: the city working it may have changed).
+	const sov::PlotMemory* Mem = Game.lastSeen(static_cast<sov::PlayerId>(Viewer), H);
+	const sov::Plot P = SeenPlot(Game, static_cast<sov::PlayerId>(Viewer), H);
 	auto Str = [](const std::string& V) { return FString(UTF8_TO_TCHAR(V.c_str())); };
 	FString Land = Str(R.terrains[static_cast<size_t>(P.terrain)].name);
 	if (P.feature != sov::kNone)
@@ -375,7 +454,14 @@ TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int
 	{
 		Out.Add(Str(R.improvements[static_cast<size_t>(P.improvement)].name) + (P.pillagedTurns > 0 ? TEXT(" (pillaged)") : TEXT("")));
 	}
-	if (const sov::CityDistrict* Dist = S.districtAt(H))
+	if (Mem)
+	{
+		if (Mem->district != sov::kNone)
+		{
+			Out.Add(Str(R.districts[static_cast<size_t>(Mem->district)].name) + (Mem->districtComplete ? TEXT("") : TEXT(" (being built)")));
+		}
+	}
+	else if (const sov::CityDistrict* Dist = S.districtAt(H))
 	{
 		Out.Add(Str(R.districts[static_cast<size_t>(Dist->type)].name) + (Dist->complete ? TEXT("") : TEXT(" (being built)")));
 	}
@@ -384,8 +470,8 @@ TArray<FString> SovPlotTooltip(const sov::Game& Game, int32 Viewer, int32 X, int
 		const sov::Player& O = S.players[static_cast<size_t>(P.owner)];
 		const FString Who = O.cityState != sov::kNone ? Str(R.cityStates[static_cast<size_t>(O.cityState)].name)
 			: O.civ != sov::kNone ? Str(R.civs[static_cast<size_t>(O.civ)].name) : FString(TEXT("Free Cities"));
-		const sov::City* C = P.city != sov::kNoCity ? S.city(P.city) : nullptr;
-		Out.Add(C ? FString::Printf(TEXT("%s, %s"), *Str(C->name), *Who) : Who);
+		const sov::City* C = !Mem && P.city != sov::kNoCity ? S.city(P.city) : nullptr;
+		Out.Add(C ? FString::Printf(TEXT("%s, %s"), *Str(C->name), *Who) : Mem && Mem->city != sov::kNoCity ? FString::Printf(TEXT("%s, %s"), *Str(Mem->cityName), *Who) : Who);
 		if (C)
 		{
 			// What working it would bring that city.
