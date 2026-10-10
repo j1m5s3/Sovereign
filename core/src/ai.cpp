@@ -54,6 +54,7 @@ constexpr int kStageDistance = 4;     // an operation gathers this far from its 
 constexpr int kAssaultRatio = 200;    // own strength vs the city's to start an assault (AiOperationTeams: 2x)
 constexpr int kWalledRatio = 300;     // against walls (Civ: 2x to start, 4x to continue, with siege)
 constexpr int kReinforceRange = 6;    // units this close come to a threatened city
+constexpr int kNavalReach = 12;      // a warship at war sails on enemy ships this close
 constexpr int kAllyAidRange = 8;      // units this close go to an ally's city threatened by a shared enemy
 
 size_t at(TypeIndex i) { return static_cast<size_t>(i); }
@@ -63,6 +64,8 @@ size_t yi(YieldType y) { return static_cast<size_t>(y); }
 int power(const UnitType& t) { return std::max(t.combat, t.ranged); }
 
 bool isArmy(const UnitType& t) { return t.layer == UnitLayer::Military && t.domain == Domain::Land && power(t) > 0; }
+
+bool isWarship(const UnitType& t) { return t.layer == UnitLayer::Military && t.domain == Domain::Sea && power(t) > 0; }
 
 // --- per-turn view ---------------------------------------------------------------
 // What the grand strategy asks of the economy and the army this turn (percentages are of the
@@ -1514,7 +1517,7 @@ void attacks(View& v) {
         std::vector<UnitId> order;
         for (const Unit& u : v.s().units) {
             const UnitType& ut = v.r.units[at(u.type)];
-            if (u.owner == v.me && (isArmy(ut) || ut.domain == Domain::Air) && u.movesLeft > Fixed() && u.attacks < v.game.maxAttacks(u))
+            if (u.owner == v.me && (isArmy(ut) || isWarship(ut) || ut.domain == Domain::Air) && u.movesLeft > Fixed() && u.attacks < v.game.maxAttacks(u))
                 order.push_back(u.id);
         }
         std::stable_sort(order.begin(), order.end(), [&](UnitId a, UnitId b) {
@@ -1606,6 +1609,63 @@ bool explore(View& v, UnitId id) {
         if (reach.empty() && i + 1 < tries) reach = v.game.moveReach(id, true);
     }
     return false;
+}
+
+// Warships (10: naval superiority operation): at war, each sails on the nearest enemy ship in sight, else the nearest
+// enemy city on the coast, and the attacks after it strike what is in reach; hurt ships and ships at peace go home,
+// beside the nearest of our coastal cities (its garrison holds the city plot).
+void navy(View& v) {
+    const GameState& s = v.s();
+    std::vector<UnitId> ships;
+    for (const Unit& u : s.units) {
+        if (u.owner == v.me && u.movesLeft > Fixed() && isWarship(v.r.units[at(u.type)])) ships.push_back(u.id);
+    }
+    if (ships.empty()) return;
+    const auto coastal = [&](const City& c) {
+        for (const Hex& h : s.grid.within(c.pos, 1)) {
+            if (v.r.terrains[at(s.plot(h).terrain)].shallowWater) return true;
+        }
+        return false;
+    };
+    std::vector<Hex> homes, targets;
+    for (const City& c : s.cities) {
+        if (!coastal(c)) continue;
+        if (c.owner == v.me) homes.push_back(c.pos);
+        else if (v.hostile(c.owner) && v.game.visibility(v.me, c.pos) != Visibility::Unrevealed) targets.push_back(c.pos);
+    }
+    std::vector<Hex> foes;
+    if (!v.enemies.empty()) {
+        for (const Unit& o : s.units) {
+            if (v.hostile(o.owner) && isWarship(v.r.units[at(o.type)]) && v.game.unitVisibleTo(v.me, o)) foes.push_back(o.pos);
+        }
+    }
+    const auto nearest = [&](Hex from, const std::vector<Hex>& among, int within) -> std::optional<Hex> {
+        std::optional<Hex> best;
+        int bestD = within + 1;
+        for (const Hex& h : among) {
+            const int d = s.grid.distance(from, h);
+            if (d < bestD) {
+                bestD = d;
+                best = h;
+            }
+        }
+        return best;
+    };
+    for (UnitId id : ships) {
+        const Unit* u = s.unit(id);
+        if (!u) continue;
+        std::optional<Hex> goal;
+        if (u->hp >= kHealBelow && !v.enemies.empty()) {
+            goal = nearest(u->pos, foes, kNavalReach);
+            if (!goal) goal = nearest(u->pos, targets, INT_MAX - 1);
+        }
+        if (goal) {
+            if (!approach(v, id, *goal, false)) rest(v, id);
+            continue;
+        }
+        const std::optional<Hex> home = nearest(u->pos, homes, INT_MAX - 1);
+        if (!home || s.grid.distance(u->pos, *home) <= 1 || !approach(v, id, *home, false)) rest(v, id);
+    }
 }
 
 void military(View& v) {
@@ -1867,6 +1927,40 @@ int desiredArmy(const View& v) {
     return std::min(want * v.posture.army / 100, 6 * n + 6);
 }
 
+// The warships wanted (10: Naval strategy, naval superiority operation): one per two coastal cities under the Naval
+// strategy, one per three at war with a civ that has a coastal city, none otherwise.
+int desiredFleet(const View& v) {
+    const GameState& s = v.s();
+    const auto coastal = [&](const City& c) {
+        for (const Hex& h : s.grid.within(c.pos, 1)) {
+            if (v.r.terrains[at(s.plot(h).terrain)].shallowWater) return true;
+        }
+        return false;
+    };
+    int ours = 0;
+    for (CityId id : v.cities) ours += coastal(*s.city(id)) ? 1 : 0;
+    if (ours == 0) return 0;
+    if (v.posture.has(Strategy::Naval)) return (ours + 1) / 2;
+    for (const City& c : s.cities) {
+        if (v.hostile(c.owner) && v.game.isMajorCiv(c.owner) && coastal(c)) return (ours + 2) / 3;
+    }
+    return 0;
+}
+
+std::optional<ProductionItem> bestWarship(const View& v, const std::vector<ProductionItem>& items) {
+    std::optional<ProductionItem> best;
+    int bestScore = INT_MIN;
+    for (const ProductionItem& it : items) {
+        if (it.kind != ProductionKind::Unit || it.formation != 0 || !isWarship(v.r.units[at(it.type)])) continue;
+        const int score = power(v.r.units[at(it.type)]) * 100 - v.game.productionCost(v.me, it) / 2;
+        if (score > bestScore) {
+            bestScore = score;
+            best = it;
+        }
+    }
+    return best;
+}
+
 std::optional<ProductionItem> bestMilitaryUnit(const View& v, const std::vector<ProductionItem>& items) {
     const bool wantRanged = v.ranged * 2 < v.military - v.ranged;
     // A war on walled cities wants one siege unit per four soldiers.
@@ -1994,6 +2088,16 @@ void production(View& v) {
         const City& oc = *s.city(other);
         wantScout = wantScout && !(!oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && v.r.units[at(oc.queue.front().type)].unitClass == "RECON");
     }
+    // Warships afloat or in training against the fleet wanted.
+    const int wantFleet = desiredFleet(v);
+    int fleet = 0;
+    if (wantFleet > 0) {
+        for (const Unit& u : s.units) fleet += u.owner == v.me && isWarship(v.r.units[at(u.type)]) ? 1 : 0;
+        for (CityId other : v.cities) {
+            const City& oc = *s.city(other);
+            fleet += !oc.queue.empty() && oc.queue.front().kind == ProductionKind::Unit && isWarship(v.r.units[at(oc.queue.front().type)]) ? 1 : 0;
+        }
+    }
     for (CityId cid : needing) {
         const City& c = *s.city(cid);
         const int ci = cityIndex(v, cid);
@@ -2002,6 +2106,7 @@ void production(View& v) {
         std::vector<ProductionItem> items = g.buildableItems(cid);
         if (items.empty()) continue;
         std::optional<ProductionItem> soldier = bestMilitaryUnit(v, items);
+        const std::optional<ProductionItem> warship = fleet < wantFleet ? bestWarship(v, items) : std::nullopt;
         const bool needGuard = !hasGarrison(v, c) && v.military < static_cast<int>(v.cities.size());
         // No new army while the treasury runs down (maintenance), unless at war.
         const bool wantArmy = v.military < desiredArmy(v) && (!v.enemies.empty() || g.goldPerTurn(v.me) > Fixed());
@@ -2096,6 +2201,7 @@ void production(View& v) {
                     // A Builder works for all our cities: it is worth the plots this city works unimproved, or those all
                     // our cities work beyond the charges our Builders carry, whichever are more.
                     else if (isBuilder(t)) value = wantBuilder ? 160 + 40 * std::min(std::max(unimproved, workedWork - charges), 6) : 0;
+                    else if (warship && it == *warship) value = v.enemies.empty() ? 150 : 260;
                     else if (soldier && it == *soldier) value = (needGuard || threatened) ? 700 : wantArmy ? (v.enemies.empty() ? 150 : 260) : 0;
                     else if (t.domain == Domain::Air) {
                         int aircraft = 0, fighters = 0;
@@ -2281,6 +2387,7 @@ void production(View& v) {
             if (isBuilder(t)) charges += t.buildCharges;
             if (t.id == "UNIT_TRADER") ++traders;
             v.military += isArmy(t) && t.unitClass != "RECON";
+            fleet += isWarship(t);
         }
     }
 }
@@ -3297,6 +3404,7 @@ void playTurn(Game& game) {
         for (const auto& [a, b] : merges) game.submit(Command::formUnit(v.me, a, b));
     }
     military(v);
+    navy(v);
     attacks(v);  // units that moved into reach
     // Units standing in enemy land with moves to spare pillage what is there (05: Pillage).
     std::vector<UnitId> raiders;
