@@ -309,6 +309,7 @@ public:
     static PolicySlot slotType(const GovernmentType& government, int slot);
     // A player's slots are the government's, then those of the wonders they hold (Alhambra, Forbidden City...).
     PolicySlot policySlotType(PlayerId player, int slot) const;
+    int wildcardsTaken(PlayerId player) const;  // World Ideology B: the government's Wildcard slot it takes (0 or 1)
     void syncPolicySlots(PlayerId player);  // sizes the player's slots to their government and wonders
     // ---- improvements and resources (01-map-and-terrain.md, 02-cities.md)
     bool resourceVisible(PlayerId player, Hex plot) const;

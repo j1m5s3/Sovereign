@@ -135,12 +135,15 @@ Game::Output Game::outputPerTurn(PlayerId player) const {
         if (!anarchy) {
             out.science += y[idx(YieldType::Science)];
             out.culture += y[idx(YieldType::Culture)];
+            out.faith += y[idx(YieldType::Faith)];
         }
-        out.faith += y[idx(YieldType::Faith)];
     }
+    // As the turn itself counts them (Game::processCities): a founder's beliefs and alliances, none in anarchy.
     if (!anarchy) {
-        out.science += allianceShare(player, YieldType::Science);
-        out.culture += allianceShare(player, YieldType::Culture);
+        const Yields fy = founderYields(player);
+        out.science += fy[idx(YieldType::Science)] + allianceShare(player, YieldType::Science);
+        out.culture += fy[idx(YieldType::Culture)] + allianceShare(player, YieldType::Culture);
+        out.faith += fy[idx(YieldType::Faith)];
     }
     return out;
 }
@@ -455,6 +458,8 @@ bool Game::canAdoptGovernment(PlayerId player, TypeIndex gov, CommandError* why)
     const Player& p = state_.players[static_cast<size_t>(player)];
     if (!inRange(gov, rules_->governments.size()) || gov == p.government || p.anarchyTurns > 0)
         return fail(CommandError::CannotAdoptGovernment);
+    // An interregnum is the ruler's anarchy (leader doc section 5): no government change until it ends.
+    if (p.interregnumTurns > 0) return fail(CommandError::ChangesLocked);
     const GovernmentType& g = rules_->governments[static_cast<size_t>(gov)];
     // A government with no unlock (Chiefdom) arrives with the first civic.
     if (g.unlock.none()) {
@@ -476,12 +481,23 @@ PolicySlot Game::slotType(const GovernmentType& g, int slot) {
     return PolicySlot::Wildcard;
 }
 
+// World Ideology option B (World Congress): one Wildcard slot fewer under the chosen government, taken from the
+// government's own Wildcard slots (never a wonder's slot); 0 when it has none to give.
+int Game::wildcardsTaken(PlayerId player) const {
+    const Player& p = state_.players[static_cast<size_t>(player)];
+    if (p.government == kNone) return 0;
+    const PassedResolution* wi = passed(ResolutionKind::WorldIdeology);
+    if (!wi || wi->target != p.government || wi->option == 0) return 0;
+    return rules_->governments[static_cast<size_t>(p.government)].slots[static_cast<size_t>(PolicySlot::Wildcard)] > 0 ? 1 : 0;
+}
+
 PolicySlot Game::policySlotType(PlayerId player, int slot) const {
     const Player& p = state_.players[static_cast<size_t>(player)];
     if (p.government == kNone) return PolicySlot::Wildcard;
     const GovernmentType& g = rules_->governments[static_cast<size_t>(p.government)];
-    if (slot < g.totalSlots()) return slotType(g, slot);
-    slot -= g.totalSlots();
+    const int own = g.totalSlots() - wildcardsTaken(player);  // Wildcard slots come last among the government's
+    if (slot < own) return slotType(g, slot);
+    slot -= own;
     int extra[4] = {0, 0, 0, 0};
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
@@ -506,9 +522,10 @@ void Game::syncPolicySlots(PlayerId player) {
             for (int n : rules_->buildings[static_cast<size_t>(b)].policySlots) want += static_cast<size_t>(n);
         }
     }
-    // World Ideology (World Congress): a Wildcard slot more (A) or fewer (B) under the chosen government.
-    if (const PassedResolution* wi = passed(ResolutionKind::WorldIdeology); wi && wi->target == p.government)
-        want = wi->option == 0 ? want + 1 : (want > 0 ? want - 1 : 0);
+    // World Ideology (World Congress): a Wildcard slot more (A) or fewer (B, from the government's own) under the
+    // chosen government.
+    if (const PassedResolution* wi = passed(ResolutionKind::WorldIdeology); wi && wi->target == p.government && wi->option == 0) ++want;
+    want -= static_cast<size_t>(wildcardsTaken(player));
     if (p.policies.size() == want) return;
     // A slot gained opens a free change window, as a civic does (04: "a new slot is gained").
     if (want > p.policies.size() && p.anarchyTurns == 0 && p.interregnumTurns == 0) p.freeChanges = true;

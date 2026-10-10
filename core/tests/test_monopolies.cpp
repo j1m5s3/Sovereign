@@ -80,6 +80,12 @@ TEST(a_monopoly_pays_gold_and_tourism) {
     auto plain = Game::fromScenario(rules(), std::move(off));
     CHECK_EQ(g->goldPerTurn(0), plain->goldPerTurn(0) + Fixed::fromInt(6));
     CHECK_EQ(plain->monopolySources(0), 0);
+    // Anarchy: no monopoly Gold (04).
+    GameState a = monopolyState(true, true), b = monopolyState(true, true);
+    a.players[0].anarchyTurns = 2;
+    b.players[0].anarchyTurns = 2;
+    b.setup.monopolies = false;
+    CHECK_EQ(Game::fromScenario(rules(), std::move(a))->goldPerTurn(0), Game::fromScenario(rules(), std::move(b))->goldPerTurn(0));
 }
 
 TEST(only_improved_sources_count_toward_a_monopoly) {
