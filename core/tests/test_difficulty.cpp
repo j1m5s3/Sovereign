@@ -20,11 +20,13 @@ int unitsOf(const Game& g, PlayerId p, const char* type) {
     return n;
 }
 
-std::unique_ptr<Game> start(int difficulty) {
+std::unique_ptr<Game> start(int difficulty, int cityStates = -1, int era = 0) {
     GameSetup setup;
     setup.seed = 3;
     setup.mapSize = "MAPSIZE_DUEL";
     setup.difficulty = difficulty;
+    setup.cityStates = cityStates;
+    setup.startEra = era;
     setup.players.push_back({rules().civs[0].id, true});
     setup.players.push_back({rules().civs[1].id, false});
     std::string err;
@@ -39,6 +41,31 @@ TEST(difficulty_levels_from_setup) {
     CHECK_EQ(r.difficulties[7].aiYieldPercent, 32);
     CHECK_EQ(r.difficulties[5].aiYieldPercent, 0);  // Sovereign: no AI bonuses below Immortal
     CHECK_EQ(r.difficulties[0].humanCombat, 3);
+}
+
+// City-states start with more Warriors and Ancient Walls at Immortal and Deity (00: Difficulty levels), and in a later
+// era's start an AI's extra Warriors are that era's defender (game-setup.md, AI-only starting units).
+TEST(city_states_and_era_starts_follow_the_difficulty) {
+    const TypeIndex walls = rules().building("BUILDING_ANCIENT_WALLS");
+    for (const int level : {3, 6, 7}) {
+        auto g = start(level, 2);
+        REQUIRE(g);
+        int cityStates = 0;
+        for (const Player& p : g->state().players) {
+            if (p.cityState == kNone) continue;
+            ++cityStates;
+            CHECK_EQ(unitsOf(*g, p.id, "UNIT_WARRIOR"), 2 + (level == 7 ? 3 : level == 6 ? 2 : 0));
+            for (const City& c : g->state().cities) {
+                if (c.owner == p.id) CHECK_EQ(c.has(walls), level >= 6);
+            }
+        }
+        CHECK_EQ(cityStates, 2);
+    }
+    const int renaissance = rules().era("ERA_RENAISSANCE");
+    auto g = start(7, 0, renaissance);
+    REQUIRE(g);
+    CHECK_EQ(unitsOf(*g, 1, "UNIT_PIKEMAN"), unitsOf(*g, 0, "UNIT_PIKEMAN") + 4);
+    CHECK_EQ(unitsOf(*g, 1, "UNIT_WARRIOR"), unitsOf(*g, 0, "UNIT_WARRIOR"));
 }
 
 TEST(deity_ai_starts_with_extra_units_and_the_human_does_not) {

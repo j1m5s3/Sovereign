@@ -164,6 +164,7 @@ const char* commandErrorName(CommandError e) {
         case CommandError::LeaderNeeded: return "LeaderNeeded";
         case CommandError::CannotSucceed: return "CannotSucceed";
         case CommandError::CannotGuard: return "CannotGuard";
+        case CommandError::DedicationNeeded: return "DedicationNeeded";
         case CommandError::CannotSendAgent: return "CannotSendAgent";
         case CommandError::CannotTakeStance: return "CannotTakeStance";
         case CommandError::BattlePending: return "BattlePending";

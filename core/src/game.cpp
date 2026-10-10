@@ -92,11 +92,17 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
     for (Player& p : st.players) {
         if (p.barbarian) continue;
         if (p.cityState != kNone) {
-            // A city-state starts with its city and two Warriors (game-setup.md, Starting units (city-states)).
+            // A city-state starts with its city and two Warriors (game-setup.md, Starting units (city-states)), more
+            // Warriors and Ancient Walls at Immortal and Deity (00: Difficulty levels).
             Unit& settler = game->spawnUnit(rules.unit("UNIT_SETTLER"), p.id, p.startPos);
             game->applyFoundCity(Command::foundCity(p.id, settler.id));
-            for (int k = 0; k < 2; ++k) {
-                if (auto spot = game->unitSpawnPlot(*st.cityAt(p.startPos), rules.unit("UNIT_WARRIOR"))) game->spawnUnit(rules.unit("UNIT_WARRIOR"), p.id, *spot);
+            City& home = *st.city(st.cityAt(p.startPos)->id);
+            for (int k = 0; k < 2 + game->difficulty().cityStateExtraWarriors; ++k) {
+                if (auto spot = game->unitSpawnPlot(home, rules.unit("UNIT_WARRIOR"), 2)) game->spawnUnit(rules.unit("UNIT_WARRIOR"), p.id, *spot);
+            }
+            if (const TypeIndex walls = rules.building("BUILDING_ANCIENT_WALLS"); game->difficulty().cityStateWalls && walls != kNone && !home.has(walls)) {
+                home.buildings.insert(std::lower_bound(home.buildings.begin(), home.buildings.end(), walls), walls);
+                home.wallHp = game->cityMaxWallHp(home);
             }
             continue;
         }
@@ -118,9 +124,11 @@ std::unique_ptr<Game> Game::create(const Rules& rules, const GameSetup& setup, s
         // AI civs at Immortal and Deity start with extra units (00-overview: AI starting units).
         if (game->difficultyAi(p.id)) {
             const DifficultyType& d = game->difficulty();
-            const std::pair<const char*, int> extras[] = {{"UNIT_SETTLER", d.aiExtraSettlers}, {"UNIT_WARRIOR", d.aiExtraWarriors}, {"UNIT_BUILDER", d.aiExtraBuilders}};
-            for (const auto& [unitId, count] : extras) {
-                const TypeIndex t = rules.unit(unitId);
+            // In a later era's start the extra Warriors are that era's defender (game-setup.md, AI-only starting units).
+            const EraStartType* es = setup.startEra > 0 ? rules.eraStart(setup.startEra) : nullptr;
+            const TypeIndex defender = es && es->aiDefender != kNone ? es->aiDefender : rules.unit("UNIT_WARRIOR");
+            const std::pair<TypeIndex, int> extras[] = {{rules.unit("UNIT_SETTLER"), d.aiExtraSettlers}, {defender, d.aiExtraWarriors}, {rules.unit("UNIT_BUILDER"), d.aiExtraBuilders}};
+            for (const auto& [t, count] : extras) {
                 if (t == kNone) continue;
                 const UnitLayer layer = rules.units[static_cast<size_t>(t)].layer;
                 for (int k = 0; k < count; ++k) {
@@ -408,6 +416,8 @@ CommandError Game::validate(const Command& c, std::optional<CheckedPath>* movePa
                                          [&](const City& city) { return city.owner == c.player; });
         if (hasCity && p.techs.current == kNone && !availableTechs(c.player).empty()) return CommandError::ResearchNeeded;
         if (hasCity && p.civics.current == kNone && !availableCivics(c.player).empty()) return CommandError::CivicNeeded;
+        // A dedication left unchosen is lost when the next era begins (00: end-turn blockers).
+        if (p.dedicationsPending > 0 && !availableDedications(c.player).empty()) return CommandError::DedicationNeeded;
         return CommandError::Ok;
     }
     switch (c.type) {

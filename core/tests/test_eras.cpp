@@ -153,6 +153,7 @@ TEST(the_world_era_sets_each_civs_age) {
     // Out of a Dark Age straight into a Golden one: a Heroic Age.
     GameState next = g->state();
     next.players[1].eraScore = 100;
+    for (Player& p : next.players) p.dedicationsPending = 0;  // chosen, or the turn would not end (00: blockers)
     next.turn = next.gameEraStart + 61;
     next.eraEndsOn = next.turn;
     auto g2 = Game::fromScenario(rules(), std::move(next));
@@ -345,6 +346,23 @@ TEST(a_dedication_scores_in_a_normal_age_and_rewards_in_a_golden_one) {
     auto h = Game::fromScenario(rules(), std::move(s));
     CHECK_EQ(h->purchaseCost(0, builder), normalCost * 70 / 100 / 5 * 5);
     CHECK_EQ(h->maxMoves(*h->state().unit(b)), rules().units[at(rules().unit("UNIT_BUILDER"))].moves + 2);
+}
+
+// A dedication owed blocks the end of the turn while one is open (00: end-turn blockers): it would be lost otherwise.
+TEST(an_owed_dedication_blocks_the_end_of_the_turn) {
+    GameState s = eraState();
+    s.gameEra = rules().era("ERA_CLASSICAL");
+    s.players[0].human = true;
+    s.players[0].dedicationsPending = 1;
+    for (Player& p : s.players) {
+        p.techs.current = rules().tech("TECH_POTTERY");
+        p.civics.current = rules().civic("CIVIC_CODE_OF_LAWS");
+    }
+    auto g = Game::fromScenario(rules(), std::move(s));
+    for (UnitId id : g->unitsNeedingOrders(0)) g->submit(Command::setActivity(0, id, Activity::Skip));
+    CHECK_EQ(g->submit(Command::endTurn(0)), CommandError::DedicationNeeded);
+    REQUIRE(g->submit(Command::chooseDedication(0, g->availableDedications(0).front())) == CommandError::Ok);
+    CHECK_EQ(g->submit(Command::endTurn(0)), CommandError::Ok);
 }
 
 // Free Inquiry, Pen, Brush, and Voice, Heartbeat of Steam and Sky and Stars (09): +1 era score in a Normal Age for each

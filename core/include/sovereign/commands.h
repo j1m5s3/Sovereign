@@ -352,6 +352,7 @@ enum class CommandError : uint8_t {
     CannotUpgrade,
     CannotTreatWithClan,
     CannotGuard,
+    DedicationNeeded,  // end turn: a dedication waits to be chosen
 };
 
 // The items a ProposeDeal command carries (empty when its payload is malformed).

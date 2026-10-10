@@ -169,6 +169,11 @@ inline void playTurn(sov::Game& game, sov::Rng& rng) {
         std::vector<TypeIndex> civics = game.availableCivics(me);
         if (!civics.empty()) game.submit(Command::chooseCivic(me, civics[rng.below(static_cast<uint32_t>(civics.size()))]));
     }
+    // Dedications: a random open one while any is owed (an end-turn blocker).
+    for (int guard = 0; guard < 3 && pl.dedicationsPending > 0; ++guard) {
+        const std::vector<TypeIndex> open = game.availableDedications(me);
+        if (open.empty() || game.submit(Command::chooseDedication(me, open[rng.below(static_cast<uint32_t>(open.size()))])) != CommandError::Ok) break;
+    }
     for (size_t g = game.rules().governments.size(); g-- > 0;) {
         const GovernmentType& gt = game.rules().governments[g];
         const int current = pl.government == kNone ? -1 : game.rules().governments[static_cast<size_t>(pl.government)].tier;
