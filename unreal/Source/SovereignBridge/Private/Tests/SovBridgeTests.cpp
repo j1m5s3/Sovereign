@@ -141,9 +141,15 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 	{
 		Units += U.owner == Me || G.visibility(Me, U.pos) == sov::Visibility::Visible;
 	}
+	// Cities as the viewer knows them: live where in sight or never snapshotted, as last seen under the fog.
 	for (const sov::City& C : S.cities)
 	{
-		Cities += G.visibility(Me, C.pos) != sov::Visibility::Unrevealed;
+		Cities += G.visibility(Me, C.pos) != sov::Visibility::Unrevealed && !G.lastSeen(Me, C.pos);
+	}
+	for (int32 i = 0; i < S.grid.size(); ++i)
+	{
+		const sov::PlotMemory* Mem = G.lastSeen(Me, S.grid.at(i));
+		Cities += Mem && Mem->city != sov::kNoCity && Mem->cityOwner != sov::kNoPlayer;
 	}
 	int32 MirrorVisible = 0;
 	for (const FSovTile& T : M.Tiles)
@@ -161,6 +167,52 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("no marker on unrevealed plots"), G.visibility(Me, sov::Hex{U.X, U.Y}) != sov::Visibility::Unrevealed);
 	}
 	TestEqual(TEXT("unexplored = the rest"), M.Unexplored.Num(), S.grid.size() - Revealed);
+	for (const FSovTile& T : M.Tiles)
+	{
+		// A fogged plot's owner is the one last seen there.
+		if (const sov::PlotMemory* Mem = G.lastSeen(Me, sov::Hex{T.X, T.Y}))
+		{
+			TestEqual(TEXT("fogged owner as last seen"), T.Owner, static_cast<int32>(Mem->owner));
+		}
+	}
+
+	// A plot under the fog is drawn as last seen (Game::lastSeen), not as it is now: plant a memory of a farmed
+	// plot with a city on it, owned by someone else, on a fogged plot of seat 0's.
+	{
+		sov::GameState Copy = S;
+		int32 Fogged = -1;
+		for (int32 i = 0; i < Copy.grid.size() && Fogged < 0; ++i)
+		{
+			const sov::Hex H = Copy.grid.at(i);
+			if (G.visibility(Me, H) == sov::Visibility::Revealed && !Copy.cityAt(H) && !Copy.districtAt(H)) Fogged = i;
+		}
+		if (!TestTrue(TEXT("seat 0 has a fogged plot"), Fogged >= 0)) return false;
+		const sov::Hex H = Copy.grid.at(Fogged);
+		const sov::PlayerId Then = Copy.plot(H).owner == 1 ? 2 : 1;
+		sov::Player& P0 = Copy.players[0];
+		P0.seen.resize(P0.visibility.size());
+		sov::PlotMemory& Mem = P0.seen[static_cast<size_t>(Fogged)];
+		Mem = sov::PlotMemory{};
+		Mem.known = true;
+		Mem.terrain = Copy.plot(H).terrain;
+		Mem.owner = Then;
+		Mem.improvement = G.rules().improvement("IMPROVEMENT_FARM");
+		Mem.city = 9999;
+		Mem.cityOwner = Then;
+		Mem.cityName = "Atlantis";
+		Mem.cityPopulation = 4;
+		const std::unique_ptr<sov::Game> Fog = sov::Game::fromScenario(G.rules(), std::move(Copy));
+		if (!TestTrue(TEXT("the memory is read back"), Fog && Fog->lastSeen(Me, H) != nullptr)) return false;
+		const FSovMirror FM = BuildMirror(*Fog, Me);
+		const FSovTile* T = FM.Tiles.FindByPredicate([&](const FSovTile& X) { return X.X == H.x && X.Y == H.y; });
+		if (!TestNotNull(TEXT("the fogged tile is drawn"), T)) return false;
+		TestEqual(TEXT("its owner then"), T->Owner, static_cast<int32>(Then));
+		TestEqual(TEXT("its farm then"), T->Improvement, FString(TEXT("IMPROVEMENT_FARM")));
+		const FSovCityMarker* C = FM.Cities.FindByPredicate([&](const FSovCityMarker& X) { return X.X == H.x && X.Y == H.y; });
+		TestTrue(TEXT("the city then"), C && C->Name == TEXT("Atlantis") && C->Population == 4 && C->Owner == Then);
+		const TArray<FString> Tip = SovPlotTooltip(*Fog, Me, H.x, H.y);
+		TestTrue(TEXT("the tooltip names the city then"), Tip.ContainsByPredicate([](const FString& L) { return L.StartsWith(TEXT("Atlantis, ")); }));
+	}
 
 	// Each arm and era gets its figure (kit_figures.py).
 	const sov::Rules& R = G.rules();
