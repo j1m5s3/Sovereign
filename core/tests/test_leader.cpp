@@ -698,6 +698,95 @@ TEST(presence_aura_and_builder_king) {
     CHECK_EQ(g2->cityReport(city).yields[static_cast<size_t>(YieldType::Production)], before + Fixed::fromInt(2));
 }
 
+TEST(the_capital_counterspies_and_victor_guard_the_ruler) {
+    // Leader doc section 6 "Defenses": staying in the capital, counterspies in the city and Victor the Castellan.
+    CityId capital = kNoCity, town = kNoCity;
+    UnitId leader = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            capital = addCity(s, 0, {4, 4}, true);
+            town = addCity(s, 0, {10, 4}, false);
+            leader = addLeader(s, 0, {10, 4});
+        },
+        false);
+    auto defenseOf = [&](const GameState& s) {
+        auto h = Game::fromScenario(rules(), GameState(s));
+        return h->leaderDefenseVsAssassin(*h->state().unit(leader));
+    };
+    const GameState base = g->state();
+    const int inTown = defenseOf(base);
+    GameState s = base;
+    s.unit(leader)->pos = Hex{4, 4};
+    CHECK_EQ(defenseOf(s), inTown + rules().globalInt("ASSASSIN_CAPITAL_DEFENSE"));
+    // A level-2 counterspy at work in the town; one still travelling or on another mission does nothing.
+    s = base;
+    Agent spy;
+    spy.id = s.nextAgentId++;
+    spy.owner = 0;
+    spy.spy = true;
+    spy.level = 2;
+    spy.city = town;
+    spy.mission = SpyMission::Counterspy;
+    s.agents.push_back(spy);
+    CHECK_EQ(defenseOf(s), inTown + 2 * rules().globalInt("ASSASSIN_COUNTERSPY_DEFENSE"));
+    s.agents.back().travel = 1;
+    CHECK_EQ(defenseOf(s), inTown);
+    s.agents.back().travel = 0;
+    s.agents.back().mission = SpyMission::ListeningPost;
+    CHECK_EQ(defenseOf(s), inTown);
+    // An established Victor with one promotion past Redoubt; still establishing, he does nothing.
+    s = base;
+    Governor victor;
+    victor.type = rules().governor("GOVERNOR_VICTOR");
+    victor.city = town;
+    const auto& promos = rules().governors[at(victor.type)].promotions;
+    victor.promotions = {promos[0], promos[1]};
+    s.players[0].governors.push_back(victor);
+    CHECK_EQ(defenseOf(s), inTown + rules().globalInt("ASSASSIN_VICTOR_DEFENSE") + rules().globalInt("ASSASSIN_VICTOR_DEFENSE_PER_PROMOTION"));
+    s.players[0].governors.back().establishTurns = 2;
+    CHECK_EQ(defenseOf(s), inTown);
+    // Another governor gives no defence.
+    s.players[0].governors.back() = Governor{};
+    s.players[0].governors.back().type = rules().governor("GOVERNOR_MAGNUS");
+    s.players[0].governors.back().city = town;
+    CHECK_EQ(defenseOf(s), inTown);
+    (void)capital;
+}
+
+TEST(a_builder_king_hurries_governors_and_earns_great_people) {
+    // Leader doc section 3: faster governor establishment and extra Great Person points while present.
+    CityId city = kNoCity;
+    UnitId leader = 0;
+    auto g = duel(
+        [&](GameState& s) {
+            city = addCity(s, 0, {4, 4}, true);
+            City& c = s.cities.back();
+            c.districts.push_back({rules().district("DISTRICT_CAMPUS"), Hex{5, 5}, true});
+            leader = addLeader(s, 0, {4, 4});
+            s.units.back().promotions = {promo("PROMOTION_SOVEREIGN_OVERSEER"), promo("PROMOTION_SOVEREIGN_PATRON")};
+            Governor magnus;
+            magnus.type = rules().governor("GOVERNOR_MAGNUS");
+            magnus.city = city;
+            magnus.establishTurns = 5;
+            magnus.promotions = {rules().governors[at(magnus.type)].promotions.front()};
+            s.players[0].governors.push_back(magnus);
+        },
+        false);
+    const TypeIndex sci = rules().greatPersonClass("GREAT_PERSON_CLASS_SCIENTIST");
+    const TypeIndex writer = rules().greatPersonClass("GREAT_PERSON_CLASS_WRITER");
+    GameState away = g->state();
+    away.unit(leader)->pos = Hex{8, 4};
+    auto h = Game::fromScenario(rules(), GameState(away));
+    CHECK_EQ(g->greatPersonPointsPerTurn(0, sci), h->greatPersonPointsPerTurn(0, sci) + 2);
+    CHECK_EQ(g->greatPersonPointsPerTurn(0, writer), h->greatPersonPointsPerTurn(0, writer));  // only classes it earns
+    pass(*g, 2);
+    pass(*h, 2);
+    const int present = g->state().players[0].governors[0].establishTurns;
+    const int absent = h->state().players[0].governors[0].establishTurns;
+    CHECK(absent < 5);
+    CHECK_EQ(present, std::max(0, absent - (5 - absent)));
+}
+
 TEST(presence_aura_does_not_stack_with_a_great_general) {
     // Leader doc section 1: the higher of the leader's aura and a Great General's applies.
     UnitId both = 0, leaderOnly = 0, generalOnly = 0, neither = 0, enemy = 0;
