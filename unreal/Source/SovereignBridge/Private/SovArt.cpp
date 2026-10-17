@@ -195,6 +195,15 @@ TArray<FString> RequiredAssets()
 	{
 		Out.Add(MeshPath(TEXT("Districts"), Name));
 	}
+	// The districts built in the other architectural styles (kit_districts.py STYLED).
+	for (const TCHAR* Style : {TEXT("MiddleEast"), TEXT("Asian"), TEXT("African"), TEXT("American")})
+	{
+		for (const TCHAR* Name : {TEXT("Campus"), TEXT("HolySite"), TEXT("CommercialHub"), TEXT("Harbor"), TEXT("TheaterSquare"), TEXT("Neighborhood"),
+				 TEXT("GovernmentPlaza"), TEXT("DiplomaticQuarter")})
+		{
+			Out.Add(MeshPath(TEXT("Districts"), FString(Name) + TEXT("_") + Style));
+		}
+	}
 	for (const TCHAR* Name : {TEXT("Farm"), TEXT("Mine"), TEXT("Quarry"), TEXT("Pasture"), TEXT("Plantation"), TEXT("Camp"),
 			 TEXT("FishingBoats"), TEXT("LumberMill"), TEXT("OilWell"), TEXT("Fort"), TEXT("WindFarm"), TEXT("SolarFarm"), TEXT("Works")})
 	{
