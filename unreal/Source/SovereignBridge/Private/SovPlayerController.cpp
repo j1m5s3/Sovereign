@@ -446,6 +446,7 @@ void ASovPlayerController::EndTurn()
 		case sov::CommandError::ResearchNeeded: OpenChooser(EChooser::Research); break;
 		case sov::CommandError::CivicNeeded: OpenChooser(EChooser::Civic); break;
 		case sov::CommandError::LeaderNeeded: OpenChooser(EChooser::Throne); break;
+		case sov::CommandError::DedicationNeeded: OpenChooser(EChooser::Government); break;
 		default: break;
 	}
 }
@@ -3050,6 +3051,7 @@ void ASovPlayerController::UpdateGameUI()
 			case sov::CommandError::ResearchNeeded: M.TurnLabel = TEXT("Choose research"); break;
 			case sov::CommandError::CivicNeeded: M.TurnLabel = TEXT("Choose a civic"); break;
 			case sov::CommandError::LeaderNeeded: M.TurnLabel = TEXT("Choose a successor"); M.TurnDetail = TEXT("The throne is empty"); break;
+			case sov::CommandError::DedicationNeeded: M.TurnLabel = TEXT("Choose a dedication"); M.TurnDetail = TEXT("The new age waits for its dedication"); break;
 			default: M.TurnLabel = TEXT("End turn"); break;
 		}
 		if (M.bTurnReady) M.TurnDetail = FString::Printf(TEXT("Turn %d"), S.turn);
