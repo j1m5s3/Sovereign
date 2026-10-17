@@ -686,6 +686,17 @@ int Game::leaderDefenseVsAssassin(const Unit& leader) const {
     d -= rules_->globalInt("COMBAT_WOUNDED_DAMAGE_MULTIPLIER") * (maxHp - leader.hp) / std::max(1, maxHp);
     d += unitEffectTotal(leader, UnitEffectKind::AssassinDefense);
     d += bodyguardDefense(leader.owner);  // sworn companions, always at its side (§8.3)
+    // In one of its own cities: the capital, counterspies working there and an established Victor help (§6 "Defenses").
+    if (const City* c = state_.cityAt(leader.pos); c && c->owner == leader.owner) {
+        if (c->capital) d += rules_->globalInt("ASSASSIN_CAPITAL_DEFENSE");
+        for (const Agent& a : state_.agents) {
+            if (a.spy && a.owner == leader.owner && a.city == c->id && a.travel == 0 && a.mission == SpyMission::Counterspy)
+                d += rules_->globalInt("ASSASSIN_COUNTERSPY_DEFENSE") * a.level;
+        }
+        if (const Governor* g = establishedGovernor(*c); g && rules_->governors[static_cast<size_t>(g->type)].id == "GOVERNOR_VICTOR")
+            d += rules_->globalInt("ASSASSIN_VICTOR_DEFENSE") +
+                 rules_->globalInt("ASSASSIN_VICTOR_DEFENSE_PER_PROMOTION") * std::max(0, static_cast<int>(g->promotions.size()) - 1);
+    }
     // Guards on or next to its plot join the fight.
     for (const Unit& u : state_.units) {
         if (u.owner != leader.owner || typeOf(*rules_, u).layer != UnitLayer::Military) continue;

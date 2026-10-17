@@ -140,6 +140,7 @@ int Game::regionalBonus(const City& city, TypeIndex district, GreatPersonEffectK
 
 int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
     int total = 0;
+    const Unit* leader = leaderOf(player);
     for (const City& c : state_.cities) {
         if (c.owner != player) continue;
         int city = 0;
@@ -164,6 +165,8 @@ int Game::greatPersonPointsPerTurn(PlayerId player, TypeIndex cls) const {
             for (const auto& [k, v] : rules_->buildings[at(b)].greatPersonPoints) city += k == cls ? v : 0;
         }
         city += static_cast<int>(sumCityGreatPersonPoints(state_, *rules_, c, cls).toInt());  // policy cards (04)
+        // A Builder-King standing in the city adds to each class it already earns (leader doc §3).
+        if (city > 0 && leader && leader->pos == c.pos) city += unitEffectTotal(*leader, UnitEffectKind::GreatPersonPoints);
         // Grants: more points from the city (08: Governors).
         total += city * (100 + static_cast<int>(sumCityModifiers(state_, *rules_, c, ModEffect::CityGreatPersonPercent).toInt())) / 100;
     }

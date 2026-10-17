@@ -171,6 +171,7 @@ void Game::applyGovernor(const Command& c) {
 }
 
 void Game::processGovernors(PlayerId pid) {
+    const Unit* leader = leaderOf(pid);
     for (Governor& g : state_.players[static_cast<size_t>(pid)].governors) {
         if (g.city == kNoCity) continue;
         const City* c = state_.city(g.city);
@@ -182,6 +183,9 @@ void Game::processGovernors(PlayerId pid) {
             continue;
         }
         if (g.establishTurns > 0) --g.establishTurns;
+        // A Builder-King standing in the city hurries it (leader doc §3).
+        if (g.establishTurns > 0 && leader && leader->pos == c->pos)
+            g.establishTurns = std::max(0, g.establishTurns - unitEffectTotal(*leader, UnitEffectKind::GovernorHaste));
     }
 }
 

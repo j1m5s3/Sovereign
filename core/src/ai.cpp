@@ -3428,13 +3428,19 @@ void playTurn(Game& game) {
     production(v);
     upgrades(v);
     purchases(v);
-    // Builders and Traders trained or bought this turn still have their moves; send them out the same turn.
+    // Builders and Traders trained or bought this turn still have their moves; send them out the same turn. Their
+    // orders can remove units (a Builder's last charge, a Trader leaving on its route), so they are listed first.
     survey(v);
+    std::vector<UnitId> fresh;
     for (const Unit& u : game.state().units) {
-        if (u.owner != v.me || u.movesLeft <= Fixed()) continue;
-        const UnitType& t = v.r.units[at(u.type)];
-        if (t.id == "UNIT_TRADER") trader(v, u.id);
-        else if (isBuilder(t) && u.charges > 0) build(v, u.id);
+        if (u.owner == v.me && u.movesLeft > Fixed()) fresh.push_back(u.id);
+    }
+    for (UnitId uid : fresh) {
+        const Unit* u = game.state().unit(uid);
+        if (!u || u->movesLeft <= Fixed()) continue;
+        const UnitType& t = v.r.units[at(u->type)];
+        if (t.id == "UNIT_TRADER") trader(v, uid);
+        else if (isBuilder(t) && u->charges > 0) build(v, uid);
     }
     solvency(v);
     clans(v);
