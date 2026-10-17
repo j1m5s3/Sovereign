@@ -299,6 +299,9 @@ bool FSovHumanSeatTest::RunTest(const FString& Parameters)
 			case sov::CommandError::CivicNeeded:
 				TestEqual(TEXT("civic"), Session.Submit(sov::Command::chooseCivic(Me, G.availableCivics(Me).front())), sov::CommandError::Ok);
 				break;
+			case sov::CommandError::DedicationNeeded:
+				TestEqual(TEXT("dedication"), Session.Submit(sov::Command::chooseDedication(Me, G.availableDedications(Me).front())), sov::CommandError::Ok);
+				break;
 			default:
 				AddError(FString::Printf(TEXT("end turn refused: %s"), UTF8_TO_TCHAR(sov::commandErrorName(Result))));
 				return false;
@@ -1129,6 +1132,17 @@ struct FNaivePlayer
 				case sov::CommandError::LeaderNeeded:
 					if (!ChooseSuccessor()) return false;
 					break;
+				case sov::CommandError::DedicationNeeded:
+				{
+					// The controller opens the government screen (F2), which lists this era's dedications.
+					const std::vector<sov::TypeIndex> Dedications = G.availableDedications(Me);
+					if (Dedications.empty() || !Try(sov::Command::chooseDedication(Me, Dedications[static_cast<size_t>(G.state().turn) % Dedications.size()])))
+					{
+						Why = FString::Printf(TEXT("turn %d: a dedication waits and cannot be chosen"), G.state().turn);
+						return false;
+					}
+					break;
+				}
 				default:
 					Why = FString::Printf(TEXT("turn %d: End Turn refused (%s) and the controller opens nothing for it"), G.state().turn,
 						UTF8_TO_TCHAR(sov::commandErrorName(Result)));
