@@ -164,7 +164,7 @@ Weekly challenges need leaderboards and a validation server, mods need a worksho
 
 ### 20. Unverified rules and assassin questions
 
-Already tracked: policy swap gold cost, world era triggers, spy mission odds (which block assassin odds), the Deity AI combat bonus (+3 data vs. +4 guides), and the leader doc's still-open items 3 and 4 (assassins as their own unit or a spy mission; other spy missions against the leader). Resolve the spy odds before tuning assassins.
+Already tracked: policy swap gold cost, world era triggers (since sourced: the median civ, 09), spy mission odds (which block assassin odds), the Deity AI combat bonus (+3 data vs. +4 guides), and the leader doc's still-open items 3 and 4 (assassins as their own unit or a spy mission; other spy missions against the leader). Resolve the spy odds before tuning assassins.
 
 ### Smaller notes
 
