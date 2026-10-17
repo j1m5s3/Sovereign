@@ -229,8 +229,8 @@ void Game::processEras() {
         ++majors;
         ahead += playerEra(p.id) > state_.gameEra ? 1 : 0;
     }
-    // Between the era's minimum and maximum length, the world moves on once half the civs have
-    // (the trigger between those bounds is engine; Sovereign's reading), after a countdown that warns
+    // Between the era's minimum and maximum length, the world moves on once half the civs have (the median civ,
+    // 09: Global era transitions), after a countdown that warns
     // every civ (09: NEXT_ERA_TURN_COUNTDOWN). The countdown starts in time for the era to end at its
     // minimum, or at its maximum when too few civs are ahead (Sovereign's reading).
     if (state_.eraEndsOn == 0) {
