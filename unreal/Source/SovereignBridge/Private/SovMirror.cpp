@@ -149,7 +149,7 @@ FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian)
 FName SovCultureFigure(const sov::Game& Game, int32 Owner, FName Figure)
 {
 	const sov::GameState& S = Game.state();
-	const bool bDressed = Figure == FName("Soldier") || Figure == FName("Archer") || Figure == FName("Rider");
+	const bool bDressed = Figure == FName("Soldier") || Figure == FName("Archer") || Figure == FName("Rider") || Figure == FName("Musketeer");
 	if (!bDressed || Owner < 0 || Owner >= static_cast<int32>(S.players.size())) return Figure;
 	const sov::TypeIndex Civ = S.players[static_cast<size_t>(Owner)].civ;
 	if (Civ == sov::kNone) return Figure;
