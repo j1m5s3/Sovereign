@@ -243,7 +243,7 @@ FSovBattleResult FSovBattleSim::Result() const
 namespace
 {
 constexpr uint32 kRecordingMagic = 0x42564F53;  // "SOVB"
-constexpr uint32 kRecordingVersion = 1;
+constexpr uint32 kRecordingVersion = 2;  // 2: each side's figure (1 is still read, as spearmen)
 
 void WriteColor(sov::ByteWriter& W, const FLinearColor& C)
 {
@@ -297,13 +297,17 @@ std::vector<uint8_t> FSovBattleRecording::Encode() const
 	W.boolean(bWalls);
 	W.u32(static_cast<uint32>(Frames.size()));
 	for (const std::vector<uint8_t>& F : Frames) W.bytes(F);
+	W.str(TCHAR_TO_UTF8(*Spec.Attacker.Figure.ToString()));
+	W.str(TCHAR_TO_UTF8(*Spec.Defender.Figure.ToString()));
 	return W.take();
 }
 
 bool FSovBattleRecording::Decode(const std::vector<uint8_t>& Bytes)
 {
 	sov::ByteReader R(Bytes);
-	if (R.u32() != kRecordingMagic || R.u32() != kRecordingVersion) return false;
+	if (R.u32() != kRecordingMagic) return false;
+	const uint32 Version = R.u32();
+	if (Version < 1 || Version > kRecordingVersion) return false;
 	FSovBattleRecording Out;
 	Out.Title = UTF8_TO_TCHAR(R.str().c_str());
 	ReadUnit(R, Out.Spec.Attacker);
@@ -324,6 +328,14 @@ bool FSovBattleRecording::Decode(const std::vector<uint8_t>& Bytes)
 	if (!R.checkCount(Count, 4)) return false;
 	Out.Frames.resize(Count);
 	for (std::vector<uint8_t>& F : Out.Frames) F = R.bytes();
+	if (Version >= 2)
+	{
+		for (FSovBattleUnitSpec* U : {&Out.Spec.Attacker, &Out.Spec.Defender})
+		{
+			const FString Figure = UTF8_TO_TCHAR(R.str().c_str());
+			U->Figure = Figure.IsEmpty() || Figure == TEXT("None") ? FName() : FName(*Figure);
+		}
+	}
 	if (!R.ok() || !R.atEnd()) return false;
 	*this = std::move(Out);
 	return true;
