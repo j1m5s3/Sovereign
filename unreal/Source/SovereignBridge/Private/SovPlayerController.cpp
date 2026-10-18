@@ -1265,6 +1265,25 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 						continue;
 					}
 					const int32 Odds = G.spySuccessPercent(SpyAgent, Mission, Cty.id);
+					if (Mission == sov::SpyMission::Counterspy && std::any_of(Cty.districts.begin(), Cty.districts.end(), [](const sov::CityDistrict& D) { return D.complete; }))
+					{
+						// A counterspy guards one plot and those beside it (08: Counterspy): the City Center or a finished
+						// district, the game's own pick (Game::counterspyPlot) marked.
+						const sov::Hex Pick = G.counterspyPlot(Cty);
+						auto Guard = [&](sov::Hex At, const FString& Where)
+						{
+							FChoice Ch{FString::Printf(TEXT("Counterspy: guard the %s"), *Where), sov::Command::spyMission(Me(), SpyAgent, Mission, Cty.id, At), {},
+								At == Pick ? FString(TEXT("covers most")) : FString(), "link", FString::Printf(TEXT("In %s"), *Str(Cty.name))};
+							Ch.Tip = TEXT("Guards this plot and those beside it against enemy operations.");
+							Choices.Add(Ch);
+						};
+						Guard(Cty.pos, TEXT("City Center"));
+						for (const sov::CityDistrict& D : Cty.districts)
+						{
+							if (D.complete && D.type != sov::kNone) Guard(D.pos, Str(R.districts[static_cast<size_t>(D.type)].name));
+						}
+						continue;
+					}
 					Choices.Add({Missions[M], sov::Command::spyMission(Me(), SpyAgent, Mission, Cty.id), {}, Odds < 100 ? FString::Printf(TEXT("%d%% to succeed"), Odds) : FString(),
 						"link", FString::Printf(TEXT("In %s"), *Str(Cty.name))});
 				}
