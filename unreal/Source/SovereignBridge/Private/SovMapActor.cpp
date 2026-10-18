@@ -813,10 +813,14 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		// Its arm's figure (FSovUnitMarker::Figure); the vehicles, several metres long, are drawn smaller.
 		const FString FigureName = Unit.Figure.IsNone() ? FString(Unit.bNaval ? TEXT("Ship") : Unit.bLeader ? TEXT("Leader") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier"))
 			: Unit.Figure.ToString();
+		// A figure in its culture's dress (Archer_Asian) falls back to the plain one (Archer), then to the arm's default.
+		FString PlainName = FigureName, Style;
+		FigureName.Split(TEXT("_"), &PlainName, &Style);
 		const bool bFigureOk = SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color)
+			|| (PlainName != FigureName && SovArt::SetKitMesh(C, TEXT("Figures"), PlainName, Unit.Color))
 			|| SovArt::SetKitMesh(C, TEXT("Figures"), Unit.bNaval ? TEXT("Ship") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier"), Unit.Color);
-		const double Vehicle = FigureName == TEXT("Tank") ? 0.13 : FigureName == TEXT("Plane") ? 0.12 : FigureName == TEXT("Siege") ? 0.2
-			: FigureName == TEXT("Rider") ? 0.22 : FigureName == TEXT("Steamship") ? 0.13 : 0.0;
+		const double Vehicle = PlainName == TEXT("Tank") ? 0.13 : PlainName == TEXT("Plane") ? 0.12 : PlainName == TEXT("Siege") ? 0.2
+			: PlainName == TEXT("Rider") ? 0.22 : PlainName == TEXT("Steamship") ? 0.13 : 0.0;
 		if (bFigureOk)
 		{
 			if (Unit.bNaval || Vehicle > 0.0)

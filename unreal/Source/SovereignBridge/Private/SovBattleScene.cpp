@@ -57,10 +57,17 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 	for (int32 Side = 0; Side < 2; ++Side)
 	{
 		const FName F = Side == 0 ? Spec.Attacker.Figure : Spec.Defender.Figure;
-		const bool bOnFoot = F == FName("Archer") || F == FName("Musketeer") || F == FName("Rifleman") || F == FName("Rider")
-			|| F.ToString().StartsWith(TEXT("Soldier_"));  // the spear soldier in its culture's dress (SovCultureFigure)
-		SideFigure[Side] = bOnFoot && SovArt::Mesh(TEXT("Figures"), F.ToString()) ? F.ToString() : FString(TEXT("Soldier"));
-		SideYaw[Side] = SideFigure[Side] == TEXT("Rider") ? 90.f : 0.f;
+		// A figure in its culture's dress (SovCultureFigure) is Soldier_, Archer_ or Rider_ and its style; without that
+		// mesh it fights in the plain figure.
+		FString Base, Style;
+		const bool bDressed = F.ToString().Split(TEXT("_"), &Base, &Style);
+		const FName Plain = bDressed ? FName(*Base) : F;
+		const bool bOnFoot = Plain == FName("Archer") || Plain == FName("Musketeer") || Plain == FName("Rifleman") || Plain == FName("Rider")
+			|| Plain == FName("Soldier");
+		SideFigure[Side] = !bOnFoot ? FString(TEXT("Soldier"))
+			: SovArt::Mesh(TEXT("Figures"), F.ToString()) ? F.ToString()
+			: SovArt::Mesh(TEXT("Figures"), Plain.ToString()) ? Plain.ToString() : FString(TEXT("Soldier"));
+		SideYaw[Side] = SideFigure[Side].StartsWith(TEXT("Rider")) ? 90.f : 0.f;
 		// Siege engines and tanks fight among their crews: catapult hands as spearmen, tank riders as riflemen.
 		const bool bMachine = (F == FName("Siege") || F == FName("Tank")) && SovArt::Mesh(TEXT("Figures"), F.ToString());
 		SideVehicle[Side] = bMachine ? F.ToString() : FString();
