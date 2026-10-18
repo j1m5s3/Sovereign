@@ -831,7 +831,102 @@ def rider_american(seed=62):
     return p
 
 
+# ---------------------------------------------------------------------------------- musketeers in each culture's dress
+# SM_Musketeer_<Style>: a civ's Renaissance and Industrial foot soldiers wear its own dress; riflemen and later are shared.
+
+RED_FELT = "#8b2a22"
+
+
+def _musket(p, x=0.3, bayonet=True, length=1.25):
+    """A musket shouldered upright at the right side."""
+    p.cylinder((x, -0.04, 0.6), 0.022, length, WOOD, segments=8)  # stock and barrel
+    p.cylinder((x, -0.04, 0.6 + length), 0.014, 0.12, IRON, segments=6)
+    if bayonet:
+        p.cone((x, -0.04, 0.72 + length), 0.012, 0.25, IRON, segments=4)
+
+
+def musketeer_middleeast(seed=63):
+    """A Janissary: a long kaftan in the owner's colour over baggy trousers, the tall white börk with its spoon, a long musket."""
+    p = _figure("SM_Musketeer_MiddleEast", seed)
+    _body(p, SKIN[1], legs=COTTON)
+    _sandals(p, boots=True, color="#9a2a1e")
+    _tunic(p, LINEN, hem=0.3, team=True)
+    p.team_color(True)
+    for side in (-1, 1):
+        p.segment((side * 0.24, 0.005, 1.24), (side * 0.262, -0.01, 0.92), 0.056, 0.045, LINEN, caps=False)
+    p.team_color(False)
+    p.loft([(0.97, 0.175, 0.125), (1.05, 0.172, 0.122)], GOLD, segments=18)  # the sash
+    z = _head(p, SKIN[1], HAIR[2], moustache=HAIR[2])
+    p.loft([(z + 0.15, 0.1, 0.11), (z + 0.2, 0.105, 0.115), (z + 0.38, 0.08, 0.09), (z + 0.48, 0.05, 0.06, 0, 0.05)], COTTON, segments=14)  # the börk
+    p.segment((0, 0.07, z + 0.4), (0, 0.2, z + 0.1), 0.05, 0.03, COTTON, segments=8)  # its fold down the back
+    p.box((0, -0.11, z + 0.22), (0.04, 0.02, 0.12), GOLD)  # the spoon holder
+    _musket(p, length=1.4, bayonet=False)
+    return p
+
+
+def musketeer_asian(seed=64):
+    """An ashigaru teppo gunner: a lacquered breastplate over a robe in the owner's colour, the conical jingasa, a matchlock."""
+    p = _figure("SM_Musketeer_Asian", seed)
+    _body(p, SKIN[3], legs=INDIGO)
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.62, team=True)
+    p.loft([(1.0, 0.185, 0.13), (1.14, 0.17, 0.12), (1.3, 0.205, 0.138), (1.39, 0.2, 0.12)], LACQUER[0], segments=18, cap_top=False)  # the do
+    for z in (1.08, 1.2):
+        p.loft([(z - 0.007, 0.19, 0.134), (z + 0.007, 0.19, 0.134)], LACQUER[1], segments=18)
+    p.team_color(True)
+    p.box((0.0, 0.17, 1.65), (0.02, 0.01, 0.5), LINEN)  # the sashimono banner on the back
+    p.box((0.0, 0.17, 1.82), (0.22, 0.01, 0.3), LINEN)
+    p.team_color(False)
+    z = _head(p, SKIN[3], HAIR[2])
+    p.cone((0, 0, z + 0.19), 0.24, 0.1, LACQUER[0], segments=18)  # the jingasa
+    p.cylinder((0, 0, z + 0.18), 0.24, 0.012, LACQUER[0], segments=18)
+    _musket(p, bayonet=False)
+    p.segment((0.33, -0.06, 1.3), (0.36, -0.08, 1.0), 0.006, 0.006, "#8a6a3a", segments=4)  # the slow match
+    return p
+
+
+def musketeer_african(seed=65):
+    """A Sahel or Moroccan musketeer: a long robe in the owner's colour, an indigo turban, a powder horn, a long musket."""
+    p = _figure("SM_Musketeer_African", seed)
+    _body(p, SKIN[2])
+    _sandals(p)
+    _tunic(p, LINEN, hem=0.25, team=True)
+    p.team_color(True)
+    for side in (-1, 1):
+        p.segment((side * 0.24, 0.005, 1.24), (side * 0.262, -0.01, 0.94), 0.06, 0.05, LINEN, caps=False)
+    p.team_color(False)
+    _belt(p, LEATHER, 1.0)
+    p.segment((0.16, -0.11, 1.4), (-0.15, -0.12, 0.98), 0.016, 0.016, LEATHER, segments=6)
+    p.segment((-0.2, -0.1, 1.0), (-0.12, -0.12, 0.88), 0.035, 0.012, COTTON, segments=8)  # the powder horn
+    z = _head(p, SKIN[2], HAIR[2])
+    p.loft([(z + 0.12, 0.11, 0.12), (z + 0.2, 0.12, 0.125), (z + 0.27, 0.095, 0.1), (z + 0.3, 0.03, 0.04)], INDIGO, segments=14, folds=6,
+           fold_depth=0.04)  # the turban
+    p.loft([(z + 0.02, 0.095, 0.1), (z + 0.1, 0.105, 0.112)], INDIGO, segments=14, cap_bottom=False, cap_top=False, two_sided=True)  # the veil
+    _musket(p, length=1.4, bayonet=False)
+    return p
+
+
+def musketeer_american(seed=66):
+    """An Andean or Mexican musketeer: a striped poncho in the owner's colour, a wide felt hat, a musket with its bayonet."""
+    p = _figure("SM_Musketeer_American", seed)
+    _body(p, SKIN[1], legs=WOOL)
+    _sandals(p)
+    _tunic(p, LINEN, hem=0.7, team=False)
+    p.team_color(True)
+    p.loft([(0.88, 0.32, 0.22), (1.1, 0.28, 0.2), (1.32, 0.23, 0.15), (1.42, 0.12, 0.09)], LINEN, segments=4, cap_bottom=False, cap_top=False,
+           two_sided=True)  # the poncho, square-cut
+    p.team_color(False)
+    for z in (0.95, 1.05):  # its woven bands
+        p.loft([(z - 0.012, 0.31, 0.215), (z + 0.012, 0.302, 0.21)], FEATHER[1] if z < 1.0 else RED_FELT, segments=4, two_sided=True)
+    z = _head(p, SKIN[1], HAIR[2])
+    p.cylinder((0, 0, z + 0.18), 0.27, 0.015, DARK_LEATHER, segments=18)  # the wide brim
+    p.loft([(z + 0.18, 0.11, 0.115), (z + 0.28, 0.1, 0.105), (z + 0.31, 0.03, 0.03)], DARK_LEATHER, segments=14, cap_bottom=False)
+    _musket(p)
+    return p
+
+
 PIECES = [citizen, herald, captain, soldier, leader, ship, boat, archer, rider, siege, musketeer, rifleman, tank, plane, steamship,
           soldier_middleeast, soldier_asian, soldier_african, soldier_american, archer_middleeast, archer_asian, archer_african,
-          archer_american, rider_middleeast, rider_asian, rider_african, rider_american]
+          archer_american, rider_middleeast, rider_asian, rider_african, rider_american, musketeer_middleeast, musketeer_asian,
+          musketeer_african, musketeer_american]
 PEOPLE = [citizen, herald, captain, soldier, leader]
