@@ -9,6 +9,7 @@
 #include "SovMirror.h"
 #include "SovMods.h"
 #include "SovSession.h"
+#include "SovStatGraph.h"
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
 #include "SovArt.h"
@@ -212,6 +213,36 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("the city then"), C && C->Name == TEXT("Atlantis") && C->Population == 4 && C->Owner == Then);
 		const TArray<FString> Tip = SovPlotTooltip(*Fog, Me, H.x, H.y);
 		TestTrue(TEXT("the tooltip names the city then"), Tip.ContainsByPredicate([](const FString& L) { return L.StartsWith(TEXT("Atlantis, ")); }));
+	}
+
+	// The end-game graphs: one series per seat with figures, a point per turn, in every stat.
+	{
+		sov::GameState Copy = G.state();
+		Copy.turnStats.clear();
+		for (int32 Turn = 1; Turn <= 3; ++Turn)
+		{
+			for (sov::PlayerId P : {sov::PlayerId(0), sov::PlayerId(1)})
+			{
+				sov::TurnStats T;
+				T.turn = Turn;
+				T.player = P;
+				T.score = Turn * 10 + P;
+				T.military = 5 * Turn;
+				Copy.turnStats.push_back(T);
+			}
+		}
+		const std::unique_ptr<sov::Game> Graphed = sov::Game::fromScenario(G.rules(), std::move(Copy));
+		const FSovGraphData D = SovEndGraphs(*Graphed, 1);
+		TestEqual(TEXT("ten stats"), D.Stats.Num(), 10);
+		TestEqual(TEXT("a series list per stat"), D.Series.Num(), D.Stats.Num());
+		if (TestEqual(TEXT("two seats graphed"), D.Series[0].Num(), 2))
+		{
+			TestEqual(TEXT("a point per turn"), D.Series[0][1].Points.Num(), 3);
+			TestEqual(TEXT("seat 1's last score"), D.Series[0][1].Points.Last(), FVector2D(3, 31));
+			TestTrue(TEXT("the viewer's line is marked"), D.Series[0][1].bYou && !D.Series[0][0].bYou);
+			const int32 Mil = D.Stats.IndexOfByKey(FString(TEXT("Military")));
+			TestTrue(TEXT("military graphed"), Mil != INDEX_NONE && D.Series[Mil][0].Points.Last().Y == 15.0);
+		}
 	}
 
 	// Each arm and era gets its figure (kit_figures.py).
