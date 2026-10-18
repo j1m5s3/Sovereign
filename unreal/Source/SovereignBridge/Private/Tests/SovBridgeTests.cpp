@@ -226,19 +226,19 @@ bool FSovMirrorTest::RunTest(const FString& Parameters)
 		const sov::UnitType& Type = R.units[static_cast<size_t>(T)];
 		TestEqual(FString(TEXT("figure of ")) + Id, SovUnitFigure(Type, false, Type.layer == sov::UnitLayer::Civilian || Type.layer == sov::UnitLayer::Support).ToString(), FString(Want));
 	}
-	// Soldiers, archers and riders wear their civ's dress; the later figures are shared.
+	// Soldiers, archers, riders and musketeers wear their civ's dress; riflemen and later are shared.
 	for (int32 P = 0; P < static_cast<int32>(G.state().players.size()); ++P)
 	{
 		const sov::TypeIndex Civ = G.state().players[static_cast<size_t>(P)].civ;
 		if (Civ == sov::kNone) continue;
 		const FString Style = SovArt::CivStyle(UTF8_TO_TCHAR(R.civs[static_cast<size_t>(Civ)].id.c_str()));
 		const bool bOwn = Style != TEXT("Mediterranean") && Style != TEXT("European");
-		for (const TCHAR* Figure : {TEXT("Soldier"), TEXT("Archer"), TEXT("Rider")})
+		for (const TCHAR* Figure : {TEXT("Soldier"), TEXT("Archer"), TEXT("Rider"), TEXT("Musketeer")})
 		{
 			TestEqual(FString::Printf(TEXT("seat %d's %s"), P, Figure), SovCultureFigure(G, P, FName(Figure)).ToString(),
 				bOwn ? FString(Figure) + TEXT("_") + Style : FString(Figure));
 		}
-		TestEqual(FString::Printf(TEXT("seat %d's musketeer"), P), SovCultureFigure(G, P, FName("Musketeer")).ToString(), FString(TEXT("Musketeer")));
+		TestEqual(FString::Printf(TEXT("seat %d's rifleman"), P), SovCultureFigure(G, P, FName("Rifleman")).ToString(), FString(TEXT("Rifleman")));
 	}
 	return true;
 }
