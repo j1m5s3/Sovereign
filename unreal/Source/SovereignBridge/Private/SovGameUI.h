@@ -10,6 +10,7 @@
 #include "SovGovernmentView.h"
 #include "SovLens.h"
 #include "SovMinimap.h"
+#include "SovStatGraph.h"
 #include "SovTreeView.h"
 
 class SVerticalBox;
@@ -108,6 +109,7 @@ struct FSovUIModel
 	FString EndTitle, EndSub;
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
+	TSharedPtr<const FSovGraphData> EndGraphs;  // each civ's figures over the game, beside the chronicle
 	// A page to read over the map: how to play (F1) or the chronicle (F4).
 	bool bReader = false;
 	FString ReaderTitle, ReaderFoot;
@@ -199,6 +201,8 @@ private:
 	TDelegate<void(int32)> OnNotice, OnDismiss;
 	TSharedPtr<SVerticalBox> NoticesBox;
 	TSharedPtr<SVerticalBox> EndScoresBox, EndChronicleBox;
+	TSharedPtr<class SWrapBox> EndTabsBox;
+	int32 EndTab = 0;  // 0: the chronicle; k: the graph of EndGraphs->Stats[k - 1]
 	FString EndKey;
 	TSharedPtr<SVerticalBox> LegendBox;
 	TSharedPtr<SVerticalBox> EmpireBox;

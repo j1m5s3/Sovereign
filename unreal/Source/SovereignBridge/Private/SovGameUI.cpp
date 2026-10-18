@@ -358,9 +358,29 @@ void SSovGameUI::Construct(const FArguments& Args)
 						+ SHorizontalBox::Slot().FillWidth(1.f)
 						[
 							SNew(SVerticalBox)
+							// The chronicle, or a graph of the civs' figures over the game (SovEndGraphs).
+							+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 6)[SAssignNew(EndTabsBox, SWrapBox).PreferredSize(560.f).InnerSlotPadding(FVector2D(4, 4))]
 							+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 4)
-							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("The chronicle of your reign")))]
-							+ SVerticalBox::Slot().FillHeight(1.f)[SNew(SScrollBox) + SScrollBox::Slot()[SAssignNew(EndChronicleBox, SVerticalBox)]]
+							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() {
+								const bool bGraph = EndTab > 0 && Model.EndGraphs.IsValid() && Model.EndGraphs->Stats.IsValidIndex(EndTab - 1);
+								return FText::FromString(bGraph ? Model.EndGraphs->Stats[EndTab - 1] + TEXT(" over the game") : FString(TEXT("The chronicle of your reign")));
+							})]
+							+ SVerticalBox::Slot().FillHeight(1.f)
+							[
+								SNew(SOverlay)
+								+ SOverlay::Slot()
+								[
+									SNew(SScrollBox).Visibility_Lambda([this]() { return EndTab == 0 ? EVisibility::Visible : EVisibility::Collapsed; })
+									+ SScrollBox::Slot()[SAssignNew(EndChronicleBox, SVerticalBox)]
+								]
+								+ SOverlay::Slot()
+								[
+									SNew(SSovStatGraph)
+									.Visibility_Lambda([this]() { return EndTab > 0 ? EVisibility::Visible : EVisibility::Collapsed; })
+									.Data_Lambda([this]() { return Model.EndGraphs; })
+									.Stat_Lambda([this]() { return EndTab - 1; })
+								]
+							]
 						]
 					]
 					+ SVerticalBox::Slot().AutoHeight().Padding(0, 14, 0, 0)
@@ -651,6 +671,7 @@ void SSovGameUI::SetModel(const FSovUIModel& InModel)
 	FString E = Model.bEnd ? Model.EndTitle + Model.EndSub : FString();
 	for (const FString& L : Model.EndScores) E += L + TEXT("|");
 	E += FString::FromInt(Model.EndChronicle.Num());
+	E += Model.EndGraphs.IsValid() ? FString::FromInt(Model.EndGraphs->Stats.Num()) : FString();
 	if (E != EndKey)
 	{
 		EndKey = E;
@@ -802,6 +823,21 @@ void SSovGameUI::RebuildEnd()
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(STextBlock).Font(FSovStyle::Font(11, i == 0)).ColorAndOpacity(Color).Text(FText::FromString(Name))]
 			+ SHorizontalBox::Slot().AutoWidth()[SNew(STextBlock).Font(FSovStyle::Font(11, i == 0)).ColorAndOpacity(Color).Text(FText::FromString(Score))]
+		];
+	}
+	// The tabs over the right column: the chronicle, then each graph.
+	EndTabsBox->ClearChildren();
+	const int32 NumGraphs = Model.EndGraphs.IsValid() ? Model.EndGraphs->Stats.Num() : 0;
+	if (EndTab > NumGraphs) EndTab = 0;
+	for (int32 Tab = 0; Tab <= NumGraphs; ++Tab)
+	{
+		const FString Name = Tab == 0 ? FString(TEXT("Chronicle")) : Model.EndGraphs->Stats[Tab - 1];
+		EndTabsBox->AddSlot()
+		[
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ContentPadding(FMargin(8, 3))
+				.OnClicked_Lambda([this, Tab]() { EndTab = Tab; return FReply::Handled(); })
+				[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity_Lambda([this, Tab]() { return EndTab == Tab ? FSovStyle::Gold : FSovStyle::Text; })
+					.Text(FText::FromString(Name))]
 		];
 	}
 	EndChronicleBox->ClearChildren();

@@ -57,7 +57,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 - **Empire panel** (`F8`, or the top bar's era button): your cities and units (click one to go to it), your civ, faith, era and age, diplomacy, the world's contests, climate, governors and leader.
 - **Notifications** (above end turn): cities waiting for production and anything else waiting on you (an offer, the throne, a pantheon, dedications, governor titles, envoys), then news from the last two turns. Click one to open its screen (diplomacy, great people, World Congress, the chronicle), or X to dismiss it. Hover the top bar's yields for a city-by-city breakdown.
 - **Lenses and minimap** (bottom right): the lens buttons recolour the map for religion, loyalty, appeal, where a city can be founded, or your trade routes, with a legend; click again (or `F7` to step through them) to clear. The minimap shows what you have revealed, in owners' colours or the lens's; click or drag on it to move the camera.
-- **End of game:** Victory or Defeat with who won and how, the scores and your chronicle; look at the map, write the chronicle up, or go to the menu.
+- **End of game:** Victory or Defeat with who won and how, the scores, and your chronicle or a graph of every civ's figures over the game (score, science, culture, faith, gold, military, cities, population, techs, civics); look at the map, write the chronicle up, or go to the menu.
 - **End turn** (bottom right): names what stands in the way (a unit needing orders, production, research, a civic, a successor). Clicking it does what Space does: ends the turn, or opens what is needed.
 
 ## Menu screens

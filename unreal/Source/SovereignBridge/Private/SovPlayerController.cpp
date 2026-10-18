@@ -3048,6 +3048,12 @@ void ASovPlayerController::UpdateGameUI()
 		}
 		const std::vector<std::string> Lines = G.chronicleLines(Me());
 		for (size_t i = Lines.size() > 60 ? Lines.size() - 60 : 0; i < Lines.size(); ++i) M.EndChronicle.Add(Str(Lines[i]));
+		if (EndGraphsFrom != static_cast<int32>(S.turnStats.size()))
+		{
+			EndGraphsFrom = static_cast<int32>(S.turnStats.size());
+			EndGraphs = MakeShared<const FSovGraphData>(SovEndGraphs(G, Me()));
+		}
+		M.EndGraphs = EndGraphs;
 	}
 	// End turn: what stands in the way, if anything.
 	M.bMyTurn = MyTurn();
