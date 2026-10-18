@@ -149,11 +149,12 @@ FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian)
 FName SovCultureFigure(const sov::Game& Game, int32 Owner, FName Figure)
 {
 	const sov::GameState& S = Game.state();
-	if (Figure != FName("Soldier") || Owner < 0 || Owner >= static_cast<int32>(S.players.size())) return Figure;
+	const bool bDressed = Figure == FName("Soldier") || Figure == FName("Archer") || Figure == FName("Rider");
+	if (!bDressed || Owner < 0 || Owner >= static_cast<int32>(S.players.size())) return Figure;
 	const sov::TypeIndex Civ = S.players[static_cast<size_t>(Owner)].civ;
 	if (Civ == sov::kNone) return Figure;
 	const FString Style = SovArt::CivStyle(UTF8_TO_TCHAR(Game.rules().civs[static_cast<size_t>(Civ)].id.c_str()));
-	return Style == TEXT("Mediterranean") || Style == TEXT("European") ? Figure : FName(*(TEXT("Soldier_") + Style));
+	return Style == TEXT("Mediterranean") || Style == TEXT("European") ? Figure : FName(*(Figure.ToString() + TEXT("_") + Style));
 }
 
 FLinearColor SovPlayerColor(const sov::Game& Game, int32 Player)

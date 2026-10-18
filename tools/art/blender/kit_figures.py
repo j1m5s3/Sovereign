@@ -348,13 +348,28 @@ NAVY = "#2e3440"
 HORSE = ["#6b4226", "#4a2f1c"]
 
 
-def _bow(p, x, s=1.0):
-    """A self bow held upright in the left hand, its string toward the body."""
-    pts = [(x * s, -0.06 * s, (0.95 + 0.62 * math.sin(a)) * s, a) for a in [(-0.5 + i / 8.0) * math.pi * 0.9 for i in range(9)]]
-    for (x0, y0, z0, a0), (x1, y1, z1, a1) in zip(pts, pts[1:]):
-        b0, b1 = 0.08 * math.cos(a0) * s, 0.08 * math.cos(a1) * s
-        p.segment((x0, y0 - b0, z0), (x1, y1 - b1, z1), 0.016 * s, 0.016 * s, WOOD, segments=6, caps=False)
-    p.segment(pts[0][:3], pts[-1][:3], 0.004 * s, 0.004 * s, LINEN, segments=4, caps=False)
+def _bow(p, x, s=1.0, half=0.62, centre=0.95, depth=0.08, recurve=0.0, color=WOOD):
+    """A bow held upright in the left hand, its string toward the body: a self bow, or with `recurve` its tips turned
+    away from the archer (the composite bows of the steppe and Persia); `half` and `centre` set its size and grip."""
+    pts = [(x * s, -0.06 * s, (centre + half * math.sin(a)) * s, a) for a in [(-0.5 + i / 8.0) * math.pi * 0.9 for i in range(9)]]
+    bend = [depth * math.cos(a) + recurve * math.sin(a) ** 8 for (_, _, _, a) in pts]
+    for (x0, y0, z0, a0), (x1, y1, z1, a1), b0, b1 in zip(pts, pts[1:], bend, bend[1:]):
+        p.segment((x0, y0 - b0 * s, z0), (x1, y1 - b1 * s, z1), 0.016 * s, 0.016 * s, color, segments=6, caps=False)
+    if recurve:
+        tips = [(px, py - b * s, pz) for (px, py, pz, _), b in ((pts[0], bend[0]), (pts[-1], bend[-1]))]
+        p.segment(tips[0], tips[1], 0.004 * s, 0.004 * s, LINEN, segments=4, caps=False)
+    else:
+        p.segment(pts[0][:3], pts[-1][:3], 0.004 * s, 0.004 * s, LINEN, segments=4, caps=False)
+
+
+def _quiver(p, at=(0.12, 0.14, 0.95), length=0.5, color=LEATHER, fletch=CREST, tilt=0.0):
+    """A quiver on the back (or, tilted, at the hip) with four arrows' fletching above its mouth."""
+    x, y, z = at
+    top = (x + tilt * length, y, z + length)
+    p.segment((x, y, z), top, 0.06, 0.06, color, segments=8)
+    for i in range(4):
+        p.segment((top[0] - 0.02 + 0.015 * i, y, top[2] - 0.05), (top[0] - 0.02 + 0.015 * i + tilt * 0.12, y, top[2] + 0.07), 0.01, 0.01, fletch,
+                  segments=4, caps=False)
 
 
 def archer(seed=38):
@@ -372,36 +387,60 @@ def archer(seed=38):
     return p
 
 
+def _horse(p, coat=HORSE, cloth=(0.7, 0.72)):
+    """A horse side-on along X, facing +X, with a saddle cloth in the owner's colour."""
+    p.segment((-0.75, 0, 1.2), (0.75, 0, 1.25), 0.3, 0.32, coat[0], segments=12)  # barrel
+    p.segment((0.75, 0, 1.3), (1.05, 0, 1.75), 0.17, 0.12, coat[0], segments=10)  # neck
+    p.segment((1.05, 0, 1.78), (1.38, 0, 1.6), 0.11, 0.07, coat[0], segments=10)  # head
+    p.segment((0.82, 0, 1.6), (1.02, 0, 1.92), 0.04, 0.03, coat[1], segments=6)  # mane
+    for x in (-0.6, 0.6):
+        for y in (-0.15, 0.15):
+            p.segment((x, y, 1.0), (x + 0.03, y, 0.5), 0.08, 0.06, coat[0], segments=8)
+            p.segment((x + 0.03, y, 0.5), (x, y, 0.05), 0.05, 0.04, coat[0], segments=8)
+            p.cylinder((x, y, 0.0), 0.055, 0.08, DARK_LEATHER, segments=8)  # hooves
+    p.segment((-0.78, 0, 1.3), (-1.0, 0, 0.8), 0.07, 0.03, coat[1], segments=6)  # tail
+    p.team_color(True)
+    p.box((-0.05, 0, 1.5), (cloth[0], cloth[1], 0.05), LINEN)  # saddle cloth
+    p.team_color(False)
+
+
+RIDE = 0.63  # how far the seated rider's body is raised above a standing figure's
+
+
+def _seated(p, coat=LINEN, legs=LEATHER, skin=SKIN[1], team=False):
+    """The rider astride: torso, legs down the flanks, arms, neck and head; returns the head's base height."""
+    off = RIDE
+    p.team_color(team)
+    p.loft([(0.92 + off, 0.16, 0.105), (1.06 + off, 0.145, 0.095), (1.24 + off, 0.18, 0.115), (1.38 + off, 0.205, 0.105),
+            (1.45 + off, 0.09, 0.07)], coat, segments=14)
+    p.team_color(False)
+    for side in (-1, 1):
+        p.segment((0.0, side * 0.12, 1.55), (0.12, side * 0.36, 1.15), 0.07, 0.055, legs, segments=8)
+        p.segment((0.12, side * 0.36, 1.15), (0.05, side * 0.36, 0.8), 0.05, 0.04, legs, segments=8)
+        p.segment((0.0, side * 0.215, 1.37 + off), (0.15, side * 0.26, 1.15 + off), 0.045, 0.035, skin, segments=8)
+    hz = 1.49 + off
+    p.segment((0, 0, 1.4 + off), (0, 0, hz + 0.03), 0.05, 0.045, skin)
+    p.blob((0, 0, hz + 0.13), 0.1, skin, squash=1.25, subdiv=2, wobble=0.0)
+    return hz
+
+
+def _lance(p, pennant=False):
+    p.segment((0.2, -0.3, 0.9), (1.1, -0.3, 3.0), 0.02, 0.015, WOOD, segments=6, caps=False)  # lance
+    p.cone((1.1, -0.3, 3.0), 0.03, 0.2, IRON, segments=6)
+    if pennant:
+        p.team_color(True)
+        p.box((0.85, -0.3, 2.6), (0.22, 0.01, 0.15), LINEN)  # its pennant
+        p.team_color(False)
+
+
 def rider(seed=39):
     """A horseman: the horse side-on along X, the rider astride with a lance, a team saddle cloth."""
     p = _figure("SM_Rider", seed)
-    p.segment((-0.75, 0, 1.2), (0.75, 0, 1.25), 0.3, 0.32, HORSE[0], segments=12)  # barrel
-    p.segment((0.75, 0, 1.3), (1.05, 0, 1.75), 0.17, 0.12, HORSE[0], segments=10)  # neck
-    p.segment((1.05, 0, 1.78), (1.38, 0, 1.6), 0.11, 0.07, HORSE[0], segments=10)  # head
-    p.segment((0.82, 0, 1.6), (1.02, 0, 1.92), 0.04, 0.03, HORSE[1], segments=6)  # mane
-    for x in (-0.6, 0.6):
-        for y in (-0.15, 0.15):
-            p.segment((x, y, 1.0), (x + 0.03, y, 0.5), 0.08, 0.06, HORSE[0], segments=8)
-            p.segment((x + 0.03, y, 0.5), (x, y, 0.05), 0.05, 0.04, HORSE[0], segments=8)
-            p.cylinder((x, y, 0.0), 0.055, 0.08, DARK_LEATHER, segments=8)  # hooves
-    p.segment((-0.78, 0, 1.3), (-1.0, 0, 0.8), 0.07, 0.03, HORSE[1], segments=6)  # tail
-    p.team_color(True)
-    p.box((-0.05, 0, 1.5), (0.7, 0.72, 0.05), LINEN)  # saddle cloth
-    p.team_color(False)
+    _horse(p)
     # The rider, seated: torso, legs down the flanks, arms, head and helmet, a lance.
-    off = 0.63
-    p.loft([(0.92 + off, 0.16, 0.105), (1.06 + off, 0.145, 0.095), (1.24 + off, 0.18, 0.115), (1.38 + off, 0.205, 0.105),
-            (1.45 + off, 0.09, 0.07)], LINEN, segments=14)
-    for side in (-1, 1):
-        p.segment((0.0, side * 0.12, 1.55), (0.12, side * 0.36, 1.15), 0.07, 0.055, LEATHER, segments=8)
-        p.segment((0.12, side * 0.36, 1.15), (0.05, side * 0.36, 0.8), 0.05, 0.04, LEATHER, segments=8)
-        p.segment((0.0, side * 0.215, 1.37 + off), (0.15, side * 0.26, 1.15 + off), 0.045, 0.035, SKIN[1], segments=8)
-    hz = 1.49 + off
-    p.segment((0, 0, 1.4 + off), (0, 0, hz + 0.03), 0.05, 0.045, SKIN[1])
-    p.blob((0, 0, hz + 0.13), 0.1, SKIN[1], squash=1.25, subdiv=2, wobble=0.0)
+    hz = _seated(p)
     p.loft([(hz + 0.1, 0.1, 0.11), (hz + 0.2, 0.09, 0.1), (hz + 0.27, 0.01, 0.01)], BRONZE, segments=12, cap_bottom=False)
-    p.segment((0.2, -0.3, 0.9), (1.1, -0.3, 3.0), 0.02, 0.015, WOOD, segments=6, caps=False)  # lance
-    p.cone((1.1, -0.3, 3.0), 0.03, 0.2, IRON, segments=6)
+    _lance(p)
     return p
 
 
@@ -617,6 +656,182 @@ def soldier_american(seed=54):
     return p
 
 
+# ---------------------------------------------------------------------------------- archers and horsemen in each culture's dress
+# SM_Archer_<Style> and SM_Rider_<Style>, as the soldiers above: a civ's archers until the Industrial era and its riders until
+# the Modern one wear its own dress.
+
+FUR = "#5b4632"
+DUN = ["#a5814f", "#5a4026"]
+GREY = ["#8c8378", "#3e3832"]
+STRAW = "#c4a868"
+INDIGO = "#2e3a5a"
+
+
+def archer_middleeast(seed=55):
+    """A Persian archer: a long robe and felt cap, a recurved composite bow, a gorytos case at the left hip."""
+    p = _figure("SM_Archer_MiddleEast", seed)
+    _body(p, SKIN[1])
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.22, team=True)
+    p.team_color(True)
+    for side in (-1, 1):
+        p.segment((side * 0.24, 0.005, 1.24), (side * 0.262, -0.01, 0.92), 0.056, 0.045, LINEN, caps=False)
+    p.team_color(False)
+    _belt(p, GOLD, 1.0)
+    p.box((-0.24, 0.02, 0.82), (0.05, 0.16, 0.4), LEATHER, rot_z=0.2)  # the gorytos, bow case and quiver in one
+    _quiver(p, at=(-0.24, 0.09, 0.82), length=0.36, color=DARK_LEATHER, tilt=0.15)
+    _bow(p, -0.3, half=0.48, centre=1.0, depth=0.06, recurve=0.07)
+    z = _head(p, SKIN[1], HAIR[2], beard=HAIR[2])
+    p.loft([(z + 0.15, 0.1, 0.11), (z + 0.24, 0.095, 0.105), (z + 0.31, 0.07, 0.08), (z + 0.34, 0.03, 0.04)], WOOL, segments=14)  # the felt cap
+    return p
+
+
+def archer_asian(seed=56):
+    """An East Asian archer: a robe under a lacquered vest, a wide straw hat, the tall asymmetric bow, a quiver on the back."""
+    p = _figure("SM_Archer_Asian", seed)
+    _body(p, SKIN[3])
+    _sandals(p, boots=True, color=DARK_LEATHER)
+    _tunic(p, LINEN, hem=0.45, team=True)
+    p.loft([(0.98, 0.185, 0.13), (1.14, 0.17, 0.12), (1.3, 0.205, 0.138), (1.39, 0.2, 0.12)], LACQUER[0], segments=18, cap_top=False)  # the vest
+    for z in (1.06, 1.18, 1.3):
+        p.loft([(z - 0.007, 0.19, 0.134), (z + 0.007, 0.19, 0.134)], LACQUER[1], segments=18)
+    _belt(p, LACQUER[1], 0.98)
+    _quiver(p, length=0.55, color=LACQUER[0], fletch=LINEN)
+    _bow(p, -0.3, half=0.95, centre=1.25, depth=0.07)  # the yumi: taller than its archer, gripped below the middle
+    z = _head(p, SKIN[3], HAIR[2], moustache=HAIR[2])
+    p.cone((0, 0, z + 0.2), 0.3, 0.16, STRAW, segments=18)  # the wide conical hat
+    p.cylinder((0, 0, z + 0.19), 0.3, 0.012, STRAW, segments=18)
+    return p
+
+
+def archer_african(seed=57):
+    """A Nubian archer of Ta-Seti, the land of the bow: a white kilt, a headband in the owner's colour with an ostrich feather, a long bow."""
+    p = _figure("SM_Archer_African", seed)
+    _body(p, SKIN[2])
+    _sandals(p)
+    p.loft([(0.62, 0.21, 0.15), (0.8, 0.19, 0.135), (0.94, 0.17, 0.118), (1.0, 0.16, 0.11)], COTTON, segments=18, folds=8, fold_depth=0.03,
+           cap_top=False)  # the kilt
+    _belt(p, LEATHER, 0.99)
+    for side in (-1, 1):  # gold armlets
+        p.cylinder((side * 0.236, 0.005, 1.2), 0.05, 0.03, GOLD, segments=10)
+    p.segment((-0.2, -0.12, 1.36), (0.18, -0.12, 0.98), 0.012, 0.012, LEATHER, segments=5)  # the quiver's strap across the chest
+    _quiver(p, length=0.55, color="#7d6448", fletch=COTTON)
+    _bow(p, -0.3, half=0.8, centre=1.1, depth=0.09)
+    z = _head(p, SKIN[2], HAIR[2])
+    p.team_color(True)
+    p.loft([(z + 0.15, 0.094, 0.105), (z + 0.19, 0.093, 0.104)], LINEN, segments=16)  # the headband
+    p.team_color(False)
+    p.segment((0.02, 0.08, z + 0.17), (0.06, 0.12, z + 0.45), 0.03, 0.012, COTTON, segments=6)  # the ostrich feather
+    return p
+
+
+def archer_american(seed=58):
+    """An Aztec archer: quilted cotton armour, a cloak in the owner's colour knotted at the shoulder, a feathered headband."""
+    p = _figure("SM_Archer_American", seed)
+    _body(p, SKIN[1])
+    _sandals(p)
+    _tunic(p, LINEN, hem=0.74, team=True)
+    p.loft([(0.96, 0.19, 0.135), (1.14, 0.185, 0.13), (1.3, 0.205, 0.14), (1.38, 0.2, 0.125)], COTTON, segments=18, cap_top=False)  # quilted armour
+    for z in (1.02, 1.12, 1.22, 1.32):
+        p.loft([(z - 0.006, 0.193, 0.137), (z + 0.006, 0.193, 0.137)], WOOL, segments=18)
+    _cloak(p, LINEN, hem=0.7, clasp=FEATHER[1])
+    _quiver(p, at=(0.12, 0.2, 0.95), length=0.5, color=WOOL, fletch=FEATHER[0])
+    _bow(p, -0.3)
+    z = _head(p, SKIN[1], HAIR[2])
+    p.loft([(z + 0.15, 0.094, 0.105), (z + 0.2, 0.093, 0.104)], FEATHER[2], segments=16)  # the headband
+    for i in range(5):  # its feathers, standing up behind
+        a = -0.5 + 0.25 * i
+        p.segment((0.06 * math.sin(a), 0.08, z + 0.18), (0.16 * math.sin(a), 0.12, z + 0.42), 0.022, 0.006, FEATHER[i % 3], segments=5)
+    return p
+
+
+def rider_middleeast(seed=59):
+    """An Arab or Persian horseman on a grey: a robe in the owner's colour, a white turban, a lance with a pennant, a tasselled caparison."""
+    p = _figure("SM_Rider_MiddleEast", seed)
+    _horse(p, coat=GREY)
+    p.team_color(True)
+    for y in (-0.31, 0.31):  # the caparison down both flanks, under the rider's legs
+        p.box((-0.05, y, 1.12), (1.2, 0.03, 0.52), LINEN)
+    p.team_color(False)
+    for x in (-0.6, -0.3, 0.0, 0.3, 0.6):
+        for y in (-0.325, 0.325):
+            p.cone((x, y, 0.8), 0.03, 0.1, GOLD, segments=6)  # tassels
+    hz = _seated(p, coat=LINEN, legs=LINEN, team=True)
+    p.loft([(hz + 0.12, 0.11, 0.12), (hz + 0.2, 0.125, 0.13), (hz + 0.27, 0.1, 0.11), (hz + 0.31, 0.04, 0.05)], COTTON, segments=14,
+           folds=6, fold_depth=0.04)  # the turban
+    _lance(p, pennant=True)
+    return p
+
+
+def rider_asian(seed=60):
+    """A steppe horse archer on a dun pony: lacquered lamellar, a fur-brimmed hat, a recurved bow drawn, a quiver at the hip."""
+    p = _figure("SM_Rider_Asian", seed)
+    _horse(p, coat=DUN, cloth=(0.6, 0.7))
+    hz = _seated(p, coat=LACQUER[0], legs=DARK_LEATHER, skin=SKIN[3])
+    for z in (1.7, 1.8, 1.9):  # the lamellae's lacing rows
+        p.loft([(z - 0.007, 0.17, 0.112), (z + 0.007, 0.17, 0.112)], LACQUER[1], segments=14)
+    p.cylinder((0, 0, hz + 0.16), 0.13, 0.06, FUR, segments=14)  # the fur brim
+    p.team_color(True)
+    p.loft([(hz + 0.2, 0.1, 0.1), (hz + 0.28, 0.08, 0.08), (hz + 0.33, 0.02, 0.02)], LINEN, segments=12, cap_bottom=False)  # the hat's crown
+    p.team_color(False)
+    _quiver(p, at=(-0.25, 0.32, 1.45), length=0.45, color=LACQUER[0], fletch=LINEN, tilt=-0.6)
+    # The bow, held out ahead on the left and drawn: its back toward the horse's head, the string pulled to the rider's chest.
+    pts = [(-0.5 + i / 8.0) * math.pi * 0.9 for i in range(9)]
+    bow = [(0.5 + 0.12 * math.cos(a) + 0.08 * math.sin(a) ** 8, -0.3, 2.05 + 0.45 * math.sin(a)) for a in pts]
+    for b0, b1 in zip(bow, bow[1:]):
+        p.segment(b0, b1, 0.016, 0.016, WOOD, segments=6, caps=False)
+    for tip in (bow[0], bow[-1]):
+        p.segment(tip, (0.16, -0.26, 2.05), 0.004, 0.004, LINEN, segments=4, caps=False)  # the drawn string
+    return p
+
+
+def rider_african(seed=61):
+    """A Sahel cavalryman of Mali or Kanem: a grey under quilted lifidi armour in the owner's colour, a robe and veiled indigo turban,
+    a hide shield and a long lance."""
+    p = _figure("SM_Rider_African", seed)
+    _horse(p, coat=GREY)
+    p.team_color(True)
+    for y in (-0.31, 0.31):  # the quilted lifidi down both flanks and over the chest
+        p.box((-0.05, y, 1.05), (1.6, 0.04, 0.62), LINEN)
+    p.box((0.88, 0, 1.25), (0.08, 0.5, 0.6), LINEN)
+    p.team_color(False)
+    for x in (-0.7, -0.45, -0.2, 0.05, 0.3, 0.55):  # its quilting
+        for y in (-0.335, 0.335):
+            p.box((x, y, 1.05), (0.02, 0.012, 0.6), DARK_LEATHER)
+    hz = _seated(p, coat=COTTON, legs=COTTON, skin=SKIN[2])
+    p.loft([(hz + 0.12, 0.11, 0.12), (hz + 0.2, 0.12, 0.125), (hz + 0.27, 0.095, 0.1), (hz + 0.3, 0.03, 0.04)], INDIGO, segments=14,
+           folds=6, fold_depth=0.04)  # the turban
+    p.loft([(hz + 0.03, 0.095, 0.1), (hz + 0.12, 0.105, 0.112)], INDIGO, segments=14, cap_bottom=False, cap_top=False, two_sided=True)  # the veil
+    p.disc((0.12, -0.34, 1.75), 0.22, 0.04, "#7d6448", segments=14)  # a round hide shield on the left arm
+    _lance(p)
+    return p
+
+
+def rider_american(seed=62):
+    """An Andean or Mexican horseman: a checkered unku tunic in the owner's colour, a feathered headband, a striped woven blanket
+    under the saddle, a spear with a feather tassel."""
+    p = _figure("SM_Rider_American", seed)
+    _horse(p, cloth=(0.8, 0.76))
+    for y in (-0.31, 0.31):  # the woven blanket down the flanks, in bands
+        p.box((-0.05, y, 1.3), (0.8, 0.03, 0.34), WOOL)
+        for i, z in enumerate((1.2, 1.28, 1.36, 1.44)):
+            p.box((-0.05, y * 1.06, z), (0.8, 0.012, 0.04), FEATHER[i % 3])
+    hz = _seated(p, coat=LINEN, team=True)
+    for i, z in enumerate((1.68, 1.8, 1.92)):  # the tocapu checks
+        for j in range(4):
+            a = 2 * math.pi * (j + 0.5 * i) / 4
+            p.box((0.17 * math.cos(a), 0.12 * math.sin(a), z), (0.05, 0.05, 0.05), [GOLD, OBSIDIAN][(i + j) % 2], rot_z=a)
+    p.loft([(hz + 0.15, 0.1, 0.11), (hz + 0.2, 0.1, 0.11)], GOLD, segments=14)  # the headband
+    for i in range(5):  # its feathers, standing up behind
+        a = -0.5 + 0.25 * i
+        p.segment((-0.04, 0.06 * math.sin(a), hz + 0.18), (-0.14, 0.18 * math.sin(a), hz + 0.45), 0.024, 0.006, FEATHER[i % 3], segments=5)
+    _lance(p)
+    for i in range(3):  # the spear's tassel
+        p.segment((1.02, -0.3, 2.76), (1.0 + 0.04 * i, -0.3 - 0.03 * i, 2.6), 0.015, 0.006, FEATHER[i], segments=5)
+    return p
+
+
 PIECES = [citizen, herald, captain, soldier, leader, ship, boat, archer, rider, siege, musketeer, rifleman, tank, plane, steamship,
-          soldier_middleeast, soldier_asian, soldier_african, soldier_american]
+          soldier_middleeast, soldier_asian, soldier_african, soldier_american, archer_middleeast, archer_asian, archer_african,
+          archer_american, rider_middleeast, rider_asian, rider_african, rider_american]
 PEOPLE = [citizen, herald, captain, soldier, leader]

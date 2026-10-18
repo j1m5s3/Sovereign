@@ -128,9 +128,9 @@ FLinearColor SovPlotColor(const sov::Game& Game, int32 X, int32 Y, bool* bWoods 
 // A unit type's Figures kit model (kit_figures.py): Soldier, Archer, Musketeer, Rifleman, Rider, Siege, Tank, Plane,
 // Ship, Steamship, Citizen or Leader.
 FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian);
-// The figure in its owner's culture's dress: the spear soldier as Soldier_<Style> for a civ of the Middle Eastern, Asian,
-// African or American style (kit_figures.py; SovArt::CivStyle); any other figure, or owner, unchanged. Callers fall back
-// to the plain figure when that mesh is missing.
+// The figure in its owner's culture's dress: the spear soldier, archer and rider as Soldier_<Style>, Archer_<Style> and
+// Rider_<Style> for a civ of the Middle Eastern, Asian, African or American style (kit_figures.py; SovArt::CivStyle); any
+// other figure, or owner, unchanged. Callers fall back to the plain figure (the name before the '_') when that mesh is missing.
 FName SovCultureFigure(const sov::Game& Game, int32 Owner, FName Figure);
 
 // Owner colour for markers and labels (barbarians are always the last seat).
