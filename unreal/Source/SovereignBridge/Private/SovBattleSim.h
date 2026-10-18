@@ -19,7 +19,7 @@ struct FSovBattleUnitSpec
 	int32 Strength = 20;  // Civ combat strength in this fight (attacking or defending)
 	int32 Hp = 100;
 	bool bLeaderIsUnit = false;  // an unescorted leader: the unit is the leader alone
-	FName Figure;                // its Figures kit model (SovUnitFigure); not streamed or recorded (the soldier there)
+	FName Figure;                // its Figures kit model (SovUnitFigure, SovCultureFigure); recorded for replays, and each machine online works out its own
 };
 
 struct FSovBattleSpec

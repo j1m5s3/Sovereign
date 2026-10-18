@@ -852,6 +852,7 @@ bool FSovBattleReplayTest::RunTest(const FString& Parameters)
 	FSovBattleRecording Rec;
 	Rec.Title = TEXT("Turn 3: Swordsman attacks Archer");
 	Rec.Spec = Spec;
+	Rec.Spec.Defender.Figure = FName("Archer_Asian");  // the sides' figures are kept for the replay
 	Rec.bWoods = true;
 	Rec.Frames.push_back(Live.Snapshot().Encode());
 	for (int32 Step = 0; Step < 4000 && !Live.Finished(); ++Step)
@@ -865,6 +866,7 @@ bool FSovBattleReplayTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("its title"), Back.Title, Rec.Title);
 	TestEqual(TEXT("its frames"), Back.Frames.size(), Rec.Frames.size());
 	TestTrue(TEXT("its field"), Back.bWoods && Back.Spec.Attacker.Name == TEXT("Swordsman") && Back.Spec.Seed == 5);
+	TestTrue(TEXT("its figures"), Back.Spec.Defender.Figure == FName("Archer_Asian") && Back.Spec.Attacker.Figure.IsNone());
 	FSovBattleSim Replay;
 	Replay.StartRemoteView(Back.Spec);
 	for (const std::vector<uint8_t>& F : Back.Frames)
