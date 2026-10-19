@@ -430,13 +430,7 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 			// The flat top already leans toward its neighbours at its rim: the blend spans the plot, not just its slope.
 			InnerPaint[k] = Bytes(Mottle(Inner[k], FMath::Lerp(Color, Mean, 0.45f)));
 		}
-		// The flat top.
 		const FVector Up(0, 0, 1);
-		const FVector Mid3 = SovHex::ToWorld(Center, Top);
-		const int32 Mid = S.Vert(Mid3, Up, Bytes(Mottle(Mid3, Color)));
-		int32 Ring[12];
-		for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up, InnerPaint[k]);
-		for (int32 k = 0; k < 12; ++k) S.Tri(Mid, Ring[k], Ring[(k + 1) % 12]);
 		// The slope to the neighbours, each face lit by its own normal, its colour fading to theirs.
 		auto Face = [&](const FVector& A, FColor CA, const FVector& B, FColor CB, const FVector& C, FColor CC) {
 			FVector N = FVector::CrossProduct(B - A, C - A).GetSafeNormal();
@@ -444,6 +438,42 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 			if (N.IsNearlyZero()) N = Up;
 			S.Tri(S.Vert(A, N, CA), S.Vert(B, N, CB), S.Vert(C, N, CC));
 		};
+		const FVector Mid3 = SovHex::ToWorld(Center, Top);
+		if (Tile.Relief == ESovRelief::Mountain)
+		{
+			// A mountain rises to a rocky peak instead of a flat top: a ridge ring halfway in and a summit, both raised
+			// and jittered by the plot's hash, faceted, pale with snow toward the top.
+			const uint32 H = static_cast<uint32>(Tile.X * 73856093) ^ static_cast<uint32>(Tile.Y * 19349663);
+			auto Jit = [H](int32 k, double Lo, double Hi) { return Lo + (Hi - Lo) * (((H >> (k % 24)) ^ (k * 2654435761u)) % 1000) / 999.0; };
+			const FVector2D Off = FVector2D(Jit(30, -12.0, 12.0), Jit(31, -12.0, 12.0));
+			const FVector Peak = SovHex::ToWorld(Center + Off, Top + Jit(32, 120.0, 165.0));
+			FVector Ridge[12], Foot[12];
+			FColor RidgePaint[12];
+			for (int32 k = 0; k < 12; ++k)
+			{
+				Foot[k] = Inner[k] + FVector(0, 0, Jit(k, -6.0, 22.0));
+				const FVector2D P = Center + Off * 0.5 + (Pts[k] - Center) * Plateau * Jit(k + 12, 0.42, 0.58);
+				Ridge[k] = SovHex::ToWorld(P, Top + Jit(k + 40, 45.0, 95.0));
+				RidgePaint[k] = Bytes(FMath::Lerp(Color, FLinearColor(0.85f, 0.86f, 0.88f), Ridge[k].Z > Top + 75.0 ? 0.45f : 0.12f));
+			}
+			const FColor Snow = Bytes(FLinearColor(0.88f, 0.9f, 0.93f));
+			for (int32 k = 0; k < 12; ++k)
+			{
+				const int32 n = (k + 1) % 12;
+				Face(Foot[k], InnerPaint[k], Foot[n], InnerPaint[n], Ridge[n], RidgePaint[n]);
+				Face(Foot[k], InnerPaint[k], Ridge[n], RidgePaint[n], Ridge[k], RidgePaint[k]);
+				Face(Ridge[k], RidgePaint[k], Ridge[n], RidgePaint[n], Peak, Snow);
+				Inner[k] = Foot[k];
+			}
+		}
+		else
+		{
+			// The flat top.
+			const int32 Mid = S.Vert(Mid3, Up, Bytes(Mottle(Mid3, Color)));
+			int32 Ring[12];
+			for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up, InnerPaint[k]);
+			for (int32 k = 0; k < 12; ++k) S.Tri(Mid, Ring[k], Ring[(k + 1) % 12]);
+		}
 		for (int32 k = 0; k < 12; ++k)
 		{
 			const int32 n = (k + 1) % 12;
@@ -547,7 +577,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	BuildTerrain(Mirror);
 
 	// Rivers along plot edges; borders just inside the owner's side.
-	EdgeStrips(Mirror.Rivers, RiverPieces, 0.0, 9.0, 1.0);
+	EdgeStrips(Mirror.Rivers, RiverPieces, 0.0, 15.0, 1.0);
 	EdgeStrips(Mirror.Borders, BorderPieces, 7.0, 4.0, 2.0);
 
 	// Resources the viewer sees (a small ball: green bonus, violet luxury, red strategic) and improvements (the Fields
@@ -669,8 +699,8 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			for (int32 k = 0; k < Count; ++k)
 			{
 				const double A = (H % 360) * PI / 180.0 + k * 2.4;
-				const double R = k == 0 ? (bMountain ? 0.0 : 28.0) : 42.0;
-				const double Scale = bMountain ? (k == 0 ? 0.34 : 0.2) : 0.12;
+				const double R = k == 0 ? (bMountain ? 62.0 : 28.0) : (bMountain ? 66.0 : 42.0);  // a mountain's on its foothills, clear of the peak
+				const double Scale = bMountain ? (k == 0 ? 0.22 : 0.16) : 0.12;
 				UStaticMeshComponent* Rk = Marker(Rocks, RockCount++, nullptr);
 				SovArt::SetKitMesh(Rk, TEXT("Nature"), TEXT("Rocks"), FLinearColor::White);
 				Rk->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
