@@ -129,4 +129,10 @@ With plan D done, the screenshots still show the canvas HUD's status block (a do
 52. **Done: replays keep their figures.** A battle replay file (`.sovbattle`, version 2) stores each side's figure, so a replay shows archers, riders and culture dress as fought; version-1 files still play, as spearmen. Online views already worked out their own figures from their own game. The README's "Not yet" list now says what is left: units from the musketeer on, and improvements, are one look for every civ. Test: `RecordedBattleReplays` round-trips a figure.
 53. **Done: a counterspy's district.** The spy chooser now lets a counterspy guard any plot the core allows (`Command::spyMission`'s guard, from `2026-10-10-counterspy-district.md`). In a city with a finished district it lists the City Center and each finished district, and marks the one `Game::counterspyPlot` would pick ("covers most"). In a city with no districts there is one choice, as before. Built; not checked in the game (the desktop was in use).
 
+## Plan F: from James's first playtest (active, 2026-10-19)
+
+James played for a minute and said "lots of work left to be done", with standing orders to fix it without asking. I review the game through offscreen screenshots and fix what a new player sees first.
+
+- **Done: small UI fixes.** The main menu's buttons wrapped short labels ("Battle / replays") on their first layout (AutoWrapText); they wrap at a fixed width now. The canvas line "X wins: ... Esc opens the menu" no longer sits behind the end-of-game screen. The chronicle merges the same event in the same turn into one line with a count ("Great Person Recruited (3 times)"); test `the_chronicle_counts_repeats_in_a_turn`.
+
 Plan E is done except sound, which waits on a decision.

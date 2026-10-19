@@ -95,11 +95,12 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	{
 		Line(FString::Printf(TEXT("%s is playing..."), *CurrentName), 16, Y, FLinearColor(1.f, 0.8f, 0.3f));
 	}
-	if (!P.alive)
+	// With the widgets up, the end-of-game screen says these; the canvas line would sit behind it.
+	if (!P.alive && TopInset <= 0.f)
 	{
 		Line(TEXT("You have been eliminated. Esc opens the menu."), 16, Y, FLinearColor(1.f, 0.3f, 0.3f));
 	}
-	if (G.gameOver())
+	if (G.gameOver() && TopInset <= 0.f)
 	{
 		const sov::Player& W = S.players[static_cast<size_t>(S.winner)];
 		const FString Winner = W.civ == sov::kNone ? TEXT("?") : Str(R.civs[static_cast<size_t>(W.civ)].name);
