@@ -14,6 +14,7 @@
 #include "SovEvents.h"
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
+#include "SovMapActor.h"
 #include "SovMirror.h"
 #include "SovStatus.h"
 #include "SovPlayerController.h"
@@ -227,6 +228,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	const FSovMirror& M = *Sub.Mirror;
 	const sov::PlayerId View = static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer());
 	UFont* Font = GEngine->GetSmallFont();
+	const ASovPlayerController* PC = Cast<ASovPlayerController>(PlayerOwner);
 	const FLinearColor Ink(0.03f, 0.027f, 0.024f, 0.88f), Edge(0.42f, 0.28f, 0.11f, 1.f);
 	for (const FSovCityMarker& C : M.Cities)
 	{
@@ -323,8 +325,19 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 			continue;
 		}
 		const float S = 20.f;
-		const float FX = Screen.X - S / 2 + (U.bInCity ? (U.bCivilian ? 12.f : -12.f) : 0.f);
-		const float FY = Screen.Y - S - (U.bInCity ? 32.f : 0.f);
+		// While the figure walks to its plot, the flag goes with it.
+		FVector2D Walk = FVector2D::ZeroVector;
+		if (const ASovMapActor* Map = PC ? PC->GetMap() : nullptr; Map && !U.bInCity)
+		{
+			if (const FVector Drift = Map->UnitDrift(U.Id); !Drift.IsNearlyZero())
+			{
+				const FVector Over = SovHex::Center(U.X, U.Y, 105.0) + SovHex::ToWorld(Offset, 0.0);
+				const FVector Now = Project(NearCamera(PlayerOwner, Over + Drift));
+				if (Now.Z > 0) Walk = FVector2D(Now.X - Screen.X, Now.Y - Screen.Y);
+			}
+		}
+		const float FX = Screen.X - S / 2 + (U.bInCity ? (U.bCivilian ? 12.f : -12.f) : 0.f) + Walk.X;
+		const float FY = Screen.Y - S - (U.bInCity ? 32.f : 0.f) + Walk.Y;
 		DrawRect(FLinearColor(0.02f, 0.02f, 0.02f, 0.9f), FX - 1.5f, FY - 1.5f, S + 3.f, S + 3.f);
 		DrawRect(FLinearColor(U.Color.R * 0.8f, U.Color.G * 0.8f, U.Color.B * 0.8f, 0.95f), FX, FY, S, S);
 		if (UTexture2D* Tex = IconTexture(U.Icon))
@@ -526,6 +539,7 @@ void ASovHUD::DrawHUD()
 	if (bShowYields || YieldCity >= 0) DrawYields(*Sub);
 	DrawPath();
 	DrawLabels(*Sub);
+	if (Sub->Mirror.IsValid()) DrawHitNumbers(*Sub->Mirror);
 	DrawStatus(*Sub, Y);
 	// The plot under the cursor: terrain, resource, improvement, owner and yields.
 	int32 TX = 0, TY = 0;
@@ -556,4 +570,35 @@ void ASovHUD::DrawHUD()
 	// With the widgets up, the reader panel shows these.
 	if (bShowHelp && TopInset <= 0.f) DrawHelp();
 	if (bShowChronicle && TopInset <= 0.f && Sub && Sub->IsRunning()) DrawChronicle(*Sub);
+}
+
+void ASovHUD::DrawHitNumbers(const FSovMirror& M)
+{
+	const double Now = GetWorld() ? GetWorld()->GetRealTimeSeconds() : 0.0;
+	TMap<int32, int32> Hp;
+	for (const FSovUnitMarker& U : M.Units)
+	{
+		Hp.Add(U.Id, U.Hp);
+		if (const int32* Was = LastHp.Find(U.Id); Was && U.Hp < *Was)
+		{
+			HitNumbers.Add({SovHex::Center(U.X, U.Y, 120.0), *Was - U.Hp, Now});
+		}
+	}
+	LastHp = MoveTemp(Hp);
+	constexpr double Life = 1.8;
+	HitNumbers.RemoveAll([Now](const FHitNumber& H) { return Now - H.Born > Life; });
+	UFont* Font = GEngine->GetLargeFont();
+	for (const FHitNumber& H : HitNumbers)
+	{
+		const FVector At = Project(NearCamera(PlayerOwner, H.World));
+		if (At.Z <= 0) continue;
+		const float Age = static_cast<float>((Now - H.Born) / Life);
+		const float Alpha = Age < 0.7f ? 1.f : 1.f - (Age - 0.7f) / 0.3f;
+		const FString Text = FString::Printf(TEXT("-%d"), H.Amount);
+		float W = 0, TH = 0;
+		GetTextSize(Text, W, TH, Font, 1.f);
+		const float X = At.X - W / 2, Y = At.Y - TH - 36.f * Age;  // rising
+		DrawText(Text, FLinearColor(0, 0, 0, 0.8f * Alpha), X + 1.5f, Y + 1.5f, Font, 1.f);
+		DrawText(Text, FLinearColor(1.f, 0.28f, 0.2f, Alpha), X, Y, Font, 1.f);
+	}
 }

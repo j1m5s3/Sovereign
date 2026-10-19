@@ -49,4 +49,14 @@ protected:
 
 	UPROPERTY()
 	TMap<FName, TObjectPtr<class UTexture2D>> Icons;
+	// Damage taken, floating up from a unit for a moment after a fight (as Civ VI shows it).
+	struct FHitNumber
+	{
+		FVector World;
+		int32 Amount = 0;
+		double Born = 0.0;
+	};
+	TArray<FHitNumber> HitNumbers;
+	TMap<int32, int32> LastHp;  // each unit's health when last drawn
+	void DrawHitNumbers(const struct FSovMirror& M);
 };

@@ -34,7 +34,19 @@ public:
 
 	static double ReliefHeight(ESovRelief Relief);
 
+	// Where a unit's figure is drawn now, less where it is going: non-zero while it walks from plot to plot (the
+	// HUD moves its flag with it).
+	FVector UnitDrift(int32 Id) const;
+
+	virtual void Tick(float DeltaSeconds) override;
+
 private:
+	// Puts a unit's figure at its plot; when the unit was drawn elsewhere a moment ago (a move, not a jump across
+	// the map), it walks there instead, facing the way it goes, then turns back to Rot.
+	void PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot);
+	// The figures of a unit's squad beside its lead figure (C), one fewer for each third of its health lost.
+	int32 AddSquad(UStaticMeshComponent* C, int32 Index, const FSovUnitMarker& Unit, const FString& Figure);
+
 	UMaterialInstanceDynamic* MaterialFor(const FLinearColor& Color);
 	UStaticMeshComponent* Marker(TArray<TObjectPtr<UStaticMeshComponent>>& Pool, int32 Index, UStaticMesh* Mesh);
 	void BuildTerrain(const FSovMirror& Mirror);
@@ -93,6 +105,21 @@ private:
 	// Boats under embarked units.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Boats;
+	// A unit's other men, attached to its lead figure so they move with it.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> SquadPieces;
+
+	struct FGlide
+	{
+		TWeakObjectPtr<UStaticMeshComponent> Figure;
+		int32 Id = 0;
+		FVector From, To;
+		FRotator Rot;  // facing when it arrives
+		float T = 0.f, Duration = 0.5f;
+	};
+	TArray<FGlide> Glides;
+	TMap<int32, FVector> UnitNow;     // each unit's figure where it is drawn now
+	TMap<int32, FVector> UnitTarget;  // and where it is going
 
 	UPROPERTY()
 	TMap<uint32, TObjectPtr<UMaterialInstanceDynamic>> Materials;
