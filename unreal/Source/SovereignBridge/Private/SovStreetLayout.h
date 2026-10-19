@@ -22,7 +22,8 @@ enum class ESovStreetPiece : uint8
 	Boarded,
 	Guard,
 	Tree,
-	Market
+	Market,
+	Prop  // street clutter from the Props kit (Recipe names the piece): a well, barrels, carts, benches, lamp posts...
 };
 
 struct FSovStreetPiece

@@ -344,7 +344,13 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		// Kit meshes when the art has been built (tools/art); primitives otherwise.
 		// Houses and the Palace in the owner's era's style (SovArt::EraPiece); here the Landmark stands for other
 		// buildings, so it stays.
+		if (P.Kind == ESovStreetPiece::Prop || P.Kind == ESovStreetPiece::Market)
+		{
+			const double R = P.Recipe == TEXT("Well") ? 150.0 : P.Recipe == TEXT("Cart") || P.Kind == ESovStreetPiece::Market ? 170.0 : 80.0;
+			Obstacles.Add(FVector(P.Location.X, P.Location.Y, R));
+		}
 		const TPair<const TCHAR*, FString> Piece = P.Kind == ESovStreetPiece::Tree ? TPair<const TCHAR*, FString>(TEXT("Nature"), P.Recipe)
+			: P.Kind == ESovStreetPiece::Prop ? TPair<const TCHAR*, FString>(TEXT("Props"), P.Recipe)
 			: P.Recipe == TEXT("Landmark") ? TPair<const TCHAR*, FString>(TEXT("Classical"), P.Recipe) : SovArt::EraPiece(Layout.Era, P.Recipe, Layout.Civ);
 		const TCHAR* Kit = Piece.Key;
 		if (UStaticMesh* Mesh = P.Recipe.IsEmpty() ? nullptr : SovArt::Mesh(Kit, Piece.Value))
@@ -442,14 +448,17 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		// Townsfolk in clothes of many colours (the citizen's team cloth), walking on their own legs.
 		const FLinearColor Cloth = FLinearColor::MakeFromHSV8(static_cast<uint8>(Rng.RandRange(0, 255)), static_cast<uint8>(Rng.RandRange(60, 150)),
 			static_cast<uint8>(Rng.RandRange(150, 235)));
-		// One of the townsfolk (the dyed variants of rig_figures.py), else the plain citizen.
-		static const TCHAR* const Folk[] = {TEXT("Townsman"), TEXT("Traveller"), TEXT("Townswoman")};
+		// One of the townsfolk (the dyed variants of rig_figures.py), else the plain citizen. Some townsmen and
+		// townswomen are children: smaller, and quicker on their feet.
+		static const TCHAR* const Folk[] = {TEXT("Townsman"), TEXT("Traveller"), TEXT("Townswoman"), TEXT("Elder"), TEXT("Porter"),
+			TEXT("Merchant"), TEXT("WaterCarrier"), TEXT("Townsman"), TEXT("Townswoman")};
 		C.Kind = Folk[Rng.RandRange(0, UE_ARRAY_COUNT(Folk) - 1)];
 		if (!SovArt::RiggedMesh(C.Kind)) C.Kind = TEXT("Citizen");
+		const bool bChild = (C.Kind == TEXT("Townsman") || C.Kind == TEXT("Townswoman")) && Rng.FRand() < 0.3f;
 		if ((C.Rigged = AddRigged(C.Kind, FVector(Start.X, Start.Y, 0), 0.f, Cloth)) != nullptr)
 		{
 			C.Body->SetVisibility(false);
-			C.Rigged->SetRelativeScale3D(FVector(Rng.FRandRange(0.92f, 1.06f)));
+			C.Rigged->SetRelativeScale3D(FVector(bChild ? Rng.FRandRange(0.6f, 0.72f) : Rng.FRandRange(0.92f, 1.06f)));
 			if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
 			C.bFigure = true;
 		}
@@ -460,6 +469,9 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		}
 		C.Target = FVector(Rng.FRandRange(-3000.f, 3000.f), Rng.FRandRange(-3000.f, 3000.f), 80.f);
 		C.Speed = Rng.FRandRange(80.f, 160.f) * (Layout.bFear ? 0.6f : 1.f);  // a cowed city moves quietly
+		if (C.Kind == TEXT("Elder")) C.Speed *= 0.6f;
+		if (C.Kind == TEXT("Porter") || C.Kind == TEXT("WaterCarrier")) C.Speed *= 0.8f;  // under a load
+		if (bChild) C.Speed *= 0.75f;  // short legs: the stride (and the walk's play rate, below) scale with them
 		Citizens.Add(C);
 	}
 }
@@ -490,7 +502,18 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 			}
 			continue;
 		}
-		const FVector Step = To.GetSafeNormal2D() * C.Speed * DeltaSeconds;
+		FVector Step = To.GetSafeNormal2D() * C.Speed * DeltaSeconds;
+		// Step round the well, carts and stalls: inside one's circle, turn along its rim (the way that keeps heading on).
+		for (const FVector& O : Obstacles)
+		{
+			const FVector Off(Here.X - O.X, Here.Y - O.Y, 0.0);
+			if (Off.Size2D() < O.Z + 40.0 && (Step | Off) < 0.0)
+			{
+				FVector Round = FVector(-Off.Y, Off.X, 0.0).GetSafeNormal();
+				if ((Round | To) < 0.0) Round = -Round;
+				Step = Round * C.Speed * DeltaSeconds;
+			}
+		}
 		// Figures stand on the ground and face where they walk (kit figures face +Y in Unreal).
 		const FVector Next = Here + Step;
 		Who->SetRelativeLocation(C.bFigure ? FVector(Next.X, Next.Y, 0.0) : Next);
@@ -498,6 +521,7 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 		{
 			Who->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
 		}
-		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / 140.f);  // one stride a second at 140 cm/s: the feet keep their footing
+		// One stride a second at 140 cm/s for a full-size figure: the feet keep their footing (a smaller one strides shorter).
+		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / (140.f * static_cast<float>(C.Rigged->GetRelativeScale3D().X)));
 	}
 }

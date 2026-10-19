@@ -199,6 +199,11 @@ TArray<FString> RequiredAssets()
 			Out.Add(MeshPath(TEXT("Towns"), FString(Style) + Part));
 		}
 	}
+	for (const TCHAR* Name : {TEXT("Barrels"), TEXT("Crates"), TEXT("Sacks"), TEXT("Cart"), TEXT("Well"), TEXT("Bench"), TEXT("LampPost"),
+			 TEXT("Trough"), TEXT("Haystack"), TEXT("Woodpile"), TEXT("FlowerPots")})
+	{
+		Out.Add(MeshPath(TEXT("Props"), Name));
+	}
 	for (const TCHAR* Name : {TEXT("Sheaf"), TEXT("Beast"), TEXT("Fish"), TEXT("Shell"), TEXT("Ore"), TEXT("Blocks"), TEXT("Shrub"),
 			 TEXT("OilPool"), TEXT("Hive"), TEXT("Goods")})
 	{

@@ -67,8 +67,73 @@ def townswoman(seed=73):
     return p
 
 
+GREY = "#cfc8bb"  # an elder's hair
+JAR = "#9c6a48"   # fired clay
+STRAW_HAT = "#c9a96a"
+kitlib.patterns({"hair": [GREY], "rooftile": [JAR], "thatch": [STRAW_HAT]})
+
+
+def elder(seed=74):
+    """An old man, white-haired and bearded, in a long dyed robe and a plain cloak, leaning on a staff."""
+    p = F._figure("SM_Elder", seed)
+    F._body(p, F.SKIN[3])
+    F._sandals(p)
+    F._tunic(p, F.LINEN, hem=0.1, team=True)
+    F._belt(p, F.LEATHER, 1.0)
+    F._cloak(p, F.WOOL, hem=0.3, clasp=F.BRONZE, team=False)
+    F._head(p, F.SKIN[3], GREY, beard=GREY)
+    p.segment((0.31, -0.08, 0.02), (0.29, -0.06, 1.55), 0.022, 0.018, F.WOOD, segments=6)  # the staff, in the right hand
+    return p
+
+
+def porter(seed=75):
+    """A labourer in a short dyed tunic, bare-legged, a full sack over his shoulder."""
+    p = F._figure("SM_Porter", seed)
+    F._body(p, F.SKIN[2])
+    F._sandals(p)
+    F._tunic(p, F.LINEN, hem=0.78, team=True)
+    F._belt(p, "#7d6448", 1.0)
+    F._head(p, F.SKIN[2], F.HAIR[2])
+    p.blob((-0.13, 0.1, 1.55), 0.2, F.WOOL, squash=0.75, subdiv=2, wobble=0.08)  # the sack, on the head bone with the shoulders
+    return p
+
+
+def merchant(seed=76):
+    """A well-fed merchant in a long dyed coat, a purse at his belt and a broad straw hat."""
+    p = F._figure("SM_Merchant", seed)
+    F._body(p, F.SKIN[0], legs=F.WOOL)
+    F._sandals(p, boots=True, color=F.LEATHER)
+    F._tunic(p, F.LINEN, hem=0.35, team=True)
+    p.team_color(True)
+    p.loft([(1.0, 0.19, 0.15), (1.12, 0.2, 0.16), (1.24, 0.19, 0.14)], F.LINEN, segments=16)  # the belly, in the coat
+    p.team_color(False)
+    F._belt(p, F.DARK_LEATHER, 1.0, buckle=F.GOLD)
+    p.blob((0.12, -0.13, 0.94), 0.05, F.LEATHER, squash=1.3, subdiv=1)  # the purse
+    z = F._head(p, F.SKIN[0], F.HAIR[3], moustache=F.HAIR[3])
+    p.cylinder((0, 0, z + 0.2), 0.24, 0.02, STRAW_HAT, segments=16)  # the brim
+    p.cylinder((0, 0, z + 0.2), 0.1, 0.1, STRAW_HAT, radius_top=0.08, segments=14)
+    return p
+
+
+def water_carrier(seed=77):
+    """A woman in a long dyed dress and headcloth, a water jar balanced on her head."""
+    p = F._figure("SM_WaterCarrier", seed)
+    F._body(p, F.SKIN[3], s=0.95)
+    F._sandals(p, s=0.95)
+    F._tunic(p, F.LINEN, s=0.95, hem=0.12, team=True)
+    F._belt(p, "#8b2a22", 0.98, s=0.95)
+    z = F._head(p, F.SKIN[3], F.HAIR[1], s=0.95)
+    p.loft([(z + 0.04, 0.1, 0.105, 0, 0.03), (z + 0.15, 0.1, 0.11, 0, 0.01), (z + 0.24, 0.08, 0.09)], F.WOOL,
+           segments=16, arc=(-0.35, math.pi + 0.35), two_sided=True)  # the headcloth
+    p.cylinder((0, 0.01, z + 0.25), 0.06, 0.03, F.WOOL, segments=10)  # the pad under the jar
+    p.loft([(z + 0.27, 0.06, 0.06, 0, 0.01), (z + 0.36, 0.13, 0.13, 0, 0.01), (z + 0.46, 0.1, 0.1, 0, 0.01), (z + 0.52, 0.045, 0.045, 0, 0.01),
+            (z + 0.56, 0.055, 0.055, 0, 0.01)], JAR, segments=14)
+    return p
+
+
 PEOPLE = {"Citizen": kit_figures.citizen, "Herald": kit_figures.herald, "Captain": kit_figures.captain, "Soldier": kit_figures.soldier,
-          "Leader": kit_figures.leader, "Townsman": townsman, "Traveller": traveller, "Townswoman": townswoman}
+          "Leader": kit_figures.leader, "Townsman": townsman, "Traveller": traveller, "Townswoman": townswoman, "Elder": elder,
+          "Porter": porter, "Merchant": merchant, "WaterCarrier": water_carrier}
 FPS = 24
 CM = 100.0  # the rig is built in centimetres (see rig)
 
