@@ -1777,7 +1777,7 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	const FLinearColor Ground = SovPlotColor(G, Where.x, Where.y, &bWoods);
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
+	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), ASovBattleScene::FacingFor(Spec.HumanSide), Params);
 	Battle->Build(Spec, Ground, bWoods && !C, SovPlayerColor(G, A->owner), SovPlayerColor(G, DefOwner), C != nullptr, C && C->wallHp > 0);
 	Battle->Sync(Sim);
 	// Kept for replay as it is fought (player-retention §2).
@@ -1798,7 +1798,7 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	Walker->GetCharacterMovement()->DisableMovement();  // the simulation moves the leader
 	MapPawn = GetPawn();
 	Possess(Walker);
-	SetControlRotation(FRotator(-20.f, Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
+	SetControlRotation(FRotator(-20.f, (Spec.HumanSide == 0 ? 0.f : 180.f) + ASovBattleScene::FacingFor(Spec.HumanSide).Yaw, 0.f));
 	Chooser = EChooser::None;
 	Sub->LastMessage = bRemoteView
 		? TEXT("You command your men in a battle your rival fights live: Tab charge/hold, 1-6 squad orders (7 8 9 pick a squad), Esc leave them to your generals.")
@@ -1820,7 +1820,7 @@ void ASovPlayerController::StartReplay(const FString& Path)
 	if (First.Decode(Recording.Frames.front())) Sim.ApplySnapshot(First);
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), FRotator::ZeroRotator, Params);
+	Battle = GetWorld()->SpawnActor<ASovBattleScene>(ASovBattleScene::Origin(), ASovBattleScene::FacingFor(Recording.Spec.HumanSide), Params);
 	Battle->Build(Recording.Spec, Recording.Ground, Recording.bWoods, Recording.AttackerColor, Recording.DefenderColor, Recording.bCity, Recording.bWalls);
 	Battle->Sync(Sim);
 	const FVector2D Start(Recording.Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
@@ -1831,7 +1831,7 @@ void ASovPlayerController::StartReplay(const FString& Path)
 	Walker->Crown->SetVisibility(false);
 	MapPawn = GetPawn();
 	Possess(Walker);
-	SetControlRotation(FRotator(-20.f, Recording.Spec.HumanSide == 0 ? 0.f : 180.f, 0.f));
+	SetControlRotation(FRotator(-20.f, (Recording.Spec.HumanSide == 0 ? 0.f : 180.f) + ASovBattleScene::FacingFor(Recording.Spec.HumanSide).Yaw, 0.f));
 	bReplay = true;
 	ReplayTime = 0.f;
 	Chooser = EChooser::None;
@@ -1920,6 +1920,9 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		if (BattleKey(OrderKeys[k])) Sim.SetOrder(Side, static_cast<sov::battle::Order>(k), BattleSquad);
 	}
 	const bool bSettleNow = BattleKey(EKeys::Escape);
+	// The keys move the leader as the camera looks; the field may be turned (FacingFor), so as a direction on it.
+	const FVector2D WorldMove = Move;
+	Move = Battle->ToField(Move);
 	Sim.Step(DeltaTime, Move.GetSafeNormal(), bStrike);
 	Battle->Sync(Sim);
 	RecordTimer += DeltaTime;
@@ -1942,7 +1945,7 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	{
 		const FSovSoldier& Me3 = Sim.Soldiers()[Sim.LeaderIndex()];
 		Walker->SetActorLocation(Battle->ToWorld(Me3.Pos, 90.0));
-		if (!Move.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Move.Y, Move.X)), 0.f));
+		if (!WorldMove.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(WorldMove.Y, WorldMove.X)), 0.f));
 		// The rigged ruler when there is one (its stand-in cylinder stays hidden), else the still figure or primitives.
 		Walker->Body->SetVisibility(Me3.bAlive && !Walker->bRigged);
 		Walker->Crown->SetVisibility(Me3.bAlive && !Walker->bFigure);
