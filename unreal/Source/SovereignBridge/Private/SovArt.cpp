@@ -1,5 +1,9 @@
 #include "SovArt.h"
 
+#include "Animation/AnimSequence.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
+
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -57,6 +61,37 @@ UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint)
 	UMaterialInstanceDynamic* Mid = UMaterialInstanceDynamic::Create(Base, Outer);
 	Mid->SetVectorParameterValue(TEXT("Tint"), Tint);
 	return Mid;
+}
+
+USkeletalMesh* RiggedMesh(const FString& Name)
+{
+	return LoadObject<USkeletalMesh>(nullptr, *FString::Printf(TEXT("/Game/Art/Rigged/SK_%s.SK_%s"), *Name, *Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
+}
+
+UAnimSequence* RiggedAnim(const FString& Name, const TCHAR* Anim)
+{
+	const FString Asset = FString::Printf(TEXT("SK_%s_Anim_Armature_%s"), *Name, Anim);
+	return LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Art/Rigged/%s.%s"), *Asset, *Asset), nullptr, LOAD_NoWarn | LOAD_Quiet);
+}
+
+bool SetRiggedFigure(USkeletalMeshComponent* Component, const FString& Name, const FLinearColor& Tint, const TCHAR* Anim)
+{
+	USkeletalMesh* M = RiggedMesh(Name);
+	if (!M) return false;
+	if (Component->GetSkeletalMeshAsset() != M) Component->SetSkeletalMesh(M);
+	if (UMaterialInterface* Kit = KitMaterial()) Component->SetMaterial(0, Kit);  // the kit material, whatever the import left in the slot
+	if (Component->GetNumMaterials() > 1)
+	{
+		UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Component->GetMaterial(1));
+		if (!Mid || Mid->GetOuter() != Component)
+		{
+			Mid = Tinted(Component, Tint);
+			Component->SetMaterial(1, Mid);
+		}
+		if (Mid) Mid->SetVectorParameterValue(TEXT("Tint"), Tint);
+	}
+	if (UAnimSequence* A = RiggedAnim(Name, Anim)) Component->PlayAnimation(A, true);
+	return true;
 }
 
 bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint)

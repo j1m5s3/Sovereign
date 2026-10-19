@@ -20,6 +20,11 @@ UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint);
 // Puts a kit mesh on a component and paints its team slot (slot 1: clothing, shields, banner cloth)
 // with Tint; returns false when the mesh is missing (callers keep their primitive).
 bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint);
+// The rigged people (tools/art/blender/rig_figures.py): SK_<Name> in /Game/Art/Rigged with its Walk and Idle animations.
+// SetRiggedFigure puts one on a skeletal component, its team cloth tinted, playing Anim (looping); false without the art.
+class USkeletalMesh* RiggedMesh(const FString& Name);
+class UAnimSequence* RiggedAnim(const FString& Name, const TCHAR* Anim);
+bool SetRiggedFigure(class USkeletalMeshComponent* Component, const FString& Name, const FLinearColor& Tint, const TCHAR* Anim);
 
 // A civ's architectural style (leaders-and-art-style.md) by its rules id: European, Mediterranean, MiddleEast,
 // Asian, African or American (Mediterranean for anything else).

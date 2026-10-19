@@ -40,6 +40,12 @@ public:
 	TObjectPtr<UCameraComponent> Camera;
 
 	bool bFigure = false;  // drawn by the kit's leader figure (no primitive crown)
+	bool bRigged = false;  // drawn by the rigged leader (the character's mesh), walking when it moves
+
+	virtual void Tick(float DeltaSeconds) override;
+
+private:
+	bool bWalking = false;
 };
 
 UCLASS()
@@ -73,10 +79,15 @@ private:
 	struct FCitizen
 	{
 		TObjectPtr<UStaticMeshComponent> Body;
+		TObjectPtr<class USkeletalMeshComponent> Rigged;  // a walking figure (rig_figures.py); Body is hidden then
+		FString Kind;                                     // which rigged figure (Townsman, Traveller, Townswoman, Citizen)
 		FVector Target = FVector::ZeroVector;
 		float Speed = 120.f;
+		float Pause = 0.f;  // seconds left standing (idling) before walking on
 		bool bFigure = false;
 	};
+	// A rigged person standing at a place, facing Yaw, playing its Idle; null without the art.
+	class USkeletalMeshComponent* AddRigged(const FString& Name, const FVector& Location, float Yaw, const FLinearColor& Tint);
 
 	FSovStreetLayout Layout;
 	TArray<FCitizen> Citizens;
@@ -90,6 +101,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<class UExponentialHeightFogComponent> Fog;
+
+	UPROPERTY()
+	TArray<TObjectPtr<class USkeletalMeshComponent>> RiggedParts;
 
 	UPROPERTY()
 	TObjectPtr<class UPostProcessComponent> Grade;
