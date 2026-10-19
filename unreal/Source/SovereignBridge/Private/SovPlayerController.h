@@ -140,6 +140,8 @@ protected:
 	void UpdateGameUI();
 	// An order key (by its default) pressed this frame: on the key it is bound to now (SovKeys), or by a widget.
 	bool Pressed(const FKey& Key) const { return WasInputKeyJustPressed(SovKeys::Physical(Key)) || UIKeys.Contains(Key); }
+	// Held down: by the player, or by a -SovPress hold (Key~seconds).
+	bool Down(const FKey& Key) const { return IsInputKeyDown(Key) || PressHeld.Contains(Key); }
 	void UpdatePanel();
 	// Online and hot seat: the lobby, the hand-over screen, and the chat line (M).
 	// True when they took this frame's input.
@@ -247,6 +249,7 @@ protected:
 	float ShotTimer = 0.f;        // -SovShots=<seconds>: time since the last screenshot
 	float PressClock = 0.f;       // -SovPress: seconds since the game began
 	int32 PressNext = 0;          // -SovPress: the next key to press
+	TMap<FKey, float> PressHeld;  // -SovPress holds: key -> PressClock when it is let go
 	int32 ShotCount = 0;
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it

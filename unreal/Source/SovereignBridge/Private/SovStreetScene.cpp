@@ -17,6 +17,10 @@
 
 namespace
 {
+// The rigged Walk's ground speed at play rate 1 (rig_figures.py WALK_SPEED: a 90 cm stride in 0.83 s, each planted
+// foot holding still); played at speed / kWalkSpeed, the feet keep their footing.
+constexpr float kWalkSpeed = 108.f;
+
 uint32 ColorKey(const FLinearColor& C)
 {
 	return C.ToFColor(false).ToPackedRGBA();
@@ -54,7 +58,7 @@ ASovWalker::ASovWalker()
 	GetCapsuleComponent()->InitCapsuleSize(40.f, 90.f);
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->MaxWalkSpeed = 450.f;
+	GetCharacterMovement()->MaxWalkSpeed = 280.f;  // a brisk walk: faster and the legs (kWalkSpeed) would blur
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -119,7 +123,7 @@ void ASovWalker::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	if (!bRigged) return;
-	// Walk while moving, at a pace that keeps the feet from sliding (the cycle is one stride a second at 140 cm/s).
+	// Walk while moving, at a pace that keeps the feet from sliding (kWalkSpeed).
 	const float Speed = GetVelocity().Size2D();
 	const bool bMoving = Speed > 20.f;
 	if (bMoving != bWalking)
@@ -127,7 +131,7 @@ void ASovWalker::Tick(float DeltaSeconds)
 		bWalking = bMoving;
 		if (UAnimSequence* A = SovArt::RiggedAnim(TEXT("Leader"), bMoving ? TEXT("Walk") : TEXT("Idle"))) GetMesh()->PlayAnimation(A, true);
 	}
-	if (bWalking) GetMesh()->SetPlayRate(FMath::Clamp(Speed / 140.f, 0.6f, 3.5f));
+	if (bWalking) GetMesh()->SetPlayRate(FMath::Clamp(Speed / kWalkSpeed, 0.6f, 3.f));
 }
 
 // ------------------------------------------------------------------ the scene
@@ -521,7 +525,7 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 		{
 			Who->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
 		}
-		// One stride a second at 140 cm/s for a full-size figure: the feet keep their footing (a smaller one strides shorter).
-		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / (140.f * static_cast<float>(C.Rigged->GetRelativeScale3D().X)));
+		// kWalkSpeed for a full-size figure: the feet keep their footing (a smaller one strides shorter).
+		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / (kWalkSpeed * static_cast<float>(C.Rigged->GetRelativeScale3D().X)));
 	}
 }

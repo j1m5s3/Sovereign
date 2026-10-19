@@ -30,6 +30,11 @@ def main():
         lib.save_asset(MATERIAL)
     tasks = []
     for path in sorted(glob.glob(os.path.join(BUILD, "SK_*.fbx"))):
+        # A fresh import: importing over the old assets keeps the old animations.
+        name = os.path.splitext(os.path.basename(path))[0]
+        for suffix in ("_Anim_Armature_Walk", "_Anim_Armature_Idle", "", "_Skeleton"):  # what uses the skeleton first
+            if lib.does_asset_exist("%s/%s%s" % (DEST, name, suffix)):
+                lib.delete_asset("%s/%s%s" % (DEST, name, suffix))
         options = unreal.FbxImportUI()
         options.set_editor_property("import_mesh", True)
         options.set_editor_property("import_as_skeletal", True)
