@@ -3397,6 +3397,21 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	}
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
+	// Developer review (-SovPress=10:F,14:Enter,20:T): presses keys at so many seconds into the game, as the widgets'
+	// buttons do, so screens can be opened offscreen with -SovShots.
+	if (FString Script; Subsystem()->IsRunning() && FParse::Value(FCommandLine::Get(), TEXT("SovPress="), Script, false))
+	{
+		PressClock += GetWorld()->GetDeltaSeconds();
+		TArray<FString> Steps;
+		Script.ParseIntoArray(Steps, TEXT(","));
+		FString At, Key;
+		if (Steps.IsValidIndex(PressNext) && Steps[PressNext].Split(TEXT(":"), &At, &Key) && PressClock >= FCString::Atof(*At))
+		{
+			UIKeys.Add(FKey(*Key));
+			UE_LOG(LogTemp, Display, TEXT("SovPress %s at %.1f s"), *Key, PressClock);
+			++PressNext;
+		}
+	}
 	// Help and plot yields, whoever's turn it is.
 	if (ASovHUD* Hud = Cast<ASovHUD>(GetHUD()); Hud && Subsystem()->IsRunning())
 	{
