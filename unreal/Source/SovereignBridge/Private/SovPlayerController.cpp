@@ -26,6 +26,8 @@
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SScaleBox.h"
+#include "Widgets/Images/SImage.h"
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
@@ -3836,7 +3838,15 @@ void ASovPlayerController::OpenMenu()
 				})];
 		}
 	}
-	Menu = SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.01f, 0.01f, 0.01f, 0.72f)).Padding(0)
+	// Before a game the menu stands on a painted scene (tools/art/blender/backdrop.py); over a game, on the dimmed map.
+	auto NoGame = [this]() { USovGameSubsystem* S = Subsystem(); return !S || !S->IsRunning(); };
+	Menu = SNew(SOverlay)
+		+ SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill).Visibility_Lambda([NoGame]() { return NoGame() ? EVisibility::Visible : EVisibility::Collapsed; })
+			[SNew(SImage).Image(FSovStyle::Backdrop())]]
+		+ SOverlay::Slot()[
+		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor_Lambda([NoGame]() {
+			return FLinearColor(0.01f, 0.01f, 0.01f, NoGame() ? 0.2f : 0.72f);
+		}).Padding(0)
 		.HAlign(HAlign_Center).VAlign(VAlign_Center)[
 		SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(28.f, 20.f))[
 			SNew(SVerticalBox)
@@ -3979,7 +3989,7 @@ void ASovPlayerController::OpenMenu()
 					const USovGameSubsystem* S = Subsystem();
 					return FText::FromString(S ? S->LastMessage : FString());
 				})]
-		]];
+		]]];
 	GEngine->GameViewport->AddViewportWidgetContent(Menu.ToSharedRef(), 60);
 }
 

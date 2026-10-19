@@ -47,6 +47,7 @@ void Build()
 		// Dynamic brushes load their file on first use (static ones load only for styles registered at start-up).
 		GStyle->Set(FName(FString(TEXT("Icon.")) + UTF8_TO_TCHAR(Name)), new FSlateDynamicImageBrush(FName(*File), FVector2D(24.f, 24.f)));
 	}
+	GStyle->Set("Backdrop", new FSlateDynamicImageBrush(FName(*GStyle->RootToContentDir(TEXT("Backdrop"), TEXT(".png"))), FVector2D(1920.f, 1080.f)));
 	GStyle->Set("Panel", new FSlateRoundedBoxBrush(FSovStyle::Ink, 6.f, FSovStyle::Edge, 1.5f));
 	GStyle->Set("Bar", new FSlateRoundedBoxBrush(FLinearColor(0.02f, 0.018f, 0.016f, 0.9f), 0.f, FSovStyle::Edge, 1.f));
 	GButton = MakeButton(FLinearColor(0.09f, 0.075f, 0.06f, 0.95f), FLinearColor(0.16f, 0.12f, 0.08f, 1.f), FLinearColor(0.22f, 0.16f, 0.09f, 1.f), FSovStyle::Edge);
@@ -62,6 +63,11 @@ const FSlateStyleSet& FSovStyle::Get()
 {
 	if (!GStyle.IsValid()) Build();
 	return *GStyle;
+}
+
+const FSlateBrush* FSovStyle::Backdrop()
+{
+	return Get().GetBrush("Backdrop");
 }
 
 const FSlateBrush* FSovStyle::Icon(FName Name)
