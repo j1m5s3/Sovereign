@@ -221,8 +221,9 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		{
 			const std::string& Ground = Rules.terrains[static_cast<size_t>(Pl.terrain)].id;
 			auto Has = [&](const char* Part) { return Ground.find(Part) != std::string::npos; };
-			T.Detail = T.Relief == ESovRelief::Water ? 12 : T.Relief != ESovRelief::Flat ? 7 : T.bWoods ? 10 : Has("DESERT") ? 14
-				: Has("GRASS") || Has("PLAINS") ? 13 : 8;
+			namespace C = SovArt::Cell;
+			T.Detail = T.Relief == ESovRelief::Water ? C::Water : T.Relief != ESovRelief::Flat ? C::Stone : T.bWoods ? C::Foliage
+				: Has("DESERT") ? C::Sand : Has("GRASS") || Has("PLAINS") ? C::Grass : C::Plaster;
 		}
 		// Territory, the resource the viewer can see, and the improvement.
 		T.Owner = Pl.owner;

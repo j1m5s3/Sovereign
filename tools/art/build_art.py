@@ -4,9 +4,12 @@
   python tools/art/build_art.py            # all kits
   python tools/art/build_art.py Classical  # some kits
 
-1. Blender (headless) builds each kit piece and exports FBX to art/build/<Kit>/.
-2. The Unreal editor (commandlet) imports them into unreal/Content/Art/<Kit>/ with the
-   kit material. The .uasset files that come out are committed.
+1. fetch_textures.py downloads the CC0 photo scans the detail sheets use to art/build/Sources/ (once).
+2. Blender (headless) builds each kit piece and exports FBX to art/build/<Kit>/, bakes the detail and
+   normal sheets, and (for a full build) rigs the street's people to art/build/Rigged/.
+3. The Unreal editor (commandlet) imports them into unreal/Content/Art/<Kit>/ with the
+   kit material, and the rigged people to unreal/Content/Art/Rigged/. The .uasset files that come out
+   are committed.
 Set BLENDER / UNREAL_EDITOR_CMD to override the default install paths.
 """
 import os
@@ -23,7 +26,7 @@ def run(cmd, env=None):
     print("+", " ".join('"%s"' % c if " " in c else c for c in cmd))
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, errors="replace")
     for line in result.stdout.splitlines():
-        if any(k in line for k in ("piece ", "exported ", "SOVART", "Error", "Traceback")):
+        if any(k in line for k in ("piece ", "exported ", "SOVART", "Error", "Traceback", "fetch", "detail ", "rigged ", "photo sources")):
             print("  " + line.strip())
     if result.returncode != 0:
         print(result.stdout[-4000:], result.stderr[-4000:])
@@ -33,10 +36,15 @@ def run(cmd, env=None):
 def main():
     kits = sys.argv[1:]
     os.makedirs(BUILD, exist_ok=True)
-    run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "generate.py"), "--", BUILD] + kits)
     env = dict(os.environ, SOV_ART_BUILD=BUILD)
-    run([EDITOR, os.path.join(REPO, "unreal", "Sovereign.uproject"), "-run=pythonscript",
-         "-script=" + os.path.join(REPO, "tools", "art", "ue_import.py"), "-unattended", "-nosplash", "-nopause", "-stdout"], env=env)
+    run([sys.executable, os.path.join(REPO, "tools", "art", "fetch_textures.py")], env=env)
+    run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "generate.py"), "--", BUILD] + kits)
+    # The rigged people share the kit's pattern cells, so a full build remakes them too.
+    if not kits:
+        run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_figures.py"), "--", BUILD])
+    for script in ["ue_import.py"] + ([] if kits else ["ue_import_rigged.py"]):
+        run([EDITOR, os.path.join(REPO, "unreal", "Sovereign.uproject"), "-run=pythonscript",
+             "-script=" + os.path.join(REPO, "tools", "art", script), "-unattended", "-nosplash", "-nopause", "-stdout"], env=env)
     print("done: assets in unreal/Content/Art")
 
 

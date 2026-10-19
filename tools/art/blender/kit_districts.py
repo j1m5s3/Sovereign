@@ -39,8 +39,9 @@ INCA_STONE = ["#8f8a80", "#7f7a71"]
 STYLES = ("MiddleEast", "Asian", "African", "American")
 _style = None  # the style the pieces are being built in (None: Classical)
 
-kitlib.patterns({"plaster": MUD + PLASTER, "rooftile": ROOF_GREY + [RED_LACQUER], "thatch": THATCH, "stone": INCA_STONE, "metal": [TILE_BLUE]})
-kitlib.patterns({"plaster": WALL, "rooftile": ROOF + BRICK, "stone": MARBLE + STONE + [PAVING], "wood": WOOD,
+kitlib.patterns({"adobe": MUD, "plaster": PLASTER, "rooftile": ROOF_GREY + [RED_LACQUER], "thatch": THATCH, "masonry": INCA_STONE,
+                 "metal": [TILE_BLUE]})
+kitlib.patterns({"plaster": WALL, "rooftile": ROOF, "brick": BRICK, "masonry": MARBLE + STONE, "flagstones": PAVING, "wood": WOOD,
                  "foliage": LEAF + [LAWN], "cloth": CANVAS + [FLAG], "metal": IRON + [GOLD], "water": WATER})
 
 

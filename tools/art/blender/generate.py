@@ -46,10 +46,10 @@ def main():
             kitlib.export_fbx(obj, os.path.join(out, kit, piece.name + ".fbx"))
             count += 1
             print("piece %s/%s: %d faces, %.1f m tall" % (kit, piece.name, len(obj.data.polygons), piece.height))
-    # The detail sheet every kit's material samples (textures.py).
+    # The detail and normal sheets every kit's material samples (textures.py), from the scans fetched to <out>/Sources.
     os.makedirs(os.path.join(out, "Textures"), exist_ok=True)
-    textures.save(os.path.join(out, "Textures", "T_SovDetail.png"))
-    print("exported %d pieces and the detail sheet to %s" % (count, out))
+    textures.save(os.path.join(out, "Textures", "T_SovDetail.png"), out)
+    print("exported %d pieces and the detail sheets to %s" % (count, out))
 
 
 if __name__ == "__main__":

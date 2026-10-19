@@ -4,8 +4,9 @@
 
 Reads art/build/<Kit>/*.fbx (or $SOV_ART_BUILD), imports each as a static mesh under
 /Game/Art/<Kit>/ with its vertex colours, and gives it the kit master material
-/Game/Art/M_SovKit, rebuilt first: vertex colour x Tint x the painted detail tile that the vertex alpha picks
-from /Game/Art/T_SovDetail (the sheet textures.py writes to <build>/Textures).
+/Game/Art/M_SovKit, rebuilt first: vertex colour x Tint x the detail cell that the vertex alpha picks from
+/Game/Art/T_SovDetail, with the relief of the same cell in /Game/Art/T_SovDetailN (the sheets textures.py writes
+to <build>/Textures).
 """
 import glob
 import os
@@ -22,11 +23,15 @@ mel = unreal.MaterialEditingLibrary
 
 
 TEXTURE = "/Game/Art/T_SovDetail"
+NORMALS = "/Game/Art/T_SovDetailN"
+GRID = 8  # cells across the sheets (textures.GRID)
+CELL, PAD = 512.0, 16.0  # a cell's pixels, and how far its pattern wraps past each edge (textures.CELL, PAD)
+# Kit folders under the build that are not static-mesh kits: the sheets, the scans they come from, the rigged people.
+NOT_KITS = ("Textures", "Sources", "Rigged")
 
 
-def detail_texture():
-    """The painted detail sheet (textures.py): linear greyscale, tiling, with mips."""
-    png = os.path.join(BUILD, "Textures", "T_SovDetail.png")
+def _import_texture(name, asset, normal):
+    png = os.path.join(BUILD, "Textures", name + ".png")
     if os.path.exists(png):
         task = unreal.AssetImportTask()
         task.set_editor_property("filename", png)
@@ -35,11 +40,26 @@ def detail_texture():
         task.set_editor_property("replace_existing", True)
         task.set_editor_property("save", False)
         tools.import_asset_tasks([task])
-        tex = lib.load_asset(TEXTURE)
+        tex = lib.load_asset(asset)
         tex.set_editor_property("srgb", False)
-        tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_GRAYSCALE)
-        lib.save_asset(TEXTURE)
-    return lib.load_asset(TEXTURE)
+        if normal:
+            # Written OpenGL-style (green up); Unreal reads DirectX normals.
+            tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
+            tex.set_editor_property("flip_green_channel", True)
+        else:
+            tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_GRAYSCALE)
+        lib.save_asset(asset)
+    return lib.load_asset(asset)
+
+
+def detail_texture():
+    """The detail sheet (textures.py): linear greyscale, tiling, with mips."""
+    return _import_texture("T_SovDetail", TEXTURE, False)
+
+
+def normal_texture():
+    """The normal sheet (textures.py), cell for cell with the detail sheet."""
+    return _import_texture("T_SovDetailN", NORMALS, True)
 
 
 def _expr(mat, cls, x, y, **props):
@@ -49,8 +69,8 @@ def _expr(mat, cls, x, y, **props):
     return e
 
 
-def master_material(texture):
-    """Vertex colour x Tint x the painted detail tile the vertex alpha picks (kitlib PATTERNS).
+def master_material(texture, normals):
+    """Vertex colour x Tint x the detail cell the vertex alpha picks (kitlib PATTERNS), with that cell's relief.
     Built afresh each import, in place, so the meshes that use it stay linked."""
     if lib.does_asset_exist(MATERIAL):
         mat = lib.load_asset(MATERIAL)
@@ -68,37 +88,37 @@ def master_material(texture):
     mul = _expr(mat, unreal.MaterialExpressionMultiply, -200, 80)
     c(sq, "", mul, "A")
     c(tint, "", mul, "B")
-    # The tile: index = round(alpha * 15); column = index mod 4, row = floor(index / 4).
-    a15 = _expr(mat, unreal.MaterialExpressionMultiply, -1400, 300, const_b=15.0)
+    # The cell: index = round(alpha * (GRID^2 - 1)); column = index mod GRID, row = floor(index / GRID).
+    a15 = _expr(mat, unreal.MaterialExpressionMultiply, -1400, 300, const_b=float(GRID * GRID - 1))
     c(vc, "A", a15, "A")
     idx = _expr(mat, unreal.MaterialExpressionRound, -1250, 300)
     c(a15, "", idx, "")
-    four = _expr(mat, unreal.MaterialExpressionConstant, -1250, 400, r=4.0)
+    four = _expr(mat, unreal.MaterialExpressionConstant, -1250, 400, r=float(GRID))
     col = _expr(mat, unreal.MaterialExpressionFmod, -1100, 300)
     c(idx, "", col, "A")
     c(four, "", col, "B")
-    quarter = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 420, const_b=0.25)
+    quarter = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 420, const_b=1.0 / GRID)
     c(idx, "", quarter, "A")
     row = _expr(mat, unreal.MaterialExpressionFloor, -950, 420)
     c(quarter, "", row, "")
     off = _expr(mat, unreal.MaterialExpressionAppendVector, -800, 350)
     c(col, "", off, "A")
     c(row, "", off, "B")
-    # Within the tile: the UVs repeat (frac), kept off the tile's edges.
+    # Within the cell: the UVs repeat (frac) over one period of the pattern, which wraps past the cell's edges.
     tc = _expr(mat, unreal.MaterialExpressionTextureCoordinate, -1400, 600)
     fr = _expr(mat, unreal.MaterialExpressionFrac, -1250, 600)
     c(tc, "", fr, "")
-    inner = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 600, const_b=0.9375)
+    inner = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 600, const_b=(CELL - 2 * PAD) / CELL)
     c(fr, "", inner, "A")
-    pad = _expr(mat, unreal.MaterialExpressionAdd, -950, 600, const_b=0.03125)
+    pad = _expr(mat, unreal.MaterialExpressionAdd, -950, 600, const_b=PAD / CELL)
     c(inner, "", pad, "A")
     at = _expr(mat, unreal.MaterialExpressionAdd, -650, 450)
     c(pad, "", at, "A")
     c(off, "", at, "B")
-    uv = _expr(mat, unreal.MaterialExpressionMultiply, -500, 450, const_b=0.25)
+    uv = _expr(mat, unreal.MaterialExpressionMultiply, -500, 450, const_b=1.0 / GRID)
     c(at, "", uv, "A")
     # Mips from the unwrapped UVs, so the tile's seam does not flash the smallest mip.
-    tc4 = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 760, const_b=0.25)
+    tc4 = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 760, const_b=(CELL - 2 * PAD) / CELL / GRID)
     c(tc, "", tc4, "A")
     ddx = _expr(mat, unreal.MaterialExpressionDDX, -950, 760)
     ddy = _expr(mat, unreal.MaterialExpressionDDY, -950, 840)
@@ -117,6 +137,14 @@ def master_material(texture):
     c(mul, "", base, "A")
     c(detail, "", base, "B")
     mel.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    # The cell's relief, sampled as the detail is.
+    nrm = _expr(mat, unreal.MaterialExpressionTextureSample, -350, 750, texture=normals,
+                sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+                mip_value_mode=unreal.TextureMipValueMode.TMVM_DERIVATIVE)
+    c(uv, "", nrm, "UVs")
+    c(ddx, "", nrm, "DDX(UVs)")
+    c(ddy, "", nrm, "DDY(UVs)")
+    mel.connect_material_property(nrm, "RGB", unreal.MaterialProperty.MP_NORMAL)
     rough = _expr(mat, unreal.MaterialExpressionConstant, -200, 600, r=0.85)
     mel.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
     mel.recompile_material(mat)
@@ -157,10 +185,10 @@ def import_kit(kit, files):
 def main():
     # The classic FBX importer honours FbxImportUI (vertex colours, no materials).
     unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX false")
-    mat = master_material(detail_texture())
+    mat = master_material(detail_texture(), normal_texture())
     count = 0
     for kit_dir in sorted(glob.glob(os.path.join(BUILD, "*"))):
-        if not os.path.isdir(kit_dir) or os.path.basename(kit_dir) == "Textures":
+        if not os.path.isdir(kit_dir) or os.path.basename(kit_dir) in NOT_KITS:
             continue
         kit = os.path.basename(kit_dir)
         files = sorted(glob.glob(os.path.join(kit_dir, "*.fbx")))

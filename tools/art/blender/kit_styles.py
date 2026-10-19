@@ -26,8 +26,8 @@ INCA_STONE = ["#8f8a80", "#7f7a71"]
 GOLD = "#c9a43c"
 PAINT = ["#a8452f", "#3f6fa0", "#d8b040"]
 
-kitlib.patterns({"plaster": MUD + PLASTER + SANDSTONE, "rooftile": ROOF_GREY + [ROOF_GREEN, RED_LACQUER], "wood": WOOD,
-                 "stone": STONE + INCA_STONE, "thatch": THATCH, "metal": TILE_BLUE + [GOLD], "cloth": PAINT})
+kitlib.patterns({"adobe": MUD, "plaster": PLASTER, "masonry": SANDSTONE + STONE + INCA_STONE, "rooftile": ROOF_GREY + [ROOF_GREEN, RED_LACQUER], "wood": WOOD,
+                 "thatch": THATCH, "metal": TILE_BLUE + [GOLD], "cloth": PAINT})
 
 
 def _door(p, x, y, h=2.0, w=1.0):

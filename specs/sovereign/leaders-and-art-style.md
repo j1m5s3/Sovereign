@@ -15,6 +15,8 @@ Status: art style, roster and leader abilities decided by James (2026-10-04); ab
 
 **Who makes the art **[decided, James 2026-10-04]**:** Claude makes the art (models, kit pieces, textures) through scripted tools such as Blender's Python API, modelling from reference images gathered online. References are used only to study shapes, proportions and period detail; no downloaded image, texture or model ships in the game unless its license allows it.
 
+**Free asset libraries **[decided, James 2026-10-19]**:** after his first playtest James chose free libraries over code-only art where they help: CC0 sound, Mixamo animation, and Megascans/Fab or other CC0 textures, falling back to scripted assets where a library cannot be fetched on the build PC. First use: the building and paving surfaces of the detail sheet (masonry, brick, plaster, roof tiles, thatch, adobe, flagstones, cobbles) come from CC0 Poly Haven scans, greyscale with their normal maps, so the kits' palettes still set the colour (`tools/art/blender/sources.py`, credits in `tools/art/CREDITS.md`).
+
 
 | Tool | Use |
 |---|---|
