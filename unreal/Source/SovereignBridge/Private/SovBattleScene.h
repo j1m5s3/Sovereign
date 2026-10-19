@@ -28,7 +28,12 @@ public:
 	void Build(const FSovBattleSpec& Spec, const FLinearColor& Ground, bool bWoods, const FLinearColor& AttackerColor,
 		const FLinearColor& DefenderColor, bool bCity = false, bool bWalls = false);
 	void Sync(const FSovBattleSim& Sim);
-	FVector ToWorld(const FVector2D& P, double Z = 0.0) const { return GetActorLocation() + FVector(P.X, P.Y, Z); }
+	FVector ToWorld(const FVector2D& P, double Z = 0.0) const { return GetActorTransform().TransformPosition(FVector(P.X, P.Y, Z)); }
+	// A direction in the world (the camera's) as one on the field.
+	FVector2D ToField(const FVector2D& Dir) const { return FVector2D(GetActorTransform().InverseTransformVectorNoScale(FVector(Dir, 0.0))); }
+	// The field is turned so the side the player commands looks away from the map's sun (ASovGameMode::SpawnLighting),
+	// the armies ahead lit rather than black against the light: side 0 starts at -X looking +X.
+	static FRotator FacingFor(int32 HumanSide) { return FRotator(0.f, HumanSide == 0 ? 180.f : 0.f, 0.f); }
 
 	// Battles are fought 10 km east of the map (street scenes sit to the west).
 	static FVector Origin() { return FVector(-1000000.0, 1000000.0, 0.0); }
