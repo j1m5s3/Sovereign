@@ -67,7 +67,10 @@ private:
 
 	// Kit trees on woods tiles.
 	UPROPERTY()
-	TArray<TObjectPtr<UStaticMeshComponent>> Trees;
+	TArray<TObjectPtr<UStaticMeshComponent>> Trees;  // (unused since the forests are instanced)
+	// Woods, as instances: conifers and broadleaves on seen plots, then the same on fogged ones (browned).
+	UPROPERTY()
+	TArray<TObjectPtr<class UInstancedStaticMeshComponent>> Forest;
 
 	// Kit rocks on hills and mountains.
 	UPROPERTY()
