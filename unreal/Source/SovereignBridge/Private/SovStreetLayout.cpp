@@ -224,6 +224,55 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 		++Trees;
 	}
 
+	// Street life (stage 5): a well in the square, benches round it, lamp posts down the streets, carts at the
+	// street mouths, and household clutter beside the houses. The richer the mood, the more flowers; the poorer, the more junk.
+	auto AddProp = [&L](const TCHAR* Recipe, const FVector2D& At, double Yaw, double Size = 150.0)
+	{
+		L.Pieces.Add({ESovStreetPiece::Prop, FVector(At.X, At.Y, Size * 0.5), FVector(Size), static_cast<float>(Yaw), FLinearColor(0.45f, 0.35f, 0.25f),
+			FString(), Recipe});
+	};
+	AddProp(TEXT("Well"), FVector2D(0, 0), Rng.FRandRange(0.f, 360.f), 220.0);
+	for (int32 i = 0; i < 6; ++i)
+	{
+		// Benches between the streets at the plaza's rim, facing in.
+		const double A = 60.0 * i + 30.0;
+		const FVector2D Dir(FMath::Cos(FMath::DegreesToRadians(A)), FMath::Sin(FMath::DegreesToRadians(A)));
+		if (i % 2 == 0) AddProp(TEXT("Bench"), Dir * (PlazaRadius - 250.0), A - 90.0);
+		else AddProp(L.Mood == ESovStreetMood::Unhappy ? TEXT("Crates") : TEXT("FlowerPots"), Dir * (PlazaRadius - 200.0), A);
+		// Lamp posts down both sides of each street, and a cart or barrels at some street mouths.
+		const double S = 60.0 * i;
+		const FVector2D Along(FMath::Cos(FMath::DegreesToRadians(S)), FMath::Sin(FMath::DegreesToRadians(S)));
+		const FVector2D Side(-Along.Y, Along.X);
+		for (double D = PlazaRadius + 400.0; D < Rad * 0.8; D += 1600.0)
+		{
+			const double Sign = (FMath::RoundToInt(D / 1600.0) % 2) ? 1.0 : -1.0;
+			AddProp(TEXT("LampPost"), Along * D + Side * (Sign * 320.0), S + (Sign > 0 ? 90.0 : -90.0));
+		}
+		const double Roll = Rng.FRand();
+		const FVector2D Mouth = Along * (PlazaRadius + 900.0) + Side * 380.0 * (Rng.FRand() < 0.5f ? 1.0 : -1.0);
+		if (Roll < 0.35) AddProp(TEXT("Cart"), Mouth, S + 180.0);
+		else if (Roll < 0.6) AddProp(TEXT("Barrels"), Mouth, Rng.FRandRange(0.f, 360.f));
+		else if (Roll < 0.8) AddProp(TEXT("Trough"), Mouth, S);
+	}
+	// Beside some houses, at a side wall: what households leave out.
+	static const TCHAR* const Clutter[] = {TEXT("Barrels"), TEXT("Crates"), TEXT("Sacks"), TEXT("Woodpile"), TEXT("FlowerPots"), TEXT("Haystack")};
+	const float ClutterChance = L.Mood == ESovStreetMood::Unhappy ? 0.6f : 0.4f;
+	const int32 NumPieces = L.Pieces.Num();
+	for (int32 i = 0; i < NumPieces; ++i)
+	{
+		const FSovStreetPiece H = L.Pieces[i];
+		if ((H.Kind != ESovStreetPiece::House && H.Kind != ESovStreetPiece::Boarded) || Rng.FRand() >= ClutterChance) continue;
+		const double Side = Rng.FRand() < 0.5f ? 1.0 : -1.0;
+		const FVector2D Right(FMath::Cos(FMath::DegreesToRadians(H.Yaw)), FMath::Sin(FMath::DegreesToRadians(H.Yaw)));
+		const FVector2D At = FVector2D(H.Location) + Right * Side * (H.Size.X * 0.5 + 110.0);
+		bool bClear = InsideHex(At, Rad * 0.92);
+		for (const TPair<FVector2D, FVector2D>& St : Streets) bClear &= SegmentDistance(At, St.Key, St.Value) > 330.0;
+		if (!bClear) continue;
+		const int32 Pick = Rng.RandRange(0, UE_ARRAY_COUNT(Clutter) - 1);
+		if (Pick == 5 && At.Size() < Rad * 0.6) continue;  // hay only out toward the fields
+		AddProp(Clutter[Pick], At, H.Yaw + Rng.FRandRange(-20.f, 20.f));
+	}
+
 	L.Crowd = 6 + City->population * 4;
 	L.Herald = FVector(PlazaRadius * 0.45, -PlazaRadius * 0.3, 0);
 	L.Captain = FVector(-PlazaRadius * 0.45, PlazaRadius * 0.3, 0);

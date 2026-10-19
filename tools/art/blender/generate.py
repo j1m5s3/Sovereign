@@ -14,6 +14,7 @@ import kit_districts  # noqa: E402
 import kit_fields  # noqa: E402
 import kit_landmarks  # noqa: E402
 import kit_nature  # noqa: E402
+import kit_props  # noqa: E402
 import kit_resources  # noqa: E402
 import kit_styles  # noqa: E402
 import kit_towns  # noqa: E402
@@ -23,7 +24,7 @@ import textures  # noqa: E402
 
 KITS = {"Nature": kit_nature, "Classical": kit_classical, "Fields": kit_fields, "Districts": kit_districts,
         "Wonders": kit_wonders, "Landmarks": kit_landmarks, "Resources": kit_resources,
-        "Towns": kit_towns, "Styles": kit_styles}
+        "Towns": kit_towns, "Styles": kit_styles, "Props": kit_props}
 try:
     import kit_figures  # noqa: E402
 

@@ -80,7 +80,7 @@ private:
 	{
 		TObjectPtr<UStaticMeshComponent> Body;
 		TObjectPtr<class USkeletalMeshComponent> Rigged;  // a walking figure (rig_figures.py); Body is hidden then
-		FString Kind;                                     // which rigged figure (Townsman, Traveller, Townswoman, Citizen)
+		FString Kind;                                     // which rigged figure (Townsman, Traveller, Townswoman, Elder... Citizen)
 		FVector Target = FVector::ZeroVector;
 		float Speed = 120.f;
 		float Pause = 0.f;  // seconds left standing (idling) before walking on
@@ -91,6 +91,8 @@ private:
 
 	FSovStreetLayout Layout;
 	TArray<FCitizen> Citizens;
+	// What the walkers step round (they move without collision): the well, carts, stalls and the like, as circles (centre, radius).
+	TArray<FVector> Obstacles;
 	FRandomStream Rng;
 
 	UPROPERTY()
