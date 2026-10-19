@@ -231,8 +231,8 @@ void ASovPlayerController::UpdateCamera(float DeltaTime)
 	{
 		Cam->Pan(Dir.GetSafeNormal() * Cam->Height * PanSpeed * DeltaTime);
 	}
-	if (WasInputKeyJustPressed(EKeys::MouseScrollUp)) Cam->Zoom(1.f);
-	if (WasInputKeyJustPressed(EKeys::MouseScrollDown)) Cam->Zoom(-1.f);
+	if (WasInputKeyJustPressed(EKeys::MouseScrollUp) || UIKeys.Contains(EKeys::MouseScrollUp)) Cam->Zoom(1.f);  // or -SovPress
+	if (WasInputKeyJustPressed(EKeys::MouseScrollDown) || UIKeys.Contains(EKeys::MouseScrollDown)) Cam->Zoom(-1.f);
 	if (WasInputKeyJustPressed(EKeys::Home)) CenterOnHome();
 }
 
