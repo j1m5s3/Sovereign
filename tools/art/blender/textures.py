@@ -27,7 +27,7 @@ PERIOD = CELL - 2 * PAD
 NAMES = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch",
          "water", "grass", "sand", "masonry", "brick", "adobe", "flagstones", "cobbles"]
 # How deep each painted pattern's relief reads (0: flat). Scans use their own normal maps.
-RELIEF = {"cloth": 0.6, "leather": 0.8, "metal": 0.5, "wood": 1.0, "stone": 2.0, "plaster": 0.8, "rooftile": 2.0,
+RELIEF = {"water": 0.8, "cloth": 0.6, "leather": 0.8, "metal": 0.5, "wood": 1.0, "stone": 2.0, "plaster": 0.8, "rooftile": 2.0,
           "foliage": 1.2, "thatch": 1.5, "masonry": 2.0, "brick": 2.0, "adobe": 1.0, "flagstones": 2.0, "cobbles": 2.0}
 
 
