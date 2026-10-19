@@ -228,6 +228,18 @@ bool ASovStreetScene::BuildGround()
 			Streets.Add({Mid - Dir * P.Size.X * 0.5, Mid + Dir * P.Size.X * 0.5});
 		}
 	}
+	// The ground round the town, by the city plot's climate: grass, olive plains, desert sand, tundra, snow.
+	struct FLand
+	{
+		FLinearColor Lush, Sere;
+		int32 Cell;
+	};
+	const FLand Land = Layout.Land == TEXT("DESERT") ? FLand{FLinearColor(0.42f, 0.32f, 0.17f), FLinearColor(0.48f, 0.38f, 0.21f), SovArt::Cell::Sand}
+		: Layout.Land == TEXT("PLAINS") ? FLand{FLinearColor(0.17f, 0.2f, 0.06f), FLinearColor(0.3f, 0.27f, 0.12f), SovArt::Cell::Grass}
+		: Layout.Land == TEXT("TUNDRA") ? FLand{FLinearColor(0.2f, 0.2f, 0.13f), FLinearColor(0.27f, 0.25f, 0.2f), SovArt::Cell::Grass}
+		: Layout.Land == TEXT("SNOW") ? FLand{FLinearColor(0.62f, 0.64f, 0.68f), FLinearColor(0.7f, 0.72f, 0.75f), SovArt::Cell::Plaster}
+		: FLand{FLinearColor(0.1f, 0.2f, 0.05f), FLinearColor(0.26f, 0.25f, 0.11f), SovArt::Cell::Grass};
+	const bool bDesert = Layout.Land == TEXT("DESERT");
 	// A grid finer in the town than in the hills: x = Extent * sign(u) * |u|^1.7 for u evenly spaced in -1..1.
 	const int32 N = 230;
 	const double Extent = Layout.Radius * 3.2;
@@ -266,8 +278,7 @@ bool ASovStreetScene::BuildGround()
 			else
 			{
 				const float Dry = static_cast<float>(FMath::Clamp(Z / 2500.0, 0.0, 1.0));
-				const FLinearColor Lush(0.1f, 0.2f, 0.05f), Sere(0.26f, 0.25f, 0.11f);
-				C = KitPaint(FMath::Lerp(Lush, Sere, Dry * 0.7f + 0.3f * static_cast<float>(Noise(Y, X, 1500.0))) * Var, SovArt::Cell::Grass);
+				C = KitPaint(FMath::Lerp(Land.Lush, Land.Sere, Dry * 0.7f + 0.3f * static_cast<float>(Noise(Y, X, 1500.0))) * Var, Land.Cell);
 			}
 			Colors.Add(C);
 		}
@@ -286,13 +297,14 @@ bool ASovStreetScene::BuildGround()
 	Ground->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, Colors, TArray<FProcMeshTangent>(), true);
 	Ground->SetMaterial(0, Kit);
 	Ground->SetCollisionProfileName(TEXT("BlockAll"));
-	// Woods on the hills round the town, and a haze that softens the distance.
-	for (int32 k = 0; k < 140; ++k)
+	// Woods on the hills round the town (a few palms on a desert's), and a haze that softens the distance.
+	for (int32 k = 0; k < (bDesert ? 40 : 140); ++k)
 	{
 		const double A = Rng.FRandRange(0.f, 2.f * PI);
 		const double R = Layout.Radius * Rng.FRandRange(1.05f, 2.6f);
 		const FVector At(R * FMath::Cos(A), R * FMath::Sin(A), 0.0);
-		if (UStaticMesh* Tree = SovArt::Mesh(TEXT("Nature"), Rng.FRand() < 0.6f ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer")))
+		const TCHAR* Kind = bDesert ? TEXT("Palms") : Rng.FRand() < 0.6f ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer");
+		if (UStaticMesh* Tree = SovArt::Mesh(TEXT("Nature"), Kind))
 		{
 			UStaticMeshComponent* T = AddKitPiece(Tree, FVector(At.X, At.Y, GroundZ(At.X, At.Y) - 20.0), Rng.FRandRange(0.f, 360.f), FLinearColor::White);
 			T->SetRelativeScale3D(FVector(Rng.FRandRange(1.3f, 2.2f)));
