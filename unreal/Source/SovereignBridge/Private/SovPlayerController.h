@@ -244,6 +244,8 @@ protected:
 	bool bEmpireOpen = false;  // the Empire panel (F8)
 	bool bBattleNowDone = false;  // -SovBattleNow has attacked
 	float ShotTimer = 0.f;        // -SovShots=<seconds>: time since the last screenshot
+	float PressClock = 0.f;       // -SovPress: seconds since the game began
+	int32 PressNext = 0;          // -SovPress: the next key to press
 	int32 ShotCount = 0;
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
