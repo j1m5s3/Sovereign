@@ -249,6 +249,9 @@ protected:
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
 	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
+	FString TipShown;         // the advisor tip on screen, by id (Tip)
+	// The advisor's tip for a new player, by id and text, or an empty id; ids put aside are kept in GameUserSettings.
+	void Tip(FString& Id, FString& Title, FString& Text) const;
 	TSharedPtr<const FSovGraphData> EndGraphs;  // built once the game ends, for the end screen's graphs
 	int32 EndGraphsFrom = -1;                    // the turnStats count they were built from
 	bool StepTowardGoal(bool bCivics);  // starts the next node toward the goal; false when none

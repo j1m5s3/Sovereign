@@ -36,6 +36,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 	OnNotice = Args._OnNotice;
 	OnDismiss = Args._OnDismiss;
 	OnEndClose = Args._OnEndClose;
+	OnTip = Args._OnTip;
 	OnGovAdopt = Args._OnGovAdopt;
 	OnGovSlot = Args._OnGovSlot;
 	OnGovCard = Args._OnGovCard;
@@ -161,6 +162,41 @@ void SSovGameUI::Construct(const FArguments& Args)
 			.ColorAndOpacity_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			.BorderBackgroundColor_Lambda([this]() { return FLinearColor(1.f, 1.f, 1.f, Model.MessageAlpha); })
 			[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.Message); })]
+		]
+		// The advisor, top left under the bar (where the Empire panel opens): one tip for a new player at a time.
+		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Left).Padding(12, 52, 0, 0)
+		[
+			SNew(SBox).WidthOverride(380).Visibility(Visible([this]() {
+				return Model.bVisible && !Model.TipTitle.IsEmpty() && !Model.bEmpire && !Model.Tree.bOpen && !Model.Gov.bOpen && !Model.bEnd && !Model.bChooser;
+			}))
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 8))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.TipTitle); })]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 4, 0, 8)
+					[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(Model.TipText); })]
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ContentPadding(FMargin(10, 3))
+							.OnClicked_Lambda([this]() { OnTip.ExecuteIfBound(false); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(10, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Got it")))]
+						]
+						+ SHorizontalBox::Slot().FillWidth(1.f)
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ContentPadding(FMargin(10, 3))
+							.ToolTipText(FText::FromString(TEXT("Turn the advisor off")))
+							.OnClicked_Lambda([this]() { OnTip.ExecuteIfBound(true); return FReply::Handled(); })
+							[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("No more tips")))]
+						]
+					]
+				]
+			]
 		]
 		// The Empire panel, top left under the bar.
 		+ SOverlay::Slot().VAlign(VAlign_Top).HAlign(HAlign_Left).Padding(12, 52, 0, 0)

@@ -22,6 +22,7 @@
 #include "UnrealClient.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Misc/CommandLine.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/Parse.h"
 #include "Widgets/Input/SEditableTextBox.h"
@@ -136,6 +137,48 @@ bool ASovPlayerController::MyTurn() const
 	const USovGameSubsystem* Sub = Subsystem();
 	return Sub && Sub->IsRunning() && Sub->GetSession().IsHumanTurn() && !Sub->GetSession().IsGameOver() &&
 		Sub->GetGame().state().currentPlayer == Me();
+}
+
+void ASovPlayerController::Tip(FString& Id, FString& Title, FString& Text) const
+{
+	Id.Reset();
+	bool bOff = false;
+	GConfig->GetBool(TEXT("Sovereign.Tips"), TEXT("Off"), bOff, GGameUserSettingsIni);
+	const USovGameSubsystem* Sub = Subsystem();
+	if (bOff || !Sub || !Sub->IsRunning()) return;
+	FString SeenList;
+	GConfig->GetString(TEXT("Sovereign.Tips"), TEXT("Seen"), SeenList, GGameUserSettingsIni);
+	TArray<FString> Seen;
+	SeenList.ParseIntoArray(Seen, TEXT(","));
+	const sov::Game& G = Sub->GetGame();
+	const sov::GameState& S = G.state();
+	const sov::Player& P = S.players[static_cast<size_t>(Me())];
+	const bool bCity = std::any_of(S.cities.begin(), S.cities.end(), [&](const sov::City& C) { return C.owner == Me(); });
+	const bool bSettler = std::any_of(S.units.begin(), S.units.end(), [&](const sov::Unit& U) {
+		return U.owner == Me() && G.rules().units[static_cast<size_t>(U.type)].foundCity;
+	});
+	// The first that applies and has not been put aside, most pressing first.
+	struct FTip { const TCHAR* Id; bool bApplies; const TCHAR* Title; const TCHAR* Text; };
+	const FTip Tips[] = {
+		{TEXT("found"), !bCity && bSettler, TEXT("Found your capital"),
+			TEXT("Select your Settler and press F, or the city button in its panel, to found your capital where it stands. Grassland or plains beside a river or the coast make a strong start.")},
+		{TEXT("research"), bCity && P.techs.current == sov::kNone, TEXT("Choose research"),
+			TEXT("Click Choose research at the top. Each technology unlocks units, buildings and improvements; the tree (the button beside it) shows what leads where.")},
+		{TEXT("move"), bCity && S.turn <= 6, TEXT("Moving units"),
+			TEXT("Click a unit to select it, then right-click a plot to send it there; the path shows the turns it takes. The button at the bottom right (or Space) ends your turn and names anything still waiting.")},
+		{TEXT("ruler"), bCity && S.turn <= 12 && G.leaderOf(Me()) != nullptr, TEXT("Your ruler"),
+			TEXT("Your ruler is a unit on the map. They fight in person, gain levels and promotions, and can be wounded, captured or killed. Keep them guarded: if they fall, the throne passes to a successor (H).")},
+		{TEXT("city"), bCity && S.turn >= 2 && S.turn <= 16, TEXT("Your city"),
+			TEXT("Click your city's banner to see what it builds and how it grows. Scouts explore, Builders improve the land, Settlers found more cities. F1 lists every key.")},
+	};
+	for (const FTip& T : Tips)
+	{
+		if (!T.bApplies || Seen.Contains(T.Id)) continue;
+		Id = T.Id;
+		Title = T.Title;
+		Text = T.Text;
+		return;
+	}
 }
 
 void ASovPlayerController::CenterOnHome()
@@ -2429,6 +2472,14 @@ void ASovPlayerController::UpdateGameUI()
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
 			.OnEndClose_Lambda([this]() { bEndClosed = true; })
+			.OnTip_Lambda([this](bool bAllOff) {
+				// Put aside for good: this tip, or every tip (GameUserSettings.ini, [Sovereign.Tips]).
+				if (bAllOff) GConfig->SetBool(TEXT("Sovereign.Tips"), TEXT("Off"), true, GGameUserSettingsIni);
+				FString Seen;
+				GConfig->GetString(TEXT("Sovereign.Tips"), TEXT("Seen"), Seen, GGameUserSettingsIni);
+				if (!TipShown.IsEmpty()) GConfig->SetString(TEXT("Sovereign.Tips"), TEXT("Seen"), *(Seen + TEXT(",") + TipShown), GGameUserSettingsIni);
+				GConfig->Flush(false, GGameUserSettingsIni);
+			})
 			.OnGovAdopt_Lambda([this](int32 G) { Send(sov::Command::changeGovernment(Me(), static_cast<sov::TypeIndex>(G))); })
 			.OnGovSlot_Lambda([this](int32 Slot) { GovSlot = Slot; })
 			.OnGovCard_Lambda([this](int32 Policy) {
@@ -3020,6 +3071,13 @@ void ASovPlayerController::UpdateGameUI()
 		const double MapW = SovHex::MapWorldWidth(M.Minimap->Width);
 		const double East = FMath::Fmod(FMath::Fmod(W.Y, MapW) + MapW, MapW);  // the wrapped copy on the map
 		M.MinimapFocus = (FVector2D(East, -W.X) + Half) / Size;
+	}
+	// The advisor's tip, on the player's own turn.
+	if (MyTurn())
+	{
+		FString Id;
+		Tip(Id, M.TipTitle, M.TipText);
+		TipShown = Id;
 	}
 	// The end of the game, or of this player's part in it (plan D, step 5).
 	if (!G.gameOver() && P.alive) bEndClosed = false;
