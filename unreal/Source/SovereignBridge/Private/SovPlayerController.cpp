@@ -1940,8 +1940,10 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 		const FSovSoldier& Me3 = Sim.Soldiers()[Sim.LeaderIndex()];
 		Walker->SetActorLocation(Battle->ToWorld(Me3.Pos, 90.0));
 		if (!Move.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Move.Y, Move.X)), 0.f));
-		Walker->Body->SetVisibility(Me3.bAlive);
+		// The rigged ruler when there is one (its stand-in cylinder stays hidden), else the still figure or primitives.
+		Walker->Body->SetVisibility(Me3.bAlive && !Walker->bRigged);
 		Walker->Crown->SetVisibility(Me3.bAlive && !Walker->bFigure);
+		Walker->GetMesh()->SetVisibility(Me3.bAlive && Walker->bRigged);
 	}
 	if (Sim.Finished() || bSettleNow)
 	{

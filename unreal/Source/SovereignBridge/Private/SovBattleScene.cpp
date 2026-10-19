@@ -1,11 +1,43 @@
 #include "SovBattleScene.h"
 
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ProceduralMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include "SovArt.h"
+
+namespace
+{
+// The fighting field's half extents (the simulation keeps the armies inside them).
+constexpr double FieldX = 4500.0, FieldY = 3000.0;
+
+// Smooth value noise in about 0..1 from a few sines (as the street scene's).
+double Noise(double X, double Y, double Scale)
+{
+	const double U = X / Scale, V = Y / Scale;
+	return 0.5 + 0.25 * FMath::Sin(U * 1.7 + FMath::Cos(V * 0.9)) * FMath::Cos(V * 1.3 - 0.7) + 0.15 * FMath::Sin(U * 3.1 + V * 2.3)
+		+ 0.1 * FMath::Cos(U * 5.3 - V * 4.1);
+}
+
+// A linear colour as the bytes M_SovKit squares back, and its detail cell in alpha.
+FColor KitPaint(const FLinearColor& Linear, int32 Cell)
+{
+	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
+	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Cell * 255.f / (SovArt::KitCells - 1))));
+}
+
+// The ground's height: flat across the field, rising beyond it to hills.
+double FieldZ(double X, double Y)
+{
+	const double D = FMath::Max(FMath::Abs(X) / FieldX, FMath::Abs(Y) / FieldY);
+	const double T = FMath::Clamp((D - 1.05) / 1.6, 0.0, 1.0);
+	return T * T * (3.0 - 2.0 * T) * (1300.0 + 2000.0 * Noise(X, Y, 3800.0));
+}
+}  // namespace
 
 ASovBattleScene::ASovBattleScene()
 {
@@ -76,8 +108,12 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 			SideFigure[Side] = TEXT("Rifleman");
 		}
 	}
-	UStaticMeshComponent* Floor = Add(CubeMesh, FVector(0, 0, -50), FVector(90.0, 60.0, 1.0), Ground);
-	Floor->SetCollisionProfileName(TEXT("BlockAll"));
+	// The field and its hills when the art exists; else a slab.
+	if (!BuildField(Ground, Spec.Seed))
+	{
+		UStaticMeshComponent* Floor = Add(CubeMesh, FVector(0, 0, -50), FVector(90.0, 60.0, 1.0), Ground);
+		Floor->SetCollisionProfileName(TEXT("BlockAll"));
+	}
 	FRandomStream Rng(Spec.Seed + 101);
 	if (bWoods)
 	{
@@ -199,4 +235,95 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Heads[i]->SetVisibility(false);
 		}
 	}
+}
+
+bool ASovBattleScene::BuildField(const FLinearColor& Ground, int32 Seed)
+{
+	UMaterialInterface* Kit = SovArt::KitMaterial();
+	if (!Kit) return false;
+	// Sand on a desert (the brightest ground), else grass in the plot's own colour, deeper than the map draws it (light,
+	// to read from above) and drawn toward a meadow's green so plains do not glare yellow at ground level.
+	const bool bDesert = Ground.GetLuminance() > 0.38f;
+	const int32 Cell = bDesert ? SovArt::Cell::Sand : SovArt::Cell::Grass;
+	const FLinearColor Base = bDesert ? Ground * 0.6f : FMath::Lerp(Ground * 0.55f, FLinearColor(0.1f, 0.18f, 0.05f), 0.4f);
+	const FLinearColor Sere(0.26f, 0.24f, 0.12f);
+	// A grid finer on the field than in the hills: x = Extent * sign(u) * |u|^1.6.
+	const int32 N = 170;
+	const double Extent = FieldX * 3.4;
+	TArray<double> Axis;
+	for (int32 i = 0; i <= N; ++i)
+	{
+		const double U = -1.0 + 2.0 * i / N;
+		Axis.Add(Extent * FMath::Sign(U) * FMath::Pow(FMath::Abs(U), 1.6));
+	}
+	TArray<FVector> Vertices;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UVs;
+	TArray<FColor> Colors;
+	TArray<int32> Triangles;
+	for (int32 j = 0; j <= N; ++j)
+	{
+		for (int32 i = 0; i <= N; ++i)
+		{
+			const double X = Axis[i], Y = Axis[j];
+			const double Z = FieldZ(X, Y);
+			Vertices.Add(FVector(X, Y, Z));
+			const double E = 60.0;
+			Normals.Add(FVector(FieldZ(X - E, Y) - FieldZ(X + E, Y), FieldZ(X, Y - E) - FieldZ(X, Y + E), 2.0 * E).GetSafeNormal());
+			UVs.Add(FVector2D(X, Y) / 160.0);
+			const float Var = static_cast<float>(0.85 + 0.3 * Noise(X, Y, 900.0));
+			const float Dry = static_cast<float>(FMath::Clamp(Z / 2400.0, 0.0, 1.0) * 0.7 + 0.25 * Noise(Y, X, 2200.0));
+			Colors.Add(KitPaint(FMath::Lerp(Base, Sere, Dry) * Var, Cell));
+		}
+	}
+	for (int32 j = 0; j < N; ++j)
+	{
+		for (int32 i = 0; i < N; ++i)
+		{
+			const int32 A = j * (N + 1) + i, B = A + 1, Cn = A + N + 1, D = Cn + 1;
+			Triangles.Append({A, Cn, B, B, Cn, D});
+		}
+	}
+	Field = NewObject<UProceduralMeshComponent>(this);
+	Field->SetupAttachment(RootComponent);
+	Field->RegisterComponent();
+	Field->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, Colors, TArray<FProcMeshTangent>(), true);
+	Field->SetMaterial(0, Kit);
+	Field->SetCollisionProfileName(TEXT("BlockAll"));
+	// Woods on the hills all round, whatever the plot (the woods on the field itself are the plot's own).
+	FRandomStream Rng(Seed + 211);
+	for (int32 k = 0; k < 110; ++k)
+	{
+		const double X = Rng.FRandRange(-Extent * 0.8, Extent * 0.8), Y = Rng.FRandRange(-Extent * 0.8, Extent * 0.8);
+		if (FMath::Max(FMath::Abs(X) / FieldX, FMath::Abs(Y) / FieldY) < 1.25) continue;
+		const TCHAR* Kind = Rng.FRand() < 0.55f ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer");
+		if (SovArt::Mesh(TEXT("Nature"), Kind))
+		{
+			UStaticMeshComponent* T = Add(CubeMesh, FVector::ZeroVector, FVector(1.0), FLinearColor::White);
+			SovArt::SetKitMesh(T, TEXT("Nature"), Kind, FLinearColor::White);
+			T->SetRelativeLocationAndRotation(FVector(X, Y, FieldZ(X, Y) - 20.0), FRotator(0.f, Rng.FRandRange(0.f, 360.f), 0.f));
+			T->SetRelativeScale3D(FVector(Rng.FRandRange(1.2f, 2.1f)));
+			T->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+	// A haze that softens the hills, and a warm grade over the scene (the map keeps its own).
+	Haze = NewObject<UExponentialHeightFogComponent>(this);
+	Haze->SetupAttachment(RootComponent);
+	Haze->SetFogDensity(0.007f);
+	Haze->SetFogHeightFalloff(0.08f);
+	Haze->SetStartDistance(3000.f);
+	Haze->SetFogInscatteringColor(FLinearColor(0.62f, 0.66f, 0.72f));
+	Haze->RegisterComponent();
+	Grade = NewObject<UPostProcessComponent>(this);
+	Grade->SetupAttachment(RootComponent);
+	Grade->bUnbound = true;
+	Grade->Priority = 1.f;
+	FPostProcessSettings& S = Grade->Settings;
+	S.bOverride_ColorContrast = S.bOverride_ColorSaturation = S.bOverride_WhiteTemp = S.bOverride_VignetteIntensity = true;
+	S.ColorContrast = FVector4(1.1, 1.1, 1.1, 1.0);
+	S.ColorSaturation = FVector4(1.12, 1.12, 1.12, 1.0);
+	S.WhiteTemp = 7200.f;  // above 6500 warms the image
+	S.VignetteIntensity = 0.35f;
+	Grade->RegisterComponent();
+	return true;
 }

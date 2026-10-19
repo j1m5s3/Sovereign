@@ -75,4 +75,13 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> ConeMesh;
+
+	// The field: flat where the armies fight, rising to wooded hills all round, under a haze and a warm grade.
+	bool BuildField(const FLinearColor& Ground, int32 Seed);
+	UPROPERTY()
+	TObjectPtr<class UProceduralMeshComponent> Field;
+	UPROPERTY()
+	TObjectPtr<class UExponentialHeightFogComponent> Haze;
+	UPROPERTY()
+	TObjectPtr<class UPostProcessComponent> Grade;
 };
