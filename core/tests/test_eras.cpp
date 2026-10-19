@@ -596,6 +596,28 @@ TEST(a_short_reign_lasts_a_hundred_turns) {
     CHECK(g->techCost(writing) * 4 < standard->techCost(writing));
 }
 
+// Durations in turns take the Half scaling (00: Game speed), at least 1 for a positive input; costs keep the full cost
+// percent (a Marathon tech costs 3x Standard's while a 30-turn effect lasts 60).
+TEST(durations_take_the_half_scaling_and_costs_the_cost_percent) {
+    std::string err;
+    GameSetup marathon = sovtest::duelSetup(3);
+    marathon.speed = "GAMESPEED_MARATHON";
+    auto m = Game::create(rules(), marathon, &err);
+    auto st = Game::create(rules(), sovtest::duelSetup(3), &err);
+    GameSetup online = sovtest::duelSetup(3);
+    online.speed = "GAMESPEED_ONLINE";
+    auto o = Game::create(rules(), online, &err);
+    REQUIRE(m && st && o);
+    CHECK_EQ(st->speedTurns(30), 30);
+    CHECK_EQ(m->speedTurns(30), 60);
+    CHECK_EQ(m->speedTurns(5), 10);
+    CHECK_EQ(o->speedTurns(10), 6);
+    CHECK_EQ(o->speedTurns(1), 1);  // never below one turn
+    CHECK_EQ(o->speedTurns(0), 0);
+    const TypeIndex writing = rules().tech("TECH_WRITING");
+    CHECK_EQ(m->techCost(writing), 3 * st->techCost(writing));
+}
+
 // Wish You Were Here in a Golden Age doubles the tourism of the civ's National Parks (09: "+100% National Park
 // tourism").
 TEST(wish_you_were_here_doubles_national_park_tourism) {

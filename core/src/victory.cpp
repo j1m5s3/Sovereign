@@ -15,6 +15,13 @@ int Game::lightYearsRequired() const {
     return std::max(1, rules_->globalInt(HotGlobal::ScienceVictoryPointsRequired) * percent / 100);
 }
 
+int Game::speedTurns(int standardTurns) const {
+    if (standardTurns <= 0) return standardTurns;
+    const TypeIndex speed = rules_->speed(state_.setup.speed);
+    const int percent = speed == kNone ? 100 : rules_->speeds[static_cast<size_t>(speed)].durationPercent;
+    return std::max(1, standardTurns * percent / 100);
+}
+
 int Game::turnLimit() const {
     if (state_.setup.turnLimit > 0) return state_.setup.turnLimit;
     return rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].turns;

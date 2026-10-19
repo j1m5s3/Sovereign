@@ -342,8 +342,7 @@ void Game::processWorldCongress() {
         state_.nextCongressTurn = state_.turn;
     }
     if (state_.congressOpenedTurn == 0 && state_.turn >= state_.nextCongressTurn) {
-        const int speed = rules_->speeds[at(rules_->speed(state_.setup.speed))].costPercent;
-        state_.nextCongressTurn = state_.turn + std::max(1, rules_->globalInt("WORLD_CONGRESS_MAX_TIME_BETWEEN_MEETINGS") * speed / 100);
+        state_.nextCongressTurn = state_.turn + std::max(1, speedTurns(rules_->globalInt("WORLD_CONGRESS_MAX_TIME_BETWEEN_MEETINGS")));
         openCongressSession();
     }
 }

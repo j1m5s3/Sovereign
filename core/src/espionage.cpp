@@ -220,7 +220,6 @@ int Game::spySuccessPercent(int32_t spyId, SpyMission m, CityId cityId) const {
 }
 
 void Game::processSpies(PlayerId pid) {
-    const int speed = rules_->speeds[at(rules_->speed(state_.setup.speed))].costPercent;
     std::vector<int32_t> ids;
     for (const Agent& a : state_.agents) {
         if (a.spy && a.owner == pid) ids.push_back(a.id);
@@ -248,7 +247,7 @@ void Game::processSpies(PlayerId pid) {
         if (a.mission == SpyMission::GainSources) {
             const SpyOperationType* op = spyOperationFor(SpyMission::GainSources);
             a.sourcesCity = a.city;
-            a.sourcesUntil = state_.turn + (op ? op->turns : 8) * rules_->globalInt("ESPIONAGE_GAIN_SOURCES_DURATION_MULTIPLIER") * speed / 100;
+            a.sourcesUntil = state_.turn + speedTurns((op ? op->turns : 8) * rules_->globalInt("ESPIONAGE_GAIN_SOURCES_DURATION_MULTIPLIER"));
             a.mission = SpyMission::None;
             continue;
         }

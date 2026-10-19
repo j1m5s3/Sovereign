@@ -767,7 +767,7 @@ void Game::processResearch(PlayerId pid, Fixed science, Fixed culture) {
 // A Research alliance at level 2 (08; data: alliance research agreement, Amount=30): every 30 turns at standard
 // speed, a random Eureka toward a tech the ally has researched or boosted and this civ has neither.
 void Game::allianceEurekas(PlayerId pid) {
-    const int period = std::max(1, 30 * speedPercent(state_, *rules_) / 100);
+    const int period = speedTurns(30);
     Player& me = state_.players[static_cast<size_t>(pid)];
     for (size_t o = 0; o < me.relations.size() && o < state_.players.size(); ++o) {
         Relation& rel = me.relations[o];

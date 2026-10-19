@@ -1638,7 +1638,6 @@ void Game::apply(const Command& c) {
             for (Agent& a : state_.agents) {
                 if (a.id != c.id) continue;
                 const SpyMission m = static_cast<SpyMission>(c.arg);
-                const int speed = rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent;
                 if (m == SpyMission::None) {
                     a.city = kNoCity;
                     a.travel = a.missionTurns = 0;
@@ -1647,7 +1646,7 @@ void Game::apply(const Command& c) {
                     if (a.city != c.arg2) {
                         const TypeIndex travel = rules_->spyOperation("SPYOP_TRAVEL_NEW_CITY");
                         const int lies = goldenDedication(c.player, "DEDICATION_BODYGUARD_OF_LIES") ? 100 : 0;  // 09
-                        a.travel = std::max(1, (travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) * speed / 100 *
+                        a.travel = std::max(1, speedTurns(travel == kNone ? 3 : rules_->spyOperations[static_cast<size_t>(travel)].turns) *
                                                    100 / (100 + spyPromotionTotal(a, &SpyPromotionType::travelFaster) + lies));
                         a.city = c.arg2;
                     }
@@ -1657,7 +1656,7 @@ void Game::apply(const Command& c) {
                     for (TypeIndex pr : a.promotions) faster += opIndex == kNone ? 0 : rules_->spyPromotions[static_cast<size_t>(pr)].faster[static_cast<size_t>(opIndex)];
                     if (m != SpyMission::Counterspy && m != SpyMission::ListeningPost && goldenDedication(c.player, "DEDICATION_BODYGUARD_OF_LIES")) faster += 25;  // 09
                     if (m != SpyMission::Counterspy && m != SpyMission::ListeningPost && policyIs(c.player, "POLICY_MACHIAVELLIANISM")) faster += 25;  // 04
-                    a.missionTurns = std::max(1, (op ? op->turns : 8) * speed / 100 * (100 - std::min(75, faster)) / 100);
+                    a.missionTurns = std::max(1, speedTurns(op ? op->turns : 8) * (100 - std::min(75, faster)) / 100);
                 }
                 a.mission = m;
                 a.guard = -1;
@@ -1684,7 +1683,7 @@ void Game::apply(const Command& c) {
             Levy lv;
             lv.player = c.player;
             lv.cityState = cs;
-            lv.until = state_.turn + rules_->globalInt("LEVY_MILITARY_TURN_DURATION") * rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent / 100;
+            lv.until = state_.turn + speedTurns(rules_->globalInt("LEVY_MILITARY_TURN_DURATION"));
             for (Unit& u : state_.units) {
                 if (u.owner != cs || rules_->units[static_cast<size_t>(u.type)].layer != UnitLayer::Military) continue;
                 u.owner = c.player;
