@@ -859,21 +859,23 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		const bool bFigureOk = SovArt::SetKitMesh(C, TEXT("Figures"), FigureName, Unit.Color)
 			|| (PlainName != FigureName && SovArt::SetKitMesh(C, TEXT("Figures"), PlainName, Unit.Color))
 			|| SovArt::SetKitMesh(C, TEXT("Figures"), Unit.bNaval ? TEXT("Ship") : Unit.bCivilian ? TEXT("Citizen") : TEXT("Soldier"), Unit.Color);
-		const double Vehicle = PlainName == TEXT("Tank") ? 0.13 : PlainName == TEXT("Plane") ? 0.12 : PlainName == TEXT("Siege") ? 0.2
-			: PlainName == TEXT("Rider") ? 0.22 : PlainName == TEXT("Steamship") ? 0.13 : 0.0;
+		// Figures are drawn large enough to read at the usual zoom (a person about 70 cm against a 2 m plot).
+		constexpr double People = 0.4;
+		const double Vehicle = PlainName == TEXT("Tank") ? 0.19 : PlainName == TEXT("Plane") ? 0.17 : PlainName == TEXT("Siege") ? 0.28
+			: PlainName == TEXT("Rider") ? 0.32 : PlainName == TEXT("Steamship") ? 0.19 : 0.0;
 		if (bFigureOk)
 		{
 			if (Unit.bNaval || Vehicle > 0.0)
 			{
 				C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)));
-				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.14));
+				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.2));
 				C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // side-on to the camera
 				continue;
 			}
 			const FVector2D Offset = Unit.bLeader ? FVector2D(-38.0, -30.0) : Unit.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 			Pos += SovHex::ToWorld(Offset, 0.0);
 			C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
-			C->SetRelativeScale3D(FVector(Unit.bLeader ? 0.3 : 0.26));
+			C->SetRelativeScale3D(FVector(Unit.bLeader ? People * 1.15 : People));
 			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // face the camera (south)
 			if (Unit.bEmbarked)
 			{
@@ -882,9 +884,9 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 				if (SovArt::SetKitMesh(B, TEXT("Figures"), TEXT("Boat"), Unit.Color))
 				{
 					B->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
-					B->SetRelativeScale3D(FVector(0.26));
+					B->SetRelativeScale3D(FVector(People));
 					B->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
-					C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + 0.26 * 30.0));
+					C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + People * 30.0));
 				}
 			}
 			continue;

@@ -302,7 +302,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		const FVector2D Offset = U.bNaval ? FVector2D(0.0, 0.0) : U.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 		// In a city, the flags stand above its banner (projected from the same point), side by side.
 		const FVector Screen = U.bInCity ? Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 60.0)))
-			: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 75.0) + SovHex::ToWorld(Offset, 0.0)));
+			: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 105.0) + SovHex::ToWorld(Offset, 0.0)));  // over the figure (SovMapActor: People)
 		if (Screen.Z <= 0)
 		{
 			continue;
