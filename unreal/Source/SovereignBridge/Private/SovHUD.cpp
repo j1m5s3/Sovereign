@@ -280,8 +280,10 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	{
 		if (U.bLeader)
 		{
-			// Leaders carry their ruler's name.
-			const FVector At = Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
+			// Leaders carry their ruler's name; in a city, above its banner and the flags over it, clear of both.
+			FVector At = U.bInCity ? Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 60.0)))
+				: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
+			if (U.bInCity) At.Y -= 58.f;
 			if (At.Z > 0)
 			{
 				float W = 0, H = 0;
