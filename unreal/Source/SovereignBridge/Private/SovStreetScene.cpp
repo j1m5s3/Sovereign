@@ -123,8 +123,13 @@ void ASovWalker::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	if (!bRigged) return;
-	// Walk while moving, at a pace that keeps the feet from sliding (kWalkSpeed).
-	const float Speed = GetVelocity().Size2D();
+	// Walk while moving, at a pace that keeps the feet from sliding (kWalkSpeed). In a battle the simulation moves the
+	// leader by placing it, so the pace is also read from how far it went, eased so a frame's jitter does not flicker it.
+	const FVector Here = GetActorLocation();
+	const float Moved = DeltaSeconds > 0.f && !LastSpot.IsZero() ? static_cast<float>(FVector::Dist2D(Here, LastSpot)) / DeltaSeconds : 0.f;
+	LastSpot = Here;
+	Pace = FMath::Lerp(Pace, FMath::Max(GetVelocity().Size2D(), Moved), 1.f - FMath::Exp(-DeltaSeconds * 8.f));
+	const float Speed = Pace;
 	const bool bMoving = Speed > 20.f;
 	if (bMoving != bWalking)
 	{

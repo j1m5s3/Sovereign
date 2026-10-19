@@ -46,6 +46,8 @@ public:
 
 private:
 	bool bWalking = false;
+	FVector LastSpot = FVector::ZeroVector;  // where it stood last frame
+	float Pace = 0.f;                        // its eased speed, cm/s
 };
 
 UCLASS()
