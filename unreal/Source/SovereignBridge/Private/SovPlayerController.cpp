@@ -223,10 +223,10 @@ void ASovPlayerController::UpdateCamera(float DeltaTime)
 		Cam->WrapWidth = Grid.wrapX() ? SovHex::MapWorldWidth(Grid.width()) : 0.0;
 	}
 	FVector2D Dir(0, 0);
-	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Dir.Y += 1;
-	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Dir.Y -= 1;
-	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Dir.X += 1;
-	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Dir.X -= 1;
+	if (Down(EKeys::W) || Down(EKeys::Up)) Dir.Y += 1;
+	if (Down(EKeys::S) || Down(EKeys::Down)) Dir.Y -= 1;
+	if (Down(EKeys::D) || Down(EKeys::Right)) Dir.X += 1;
+	if (Down(EKeys::A) || Down(EKeys::Left)) Dir.X -= 1;
 	if (!Dir.IsZero())
 	{
 		Cam->Pan(Dir.GetSafeNormal() * Cam->Height * PanSpeed * DeltaTime);
@@ -387,7 +387,7 @@ void ASovPlayerController::ClickSelect(int32 X, int32 Y)
 	const sov::Game& G = Subsystem()->GetGame();
 	const sov::GameState& S = G.state();
 	// Shift+click with one of our cities selected: lock a citizen to the plot, or free a locked one (02: Citizens).
-	if (SelectedCity >= 0 && (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)))
+	if (SelectedCity >= 0 && (Down(EKeys::LeftShift) || Down(EKeys::RightShift)))
 	{
 		if (const sov::City* C = S.city(SelectedCity); C && C->owner == Me())
 		{
@@ -441,12 +441,12 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 	if (SelectedCity >= 0)
 	{
 		// Ctrl+right-click: the city's Encampment fires (03: Defense).
-		const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+		const bool bCtrl = Down(EKeys::LeftControl) || Down(EKeys::RightControl);
 		Send(bCtrl ? sov::Command::encampmentStrike(Me(), SelectedCity, Target) : sov::Command::cityStrike(Me(), SelectedCity, Target));
 		return;
 	}
 	// Alt+right-click: the strongest device from one of our Missile Silos in range (05: Nuclear weapons).
-	if (IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt))
+	if (Down(EKeys::LeftAlt) || Down(EKeys::RightAlt))
 	{
 		const sov::Player& P = S.players[static_cast<size_t>(Me())];
 		const sov::TypeIndex Silo = G.rules().improvement("IMPROVEMENT_MISSILE_SILO");
@@ -474,7 +474,7 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 		return;
 	}
 	// Ctrl+right-click with a bomber or Nuclear Submarine: deliver the strongest device held (05: Nuclear weapons).
-	if ((IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl)) && G.rules().units[static_cast<size_t>(U->type)].deliversWmd)
+	if ((Down(EKeys::LeftControl) || Down(EKeys::RightControl)) && G.rules().units[static_cast<size_t>(U->type)].deliversWmd)
 	{
 		const sov::Player& P = S.players[static_cast<size_t>(Me())];
 		for (int32 W = static_cast<int32>(P.wmds.size()) - 1; W >= 0; --W)
@@ -1544,7 +1544,7 @@ void ASovPlayerController::Pick(int32 Index)
 	const EChooser Was = Chooser;
 	sov::Command Command = Choices[I].Command;
 	// Shift with a production choice: add it to the queue instead of replacing (02: Production queue).
-	if (Command.type == sov::CommandType::SetProduction && (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)))
+	if (Command.type == sov::CommandType::SetProduction && (Down(EKeys::LeftShift) || Down(EKeys::RightShift)))
 		Command.type = sov::CommandType::QueueProduction;
 	const std::vector<sov::Command> Then = Choices[I].Then;
 	Chooser = EChooser::None;
@@ -1601,15 +1601,15 @@ void ASovPlayerController::Pick(int32 Index)
 void ASovPlayerController::LookAround(float DeltaTime)
 {
 	FRotator Look = GetControlRotation();
-	if (IsInputKeyDown(EKeys::RightMouseButton))
+	if (Down(EKeys::RightMouseButton))
 	{
 		float DX = 0.f, DY = 0.f;
 		GetInputMouseDelta(DX, DY);
 		Look.Yaw += DX * 2.5f;
 		Look.Pitch = FMath::ClampAngle(Look.Pitch + DY * 2.5f, -60.f, 20.f);
 	}
-	if (IsInputKeyDown(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
-	if (IsInputKeyDown(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
+	if (Down(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
+	if (Down(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
 	SetControlRotation(Look);
 }
 
@@ -1898,10 +1898,10 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	const FRotator Yaw(0.f, GetControlRotation().Yaw, 0.f);
 	const FVector F3 = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), R3 = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
 	FVector2D Move(0, 0);
-	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Move += FVector2D(F3);
-	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Move -= FVector2D(F3);
-	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Move += FVector2D(R3);
-	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Move -= FVector2D(R3);
+	if (Down(EKeys::W) || Down(EKeys::Up)) Move += FVector2D(F3);
+	if (Down(EKeys::S) || Down(EKeys::Down)) Move -= FVector2D(F3);
+	if (Down(EKeys::D) || Down(EKeys::Right)) Move += FVector2D(R3);
+	if (Down(EKeys::A) || Down(EKeys::Left)) Move -= FVector2D(R3);
 	const bool bStrike = BattleKey(EKeys::LeftMouseButton) || BattleKey(EKeys::F);
 	const int32 Side = Sim.GetSpec().HumanSide;
 	if (BattleKey(EKeys::Tab)) Sim.SetCharge(Side, !Sim.Charging(Side));
@@ -2063,22 +2063,22 @@ void ASovPlayerController::UpdateStreet(float DeltaTime)
 	}
 	// Look around: the control rotation is set directly (input-axis rotation is consumed before this runs).
 	FRotator Look = GetControlRotation();
-	if (IsInputKeyDown(EKeys::RightMouseButton))
+	if (Down(EKeys::RightMouseButton))
 	{
 		float DX = 0.f, DY = 0.f;
 		GetInputMouseDelta(DX, DY);
 		Look.Yaw += DX * 2.5f;
 		Look.Pitch = FMath::ClampAngle(Look.Pitch + DY * 2.5f, -60.f, 20.f);
 	}
-	if (IsInputKeyDown(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
-	if (IsInputKeyDown(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
+	if (Down(EKeys::Q)) Look.Yaw -= 90.f * DeltaTime;
+	if (Down(EKeys::E)) Look.Yaw += 90.f * DeltaTime;
 	SetControlRotation(Look);
 	const FRotator Yaw(0.f, GetControlRotation().Yaw, 0.f);
 	const FVector Forward = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Right = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
-	if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up)) Walker->AddMovementInput(Forward);
-	if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down)) Walker->AddMovementInput(-Forward);
-	if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) Walker->AddMovementInput(Right);
-	if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left)) Walker->AddMovementInput(-Right);
+	if (Down(EKeys::W) || Down(EKeys::Up)) Walker->AddMovementInput(Forward);
+	if (Down(EKeys::S) || Down(EKeys::Down)) Walker->AddMovementInput(-Forward);
+	if (Down(EKeys::D) || Down(EKeys::Right)) Walker->AddMovementInput(Right);
+	if (Down(EKeys::A) || Down(EKeys::Left)) Walker->AddMovementInput(-Right);
 	if (WasInputKeyJustPressed(EKeys::F))
 	{
 		const FSovStreetLayout& L = Street->GetLayout();
@@ -3465,15 +3465,22 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 	UpdateGameUI();
 	ON_SCOPE_EXIT { UIKeys.Reset(); };
 	// Developer review (-SovPress=10:F,14:Enter,20:T): presses keys at so many seconds into the game, as the widgets'
-	// buttons do, so screens can be opened offscreen with -SovShots.
+	// buttons do, so screens can be opened offscreen with -SovShots. `20:W~3` holds W for three seconds (walking).
 	if (FString Script; Subsystem()->IsRunning() && FParse::Value(FCommandLine::Get(), TEXT("SovPress="), Script, false))
 	{
 		PressClock += GetWorld()->GetDeltaSeconds();
 		TArray<FString> Steps;
 		Script.ParseIntoArray(Steps, TEXT(","));
 		FString At, Key;
+		for (auto It = PressHeld.CreateIterator(); It; ++It)
+		{
+			if (PressClock >= It.Value()) It.RemoveCurrent();
+		}
 		if (Steps.IsValidIndex(PressNext) && Steps[PressNext].Split(TEXT(":"), &At, &Key) && PressClock >= FCString::Atof(*At))
 		{
+			FString Name = Key, Hold;
+			if (Key.Split(TEXT("~"), &Name, &Hold)) PressHeld.Add(FKey(*Name), PressClock + FCString::Atof(*Hold));
+			Key = Name;
 			UIKeys.Add(FKey(*Key));
 			UE_LOG(LogTemp, Display, TEXT("SovPress %s at %.1f s"), *Key, PressClock);
 			++PressNext;

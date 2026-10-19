@@ -113,7 +113,7 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 
 ## Tests
 
-Screenshots for review without a window on the desktop: add `-RenderOffscreen -SovShots=<seconds>` to any start; the interface is captured to `Saved/Screenshots/auto/` every so often, named by count and turn. `-SovPress=6:F,10:One,14:T` presses keys at so many seconds into the game (FKey names: `One`, `Enter`, `Escape`...), as the widgets' buttons do, to open screens for those screenshots.
+Screenshots for review without a window on the desktop: add `-RenderOffscreen -SovShots=<seconds>` to any start; the interface is captured to `Saved/Screenshots/auto/` every so often, named by count and turn. `-SovPress=6:F,10:One,14:T` presses keys at so many seconds into the game (FKey names: `One`, `Enter`, `Escape`...), as the widgets' buttons do, to open screens for those screenshots; `20:W~3` holds a key for three seconds (walking the leader in the street). `-SovShots` takes fractions (`0.05` for a 20 fps clip).
 
 Headless automation tests (no window):
 

@@ -1,5 +1,5 @@
 """The Figures kit's people rigged and animated for the street scene: each figure (kit_figures.py) gets a simple
-skeleton, its vertices bound rigidly to the nearest limb, and two looping actions, Walk (one stride a second)
+skeleton, its vertices bound rigidly to the nearest limb, and two looping actions, Walk (a 90 cm stride in 0.83 s, legs by inverse kinematics so planted feet hold still)
 and Idle (breathing and a slow sway). Exported as FBX skeletal meshes with their animations to
 <build>/Rigged/SK_<Name>.fbx for tools/art/ue_import_rigged.py.
 
@@ -212,27 +212,100 @@ def key(pb, frame, rx=0.0, ry=0.0, rz=0.0, loc=None):
         pb.keyframe_insert("location", frame=frame)
 
 
+# The walk: a stride in WALK_FRAMES at FPS, each foot on the ground for STANCE of it and moving back at a steady
+# WALK_SPEED while it is (so planted feet do not slide), then lifted and swung forward. Unreal plays it at
+# speed / WALK_SPEED (SovStreetScene.cpp kWalkSpeed).
+WALK_FRAMES = 20
+STANCE = 0.6
+STEP = 0.27     # m: a planted foot runs from STEP ahead of the hip to STEP behind it
+LIFT = 0.1      # m: how high the swinging foot rises
+ANKLE = 0.08    # m: the ankle's height with the foot flat
+WALK_SPEED = 2 * STEP / (STANCE * WALK_FRAMES / FPS) * CM  # cm/s, about 108
+
+
+def _foot(u):
+    """Where a foot is (forward of the hip, height of the ankle) at phase u in 0..1: planted from 0 to STANCE."""
+    if u < STANCE:
+        return STEP - 2 * STEP * u / STANCE, ANKLE
+    w = (u - STANCE) / (1 - STANCE)
+    return -STEP + 2 * STEP * (0.5 - 0.5 * math.cos(math.pi * w)), ANKLE + LIFT * math.sin(math.pi * w)
+
+
+def _solve_leg(arm, side, target, start):
+    """Thigh and shin angles (degrees about X) that put the shin's tail (the ankle) at `target` (armature space),
+    searched from `start` (the last frame's answer, so the knee keeps bending the same way)."""
+    P = arm.pose.bones
+    th, sh = P["thigh_" + side], P["shin_" + side]
+    vl = bpy.context.view_layer
+    a = list(start)
+
+    def err(x):
+        th.rotation_euler = (math.radians(x[0]), 0, 0)
+        sh.rotation_euler = (math.radians(x[1]), 0, 0)
+        vl.update()
+        t = sh.tail
+        return (t.y - target[0], t.z - target[1])
+
+    for _ in range(8):  # Gauss-Newton on the two angles, from the last answer
+        e = err(a)
+        if abs(e[0]) + abs(e[1]) < 0.02:
+            break
+        J = []
+        for k in range(2):
+            b = list(a)
+            b[k] += 0.5
+            ek = err(b)
+            J.append(((ek[0] - e[0]) / 0.5, (ek[1] - e[1]) / 0.5))
+        (j00, j10), (j01, j11) = J  # columns: d/da0, d/da1
+        det = j00 * j11 - j01 * j10
+        if abs(det) < 1e-9:
+            break
+        d0 = (j11 * e[0] - j01 * e[1]) / det
+        d1 = (-j10 * e[0] + j00 * e[1]) / det
+        a = [a[0] - d0, a[1] - d1]
+    return [(x + 180.0) % 360.0 - 180.0 for x in a]  # one turn at most, or the keys between frames spin
+
+
 def walk(arm, name):
-    """One stride a second: legs swing 24 degrees, the trailing shin bends, arms swing against the legs, the hips bob."""
+    """The legs by inverse kinematics along _foot (each planted foot holds still on the ground), the hips lowered
+    as far as the planted legs need and bobbing, the arms swinging against the legs."""
     action = bpy.data.actions.new("Walk")
     arm.animation_data.action = action
     P = arm.pose.bones
+    for b in P:
+        b.rotation_mode = "XYZ"
     stiff = 0.5 if name in ("Captain", "Soldier") else 1.0  # armed men keep their weapon arm steadier
-    n = FPS
-    for f in range(0, n + 1, 3):
-        ph = 2 * math.pi * f / n
-        s = math.sin(ph)
-        key(P["thigh_r"], f, rx=24 * s)
-        key(P["thigh_l"], f, rx=-24 * s)
-        key(P["shin_r"], f, rx=-max(0.0, 32 * math.sin(ph - 1.2)))
-        key(P["shin_l"], f, rx=-max(0.0, 32 * math.sin(ph + math.pi - 1.2)))
-        key(P["upperarm_r"], f, rx=-16 * s * stiff)
-        key(P["upperarm_l"], f, rx=16 * s)
-        key(P["forearm_r"], f, rx=8 + 6 * s * stiff)
-        key(P["forearm_l"], f, rx=8 - 6 * s)
-        key(P["pelvis"], f, rz=4 * s, loc=(0, 0.018 * CM * abs(math.cos(ph)), 0))  # bone space: Y runs along the bone, up
-        key(P["spine"], f, rz=-3 * s, rx=3)
-        key(P["head"], f, rz=1.5 * s)
+    L = 0.84 * 0.985  # thigh and shin, kept a little short of straight
+    hip0 = 0.92
+    n = WALK_FRAMES
+    last = {"r": (-10.0, 10.0), "l": (-10.0, 10.0)}
+    feet_at = [{"r": _foot((f / n) % 1.0), "l": _foot((f / n + 0.5) % 1.0)} for f in range(n + 1)]
+    # The hips as high as the legs allow, never above their rest; then eased (a lower envelope of parabolas, so it
+    # only ever goes lower) so they do not drop in a single frame as a foot lands.
+    reach = [min([hip0 - 0.02] + [z + math.sqrt(max(L * L - fwd * fwd, 0.0)) for fwd, z in feet.values()]) for feet in feet_at]
+    ease = 0.003  # m per frame squared
+    hips = [min(reach[g] + ease * min(abs(f - g), n - abs(f - g)) ** 2 for g in range(n)) for f in range(n + 1)]
+    for f in range(0, n + 1):
+        u = f / n
+        feet = feet_at[f]
+        hz = hips[f]
+        sw = math.sin(2 * math.pi * u)
+        # The hips sway a little with the stride; the legs are solved with it applied, so the feet stay put.
+        key(P["pelvis"], f, rz=2 * sw, loc=(0, (hz - hip0) * CM, 0))  # bone space: Y runs along the bone, up
+        bpy.context.view_layer.update()
+        for side, (fwd, z) in feet.items():
+            a = last[side] = _solve_leg(arm, side, (-fwd * CM, z * CM), last[side])  # forward is -Y
+            P["thigh_" + side].rotation_euler = (math.radians(a[0]), 0, 0)
+            P["shin_" + side].rotation_euler = (math.radians(a[1]), 0, 0)
+            P["thigh_" + side].keyframe_insert("rotation_euler", frame=f)
+            P["shin_" + side].keyframe_insert("rotation_euler", frame=f)
+        # Arms against the legs: the right arm forward as the left leg is.
+        key(P["upperarm_r"], f, rx=-16 * sw * stiff)
+        key(P["upperarm_l"], f, rx=16 * sw)
+        key(P["forearm_r"], f, rx=8 + 6 * sw * stiff)
+        key(P["forearm_l"], f, rx=8 - 6 * sw)
+        key(P["spine"], f, rz=-3 * sw, rx=3)
+        key(P["head"], f, rz=1.5 * sw)
     finish(action, n)
 
 
