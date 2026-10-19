@@ -55,10 +55,11 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Bodies;
 
-	// Spearmen on their own legs (the rigged soldier, rig_figures.py): per soldier, null when drawn still; where each
+	// Men on their own legs (the rigged figures, rig_figures.py): per soldier, null when drawn still; where each
 	// stood at the last sync and whether it walks, to pace its stride.
 	UPROPERTY()
 	TArray<TObjectPtr<class USkeletalMeshComponent>> Rigs;
+	TArray<FString> RigNames;  // which rigged figure each is drawn by
 	TArray<FVector2D> LastPos;
 	TArray<bool> Striding;
 	double LastSyncTime = 0.0;
