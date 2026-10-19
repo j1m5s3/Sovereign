@@ -26,6 +26,7 @@ TEXTURE = "/Game/Art/T_SovDetail"
 NORMALS = "/Game/Art/T_SovDetailN"
 GRID = 8  # cells across the sheets (textures.GRID)
 CELL, PAD = 512.0, 16.0  # a cell's pixels, and how far its pattern wraps past each edge (textures.CELL, PAD)
+WATER_CELL = 12  # the water pattern's cell (kitlib.PATTERNS)
 # Kit folders under the build that are not static-mesh kits: the sheets, the scans they come from, the rigged people.
 NOT_KITS = ("Textures", "Sources", "Rigged")
 
@@ -104,10 +105,30 @@ def master_material(texture, normals):
     off = _expr(mat, unreal.MaterialExpressionAppendVector, -800, 350)
     c(col, "", off, "A")
     c(row, "", off, "B")
+    # Water (the water cell, textures.NAMES): weight 1 there, 0 elsewhere. Its ripples drift with time and it is glossy.
+    wd = _expr(mat, unreal.MaterialExpressionSubtract, -1250, 160, const_b=float(WATER_CELL))
+    c(idx, "", wd, "A")
+    wa = _expr(mat, unreal.MaterialExpressionAbs, -1150, 160)
+    c(wd, "", wa, "")
+    wo = _expr(mat, unreal.MaterialExpressionOneMinus, -1050, 160)
+    c(wa, "", wo, "")
+    water = _expr(mat, unreal.MaterialExpressionSaturate, -950, 160)
+    c(wo, "", water, "")
+    time = _expr(mat, unreal.MaterialExpressionTime, -1600, 700)
+    drift = _expr(mat, unreal.MaterialExpressionConstant2Vector, -1600, 780, r=0.035, g=0.02)
+    flow = _expr(mat, unreal.MaterialExpressionMultiply, -1500, 720)
+    c(time, "", flow, "A")
+    c(drift, "", flow, "B")
+    flow_w = _expr(mat, unreal.MaterialExpressionMultiply, -1450, 720)
+    c(flow, "", flow_w, "A")
+    c(water, "", flow_w, "B")
     # Within the cell: the UVs repeat (frac) over one period of the pattern, which wraps past the cell's edges.
     tc = _expr(mat, unreal.MaterialExpressionTextureCoordinate, -1400, 600)
+    tcf = _expr(mat, unreal.MaterialExpressionAdd, -1320, 600)
+    c(tc, "", tcf, "A")
+    c(flow_w, "", tcf, "B")
     fr = _expr(mat, unreal.MaterialExpressionFrac, -1250, 600)
-    c(tc, "", fr, "")
+    c(tcf, "", fr, "")
     inner = _expr(mat, unreal.MaterialExpressionMultiply, -1100, 600, const_b=(CELL - 2 * PAD) / CELL)
     c(fr, "", inner, "A")
     pad = _expr(mat, unreal.MaterialExpressionAdd, -950, 600, const_b=PAD / CELL)
@@ -145,7 +166,13 @@ def master_material(texture, normals):
     c(ddx, "", nrm, "DDX(UVs)")
     c(ddy, "", nrm, "DDY(UVs)")
     mel.connect_material_property(nrm, "RGB", unreal.MaterialProperty.MP_NORMAL)
-    rough = _expr(mat, unreal.MaterialExpressionConstant, -200, 600, r=0.85)
+    # Matte, but water glossy enough to catch the sky.
+    gloss = _expr(mat, unreal.MaterialExpressionMultiply, -300, 650, const_b=0.3)  # more and the sky's grey drowns its blue
+    c(water, "", gloss, "A")
+    matte = _expr(mat, unreal.MaterialExpressionConstant, -300, 560, r=0.85)
+    rough = _expr(mat, unreal.MaterialExpressionSubtract, -200, 600)
+    c(matte, "", rough, "A")
+    c(gloss, "", rough, "B")
     mel.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
     mel.recompile_material(mat)
     lib.save_asset(MATERIAL)
@@ -186,6 +213,10 @@ def main():
     # The classic FBX importer honours FbxImportUI (vertex colours, no materials).
     unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX false")
     mat = master_material(detail_texture(), normal_texture())
+    if os.environ.get("SOV_MATERIAL_ONLY"):
+        # Just the sheets and the material (SOV_MATERIAL_ONLY=1): every mesh keeps its slots, which point at it.
+        unreal.log("SOVART rebuilt the material")
+        return
     count = 0
     for kit_dir in sorted(glob.glob(os.path.join(BUILD, "*"))):
         if not os.path.isdir(kit_dir) or os.path.basename(kit_dir) in NOT_KITS:

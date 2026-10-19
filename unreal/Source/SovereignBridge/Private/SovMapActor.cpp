@@ -370,12 +370,14 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		{
 			FVector2D& S = Shared.FindOrAdd(PointKey(P), FVector2D::ZeroVector);
 			S += FVector2D(Z, 1.0);
+			if (Color.A <= 0.f) continue;  // the parchment: known plots keep their colours to its edge
 			FLinearColor& C = SharedColor.FindOrAdd(PointKey(P), FLinearColor(0, 0, 0, 0));
 			C += FLinearColor(Color.R, Color.G, Color.B, 1.f);
 		}
 	};
 	for (const FSovTile& Tile : Mirror.Tiles) Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief), ShownColor(Tile));
-	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0, Parchment);
+	// Unexplored plots share their height but not their colour: blended with parchment, a coast turned grey.
+	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0, FLinearColor(0, 0, 0, 0));
 	// A little painted variation over the flat tops, so a run of one terrain is not one flat colour.
 	auto Mottle = [](const FVector& P, const FLinearColor& C) {
 		const double V = FMath::Sin(P.X * 0.0071 + P.Y * 0.0043) * FMath::Sin(P.Y * 0.0067 - P.X * 0.0029) + 0.5 * FMath::Sin(P.X * 0.019 + P.Y * 0.023);
