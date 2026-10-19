@@ -36,6 +36,7 @@ public:
 	virtual void PlayerTick(float DeltaTime) override;
 
 	void SetMap(ASovMapActor* InMap) { Map = InMap; }
+	ASovMapActor* GetMap() const { return Map; }
 
 	// ---- street scenes (step 4): the leader walks its City Center
 	bool InStreet() const { return Street != nullptr; }

@@ -232,7 +232,8 @@ void ShadeKit(UStaticMeshComponent* C, const FLinearColor& Tint)
 
 ASovMapActor::ASovMapActor()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;  // only while units walk (PlaceUnit)
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	Terrain = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("Terrain"));
 	Terrain->bUseAsyncCooking = true;
 	Terrain->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -893,7 +894,18 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		DistrictPieces[i]->SetVisibility(false);
 	}
 
-	int32 CrownCount = 0, BoatCount = 0;
+	int32 CrownCount = 0, BoatCount = 0, SquadCount = 0;
+	// The pool hands components to units by index, so walks in progress restart from where each figure is now.
+	Glides.Reset();
+	TSet<int32> Seen;
+	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
+	{
+		Seen.Add(Mirror.Units[i].Id);
+	}
+	for (auto It = UnitNow.CreateIterator(); It; ++It)
+	{
+		if (!Seen.Contains(It.Key())) It.RemoveCurrent();
+	}
 	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
 	{
 		const FSovUnitMarker& Unit = Mirror.Units[i];
@@ -919,16 +931,17 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		{
 			if (Unit.bNaval || Vehicle > 0.0)
 			{
-				C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)));
 				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.2));
-				C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // side-on to the camera
+				PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)),
+					FRotator(0.f, 90.f, 0.f));  // side-on to the camera
+				if (!Unit.bNaval && PlainName != TEXT("Plane")) SquadCount = AddSquad(C, SquadCount, Unit, FigureName);
 				continue;
 			}
 			const FVector2D Offset = Unit.bLeader ? FVector2D(-38.0, -30.0) : Unit.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 			Pos += SovHex::ToWorld(Offset, 0.0);
-			C->SetRelativeLocation(FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)));
 			C->SetRelativeScale3D(FVector(Unit.bLeader ? People * 1.15 : People));
-			C->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));  // face the camera (south)
+			PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)), FRotator(0.f, 90.f, 0.f));  // facing the camera (south)
+			if (!Unit.bLeader && !Unit.bCivilian && !Unit.bEmbarked) SquadCount = AddSquad(C, SquadCount, Unit, FigureName);
 			if (Unit.bEmbarked)
 			{
 				// An embarked unit rides in a boat in its owner's colour.
@@ -973,6 +986,11 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		UnitMarkers[i]->SetVisibility(false);
 	}
+	for (int32 i = SquadCount; i < SquadPieces.Num(); ++i)
+	{
+		SquadPieces[i]->SetVisibility(false);
+	}
+	SetActorTickEnabled(Glides.Num() > 0);
 	for (int32 i = CrownCount; i < Crowns.Num(); ++i)
 	{
 		Crowns[i]->SetVisibility(false);
@@ -994,4 +1012,81 @@ void ASovMapActor::SetHighlight(int32 X, int32 Y)
 	Highlight->SetMaterial(0, MaterialFor(FLinearColor(1.f, 0.85f, 0.1f)));
 	Highlight->SetRelativeLocation(SovHex::Center(X, Y, SurfaceZ(X, Y) + 2.0));
 	Highlight->SetVisibility(true);
+}
+
+void ASovMapActor::PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot)
+{
+	const FVector* Now = UnitNow.Find(Id);
+	const double Dist = Now ? FVector::Dist2D(*Now, At) : 0.0;
+	UnitTarget.Add(Id, At);
+	// A step or a few: walk. Nothing to walk from, or a jump (a teleport, the map's wrap): just stand there.
+	if (!Now || Dist < 1.0 || Dist > SovHex::Size * 6.0)
+	{
+		C->SetRelativeLocation(At);
+		C->SetRelativeRotation(Rot);
+		UnitNow.Add(Id, At);
+		return;
+	}
+	FGlide G;
+	G.Figure = C;
+	G.Id = Id;
+	G.From = *Now;
+	G.To = At;
+	G.Rot = Rot;
+	G.Duration = FMath::Clamp(static_cast<float>(Dist / (SovHex::Size * 2.2)), 0.3f, 1.4f);  // about half a second a plot
+	C->SetRelativeLocation(G.From);
+	const FVector Dir = At - G.From;
+	// Kit figures face +Y: turn so +Y points along the way.
+	C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))) - 90.f, 0.f));
+	Glides.Add(G);
+}
+
+void ASovMapActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	for (int32 i = Glides.Num() - 1; i >= 0; --i)
+	{
+		FGlide& G = Glides[i];
+		UStaticMeshComponent* C = G.Figure.Get();
+		G.T += DeltaSeconds;
+		const float A = FMath::Clamp(G.T / G.Duration, 0.f, 1.f);
+		const float E = A * A * (3.f - 2.f * A);  // ease in and out
+		// A little bob in step on the way.
+		const FVector P = FMath::Lerp(G.From, G.To, static_cast<double>(E)) + FVector(0, 0, 2.0 * FMath::Abs(FMath::Sin(A * PI * 4.0)));
+		const FVector Here = A >= 1.f ? G.To : P;
+		UnitNow.Add(G.Id, Here);
+		if (C)
+		{
+			C->SetRelativeLocation(Here);
+			if (A >= 1.f) C->SetRelativeRotation(G.Rot);
+		}
+		if (A >= 1.f) Glides.RemoveAtSwap(i);
+	}
+	if (Glides.Num() == 0) SetActorTickEnabled(false);
+}
+
+FVector ASovMapActor::UnitDrift(int32 Id) const
+{
+	const FVector* Now = UnitNow.Find(Id);
+	const FVector* To = UnitTarget.Find(Id);
+	return Now && To ? *Now - *To : FVector::ZeroVector;
+}
+
+int32 ASovMapActor::AddSquad(UStaticMeshComponent* C, int32 Index, const FSovUnitMarker& Unit, const FString& Figure)
+{
+	// Two men behind the lead, left and right (in the lead's own space: it faces +Y and is scaled down), fewer as the
+	// unit is hurt, as Civ VI thins a unit's formation.
+	static const FVector Spots[] = {FVector(-48.0, -42.0, 0.0), FVector(48.0, -42.0, 0.0)};
+	const int32 Men = Unit.Hp > 66 ? 2 : Unit.Hp > 33 ? 1 : 0;
+	for (int32 k = 0; k < Men; ++k)
+	{
+		UStaticMeshComponent* S = Marker(SquadPieces, Index, nullptr);
+		if (!SovArt::SetKitMesh(S, TEXT("Figures"), Figure, Unit.Color)) break;
+		if (S->GetAttachParent() != C) S->AttachToComponent(C, FAttachmentTransformRules::KeepRelativeTransform);
+		S->SetRelativeLocation(Spots[k]);
+		S->SetRelativeRotation(FRotator::ZeroRotator);
+		S->SetRelativeScale3D(FVector(0.95));
+		++Index;
+	}
+	return Index;
 }
