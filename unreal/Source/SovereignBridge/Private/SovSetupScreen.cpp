@@ -1,4 +1,7 @@
 #include "SovSetupScreen.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Layout/SScaleBox.h"
+#include "SovArt.h"
 
 #include "SovStyle.h"
 #include "Styling/CoreStyle.h"
@@ -120,7 +123,11 @@ void SSovSetupScreen::Construct(const FArguments& Args)
 
 	ChildSlot
 	[
-		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.015f, 0.014f, 0.013f, 0.97f)).Padding(0)
+		SNew(SOverlay)
+		+ SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill)[SNew(SImage).Image(FSovStyle::Backdrop())]]
+		+ SOverlay::Slot()
+		[
+		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.015f, 0.014f, 0.013f, 0.55f)).Padding(0)
 		.HAlign(HAlign_Center).VAlign(VAlign_Center)
 		[
 			SNew(SBox).WidthOverride(1240.f).HeightOverride(780.f)
@@ -152,6 +159,14 @@ void SSovSetupScreen::Construct(const FArguments& Args)
 									return FText::FromString(CivPick < 0 ? FString(TEXT("Any of the twelve; you learn which when the game begins."))
 																		 : LeaderName(*Rules, CivPick) + TEXT(", ") + Str(Rules->civs[static_cast<size_t>(CivPick)].leaning));
 								})]
+								// What its cities look like (tools/art/blender/style_views.py, one view per architectural style).
+								+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 10)
+								[
+									SNew(SBox).WidthOverride(480.f).HeightOverride(270.f).HAlign(HAlign_Left).Visibility_Lambda([this]() {
+										return StyleView() ? EVisibility::Visible : EVisibility::Collapsed;
+									})
+									[SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(2)[SNew(SImage).Image_Lambda([this]() { return StyleView(); })]]
+								]
 								+ SVerticalBox::Slot().AutoHeight()
 								[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(CivText(CivPick)); })]
 							]
@@ -180,7 +195,14 @@ void SSovSetupScreen::Construct(const FArguments& Args)
 				]
 			]
 		]
+		]
 	];
+}
+
+const FSlateBrush* SSovSetupScreen::StyleView() const
+{
+	if (CivPick < 0 || !Rules.IsValid()) return nullptr;
+	return FSovStyle::Picture(TEXT("Styles"), SovArt::CivStyle(Str(Rules->civs[static_cast<size_t>(CivPick)].id)), FVector2D(640.f, 360.f));
 }
 
 void SSovSetupScreen::Start()
