@@ -35,6 +35,12 @@ int32 SSovMinimap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 	FVector2D Origin;
 	double Scale;
 	Fit(Size, *D, Origin, Scale);
+	// The whole map as blank parchment (as the unexplored world is drawn on the map), with the revealed plots over it.
+	{
+		const FVector2D Sheet(SovHex::Size * SovHex::Sqrt3 * (D->Width + 0.5) * Scale, SovHex::Size * (1.5 * FMath::Max(0, D->Height - 1) + 2.0) * Scale);
+		FSlateDrawElement::MakeBox(Out, Layer, Geometry.ToPaintGeometry(Sheet, FSlateLayoutTransform(Origin)), White, ESlateDrawEffect::None,
+			FLinearColor(0.33f, 0.27f, 0.18f, 1.f));
+	}
 	// One small box per revealed plot.
 	const FVector2D Cell(SovHex::Size * SovHex::Sqrt3 * Scale + 0.6, SovHex::Size * 1.5 * Scale + 0.6);
 	const FVector2D Half(SovHex::Size * SovHex::Sqrt3 * 0.5, SovHex::Size);
