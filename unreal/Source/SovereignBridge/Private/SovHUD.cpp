@@ -126,7 +126,9 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 	const sov::GameState& S = G.state();
 	const sov::PlayerId View = static_cast<sov::PlayerId>(Sub.GetSession().ViewPlayer());
 	UFont* Font = GEngine->GetSmallFont();
+	// Each yield as its icon and amount, as Civ VI marks a city's plots (the letter where an icon is missing).
 	static const TCHAR* Letters[] = {TEXT("F"), TEXT("P"), TEXT("G"), TEXT("S"), TEXT("C"), TEXT("R")};
+	static const FName IconOf[] = {FName("food"), FName("production"), FName("gold"), FName("science"), FName("culture"), FName("faith")};
 	static const FLinearColor Colors[] = {FLinearColor(0.5f, 1.f, 0.4f), FLinearColor(1.f, 0.6f, 0.3f), FLinearColor(1.f, 0.9f, 0.3f),
 		FLinearColor(0.4f, 0.75f, 1.f), FLinearColor(0.9f, 0.5f, 1.f), FLinearColor(0.9f, 0.9f, 0.9f)};
 	for (int32 i = 0; i < S.grid.size(); ++i)
@@ -153,7 +155,8 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 		int32 Shown = 0;
 		for (size_t k = 0; k < sov::kNumYields && k < UE_ARRAY_COUNT(Letters); ++k) Shown += Y[k].toInt() > 0;
 		if (Shown == 0 && !bWorked) continue;
-		const float W = FMath::Max(1, Shown) * 18.f + 6.f;
+		constexpr float Item = 24.f;
+		const float W = FMath::Max(1, Shown) * Item + 4.f;
 		float X = Screen.X - W / 2 + 3.f;
 		if (bWorked) DrawRect(FLinearColor(1.f, 0.78f, 0.32f, 0.9f), Screen.X - W / 2 - 1.f, Screen.Y - 2.f, W + 2.f, 18.f);
 		DrawRect(FLinearColor(0.02f, 0.018f, 0.016f, 0.78f), Screen.X - W / 2, Screen.Y - 1.f, W, 16.f);
@@ -161,8 +164,16 @@ void ASovHUD::DrawYields(const USovGameSubsystem& Sub)
 		{
 			const int32 V = static_cast<int32>(Y[k].toInt());
 			if (V <= 0) continue;
-			DrawText(FString::Printf(TEXT("%d%s"), V, Letters[k]), Colors[k], X, Screen.Y, Font, 1.0f);
-			X += 18.f;
+			if (UTexture2D* Tex = IconTexture(IconOf[k]))
+			{
+				DrawTexture(Tex, X - 1.f, Screen.Y, 13.f, 13.f, 0.f, 0.f, 1.f, 1.f, FLinearColor::White);
+				DrawText(FString::FromInt(V), Colors[k], X + 12.f, Screen.Y, Font, 1.0f);
+			}
+			else
+			{
+				DrawText(FString::Printf(TEXT("%d%s"), V, Letters[k]), Colors[k], X, Screen.Y, Font, 1.0f);
+			}
+			X += Item;
 		}
 	}
 }
