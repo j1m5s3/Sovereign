@@ -3630,8 +3630,15 @@ void ASovPlayerController::OpenDiplomacy(sov::PlayerId Leader)
 		Talk->AddNote(FString::Printf(TEXT("They have put an offer to you: %s."), *Str(sov::describeDeal(G.rules(), G.state(), *D))));
 	}
 	FSovDiplomacyTalk* T = Talk.Get();
+	FString TheirCiv;
+	if (const sov::Game& G0 = Subsystem()->GetGame(); T->Leader() >= 0 && T->Leader() < static_cast<int32>(G0.state().players.size()))
+	{
+		const sov::TypeIndex Civ = G0.state().players[static_cast<size_t>(T->Leader())].civ;
+		if (Civ != sov::kNone) TheirCiv = Str(G0.rules().civs[static_cast<size_t>(Civ)].id);
+	}
 	DiplomacyPanel = SNew(SSovDiplomacyPanel)
 		.Talk(T)
+		.CivId(TheirCiv)
 		.Header([this, T]() {
 			const sov::diplomacy::Persona& P = T->GetPersona();
 			// Their agenda shows from Open access (08: Access level).

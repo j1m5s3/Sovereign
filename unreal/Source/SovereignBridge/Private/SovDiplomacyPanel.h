@@ -16,6 +16,7 @@ class SSovDiplomacyPanel : public SCompoundWidget
 public:
 	SLATE_BEGIN_ARGS(SSovDiplomacyPanel) {}
 	SLATE_ARGUMENT(FSovDiplomacyTalk*, Talk)
+	SLATE_ARGUMENT(FString, CivId)                    // the leader's civilization's rules id: the scene behind their portrait
 	SLATE_ARGUMENT(TFunction<FText()>, Header)       // name, relationship, agenda
 	SLATE_ARGUMENT(TFunction<FText()>, Reasons)      // why they feel as they do
 	SLATE_ARGUMENT(TFunction<FText()>, Proposal)     // the last proposal and the rules' verdict ("" when none)
