@@ -210,6 +210,7 @@ protected:
 	bool bReplay = false;
 	float ReplayTime = 0.f;
 	bool bMenuReplays = false;
+	bool bMenuOthers = false, bMenuLoads = false, bMenuExtras = false;  // the menu's folded sections
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second

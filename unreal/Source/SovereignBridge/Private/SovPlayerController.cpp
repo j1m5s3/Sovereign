@@ -1,5 +1,8 @@
 #include "SovPlayerController.h"
 
+#include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SSpacer.h"
+
 #include "Engine/GameInstance.h"
 #include "InputCoreTypes.h"
 
@@ -3970,14 +3973,17 @@ void ASovPlayerController::OpenMenu()
 		}
 		if (Files.Num() == 0) Replays->AddSlot().AutoHeight()[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("No live battle has been fought yet.")))];
 	}
-	// Saved games, newest first (the four latest): continue one.
+	// Saved games, newest first: the newest is offered on its own, the next three fold under "Load another save".
+	TSharedRef<SVerticalBox> LatestSave = SNew(SVerticalBox);
 	TSharedRef<SVerticalBox> SavedGames = SNew(SVerticalBox);
+	int32 OlderSaves = 0;
 	{
 		const TArray<TPair<FString, FDateTime>> Saves = USovGameSubsystem::ListSaves();
 		for (int32 i = 0; i < Saves.Num() && i < 4; ++i)
 		{
 			const FString SaveName = Saves[i].Key;
-			SavedGames->AddSlot().AutoHeight()[Item(FString::Printf(TEXT("Continue: %s (%s)"), *SaveName, *Saves[i].Value.ToString(TEXT("%Y-%m-%d %H:%M"))),
+			OlderSaves += i > 0;
+			(i == 0 ? LatestSave : SavedGames)->AddSlot().AutoHeight()[Item(FString::Printf(TEXT("Continue: %s (%s)"), *SaveName, *Saves[i].Value.ToString(TEXT("%Y-%m-%d %H:%M"))),
 				[this, SaveName]() {
 					if (Subsystem() && Subsystem()->LoadGame(SaveName))
 					{
@@ -3996,8 +4002,14 @@ void ASovPlayerController::OpenMenu()
 		SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor_Lambda([NoGame]() {
 			return FLinearColor(0.01f, 0.01f, 0.01f, NoGame() ? 0.2f : 0.72f);
 		}).Padding(0)
-		.HAlign(HAlign_Center).VAlign(VAlign_Center)[
+		.HAlign(HAlign_Fill).VAlign(VAlign_Center)[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SSpacer).Visibility_Lambda([NoGame]() { return NoGame() ? EVisibility::Collapsed : EVisibility::Visible; })]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(TAttribute<FMargin>::CreateLambda([NoGame]() { return FMargin(NoGame() ? 70.f : 0.f, 0.f, 0.f, 0.f); }))[
+		SNew(SBox).MaxDesiredHeight(1000.f)[
 		SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(28.f, 20.f))[
+			SNew(SScrollBox)
+			+ SScrollBox::Slot()[
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)[
 				SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Sovereign"))).Font(FSovStyle::Font(34, true))
@@ -4007,8 +4019,20 @@ void ASovPlayerController::OpenMenu()
 				SNew(SBox).WidthOverride(440.f)[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Primary()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 8.f))
 					.OnClicked_Lambda([this, Base]() { OpenSetup(Base()); return FReply::Handled(); })
 					[SNew(STextBlock).Font(FSovStyle::Font(15, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("New game")))]]]
+			+ SVerticalBox::Slot().AutoHeight()[LatestSave]
+			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
+				FSovSetup S = Base();
+				S.ChallengeWeek = Week;
+				StartFromMenu(S);
+			})]
+			// The rest folds away, as Civ VI's menu keeps a few big choices: games with others, older saves, extras.
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)[Item(TEXT("Play with others"), [this]() { bMenuOthers = !bMenuOthers; })]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).Padding(FMargin(14.f, 0.f, 0.f, 6.f)).Visibility_Lambda([this]() {
+				return bMenuOthers ? EVisibility::Visible : EVisibility::Collapsed;
+			})[
+			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 8.f, 0.f, 2.f)[
-				SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("For hot seat and online games:")))]
+				SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("For hot seat and online games, the new game's settings:")))]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)[
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().AutoWidth()[SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).Text(FText::FromString(TEXT("<"))).OnClicked_Lambda([this]() {
@@ -4048,12 +4072,6 @@ void ASovPlayerController::OpenMenu()
 						S->LastMessage = IFileManager::Get().Delete(*Path, false, false, true) ? FString(TEXT("Your rivals have forgotten you.")) : FString(TEXT("No rivals remember you yet."));
 					return FReply::Handled();
 				})]]
-			+ SVerticalBox::Slot().AutoHeight()[Item(ChallengeLabel.IsEmpty() ? FString(TEXT("Weekly challenge")) : ChallengeLabel, [this, Base, Week]() {
-				FSovSetup S = Base();
-				S.ChallengeWeek = Week;
-				StartFromMenu(S);
-			})]
-			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Hot seat (two players, one screen)"), [this, Base]() {
 				FSovSetup S = Base();
 				S.HumanSeats = 2;
@@ -4089,6 +4107,19 @@ void ASovPlayerController::OpenMenu()
 				S.bSteam = true;
 				StartFromMenu(S);
 			})]
+			]]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).Visibility(OlderSaves > 0 ? EVisibility::Visible : EVisibility::Collapsed)[Item(TEXT("Load another save"), [this]() { bMenuLoads = !bMenuLoads; })]]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).Padding(FMargin(14.f, 0.f, 0.f, 6.f)).Visibility_Lambda([this]() {
+				return bMenuLoads ? EVisibility::Visible : EVisibility::Collapsed;
+			})[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight()[SavedGames]
+			]]
+			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Extras: replays, the Hall, mods, achievements"), [this]() { bMenuExtras = !bMenuExtras; })]
+			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).Padding(FMargin(14.f, 0.f, 0.f, 6.f)).Visibility_Lambda([this]() {
+				return bMenuExtras ? EVisibility::Visible : EVisibility::Collapsed;
+			})[
+			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Mods"), [this]() { bMenuMods = !bMenuMods; })]
 			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).WidthOverride(640.f).Visibility_Lambda([this]() {
 				return bMenuMods ? EVisibility::Visible : EVisibility::Collapsed;
@@ -4130,6 +4161,8 @@ void ASovPlayerController::OpenMenu()
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)[
 				SNew(SBox).WidthOverride(640.f)[SNew(STextBlock).Font(FSovStyle::Font(12)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
 					.Text_Lambda([this]() { return FText::FromString(MenuHall); })]]
+			]]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)[SNullWidget::NullWidget]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Settings"), [this]() { OpenSettings(); })]
 			+ SVerticalBox::Slot().AutoHeight()[Item(TEXT("Quit"), [this]() { ConsoleCommand(TEXT("quit")); })]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 10.f, 0.f, 0.f)[
@@ -4138,7 +4171,8 @@ void ASovPlayerController::OpenMenu()
 					const USovGameSubsystem* S = Subsystem();
 					return FText::FromString(S ? S->LastMessage : FString());
 				})]
-		]]];
+		]]]]
+		+ SHorizontalBox::Slot().FillWidth(1.f)[SNew(SSpacer)]]];
 	GEngine->GameViewport->AddViewportWidgetContent(Menu.ToSharedRef(), 60);
 }
 
