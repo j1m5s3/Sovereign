@@ -20,7 +20,9 @@ constexpr double Plateau = 0.78;      // each plot is flat this far toward its e
 FLinearColor Fogged(const FLinearColor& C)
 {
 	const float L = C.GetLuminance();
-	return FMath::Lerp(C * 0.55f, FLinearColor(L * 0.95f, L * 0.8f, L * 0.58f), 0.7f) * 0.8f;
+	const FLinearColor Sepia = FMath::Lerp(C * 0.55f, FLinearColor(L * 0.95f, L * 0.8f, L * 0.58f), 0.7f) * 0.8f;
+	// Drawn toward the unexplored parchment, so dark plots (the deep sea) fade like paper instead of sinking to black.
+	return FMath::Lerp(Sepia, FLinearColor(0.2f, 0.17f, 0.12f), 0.35f);
 }
 // Kit models on such plots: their tint (it multiplies their own colours) browned and dimmed to match.
 const FLinearColor KitFog(0.62f, 0.52f, 0.4f);
