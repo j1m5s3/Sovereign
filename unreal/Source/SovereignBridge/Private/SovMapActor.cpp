@@ -953,11 +953,13 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		if (!Seen.Contains(It.Key())) It.RemoveCurrent();
 	}
+	TMap<int32, UStaticMeshComponent*> FigureOf;
 	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
 	{
 		const FSovUnitMarker& Unit = Mirror.Units[i];
 		UStaticMesh* Mesh = Unit.bLeader ? CylinderMesh.Get() : Unit.bCivilian ? SphereMesh.Get() : ConeMesh.Get();
 		UStaticMeshComponent* C = Marker(UnitMarkers, i, nullptr);
+		FigureOf.Add(Unit.Id, C);
 		const double Z = SurfaceZ(Unit.X, Unit.Y) + (Unit.bInCity ? CityHeight : 0.0);
 		FVector Pos = SovHex::Center(Unit.X, Unit.Y);
 		// Kit figures in the owner's colour when the art exists; a figure stands about 45 cm tall on the map.
@@ -1037,6 +1039,7 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		SquadPieces[i]->SetVisibility(false);
 	}
+	LungeAtFoes(Mirror, FigureOf);
 	SetActorTickEnabled(Glides.Num() > 0);
 	for (int32 i = CrownCount; i < Crowns.Num(); ++i)
 	{
@@ -1098,8 +1101,10 @@ void ASovMapActor::Tick(float DeltaSeconds)
 		G.T += DeltaSeconds;
 		const float A = FMath::Clamp(G.T / G.Duration, 0.f, 1.f);
 		const float E = A * A * (3.f - 2.f * A);  // ease in and out
-		// A little bob in step on the way.
-		const FVector P = FMath::Lerp(G.From, G.To, static_cast<double>(E)) + FVector(0, 0, 2.0 * FMath::Abs(FMath::Sin(A * PI * 4.0)));
+		// A little bob in step on the way; a blow goes out toward the foe and springs back.
+		const FVector Out = (G.Toward - G.From).GetSafeNormal2D() * FMath::Min(FVector::Dist2D(G.Toward, G.From) * 0.42, 75.0);
+		const FVector P = G.bLunge ? G.From + Out * FMath::Sin(A * PI) + FVector(0, 0, 4.0 * FMath::Sin(A * PI))
+			: FMath::Lerp(G.From, G.To, static_cast<double>(E)) + FVector(0, 0, 2.0 * FMath::Abs(FMath::Sin(A * PI * 4.0)));
 		const FVector Here = A >= 1.f ? G.To : P;
 		UnitNow.Add(G.Id, Here);
 		if (C)
@@ -1136,4 +1141,55 @@ int32 ASovMapActor::AddSquad(UStaticMeshComponent* C, int32 Index, const FSovUni
 		++Index;
 	}
 	return Index;
+}
+
+void ASovMapActor::LungeAtFoes(const FSovMirror& Mirror, const TMap<int32, UStaticMeshComponent*>& FigureOf)
+{
+	// Two neighbouring units of different owners that both lost health since the last redraw fought each other; a unit
+	// that vanished beside a hurt foe fell to it. Each lunges at the other and springs back, as Civ VI shows every
+	// attack (a ranged attacker loses nothing, and stays put).
+	TMap<int32, FUnitSeen> Now;
+	for (const FSovUnitMarker& U : Mirror.Units)
+	{
+		const FVector* At = UnitTarget.Find(U.Id);
+		Now.Add(U.Id, {At ? *At : SovHex::Center(U.X, U.Y, SurfaceZ(U.X, U.Y)), U.Owner, U.Hp});
+	}
+	const double Reach = SovHex::Size * 2.0;  // neighbouring plots' centres are sqrt(3) sizes apart
+	auto Lunge = [&](int32 Id, const FVector& Toward) {
+		UStaticMeshComponent* const* C = FigureOf.Find(Id);
+		const FUnitSeen* Me = Now.Find(Id);
+		if (!C || !*C || !Me || Glides.ContainsByPredicate([Id](const FGlide& G) { return G.Id == Id; })) return;  // walking already
+		FGlide G;
+		G.Figure = *C;
+		G.Id = Id;
+		G.From = G.To = Me->At;
+		G.Rot = (*C)->GetRelativeRotation();
+		G.bLunge = true;
+		G.Toward = Toward;
+		G.Duration = 0.6f;
+		const FVector Dir = Toward - Me->At;
+		(*C)->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))) - 90.f, 0.f));
+		Glides.Add(G);
+	};
+	for (const TPair<int32, FUnitSeen>& A : Now)
+	{
+		const FUnitSeen* Was = LastSeen.Find(A.Key);
+		if (!Was || A.Value.Hp >= Was->Hp) continue;
+		for (const TPair<int32, FUnitSeen>& B : Now)
+		{
+			const FUnitSeen* BWas = LastSeen.Find(B.Key);
+			if (B.Value.Owner != A.Value.Owner && BWas && B.Value.Hp < BWas->Hp && FVector::Dist2D(A.Value.At, B.Value.At) < Reach)
+			{
+				Lunge(A.Key, B.Value.At);
+			}
+		}
+		for (const TPair<int32, FUnitSeen>& Gone : LastSeen)
+		{
+			if (!Now.Contains(Gone.Key) && Gone.Value.Owner != A.Value.Owner && FVector::Dist2D(A.Value.At, Gone.Value.At) < Reach)
+			{
+				Lunge(A.Key, Gone.Value.At);
+			}
+		}
+	}
+	LastSeen = MoveTemp(Now);
 }

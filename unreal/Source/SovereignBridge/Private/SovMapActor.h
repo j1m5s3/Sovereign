@@ -116,8 +116,18 @@ private:
 		FVector From, To;
 		FRotator Rot;  // facing when it arrives
 		float T = 0.f, Duration = 0.5f;
+		bool bLunge = false;  // a blow: out toward Toward and back to From, not a walk
+		FVector Toward = FVector::ZeroVector;
 	};
 	TArray<FGlide> Glides;
+	// Each unit as last drawn, to see who fought since (the core keeps no record of single fights).
+	struct FUnitSeen
+	{
+		FVector At = FVector::ZeroVector;
+		int32 Owner = 0, Hp = 0;
+	};
+	TMap<int32, FUnitSeen> LastSeen;
+	void LungeAtFoes(const FSovMirror& Mirror, const TMap<int32, UStaticMeshComponent*>& FigureOf);
 	TMap<int32, FVector> UnitNow;     // each unit's figure where it is drawn now
 	TMap<int32, FVector> UnitTarget;  // and where it is going
 
