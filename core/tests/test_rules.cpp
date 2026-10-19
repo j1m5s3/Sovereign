@@ -16,6 +16,12 @@ TEST(rules_load_known_values) {
     REQUIRE(r.speed("GAMESPEED_STANDARD") != kNone);
     CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_STANDARD"))].turns, 500);
     CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_MARATHON"))].costPercent, 300);
+    // Durations in turns take the Half scaling (00: Game speed), costs the full cost percent.
+    CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_MARATHON"))].durationPercent, 200);
+    CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_ONLINE"))].durationPercent, 66);
+    CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_QUICK"))].durationPercent, 87);
+    CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_EPIC"))].durationPercent, 125);
+    CHECK_EQ(r.speeds[static_cast<size_t>(r.speed("GAMESPEED_STANDARD"))].durationPercent, 100);
     const UnitType& settler = r.units[static_cast<size_t>(r.unit("UNIT_SETTLER"))];
     CHECK(settler.foundCity);
     CHECK_EQ(settler.sight, 3);

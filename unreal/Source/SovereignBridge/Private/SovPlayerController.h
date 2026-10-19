@@ -243,6 +243,8 @@ protected:
 	TArray<FString> CombatLines;  // what an attack on the plot under the cursor would do (empty: none)
 	bool bEmpireOpen = false;  // the Empire panel (F8)
 	bool bBattleNowDone = false;  // -SovBattleNow has attacked
+	float ShotTimer = 0.f;        // -SovShots=<seconds>: time since the last screenshot
+	int32 ShotCount = 0;
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
 	double MessageTime = -100.0;
