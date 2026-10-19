@@ -11,6 +11,13 @@ class UStaticMeshComponent;
 
 namespace SovArt
 {
+// The detail sheet's cells (tools/art/blender/textures.py, 8 x 8): a kit vertex carries its cell as alpha = cell / (KitCells - 1).
+constexpr int32 KitCells = 64;
+// Cells the map and the street paint their own ground with (kitlib.PATTERNS).
+namespace Cell
+{
+constexpr int32 Stone = 7, Plaster = 8, Foliage = 10, Water = 12, Grass = 13, Sand = 14, Masonry = 15, Flagstones = 18, Cobbles = 19;
+}
 // /Game/Art/<Kit>/SM_<Name>, cached; null when the kit has not been built.
 UStaticMesh* Mesh(const TCHAR* Kit, const FString& Name);
 // The kit master material (vertex colour x Tint), or null.

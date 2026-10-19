@@ -16,7 +16,7 @@ DARK = "#3a2f28"
 THATCH = "#b89b5e"
 CLOTH = ["#c9b27a", "#a8452f", "#e8e2d6"]
 
-kitlib.patterns({"plaster": WALL, "rooftile": ROOF, "stone": MARBLE + STONE, "wood": WOOD, "thatch": THATCH, "cloth": CLOTH})
+kitlib.patterns({"plaster": WALL, "rooftile": ROOF, "masonry": MARBLE + STONE, "wood": WOOD, "thatch": THATCH, "cloth": CLOTH})
 
 
 def _door_and_windows(p, w, d, h, rng_floor=0.0):

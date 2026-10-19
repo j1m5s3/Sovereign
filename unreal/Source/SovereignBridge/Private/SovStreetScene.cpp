@@ -23,11 +23,11 @@ uint32 ColorKey(const FLinearColor& C)
 }
 
 // As the map's terrain (SovMapActor KitPaint): a linear colour as the bytes M_SovKit squares back, and the art kit's
-// detail tile in alpha (kitlib.PATTERNS: 7 stone, 9 roof tiles, which read as paving, 13 grass, 14 sand).
+// detail cell in alpha (SovArt::Cell).
 FColor KitPaint(const FLinearColor& Linear, int32 Tile)
 {
 	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
-	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile / 15.f * 255.f)));
+	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile * 255.f / (SovArt::KitCells - 1))));
 }
 
 // Smooth value noise in about 0..1, from a few sines (deterministic, no state).
@@ -250,15 +250,15 @@ bool ASovStreetScene::BuildGround()
 			for (const TPair<FVector2D, FVector2D>& S : Streets) DStreet = FMath::Min(DStreet, SegmentDistance2D(FVector2D(X, Y), S.Key, S.Value));
 			const float Var = static_cast<float>(0.88 + 0.24 * Noise(X, Y, 700.0));
 			FColor C;
-			if (R < PlazaR - 90.0) C = KitPaint(FLinearColor(0.36f, 0.31f, 0.25f) * Var, 9);
-			else if (R < PlazaR + 30.0) C = KitPaint(FLinearColor(0.2f, 0.19f, 0.17f), 7);  // the kerb round the square
-			else if (DStreet < 240.0) C = KitPaint(FLinearColor(0.27f, 0.24f, 0.2f) * Var, 7);
-			else if (DStreet < 340.0) C = KitPaint(FLinearColor(0.25f, 0.18f, 0.11f) * Var, 14);
+			if (R < PlazaR - 90.0) C = KitPaint(FLinearColor(0.36f, 0.31f, 0.25f) * Var, SovArt::Cell::Flagstones);
+			else if (R < PlazaR + 30.0) C = KitPaint(FLinearColor(0.2f, 0.19f, 0.17f), SovArt::Cell::Masonry);  // the kerb round the square
+			else if (DStreet < 240.0) C = KitPaint(FLinearColor(0.27f, 0.24f, 0.2f) * Var, SovArt::Cell::Cobbles);
+			else if (DStreet < 340.0) C = KitPaint(FLinearColor(0.25f, 0.18f, 0.11f) * Var, SovArt::Cell::Sand);
 			else
 			{
 				const float Dry = static_cast<float>(FMath::Clamp(Z / 2500.0, 0.0, 1.0));
 				const FLinearColor Lush(0.1f, 0.2f, 0.05f), Sere(0.26f, 0.25f, 0.11f);
-				C = KitPaint(FMath::Lerp(Lush, Sere, Dry * 0.7f + 0.3f * static_cast<float>(Noise(Y, X, 1500.0))) * Var, 13);
+				C = KitPaint(FMath::Lerp(Lush, Sere, Dry * 0.7f + 0.3f * static_cast<float>(Noise(Y, X, 1500.0))) * Var, SovArt::Cell::Grass);
 			}
 			Colors.Add(C);
 		}

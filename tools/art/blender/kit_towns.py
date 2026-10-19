@@ -22,7 +22,7 @@ DARK = "#2e2722"
 GOLD = "#c9a43c"
 COPPER = "#6d8f8a"
 
-kitlib.patterns({"plaster": PLASTER + [TRIM], "wood": BEAM, "rooftile": TILE + BRICK, "stone": STONE + CONCRETE, "metal": SLATE + GLASS + [GOLD, COPPER]})
+kitlib.patterns({"plaster": PLASTER + [TRIM], "wood": BEAM, "rooftile": TILE, "brick": BRICK, "masonry": STONE, "stone": CONCRETE, "metal": SLATE + GLASS + [GOLD, COPPER]})
 
 
 def _windows(p, w, d, floors, h, color=DARK, step=None):

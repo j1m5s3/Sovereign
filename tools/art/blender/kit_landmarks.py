@@ -19,7 +19,7 @@ CEDAR = "#6b4a2e"
 SLATE = "#5b6a6e"
 TEAL = "#4e8f86"
 
-kitlib.patterns({"stone": ROSE + [SLATE], "plaster": MUD, "rooftile": CLAY + [GLAZE], "wood": [CEDAR], "metal": [TEAL]})
+kitlib.patterns({"stone": ROSE + [SLATE], "adobe": MUD, "rooftile": CLAY + [GLAZE], "wood": [CEDAR], "metal": [TEAL]})
 
 
 def _mound(p, center, radius, color, squash=1.0, wobble=0.15):

@@ -52,7 +52,7 @@ uint32 ColorKey(const FLinearColor& C)
 FColor KitPaint(const FLinearColor& Linear, int32 Tile)
 {
 	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
-	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile / 15.f * 255.f)));
+	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile * 255.f / (SovArt::KitCells - 1))));
 }
 // The Fields kit's model for an improvement (tools/art/blender/kit_fields.py); the rest share a walled yard.
 const TCHAR* FieldsModel(const FString& Id)

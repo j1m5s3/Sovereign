@@ -23,7 +23,7 @@ DOME = ["#6d8f8a", "#c9a43c"]
 DARK = "#3a2f28"
 PAVING = "#c8bfae"
 
-kitlib.patterns({"stone": SAND + STONE + MARBLE + [PAVING], "plaster": WALL, "rooftile": ROOF + BRICK, "metal": BRONZE + IRON + [GOLD] + DOME,
+kitlib.patterns({"stone": SAND, "masonry": STONE + MARBLE, "flagstones": [PAVING], "plaster": WALL, "rooftile": ROOF, "brick": BRICK, "metal": BRONZE + IRON + [GOLD] + DOME,
                  "foliage": LEAF + [LAWN], "water": WATER})
 
 

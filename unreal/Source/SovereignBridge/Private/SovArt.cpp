@@ -173,7 +173,7 @@ FString LandmarkName(const FString& WonderId)
 
 TArray<FString> RequiredAssets()
 {
-	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit")};
+	TArray<FString> Out = {TEXT("/Game/Art/M_SovKit.M_SovKit"), TEXT("/Game/Art/T_SovDetail.T_SovDetail"), TEXT("/Game/Art/T_SovDetailN.T_SovDetailN")};
 	for (const TCHAR* Name : {TEXT("Tree_Broadleaf"), TEXT("Tree_Conifer"), TEXT("Bush"), TEXT("Rocks"), TEXT("Reeds"), TEXT("Palms"),
 			 TEXT("Coral"), TEXT("IceFloe"), TEXT("Volcano"), TEXT("Fumarole"), TEXT("BurntTree"), TEXT("Peak"), TEXT("Mesa"), TEXT("Spires"),
 			 TEXT("Pool"), TEXT("Cliffs"), TEXT("Mounds")})

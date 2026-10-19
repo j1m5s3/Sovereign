@@ -1,18 +1,34 @@
-"""The kit detail sheet (run inside Blender, from generate.py): a 4x4 sheet of greyscale painted
-patterns, each tile 256 px and seamless on its own, that the kit material multiplies over the vertex
-colours (specs/sovereign/leaders-and-art-style.md: hand-painted, simplified textures). Mid grey is
-"no change"; brighter lightens, darker deepens (the material doubles the value).
+"""The kit detail sheet (run inside Blender, from generate.py): an 8x8 sheet of greyscale patterns that the kit
+material multiplies over the vertex colours, and a matching sheet of normals for their relief
+(specs/sovereign/leaders-and-art-style.md: hand-painted, simplified textures). Mid grey is "no change";
+brighter lightens, darker deepens (the material doubles the value).
 
-Every pattern is built from periodic noise (white noise filtered in the frequency domain), so it
-tiles without seams. The tile a face uses is chosen by kitlib (vertex colour alpha).
+Buildings and paving (masonry, brick, plaster, roof tiles, thatch, adobe, flagstones, cobbles) come from CC0
+photo scans (sources.py), their colour taken out so the kit's palette stays in charge; the rest are painted here
+from periodic noise (white noise filtered in the frequency domain), and so is any scan not downloaded.
+
+Each cell is 512 px: one period of its pattern (480 px) wrapped 16 px past each edge, so the material can stay
+inside the cell and still tile without a seam. The cell a face uses is chosen by kitlib (vertex colour alpha).
 """
+import os
+
 import numpy as np
 
-TILE = 256
-GRID = 4
-# Pattern name -> tile index (kitlib.PATTERNS mirrors this order).
+import sources
+
+# Where tools/art/fetch_textures.py put the scans (build_art.py's build folder).
+BUILD = os.environ.get("SOV_ART_BUILD") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "art", "build")
+TILE = 256  # the painted patterns' own size; every pattern is resampled to PERIOD
+GRID = 8
+CELL = 512
+PAD = 16
+PERIOD = CELL - 2 * PAD
+# Pattern name -> cell index (kitlib.PATTERNS mirrors this order).
 NAMES = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch",
-         "water", "grass", "sand"]
+         "water", "grass", "sand", "masonry", "brick", "adobe", "flagstones", "cobbles"]
+# How deep each painted pattern's relief reads (0: flat). Scans use their own normal maps.
+RELIEF = {"cloth": 0.6, "leather": 0.8, "metal": 0.5, "wood": 1.0, "stone": 2.0, "plaster": 0.8, "rooftile": 2.0,
+          "foliage": 1.2, "thatch": 1.5, "masonry": 2.0, "brick": 2.0, "adobe": 1.0, "flagstones": 2.0, "cobbles": 2.0}
 
 
 def _noise(seed, cutoff, aniso=(1.0, 1.0)):
@@ -131,30 +147,156 @@ def sand():
     return dunes + _noise(142, 110) * 0.05 + _noise(143, 6) * 0.06
 
 
-PATTERNS = [plain, cloth, leather, metal, skin, hair, wood, stone, plaster, rooftile, foliage, thatch, water, grass, sand]
+def masonry():
+    """Dressed blocks in courses, each its own shade, with sunken joints (painted in place of the scan)."""
+    x, y = _grid()
+    rows, cols = 6, 3
+    h, w = TILE / rows, TILE / cols
+    r = np.floor(y / h)
+    xs = (x + (r % 2) * w / 2) % TILE
+    c = np.floor(xs / w)
+    joint = (np.minimum(y % h, h - y % h) < 2.5) | (np.minimum(xs % w, w - xs % w) < 2.5)
+    shade = (np.sin(r * 12.9898 + c * 78.233) * 43758.5453) % 1.0 - 0.5
+    return np.where(joint, -0.3, shade * 0.12) + _noise(151, 40) * 0.05
 
 
-def atlas():
-    """The sheet as values in 0..1 (0.5 = no change), rows from the bottom as Blender images store them."""
-    sheet = np.full((TILE * GRID, TILE * GRID), 0.5)
-    for i, make in enumerate(PATTERNS):
-        col, row = i % GRID, i // GRID
-        tile = np.clip(0.5 + make() * 0.95, 0.0, 1.0)
-        # Blender's pixel rows start at the bottom; tile row 0 is drawn at the top of the image.
-        top = (GRID - 1 - row) * TILE
-        sheet[top:top + TILE, col * TILE:(col + 1) * TILE] = tile
-    return sheet
+def brick():
+    """Running-bond bricks, the mortar lighter than the brick."""
+    x, y = _grid()
+    rows, cols = 16, 4
+    h, w = TILE / rows, TILE / cols
+    r = np.floor(y / h)
+    xs = (x + (r % 2) * w / 2) % TILE
+    c = np.floor(xs / w)
+    mortar = (np.minimum(y % h, h - y % h) < 1.5) | (np.minimum(xs % w, w - xs % w) < 1.5)
+    shade = (np.sin(r * 12.9898 + c * 78.233) * 43758.5453) % 1.0 - 0.5
+    return np.where(mortar, 0.18, shade * 0.14) + _noise(161, 60) * 0.04
 
 
-def save(path):
+def adobe():
+    """Mud plaster: broad smears and a few fine cracks."""
+    return _noise(171, 4) * 0.08 + _noise(172, 30) * 0.05 - np.clip(np.abs(_noise(173, 10)) < 0.02, 0, 1) * 0.12
+
+
+def flagstones():
+    return masonry()
+
+
+def cobbles():
+    """Rounded setts in a grid with dark gaps between."""
+    x, y = _grid()
+    n = 12
+    cx = (x % (TILE / n)) / (TILE / n) - 0.5
+    cy = (y % (TILE / n)) / (TILE / n) - 0.5
+    return np.clip((0.25 - (cx ** 2 + cy ** 2)) * 1.2, -0.25, 0.2) + _noise(181, 50) * 0.05
+
+
+PATTERNS = [plain, cloth, leather, metal, skin, hair, wood, stone, plaster, rooftile, foliage, thatch, water, grass, sand,
+            masonry, brick, adobe, flagstones, cobbles]
+
+
+def _resample(a, n):
+    """A periodic image resampled to n x n through its spectrum, so it stays seamless."""
+    m = a.shape[0]
+    if m == n:
+        return a.copy()
+    f = np.fft.fftshift(np.fft.fft2(a))
+    if n < m:
+        lo = (m - n) // 2
+        f = f[lo:lo + n, lo:lo + n]
+    else:
+        lo = (n - m) // 2
+        g = np.zeros((n, n), dtype=complex)
+        g[lo:lo + m, lo:lo + m] = f
+        f = g
+    return np.real(np.fft.ifft2(np.fft.ifftshift(f))) * (n * n) / float(m * m)
+
+
+def _blur(a, cycles):
+    """Only what varies slower than about `cycles` per tile (a periodic Gaussian)."""
+    m = a.shape[0]
+    f = np.fft.fftfreq(m) * m
+    FX, FY = np.meshgrid(f, f)
+    return np.real(np.fft.ifft2(np.fft.fft2(a) * np.exp(-(FX ** 2 + FY ** 2) / (2 * cycles ** 2))))
+
+
+def _relief(h, depth):
+    """Normals (x, y, z in -1..1, OpenGL: +y up the image) from a height field whose rows run from the top."""
+    gx = (np.roll(h, -1, axis=1) - np.roll(h, 1, axis=1)) * 0.5
+    gy = (np.roll(h, -1, axis=0) - np.roll(h, 1, axis=0)) * 0.5
+    k = depth * PERIOD / 32.0
+    n = np.stack([-gx * k, gy * k, np.ones_like(h)], axis=-1)
+    return n / np.linalg.norm(n, axis=-1, keepdims=True)
+
+
+def _load(path):
+    """An image as float RGB, rows from the top (Blender stores them from the bottom)."""
     import bpy
 
-    sheet = atlas()
-    n = TILE * GRID
-    img = bpy.data.images.new("T_SovDetail", width=n, height=n, alpha=False, float_buffer=False)
+    img = bpy.data.images.load(path)
+    img.colorspace_settings.name = "Non-Color"  # the raw bytes: sRGB colour for the scan, encoded vectors for normals
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    bpy.data.images.remove(img)
+    return np.flipud(px.reshape(h, w, 4)[:, :, :3]).astype(np.float64)
+
+
+def _scan(name, build):
+    """The pattern's tile and normals from its photo scan, or None when the scan was not downloaded."""
+    src = sources.SOURCES.get(name)
+    if not src or not build:
+        return None
+    folder = os.path.join(build, "Sources", src["id"])
+    paths = [os.path.join(folder, f) for f in sources.MAPS.values()]
+    if not all(os.path.exists(p) for p in paths):
+        return None
+    lum = _load(paths[0]) @ np.array([0.2126, 0.7152, 0.0722])
+    # Light and shade against the neighbourhood, so the scan's own lighting and stains fade and its colour drops out.
+    rel = lum / np.maximum(_blur(lum, 2.0), 1e-3) - 1.0
+    tile = _resample(rel, PERIOD) * 0.5 * src["contrast"]
+    nrm = _load(paths[1]) * 2.0 - 1.0
+    nx = _resample(nrm[:, :, 0], PERIOD) * src["relief"]
+    ny = _resample(nrm[:, :, 1], PERIOD) * src["relief"]
+    nz = np.sqrt(np.clip(1.0 - nx ** 2 - ny ** 2, 0.05, 1.0))
+    n = np.stack([nx, ny, nz], axis=-1)
+    return tile, n / np.linalg.norm(n, axis=-1, keepdims=True)
+
+
+def cells(build=BUILD):
+    """Each pattern's tile (centred on 0) and normals at PERIOD px: from its scan where there is one, else painted."""
+    out = []
+    for name, make in zip(NAMES, PATTERNS):
+        got = _scan(name, build)
+        print("detail %s: %s" % (name, "scan " + sources.SOURCES[name]["id"] if got else "painted"))
+        if got is None:
+            tile = _resample(make(), PERIOD)
+            got = (tile, _relief(tile, RELIEF.get(name, 0.0)))
+        out.append(got)
+    return out
+
+
+def atlas(build=BUILD):
+    """The detail sheet (0..1, 0.5 = no change) and the normal sheet (OpenGL, encoded 0..1), rows from the top,
+    each cell its pattern wrapped PAD px past its edges."""
+    n = CELL * GRID
+    sheet = np.full((n, n), 0.5)
+    normals = np.zeros((n, n, 3))
+    normals[:, :] = (0.5, 0.5, 1.0)
+    for i, (tile, nrm) in enumerate(cells(build)):
+        y0, x0 = (i // GRID) * CELL, (i % GRID) * CELL
+        sheet[y0:y0 + CELL, x0:x0 + CELL] = np.pad(np.clip(0.5 + tile * 0.95, 0.0, 1.0), PAD, mode="wrap")
+        normals[y0:y0 + CELL, x0:x0 + CELL] = np.pad(nrm * 0.5 + 0.5, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="wrap")
+    return sheet, normals
+
+
+def _write(name, rgb, path):
+    import bpy
+
+    n = rgb.shape[0]
+    img = bpy.data.images.new(name, width=n, height=n, alpha=False, float_buffer=False)
     rgba = np.ones((n, n, 4), dtype=np.float32)
-    for c in range(3):
-        rgba[:, :, c] = sheet
+    rgba[:, :, :3] = np.flipud(rgb)  # Blender's pixel rows start at the bottom
     img.colorspace_settings.name = "Non-Color"  # before the pixels: changing it reloads the image
     img.pixels.foreach_set(rgba.ravel())
     img.update()
@@ -162,3 +304,12 @@ def save(path):
     img.file_format = "PNG"
     img.save()
     return img
+
+
+def save(path, build=BUILD):
+    """Writes the detail sheet to `path` and the normal sheet beside it as T_SovDetailN.png; returns both images.
+    `build` is the art build folder whose Sources/ holds the fetched scans."""
+    sheet, normals = atlas(build)
+    detail = _write("T_SovDetail", np.repeat(sheet[:, :, None], 3, axis=2), path)
+    normal = _write("T_SovDetailN", normals, os.path.join(os.path.dirname(path), "T_SovDetailN.png"))
+    return detail, normal

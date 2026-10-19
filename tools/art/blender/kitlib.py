@@ -13,15 +13,20 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
+import sources
 
-# Painted detail patterns (textures.py builds the sheet in this order): the pattern's tile index goes
+
+# Painted detail patterns (textures.py builds the sheet in this order): the pattern's cell index goes
 # into the vertex colour's alpha, and the face's UVs repeat it every so many metres.
 PATTERNS = ["plain", "cloth", "leather", "metal", "skin", "hair", "wood", "stone", "plaster", "rooftile", "foliage", "thatch",
-            "water", "grass", "sand"]  # the last three are the map's (the Unreal map actor picks them by terrain)
+            "water", "grass", "sand",  # the map's (the Unreal map actor picks them by terrain)
+            "masonry", "brick", "adobe", "flagstones", "cobbles"]
 REPEAT = {"plain": 1.0, "cloth": 0.45, "leather": 0.5, "metal": 0.6, "skin": 0.5, "hair": 0.35, "wood": 1.2,
           "stone": 1.6, "plaster": 2.4, "rooftile": 1.4, "foliage": 1.4, "thatch": 1.1, "water": 1.0, "grass": 1.0,
-          "sand": 1.0}
-GRID = 4  # the sheet holds GRID x GRID tiles
+          "sand": 1.0, "masonry": 2.0, "brick": 1.4, "adobe": 2.0, "flagstones": 1.6, "cobbles": 1.6}
+# Patterns from photo scans repeat over the metres the scan covers.
+REPEAT.update({name: src["size"] for name, src in sources.SOURCES.items()})
+GRID = 8  # the sheet holds GRID x GRID cells; alpha = index / (GRID * GRID - 1)
 # Which pattern a colour wears, by its '#rrggbb' (kits fill this in; unknown colours are plain).
 PATTERN_OF = {}
 
