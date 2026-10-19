@@ -2421,6 +2421,7 @@ bool Rules::loadFromText(const std::vector<std::map<std::string, std::string>>& 
         GameSpeedType s;
         s.id = id;
         s.costPercent = static_cast<int>(j["costPercent"].integer(100));
+        s.durationPercent = static_cast<int>(j["durationPercent"].integer(s.costPercent));
         s.turns = static_cast<int>(j["turns"].integer(500));
         s.scienceVictoryPercent = static_cast<int>(j["scienceVictoryPercent"].integer(100));
         speeds.push_back(std::move(s));

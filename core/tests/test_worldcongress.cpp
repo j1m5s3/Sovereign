@@ -117,6 +117,25 @@ TEST(the_congress_convenes_in_the_medieval_era) {
     CHECK(g->state().nextCongressTurn > g->state().turn);
 }
 
+// Sessions come WORLD_CONGRESS_MAX_TIME_BETWEEN_MEETINGS (30) turns apart on Standard, scaled by the Half duration
+// scaling (00: Game speed): 60 on Marathon, 37 on Epic.
+TEST(congress_sessions_are_spaced_by_the_half_duration_scaling) {
+    const auto gap = [](const char* speed) {
+        GameState s = wcState();
+        s.setup.speed = speed;
+        s.gameEra = rules().era("ERA_MEDIEVAL");
+        s.nextCongressTurn = s.turn;
+        auto g = Game::fromScenario(rules(), std::move(s));
+        sovtest::endTurns(*g, 2);
+        REQUIRE(g->congressInSession());
+        return g->state().nextCongressTurn - g->state().turn;
+    };
+    const int standard = gap("GAMESPEED_STANDARD");
+    CHECK_EQ(gap("GAMESPEED_MARATHON") - standard, 30);
+    CHECK_EQ(gap("GAMESPEED_EPIC") - standard, 7);
+    CHECK_EQ(gap("GAMESPEED_QUICK") - standard, -4);  // 30 x 87% = 26
+}
+
 TEST(trade_policy_and_patronage_take_effect) {
     auto g = Game::fromScenario(rules(), inSession("RESOLUTION_TRADE_POLICY", 0, 0));
     const int before = g->tradeRouteCapacity(0);

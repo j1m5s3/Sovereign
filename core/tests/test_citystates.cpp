@@ -209,6 +209,28 @@ TEST(a_suzerain_levies_a_city_states_army) {
     CHECK(h->state().levies.empty());
 }
 
+// A levy lasts LEVY_MILITARY_TURN_DURATION (30) turns on Standard, scaled by the Half duration scaling (00: Game speed):
+// 60 on Marathon, not the cost percent's 90; its gold price keeps the cost percent.
+TEST(a_levy_lasts_by_the_half_duration_scaling) {
+    const auto levy = [](const char* speed, int* cost) {
+        GameState s = csState();
+        s.setup.speed = speed;
+        s.players[0].envoys[2] = 3;
+        s.players[0].gold = Fixed::fromInt(100000);
+        sovtest::addUnit(s, "UNIT_WARRIOR", 2, {15, 6});
+        auto g = Game::fromScenario(rules(), std::move(s));
+        *cost = g->levyCost(0, 2);
+        REQUIRE(g->submit(Command::levyMilitary(0, 2)) == CommandError::Ok);
+        REQUIRE(g->state().levies.size() == 1u);
+        return g->state().levies[0].until - g->state().turn;
+    };
+    int standardCost = 0, marathonCost = 0, onlineCost = 0;
+    CHECK_EQ(levy("GAMESPEED_STANDARD", &standardCost), 30);
+    CHECK_EQ(levy("GAMESPEED_MARATHON", &marathonCost), 60);
+    CHECK_EQ(levy("GAMESPEED_ONLINE", &onlineCost), 19);  // 30 x 66%, rounded down
+    CHECK(marathonCost > 2 * standardCost);              // the price still scales by the full cost percent
+}
+
 // Levied units never share a plot with the city-state's units or stand in its city, and when the levy ends they go
 // back to the city-state's city (05: Stacking; Sovereign).
 TEST(levied_units_stand_alone_and_go_home) {

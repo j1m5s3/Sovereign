@@ -8,13 +8,14 @@
   {"id": "MAPSIZE_LARGE", "width": 96, "height": 60, "defaultPlayers": 10, "maxReligions": 6, "defaultCityStates": 15, "co2PerDegree": 2500000},
   {"id": "MAPSIZE_HUGE", "width": 106, "height": 66, "defaultPlayers": 12, "maxReligions": 7, "defaultCityStates": 18, "co2PerDegree": 3000000}
  ],
+ "_gameSpeeds": "costPercent scales costs; durationPercent scales every duration in turns (timed effects, cooldowns, intervals), the Half scaling of 00-overview.md Game speed (Online 66, Quick 87, Epic 125, Marathon 200). Sovereign rule: Slight is unused; Short Reign's 50 is Sovereign's own.",
  "gameSpeeds": [
-  {"id": "GAMESPEED_SHORT_REIGN", "costPercent": 20, "turns": 100, "scienceVictoryPercent": 20},
-  {"id": "GAMESPEED_ONLINE", "costPercent": 50, "turns": 250},
-  {"id": "GAMESPEED_QUICK", "costPercent": 67, "turns": 330},
-  {"id": "GAMESPEED_STANDARD", "costPercent": 100, "turns": 500},
-  {"id": "GAMESPEED_EPIC", "costPercent": 150, "turns": 750},
-  {"id": "GAMESPEED_MARATHON", "costPercent": 300, "turns": 1500}
+  {"id": "GAMESPEED_SHORT_REIGN", "costPercent": 20, "durationPercent": 50, "turns": 100, "scienceVictoryPercent": 20},
+  {"id": "GAMESPEED_ONLINE", "costPercent": 50, "durationPercent": 66, "turns": 250},
+  {"id": "GAMESPEED_QUICK", "costPercent": 67, "durationPercent": 87, "turns": 330},
+  {"id": "GAMESPEED_STANDARD", "costPercent": 100, "durationPercent": 100, "turns": 500},
+  {"id": "GAMESPEED_EPIC", "costPercent": 150, "durationPercent": 125, "turns": 750},
+  {"id": "GAMESPEED_MARATHON", "costPercent": 300, "durationPercent": 200, "turns": 1500}
  ],
  "_difficulties": "Difficulty levels (00-overview.md, Difficulty levels; AI starting units). Sovereign rule (leader doc section 10, Difficulty [decided]): levels scale the AI's skill first (aiSkill 0..7); Civ's AI bonuses (yields, combat, XP, free boosts, extra starting units) apply only at Immortal and Deity, with Civ's values for those levels. Human bonuses at Settler and Chieftain and the barbarian camp gold follow Civ. aiCombat uses the guides' +1 at King .. +4 at Deity reading (Immortal +3, Deity +4). diplomacyOffset is Civ's DifficultyOffset on the diplomacy random modifier (Settler +3 .. Deity -4), added to each AI's opinion of a human. City-states, AIs too, get Civ's extra Warriors (Immortal +2, Deity +3) and Ancient Walls at those two levels only (Civ also gives Emperor +1).",
  "difficulties": [

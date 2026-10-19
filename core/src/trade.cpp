@@ -14,7 +14,6 @@ namespace {
 
 size_t at(TypeIndex i) { return static_cast<size_t>(i); }
 
-int speedPercent(const GameState& s, const Rules& r) { return r.speeds[at(r.speed(s.setup.speed))].costPercent; }
 
 // The city a Trader starts from: the one it stands in, or (when another civilian holds the
 // city plot) the one whose land it stands on next to the center. Sovereign convenience.
@@ -358,7 +357,7 @@ int Game::tradeRouteLength() const {
     // The world (game) era sets it (04: World era; 09: Global era transitions), not the era most civs have entered.
     const int era = std::clamp(state_.gameEra, 0, static_cast<int>(rules_->eras.size()) - 1);
     const int turns = rules_->globalInt("TRADE_ROUTE_TURN_DURATION_BASE") + rules_->eras[static_cast<size_t>(era)].tradeRouteExtraTurns;
-    return std::max(1, turns * speedPercent(state_, *rules_) / 100);
+    return std::max(1, speedTurns(turns));
 }
 
 // The Trader shuttles between the two cities, a round trip twice the way's length in plots, and the route ends when it

@@ -712,6 +712,9 @@ public:
     // 2 per finished district, 1 per population. Cost scaling of techs and civics is unverified and not applied.
     int score(PlayerId player) const;
     int turnLimit() const;  // last turn played; Score decides after it
+    // A duration of standardTurns on Standard at this game's speed (the Half scaling, 00: Game speed), at least 1 for a
+    // positive input; every timed effect, cooldown and interval goes through it, while costs keep the cost percent.
+    int speedTurns(int standardTurns) const;
     int lightYearsRequired() const;  // for the Science victory, scaled by the game speed
     bool gameOver() const { return state_.winner != kNoPlayer; }  // kNoPlayer when the game has no barbarians
     const Camp* campAt(Hex h) const;

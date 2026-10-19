@@ -976,8 +976,9 @@ TEST(a_research_alliance_shares_a_eureka_every_30_turns) {
     sovtest::endTurns(*g, 2);  // the 30th
     CHECK(g->state().players[0].techs.boosted[flight]);
     CHECK_EQ(g->state().players[0].relations[1].sharedBoostTurns, 0);
-    // A tech the ally only boosted counts too; faster speeds share sooner (Online: every 15 turns).
-    auto quick = allied(AllianceType::Research, two, 14, false, "GAMESPEED_ONLINE");
+    // A tech the ally only boosted counts too; faster speeds share sooner (Online: every 19 turns, 30 x the Half
+    // scaling's 66%).
+    auto quick = allied(AllianceType::Research, two, 18, false, "GAMESPEED_ONLINE");
     sovtest::endTurns(*quick, 2);
     CHECK(quick->state().players[0].techs.boosted[flight]);
     // Level 1, or another kind of alliance, shares nothing and keeps no count.

@@ -479,7 +479,7 @@ void Game::applyClan(const Command& c) {
     if (!camp) return;
     const int cost = clanCost(c.player, c.id, c.type);
     state_.players[static_cast<size_t>(c.player)].gold -= Fixed::fromInt(cost);
-    const int turns = kClanTurns * rules_->speeds[static_cast<size_t>(rules_->speed(state_.setup.speed))].costPercent / 100;
+    const int turns = speedTurns(kClanTurns);
     if (c.type == CommandType::BribeCamp) {
         camp->bribes.erase(std::remove_if(camp->bribes.begin(), camp->bribes.end(), [&](const auto& b) { return b.first == c.player; }), camp->bribes.end());
         camp->bribes.push_back({c.player, state_.turn + turns});

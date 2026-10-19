@@ -1327,7 +1327,8 @@ struct MapSizeType {
 
 struct GameSpeedType {
     std::string id;
-    int costPercent = 100;
+    int costPercent = 100;     // costs: gold, production, science, culture, faith, points
+    int durationPercent = 100; // durations in turns (00: the Half scaling; Sovereign: every timed effect uses it)
     int turns = 500;
     int scienceVictoryPercent = 100;  // of SCIENCE_VICTORY_POINTS_REQUIRED (Short Reign scales its victories)
 };
