@@ -442,11 +442,15 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		// Townsfolk in clothes of many colours (the citizen's team cloth), walking on their own legs.
 		const FLinearColor Cloth = FLinearColor::MakeFromHSV8(static_cast<uint8>(Rng.RandRange(0, 255)), static_cast<uint8>(Rng.RandRange(60, 150)),
 			static_cast<uint8>(Rng.RandRange(150, 235)));
-		if ((C.Rigged = AddRigged(TEXT("Citizen"), FVector(Start.X, Start.Y, 0), 0.f, Cloth)) != nullptr)
+		// One of the townsfolk (the dyed variants of rig_figures.py), else the plain citizen.
+		static const TCHAR* const Folk[] = {TEXT("Townsman"), TEXT("Traveller"), TEXT("Townswoman")};
+		C.Kind = Folk[Rng.RandRange(0, UE_ARRAY_COUNT(Folk) - 1)];
+		if (!SovArt::RiggedMesh(C.Kind)) C.Kind = TEXT("Citizen");
+		if ((C.Rigged = AddRigged(C.Kind, FVector(Start.X, Start.Y, 0), 0.f, Cloth)) != nullptr)
 		{
 			C.Body->SetVisibility(false);
 			C.Rigged->SetRelativeScale3D(FVector(Rng.FRandRange(0.92f, 1.06f)));
-			if (UAnimSequence* Walk = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+			if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
 			C.bFigure = true;
 		}
 		else if (SovArt::SetKitMesh(C.Body, TEXT("Figures"), TEXT("Citizen"), FLinearColor::White))
@@ -471,7 +475,7 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 			// Standing a while, then walking on.
 			C.Pause -= DeltaSeconds;
 			if (C.Pause <= 0.f && C.Rigged)
-				if (UAnimSequence* Walk = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+				if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
 			continue;
 		}
 		const FVector Here = Who->GetRelativeLocation();
@@ -482,7 +486,7 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 			if (C.Rigged && Rng.FRand() < 0.5f)
 			{
 				C.Pause = Rng.FRandRange(2.f, 7.f);  // stop to look about, or to talk
-				if (UAnimSequence* Idle = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Idle"))) C.Rigged->PlayAnimation(Idle, true);
+				if (UAnimSequence* Idle = SovArt::RiggedAnim(C.Kind, TEXT("Idle"))) C.Rigged->PlayAnimation(Idle, true);
 			}
 			continue;
 		}

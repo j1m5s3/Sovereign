@@ -19,8 +19,56 @@ from mathutils import Matrix  # noqa: E402
 import kit_figures  # noqa: E402
 import kitlib  # noqa: E402
 
+
+F = kit_figures
+
+
+def townsman(seed=71):
+    """The street's townsman: the map's citizen, his tunic dyed (the team slot, tinted per person in the street)."""
+    p = F._figure("SM_Townsman", seed)
+    F._body(p, F.SKIN[0])
+    F._sandals(p)
+    F._tunic(p, F.LINEN, hem=0.62, team=True)
+    F._belt(p, F.DARK_LEATHER, 1.0)
+    p.loft([(1.12, 0.21, 0.135), (1.3, 0.215, 0.13), (1.44, 0.15, 0.1)], "#7a3b22", segments=14, arc=(math.pi * 0.25, math.pi * 1.35),
+           folds=6, fold_depth=0.06, two_sided=True)
+    p.segment((0.16, -0.11, 1.4), (-0.15, -0.12, 0.98), 0.012, 0.012, F.DARK_LEATHER, segments=6)
+    p.box((-0.19, -0.1, 0.94), (0.16, 0.06, 0.15), "#7d6448", taper=0.9)
+    F._head(p, F.SKIN[0], F.HAIR[1])
+    return p
+
+
+def traveller(seed=72):
+    """A darker-skinned man in a short dyed tunic and a hooded cloak, bearded."""
+    p = F._figure("SM_Traveller", seed)
+    F._body(p, F.SKIN[2])
+    F._sandals(p, boots=True, color=F.DARK_LEATHER)
+    F._tunic(p, F.LINEN, hem=0.66, team=True)
+    F._belt(p, F.LEATHER, 1.0, buckle=F.GOLD)
+    F._cloak(p, F.WOOL, hem=0.6, clasp=F.BRONZE, team=False)
+    z = F._head(p, F.SKIN[2], F.HAIR[2], beard=F.HAIR[2])
+    p.loft([(z + 0.05, 0.11, 0.12, 0, 0.03), (z + 0.18, 0.115, 0.125, 0, 0.02), (z + 0.27, 0.07, 0.08)], F.WOOL, segments=14,
+           arc=(-0.3, math.pi + 0.3), two_sided=True)  # the hood, back off the face
+    return p
+
+
+def townswoman(seed=73):
+    """A woman in a long dyed dress and a pale headscarf, a basket on her hip."""
+    p = F._figure("SM_Townswoman", seed)
+    F._body(p, F.SKIN[1], s=0.95)
+    F._sandals(p, s=0.95)
+    F._tunic(p, F.LINEN, s=0.95, hem=0.12, team=True)  # the dress, to the ankle
+    F._belt(p, "#e8dcc0", 0.98, s=0.95)
+    z = F._head(p, F.SKIN[1], F.HAIR[0], s=0.95)
+    p.loft([(z + 0.04, 0.1, 0.105, 0, 0.03), (z + 0.15, 0.1, 0.11, 0, 0.01), (z + 0.24, 0.08, 0.09), (z + 0.27, 0.03, 0.03)], "#efe6d2",
+           segments=16, arc=(-0.35, math.pi + 0.35), two_sided=True)  # the headscarf
+    p.cylinder((-0.26, -0.02, 0.8), 0.12, 0.14, "#b8935a", segments=12)  # the basket
+    p.blob((-0.26, -0.02, 0.96), 0.07, "#c03a2a", subdiv=1)
+    return p
+
+
 PEOPLE = {"Citizen": kit_figures.citizen, "Herald": kit_figures.herald, "Captain": kit_figures.captain, "Soldier": kit_figures.soldier,
-          "Leader": kit_figures.leader}
+          "Leader": kit_figures.leader, "Townsman": townsman, "Traveller": traveller, "Townswoman": townswoman}
 FPS = 24
 CM = 100.0  # the rig is built in centimetres (see rig)
 

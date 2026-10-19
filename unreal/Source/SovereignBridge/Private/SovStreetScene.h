@@ -80,6 +80,7 @@ private:
 	{
 		TObjectPtr<UStaticMeshComponent> Body;
 		TObjectPtr<class USkeletalMeshComponent> Rigged;  // a walking figure (rig_figures.py); Body is hidden then
+		FString Kind;                                     // which rigged figure (Townsman, Traveller, Townswoman, Citizen)
 		FVector Target = FVector::ZeroVector;
 		float Speed = 120.f;
 		float Pause = 0.f;  // seconds left standing (idling) before walking on
