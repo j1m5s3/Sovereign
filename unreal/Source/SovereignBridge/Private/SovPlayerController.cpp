@@ -19,6 +19,7 @@
 #include "SovBattleScene.h"
 #include "SovDiplomacyPanel.h"
 #include "Engine/GameViewportClient.h"
+#include "UnrealClient.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Misc/CommandLine.h"
 #include "Misc/ScopeExit.h"
@@ -3302,6 +3303,14 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	// Developer review (-SovShots=<seconds>, with -RenderOffscreen to keep the window off the desktop): a screenshot with
+	// the interface every so often to Saved/Screenshots/auto/, named by count and turn.
+	if (float Every = 0.f; FParse::Value(FCommandLine::Get(), TEXT("SovShots="), Every) && Every > 0.f && (ShotTimer += DeltaTime) >= Every)
+	{
+		ShotTimer = 0.f;
+		const int32 Turn = Subsystem() && Subsystem()->IsRunning() ? Subsystem()->GetGame().state().turn : 0;
+		FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/auto/%03d-turn%03d.png"), ShotCount++, Turn), true, false);
+	}
 	// The setup screen's keys, when the viewport rather than the screen has keyboard focus.
 	if (SettingsScreen.IsValid())
 	{

@@ -13,7 +13,8 @@
 namespace
 {
 constexpr double BaseZ = -30.0;       // bottom of every tile's skirt
-constexpr double TileScale = 0.95;    // leaves a thin dark seam between hexes
+constexpr double TileScale = 1.0;     // plots meet edge to edge
+constexpr double Plateau = 0.78;      // each plot is flat this far toward its edge, then slopes to meet its neighbours
 constexpr float FogFactor = 0.4f;     // revealed but not currently visible
 constexpr double CityHeight = 30.0;
 
@@ -360,6 +361,31 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		}
 	}
 
+	// One continuous surface: each plot's outline (its six corners and six edge midpoints) sits at the mean height of the
+	// plots that share that point, so coasts, hills and mountains slope into their neighbours with no seams; unexplored
+	// plots count at the parchment's height, so the known world slopes down to it.
+	auto Outline = [](const FVector2D& Center, FVector2D (&Out)[12]) {
+		for (int32 i = 0; i < 6; ++i)
+		{
+			const double A = FMath::DegreesToRadians(60.0 * i + 30.0), M = FMath::DegreesToRadians(60.0 * i + 60.0);
+			Out[2 * i] = Center + FVector2D(FMath::Cos(A), FMath::Sin(A)) * SovHex::Size * TileScale;
+			Out[2 * i + 1] = Center + FVector2D(FMath::Cos(M), FMath::Sin(M)) * SovHex::Size * TileScale * 0.8660254;
+		}
+	};
+	auto PointKey = [](const FVector2D& P) { return FIntPoint(FMath::RoundToInt(P.X * 2.0), FMath::RoundToInt(P.Y * 2.0)); };
+	TMap<FIntPoint, FVector2D> Shared;  // sum of heights, count of plots
+	auto Share = [&](const FVector2D& Center, double Z) {
+		FVector2D Pts[12];
+		Outline(Center, Pts);
+		for (const FVector2D& P : Pts)
+		{
+			FVector2D& S = Shared.FindOrAdd(PointKey(P), FVector2D::ZeroVector);
+			S += FVector2D(Z, 1.0);
+		}
+	};
+	for (const FSovTile& Tile : Mirror.Tiles) Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief));
+	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0);
+
 	for (const FSovTile& Tile : Mirror.Tiles)
 	{
 		const double Top = ReliefHeight(Tile.Relief);
@@ -368,34 +394,46 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), Tile.Detail);
 
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
-		FVector2D Corners[6];
-		for (int32 i = 0; i < 6; ++i)
+		FVector2D Pts[12];
+		Outline(Center, Pts);
+		FVector Outer[12], Inner[12];
+		bool bAlone[12];
+		for (int32 k = 0; k < 12; ++k)
 		{
-			const double Angle = FMath::DegreesToRadians(60.0 * i + 30.0);
-			Corners[i] = Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * SovHex::Size * TileScale;
+			const FVector2D Sum = Shared.FindRef(PointKey(Pts[k]));
+			bAlone[k] = Sum.Y <= 1.0;
+			Outer[k] = SovHex::ToWorld(Pts[k], Sum.Y > 0.0 ? Sum.X / Sum.Y : Top);
+			Inner[k] = SovHex::ToWorld(Center + (Pts[k] - Center) * Plateau, Top);
 		}
+		// The flat top.
 		const FVector Up(0, 0, 1);
 		const int32 Mid = S.Vert(SovHex::ToWorld(Center, Top), Up);
-		int32 Ring[6];
-		for (int32 i = 0; i < 6; ++i)
+		int32 Ring[12];
+		for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up);
+		for (int32 k = 0; k < 12; ++k) S.Tri(Mid, Ring[k], Ring[(k + 1) % 12]);
+		// The slope to the neighbours, each face lit by its own normal.
+		auto Face = [&](const FVector& A, const FVector& B, const FVector& C) {
+			FVector N = FVector::CrossProduct(B - A, C - A).GetSafeNormal();
+			if (N.Z < 0.0) N = -N;
+			if (N.IsNearlyZero()) N = Up;
+			S.Tri(S.Vert(A, N), S.Vert(B, N), S.Vert(C, N));
+		};
+		for (int32 k = 0; k < 12; ++k)
 		{
-			Ring[i] = S.Vert(SovHex::ToWorld(Corners[i], Top), Up);
+			const int32 n = (k + 1) % 12;
+			Face(Inner[k], Inner[n], Outer[n]);
+			Face(Inner[k], Outer[n], Outer[k]);
 		}
-		for (int32 i = 0; i < 6; ++i)
+		// At the edge of the drawn world (no plot beyond), a skirt down to the floor so the edge reads as solid.
+		for (int32 k = 0; k < 12; ++k)
 		{
-			S.Tri(Mid, Ring[i], Ring[(i + 1) % 6]);
-		}
-		// Skirt down to the floor so raised plots read as solid.
-		for (int32 i = 0; i < 6; ++i)
-		{
-			const FVector2D& P0 = Corners[i];
-			const FVector2D& P1 = Corners[(i + 1) % 6];
-			const FVector2D Out = ((P0 + P1) * 0.5 - Center).GetSafeNormal();
-			const FVector N = SovHex::ToWorld(Out, 0.0);
-			const int32 A = S.Vert(SovHex::ToWorld(P0, Top), N);
-			const int32 B = S.Vert(SovHex::ToWorld(P1, Top), N);
-			const int32 C = S.Vert(SovHex::ToWorld(P1, BaseZ), N);
-			const int32 D = S.Vert(SovHex::ToWorld(P0, BaseZ), N);
+			const int32 n = (k + 1) % 12;
+			if (!bAlone[k] && !bAlone[n]) continue;
+			const FVector Out = ((Outer[k] + Outer[n]) * 0.5 - SovHex::ToWorld(Center, 0.0)).GetSafeNormal2D();
+			const int32 A = S.Vert(Outer[k], Out);
+			const int32 B = S.Vert(Outer[n], Out);
+			const int32 C = S.Vert(FVector(Outer[n].X, Outer[n].Y, BaseZ), Out);
+			const int32 D = S.Vert(FVector(Outer[k].X, Outer[k].Y, BaseZ), Out);
 			S.Tri(A, B, C);
 			S.Tri(A, C, D);
 		}
@@ -433,7 +471,9 @@ int32 ASovMapActor::EdgeStrips(const TArray<FSovEdge>& Edges, TArray<TObjectPtr<
 		}
 		const FVector Across = FVector(Dir.X, Dir.Y, 0.0).GetSafeNormal();
 		FVector Mid = (A + B) * 0.5 - Across * Inset;
-		Mid.Z = FMath::Max(A.Z, B.Z) + Lift;
+		// The ground at the edge is the two plots' mean height, rising to A's over the slope (BuildTerrain).
+		const double Slope = SovHex::Size * TileScale * 0.8660254 * (1.0 - Plateau);
+		Mid.Z = FMath::Lerp((A.Z + B.Z) * 0.5, A.Z, FMath::Clamp(Inset / Slope, 0.0, 1.0)) + Lift + 1.0;
 		UStaticMeshComponent* C = Marker(Pool, Count++, CubeMesh.Get());
 		C->SetRelativeLocation(Mid);
 		// The edge runs at right angles to the line between the two centres; a hex side is as long as the hex's radius.
