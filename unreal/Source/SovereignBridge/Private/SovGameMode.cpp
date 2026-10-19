@@ -4,6 +4,7 @@
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Engine/DirectionalLight.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/GameInstance.h"
 #include "Engine/SkyLight.h"
 #include "Engine/TextureCube.h"
@@ -35,13 +36,35 @@ void ASovGameMode::SpawnLighting()
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-50.f, -150.f, 0.f), Params);  // from behind the default views (cameras look north, +X)
+	// A late-morning sun from behind the default views (cameras look north, +X), a little low and warm so the relief,
+	// the trees and the towns cast shadows that read, as Civ VI's map is lit.
+	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-40.f, -145.f, 0.f), Params);
 	if (UDirectionalLightComponent* L = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
 	{
 		L->SetMobility(EComponentMobility::Movable);
-		L->SetIntensity(2.6f);
+		L->SetIntensity(2.8f);
+		L->SetLightColor(FLinearColor(1.0f, 0.93f, 0.82f));
 		L->SetAtmosphereSunLight(true);
 	}
+	// A gentle grade over the whole map: warmer, a touch richer, soft contact shadows, darker corners.
+	APostProcessVolume* Grade = World->SpawnActor<APostProcessVolume>(FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	Grade->bUnbound = true;
+	Grade->Priority = -1.f;  // the street and battle scenes' own grades win where they set the same things
+	FPostProcessSettings& P = Grade->Settings;
+	P.bOverride_WhiteTemp = true;
+	P.WhiteTemp = 7000.f;  // above 6500 warms the image
+	P.bOverride_ColorSaturation = true;
+	P.ColorSaturation = FVector4(1.03, 1.03, 1.03, 1.0);  // the grass is green enough already
+	P.bOverride_ColorContrast = true;
+	P.ColorContrast = FVector4(1.06, 1.06, 1.06, 1.0);
+	P.bOverride_AmbientOcclusionIntensity = true;
+	P.AmbientOcclusionIntensity = 0.65f;
+	P.bOverride_AmbientOcclusionRadius = true;
+	P.AmbientOcclusionRadius = 60.f;
+	P.bOverride_VignetteIntensity = true;
+	P.VignetteIntensity = 0.35f;
+	P.bOverride_BloomIntensity = true;
+	P.BloomIntensity = 0.35f;
 
 	AActor* Sky = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
 	USkyAtmosphereComponent* Atmosphere = NewObject<USkyAtmosphereComponent>(Sky);
