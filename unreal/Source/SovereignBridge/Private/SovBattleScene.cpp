@@ -2,6 +2,7 @@
 
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -185,12 +186,63 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Figure.Add(false);
 		}
 		Vehicle.Add(bMachine && Figure.Last());
+		// A plain spearman walks on the rigged soldier's legs when that art exists; the still figure stays hidden then.
+		USkeletalMeshComponent* Rig = nullptr;
+		if (!S.bLeader && !bMachine && Name == TEXT("Soldier") && SovArt::RiggedMesh(TEXT("Soldier")))
+		{
+			Rig = NewObject<USkeletalMeshComponent>(this);
+			Rig->SetupAttachment(RootComponent);
+			Rig->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Rig->RegisterComponent();
+			if (SovArt::SetRiggedFigure(Rig, TEXT("Soldier"), C, TEXT("Idle")))
+			{
+				Rig->SetPosition(FMath::FRand() * 3.f);  // not all breathing in step
+				Body->SetVisibility(false);
+			}
+			else
+			{
+				Rig->DestroyComponent();
+				Rig = nullptr;
+			}
+		}
+		Rigs.Add(Rig);
+		LastPos.Add(S.Pos);
+		Striding.Add(false);
 		Bodies.Add(Body);
 		Heads.Add(Head);
 	}
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	const double Dt = FMath::Max(Now - LastSyncTime, 1e-3);
+	LastSyncTime = Now;
 	for (int32 i = 0; i < Men.Num(); ++i)
 	{
 		const FSovSoldier& S = Men[i];
+		if (USkeletalMeshComponent* Rig = Rigs[i])
+		{
+			// Facing the way it goes while it walks, else the enemy's side; down where it fell.
+			const FVector2D Step = S.Pos - LastPos[i];
+			LastPos[i] = S.Pos;
+			const float Speed = static_cast<float>(Step.Size() / Dt);
+			const bool bWalk = S.bAlive && Speed > 25.f;
+			if (bWalk != Striding[i] && S.bAlive)
+			{
+				Striding[i] = bWalk;
+				if (UAnimSequence* A = SovArt::RiggedAnim(TEXT("Soldier"), bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
+			}
+			const float Face = (S.Side == 0 ? -90.f : 90.f);
+			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f : Face;
+			if (S.bAlive)
+			{
+				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaw, 0.f));
+				if (bWalk) Rig->SetPlayRate(FMath::Clamp(Speed / 108.f, 0.5f, 3.f));  // rig_figures.py WALK_SPEED
+			}
+			else if (Rig->IsPlaying())
+			{
+				Rig->Stop();
+				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 15), FRotator(0.f, Face, 90.f));
+			}
+			continue;
+		}
 		if (S.bLeader && i == Sim.LeaderIndex() && S.bAlive)
 		{
 			// The human's leader is drawn by its walker.
