@@ -344,29 +344,6 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		Floor.Tri(A, C, D);
 	}
 
-	// Unexplored plots: blank parchment, a little below the sea, so the known world stands up out of the map. Drawn a
-	// touch larger than a plot, so they join into one sheet with no seams.
-	{
-		FSection& Blank = SectionFor(FLinearColor(0.2f, 0.17f, 0.12f), 1);
-		const FVector Up(0, 0, 1);
-		const double Z = ReliefHeight(ESovRelief::Water) - 6.0;
-		for (const FIntPoint& P : Mirror.Unexplored)
-		{
-			const FVector2D Center = SovHex::MapPos(P.X, P.Y);
-			const int32 Mid = Blank.Vert(SovHex::ToWorld(Center, Z), Up);
-			int32 Ring[6];
-			for (int32 i = 0; i < 6; ++i)
-			{
-				const double Angle = FMath::DegreesToRadians(60.0 * i + 30.0);
-				Ring[i] = Blank.Vert(SovHex::ToWorld(Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * SovHex::Size * 1.02, Z), Up);
-			}
-			for (int32 i = 0; i < 6; ++i)
-			{
-				Blank.Tri(Mid, Ring[i], Ring[(i + 1) % 6]);
-			}
-		}
-	}
-
 	// One continuous surface: each plot's outline (its six corners and six edge midpoints) sits at the mean height of the
 	// plots that share that point, so coasts, hills and mountains slope into their neighbours with no seams; unexplored
 	// plots count at the parchment's height, so the known world slopes down to it.
@@ -404,6 +381,35 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		return C * static_cast<float>(1.0 + 0.07 * V);
 	};
 	auto Bytes = [](const FLinearColor& C) { return KitPaint(C, 0); };
+
+	// Unexplored plots: blank parchment, a little below the sea, so the known world stands up out of the map. Each is
+	// flat to its plateau and slopes up to meet the known plots beside it, so no gap shows the floor between them.
+	{
+		FSection& Blank = SectionFor(Parchment, 1);
+		const FVector Up(0, 0, 1);
+		const double Z = ReliefHeight(ESovRelief::Water) - 6.0;
+		for (const FIntPoint& P : Mirror.Unexplored)
+		{
+			const FVector2D Center = SovHex::MapPos(P.X, P.Y);
+			FVector2D Pts[12];
+			Outline(Center, Pts);
+			const int32 Mid = Blank.Vert(SovHex::ToWorld(Center, Z), Up);
+			int32 In[12], Out[12];
+			for (int32 k = 0; k < 12; ++k)
+			{
+				const FVector2D Sum = Shared.FindRef(PointKey(Pts[k]));
+				In[k] = Blank.Vert(SovHex::ToWorld(Center + (Pts[k] - Center) * Plateau, Z), Up);
+				Out[k] = Blank.Vert(SovHex::ToWorld(Pts[k], Sum.Y > 0.0 ? Sum.X / Sum.Y : Z), Up);
+			}
+			for (int32 k = 0; k < 12; ++k)
+			{
+				const int32 n = (k + 1) % 12;
+				Blank.Tri(Mid, In[k], In[n]);
+				Blank.Tri(In[k], In[n], Out[n]);
+				Blank.Tri(In[k], Out[n], Out[k]);
+			}
+		}
+	}
 
 	for (const FSovTile& Tile : Mirror.Tiles)
 	{
