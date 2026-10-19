@@ -79,6 +79,7 @@ def master_material(texture, normals):
     else:
         mat = tools.create_asset("M_SovKit", "/Game/Art", unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_property("used_with_skeletal_mesh", True)  # the rigged people of the street (ue_import_rigged.py)
+    mat.set_editor_property("used_with_instanced_static_meshes", True)  # the map's forests (ASovMapActor::Forest)
     c = mel.connect_material_expressions
     vc = _expr(mat, unreal.MaterialExpressionVertexColor, -1600, 0)
     # Vertex colours arrive as sRGB bytes: square them for roughly linear base colour.

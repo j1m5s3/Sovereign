@@ -1,5 +1,6 @@
 #include "SovMapActor.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
@@ -643,32 +644,48 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = ResourceCount; i < ResourcePieces.Num(); ++i) ResourcePieces[i]->SetVisibility(false);
 	for (int32 i = ImprovementCount; i < ImprovementPieces.Num(); ++i) ImprovementPieces[i]->SetVisibility(false);
 
-	// Woods: a few kit trees per wooded tile (map scale: 1 km hexes drawn 1 m wide).
-	int32 TreeCount = 0;
+	// Woods: a stand of kit trees on each wooded plot (map scale: 1 km plots drawn 2 m wide), dense enough to read as a
+	// forest, as instances: one component per kind of tree, a set for seen plots and one for fogged ones (browned).
+	if (Forest.Num() == 0)
+	{
+		for (int32 i = 0; i < 4; ++i)
+		{
+			UInstancedStaticMeshComponent* F = NewObject<UInstancedStaticMeshComponent>(this);
+			F->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			F->SetupAttachment(RootComponent);
+			F->RegisterComponent();
+			Forest.Add(F);
+		}
+	}
+	TArray<FTransform> Stands[4];
 	if (SovArt::Mesh(TEXT("Nature"), TEXT("Tree_Broadleaf")))
 	{
 		for (const FSovTile& Tile : Mirror.Tiles)
 		{
-			if (!Tile.bWoods)
-			{
-				continue;
-			}
+			if (!Tile.bWoods) continue;
 			const uint32 H = static_cast<uint32>(Tile.X * 73856093) ^ static_cast<uint32>(Tile.Y * 19349663);
-			for (int32 k = 0; k < 3; ++k)
+			const FVector At = SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y));
+			// One near the middle and a ring of six, each pushed in or out and turned by the plot's hash.
+			for (int32 k = 0; k < 7; ++k)
 			{
-				const double A = (k * 2.1 + (H % 7)) * 1.0, R = 32.0 + (H >> (k * 3) & 7) * 3.0;
-				UStaticMeshComponent* T = Marker(Trees, TreeCount++, nullptr);
-				SovArt::SetKitMesh(T, TEXT("Nature"), (H >> k) & 1 ? TEXT("Tree_Conifer") : TEXT("Tree_Broadleaf"), FLinearColor::White);
-				ShadeKit(T, Tile.bVisible ? FLinearColor::White : KitFog);
-				T->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
-				T->SetRelativeScale3D(FVector(0.075));
-				T->SetVisibility(true);
+				const uint32 Hk = H ^ (static_cast<uint32>(k + 1) * 2654435761u);
+				const double A = k * PI / 3.0 + (H % 7) * 0.3 + ((Hk >> 3) % 9 - 4) * 0.05;
+				const double R = k == 0 ? 6.0 + (Hk % 9) : 34.0 + (Hk >> 5) % 18;
+				const int32 Kind = (Hk >> 9) & 1;  // 0 conifer, 1 broadleaf
+				const double Scale = 0.062 + ((Hk >> 11) % 9) * 0.0035;
+				Stands[Kind + (Tile.bVisible ? 0 : 2)].Add(FTransform(FRotator(0.f, static_cast<float>((Hk >> 13) % 360), 0.f),
+					At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0), FVector(Scale)));
 			}
 		}
 	}
-	for (int32 i = TreeCount; i < Trees.Num(); ++i)
+	for (int32 i = 0; i < 4; ++i)
 	{
-		Trees[i]->SetVisibility(false);
+		UInstancedStaticMeshComponent* F = Forest[i];
+		F->ClearInstances();
+		if (Stands[i].Num() == 0) continue;
+		SovArt::SetKitMesh(F, TEXT("Nature"), i % 2 ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer"), FLinearColor::White);
+		ShadeKit(F, i < 2 ? FLinearColor::White : KitFog);
+		F->AddInstances(Stands[i], false);
 	}
 
 	// Features: reeds in marshes, palms at oases, coral on reefs, floes on ice, fissures, burnt trees, and a landform
