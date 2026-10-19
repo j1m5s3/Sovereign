@@ -10,6 +10,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "ProceduralMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/PostProcessComponent.h"
 
 #include "SovArt.h"
@@ -83,6 +84,18 @@ ASovWalker::ASovWalker()
 
 void ASovWalker::SetColor(const FLinearColor& Color)
 {
+	// The rigged leader when the art exists, walking as the character moves; else the kit's still figure.
+	if (SovArt::SetRiggedFigure(GetMesh(), TEXT("Leader"), Color, TEXT("Idle")))
+	{
+		GetMesh()->SetRelativeLocation(FVector(0, 0, -90));
+		GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));  // as the kit figures: built facing +Y in Unreal
+		Body->SetVisibility(false);
+		Crown->SetVisibility(false);
+		bFigure = bRigged = true;
+		PrimaryActorTick.bCanEverTick = true;
+		SetActorTickEnabled(true);
+		return;
+	}
 	// The leader's own figure when the art exists: robe and cloak in the owner's colour.
 	if (SovArt::SetKitMesh(Body, TEXT("Figures"), TEXT("Leader"), Color))
 	{
@@ -100,6 +113,21 @@ void ASovWalker::SetColor(const FLinearColor& Color)
 	UMaterialInstanceDynamic* Gold = UMaterialInstanceDynamic::Create(Base, this);
 	Gold->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, 0.75f, 0.1f));
 	Crown->SetMaterial(0, Gold);
+}
+
+void ASovWalker::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!bRigged) return;
+	// Walk while moving, at a pace that keeps the feet from sliding (the cycle is one stride a second at 140 cm/s).
+	const float Speed = GetVelocity().Size2D();
+	const bool bMoving = Speed > 20.f;
+	if (bMoving != bWalking)
+	{
+		bWalking = bMoving;
+		if (UAnimSequence* A = SovArt::RiggedAnim(TEXT("Leader"), bMoving ? TEXT("Walk") : TEXT("Idle"))) GetMesh()->PlayAnimation(A, true);
+	}
+	if (bWalking) GetMesh()->SetPlayRate(FMath::Clamp(Speed / 140.f, 0.6f, 3.5f));
 }
 
 // ------------------------------------------------------------------ the scene
@@ -287,6 +315,21 @@ bool ASovStreetScene::BuildGround()
 	return true;
 }
 
+USkeletalMeshComponent* ASovStreetScene::AddRigged(const FString& Name, const FVector& Location, float Yaw, const FLinearColor& Tint)
+{
+	if (!SovArt::RiggedMesh(Name)) return nullptr;
+	USkeletalMeshComponent* C = NewObject<USkeletalMeshComponent>(this);
+	C->SetupAttachment(RootComponent);
+	C->SetRelativeLocation(Location);
+	C->SetRelativeRotation(FRotator(0.f, Yaw, 0.f));
+	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	C->RegisterComponent();
+	SovArt::SetRiggedFigure(C, Name, Tint, TEXT("Idle"));
+	C->SetPosition(Rng.FRandRange(0.f, 3.f));  // not all breathing in step
+	RiggedParts.Add(C);
+	return C;
+}
+
 void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 {
 	Layout = InLayout;
@@ -333,6 +376,8 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 			case ESovStreetPiece::Guard:
 			{
 				// Soldiers of the guard stand at the street mouths under Fear.
+				const float Out = FMath::RadiansToDegrees(FMath::Atan2(P.Location.Y, P.Location.X)) - 90.f;
+				if (AddRigged(TEXT("Soldier"), FVector(P.Location.X, P.Location.Y, 0), Out, Layout.CivColor)) break;
 				UStaticMeshComponent* G = AddPiece(CylinderMesh, P.Location, Scale, P.Yaw + 180.f, P.Color);
 				if (SovArt::SetKitMesh(G, TEXT("Figures"), TEXT("Soldier"), Layout.CivColor))
 				{
@@ -360,8 +405,10 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		}
 	}
 	// The two people the leader can talk to (kit figures, primitives without the art).
-	UStaticMeshComponent* Herald = AddPiece(CylinderMesh, Layout.Herald + FVector(0, 0, 90), FVector(0.6, 0.6, 1.8), 0.f, FLinearColor(0.9f, 0.8f, 0.2f));
-	if (SovArt::SetKitMesh(Herald, TEXT("Figures"), TEXT("Herald"), Layout.CivColor))
+	UStaticMeshComponent* Herald = AddRigged(TEXT("Herald"), Layout.Herald, 90.f, Layout.CivColor) ? nullptr
+		: AddPiece(CylinderMesh, Layout.Herald + FVector(0, 0, 90), FVector(0.6, 0.6, 1.8), 0.f, FLinearColor(0.9f, 0.8f, 0.2f));
+	if (!Herald) {}
+	else if (SovArt::SetKitMesh(Herald, TEXT("Figures"), TEXT("Herald"), Layout.CivColor))
 	{
 		Herald->SetRelativeLocation(Layout.Herald);
 		Herald->SetRelativeScale3D(FVector(1.0));
@@ -371,8 +418,10 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 	{
 		AddPiece(SphereMesh, Layout.Herald + FVector(0, 0, 205), FVector(0.4), 0.f, FLinearColor(0.95f, 0.8f, 0.65f));
 	}
-	UStaticMeshComponent* Captain = AddPiece(CylinderMesh, Layout.Captain + FVector(0, 0, 90), FVector(0.7, 0.7, 1.9), 0.f, FLinearColor(0.35f, 0.08f, 0.08f));
-	if (SovArt::SetKitMesh(Captain, TEXT("Figures"), TEXT("Captain"), Layout.CivColor))
+	UStaticMeshComponent* Captain = AddRigged(TEXT("Captain"), Layout.Captain, 90.f, Layout.CivColor) ? nullptr
+		: AddPiece(CylinderMesh, Layout.Captain + FVector(0, 0, 90), FVector(0.7, 0.7, 1.9), 0.f, FLinearColor(0.35f, 0.08f, 0.08f));
+	if (!Captain) {}
+	else if (SovArt::SetKitMesh(Captain, TEXT("Figures"), TEXT("Captain"), Layout.CivColor))
 	{
 		Captain->SetRelativeLocation(Layout.Captain);
 		Captain->SetRelativeScale3D(FVector(1.0));
@@ -390,7 +439,17 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		const float Shade = Rng.FRandRange(0.35f, 0.85f);
 		C.Body = AddPiece(CylinderMesh, Start, FVector(0.45, 0.45, 1.6), 0.f, FLinearColor(Shade, Shade * 0.8f, Shade * 0.6f));
 		C.Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		if (SovArt::SetKitMesh(C.Body, TEXT("Figures"), TEXT("Citizen"), FLinearColor::White))
+		// Townsfolk in clothes of many colours (the citizen's team cloth), walking on their own legs.
+		const FLinearColor Cloth = FLinearColor::MakeFromHSV8(static_cast<uint8>(Rng.RandRange(0, 255)), static_cast<uint8>(Rng.RandRange(60, 150)),
+			static_cast<uint8>(Rng.RandRange(150, 235)));
+		if ((C.Rigged = AddRigged(TEXT("Citizen"), FVector(Start.X, Start.Y, 0), 0.f, Cloth)) != nullptr)
+		{
+			C.Body->SetVisibility(false);
+			C.Rigged->SetRelativeScale3D(FVector(Rng.FRandRange(0.92f, 1.06f)));
+			if (UAnimSequence* Walk = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+			C.bFigure = true;
+		}
+		else if (SovArt::SetKitMesh(C.Body, TEXT("Figures"), TEXT("Citizen"), FLinearColor::White))
 		{
 			C.Body->SetRelativeScale3D(FVector(Rng.FRandRange(0.92f, 1.06f)));
 			C.bFigure = true;
@@ -406,20 +465,35 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	for (FCitizen& C : Citizens)
 	{
-		const FVector Here = C.Body->GetRelativeLocation();
+		USceneComponent* Who = C.Rigged ? static_cast<USceneComponent*>(C.Rigged) : static_cast<USceneComponent*>(C.Body);
+		if (C.Pause > 0.f)
+		{
+			// Standing a while, then walking on.
+			C.Pause -= DeltaSeconds;
+			if (C.Pause <= 0.f && C.Rigged)
+				if (UAnimSequence* Walk = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+			continue;
+		}
+		const FVector Here = Who->GetRelativeLocation();
 		const FVector To = C.Target - Here;
 		if (To.Size2D() < 50.f)
 		{
 			C.Target = FVector(Rng.FRandRange(-3000.f, 3000.f), Rng.FRandRange(-3000.f, 3000.f), 80.f);
+			if (C.Rigged && Rng.FRand() < 0.5f)
+			{
+				C.Pause = Rng.FRandRange(2.f, 7.f);  // stop to look about, or to talk
+				if (UAnimSequence* Idle = SovArt::RiggedAnim(TEXT("Citizen"), TEXT("Idle"))) C.Rigged->PlayAnimation(Idle, true);
+			}
 			continue;
 		}
 		const FVector Step = To.GetSafeNormal2D() * C.Speed * DeltaSeconds;
 		// Figures stand on the ground and face where they walk (kit figures face +Y in Unreal).
 		const FVector Next = Here + Step;
-		C.Body->SetRelativeLocation(C.bFigure ? FVector(Next.X, Next.Y, 0.0) : Next);
+		Who->SetRelativeLocation(C.bFigure ? FVector(Next.X, Next.Y, 0.0) : Next);
 		if (C.bFigure)
 		{
-			C.Body->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
+			Who->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
 		}
+		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / 140.f);  // one stride a second at 140 cm/s: the feet keep their footing
 	}
 }

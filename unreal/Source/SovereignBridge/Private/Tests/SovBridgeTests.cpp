@@ -537,6 +537,13 @@ bool FSovArtAssetsTest::RunTest(const FString& Parameters)
 		TestNotNull(*FString::Printf(TEXT("loads %s"), *Path), LoadObject<UObject>(nullptr, *Path));
 	}
 	TestNotNull(TEXT("kit material"), SovArt::KitMaterial());
+	// The rigged people of the street scene (rig_figures.py), each with its walk and idle.
+	for (const TCHAR* Name : {TEXT("Citizen"), TEXT("Herald"), TEXT("Captain"), TEXT("Soldier"), TEXT("Leader")})
+	{
+		TestNotNull(*FString::Printf(TEXT("rigged %s"), Name), SovArt::RiggedMesh(Name));
+		TestNotNull(*FString::Printf(TEXT("%s walks"), Name), SovArt::RiggedAnim(Name, TEXT("Walk")));
+		TestNotNull(*FString::Printf(TEXT("%s idles"), Name), SovArt::RiggedAnim(Name, TEXT("Idle")));
+	}
 	TestNotNull(TEXT("palace mesh"), SovArt::Mesh(TEXT("Classical"), TEXT("Palace")));
 	return true;
 }
