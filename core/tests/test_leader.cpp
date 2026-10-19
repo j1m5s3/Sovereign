@@ -1029,6 +1029,23 @@ TEST(a_captured_ruler_is_ransomed_home) {
     }));
 }
 
+// The same event twice in a turn is one chronicle line with a count; on another turn it is a line of its own.
+TEST(the_chronicle_counts_repeats_in_a_turn) {
+    auto g = duel([](GameState& s) {
+        addCity(s, 0, hx(2, 2), true);
+        for (int i = 0; i < 3; ++i) s.chronicle.push_back({4, EventKind::AssassinKilled, 1, 0, 0});
+        s.chronicle.push_back({4, EventKind::AssassinCaptured, 1, 0, 0});
+        s.chronicle.push_back({4, EventKind::AssassinCaptured, 1, 0, 0});
+        s.chronicle.push_back({6, EventKind::AssassinCaptured, 1, 0, 0});
+    }, false);
+    const std::string me = rules().civs[0].name, them = rules().civs[1].name;
+    const std::vector<std::string> lines = g->chronicleLines(0);
+    REQUIRE(lines.size() >= 3);
+    CHECK_EQ(lines[0], "Turn 4: An assassin from " + them + " died in an attempt on the ruler of " + me + " (3 times).");
+    CHECK_EQ(lines[1], "Turn 4: " + me + " caught an assassin sent by " + them + " (twice).");
+    CHECK_EQ(lines[2], "Turn 6: " + me + " caught an assassin sent by " + them + ".");
+}
+
 // A failed assassin's death is in the chronicle, and the Hall of Sovereigns says how the last ruler fell.
 TEST(the_chronicle_and_hall_tell_how_a_ruler_fell) {
     auto g = duel([](GameState& s) {

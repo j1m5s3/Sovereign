@@ -3725,7 +3725,7 @@ void ASovPlayerController::OpenMenu()
 			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 6.f)).OnClicked_Lambda([Click]() {
 				Click();
 				return FReply::Handled();
-			})[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Justification(ETextJustify::Center).AutoWrapText(true).Text(FText::FromString(Label))]];
+			})[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Justification(ETextJustify::Center).WrapTextAt(400.f).Text(FText::FromString(Label))]];  // a fixed wrap: AutoWrapText broke short labels on the first layout
 	};
 	const FString Name = FPlatformProcess::UserName();
 	auto Base = [this, Name]() {

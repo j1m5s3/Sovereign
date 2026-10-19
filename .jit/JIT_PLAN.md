@@ -134,5 +134,6 @@ With plan D done, the screenshots still show the canvas HUD's status block (a do
 James played the build for a minute and said "lots of work left to be done", with standing orders to fix it without asking. I reviewed the game myself through offscreen screenshots (`-SovShots=<seconds>` with `-RenderOffscreen`, so nothing appears on his desktop) and work through what a new player sees first.
 
 1. **Done: one continuous map.** Plots were separate raised hexes with dark seams between them, like board-game tiles. Now every plot keeps a flat top to 78% of its radius and slopes to the mean height of the plots it meets, so coasts, hills and mountains run into one another. The known world slopes down to the unexplored parchment, and only the edge of the drawn world keeps a skirt. Borders, rivers and the reach outline sit on the slope (`EdgeStrips`).
+2. **Done: small UI fixes.** The main menu's buttons wrapped short labels ("Battle / replays") on their first layout (AutoWrapText); they wrap at a fixed width now. The canvas line "X wins: ... Esc opens the menu" no longer sits behind the end-of-game screen. The chronicle merges the same event in the same turn into one line with a count ("Great Person Recruited (3 times)"); test `the_chronicle_counts_repeats_in_a_turn`.
 
 Plan E is done except sound, which waits on a decision.
