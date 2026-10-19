@@ -1,4 +1,8 @@
 #include "SovDiplomacyPanel.h"
+#include "Widgets/SOverlay.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Layout/SScaleBox.h"
+#include "SovArt.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Styling/CoreStyle.h"
@@ -62,6 +66,23 @@ void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 				+ SVerticalBox::Slot().FillHeight(1.f).Padding(0.f, 10.f)
 				[
 					SNew(SHorizontalBox)
+					// The leader before their city (tools/art/blender: style_views.py, unit_portraits.py), as Civ VI
+					// receives you in the leader's own setting.
+					+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 14.f, 0.f)
+					[
+						SNew(SBox).WidthOverride(270.f)
+						[
+							SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(2.f)
+							[
+								SNew(SOverlay)
+								+ SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill)
+									[SNew(SImage).Image(FSovStyle::Picture(TEXT("Styles"), SovArt::CivStyle(Args._CivId), FVector2D(640.f, 360.f)))]]
+								+ SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.25f))]
+								+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Center)
+								[SNew(SBox).WidthOverride(240.f).HeightOverride(240.f)[SNew(SImage).Image(FSovStyle::Portrait(FName("Leader")))]]
+							]
+						]
+					]
 					+ SHorizontalBox::Slot().FillWidth(0.66f).Padding(0.f, 0.f, 12.f, 0.f)
 					[
 						SAssignNew(Scroll, SScrollBox)
