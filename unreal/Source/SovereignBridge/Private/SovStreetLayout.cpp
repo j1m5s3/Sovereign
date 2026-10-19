@@ -57,6 +57,7 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 	L.CityId = CityId;
 	L.CityName = Str(City->name);
 	L.Era = Game.playerEra(City->owner);
+	L.Land = Str(R.terrains[static_cast<size_t>(Game.state().plot(City->pos).terrain)].base);
 	if (const sov::TypeIndex Civ = Game.state().players[static_cast<size_t>(City->owner)].civ; Civ != sov::kNone)
 	{
 		L.Civ = Str(R.civs[static_cast<size_t>(Civ)].id);

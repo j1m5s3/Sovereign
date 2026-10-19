@@ -61,6 +61,7 @@ struct FSovStreetLayout
 	FLinearColor CivColor = FLinearColor::White;  // the owner's colour (banners, herald, guards)
 	int32 Era = 0;  // the owner's era (Game::playerEra): the style its houses and palace are built in
 	FString Civ;    // the owner's civilization's rules id, likewise (its culture's style)
+	FString Land;   // the city plot's climate (its terrain's base: GRASSLAND, PLAINS, DESERT, TUNDRA, SNOW): the ground round the town
 
 	int32 Count(ESovStreetPiece Kind) const;
 };
