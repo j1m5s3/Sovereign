@@ -34,6 +34,13 @@ FVector NearCamera(const APlayerController* PC, const FVector& P)
 	const ASovCameraPawn* Cam = PC ? Cast<ASovCameraPawn>(PC->GetPawn()) : nullptr;
 	return Cam ? SovHex::NearestCopy(P, Cam->FocusPoint().Y, Cam->WrapWidth) : P;
 }
+
+// Where a city's banner hangs: at the front of its plot (toward the camera, as in Civ VI), so the town behind it shows.
+// The flags of units in the city and its ruler's name stack above it.
+FVector CityAnchor(int32 X, int32 Y)
+{
+	return SovHex::Center(X, Y, 30.0) + SovHex::ToWorld(FVector2D(0.0, 72.0), 0.0);
+}
 }  // namespace
 
 void ASovHUD::Line(const FString& Text, float X, float& Y, const FLinearColor& Color)
@@ -230,7 +237,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	const FLinearColor Ink(0.03f, 0.027f, 0.024f, 0.88f), Edge(0.42f, 0.28f, 0.11f, 1.f);
 	for (const FSovCityMarker& C : M.Cities)
 	{
-		const FVector Screen = Project(NearCamera(PlayerOwner, SovHex::Center(C.X, C.Y, 60.0)));
+		const FVector Screen = Project(NearCamera(PlayerOwner, CityAnchor(C.X, C.Y)));
 		if (Screen.Z <= 0)
 		{
 			continue;
@@ -293,10 +300,10 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 	{
 		if (U.bLeader)
 		{
-			// Leaders carry their ruler's name; in a city, above its banner and the flags over it, clear of both.
-			FVector At = U.bInCity ? Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 60.0)))
+			// Leaders carry their ruler's name; in a city, under its banner (and its production bar), off the town.
+			FVector At = U.bInCity ? Project(NearCamera(PlayerOwner, CityAnchor(U.X, U.Y)))
 				: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
-			if (U.bInCity) At.Y -= 58.f;
+			if (U.bInCity) At.Y += 30.f;
 			if (At.Z > 0)
 			{
 				float W = 0, H = 0;
@@ -316,7 +323,7 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		// health beneath when hurt.
 		const FVector2D Offset = U.bNaval ? FVector2D(0.0, 0.0) : U.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 		// In a city, the flags stand above its banner (projected from the same point), side by side.
-		const FVector Screen = U.bInCity ? Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 60.0)))
+		const FVector Screen = U.bInCity ? Project(NearCamera(PlayerOwner, CityAnchor(U.X, U.Y)))
 			: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 105.0) + SovHex::ToWorld(Offset, 0.0)));  // over the figure (SovMapActor: People)
 		if (Screen.Z <= 0)
 		{

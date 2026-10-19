@@ -810,28 +810,54 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		CityMarkers[i]->SetVisibility(false);
 	}
 
-	// Houses round each city centre: one more for every two citizens, up to eight, placed by the city's hash.
+	// Houses packed round each city centre, as a town fills its plot: six to start and one more per citizen, up to
+	// sixteen, in two rings (the inner first), the slots taken in an order from the city's hash. The front (toward the
+	// camera, +Y) stays clear for the banner and the units.
 	int32 HouseCount = 0;
 	if (SovArt::Mesh(TEXT("Classical"), TEXT("House_A")))
 	{
+		struct FSlot
+		{
+			double A, R;
+		};
+		static const TArray<FSlot> Slots = [] {
+			TArray<FSlot> Out;
+			for (int32 Ring = 0; Ring < 2; ++Ring)
+			{
+				const int32 N = Ring == 0 ? 7 : 12;
+				for (int32 j = 0; j < N; ++j)
+				{
+					const double A = 2.0 * PI * (j + 0.5 * Ring) / N;
+					if (FMath::Abs(FMath::UnwindRadians(A - PI * 0.5)) < PI * 0.17) continue;  // the front
+					Out.Add({A, Ring == 0 ? 48.0 : 71.0});
+				}
+			}
+			return Out;
+		}();
 		for (const FSovCityMarker& City : Mirror.Cities)
 		{
 			const FVector At = SovHex::Center(City.X, City.Y, SurfaceZ(City.X, City.Y));
 			const uint32 H = static_cast<uint32>(City.X * 2654435761u) ^ static_cast<uint32>(City.Y * 40503);
-			const int32 Count = FMath::Clamp(1 + City.Population / 2, 1, 8);
+			const int32 Count = FMath::Min(FMath::Clamp(6 + City.Population, 6, 16), Slots.Num());
 			for (int32 k = 0; k < Count; ++k)
 			{
-				// Round the ring, filling it in a scattered order; the front (toward the camera, +Y) stays clear.
-				const double A = PI * (0.78 + 1.44 * ((k * 3) % 8) / 7.0) + ((H >> k) % 7) * 0.03;
-				const double R = 64.0 + ((H >> (k + 3)) % 4) * 3.0;
+				// The inner ring's slots first (they come first in Slots), each ring's in a scattered order.
+				const int32 Inner = Slots.IndexOfByPredicate([](const FSlot& S) { return S.R > 50.0; });
+				const int32 InRing = k < Inner ? Inner : Slots.Num() - Inner;
+				const int32 Base = k < Inner ? 0 : Inner;
+				const int32 Local = k < Inner ? k : k - Inner;
+				const FSlot& S = Slots[Base + (Local * 5 + static_cast<int32>(H % 7)) % InRing];
+				const double A = S.A + (((H >> (k % 16)) % 9) - 4) * 0.02;
+				const double R = S.R + ((H >> ((k + 3) % 16)) % 5) - 2.0;
 				UStaticMeshComponent* C = Marker(CityHouses, HouseCount++, nullptr);
 				static const TCHAR* Houses[] = {TEXT("House_A"), TEXT("House_B"), TEXT("House_C")};
 				const TPair<const TCHAR*, FString> House = SovArt::EraPiece(City.Era, Houses[(H + k) % 3], City.Civ);
 				SovArt::SetKitMesh(C, House.Key, House.Value, FLinearColor::White);
 				ShadeKit(C, FLinearColor::White);
 				C->SetRelativeLocation(At + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
-				C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(A)) + 90.f, 0.f));
-				C->SetRelativeScale3D(FVector(0.034));
+				// Fronts to the centre, as round a square, each a little askew.
+				C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(A)) + 90.f + static_cast<float>((H >> (k % 13)) % 11) - 5.f, 0.f));
+				C->SetRelativeScale3D(FVector(0.048));
 			}
 		}
 	}
