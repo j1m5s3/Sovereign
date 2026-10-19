@@ -11,6 +11,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "SovKeys.h"
 #include "SovStyle.h"
+#include "SovAudio.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -83,9 +84,17 @@ void SSovSettingsScreen::Construct(const FArguments& Args)
 	Add(Option(TEXT("Frame limit"), [this]() { return kLimits[FrameLimit] ? FString::Printf(TEXT("%d fps"), kLimits[FrameLimit]) : FString(TEXT("None")); },
 		[this](int32 D) { FrameLimit = FMath::Clamp(FrameLimit + D, 0, static_cast<int32>(UE_ARRAY_COUNT(kLimits)) - 1); }));
 	Add(Option(TEXT("Interface scale"), [this]() { return FString::Printf(TEXT("%d%%"), Scale * 10); }, [this](int32 D) { Scale = FMath::Clamp(Scale + D, 7, 16); }));
+	// Sound volumes take effect at once (FSovAudio; kept in GameUserSettings.ini, [Sovereign.Audio]).
+	for (const auto& [Label, Which] : {TPair<const TCHAR*, ESovVolume>{TEXT("Volume"), ESovVolume::Master}, {TEXT("Music"), ESovVolume::Music},
+			 {TEXT("Ambience"), ESovVolume::Ambience}, {TEXT("Effects"), ESovVolume::Effects}})
+	{
+		const ESovVolume W = Which;
+		Add(Option(Label, [W]() { return FString::Printf(TEXT("%d%%"), FMath::RoundToInt(FSovAudio::Volume(W) * 100.f)); },
+			[W](int32 D) { FSovAudio::SetVolume(W, FMath::RoundToFloat(FSovAudio::Volume(W) * 10.f + D) / 10.f); }));
+	}
 	Options->AddSlot().AutoHeight().Padding(0, 10, 0, 0)
 	[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true)
-		.Text(FText::FromString(TEXT("Sound: none yet. Click a key on the right to rebind it (Esc cancels); an action already on the new key takes the old one.")))];
+		.Text(FText::FromString(TEXT("Click a key on the right to rebind it (Esc cancels); an action already on the new key takes the old one.")))];
 
 	TSharedRef<SVerticalBox> Keys = SNew(SVerticalBox);
 	// The order keys: click one, then press its new key.

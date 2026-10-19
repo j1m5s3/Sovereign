@@ -258,7 +258,73 @@ bool ASovPlayerController::HexUnderCursor(int32& OutX, int32& OutY) const
 
 bool ASovPlayerController::Send(const sov::Command& Command)
 {
-	return Subsystem()->Submit(Command) == sov::CommandError::Ok;
+	const sov::Unit* Mover = Subsystem()->GetGame().state().unit(Command.id);
+	const FName Figure = Mover ? SovUnitFigure(Subsystem()->GetGame().rules().units[static_cast<size_t>(Mover->type)], false, false) : FName();
+	if (Subsystem()->Submit(Command) != sov::CommandError::Ok) return false;
+	// The sound of an order carried out: the unit's own for moves and attacks.
+	using CT = sov::CommandType;
+	const TCHAR* Sound = nullptr;
+	switch (Command.type)
+	{
+		case CT::FoundCity: Sound = TEXT("SFX_FoundCity"); break;
+		case CT::EndTurn: Sound = TEXT("SFX_EndTurn"); break;
+		case CT::MoveUnit: Sound = Figure == FName("Rider") ? TEXT("SFX_Hooves") : TEXT("SFX_March"); break;
+		case CT::Attack: case CT::RangedAttack: case CT::CityStrike:
+			Sound = Figure == FName("Archer") ? TEXT("SFX_Bow") : Figure == FName("Musketeer") || Figure == FName("Rifleman") ? TEXT("SFX_Gunshot")
+				: Figure == FName("Siege") || Figure == FName("Tank") || Figure == FName("Ship") || Figure == FName("Steamship") || Figure == FName("Plane")
+				? TEXT("SFX_Cannon") : TEXT("SFX_Clash");
+			if (Command.type == CT::CityStrike) Sound = TEXT("SFX_Bow");
+			break;
+		case CT::Purchase: case CT::BuyPlot: Sound = TEXT("SFX_Coins"); break;
+		case CT::BuildImprovement: case CT::Harvest: Sound = TEXT("SFX_Build"); break;
+		case CT::DeclareWar: Sound = TEXT("SFX_War"); break;
+		case CT::ChooseResearch: case CT::ChooseCivic: case CT::SetProduction: case CT::QueueProduction: case CT::Promote: Sound = TEXT("SFX_Select"); break;
+		default: break;
+	}
+	if (Sound) FSovAudio::Play(this, Sound);
+	return true;
+}
+
+void ASovPlayerController::UpdateAudio()
+{
+	USovGameSubsystem* Sub = Subsystem();
+	const bool bGame = Sub && Sub->IsRunning();
+	if (!bGame)
+	{
+		Audio.SetMusic(this, TEXT("MUS_Menu"));
+		Audio.SetAmbience(this, FString());
+		HeardTechs = HeardCivics = HeardEra = -1;
+		bHeardEnd = false;
+		return;
+	}
+	const sov::Game& G = Sub->GetGame();
+	const sov::GameState& S = G.state();
+	// Music follows the player's era; the ambience follows where the player is: the field, the street or the land.
+	const int32 Era = G.playerEra(Me());
+	Audio.SetMusic(this, Era <= 0 ? TEXT("MUS_Ancient") : Era == 1 ? TEXT("MUS_Classical") : Era <= 3 ? TEXT("MUS_Medieval") : TEXT("MUS_Modern"));
+	Audio.SetAmbience(this, InBattle() ? TEXT("AMB_Battle") : InStreet() ? TEXT("AMB_Town") : TEXT("AMB_Country"));
+	Audio.ApplyVolumes();  // the settings screen's sliders take effect at once
+	// What changed since the last frame: our turn began, research or a civic finished, a new era, news, the end.
+	const sov::Player& P = S.players[static_cast<size_t>(Me())];
+	const int32 Techs = static_cast<int32>(std::count(P.techs.done.begin(), P.techs.done.end(), 1));
+	const int32 Civics = static_cast<int32>(std::count(P.civics.done.begin(), P.civics.done.end(), 1));
+	const bool bMine = MyTurn();
+	if (HeardTechs >= 0)
+	{
+		if (Era > HeardEra) FSovAudio::Play(this, TEXT("SFX_Era"));
+		else if (Techs > HeardTechs) FSovAudio::Play(this, TEXT("SFX_Research"));
+		else if (Civics > HeardCivics) FSovAudio::Play(this, TEXT("SFX_Civic"));
+		else if (bMine && !bHeardMyTurn) FSovAudio::Play(this, TEXT("SFX_NewTurn"));
+		if (G.gameOver() && !bHeardEnd)
+		{
+			FSovAudio::Play(this, S.winner == Me() ? TEXT("SFX_Victory") : TEXT("SFX_Defeat"));
+			bHeardEnd = true;
+		}
+	}
+	HeardTechs = Techs;
+	HeardCivics = Civics;
+	HeardEra = Era;
+	bHeardMyTurn = bMine;
 }
 
 void ASovPlayerController::SelectUnit(int32 Id, bool bCenter)
@@ -2468,8 +2534,8 @@ void ASovPlayerController::UpdateGameUI()
 	{
 		if (!GEngine || !GEngine->GameViewport) return;
 		SAssignNew(GameUI, SSovGameUI)
-			.OnKey_Lambda([this](FKey Key) { UIKeys.Add(Key); })
-			.OnPick_Lambda([this](int32 Index) { PickAbsolute(Index); })
+			.OnKey_Lambda([this](FKey Key) { UIKeys.Add(Key); FSovAudio::Play(this, TEXT("SFX_Click")); })
+			.OnPick_Lambda([this](int32 Index) { FSovAudio::Play(this, TEXT("SFX_Click")); PickAbsolute(Index); })
 			.OnEndTurn_Lambda([this]() { UIKeys.Add(EKeys::Enter); })
 			.OnTreeNode_Lambda([this](int32 Node) { PickTreeNode(Node); })
 			.OnNotice_Lambda([this](int32 Index) { OpenNotice(Index); })
@@ -3363,6 +3429,7 @@ void ASovPlayerController::UpdatePanel()
 void ASovPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	UpdateAudio();
 	// Developer review (-SovShots=<seconds>, with -RenderOffscreen to keep the window off the desktop): a screenshot with
 	// the interface every so often to Saved/Screenshots/auto/, named by count and turn.
 	if (float Every = 0.f; FParse::Value(FCommandLine::Get(), TEXT("SovShots="), Every) && Every > 0.f && (ShotTimer += DeltaTime) >= Every)
@@ -3797,7 +3864,8 @@ void ASovPlayerController::OpenMenu()
 	TSharedPtr<SEditableTextBox> Address;
 	auto Item = [this](const FString& Label, TFunction<void()> Click) {
 		return SNew(SBox).Padding(FMargin(0.f, 3.f)).WidthOverride(440.f)[
-			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 6.f)).OnClicked_Lambda([Click]() {
+			SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).HAlign(HAlign_Center).ContentPadding(FMargin(10.f, 6.f)).OnClicked_Lambda([this, Click]() {
+				FSovAudio::Play(this, TEXT("SFX_Click"));
 				Click();
 				return FReply::Handled();
 			})[SNew(STextBlock).Font(FSovStyle::Font(13, true)).ColorAndOpacity(FSovStyle::Text).Justification(ETextJustify::Center).WrapTextAt(400.f).Text(FText::FromString(Label))]];  // a fixed wrap: AutoWrapText broke short labels on the first layout

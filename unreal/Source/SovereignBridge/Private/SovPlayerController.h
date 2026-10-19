@@ -11,6 +11,7 @@
 #include "SovBattleSim.h"
 #include "SovDiplomacy.h"
 #include "SovGameUI.h"
+#include "SovAudio.h"
 #include "SovKeys.h"
 
 #include "SovPlayerController.generated.h"
@@ -251,6 +252,11 @@ protected:
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
 	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
+	// Sound (plan F): the loops now playing, and what the last frame saw, to sound what changed.
+	FSovAudio Audio;
+	void UpdateAudio();
+	int32 HeardTechs = -1, HeardCivics = -1, HeardEra = -1;
+	bool bHeardMyTurn = false, bHeardEnd = false;
 	FString TipShown;         // the advisor tip on screen, by id (Tip)
 	// The advisor's tip for a new player, by id and text, or an empty id; ids put aside are kept in GameUserSettings.
 	void Tip(FString& Id, FString& Title, FString& Text) const;

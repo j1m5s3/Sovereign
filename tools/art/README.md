@@ -15,6 +15,17 @@ Needs Blender 5.2 (`BLENDER` overrides the path) and Unreal Engine 5.8
 imported `.uasset` files in `unreal/Content/Art/` are committed, so a fresh clone runs
 with art. The game falls back to primitives for anything missing.
 
+## Sound
+
+`tools/audio/synth.py` makes every sound by script with numpy (run in Blender's Python, which has it): effects (clicks, the end-turn bell, the founding fanfare, sword clash, bow, musket, cannon, marching feet, hooves, war drums, a new era's swell, victory and defeat), ambience loops (country wind and birds, a town's murmur, a battle's clamour) and five music tracks composed by a seeded modal generator over plucked strings, pipes, pads and frame drums (menu, Ancient, Classical, Medieval, Modern). `tools/audio/ue_import_audio.py` imports them to `unreal/Content/Audio/` (committed); music and ambience loop.
+
+```bash
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/audio/synth.py -- art/build/audio
+UnrealEditor-Cmd unreal/Sovereign.uproject -run=pythonscript -script=tools/audio/ue_import_audio.py
+```
+
+The game plays them through `FSovAudio` (`SovAudio.*`): the music follows the player's era, the ambience where they are (map, street, battle), effects follow orders carried out and what changed (a new turn, research or a civic done, a new era, the end). Settings has Volume, Music, Ambience and Effects.
+
 ## Painted detail
 
 Each kit maps its colours to a pattern (`kitlib.patterns({...})` at the top of the kit; `Piece.wear(...)` overrides it for the next solids). `Piece.build` stores the pattern's tile in the vertex colour's alpha and gives every face UVs by box projection in metres (`kitlib.REPEAT`), so detail is the same size on every piece. The material multiplies vertex colour, the team tint and the tile (doubled, so mid grey is no change). `portrait.py` renders with the same maths.
