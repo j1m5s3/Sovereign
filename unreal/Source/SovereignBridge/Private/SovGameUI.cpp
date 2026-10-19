@@ -230,10 +230,22 @@ void SSovGameUI::Construct(const FArguments& Args)
 		// The selected unit.
 		+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Left).Padding(12, 0, 0, 12)
 		[
-			SNew(SBox).WidthOverride(470).Visibility(Visible([this]() { return Model.bVisible && Model.bUnit; }))
+			SNew(SBox).WidthOverride(564).Visibility(Visible([this]() { return Model.bVisible && Model.bUnit; }))
 			[
 				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(10)
 				[
+					SNew(SHorizontalBox)
+					// The unit's portrait in a bronze-edged frame, as Civ VI shows the selected unit.
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(0, 0, 10, 0)
+					[
+						SNew(SBox).WidthOverride(84).HeightOverride(84).Visibility_Lambda([this]() { return FSovStyle::Portrait(Model.UnitFigure) ? EVisibility::Visible : EVisibility::Collapsed; })
+						[
+							SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(2)
+							[SNew(SImage).Image_Lambda([this]() { return FSovStyle::Portrait(Model.UnitFigure); })]
+						]
+					]
+					+ SHorizontalBox::Slot().FillWidth(1.f)
+					[
 					SNew(SVerticalBox)
 					+ SVerticalBox::Slot().AutoHeight()
 					[SNew(STextBlock).Font(FSovStyle::Font(16, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.UnitName); })]
@@ -244,6 +256,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 						.FillColorAndOpacity_Lambda([this]() { return Model.UnitHealth > 0.5f ? FSovStyle::Good : Model.UnitHealth > 0.25f ? FSovStyle::Gold : FSovStyle::Bad; })]]
 					+ SVerticalBox::Slot().AutoHeight()[SAssignNew(UnitStatsBox, SHorizontalBox)]
 					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 0)[SAssignNew(ActionsBox, SWrapBox).PreferredSize(450.f).InnerSlotPadding(FVector2D(4, 4))]
+					]
 				]
 			]
 		]

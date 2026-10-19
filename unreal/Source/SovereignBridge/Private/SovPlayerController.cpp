@@ -2747,6 +2747,7 @@ void ASovPlayerController::UpdateGameUI()
 		M.bUnit = true;
 		M.UnitName = G.isLeader(*U) ? Str(P.leaderName) : U->greatPerson != sov::kNone ? Str(R.greatPeople[static_cast<size_t>(U->greatPerson)].name) : Str(T.name);
 		M.UnitSub = Str(T.name);
+		M.UnitFigure = SovCultureFigure(G, Me(), SovUnitFigure(T, G.isLeader(*U), T.layer == sov::UnitLayer::Civilian || T.layer == sov::UnitLayer::Support));
 		if (!T.promotionClass.empty()) M.UnitSub += FString::Printf(TEXT(", level %d"), U->level());
 		if (const sov::Unit* E = G.isLeader(*U) ? G.escortOf(*U) : nullptr) M.UnitSub += FString::Printf(TEXT(", escorted by %s"), *Str(R.units[static_cast<size_t>(E->type)].name));
 		if (!U->promotions.empty())

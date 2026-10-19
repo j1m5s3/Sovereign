@@ -61,6 +61,7 @@ Patterns: `plain`, `cloth`, `leather`, `metal`, `skin`, `hair`, `wood`, `stone` 
 | `blender/look.py` | The game material's look for review renders (vertex colour x tint x the detail tile), shared by `portrait.py` and `backdrop.py` |
 | `blender/generate.py` | Builds every piece and exports FBX, and writes the detail sheet to `Textures/T_SovDetail.png` |
 | `blender/preview.py` | Renders a contact sheet of a kit for review |
+| `blender/unit_portraits.py` | Portraits of every unit figure for the unit panel (`unreal/Content/Slate/Portraits/<Figure>.png`, 160 px, transparent): people head and shoulders, riders, machines and ships whole: `blender -b --factory-startup --python tools/art/blender/unit_portraits.py -- unreal/Content/Slate/Portraits` |
 | `blender/portrait.py` | Renders the Figures kit's people lit (Eevee), team cloth tinted, whole or `close` (upper bodies), or chosen pieces in a row (`pieces=archer_asian,rider_asian`): `blender -b --python tools/art/blender/portrait.py -- out.png "#2f4f9a" close` |
 | `ue_import.py` | Imports the sheets (`T_SovDetail`, and `T_SovDetailN` as a normal map with green flipped) and FBX into `/Game/Art/<Kit>/`, and assigns the master material `M_SovKit` (vertex colour × `Tint` × detail, with the normal sheet) |
 | `build_art.py` | Runs both steps |
