@@ -134,5 +134,6 @@ With plan D done, the screenshots still show the canvas HUD's status block (a do
 James played the build for a minute and said "lots of work left to be done", with standing orders to fix it without asking. I reviewed the game myself through offscreen screenshots (`-SovShots=<seconds>` with `-RenderOffscreen`, so nothing appears on his desktop) and work through what a new player sees first.
 
 1. **Done: one continuous map.** Plots were separate raised hexes with dark seams between them, like board-game tiles. Now every plot keeps a flat top to 78% of its radius and slopes to the mean height of the plots it meets, so coasts, hills and mountains run into one another. The known world slopes down to the unexplored parchment, and only the edge of the drawn world keeps a skirt. Borders, rivers and the reach outline sit on the slope (`EdgeStrips`).
+- **Done: the menu's backdrop.** Before a game the main menu stood on an empty sky and grey ground. It now stands on a painted scene from the kits, rendered in Blender (`tools/art/blender/backdrop.py` to `Content/Slate/Backdrop.png`): a walled Classical town above a river at dusk, right of the panel, with a column of soldiers at its gate. Over a running game the menu keeps the dimmed map.
 
 Plan E is done except sound, which waits on a decision.

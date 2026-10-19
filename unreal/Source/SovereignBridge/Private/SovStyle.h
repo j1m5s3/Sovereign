@@ -19,6 +19,7 @@ public:
 
 	static const FSlateBrush* Panel();      // dark parchment-edged panel
 	static const FSlateBrush* Bar();        // the top bar strip
+	static const FSlateBrush* Backdrop();   // the main menu's painted scene (tools/art/blender/backdrop.py)
 	static const FButtonStyle& Button();    // plain button
 	static const FButtonStyle& Primary();   // the gold call-to-action (end turn)
 	static const FProgressBarStyle& Progress();  // plain bars the fill colour shows on

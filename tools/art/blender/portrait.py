@@ -20,6 +20,7 @@ from mathutils import Vector  # noqa: E402
 import generate  # noqa: E402
 import kit_figures  # noqa: E402
 import kitlib  # noqa: E402
+import look  # noqa: E402
 import textures  # noqa: E402
 
 args = sys.argv[sys.argv.index("--") + 1:]
@@ -35,66 +36,7 @@ scene = bpy.context.scene
 sheet = textures.save(os.path.join(tempfile.gettempdir(), "T_SovDetail_preview.png"))
 
 
-def material(name, tint):
-    """As M_SovKit: vertex colour x tint x 2 x the detail sheet at the alpha's tile."""
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nodes, links = m.node_tree.nodes, m.node_tree.links
-    bsdf = nodes.get("Principled BSDF")
-    L = links.new
-
-    def math_node(op, a, b=None):
-        n = nodes.new("ShaderNodeMath")
-        n.operation = op
-        for i, v in enumerate((a, b)):
-            if v is None:
-                continue
-            if isinstance(v, (int, float)):
-                n.inputs[i].default_value = v
-            else:
-                L(v, n.inputs[i])
-        return n.outputs[0]
-
-    col = nodes.new("ShaderNodeVertexColor")
-    col.layer_name = "Col"
-    idx = math_node("ROUND", math_node("MULTIPLY", col.outputs["Alpha"], 15.0))
-    column = math_node("FLOORED_MODULO", idx, 4.0)
-    row = math_node("FLOOR", math_node("MULTIPLY", idx, 0.25))
-    uvmap = nodes.new("ShaderNodeUVMap")
-    uvmap.uv_map = "UVMap"
-    sep = nodes.new("ShaderNodeSeparateXYZ")
-    L(uvmap.outputs["UV"], sep.inputs[0])
-    fu = math_node("ADD", math_node("MULTIPLY", math_node("FRACT", sep.outputs["X"]), 0.9375), 0.03125)
-    fv = math_node("ADD", math_node("MULTIPLY", math_node("FRACT", sep.outputs["Y"]), 0.9375), 0.03125)
-    # Tile row 0 sits at the top of the sheet; Blender's V runs up from the bottom.
-    au = math_node("MULTIPLY", math_node("ADD", column, fu), 0.25)
-    av = math_node("MULTIPLY", math_node("ADD", math_node("SUBTRACT", 3.0, row), fv), 0.25)
-    comb = nodes.new("ShaderNodeCombineXYZ")
-    L(au, comb.inputs["X"])
-    L(av, comb.inputs["Y"])
-    img = nodes.new("ShaderNodeTexImage")
-    img.image = sheet
-    img.interpolation = "Linear"
-    L(comb.outputs[0], img.inputs["Vector"])
-    detail = math_node("MULTIPLY", img.outputs["Color"], 2.0)
-    mix = nodes.new("ShaderNodeMix")
-    mix.data_type = "RGBA"
-    mix.blend_type = "MULTIPLY"
-    mix.inputs["Factor"].default_value = 1.0
-    L(col.outputs["Color"], mix.inputs["A"])
-    mix.inputs["B"].default_value = (tint[0], tint[1], tint[2], 1.0)
-    mix2 = nodes.new("ShaderNodeMix")
-    mix2.data_type = "RGBA"
-    mix2.blend_type = "MULTIPLY"
-    mix2.inputs["Factor"].default_value = 1.0
-    L(mix.outputs["Result"], mix2.inputs["A"])
-    L(detail, mix2.inputs["B"])
-    L(mix2.outputs["Result"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.75
-    return m
-
-
-base_mat, team_mat = material("Base", (1, 1, 1)), material("Team", team)
+base_mat, team_mat = look.material("Base", (1, 1, 1), sheet), look.material("Team", team, sheet)
 if picked:
     makers = [getattr(generate.KITS[kit], name) for name in picked]
 elif kit == "Figures":
