@@ -97,6 +97,15 @@ std::vector<std::string> Game::chronicleLines(PlayerId viewer) const {
     const auto name = [&](PlayerId id) { return playerName(*rules_, state_, id); };
 
     static const char* const kAges[] = {"a Normal Age", "a Golden Age", "a Dark Age", "a Heroic Age"};
+    int32_t lastTurn = -1, repeats = 1;
+    std::string lastText;
+    const auto flush = [&]() {
+        if (lastText.empty()) return;
+        const std::string times = repeats == 2 ? " (twice)" : repeats > 2 ? " (" + std::to_string(repeats) + " times)" : "";
+        out.push_back("Turn " + std::to_string(lastTurn) + ": " + lastText + times + ".");
+        lastText.clear();
+        repeats = 1;
+    };
     for (const GameEvent& e : state_.chronicle) {
         if (e.actor != viewer && e.target != viewer) continue;
         const std::string a = name(e.actor), t = name(e.target);
@@ -133,9 +142,17 @@ std::vector<std::string> Game::chronicleLines(PlayerId viewer) const {
         }
         if (!text.empty()) {
             text[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(text[0])));
-            out.push_back("Turn " + std::to_string(e.turn) + ": " + text + ".");
+            // The same thing again in the same turn (two Great People recruited) is one line with a count.
+            if (e.turn == lastTurn && text == lastText) {
+                ++repeats;
+                continue;
+            }
+            flush();
+            lastTurn = e.turn;
+            lastText = text;
         }
     }
+    flush();
     // How it ended for them.
     const Player& v = state_.players[at(viewer)];
     if (state_.winner != kNoPlayer) {
