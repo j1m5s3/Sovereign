@@ -256,8 +256,8 @@ double ASovMapActor::ReliefHeight(ESovRelief Relief)
 	switch (Relief)
 	{
 		case ESovRelief::Water: return -8.0;
-		case ESovRelief::Hills: return 18.0;
-		case ESovRelief::Mountain: return 55.0;
+		case ESovRelief::Hills: return 34.0;     // high enough to read as hills now plots slope into each other
+		case ESovRelief::Mountain: return 100.0;
 		default: return 0.0;
 	}
 }
