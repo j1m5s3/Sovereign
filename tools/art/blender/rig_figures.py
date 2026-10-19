@@ -133,7 +133,9 @@ def water_carrier(seed=77):
 
 PEOPLE = {"Citizen": kit_figures.citizen, "Herald": kit_figures.herald, "Captain": kit_figures.captain, "Soldier": kit_figures.soldier,
           "Leader": kit_figures.leader, "Townsman": townsman, "Traveller": traveller, "Townswoman": townswoman, "Elder": elder,
-          "Porter": porter, "Merchant": merchant, "WaterCarrier": water_carrier}
+          "Porter": porter, "Merchant": merchant, "WaterCarrier": water_carrier,
+          # The other foot soldiers, for live battles (their cultures' dress stays still: rigging each would weigh too much).
+          "Archer": kit_figures.archer, "Musketeer": kit_figures.musketeer, "Rifleman": kit_figures.rifleman}
 FPS = 24
 CM = 100.0  # the rig is built in centimetres (see rig)
 

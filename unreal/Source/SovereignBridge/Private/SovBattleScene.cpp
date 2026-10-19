@@ -186,15 +186,16 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Figure.Add(false);
 		}
 		Vehicle.Add(bMachine && Figure.Last());
-		// A plain spearman walks on the rigged soldier's legs when that art exists; the still figure stays hidden then.
+		// A man of a plain arm (spearman, archer, musketeer, rifleman) walks on its rigged figure's legs when that art
+		// exists; the still figure stays hidden then. Cultures' dress has no rig yet, and stays still.
 		USkeletalMeshComponent* Rig = nullptr;
-		if (!S.bLeader && !bMachine && Name == TEXT("Soldier") && SovArt::RiggedMesh(TEXT("Soldier")))
+		if (!S.bLeader && !bMachine && SovArt::RiggedMesh(Name))
 		{
 			Rig = NewObject<USkeletalMeshComponent>(this);
 			Rig->SetupAttachment(RootComponent);
 			Rig->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			Rig->RegisterComponent();
-			if (SovArt::SetRiggedFigure(Rig, TEXT("Soldier"), C, TEXT("Idle")))
+			if (SovArt::SetRiggedFigure(Rig, Name, C, TEXT("Idle")))
 			{
 				Rig->SetPosition(FMath::FRand() * 3.f);  // not all breathing in step
 				Body->SetVisibility(false);
@@ -206,6 +207,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			}
 		}
 		Rigs.Add(Rig);
+		RigNames.Add(Name);
 		LastPos.Add(S.Pos);
 		Striding.Add(false);
 		Bodies.Add(Body);
@@ -227,7 +229,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			if (bWalk != Striding[i] && S.bAlive)
 			{
 				Striding[i] = bWalk;
-				if (UAnimSequence* A = SovArt::RiggedAnim(TEXT("Soldier"), bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
+				if (UAnimSequence* A = SovArt::RiggedAnim(RigNames[i], bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
 			}
 			const float Face = (S.Side == 0 ? -90.f : 90.f);
 			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f : Face;
