@@ -445,7 +445,7 @@ bool FSovStreetLayoutTest::RunTest(const FString& Parameters)
 	const FSovStreetLayout B = BuildStreetLayout(Session.GetGame(), City.id);
 	TestEqual(TEXT("one landmark per building"), A.Count(ESovStreetPiece::Landmark), static_cast<int32>(City.buildings.size()));
 	TestTrue(TEXT("the Palace is a landmark"), A.Pieces.ContainsByPredicate([](const FSovStreetPiece& P) { return P.Kind == ESovStreetPiece::Landmark && P.Label == TEXT("Palace"); }));
-	TestEqual(TEXT("filler houses follow population"), A.Count(ESovStreetPiece::House) + A.Count(ESovStreetPiece::Boarded), 10 + City.population * 8);
+	TestEqual(TEXT("filler houses follow population"), A.Count(ESovStreetPiece::House) + A.Count(ESovStreetPiece::Boarded), 20 + City.population * 10);
 	TestEqual(TEXT("six main streets"), A.Count(ESovStreetPiece::Street), 6);
 	TestFalse(TEXT("no walls yet"), A.bWalls);
 	TestEqual(TEXT("crowd by population"), A.Crowd, 6 + City.population * 4);

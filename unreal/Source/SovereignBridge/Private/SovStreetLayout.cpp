@@ -120,12 +120,12 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 	}
 
 	// Filler houses by population (stage 4, "Filler"), kept off the streets and the plaza.
-	const int32 Houses = 10 + City->population * 8;
+	const int32 Houses = 20 + City->population * 10;  // a close-built town round the square
 	int32 Placed = 0;
 	for (int32 Tries = 0; Tries < Houses * 30 && Placed < Houses; ++Tries)
 	{
 		const FVector2D P(Rng.FRandRange(-Rad, Rad), Rng.FRandRange(-Rad, Rad));
-		if (!InsideHex(P, Rad * 0.92) || P.Size() < PlazaRadius + 1500.0)
+		if (!InsideHex(P, Rad * 0.92) || P.Size() < PlazaRadius + 650.0)
 		{
 			continue;
 		}
@@ -136,7 +136,8 @@ FSovStreetLayout BuildStreetLayout(const sov::Game& Game, int32 CityId)
 		}
 		for (const FSovStreetPiece& O : L.Pieces)
 		{
-			if (O.Kind == ESovStreetPiece::House && FVector2D::Distance(P, FVector2D(O.Location)) < 700.0)
+			if ((O.Kind == ESovStreetPiece::House && FVector2D::Distance(P, FVector2D(O.Location)) < 700.0)
+				|| (O.Kind == ESovStreetPiece::Landmark && FVector2D::Distance(P, FVector2D(O.Location)) < FMath::Max(O.Size.X, O.Size.Y) * 0.6 + 450.0))
 			{
 				bClear = false;
 			}
