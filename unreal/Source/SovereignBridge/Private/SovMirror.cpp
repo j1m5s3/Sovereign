@@ -248,7 +248,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 			if ((D == static_cast<int32>(sov::Dir::E) || D == static_cast<int32>(sov::Dir::SE) || D == static_cast<int32>(sov::Dir::SW)) && bKnown &&
 				sov::hasRiver(S, H, static_cast<sov::Dir>(D)))
 			{
-				M.Rivers.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), Srgb(70, 150, 230)});
+				M.Rivers.Add({FIntPoint(H.x, H.y), FIntPoint(N->x, N->y), Srgb(46, 112, 178)});
 			}
 			// A border where the territory ends.
 			if (Pl.owner != sov::kNoPlayer && (!bKnown || SeenPlot(Game, View, *N).owner != Pl.owner))
