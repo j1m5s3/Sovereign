@@ -684,16 +684,18 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 		const uint32 H = static_cast<uint32>(Tile.X * 2246822519u) ^ static_cast<uint32>(Tile.Y * 3266489917u);
 		const bool bLandform = IsLandform(Model);
 		const bool bBurnt = !FCString::Strcmp(Model, TEXT("BurntTree"));
-		const int32 Count = bBurnt ? 3 : 1;
+		// Burnt woods and marshes spread across the plot (a single pool of reeds read as a puddle).
+		const bool bSpread = bBurnt || !FCString::Strcmp(Model, TEXT("Reeds"));
+		const int32 Count = bSpread ? 3 : 1;
 		for (int32 k = 0; k < Count; ++k)
 		{
 			const double A = (k * 2.1 + (H % 7)) * 1.0;
-			const double R = bLandform ? 0.0 : bBurnt ? 32.0 + ((H >> (k * 3)) & 7) * 3.0 : 22.0;
+			const double R = bLandform ? 0.0 : bSpread ? 32.0 + ((H >> (k * 3)) & 7) * 3.0 : 22.0;
 			UStaticMeshComponent* C = Marker(FeaturePieces, FeatureCount++, nullptr);
 			SovArt::SetKitMesh(C, TEXT("Nature"), Model, FLinearColor::White);
 			ShadeKit(C, Tile.bVisible ? FLinearColor::White : KitFog);
 			C->SetRelativeLocation(SovHex::Center(Tile.X, Tile.Y, SurfaceZ(Tile.X, Tile.Y)) + SovHex::ToWorld(FVector2D(FMath::Cos(A), FMath::Sin(A)) * R, 0.0));
-			C->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 5) % 360), 0.f));
+			C->SetRelativeRotation(FRotator(0.f, static_cast<float>((H >> 5) % 360 + k * 131), 0.f));
 			C->SetRelativeScale3D(FVector(bLandform ? 0.13 : bBurnt ? 0.075 : !FCString::Strcmp(Model, TEXT("IceFloe")) ? 0.12 : 0.09));
 		}
 	}

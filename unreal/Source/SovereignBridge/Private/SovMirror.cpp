@@ -57,7 +57,7 @@ bool FeatureTint(const std::string& Id, FLinearColor& Tint, float& Amount)
 	static const FEntry Entries[] = {
 		{"FEATURE_FOREST", 34, 84, 34, 0.6f},
 		{"FEATURE_JUNGLE", 20, 104, 52, 0.65f},
-		{"FEATURE_MARSH", 80, 120, 100, 0.5f},
+		{"FEATURE_MARSH", 58, 98, 84, 0.6f},
 		{"FEATURE_FLOODPLAINS", 150, 160, 80, 0.3f},
 		{"FEATURE_OASIS", 60, 160, 140, 0.5f},
 		{"FEATURE_ICE", 230, 240, 250, 0.85f},
