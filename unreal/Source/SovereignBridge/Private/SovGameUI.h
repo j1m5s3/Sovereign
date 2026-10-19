@@ -76,6 +76,7 @@ struct FSovUIModel
 	// The selected unit.
 	bool bUnit = false;
 	FString UnitName, UnitSub;
+	FName UnitFigure;  // its portrait (FSovStyle::Portrait)
 	float UnitHealth = 1.f;
 	TArray<FSovUIStat> UnitStats;
 	TArray<FSovUIAction> UnitActions;
