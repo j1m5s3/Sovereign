@@ -2009,13 +2009,13 @@ void ASovPlayerController::EnterStreet()
 	Sub->SaveGame(TEXT("autosave"));
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), FRotator::ZeroRotator, Params);
+	Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), ASovStreetScene::Facing(), Params);
 	Street->Build(BuildStreetLayout(G, City->id));
-	Walker = GetWorld()->SpawnActor<ASovWalker>(Street->ToWorld(Street->GetLayout().Entry + FVector(0, 0, 120)), FRotator::ZeroRotator, Params);
+	Walker = GetWorld()->SpawnActor<ASovWalker>(Street->ToWorld(Street->GetLayout().Entry + FVector(0, 0, 120)), ASovStreetScene::Facing(), Params);
 	Walker->SetColor(SovPlayerColor(G, Me()));
 	MapPawn = GetPawn();
 	Possess(Walker);
-	SetControlRotation(FRotator(-15.f, 0.f, 0.f));
+	SetControlRotation(FRotator(-15.f, ASovStreetScene::Facing().Yaw, 0.f));  // toward the square
 	Chooser = EChooser::None;
 	Sub->LastMessage = FString::Printf(TEXT("You walk into %s. WASD to walk, hold right mouse to look, F to talk, Esc to return."),
 		*Street->GetLayout().CityName);
@@ -2100,7 +2100,7 @@ void ASovPlayerController::UpdateStreet(float DeltaTime)
 				Street->Destroy();
 				FActorSpawnParameters Params;
 				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-				Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), FRotator::ZeroRotator, Params);
+				Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), ASovStreetScene::Facing(), Params);
 				Street->Build(BuildStreetLayout(Subsystem()->GetGame(), L.CityId));
 				Walker->SetActorLocation(Street->GetActorLocation() + Keep);
 				Subsystem()->LastMessage = St == sov::Stance::Benevolence ? TEXT("The petitioners bless your name. (+amenities)")
