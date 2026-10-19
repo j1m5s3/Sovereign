@@ -36,7 +36,7 @@ FLinearColor Srgb(uint8 R, uint8 G, uint8 B)
 FLinearColor BaseColor(const std::string& Base)
 {
 	if (Base == "GRASSLAND") return Srgb(86, 140, 58);
-	if (Base == "PLAINS") return Srgb(166, 160, 84);
+	if (Base == "PLAINS") return Srgb(148, 142, 78);
 	if (Base == "DESERT") return Srgb(222, 200, 132);
 	if (Base == "TUNDRA") return Srgb(132, 128, 108);
 	if (Base == "SNOW") return Srgb(236, 240, 244);

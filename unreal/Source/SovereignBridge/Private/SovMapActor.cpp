@@ -36,8 +36,14 @@ struct FSection
 	}
 	int32 Vert(const FVector& P, const FVector& N)
 	{
+		return Vert(P, N, Paint);
+	}
+	// With its own colour (the detail tile stays the section's: alpha is never blended within a triangle).
+	int32 Vert(const FVector& P, const FVector& N, FColor Color)
+	{
+		Color.A = Paint.A;
 		Normals.Add(N);
-		Colors.Add(Paint);
+		Colors.Add(Color);
 		UVs.Add(FVector2D(P.Y + P.Z * 0.5, P.Z * 0.5 - P.X) / 170.0);
 		return Vertices.Add(P);
 	}
@@ -374,29 +380,43 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	};
 	auto PointKey = [](const FVector2D& P) { return FIntPoint(FMath::RoundToInt(P.X * 2.0), FMath::RoundToInt(P.Y * 2.0)); };
 	TMap<FIntPoint, FVector2D> Shared;  // sum of heights, count of plots
-	auto Share = [&](const FVector2D& Center, double Z) {
+	// Colours meet the same way: a plot's flat top keeps its own colour and its slope fades to the mean colour of the
+	// plots at each point of its outline, so neighbouring terrains blend instead of meeting at a hard hex edge.
+	TMap<FIntPoint, FLinearColor> SharedColor;  // sum of colours (A: count)
+	auto ShownColor = [](const FSovTile& Tile) { return Tile.bVisible ? Tile.Color : Tile.Color * FogFactor; };
+	const FLinearColor Parchment(0.2f, 0.17f, 0.12f);
+	auto Share = [&](const FVector2D& Center, double Z, const FLinearColor& Color) {
 		FVector2D Pts[12];
 		Outline(Center, Pts);
 		for (const FVector2D& P : Pts)
 		{
 			FVector2D& S = Shared.FindOrAdd(PointKey(P), FVector2D::ZeroVector);
 			S += FVector2D(Z, 1.0);
+			FLinearColor& C = SharedColor.FindOrAdd(PointKey(P), FLinearColor(0, 0, 0, 0));
+			C += FLinearColor(Color.R, Color.G, Color.B, 1.f);
 		}
 	};
-	for (const FSovTile& Tile : Mirror.Tiles) Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief));
-	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0);
+	for (const FSovTile& Tile : Mirror.Tiles) Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief), ShownColor(Tile));
+	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0, Parchment);
+	// A little painted variation over the flat tops, so a run of one terrain is not one flat colour.
+	auto Mottle = [](const FVector& P, const FLinearColor& C) {
+		const double V = FMath::Sin(P.X * 0.0071 + P.Y * 0.0043) * FMath::Sin(P.Y * 0.0067 - P.X * 0.0029) + 0.5 * FMath::Sin(P.X * 0.019 + P.Y * 0.023);
+		return C * static_cast<float>(1.0 + 0.07 * V);
+	};
+	auto Bytes = [](const FLinearColor& C) { return KitPaint(C, 0); };
 
 	for (const FSovTile& Tile : Mirror.Tiles)
 	{
 		const double Top = ReliefHeight(Tile.Relief);
 		Heights[Tile.Y * Mirror.Width + Tile.X] = Top;
-		const FLinearColor Color = Tile.bVisible ? Tile.Color : Tile.Color * FogFactor;
+		const FLinearColor Color = ShownColor(Tile);
 		FSection& S = SectionFor(FLinearColor(Color.R, Color.G, Color.B, 1.f), Tile.Detail);
 
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
 		FVector2D Pts[12];
 		Outline(Center, Pts);
 		FVector Outer[12], Inner[12];
+		FColor OuterPaint[12], InnerPaint[12];
 		bool bAlone[12];
 		for (int32 k = 0; k < 12; ++k)
 		{
@@ -404,25 +424,31 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 			bAlone[k] = Sum.Y <= 1.0;
 			Outer[k] = SovHex::ToWorld(Pts[k], Sum.Y > 0.0 ? Sum.X / Sum.Y : Top);
 			Inner[k] = SovHex::ToWorld(Center + (Pts[k] - Center) * Plateau, Top);
+			const FLinearColor Tint = SharedColor.FindRef(PointKey(Pts[k]));
+			const FLinearColor Mean = Tint.A > 0.f ? Tint / Tint.A : Color;
+			OuterPaint[k] = Bytes(Mean);
+			// The flat top already leans toward its neighbours at its rim: the blend spans the plot, not just its slope.
+			InnerPaint[k] = Bytes(Mottle(Inner[k], FMath::Lerp(Color, Mean, 0.45f)));
 		}
 		// The flat top.
 		const FVector Up(0, 0, 1);
-		const int32 Mid = S.Vert(SovHex::ToWorld(Center, Top), Up);
+		const FVector Mid3 = SovHex::ToWorld(Center, Top);
+		const int32 Mid = S.Vert(Mid3, Up, Bytes(Mottle(Mid3, Color)));
 		int32 Ring[12];
-		for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up);
+		for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up, InnerPaint[k]);
 		for (int32 k = 0; k < 12; ++k) S.Tri(Mid, Ring[k], Ring[(k + 1) % 12]);
-		// The slope to the neighbours, each face lit by its own normal.
-		auto Face = [&](const FVector& A, const FVector& B, const FVector& C) {
+		// The slope to the neighbours, each face lit by its own normal, its colour fading to theirs.
+		auto Face = [&](const FVector& A, FColor CA, const FVector& B, FColor CB, const FVector& C, FColor CC) {
 			FVector N = FVector::CrossProduct(B - A, C - A).GetSafeNormal();
 			if (N.Z < 0.0) N = -N;
 			if (N.IsNearlyZero()) N = Up;
-			S.Tri(S.Vert(A, N), S.Vert(B, N), S.Vert(C, N));
+			S.Tri(S.Vert(A, N, CA), S.Vert(B, N, CB), S.Vert(C, N, CC));
 		};
 		for (int32 k = 0; k < 12; ++k)
 		{
 			const int32 n = (k + 1) % 12;
-			Face(Inner[k], Inner[n], Outer[n]);
-			Face(Inner[k], Outer[n], Outer[k]);
+			Face(Inner[k], InnerPaint[k], Inner[n], InnerPaint[n], Outer[n], OuterPaint[n]);
+			Face(Inner[k], InnerPaint[k], Outer[n], OuterPaint[n], Outer[k], OuterPaint[k]);
 		}
 		// At the edge of the drawn world (no plot beyond), a skirt down to the floor so the edge reads as solid.
 		for (int32 k = 0; k < 12; ++k)
