@@ -280,7 +280,7 @@ bool ASovStreetScene::BuildGround()
 	S.bOverride_VignetteIntensity = true;
 	S.ColorContrast = FVector4(1.12, 1.12, 1.12, 1.0);
 	S.ColorSaturation = FVector4(1.18, 1.18, 1.18, 1.0);
-	S.WhiteTemp = 5600.f;
+	S.WhiteTemp = 7600.f;  // above 6500 warms the image
 	S.AutoExposureBias = 0.3f;
 	S.VignetteIntensity = 0.35f;
 	Grade->RegisterComponent();
