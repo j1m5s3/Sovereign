@@ -276,6 +276,18 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 				DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.7f), L, BarY, W, 3.f);
 				DrawRect(FLinearColor(0.95f, 0.6f, 0.25f, 0.95f), L, BarY, W * Frac, 3.f);
 				BarY += 4.f;
+				// What it builds and in how many turns, on a tab at the banner's end (as Civ VI's banner shows it).
+				const int32 PerTurn = FMath::Max(1, static_cast<int32>(G.cityReport(C.Id).yields[static_cast<size_t>(sov::YieldType::Production)].toInt()));
+				const int32 Turns = FMath::Max(1, (FMath::Max(0, Cost - static_cast<int32>(Done.toInt())) + PerTurn - 1) / PerTurn);
+				const FString TurnText = FString::FromInt(Turns);
+				float TW = 0, TH = 0;
+				GetTextSize(TurnText, TW, TH, Font, 1.1f);
+				const float TabL = L + W + 2.f, TabW = H + TW + 8.f;
+				DrawRect(Edge, TabL - 1, T - 1, TabW + 2, H + 2);
+				DrawRect(Ink, TabL, T, TabW, H);
+				const FName Icon = Item.kind == sov::ProductionKind::Unit ? FName("strength") : Item.kind == sov::ProductionKind::District ? FName("streets") : FName("build");
+				if (UTexture2D* Tex = IconTexture(Icon)) DrawTexture(Tex, TabL + 2.f, T + 2.f, H - 4.f, H - 4.f, 0.f, 0.f, 1.f, 1.f, FLinearColor::White);
+				DrawText(TurnText, FLinearColor(0.95f, 0.75f, 0.4f), TabL + H + 2.f, T + (H - TH) / 2.f, Font, 1.1f);
 			}
 		}
 		if (C.MaxHp > 0 && C.Hp < C.MaxHp)
