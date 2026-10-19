@@ -64,6 +64,11 @@ private:
 	UStaticMeshComponent* AddPiece(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, float Yaw, const FLinearColor& Color);
 	// A kit mesh at true size, pivot on the ground; a non-white tint makes an owner-coloured instance.
 	UStaticMeshComponent* AddKitPiece(UStaticMesh* Mesh, const FVector& Location, float Yaw, const FLinearColor& Tint);
+	// The ground as one painted mesh (the art kit's material): paved plaza, cobbled streets, grass, and hills
+	// rising beyond the town to close the horizon. False without the art (the slab and primitives stand in).
+	bool BuildGround();
+	// The ground's height at a point (0 in the town, rising to the hills beyond it).
+	double GroundZ(double X, double Y) const;
 
 	struct FCitizen
 	{
@@ -79,6 +84,15 @@ private:
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Parts;
+
+	UPROPERTY()
+	TObjectPtr<class UProceduralMeshComponent> Ground;
+
+	UPROPERTY()
+	TObjectPtr<class UExponentialHeightFogComponent> Fog;
+
+	UPROPERTY()
+	TObjectPtr<class UPostProcessComponent> Grade;
 
 	UPROPERTY()
 	TMap<uint32, TObjectPtr<UMaterialInstanceDynamic>> Materials;

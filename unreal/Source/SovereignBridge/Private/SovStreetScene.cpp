@@ -8,6 +8,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "ProceduralMeshComponent.h"
+#include "Components/PostProcessComponent.h"
 
 #include "SovArt.h"
 
@@ -16,6 +19,29 @@ namespace
 uint32 ColorKey(const FLinearColor& C)
 {
 	return C.ToFColor(false).ToPackedRGBA();
+}
+
+// As the map's terrain (SovMapActor KitPaint): a linear colour as the bytes M_SovKit squares back, and the art kit's
+// detail tile in alpha (kitlib.PATTERNS: 7 stone, 9 roof tiles, which read as paving, 13 grass, 14 sand).
+FColor KitPaint(const FLinearColor& Linear, int32 Tile)
+{
+	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
+	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile / 15.f * 255.f)));
+}
+
+// Smooth value noise in about 0..1, from a few sines (deterministic, no state).
+double Noise(double X, double Y, double Scale)
+{
+	const double U = X / Scale, V = Y / Scale;
+	return 0.5 + 0.25 * FMath::Sin(U * 1.7 + FMath::Cos(V * 0.9)) * FMath::Cos(V * 1.3 - 0.7) + 0.15 * FMath::Sin(U * 3.1 + V * 2.3)
+		+ 0.1 * FMath::Cos(U * 5.3 - V * 4.1);
+}
+
+double SegmentDistance2D(const FVector2D& P, const FVector2D& A, const FVector2D& B)
+{
+	const FVector2D AB = B - A;
+	const double T = FMath::Clamp(FVector2D::DotProduct(P - A, AB) / FMath::Max(AB.SizeSquared(), 1.0), 0.0, 1.0);
+	return FVector2D::Distance(P, A + AB * T);
 }
 }  // namespace
 
@@ -142,14 +168,135 @@ UStaticMeshComponent* ASovStreetScene::AddKitPiece(UStaticMesh* Mesh, const FVec
 	return C;
 }
 
+double ASovStreetScene::GroundZ(double X, double Y) const
+{
+	const double R = Layout.Radius;
+	const double T = FMath::Clamp((FMath::Sqrt(X * X + Y * Y) - R * 0.97) / (R * 1.5), 0.0, 1.0);
+	return T * T * (3.0 - 2.0 * T) * (1500.0 + 2200.0 * Noise(X, Y, 4200.0));
+}
+
+bool ASovStreetScene::BuildGround()
+{
+	UMaterialInterface* Kit = SovArt::KitMaterial();
+	if (!Kit) return false;
+	double PlazaR = 0.0;
+	TArray<TPair<FVector2D, FVector2D>> Streets;
+	for (const FSovStreetPiece& P : Layout.Pieces)
+	{
+		if (P.Kind == ESovStreetPiece::Plaza) PlazaR = P.Size.X * 0.5;
+		if (P.Kind == ESovStreetPiece::Street)
+		{
+			const FVector2D Dir(FRotator(0.f, P.Yaw, 0.f).Vector());
+			const FVector2D Mid(P.Location);
+			Streets.Add({Mid - Dir * P.Size.X * 0.5, Mid + Dir * P.Size.X * 0.5});
+		}
+	}
+	// A grid finer in the town than in the hills: x = Extent * sign(u) * |u|^1.7 for u evenly spaced in -1..1.
+	const int32 N = 230;
+	const double Extent = Layout.Radius * 3.2;
+	TArray<double> Axis;
+	for (int32 i = 0; i <= N; ++i)
+	{
+		const double U = -1.0 + 2.0 * i / N;
+		Axis.Add(Extent * FMath::Sign(U) * FMath::Pow(FMath::Abs(U), 1.7));
+	}
+	TArray<FVector> Vertices;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UVs;
+	TArray<FColor> Colors;
+	TArray<int32> Triangles;
+	for (int32 j = 0; j <= N; ++j)
+	{
+		for (int32 i = 0; i <= N; ++i)
+		{
+			const double X = Axis[i], Y = Axis[j];
+			const double Z = GroundZ(X, Y);
+			Vertices.Add(FVector(X, Y, Z));
+			const double E = 50.0;
+			Normals.Add(FVector(GroundZ(X - E, Y) - GroundZ(X + E, Y), GroundZ(X, Y - E) - GroundZ(X, Y + E), 2.0 * E).GetSafeNormal());
+			UVs.Add(FVector2D(X, Y) / 160.0);
+			// What the ground is here: paving in the square, cobbles down the streets with dirt at their edges, grass
+			// that dries toward the hills.
+			const double R = FMath::Sqrt(X * X + Y * Y);
+			double DStreet = 1e9;
+			for (const TPair<FVector2D, FVector2D>& S : Streets) DStreet = FMath::Min(DStreet, SegmentDistance2D(FVector2D(X, Y), S.Key, S.Value));
+			const float Var = static_cast<float>(0.88 + 0.24 * Noise(X, Y, 700.0));
+			FColor C;
+			if (R < PlazaR - 90.0) C = KitPaint(FLinearColor(0.36f, 0.31f, 0.25f) * Var, 9);
+			else if (R < PlazaR + 30.0) C = KitPaint(FLinearColor(0.2f, 0.19f, 0.17f), 7);  // the kerb round the square
+			else if (DStreet < 240.0) C = KitPaint(FLinearColor(0.27f, 0.24f, 0.2f) * Var, 7);
+			else if (DStreet < 340.0) C = KitPaint(FLinearColor(0.25f, 0.18f, 0.11f) * Var, 14);
+			else
+			{
+				const float Dry = static_cast<float>(FMath::Clamp(Z / 2500.0, 0.0, 1.0));
+				const FLinearColor Lush(0.1f, 0.2f, 0.05f), Sere(0.26f, 0.25f, 0.11f);
+				C = KitPaint(FMath::Lerp(Lush, Sere, Dry * 0.7f + 0.3f * static_cast<float>(Noise(Y, X, 1500.0))) * Var, 13);
+			}
+			Colors.Add(C);
+		}
+	}
+	for (int32 j = 0; j < N; ++j)
+	{
+		for (int32 i = 0; i < N; ++i)
+		{
+			const int32 A = j * (N + 1) + i, B = A + 1, Cn = A + N + 1, D = Cn + 1;
+			Triangles.Append({A, Cn, B, B, Cn, D});
+		}
+	}
+	Ground = NewObject<UProceduralMeshComponent>(this);
+	Ground->SetupAttachment(RootComponent);
+	Ground->RegisterComponent();
+	Ground->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, Colors, TArray<FProcMeshTangent>(), true);
+	Ground->SetMaterial(0, Kit);
+	Ground->SetCollisionProfileName(TEXT("BlockAll"));
+	// Woods on the hills round the town, and a haze that softens the distance.
+	for (int32 k = 0; k < 140; ++k)
+	{
+		const double A = Rng.FRandRange(0.f, 2.f * PI);
+		const double R = Layout.Radius * Rng.FRandRange(1.05f, 2.6f);
+		const FVector At(R * FMath::Cos(A), R * FMath::Sin(A), 0.0);
+		if (UStaticMesh* Tree = SovArt::Mesh(TEXT("Nature"), Rng.FRand() < 0.6f ? TEXT("Tree_Broadleaf") : TEXT("Tree_Conifer")))
+		{
+			UStaticMeshComponent* T = AddKitPiece(Tree, FVector(At.X, At.Y, GroundZ(At.X, At.Y) - 20.0), Rng.FRandRange(0.f, 360.f), FLinearColor::White);
+			T->SetRelativeScale3D(FVector(Rng.FRandRange(1.3f, 2.2f)));
+			T->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+	Fog = NewObject<UExponentialHeightFogComponent>(this);
+	Fog->SetupAttachment(RootComponent);
+	Fog->SetFogDensity(0.008f);
+	Fog->SetFogHeightFalloff(0.08f);
+	Fog->SetStartDistance(2500.f);
+	Fog->SetFogInscatteringColor(FLinearColor(0.62f, 0.66f, 0.72f));
+	Fog->RegisterComponent();
+	// A warm, fuller grade for the street (the map keeps its own look): more contrast and colour, a late-afternoon
+	// white balance, a touch brighter for the darker paving and grass.
+	Grade = NewObject<UPostProcessComponent>(this);
+	Grade->SetupAttachment(RootComponent);
+	Grade->bUnbound = true;
+	Grade->Priority = 1.f;
+	FPostProcessSettings& S = Grade->Settings;
+	S.bOverride_ColorContrast = S.bOverride_ColorSaturation = S.bOverride_WhiteTemp = S.bOverride_AutoExposureBias = true;
+	S.bOverride_VignetteIntensity = true;
+	S.ColorContrast = FVector4(1.12, 1.12, 1.12, 1.0);
+	S.ColorSaturation = FVector4(1.18, 1.18, 1.18, 1.0);
+	S.WhiteTemp = 5600.f;
+	S.AutoExposureBias = 0.3f;
+	S.VignetteIntensity = 0.35f;
+	Grade->RegisterComponent();
+	return true;
+}
+
 void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 {
 	Layout = InLayout;
 	Rng.Initialize(Layout.CityId * 7919 + 17);
-	// Ground: a large slab under the hex (BasicShapes are 100 cm cubes).
-	AddPiece(CubeMesh, FVector(0, 0, -50), FVector(Layout.Radius * 2.2 / 100.0, Layout.Radius * 2.2 / 100.0, 1.0), 0.f, FLinearColor(0.32f, 0.45f, 0.24f));
+	// Ground: one painted mesh with the art kit; without it, a large slab under the hex (BasicShapes are 100 cm cubes).
+	const bool bGround = BuildGround();
+	if (!bGround) AddPiece(CubeMesh, FVector(0, 0, -50), FVector(Layout.Radius * 2.2 / 100.0, Layout.Radius * 2.2 / 100.0, 1.0), 0.f, FLinearColor(0.32f, 0.45f, 0.24f));
 	for (const FSovStreetPiece& P : Layout.Pieces)
 	{
+		if (bGround && (P.Kind == ESovStreetPiece::Plaza || P.Kind == ESovStreetPiece::Street)) continue;  // painted into the ground
 		const FVector Scale = P.Size / 100.0;
 		// Kit meshes when the art has been built (tools/art); primitives otherwise.
 		// Houses and the Palace in the owner's era's style (SovArt::EraPiece); here the Landmark stands for other
