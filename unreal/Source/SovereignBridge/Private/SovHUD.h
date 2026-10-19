@@ -44,6 +44,8 @@ protected:
 	void Line(const FString& Text, float X, float& Y, const FLinearColor& Color = FLinearColor::White);
 	// A UI icon (unreal/Content/Slate/Icons) as a texture for the canvas, loaded once.
 	class UTexture2D* IconTexture(FName Name);
+	// An image under Content/Slate/<Folder>/ (Icons, Resources), loaded once.
+	class UTexture2D* SlateTexture(const TCHAR* Folder, const FString& Name);
 
 	UPROPERTY()
 	TMap<FName, TObjectPtr<class UTexture2D>> Icons;

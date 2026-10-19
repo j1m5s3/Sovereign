@@ -276,6 +276,19 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 			DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), L, BarY, W * Frac, 4.f);
 		}
 	}
+	// Resources (as Civ VI): each one the viewer can see as its icon on a badge of its class's colour
+	// (tools/ui/resource_icons.py), floating over the west side of its plot, clear of units in the middle.
+	for (const FSovTile& T : M.Tiles)
+	{
+		if (T.ResourceClass == 0 || T.Resource.IsEmpty()) continue;
+		UTexture2D* Tex = SlateTexture(TEXT("Resources"), T.Resource.Replace(TEXT("RESOURCE_"), TEXT("")).ToLower());
+		if (!Tex) continue;
+		const FVector At = Project(NearCamera(PlayerOwner, SovHex::Center(T.X, T.Y, 45.0) + SovHex::ToWorld(FVector2D(-48.0, 0.0), 0.0)));
+		if (At.Z <= 0) continue;
+		const float S = 26.f;
+		const float Fade = T.bVisible ? 1.f : 0.6f;
+		DrawTexture(Tex, At.X - S / 2, At.Y - S / 2, S, S, 0.f, 0.f, 1.f, 1.f, FLinearColor(Fade, Fade, Fade, 1.f));
+	}
 	for (const FSovUnitMarker& U : M.Units)
 	{
 		if (U.bLeader)
@@ -330,17 +343,19 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 
 UTexture2D* ASovHUD::IconTexture(FName Name)
 {
-	if (Name.IsNone())
-	{
-		return nullptr;
-	}
-	if (const TObjectPtr<UTexture2D>* Found = Icons.Find(Name))
+	return Name.IsNone() ? nullptr : SlateTexture(TEXT("Icons"), Name.ToString());
+}
+
+UTexture2D* ASovHUD::SlateTexture(const TCHAR* Folder, const FString& Name)
+{
+	const FName Key(*(FString(Folder) / Name));
+	if (const TObjectPtr<UTexture2D>* Found = Icons.Find(Key))
 	{
 		return Found->Get();
 	}
-	const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Slate/Icons") / (Name.ToString() + TEXT(".png")));
+	const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Slate") / Folder / (Name + TEXT(".png")));
 	UTexture2D* Tex = FImageUtils::ImportFileAsTexture2D(File);
-	Icons.Add(Name, Tex);  // a missing file is remembered as null, so it is not looked for every frame
+	Icons.Add(Key, Tex);  // a missing file is remembered as null, so it is not looked for every frame
 	return Tex;
 }
 
