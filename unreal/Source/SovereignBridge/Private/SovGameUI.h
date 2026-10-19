@@ -110,6 +110,8 @@ struct FSovUIModel
 	TArray<FString> EndScores;     // "Egypt (Ramesses II)|812", best first
 	TArray<FString> EndChronicle;  // the reign's key lines, latest last
 	TSharedPtr<const FSovGraphData> EndGraphs;  // each civ's figures over the game, beside the chronicle
+	// The advisor's tip for a new player (empty: none): what to do next, in a card under the top bar.
+	FString TipTitle, TipText;
 	// A page to read over the map: how to play (F1) or the chronicle (F4).
 	bool bReader = false;
 	FString ReaderTitle, ReaderFoot;
@@ -155,6 +157,7 @@ public:
 	SLATE_EVENT(TDelegate<void(int32)>, OnNotice)   // a notification clicked
 	SLATE_EVENT(TDelegate<void(int32)>, OnDismiss)  // a notification's X
 	SLATE_EVENT(TDelegate<void()>, OnEndClose)      // look at the map after the game
+	SLATE_EVENT(TDelegate<void(bool)>, OnTip)       // the advisor's tip put aside (true: no more tips)
 	SLATE_EVENT(TDelegate<void(int32)>, OnGovAdopt)
 	SLATE_EVENT(TDelegate<void(int32)>, OnGovSlot)
 	SLATE_EVENT(TDelegate<void(int32)>, OnGovCard)
@@ -220,6 +223,7 @@ private:
 	TDelegate<void(int32)> OnLens;
 	TDelegate<void(FVector2D)> OnMinimap;
 	TDelegate<void()> OnEndClose;
+	TDelegate<void(bool)> OnTip;
 	FString NoticesKey;
 	TSharedPtr<SSovTreeView> TreeView;
 	bool bTreeWasOpen = false;  // to scroll the tree to the current node each time it opens
