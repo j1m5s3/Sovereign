@@ -144,6 +144,5 @@ GitHub CI has no Unreal; it builds the core standalone and checks the wrapper li
 
 ## Not yet
 
-- Sound: there is none yet (music, ambience and effects wait on a direction).
 - City centres and districts follow the six architectural styles only until the Industrial era (then every civ shares the Industrial and Modern kits). Spearmen, archers and horsemen wear their culture's dress; musketeers and later units, and improvements, are one look for every civ. Natural wonders are drawn by kind, and Stonehenge and the Hanging Gardens by their kind's model.
 - Live battles draw each side's men as its unit's figure (spearman, archer, musketeer, rifleman, horseman, in their culture's dress where they have one; siege engines and tanks among their crews), in online views and replays too.

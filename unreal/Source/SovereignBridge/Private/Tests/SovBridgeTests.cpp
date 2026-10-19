@@ -13,6 +13,7 @@
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
 #include "SovArt.h"
+#include "Sound/SoundWave.h"
 #include "SovDiplomacy.h"
 #include "sovereign_net/session.h"
 #include "HAL/FileManager.h"
@@ -538,6 +539,23 @@ bool FSovArtAssetsTest::RunTest(const FString& Parameters)
 	}
 	TestNotNull(TEXT("kit material"), SovArt::KitMaterial());
 	TestNotNull(TEXT("palace mesh"), SovArt::Mesh(TEXT("Classical"), TEXT("Palace")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovAudioAssetsTest, "Sovereign.Art.SoundsLoad", kSovTestFlags)
+bool FSovAudioAssetsTest::RunTest(const FString& Parameters)
+{
+	// Every sound the game plays was made by tools/audio and loads; music and ambience loop.
+	for (const TCHAR* Name : {TEXT("SFX_Click"), TEXT("SFX_Select"), TEXT("SFX_EndTurn"), TEXT("SFX_NewTurn"), TEXT("SFX_FoundCity"), TEXT("SFX_Research"),
+			 TEXT("SFX_Civic"), TEXT("SFX_Clash"), TEXT("SFX_Bow"), TEXT("SFX_Gunshot"), TEXT("SFX_Cannon"), TEXT("SFX_March"), TEXT("SFX_Hooves"),
+			 TEXT("SFX_War"), TEXT("SFX_Era"), TEXT("SFX_Victory"), TEXT("SFX_Defeat"), TEXT("SFX_Build"), TEXT("SFX_Coins"), TEXT("AMB_Country"),
+			 TEXT("AMB_Town"), TEXT("AMB_Battle"), TEXT("MUS_Menu"), TEXT("MUS_Ancient"), TEXT("MUS_Classical"), TEXT("MUS_Medieval"), TEXT("MUS_Modern")})
+	{
+		const USoundWave* Wave = LoadObject<USoundWave>(nullptr, *FString::Printf(TEXT("/Game/Audio/%s.%s"), Name, Name));
+		if (!TestNotNull(*FString::Printf(TEXT("loads %s"), Name), Wave)) continue;
+		TestEqual(*FString::Printf(TEXT("%s loops"), Name), static_cast<bool>(Wave->bLooping), FString(Name).StartsWith(TEXT("MUS_")) || FString(Name).StartsWith(TEXT("AMB_")));
+		TestTrue(*FString::Printf(TEXT("%s has sound"), Name), Wave->Duration > 0.05f);
+	}
 	return true;
 }
 
