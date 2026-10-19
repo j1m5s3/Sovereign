@@ -70,19 +70,24 @@ const FSlateBrush* FSovStyle::Backdrop()
 	return Get().GetBrush("Backdrop");
 }
 
+const FSlateBrush* FSovStyle::Picture(const FString& Folder, const FString& Name, FVector2D Size)
+{
+	static TMap<FString, TSharedPtr<FSlateDynamicImageBrush>> Cache;
+	const FString Key = Folder / Name;
+	if (const TSharedPtr<FSlateDynamicImageBrush>* Found = Cache.Find(Key)) return Found->Get();
+	const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Slate") / Folder / (Name + TEXT(".png")));
+	TSharedPtr<FSlateDynamicImageBrush> Brush;
+	if (FPaths::FileExists(File)) Brush = MakeShared<FSlateDynamicImageBrush>(FName(*File), Size);
+	Cache.Add(Key, Brush);  // a missing picture is remembered as null
+	return Brush.Get();
+}
+
 const FSlateBrush* FSovStyle::Portrait(FName Figure)
 {
-	static TMap<FName, TSharedPtr<FSlateDynamicImageBrush>> Cache;
 	if (Figure.IsNone()) return nullptr;
-	if (const TSharedPtr<FSlateDynamicImageBrush>* Found = Cache.Find(Figure)) return Found->Get();
-	const FString Root = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Slate") / TEXT("Portraits"));
 	FString Name = Figure.ToString(), Plain;
-	FString File = Root / (Name + TEXT(".png"));
-	if (!FPaths::FileExists(File) && Name.Split(TEXT("_"), &Plain, nullptr)) File = Root / (Plain + TEXT(".png"));
-	TSharedPtr<FSlateDynamicImageBrush> Brush;
-	if (FPaths::FileExists(File)) Brush = MakeShared<FSlateDynamicImageBrush>(FName(*File), FVector2D(160.f, 160.f));
-	Cache.Add(Figure, Brush);  // a missing portrait is remembered as null
-	return Brush.Get();
+	if (const FSlateBrush* B = Picture(TEXT("Portraits"), Name, FVector2D(160.f, 160.f))) return B;
+	return Name.Split(TEXT("_"), &Plain, nullptr) ? Picture(TEXT("Portraits"), Plain, FVector2D(160.f, 160.f)) : nullptr;
 }
 
 const FSlateBrush* FSovStyle::Icon(FName Name)

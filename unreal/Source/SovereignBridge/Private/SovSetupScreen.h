@@ -30,6 +30,8 @@ public:
 private:
 	TSharedRef<SWidget> Option(const FString& Label, TFunction<FString()> Value, TFunction<void(int32)> Step);
 	FString CivText(int32 Civ) const;
+	// The picked civ's architectural style, as its cities will look (null for Random or without the picture).
+	const FSlateBrush* StyleView() const;
 	void Start();
 
 	TSharedPtr<const sov::Rules> Rules;

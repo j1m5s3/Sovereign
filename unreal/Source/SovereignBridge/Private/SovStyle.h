@@ -22,7 +22,9 @@ public:
 	static const FSlateBrush* Backdrop();
 	// A unit's portrait (Content/Slate/Portraits/<Figure>.png, tools/art/blender/unit_portraits.py): a culture's dress
 	// (Archer_Asian) falls back to the plain figure (Archer); null when there is none.
-	static const FSlateBrush* Portrait(FName Figure);   // the main menu's painted scene (tools/art/blender/backdrop.py)
+	static const FSlateBrush* Portrait(FName Figure);
+	// A picture from Content/Slate/<Folder>/<Name>.png at its drawn size, loaded once; null when there is none.
+	static const FSlateBrush* Picture(const FString& Folder, const FString& Name, FVector2D Size);   // the main menu's painted scene (tools/art/blender/backdrop.py)
 	static const FButtonStyle& Button();    // plain button
 	static const FButtonStyle& Primary();   // the gold call-to-action (end turn)
 	static const FProgressBarStyle& Progress();  // plain bars the fill colour shows on
