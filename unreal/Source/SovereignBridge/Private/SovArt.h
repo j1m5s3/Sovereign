@@ -36,6 +36,9 @@ bool SetRiggedFigure(class USkeletalMeshComponent* Component, const FString& Nam
 // A civ's architectural style (leaders-and-art-style.md) by its rules id: European, Mediterranean, MiddleEast,
 // Asian, African or American (Mediterranean for anything else).
 const TCHAR* CivStyle(const FString& CivId);
+// A civ's leader as themselves (tools/art/blender/kit_leaders.py): Leader_ENGLAND for CIVILIZATION_ENGLAND; the generic
+// ruler (Leader) for city-states and civs without one. The mesh, rig and portrait all go by this name.
+FString LeaderFigure(const FString& CivId);
 // A Classical kit city piece (Palace, Landmark, House_A/B/C) in a civ's style and era (Game::playerEra), the Landmark
 // becoming its Hall. Until the Industrial era: the Styles kit's piece for Middle Eastern, Asian, African and American
 // civs (kit_styles.py), the Towns kit's Medieval piece for European ones, and for Mediterranean ones the Classical

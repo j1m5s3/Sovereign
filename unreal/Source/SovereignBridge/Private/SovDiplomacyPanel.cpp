@@ -79,7 +79,7 @@ void SSovDiplomacyPanel::Construct(const FArguments& InArgs)
 									[SNew(SImage).Image(FSovStyle::Picture(TEXT("Styles"), SovArt::CivStyle(Args._CivId), FVector2D(640.f, 360.f)))]]
 								+ SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.25f))]
 								+ SOverlay::Slot().VAlign(VAlign_Bottom).HAlign(HAlign_Center)
-								[SNew(SBox).WidthOverride(240.f).HeightOverride(240.f)[SNew(SImage).Image(FSovStyle::Portrait(FName("Leader")))]]
+								[SNew(SBox).WidthOverride(240.f).HeightOverride(240.f)[SNew(SImage).Image(FSovStyle::Portrait(FName(*SovArt::LeaderFigure(Args._CivId))))]]
 							]
 						]
 					]

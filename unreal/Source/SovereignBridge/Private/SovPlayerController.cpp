@@ -1794,7 +1794,7 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	if (!bRemoteView) Recording.Frames.push_back(Sim.Snapshot().Encode());
 	const FVector2D Start = Sim.LeaderIndex() != INDEX_NONE ? Sim.Soldiers()[Sim.LeaderIndex()].Pos : FVector2D(Spec.HumanSide == 0 ? -2300.f : 2300.f, 0.f);
 	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
-	Walker->SetColor(SovPlayerColor(G, Me()));
+	Walker->SetColor(SovPlayerColor(G, Me()), SovCultureFigure(G, Me(), FName("Leader")).ToString());
 	Walker->GetCharacterMovement()->DisableMovement();  // the simulation moves the leader
 	MapPawn = GetPawn();
 	Possess(Walker);
@@ -2015,7 +2015,7 @@ void ASovPlayerController::EnterStreet()
 	Street = GetWorld()->SpawnActor<ASovStreetScene>(ASovStreetScene::Origin(), ASovStreetScene::Facing(), Params);
 	Street->Build(BuildStreetLayout(G, City->id));
 	Walker = GetWorld()->SpawnActor<ASovWalker>(Street->ToWorld(Street->GetLayout().Entry + FVector(0, 0, 120)), ASovStreetScene::Facing(), Params);
-	Walker->SetColor(SovPlayerColor(G, Me()));
+	Walker->SetColor(SovPlayerColor(G, Me()), SovCultureFigure(G, Me(), FName("Leader")).ToString());
 	MapPawn = GetPawn();
 	Possess(Walker);
 	SetControlRotation(FRotator(-15.f, ASovStreetScene::Facing().Yaw, 0.f));  // toward the square
