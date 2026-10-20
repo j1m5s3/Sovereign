@@ -58,6 +58,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> Highlight;
+	// The selected plot's ring: its six sides.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> HighlightRing;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> UnitMarkers;

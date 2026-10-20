@@ -32,16 +32,17 @@ FLinearColor Srgb(uint8 R, uint8 G, uint8 B)
 	return FLinearColor::FromSRGBColor(FColor(R, G, B));
 }
 
-// Plain-map palette keyed by the terrain's climate base (presentation only).
+// Plain-map palette keyed by the terrain's climate base (presentation only): a bright, warm painted map (James's picture,
+// plan G step 3): warm olive and yellow-green grass, golden plains and desert, light-cyan shallows, dark-teal deep sea.
 FLinearColor BaseColor(const std::string& Base)
 {
-	if (Base == "GRASSLAND") return Srgb(86, 140, 58);
-	if (Base == "PLAINS") return Srgb(148, 142, 78);
-	if (Base == "DESERT") return Srgb(222, 200, 132);
-	if (Base == "TUNDRA") return Srgb(132, 128, 108);
+	if (Base == "GRASSLAND") return Srgb(118, 152, 58);
+	if (Base == "PLAINS") return Srgb(170, 160, 90);
+	if (Base == "DESERT") return Srgb(228, 202, 136);
+	if (Base == "TUNDRA") return Srgb(150, 142, 112);
 	if (Base == "SNOW") return Srgb(236, 240, 244);
-	if (Base == "COAST") return Srgb(64, 132, 186);
-	if (Base == "OCEAN") return Srgb(26, 62, 128);
+	if (Base == "COAST") return Srgb(77, 144, 171);
+	if (Base == "OCEAN") return Srgb(12, 61, 79);
 	return Srgb(255, 0, 255);
 }
 
@@ -218,6 +219,7 @@ FSovMirror BuildMirror(const sov::Game& Game, int32 Viewer)
 		T.bVisible = V == sov::Visibility::Visible;
 		const sov::Plot Pl = SeenPlot(Game, View, H);
 		T.Color = PlotColor(Rules, Pl, T.Relief);
+		T.bShallow = Rules.terrains[static_cast<size_t>(Pl.terrain)].water && Rules.terrains[static_cast<size_t>(Pl.terrain)].shallowWater;
 		if (Pl.feature != sov::kNone)
 		{
 			const std::string& Id = Rules.features[static_cast<size_t>(Pl.feature)].id;

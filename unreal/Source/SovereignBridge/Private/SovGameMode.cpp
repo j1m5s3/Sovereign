@@ -36,9 +36,10 @@ void ASovGameMode::SpawnLighting()
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	// A late-morning sun from behind the default views (cameras look north, +X), a little low and warm so the relief,
+	// A late-morning sun from behind the camera and to its left (cameras look north, +X), front-lighting the map as James's
+	// picture does, a little low and warm so the relief,
 	// the trees and the towns cast shadows that read, as Civ VI's map is lit.
-	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-40.f, -145.f, 0.f), Params);
+	ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector::ZeroVector, FRotator(-45.f, 30.f, 0.f), Params);
 	if (UDirectionalLightComponent* L = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
 	{
 		L->SetMobility(EComponentMobility::Movable);

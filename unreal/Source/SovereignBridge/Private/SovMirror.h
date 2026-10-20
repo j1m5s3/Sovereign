@@ -25,6 +25,7 @@ struct FSovTile
 	ESovRelief Relief = ESovRelief::Flat;
 	bool bVisible = false;  // false: revealed earlier, drawn fogged
 	bool bWoods = false;    // woods or rainforest: trees on the tile
+	bool bShallow = false;  // coast water (lighter), not the deep sea
 	// The art kit's detail tile its ground wears (tools/art/blender/kitlib.py PATTERNS): water 12, grass 13, sand 14,
 	// stone 7 (hills, mountains), foliage 10 (woods), plaster 8 (tundra, snow).
 	uint8 Detail = 8;
