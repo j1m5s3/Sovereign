@@ -1,6 +1,6 @@
 # Plans: city sites, playtest readiness, player retention, then the player-facing UI (step 6, "everything else")
 
-Status: active, 2026-10-08. Previous: `jit_history/2026-10-07-ai-planner.md`. James asked for the playtest work to be added to the plans and the work to keep going. Plan A is done; plan B is done except James's hands-on game; plan C is done (2026-10-08: with James's order list finished, I picked the decided retention features as the next work); plan D, the player-facing UI, is active (James, 2026-10-09: "start UI"); all six steps are done; plan E (UI polish) is next.
+Status: active, 2026-10-20. Previous: `jit_history/2026-10-07-ai-planner.md`. Plans A to E are done. Plan F, the fixes from James's first playtest (2026-10-19) and his three picks after it, is done too; a packaged build of main is in `C:\source\games\Sovereign-playtest\Windows\Sovereign.exe` (unreal/README.md, A packaged build). Next: James's second playtest; fix what he reports.
 
 ## Plan A: city sites and expansion (done)
 
@@ -26,7 +26,7 @@ At turn 200 the AI held about 7.7 cities a civ on a Small map, where Civ VI usua
 
 **Dropped:** more scouting. Building a Scout early delays the first Settlers, and wider exploring lost cities in every variant.
 
-## Plan B: ready for a playtest (active)
+## Plan B: ready for a playtest (done)
 
 The game can be played end to end from the Unreal menu, but the map and controls make a playtest hard (unreal/README.md "Not yet", checked against the code on 2026-10-07).
 
@@ -37,10 +37,10 @@ The game can be played end to end from the Unreal menu, but the map and controls
 5. **Playtest pass.**
    - **Done: automated playthrough.** `Sovereign.Bridge.HumanSeatPlaysLongGame` plays seat 0 as a newcomer for two games to turn 250 through what the controller offers, saving and resuming every 50 turns. It found no End Turn dead end. It did find that a game had no way out: there was no in-game menu, so after a victory or elimination the only exit was closing the window. `Esc` with nothing selected now opens the menu over the game (resume, save, continue, new game, quit). `F2` was missing from the README.
    - Seed 7's newcomer, who fortifies every unit, lost its only city (London, population 3) to AI seat 3 on turn 129. That is the AI taking a weak one-city neighbour, not a bug.
-   - **Next: James plays.** A hands-on game from the menu; fix what he reports.
+   - **Done: James plays.** His first hands-on game (2026-10-19) became plan F.
 6. **Done: east-west wrap drawn.** The map actor draws a copy of itself a map's width to the west and east (`ASovMapActor::SyncGhosts`). The camera's focus stays within one copy, so panning past an edge carries on into the other. `LookAt` and the HUD's labels use the copy nearest the camera (`SovHex::NearestCopy`), and rivers, borders and roads across the wrap are drawn rather than skipped. Picking already wrapped through `HexGrid::normalize`. Checked in the game at column 0 of seed 7.
 
-## Plan C: player retention (active)
+## Plan C: player retention (done)
 
 The decided feature list in `specs/sovereign/player-retention.md` (James, 2026-10-04), in this order: what a playtest feels first, then what builds on the player profiles already carried between games.
 
@@ -72,7 +72,7 @@ Today the game is played through a text HUD and numbered lists (1-9 pick, 0 next
 5. **Done: setup, end-of-game and settings screens.** *Setup* (`SSovSetupScreen`, from the menu's New game (was Single player); `-SovSetup` opens it at launch): the twelve civs and Random, each with its leader and leaning; the civ ability, leader ability, uniques, agenda and heirs in words (new `text` and `uniquesText` fields in `civilizations.json`, read into `CivAbility::text` and `CivType::uniquesText`; the rules checksum in the golden file moved, the state hash did not); map size, civilizations, difficulty, length, start era, natural disasters, Barbarian Clans, Monopolies, rival memory and a fresh map seed. `FSovSetup` gained `Civ`, `Disasters`, `bClans` and `bMonopolies` (`-SovCiv=`); seat 0 takes the picked civ and the others the roster without it. Up/Down/Enter/Esc work there too. *End of game* (in `SSovGameUI`): Victory or Defeat, who won and how, every civ's score and the player's chronicle, with Look at the map, Write the chronicle (F6) and Main menu; also when the player is eliminated. *Settings* (`SSovSettingsScreen`, from the menu; `-SovSettings`): graphics quality, window mode, resolution, vsync, frame limit and interface scale (kept in GameUserSettings, the scale restored at start), and the controls as a reference list. Not done: sound (there is none yet) and key rebinding (keys are fixed in the controller). Checked in the game: picking Egypt by keys and starting as Egypt; the end screen after an AI-only Short Reign duel; the settings screen.
 6. **Done: lenses and minimap.** `SovLens.*` recolours the revealed plots for one lens and fills a legend: religion (each city's majority, one colour per religion), loyalty (red to green by the city's loyalty), appeal (five bands), settler (where `canFoundCityAt` allows a city) and trade (the viewer's routes and their cities). The lens is this machine's view, kept in the subsystem; the game mode applies it when it redraws the map. Lens buttons sit above the minimap (click again to clear), and F7 steps through them. The minimap (`SSovMinimap`, `SovMinimap.*`) shows every revealed plot in its owner's colour (or the lens's), fogged plots darker, with a frame where the camera looks; a click or drag moves the camera. Checked in an AI-only duel: the minimap, and the religion, loyalty and settler lenses with their legends.
 
-## Plan E: UI polish (done except sound, 2026-10-09)
+## Plan E: UI polish (done)
 
 With plan D done, the screenshots still show the canvas HUD's status block (a dozen lines of text over the map's top-left) and the gaps step 5 noted. I picked these next, most visible first (standing consent, 2026-10-05).
 
@@ -129,7 +129,7 @@ With plan D done, the screenshots still show the canvas HUD's status block (a do
 52. **Done: replays keep their figures.** A battle replay file (`.sovbattle`, version 2) stores each side's figure, so a replay shows archers, riders and culture dress as fought; version-1 files still play, as spearmen. Online views already worked out their own figures from their own game. The README's "Not yet" list now says what is left: units from the musketeer on, and improvements, are one look for every civ. Test: `RecordedBattleReplays` round-trips a figure.
 53. **Done: a counterspy's district.** The spy chooser now lets a counterspy guard any plot the core allows (`Command::spyMission`'s guard, from `2026-10-10-counterspy-district.md`). In a city with a finished district it lists the City Center and each finished district, and marks the one `Game::counterspyPlot` would pick ("covers most"). In a city with no districts there is one choice, as before. Built; not checked in the game (the desktop was in use).
 
-## Plan F: from James's first playtest (active, 2026-10-19)
+## Plan F: from James's first playtest (done, 2026-10-20)
 
 James played the build for a minute and said "lots of work left to be done", with standing orders to fix it without asking. I reviewed the game myself through offscreen screenshots (`-SovShots=<seconds>` with `-RenderOffscreen`, so nothing appears on his desktop) and work through what a new player sees first.
 
@@ -161,6 +161,12 @@ James played the build for a minute and said "lots of work left to be done", wit
 26. **Done: plot yields as icons.** A city's plots show each yield's icon and amount instead of "1F 2P".
 27. **Done: streets stand on their own land.** The ground round a town follows the city plot's climate (`FSovStreetLayout::Land`): green grassland, olive plains, desert sand with palms, tundra, snow.
 28. **Done: the sun at the player's back.** The street scene is turned half round (`ASovStreetScene::Facing`) and the battlefield turned for the side the player commands (`ASovBattleScene::FacingFor`), so the Palace and the armies ahead are lit instead of black against the map's sun; both scenes' `ToWorld` follow their transforms, and battle movement is turned into the field's frame (`ToField`).
+29. **Done: James's three picks (2026-10-20), in his order.** (1) The twelve leaders as themselves (`kit_leaders.py`: faces, headgear and dress, one team-coloured cloak or sash), on the map (`SovArt::LeaderFigure`), rigged for the streets and battles, and as portraits on the diplomacy, setup and unit screens. (2) Troops in their cultures' dress rigged (the spearman, archer and musketeer in four styles), and then the horsemen too (`rig_riders.py`: a horse skeleton with a four-beat walk, each planted hoof holding still). (3) The tech and civic trees show what each node unlocks as pictures (`unlock_icons.py`, `TreeIcons`).
+30. **Done: a playtest build.** `DefaultGame.ini` cooks `/Game/Art` and `/Game/Audio` (loaded by path, a first package had no art); `unreal/README.md` says how to package and that `data/` and `mods/` go beside the executable.
+31. **Done: the keys as bound.** The help, the first-game tips and the tooltips name each key as the player has rebound it (`SovKeys::Expand`); chat honours its rebinding.
+32. **Done: the challenge board from the game.** `sovereign_board` compiles into the Unreal core module; `SovBoard.*` submits a finished challenge to the board set in Settings (or `-SovBoard=`) and the menu shows the week's leaders.
+33. **Done: a ruler's name stays readable**, drawn after every unit's flag and tucked under the city's banner.
+34. **Checked on a live map** (an AI Short Reign from the Renaissance to a turn-75 Science victory): districts in their cultures' style, wonders as themselves, industrial towns, and the end screen with its graph tabs, all of which the earlier steps had only checked in Blender or the asset test.
 4. **Done: units large enough to read (#349).** People on the map at 0.4 (was 0.26), the ruler a little larger, vehicles, ships and the embark boat in proportion; flags stand over the taller figures.
 5. **Done: an advisor for the first turns (#351).** A card under the top bar gives one tip at a time on the player's turn: found the capital, choose research, moving units and ending the turn, the ruler as a unit, the city. "Got it" puts one aside, "No more tips" all of them (`GameUserSettings.ini`, `[Sovereign.Tips]`).
 6. **Done: offscreen review by script (#352).** `-SovPress=6:F,10:One,14:T` presses keys at so many seconds into a game, through the buttons' path, so with `-SovShots` and `-RenderOffscreen` the first turns can be played and screenshotted without a window on the desktop. Played ten turns that way: founding, production, research, civics and turn ends all work, and the tips follow the game.
@@ -169,4 +175,4 @@ James played the build for a minute and said "lots of work left to be done", wit
 
 Seen and left for now: a Major Drought struck on turn 2 of a review game (disasters are on by default); the notification column fills with historic moments in busy turns; game pace is #346's.
 
-Plan E is done except sound, which waits on a decision.
+Plan E is done: sound came with #357 (music, ambience and effects, all made by script).
