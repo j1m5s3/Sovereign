@@ -139,6 +139,11 @@ PEOPLE = {"Citizen": kit_figures.citizen, "Herald": kit_figures.herald, "Captain
           "Archer": kit_figures.archer, "Musketeer": kit_figures.musketeer, "Rifleman": kit_figures.rifleman}
 # Each civ's ruler as themselves (kit_leaders.py), walking the street and leading in battle.
 PEOPLE.update({"Leader_" + civ: make for civ, make in kit_leaders.LEADERS.items()})
+# Foot soldiers in their cultures' dress (kit_figures.py), marching in live battles as the plain ones do. Riders stay still:
+# this skeleton has no horse.
+for _arm in ("Soldier", "Archer", "Musketeer"):
+    for _style in ("MiddleEast", "Asian", "African", "American"):
+        PEOPLE["%s_%s" % (_arm, _style)] = getattr(kit_figures, "%s_%s" % (_arm.lower(), _style.lower()))
 FPS = 24
 CM = 100.0  # the rig is built in centimetres (see rig)
 
