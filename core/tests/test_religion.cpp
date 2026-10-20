@@ -282,6 +282,37 @@ TEST(theological_combat_needs_no_war) {
     CHECK_EQ(g->submit(Command::attack(0, apostle, {12, 6})), CommandError::CannotAttack);
 }
 
+// Unreal's declare-war prompt and the attack planner leave theological combat alone: it never waits on a war, and an
+// Apostle walks up to a foe of another religion as a soldier would.
+TEST(theological_combat_waits_on_no_war) {
+    GameState s = religionState();
+    s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});
+    s.religions.push_back({rules().religion("RELIGION_ISLAM"), 1, s.cities[2].id, {belief("BELIEF_PILGRIMAGE")}});
+    s.players[0].religion = 0;
+    s.players[1].religion = 1;
+    const UnitId apostle = addUnit(s, "UNIT_APOSTLE", 0, {13, 6});
+    s.units.back().religion = 0;
+    s.units.back().charges = 3;
+    const UnitId missionary = addUnit(s, "UNIT_MISSIONARY", 1, {15, 6});
+    s.units.back().religion = 1;
+    s.units.back().charges = 3;
+    auto g = Game::fromScenario(rules(), std::move(s));
+    REQUIRE(!g->atWar(0, 1));
+    // A Missionary is a Peacekeeper: no plot, and no war, lets it attack.
+    CHECK(!g->attackApproach(missionary, {13, 6}, false).has_value());
+    CHECK_EQ(static_cast<int>(g->warNeededToAttack(missionary, {13, 6}, false)), static_cast<int>(kNoPlayer));
+    CHECK_EQ(static_cast<int>(g->warNeededToAttack(apostle, {15, 6}, false)), static_cast<int>(kNoPlayer));
+    const std::optional<AttackApproach> a = g->attackApproach(apostle, {15, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, (Hex{14, 6}));
+    CHECK_EQ(static_cast<int>(a->war), static_cast<int>(kNoPlayer));
+    CHECK(a->attackOnArrival);
+    REQUIRE(g->submit(Command::move(0, apostle, a->plot)) == CommandError::Ok);
+    CHECK_EQ(static_cast<int>(g->warNeededToAttack(apostle, {15, 6}, false)), static_cast<int>(kNoPlayer));
+    CHECK_EQ(g->submit(Command::attack(0, apostle, {15, 6})), CommandError::Ok);
+    CHECK(!g->atWar(0, 1));
+}
+
 TEST(a_religion_followed_across_every_civ_wins) {
     GameState s = religionState();
     s.religions.push_back({rules().religion("RELIGION_BUDDHISM"), 0, s.cities[0].id, {belief("BELIEF_TITHE")}});

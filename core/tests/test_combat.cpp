@@ -772,3 +772,204 @@ TEST(amphibious_units_and_helicopters_cross_rivers_freely) {
         CHECK_EQ(g->moveCost(unit(*g, id), {4, 7}, {5, 7}).value_or(Fixed()), rules().routes[0].moveCost + extra);
     }
 }
+
+namespace {
+// Players 0 and 1 are majors at peace, player 2 is Geneva (a city-state), player 3 the barbarians, at war with all, on
+// revealed grassland 24 plots wide (`wrap`: joined east to west); `edit` adds the units.
+template <typename Edit>
+std::unique_ptr<Game> frontier(Edit edit, bool wrap = false) {
+    GameState s = flatState(24, 14, 4, wrap);
+    s.players[0].human = true;
+    s.players[2].civ = kNone;
+    s.players[2].cityState = rules().cityState("CITYSTATE_GENEVA");
+    s.players[3].civ = kNone;
+    s.players[3].barbarian = true;
+    for (Player& p : s.players) {
+        Game::fitPlayerToRules(p, rules());
+        p.envoys.assign(s.players.size(), 0);
+        p.visibility.assign(static_cast<size_t>(s.grid.size()), static_cast<uint8_t>(Visibility::Revealed));
+    }
+    sovtest::addCity(s, 0, {4, 2}, true, 3);
+    sovtest::addCity(s, 1, {16, 2}, true, 3);
+    sovtest::addCity(s, 2, {16, 11}, true, 2);
+    edit(s);
+    return Game::fromScenario(rules(), std::move(s));
+}
+
+int warWith(const Game& g, UnitId u, Hex target, bool ranged) { return g.warNeededToAttack(u, target, ranged); }
+}  // namespace
+
+// The declare-war prompt (Unreal's right-click): a war with the target's owner, a major civ or a city-state, is asked
+// for only when it is all that stops the attack; a barbarian is fought at once, and a unit out of moves waits anyway.
+TEST(war_needed_to_attack_names_the_target_owner) {
+    UnitId w = kNoUnit, tired = kNoUnit, scout = kNoUnit;
+    auto g = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 1, {9, 6});   // a major civ's, at peace
+        addUnit(s, "UNIT_WARRIOR", 2, {7, 6});   // Geneva's, at peace
+        addUnit(s, "UNIT_WARRIOR", 3, {8, 5});   // a barbarian's, at war
+        tired = addUnit(s, "UNIT_WARRIOR", 0, {12, 8});
+        addUnit(s, "UNIT_WARRIOR", 1, {13, 8});
+        scout = addUnit(s, "UNIT_SCOUT", 0, {11, 6});
+        addUnit(s, "UNIT_BUILDER", 1, {12, 6});  // civilians at peace: captured once at war
+    });
+    g->stateMutForTests().unit(tired)->movesLeft = Fixed();  // the turn has begun: out of moves now
+    CHECK(g->canDeclareWar(0, 1) && g->canDeclareWar(0, 2));
+    CHECK_EQ(warWith(*g, w, {9, 6}, false), 1);
+    CHECK_EQ(warWith(*g, w, {7, 6}, false), 2);
+    CHECK_EQ(warWith(*g, w, {8, 5}, false), static_cast<int>(kNoPlayer));  // at war already: the attack is open
+    CHECK(g->previewAttack(w, {8, 5}, false).valid);
+    CHECK_EQ(warWith(*g, w, {9, 6}, true), static_cast<int>(kNoPlayer));     // a Warrior has no ranged attack
+    CHECK_EQ(warWith(*g, w, {10, 6}, false), static_cast<int>(kNoPlayer));   // nothing there
+    CHECK_EQ(warWith(*g, tired, {13, 8}, false), static_cast<int>(kNoPlayer));  // no moves left either
+    CHECK_EQ(warWith(*g, scout, {12, 6}, false), 1);
+    // Declared, the same attacks are open and wait on nothing.
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    CHECK_EQ(warWith(*g, w, {9, 6}, false), static_cast<int>(kNoPlayer));
+    CHECK_EQ(g->validate(Command::attack(0, w, {9, 6})), CommandError::Ok);
+    CHECK_EQ(warWith(*g, w, {7, 6}, false), 2);  // Geneva is still at peace
+    REQUIRE(g->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    CHECK_EQ(g->validate(Command::attack(0, w, {7, 6})), CommandError::Ok);
+}
+
+TEST(war_needed_to_attack_a_city_names_its_owner) {
+    UnitId w = kNoUnit;
+    auto g = frontier([&](GameState& s) { w = addUnit(s, "UNIT_WARRIOR", 0, {15, 11}); });
+    CHECK_EQ(warWith(*g, w, {16, 11}, false), 2);
+    const std::optional<AttackApproach> a = g->attackApproach(w, {16, 11}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, (Hex{15, 11}));
+    CHECK_EQ(static_cast<int>(a->war), 2);
+}
+
+// Where to stand to attack: beside the foe for a melee attack, found by the move planner, so zone of control decides
+// whether the attack comes this turn or the next.
+TEST(attack_approach_walks_beside_the_target) {
+    UnitId w = kNoUnit;
+    // Beside it already: where it stands.
+    auto here = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 3, {9, 6});
+    });
+    std::optional<AttackApproach> a = here->attackApproach(w, {9, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, (Hex{8, 6}));
+    CHECK_EQ(a->turns, 0);
+    CHECK_EQ(a->movesLeft, Fixed::fromInt(2));
+    CHECK(a->attackOnArrival);
+    CHECK_EQ(static_cast<int>(a->war), static_cast<int>(kNoPlayer));
+
+    // A barbarian Scout two plots away holds every plot beside it in its zone of control: the Warrior gets there
+    // this turn with no moves left, and attacks next turn.
+    auto zoc = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_SCOUT", 3, {10, 6});
+    });
+    a = zoc->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(zoc->state().grid.distance(a->plot, {10, 6}), 1);
+    CHECK_EQ(zoc->state().grid.distance(a->plot, {8, 6}), 1);
+    CHECK_EQ(a->turns, 0);
+    CHECK_EQ(a->movesLeft, Fixed());
+    CHECK(!a->attackOnArrival);
+    CHECK_EQ(zoc->validate(Command::move(0, w, {10, 6})), CommandError::NoPath);  // never onto the foe itself
+    REQUIRE(zoc->submit(Command::move(0, w, a->plot)) == CommandError::Ok);
+    CHECK_EQ(unit(*zoc, w).pos, a->plot);
+    CHECK_EQ(zoc->validate(Command::attack(0, w, {10, 6})), CommandError::CannotAttack);  // next turn
+
+    // A Slinger has no zone of control: the Warrior arrives with a move left and attacks at once.
+    auto open = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_SLINGER", 3, {10, 6});
+    });
+    a = open->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->movesLeft, Fixed::fromInt(1));
+    CHECK(a->attackOnArrival);
+    REQUIRE(open->submit(Command::move(0, w, a->plot)) == CommandError::Ok);
+    CHECK_EQ(open->submit(Command::attack(0, w, {10, 6})), CommandError::Ok);
+
+    // Out of moves beside it: where it stands, attacking next turn.
+    auto tired = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 3, {9, 6});
+    });
+    tired->stateMutForTests().unit(w)->movesLeft = Fixed();
+    a = tired->attackApproach(w, {9, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, (Hex{8, 6}));
+    CHECK(!a->attackOnArrival);
+    CHECK_EQ(warWith(*tired, w, {9, 6}, false), static_cast<int>(kNoPlayer));
+
+    // Across the seam of a map that wraps east to west.
+    auto wrapped = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {0, 6});
+        addUnit(s, "UNIT_SLINGER", 3, {22, 6});
+    }, true);
+    a = wrapped->attackApproach(w, {22, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, (Hex{23, 6}));
+    CHECK_EQ(a->turns, 0);
+    CHECK(a->attackOnArrival);
+    REQUIRE(wrapped->submit(Command::move(0, w, a->plot)) == CommandError::Ok);
+    CHECK_EQ(wrapped->submit(Command::attack(0, w, {22, 6})), CommandError::Ok);
+
+    // A civilian has no plot to attack from.
+    UnitId builder = kNoUnit;
+    auto civilian = frontier([&](GameState& s) {
+        builder = addUnit(s, "UNIT_BUILDER", 0, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 3, {9, 6});
+    });
+    CHECK(!civilian->attackApproach(builder, {9, 6}, false).has_value());
+}
+
+// Foes at peace are approached as at war would allow, and the approach says whose war comes first; the declaration
+// brings zone of control with it.
+TEST(attack_approach_names_the_war_it_needs) {
+    UnitId w = kNoUnit;
+    auto g = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_WARRIOR", 2, {10, 6});   // Geneva's
+        addUnit(s, "UNIT_WARRIOR", 1, {7, 8});    // a major civ's
+        addUnit(s, "UNIT_WARRIOR", 1, {8, 10});   // out of sight
+    });
+    std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(static_cast<int>(a->war), 2);
+    CHECK_EQ(a->movesLeft, Fixed::fromInt(1));  // no zone of control at peace
+    CHECK(a->attackOnArrival);
+    CHECK_EQ(warWith(*g, w, {10, 6}, false), static_cast<int>(kNoPlayer));  // not from where it stands
+    a = g->attackApproach(w, {7, 8}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(static_cast<int>(a->war), 1);
+    CHECK(!g->attackApproach(w, {8, 10}, false).has_value());  // a unit we do not see is no target
+    REQUIRE(g->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    a = g->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(static_cast<int>(a->war), static_cast<int>(kNoPlayer));
+    CHECK_EQ(a->movesLeft, Fixed());
+    CHECK(!a->attackOnArrival);
+}
+
+// A ranged unit stops within its range, with a line of sight, and shoots from there; where it stands when it can.
+TEST(attack_approach_for_a_ranged_unit_stops_in_range) {
+    UnitId archer = kNoUnit;
+    auto g = frontier([&](GameState& s) {
+        archer = addUnit(s, "UNIT_ARCHER", 0, {7, 6});
+        addUnit(s, "UNIT_WARRIOR", 3, {10, 6});
+        addUnit(s, "UNIT_SCOUT", 0, {12, 6});  // keeps the foe in sight
+    });
+    std::optional<AttackApproach> a = g->attackApproach(archer, {10, 6}, true);
+    REQUIRE(a.has_value());
+    CHECK_EQ(g->state().grid.distance(a->plot, {10, 6}), 2);
+    CHECK_EQ(a->turns, 0);
+    CHECK_EQ(a->movesLeft, Fixed::fromInt(1));
+    CHECK(a->attackOnArrival);
+    CHECK(!g->attackApproach(archer, {10, 6}, false).has_value());  // an Archer never melees
+    REQUIRE(g->submit(Command::move(0, archer, a->plot)) == CommandError::Ok);
+    CHECK(g->previewAttack(archer, {10, 6}, true).valid);
+    a = g->attackApproach(archer, {10, 6}, true);
+    REQUIRE(a.has_value());
+    CHECK_EQ(a->plot, unit(*g, archer).pos);  // in range already
+    CHECK_EQ(g->submit(Command::rangedAttack(0, archer, {10, 6})), CommandError::Ok);
+}

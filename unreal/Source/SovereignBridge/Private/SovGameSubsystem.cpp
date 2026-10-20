@@ -1,5 +1,6 @@
 #include "SovGameSubsystem.h"
 #include "SovBoard.h"
+#include "SovKeys.h"
 
 #include "sovereign/challenge.h"
 #include "sovereign/commands.h"
@@ -14,6 +15,63 @@
 #include "Algo/Reverse.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSovereign, Log, All);
+
+namespace
+{
+// A refused command as the player reads it on the message line (the log keeps the command and the error's name).
+FString RefusalText(sov::CommandError Error)
+{
+	using CE = sov::CommandError;
+	switch (Error)
+	{
+		case CE::NotYourTurn: return TEXT("It is not your turn.");
+		case CE::BadUnit: return TEXT("That unit is gone.");
+		case CE::NotYourUnit: return TEXT("That unit is not yours.");
+		case CE::BadTarget: return TEXT("It cannot do that there.");
+		case CE::NoPath: return TEXT("No way to get there.");
+		case CE::CannotFoundHere: return TEXT("A city cannot be founded here.");
+		case CE::TooCloseToCity: return TEXT("Too close to another city.");
+		case CE::NotASettler: return TEXT("Only a Settler founds cities.");
+		case CE::UnitsNeedOrders: return TEXT("Some units still need orders.");
+		case CE::GameOver: return TEXT("The game is over.");
+		case CE::NotYourCity: return TEXT("That city is not yours.");
+		case CE::CannotBuild: return TEXT("That cannot be built there now.");
+		case CE::QueueFull: return TEXT("The production queue is full.");
+		case CE::NotEnoughGold: return TEXT("Not enough gold.");
+		case CE::NotEnoughFaith: return TEXT("Not enough faith.");
+		case CE::NotEnoughResources: return TEXT("Not enough of the strategic resource it needs.");
+		case CE::ProductionNeeded: return TEXT("A city needs something to build.");
+		case CE::ResearchNeeded: return TEXT("Choose a technology to research.");
+		case CE::CivicNeeded: return TEXT("Choose a civic to develop.");
+		case CE::ChangesLocked: return TEXT("Policies change only when a new civic opens them, or for gold.");
+		case CE::CannotDeclareWar: return TEXT("War cannot be declared on them now.");
+		case CE::CannotMakePeace: return TEXT("Peace cannot be made yet.");
+		case CE::CannotAttack: return TEXT("That attack is not possible.");
+		case CE::CannotStrike: return TEXT("The city cannot strike there.");
+		case CE::LeaderNeeded: return TEXT("The throne is empty: choose a successor.");
+		case CE::BattlePending: return SovKeys::Expand(TEXT("A battle waits: fight it live (B) or settle it by the numbers (R)."));
+		case CE::DedicationNeeded: return TEXT("Choose this era's dedication first.");
+		default: break;
+	}
+	// The rest: the error's name in words ("CannotSendEnvoy": "Cannot send envoy.").
+	const FString Name = UTF8_TO_TCHAR(sov::commandErrorName(Error));
+	FString Out;
+	for (int32 i = 0; i < Name.Len(); ++i)
+	{
+		const TCHAR Ch = Name[i];
+		if (i > 0 && FChar::IsUpper(Ch))
+		{
+			Out.AppendChar(TEXT(' '));
+			Out.AppendChar(FChar::ToLower(Ch));
+		}
+		else
+		{
+			Out.AppendChar(Ch);
+		}
+	}
+	return Out + TEXT(".");
+}
+}  // namespace
 
 bool USovGameSubsystem::StartGame(const FSovSetup& Setup)
 {
@@ -44,8 +102,9 @@ sov::CommandError USovGameSubsystem::Submit(const sov::Command& Command)
 	}
 	else
 	{
-		LastMessage = FString::Printf(TEXT("%s refused: %s"), UTF8_TO_TCHAR(sov::describe(Command).c_str()),
-			UTF8_TO_TCHAR(sov::commandErrorName(Result)));
+		// A plain sentence, said again each time (the toast flashes even when the text repeats).
+		UE_LOG(LogSovereign, Log, TEXT("%s refused: %s"), UTF8_TO_TCHAR(sov::describe(Command).c_str()), UTF8_TO_TCHAR(sov::commandErrorName(Result)));
+		Say(RefusalText(Result));
 	}
 	return Result;
 }

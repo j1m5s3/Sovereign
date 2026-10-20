@@ -67,6 +67,14 @@ public:
 	TSharedPtr<const struct FSovMirror> Mirror;
 
 	FString LastMessage;
+	// Counts the messages said (Say, and refusals): the toast shows a message again when it is said again, even with
+	// the same text.
+	int32 MessageSerial = 0;
+	void Say(const FString& Text)
+	{
+		LastMessage = Text;
+		++MessageSerial;
+	}
 	// Online notices and chat, newest last (a few kept for the HUD).
 	TArray<FString> NetLines;
 	// Seconds between AI seats, so their turns can be watched.

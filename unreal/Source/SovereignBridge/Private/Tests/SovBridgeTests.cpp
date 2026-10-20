@@ -2,6 +2,7 @@
 //   UnrealEditor-Cmd.exe Sovereign.uproject -ExecCmds="Automation RunTests Sovereign; Quit" -nullrhi -unattended
 #include "Misc/AutomationTest.h"
 
+#include "SovAttack.h"
 #include "SovDescribe.h"
 #include "SovHexLayout.h"
 #include "SovKeys.h"
@@ -29,6 +30,7 @@
 #include "sovereign/commands.h"
 #include "sovereign/ai.h"
 #include "sovereign/game.h"
+#include "sovereign/mapgen.h"
 #include "sovereign/serialize.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -1394,6 +1396,94 @@ bool FSovDescribeTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("most promotions have a description"), Promos * 2 > static_cast<int32>(R.promotions.size()));
 	for (size_t g = 0; g < R.governments.size(); ++g)
 		AddInfo(FString::Printf(TEXT("%s: %s"), UTF8_TO_TCHAR(R.governments[g].name.c_str()), *SovSourceText(R, sov::ModSource::Government, static_cast<sov::TypeIndex>(g))));
+	return true;
+}
+
+// A right-click with our Warrior on a city-state's Warrior beside it, at peace (Civ VI): the controller asks to declare
+// war (SovPlanAttack: AskWar, SovWarChoices for the prompt), and the declaration it confirms is followed by the attack.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovAttackAsksForWarTest, "Sovereign.Bridge.RightClickAsksForWarThenAttacks", kSovTestFlags)
+bool FSovAttackAsksForWarTest::RunTest(const FString& Parameters)
+{
+	FSovSession Session;
+	FSovSetup Setup;
+	FString Error;
+	if (!Session.Start(Setup, Error))
+	{
+		AddError(Error);
+		return false;
+	}
+	const sov::Rules& R = Session.GetRules();
+	const sov::PlayerId Me = 0;
+	const sov::TypeIndex WarriorType = R.unit("UNIT_WARRIOR");
+	if (!TestTrue(TEXT("the Warrior exists"), WarriorType != sov::kNone)) return false;
+	// A city-state's Warrior on a land plot beside its city, and ours on a land plot beside that one.
+	sov::GameState S = Session.GetGame().state();
+	sov::PlayerId Cs = sov::kNoPlayer;
+	sov::Hex Theirs, Ours;
+	auto Free = [&](sov::Hex H) {
+		if (!sov::isLandPassable(S, R, H) || S.cityAt(H) || S.districtAt(H)) return false;
+		for (const sov::Unit& U : S.units)
+		{
+			if (U.pos == H) return false;
+		}
+		return true;
+	};
+	for (const sov::City& C : S.cities)
+	{
+		if (Cs != sov::kNoPlayer || !Session.GetGame().isCityState(C.owner)) continue;
+		for (int32 d = 0; d < 6 && Cs == sov::kNoPlayer; ++d)
+		{
+			const std::optional<sov::Hex> P = S.grid.neighbor(C.pos, static_cast<sov::Dir>(d));
+			if (!P || !Free(*P)) continue;
+			for (int32 e = 0; e < 6 && Cs == sov::kNoPlayer; ++e)
+			{
+				const std::optional<sov::Hex> Q = S.grid.neighbor(*P, static_cast<sov::Dir>(e));
+				if (!Q || !Free(*Q) || S.grid.distance(*Q, C.pos) < 2) continue;
+				Cs = C.owner;
+				Theirs = *P;
+				Ours = *Q;
+			}
+		}
+	}
+	if (!TestTrue(TEXT("a city-state with room beside it"), Cs != sov::kNoPlayer)) return false;
+	auto Add = [&](sov::PlayerId Owner, sov::Hex At) {
+		sov::Unit U;
+		U.id = S.nextUnitId++;
+		U.type = WarriorType;
+		U.owner = Owner;
+		U.pos = At;
+		U.movesLeft = sov::Fixed::fromInt(R.units[static_cast<size_t>(WarriorType)].moves);
+		S.units.push_back(U);
+		return U.id;
+	};
+	const sov::UnitId Defender = Add(Cs, Theirs);
+	const sov::UnitId Attacker = Add(Me, Ours);
+	const std::unique_ptr<sov::Game> G = sov::Game::fromScenario(R, std::move(S));
+	if (!TestTrue(TEXT("the scenario starts"), G != nullptr)) return false;
+	TestFalse(TEXT("at peace with the city-state"), G->atWar(Me, Cs));
+	TestTrue(TEXT("its Warrior is a foe to right-click"), SovFoeAt(*G, Me, Theirs));
+
+	// The right-click: only a war stands in the way, so the prompt asks first, in the diplomacy list's words.
+	const FSovAttackPlan Plan = SovPlanAttack(*G, Attacker, Theirs);
+	TestTrue(FString::Printf(TEXT("asks to declare war (%s)"), *Plan.Text), Plan.Kind == ESovAttackPlan::AskWar);
+	TestEqual(TEXT("on the city-state"), static_cast<int32>(Plan.War), static_cast<int32>(Cs));
+	const TArray<FSovWarChoice> Choices = SovWarChoices(*G, Me, Cs, true);
+	if (!TestTrue(TEXT("a war to declare"), Choices.Num() > 0 && Choices[0].Command.type == sov::CommandType::DeclareWar)) return false;
+	TestTrue(FString::Printf(TEXT("worded as a surprise war (%s)"), *Choices[0].Label), Choices[0].Label.StartsWith(TEXT("Declare a surprise war on ")) && Choices[0].Label.EndsWith(TEXT(" and attack")));
+	TestTrue(TEXT("city-state wars last"), Choices[0].Tip.Contains(TEXT("do not make peace")));
+
+	// Confirming: the declaration, then the attack from where it stands.
+	TestEqual(TEXT("war declared"), G->submit(Choices[0].Command), sov::CommandError::Ok);
+	TestTrue(TEXT("at war"), G->atWar(Me, Cs));
+	const FSovAttackPlan After = SovPlanAttack(*G, Attacker, Theirs);
+	TestTrue(FString::Printf(TEXT("attacks now (%s)"), *After.Text), After.Kind == ESovAttackPlan::Attack && !After.bRanged);
+	const int32 HpBefore = G->state().unit(Defender)->hp;
+	TestEqual(TEXT("attack accepted"), G->submit(SovAttackCommand(Me, Attacker, Theirs, After.bRanged)), sov::CommandError::Ok);
+	const sov::Unit* D = G->state().unit(Defender);
+	TestTrue(TEXT("the defender is hurt or gone"), !D || D->hp < HpBefore || G->battlePending());
+	// Once more: no moves left, said plainly.
+	const FSovAttackPlan Again = SovPlanAttack(*G, Attacker, Theirs);
+	TestTrue(FString::Printf(TEXT("refused in plain words (%s)"), *Again.Text), Again.Kind == ESovAttackPlan::Refuse && !Again.Text.IsEmpty());
 	return true;
 }
 

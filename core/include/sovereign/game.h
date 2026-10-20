@@ -49,6 +49,15 @@ struct PathStep {
     Fixed movesLeft;    // after entering this plot
 };
 
+// Where a unit would stand to attack a target, and when it gets there (Game::attackApproach).
+struct AttackApproach {
+    Hex plot;                      // the unit's own plot when it may attack from where it stands
+    int turns = 0;                 // 0 = reached this turn
+    Fixed movesLeft;               // on arrival
+    bool attackOnArrival = false;  // there this turn with moves and an attack left, so it attacks at once (war aside)
+    PlayerId war = kNoPlayer;      // the player a war must be declared on first (kNoPlayer: none)
+};
+
 // A personal aim for the leader, shown at turn end beside Civ's "X turns to Y" (player-retention §4).
 enum class LeaderGoalKind : uint8_t {
     Promotion = 0,    // a promotion waits to be chosen
@@ -678,6 +687,15 @@ public:
     // Damage dealt for a strength difference and a roll in 0..COMBAT_MAX_EXTRA_DAMAGE.
     int combatDamage(int strengthDifference, int roll) const;
     CombatPreview previewAttack(UnitId attacker, Hex target, bool ranged) const;
+    // The player a declaration of war on would be all that stops the unit's attack (melee, or ranged) on `target` from
+    // where it stands: the owner of the city, Encampment or defender there, as validateCombat reads them. kNoPlayer when
+    // the attack is open already or something else stops it too (theological combat needs no war, 06).
+    PlayerId warNeededToAttack(UnitId attacker, Hex target, bool ranged) const;
+    // Where the unit would stand to attack `target`: beside it for a melee attack, within its range and line of sight
+    // for a ranged one, on a plot a move order may end on (its own plot when it may attack from there). Planned as a
+    // move order is, zone of control included; the one reached this turn with moves left comes first, then the fewest
+    // turns, the most moves left and the nearest. nullopt when no such plot is in reach.
+    std::optional<AttackApproach> attackApproach(UnitId attacker, Hex target, bool ranged) const;
     // The human whose leader stack is in this melee (so it goes live), or kNoPlayer (leader doc §9).
     PlayerId liveBattleSide(const Unit& attacker, const Unit& defender) const;
     // The same for a melee assault on a city: the attacker's leader stack, or a human leader inside.
@@ -831,6 +849,12 @@ private:
     void applyBuilder(const Command& c);
     void accumulateStrategics(PlayerId p);
     CommandError validateCombat(const Command& c) const;
+    // validateCombat, with the at-war checks left out (assumeWar), or planned from another plot (`from`: attacking from
+    // there, its moves, attacks and whether it moved this turn left to the caller).
+    CommandError validateCombat(const Command& c, bool assumeWar, const Hex* from) const;
+    // The player whose war an attack by `player` on `target` waits on: the city's, Encampment's or defender's owner, or
+    // the one owner of the civilians there; kNoPlayer when at war with them already, or when it would take two wars.
+    PlayerId warTargetOwner(PlayerId player, Hex target) const;
     void applyCombat(const Command& c);
     // A bit for a kind of unit effect; kinds 64 apart share one, so a mask of them may only let in more abilities.
     static constexpr uint64_t effectBit(UnitEffectKind k) { return uint64_t{1} << (static_cast<unsigned>(k) % 64); }
