@@ -223,6 +223,9 @@ protected:
 	TMap<int32, int32> TechGoals, CivicGoals;  // per player: the node the tree path leads to
 	TArray<FString> TechUnlocks, CivicUnlocks;  // per node: what it opens (built once)
 	const TArray<FString>& TreeUnlocks(bool bCivics);
+	// What each node unlocks as pictures (FSovTreeIcon), cached as TreeUnlocks.
+	const TArray<TArray<struct FSovTreeIcon>>& TreeIcons(bool bCivics);
+	TArray<TArray<struct FSovTreeIcon>> TechIcons, CivicIcons;
 	TSet<int32> TreePath(bool bCivics) const;
 	void PickTreeNode(int32 Node);
 	// Notifications (plan D, step 4): rebuilt each frame; a dismissed one stays gone.

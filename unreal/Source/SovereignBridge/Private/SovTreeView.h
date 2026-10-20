@@ -18,6 +18,12 @@ enum class ESovTreeState : uint8
 	Done
 };
 
+// One thing a node unlocks, drawn as a picture from Content/Slate (Folder/Name.png) with its name on hover.
+struct FSovTreeIcon
+{
+	FString Folder, Name, Label;
+};
+
 struct FSovTreeNode
 {
 	FString Name;
@@ -28,6 +34,7 @@ struct FSovTreeNode
 	FString Boost;     // the boost's condition (empty: none)
 	bool bBoosted = false;
 	FString Unlocks;   // what it opens, comma separated
+	TArray<FSovTreeIcon> Icons;  // and as pictures (units, districts, buildings, wonders, improvements, resources...)
 	float Progress = 0.f;
 };
 

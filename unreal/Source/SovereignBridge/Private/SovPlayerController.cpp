@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "InputCoreTypes.h"
 
+#include "SovArt.h"
 #include "SovCameraPawn.h"
 #include "SovDescribe.h"
 #include "SovEvents.h"
@@ -2351,6 +2352,59 @@ const TArray<FString>& ASovPlayerController::TreeUnlocks(bool bCivics)
 	return Out;
 }
 
+const TArray<TArray<FSovTreeIcon>>& ASovPlayerController::TreeIcons(bool bCivics)
+{
+	const sov::Rules& R = Subsystem()->GetGame().rules();
+	TArray<TArray<FSovTreeIcon>>& Out = bCivics ? CivicIcons : TechIcons;
+	const size_t Count = bCivics ? R.civics.size() : R.techs.size();
+	if (Out.Num() == static_cast<int32>(Count)) return Out;
+	Out.SetNum(static_cast<int32>(Count));
+	auto Add = [&](const sov::Unlock& U, const FString& Folder, const FString& Name, const std::string& Label) {
+		if (U.none() || U.civic != bCivics || !Out.IsValidIndex(U.index) || Out[U.index].Num() >= 7) return;
+		Out[U.index].Add({Folder, Name, Str(Label)});
+	};
+	// Units by their figure (the unit portraits); unique units are the civ's own business, and stay text.
+	for (const sov::UnitType& T : R.units)
+	{
+		if (T.uniqueTo != sov::kNone) continue;
+		const bool bCivilian = T.layer == sov::UnitLayer::Civilian || T.layer == sov::UnitLayer::Support;
+		Add(T.unlock, TEXT("Portraits"), SovUnitFigure(T, false, bCivilian).ToString(), T.name);
+	}
+	for (const sov::DistrictType& D : R.districts) Add(D.unlock, TEXT("Unlocks"), TEXT("Districts_") + SovArt::DistrictModel(Str(D.id)), D.name);
+	for (const sov::BuildingType& B : R.buildings)
+	{
+		if (B.uniqueTo != sov::kNone) continue;
+		const FString Id = Str(B.id);
+		FString Icon;
+		if (B.wonder)
+		{
+			// The wonder as itself (the Landmarks kit), else its kind, else the Classical temple.
+			const FString Own = SovArt::LandmarkName(Id);
+			Icon = FPaths::FileExists(FPaths::ProjectContentDir() / TEXT("Slate/Unlocks") / (TEXT("Landmarks_") + Own + TEXT(".png"))) ? TEXT("Landmarks_") + Own
+				: SovArt::WonderModel(Id) ? FString(TEXT("Wonders_")) + SovArt::WonderModel(Id) : FString(TEXT("Classical_Temple"));
+		}
+		else if (B.outerDefenseHp > 0) Icon = TEXT("Classical_Wall");
+		else if (B.district.empty() || B.district == "DISTRICT_CITY_CENTER")
+		{
+			Icon = Id == "BUILDING_MONUMENT" ? TEXT("Classical_Monument") : Id == "BUILDING_GRANARY" ? TEXT("Classical_Granary")
+				: Id == "BUILDING_PALACE" ? TEXT("Classical_Palace") : TEXT("Classical_Landmark");
+		}
+		else Icon = TEXT("Districts_") + SovArt::DistrictModel(Str(B.district));  // a district's building: its district
+		Add(B.unlock, TEXT("Unlocks"), Icon, B.name);
+	}
+	for (const sov::ImprovementType& I : R.improvements)
+	{
+		if (I.uniqueTo != sov::kNone) continue;
+		Add(I.unlock, TEXT("Unlocks"), FString(TEXT("Fields_")) + SovArt::FieldsModel(Str(I.id)), I.name);
+	}
+	for (const sov::ResourceType& Res : R.resources) Add(Res.reveal, TEXT("Resources"), Str(Res.id).Replace(TEXT("RESOURCE_"), TEXT("")).ToLower(), Res.name);
+	for (const sov::GovernmentType& Gv : R.governments) Add(Gv.unlock, TEXT("Icons"), TEXT("government"), Gv.name);
+	for (const sov::PolicyType& Po : R.policies) Add(Po.unlock, TEXT("Icons"), TEXT("civic"), Po.name);
+	for (const sov::ProjectType& Pr : R.projects) Add(Pr.unlock, TEXT("Icons"), TEXT("build"), Pr.name);
+	for (const sov::GearType& Ge : R.gear) Add(Ge.unlock, TEXT("Icons"), TEXT("gear"), Ge.name);
+	return Out;
+}
+
 TSet<int32> ASovPlayerController::TreePath(bool bCivics) const
 {
 	// The goal and every prerequisite of it not yet done.
@@ -2951,6 +3005,7 @@ void ASovPlayerController::UpdateGameUI()
 		const int32 PerTurn = FMath::Max(1, static_cast<int32>((bCivics ? G.culturePerTurn(Me()) : G.sciencePerTurn(Me())).toInt()));
 		const TSet<int32> Path = TreePath(bCivics);
 		const TArray<FString>& Unlocks = TreeUnlocks(bCivics);
+		const TArray<TArray<FSovTreeIcon>>& Icons = TreeIcons(bCivics);
 		FSovTreeModel& T = M.Tree;
 		T.bOpen = true;
 		T.bCivics = bCivics;
@@ -2975,6 +3030,7 @@ void ASovPlayerController::UpdateGameUI()
 			if (Nd.boost.percent > 0) Out.Boost = Str(Nd.boost.text.empty() ? Nd.boost.type : Nd.boost.text);
 			Out.bBoosted = i < Prog.boosted.size() && Prog.boosted[i] != 0;
 			if (Unlocks.IsValidIndex(static_cast<int32>(i))) Out.Unlocks = Unlocks[i];
+			if (Icons.IsValidIndex(static_cast<int32>(i))) Out.Icons = Icons[i];
 		}
 		if (Prog.current != sov::kNone)
 		{
