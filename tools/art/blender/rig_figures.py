@@ -5,9 +5,10 @@ legs' own blended across the hip and knee; the cloth below the hips shared with 
 legs), and four looping actions from motion capture (mocap.py, the clips in tools/art/mocap/): WalkSlow, Walk, Run and
 Idle, in place, each authored at a speed it prints (cm/s; the game plays a loop at its own speed / that, choosing the
 loop by speed: tools/art/README.md). Without the clips it falls back to a procedural Walk and Idle (no WalkSlow or
-Run). Each figure is checked (check_rigs.py: skin, planted feet, ground, what the hands hold) before it is exported as
-an FBX skeletal mesh with its animations to <build>/Rigged/SK_<Name>.fbx for tools/art/ue_import_rigged.py; one that
-fails is not exported (an older export of it is removed) and the script exits 1.
+Run). Each figure is checked (check_rigs.py: skin, planted feet, ground, what the hands hold, each gait starting as
+the left foot plants) before it is exported as an FBX skeletal mesh with its animations to <build>/Rigged/SK_<Name>.fbx
+for tools/art/ue_import_rigged.py; one that fails is not exported (an older export of it is removed) and the script
+exits 1.
 
   blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/rig_figures.py -- art/build [Citizen ...]
 

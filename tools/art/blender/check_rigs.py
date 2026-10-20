@@ -12,6 +12,9 @@ Per figure:
 - no foot vertex goes more than SINK cm into the ground;
 - what a hand holds (rig_figures.HELD: a spear, shield, musket...) does not flail: against the chest, none of its
   vertices moves over more than SWING cm in a loop (a steady slope is fine; a swing with the arm is not);
+- each gait (an action with a speed) starts as the left foot plants (mocap.CLIPS), so the game can blend two at one
+  phase: the first frame of the longest stretch over which that shoe holds still on the ground ("plant0", frames
+  from frame 0, negative before it at the loop's end) is within PLANT_AT frames of 0;
 - and, reported only: how far the seams between two bones open ("seam": the edge between two bones' parts
   that stretches most beyond its length at rest, in cm, such as a knee or hip in a long stride), how far the cloth
   the skirt bones swing stretches ("cloth": a robe flares as its front and back part, by design), and the lowest
@@ -26,6 +29,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import numpy as np  # noqa: E402
 
+import mocap  # noqa: E402
+
 LIMBS = ("pelvis", "spine", "head", "thigh_r", "thigh_l", "shin_r", "shin_l", "foot_r", "foot_l", "upperarm_r", "upperarm_l", "forearm_r",
          "forearm_l")
 SLIDE = 3.0   # cm
@@ -33,6 +38,8 @@ SINK = 1.0    # cm
 CONTACT = 1.0  # cm: a foot vertex this near the ground is on it
 PLANTED = 3   # frames on the ground before a vertex counts as planted
 SWING = 15.0  # cm: how far what a hand holds may move against the chest over a loop
+STILL = 0.3   # cm: a planted shoe's vertices move less than this a frame in the world
+PLANT_AT = 1  # frames: how far from frame 0 a gait's left foot may plant
 ACTIONS = ("WalkSlow", "Walk", "Run", "Idle")
 
 
@@ -63,6 +70,7 @@ def check(arm, body, name, speeds, fps, held=None):
     body.data.vertices.foreach_get("co", rest)
     rest = rest.reshape(-1, 3)
     feet = np.array([i for i in range(n) if owner[i].startswith("foot_") or (owner[i].startswith("shin_") and rest[i, 2] < 16.0)], dtype=np.int64)
+    lead = np.array([k for k, i in enumerate(feet) if owner[i] == "foot_" + mocap.LEAD], dtype=np.int64)  # the left shoe, in feet
     others = np.array([i for i in range(n) if not owner[i].startswith(("shin_", "foot_"))], dtype=np.int64)
     # Seams: edges between two bones' parts (a knee, hip, elbow or neck); cloth: edges of what the skirt bones
     # swing (a robe flares as its front and back part, so it stretches by design).
@@ -121,7 +129,7 @@ def check(arm, body, name, speeds, fps, held=None):
                 flare = max(flare, float((length - cloth_len).max()))
         # Planted-foot slide over two laps of the loop (so a stance across its seam counts whole), in the world: the
         # figure walks to -Y at `speed`.
-        slide = 0.0
+        slide, plant = 0.0, None
         if foot_track:
             track = np.array(foot_track + foot_track)  # (2 * frames, feet, 3)
             track[:, :, 1] -= (speed / fps) * np.arange(2 * frames)[:, None]
@@ -144,6 +152,19 @@ def check(arm, body, name, speeds, fps, held=None):
                         f = g + 1
                     else:
                         f += 1
+            # A gait's left foot plants at frame 0: where the longest stretch over which its shoe holds still on the
+            # ground begins (counted round the loop from a frame where it does not, so no stretch is cut).
+            if speed > 0.0 and len(lead):
+                shoe = track[:frames + 1, lead]
+                still = (np.linalg.norm(shoe[1:] - shoe[:-1], axis=2).max(axis=1) < STILL) & (shoe[:-1, :, 2].min(axis=1) < CONTACT)
+                if still.any() and not still.all():
+                    start, run, best = int(np.argmin(still)), 0, 0
+                    for k in range(1, frames + 1):
+                        f = (start + k) % frames
+                        run = run + 1 if still[f] else 0
+                        if run > best:
+                            best, plant = run, (f - run + 1) % frames
+                    plant = plant if plant <= frames // 2 else plant - frames
         # What the hands hold: the span of each vertex's path against the chest, the widest.
         swing = 0.0
         if item_track:
@@ -155,8 +176,11 @@ def check(arm, body, name, speeds, fps, held=None):
             problems.append("%s: a foot goes %.1f cm into the ground" % (act_name, -sink))
         if swing > SWING:
             problems.append("%s: what a hand holds swings %.1f cm" % (act_name, swing))
-        parts.append("%s %d fr %.1f cm/s slide %.1f foot %.1f other %.1f seam +%.1f cloth +%.1f held %.1f" % (
-            act_name, frames, speed, slide, sink, low_other, stretch, flare, swing))
+        if speed > 0.0 and (plant is None or abs(plant) > PLANT_AT):
+            problems.append("%s: the left foot plants %s" % (act_name, "nowhere" if plant is None else "at frame %d, not 0" % plant))
+        parts.append("%s %d fr %.1f cm/s slide %.1f foot %.1f other %.1f seam +%.1f cloth +%.1f held %.1f%s" % (
+            act_name, frames, speed, slide, sink, low_other, stretch, flare, swing,
+            "" if speed <= 0.0 else " plant0 " + ("-" if plant is None else "%d" % plant)))
     line = "check %s: %s | %s" % (name, "ok" if not problems else "FAIL (" + "; ".join(problems) + ")", " | ".join(parts))
     return problems, line
 

@@ -9,7 +9,9 @@ How a clip becomes an action:
    rig's ankle height).
 2. Root motion comes out: the body is carried back at the loop's mean speed, which is recorded (`Motion.speed`, cm/s)
    so the game plays the clip at its own speed / that. The hips keep their surge, sway and bob around it.
-3. The loop is closed: whatever differs between its last frame and its first is taken out evenly across it.
+3. The loop is closed: whatever differs between its last frame and its first is taken out evenly across it. A gait's
+   is then turned round to start as the subject's left foot plants (CLIPS), so every gait's frame 0 is the same moment
+   of the stride.
 4. The trunk turns as the subject's does from standing (an idle's mean lean taken out, and its feet set under its
    hips on average, so it stands upright); arms and legs point where the subject's do. Legs are solved
    by two-bone IK to ankle targets; while a foot is planted its target holds still in the world (in place, it moves
@@ -31,7 +33,10 @@ from mathutils import Matrix, Vector
 MOCAP = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mocap"))
 
 # action: (file in tools/art/mocap/, first and last frame of the loop in that file, kind). "gait" clips travel and
-# loop over one full stride (two steps); "stand" clips stay put with both feet planted.
+# loop over one full stride (two steps); "stand" clips stay put with both feet planted. Every gait loop starts as the
+# left foot plants: wherever its file's loop is cut, the closed loop is turned round so the rig's frame 0 is the first
+# frame the subject's left foot (LEAD) is planted, as found below and locked. So the gaits are in step at the same
+# phase and the game can blend two of them there.
 CLIPS = {
     "WalkSlow": ("walkslow_16_33.bvh", 12, 149, "gait"),
     "Walk": ("walk_39_01.bvh", 12, 136, "gait"),
@@ -44,6 +49,7 @@ CALM_CARRY, CALM_OTHER, CALM_FREE = 0.95, 0.4, 0.0
 LOCK_BLEND = 2      # frames to blend a planted foot's lock in and out
 LOCK_SPEED = 0.25   # a foot is planted while it moves slower than this share of the loop's speed (gait)
 LOCK_FLOOR = 6.0    # cm: ... and its ankle is no higher than this above its planted height
+LEAD = "r"          # the foot every gait loop starts on as it plants: the subject's left (the rig's +X side, SIDES)
 CLEAR = 0.3         # cm: a planted shoe's lowest vertex this far above the ground
 SWING_CLEAR = 1.5   # cm: and a moving one's this much further
 REACH = 0.998       # the share of a leg's length its ankle may be from its hip (straighter snaps the knee)
@@ -270,6 +276,16 @@ class Motion:
                 flags = [down[min(m - 1, int(round(f * (m - 1) / n)))] for f in range(n)]
             self.planted[s] = flags
 
+        # A gait starts as the left foot plants: the loop (and its planted flags) turned round so frame 0 is the first
+        # frame of LEAD's longest planted stretch. It is closed, so it stays seamless; the last frame is the first again.
+        stances = self.windows(LEAD) if kind == "gait" else []
+        if stances:
+            a = max(stances, key=lambda w: w[1] - w[0])[0] % n
+            self.joints = self.joints[a:n] + self.joints[:a]
+            self.joints.append({name: p.copy() for name, p in self.joints[0].items()})
+            for s in self.planted:
+                self.planted[s] = self.planted[s][a:] + self.planted[s][:a]
+
     def windows(self, side):
         """The planted stretches of one foot as (first, last) rig frames; a stretch over the loop's seam runs past
         `frames` (or before 0)."""
@@ -381,16 +397,17 @@ class Retarget:
             b.rotation_mode = "XYZ"
         action = bpy.data.actions.new(action_name)
         arm.animation_data.action = action
-        X, Z = Vector((1, 0, 0)), Vector((0, 0, 1))
+        X = Vector((1, 0, 0))
         rest_src = _trunk(mo.rest)
         rest_frames = {b: _frame(*rest_src[b]) for b in rest_src}
         armed = bool(self.carry["r"] or self.carry["l"])
         calm = {s: CALM_CARRY if self.carry[s] else (CALM_OTHER if armed else CALM_FREE) for s in ("r", "l")}
 
-        def foot_frame(d):
-            return _frame(d, Z.cross(d))
+        def foot_frame(j, src):
+            # Rolled by the hips' lateral, never along the toe (the horizontal across a toe pointing down flips).
+            return _frame(j[src + "ToeBase"] - j[src + "Foot"], j["LeftUpLeg"] - j["RightUpLeg"])
 
-        src_foot_rest = {s: foot_frame(mo.rest[src + "ToeBase"] - mo.rest[src + "Foot"]) for s, src in SIDES.items()}
+        src_foot_rest = {s: foot_frame(mo.rest, src) for s, src in SIDES.items()}
 
         # The trunk turns as the subject's does from standing; the pelvis sits where the subject's hips are (Motion's
         # heights are above the ground already).
@@ -400,7 +417,7 @@ class Retarget:
             tr = _trunk(j)
             D = {b: _frame(*tr[b]) @ rest_frames[b].transposed() for b in tr}
             for s, src in SIDES.items():
-                D["foot_" + s] = foot_frame(j[src + "ToeBase"] - j[src + "Foot"]) @ src_foot_rest[s].transposed()
+                D["foot_" + s] = foot_frame(j, src) @ src_foot_rest[s].transposed()
             poses.append({"j": j, "D": D})
         if mo.kind == "stand":
             # Standing upright on average: the subject's mean lean of the hips, back and head (back, with the hips held
@@ -417,14 +434,16 @@ class Retarget:
         for pose in poses:
             j, Mp = pose["j"], pose["M"]["pelvis"]
             pose["hip"], pose["target"], pose["pole"] = {}, {}, {}
+            ahead = (j["LeftUpLeg"] - j["RightUpLeg"]).cross(Vector((0, 0, 1))).normalized()  # the hips' forward
             for s, src in SIDES.items():
                 hip = self._child_head(Mp, "pelvis", "thigh_" + s)
                 pose["hip"][s] = hip
                 pose["target"][s] = hip + (j[src + "Foot"] - j[src + "UpLeg"])
                 toe = j[src + "ToeBase"] - j[src + "Foot"]
-                toe.z = 0.0
                 knee = j[src + "Leg"] - (j[src + "UpLeg"] + j[src + "Foot"]) * 0.5
-                pose["pole"][s] = knee + (toe.normalized() * 8.0 if toe.length > 1e-6 else Vector((0, -8.0, 0)))
+                # Toward the toe by its horizontal share, fading out as it points down (where its horizontal swings
+                # round and would roll the leg), and a little forward so a straight leg's pole never vanishes.
+                pose["pole"][s] = knee + Vector((toe.x, toe.y, 0.0)) * (8.0 / max(toe.length, 1e-6)) + ahead * 2.0
 
         # Planted feet hold still in the world (in place, they drift back at the loop's speed), flat on the ground
         # and turned as the subject's on average over the stance.

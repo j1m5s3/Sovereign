@@ -18,13 +18,21 @@ CMU's conversion has them, nothing re-posed or smoothed. The source is 120 fps.
 The speeds are the rig's, a figure about 1.75 m tall (legs 84 cm hip to ankle): the subject's own speed scaled by
 our leg over theirs. The game plays a loop at its speed over this one, so planted feet hold still.
 
+Every gait loop starts as the left foot plants. Wherever a file's loop is cut, `mocap.py` turns the closed loop round
+(same frames, speed and in-place motion) so the rig's frame 0 is the first frame the subject's left foot (the rig's
+`foot_r`, on its +X side) is planted, as `mocap.py` finds and locks it; `../blender/check_rigs.py` fails a gait whose
+left shoe comes to rest on the ground more than a frame from 0. So WalkSlow, Walk and Run are in step at the same phase and the game can
+blend two of them there. The left foot lifts at phase 0.44 in WalkSlow, 0.36 in Walk and 0.21 in Run (a jog's stance
+is shorter) and the right foot plants at about 0.5 in each (0.48, 0.48, 0.53).
+
 Chosen by measuring and rendering candidates: a natural, upright walk at an ordinary pace with an even arm swing
 (39_01 over 02_01, 07_01 and 81_02, whose subjects look down or stride short), a steady jog with a clean loop, a
 standing idle with weight shifts but no gestures, and a relaxed stroll for the slow end of the street's speeds (16_33
 over 08_04, 16_34, 07_05, 37_01 and 120_19: 08_04 swings its arms like a march and its planted feet slid most, 16_34
 is faster at 113 cm/s, 07_05 and 37_01 turn and close their loops badly, 120_19 ambles at 57 cm/s). To change one,
 cut the new trial's frames the same way (header plus the frames, the frame time scaled if frames are skipped), set its
-row in `mocap.CLIPS` (first and last frame of one loop: for a gait, the same foot at the same phase), run
+row in `mocap.CLIPS` (first and last frame of one loop: for a gait, the same foot at the same phase; where in the
+stride it is cut does not matter), run
 `../blender/check_rigs.py` and update this table and the speeds in `../README.md` (and the game's).
 
 ## Credit and terms
