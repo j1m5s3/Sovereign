@@ -6,7 +6,8 @@
 
 1. fetch_textures.py downloads the CC0 photo scans the detail sheets use to art/build/Sources/ (once).
 2. Blender (headless) builds each kit piece and exports FBX to art/build/<Kit>/, bakes the detail and
-   normal sheets, and (for a full build) rigs the street's people to art/build/Rigged/.
+   normal sheets, and (for a full build) rigs the street's people to art/build/Rigged/ (each checked first by
+   blender/check_rigs.py: a figure that fails is not exported and the build stops).
 3. The Unreal editor (commandlet) imports them into unreal/Content/Art/<Kit>/ with the
    kit material, and the rigged people to unreal/Content/Art/Rigged/. The .uasset files that come out
    are committed.
@@ -26,7 +27,8 @@ def run(cmd, env=None):
     print("+", " ".join('"%s"' % c if " " in c else c for c in cmd))
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, errors="replace")
     for line in result.stdout.splitlines():
-        if any(k in line for k in ("piece ", "exported ", "SOVART", "Error", "Traceback", "fetch", "detail ", "rigged ", "photo sources")):
+        if any(k in line for k in ("piece ", "exported ", "SOVART", "Error", "Traceback", "fetch", "detail ", "rigged ", "check ", "rig_figures",
+                                   "photo sources")):
             print("  " + line.strip())
     if result.returncode != 0:
         print(result.stdout[-4000:], result.stderr[-4000:])
@@ -41,7 +43,9 @@ def main():
     run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "generate.py"), "--", BUILD] + kits)
     # The rigged people share the kit's pattern cells, so a full build remakes them too.
     if not kits:
-        run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_figures.py"), "--", BUILD])
+        # (--python-exit-code: a script error fails the build too, not only a figure that fails check_rigs.)
+        run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_figures.py"),
+             "--", BUILD])
         run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_riders.py"), "--", BUILD])
     for script in ["ue_import.py"] + ([] if kits else ["ue_import_rigged.py"]):
         run([EDITOR, os.path.join(REPO, "unreal", "Sovereign.uproject"), "-run=pythonscript",
