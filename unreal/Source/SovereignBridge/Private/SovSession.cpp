@@ -358,6 +358,27 @@ void FSovSession::ApplyDemos(const FSovSetup& Setup)
 					break;
 				}
 			}
+			// -SovBattleGap=N: the foe that many plots east instead (to try walking up to a foe and striking).
+			const TCHAR* Cmd = FCommandLine::Get();
+			int32 Gap = 1;
+			FParse::Value(Cmd, TEXT("SovBattleGap="), Gap);
+			std::optional<sov::Hex> Far = Leader->pos;
+			for (int32 k = 0; k < Gap && Far; ++k) Far = S.grid.neighbor(*Far, sov::Dir::E);
+			if (Gap > 1 && Far && sov::isLandPassable(S, *Rules, *Far) && !S.cityAt(*Far)) Foe->pos = *Far;
+			// -SovBattleFoe=citystate|barbarian: the foe belongs to the first city-state or to the barbarians instead.
+			FString FoeKind;
+			FParse::Value(Cmd, TEXT("SovBattleFoe="), FoeKind);
+			for (const sov::Player& X : S.players)
+			{
+				if ((FoeKind == TEXT("citystate") && X.cityState != sov::kNone && X.alive) || (FoeKind == TEXT("barbarian") && X.barbarian))
+				{
+					Foe->owner = X.id;
+					// Met, as seeing its unit beside our leader would have done.
+					if (static_cast<size_t>(X.id) < S.players[0].met.size()) S.players[0].met[static_cast<size_t>(X.id)] = 1;
+					if (S.players[static_cast<size_t>(X.id)].met.size() > 0) S.players[static_cast<size_t>(X.id)].met[0] = 1;
+					break;
+				}
+			}
 			// -SovBattleUnits: other unit types for the two sides (a developer's way to see each arm fight).
 			TArray<FString> Types;
 			Setup.BattleUnits.ParseIntoArray(Types, TEXT(","));
@@ -366,8 +387,12 @@ void FSovSession::ApplyDemos(const FSovSetup& Setup)
 				const sov::TypeIndex T = Rules->unit(TCHAR_TO_UTF8(*Types[k]));
 				if (T != sov::kNone) (k == 0 ? Guard : Foe)->type = T;
 			}
-			S.players[0].relations[1].war = S.players[1].relations[0].war = true;
-			S.players[0].relations[1].since = S.players[1].relations[0].since = 1;
+			// -SovBattlePeace: no war yet, so the first attack asks to declare one.
+			if (!FParse::Param(Cmd, TEXT("SovBattlePeace")))
+			{
+				S.players[0].relations[1].war = S.players[1].relations[0].war = true;
+				S.players[0].relations[1].since = S.players[1].relations[0].since = 1;
+			}
 			Game = sov::Game::fromScenario(*Rules, std::move(S));
 		}
 	}
