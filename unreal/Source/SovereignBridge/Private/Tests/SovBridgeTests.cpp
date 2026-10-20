@@ -15,6 +15,7 @@
 #include "SovBattleSim.h"
 #include "SovArt.h"
 #include "SovBoard.h"
+#include "SovGait.h"
 #include "Sound/SoundWave.h"
 #include "SovDiplomacy.h"
 #include "sovereign_net/session.h"
@@ -1565,6 +1566,117 @@ bool FSovBoardTest::RunTest(const FString&)
 	FString Refused;
 	TestFalse(TEXT("another week's board refuses it"), SovBoard::Submit(Board, 10, TEXT("BridgeTest"), TArray<uint8>(Bytes.data(), static_cast<int32>(Bytes.size())), Refused));
 	AddInfo(Refused);
+	return true;
+}
+
+// The walking blend's arithmetic (SovGait::Blend, as USovLocomotion plays it): standing, the slow walk, the walk and the
+// run share the figure by speed, their weights summing to one and handing over in that order; the stride is the two
+// blending clips' between them; a figure without a WalkSlow blends as it did before there was one.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovGaitBlendTest, "Sovereign.Art.GaitBlendsBySpeed", kSovTestFlags)
+bool FSovGaitBlendTest::RunTest(const FString&)
+{
+	using SovGait::FBlend;
+	using SovGait::FGait;
+	const FGait Slow{kSovMocapWalkSlowSpeed, 1.2f}, Walk{kSovMocapWalkSpeed, 25.f / 24.f}, Run{kSovMocapRunSpeed, 19.f / 24.f}, NoClip;
+	FBlend Was = SovGait::Blend(0.f, Slow, Walk, Run);
+	TestEqual(TEXT("standing is all idle"), Was.Idle, 1.f);
+	for (float V = 2.5f; V <= 900.f; V += 2.5f)
+	{
+		const FBlend B = SovGait::Blend(V, Slow, Walk, Run);
+		const float Sum = B.Idle + B.Slow + B.Walk + B.Run;
+		const bool bInRange = B.Idle >= 0.f && B.Slow >= 0.f && B.Walk >= 0.f && B.Run >= 0.f;
+		// Faster never gives a slower gait more of the figure: each running total from the idle up only falls.
+		const bool bInOrder = B.Idle <= Was.Idle + 1e-5f && B.Idle + B.Slow <= Was.Idle + Was.Slow + 1e-5f
+			&& B.Idle + B.Slow + B.Walk <= Was.Idle + Was.Slow + Was.Walk + 1e-5f;
+		if (!TestTrue(FString::Printf(TEXT("weights at %.1f cm/s sum to one (%.5f), in 0..1, handing over in order"), V, Sum),
+				FMath::IsNearlyEqual(Sum, 1.f, 1e-4f) && bInRange && bInOrder && B.StrideSpeed >= Was.StrideSpeed - 1e-3f && B.Rate <= SovGait::kMaxRate))
+			return false;
+		Was = B;
+	}
+	TestEqual(TEXT("at its own speed, all slow walk"), SovGait::Blend(kSovMocapWalkSlowSpeed, Slow, Walk, Run).Slow, 1.f);
+	TestEqual(TEXT("at its own speed, all walk"), SovGait::Blend(kSovMocapWalkSpeed, Slow, Walk, Run).Walk, 1.f);
+	TestEqual(TEXT("at its own speed, all run"), SovGait::Blend(kSovMocapRunSpeed, Slow, Walk, Run).Run, 1.f);
+	const float Mid = 0.5f * (kSovMocapWalkSlowSpeed + kSovMocapWalkSpeed);
+	const FBlend Half = SovGait::Blend(Mid, Slow, Walk, Run);
+	TestTrue(TEXT("half way, half slow walk and half walk"), FMath::IsNearlyEqual(Half.Slow, 0.5f, 1e-4f) && FMath::IsNearlyEqual(Half.Walk, 0.5f, 1e-4f));
+	TestTrue(TEXT("half way, the stride between the two"), FMath::IsNearlyEqual(Half.StrideSpeed, Mid, 1e-3f)
+		&& FMath::IsNearlyEqual(Half.StrideTime, 0.5f * (Slow.Time + Walk.Time), 1e-4f) && FMath::IsNearlyEqual(Half.Rate, 1.f, 1e-4f));
+	const FBlend Brisk = SovGait::Blend(220.f, Slow, Walk, Run);
+	const float Share = (220.f - kSovMocapWalkSpeed) / (kSovMocapRunSpeed - kSovMocapWalkSpeed);
+	TestTrue(TEXT("between walk and run, their stride"), FMath::IsNearlyEqual(Brisk.StrideSpeed, FMath::Lerp(kSovMocapWalkSpeed, kSovMocapRunSpeed, Share), 1e-3f)
+		&& FMath::IsNearlyEqual(Brisk.StrideTime, FMath::Lerp(Walk.Time, Run.Time, Share), 1e-4f) && Brisk.Slow == 0.f);
+	TestEqual(TEXT("a shuffle still steps"), SovGait::Blend(10.f, Slow, Walk, Run).Rate, 0.4f);
+	TestEqual(TEXT("past a full run the rate stops at the ceiling"), SovGait::Blend(2000.f, Slow, Walk, Run).Rate, SovGait::kMaxRate);
+	// Without a WalkSlow: the idle, walk and run blend as it was (#411), but for the ceiling of 3.
+	for (float V = 0.f; V <= 900.f; V += 7.5f)
+	{
+		const FBlend B = SovGait::Blend(V, NoClip, Walk, Run);
+		const float Moving = FMath::Clamp(V / (0.4f * Walk.Speed), 0.f, 1.f);
+		const float RunShare = FMath::Clamp((V - Walk.Speed) / (Run.Speed - Walk.Speed), 0.f, 1.f);
+		const float Stride = FMath::Lerp(Walk.Speed, Run.Speed, RunShare);
+		const bool bSame = B.Slow == 0.f && FMath::IsNearlyEqual(B.Idle, 1.f - Moving, 1e-5f) && FMath::IsNearlyEqual(B.Walk, Moving * (1.f - RunShare), 1e-5f)
+			&& FMath::IsNearlyEqual(B.Run, Moving * RunShare, 1e-5f) && FMath::IsNearlyEqual(B.StrideSpeed, Stride, 1e-3f)
+			&& FMath::IsNearlyEqual(B.StrideTime, FMath::Lerp(Walk.Time, Run.Time, RunShare), 1e-5f)
+			&& FMath::IsNearlyEqual(B.Rate, FMath::Clamp(FMath::Max(V, 0.4f * Walk.Speed) / Stride, 0.f, 3.f), 1e-5f);
+		if (!TestTrue(FString::Printf(TEXT("without a WalkSlow, the blend at %.1f cm/s is the old one"), V), bSame)) return false;
+	}
+	// A figure rigged before the motion capture (the procedural walk, no Run) or a horse: idle and walk only.
+	const FBlend Old = SovGait::Blend(200.f, NoClip, FGait{kSovProceduralWalkSpeed, 20.f / 24.f}, NoClip);
+	TestTrue(TEXT("the procedural walk alone"), Old.Walk == 1.f && Old.Run == 0.f && Old.Slow == 0.f
+		&& FMath::IsNearlyEqual(Old.Rate, 200.f / kSovProceduralWalkSpeed, 1e-5f));
+	return true;
+}
+
+// A rigged unit's walk on the map (SovGait::RiggedGlide and its ease): a plot takes a person about a second, the
+// steady pace stays within what the gait carries at the figure's scale (1.6 times a Run's cadence, else 2.5 times the
+// walk's) until a long move is held to three seconds, and the ease runs from 0 to 1 at an average speed of one.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovMapWalkPaceTest, "Sovereign.Art.MapWalkKeepsItsFooting", kSovTestFlags)
+bool FSovMapWalkPaceTest::RunTest(const FString&)
+{
+	const float Plot = static_cast<float>(SovHex::Size * SovHex::Sqrt3);  // between neighbouring plots' centres
+	struct FWho
+	{
+		const TCHAR* Name;
+		float Scale, Walk, Run, Cap;  // Cap: the most the gait carries, cm/s at scale 1
+	};
+	const FWho Who[] = {{TEXT("a person with the mocap run"), 0.4f, kSovMocapWalkSpeed, kSovMocapRunSpeed, 1.6f * kSovMocapRunSpeed},
+		{TEXT("a person with the procedural walk"), 0.4f, kSovProceduralWalkSpeed, 0.f, 2.5f * kSovProceduralWalkSpeed},
+		{TEXT("a horseman"), 0.32f, kSovHorseWalkSpeed, 0.f, 2.5f * kSovHorseWalkSpeed}};
+	for (const FWho& W : Who)
+	{
+		float Before = 0.f;
+		for (const int32 Plots : {1, 2, 6})
+		{
+			const float Dist = Plots * Plot;
+			const SovGait::FGlidePace P = SovGait::RiggedGlide(Dist, W.Scale, W.Walk, W.Run);
+			const float Peak = Dist * SovGait::EaseRate(0.5f, P.Ramp) / P.Duration / W.Scale;  // at the figure's scale
+			AddInfo(FString::Printf(TEXT("%s, %d plot(s): %.2f s, peak %.0f cm/s against %.0f"), W.Name, Plots, P.Duration, Peak, W.Cap));
+			TestTrue(FString::Printf(TEXT("%s, %d plot(s): no more than 3 s, no shorter than a shorter walk"), W.Name, Plots),
+				P.Duration <= 3.f + 1e-4f && P.Duration >= Before && P.Ramp > 0.f && P.Ramp <= 0.5f);
+			if (P.Duration < 3.f - 1e-3f)
+				TestTrue(FString::Printf(TEXT("%s, %d plot(s): the feet hold (%.0f <= %.0f cm/s)"), W.Name, Plots, Peak, W.Cap), Peak <= W.Cap * 1.001f);
+			Before = P.Duration;
+		}
+	}
+	const SovGait::FGlidePace One = SovGait::RiggedGlide(Plot, 0.4f, kSovMocapWalkSpeed, kSovMocapRunSpeed);
+	TestTrue(FString::Printf(TEXT("a person crosses a plot in about a second (%.2f s)"), One.Duration), One.Duration >= 1.f && One.Duration <= 1.4f);
+	for (const float Ramp : {0.f, 0.1f, One.Ramp, 0.5f})
+	{
+		float Sum = 0.f, Last = 0.f;
+		bool bRising = true;
+		const int32 N = 2000;
+		for (int32 i = 1; i <= N; ++i)
+		{
+			const float A = static_cast<float>(i) / N;
+			const float E = SovGait::Ease(A, Ramp);
+			bRising &= E >= Last - 1e-6f;
+			Last = E;
+			Sum += SovGait::EaseRate((i - 0.5f) / N, Ramp) / N;
+		}
+		TestTrue(FString::Printf(TEXT("ease %.2f runs from 0 to 1, never back, at an average speed of one (%.4f)"), Ramp, Sum),
+			SovGait::Ease(0.f, Ramp) == 0.f && FMath::IsNearlyEqual(Last, 1.f, 1e-5f) && bRising && FMath::IsNearlyEqual(Sum, 1.f, 1e-3f));
+	}
+	TestTrue(TEXT("no ramp is the smoothstep"), FMath::IsNearlyEqual(SovGait::Ease(0.3f, 0.f), 0.3f * 0.3f * (3.f - 2.f * 0.3f), 1e-6f));
 	return true;
 }
 

@@ -163,6 +163,7 @@ void ASovBattleScene::Build(const FSovBattleSpec& Spec, const FLinearColor& Grou
 void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 {
 	const TArray<FSovSoldier>& Men = Sim.Soldiers();
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 	while (Bodies.Num() < Men.Num())
 	{
 		const int32 i = Bodies.Num();
@@ -211,12 +212,14 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		Rigs.Add(Rig);
 		RigNames.Add(Name);
 		LastPos.Add(S.Pos);
+		MovedAt.Add(Now);
+		MoveSpeed.Add(0.f);
 		Striding.Add(false);
 		Yaws.Add((S.Side == 0 ? -90.f : 90.f) + (Name.StartsWith(TEXT("Rider")) ? 90.f : 0.f));
+		MoveYaw.Add(Yaws.Last());
 		Bodies.Add(Body);
 		Heads.Add(Head);
 	}
-	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 	const double Dt = FMath::Max(Now - LastSyncTime, 1e-3);
 	LastSyncTime = Now;
 	for (int32 i = 0; i < Men.Num(); ++i)
@@ -224,12 +227,42 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		const FSovSoldier& S = Men[i];
 		if (USkeletalMeshComponent* Rig = Rigs[i])
 		{
-			// Facing the way it goes while it walks, else the enemy's side; down where it fell.
+			// A horseman is modelled along X (rig_riders.py), a man facing +Y (rig_figures.py); each walks at its own pace.
+			const bool bHorse = RigNames[i].StartsWith(TEXT("Rider"));
+			const float Turn = bHorse ? 90.f : 0.f;
+			const float Pace = bHorse ? 154.f : 108.f;  // rig_riders.py / rig_figures.py WALK_SPEED, cm/s
+			const float Face = (S.Side == 0 ? -90.f : 90.f) + Turn;
+			// Speed and heading from the man's own moves, not from the frames: a replay or the online view (Sim.RemoteView)
+			// moves the men ten times a second while this runs every frame; the battle fought here moves them every frame,
+			// so there the move is the frame's step, as before. A snapshot's move spans at least the 0.1 s between
+			// snapshots, even when one held up on the way lands a frame before the next (no burst of speed), and a man not
+			// moved since keeps his speed and heading a quarter second, a little over two snapshots, then stands; here he
+			// stands at once. Setting off from a stand, his move is the last snapshot's (or frame's), not his whole wait.
+			const bool bSnapshots = Sim.RemoteView();
+			const double Floor = bSnapshots ? FMath::Max(Dt, 0.1) : Dt;
 			const FVector2D Step = S.Pos - LastPos[i];
-			LastPos[i] = S.Pos;
-			const float Speed = static_cast<float>(Step.Size() / Dt);
+			if (!Step.IsNearlyZero(0.01))
+			{
+				const double Since = MoveSpeed[i] > 0.f ? FMath::Clamp(Now - MovedAt[i], Floor, FMath::Max(Floor, 0.25)) : Floor;
+				MoveSpeed[i] = static_cast<float>(Step.Size() / Since);
+				MoveYaw[i] = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f + Turn;
+				LastPos[i] = S.Pos;
+				MovedAt[i] = Now;
+			}
+			else if (Now - MovedAt[i] > (bSnapshots ? 0.25 : 0.0))
+			{
+				MoveSpeed[i] = 0.f;
+			}
+			const float Speed = MoveSpeed[i];
 			const bool bWalk = S.bAlive && Speed > 25.f;
 			USovLocomotion* Loco = Cast<USovLocomotion>(Rig->GetAnimInstance());
+			if (S.bAlive && Rig->bPauseAnims)
+			{
+				// Up again: nothing rewinds a battle today, but a scene shown an earlier snapshot must not leave him frozen.
+				Rig->bPauseAnims = false;
+				Rig->bNoSkeletonUpdate = false;
+				Striding[i] = !bWalk;  // without the blend, his clip starts again below
+			}
 			if (Loco)
 			{
 				Loco->Speed = bWalk ? Speed : 0.f;  // the blend eases between standing, walking and running
@@ -239,12 +272,8 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 				Striding[i] = bWalk;
 				if (UAnimSequence* A = SovArt::RiggedAnim(RigNames[i], bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
 			}
-			// A horseman is modelled along X (rig_riders.py), a man facing +Y (rig_figures.py); each walks at its own pace.
-			const bool bHorse = RigNames[i].StartsWith(TEXT("Rider"));
-			const float Turn = bHorse ? 90.f : 0.f;
-			const float Pace = bHorse ? 154.f : 108.f;  // rig_riders.py / rig_figures.py WALK_SPEED, cm/s
-			const float Face = (S.Side == 0 ? -90.f : 90.f) + Turn;
-			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f + Turn : Face;
+			// Facing the way it goes while it walks, else the enemy's side; down where it fell.
+			const float Yaw = bWalk ? MoveYaw[i] : Face;
 			if (S.bAlive)
 			{
 				// Turning over a moment (a man about 360 degrees a second, a horse half that), not at a snap.
@@ -254,10 +283,12 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			}
 			else if (!Rig->bPauseAnims)
 			{
-				Rig->bPauseAnims = true;  // the fallen lie still
-				Rig->Stop();
-				// The fallen lie where they fell; a horse goes down on its side.
+				// The fallen lie still where they fell (a horse goes down on its side), and then cost nothing: no pose
+				// ticked or refreshed. Stop is for a single clip; the blend has none to stop.
+				Rig->bPauseAnims = true;
+				if (!Loco) Rig->Stop();
 				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, bHorse ? 30 : 15), bHorse ? FRotator(0.f, Face, 80.f) : FRotator(0.f, Face, 90.f));
+				Rig->bNoSkeletonUpdate = true;
 			}
 			continue;
 		}

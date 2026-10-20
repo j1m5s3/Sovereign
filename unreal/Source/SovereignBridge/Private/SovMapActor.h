@@ -41,9 +41,6 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
-	// Puts a unit's figure at its plot; when the unit was drawn elsewhere a moment ago (a move, not a jump across
-	// the map), it walks there instead, facing the way it goes, then turns back to Rot.
-	void PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot);
 	// The figures of a unit's squad beside its lead figure (C), one fewer for each third of its health lost.
 	int32 AddSquad(UStaticMeshComponent* C, int32 Index, const FSovUnitMarker& Unit, const FString& Figure);
 
@@ -122,19 +119,31 @@ private:
 		FVector From, To;
 		FRotator Rot;  // facing when it arrives
 		float T = 0.f, Duration = 0.5f;
+		float Ramp = 0.f;     // a walk on rigs: the share of it spent speeding up (and slowing down); 0: the smoothstep
+		bool bPaced = false;  // timed from its walkers' gait (SovGait::RiggedGlide)
 		bool bLunge = false;  // a blow: out toward Toward and back to From, not a walk
 		FVector Toward = FVector::ZeroVector;
 		// A walk on rigged figures (the lead and its squad, standing in for the still figures while it lasts).
 		TArray<TWeakObjectPtr<class USkeletalMeshComponent>> Rigs;
 		TArray<TWeakObjectPtr<USceneComponent>> Hidden;  // the still figure and its squad, shown again on arrival
 	};
-	// Rigged walkers for units on the move, pooled; WalkerCount in use since the last redraw.
+	// Puts a unit's figure at its plot; when the unit was drawn elsewhere a moment ago (a move, not a jump across
+	// the map), it walks there instead, facing the way it goes, then turns back to Rot. Was: its walk before this
+	// redraw, carried on at its pace when it still goes there. True when it walks.
+	bool PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot, const FGlide* Was = nullptr);
+	// Rigged walkers for units on the move; those no unit walks on wait in SpareWalkers, hidden and not ticking.
 	UPROPERTY()
 	TArray<TObjectPtr<class USkeletalMeshComponent>> Walkers;
-	int32 WalkerCount = 0;
-	class USkeletalMeshComponent* Walker(const FString& Rig, const FLinearColor& Color);
-	// Puts a walking unit's figure (and squad) on rigged walkers for the glide.
-	void WalkOnRigs(FGlide& G, const FString& Rig, const FLinearColor& Color, int32 Squad);
+	TArray<TWeakObjectPtr<class USkeletalMeshComponent>> SpareWalkers;
+	// A walker showing the rigged figure Rig (its mesh, Mesh) in Color: Reuse (the unit's walker before this redraw)
+	// or a spare, kept as it is when it already shows that figure on the blend (only the tint set), else made so.
+	class USkeletalMeshComponent* Walker(const FString& Rig, class USkeletalMesh* Mesh, const FLinearColor& Color, class USkeletalMeshComponent* Reuse);
+	void FreeWalker(class USkeletalMeshComponent* W);
+	// Puts a walking unit's figure (and squad) on rigged walkers for the glide, the ones it walked on before (Kept,
+	// lead first; those taken are cleared) when it has them.
+	void WalkOnRigs(FGlide& G, const FString& Rig, class USkeletalMesh* Mesh, const FLinearColor& Color, int32 Squad,
+		TArray<TWeakObjectPtr<class USkeletalMeshComponent>>& Kept);
+	// Hands a glide's walkers back and shows its still figures again.
 	void EndWalk(FGlide& G);
 	TArray<FGlide> Glides;
 	// Each unit as last drawn, to see who fought since (the core keeps no record of single fights).

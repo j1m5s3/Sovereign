@@ -569,7 +569,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 		[
 			SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(12, 5))
 			.Visibility_Lambda([this]() { return Model.bStreet ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-			[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("WASD walk   hold right mouse or Q/E to look   F talk   Esc back to the map")))]
+			[SNew(STextBlock).Font(FSovStyle::Font(10)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("WASD walk, Shift run   hold right mouse or Q/E to look   F talk   Esc back to the map")))]
 		]
 		// A live battle or a replay.
 		+ SOverlay::Slot()
