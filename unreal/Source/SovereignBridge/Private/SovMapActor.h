@@ -124,7 +124,18 @@ private:
 		float T = 0.f, Duration = 0.5f;
 		bool bLunge = false;  // a blow: out toward Toward and back to From, not a walk
 		FVector Toward = FVector::ZeroVector;
+		// A walk on rigged figures (the lead and its squad, standing in for the still figures while it lasts).
+		TArray<TWeakObjectPtr<class USkeletalMeshComponent>> Rigs;
+		TArray<TWeakObjectPtr<USceneComponent>> Hidden;  // the still figure and its squad, shown again on arrival
 	};
+	// Rigged walkers for units on the move, pooled; WalkerCount in use since the last redraw.
+	UPROPERTY()
+	TArray<TObjectPtr<class USkeletalMeshComponent>> Walkers;
+	int32 WalkerCount = 0;
+	class USkeletalMeshComponent* Walker(const FString& Rig, const FLinearColor& Color);
+	// Puts a walking unit's figure (and squad) on rigged walkers for the glide.
+	void WalkOnRigs(FGlide& G, const FString& Rig, const FLinearColor& Color, int32 Squad);
+	void EndWalk(FGlide& G);
 	TArray<FGlide> Glides;
 	// Each unit as last drawn, to see who fought since (the core keeps no record of single fights).
 	struct FUnitSeen

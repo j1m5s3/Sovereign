@@ -10,6 +10,8 @@
 
 #include "SovHexLayout.h"
 #include "SovArt.h"
+#include "SovLocomotion.h"
+#include "Components/SkeletalMeshComponent.h"
 
 namespace
 {
@@ -976,7 +978,17 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 
 	int32 CrownCount = 0, BoatCount = 0, SquadCount = 0;
 	// The pool hands components to units by index, so walks in progress restart from where each figure is now.
+	for (FGlide& G : Glides) EndWalk(G);
 	Glides.Reset();
+	for (USkeletalMeshComponent* W : Walkers) W->SetVisibility(false, true);
+	WalkerCount = 0;
+	struct FWalkWith
+	{
+		FString Rig;
+		FLinearColor Color;
+		int32 Squad = 0;
+	};
+	TMap<int32, FWalkWith> WalkWith;  // the units that can walk on a rigged figure
 	TSet<int32> Seen;
 	for (int32 i = 0; i < Mirror.Units.Num(); ++i)
 	{
@@ -1011,6 +1023,11 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			: PlainName == TEXT("Rider") ? 0.32 : PlainName == TEXT("Steamship") ? 0.19 : 0.0;
 		if (bFigureOk)
 		{
+			// The rigged figure it walks on between plots, if it has one (a person, or a horseman): its squad walks too.
+			const FString Rig = SovArt::RiggedMesh(FigureName) ? FigureName : SovArt::RiggedMesh(PlainName) ? PlainName : FString();
+			const bool bSquad = !Unit.bLeader && !Unit.bCivilian && !Unit.bEmbarked;
+			if (!Rig.IsEmpty() && !Unit.bNaval && !Unit.bEmbarked && (Vehicle == 0.0 || PlainName == TEXT("Rider")))
+				WalkWith.Add(Unit.Id, {Rig, Unit.Color, bSquad ? (Unit.Hp > 66 ? 2 : Unit.Hp > 33 ? 1 : 0) : 0});
 			if (Unit.bNaval || Vehicle > 0.0)
 			{
 				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.2));
@@ -1071,6 +1088,11 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	for (int32 i = SquadCount; i < SquadPieces.Num(); ++i)
 	{
 		SquadPieces[i]->SetVisibility(false);
+	}
+	// Units on the move walk on their rigged figures (plan G step 4); a blow is still the still figure's lunge.
+	for (FGlide& G : Glides)
+	{
+		if (const FWalkWith* W = WalkWith.Find(G.Id)) WalkOnRigs(G, W->Rig, W->Color, W->Squad);
 	}
 	LungeAtFoes(Mirror, FigureOf);
 	SetActorTickEnabled(Glides.Num() > 0);
@@ -1159,9 +1181,93 @@ void ASovMapActor::Tick(float DeltaSeconds)
 			C->SetRelativeLocation(Here);
 			if (A >= 1.f) C->SetRelativeRotation(G.Rot);
 		}
+		if (G.Rigs.Num() > 0)
+		{
+			// The walkers follow the way without the bob (their own legs carry them), at the speed the ease gives now, in
+			// each figure's own scale.
+			USkeletalMeshComponent* Lead = G.Rigs[0].Get();
+			if (Lead && C)
+			{
+				Lead->SetRelativeLocation(FMath::Lerp(G.From, G.To, static_cast<double>(E)));
+				const double Rate = 6.0 * A * (1.0 - A) / FMath::Max(G.Duration, 0.05f);  // d(ease)/dt
+				const float Speed = static_cast<float>(FVector::Dist2D(G.From, G.To) * Rate / FMath::Max(Lead->GetComponentScale().X, 0.05));
+				for (const TWeakObjectPtr<USkeletalMeshComponent>& R : G.Rigs)
+				{
+					if (USovLocomotion* Loco = R.IsValid() ? Cast<USovLocomotion>(R->GetAnimInstance()) : nullptr) Loco->Speed = Speed;
+				}
+			}
+			if (A >= 1.f) EndWalk(G);
+		}
 		if (A >= 1.f) Glides.RemoveAtSwap(i);
 	}
 	if (Glides.Num() == 0) SetActorTickEnabled(false);
+}
+
+USkeletalMeshComponent* ASovMapActor::Walker(const FString& Rig, const FLinearColor& Color)
+{
+	while (Walkers.Num() <= WalkerCount)
+	{
+		USkeletalMeshComponent* W = NewObject<USkeletalMeshComponent>(this);
+		W->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		W->SetupAttachment(RootComponent);
+		W->RegisterComponent();
+		Walkers.Add(W);
+	}
+	USkeletalMeshComponent* W = Walkers[WalkerCount++];
+	if (W->GetAttachParent() != RootComponent) W->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	if (!SovArt::SetRiggedFigure(W, Rig, Color, TEXT("Idle")) || !USovLocomotion::Attach(W, Rig))
+	{
+		W->SetVisibility(false);
+		return nullptr;
+	}
+	W->SetVisibility(true);
+	return W;
+}
+
+void ASovMapActor::WalkOnRigs(FGlide& G, const FString& Rig, const FLinearColor& Color, int32 Squad)
+{
+	UStaticMeshComponent* C = G.Figure.Get();
+	if (!C || G.bLunge) return;
+	USkeletalMeshComponent* Lead = Walker(Rig, Color);
+	if (!Lead) return;
+	Lead->SetRelativeLocation(G.From);
+	Lead->SetRelativeRotation(C->GetRelativeRotation());  // facing the way, as PlaceUnit turned the figure
+	Lead->SetRelativeScale3D(C->GetRelativeScale3D());
+	G.Rigs.Add(Lead);
+	// The squad behind it, as AddSquad places them on the still figure.
+	static const FVector Spots[] = {FVector(-48.0, -42.0, 0.0), FVector(48.0, -42.0, 0.0)};
+	for (int32 k = 0; k < Squad && k < 2; ++k)
+	{
+		USkeletalMeshComponent* Man = Walker(Rig, Color);
+		if (!Man) break;
+		Man->AttachToComponent(Lead, FAttachmentTransformRules::KeepRelativeTransform);
+		Man->SetRelativeLocation(Spots[k]);
+		Man->SetRelativeRotation(FRotator::ZeroRotator);
+		Man->SetRelativeScale3D(FVector(0.95));
+		G.Rigs.Add(Man);
+	}
+	// The still figure and its squad (those showing) wait for the arrival.
+	G.Hidden.Add(C);
+	for (USceneComponent* Child : C->GetAttachChildren())
+	{
+		if (Child && Child->IsVisible()) G.Hidden.Add(Child);
+	}
+	for (const TWeakObjectPtr<USceneComponent>& H : G.Hidden) H->SetVisibility(false);
+}
+
+void ASovMapActor::EndWalk(FGlide& G)
+{
+	if (G.Rigs.Num() == 0) return;
+	for (const TWeakObjectPtr<USkeletalMeshComponent>& R : G.Rigs)
+	{
+		if (R.IsValid()) R->SetVisibility(false);
+	}
+	G.Rigs.Reset();
+	for (const TWeakObjectPtr<USceneComponent>& H : G.Hidden)
+	{
+		if (H.IsValid()) H->SetVisibility(true);
+	}
+	G.Hidden.Reset();
 }
 
 FVector ASovMapActor::UnitDrift(int32 Id) const
