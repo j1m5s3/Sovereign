@@ -18,7 +18,7 @@ constexpr float kRampSeconds = 0.25f;
 constexpr float kLongestGlide = 3.f;
 }  // namespace
 
-FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run, float RunBy)
+FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run, float Band)
 {
 	FBlend B;
 	const float E = FMath::Max(Speed, 0.f);
@@ -26,13 +26,60 @@ FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run
 	const bool bRun = Run.Speed > 0.f;
 	const float W = FMath::Max(Walk.Speed, 1.f);
 	const float Lowest = bSlow ? FMath::Min(Slow.Speed, W) : W;
-	// Standing to moving over the first 40% of the slowest gait's speed; then each gait into the next between the two
-	// clips' speeds, or the walk into the run by RunBy (past it the run alone, its stride its own).
+	// Standing to moving over the first 40% of the slowest gait's speed.
 	const float Moving = FMath::Clamp(E / (0.4f * Lowest), 0.f, 1.f);
-	const float WalkShare = bSlow ? FMath::Clamp((E - Lowest) / FMath::Max(W - Lowest, 1.f), 0.f, 1.f) : 1.f;
-	const float RunFull = RunBy > W ? FMath::Min(RunBy, Run.Speed) : Run.Speed;
-	const float RunShare = bRun ? FMath::Clamp((E - W) / FMath::Max(RunFull - W, 1.f), 0.f, 1.f) : 0.f;
 	B.Idle = 1.f - Moving;
+	if (Band > 0.f)
+	{
+		// Gaits whose footfalls differ: the ones there are, slowest first (each one's weight, speed and loop's length).
+		struct FStep
+		{
+			float* Weight;
+			float Speed, Time;
+		};
+		FStep Steps[3];
+		int32 Count = 0;
+		if (bSlow) Steps[Count++] = {&B.Slow, Lowest, Slow.Time};
+		Steps[Count++] = {&B.Walk, W, Walk.Time};
+		if (bRun) Steps[Count++] = {&B.Run, Run.Speed, Run.Time};
+		// The first gait whose handover the speed has not passed plays; within that handover's band it shares the
+		// figure with the next, whose share rises straight across the band.
+		int32 At = 0;
+		float Share = 0.f, Low = 0.f, High = 0.f;
+		for (; At + 1 < Count; ++At)
+		{
+			const float Mid = FMath::Sqrt(Steps[At].Speed * Steps[At + 1].Speed);
+			Low = Mid * (1.f - Band);
+			High = Mid * (1.f + Band);
+			if (E < High)
+			{
+				Share = FMath::Clamp((E - Low) / (High - Low), 0.f, 1.f);
+				break;
+			}
+		}
+		const FStep& From = Steps[At];
+		if (Share <= 0.f)
+		{
+			// One gait alone: its own stride, played at the speed asked over its own (floor and ceiling as below).
+			*From.Weight = Moving;
+			B.StrideSpeed = From.Speed;
+			B.StrideTime = From.Time;
+			B.Rate = FMath::Clamp(FMath::Max(E, 0.4f * Lowest) / B.StrideSpeed, 0.f, kMaxRate);
+			return B;
+		}
+		// In a band: the rate runs straight from the one gait's at the band's foot to the next one's at its head, and
+		// the stride is what that rate covers at the speed asked, so neither jumps where a gait comes in or goes.
+		const FStep& To = Steps[At + 1];
+		*From.Weight = Moving * (1.f - Share);
+		*To.Weight = Moving * Share;
+		B.Rate = FMath::Clamp(FMath::Lerp(Low / From.Speed, High / To.Speed, Share), 0.f, kMaxRate);
+		B.StrideSpeed = E / FMath::Max(B.Rate, KINDA_SMALL_NUMBER);
+		B.StrideTime = FMath::Lerp(From.Time, To.Time, Share);
+		return B;
+	}
+	// Gaits that keep in step: each into the next between the two clips' speeds.
+	const float WalkShare = bSlow ? FMath::Clamp((E - Lowest) / FMath::Max(W - Lowest, 1.f), 0.f, 1.f) : 1.f;
+	const float RunShare = bRun ? FMath::Clamp((E - W) / FMath::Max(Run.Speed - W, 1.f), 0.f, 1.f) : 0.f;
 	B.Slow = Moving * (1.f - WalkShare);
 	B.Walk = Moving * WalkShare * (1.f - RunShare);
 	B.Run = Moving * RunShare;
@@ -97,19 +144,34 @@ USovLocomotion* USovLocomotion::Attach(USkeletalMeshComponent* Component, const 
 	USovLocomotion* Loco = Cast<USovLocomotion>(Component->GetAnimInstance());
 	if (!Loco) return nullptr;
 	Loco->IdleClip = SovArt::RiggedAnim(Name, TEXT("Idle"));
-	Loco->SlowClip = SovArt::RiggedAnim(Name, TEXT("WalkSlow"));
-	Loco->WalkClip = Walk;
 	Loco->RunClip = SovArt::RiggedAnim(Name, TEXT("Run"));
-	// A person with a Run (or a WalkSlow) has the motion-captured clips; one without has the procedural walk. A horse
-	// has its own walk, and its gallop for a Run, handed over just past the walk (kSovHorseHandover). The run speed
-	// counts only where a Run was found, so a horse rigged before the gallop keeps to its walk.
-	const bool bHorse = Name.StartsWith(TEXT("Rider"));
-	const bool bMocap = Loco->RunClip || Loco->SlowClip;
-	const float Walking = bHorse ? kSovHorseWalkSpeed : bMocap ? kSovMocapWalkSpeed : kSovProceduralWalkSpeed;
-	Loco->SlowSpeed = kSovMocapWalkSlowSpeed * Scale;
-	Loco->WalkSpeed = Walking * Scale;
-	Loco->RunSpeed = (bHorse ? kSovHorseRunSpeed : FMath::Max(kSovMocapRunSpeed, Walking * 1.5f)) * Scale;
-	Loco->RunBy = bHorse ? kSovHorseHandover * Loco->WalkSpeed : 0.f;
+	if (Name.StartsWith(TEXT("Rider")))
+	{
+		// A horse fills the same slots with its own gaits, each played alone but for a narrow band where the next
+		// takes over (kSovHorseHandoverBand), as their footfalls differ: with a Trot, its walk is the slow walk, its
+		// trot the walk and its gallop the Run; rigged before the trot (no Trot), its walk and its gallop; rigged
+		// before the gallop too (no Run), its walk alone. A gait's speed counts only where its clip was found.
+		UAnimSequence* Trot = SovArt::RiggedAnim(Name, TEXT("Trot"));
+		Loco->SlowClip = Trot ? Walk : nullptr;
+		Loco->WalkClip = Trot ? Trot : Walk;
+		Loco->SlowSpeed = kSovHorseWalkSpeed * Scale;
+		Loco->WalkSpeed = (Trot ? kSovHorseTrotSpeed : kSovHorseWalkSpeed) * Scale;
+		Loco->RunSpeed = kSovHorseRunSpeed * Scale;
+		Loco->Band = kSovHorseHandoverBand;
+	}
+	else
+	{
+		// A person with a Run (or a WalkSlow) has the motion-captured clips; one without has the procedural walk.
+		Loco->SlowClip = SovArt::RiggedAnim(Name, TEXT("WalkSlow"));
+		Loco->WalkClip = Walk;
+		const bool bMocap = Loco->RunClip || Loco->SlowClip;
+		const float Walking = bMocap ? kSovMocapWalkSpeed : kSovProceduralWalkSpeed;
+		Loco->SlowSpeed = kSovMocapWalkSlowSpeed * Scale;
+		Loco->WalkSpeed = Walking * Scale;
+		Loco->RunSpeed = FMath::Max(kSovMocapRunSpeed, Walking * 1.5f) * Scale;
+		// No band: a person's gaits keep in step (and a walker that carried a horse before keeps none of its band).
+		Loco->Band = 0.f;
+	}
 	Loco->StartPhase = FMath::FRand();
 	return Loco;
 }
@@ -133,7 +195,7 @@ void FSovLocomotionProxy::PreUpdate(UAnimInstance* Instance, float DeltaSeconds)
 	SlowSpeed = Loco->SlowSpeed;
 	WalkSpeed = FMath::Max(Loco->WalkSpeed, 1.f);
 	RunSpeed = Loco->RunSpeed;
-	RunBy = Loco->RunBy;
+	Band = Loco->Band;
 	Speed = FMath::Max(Loco->Speed, 0.f);
 	Easing = Loco->SpeedEasing;
 }
@@ -145,7 +207,8 @@ void FSovLocomotionProxy::Update(float DeltaSeconds)
 	auto Gait = [](const UAnimSequence* Clip, float ClipSpeed) {
 		return Clip ? SovGait::FGait{ClipSpeed, static_cast<float>(Clip->GetPlayLength())} : SovGait::FGait();
 	};
-	const SovGait::FBlend B = SovGait::Blend(Eased, Gait(Slow, SlowSpeed), Gait(Walk, WalkSpeed), Gait(Run, RunSpeed), RunBy);
+	const SovGait::FBlend B =
+		SovGait::Blend(Eased, Gait(Slow, SlowSpeed), Gait(Walk, WalkSpeed), Gait(Run, RunSpeed), Band);
 	SlowWeight = B.Slow;
 	WalkWeight = B.Walk;
 	RunWeight = B.Run;

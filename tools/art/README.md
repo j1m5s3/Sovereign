@@ -68,29 +68,47 @@ Change them in the same commit as the regenerated `unreal/Content/Art/Rigged/*.u
 assets, or the new assets with the old constants, make planted feet slide by the difference.
 
 The horsemen (`blender/rig_riders.py`) have no WalkSlow; their gaits are made in the script, not captured: Walk, a
-four-beat walk (24 frames, one stride of 92 cm, 92.3 cm/s), and Run, a transverse gallop on the right lead (12 frames,
-one stride of 229 cm, 457.1 cm/s), each starting as the left hind hoof touches down, and a grazing Idle on straight
+four-beat walk (24 frames, one stride of 92 cm, 92.3 cm/s); Trot, a two-beat trot on diagonal pairs (16 frames, one
+stride of 176 cm, 264.0 cm/s, about a live battle's pace); and Run, a transverse gallop on the right lead (12 frames,
+one stride of 229 cm, 457.1 cm/s), each starting as the left hind hoof touches down; and a grazing Idle on straight
 legs. Each leg is solved exactly so its planted hoof holds still on the ground, flat, at each key, and the barrel rides
 on the planted hooves (each end as high as its legs reach at 98.5% of their length, rounded underneath so it never turns
-sharply), so it bounces and rocks with the stride; the actions and the FBX carry two keys a frame (imported at 48 fps,
-every key kept), so the game's straight blend from one key to the next keeps a galloping hoof within a few millimetres.
-The legs are bound solid by solid (each thigh with the balls of its hip and knee, each cannon with its ankle's ball,
-each hoof), so no joint tears and nothing of the barrel, rider or tack rides a leg. Only the left hind's touchdown is
-shared: the walk lands left hind, left fore, right hind, right fore a quarter stride apart, the gallop left hind, right
-hind, left fore, right fore at 0, 3/24, 8/24 and 11/24, so the two mixed at one phase slide every hoof. The game
-therefore hands the walk to the gallop between 92.3 and 138 cm/s (`kSovHorseHandover`, 1.5 times the walk) and above
-that plays the gallop alone at v / 457.1: a battle's 208 to 299 cm/s is the gallop at 0.46x to 0.65x, its hooves held.
-`rig_riders.py` checks each rider before it exports it (every horse bone carries vertices; in Walk and Run, sampled four
-times a frame: a planted hoof moves under 0.5 cm along or off the ground, no hoof goes 0.5 cm into it, the loop closes,
-the left hind touches down at frame 0, the barrel moves under 3 cm or 3 degrees a frame; `check_rigs.py Rider ...` runs
-the same) and prints, after it exports, this line exactly:
+sharply), so it bounces and rocks with the stride (in the trot it bounces twice a stride, highest as each diagonal pair
+passes under it, and does not pitch); the actions and the FBX carry two keys a frame (imported at 48 fps, every key
+kept), so the game's straight blend from one key to the next keeps a galloping hoof within a few millimetres; every
+touchdown falls on a key (and in the trot every lift-off too). The legs are bound solid by solid (each thigh with the
+balls of its hip and knee, each cannon with its ankle's ball, each hoof), so no joint tears and nothing of the barrel,
+rider or tack rides a leg. The walk lands left hind, left fore, right hind, right fore a quarter stride apart, each
+hoof planted for 65% of the stride; the trot left hind with right fore and then right hind with left fore half a stride
+later, each pair planted for 6 of its 16 frames (two frames with no hoof down after each); and the gallop left hind,
+right hind, left fore, right fore at 0, 3/24, 8/24 and 11/24. All three share only the left hind's touchdown (the walk
+and the trot the right hind's too, but not their fores' or how long a hoof stays down), so two of them mixed at one
+phase slide the hooves. The game therefore plays each alone at v over its own speed and hands one to the next only in
+a narrow band either side of the speed between the two (their geometric mean, plus or minus 10%:
+`kSovHorseHandoverBand`): the walk to the trot from 140 to 172 cm/s and the trot to the gallop from 313 to 382, the
+rate running on without a jump through each band. A battle's 208 to 299 cm/s is the trot alone at 0.79x to 1.13x; the
+map's steady glide is the gallop at up to 1.6x (a long move, held to 3 s, hurries it).
 
-    rig_riders: authored speeds Walk 92.3 cm/s, Run 457.1 cm/s, Idle 0.0 cm/s
+| Horse action | Loop | Authored speed | Alone at speed v (cm/s) | Play rate |
+|---|---|---|---|---|
+| Walk | 24 frames at 24 fps (1.0 s, one stride of 92 cm) | 92.3 cm/s | below 140 | v / 92.3 |
+| Trot | 16 frames (0.67 s, one stride of 176 cm) | 264.0 cm/s | 172 to 313 | v / 264.0 |
+| Run (the gallop) | 12 frames (0.5 s, one stride of 229 cm) | 457.1 cm/s | above 382 | v / 457.1 |
+| Idle (grazing) | 72 frames (3 s) | 0 | standing | 1 |
 
-The game's constants for them are `kSovHorseWalkSpeed` and `kSovHorseRunSpeed` in
-`unreal/Source/SovereignBridge/Private/SovGait.h` (the walk had been taken for 154 cm/s, so its hooves slid). A
-horseman rigged before the gallop has no Run, so the game keeps it to its walk, as it falls back to Walk wherever
-`SovArt::RiggedAnim` finds no WalkSlow or Run.
+`rig_riders.py` checks each rider before it exports it (every horse bone carries vertices; in Walk, Trot and Run,
+sampled four times a frame: a planted hoof moves under 0.5 cm along or off the ground, no hoof goes 0.5 cm into it, the
+loop closes, the left hind touches down at frame 0, the barrel moves under 3 cm or 3 degrees a frame; `check_rigs.py
+Rider ...` runs the same) and prints, after it exports, this line exactly:
+
+    rig_riders: authored speeds Walk 92.3 cm/s, Trot 264.0 cm/s, Run 457.1 cm/s, Idle 0.0 cm/s
+
+The game's constants for them are `kSovHorseWalkSpeed`, `kSovHorseTrotSpeed` and `kSovHorseRunSpeed` in
+`unreal/Source/SovereignBridge/Private/SovGait.h` (the walk had been taken for 154 cm/s, so its hooves slid).
+`USovLocomotion` puts a horse's walk, trot and gallop in the blend's slow-walk, walk and run places. A horseman rigged
+before the trot (no Trot) hands its walk to its gallop in a band around 205 cm/s (185 to 226), and one rigged before
+the gallop too (no Run) keeps to its walk, as the game falls back to Walk wherever `SovArt::RiggedAnim` finds no
+WalkSlow, Trot or Run.
 
 Check the rigs headless (no Unreal) with Blender, or with pip's `bpy` 5.0 (`pip install bpy==5.0.1`, Python 3.11):
 
@@ -120,8 +138,8 @@ python -I tools/art/blender/check_rigs.py Townsman Soldier
 | `blender/mocap.py` | Retargets the CMU clips in `mocap/` onto the rig: reads the BVH itself (no importer), cuts the loop the clip's row in `CLIPS` names, scales the subject to the rig's leg length, takes the root motion out (recording the speed), closes the loop, starts each gait loop as the left foot plants, solves the legs by two-bone IK with planted feet locked still and flat, keeps shoes and shins out of the ground, stands an idle upright on average, and calms the arm that carries something (what `rig_figures.whole_parts` found in that hand) so it does not flail, swinging it back where a spear's butt would meet the ground |
 | `blender/check_rigs.py` | Rigs every figure (or those named) and fails on a limb bone without vertices, a planted foot sliding more than 3 cm, a foot more than 1 cm into the ground, something held swinging more than 15 cm against the chest in a loop, or a gait whose left foot plants more than a frame from its frame 0; reports seam and cloth stretch and the lowest other point. A horseman named (`Rider`, `Rider_Asian`...) is rigged and checked by `rig_riders.py`'s own check instead. Runs under Blender or pip's `bpy` (`python -I tools/art/blender/check_rigs.py [Townsman ...]`) |
 | `mocap/` | The trimmed CMU motion-capture clips (BVH) behind WalkSlow, Walk, Run and Idle; its README names each source trial and the frames kept |
-| `blender/rig_riders.py` | The horsemen rigged for live battles and the map (the plain rider and the four cultures' dress): a horse skeleton (barrel, neck, and each leg's upper and lower part and hoof), a four-beat Walk (92.3 cm/s), a gallop as Run (457.1 cm/s) and a grazing Idle, each planted hoof held still and the barrel riding on the planted hooves, the legs bound solid by solid (see "Rigged people's motion" above); each rider checked before export (one that fails is not exported, an older `SK_<Name>.fbx` of it is removed, and the script exits 1); exported to `<build>/Rigged/SK_Rider*.fbx` |
-| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`; riders have Walk, Run (the gallop) and Idle) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
+| `blender/rig_riders.py` | The horsemen rigged for live battles and the map (the plain rider and the four cultures' dress): a horse skeleton (barrel, neck, and each leg's upper and lower part and hoof), a four-beat Walk (92.3 cm/s), a two-beat Trot (264.0 cm/s), a gallop as Run (457.1 cm/s) and a grazing Idle, each planted hoof held still and the barrel riding on the planted hooves, the legs bound solid by solid (see "Rigged people's motion" above); each rider checked before export (one that fails is not exported, an older `SK_<Name>.fbx` of it is removed, and the script exits 1); exported to `<build>/Rigged/SK_Rider*.fbx` |
+| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`; riders have Walk, Trot, Run (the gallop) and Idle) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
 | `blender/textures.py` | The detail sheet and its normal sheet: 8x8 cells of 512 px, each one seamless period of a pattern wrapped 16 px past its edges. Building and paving patterns from the scans, the rest (cloth weave, leather, worn metal, skin, hair, wood, rock, foliage, and for the map's ground water ripples, grass and sand dunes) painted from periodic noise with relief from their height; any scan not downloaded is painted too. Mid grey is no change |
 | `blender/sources.py` | The CC0 Poly Haven scans behind the building and paving patterns: asset id, metres covered, contrast, relief, author |
 | `fetch_textures.py` | Downloads each scan's colour and OpenGL normal maps (2k JPG) to `art/build/Sources/<id>/`, skipping what is there |
