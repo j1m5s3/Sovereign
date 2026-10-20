@@ -462,7 +462,7 @@ void ASovHUD::DrawStreet(const USovGameSubsystem& Sub, const ASovPlayerControlle
 		DrawText(Prompt, FLinearColor::White, Canvas->ClipX / 2 - W / 2, Canvas->ClipY * 0.7f, Font, 1.4f);
 	}
 	float PY = Canvas->ClipY - 26.f;
-	if (bText) Line(TEXT("WASD walk   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
+	if (bText) Line(TEXT("WASD walk, Shift run   hold right mouse / Q E look   F talk   Esc back to the map"), 16, PY);
 }
 
 void ASovHUD::DrawBattle(const USovGameSubsystem& Sub, const ASovPlayerController& PC)

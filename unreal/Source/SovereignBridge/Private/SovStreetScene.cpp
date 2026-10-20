@@ -18,9 +18,14 @@
 
 namespace
 {
-// The rigged Walk's ground speed at play rate 1 (rig_figures.py WALK_SPEED: a 90 cm stride in 0.83 s, each planted
-// foot holding still); played at speed / kWalkSpeed, the feet keep their footing.
+// The procedural Walk's ground speed at play rate 1 (rig_figures.py WALK_SPEED: a 90 cm stride in 0.83 s, each planted
+// foot holding still), for a figure without the blend (USovLocomotion): played at speed / kWalkSpeed, the feet keep
+// their footing.
 constexpr float kWalkSpeed = 108.f;
+// The ruler's pace in the streets, cm/s: a walk, just over the motion-captured Walk's 152.5 (SovGait.h), and with
+// Shift held a run, just over its Run's 295.2.
+constexpr float kRulerWalk = 165.f;
+constexpr float kRulerRun = 300.f;
 
 uint32 ColorKey(const FLinearColor& C)
 {
@@ -59,7 +64,7 @@ ASovWalker::ASovWalker()
 	GetCapsuleComponent()->InitCapsuleSize(40.f, 90.f);
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->MaxWalkSpeed = 280.f;  // a brisk walk: faster and the legs (kWalkSpeed) would blur
+	GetCharacterMovement()->MaxWalkSpeed = kRulerWalk;  // a walk; holding Shift runs (SetRunning)
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -120,6 +125,11 @@ void ASovWalker::SetColor(const FLinearColor& Color, const FString& Figure)
 	UMaterialInstanceDynamic* Gold = UMaterialInstanceDynamic::Create(Base, this);
 	Gold->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, 0.75f, 0.1f));
 	Crown->SetMaterial(0, Gold);
+}
+
+void ASovWalker::SetRunning(bool bRun)
+{
+	GetCharacterMovement()->MaxWalkSpeed = bRun ? kRulerRun : kRulerWalk;
 }
 
 void ASovWalker::Tick(float DeltaSeconds)

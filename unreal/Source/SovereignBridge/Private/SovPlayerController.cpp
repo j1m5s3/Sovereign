@@ -2174,7 +2174,7 @@ void ASovPlayerController::EnterStreet()
 	Possess(Walker);
 	SetControlRotation(FRotator(-15.f, ASovStreetScene::Facing().Yaw, 0.f));  // toward the square
 	Chooser = EChooser::None;
-	Sub->LastMessage = FString::Printf(TEXT("You walk into %s. WASD to walk, hold right mouse to look, F to talk, Esc to return."),
+	Sub->LastMessage = FString::Printf(TEXT("You walk into %s. WASD to walk (hold Shift to run), hold right mouse to look, F to talk, Esc to return."),
 		*Street->GetLayout().CityName);
 }
 
@@ -2237,6 +2237,7 @@ void ASovPlayerController::UpdateStreet(float DeltaTime)
 	SetControlRotation(Look);
 	const FRotator Yaw(0.f, GetControlRotation().Yaw, 0.f);
 	const FVector Forward = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Right = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
+	Walker->SetRunning(Down(EKeys::LeftShift) || Down(EKeys::RightShift));
 	if (Down(EKeys::W) || Down(EKeys::Up)) Walker->AddMovementInput(Forward);
 	if (Down(EKeys::S) || Down(EKeys::Down)) Walker->AddMovementInput(-Forward);
 	if (Down(EKeys::D) || Down(EKeys::Right)) Walker->AddMovementInput(Right);

@@ -27,6 +27,8 @@ public:
 	ASovWalker();
 	// The ruler's figure in the owner's colour: Figure (Leader_ENGLAND...) when its art exists, else the generic ruler.
 	void SetColor(const FLinearColor& Color, const FString& Figure = TEXT("Leader"));
+	// In the streets the ruler walks, and runs while Shift is held.
+	void SetRunning(bool bRun);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Body;

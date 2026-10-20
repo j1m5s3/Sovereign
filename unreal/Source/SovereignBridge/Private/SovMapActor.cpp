@@ -30,6 +30,14 @@ FLinearColor Fogged(const FLinearColor& C)
 // Kit models on such plots: their tint (it multiplies their own colours) browned and dimmed to match.
 const FLinearColor KitFog(0.62f, 0.52f, 0.4f);
 constexpr double CityHeight = 30.0;
+// Where a lead figure's two squad mates stand in its own space, still or walking: behind it, left and right. A person
+// faces +Y; a horseman is modelled along +X, head to +X (kit_figures.py, rig_riders.py), so its squad trails along -X.
+FVector SquadSpot(int32 k, bool bHorse)
+{
+	static const FVector Spots[] = {FVector(-48.0, -42.0, 0.0), FVector(48.0, -42.0, 0.0)};
+	static const FVector HorseSpots[] = {FVector(-42.0, 48.0, 0.0), FVector(-42.0, -48.0, 0.0)};
+	return bHorse ? HorseSpots[k] : Spots[k];
+}
 
 struct FSection
 {
@@ -977,14 +985,24 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	}
 
 	int32 CrownCount = 0, BoatCount = 0, SquadCount = 0;
-	// The pool hands components to units by index, so walks in progress restart from where each figure is now.
-	for (FGlide& G : Glides) EndWalk(G);
+	// The pool hands still figures to units by index, so each redraw places them afresh: a walk in progress carries on
+	// (its pace and its walkers kept) when the unit still goes where it went, else restarts from where it is now.
+	TMap<int32, FGlide> Going;
+	for (FGlide& G : Glides)
+	{
+		for (const TWeakObjectPtr<USceneComponent>& H : G.Hidden)
+		{
+			if (H.IsValid()) H->SetVisibility(true);
+		}
+		G.Hidden.Reset();
+		if (G.bLunge || Going.Contains(G.Id)) EndWalk(G);
+		else Going.Add(G.Id, MoveTemp(G));
+	}
 	Glides.Reset();
-	for (USkeletalMeshComponent* W : Walkers) W->SetVisibility(false, true);
-	WalkerCount = 0;
 	struct FWalkWith
 	{
 		FString Rig;
+		USkeletalMesh* Mesh = nullptr;
 		FLinearColor Color;
 		int32 Squad = 0;
 	};
@@ -1023,23 +1041,35 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 			: PlainName == TEXT("Rider") ? 0.32 : PlainName == TEXT("Steamship") ? 0.19 : 0.0;
 		if (bFigureOk)
 		{
-			// The rigged figure it walks on between plots, if it has one (a person, or a horseman): its squad walks too.
-			const FString Rig = SovArt::RiggedMesh(FigureName) ? FigureName : SovArt::RiggedMesh(PlainName) ? PlainName : FString();
-			const bool bSquad = !Unit.bLeader && !Unit.bCivilian && !Unit.bEmbarked;
-			if (!Rig.IsEmpty() && !Unit.bNaval && !Unit.bEmbarked && (Vehicle == 0.0 || PlainName == TEXT("Rider")))
-				WalkWith.Add(Unit.Id, {Rig, Unit.Color, bSquad ? (Unit.Hp > 66 ? 2 : Unit.Hp > 33 ? 1 : 0) : 0});
+			// A unit that walks to its plot does so on its rigged figure, if it has one (a person, or a horseman): its
+			// squad walks too. Ships, vehicles and the embarked glide as they are.
+			const FGlide* Was = Going.Find(Unit.Id);
+			auto WalkIfRigged = [&]()
+			{
+				if (Unit.bNaval || Unit.bEmbarked || (Vehicle > 0.0 && PlainName != TEXT("Rider"))) return;
+				FString Rig = FigureName;
+				USkeletalMesh* Rigged = SovArt::RiggedMesh(Rig);
+				if (!Rigged && PlainName != FigureName)
+				{
+					Rig = PlainName;
+					Rigged = SovArt::RiggedMesh(Rig);
+				}
+				const bool bSquad = !Unit.bLeader && !Unit.bCivilian;
+				if (Rigged) WalkWith.Add(Unit.Id, {Rig, Rigged, Unit.Color, bSquad ? (Unit.Hp > 66 ? 2 : Unit.Hp > 33 ? 1 : 0) : 0});
+			};
 			if (Unit.bNaval || Vehicle > 0.0)
 			{
 				C->SetRelativeScale3D(FVector(Vehicle > 0.0 ? Vehicle : 0.2));
-				PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)),
-					FRotator(0.f, 90.f, 0.f));  // side-on to the camera
+				if (PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y) + (FigureName == TEXT("Plane") ? 25.0 : 0.0)),
+						FRotator(0.f, 90.f, 0.f), Was))  // side-on to the camera
+					WalkIfRigged();
 				if (!Unit.bNaval && PlainName != TEXT("Plane")) SquadCount = AddSquad(C, SquadCount, Unit, FigureName);
 				continue;
 			}
 			const FVector2D Offset = Unit.bLeader ? FVector2D(-38.0, -30.0) : Unit.bCivilian ? FVector2D(38.0, 30.0) : FVector2D(0.0, 0.0);
 			Pos += SovHex::ToWorld(Offset, 0.0);
 			C->SetRelativeScale3D(FVector(Unit.bLeader ? People * 1.15 : People));
-			PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)), FRotator(0.f, 90.f, 0.f));  // facing the camera (south)
+			if (PlaceUnit(C, Unit.Id, FVector(Pos.X, Pos.Y, SurfaceZ(Unit.X, Unit.Y)), FRotator(0.f, 90.f, 0.f), Was)) WalkIfRigged();  // facing the camera (south)
 			if (!Unit.bLeader && !Unit.bCivilian && !Unit.bEmbarked) SquadCount = AddSquad(C, SquadCount, Unit, FigureName);
 			if (Unit.bEmbarked)
 			{
@@ -1089,11 +1119,21 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 	{
 		SquadPieces[i]->SetVisibility(false);
 	}
-	// Units on the move walk on their rigged figures (plan G step 4); a blow is still the still figure's lunge.
+	// Units on the move walk on their rigged figures (plan G step 4), each on the walkers it walked on before; a blow is
+	// still the still figure's lunge. Walkers no unit walks on now go back first, so the walks below can take them.
+	for (TPair<int32, FGlide>& Was : Going)
+	{
+		if (!WalkWith.Contains(Was.Key)) EndWalk(Was.Value);
+	}
 	for (FGlide& G : Glides)
 	{
-		if (const FWalkWith* W = WalkWith.Find(G.Id)) WalkOnRigs(G, W->Rig, W->Color, W->Squad);
+		const FWalkWith* W = WalkWith.Find(G.Id);
+		if (!W) continue;
+		FGlide* Was = Going.Find(G.Id);
+		TArray<TWeakObjectPtr<USkeletalMeshComponent>> NoneKept;
+		WalkOnRigs(G, W->Rig, W->Mesh, W->Color, W->Squad, Was ? Was->Rigs : NoneKept);
 	}
+	for (TPair<int32, FGlide>& Was : Going) EndWalk(Was.Value);  // what the walks did not take back (a squad grown smaller)
 	LungeAtFoes(Mirror, FigureOf);
 	SetActorTickEnabled(Glides.Num() > 0);
 	for (int32 i = CrownCount; i < Crowns.Num(); ++i)
@@ -1133,7 +1173,7 @@ void ASovMapActor::SetHighlight(int32 X, int32 Y)
 	}
 }
 
-void ASovMapActor::PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot)
+bool ASovMapActor::PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot, const FGlide* Was)
 {
 	const FVector* Now = UnitNow.Find(Id);
 	const double Dist = Now ? FVector::Dist2D(*Now, At) : 0.0;
@@ -1144,20 +1184,34 @@ void ASovMapActor::PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& A
 		C->SetRelativeLocation(At);
 		C->SetRelativeRotation(Rot);
 		UnitNow.Add(Id, At);
-		return;
+		return false;
 	}
 	FGlide G;
 	G.Figure = C;
 	G.Id = Id;
-	G.From = *Now;
 	G.To = At;
 	G.Rot = Rot;
-	G.Duration = FMath::Clamp(static_cast<float>(Dist / (SovHex::Size * 2.2)), 0.3f, 1.4f);  // about half a second a plot
-	C->SetRelativeLocation(G.From);
+	if (Was && !Was->bLunge && FVector::Dist2D(Was->To, At) < 1.0)
+	{
+		// Still going where it was going: the same walk carries on, at the same pace.
+		G.From = Was->From;
+		G.T = Was->T;
+		G.Duration = Was->Duration;
+		G.Ramp = Was->Ramp;
+		G.bPaced = Was->bPaced;
+	}
+	else
+	{
+		G.From = *Now;
+		// About half a second a plot; a walk on rigs is timed from its gait instead (WalkOnRigs).
+		G.Duration = FMath::Clamp(static_cast<float>(Dist / (SovHex::Size * 2.2)), 0.3f, 1.4f);
+	}
+	C->SetRelativeLocation(*Now);
 	const FVector Dir = At - G.From;
 	// Kit figures face +Y: turn so +Y points along the way.
 	C->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))) - 90.f, 0.f));
 	Glides.Add(G);
+	return true;
 }
 
 void ASovMapActor::Tick(float DeltaSeconds)
@@ -1169,7 +1223,7 @@ void ASovMapActor::Tick(float DeltaSeconds)
 		UStaticMeshComponent* C = G.Figure.Get();
 		G.T += DeltaSeconds;
 		const float A = FMath::Clamp(G.T / G.Duration, 0.f, 1.f);
-		const float E = A * A * (3.f - 2.f * A);  // ease in and out
+		const float E = SovGait::Ease(A, G.Ramp);  // ease in and out
 		// A little bob in step on the way; a blow goes out toward the foe and springs back.
 		const FVector Out = (G.Toward - G.From).GetSafeNormal2D() * FMath::Min(FVector::Dist2D(G.Toward, G.From) * 0.42, 75.0);
 		const FVector P = G.bLunge ? G.From + Out * FMath::Sin(A * PI) + FVector(0, 0, 4.0 * FMath::Sin(A * PI))
@@ -1184,16 +1238,16 @@ void ASovMapActor::Tick(float DeltaSeconds)
 		if (G.Rigs.Num() > 0)
 		{
 			// The walkers follow the way without the bob (their own legs carry them), at the speed the ease gives now, in
-			// each figure's own scale.
+			// each figure's own scale (the squad stands 0.95 of the lead).
 			USkeletalMeshComponent* Lead = G.Rigs[0].Get();
 			if (Lead && C)
 			{
 				Lead->SetRelativeLocation(FMath::Lerp(G.From, G.To, static_cast<double>(E)));
-				const double Rate = 6.0 * A * (1.0 - A) / FMath::Max(G.Duration, 0.05f);  // d(ease)/dt
-				const float Speed = static_cast<float>(FVector::Dist2D(G.From, G.To) * Rate / FMath::Max(Lead->GetComponentScale().X, 0.05));
+				const double Ground = FVector::Dist2D(G.From, G.To) * SovGait::EaseRate(A, G.Ramp) / FMath::Max(G.Duration, 0.05f);
 				for (const TWeakObjectPtr<USkeletalMeshComponent>& R : G.Rigs)
 				{
-					if (USovLocomotion* Loco = R.IsValid() ? Cast<USovLocomotion>(R->GetAnimInstance()) : nullptr) Loco->Speed = Speed;
+					if (USovLocomotion* Loco = R.IsValid() ? Cast<USovLocomotion>(R->GetAnimInstance()) : nullptr)
+						Loco->Speed = static_cast<float>(Ground / FMath::Max(R->GetComponentScale().X, 0.05));
 				}
 			}
 			if (A >= 1.f) EndWalk(G);
@@ -1203,45 +1257,106 @@ void ASovMapActor::Tick(float DeltaSeconds)
 	if (Glides.Num() == 0) SetActorTickEnabled(false);
 }
 
-USkeletalMeshComponent* ASovMapActor::Walker(const FString& Rig, const FLinearColor& Color)
+USkeletalMeshComponent* ASovMapActor::Walker(const FString& Rig, USkeletalMesh* Mesh, const FLinearColor& Color, USkeletalMeshComponent* Reuse)
 {
-	while (Walkers.Num() <= WalkerCount)
+	// Showing this figure on the blend already: kept as it is, its stride running on.
+	auto Ready = [Mesh](const USkeletalMeshComponent* W) { return W->GetSkeletalMeshAsset() == Mesh && Cast<USovLocomotion>(W->GetAnimInstance()) != nullptr; };
+	USkeletalMeshComponent* W = Reuse;
+	if (!W)
 	{
-		USkeletalMeshComponent* W = NewObject<USkeletalMeshComponent>(this);
+		// A spare, one showing this figure first.
+		SpareWalkers.RemoveAll([](const TWeakObjectPtr<USkeletalMeshComponent>& S) { return !S.IsValid(); });
+		int32 Pick = SpareWalkers.IndexOfByPredicate([&Ready](const TWeakObjectPtr<USkeletalMeshComponent>& S) { return Ready(S.Get()); });
+		if (Pick == INDEX_NONE) Pick = SpareWalkers.Num() - 1;
+		if (Pick != INDEX_NONE)
+		{
+			W = SpareWalkers[Pick].Get();
+			SpareWalkers.RemoveAtSwap(Pick);
+		}
+	}
+	if (!W)
+	{
+		W = NewObject<USkeletalMeshComponent>(this);
 		W->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		W->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;  // nothing to pose off screen
 		W->SetupAttachment(RootComponent);
 		W->RegisterComponent();
 		Walkers.Add(W);
 	}
-	USkeletalMeshComponent* W = Walkers[WalkerCount++];
-	if (W->GetAttachParent() != RootComponent) W->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	if (!SovArt::SetRiggedFigure(W, Rig, Color, TEXT("Idle")) || !USovLocomotion::Attach(W, Rig))
+	if (Ready(W))
 	{
-		W->SetVisibility(false);
-		return nullptr;
+		if (UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(W->GetMaterial(1))) Mid->SetVectorParameterValue(TEXT("Tint"), Color);
 	}
+	else
+	{
+		// Made anew, it carries on from the stride and speed it had (a unit whose figure changed mid-walk).
+		const USovLocomotion* Old = Cast<USovLocomotion>(W->GetAnimInstance());
+		const float Phase = Old ? Old->StridePhase : -1.f, Speed = Old ? Old->Speed : 0.f;
+		USovLocomotion* Loco = SovArt::SetRiggedFigure(W, Rig, Color, TEXT("Idle")) ? USovLocomotion::Attach(W, Rig) : nullptr;
+		if (!Loco)
+		{
+			FreeWalker(W);
+			return nullptr;
+		}
+		if (Phase >= 0.f) Loco->StartPhase = Phase;
+		Loco->Speed = Speed;
+	}
+	// The glide's own ease already smooths its speed: the legs take it up at once rather than lagging the ground.
+	if (USovLocomotion* Loco = Cast<USovLocomotion>(W->GetAnimInstance())) Loco->SpeedEasing = 30.f;
+	W->SetComponentTickEnabled(true);
 	W->SetVisibility(true);
 	return W;
 }
 
-void ASovMapActor::WalkOnRigs(FGlide& G, const FString& Rig, const FLinearColor& Color, int32 Squad)
+void ASovMapActor::FreeWalker(USkeletalMeshComponent* W)
+{
+	if (!W) return;
+	// A spare costs nothing until it walks again: hidden, its pose neither ticked nor refreshed.
+	W->SetVisibility(false);
+	W->SetComponentTickEnabled(false);
+	if (USovLocomotion* Loco = Cast<USovLocomotion>(W->GetAnimInstance())) Loco->Speed = 0.f;
+	SpareWalkers.AddUnique(W);
+}
+
+void ASovMapActor::WalkOnRigs(FGlide& G, const FString& Rig, USkeletalMesh* Mesh, const FLinearColor& Color, int32 Squad,
+	TArray<TWeakObjectPtr<USkeletalMeshComponent>>& Kept)
 {
 	UStaticMeshComponent* C = G.Figure.Get();
 	if (!C || G.bLunge) return;
-	USkeletalMeshComponent* Lead = Walker(Rig, Color);
+	auto Take = [&Kept](int32 k) -> USkeletalMeshComponent* {
+		if (!Kept.IsValidIndex(k)) return nullptr;
+		USkeletalMeshComponent* W = Kept[k].Get();
+		Kept[k].Reset();
+		return W;
+	};
+	USkeletalMeshComponent* Lead = Walker(Rig, Mesh, Color, Take(0));
 	if (!Lead) return;
-	Lead->SetRelativeLocation(G.From);
-	Lead->SetRelativeRotation(C->GetRelativeRotation());  // facing the way, as PlaceUnit turned the figure
+	if (Lead->GetAttachParent() != RootComponent) Lead->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	Lead->SetRelativeScale3D(C->GetRelativeScale3D());
+	// Facing the way: a horseman is modelled along +X (rig_riders.py), a person facing +Y (as SovBattleScene turns them).
+	const bool bHorse = Rig.StartsWith(TEXT("Rider"));
+	const FVector Dir = G.To - G.From;
+	Lead->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))) - 90.f + (bHorse ? 90.f : 0.f), 0.f));
+	// Timed from the gait at the figure's scale, so the speed asked stays within what the legs carry (a walk carried on
+	// from the last redraw keeps its time).
+	const USovLocomotion* Loco = Cast<USovLocomotion>(Lead->GetAnimInstance());
+	if (Loco && !G.bPaced && G.T <= 0.f)
+	{
+		const SovGait::FGlidePace Pace = SovGait::RiggedGlide(static_cast<float>(FVector::Dist2D(G.From, G.To)),
+			static_cast<float>(Lead->GetComponentScale().X), Loco->WalkSpeed, Loco->RunClip ? Loco->RunSpeed : 0.f);
+		G.Duration = Pace.Duration;
+		G.Ramp = Pace.Ramp;
+		G.bPaced = true;
+	}
+	Lead->SetRelativeLocation(FMath::Lerp(G.From, G.To, static_cast<double>(SovGait::Ease(G.T / FMath::Max(G.Duration, 0.05f), G.Ramp))));
 	G.Rigs.Add(Lead);
-	// The squad behind it, as AddSquad places them on the still figure.
-	static const FVector Spots[] = {FVector(-48.0, -42.0, 0.0), FVector(48.0, -42.0, 0.0)};
+	// The squad behind it, where AddSquad places them on the still figure.
 	for (int32 k = 0; k < Squad && k < 2; ++k)
 	{
-		USkeletalMeshComponent* Man = Walker(Rig, Color);
+		USkeletalMeshComponent* Man = Walker(Rig, Mesh, Color, Take(k + 1));
 		if (!Man) break;
-		Man->AttachToComponent(Lead, FAttachmentTransformRules::KeepRelativeTransform);
-		Man->SetRelativeLocation(Spots[k]);
+		if (Man->GetAttachParent() != Lead) Man->AttachToComponent(Lead, FAttachmentTransformRules::KeepRelativeTransform);
+		Man->SetRelativeLocation(SquadSpot(k, bHorse));
 		Man->SetRelativeRotation(FRotator::ZeroRotator);
 		Man->SetRelativeScale3D(FVector(0.95));
 		G.Rigs.Add(Man);
@@ -1257,11 +1372,7 @@ void ASovMapActor::WalkOnRigs(FGlide& G, const FString& Rig, const FLinearColor&
 
 void ASovMapActor::EndWalk(FGlide& G)
 {
-	if (G.Rigs.Num() == 0) return;
-	for (const TWeakObjectPtr<USkeletalMeshComponent>& R : G.Rigs)
-	{
-		if (R.IsValid()) R->SetVisibility(false);
-	}
+	for (const TWeakObjectPtr<USkeletalMeshComponent>& R : G.Rigs) FreeWalker(R.Get());
 	G.Rigs.Reset();
 	for (const TWeakObjectPtr<USceneComponent>& H : G.Hidden)
 	{
@@ -1279,16 +1390,16 @@ FVector ASovMapActor::UnitDrift(int32 Id) const
 
 int32 ASovMapActor::AddSquad(UStaticMeshComponent* C, int32 Index, const FSovUnitMarker& Unit, const FString& Figure)
 {
-	// Two men behind the lead, left and right (in the lead's own space: it faces +Y and is scaled down), fewer as the
-	// unit is hurt, as Civ VI thins a unit's formation.
-	static const FVector Spots[] = {FVector(-48.0, -42.0, 0.0), FVector(48.0, -42.0, 0.0)};
+	// Two men behind the lead, left and right (in the lead's own space, which is scaled down: SquadSpot), fewer as the
+	// unit is hurt, as Civ VI thins a unit's formation. A horseman's squad trails along its length, as it does walking.
+	const bool bHorse = Figure.StartsWith(TEXT("Rider"));
 	const int32 Men = Unit.Hp > 66 ? 2 : Unit.Hp > 33 ? 1 : 0;
 	for (int32 k = 0; k < Men; ++k)
 	{
 		UStaticMeshComponent* S = Marker(SquadPieces, Index, nullptr);
 		if (!SovArt::SetKitMesh(S, TEXT("Figures"), Figure, Unit.Color)) break;
 		if (S->GetAttachParent() != C) S->AttachToComponent(C, FAttachmentTransformRules::KeepRelativeTransform);
-		S->SetRelativeLocation(Spots[k]);
+		S->SetRelativeLocation(SquadSpot(k, bHorse));
 		S->SetRelativeRotation(FRotator::ZeroRotator);
 		S->SetRelativeScale3D(FVector(0.95));
 		++Index;
