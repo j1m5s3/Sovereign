@@ -249,8 +249,15 @@ bool ASovPlayerController::HexUnderCursor(int32& OutX, int32& OutY) const
 	{
 		return false;
 	}
-	const FVector Ground = Origin + Dir * (-Origin.Z / Dir.Z);
-	const FIntPoint P = SovHex::FromWorld(Ground);
+	// Where the ray meets the ground: first at sea level, then a few times at the height of the plot found there, so a
+	// click on a hill's face picks the hill, not the plot behind it.
+	double Z = 0.0;
+	FIntPoint P = SovHex::FromWorld(Origin + Dir * ((Z - Origin.Z) / Dir.Z));
+	for (int32 Pass = 0; Pass < 3; ++Pass)
+	{
+		Z = SurfaceZ(P.X, P.Y);
+		P = SovHex::FromWorld(Origin + Dir * ((Z - Origin.Z) / Dir.Z));
+	}
 	const USovGameSubsystem* Sub = Subsystem();
 	const std::optional<sov::Hex> H = Sub->GetGame().state().grid.normalize(sov::Hex{P.X, P.Y});
 	if (!H)

@@ -16,6 +16,7 @@ namespace
 constexpr double BaseZ = -30.0;       // bottom of every tile's skirt
 constexpr double TileScale = 1.0;     // plots meet edge to edge
 constexpr double Plateau = 0.78;      // each plot is flat this far toward its edge, then slopes to meet its neighbours
+constexpr double RimAt = 0.72;        // how far down that slope the rim ring sits: beyond it, the water's grid line, foam or sand
 // Revealed but not seen now: faded toward sepia, like an old map (Civ VI's fog), rather than just darkened.
 FLinearColor Fogged(const FLinearColor& C)
 {
@@ -319,29 +320,44 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 	TMap<FIntPoint, FVector2D> Shared;  // sum of heights, count of plots
 	// Colours meet the same way: a plot's flat top keeps its own colour and its slope fades to the mean colour of the
 	// plots at each point of its outline, so neighbouring terrains blend instead of meeting at a hard hex edge.
-	TMap<FIntPoint, FLinearColor> SharedColor;  // sum of colours (A: count)
+	// Land blends only with land and water only with water, so coasts stay crisp (James's picture): sums of colours (A:
+	// count) per outline point, and how many land and water plots meet there.
+	TMap<FIntPoint, FLinearColor> LandColor, WaterColor;
 	auto ShownColor = [](const FSovTile& Tile) { return Tile.bVisible ? Tile.Color : Fogged(Tile.Color); };
 	const FLinearColor Parchment(0.2f, 0.17f, 0.12f);
-	auto Share = [&](const FVector2D& Center, double Z, const FLinearColor& Color) {
+	auto Share = [&](const FVector2D& Center, double Z, const FLinearColor& Color, int32 Kind) {  // Kind: 0 land, 1 water, -1 parchment
 		FVector2D Pts[12];
 		Outline(Center, Pts);
 		for (const FVector2D& P : Pts)
 		{
 			FVector2D& S = Shared.FindOrAdd(PointKey(P), FVector2D::ZeroVector);
 			S += FVector2D(Z, 1.0);
-			if (Color.A <= 0.f) continue;  // the parchment: known plots keep their colours to its edge
-			FLinearColor& C = SharedColor.FindOrAdd(PointKey(P), FLinearColor(0, 0, 0, 0));
+			if (Kind < 0) continue;  // the parchment: known plots keep their colours to its edge
+			FLinearColor& C = (Kind == 0 ? LandColor : WaterColor).FindOrAdd(PointKey(P), FLinearColor(0, 0, 0, 0));
 			C += FLinearColor(Color.R, Color.G, Color.B, 1.f);
 		}
 	};
-	for (const FSovTile& Tile : Mirror.Tiles) Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief), ShownColor(Tile));
-	// Unexplored plots share their height but not their colour: blended with parchment, a coast turned grey.
-	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0, FLinearColor(0, 0, 0, 0));
+	for (const FSovTile& Tile : Mirror.Tiles)
+		Share(SovHex::MapPos(Tile.X, Tile.Y), ReliefHeight(Tile.Relief), ShownColor(Tile), Tile.Relief == ESovRelief::Water ? 1 : 0);
+	for (const FIntPoint& P : Mirror.Unexplored) Share(SovHex::MapPos(P.X, P.Y), ReliefHeight(ESovRelief::Water) - 6.0, Parchment, -1);
 	// A little painted variation over the flat tops, so a run of one terrain is not one flat colour.
 	auto Mottle = [](const FVector& P, const FLinearColor& C) {
 		const double V = FMath::Sin(P.X * 0.0071 + P.Y * 0.0043) * FMath::Sin(P.Y * 0.0067 - P.X * 0.0029) + 0.5 * FMath::Sin(P.X * 0.019 + P.Y * 0.023);
 		return C * static_cast<float>(1.0 + 0.07 * V);
 	};
+	// Territory borders glow faintly inside the owner's plots in the owner's colour (the cream line itself is EdgeStrips):
+	// the outline points each border edge runs through, per plot.
+	TMap<FIntPoint, TMap<FIntPoint, FLinearColor>> Glow;
+	for (const FSovEdge& E : Mirror.Borders)
+	{
+		FVector2D PA[12], PB[12];
+		Outline(SovHex::MapPos(E.A.X, E.A.Y), PA);
+		Outline(SovHex::MapPos(E.B.X, E.B.Y), PB);
+		TSet<FIntPoint> InB;
+		for (const FVector2D& P : PB) InB.Add(PointKey(P));
+		for (const FVector2D& P : PA)
+			if (InB.Contains(PointKey(P))) Glow.FindOrAdd(E.A).Add(PointKey(P), E.Color);
+	}
 	auto Bytes = [](const FLinearColor& C) { return KitPaint(C, 0); };
 
 	// Unexplored plots: blank parchment, a little below the sea, so the known world stands up out of the map. Each is
@@ -383,20 +399,59 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		const FVector2D Center = SovHex::MapPos(Tile.X, Tile.Y);
 		FVector2D Pts[12];
 		Outline(Center, Pts);
-		FVector Outer[12], Inner[12];
-		FColor OuterPaint[12], InnerPaint[12];
+		FVector Outer[12], Inner[12], Rim[12];
+		FColor OuterPaint[12], InnerPaint[12], RimPaint[12];
 		bool bAlone[12];
+		const bool bWater = Tile.Relief == ESovRelief::Water;
+		// A patchwork: each plot its own shade, a few per cent either way (James's picture: land as fields of shades).
+		const uint32 Hash = static_cast<uint32>(Tile.X * 73856093) ^ static_cast<uint32>(Tile.Y * 19349663);
+		const FLinearColor Own = bWater ? Color : Color * (0.94f + 0.12f * static_cast<float>(Hash % 1000) / 999.f);
+		const TMap<FIntPoint, FLinearColor>* MyGlow = Glow.Find(FIntPoint(Tile.X, Tile.Y));
+		auto Srgb = [](uint8 R, uint8 G, uint8 B) { return FLinearColor::FromSRGBColor(FColor(R, G, B)); };
+		const FLinearColor Foam = Srgb(236, 240, 230), Sand = Srgb(222, 202, 150);
+		const FLinearColor GridLine = Tile.bShallow ? Srgb(104, 164, 182) : Srgb(40, 98, 112);  // softer over the shallows
+		const FLinearColor NearLand = Srgb(123, 177, 190);  // the shallows lighten toward the land
 		for (int32 k = 0; k < 12; ++k)
 		{
-			const FVector2D Sum = Shared.FindRef(PointKey(Pts[k]));
+			const FIntPoint Key = PointKey(Pts[k]);
+			const FVector2D Sum = Shared.FindRef(Key);
 			bAlone[k] = Sum.Y <= 1.0;
 			Outer[k] = SovHex::ToWorld(Pts[k], Sum.Y > 0.0 ? Sum.X / Sum.Y : Top);
 			Inner[k] = SovHex::ToWorld(Center + (Pts[k] - Center) * Plateau, Top);
-			const FLinearColor Tint = SharedColor.FindRef(PointKey(Pts[k]));
-			const FLinearColor Mean = Tint.A > 0.f ? Tint / Tint.A : Color;
-			OuterPaint[k] = Bytes(Mean);
-			// The flat top already leans toward its neighbours at its rim: the blend spans the plot, not just its slope.
-			InnerPaint[k] = Bytes(Mottle(Inner[k], FMath::Lerp(Color, Mean, 0.45f)));
+			Rim[k] = FMath::Lerp(Inner[k], Outer[k], RimAt);
+			const FLinearColor L = LandColor.FindRef(Key), W = WaterColor.FindRef(Key);
+			FLinearColor In, R, Out;
+			if (bWater)
+			{
+				// Water: its own colour (lighter where the shallows meet land) to the rim, then a thin line: foam at the
+				// coast, a faint grid line on open water.
+				const FLinearColor Water = Tile.bShallow && L.A > 0.f ? FMath::Lerp(Own, NearLand, 0.35f) : Own;
+				In = W.A > 0.f ? FMath::Lerp(Water, W / W.A, 0.3f) : Water;
+				R = In;
+				Out = L.A > 0.f ? Foam : GridLine;
+			}
+			else
+			{
+				// Land: its own shade at the centre, leaning toward the land beside it at the rim; sand where it meets water.
+				const FLinearColor Mean = L.A > 0.f ? L / L.A : Own;
+				In = FMath::Lerp(Own, Mean, 0.2f);
+				R = FMath::Lerp(Own, Mean, 0.5f);
+				Out = Mean;
+				if (W.A > 0.f)
+				{
+					R = FMath::Lerp(R, Sand, 0.5f);
+					Out = Sand;
+				}
+			}
+			if (const FLinearColor* G = MyGlow ? MyGlow->Find(Key) : nullptr)
+			{
+				// The owner's faint glow just inside the border.
+				R = FMath::Lerp(R, *G, 0.18f);
+				Out = FMath::Lerp(Out, *G, 0.35f);
+			}
+			OuterPaint[k] = Bytes(Out);
+			RimPaint[k] = Bytes(R);
+			InnerPaint[k] = Bytes(Mottle(Inner[k], In));
 		}
 		const FVector Up(0, 0, 1);
 		// The slope to the neighbours, each face lit by its own normal, its colour fading to theirs.
@@ -437,16 +492,20 @@ void ASovMapActor::BuildTerrain(const FSovMirror& Mirror)
 		else
 		{
 			// The flat top.
-			const int32 Mid = S.Vert(Mid3, Up, Bytes(Mottle(Mid3, Color)));
+			const int32 Mid = S.Vert(Mid3, Up, Bytes(Mottle(Mid3, Own)));
 			int32 Ring[12];
 			for (int32 k = 0; k < 12; ++k) Ring[k] = S.Vert(Inner[k], Up, InnerPaint[k]);
 			for (int32 k = 0; k < 12; ++k) S.Tri(Mid, Ring[k], Ring[(k + 1) % 12]);
 		}
 		for (int32 k = 0; k < 12; ++k)
 		{
+			// The slope in two bands: to the rim, then the rim to the outline (the water's grid line, foam or sand, the glow).
 			const int32 n = (k + 1) % 12;
-			Face(Inner[k], InnerPaint[k], Inner[n], InnerPaint[n], Outer[n], OuterPaint[n]);
-			Face(Inner[k], InnerPaint[k], Outer[n], OuterPaint[n], Outer[k], OuterPaint[k]);
+			if (Tile.Relief == ESovRelief::Mountain) Rim[k] = FMath::Lerp(Inner[k], Outer[k], RimAt);
+			Face(Inner[k], InnerPaint[k], Inner[n], InnerPaint[n], Rim[n], RimPaint[n]);
+			Face(Inner[k], InnerPaint[k], Rim[n], RimPaint[n], Rim[k], RimPaint[k]);
+			Face(Rim[k], RimPaint[k], Rim[n], RimPaint[n], Outer[n], OuterPaint[n]);
+			Face(Rim[k], RimPaint[k], Outer[n], OuterPaint[n], Outer[k], OuterPaint[k]);
 		}
 		// At the edge of the drawn world (no plot beyond), a skirt down to the floor so the edge reads as solid.
 		for (int32 k = 0; k < 12; ++k)
@@ -546,7 +605,11 @@ void ASovMapActor::Sync(const FSovMirror& Mirror)
 
 	// Rivers along plot edges; borders just inside the owner's side.
 	EdgeStrips(Mirror.Rivers, RiverPieces, 0.0, 15.0, 1.0);
-	EdgeStrips(Mirror.Borders, BorderPieces, 7.0, 4.0, 2.0);
+	{
+		TArray<FSovEdge> Cream = Mirror.Borders;
+		for (FSovEdge& E : Cream) E.Color = FLinearColor::FromSRGBColor(FColor(243, 238, 216));  // #F3EED8
+		EdgeStrips(Cream, BorderPieces, 3.0, 3.0, 1.0);
+	}
 
 	// Resources the viewer sees (a small ball: green bonus, violet luxury, red strategic) and improvements (the Fields
 	// kit's model, darkened when pillaged; without the art, a flat tile, dark red when pillaged).
@@ -1027,11 +1090,25 @@ void ASovMapActor::SetHighlight(int32 X, int32 Y)
 	if (X < 0)
 	{
 		Highlight->SetVisibility(false);
+		for (UStaticMeshComponent* Side : HighlightRing) Side->SetVisibility(false);
 		return;
 	}
-	Highlight->SetMaterial(0, MaterialFor(FLinearColor(1.f, 0.85f, 0.1f)));
-	Highlight->SetRelativeLocation(SovHex::Center(X, Y, SurfaceZ(X, Y) + 2.0));
-	Highlight->SetVisibility(true);
+	// A gold ring along the plot's six sides (James's picture: a hex ring, not an opaque disc).
+	Highlight->SetVisibility(false);
+	const FVector2D C = SovHex::MapPos(X, Y);
+	const double Z = SurfaceZ(X, Y) + 3.0;
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const double A0 = FMath::DegreesToRadians(60.0 * i + 30.0), A1 = FMath::DegreesToRadians(60.0 * i + 90.0);
+		const FVector P0 = SovHex::ToWorld(C + FVector2D(FMath::Cos(A0), FMath::Sin(A0)) * SovHex::Size * 0.92, Z);
+		const FVector P1 = SovHex::ToWorld(C + FVector2D(FMath::Cos(A1), FMath::Sin(A1)) * SovHex::Size * 0.92, Z);
+		UStaticMeshComponent* Side = Marker(HighlightRing, i, CubeMesh.Get());
+		Side->SetRelativeLocation((P0 + P1) * 0.5);
+		const FVector Dir = P1 - P0;
+		Side->SetRelativeRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X))), 0.f));
+		Side->SetRelativeScale3D(FVector(Dir.Size() / 100.0, 0.05, 0.02));
+		Side->SetMaterial(0, MaterialFor(FLinearColor(1.f, 0.8f, 0.2f)));
+	}
 }
 
 void ASovMapActor::PlaceUnit(UStaticMeshComponent* C, int32 Id, const FVector& At, const FRotator& Rot)

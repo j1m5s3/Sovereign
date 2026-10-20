@@ -67,7 +67,7 @@ public:
 	FVector ToWorld(const FVector& Local) const { return GetActorTransform().TransformPosition(Local); }
 	// The scene is turned so the leader, walking in from the entry toward the square and the Palace, has the map's sun
 	// (ASovGameMode::SpawnLighting) at the back: the buildings ahead are lit, not black against it.
-	static FRotator Facing() { return FRotator(0.f, 180.f, 0.f); }
+	static FRotator Facing() { return FRotator(0.f, 0.f, 0.f); }
 
 	// Scenes sit 10 km west of the map so both can exist at once (and the sky stays above them).
 	static FVector Origin() { return FVector(1000000.0, -1000000.0, 0.0); }
