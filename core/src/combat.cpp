@@ -196,6 +196,19 @@ void Game::declareWarOn(PlayerId by, PlayerId target, CasusBelli why) {
     }
 }
 
+std::vector<uint8_t> Game::warsFromDeclaring(PlayerId by, PlayerId target) const {
+    if (target == kNoPlayer) return {};
+    std::vector<uint8_t> wars(state_.players.size(), 0);
+    wars[static_cast<size_t>(target)] = 1;
+    // As declareWarOn's Suzerain War: the city-states the target is suzerain of join its side.
+    if (isMajorCiv(by) && isMajorCiv(target)) {
+        for (const Player& cs : state_.players) {
+            if (cs.cityState != kNone && cs.alive && suzerainOf(cs.id) == target) wars[static_cast<size_t>(cs.id)] = 1;
+        }
+    }
+    return wars;
+}
+
 bool Game::canMakePeace(PlayerId player, PlayerId target) const {
     if (!atWar(player, target)) return false;
     if (state_.players[static_cast<size_t>(player)].barbarian || state_.players[static_cast<size_t>(target)].barbarian)
@@ -445,7 +458,10 @@ bool Game::exertsZoc(const Unit& u) const {
 
 void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit, PlayerId warWith) const {
     if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return;
-    auto hostile = [&](PlayerId other) { return other != mover.owner && (other == warWith || atWar(mover.owner, other)); };
+    const std::vector<uint8_t> declared = warsFromDeclaring(mover.owner, warWith);
+    auto hostile = [&](PlayerId other) {
+        return other != mover.owner && ((!declared.empty() && declared[static_cast<size_t>(other)]) || atWar(mover.owner, other));
+    };
     auto mark = [&](Hex center) {
         for (int d = 0; d < kNumDirs; ++d) {
             const std::optional<Hex> h = state_.grid.neighbor(center, static_cast<Dir>(d));
@@ -1146,8 +1162,9 @@ std::optional<AttackApproach> Game::attackApproach(UnitId attacker, Hex target, 
         if (best->war == kNoPlayer) return std::nullopt;
     }
     // At peace, the way may be shut (their borders closed to us), or open only to an attack on a later turn: planned as
-    // if at war with them (borders open, their units kept out of and their zone of control in force), a plot it gets
-    // to and attacks from this turn, or any when there is no other, is taken with the war declared first.
+    // if at war with them (borders open, their units and those of the city-states that join them kept out of and their
+    // zone of control in force), a plot it gets to and attacks from this turn, or any when there is no other, is taken
+    // with the war declared first.
     const PlayerId owner = best ? best->war : warTargetOwner(u->owner, *t);
     if (walks && owner != kNoPlayer && (!best || !(best->turns == 0 && best->attackOnArrival))) {
         std::optional<AttackApproach> opened = plan(owner);

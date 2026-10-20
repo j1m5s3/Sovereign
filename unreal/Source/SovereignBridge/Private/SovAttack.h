@@ -33,8 +33,8 @@ struct FSovAttackPlan
 	FString Text;                         // a plain sentence for the message line and the hover
 };
 
-// The foe a right-click on `Target` is aimed at: a city of another player on a plot we have seen, a standing Encampment
-// of a player we are at war with, or another player's unit, both in sight.
+// The foe a right-click on `Target` is aimed at: a city of another player or a standing Encampment of a player we are at
+// war with, on a plot we have seen, or another player's unit in sight.
 bool SovFoeAt(const sov::Game& G, sov::PlayerId Me, sov::Hex Target);
 // The plan for our unit against the foe at `Target`. At peace, the war is asked for when the attack can be made: from
 // where it stands, or on arriving this turn (the move first, then the war), or when only a war opens the way there.

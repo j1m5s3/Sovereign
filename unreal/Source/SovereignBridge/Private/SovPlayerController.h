@@ -219,6 +219,7 @@ protected:
 	sov::Hex WarTarget;
 	sov::Hex WarPlot;          // where WarUnit attacks from (FSovAttackPlan::Plot)
 	bool bWarFirst = false;    // the way to WarPlot opens only at war: declare before the move
+	bool bWarAttacks = false;  // the attack follows this turn (FSovAttackPlan::bAttackOnArrival); else only the move
 	FSovBattleResult Outcome;
 	bool bBattleSent = false;
 	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle

@@ -1014,6 +1014,115 @@ TEST(attack_approach_through_closed_borders_declares_first) {
     }
 }
 
+// The war comes first only when it lets the attack come sooner. Their land is only the plot beside the foe, closed to
+// us: at peace the Warrior goes around it and gets beside the foe this turn with no move left; as if at war it steps
+// onto it with a move to spare. That attacks a Slinger this turn, so the war comes first; beside a Warrior (zone of
+// control) it would stop with no move either way, so the war waits. On open land the move at peace attacks this turn.
+TEST(attack_approach_declares_first_only_to_attack_sooner) {
+    for (const char* foe : {"UNIT_SLINGER", "UNIT_WARRIOR"}) {
+        UnitId w = kNoUnit;
+        auto g = frontier([&](GameState& s) {
+            const TypeIndex ee = rules().civic("CIVIC_EARLY_EMPIRE");
+            s.players[1].civics.done[static_cast<size_t>(ee)] = 1;
+            sovtest::addCity(s, 1, {12, 9}, false, 1);
+            sovtest::claimFor(s, s.cities.back(), {9, 6});
+            sovtest::claimFor(s, s.cities.back(), {10, 6});
+            w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+            addUnit(s, foe, 1, {10, 6});
+        });
+        const bool zoc = std::string(foe) == "UNIT_WARRIOR";
+        REQUIRE(g->state().plot({9, 6}).owner == 1 && g->state().plot({9, 5}).owner == kNoPlayer);
+        CHECK_EQ(g->validate(Command::move(0, w, {9, 6})), CommandError::NoPath);  // closed to us at peace
+        const std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
+        REQUIRE(a.has_value());
+        CHECK_EQ(static_cast<int>(a->war), 1);
+        CHECK_EQ(a->turns, 0);
+        CHECK_EQ(a->plot, (zoc ? Hex{9, 5} : Hex{9, 6}));
+        CHECK_EQ(a->warFirst, !zoc);
+        CHECK_EQ(a->attackOnArrival, !zoc);
+    }
+    UnitId w = kNoUnit;
+    auto open = frontier([&](GameState& s) {
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_SLINGER", 1, {10, 6});
+    });
+    const std::optional<AttackApproach> a = open->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(static_cast<int>(a->war), 1);
+    CHECK(a->attackOnArrival);
+    CHECK(!a->warFirst);
+}
+
+// Planned as if at war, their Builder and their Encampment are kept out of as they are once the war is declared: with
+// the only quick way in through either, the plan goes around, the same before the declaration and after it.
+TEST(attack_approach_declares_first_around_what_war_keeps_out) {
+    for (const bool camp : {false, true}) {
+        UnitId w = kNoUnit;
+        auto g = frontier([&](GameState& s) {
+            const TypeIndex ee = rules().civic("CIVIC_EARLY_EMPIRE");
+            s.players[1].civics.done[static_cast<size_t>(ee)] = 1;
+            sovtest::addCity(s, 1, {12, 6}, false, 1);
+            for (const Hex& h : s.grid.within({12, 6}, 3)) sovtest::claimFor(s, s.cities.back(), h);
+            for (const Hex& h : {Hex{8, 5}, Hex{7, 5}, Hex{8, 7}, Hex{7, 7}}) s.plot(h).terrain = rules().terrain("TERRAIN_GRASS_MOUNTAIN");
+            if (camp) {
+                CityDistrict d;
+                d.type = rules().district("DISTRICT_ENCAMPMENT");
+                d.pos = {9, 6};
+                d.complete = true;
+                s.cities.back().districts.push_back(d);
+            } else {
+                addUnit(s, "UNIT_BUILDER", 1, {9, 6});
+            }
+            w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+            addUnit(s, "UNIT_SLINGER", 1, {10, 6});
+        });
+        const std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
+        REQUIRE(a.has_value());
+        CHECK_EQ(static_cast<int>(a->war), 1);
+        CHECK(a->warFirst);
+        CHECK_EQ(a->plot, (Hex{9, 5}));
+        CHECK_EQ(a->turns, 2);
+        CHECK(!a->attackOnArrival);
+        REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+        const std::optional<AttackApproach> b = g->attackApproach(w, {10, 6}, false);
+        REQUIRE(b.has_value());
+        CHECK_EQ(b->plot, a->plot);
+        CHECK_EQ(b->turns, a->turns);
+        CHECK_EQ(b->movesLeft, a->movesLeft);
+    }
+}
+
+// Declared on a major civ, a war brings the city-states of its suzerainty in as well (Suzerain War): planned as if at
+// war, their zone of control is in force too, so the plan made before the declaration is the one the move gives after.
+TEST(attack_approach_declares_first_with_their_city_states) {
+    UnitId w = kNoUnit;
+    auto g = frontier([&](GameState& s) {
+        const TypeIndex ee = rules().civic("CIVIC_EARLY_EMPIRE");
+        s.players[1].civics.done[static_cast<size_t>(ee)] = 1;
+        sovtest::addCity(s, 1, {12, 6}, false, 1);
+        for (const Hex& h : s.grid.within({12, 6}, 3)) sovtest::claimFor(s, s.cities.back(), h);
+        s.players[1].envoys[2] = 6;  // Geneva's suzerain
+        w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
+        addUnit(s, "UNIT_SLINGER", 1, {10, 6});
+        addUnit(s, "UNIT_WARRIOR", 2, {9, 5});  // Geneva's, beside the plot it attacks from without it
+    });
+    REQUIRE(g->suzerainOf(2) == 1);
+    const std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK_EQ(static_cast<int>(a->war), 1);
+    CHECK(a->warFirst);
+    CHECK(!a->attackOnArrival);
+    REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+    REQUIRE(g->atWar(0, 2));
+    const std::optional<AttackApproach> b = g->attackApproach(w, {10, 6}, false);
+    REQUIRE(b.has_value());
+    CHECK_EQ(b->plot, a->plot);
+    CHECK_EQ(b->turns, a->turns);
+    CHECK_EQ(b->movesLeft, a->movesLeft);
+    REQUIRE(g->submit(Command::move(0, w, a->plot)) == CommandError::Ok);
+    CHECK_EQ(g->validate(Command::attack(0, w, {10, 6})), CommandError::CannotAttack);
+}
+
 // A ranged unit stops within its range, with a line of sight, and shoots from there; where it stands when it can.
 TEST(attack_approach_for_a_ranged_unit_stops_in_range) {
     UnitId archer = kNoUnit;
