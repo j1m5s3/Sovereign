@@ -1,10 +1,12 @@
 // Idle, walk and run blended by speed (plan G step 4), without an Animation Blueprint: a scene sets Speed each frame and
 // the figure eases from standing into a slow walk, from that into a walk and from a walk into a run, played at the rate
 // that keeps the feet from sliding. Every gait loop starts as the left foot plants (tools/art/mocap/README.md), so one
-// shared stride phase keeps the feet in step through each cross-fade. A horse's walk and gallop share only that first
-// footfall, so a horse hands one to the other just past its walk's speed (kSovHorseHandover) and gallops alone above.
-// The clips are a rigged figure's Idle, WalkSlow, Walk and Run (WalkSlow and Run when it has them), from
-// tools/art/blender/rig_figures.py and rig_riders.py.
+// shared stride phase keeps the feet in step through each cross-fade. A horse's walk, trot and gallop (in the slow
+// walk's, walk's and run's places) share only that first footfall (the walk and the trot the right hind too, not the
+// fores), so a horse plays each alone, slowed or hurried, and hands it to the next only in a narrow band of speed
+// between the two (kSovHorseHandoverBand). The clips are a rigged figure's Idle, WalkSlow, Walk and Run (WalkSlow and
+// Run when it has them), from tools/art/blender/rig_figures.py, or a horseman's Idle, Walk, Trot and Run (Trot and Run
+// when it has them) from rig_riders.py.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -32,7 +34,7 @@ struct FSovLocomotionProxy : public FAnimInstanceProxy
 	float SlowSpeed = kSovMocapWalkSlowSpeed;  // cm/s the gaits were made at
 	float WalkSpeed = kSovMocapWalkSpeed;
 	float RunSpeed = kSovMocapRunSpeed;
-	float RunBy = 0.f;        // a horse: the speed by which it gallops alone (SovGait::Blend)
+	float Band = 0.f;         // a horse: the band its gaits hand over in (SovGait::Blend)
 	float Speed = 0.f;        // asked by the scene
 	float Eased = 0.f;        // eased toward it, so a start or a stop blends
 	float Easing = 8.f;       // per second
@@ -56,7 +58,7 @@ public:
 	// can ask for more, so the legs keep up with the ground.
 	float SpeedEasing = 8.f;
 	float SlowSpeed = kSovMocapWalkSlowSpeed, WalkSpeed = kSovMocapWalkSpeed, RunSpeed = kSovMocapRunSpeed;
-	float RunBy = 0.f;        // the speed by which the walk has handed over to the run, for a horse; 0 for people
+	float Band = 0.f;         // a horse: its gaits hand over only within this band (SovGait::Blend); 0 for people
 	float StartPhase = 0.f;   // not every figure in step
 	float StridePhase = 0.f;  // where the stride had got to (read back each update, so a rebuilt figure can carry on)
 

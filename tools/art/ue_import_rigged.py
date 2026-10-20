@@ -6,8 +6,9 @@ inside the editor):
 Reads art/build/Rigged/SK_<Name>.fbx (or $SOV_ART_BUILD/Rigged) and imports each as a skeletal mesh with its own
 skeleton and its animations under /Game/Art/Rigged/, the kit material on every slot (marked for skeletal meshes, so
 it renders on them). Each FBX take becomes SK_<Name>_Anim_Armature_<Take>: WalkSlow, Walk, Run and Idle for the
-people (rig_figures.py; the speeds they were authored at are in tools/art/README.md), Walk, Run (the gallop) and Idle
-for the riders (rig_riders.py; their takes carry two keys a frame, imported at 48 fps so none is lost).
+people (rig_figures.py; the speeds they were authored at are in tools/art/README.md), Walk, Trot, Run (the gallop) and
+Idle for the riders (rig_riders.py; their takes carry two keys a frame, imported at 48 fps so none is lost: the Trot's
+16 frames come in as 33 keys, the Run's 12 as 25).
 """
 import glob
 import os
@@ -38,7 +39,7 @@ def main():
     for path in sorted(glob.glob(os.path.join(BUILD, "SK_*.fbx"))):
         # A fresh import: importing over the old assets keeps the old animations.
         name = os.path.splitext(os.path.basename(path))[0]
-        takes = ("WalkSlow", "Walk", "Run", "Idle")
+        takes = ("WalkSlow", "Walk", "Trot", "Run", "Idle")
         for suffix in ["_Anim_Armature_" + t for t in takes] + ["", "_Skeleton"]:  # what uses the skeleton first
             if lib.does_asset_exist("%s/%s%s" % (DEST, name, suffix)):
                 lib.delete_asset("%s/%s%s" % (DEST, name, suffix))

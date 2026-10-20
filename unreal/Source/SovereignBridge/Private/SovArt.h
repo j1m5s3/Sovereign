@@ -28,7 +28,7 @@ UMaterialInstanceDynamic* Tinted(UObject* Outer, const FLinearColor& Tint);
 // with Tint; returns false when the mesh is missing (callers keep their primitive).
 bool SetKitMesh(UStaticMeshComponent* Component, const TCHAR* Kit, const FString& Name, const FLinearColor& Tint);
 // The rigged people and horsemen (tools/art/blender/rig_figures.py, rig_riders.py): SK_<Name> in /Game/Art/Rigged with its
-// animations (WalkSlow, Walk, Run and Idle for people; Walk, Run and Idle for horsemen; Walk and Idle for older rigs).
+// animations (WalkSlow, Walk, Run and Idle for people; Walk, Trot, Run and Idle for horsemen; fewer for older rigs).
 // SetRiggedFigure puts one on a skeletal component, its team cloth tinted, playing Anim (looping); false without the art.
 class USkeletalMesh* RiggedMesh(const FString& Name);
 class UAnimSequence* RiggedAnim(const FString& Name, const TCHAR* Anim);

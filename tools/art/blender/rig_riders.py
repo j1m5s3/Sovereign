@@ -1,17 +1,20 @@
 """The horsemen rigged for live battles and the map: the Figures kit's riders (the plain one and the four cultures'
-dress) on a horse skeleton (barrel, neck, and each leg's upper part, lower part and hoof), with three looping actions
-made here, in place: Walk, a four-beat walk (WALK_SPEED, about 92 cm/s); Run, a transverse gallop on the right lead
-(RUN_SPEED, about 457 cm/s); and Idle, grazing. In both gaits each hoof is planted while it bears weight and held still
-on the ground at the gait's speed (each leg solved exactly as two bones, the hoof kept flat), and the barrel rides on
-the planted hooves (the carriage): each end of it rides as high as its own planted legs reach, so the body bounces and
-rocks with the stride and no planted leg is stretched past REACH of its length. The neck nods, the rider rides the
-barrel. Each gait loop starts as the left hind hoof touches down, but the two gaits' other footfalls do not line up, so
-the game does not mix them at one phase across the way from one speed to the other: it hands the walk over to the gallop
-just past the walk's speed and plays the gallop alone above that, slowed or hurried (SovGait.h kSovHorseHandover). Each
-rider is checked (check: skin, planted hooves held, ground, the loop closing, the barrel moving smoothly) before it is
-exported as an FBX skeletal mesh with Walk, Run and Idle to <build>/Rigged/SK_Rider*.fbx, alongside rig_figures.py's
-people, for tools/art/ue_import_rigged.py; one that fails is not exported (an older export of it is removed) and the
-script exits 1. It prints the speeds the gaits were authored at, which the game's SovGait.h must match.
+dress) on a horse skeleton (barrel, neck, and each leg's upper part, lower part and hoof), with four looping actions
+made here, in place: Walk, a four-beat walk (WALK_SPEED, about 92 cm/s); Trot, a two-beat trot on diagonal pairs
+(TROT_SPEED, about 264 cm/s, a live battle's pace); Run, a transverse gallop on the right lead (RUN_SPEED, about 457
+cm/s); and Idle, grazing. In every gait each hoof is planted while it bears weight and held still on the ground at the
+gait's speed (each leg solved exactly as two bones, the hoof kept flat), and the barrel rides on the planted hooves
+(the carriage): each end of it rides as high as its own planted legs reach, so the body bounces and rocks with the
+stride and no planted leg is stretched past REACH of its length. The neck nods, the rider rides the barrel. Each gait
+loop starts as the left hind hoof touches down, but their other footfalls do not line up (the walk and the trot land the
+right hind together too, but not the fores, and a hoof stays down longer in the walk), so the game does not mix two at
+one phase across the way from one speed to the other: it plays each alone, slowed or hurried to the speed asked, and
+hands one to the next only in a narrow band of speed between theirs (SovGait.h kSovHorseHandoverBand), the walk to the
+trot around 156 cm/s and the trot to the gallop around 347. Each rider is checked (check: skin, planted hooves held,
+ground, the loop closing, the barrel moving smoothly) before it is exported as an FBX skeletal mesh with Walk, Trot,
+Run and Idle to <build>/Rigged/SK_Rider*.fbx, alongside rig_figures.py's people, for tools/art/ue_import_rigged.py;
+one that fails is not exported (an older export of it is removed) and the script exits 1. It prints the speeds the
+gaits were authored at, which the game's SovGait.h must match.
 
   blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/rig_riders.py -- art/build [Rider ...]
 
@@ -55,6 +58,21 @@ FOLD = 40     # degrees: how far a hoof turns up and back at the height of its s
 WALK_SPEED = 2 * STEP / (STANCE * WALK_FRAMES / FPS) * CM  # cm/s, about 92 (SovGait.h kSovHorseWalkSpeed)
 PHASE = {"hl": 0.0, "fl": 0.25, "hr": 0.5, "fr": 0.75}  # where each hoof touches down in the stride, the four-beat walk:
 # left hind, left fore, right hind, right fore
+# The trot, a two-beat trot on diagonal pairs: the left hind lands with the right fore, and the right hind with the left
+# fore half a stride later (TROT_PHASE), each pair planted for TROT_STANCE of the stride (lift-off on a key: 6 of its 16
+# frames), then a brief moment with none down (2 frames) before the other pair lands. Its speed is near a live battle's
+# (the battle sim's kSpeed, 260 cm/s), so a horseman there trots at about its own pace rather than galloping at half of
+# it. Both ends of the barrel ride their planted legs alike, so it bounces twice a stride, highest as each pair passes
+# under it, and hardly pitches (a real trot sinks at mid-stance on its fetlocks; here a planted leg could only shorten by
+# bending its knee or hock deeply); the head nods a little against it, highest in the moment off the ground, so it rides
+# steadier than the barrel.
+TROT_FRAMES = 16
+TROT_STANCE = 0.375
+TROT_STEP = 0.33
+TROT_LIFT = 0.2
+TROT_FOLD = 60
+TROT_SPEED = 2 * TROT_STEP / (TROT_STANCE * TROT_FRAMES / FPS) * CM  # cm/s, about 264 (SovGait.h kSovHorseTrotSpeed)
+TROT_PHASE = {"hl": 0.0, "fr": 0.0, "hr": 0.5, "fl": 0.5}
 # The gallop, a transverse gallop on the right lead: the hooves land in turn (left hind, right hind, left fore, right
 # fore, at RUN_PHASE of the stride), each planted for RUN_STANCE of it, then a moment with none down, the legs gathered
 # under the body, before the left hind lands again. A swing lifts the hoof higher and folds the leg tight.
@@ -72,10 +90,12 @@ RUN_PHASE = {"hl": 0 / 24, "hr": 3 / 24, "fl": 8 / 24, "fr": 11 / 24}
 # (_carriage); nod: the neck's swing up and down (degrees), how many times a stride, and where in it the head is highest.
 GAITS = {"Walk": dict(frames=WALK_FRAMES, stance=STANCE, step=STEP, lift=LIFT, fold=FOLD, phase=PHASE, peak=0.5, rise=0.0, sway=4.0,
                       nod=(4.0, 2, 0.1)),
+         "Trot": dict(frames=TROT_FRAMES, stance=TROT_STANCE, step=TROT_STEP, lift=TROT_LIFT, fold=TROT_FOLD, phase=TROT_PHASE, peak=0.45,
+                      rise=0.0, sway=10.0, nod=(2.0, 2, 0.4375)),
          "Run": dict(frames=RUN_FRAMES, stance=RUN_STANCE, step=RUN_STEP, lift=RUN_LIFT, fold=RUN_FOLD, phase=RUN_PHASE, peak=0.4,
                      rise=RUN_RISE, sway=40.0, nod=(8.0, 1, 0.1))}
 # The speed (cm/s) each looping action was authored at: the game plays it at its own speed / this.
-SPEEDS = {"Walk": WALK_SPEED, "Run": RUN_SPEED, "Idle": 0.0}
+SPEEDS = {"Walk": WALK_SPEED, "Trot": TROT_SPEED, "Run": RUN_SPEED, "Idle": 0.0}
 # The check (check): a planted hoof holds within HOLD cm of where it landed, on the ground; no hoof goes more than SINK
 # cm into it; the barrel moves no more than JOLT cm (or degrees) a frame; sampled SUBFRAMES times a frame.
 HOLD = 0.5
@@ -174,6 +194,7 @@ def rig(name, make):
     for b in arm.pose.bones:
         b.rotation_mode = "QUATERNION"
     gait(arm, "Walk")
+    gait(arm, "Trot")
     gait(arm, "Run")
     idle(arm)
     return arm, body
@@ -394,11 +415,12 @@ def _runs(mask):
 
 def check(arm, body, name):
     """Checks one rigged horseman; returns (problems, a report line for each gait). Fails when a leg bone, the barrel
-    or the neck carries no vertices, or in Walk or Run (sampled SUBFRAMES times a frame): a hoof in its planted window
-    (its ankle, the lower leg's tail, and its sole's vertices) moves more than HOLD cm along the ground (which runs back
-    at the gait's speed) or off it; a hoof vertex goes more than SINK cm into the ground; the last frame is not the
-    first (every bone within 0.01 cm and 0.01 degrees); the left hind hoof does not touch down at frame 0; or the barrel
-    moves more than JOLT cm or degrees in a frame. Reports too how far the planted legs stretch (at most about REACH)."""
+    or the neck carries no vertices, or in Walk, Trot or Run (sampled SUBFRAMES times a frame): a hoof in its planted
+    window (its ankle, the lower leg's tail, and its sole's vertices) moves more than HOLD cm along the ground (which
+    runs back at the gait's speed) or off it; a hoof vertex goes more than SINK cm into the ground; the last frame is not
+    the first (every bone within 0.01 cm and 0.01 degrees); the left hind hoof does not touch down at frame 0; or the
+    barrel moves more than JOLT cm or degrees in a frame. Reports too how far the planted legs stretch (at most about
+    REACH)."""
     problems = []
     groups = {g.index: g.name for g in body.vertex_groups}
     owner = [groups[max(v.groups, key=lambda g: g.weight).group] if len(v.groups) else "" for v in body.data.vertices]
@@ -418,7 +440,7 @@ def check(arm, body, name):
         return arm.evaluated_get(bpy.context.evaluated_depsgraph_get()).pose.bones
 
     lines = []
-    for act_name in ("Walk", "Run"):
+    for act_name in ("Walk", "Trot", "Run"):
         g = GAITS[act_name]
         act = bpy.data.actions.get(act_name)
         if act is None:
