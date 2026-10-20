@@ -23,6 +23,11 @@ bool CanBind(const FKey& Key);
 // Binds an action to a key; an action already on that key takes this one's old key.
 void Bind(const FKey& Logical, const FKey& Key);
 void ResetAll();
+// A key as players read it: F, F8, ',' or '.'.
+FString KeyText(const FKey& Key);
+// Text naming keys by their defaults, as now bound: each "(F)" and "{F}" (an action's default key, by its FKey name, e.g.
+// {Comma}) becomes the key that triggers that action now, so the help and tooltips follow the player's bindings.
+FString Expand(const FString& Text);
 void Load();  // from GameUserSettings (once, at start-up)
 void Save();
 }  // namespace SovKeys

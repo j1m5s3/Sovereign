@@ -1309,6 +1309,7 @@ bool FSovKeyRebindTest::RunTest(const FString& Parameters)
 	SovKeys::Bind(EKeys::F, EKeys::G);  // Found onto Fortify's key: Fortify takes F
 	TestEqual(TEXT("found moves to G"), SovKeys::Physical(EKeys::F), EKeys::G);
 	TestEqual(TEXT("fortify takes F"), SovKeys::Physical(EKeys::G), EKeys::F);
+	TestEqual(TEXT("help names the bound keys"), SovKeys::Expand(TEXT("{F} founds a city (F); Fortify (G)")), FString(TEXT("G founds a city (G); Fortify (F)")));
 	SovKeys::Bind(EKeys::F, EKeys::Semicolon);  // onto a free key: Fortify keeps F
 	TestEqual(TEXT("found on a free key"), SovKeys::Physical(EKeys::F), EKeys::Semicolon);
 	TestEqual(TEXT("fortify keeps F"), SovKeys::Physical(EKeys::G), EKeys::F);
