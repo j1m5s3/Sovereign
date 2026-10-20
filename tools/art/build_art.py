@@ -42,6 +42,7 @@ def main():
     # The rigged people share the kit's pattern cells, so a full build remakes them too.
     if not kits:
         run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_figures.py"), "--", BUILD])
+        run([BLENDER, "-b", "--factory-startup", "--python", os.path.join(REPO, "tools", "art", "blender", "rig_riders.py"), "--", BUILD])
     for script in ["ue_import.py"] + ([] if kits else ["ue_import_rigged.py"]):
         run([EDITOR, os.path.join(REPO, "unreal", "Sovereign.uproject"), "-run=pythonscript",
              "-script=" + os.path.join(REPO, "tools", "art", script), "-unattended", "-nosplash", "-nopause", "-stdout"], env=env)
