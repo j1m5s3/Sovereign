@@ -15,3 +15,12 @@ relief (`blender/textures.py`); the list is `blender/sources.py`.
 | adobe | [Clay Plaster](https://polyhaven.com/a/clay_plaster) | Amal Kumar |
 | flagstones | [Cobblestone Floor 01](https://polyhaven.com/a/cobblestone_floor_01) | Rob Tuytel |
 | cobbles | [Cobblestone Floor 08](https://polyhaven.com/a/cobblestone_floor_08) | Rob Tuytel |
+
+## Motion capture
+
+The rigged people's WalkSlow, Walk, Run and Idle are retargeted (`blender/mocap.py`) from the
+[CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu), in Bruce Hahne's BVH conversion: subject 16
+trial 33 (slow walk), subject 39 trial 01 (walk), subject 35 trial 18 (run/jog) and subject 82 trial 08 (standing). The trimmed clips and what was
+kept are in `mocap/` (its README). The data used in this project was obtained from mocap.cs.cmu.edu. The database
+was created with funding from NSF EIA-0196217. CMU allows its use in commercial products but not reselling the data
+itself, even converted.

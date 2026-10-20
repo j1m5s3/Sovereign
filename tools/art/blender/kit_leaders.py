@@ -216,7 +216,8 @@ def japan(seed=408):
     p.loft([(z + 0.07 * s, 0.083 * s, 0.09 * s, 0, 0.012 * s), (z + 0.15 * s, 0.093 * s, 0.1 * s, 0, 0.008 * s)], F.HAIR[0], segments=14,
            arc=(-0.2, math.pi + 0.2), two_sided=True)  # hair at the sides and back
     p.segment((0, 0.02 * s, z + 0.25 * s), (0, -0.07 * s, z + 0.26 * s), 0.014 * s, 0.011 * s, F.HAIR[0], segments=6)  # the topknot
-    p.segment((-0.22 * s, -0.08 * s, 1.0 * s), (-0.3 * s, 0.1 * s, 0.75 * s), 0.02 * s, 0.018 * s, BLACK, segments=8)  # the katana
+    # The katana through the sash at the left hip, hilt forward and tip back (worn, so rig_figures binds it to the hips).
+    p.segment((-0.19 * s, -0.17 * s, 1.02 * s), (-0.25 * s, 0.24 * s, 0.72 * s), 0.02 * s, 0.018 * s, BLACK, segments=8)
     return p
 
 

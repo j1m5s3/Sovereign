@@ -1,9 +1,15 @@
-"""The Figures kit's people rigged and animated for the street scene: each figure (kit_figures.py) gets a simple
-skeleton, its vertices bound rigidly to the nearest limb, and two looping actions, Walk (a 90 cm stride in 0.83 s, legs by inverse kinematics so planted feet hold still)
-and Idle (breathing and a slow sway). Exported as FBX skeletal meshes with their animations to
-<build>/Rigged/SK_<Name>.fbx for tools/art/ue_import_rigged.py.
+"""The Figures kit's people rigged and animated for the street scene and battles: each figure (kit_figures.py) gets
+the same simple skeleton (16 bones: hips, chest, head, arms, legs, feet, and a skirt's front and back), its vertices
+bound rigidly to one limb (shoes to the feet, what a hand holds to its forearm and a scabbard to the hips, whole; the
+legs' own blended across the hip and knee; the cloth below the hips shared with the skirt bones, which swing with the
+legs), and four looping actions from motion capture (mocap.py, the clips in tools/art/mocap/): WalkSlow, Walk, Run and
+Idle, in place, each authored at a speed it prints (cm/s; the game plays a loop at its own speed / that, choosing the
+loop by speed: tools/art/README.md). Without the clips it falls back to a procedural Walk and Idle (no WalkSlow or
+Run). Each figure is checked (check_rigs.py: skin, planted feet, ground, what the hands hold) before it is exported as
+an FBX skeletal mesh with its animations to <build>/Rigged/SK_<Name>.fbx for tools/art/ue_import_rigged.py; one that
+fails is not exported (an older export of it is removed) and the script exits 1.
 
-  blender -b --factory-startup --python tools/art/blender/rig_figures.py -- art/build [Citizen ...]
+  blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/rig_figures.py -- art/build [Citizen ...]
 
 Figures stand at the origin facing -Y, metres, as the kits are built.
 """
@@ -14,11 +20,13 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import bpy  # noqa: E402
-from mathutils import Matrix  # noqa: E402
+from mathutils import Euler, Matrix, Vector  # noqa: E402
 
 import kit_figures  # noqa: E402
 import kit_leaders  # noqa: E402
+import check_rigs  # noqa: E402
 import kitlib  # noqa: E402
+import mocap  # noqa: E402
 
 
 F = kit_figures
@@ -153,27 +161,200 @@ BONES = {"root": ((0, 0, 0), (0, 0, 0.15), None), "pelvis": ((0, 0, 0.92), (0, 0
 for s, n in ((1, "r"), (-1, "l")):
     BONES["thigh_" + n] = ((s * 0.09, 0, 0.92), (s * 0.1, -0.01, 0.5), "pelvis")
     BONES["shin_" + n] = ((s * 0.1, -0.01, 0.5), (s * 0.1, 0.01, 0.08), "thigh_" + n)
+    BONES["foot_" + n] = ((s * 0.1, 0.01, 0.08), (s * 0.1, -0.12, 0.03), "shin_" + n)  # ankle to the ball of the foot
     BONES["upperarm_" + n] = ((s * 0.215, 0, 1.37), (s * 0.255, 0.01, 1.11), "spine")
     BONES["forearm_" + n] = ((s * 0.255, 0.01, 1.11), (s * 0.265, -0.03, 0.8), "upperarm_" + n)
+# The front and back of a skirt, hung from the hips' axis and swung by the legs (key_skirt).
+BONES["skirt_f"] = ((0, -0.02, 0.92), (0, -0.12, 0.45), "pelvis")
+BONES["skirt_b"] = ((0, 0.02, 0.92), (0, 0.12, 0.45), "pelvis")
 
 
-def bone_for(x, y, z):
-    """Which limb carries a vertex: weapons with the hands that hold them, limbs by where they are, cloth with the body."""
+def bone_for(x, y, z, hands=True, arms=True, legs=True):
+    """Which limb carries a vertex: weapons with the hands that hold them, limbs by where they are, cloth with the body.
+    (Shoes and whatever is held at the side go whole by whole_parts first, which also says which of the hand, arm and
+    leg rules a solid escapes: see there.)"""
     side = "r" if x > 0 else "l"
-    if x > 0.29:
+    # Below the elbow: above it, out that far is a broad upper arm or sleeve (on the forearm it tore at every swing).
+    if hands and x > 0.29 and z < 1.12:
         return "forearm_r"  # the spear, staff or musket in the right hand
-    if x < -0.3:
+    if hands and x < -0.3 and z < 1.12:
         return "forearm_l"  # the shield or bow in the left
-    if abs(x) > 0.18 and 0.72 < z < 1.42 and abs(y) < 0.09:
+    if arms and abs(x) > 0.18 and 0.72 < z < 1.42 and abs(y) < 0.09:
         return ("upperarm_" if z > 1.12 else "forearm_") + side
     if z < 0.92:
         # A leg only within its own limb's radius; a skirt or robe around it stays with the hips.
-        if math.hypot(abs(x) - 0.095, y) < 0.09 or (z < 0.16 and abs(x) < 0.2):  # the foot reaches forward of the leg
+        if legs and math.hypot(abs(x) - 0.095, y) < 0.09:
             return ("thigh_" if z > 0.5 else "shin_") + side
         return "pelvis"
     if z > 1.43:
         return "head"
     return "pelvis" if z < 1.05 else "spine"
+
+
+HIPS, SKIRT_FULL = 0.92, 0.1  # m: the skirt bones' axis (the hips'), and how far below it cloth rides them wholly
+HEM = 0.14  # m: a robe's hem below this is lifted toward it
+ITEM_LIFT = 0.08  # m: how far a held spear or staff that stands on the ground is raised in the hand
+
+
+def _smooth(t):
+    t = min(1.0, max(0.0, t))
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _off_limb(p, bones):
+    """How far a point (metres) is from a chain of bones, each (name, how far past its tail it reaches)."""
+    out = 1e9
+    for bone, reach in bones:
+        a, b = (Vector(c) for c in BONES[bone][:2])
+        out = min(out, mocap._off_segment(p, a, b + (b - a).normalized() * reach))
+    return out
+
+
+# A leg's own vertices near the hip and the knee share the joint with the bone across it: SHARE at the joint, none
+# BLEND (m) along the leg from it. The thigh's front then creases into the hips as it swings forward instead of
+# turning up and out through a robe's front, and a knee bends without opening a gap. The leg keeps the larger share
+# (it stays the vertex's owner for mocap.py and check_rigs.py).
+HIP_BLEND, KNEE_BLEND, SHARE = 0.15, 0.06, 0.45
+
+
+def _joint_weights(bone, p):
+    """{bone: weight} for a vertex (metres) bone_for put on a thigh or shin."""
+    head, tail, parent = BONES[bone]
+    head, tail = Vector(head), Vector(tail)
+    length = (tail - head).length
+    t = (p - head).dot((tail - head) / length)  # along the leg from its upper joint
+    if bone.startswith("thigh_"):
+        across = ((parent, t, HIP_BLEND), ("shin_" + bone[-1], length - t, KNEE_BLEND))
+    else:
+        across = ((parent, t, KNEE_BLEND),)
+    weights = {bone: 1.0}
+    for other, d, blend in across:
+        w = min(SHARE, SHARE * (1.0 - d / blend))
+        if w > 0.0:
+            weights[other] = w
+            weights[bone] -= w
+    return weights
+
+
+NO_ARMS = {"hands": False, "arms": False}
+CLOTH = dict(NO_ARMS, legs=False)
+WRIST = 0.82      # m: the forearm's tail (0.8) and a little; what a hand holds reaches down to it, or is long
+SHOULDERS = 1.6   # m: a piece out past the hands above the elbow sits on the shoulders if it starts below this
+
+
+def whole_parts(mesh):
+    """Solids bound by what they are rather than vertex by vertex (every solid is its own island of the mesh), so
+    none is torn between two bones that move apart. Returns {vertex: bone} for those that ride one bone:
+    - each shoe (kit_figures._sandals' foot box, low under one leg) on its foot;
+    - anything out at the side below the elbow (centred past the hips) on that forearm, whole: what the hand holds (a
+      spear, staff, shield, bow, musket or basket: mostly off the arm, and long or down to the hand) and the small bits
+      of it (a staff's caps, a spear's head, a bow's limbs, a bayonet) with it, or the forearm's own sleeve or cuff;
+    - a small piece of the arm (a hand, a sleeve, a shoulder's ball) wholly on the arm;
+    - a small piece out past the hands above the elbow (a vest's winged shoulder, a headdress's outer plume) on the
+      chest or the head;
+    - a scabbard at the hip (long at the side, off the arm) on the hips, rigid (not swung as a skirt);
+    and {vertex: bone_for's limits} for the rest, which its hand and arm rules leave alone: the limbs' own pieces
+    keep its leg rule, while cloth (a tunic, robe or cloak, its hem flaring past the hands) and the small things on
+    neither limb (a satchel, a pteryx) are no leg either: around the legs they are a skirt (see rig). Third, what the
+    hands hold as (lowest corner, forearm, vertices)."""
+    parent = list(range(len(mesh.vertices)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for e in mesh.edges:
+        a, b = find(e.vertices[0]), find(e.vertices[1])
+        if a != b:
+            parent[a] = b
+    islands = {}
+    for v in mesh.vertices:
+        islands.setdefault(find(v.index), []).append(v.index)
+    out, fore, others, loose = {}, [], [], {}
+    for members in islands.values():
+        co = [mesh.vertices[i].co / CM for i in members]
+        lo = [min(c[k] for c in co) for k in range(3)]
+        hi = [max(c[k] for c in co) for k in range(3)]
+        cx, cy = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2
+        side = "r" if cx > 0 else "l"
+        size = max(h - l for h, l in zip(hi, lo))
+        arm_chain = (("upperarm_" + side, 0.0), ("forearm_" + side, 0.08))
+        off_arm = sum(1 for c in co if _off_limb(c, arm_chain) > 0.09) * 5 > len(members)
+        centre = Vector([(h + l) / 2 for h, l in zip(hi, lo)])
+        on_arm = _off_limb(centre, arm_chain) <= 0.06
+        if hi[2] < 0.1 and abs(abs(cx) - 0.1) < 0.04 and -0.12 < cy < 0.02 and hi[1] - lo[1] < 0.32 and hi[0] - lo[0] < 0.14:
+            out.update((i, "foot_" + side) for i in members)
+        elif abs(cx) > 0.25 and lo[2] < 1.0 and size > 0.2:
+            out.update((i, "forearm_" + side) for i in members)
+            # Held, unless it is the forearm's own sleeve or a wide cuff (round the arm, short of the hand) or a short
+            # piece off the arm (a bow's limb: it finishes what is held, below).
+            hand = off_arm and (size >= 0.3 or lo[2] < WRIST)
+            fore.append((lo, hi, "forearm_" + side, list(members), "hand" if hand else "sleeve"))
+            if not hand and not on_arm:
+                others.append((members, lo, hi, on_arm, abs(cx) > 0.25))
+        else:
+            others.append((members, lo, hi, on_arm, abs(cx) > 0.25 and not on_arm))
+            on_leg = _off_limb(centre, (("thigh_" + side, 0.0), ("shin_" + side, 0.0))) <= 0.06
+            if abs(cx) < 0.15 and hi[0] - lo[0] > 0.25:
+                loose.update((i, CLOTH) for i in members)  # wide on the body: cloth or the torso
+            elif size >= 0.3:
+                if abs(cx) < 0.15:
+                    loose.update((i, NO_ARMS) for i in members)  # a leg
+                elif on_arm and lo[2] > 0.72:
+                    # A long sleeve down the arm (a robe's): above the elbow on the upper arm, below on the forearm. (A
+                    # scabbard's middle can sit by the hand too, but it hangs on below it.)
+                    out.update((i, ("upperarm_" if c[2] > 1.12 else "forearm_") + side) for i, c in zip(members, co))
+                elif off_arm:
+                    out.update((i, "pelvis") for i in members)  # long at the side but off the arm: a scabbard at the hip
+                    fore.append((lo, hi, "pelvis", list(members), "worn"))
+            elif on_arm:
+                if any(bone_for(*c).startswith(("upperarm_", "forearm_")) for c in co):
+                    # All of it on the arm, above the elbow on the upper arm (bone_for's split), none on the chest.
+                    out.update((i, ("upperarm_" if c[2] > 1.12 else "forearm_") + side) for i, c in zip(members, co))
+            elif sum(1 for c in co if c[0] > 0.29 or c[0] < -0.3) * 2 >= len(members):
+                if hi[2] < 1.12:
+                    out.update((i, "forearm_" + side) for i in members)  # mostly out past the hand: held
+                else:
+                    # Out there above the elbow (unless it finishes a held thing, below): a winged shoulder rides the
+                    # chest and a headdress's outer plume the head, whole (bone_for would tear it at the neck).
+                    out.update((i, "spine" if lo[2] < SHOULDERS else "head") for i in members)
+            else:
+                loose.update((i, NO_ARMS if on_leg else CLOTH) for i in members)
+    # The small solids that finish a held thing go with it: within its box (a staff's end caps, a shield's rim), or
+    # out at the side off the arm, within its box across and overlapping it in height (a spear's head, a bow's
+    # limbs, a bayonet past a rifle's muzzle). Each piece joined is tested against in turn (a bow's next limb), by its
+    # own box: one box grown over all of them would reach the body. A sleeve keeps only the arm's pieces within it
+    # (an elbow's ball), not a sword's grip at the hip beside it. Then, from what is left, a scabbard takes its
+    # sword's hilt (within its box across, overlapping it in height), not the hand that hangs by it; a long piece of
+    # a held thing that only looked like a scabbard (a bow's limb above the hand) has gone to the hand by then.
+    pending = list(others)
+
+    def finish(pieces, joins):
+        grew = True
+        while grew:
+            grew = False
+            for entry in list(pending):
+                members, lo, hi, on_arm, beside = entry
+                for hlo, hhi, bone, item, kind in pieces:
+                    across = all(hlo[k] - 0.04 <= lo[k] and hi[k] <= hhi[k] + 0.04 for k in range(2))
+                    inside = across and hlo[2] - 0.04 <= lo[2] and hi[2] <= hhi[2] + 0.04
+                    overlap = across and lo[2] <= hhi[2] + 0.04 and hi[2] >= hlo[2] - 0.04
+                    if joins(kind, inside, overlap, on_arm, beside):
+                        out.update((i, bone) for i in members)
+                        item.extend(members)
+                        pieces.append((lo, hi, bone, item, kind))
+                        pending.remove(entry)
+                        grew = True
+                        break
+
+    finish([entry for entry in fore if entry[4] != "worn"], lambda kind, inside, overlap, on_arm, beside:
+           (kind == "hand" and (inside or (overlap and beside))) or (kind == "sleeve" and inside and on_arm))
+    pending[:] = [entry for entry in pending if out.get(entry[0][0]) != "pelvis"]  # the scabbards themselves
+    finish([entry for entry in fore if entry[4] == "worn" and out[entry[3][0]] == "pelvis"],
+           lambda kind, inside, overlap, on_arm, beside: overlap and not on_arm)
+    return out, loose, [(lo, bone, item) for lo, hi, bone, item, kind in fore if kind == "hand"]
 
 
 def rig(name, make):
@@ -204,19 +385,108 @@ def rig(name, make):
         body.vertex_groups.new(name=bname)
     # bone_for reads metres; the mesh is already in centimetres here. (Bound in centimetres, every vertex went to a
     # forearm or the head and the legs never bent, from #360 until 2026-10-20.)
+    whole, loose, held = whole_parts(body.data)
+    HELD[name] = {s: [i for lo, bone, item in held if bone == "forearm_" + s for i in item] for s in ("r", "l")}
+    for lo, bone, item in held:
+        if lo[2] < 0.05:
+            # A spear or staff stood on the ground slides up through the hand a little, as it is carried: the hips
+            # walk lower than they stand, and a grounded butt would make the arm swing back to keep it out of the ground.
+            for i in item:
+                body.data.vertices[i].co.z += ITEM_LIFT * CM
+    G = body.vertex_groups
     for v in body.data.vertices:
-        body.vertex_groups[bone_for(*(v.co / CM))].add([v.index], 1.0, "REPLACE")
-    carried = {g.group for v in body.data.vertices for g in v.groups}
-    bare = [b for b in ("pelvis", "spine", "head", "thigh_r", "thigh_l", "shin_r", "shin_l") if body.vertex_groups[b].index not in carried]
+        x, y, z = v.co / CM
+        bone = whole.get(v.index) or bone_for(x, y, z, **loose.get(v.index, {}))
+        cloth = bone == "pelvis" and v.index not in whole  # (a scabbard rides the hips whole: a sword does not bend)
+        if cloth and z < HEM:
+            # A hem near the ground comes up a little: the hips dip as much as 8 cm in a long stride.
+            v.co.z = (HEM - (HEM - z) * 0.3) * CM
+        # Cloth below the hips (a tunic's skirt, a robe, a cloak's tail) rides the skirt bones, its front the front one
+        # and its back the back one, so a stride swings it rather than walking out through it: none at the hips' axis,
+        # all of it from SKIRT_FULL below (a thigh swung forward carries its front up and out there; above, the thigh's
+        # own top shares the hips, _joint_weights).
+        a = min(1.0, (HIPS - z) / SKIRT_FULL) if cloth and z < HIPS else 0.0
+        if a > 0.0:
+            f = _smooth(0.5 - (y - 0.04) / 0.12)  # the front reaches round the sides: the leg ahead swings furthest
+            if a < 1.0:
+                G["pelvis"].add([v.index], 1.0 - a, "REPLACE")
+            for bname, w in (("skirt_f", a * f), ("skirt_b", a * (1.0 - f))):
+                if w > 0.0:
+                    G[bname].add([v.index], w, "REPLACE")
+        elif v.index not in whole and bone.startswith(("thigh_", "shin_")):
+            for bname, w in _joint_weights(bone, Vector((x, y, z))).items():
+                G[bname].add([v.index], w, "REPLACE")
+        else:
+            G[bone].add([v.index], 1.0, "REPLACE")
+    carried = {g.group for v in body.data.vertices for g in v.groups if g.weight > 0.0}
+    bare = [b for b in ("pelvis", "spine", "head", "thigh_r", "thigh_l", "shin_r", "shin_l", "foot_r", "foot_l")
+            if body.vertex_groups[b].index not in carried]
     if bare:
         raise RuntimeError("%s: no vertices on %s" % (name, ", ".join(bare)))
     body.parent = arm
     mod = body.modifiers.new("Armature", "ARMATURE")
     mod.object = arm
     arm.animation_data_create()
-    walk(arm, name)
-    idle(arm, name)
+    animate(arm, body, name, HELD[name])
     return arm, body
+
+
+# The speed (cm/s) each looping action was authored at: the game plays it at its own speed / this. Filled by animate.
+SPEEDS = {}
+# What each figure's hands hold (whole_parts): {name: {"r" or "l": vertex indices}}, for mocap.py and check_rigs.py.
+HELD = {}
+
+
+def animate(arm, body, name, held):
+    """WalkSlow, Walk, Run and Idle from motion capture (mocap.py); without the clips, the procedural Walk and Idle
+    below. `held`: the vertices each hand holds ({"r" or "l": indices})."""
+    if mocap.available():
+        rt = mocap.Retarget(arm, body, held)
+        for action in mocap.CLIPS:
+            mo = mocap.motion(action, FPS, rt.leg, rt.ankle)
+            act = rt.key(action, mo)
+            finish(act, mo.frames)
+            key_skirt(arm, act)
+            SPEEDS[action] = mo.speed
+    else:
+        print("rig_figures: no motion capture in %s, the procedural Walk and Idle (no WalkSlow or Run)" % mocap.MOCAP)
+        key_skirt(arm, walk(arm, held))
+        key_skirt(arm, idle(arm, name))
+        SPEEDS.update(Walk=WALK_SPEED, Idle=0.0)
+
+
+def key_skirt(arm, action):
+    """Keys the skirt bones from the legs already keyed in `action` (their pitch from the hips, forward positive): the
+    front swings forward as far as the thigh most ahead, the back back as far as the one most behind, so the leg
+    that strides out stays inside a robe and lifts its hem."""
+    curves = {(fc.data_path, fc.array_index): fc for fc in _fcurves(action)}
+    B, P = arm.data.bones, arm.pose.bones
+    n = int(round(action.frame_range[1]))
+    pitch = {}
+    for s in ("r", "l"):
+        path = 'pose.bones["thigh_%s"].rotation_euler' % s
+        R0 = B["thigh_" + s].matrix_local.to_3x3()
+        d0 = R0 @ Vector((0, 1, 0))
+        rest = math.atan2(-d0.y, -d0.z)
+        pitch[s] = []
+        for f in range(n + 1):
+            e = Euler([curves[(path, k)].evaluate(f) if (path, k) in curves else 0.0 for k in range(3)], "XYZ")
+            d = R0 @ e.to_matrix() @ Vector((0, 1, 0))
+            pitch[s].append(math.atan2(-d.y, -d.z) - rest)
+    arm.animation_data.action = action
+    for name, pick in (("skirt_f", max), ("skirt_b", min)):
+        R0 = B[name].matrix_local.to_3x3()
+        pb = P[name]
+        pb.rotation_mode = "XYZ"
+        prev = None
+        for f in range(n + 1):
+            basis = R0.transposed() @ Matrix.Rotation(-pick(pitch["r"][f], pitch["l"][f], 0.0), 3, "X") @ R0
+            prev = basis.to_euler("XYZ", prev) if prev else basis.to_euler("XYZ")
+            pb.rotation_euler = prev
+            pb.keyframe_insert("rotation_euler", frame=f)
+    for fc in _fcurves(action):
+        if "skirt_" in fc.data_path and not fc.modifiers:
+            fc.modifiers.new("CYCLES")
 
 
 def key(pb, frame, rx=0.0, ry=0.0, rz=0.0, loc=None):
@@ -228,9 +498,8 @@ def key(pb, frame, rx=0.0, ry=0.0, rz=0.0, loc=None):
         pb.keyframe_insert("location", frame=frame)
 
 
-# The walk: a stride in WALK_FRAMES at FPS, each foot on the ground for STANCE of it and moving back at a steady
-# WALK_SPEED while it is (so planted feet do not slide), then lifted and swung forward. Unreal plays it at
-# speed / WALK_SPEED (SovStreetScene.cpp kWalkSpeed).
+# The fallback walk (no motion capture): a stride in WALK_FRAMES at FPS, each foot on the ground for STANCE of it and
+# moving back at a steady WALK_SPEED while it is (so planted feet do not slide), then lifted and swung forward.
 WALK_FRAMES = 20
 STANCE = 0.6
 STEP = 0.27     # m: a planted foot runs from STEP ahead of the hip to STEP behind it
@@ -282,15 +551,17 @@ def _solve_leg(arm, side, target, start):
     return [(x + 180.0) % 360.0 - 180.0 for x in a]  # one turn at most, or the keys between frames spin
 
 
-def walk(arm, name):
+def walk(arm, held):
     """The legs by inverse kinematics along _foot (each planted foot holds still on the ground), the hips lowered
-    as far as the planted legs need and bobbing, the arms swinging against the legs."""
+    as far as the planted legs need and bobbing, the arms swinging against the legs (an arm that holds something, in
+    `held`, hardly at all, as mocap.py calms it)."""
     action = bpy.data.actions.new("Walk")
     arm.animation_data.action = action
     P = arm.pose.bones
     for b in P:
         b.rotation_mode = "XYZ"
-    stiff = 0.5 if name in ("Captain", "Soldier") else 1.0  # armed men keep their weapon arm steadier
+    armed = any(held.values())
+    swing = {s: 1.0 - (mocap.CALM_CARRY if held.get(s) else (mocap.CALM_OTHER if armed else mocap.CALM_FREE)) for s in ("r", "l")}
     L = 0.84 * 0.985  # thigh and shin, kept a little short of straight
     hip0 = 0.92
     n = WALK_FRAMES
@@ -306,8 +577,9 @@ def walk(arm, name):
         feet = feet_at[f]
         hz = hips[f]
         sw = math.sin(2 * math.pi * u)
-        # The hips sway a little with the stride; the legs are solved with it applied, so the feet stay put.
-        key(P["pelvis"], f, rz=2 * sw, loc=(0, (hz - hip0) * CM, 0))  # bone space: Y runs along the bone, up
+        # The hips bob with the stride, no sway: the legs are solved in their own plane, so a sway (a roll of the hips)
+        # would slide the planted feet sideways.
+        key(P["pelvis"], f, loc=(0, (hz - hip0) * CM, 0))  # bone space: Y runs along the bone, up
         bpy.context.view_layer.update()
         for side, (fwd, z) in feet.items():
             a = last[side] = _solve_leg(arm, side, (-fwd * CM, z * CM), last[side])  # forward is -Y
@@ -315,14 +587,16 @@ def walk(arm, name):
             P["shin_" + side].rotation_euler = (math.radians(a[1]), 0, 0)
             P["thigh_" + side].keyframe_insert("rotation_euler", frame=f)
             P["shin_" + side].keyframe_insert("rotation_euler", frame=f)
+            key(P["foot_" + side], f, rx=-a[0] - a[1])  # the foot kept flat, so a planted shoe holds still on the ground
         # Arms against the legs: the right arm forward as the left leg is.
-        key(P["upperarm_r"], f, rx=-16 * sw * stiff)
-        key(P["upperarm_l"], f, rx=16 * sw)
-        key(P["forearm_r"], f, rx=8 + 6 * sw * stiff)
-        key(P["forearm_l"], f, rx=8 - 6 * sw)
+        key(P["upperarm_r"], f, rx=-16 * sw * swing["r"])
+        key(P["upperarm_l"], f, rx=16 * sw * swing["l"])
+        key(P["forearm_r"], f, rx=8 + 6 * sw * swing["r"])
+        key(P["forearm_l"], f, rx=8 - 6 * sw * swing["l"])
         key(P["spine"], f, rz=-3 * sw, rx=3)
         key(P["head"], f, rz=1.5 * sw)
     finish(action, n)
+    return action
 
 
 def idle(arm, name):
@@ -337,9 +611,11 @@ def idle(arm, name):
         key(P["head"], f, rz=3.0 * math.sin(ph * 0.5 + 0.7), rx=-1.0 * math.sin(ph))
         key(P["upperarm_r"], f, rx=2.0 * math.sin(ph))
         key(P["upperarm_l"], f, rx=-2.0 * math.sin(ph))
-        for b in ("pelvis", "thigh_r", "thigh_l", "shin_r", "shin_l", "forearm_r", "forearm_l"):
+        key(P["pelvis"], f, loc=(0, 0, 0))  # (the walk moves it)
+        for b in ("thigh_r", "thigh_l", "shin_r", "shin_l", "foot_r", "foot_l", "forearm_r", "forearm_l"):
             key(P[b], f)
     finish(action, n)
+    return action
 
 
 def finish(action, n):
@@ -362,18 +638,32 @@ def main():
     wanted = args[1:] or list(PEOPLE)
     out = os.path.join(build, "Rigged")
     os.makedirs(out, exist_ok=True)
+    failed = []
     for name in wanted:
         arm, body = rig(name, PEOPLE[name])
+        problems, line = check_rigs.check(arm, body, name, SPEEDS, FPS, HELD[name])
+        print(line)
+        path = os.path.join(out, "SK_%s.fbx" % name)
+        if problems:
+            # Not exported, and an older export goes too, so ue_import_rigged.py cannot bring back a stale rig.
+            failed.append(name)
+            if os.path.exists(path):
+                os.remove(path)
+            continue
         bpy.ops.object.select_all(action="DESELECT")
         arm.select_set(True)
         body.select_set(True)
         bpy.context.view_layer.objects.active = arm
-        path = os.path.join(out, "SK_%s.fbx" % name)
         bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"ARMATURE", "MESH"}, mesh_smooth_type="FACE",
                                  colors_type="SRGB", apply_unit_scale=True, apply_scale_options="FBX_SCALE_NONE", add_leaf_bones=False, bake_anim=True,
                                  bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False, bake_anim_force_startend_keying=True,
                                  primary_bone_axis="Y", secondary_bone_axis="X", armature_nodetype="NULL")
         print("rigged %s: %d vertices -> %s" % (name, len(body.data.vertices), path))
+    # The speed each loop was authored at (the same for every figure: they share one skeleton), for the game.
+    print("rig_figures: authored speeds " + ", ".join("%s %.1f cm/s" % (a, v) for a, v in SPEEDS.items()))
+    if failed:
+        print("rig_figures: not exported (any older SK_<Name>.fbx removed), failed check_rigs: " + ", ".join(failed))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
