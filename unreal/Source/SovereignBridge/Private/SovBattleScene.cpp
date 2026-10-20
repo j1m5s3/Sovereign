@@ -10,6 +10,7 @@
 #include "UObject/ConstructorHelpers.h"
 
 #include "SovArt.h"
+#include "SovLocomotion.h"
 
 namespace
 {
@@ -198,6 +199,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			if (SovArt::SetRiggedFigure(Rig, Name, C, TEXT("Idle")))
 			{
 				Rig->SetPosition(FMath::FRand() * 3.f);  // not all breathing in step
+				USovLocomotion::Attach(Rig, Name);  // idle, walk and run blended by speed
 				Body->SetVisibility(false);
 			}
 			else
@@ -210,6 +212,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		RigNames.Add(Name);
 		LastPos.Add(S.Pos);
 		Striding.Add(false);
+		Yaws.Add((S.Side == 0 ? -90.f : 90.f) + (Name.StartsWith(TEXT("Rider")) ? 90.f : 0.f));
 		Bodies.Add(Body);
 		Heads.Add(Head);
 	}
@@ -226,7 +229,12 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			LastPos[i] = S.Pos;
 			const float Speed = static_cast<float>(Step.Size() / Dt);
 			const bool bWalk = S.bAlive && Speed > 25.f;
-			if (bWalk != Striding[i] && S.bAlive)
+			USovLocomotion* Loco = Cast<USovLocomotion>(Rig->GetAnimInstance());
+			if (Loco)
+			{
+				Loco->Speed = bWalk ? Speed : 0.f;  // the blend eases between standing, walking and running
+			}
+			else if (bWalk != Striding[i] && S.bAlive)
 			{
 				Striding[i] = bWalk;
 				if (UAnimSequence* A = SovArt::RiggedAnim(RigNames[i], bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
@@ -239,11 +247,14 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f + Turn : Face;
 			if (S.bAlive)
 			{
-				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaw, 0.f));
-				if (bWalk) Rig->SetPlayRate(FMath::Clamp(Speed / Pace, 0.5f, 3.f));
+				// Turning over a moment (a man about 360 degrees a second, a horse half that), not at a snap.
+				Yaws[i] = FMath::FixedTurn(Yaws[i], Yaw, static_cast<float>(Dt) * (bHorse ? 180.f : 360.f));
+				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaws[i], 0.f));
+				if (bWalk && !Loco) Rig->SetPlayRate(FMath::Clamp(Speed / Pace, 0.5f, 3.f));
 			}
-			else if (Rig->IsPlaying())
+			else if (!Rig->bPauseAnims)
 			{
+				Rig->bPauseAnims = true;  // the fallen lie still
 				Rig->Stop();
 				// The fallen lie where they fell; a horse goes down on its side.
 				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, bHorse ? 30 : 15), bHorse ? FRotator(0.f, Face, 80.f) : FRotator(0.f, Face, 90.f));

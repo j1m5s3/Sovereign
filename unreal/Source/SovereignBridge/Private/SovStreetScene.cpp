@@ -14,6 +14,7 @@
 #include "Components/PostProcessComponent.h"
 
 #include "SovArt.h"
+#include "SovLocomotion.h"
 
 namespace
 {
@@ -94,6 +95,7 @@ void ASovWalker::SetColor(const FLinearColor& Color, const FString& Figure)
 	{
 		GetMesh()->SetRelativeLocation(FVector(0, 0, -90));
 		GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));  // as the kit figures: built facing +Y in Unreal
+		USovLocomotion::Attach(GetMesh(), RigName);
 		Body->SetVisibility(false);
 		Crown->SetVisibility(false);
 		bFigure = bRigged = true;
@@ -132,6 +134,11 @@ void ASovWalker::Tick(float DeltaSeconds)
 	Pace = FMath::Lerp(Pace, FMath::Max(GetVelocity().Size2D(), Moved), 1.f - FMath::Exp(-DeltaSeconds * 8.f));
 	const float Speed = Pace;
 	const bool bMoving = Speed > 20.f;
+	if (USovLocomotion* Loco = Cast<USovLocomotion>(GetMesh()->GetAnimInstance()))
+	{
+		Loco->Speed = bMoving ? Speed : 0.f;  // standing, walking or (in a battle's charge) running, blended
+		return;
+	}
 	if (bMoving != bWalking)
 	{
 		bWalking = bMoving;
@@ -481,7 +488,9 @@ void ASovStreetScene::Build(const FSovStreetLayout& InLayout)
 		{
 			C.Body->SetVisibility(false);
 			C.Rigged->SetRelativeScale3D(FVector(bChild ? Rng.FRandRange(0.6f, 0.72f) : Rng.FRandRange(0.92f, 1.06f)));
-			if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+			// The walk's pace scales with the figure (a child strides shorter).
+			if (!USovLocomotion::Attach(C.Rigged, C.Kind, static_cast<float>(C.Rigged->GetRelativeScale3D().X)))
+				if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
 			C.bFigure = true;
 		}
 		else if (SovArt::SetKitMesh(C.Body, TEXT("Figures"), TEXT("Citizen"), FLinearColor::White))
@@ -508,8 +517,9 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 		{
 			// Standing a while, then walking on.
 			C.Pause -= DeltaSeconds;
-			if (C.Pause <= 0.f && C.Rigged)
+			if (C.Pause <= 0.f && C.Rigged && !Cast<USovLocomotion>(C.Rigged->GetAnimInstance()))
 				if (UAnimSequence* Walk = SovArt::RiggedAnim(C.Kind, TEXT("Walk"))) C.Rigged->PlayAnimation(Walk, true);
+			if (USovLocomotion* Loco = C.Rigged ? Cast<USovLocomotion>(C.Rigged->GetAnimInstance()) : nullptr) Loco->Speed = 0.f;
 			continue;
 		}
 		const FVector Here = Who->GetRelativeLocation();
@@ -520,7 +530,8 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 			if (C.Rigged && Rng.FRand() < 0.5f)
 			{
 				C.Pause = Rng.FRandRange(2.f, 7.f);  // stop to look about, or to talk
-				if (UAnimSequence* Idle = SovArt::RiggedAnim(C.Kind, TEXT("Idle"))) C.Rigged->PlayAnimation(Idle, true);
+				if (USovLocomotion* Loco = Cast<USovLocomotion>(C.Rigged->GetAnimInstance())) Loco->Speed = 0.f;
+				else if (UAnimSequence* Idle = SovArt::RiggedAnim(C.Kind, TEXT("Idle"))) C.Rigged->PlayAnimation(Idle, true);
 			}
 			continue;
 		}
@@ -541,9 +552,18 @@ void ASovStreetScene::Tick(float DeltaSeconds)
 		Who->SetRelativeLocation(C.bFigure ? FVector(Next.X, Next.Y, 0.0) : Next);
 		if (C.bFigure)
 		{
-			Who->SetRelativeRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X)) - 90.f, 0.f));
+			// Turning toward the way it goes over a moment (about 300 degrees a second), not at a snap.
+			const float Want = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f;
+			Who->SetRelativeRotation(FRotator(0.f, FMath::FixedTurn(static_cast<float>(Who->GetRelativeRotation().Yaw), Want, 300.f * DeltaSeconds), 0.f));
 		}
-		// kWalkSpeed for a full-size figure: the feet keep their footing (a smaller one strides shorter).
-		if (C.Rigged) C.Rigged->SetPlayRate(C.Speed / (kWalkSpeed * static_cast<float>(C.Rigged->GetRelativeScale3D().X)));
+		if (USovLocomotion* Loco = C.Rigged ? Cast<USovLocomotion>(C.Rigged->GetAnimInstance()) : nullptr)
+		{
+			Loco->Speed = C.Speed;  // its pace: the blend plays the walk at the rate that keeps its feet planted
+		}
+		else if (C.Rigged)
+		{
+			// kWalkSpeed for a full-size figure: the feet keep their footing (a smaller one strides shorter).
+			C.Rigged->SetPlayRate(C.Speed / (kWalkSpeed * static_cast<float>(C.Rigged->GetRelativeScale3D().X)));
+		}
 	}
 }
