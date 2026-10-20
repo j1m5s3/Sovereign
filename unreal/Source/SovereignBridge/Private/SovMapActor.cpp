@@ -70,60 +70,9 @@ FColor KitPaint(const FLinearColor& Linear, int32 Tile)
 	auto Byte = [](float V) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(FMath::Sqrt(FMath::Max(V, 0.f)) * 255.f), 0, 255)); };
 	return FColor(Byte(Linear.R), Byte(Linear.G), Byte(Linear.B), static_cast<uint8>(FMath::RoundToInt(Tile * 255.f / (SovArt::KitCells - 1))));
 }
-// The Fields kit's model for an improvement (tools/art/blender/kit_fields.py); the rest share a walled yard.
-const TCHAR* FieldsModel(const FString& Id)
-{
-	static const TPair<const TCHAR*, const TCHAR*> Models[] = {
-		{TEXT("IMPROVEMENT_FARM"), TEXT("Farm")}, {TEXT("IMPROVEMENT_MINE"), TEXT("Mine")}, {TEXT("IMPROVEMENT_QUARRY"), TEXT("Quarry")},
-		{TEXT("IMPROVEMENT_PASTURE"), TEXT("Pasture")}, {TEXT("IMPROVEMENT_PLANTATION"), TEXT("Plantation")},
-		{TEXT("IMPROVEMENT_CAMP"), TEXT("Camp")}, {TEXT("IMPROVEMENT_FISHING_BOATS"), TEXT("FishingBoats")},
-		{TEXT("IMPROVEMENT_FISHERY"), TEXT("FishingBoats")}, {TEXT("IMPROVEMENT_LUMBER_MILL"), TEXT("LumberMill")},
-		{TEXT("IMPROVEMENT_OIL_WELL"), TEXT("OilWell")}, {TEXT("IMPROVEMENT_OFFSHORE_OIL_RIG"), TEXT("OilWell")},
-		{TEXT("IMPROVEMENT_FORT"), TEXT("Fort")}, {TEXT("IMPROVEMENT_WIND_FARM"), TEXT("WindFarm")},
-		{TEXT("IMPROVEMENT_OFFSHORE_WIND_FARM"), TEXT("WindFarm")}, {TEXT("IMPROVEMENT_SOLAR_FARM"), TEXT("SolarFarm")}};
-	for (const auto& M : Models)
-		if (Id == M.Key) return M.Value;
-	return TEXT("Works");
-}
-// The Districts kit's model for a district id: DISTRICT_HOLY_SITE -> HolySite (tools/art/blender/kit_districts.py).
-FString DistrictModel(const FString& Id)
-{
-	FString Out;
-	TArray<FString> Words;
-	Id.RightChop(9).ParseIntoArray(Words, TEXT("_"));
-	for (const FString& W : Words)
-	{
-		Out += W.Left(1) + W.RightChop(1).ToLower();
-	}
-	return Out;
-}
-
-// The Wonders kit's model for a wonder (tools/art/blender/kit_wonders.py), by kind; null for the classical temple.
-const TCHAR* WonderModel(const FString& Id)
-{
-	// Each model and the wonders (their ids without BUILDING_) drawn with it.
-	static const TPair<const TCHAR*, const TCHAR*> Kinds[] = {
-		{TEXT("Pyramid"), TEXT("PYRAMIDS JEBEL_BARKAL")},
-		{TEXT("StepPyramid"), TEXT("ETEMENANKI CHICHEN_ITZA HUEY_TEOCALLI MAHABODHI_TEMPLE MEENAKSHI_TEMPLE ANGKOR_WAT")},
-		{TEXT("StoneCircle"), TEXT("STONEHENGE")},
-		{TEXT("Gardens"), TEXT("HANGING_GARDENS GREAT_BATH BIOSPH_RE")},
-		{TEXT("Statue"), TEXT("COLOSSUS STATUE_OF_ZEUS STATUE_OF_LIBERTY CRISTO_REDENTOR TERRACOTTA_ARMY KOTOKU_IN")},
-		{TEXT("Tower"), TEXT("GREAT_LIGHTHOUSE TORRE_DE_BEL_M BIG_BEN KILWA_KISIWANI")},
-		{TEXT("LatticeTower"), TEXT("EIFFEL_TOWER")},
-		{TEXT("DomedHall"), TEXT("HAGIA_SOPHIA TAJ_MAHAL ST_BASIL_S_CATHEDRAL UNIVERSITY_OF_SANKORE OXFORD_UNIVERSITY HERMITAGE")},
-		{TEXT("Arena"), TEXT("COLOSSEUM EST_DIO_DO_MARACAN BOLSHOI_THEATRE BROADWAY SYDNEY_OPERA_HOUSE")},
-		{TEXT("Citadel"), TEXT("PETRA MACHU_PICCHU ALHAMBRA MONT_ST_MICHEL GREAT_ZIMBABWE FORBIDDEN_CITY POTALA_PALACE ORSZ_GH_Z")},
-		{TEXT("Arsenal"), TEXT("VENETIAN_ARSENAL RUHR_VALLEY PANAMA_CANAL CASA_DE_CONTRATACI_N GOLDEN_GATE_BRIDGE AMUNDSEN_SCOTT_RESEARCH_STATION")},
-	};
-	const FString Key = Id.RightChop(9);
-	for (const auto& K : Kinds)
-	{
-		TArray<FString> Ids;
-		FString(K.Value).ParseIntoArray(Ids, TEXT(" "));
-		if (Ids.Contains(Key)) return K.Key;
-	}
-	return nullptr;
-}
+using SovArt::DistrictModel;
+using SovArt::FieldsModel;
+using SovArt::WonderModel;
 
 // The Resources kit's model for a resource and the colour its accent is tinted (tools/art/blender/kit_resources.py).
 struct FResourceLook

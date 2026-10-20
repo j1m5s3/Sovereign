@@ -311,7 +311,23 @@ void SSovTreeView::Rebuild()
 			[SNew(STextBlock).Font(FSovStyle::Font(8)).ColorAndOpacity(N.bBoosted ? FSovStyle::Good : FLinearColor(0.85f, 0.7f, 0.45f)).AutoWrapText(true)
 				.Text(FText::FromString((N.bBoosted ? TEXT("Boosted: ") : TEXT("Boost: ")) + N.Boost))];
 		}
-		if (!N.Unlocks.IsEmpty())
+		if (N.Icons.Num() > 0)
+		{
+			// What it opens as pictures, as Civ VI shows them on each node (the names on hover).
+			const TSharedRef<SHorizontalBox> Row = SNew(SHorizontalBox);
+			for (const FSovTreeIcon& I : N.Icons)
+			{
+				const FSlateBrush* B = FSovStyle::Picture(I.Folder, I.Name, I.Folder == TEXT("Icons") ? FVector2D(24.f, 24.f) : FVector2D(96.f, 96.f));
+				if (!B) continue;
+				Row->AddSlot().AutoWidth().Padding(0, 0, 2, 0)
+				[
+					SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(1).ToolTipText(FText::FromString(I.Label))
+					[SNew(SBox).WidthOverride(26.f).HeightOverride(26.f)[SNew(SImage).Image(B)]]
+				];
+			}
+			Body->AddSlot().AutoHeight().Padding(0, 3, 0, 0)[Row];
+		}
+		else if (!N.Unlocks.IsEmpty())
 		{
 			Body->AddSlot().AutoHeight().Padding(0, 2, 0, 0)
 			[SNew(STextBlock).Font(FSovStyle::Font(8)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true).Text(FText::FromString(N.Unlocks))];
