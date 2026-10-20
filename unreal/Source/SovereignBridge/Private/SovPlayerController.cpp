@@ -554,6 +554,7 @@ bool ASovPlayerController::OrderAttack(sov::UnitId Unit, sov::Hex Target)
 			WarTarget = Target;
 			WarPlot = Plan.Plot;
 			bWarFirst = Plan.bWarFirst;
+			bWarAttacks = Plan.bAttackOnArrival;
 			OpenChooser(EChooser::ConfirmWar);
 			return Chooser == EChooser::ConfirmWar;
 		case ESovAttackPlan::Refuse:
@@ -1124,11 +1125,13 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 		case EChooser::ConfirmWar:
 		{
 			// The declare-war prompt (Civ VI): each war that may be declared on WarOn, worded as the diplomacy list words
-			// them, then Cancel. With WarUnit, its attack on WarTarget follows the declaration (AttackAfterWar).
-			const bool bAttack = WarUnit != sov::kNoUnit;
+			// them, then Cancel. With WarUnit, its attack on WarTarget follows the declaration (AttackAfterWar), or only
+			// its move when it cannot attack this turn (their borders closed to us: the war first, the attack later).
+			const bool bAttack = WarUnit != sov::kNoUnit && bWarAttacks;
 			const FString Who = SovPlayerName(G, WarOn);
 			ChooserTitle = bAttack ? FString::Printf(TEXT("You are at peace with %s. Declare war to attack?"), *Who)
-								   : FString::Printf(TEXT("Declare war on %s?"), *Who);
+				: WarUnit != sov::kNoUnit ? FString::Printf(TEXT("You are at peace with %s, whose borders are closed to you. Declare war to move in?"), *Who)
+										  : FString::Printf(TEXT("Declare war on %s?"), *Who);
 			for (const FSovWarChoice& W : SovWarChoices(G, Me(), WarOn, bAttack))
 			{
 				FChoice Ch{W.Label, W.Command, {}, W.Right, "attack", TEXT("War")};

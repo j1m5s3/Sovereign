@@ -41,15 +41,15 @@ FString AttackProblem(const sov::Game& G, const sov::Unit& U, sov::Hex Target)
 
 bool SovFoeAt(const sov::Game& G, sov::PlayerId Me, sov::Hex Target)
 {
-	// Nothing on a plot never seen is a foe: the fog keeps its cities hidden.
+	// Nothing on a plot never seen is a foe: the fog keeps its cities and Encampments hidden.
 	const sov::Visibility Seen = G.visibility(Me, Target);
 	if (Seen == sov::Visibility::Unrevealed) return false;
 	const sov::GameState& S = G.state();
 	if (const sov::City* C = S.cityAt(Target)) return C->owner != Me;
-	if (Seen != sov::Visibility::Visible) return false;
 	// An Encampment is a target only at war: at peace its plot is walked on like any other.
 	if (const sov::City* Camp = G.encampmentTargetAt(Target); Camp && Camp->owner != Me && G.atWar(Me, Camp->owner)) return true;
-	return S.foreignUnitAt(Target, Me) != nullptr;
+	// A unit only in sight.
+	return Seen == sov::Visibility::Visible && S.foreignUnitAt(Target, Me) != nullptr;
 }
 
 sov::Command SovAttackCommand(sov::PlayerId Me, sov::UnitId Unit, sov::Hex Target, bool bRanged)
@@ -147,19 +147,20 @@ TArray<FSovWarChoice> SovWarChoices(const sov::Game& G, sov::PlayerId Me, sov::P
 	const int32 Delay = R.globalInt("DIPLOMACY_DENOUNCE_WAR_DELAY");
 	const bool bDenouncing = G.denouncing(Me, On);
 	const bool bFormal = bDenouncing && S.turn - Rel.denouncedOn >= Delay;
-	if (bDenouncing && !bFormal && !bCityState)
-	{
-		Notes.Add(FString::Printf(TEXT("Still a surprise war: it is formal after %d more turn(s) of denouncing them."),
-			Delay - (S.turn - Rel.denouncedOn)));
-	}
 	const bool bEmergency = G.inEmergencyAgainst(Me, On);
 	auto Cost = [&](int32 Base) -> FString {
 		if (bCityState) return CityStateCost;
 		return bEmergency ? FString(TEXT("no grievances (emergency)")) : FString::Printf(TEXT("%d grievances"), Base);
 	};
 	const FString Tip = FString::Join(Notes, TEXT("\n"));
+	// Only the plain declaration's tip says it is still a surprise: a casus belli makes the war formal at once.
+	if (bDenouncing && !bFormal && !bCityState)
+	{
+		Notes.Add(FString::Printf(TEXT("Still a surprise war: it is formal after %d more turn(s) of denouncing them."),
+			Delay - (S.turn - Rel.denouncedOn)));
+	}
 	Out.Add({FString::Printf(TEXT("Declare %s war on %s%s"), bFormal ? TEXT("a formal") : TEXT("a surprise"), *Who, Then), sov::Command::declareWar(Me, On),
-		Cost(bFormal ? 100 : 150), Tip});
+		Cost(bFormal ? 100 : 150), FString::Join(Notes, TEXT("\n"))});
 	for (int32 W = 1; W < sov::kNumCasusBelli; ++W)
 	{
 		const sov::CasusBelli Why = static_cast<sov::CasusBelli>(W);

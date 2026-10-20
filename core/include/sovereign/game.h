@@ -887,7 +887,7 @@ private:
         bool onlyBlocked = false;      // with `only`: whether that plot is kept out of (`blocked` is then left empty)
     };
     // With `only` (a plot on the grid), just what a step into it reads: whether it is blocked, and its owner's entry.
-    // With `warWith`, read as if the unit's owner were at war with that player (attackApproach).
+    // With `warWith`, read as if the unit's owner had declared war on that player (warsFromDeclaring; attackApproach).
     MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt,
                           PlayerId warWith = kNoPlayer) const;
     // A step's cost: `dir` is the direction from `from` to its neighbour `to`, `limits` the whole map's (no `only`).
@@ -980,7 +980,7 @@ private:
     void relocateUnit(Unit& unit, Hex to);  // puts it there: its order and escort end, and its fortification if it moves
     bool exertsZoc(const Unit& unit) const;
     // Marks with `bit` the plots in enemy ZOC for this mover (none when it ignores ZOC) in `plots`, one entry per plot;
-    // `warWith` counts as an enemy too.
+    // `warWith` counts as an enemy too, as do the city-states a war on it brings in (warsFromDeclaring).
     void markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit, PlayerId warWith = kNoPlayer) const;
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
@@ -1023,6 +1023,9 @@ private:
     // War is declared: memories, deeds, friendships and running deals end.
     void onWarDeclared(PlayerId by, PlayerId target, CasusBelli why = CasusBelli::None);
     void declareWarOn(PlayerId by, PlayerId target, CasusBelli why);  // relations, grievances, memories
+    // One entry per player: whether declareWarOn(by, target) puts `by` at war with them, `target` and the city-states of
+    // its suzerainty (Suzerain War); empty for kNoPlayer.
+    std::vector<uint8_t> warsFromDeclaring(PlayerId by, PlayerId target) const;
     void onPeace(PlayerId a, PlayerId b);
     void processDiplomacy(PlayerId player);  // running deals pay, expire or break; old memories fade
     void processEnvoys(PlayerId player);  // influence and first meetings, each turn
@@ -1097,8 +1100,9 @@ private:
     // findPath's search; with `along`, one kept to the plots of `along` (and with enemy ZOC only where it ends a pass
     // over plots others hold, as elsewhere it changes only the moves a path leaves): a path it finds then shows that
     // findPath finds one too. With `reach`, a search with no goal (reading ZOC the same way) that marks in it every plot
-    // a move order may go to. With `warWith`, planned as if the unit's owner were at war with that player: their borders
-    // open, their units kept out of and their zone of control in force (attackApproach).
+    // a move order may go to. With `warWith`, planned as if the unit's owner had declared war on that player: their
+    // borders open, their units (and those of the city-states that join them) kept out of and their zone of control in
+    // force (attackApproach).
     std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
                                                     std::vector<uint8_t>* reach = nullptr, PlayerId warWith = kNoPlayer) const;
     // The unit a move order for `unit` is planned for: a linked escort's moves the pair, so it is planned for the leader.

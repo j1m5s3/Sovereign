@@ -643,7 +643,10 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
 
 Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only, PlayerId warWith) const {
     MoveLimits limits;
-    auto hostile = [&](PlayerId other) { return other != unit.owner && (other == warWith || atWar(unit.owner, other)); };
+    const std::vector<uint8_t> declared = warsFromDeclaring(unit.owner, warWith);
+    auto hostile = [&](PlayerId other) {
+        return other != unit.owner && ((!declared.empty() && declared[static_cast<size_t>(other)]) || atWar(unit.owner, other));
+    };
     if (!only) limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
     auto block = [&](Hex h, uint8_t mark) {
         if (only) limits.onlyBlocked = limits.onlyBlocked || ((mark & MoveLimits::kKeepOut) && h == *only && state_.grid.normalize(h) == h);
