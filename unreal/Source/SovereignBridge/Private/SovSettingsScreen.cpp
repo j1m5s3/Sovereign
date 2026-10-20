@@ -1,4 +1,6 @@
 #include "SovSettingsScreen.h"
+#include "SovBoard.h"
+#include "Widgets/Input/SEditableTextBox.h"
 
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -92,6 +94,17 @@ void SSovSettingsScreen::Construct(const FArguments& Args)
 		Add(Option(Label, [W]() { return FString::Printf(TEXT("%d%%"), FMath::RoundToInt(FSovAudio::Volume(W) * 100.f)); },
 			[W](int32 D) { FSovAudio::SetVolume(W, FMath::RoundToFloat(FSovAudio::Volume(W) * 10.f + D) / 10.f); }));
 	}
+	// The weekly challenge's board (board/: sovboard serve), host:port; empty for none.
+	Options->AddSlot().AutoHeight().Padding(0, 8, 0, 0)
+	[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).Text(FText::FromString(TEXT("Challenge board (host:port, e.g. board.example.org:7788)")))];
+	Options->AddSlot().AutoHeight().Padding(0, 2)
+	[
+		SNew(SEditableTextBox).Text(FText::FromString(SovBoard::Address())).HintText(FText::FromString(TEXT("none")))
+		.OnTextCommitted_Lambda([this](const FText& T, ETextCommit::Type) {
+			SovBoard::SetAddress(T.ToString());
+			Status = T.IsEmpty() ? FString(TEXT("No challenge board.")) : FString::Printf(TEXT("Challenge board: %s"), *T.ToString());
+		})
+	];
 	Options->AddSlot().AutoHeight().Padding(0, 10, 0, 0)
 	[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true)
 		.Text(FText::FromString(TEXT("Click a key on the right to rebind it (Esc cancels); an action already on the new key takes the old one.")))];

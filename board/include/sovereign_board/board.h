@@ -106,6 +106,9 @@ SOV_API bool decodeMessage(const std::vector<uint8_t>& bytes, Message& out);
 class SOV_API Server {
 public:
     Server(Board& board, Listener& listener);
+    // Not copyable (it owns its connections); said outright so an exported (dllexport) class does not try to copy them.
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
     void poll();
 
 private:
@@ -119,6 +122,8 @@ private:
 class SOV_API Client {
 public:
     explicit Client(std::unique_ptr<Link> link, int timeoutSeconds = 120);
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
     SubmitReply submit(int32_t week, const std::string& name, const std::vector<uint8_t>& save);
     std::vector<Entry> ranking(int32_t week);
     bool connected() const;
