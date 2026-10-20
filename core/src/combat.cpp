@@ -443,8 +443,9 @@ bool Game::exertsZoc(const Unit& u) const {
     return ut.layer == UnitLayer::Military && (ut.zoneOfControl || unitHas(u, UnitEffectKind::ExertZoc));
 }
 
-void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) const {
+void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit, PlayerId warWith) const {
     if (unitHas(mover, UnitEffectKind::IgnoreZoc)) return;
+    auto hostile = [&](PlayerId other) { return other != mover.owner && (other == warWith || atWar(mover.owner, other)); };
     auto mark = [&](Hex center) {
         for (int d = 0; d < kNumDirs; ++d) {
             const std::optional<Hex> h = state_.grid.neighbor(center, static_cast<Dir>(d));
@@ -452,15 +453,15 @@ void Game::markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) 
         }
     };
     for (const City& c : state_.cities) {
-        if (atWar(mover.owner, c.owner)) mark(c.pos);
+        if (hostile(c.owner)) mark(c.pos);
         // An Encampment exerts zone of control like a city, its plot's owner's (inEnemyZoc).
         for (const CityDistrict& d : c.districts) {
             if (!d.complete || d.type != encampment_) continue;
             const PlayerId owner = state_.plot(d.pos).owner;
-            if (owner != kNoPlayer && atWar(mover.owner, owner)) mark(d.pos);
+            if (owner != kNoPlayer && hostile(owner)) mark(d.pos);
         }
     }
-    for (const Unit& u : state_.units) if (atWar(mover.owner, u.owner) && exertsZoc(u)) mark(u.pos);
+    for (const Unit& u : state_.units) if (hostile(u.owner) && exertsZoc(u)) mark(u.pos);
 }
 
 // ------------------------------------------------------------------ strength and damage
@@ -1101,40 +1102,61 @@ std::optional<AttackApproach> Game::attackApproach(UnitId attacker, Hex target, 
     const int reach = ranged ? unitRange(*u) : 1;
     if (reach < 1) return std::nullopt;
     const bool noAttackAfterMove = unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove);
-    std::optional<AttackApproach> best;
-    auto consider = [&](Hex plot, int turns, Fixed moves) {
-        AttackApproach a;
-        a.plot = plot;
-        a.turns = turns;
-        a.movesLeft = moves;
-        // It attacks on arrival with moves and an attack left; a siege unit only where it stands, not having moved.
-        const bool moved = plot != u->pos || u->moved;
-        a.attackOnArrival = turns == 0 && moves > Fixed() && (ut.religiousStrength > 0 || u->attacks < maxAttacks(*u)) &&
-                            !(ranged && moved && noAttackAfterMove);
-        if (!best) {
-            best = a;
-            return;
+    // The best plot to attack from, the way there planned as if at war with `warWith` (kNoPlayer: as things stand).
+    auto plan = [&](PlayerId warWith) {
+        std::optional<AttackApproach> best;
+        auto consider = [&](Hex plot, int turns, Fixed moves) {
+            AttackApproach a;
+            a.plot = plot;
+            a.turns = turns;
+            a.movesLeft = moves;
+            // It attacks on arrival with moves and an attack left; a siege unit only where it stands, not having moved.
+            const bool moved = plot != u->pos || u->moved;
+            a.attackOnArrival = turns == 0 && moves > Fixed() && (ut.religiousStrength > 0 || u->attacks < maxAttacks(*u)) &&
+                                !(ranged && moved && noAttackAfterMove);
+            if (!best) {
+                best = a;
+                return;
+            }
+            const bool now = turns == 0 && moves > Fixed(), bestNow = best->turns == 0 && best->movesLeft > Fixed();
+            const int near = state_.grid.distance(u->pos, plot), bestNear = state_.grid.distance(u->pos, best->plot);
+            if (now != bestNow ? now : turns != best->turns ? turns < best->turns : moves != best->movesLeft ? moves > best->movesLeft : near < bestNear)
+                best = a;
+        };
+        // Where it stands first, so that it wins every tie.
+        if (validateCombat(c, true, &u->pos) == CommandError::Ok) consider(u->pos, 0, u->movesLeft);
+        if (walks) {
+            for (const Hex& plot : state_.grid.within(*t, reach)) {
+                if (plot == u->pos || validateCombat(c, true, &plot) != CommandError::Ok) continue;
+                // A move order may not end on a plot another of ours of the mover's layer holds (validate: MoveUnit).
+                const Unit* own = state_.unitAt(plot, moverLayer, *rules_);
+                if (own && own->owner == u->owner) continue;
+                const std::optional<std::vector<PathStep>> path = searchPath(mover.id, plot, false, nullptr, nullptr, warWith);
+                if (!path || path->empty()) continue;
+                consider(plot, path->back().turn, path->back().movesLeft);
+            }
         }
-        const bool now = turns == 0 && moves > Fixed(), bestNow = best->turns == 0 && best->movesLeft > Fixed();
-        const int near = state_.grid.distance(u->pos, plot), bestNear = state_.grid.distance(u->pos, best->plot);
-        if (now != bestNow ? now : turns != best->turns ? turns < best->turns : moves != best->movesLeft ? moves > best->movesLeft : near < bestNear)
-            best = a;
+        return best;
     };
-    // Where it stands first, so that it wins every tie.
-    if (validateCombat(c, true, &u->pos) == CommandError::Ok) consider(u->pos, 0, u->movesLeft);
-    if (walks) {
-        for (const Hex& plot : state_.grid.within(*t, reach)) {
-            if (plot == u->pos || validateCombat(c, true, &plot) != CommandError::Ok) continue;
-            // A move order may not end on a plot another of ours of the mover's layer holds (validate: MoveUnit).
-            const Unit* own = state_.unitAt(plot, moverLayer, *rules_);
-            if (own && own->owner == u->owner) continue;
-            const std::optional<std::vector<PathStep>> path = findPath(mover.id, plot);
-            if (!path || path->empty()) continue;
-            consider(plot, path->back().turn, path->back().movesLeft);
+    std::optional<AttackApproach> best = plan(kNoPlayer);
+    // From there, the at-war checks are all that may still stop it (none for theological combat): the war that would
+    // open it, or none when no one declaration would (civilians of two players at peace share the plot).
+    if (best && validateCombat(c, false, &best->plot) != CommandError::Ok) {
+        best->war = warTargetOwner(u->owner, *t);
+        if (best->war == kNoPlayer) return std::nullopt;
+    }
+    // At peace, the way may be shut (their borders closed to us), or open only to an attack on a later turn: planned as
+    // if at war with them (borders open, their units kept out of and their zone of control in force), a plot it gets
+    // to and attacks from this turn, or any when there is no other, is taken with the war declared first.
+    const PlayerId owner = best ? best->war : warTargetOwner(u->owner, *t);
+    if (walks && owner != kNoPlayer && (!best || !(best->turns == 0 && best->attackOnArrival))) {
+        std::optional<AttackApproach> opened = plan(owner);
+        if (opened && (!best || (opened->turns == 0 && opened->attackOnArrival))) {
+            opened->war = owner;
+            opened->warFirst = opened->plot != u->pos;
+            best = opened;
         }
     }
-    // From there, the at-war checks are all that may still stop it (none for theological combat).
-    if (best && validateCombat(c, false, &best->plot) != CommandError::Ok) best->war = warTargetOwner(u->owner, *t);
     return best;
 }
 

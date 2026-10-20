@@ -641,8 +641,9 @@ std::optional<Fixed> Game::moveCost(const Unit& unit, Hex from, Hex to) const {
     return terrainCost(unit, traits, from, to, *d);
 }
 
-Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only) const {
+Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only, PlayerId warWith) const {
     MoveLimits limits;
+    auto hostile = [&](PlayerId other) { return other != unit.owner && (other == warWith || atWar(unit.owner, other)); };
     if (!only) limits.blocked.assign(static_cast<size_t>(state_.grid.size()), 0);
     auto block = [&](Hex h, uint8_t mark) {
         if (only) limits.onlyBlocked = limits.onlyBlocked || ((mark & MoveLimits::kKeepOut) && h == *only && state_.grid.normalize(h) == h);
@@ -652,7 +653,7 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, st
     // be passed but not shared (05: Stacking).
     for (const Unit& u : state_.units) {
         if (u.owner == unit.owner || (only && u.pos != *only)) continue;
-        block(u.pos, static_cast<uint8_t>(atWar(unit.owner, u.owner) ? MoveLimits::kKeepOut : MoveLimits::kPassOnly | MoveLimits::kTheirs));
+        block(u.pos, static_cast<uint8_t>(hostile(u.owner) ? MoveLimits::kKeepOut : MoveLimits::kPassOnly | MoveLimits::kTheirs));
     }
     // An Encampment counts only on its own city's plot (below), so with `only` just that plot's city's can block it.
     const CityId onlyCity = only ? state_.plot(*only).city : kNoCity;
@@ -660,7 +661,7 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, st
         if (c.owner != unit.owner) block(c.pos, MoveLimits::kKeepOut);
         if (only && c.id != onlyCity) continue;
         // Nor an enemy Encampment that still stands (05: City combat).
-        const CityDistrict* camp = atWar(unit.owner, c.owner) ? encampmentOf(c) : nullptr;
+        const CityDistrict* camp = hostile(c.owner) ? encampmentOf(c) : nullptr;
         if (camp && state_.grid.normalize(camp->pos) == camp->pos && state_.plot(camp->pos).city == c.id) block(camp->pos, MoveLimits::kKeepOut);
     }
     limits.closed.assign(state_.players.size(), 0);
@@ -671,7 +672,7 @@ Game::MoveLimits Game::moveLimits(const Unit& unit, const MoveTraits& traits, st
         // Music Censorship (04): no foreign Rock Band enters the territory.
         if (traits.rockBand && policyIs(p.id, "POLICY_MUSIC_CENSORSHIP")) closed |= 2;
         // Closed borders: after Early Empire only units at war (or able to ignore borders) may enter.
-        if (traits.ignoreBorders || atWar(unit.owner, p.id) || grantsOpenBorders(p.id, unit.owner)) continue;
+        if (traits.ignoreBorders || hostile(p.id) || grantsOpenBorders(p.id, unit.owner)) continue;
         for (TypeIndex i : borderCivics_) {
             if (p.civics.has(i)) {
                 closed |= 1;
@@ -875,7 +876,7 @@ std::vector<uint8_t> Game::moveReach(UnitId id, bool overland) const {
 }
 
 std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
-                                                      std::vector<uint8_t>* reach) const {
+                                                      std::vector<uint8_t>* reach, PlayerId warWith) const {
     const Unit* u = state_.unit(id);
     if (!u) return std::nullopt;
     auto t = state_.grid.normalize(target);
@@ -887,7 +888,7 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     if (goal >= 0 && !known(goal)) return std::nullopt;
     const bool keepDry = overland && typeOf(*rules_, *u).domain == Domain::Land && !isEmbarked(*u);
     const MoveTraits traits = moveTraits(*u);
-    MoveLimits limits = moveLimits(*u, traits);
+    MoveLimits limits = moveLimits(*u, traits, std::nullopt, warWith);
     StepUnit su = stepUnit(*u, traits);
 
     // Per plot: the best arrival found (read only where its flags have kReached): its turn, the plot it came from (-1
@@ -987,7 +988,7 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
     // asks), except on plots the mover may only pass, where a move it ends could not stay: such a search marks it the
     // first time it steps onto one.
     bool zocMarked = !along && !reach;
-    if (zocMarked) markZoc(*u, flags, kZoc);
+    if (zocMarked) markZoc(*u, flags, kZoc, warWith);
 
     auto better = [](int turn, Fixed moves, const Cell& than) {
         return turn != than.turn ? turn < than.turn : moves.raw() > than.moves;
@@ -1113,7 +1114,7 @@ std::optional<std::vector<PathStep>> Game::searchPath(UnitId id, Hex target, boo
                 continue;
             }
             if (!zocMarked) {
-                markZoc(*u, flags, kZoc);
+                markZoc(*u, flags, kZoc, warWith);
                 zocMarked = true;
             }
             const bool zoc = flags[static_cast<size_t>(next)] & kZoc;
