@@ -121,6 +121,10 @@ struct FSovUIModel
 	// The latest message (saved, bought, refused...), under the top bar for a few seconds; Toast fades it out.
 	FString Message;
 	float MessageAlpha = 0.f;
+	// A question over the map (plan G step 2): declare war before an attack, or a live battle to fight. Its buttons press
+	// keys (Label, Key); the first is the main one. Empty title: none.
+	FString AskTitle, AskText;
+	TArray<FSovUIAction> AskButtons;
 	// The plot under the cursor (plan E, step 3): terrain, owner, yields and units; shown only over the map.
 	TArray<FString> Hover;
 	// The Empire panel (plan E, step 1): the empire's standing, line by line (Text and Color used).
@@ -179,6 +183,7 @@ public:
 
 private:
 	TSharedRef<SWidget> StatWidget(const FSovUIStat& Stat, int32 Size = 14);
+	TSharedRef<SWidget> AskButton(int32 Index);  // the Ask card's button, shown while Model.AskButtons has it
 	void RebuildStats();
 	void RebuildUnit();
 	void RebuildChooser();

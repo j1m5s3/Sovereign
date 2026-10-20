@@ -578,6 +578,33 @@ void SSovGameUI::Construct(const FArguments& Args)
 			.Visibility_Lambda([this]() { return Model.Battle.bOpen ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed; })
 			.OnKey_Lambda([this](FKey Key) { OnKey.ExecuteIfBound(Key); })
 		]
+		// A question over the map: declare war and attack, or a live battle to fight.
+		+ SOverlay::Slot().VAlign(VAlign_Center).HAlign(HAlign_Center)
+		[
+			SNew(SBox).WidthOverride(540).Visibility_Lambda([this]() {
+				return Model.bVisible && !Model.AskTitle.IsEmpty() && !Model.bEnd ? EVisibility::Visible : EVisibility::Collapsed;
+			})
+			[
+				SNew(SBorder).BorderImage(FSovStyle::Panel()).Padding(FMargin(22, 16))
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[SNew(STextBlock).Font(FSovStyle::Font(18, true)).ColorAndOpacity(FSovStyle::Gold).Text_Lambda([this]() { return FText::FromString(Model.AskTitle); })]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 8, 0, 14)
+					[
+						SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Justification(ETextJustify::Center)
+						.Text_Lambda([this]() { return FText::FromString(Model.AskText); })
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6, 0)[AskButton(0)]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6, 0)[AskButton(1)]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6, 0)[AskButton(2)]
+					]
+				]
+			]
+		]
 		// Hot seat: the next player's turn, the map hidden until they take over.
 		+ SOverlay::Slot()
 		[
@@ -961,4 +988,18 @@ void SSovGameUI::RebuildChooser()
 			[Row]
 		];
 	}
+}
+
+TSharedRef<SWidget> SSovGameUI::AskButton(int32 Index)
+{
+	return SNew(SButton).IsFocusable(false).ButtonStyle(Index == 0 ? &FSovStyle::Primary() : &FSovStyle::Button()).ContentPadding(FMargin(16, 6))
+		.Visibility_Lambda([this, Index]() { return Model.AskButtons.IsValidIndex(Index) ? EVisibility::Visible : EVisibility::Collapsed; })
+		.OnClicked_Lambda([this, Index]() {
+			if (Model.AskButtons.IsValidIndex(Index)) OnKey.ExecuteIfBound(Model.AskButtons[Index].Key);
+			return FReply::Handled();
+		})
+		[
+			SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text)
+			.Text_Lambda([this, Index]() { return FText::FromString(Model.AskButtons.IsValidIndex(Index) ? Model.AskButtons[Index].Label : FString()); })
+		];
 }

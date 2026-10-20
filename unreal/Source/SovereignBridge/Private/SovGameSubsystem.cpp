@@ -15,6 +15,40 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSovereign, Log, All);
 
+namespace
+{
+// A refusal as the player reads it: a plain sentence for the common ones, else the reason's name in words.
+FString RefusalText(const sov::Command& Command, sov::CommandError Error)
+{
+	UE_LOG(LogSovereign, Log, TEXT("%s refused: %s"), UTF8_TO_TCHAR(sov::describe(Command).c_str()), UTF8_TO_TCHAR(sov::commandErrorName(Error)));
+	switch (Error)
+	{
+		case sov::CommandError::NotYourTurn: return TEXT("It is not your turn.");
+		case sov::CommandError::NoPath: return TEXT("That unit has no way there.");
+		case sov::CommandError::BadTarget: return TEXT("That is not a place on the map.");
+		case sov::CommandError::CannotAttack: return TEXT("That unit cannot attack there now: out of reach, out of moves, or not at war.");
+		case sov::CommandError::CannotDeclareWar: return TEXT("War cannot be declared on them now.");
+		case sov::CommandError::CannotMakePeace: return TEXT("They will not make peace now.");
+		case sov::CommandError::CannotFoundHere: return TEXT("A city cannot be founded here.");
+		case sov::CommandError::TooCloseToCity: return TEXT("Too close to another city to found one here.");
+		case sov::CommandError::NotEnoughGold: return TEXT("Not enough gold.");
+		case sov::CommandError::NotEnoughFaith: return TEXT("Not enough faith.");
+		case sov::CommandError::BattlePending: return TEXT("A battle must be fought or settled first.");
+		case sov::CommandError::UnitsNeedOrders: return TEXT("Some units still need orders.");
+		default: break;
+	}
+	// "CannotBuild" reads "Cannot build."
+	const FString Name = UTF8_TO_TCHAR(sov::commandErrorName(Error));
+	FString Words;
+	for (int32 i = 0; i < Name.Len(); ++i)
+	{
+		if (i > 0 && FChar::IsUpper(Name[i])) Words += TEXT(" ");
+		Words.AppendChar(i > 0 ? FChar::ToLower(Name[i]) : Name[i]);
+	}
+	return Words + TEXT(".");
+}
+}  // namespace
+
 bool USovGameSubsystem::StartGame(const FSovSetup& Setup)
 {
 	FString Error;
@@ -44,8 +78,7 @@ sov::CommandError USovGameSubsystem::Submit(const sov::Command& Command)
 	}
 	else
 	{
-		LastMessage = FString::Printf(TEXT("%s refused: %s"), UTF8_TO_TCHAR(sov::describe(Command).c_str()),
-			UTF8_TO_TCHAR(sov::commandErrorName(Result)));
+		Say(RefusalText(Command, Result));
 	}
 	return Result;
 }

@@ -120,6 +120,17 @@ protected:
 	// Sends the command; true when the core accepted it.
 	bool Send(const sov::Command& Command);
 	void AfterUnitOrder();
+	// A right-click on a foreign unit or city (plan G step 2): strike it; out of reach, walk beside it and strike if moves
+	// remain; at peace, ask to declare war first (WarAsk).
+	void Strike(int32 UnitId, int32 X, int32 Y);
+	struct FWarAsk
+	{
+		bool bOpen = false;
+		int32 Unit = -1;
+		FIntPoint Target = FIntPoint::ZeroValue;
+		int32 Foe = -1;  // the player to declare war on
+	};
+	FWarAsk WarAsk;
 
 	void OpenChooser(EChooser Kind);
 	void EnterStreet();
@@ -259,6 +270,7 @@ protected:
 	int32 ShotCount = 0;
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
+	int32 ShownSerial = 0;     // and its MessageSerial then
 	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
 	// Sound (plan F): the loops now playing, and what the last frame saw, to sound what changed.

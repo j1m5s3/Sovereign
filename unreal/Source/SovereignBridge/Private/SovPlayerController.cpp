@@ -504,25 +504,7 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 	}
 	if (bEnemyCity || bEnemyUnit)
 	{
-		const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
-		const bool bRanged = T.ranged > 0 || T.bombard > 0;
-		if (bRanged && G.previewAttack(U->id, Target, true).valid)
-		{
-			Send(sov::Command::rangedAttack(Me(), U->id, Target));
-		}
-		else if (G.previewAttack(U->id, Target, false).valid)
-		{
-			Send(sov::Command::attack(Me(), U->id, Target));
-		}
-		else if (S.grid.distance(U->pos, Target) > 1 || !bRanged)
-		{
-			// Not in reach: walk towards it (the core stops next to blockers).
-			Send(sov::Command::move(Me(), U->id, Target));
-		}
-		else
-		{
-			Send(sov::Command::attack(Me(), U->id, Target));  // shows why it was refused
-		}
+		Strike(U->id, X, Y);
 	}
 	else if (G.isAircraft(*U))
 	{
@@ -542,6 +524,104 @@ void ASovPlayerController::ClickOrder(int32 X, int32 Y)
 		Send(sov::Command::move(Me(), U->id, Target));
 	}
 	AfterUnitOrder();
+}
+
+// A foreign player by name: its civ, the city-state, or the barbarians.
+static FString FoeName(const sov::Game& G, sov::PlayerId Id)
+{
+	const sov::Player& X = G.state().players[static_cast<size_t>(Id)];
+	if (X.barbarian) return TEXT("the barbarians");
+	if (X.cityState != sov::kNone) return Str(G.rules().cityStates[static_cast<size_t>(X.cityState)].name);
+	return X.civ == sov::kNone ? Str(X.leaderName) : Str(G.rules().civs[static_cast<size_t>(X.civ)].name);
+}
+
+void ASovPlayerController::Strike(int32 UnitId, int32 X, int32 Y)
+{
+	const sov::Game& G = Subsystem()->GetGame();
+	const sov::GameState& S = G.state();
+	const sov::Hex Target{X, Y};
+	const sov::Unit* U = S.unit(UnitId);
+	if (!U)
+	{
+		return;
+	}
+	const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
+	const sov::City* City = S.cityAt(Target);
+	const sov::Unit* Them = S.foreignUnitAt(Target, Me());
+	const sov::PlayerId Foe = City && City->owner != Me() ? City->owner : Them ? Them->owner : sov::kNoPlayer;
+	const bool bFighter = (T.layer == sov::UnitLayer::Military || T.layer == sov::UnitLayer::Leader || T.layer == sov::UnitLayer::Air) && T.religiousStrength <= 0;
+	if (Foe != sov::kNoPlayer && bFighter && !G.atWar(Me(), Foe))
+	{
+		// At peace: Civ VI asks before the attack that starts a war.
+		if (G.canDeclareWar(Me(), Foe))
+		{
+			WarAsk = {true, UnitId, FIntPoint(X, Y), Foe};
+		}
+		else
+		{
+			Subsystem()->Say(FString::Printf(TEXT("You are at peace with %s and cannot declare war on them yet."), *FoeName(G, Foe)));
+		}
+		return;
+	}
+	const bool bRanged = T.ranged > 0 || T.bombard > 0;
+	if (bRanged && G.previewAttack(UnitId, Target, true).valid)
+	{
+		Send(sov::Command::rangedAttack(Me(), UnitId, Target));
+		return;
+	}
+	if (G.previewAttack(UnitId, Target, false).valid)
+	{
+		Send(sov::Command::attack(Me(), UnitId, Target));
+		return;
+	}
+	if (S.grid.distance(U->pos, Target) <= 1)
+	{
+		Send(bRanged ? sov::Command::rangedAttack(Me(), UnitId, Target) : sov::Command::attack(Me(), UnitId, Target));  // says why not
+		return;
+	}
+	// Out of reach: walk to the plot beside it reached soonest (with the most moves left), then strike if moves remain. A
+	// move onto the foe's own plot is refused, so the walk ends beside it.
+	std::optional<sov::Hex> Best;
+	int32 BestTurn = 0;
+	sov::Fixed BestLeft;
+	for (int32 d = 0; d < sov::kNumDirs; ++d)
+	{
+		const std::optional<sov::Hex> Beside = S.grid.neighbor(Target, static_cast<sov::Dir>(d));
+		if (!Beside) continue;
+		const std::optional<std::vector<sov::PathStep>> Path = G.findPath(UnitId, *Beside);
+		if (!Path || Path->empty()) continue;
+		const sov::PathStep& End = Path->back();
+		if (!Best || End.turn < BestTurn || (End.turn == BestTurn && BestLeft < End.movesLeft))
+		{
+			Best = *Beside;
+			BestTurn = End.turn;
+			BestLeft = End.movesLeft;
+		}
+	}
+	if (!Best)
+	{
+		Subsystem()->Say(FString::Printf(TEXT("Your %s has no way to reach them."), *Str(T.name)));
+		return;
+	}
+	if (!Send(sov::Command::move(Me(), UnitId, *Best)))
+	{
+		return;
+	}
+	const sov::Unit* After = G.state().unit(UnitId);
+	if (After && G.state().grid.distance(After->pos, Target) <= 1)
+	{
+		if (bRanged && G.previewAttack(UnitId, Target, true).valid) Send(sov::Command::rangedAttack(Me(), UnitId, Target));
+		else if (G.previewAttack(UnitId, Target, false).valid) Send(sov::Command::attack(Me(), UnitId, Target));
+		else if (After->movesLeft <= sov::Fixed())
+		{
+			// Stepping beside a foe ends the move (its zone of control), as in Civ VI.
+			Subsystem()->Say(FString::Printf(TEXT("Your %s stands beside them, out of moves: attack next turn."), *Str(T.name)));
+		}
+	}
+	else if (BestTurn > 0)
+	{
+		Subsystem()->Say(FString::Printf(TEXT("Your %s marches on them: %d turn(s) to reach them."), *Str(T.name), BestTurn + 1));
+	}
 }
 
 void ASovPlayerController::EndTurn()
@@ -972,7 +1052,7 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 		case EChooser::CityStates:
 		{
 			// 08: each city-state we have met, its kind, our envoys and its suzerain; picking sends an envoy.
-			ChooserTitle = FString::Printf(TEXT("City-states (%d envoys to send). Pick one to send an envoy"), P.envoyTokens);
+			ChooserTitle = FString::Printf(TEXT("City-states (%d envoys to send). Send an envoy, levy an army, or declare war"), P.envoyTokens);
 			static const TCHAR* Kinds[] = {TEXT("Scientific"), TEXT("Cultural"), TEXT("Religious"), TEXT("Trade"), TEXT("Industrial"), TEXT("Militaristic")};
 			const int32 FirstCs = Choices.Num();
 			for (const sov::Player& Cs : G.state().players)
@@ -981,7 +1061,8 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				{
 					continue;
 				}
-				bool bMet = false;
+				// Met: one of its units or its city seen (Civ VI meets a city-state by its scouts and soldiers too).
+				bool bMet = G.hasMet(Me(), Cs.id);
 				for (const sov::City& C : G.state().cities)
 				{
 					bMet |= C.owner == Cs.id && G.visibility(Me(), C.pos) != sov::Visibility::Unrevealed;
@@ -1002,6 +1083,11 @@ void ASovPlayerController::OpenChooser(EChooser Kind)
 				if (const int32 Cost = G.levyCost(Me(), Cs.id); Cost >= 0)
 				{
 					Choices.Add({FString::Printf(TEXT("Levy %s's military"), *Str(T.name)), sov::Command::levyMilitary(Me(), Cs.id), {}, FString::Printf(TEXT("%d gold"), Cost), "strength", Section});
+				}
+				// War on a city-state (plan G step 2): its units are often the first foreign soldiers a Warrior meets.
+				if (!G.atWar(Me(), Cs.id) && G.canDeclareWar(Me(), Cs.id))
+				{
+					Choices.Add({FString::Printf(TEXT("Declare war on %s"), *Str(T.name)), sov::Command::declareWar(Me(), Cs.id), {}, TEXT("war"), "strength", Section});
 				}
 			}
 			// One section per kind.
@@ -2142,6 +2228,25 @@ void ASovPlayerController::HandleOrders()
 		}
 		return;
 	}
+	if (WarAsk.bOpen)
+	{
+		// Declare war and attack (Y or Enter), or think again (N or Esc).
+		if (!MyTurn() || Pressed(EKeys::N) || Pressed(EKeys::Escape))
+		{
+			WarAsk = {};
+		}
+		else if (Pressed(EKeys::Y) || Pressed(EKeys::Enter))
+		{
+			const FWarAsk Ask = WarAsk;
+			WarAsk = {};
+			if (Send(sov::Command::declareWar(Me(), Ask.Foe)))
+			{
+				Strike(Ask.Unit, Ask.Target.X, Ask.Target.Y);
+				AfterUnitOrder();
+			}
+		}
+		return;
+	}
 	int32 X = 0, Y = 0;
 	if (Pressed(EKeys::LeftMouseButton) && HexUnderCursor(X, Y))
 	{
@@ -2689,9 +2794,10 @@ void ASovPlayerController::UpdateGameUI()
 			}
 			M.StreetPrompt = StreetPrompt();
 			// Messages show as the toast here too.
-			if (Sub->LastMessage != ShownMessage)
+			if (Sub->LastMessage != ShownMessage || Sub->MessageSerial != ShownSerial)
 			{
 				ShownMessage = Sub->LastMessage;
+				ShownSerial = Sub->MessageSerial;
 				MessageTime = GetWorld()->GetRealTimeSeconds();
 			}
 			M.Message = ShownMessage;
@@ -3108,9 +3214,10 @@ void ASovPlayerController::UpdateGameUI()
 	if (Notices.Num() > 8) Notices.SetNum(8);  // the most pressing; the rest wait their turn
 	for (const FNotice& No : Notices) M.Notices.Add({No.Icon, No.Text, No.Sub, No.bUrgent});
 	// The latest message: shown for six seconds after it changes, fading over the last two.
-	if (Sub->LastMessage != ShownMessage)
+	if (Sub->LastMessage != ShownMessage || Sub->MessageSerial != ShownSerial)
 	{
 		ShownMessage = Sub->LastMessage;
+		ShownSerial = Sub->MessageSerial;
 		MessageTime = GetWorld()->GetRealTimeSeconds();
 	}
 	M.Message = ShownMessage;
@@ -3220,6 +3327,43 @@ void ASovPlayerController::UpdateGameUI()
 		FString Id;
 		Tip(Id, M.TipTitle, M.TipText);
 		TipShown = Id;
+	}
+	// A question over the map (plan G step 2): war before an attack, or a live battle waiting on us.
+	if (WarAsk.bOpen)
+	{
+		const sov::Unit* U = S.unit(WarAsk.Unit);
+		const FString Foe = FoeName(G, WarAsk.Foe);
+		M.AskTitle = FString::Printf(TEXT("Declare war on %s?"), *Foe);
+		M.AskText = FString::Printf(TEXT("You are at peace with %s. Your %s can attack them only at war, and the world remembers who struck first."), *Foe,
+			U ? *Str(R.units[static_cast<size_t>(U->type)].name) : TEXT("unit"));
+		M.AskButtons = {{NAME_None, TEXT("Declare war and attack (Y)"), EKeys::Y}, {NAME_None, TEXT("Cancel (N)"), EKeys::N}};
+	}
+	else if (G.battlePending() && S.pendingBattle.liveFor == Me())
+	{
+		const sov::PendingBattle& Bt = S.pendingBattle;
+		const sov::Unit* A = S.unit(Bt.attacker);
+		const sov::Unit* D = S.unit(Bt.defender);
+		const sov::City* C = S.city(Bt.city);
+		M.AskTitle = C ? TEXT("Battle! A city is stormed") : TEXT("Battle! Your ruler is in the fight");
+		if (A && C)
+		{
+			M.AskText = FString::Printf(TEXT("%s storms %s. Expected: %d damage to the city, %d to the attacker."),
+				*Str(R.units[static_cast<size_t>(A->type)].name), *Str(C->name), Bt.expectedToDefender, Bt.expectedToAttacker);
+		}
+		else if (A && D)
+		{
+			M.AskText = FString::Printf(TEXT("%s attacks %s. Expected: %d damage to the defender, %d to the attacker."),
+				*Str(R.units[static_cast<size_t>(A->type)].name), *Str(R.units[static_cast<size_t>(D->type)].name), Bt.expectedToDefender, Bt.expectedToAttacker);
+		}
+		M.AskText += TEXT(" Fight it live and the field can shift that by a quarter either way.");
+		M.AskButtons = {{NAME_None, TEXT("Fight it live (B)"), EKeys::B}, {NAME_None, TEXT("Auto-resolve (R)"), EKeys::R}};
+	}
+	else if (G.battlePending() && BattleOpponent() == Me())
+	{
+		M.AskTitle = TEXT("Battle!");
+		M.AskText = FString::Printf(TEXT("%s fights your army live. Take command of your men, settle it by the numbers, or let your generals lead them."),
+			*Str(S.players[static_cast<size_t>(S.pendingBattle.liveFor)].leaderName));
+		M.AskButtons = {{NAME_None, TEXT("Take command (B)"), EKeys::B}, {NAME_None, TEXT("Settle by the numbers (R)"), EKeys::R}};
 	}
 	// The end of the game, or of this player's part in it (plan D, step 5).
 	if (!G.gameOver() && P.alive) bEndClosed = false;
@@ -3432,13 +3576,14 @@ void ASovPlayerController::UpdatePanel()
 			}
 		}
 	}
-	if (G.battlePending() && G.state().pendingBattle.liveFor != Me() && BattleOpponent() == Me())
+	if (!GameUI.IsValid() && G.battlePending() && G.state().pendingBattle.liveFor != Me() && BattleOpponent() == Me())
 	{
 		L.Add(FString::Printf(TEXT("BATTLE! %s fights your army live. B: take command of your men   R: settle it by the numbers   (otherwise your generals lead them)"),
 			UTF8_TO_TCHAR(S.players[static_cast<size_t>(G.state().pendingBattle.liveFor)].leaderName.c_str())));
 	}
 	if (G.battlePending() && G.state().pendingBattle.liveFor == Me())
 	{
+		if (GameUI.IsValid()) return;  // the widgets ask (the Ask card)
 		const sov::PendingBattle& Bt = G.state().pendingBattle;
 		const sov::Unit* A = S.unit(Bt.attacker);
 		const sov::Unit* D = S.unit(Bt.defender);
@@ -3566,8 +3711,9 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
 		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
 	}
-	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit attacks the enemy beside it once,
-	// so the live battle can be opened (B) without a mouse.
+	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit is ordered against the nearest foreign
+	// unit once, as a right-click on it would (Strike: attack, walk up and attack, or ask to declare war), so the live battle
+	// can be opened (B) without a mouse.
 	if (!bBattleNowDone && Subsystem()->IsRunning() && MyTurn() && FParse::Param(FCommandLine::Get(), TEXT("SovBattleNow")))
 	{
 		bBattleNowDone = true;
@@ -3575,10 +3721,23 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		for (const sov::Unit& U : G.state().units)
 		{
 			if (U.owner != Me() || G.rules().units[static_cast<size_t>(U.type)].combat <= 0) continue;
+			const sov::Unit* Nearest = nullptr;
 			for (const sov::Unit& E : G.state().units)
 			{
-				if (E.owner == Me() || G.state().grid.distance(U.pos, E.pos) != 1) continue;
-				if (Send(sov::Command::attack(Me(), U.id, E.pos))) break;
+				if (E.owner == Me() || G.visibility(Me(), E.pos) != sov::Visibility::Visible) continue;
+				if (!Nearest || G.state().grid.distance(U.pos, E.pos) < G.state().grid.distance(U.pos, Nearest->pos)) Nearest = &E;
+			}
+			if (Nearest)
+			{
+				UE_LOG(LogTemp, Display, TEXT("SovBattleNow: unit %d strikes (%d,%d), %d plots away"), U.id, Nearest->pos.x, Nearest->pos.y, G.state().grid.distance(U.pos, Nearest->pos));
+				const int32 Id = U.id, FoeId = Nearest->id;
+				const sov::Hex At = Nearest->pos;
+				Strike(Id, At.x, At.y);
+				const sov::Unit* Ours = G.state().unit(Id);
+				const sov::Unit* Theirs = G.state().unit(FoeId);
+				UE_LOG(LogTemp, Display, TEXT("SovBattleNow: ours at (%d,%d) hp %d attacks %d moves %d; theirs hp %d; war asked %d; battle pending %d"),
+					Ours ? Ours->pos.x : -1, Ours ? Ours->pos.y : -1, Ours ? Ours->hp : -1, Ours ? Ours->attacks : -1, Ours ? static_cast<int32>(Ours->movesLeft.toInt()) : -1, Theirs ? Theirs->hp : -1,
+					WarAsk.bOpen ? 1 : 0, G.battlePending() ? 1 : 0);
 			}
 			break;
 		}

@@ -67,6 +67,14 @@ public:
 	TSharedPtr<const struct FSovMirror> Mirror;
 
 	FString LastMessage;
+	// Bumped by Say and by each refusal, so the same message said again shows again.
+	int32 MessageSerial = 0;
+	// Shows a message under the top bar (again, if it is the one already there).
+	void Say(const FString& Text)
+	{
+		LastMessage = Text;
+		++MessageSerial;
+	}
 	// Online notices and chat, newest last (a few kept for the HUD).
 	TArray<FString> NetLines;
 	// Seconds between AI seats, so their turns can be watched.
