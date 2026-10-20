@@ -88,7 +88,8 @@ protected:
 		Governors,
 		SpyMissions,
 		Congress,
-		Government
+		Government,
+		ConfirmWar  // the declare-war prompt (WarOn), before an attack or from the city-states list
 	};
 
 	struct FChoice
@@ -113,6 +114,15 @@ protected:
 	bool HexUnderCursor(int32& OutX, int32& OutY) const;
 	void ClickSelect(int32 X, int32 Y);
 	void ClickOrder(int32 X, int32 Y);
+	// A right-click on a foe (Civ VI): attack it, walk to where it can be attacked from and attack, or ask to declare
+	// war first. True when the declare-war prompt opened.
+	bool OrderAttack(sov::UnitId Unit, sov::Hex Target);
+	// Moves the unit to where it attacks from (never onto the foe), then attacks if it may this turn.
+	void ApproachAndAttack(sov::UnitId Unit, sov::Hex Target, const struct FSovAttackPlan& Plan);
+	// After the declare-war prompt's declaration: the attack it was opened for (WarUnit, WarTarget).
+	void AttackAfterWar();
+	// A live battle waits for this player: its prompt (fight it live, or settle it) shows in the chooser panel.
+	bool BattlePromptUp() const;
 	void SelectUnit(int32 Id, bool bCenter);
 	void SelectCity(int32 Id, bool bCenter);
 	void SelectNextUnit();
@@ -200,6 +210,10 @@ protected:
 	int32 CongressExtraVotes = 0;  // votes to buy with favor on the next vote cast
 	sov::UnitId ReligionUnit = sov::kNoUnit;  // the Prophet or Apostle a religion chooser is for
 	sov::TypeIndex PendingFounder = sov::kNone;  // the Founder belief picked before the Follower
+	// The declare-war prompt: the player to declare on, and the attack it opens (WarUnit kNoUnit: a declaration alone).
+	sov::PlayerId WarOn = sov::kNoPlayer;
+	sov::UnitId WarUnit = sov::kNoUnit;
+	sov::Hex WarTarget;
 	FSovBattleResult Outcome;
 	bool bBattleSent = false;
 	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle
@@ -259,6 +273,7 @@ protected:
 	int32 ShotCount = 0;
 	int32 GovSlot = -1;        // the policy slot the government screen lists cards for
 	FString ShownMessage;      // the subsystem's LastMessage as the toast last showed it
+	int32 ShownSerial = 0;     // and its MessageSerial then: a message said again shows again
 	double MessageTime = -100.0;
 	bool bEndClosed = false;  // the end-of-game screen was put aside to look at the map
 	// Sound (plan F): the loops now playing, and what the last frame saw, to sound what changed.

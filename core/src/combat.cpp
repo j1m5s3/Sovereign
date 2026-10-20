@@ -958,7 +958,9 @@ void Game::awardXp(Unit& unit, int xp, bool vsBarbarian) {
 
 // ------------------------------------------------------------------ commands
 
-CommandError Game::validateCombat(const Command& c) const {
+CommandError Game::validateCombat(const Command& c) const { return validateCombat(c, false, nullptr); }
+
+CommandError Game::validateCombat(const Command& c, bool assumeWar, const Hex* from) const {
     // Range-check arg before narrowing it to a player or promotion index.
     const bool playerArg = c.arg >= 0 && static_cast<size_t>(c.arg) < state_.players.size();
     switch (c.type) {
@@ -997,16 +999,19 @@ CommandError Game::validateCombat(const Command& c) const {
     const UnitType& ut = typeOf(*rules_, *u);
     auto t = state_.grid.normalize(c.target);
     if (!t || *t != c.target) return CommandError::BadTarget;
+    // Where it attacks from: where it stands, or the plot an approach is planned to (its moves and attacks left there,
+    // and whether it moved, are then the planner's to weigh).
+    const Hex pos = from ? *from : u->pos;
     if (ut.religiousStrength > 0) {
         // Theological combat: an adjacent religious unit of another religion, no war needed (06).
-        if (c.type != CommandType::Attack || u->religion < 0 || u->movesLeft <= Fixed() || state_.grid.distance(u->pos, *t) != 1)
+        if (c.type != CommandType::Attack || u->religion < 0 || (!from && u->movesLeft <= Fixed()) || state_.grid.distance(pos, *t) != 1)
             return CommandError::CannotAttack;
         // Missionaries and Gurus are Peacekeepers (06; data: ABILITY_PEACEKEEPER): they defend but never attack.
         if (unitHasAbility(*u, rules_->ability("ABILITY_PEACEKEEPER"))) return CommandError::CannotAttack;
         return religiousFoeAt(state_, *rules_, *u, *t) ? CommandError::Ok : CommandError::CannotAttack;
     }
-    if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader && ut.layer != UnitLayer::Air) || u->movesLeft <= Fixed() ||
-        u->attacks >= maxAttacks(*u))
+    if ((ut.layer != UnitLayer::Military && ut.layer != UnitLayer::Leader && ut.layer != UnitLayer::Air) ||
+        (!from && (u->movesLeft <= Fixed() || u->attacks >= maxAttacks(*u))))
         return CommandError::CannotAttack;
     // Attacks on a city hit the city, whoever garrisons it; elsewhere the military unit,
     // then a leader, defends the plot (leader doc §1: escorts first).
@@ -1014,26 +1019,30 @@ CommandError Game::validateCombat(const Command& c) const {
     const City* city = state_.cityAt(*t);
     const City* camp = city ? nullptr : encampmentTargetAt(*t);
     const Unit* defender = city || camp ? nullptr : defenderAt(*t);
-    if (city && (city->owner == c.player || !atWar(c.player, city->owner))) return CommandError::CannotAttack;
-    if (camp && (camp->owner == c.player || !atWar(c.player, camp->owner))) return CommandError::CannotAttack;
-    if (defender && !atWar(c.player, defender->owner)) return CommandError::CannotAttack;
+    // The at-war checks (all that assumeWar leaves out): the city's owner, the Encampment's, the defender's.
+    if (city && (city->owner == c.player || (!assumeWar && !atWar(c.player, city->owner)))) return CommandError::CannotAttack;
+    if (camp && (camp->owner == c.player || (!assumeWar && !atWar(c.player, camp->owner)))) return CommandError::CannotAttack;
+    if (defender && (defender->owner == c.player || (!assumeWar && !atWar(c.player, defender->owner)))) return CommandError::CannotAttack;
     if (defender && !city && !camp && !unitVisibleTo(c.player, *defender)) return CommandError::CannotAttack;  // a hidden Submarine (05: stealth)
-    if (isEmbarked(*u) && !unitHas(*u, UnitEffectKind::FightEmbarked)) return CommandError::CannotAttack;  // embarked units cannot attack (05: Embarkation), the Giant Death Robot excepted
+    // Embarked units cannot attack (05: Embarkation), the Giant Death Robot excepted.
+    const bool embarked = from ? ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(pos).terrain)].water && !bridgeAt(pos)
+                               : isEmbarked(*u);
+    if (embarked && !unitHas(*u, UnitEffectKind::FightEmbarked)) return CommandError::CannotAttack;
 
     if (c.type == CommandType::RangedAttack) {
         if ((rangedStrength(*u) <= 0 && ut.bombard <= 0) || (!defender && !city && !camp)) return CommandError::CannotAttack;
-        if (u->moved && unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove))
+        if (!from && u->moved && unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove))
             return CommandError::CannotAttack;
-        const int dist = state_.grid.distance(u->pos, *t);
+        const int dist = state_.grid.distance(pos, *t);
         if (dist < 1 || dist > unitRange(*u)) return CommandError::CannotAttack;
         // Aircraft see from above (ABILITY_UNOBSTRUCTED_VIEW): no line of sight needed.
-        if (visibility(c.player, *t) != Visibility::Visible || (!isAircraft(*u) && !lineOfSight(u->pos, *t))) return CommandError::CannotAttack;
+        if (visibility(c.player, *t) != Visibility::Visible || (!isAircraft(*u) && !lineOfSight(pos, *t))) return CommandError::CannotAttack;
         return CommandError::Ok;
     }
     // Melee: ranged and siege units cannot (the Immortal can); the target must be adjacent and enterable.
     if (meleeStrength(*u) <= 0 || (rangedStrength(*u) > 0 && !unitHas(*u, UnitEffectKind::MeleeAndRanged)) || ut.bombard > 0)
         return CommandError::CannotAttack;
-    if (state_.grid.distance(u->pos, *t) != 1 || !terrainCost(*u, u->pos, *t)) return CommandError::CannotAttack;
+    if (state_.grid.distance(pos, *t) != 1 || !terrainCost(*u, pos, *t)) return CommandError::CannotAttack;
     // Land units fight on land (and on a land bridge); ships fight on the water and against coastal cities.
     if (ut.domain == Domain::Land && rules_->terrains[static_cast<size_t>(state_.plot(*t).terrain)].water && !bridgeAt(*t)) return CommandError::CannotAttack;
     if (city) {
@@ -1046,10 +1055,87 @@ CommandError Game::validateCombat(const Command& c) const {
     bool any = false;
     for (const Unit& o : state_.units) {
         if (o.pos != *t) continue;
-        if (!atWar(c.player, o.owner)) return CommandError::CannotAttack;
+        if (o.owner == c.player || (!assumeWar && !atWar(c.player, o.owner))) return CommandError::CannotAttack;
         any = true;
     }
     return any ? CommandError::Ok : CommandError::CannotAttack;
+}
+
+PlayerId Game::warTargetOwner(PlayerId player, Hex target) const {
+    // The plot's defender as validateCombat reads it: the city, else a standing Encampment, else the unit that fights for
+    // the plot, else every civilian there.
+    const City* city = state_.cityAt(target);
+    const City* camp = city ? nullptr : encampmentTargetAt(target);
+    const Unit* defender = city || camp ? nullptr : defenderAt(target);
+    PlayerId owner = city ? city->owner : camp ? camp->owner : defender ? defender->owner : kNoPlayer;
+    if (!city && !camp && !defender) {
+        for (const Unit& o : state_.units) {
+            if (o.pos != target || o.owner == player || atWar(player, o.owner)) continue;
+            if (owner != kNoPlayer && owner != o.owner) return kNoPlayer;  // one declaration would not do
+            owner = o.owner;
+        }
+    }
+    return owner != kNoPlayer && owner != player && !atWar(player, owner) ? owner : kNoPlayer;
+}
+
+PlayerId Game::warNeededToAttack(UnitId attacker, Hex target, bool ranged) const {
+    const Unit* u = state_.unit(attacker);
+    if (!u) return kNoPlayer;
+    const Command c = ranged ? Command::rangedAttack(u->owner, attacker, target) : Command::attack(u->owner, attacker, target);
+    // Only when the at-war checks are all that fail: theological combat has none, so it never waits on a war.
+    if (validateCombat(c, false, nullptr) == CommandError::Ok || validateCombat(c, true, nullptr) != CommandError::Ok) return kNoPlayer;
+    return warTargetOwner(u->owner, target);
+}
+
+std::optional<AttackApproach> Game::attackApproach(UnitId attacker, Hex target, bool ranged) const {
+    const Unit* u = state_.unit(attacker);
+    const std::optional<Hex> t = state_.grid.normalize(target);
+    if (!u || !t) return std::nullopt;
+    const Command c = ranged ? Command::rangedAttack(u->owner, attacker, *t) : Command::attack(u->owner, attacker, *t);
+    const UnitType& ut = typeOf(*rules_, *u);
+    // A move order goes to the unit it is planned for (a linked escort moves with its leader), and fails as validate
+    // fails it: aircraft rebase rather than walk, and a unit that attacked moves on only with an ability for it.
+    const Unit& mover = orderMover(*u);
+    const bool walks = !isAircraft(mover) && (!mover.attacked || unitHas(mover, UnitEffectKind::MoveAfterAttack));
+    const UnitLayer moverLayer = typeOf(*rules_, mover).layer;
+    const int reach = ranged ? unitRange(*u) : 1;
+    if (reach < 1) return std::nullopt;
+    const bool noAttackAfterMove = unitHas(*u, UnitEffectKind::NoAttackAfterMove) && !unitHas(*u, UnitEffectKind::AttackAfterMove);
+    std::optional<AttackApproach> best;
+    auto consider = [&](Hex plot, int turns, Fixed moves) {
+        AttackApproach a;
+        a.plot = plot;
+        a.turns = turns;
+        a.movesLeft = moves;
+        // It attacks on arrival with moves and an attack left; a siege unit only where it stands, not having moved.
+        const bool moved = plot != u->pos || u->moved;
+        a.attackOnArrival = turns == 0 && moves > Fixed() && (ut.religiousStrength > 0 || u->attacks < maxAttacks(*u)) &&
+                            !(ranged && moved && noAttackAfterMove);
+        if (!best) {
+            best = a;
+            return;
+        }
+        const bool now = turns == 0 && moves > Fixed(), bestNow = best->turns == 0 && best->movesLeft > Fixed();
+        const int near = state_.grid.distance(u->pos, plot), bestNear = state_.grid.distance(u->pos, best->plot);
+        if (now != bestNow ? now : turns != best->turns ? turns < best->turns : moves != best->movesLeft ? moves > best->movesLeft : near < bestNear)
+            best = a;
+    };
+    // Where it stands first, so that it wins every tie.
+    if (validateCombat(c, true, &u->pos) == CommandError::Ok) consider(u->pos, 0, u->movesLeft);
+    if (walks) {
+        for (const Hex& plot : state_.grid.within(*t, reach)) {
+            if (plot == u->pos || validateCombat(c, true, &plot) != CommandError::Ok) continue;
+            // A move order may not end on a plot another of ours of the mover's layer holds (validate: MoveUnit).
+            const Unit* own = state_.unitAt(plot, moverLayer, *rules_);
+            if (own && own->owner == u->owner) continue;
+            const std::optional<std::vector<PathStep>> path = findPath(mover.id, plot);
+            if (!path || path->empty()) continue;
+            consider(plot, path->back().turn, path->back().movesLeft);
+        }
+    }
+    // From there, the at-war checks are all that may still stop it (none for theological combat).
+    if (best && validateCombat(c, false, &best->plot) != CommandError::Ok) best->war = warTargetOwner(u->owner, *t);
+    return best;
 }
 
 TypeIndex Game::upgradeTarget(const Unit& unit) const {
