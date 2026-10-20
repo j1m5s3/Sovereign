@@ -3729,8 +3729,9 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		if (Pressed(EKeys::F1)) Hud->bShowHelp = !Hud->bShowHelp;
 		if (Pressed(EKeys::F3)) Hud->bShowYields = !Hud->bShowYields;
 	}
-	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit attacks the enemy beside it once,
-	// so the live battle can be opened (B) without a mouse.
+	// Developer start (-SovBattleNow, with -SovBattleDemo): our first military unit is right-clicked onto the nearest
+	// foreign unit once (ClickOrder: attack, walk up and attack, or ask to declare war), so each case and the live battle
+	// (B) can be tried without a mouse.
 	if (!bBattleNowDone && Subsystem()->IsRunning() && MyTurn() && FParse::Param(FCommandLine::Get(), TEXT("SovBattleNow")))
 	{
 		bBattleNowDone = true;
@@ -3738,10 +3739,24 @@ void ASovPlayerController::PlayerTick(float DeltaTime)
 		for (const sov::Unit& U : G.state().units)
 		{
 			if (U.owner != Me() || G.rules().units[static_cast<size_t>(U.type)].combat <= 0) continue;
+			const sov::Unit* Nearest = nullptr;
 			for (const sov::Unit& E : G.state().units)
 			{
-				if (E.owner == Me() || G.state().grid.distance(U.pos, E.pos) != 1) continue;
-				if (Send(sov::Command::attack(Me(), U.id, E.pos))) break;
+				if (E.owner == Me() || G.visibility(Me(), E.pos) != sov::Visibility::Visible) continue;
+				if (!Nearest || G.state().grid.distance(U.pos, E.pos) < G.state().grid.distance(U.pos, Nearest->pos)) Nearest = &E;
+			}
+			if (Nearest)
+			{
+				const int32 Id = U.id, FoeId = Nearest->id;
+				const sov::Hex At = Nearest->pos;
+				SelectedUnit = Id;
+				SelectedCity = -1;
+				ClickOrder(At.x, At.y);
+				const sov::Unit* Ours = G.state().unit(Id);
+				const sov::Unit* Theirs = G.state().unit(FoeId);
+				UE_LOG(LogTemp, Display, TEXT("SovBattleNow: right-click on (%d,%d): ours at (%d,%d) moves %d attacks %d; theirs hp %d; battle pending %d"), At.x, At.y,
+					Ours ? Ours->pos.x : -1, Ours ? Ours->pos.y : -1, Ours ? static_cast<int32>(Ours->movesLeft.toInt()) : -1, Ours ? Ours->attacks : -1,
+					Theirs ? Theirs->hp : -1, G.battlePending() ? 1 : 0);
 			}
 			break;
 		}
