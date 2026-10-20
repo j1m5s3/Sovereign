@@ -230,7 +230,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			// A horseman is modelled along X (rig_riders.py), a man facing +Y (rig_figures.py); each walks at its own pace.
 			const bool bHorse = RigNames[i].StartsWith(TEXT("Rider"));
 			const float Turn = bHorse ? 90.f : 0.f;
-			const float Pace = bHorse ? 154.f : 108.f;  // rig_riders.py / rig_figures.py WALK_SPEED, cm/s
+			const float Pace = bHorse ? kSovHorseWalkSpeed : kSovProceduralWalkSpeed;  // the walk's own speed (SovGait.h), cm/s
 			const float Face = (S.Side == 0 ? -90.f : 90.f) + Turn;
 			// Speed and heading from the man's own moves, not from the frames: a replay or the online view (Sim.RemoteView)
 			// moves the men ten times a second while this runs every frame; the battle fought here moves them every frame,

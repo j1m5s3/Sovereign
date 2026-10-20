@@ -10,15 +10,15 @@ namespace SovGait
 namespace
 {
 // A map walk's steady pace, at most so many times its fastest gait's own (the play rate that still holds the feet): a
-// person's motion-captured run, else the walk (the procedural walk, a horse). A short speed-up and slow-down either side
-// of it, and a long move kept to a few seconds (its feet then hurry).
+// person's motion-captured run or a horse's gallop, else the walk (the procedural walk, a horse rigged before the
+// gallop). A short speed-up and slow-down either side of it, and a long move kept to a few seconds (its feet then hurry).
 constexpr float kRunCadence = 1.6f;
 constexpr float kWalkCadence = 2.5f;
 constexpr float kRampSeconds = 0.25f;
 constexpr float kLongestGlide = 3.f;
 }  // namespace
 
-FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run)
+FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run, float RunBy)
 {
 	FBlend B;
 	const float E = FMath::Max(Speed, 0.f);
@@ -27,10 +27,11 @@ FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run
 	const float W = FMath::Max(Walk.Speed, 1.f);
 	const float Lowest = bSlow ? FMath::Min(Slow.Speed, W) : W;
 	// Standing to moving over the first 40% of the slowest gait's speed; then each gait into the next between the two
-	// clips' speeds.
+	// clips' speeds, or the walk into the run by RunBy (past it the run alone, its stride its own).
 	const float Moving = FMath::Clamp(E / (0.4f * Lowest), 0.f, 1.f);
 	const float WalkShare = bSlow ? FMath::Clamp((E - Lowest) / FMath::Max(W - Lowest, 1.f), 0.f, 1.f) : 1.f;
-	const float RunShare = bRun ? FMath::Clamp((E - W) / FMath::Max(Run.Speed - W, 1.f), 0.f, 1.f) : 0.f;
+	const float RunFull = RunBy > W ? FMath::Min(RunBy, Run.Speed) : Run.Speed;
+	const float RunShare = bRun ? FMath::Clamp((E - W) / FMath::Max(RunFull - W, 1.f), 0.f, 1.f) : 0.f;
 	B.Idle = 1.f - Moving;
 	B.Slow = Moving * (1.f - WalkShare);
 	B.Walk = Moving * WalkShare * (1.f - RunShare);
@@ -99,12 +100,16 @@ USovLocomotion* USovLocomotion::Attach(USkeletalMeshComponent* Component, const 
 	Loco->SlowClip = SovArt::RiggedAnim(Name, TEXT("WalkSlow"));
 	Loco->WalkClip = Walk;
 	Loco->RunClip = SovArt::RiggedAnim(Name, TEXT("Run"));
-	// A figure with a Run (or a WalkSlow) has the motion-captured clips; one without has the procedural walk (or is a horse).
+	// A person with a Run (or a WalkSlow) has the motion-captured clips; one without has the procedural walk. A horse
+	// has its own walk, and its gallop for a Run, handed over just past the walk (kSovHorseHandover). The run speed
+	// counts only where a Run was found, so a horse rigged before the gallop keeps to its walk.
+	const bool bHorse = Name.StartsWith(TEXT("Rider"));
 	const bool bMocap = Loco->RunClip || Loco->SlowClip;
-	const float Walking = Name.StartsWith(TEXT("Rider")) ? kSovHorseWalkSpeed : bMocap ? kSovMocapWalkSpeed : kSovProceduralWalkSpeed;
+	const float Walking = bHorse ? kSovHorseWalkSpeed : bMocap ? kSovMocapWalkSpeed : kSovProceduralWalkSpeed;
 	Loco->SlowSpeed = kSovMocapWalkSlowSpeed * Scale;
 	Loco->WalkSpeed = Walking * Scale;
-	Loco->RunSpeed = FMath::Max(kSovMocapRunSpeed, Walking * 1.5f) * Scale;
+	Loco->RunSpeed = (bHorse ? kSovHorseRunSpeed : FMath::Max(kSovMocapRunSpeed, Walking * 1.5f)) * Scale;
+	Loco->RunBy = bHorse ? kSovHorseHandover * Loco->WalkSpeed : 0.f;
 	Loco->StartPhase = FMath::FRand();
 	return Loco;
 }
@@ -128,6 +133,7 @@ void FSovLocomotionProxy::PreUpdate(UAnimInstance* Instance, float DeltaSeconds)
 	SlowSpeed = Loco->SlowSpeed;
 	WalkSpeed = FMath::Max(Loco->WalkSpeed, 1.f);
 	RunSpeed = Loco->RunSpeed;
+	RunBy = Loco->RunBy;
 	Speed = FMath::Max(Loco->Speed, 0.f);
 	Easing = Loco->SpeedEasing;
 }
@@ -139,7 +145,7 @@ void FSovLocomotionProxy::Update(float DeltaSeconds)
 	auto Gait = [](const UAnimSequence* Clip, float ClipSpeed) {
 		return Clip ? SovGait::FGait{ClipSpeed, static_cast<float>(Clip->GetPlayLength())} : SovGait::FGait();
 	};
-	const SovGait::FBlend B = SovGait::Blend(Eased, Gait(Slow, SlowSpeed), Gait(Walk, WalkSpeed), Gait(Run, RunSpeed));
+	const SovGait::FBlend B = SovGait::Blend(Eased, Gait(Slow, SlowSpeed), Gait(Walk, WalkSpeed), Gait(Run, RunSpeed), RunBy);
 	SlowWeight = B.Slow;
 	WalkWeight = B.Walk;
 	RunWeight = B.Run;

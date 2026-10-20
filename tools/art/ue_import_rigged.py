@@ -1,11 +1,13 @@
-"""Imports the rigged people (tools/art/blender/rig_figures.py) into the Unreal project (run inside the editor):
+"""Imports the rigged people and horsemen (tools/art/blender/rig_figures.py, rig_riders.py) into the Unreal project (run
+inside the editor):
 
   UnrealEditor-Cmd unreal/Sovereign.uproject -run=pythonscript -script="tools/art/ue_import_rigged.py"
 
 Reads art/build/Rigged/SK_<Name>.fbx (or $SOV_ART_BUILD/Rigged) and imports each as a skeletal mesh with its own
 skeleton and its animations under /Game/Art/Rigged/, the kit material on every slot (marked for skeletal meshes, so
 it renders on them). Each FBX take becomes SK_<Name>_Anim_Armature_<Take>: WalkSlow, Walk, Run and Idle for the
-people (rig_figures.py; the speeds they were authored at are in tools/art/README.md), Walk and Idle for the riders.
+people (rig_figures.py; the speeds they were authored at are in tools/art/README.md), Walk, Run (the gallop) and Idle
+for the riders (rig_riders.py; their takes carry two keys a frame, imported at 48 fps so none is lost).
 """
 import glob
 import os
@@ -17,6 +19,9 @@ BUILD = os.path.join(os.environ.get("SOV_ART_BUILD") or os.path.join(REPO, "art"
 DEST = "/Game/Art/Rigged"
 MATERIAL = "/Game/Art/M_SovKit"
 ANIM_SCALE = 100.0  # the FBX takes carry bone translations in metres while the skin and skeleton are in centimetres
+# The riders' takes are keyed twice a frame at 24 fps (rig_riders.py KEYS): sampled at 24 a planted galloping hoof slips
+# about 1.5 cm between frames, so they are imported at this rate rather than one the importer guesses from the keys.
+RIDER_SAMPLE_RATE = 48
 
 tools = unreal.AssetToolsHelpers.get_asset_tools()
 lib = unreal.EditorAssetLibrary
@@ -51,6 +56,9 @@ def main():
         anim = options.get_editor_property("anim_sequence_import_data")
         anim.set_editor_property("animation_length", unreal.FBXAnimationLengthImportType.FBXALIT_EXPORTED_TIME)
         anim.set_editor_property("import_uniform_scale", ANIM_SCALE)
+        if name.startswith("SK_Rider"):
+            anim.set_editor_property("use_default_sample_rate", False)
+            anim.set_editor_property("custom_sample_rate", RIDER_SAMPLE_RATE)
         task = unreal.AssetImportTask()
         task.set_editor_property("filename", path)
         task.set_editor_property("destination_path", DEST)
