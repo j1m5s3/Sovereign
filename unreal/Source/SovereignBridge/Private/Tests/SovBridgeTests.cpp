@@ -1571,7 +1571,8 @@ bool FSovBoardTest::RunTest(const FString&)
 
 // The walking blend's arithmetic (SovGait::Blend, as USovLocomotion plays it): standing, the slow walk, the walk and the
 // run share the figure by speed, their weights summing to one and handing over in that order; the stride is the two
-// blending clips' between them; a figure without a WalkSlow blends as it did before there was one.
+// blending clips' between them; a figure without a WalkSlow blends as it did before there was one; a horse's walk hands
+// over to its gallop by kSovHorseHandover times its speed, and past that the gallop plays alone (a battle's pace too).
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovGaitBlendTest, "Sovereign.Art.GaitBlendsBySpeed", kSovTestFlags)
 bool FSovGaitBlendTest::RunTest(const FString&)
 {
@@ -1620,16 +1621,51 @@ bool FSovGaitBlendTest::RunTest(const FString&)
 			&& FMath::IsNearlyEqual(B.Rate, FMath::Clamp(FMath::Max(V, 0.4f * Walk.Speed) / Stride, 0.f, 3.f), 1e-5f);
 		if (!TestTrue(FString::Printf(TEXT("without a WalkSlow, the blend at %.1f cm/s is the old one"), V), bSame)) return false;
 	}
-	// A figure rigged before the motion capture (the procedural walk, no Run) or a horse: idle and walk only.
+	// A figure rigged before the motion capture (the procedural walk, no Run): idle and walk only.
 	const FBlend Old = SovGait::Blend(200.f, NoClip, FGait{kSovProceduralWalkSpeed, 20.f / 24.f}, NoClip);
 	TestTrue(TEXT("the procedural walk alone"), Old.Walk == 1.f && Old.Run == 0.f && Old.Slow == 0.f
 		&& FMath::IsNearlyEqual(Old.Rate, 200.f / kSovProceduralWalkSpeed, 1e-5f));
+	// A horse (rig_riders.py): its walk and its gallop as the Run, no slow walk. Their footfalls differ past the left
+	// hind's, so the two mix only between the walk's speed and RunBy; past it the gallop is alone at speed over its own.
+	const FGait HorseWalk{kSovHorseWalkSpeed, 24.f / 24.f}, Gallop{kSovHorseRunSpeed, 12.f / 24.f};
+	const float RunBy = kSovHorseHandover * kSovHorseWalkSpeed;
+	TestEqual(TEXT("a horse at its walk's own speed, all walk"), SovGait::Blend(kSovHorseWalkSpeed, NoClip, HorseWalk, Gallop, RunBy).Walk, 1.f);
+	TestEqual(TEXT("a horse handed over, all gallop"), SovGait::Blend(RunBy, NoClip, HorseWalk, Gallop, RunBy).Run, 1.f);
+	const FBlend OwnPace = SovGait::Blend(kSovHorseRunSpeed, NoClip, HorseWalk, Gallop, RunBy);
+	TestTrue(TEXT("a horse at its gallop's own speed, all gallop at its own pace"), OwnPace.Run == 1.f && FMath::IsNearlyEqual(OwnPace.Rate, 1.f, 1e-5f));
+	// A horse rigged before the gallop (no Run) gets the same RunBy from USovLocomotion::Attach: it keeps to its walk.
+	const FBlend OldHorse = SovGait::Blend(200.f, NoClip, HorseWalk, NoClip, RunBy);
+	TestTrue(TEXT("a horse without the gallop keeps to its walk"), OldHorse.Walk == 1.f && OldHorse.Run == 0.f && OldHorse.Slow == 0.f
+		&& FMath::IsNearlyEqual(OldHorse.Rate, 200.f / kSovHorseWalkSpeed, 1e-5f));
+	// A battle moves every man at 260 cm/s (Sim::kSpeed), give or take: a horseman there is one gait, its hooves held.
+	for (const float V : {208.f, 260.f, 299.f})
+	{
+		const FBlend B = SovGait::Blend(V, NoClip, HorseWalk, Gallop, RunBy);
+		TestTrue(FString::Printf(TEXT("a horse at a battle's %.0f cm/s gallops alone, at %.0f over the gallop's own speed (rate %.3f)"), V, V, B.Rate),
+			B.Run == 1.f && B.Walk == 0.f && B.Idle == 0.f && B.Slow == 0.f && FMath::IsNearlyEqual(B.Rate, V / kSovHorseRunSpeed, 1e-5f)
+				&& FMath::IsNearlyEqual(B.StrideSpeed, kSovHorseRunSpeed, 1e-3f) && FMath::IsNearlyEqual(B.StrideTime, Gallop.Time, 1e-6f));
+	}
+	Was = SovGait::Blend(0.f, NoClip, HorseWalk, Gallop, RunBy);
+	for (float V = 2.5f; V <= 1.5f * kSovHorseRunSpeed; V += 2.5f)
+	{
+		const FBlend B = SovGait::Blend(V, NoClip, HorseWalk, Gallop, RunBy);
+		const float Sum = B.Idle + B.Slow + B.Walk + B.Run;
+		const bool bInRange = B.Idle >= 0.f && B.Walk >= 0.f && B.Run >= 0.f;
+		const bool bInOrder = B.Idle <= Was.Idle + 1e-5f && B.Idle + B.Walk <= Was.Idle + Was.Walk + 1e-5f;
+		const bool bOneGait = V < RunBy || (B.Run == 1.f && B.Walk == 0.f);
+		if (!TestTrue(FString::Printf(TEXT("a horse at %.1f cm/s: weights sum to one (%.5f), in 0..1, handing over in order, the gallop alone past %.1f"), V, Sum, RunBy),
+				FMath::IsNearlyEqual(Sum, 1.f, 1e-4f) && bInRange && bInOrder && B.Slow == 0.f && bOneGait
+					&& B.StrideSpeed >= Was.StrideSpeed - 1e-3f && B.Rate <= SovGait::kMaxRate))
+			return false;
+		Was = B;
+	}
 	return true;
 }
 
 // A rigged unit's walk on the map (SovGait::RiggedGlide and its ease): a plot takes a person about a second, the
-// steady pace stays within what the gait carries at the figure's scale (1.6 times a Run's cadence, else 2.5 times the
-// walk's) until a long move is held to three seconds, and the ease runs from 0 to 1 at an average speed of one.
+// steady pace stays within what the gait carries at the figure's scale (1.6 times a Run's cadence, a person's run or a
+// horse's gallop, else 2.5 times the walk's) until a long move is held to three seconds, and the ease runs from 0 to 1
+// at an average speed of one.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovMapWalkPaceTest, "Sovereign.Art.MapWalkKeepsItsFooting", kSovTestFlags)
 bool FSovMapWalkPaceTest::RunTest(const FString&)
 {
@@ -1641,7 +1677,8 @@ bool FSovMapWalkPaceTest::RunTest(const FString&)
 	};
 	const FWho Who[] = {{TEXT("a person with the mocap run"), 0.4f, kSovMocapWalkSpeed, kSovMocapRunSpeed, 1.6f * kSovMocapRunSpeed},
 		{TEXT("a person with the procedural walk"), 0.4f, kSovProceduralWalkSpeed, 0.f, 2.5f * kSovProceduralWalkSpeed},
-		{TEXT("a horseman"), 0.32f, kSovHorseWalkSpeed, 0.f, 2.5f * kSovHorseWalkSpeed}};
+		{TEXT("a horseman"), 0.32f, kSovHorseWalkSpeed, kSovHorseRunSpeed, 1.6f * kSovHorseRunSpeed},
+		{TEXT("a horseman without the gallop"), 0.32f, kSovHorseWalkSpeed, 0.f, 2.5f * kSovHorseWalkSpeed}};
 	for (const FWho& W : Who)
 	{
 		float Before = 0.f;

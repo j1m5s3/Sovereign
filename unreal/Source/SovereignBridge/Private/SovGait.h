@@ -6,12 +6,19 @@
 #include "CoreMinimal.h"
 
 // The clips' own ground speeds at figure scale 1, cm/s: the motion-captured slow walk, walk and run (tools/art/README.md),
-// the procedural walk of a figure rigged before them (no Run or WalkSlow), and rig_riders.py's horse.
+// the procedural walk of a figure rigged before them (no Run or WalkSlow), and rig_riders.py's horse: its walk, and its
+// gallop, which is a horseman's Run (one rigged before the gallop has only the walk). rig_riders.py prints the last two.
 constexpr float kSovMocapWalkSlowSpeed = 100.4f;
 constexpr float kSovMocapWalkSpeed = 152.5f;
 constexpr float kSovMocapRunSpeed = 295.2f;
 constexpr float kSovProceduralWalkSpeed = 108.f;
-constexpr float kSovHorseWalkSpeed = 154.f;
+constexpr float kSovHorseWalkSpeed = 92.3f;
+constexpr float kSovHorseRunSpeed = 457.1f;
+// A horse's walk and gallop land only the left hind together (rig_riders.py), so the two mixed at one phase slide every
+// hoof: a horse's walk hands over to the gallop between its own speed and this many times it, and past that the gallop
+// plays alone, slowed or hurried to the speed asked (a single clip holds its hooves at any rate). A battle's 260 cm/s
+// is a gallop at about 0.57 times its own pace.
+constexpr float kSovHorseHandover = 1.5f;
 
 namespace SovGait
 {
@@ -33,7 +40,10 @@ struct FBlend
 	float StrideSpeed = 0.f, StrideTime = 0.f;
 	float Rate = 0.f;
 };
-FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run);
+// RunBy, when above the walk's speed, is the speed by which the walk has handed all of the figure to the run, which
+// then plays alone at any speed past it (a horse: kSovHorseHandover times its walk's speed); else the walk hands over
+// across the whole way to the run's own speed (people, whose gaits keep in step).
+FBlend Blend(float Speed, const FGait& Slow, const FGait& Walk, const FGait& Run, float RunBy = 0.f);
 
 // A rigged unit's walk on the map: its length (s) and the share of it spent speeding up (and again slowing down).
 struct FGlidePace

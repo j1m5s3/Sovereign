@@ -1,9 +1,10 @@
 """Checks the rigged people (rig_figures.py): rigs each figure (all of them, or those named) and fails when one is
 broken, so a bad skin or a sliding foot never reaches Unreal. rig_figures.py runs the same check on each figure
-before it exports it.
+before it exports it. A horseman named (a name beginning "Rider": Rider, Rider_Asian...) is rigged and checked by
+rig_riders.py's own check instead, as rig_riders.py does before it exports one; no names checks the people only.
 
-  blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/check_rigs.py [-- Townsman Soldier ...]
-  python -I tools/art/blender/check_rigs.py [Townsman ...]      (pip's bpy)
+  blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/check_rigs.py [-- Townsman Soldier Rider ...]
+  python -I tools/art/blender/check_rigs.py [Townsman Rider_Asian ...]      (pip's bpy)
 
 Per figure:
 - every limb bone carries vertices (a skin bound at the wrong scale leaves the legs on nothing);
@@ -195,9 +196,20 @@ def main():
     names = args or list(R.PEOPLE)
     failed = []
     for name in names:
-        arm, body = R.rig(name, R.PEOPLE[name])
-        problems, line = check(arm, body, name, R.SPEEDS, R.FPS, R.HELD.get(name))
-        print(line)
+        if name.startswith("Rider"):
+            import rig_riders
+
+            if name not in rig_riders.RIDERS:
+                print("check %s: no such horseman (rig_riders.RIDERS: %s)" % (name, ", ".join(rig_riders.RIDERS)))
+                failed.append(name)
+                continue
+            arm, body = rig_riders.rig(name, rig_riders.RIDERS[name])
+            problems, lines = rig_riders.check(arm, body, name)
+            print("\n".join(lines))
+        else:
+            arm, body = R.rig(name, R.PEOPLE[name])
+            problems, line = check(arm, body, name, R.SPEEDS, R.FPS, R.HELD.get(name))
+            print(line)
         if problems:
             failed.append(name)
     print("check_rigs: %d of %d figures ok%s" % (len(names) - len(failed), len(names), (": failed " + ", ".join(failed)) if failed else ""))
