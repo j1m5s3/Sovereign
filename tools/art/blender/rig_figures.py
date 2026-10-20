@@ -202,8 +202,14 @@ def rig(name, make):
     bpy.ops.object.mode_set(mode="OBJECT")
     for bname in BONES:
         body.vertex_groups.new(name=bname)
+    # bone_for reads metres; the mesh is already in centimetres here. (Bound in centimetres, every vertex went to a
+    # forearm or the head and the legs never bent, from #360 until 2026-10-20.)
     for v in body.data.vertices:
-        body.vertex_groups[bone_for(*v.co)].add([v.index], 1.0, "REPLACE")
+        body.vertex_groups[bone_for(*(v.co / CM))].add([v.index], 1.0, "REPLACE")
+    carried = {g.group for v in body.data.vertices for g in v.groups}
+    bare = [b for b in ("pelvis", "spine", "head", "thigh_r", "thigh_l", "shin_r", "shin_l") if body.vertex_groups[b].index not in carried]
+    if bare:
+        raise RuntimeError("%s: no vertices on %s" % (name, ", ".join(bare)))
     body.parent = arm
     mod = body.modifiers.new("Armature", "ARMATURE")
     mod.object = arm
@@ -339,8 +345,15 @@ def idle(arm, name):
 def finish(action, n):
     action.use_fake_user = True
     action.frame_range = (0, n)
-    for fc in getattr(action, "fcurves", []):
+    for fc in _fcurves(action):
         fc.modifiers.new("CYCLES")
+
+
+def _fcurves(action):
+    """An action's curves: action.fcurves before Blender 5, the layers' strips' channel bags since."""
+    if hasattr(action, "fcurves"):
+        return list(action.fcurves)
+    return [fc for layer in action.layers for strip in layer.strips for bag in getattr(strip, "channelbags", []) for fc in bag.fcurves]
 
 
 def main():
