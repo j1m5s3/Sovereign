@@ -67,6 +67,7 @@ private:
 	TArray<FString> RigNames;  // which rigged figure each is drawn by
 	TArray<FVector2D> LastPos;
 	TArray<bool> Striding;
+	TArray<float> Yaws;  // each rigged figure's facing, eased toward where it goes
 	double LastSyncTime = 0.0;
 
 	UPROPERTY()
