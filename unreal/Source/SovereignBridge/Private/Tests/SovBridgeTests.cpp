@@ -13,12 +13,15 @@
 #include "SovStreetLayout.h"
 #include "SovBattleSim.h"
 #include "SovArt.h"
+#include "SovBoard.h"
 #include "Sound/SoundWave.h"
 #include "SovDiplomacy.h"
 #include "sovereign_net/session.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
+#include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -1394,3 +1397,32 @@ bool FSovDescribeTest::RunTest(const FString& Parameters)
 }
 
 #endif  // WITH_DEV_AUTOMATION_TESTS
+
+// The game's side of the weekly challenge board (SovBoard over an engine socket): with a board running
+// (sovboard serve; pass -SovBoardTest=host:port), a challenge game is submitted, ranked, and read back. Without one the
+// test only checks the name rule.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovBoardTest, "Sovereign.Bridge.ChallengeBoardTakesAGame", kSovTestFlags)
+bool FSovBoardTest::RunTest(const FString&)
+{
+	TestEqual(TEXT("board names are cleaned"), SovBoard::CleanName(TEXT("Ann Lee (UK)!")), FString(TEXT("Ann_Lee_UK")));
+	FString Board;
+	if (!FParse::Value(FCommandLine::Get(), TEXT("SovBoardTest="), Board)) return true;
+	sov::Rules Rules;
+	std::string Err;
+	if (!TestTrue(TEXT("rules load"), Rules.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &Err))) return false;
+	const sov::Challenge Ch = sov::weeklyChallenge(Rules, 9);
+	std::unique_ptr<sov::Game> G = sov::Game::create(Rules, Ch.setup, &Err);
+	if (!TestTrue(TEXT("challenge game"), G != nullptr)) return false;
+	while (G->state().turn < 8 && !G->gameOver()) sov::ai::playTurn(*G);
+	const std::vector<uint8_t> Bytes = sov::saveGame(*G);
+	FString Line;
+	TestTrue(TEXT("the board takes the game"), SovBoard::Submit(Board, 9, TEXT("BridgeTest"), TArray<uint8>(Bytes.data(), static_cast<int32>(Bytes.size())), Line));
+	AddInfo(Line);
+	TArray<FSovBoardEntry> Entries;
+	TestTrue(TEXT("the board answers"), SovBoard::Fetch(Board, 9, Entries));
+	TestTrue(TEXT("the game is on the board"), Entries.ContainsByPredicate([](const FSovBoardEntry& E) { return E.Name == TEXT("BridgeTest"); }));
+	FString Refused;
+	TestFalse(TEXT("another week's board refuses it"), SovBoard::Submit(Board, 10, TEXT("BridgeTest"), TArray<uint8>(Bytes.data(), static_cast<int32>(Bytes.size())), Refused));
+	AddInfo(Refused);
+	return true;
+}

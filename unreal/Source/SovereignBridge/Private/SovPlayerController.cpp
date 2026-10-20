@@ -7,6 +7,7 @@
 #include "InputCoreTypes.h"
 
 #include "SovArt.h"
+#include "SovBoard.h"
 #include "SovCameraPawn.h"
 #include "SovDescribe.h"
 #include "SovEvents.h"
@@ -3997,6 +3998,33 @@ void ASovPlayerController::OpenMenu()
 	std::string PlainError;
 	const bool bPlain = Plain.load({std::string(TCHAR_TO_UTF8(*FSovSetup::DefaultRulesDir()))}, &PlainError);
 	FString ChallengeLabel = bPlain ? FString(UTF8_TO_TCHAR(sov::weeklyChallenge(Plain, Week).text.c_str())) : FString();
+	// This week's board, when one is set (SovBoard): the leaders and where this player stands.
+	MenuBoard.Reset();
+	if (!SovBoard::Address().IsEmpty())
+	{
+		MenuBoard = TEXT("Asking the board...");
+		FString Me;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("SovName="), Me)) Me = FPlatformProcess::UserName();
+		const FString MyName = SovBoard::CleanName(Me);
+		TWeakObjectPtr<ASovPlayerController> Self(this);
+		SovBoard::FetchAsync(Week, [Self, MyName](bool bOk, const TArray<FSovBoardEntry>& Entries) {
+			if (!Self.IsValid()) return;
+			if (!bOk)
+			{
+				Self->MenuBoard = TEXT("The challenge board did not answer.");
+				return;
+			}
+			FString Out = Entries.Num() == 0 ? FString(TEXT("Nobody is on this week's board yet.")) : FString(TEXT("This week's board: "));
+			for (int32 i = 0; i < Entries.Num() && i < 5; ++i)
+			{
+				const FSovBoardEntry& E = Entries[i];
+				Out += FString::Printf(TEXT("%s%d. %s (%s, turn %d, %d)"), i ? TEXT("   ") : TEXT(""), i + 1, *E.Name, E.bGoalMet ? TEXT("goal met") : TEXT("missed"), E.Turn, E.Score);
+			}
+			const int32 Mine = Entries.IndexOfByPredicate([&MyName](const FSovBoardEntry& E) { return E.Name == MyName; });
+			if (Mine >= 0) Out += FString::Printf(TEXT("   You: %d of %d."), Mine + 1, Entries.Num());
+			Self->MenuBoard = Out;
+		});
+	}
 	// Achievements (player-retention §7): the ones held, and the colours they unlock for the ruler's figure.
 	const TArray<FString> Held = USovGameSubsystem::Achievements();
 	MenuCosmetics = {TPair<FString, FString>(FString(), TEXT("the civ's own"))};
@@ -4093,6 +4121,10 @@ void ASovPlayerController::OpenMenu()
 				S.ChallengeWeek = Week;
 				StartFromMenu(S);
 			})]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 4.f)[
+				SNew(SBox).WidthOverride(440.f)[SNew(STextBlock).Font(FSovStyle::Font(9)).ColorAndOpacity(FSovStyle::Dim).AutoWrapText(true)
+					.Visibility_Lambda([this]() { return MenuBoard.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+					.Text_Lambda([this]() { return FText::FromString(MenuBoard); })]]
 			// The rest folds away, as Civ VI's menu keeps a few big choices: games with others, older saves, extras.
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 8.f, 0.f, 0.f)[Item(TEXT("Play with others"), [this]() { bMenuOthers = !bMenuOthers; })]
 			+ SVerticalBox::Slot().AutoHeight()[SNew(SBox).Padding(FMargin(14.f, 0.f, 0.f, 6.f)).Visibility_Lambda([this]() {

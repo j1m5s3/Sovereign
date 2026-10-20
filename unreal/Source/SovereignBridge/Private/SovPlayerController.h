@@ -211,6 +211,7 @@ protected:
 	float ReplayTime = 0.f;
 	bool bMenuReplays = false;
 	bool bMenuOthers = false, bMenuLoads = false, bMenuExtras = false;  // the menu's folded sections
+	FString MenuBoard;  // this week's challenge board, as the menu shows it (SovBoard)
 	float BattleExitTimer = 0.f;
 
 	float PanSpeed = 1.4f;  // fraction of camera height per second

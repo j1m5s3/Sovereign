@@ -21,6 +21,7 @@ public class SovereignCore : ModuleRules
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "battle", "include"));
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "diplomacy", "include"));
 		PublicIncludePaths.Add(Path.Combine(RepoRoot, "net", "include"));
+		PublicIncludePaths.Add(Path.Combine(RepoRoot, "board", "include"));
 		PrivateIncludePaths.Add(RepoRoot);
 
 		// Modular (editor) builds load the core as a DLL: export its API (sovereign/api.h).

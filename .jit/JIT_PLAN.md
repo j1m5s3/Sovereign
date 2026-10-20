@@ -60,7 +60,7 @@ The decided feature list in `specs/sovereign/player-retention.md` (James, 2026-1
 
 8. **Done: battle replays (§2).** Each live battle is recorded as it is fought: the field (spec, colours, woods, walls) and a snapshot every 0.1 s (`FSovBattleRecording`). It is saved to `Saved/Sovereign/Battles/*.sovbattle` when the result goes in. The menu's `Battle replays` (or `-SovReplay=<file>`, so a file can be shared) plays one back through the online remote view, with or without a game running. Checked in the game.
 
-Plan C is done. Only the server side of the challenge board is left.
+Plan C is done. The challenge board's server (`board/`, #296) and the game's side (2026-10-20: `SovBoard.*` submits a finished challenge to the board set in Settings or `-SovBoard=`, and the menu shows the week's leaders; test `Sovereign.Bridge.ChallengeBoardTakesAGame` with `-SovBoardTest=host:port` against `sovboard serve`) are both done.
 ## Plan D: the player-facing UI (done, 2026-10-09)
 
 Today the game is played through a text HUD and numbered lists (1-9 pick, 0 next page) behind keyboard shortcuts; only the menu, diplomacy, chat and hot-seat screens are widgets. Plan D replaces that with a clickable interface in Slate (C++ widgets, as the menu and diplomacy screen already are), styled from one style set, with a generated icon set. Every key keeps working; buttons press the same keys.
