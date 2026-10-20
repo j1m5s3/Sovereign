@@ -187,7 +187,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		}
 		Vehicle.Add(bMachine && Figure.Last());
 		// A man of a plain arm (spearman, archer, musketeer, rifleman) walks on its rigged figure's legs when that art
-		// exists; the still figure stays hidden then. Cultures' dress has no rig yet, and stays still.
+		// exists; the still figure stays hidden then. Riders have no rig (the skeleton has no horse), and stay still.
 		USkeletalMeshComponent* Rig = nullptr;
 		if (!S.bLeader && !bMachine && SovArt::RiggedMesh(Name))
 		{
