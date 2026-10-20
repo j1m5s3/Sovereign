@@ -322,27 +322,13 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		const float Fade = T.bVisible ? 1.f : 0.6f;
 		DrawTexture(Tex, At.X - S / 2, At.Y - S / 2, S, S, 0.f, 0.f, 1.f, 1.f, FLinearColor(Fade, Fade, Fade, 1.f));
 	}
+	// Rulers' names go on top of every flag (drawn after the loop below), so a neighbour's flag never hides one.
+	TArray<const FSovUnitMarker*> Rulers;
 	for (const FSovUnitMarker& U : M.Units)
 	{
 		if (U.bLeader)
 		{
-			// Leaders carry their ruler's name; in a city, under its banner (and its production bar), off the town.
-			FVector At = U.bInCity ? Project(NearCamera(PlayerOwner, CityAnchor(U.X, U.Y)))
-				: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
-			if (U.bInCity) At.Y += 30.f;
-			if (At.Z > 0)
-			{
-				float W = 0, H = 0;
-				GetTextSize(U.Name, W, H, Font, 1.0f);
-				DrawRect(FLinearColor(0, 0, 0, 0.6f), At.X - W / 2 - 3, At.Y - H - 1, W + 6, H + 2);
-				DrawText(U.Name, FLinearColor(1.f, 0.85f, 0.3f), At.X - W / 2, At.Y - H, Font, 1.0f);
-				if (U.Hp < 100)
-				{
-					const float Frac = FMath::Clamp(U.Hp / 100.f, 0.f, 1.f);
-					DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), At.X - W / 2 - 3, At.Y + 2, W + 6, 3.f);
-					DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), At.X - W / 2 - 3, At.Y + 2, (W + 6) * Frac, 3.f);
-				}
-			}
+			Rulers.Add(&U);
 			continue;
 		}
 		// The unit's flag above its figure (where the map stands it): its icon on the owner's colour, with its
@@ -382,6 +368,27 @@ void ASovHUD::DrawLabels(const USovGameSubsystem& Sub)
 		const float Frac = FMath::Clamp(U.Hp / 100.f, 0.f, 1.f);
 		DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), FX - 1.5f, FY + S + 2.f, S + 3.f, 3.f);
 		DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), FX - 1.5f, FY + S + 2.f, (S + 3.f) * Frac, 3.f);
+	}
+	for (const FSovUnitMarker* R : Rulers)
+	{
+		const FSovUnitMarker& U = *R;
+		// The ruler's name; in a city, tucked just under its banner, off the town.
+		FVector At = U.bInCity ? Project(NearCamera(PlayerOwner, CityAnchor(U.X, U.Y)))
+			: Project(NearCamera(PlayerOwner, SovHex::Center(U.X, U.Y, 110.0) + SovHex::ToWorld(FVector2D(-38.0, -30.0), 0.0)));
+		if (U.bInCity) At.Y += 24.f;
+		if (At.Z > 0)
+		{
+			float W = 0, H = 0;
+			GetTextSize(U.Name, W, H, Font, 1.0f);
+			DrawRect(FLinearColor(0, 0, 0, 0.6f), At.X - W / 2 - 3, At.Y - H - 1, W + 6, H + 2);
+			DrawText(U.Name, FLinearColor(1.f, 0.85f, 0.3f), At.X - W / 2, At.Y - H, Font, 1.0f);
+			if (U.Hp < 100)
+			{
+				const float Frac = FMath::Clamp(U.Hp / 100.f, 0.f, 1.f);
+				DrawRect(FLinearColor(0.2f, 0, 0, 0.8f), At.X - W / 2 - 3, At.Y + 2, W + 6, 3.f);
+				DrawRect(FLinearColor(0.2f, 0.9f, 0.2f, 0.9f), At.X - W / 2 - 3, At.Y + 2, (W + 6) * Frac, 3.f);
+			}
+		}
 	}
 }
 
