@@ -14,6 +14,7 @@
 #include "SovEvents.h"
 #include "SovGameSubsystem.h"
 #include "SovHexLayout.h"
+#include "SovKeys.h"
 #include "SovMapActor.h"
 #include "SovMirror.h"
 #include "SovStatus.h"
@@ -75,7 +76,7 @@ void ASovHUD::DrawStatus(const USovGameSubsystem& Sub, float& Y)
 	const FString Research = P.techs.current == sov::kNone ? TEXT("none") : Str(R.techs[static_cast<size_t>(P.techs.current)].name);
 	const FString Civic = P.civics.current == sov::kNone ? TEXT("none") : Str(R.civics[static_cast<size_t>(P.civics.current)].name);
 	const FString Gov = P.government == sov::kNone ? TEXT("none") : Str(R.governments[static_cast<size_t>(P.government)].name);
-	if (TopInset <= 0.f) Line(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov), 16, Y);
+	if (TopInset <= 0.f) Line(SovKeys::Expand(FString::Printf(TEXT("Research: %s   Civic: %s   Government: %s (F2)"), *Research, *Civic, *Gov)), 16, Y);
 	// The empire's standing (SovStatus; the widgets show it in the Empire panel).
 	if (TopInset <= 0.f)
 	{

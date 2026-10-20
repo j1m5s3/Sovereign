@@ -109,3 +109,25 @@ void SovKeys::Save()
 	for (const TPair<FKey, FKey>& B : GBound) GConfig->SetString(kSection, *B.Key.GetFName().ToString(), *B.Value.GetFName().ToString(), GGameUserSettingsIni);
 	GConfig->Flush(false, GGameUserSettingsIni);
 }
+
+FString SovKeys::KeyText(const FKey& Key)
+{
+	if (Key == EKeys::Comma) return TEXT(",");
+	if (Key == EKeys::Period) return TEXT(".");
+	return Key.GetDisplayName(false).ToString();
+}
+
+FString SovKeys::Expand(const FString& Text)
+{
+	// In two passes, through placeholders, so a swap (F <-> G) does not turn a key back into itself.
+	FString Out = Text;
+	const TArray<FSovKeyAction>& All = Actions();
+	auto Mark = [](int32 i) { return FString::Printf(TEXT("%d"), i); };
+	for (int32 i = 0; i < All.Num(); ++i)
+	{
+		Out.ReplaceInline(*(FString(TEXT("{")) + All[i].Logical.GetFName().ToString() + TEXT("}")), *Mark(i), ESearchCase::CaseSensitive);
+		Out.ReplaceInline(*(FString(TEXT("(")) + KeyText(All[i].Logical) + TEXT(")")), *(TEXT("(") + Mark(i) + TEXT(")")), ESearchCase::CaseSensitive);
+	}
+	for (int32 i = 0; i < All.Num(); ++i) Out.ReplaceInline(*Mark(i), *KeyText(Physical(All[i].Logical)), ESearchCase::CaseSensitive);
+	return Out;
+}
