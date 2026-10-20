@@ -9,8 +9,10 @@ Valid games rank by the goal met, then fewer turns, then a higher score. A later
 same name keeps the better result.
 
 Plain C++17 over the rules core, like `net/`. CMake builds it from `core/CMakeLists.txt`. The
-TCP code is a separate library (`sovereign_board_tcp`) so Unreal can later call the client API
-with its own sockets. This folder is not compiled into Unreal yet.
+TCP code is a separate library (`sovereign_board_tcp`); Unreal compiles `sovereign_board` into its core module
+(wrappers by `tools/check_unreal_core_module.py`) and calls `Client` over its own sockets (`SovBoard.*`): a finished
+challenge game is submitted to the board set in Settings (or `-SovBoard=host:port`), and the menu shows the week's
+leaders under the challenge.
 
 ## Files
 

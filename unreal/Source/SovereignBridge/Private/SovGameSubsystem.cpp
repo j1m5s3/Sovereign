@@ -1,4 +1,5 @@
 #include "SovGameSubsystem.h"
+#include "SovBoard.h"
 
 #include "sovereign/challenge.h"
 #include "sovereign/commands.h"
@@ -112,7 +113,19 @@ void USovGameSubsystem::Tick(float DeltaTime)
 				const FString Line = FString::Printf(TEXT("week %d  %s  turn %d  score %d"), Week, R.goalMet ? TEXT("goal met") : TEXT("goal missed"), R.turn, R.score);
 				FFileHelper::SaveStringToFile(Line + LINE_TERMINATOR, *ChallengesPath(), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM, &IFileManager::Get(), FILEWRITE_Append);
 				SaveGame(FString::Printf(TEXT("challenge week %d"), Week));
-				LastMessage = FString::Printf(TEXT("Weekly challenge: %s. Saved as \"challenge week %d\" to submit."), *Line, Week);
+				LastMessage = FString::Printf(TEXT("Weekly challenge: %s. Saved as \"challenge week %d\"."), *Line, Week);
+				// To the board, when one is set: it replays the game to check it, then ranks it.
+				if (!SovBoard::Address().IsEmpty())
+				{
+					const std::vector<uint8_t> Bytes = sov::saveGame(Session.GetGame());
+					FString Name;
+					if (!FParse::Value(FCommandLine::Get(), TEXT("SovName="), Name)) Name = FPlatformProcess::UserName();
+					LastMessage += TEXT(" Sending it to the board...");
+					TWeakObjectPtr<USovGameSubsystem> Self(this);
+					SovBoard::SubmitAsync(Week, Name, TArray<uint8>(Bytes.data(), static_cast<int32>(Bytes.size())), [Self, Line](bool, const FString& Reply) {
+						if (Self.IsValid()) Self->LastMessage = FString::Printf(TEXT("Weekly challenge: %s; %s."), *Line, *Reply);
+					});
+				}
 			}
 			bWroteEnd = true;
 		}

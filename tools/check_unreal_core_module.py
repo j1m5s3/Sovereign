@@ -23,6 +23,7 @@ LIBRARIES = [
     ("battle", "sovereign_battle", "SovBattle_", "the battle simulation stays engine-independent"),
     ("diplomacy", "sovereign_diplomacy", "SovDiplomacy_", "the dialogue layer stays engine-independent"),
     ("net", "sovereign_net", "SovNet_", "the session protocol stays engine-independent"),
+    ("board", "sovereign_board", "SovBoard_", "the challenge board's protocol stays engine-independent"),
 ]
 
 
