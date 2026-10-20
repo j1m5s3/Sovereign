@@ -923,19 +923,25 @@ TEST(attack_approach_walks_beside_the_target) {
     CHECK(!civilian->attackApproach(builder, {9, 6}, false).has_value());
 }
 
-// Foes at peace are approached as at war would allow, and the approach says whose war comes first; the declaration
-// brings zone of control with it.
+// Foes at peace are approached at peace, and the approach says whose war the attack waits on. The war comes after the
+// move (as Civ VI asks only when the attack is made): declared first, it brings zone of control with it, and the
+// Warrior would arrive with no move left to attack with.
 TEST(attack_approach_names_the_war_it_needs) {
     UnitId w = kNoUnit;
-    auto g = frontier([&](GameState& s) {
+    auto setup = [&](GameState& s) {
         w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});
         addUnit(s, "UNIT_WARRIOR", 2, {10, 6});   // Geneva's
         addUnit(s, "UNIT_WARRIOR", 1, {7, 8});    // a major civ's
         addUnit(s, "UNIT_WARRIOR", 1, {8, 10});   // out of sight
-    });
+        addUnit(s, "UNIT_WARRIOR", 2, {15, 6});   // Geneva's, three turns off
+        addUnit(s, "UNIT_SCOUT", 0, {14, 7});     // keeps it in sight
+    };
+    auto g = frontier(setup);
     std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
     REQUIRE(a.has_value());
     CHECK_EQ(static_cast<int>(a->war), 2);
+    CHECK(!a->warFirst);
+    CHECK_EQ(a->turns, 0);
     CHECK_EQ(a->movesLeft, Fixed::fromInt(1));  // no zone of control at peace
     CHECK(a->attackOnArrival);
     CHECK_EQ(warWith(*g, w, {10, 6}, false), static_cast<int>(kNoPlayer));  // not from where it stands
@@ -943,12 +949,69 @@ TEST(attack_approach_names_the_war_it_needs) {
     REQUIRE(a.has_value());
     CHECK_EQ(static_cast<int>(a->war), 1);
     CHECK(!g->attackApproach(w, {8, 10}, false).has_value());  // a unit we do not see is no target
-    REQUIRE(g->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    // A foe turns away is walked to at peace: the war waits for the attack.
+    a = g->attackApproach(w, {15, 6}, false);
+    REQUIRE(a.has_value());
+    CHECK(a->turns >= 1);
+    CHECK(!a->attackOnArrival);
+    CHECK_EQ(static_cast<int>(a->war), 2);
+    CHECK(!a->warFirst);
+
+    // Move, declare, attack: the Warrior keeps the move it attacks with.
     a = g->attackApproach(w, {10, 6}, false);
+    REQUIRE(a.has_value());
+    REQUIRE(g->submit(Command::move(0, w, a->plot)) == CommandError::Ok);
+    CHECK_EQ(unit(*g, w).movesLeft, Fixed::fromInt(1));
+    CHECK_EQ(warWith(*g, w, {10, 6}, false), 2);
+    REQUIRE(g->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    CHECK_EQ(g->submit(Command::attack(0, w, {10, 6})), CommandError::Ok);
+
+    // Declared first, the same walk ends in the foe's zone of control with no move left.
+    auto first = frontier(setup);
+    REQUIRE(first->submit(Command::declareWar(0, 2)) == CommandError::Ok);
+    a = first->attackApproach(w, {10, 6}, false);
     REQUIRE(a.has_value());
     CHECK_EQ(static_cast<int>(a->war), static_cast<int>(kNoPlayer));
     CHECK_EQ(a->movesLeft, Fixed());
     CHECK(!a->attackOnArrival);
+}
+
+// Behind borders closed to us at peace (Early Empire), a foe can be reached only at war: the approach is planned as if
+// declared (borders open, their zone of control in force) and says the war comes before the move.
+TEST(attack_approach_through_closed_borders_declares_first) {
+    for (const char* foe : {"UNIT_SLINGER", "UNIT_WARRIOR"}) {
+        UnitId w = kNoUnit;
+        auto g = frontier([&](GameState& s) {
+            const TypeIndex ee = rules().civic("CIVIC_EARLY_EMPIRE");
+            REQUIRE(ee != kNone && rules().civics[static_cast<size_t>(ee)].enforceBorders);
+            s.players[1].civics.done[static_cast<size_t>(ee)] = 1;
+            sovtest::addCity(s, 1, {12, 6}, false, 1);
+            for (const Hex& h : s.grid.within({12, 6}, 3)) sovtest::claimFor(s, s.cities.back(), h);
+            w = addUnit(s, "UNIT_WARRIOR", 0, {8, 6});  // one plot outside their land
+            addUnit(s, foe, 1, {10, 6});                // inside it, two plots off
+        });
+        const bool zoc = std::string(foe) == "UNIT_WARRIOR";
+        REQUIRE(g->state().plot({9, 6}).owner == 1 && g->state().plot({8, 6}).owner == kNoPlayer);
+        CHECK_EQ(g->validate(Command::move(0, w, {9, 6})), CommandError::NoPath);  // closed to us at peace
+        CHECK_EQ(warWith(*g, w, {10, 6}, false), static_cast<int>(kNoPlayer));     // not from where it stands
+        std::optional<AttackApproach> a = g->attackApproach(w, {10, 6}, false);
+        REQUIRE(a.has_value());
+        CHECK_EQ(static_cast<int>(a->war), 1);
+        CHECK(a->warFirst);
+        CHECK_EQ(a->turns, 0);
+        CHECK_EQ(g->state().grid.distance(a->plot, {10, 6}), 1);
+        CHECK_EQ(a->attackOnArrival, !zoc);  // a Slinger holds no zone of control; a Warrior does
+        // Declared, the way opens and the plan is the same, now needing no war.
+        REQUIRE(g->submit(Command::declareWar(0, 1)) == CommandError::Ok);
+        const std::optional<AttackApproach> b = g->attackApproach(w, {10, 6}, false);
+        REQUIRE(b.has_value());
+        CHECK_EQ(b->plot, a->plot);
+        CHECK_EQ(static_cast<int>(b->war), static_cast<int>(kNoPlayer));
+        CHECK(!b->warFirst);
+        CHECK_EQ(b->attackOnArrival, a->attackOnArrival);
+        REQUIRE(g->submit(Command::move(0, w, b->plot)) == CommandError::Ok);
+        CHECK_EQ(g->validate(Command::attack(0, w, {10, 6})), zoc ? CommandError::CannotAttack : CommandError::Ok);
+    }
 }
 
 // A ranged unit stops within its range, with a line of sight, and shoots from there; where it stands when it can.

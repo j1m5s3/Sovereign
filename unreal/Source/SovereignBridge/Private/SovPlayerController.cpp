@@ -295,13 +295,8 @@ bool ASovPlayerController::Send(const sov::Command& Command)
 		case CT::ChooseResearch: case CT::ChooseCivic: case CT::SetProduction: case CT::QueueProduction: case CT::Promote: Sound = TEXT("SFX_Select"); break;
 		default: break;
 	}
-	// An attack on a leader's stack waits as a live battle (leader doc §9): the clash of the lines, and its prompt.
-	if ((Command.type == CT::Attack || Command.type == CT::RangedAttack) && Subsystem()->GetGame().battlePending())
-	{
-		Sound = TEXT("SFX_Clash");
-		if (BattlePromptUp())
-			Subsystem()->Say(SovKeys::Expand(TEXT("Battle! A leader is in the fight: fight it live (B) or settle it by the numbers (R).")));
-	}
+	// An attack on a leader's stack waits as a live battle (leader doc §9): its prompt sounds the clash (UpdateAudio).
+	if ((Command.type == CT::Attack || Command.type == CT::RangedAttack) && BattlePromptUp()) Sound = nullptr;
 	if (Sound) FSovAudio::Play(this, Sound);
 	return true;
 }
@@ -316,6 +311,7 @@ void ASovPlayerController::UpdateAudio()
 		Audio.SetAmbience(this, FString());
 		HeardTechs = HeardCivics = HeardEra = -1;
 		bHeardEnd = false;
+		bHeardBattle = false;
 		return;
 	}
 	const sov::Game& G = Sub->GetGame();
@@ -346,6 +342,15 @@ void ASovPlayerController::UpdateAudio()
 	HeardCivics = Civics;
 	HeardEra = Era;
 	bHeardMyTurn = bMine;
+	// A live battle waits for us, from our own attack or an AI's on our leader's stack in its turn: the clash of the lines,
+	// and a word on the message line, as its prompt comes up.
+	const bool bBattle = BattlePromptUp();
+	if (bBattle && !bHeardBattle)
+	{
+		FSovAudio::Play(this, TEXT("SFX_Clash"));
+		Sub->Say(SovKeys::Expand(TEXT("Battle! A leader is in the fight: fight it live (B) or settle it by the numbers (R).")));
+	}
+	bHeardBattle = bBattle;
 }
 
 void ASovPlayerController::SelectUnit(int32 Id, bool bCenter)
@@ -543,10 +548,12 @@ bool ASovPlayerController::OrderAttack(sov::UnitId Unit, sov::Hex Target)
 		case ESovAttackPlan::Attack: Send(SovAttackCommand(Me(), Unit, Target, Plan.bRanged)); break;
 		case ESovAttackPlan::Approach: ApproachAndAttack(Unit, Target, Plan); break;
 		case ESovAttackPlan::AskWar:
-			// Only a war stands in the way: ask, then attack (AttackAfterWar) once it is declared.
+			// Only a war stands in the way: ask, then move (MoveBeforeWar), declare and attack (AttackAfterWar).
 			WarOn = Plan.War;
 			WarUnit = Unit;
 			WarTarget = Target;
+			WarPlot = Plan.Plot;
+			bWarFirst = Plan.bWarFirst;
 			OpenChooser(EChooser::ConfirmWar);
 			return Chooser == EChooser::ConfirmWar;
 		case ESovAttackPlan::Refuse:
@@ -561,7 +568,7 @@ void ASovPlayerController::ApproachAndAttack(sov::UnitId Unit, sov::Hex Target, 
 	if (Subsystem()->GetSession().NetMode() == ESovNet::Join)
 	{
 		// Online, the move takes effect when the host sends it back: the attack waits for another click.
-		if (Plan.bAttackOnArrival) Subsystem()->Say(TEXT("On its way: right-click the target again once it arrives to attack."));
+		Subsystem()->Say(Plan.bAttackOnArrival ? FString(TEXT("On its way: right-click the target again once it arrives to attack.")) : Plan.Text);
 		return;
 	}
 	const sov::Game& G = Subsystem()->GetGame();
@@ -576,6 +583,30 @@ void ASovPlayerController::ApproachAndAttack(sov::UnitId Unit, sov::Hex Target, 
 	Subsystem()->Say(U->pos == Plan.Plot ? SovPlanAttack(G, Unit, Target).Text
 		: Plan.Turns == 0 ? FString(TEXT("It stopped short of where it attacks from: right-click the target again."))
 						  : FString::Printf(TEXT("On its way (%d turn(s)): right-click the target again once it is in position."), Plan.Turns));
+}
+
+bool ASovPlayerController::MoveBeforeWar()
+{
+	// The declare-war prompt's move (Civ VI): the unit walks to where it attacks from while still at peace, so the zone
+	// of control a war brings cannot take the move it attacks with. Not when only a war opens the way (bWarFirst: closed
+	// borders), when it stands there already, or for a declaration alone (no WarUnit).
+	const sov::Unit* U = Subsystem()->GetGame().state().unit(WarUnit);
+	if (!U || bWarFirst || U->pos == WarPlot) return true;
+	if (!Send(sov::Command::move(Me(), WarUnit, WarPlot))) return false;  // the refusal says why, and no war is declared
+	// Online, the move takes effect when the host sends it back; the declaration follows it there (AttackAfterWar asks
+	// for the click that attacks).
+	if (Subsystem()->GetSession().NetMode() == ESovNet::Join) return true;
+	// There, only the war may stand in the way (SovPlanAttack: AskWar from where it stands); else no war is declared.
+	const sov::Game& G = Subsystem()->GetGame();
+	const sov::Unit* There = G.state().unit(WarUnit);
+	if (There && There->pos == WarPlot)
+	{
+		const FSovAttackPlan Plan = SovPlanAttack(G, WarUnit, WarTarget);
+		if (Plan.Kind == ESovAttackPlan::AskWar && Plan.Plot == There->pos) return true;
+	}
+	Subsystem()->Say(TEXT("It stopped short of where it attacks from: no war declared."));
+	if (SelectedUnit == WarUnit) AfterUnitOrder();
+	return false;
 }
 
 void ASovPlayerController::AttackAfterWar()
@@ -1658,7 +1689,8 @@ void ASovPlayerController::Pick(int32 Index)
 			Subsystem()->Say(TEXT("No war declared."));
 			return;
 		}
-		if (Send(Command)) AttackAfterWar();
+		// Civ VI's order: the move while still at peace, the declaration where it attacks from, then the attack.
+		if (MoveBeforeWar() && Send(Command)) AttackAfterWar();
 		else WarUnit = sov::kNoUnit;
 		return;
 	}
@@ -2665,20 +2697,32 @@ void ASovPlayerController::UpdateReach()
 			}
 		}
 		// Foes it can strike this turn, ringed in red: those a right-click attacks at once, from where it stands or from a
-		// plot it reaches with moves to spare (Game::attackApproach). Only units we see, of civs we are at war with.
+		// plot it reaches with moves to spare (Game::attackApproach). Only units we see, of civs we are at war with (any
+		// religious unit of another religion, for a religious one: theological combat needs no war).
 		const sov::UnitType& T = G.rules().units[static_cast<size_t>(U->type)];
 		const int32 Range = T.ranged > 0 || T.bombard > 0 ? G.unitRange(*U) : 0;
-		if (T.combat > 0 || Range > 0 || T.religiousStrength > 0)
+		const bool bTheological = T.religiousStrength > 0;
+		if (T.combat > 0 || Range > 0 || bTheological)
 		{
-			// Beyond the farthest plot it reaches plus its range, nothing can be struck: skip those without a search.
-			int32 Far = 0;
-			for (const TPair<int32, sov::Fixed>& R : Left) Far = FMath::Max(Far, S.grid.distance(U->pos, S.grid.at(R.Key)));
-			Far += FMath::Max(1, Range);
+			// The plots it may attack from this turn, at most: those it enters with moves to spare. `Left` ignores zone of
+			// control and lets it enter a plot with any moves left, so it holds every plot attackApproach could pick, and
+			// a foe with none of them within reach of it needs no search.
+			TArray<sov::Hex> From;
+			for (const TPair<int32, sov::Fixed>& R : Left)
+			{
+				if (R.Value > sov::Fixed()) From.Add(S.grid.at(R.Key));
+			}
+			const int32 Reach = FMath::Max(1, Range);
 			TSet<int32> Marked;
 			for (const sov::Unit& E : S.units)
 			{
-				if (E.owner == Me() || !G.atWar(Me(), E.owner) || G.visibility(Me(), E.pos) != sov::Visibility::Visible) continue;
-				if (S.grid.distance(U->pos, E.pos) > Far || Marked.Contains(S.grid.index(E.pos))) continue;
+				if (E.owner == Me() || G.visibility(Me(), E.pos) != sov::Visibility::Visible || Marked.Contains(S.grid.index(E.pos))) continue;
+				const bool bFoe = bTheological ? (G.rules().units[static_cast<size_t>(E.type)].religiousStrength > 0 && E.religion != U->religion)
+											   : G.atWar(Me(), E.owner);
+				if (!bFoe) continue;
+				bool bNear = false;
+				for (int32 i = 0; i < From.Num() && !bNear; ++i) bNear = S.grid.distance(From[i], E.pos) <= Reach;
+				if (!bNear) continue;
 				const std::optional<sov::AttackApproach> A = G.attackApproach(U->id, E.pos, Range > 0);
 				if (!A || A->turns != 0 || !A->attackOnArrival || A->war != sov::kNoPlayer) continue;
 				Marked.Add(S.grid.index(E.pos));

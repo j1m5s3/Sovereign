@@ -55,7 +55,8 @@ struct AttackApproach {
     int turns = 0;                 // 0 = reached this turn
     Fixed movesLeft;               // on arrival
     bool attackOnArrival = false;  // there this turn with moves and an attack left, so it attacks at once (war aside)
-    PlayerId war = kNoPlayer;      // the player a war must be declared on first (kNoPlayer: none)
+    PlayerId war = kNoPlayer;      // the player a war must be declared on before the attack (kNoPlayer: none)
+    bool warFirst = false;         // and before the move as well: the way there is open only at war (closed borders)
 };
 
 // A personal aim for the leader, shown at turn end beside Civ's "X turns to Y" (player-retention §4).
@@ -694,7 +695,10 @@ public:
     // Where the unit would stand to attack `target`: beside it for a melee attack, within its range and line of sight
     // for a ranged one, on a plot a move order may end on (its own plot when it may attack from there). Planned as a
     // move order is, zone of control included; the one reached this turn with moves left comes first, then the fewest
-    // turns, the most moves left and the nearest. nullopt when no such plot is in reach.
+    // turns, the most moves left and the nearest. A target whose owner we are at peace with is approached at peace
+    // (the war waits for the attack: `war`), unless only a war would let it attack this turn or get there at all
+    // (their borders closed to us): then it is planned as if at war with them, and `warFirst` says so. nullopt when no
+    // such plot is in reach.
     std::optional<AttackApproach> attackApproach(UnitId attacker, Hex target, bool ranged) const;
     // The human whose leader stack is in this melee (so it goes live), or kNoPlayer (leader doc §9).
     PlayerId liveBattleSide(const Unit& attacker, const Unit& defender) const;
@@ -883,7 +887,9 @@ private:
         bool onlyBlocked = false;      // with `only`: whether that plot is kept out of (`blocked` is then left empty)
     };
     // With `only` (a plot on the grid), just what a step into it reads: whether it is blocked, and its owner's entry.
-    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt) const;
+    // With `warWith`, read as if the unit's owner were at war with that player (attackApproach).
+    MoveLimits moveLimits(const Unit& unit, const MoveTraits& traits, std::optional<Hex> only = std::nullopt,
+                          PlayerId warWith = kNoPlayer) const;
     // A step's cost: `dir` is the direction from `from` to its neighbour `to`, `limits` the whole map's (no `only`).
     std::optional<Fixed> moveCost(const Unit& unit, const MoveTraits& traits, const MoveLimits& limits, Hex from, Hex to, Dir dir) const;
     std::optional<Fixed> terrainCost(const Unit& unit, const MoveTraits& traits, Hex from, Hex to, Dir dir) const;
@@ -973,8 +979,9 @@ private:
     void removeUnit(UnitId id);
     void relocateUnit(Unit& unit, Hex to);  // puts it there: its order and escort end, and its fortification if it moves
     bool exertsZoc(const Unit& unit) const;
-    // Marks with `bit` the plots in enemy ZOC for this mover (none when it ignores ZOC) in `plots`, one entry per plot.
-    void markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit) const;
+    // Marks with `bit` the plots in enemy ZOC for this mover (none when it ignores ZOC) in `plots`, one entry per plot;
+    // `warWith` counts as an enemy too.
+    void markZoc(const Unit& mover, std::vector<uint8_t>& plots, uint8_t bit, PlayerId warWith = kNoPlayer) const;
     void payUnitFuel(PlayerId p);
     void healAndFortify(PlayerId p);
     bool growBorders(City& city);  // false when no plot was available
@@ -1090,9 +1097,10 @@ private:
     // findPath's search; with `along`, one kept to the plots of `along` (and with enemy ZOC only where it ends a pass
     // over plots others hold, as elsewhere it changes only the moves a path leaves): a path it finds then shows that
     // findPath finds one too. With `reach`, a search with no goal (reading ZOC the same way) that marks in it every plot
-    // a move order may go to.
+    // a move order may go to. With `warWith`, planned as if the unit's owner were at war with that player: their borders
+    // open, their units kept out of and their zone of control in force (attackApproach).
     std::optional<std::vector<PathStep>> searchPath(UnitId id, Hex target, bool overland, const std::vector<PathStep>* along,
-                                                    std::vector<uint8_t>* reach = nullptr) const;
+                                                    std::vector<uint8_t>* reach = nullptr, PlayerId warWith = kNoPlayer) const;
     // The unit a move order for `unit` is planned for: a linked escort's moves the pair, so it is planned for the leader.
     const Unit& orderMover(const Unit& unit) const;
     void beginPlayerTurn(PlayerId p, bool runCities = true);

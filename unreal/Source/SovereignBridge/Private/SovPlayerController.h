@@ -119,6 +119,9 @@ protected:
 	bool OrderAttack(sov::UnitId Unit, sov::Hex Target);
 	// Moves the unit to where it attacks from (never onto the foe), then attacks if it may this turn.
 	void ApproachAndAttack(sov::UnitId Unit, sov::Hex Target, const struct FSovAttackPlan& Plan);
+	// The declare-war prompt confirmed: WarUnit walks to WarPlot while still at peace (Civ VI), unless only a war opens the
+	// way (bWarFirst). False when it did not get there (no war is then declared).
+	bool MoveBeforeWar();
 	// After the declare-war prompt's declaration: the attack it was opened for (WarUnit, WarTarget).
 	void AttackAfterWar();
 	// A live battle waits for this player: its prompt (fight it live, or settle it) shows in the chooser panel.
@@ -214,6 +217,8 @@ protected:
 	sov::PlayerId WarOn = sov::kNoPlayer;
 	sov::UnitId WarUnit = sov::kNoUnit;
 	sov::Hex WarTarget;
+	sov::Hex WarPlot;          // where WarUnit attacks from (FSovAttackPlan::Plot)
+	bool bWarFirst = false;    // the way to WarPlot opens only at war: declare before the move
 	FSovBattleResult Outcome;
 	bool bBattleSent = false;
 	sov::PlayerId BattlePeer = sov::kNoPlayer;    // online: the other machine in this battle
@@ -281,6 +286,7 @@ protected:
 	void UpdateAudio();
 	int32 HeardTechs = -1, HeardCivics = -1, HeardEra = -1;
 	bool bHeardMyTurn = false, bHeardEnd = false;
+	bool bHeardBattle = false;  // a live battle's prompt was up (its clash sounds once as it comes up)
 	FString TipShown;         // the advisor tip on screen, by id (Tip)
 	// The advisor's tip for a new player, by id and text, or an empty id; ids put aside are kept in GameUserSettings.
 	void Tip(FString& Id, FString& Title, FString& Text) const;
