@@ -187,7 +187,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		}
 		Vehicle.Add(bMachine && Figure.Last());
 		// A man of a plain arm (spearman, archer, musketeer, rifleman) walks on its rigged figure's legs when that art
-		// exists; the still figure stays hidden then. Riders have no rig (the skeleton has no horse), and stay still.
+		// exists; the still figure stays hidden then. Horsemen ride on their own skeleton (rig_riders.py).
 		USkeletalMeshComponent* Rig = nullptr;
 		if (!S.bLeader && !bMachine && SovArt::RiggedMesh(Name))
 		{
@@ -231,17 +231,22 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 				Striding[i] = bWalk;
 				if (UAnimSequence* A = SovArt::RiggedAnim(RigNames[i], bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
 			}
-			const float Face = (S.Side == 0 ? -90.f : 90.f);
-			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f : Face;
+			// A horseman is modelled along X (rig_riders.py), a man facing +Y (rig_figures.py); each walks at its own pace.
+			const bool bHorse = RigNames[i].StartsWith(TEXT("Rider"));
+			const float Turn = bHorse ? 90.f : 0.f;
+			const float Pace = bHorse ? 154.f : 108.f;  // rig_riders.py / rig_figures.py WALK_SPEED, cm/s
+			const float Face = (S.Side == 0 ? -90.f : 90.f) + Turn;
+			const float Yaw = bWalk ? static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Step.Y, Step.X))) - 90.f + Turn : Face;
 			if (S.bAlive)
 			{
 				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaw, 0.f));
-				if (bWalk) Rig->SetPlayRate(FMath::Clamp(Speed / 108.f, 0.5f, 3.f));  // rig_figures.py WALK_SPEED
+				if (bWalk) Rig->SetPlayRate(FMath::Clamp(Speed / Pace, 0.5f, 3.f));
 			}
 			else if (Rig->IsPlaying())
 			{
 				Rig->Stop();
-				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 15), FRotator(0.f, Face, 90.f));
+				// The fallen lie where they fell; a horse goes down on its side.
+				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, bHorse ? 30 : 15), bHorse ? FRotator(0.f, Face, 80.f) : FRotator(0.f, Face, 90.f));
 			}
 			continue;
 		}

@@ -1,4 +1,5 @@
 #include "SovGameUI.h"
+#include "SovKeys.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "SovStyle.h"
@@ -132,7 +133,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(4, 0)
 				[
 					SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button())
-					.ToolTipText(FText::FromString(TEXT("Empire (F8): your civ, faith, era and age, diplomacy, the world's contests, climate, governors and leader")))
+					.ToolTipText(FText::FromString(SovKeys::Expand(TEXT("Empire (F8): your civ, faith, era and age, diplomacy, the world's contests, climate, governors and leader"))))
 					.ButtonColorAndOpacity_Lambda([this]() { return Model.bEmpire ? FSovStyle::Gold : FLinearColor::White; })
 					.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
 					[StatWidget(FSovUIStat{"era", TEXT(""), TEXT("")}, 11)]
@@ -213,7 +214,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 						[SNew(STextBlock).Font(FSovStyle::Font(14, true)).ColorAndOpacity(FSovStyle::Gold).Text(FText::FromString(TEXT("Empire")))]
 						+ SHorizontalBox::Slot().AutoWidth()
 						[
-							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Close (F8)")))
+							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(SovKeys::Expand(TEXT("Close (F8)"))))
 							.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F8); return FReply::Handled(); })
 							[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("X")))]
 						]
@@ -296,7 +297,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 						SNew(SHorizontalBox)
 						+ SHorizontalBox::Slot().FillWidth(1.f)
 						[
-						SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(TEXT("Choose what to build, or buy it (P)")))
+						SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ToolTipText(FText::FromString(SovKeys::Expand(TEXT("Choose what to build, or buy it (P)"))))
 						.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::P); return FReply::Handled(); })
 						[
 							SNew(SHorizontalBox)
@@ -445,7 +446,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 						[
 							SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).ContentPadding(FMargin(16, 6))
 								.OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::F6); return FReply::Handled(); })
-								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Write the chronicle (F6)")))]
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(SovKeys::Expand(TEXT("Write the chronicle (F6)"))))]
 						]
 						+ SHorizontalBox::Slot().FillWidth(1.f)
 						+ SHorizontalBox::Slot().AutoWidth()
@@ -525,7 +526,7 @@ void SSovGameUI::Construct(const FArguments& Args)
 							+ SHorizontalBox::Slot().AutoWidth()
 							[
 								SNew(SButton).IsFocusable(false).ButtonStyle(&FSovStyle::Button()).OnClicked_Lambda([this]() { OnKey.ExecuteIfBound(EKeys::M); return FReply::Handled(); })
-								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(TEXT("Chat (M)")))]
+								[SNew(STextBlock).Font(FSovStyle::Font(12, true)).ColorAndOpacity(FSovStyle::Text).Text(FText::FromString(SovKeys::Expand(TEXT("Chat (M)"))))]
 							]
 							+ SHorizontalBox::Slot().AutoWidth().Padding(8, 0, 0, 0)
 							[

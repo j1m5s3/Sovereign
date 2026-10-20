@@ -8,6 +8,7 @@
 
 #include "SovArt.h"
 #include "SovBoard.h"
+#include "SovKeys.h"
 #include "SovCameraPawn.h"
 #include "SovDescribe.h"
 #include "SovEvents.h"
@@ -165,25 +166,25 @@ void ASovPlayerController::Tip(FString& Id, FString& Title, FString& Text) const
 		return U.owner == Me() && G.rules().units[static_cast<size_t>(U.type)].foundCity;
 	});
 	// The first that applies and has not been put aside, most pressing first.
-	struct FTip { const TCHAR* Id; bool bApplies; const TCHAR* Title; const TCHAR* Text; };
+	struct FTip { const TCHAR* Id; bool bApplies; const TCHAR* Title; FString Text; };  // Text names keys as {F} (SovKeys::Expand)
 	const FTip Tips[] = {
 		{TEXT("found"), !bCity && bSettler, TEXT("Found your capital"),
-			TEXT("Select your Settler and press F, or the city button in its panel, to found your capital where it stands. Grassland or plains beside a river or the coast make a strong start.")},
+			TEXT("Select your Settler and press {F}, or the city button in its panel, to found your capital where it stands. Grassland or plains beside a river or the coast make a strong start.")},
 		{TEXT("research"), bCity && P.techs.current == sov::kNone, TEXT("Choose research"),
 			TEXT("Click Choose research at the top. Each technology unlocks units, buildings and improvements; the tree (the button beside it) shows what leads where.")},
 		{TEXT("move"), bCity && S.turn <= 6, TEXT("Moving units"),
 			TEXT("Click a unit to select it, then right-click a plot to send it there; the path shows the turns it takes. The button at the bottom right (or Space) ends your turn and names anything still waiting.")},
 		{TEXT("ruler"), bCity && S.turn <= 12 && G.leaderOf(Me()) != nullptr, TEXT("Your ruler"),
-			TEXT("Your ruler is a unit on the map. They fight in person, gain levels and promotions, and can be wounded, captured or killed. Keep them guarded: if they fall, the throne passes to a successor (H).")},
+			TEXT("Your ruler is a unit on the map. They fight in person, gain levels and promotions, and can be wounded, captured or killed. Keep them guarded: if they fall, the throne passes to a successor ({H}).")},
 		{TEXT("city"), bCity && S.turn >= 2 && S.turn <= 16, TEXT("Your city"),
-			TEXT("Click your city's banner to see what it builds and how it grows. Scouts explore, Builders improve the land, Settlers found more cities. F1 lists every key.")},
+			TEXT("Click your city's banner to see what it builds and how it grows. Scouts explore, Builders improve the land, Settlers found more cities. {F1} lists every key.")},
 	};
 	for (const FTip& T : Tips)
 	{
 		if (!T.bApplies || Seen.Contains(T.Id)) continue;
 		Id = T.Id;
 		Title = T.Title;
-		Text = T.Text;
+		Text = SovKeys::Expand(T.Text);  // the keys as bound
 		return;
 	}
 }
@@ -2798,8 +2799,8 @@ void ASovPlayerController::UpdateGameUI()
 	};
 	Tree(false, M.Research, M.ResearchProgress);
 	Tree(true, M.Civic, M.CivicProgress);
-	M.Government = {"government", TEXT(""), FString::Printf(TEXT("Government: %s. Policies and dedications (F2)"),
-		P.government == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(P.government)].name)), FSovStyle::Text, EKeys::F2};
+	M.Government = {"government", TEXT(""), SovKeys::Expand(FString::Printf(TEXT("Government: %s. Policies and dedications (F2)"),
+		P.government == sov::kNone ? TEXT("none") : *Str(R.governments[static_cast<size_t>(P.government)].name))), FSovStyle::Text, EKeys::F2};
 	const int32 EraIndex = FMath::Clamp(S.gameEra, 0, static_cast<int32>(R.eras.size()) - 1);
 	M.Turn = {"era", FString::Printf(TEXT("Turn %d   %s"), S.turn, *Str(R.eras[static_cast<size_t>(EraIndex)].name)),
 		FString::Printf(TEXT("Turn %d of %d; the world is in the %s era. F1: how to play"), S.turn, G.turnLimit(), *Str(R.eras[static_cast<size_t>(EraIndex)].name))};
@@ -2827,7 +2828,7 @@ void ASovPlayerController::UpdateGameUI()
 		if (!T.promotionClass.empty()) M.UnitStats.Add({"experience", FString::Printf(TEXT("%d/%d"), U->xp, G.xpForNextLevel(*U)), TEXT("Experience toward the next promotion")});
 		if (T.buildCharges > 0) M.UnitStats.Add({"build", FString::FromInt(U->charges), TEXT("Build charges left")});
 		const bool bTurn = MyTurn();
-		auto Act = [&](FName Icon, const FString& Label, FKey Key, bool bOn = true) { M.UnitActions.Add({Icon, Label, Key, bOn && bTurn}); };
+		auto Act = [&](FName Icon, const FString& Label, FKey Key, bool bOn = true) { M.UnitActions.Add({Icon, SovKeys::Expand(Label), Key, bOn && bTurn}); };
 		if (T.foundCity) Act("found", TEXT("Found a city here (F)"), EKeys::F);
 		if (T.buildCharges > 0) Act("build", TEXT("Build an improvement or harvest here (B)"), EKeys::B);
 		if (T.id == "UNIT_TRADER") Act("trade", FString::Printf(TEXT("Start a trade route (F): %d of %d in use"), G.tradeRoutesOf(Me()), G.tradeRouteCapacity(Me())), EKeys::F);
@@ -2936,13 +2937,13 @@ void ASovPlayerController::UpdateGameUI()
 		if (S.turn < C->benevolenceUntil) M.CityLines.Add(FString::Printf(TEXT("Benevolence: %d more turn(s)"), C->benevolenceUntil - S.turn));
 		if (G.fearActive(*C)) M.CityLines.Add(FString::Printf(TEXT("Fear: order for %d more turn(s)"), C->fearUntil - S.turn));
 		const bool bTurn = MyTurn();
-		M.CityActions.Add({"production", TEXT("Production (P): choose, queue with Shift, or buy with gold or faith"), EKeys::P, bTurn});
+		M.CityActions.Add({"production", SovKeys::Expand(TEXT("Production (P): choose, queue with Shift, or buy with gold or faith")), EKeys::P, bTurn});
 		const sov::Unit* Leader = G.leaderOf(Me());
 		const bool bLeaderHere = Leader && Leader->pos == C->pos && rules_cooldown(G, *C) == 0;
-		M.CityActions.Add({"amenity", FString::Printf(TEXT("Benevolence (V): %d gold, more amenities; needs your leader here"), G.benevolenceCost(*C)), EKeys::V, bTurn && bLeaderHere});
-		M.CityActions.Add({"fortify", TEXT("Fear (X): order and loyalty now, resentment later; needs your leader and a garrison"), EKeys::X, bTurn && bLeaderHere});
-		M.CityActions.Add({"government", TEXT("Governors (Z): appoint, promote or send one here"), EKeys::Z, bTurn});
-		M.CityActions.Add({"food", TEXT("Citizens (F3): show what each plot yields, * where a citizen works; Shift+click a plot to lock or free a citizen"), EKeys::F3, true});
+		M.CityActions.Add({"amenity", SovKeys::Expand(FString::Printf(TEXT("Benevolence (V): %d gold, more amenities; needs your leader here"), G.benevolenceCost(*C))), EKeys::V, bTurn && bLeaderHere});
+		M.CityActions.Add({"fortify", SovKeys::Expand(TEXT("Fear (X): order and loyalty now, resentment later; needs your leader and a garrison")), EKeys::X, bTurn && bLeaderHere});
+		M.CityActions.Add({"government", SovKeys::Expand(TEXT("Governors (Z): appoint, promote or send one here")), EKeys::Z, bTurn});
+		M.CityActions.Add({"food", SovKeys::Expand(TEXT("Citizens (F3): show what each plot yields, * where a citizen works; Shift+click a plot to lock or free a citizen")), EKeys::F3, true});
 		M.CityFocus = static_cast<int32>(C->focus);
 	}
 	// The open chooser, every line clickable.
@@ -3480,7 +3481,7 @@ void ASovPlayerController::UpdatePanel()
 						G.atWar(Me(), Goal.id) ? TEXT(": a melee there is fought live") : TEXT(""));
 					break;
 				}
-				case sov::LeaderGoalKind::Promotion: Text = TEXT("a promotion waits for your leader (U)"); break;
+				case sov::LeaderGoalKind::Promotion: Text = SovKeys::Expand(TEXT("a promotion waits for your leader (U)")); break;
 				case sov::LeaderGoalKind::PromotionSoon: Text = FString::Printf(TEXT("%d XP to your leader's next promotion"), Goal.value); break;
 			}
 			Goals += (Goals.IsEmpty() ? TEXT("Leader: ") : TEXT("; ")) + Text;
@@ -3847,7 +3848,7 @@ bool ASovPlayerController::HandleSessionScreens()
 		if (WasInputKeyJustPressed(EKeys::Escape)) CloseChat();
 		return true;  // typing: the map takes no keys
 	}
-	if (Session.NetMode() != ESovNet::Local && (WasInputKeyJustPressed(EKeys::M) || UIKeys.Contains(EKeys::M)))
+	if (Session.NetMode() != ESovNet::Local && Pressed(EKeys::M))  // as rebound (SovKeys)
 	{
 		OpenChat();
 		return true;
