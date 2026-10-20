@@ -149,6 +149,12 @@ FName SovUnitFigure(const sov::UnitType& Type, bool bLeader, bool bCivilian)
 FName SovCultureFigure(const sov::Game& Game, int32 Owner, FName Figure)
 {
 	const sov::GameState& S = Game.state();
+	if (Figure == FName("Leader"))
+	{
+		// The ruler as themselves (Leader_ENGLAND...), falling back to the generic ruler where a piece is missing.
+		if (Owner < 0 || Owner >= static_cast<int32>(S.players.size()) || S.players[static_cast<size_t>(Owner)].civ == sov::kNone) return Figure;
+		return FName(*SovArt::LeaderFigure(UTF8_TO_TCHAR(Game.rules().civs[static_cast<size_t>(S.players[static_cast<size_t>(Owner)].civ)].id.c_str())));
+	}
 	const bool bDressed = Figure == FName("Soldier") || Figure == FName("Archer") || Figure == FName("Rider") || Figure == FName("Musketeer");
 	if (!bDressed || Owner < 0 || Owner >= static_cast<int32>(S.players.size())) return Figure;
 	const sov::TypeIndex Civ = S.players[static_cast<size_t>(Owner)].civ;

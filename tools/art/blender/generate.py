@@ -27,7 +27,10 @@ KITS = {"Nature": kit_nature, "Classical": kit_classical, "Fields": kit_fields, 
         "Towns": kit_towns, "Styles": kit_styles, "Props": kit_props}
 try:
     import kit_figures  # noqa: E402
+    import kit_leaders  # noqa: E402
 
+    # The leaders as themselves (SM_Leader_<CIV>) are Figures pieces too.
+    kit_figures.PIECES = kit_figures.PIECES + [f for f in kit_leaders.PIECES if f not in kit_figures.PIECES]
     KITS["Figures"] = kit_figures
 except ImportError:
     pass

@@ -86,10 +86,11 @@ ASovWalker::ASovWalker()
 	Camera->SetFieldOfView(70.f);
 }
 
-void ASovWalker::SetColor(const FLinearColor& Color)
+void ASovWalker::SetColor(const FLinearColor& Color, const FString& Figure)
 {
 	// The rigged leader when the art exists, walking as the character moves; else the kit's still figure.
-	if (SovArt::SetRiggedFigure(GetMesh(), TEXT("Leader"), Color, TEXT("Idle")))
+	RigName = SovArt::RiggedMesh(Figure) ? Figure : FString(TEXT("Leader"));
+	if (SovArt::SetRiggedFigure(GetMesh(), RigName, Color, TEXT("Idle")))
 	{
 		GetMesh()->SetRelativeLocation(FVector(0, 0, -90));
 		GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));  // as the kit figures: built facing +Y in Unreal
@@ -101,7 +102,7 @@ void ASovWalker::SetColor(const FLinearColor& Color)
 		return;
 	}
 	// The leader's own figure when the art exists: robe and cloak in the owner's colour.
-	if (SovArt::SetKitMesh(Body, TEXT("Figures"), TEXT("Leader"), Color))
+	if (SovArt::SetKitMesh(Body, TEXT("Figures"), Figure, Color) || SovArt::SetKitMesh(Body, TEXT("Figures"), TEXT("Leader"), Color))
 	{
 		Body->SetRelativeLocation(FVector(0, 0, -90));
 		Body->SetRelativeScale3D(FVector(1.0));
@@ -134,7 +135,7 @@ void ASovWalker::Tick(float DeltaSeconds)
 	if (bMoving != bWalking)
 	{
 		bWalking = bMoving;
-		if (UAnimSequence* A = SovArt::RiggedAnim(TEXT("Leader"), bMoving ? TEXT("Walk") : TEXT("Idle"))) GetMesh()->PlayAnimation(A, true);
+		if (UAnimSequence* A = SovArt::RiggedAnim(RigName, bMoving ? TEXT("Walk") : TEXT("Idle"))) GetMesh()->PlayAnimation(A, true);
 	}
 	if (bWalking) GetMesh()->SetPlayRate(FMath::Clamp(Speed / kWalkSpeed, 0.6f, 3.f));
 }

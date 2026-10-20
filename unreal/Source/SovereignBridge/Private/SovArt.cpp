@@ -138,6 +138,17 @@ const TCHAR* CivStyle(const FString& CivId)
 	return TEXT("Mediterranean");
 }
 
+FString LeaderFigure(const FString& CivId)
+{
+	static const TCHAR* const Leaders[] = {TEXT("ENGLAND"), TEXT("FRANCE"), TEXT("ROME"), TEXT("GREECE"), TEXT("PERSIA"), TEXT("ARABIA"),
+		TEXT("CHINA"), TEXT("JAPAN"), TEXT("EGYPT"), TEXT("MALI"), TEXT("AZTEC"), TEXT("INCA")};
+	for (const TCHAR* L : Leaders)
+	{
+		if (CivId.EndsWith(FString(TEXT("_")) + L)) return FString(TEXT("Leader_")) + L;
+	}
+	return TEXT("Leader");
+}
+
 TPair<const TCHAR*, FString> EraPiece(int32 Era, const FString& ClassicalName, const FString& CivId)
 {
 	const bool bCity = ClassicalName == TEXT("Palace") || ClassicalName == TEXT("Landmark") || ClassicalName.StartsWith(TEXT("House_"));
@@ -198,6 +209,11 @@ TArray<FString> RequiredAssets()
 		{
 			Out.Add(MeshPath(TEXT("Towns"), FString(Style) + Part));
 		}
+	}
+	for (const TCHAR* Civ : {TEXT("ENGLAND"), TEXT("FRANCE"), TEXT("ROME"), TEXT("GREECE"), TEXT("PERSIA"), TEXT("ARABIA"), TEXT("CHINA"),
+			 TEXT("JAPAN"), TEXT("EGYPT"), TEXT("MALI"), TEXT("AZTEC"), TEXT("INCA")})
+	{
+		Out.Add(MeshPath(TEXT("Figures"), FString(TEXT("Leader_")) + Civ));
 	}
 	for (const TCHAR* Name : {TEXT("Barrels"), TEXT("Crates"), TEXT("Sacks"), TEXT("Cart"), TEXT("Well"), TEXT("Bench"), TEXT("LampPost"),
 			 TEXT("Trough"), TEXT("Haystack"), TEXT("Woodpile"), TEXT("FlowerPots")})

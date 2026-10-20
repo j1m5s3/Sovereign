@@ -17,6 +17,7 @@ import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 import kit_figures  # noqa: E402
+import kit_leaders  # noqa: E402
 import kitlib  # noqa: E402
 import look  # noqa: E402
 import textures  # noqa: E402
@@ -28,6 +29,10 @@ FIGURES = {"Soldier": "soldier", "Archer": "archer", "Rider": "rider", "Siege": 
 for arm in ("Soldier", "Archer", "Rider", "Musketeer"):
     for style in ("MiddleEast", "Asian", "African", "American"):
         FIGURES["%s_%s" % (arm, style)] = "%s_%s" % (arm.lower(), style.lower())
+# The leaders as themselves (kit_leaders.py), each in their own team colour (kit_leaders.LOOK).
+for civ in kit_leaders.LEADERS:
+    FIGURES["Leader_" + civ] = "L_" + civ
+    setattr(kit_figures, "L_" + civ, kit_leaders.LEADERS[civ])
 PEOPLE = {"Soldier", "Archer", "Musketeer", "Rifleman", "Citizen", "Leader"}
 SIZE = 160
 TEAM = kitlib.srgb("#5a6f9a")
@@ -66,7 +71,8 @@ def render(name, func, out, sheets):
     obj = getattr(kit_figures, func)().build()
     obj.data.materials[0] = look.material("Base", (1, 1, 1), sheets)
     if len(obj.data.materials) > 1:
-        obj.data.materials[1] = look.material("Team", TEAM, sheets)
+        team = kitlib.srgb(kit_leaders.LOOK[name.split("_", 1)[1]]) if name.startswith("Leader_") else TEAM
+        obj.data.materials[1] = look.material("Team", team, sheets)
     vs = [obj.matrix_world @ v.co for v in obj.data.vertices]
     lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
     hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
@@ -74,7 +80,12 @@ def render(name, func, out, sheets):
     cam = bpy.data.objects.new("cam", cam_data)
     scene.collection.objects.link(cam)
     arm = name.split("_")[0]
-    if arm in PEOPLE:
+    if arm == "Leader" and "_" in name:
+        # A leader as themselves: head, shoulders and headgear (Cyrus's tiara, Moctezuma's plumes stand tall).
+        cam_data.lens = 85
+        target = Vector((0.0, 0.0, 1.62))
+        dist = 3.1
+    elif arm in PEOPLE:
         # Head and shoulders, by the head's height (not the top of the piece: spears and muskets reach far above it).
         cam_data.lens = 85
         target = Vector((0.0, 0.0, 1.52))

@@ -1,4 +1,5 @@
 #include "SovSetupScreen.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Layout/SScaleBox.h"
 #include "SovArt.h"
@@ -165,7 +166,16 @@ void SSovSetupScreen::Construct(const FArguments& Args)
 									SNew(SBox).WidthOverride(480.f).HeightOverride(270.f).HAlign(HAlign_Left).Visibility_Lambda([this]() {
 										return StyleView() ? EVisibility::Visible : EVisibility::Collapsed;
 									})
-									[SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(2)[SNew(SImage).Image_Lambda([this]() { return StyleView(); })]]
+									[SNew(SBorder).BorderImage(FSovStyle::Get().GetBrush("Bar")).Padding(2)
+									[
+										SNew(SOverlay)
+										+ SOverlay::Slot()[SNew(SImage).Image_Lambda([this]() { return StyleView(); })]
+										// The leader before their city (kit_leaders.py, unit_portraits.py).
+										+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom)
+										[SNew(SBox).WidthOverride(200.f).HeightOverride(200.f)[SNew(SImage).Image_Lambda([this]() {
+											return CivPick < 0 ? nullptr : FSovStyle::Portrait(FName(*SovArt::LeaderFigure(Str(Rules->civs[static_cast<size_t>(CivPick)].id))));
+										})]]
+									]]
 								]
 								+ SVerticalBox::Slot().AutoHeight()
 								[SNew(STextBlock).Font(FSovStyle::Font(11)).ColorAndOpacity(FSovStyle::Text).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(CivText(CivPick)); })]

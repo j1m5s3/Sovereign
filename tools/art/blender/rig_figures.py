@@ -17,6 +17,7 @@ import bpy  # noqa: E402
 from mathutils import Matrix  # noqa: E402
 
 import kit_figures  # noqa: E402
+import kit_leaders  # noqa: E402
 import kitlib  # noqa: E402
 
 
@@ -136,6 +137,8 @@ PEOPLE = {"Citizen": kit_figures.citizen, "Herald": kit_figures.herald, "Captain
           "Porter": porter, "Merchant": merchant, "WaterCarrier": water_carrier,
           # The other foot soldiers, for live battles (their cultures' dress stays still: rigging each would weigh too much).
           "Archer": kit_figures.archer, "Musketeer": kit_figures.musketeer, "Rifleman": kit_figures.rifleman}
+# Each civ's ruler as themselves (kit_leaders.py), walking the street and leading in battle.
+PEOPLE.update({"Leader_" + civ: make for civ, make in kit_leaders.LEADERS.items()})
 FPS = 24
 CM = 100.0  # the rig is built in centimetres (see rig)
 

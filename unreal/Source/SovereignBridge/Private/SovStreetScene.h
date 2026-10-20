@@ -25,7 +25,8 @@ class ASovWalker : public ACharacter
 
 public:
 	ASovWalker();
-	void SetColor(const FLinearColor& Color);
+	// The ruler's figure in the owner's colour: Figure (Leader_ENGLAND...) when its art exists, else the generic ruler.
+	void SetColor(const FLinearColor& Color, const FString& Figure = TEXT("Leader"));
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Body;
@@ -47,6 +48,7 @@ public:
 private:
 	bool bWalking = false;
 	FVector LastSpot = FVector::ZeroVector;  // where it stood last frame
+	FString RigName = TEXT("Leader");      // the rigged figure it is drawn by
 	float Pace = 0.f;                        // its eased speed, cm/s
 };
 
