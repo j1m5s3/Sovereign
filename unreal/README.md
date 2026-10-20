@@ -111,6 +111,16 @@ Over the map (`SovGameUI`, styled by `SovStyle`, icons in `Content/Slate/Icons` 
 | `F5` / `F9` | Quicksave / quickload (local games). Saves live in `Saved/Sovereign/*.sov`; the main menu offers to continue the four latest (the autosave a live battle writes among them) |
 | Map | Territory borders in the owner's colour, rivers in blue along plot edges, resources you can see as small balls (green bonus, violet luxury, red strategic), improvements as a flat tile (dark red when pillaged). Resting the cursor on a plot shows its terrain, resource, improvement, district, owner and what it yields its city. The map wraps east-west: panning past one edge carries on into the other, drawn as a copy on each side |
 
+## A packaged build
+
+To hand the game to a playtester without the editor:
+
+```bash
+"C:/Program Files/Epic Games/UE_5.8/Engine/Build/BatchFiles/RunUAT.bat" BuildCookRun -project="C:/source/games/Sovereign/unreal/Sovereign.uproject" -platform=Win64 -clientconfig=Development -build -cook -stage -pak -archive -archivedirectory="C:/source/games/Sovereign-playtest" -unattended
+```
+
+Then copy the repo's `data/` and `mods/` folders into `Sovereign-playtest/Windows/` beside `Sovereign.exe`: the game reads its rules and the battle AI from `../data` next to the project. `DefaultGame.ini` cooks `/Game/Art` and `/Game/Audio` and stages `Content/Slate` whole, because the game loads them by path. Run `Windows/Sovereign.exe`.
+
 ## Tests
 
 Screenshots for review without a window on the desktop: add `-RenderOffscreen -SovShots=<seconds>` to any start; the interface is captured to `Saved/Screenshots/auto/` every so often, named by count and turn. `-SovPress=6:F,10:One,14:T` presses keys at so many seconds into the game (FKey names: `One`, `Enter`, `Escape`...), as the widgets' buttons do, to open screens for those screenshots; `20:W~3` holds a key for three seconds (walking the leader in the street). `-SovShots` takes fractions (`0.05` for a 20 fps clip).
