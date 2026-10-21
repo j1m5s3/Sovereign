@@ -7,7 +7,9 @@
 1. fetch_textures.py downloads the CC0 photo scans the detail sheets use to art/build/Sources/ (once).
 2. Blender (headless) builds each kit piece and exports FBX to art/build/<Kit>/, bakes the detail and
    normal sheets, and (for a full build) rigs the street's people and the horsemen to art/build/Rigged/ (each checked
-   first, by blender/check_rigs.py or rig_riders.py's own check: one that fails is not exported and the build stops).
+   first, by blender/check_rigs.py or rig_riders.py's own check: one that fails is not exported and the build stops,
+   but a person failing only its one-shots' checks, or whose one-shots could not be keyed, is exported without them
+   and the build goes on).
 3. The Unreal editor (commandlet) imports them into unreal/Content/Art/<Kit>/ with the
    kit material, and the rigged people and horsemen to unreal/Content/Art/Rigged/. The .uasset files that come out
    are committed.
@@ -28,7 +30,7 @@ def run(cmd, env=None):
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, errors="replace")
     for line in result.stdout.splitlines():
         if any(k in line for k in ("piece ", "exported ", "SOVART", "Error", "Traceback", "fetch", "detail ", "rigged ", "check ", "rig_figures",
-                                   "rig_riders", "photo sources")):
+                                   "class ", "rig_riders", "photo sources")):
             print("  " + line.strip())
     if result.returncode != 0:
         print(result.stdout[-4000:], result.stderr[-4000:])
