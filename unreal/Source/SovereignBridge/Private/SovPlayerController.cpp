@@ -24,7 +24,9 @@
 #include "SovStreetScene.h"
 #include "SovStyle.h"
 #include "SovBattleScene.h"
+#include "SovLocomotion.h"
 #include "SovDiplomacyPanel.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/GameViewportClient.h"
 #include "UnrealClient.h"
 #include "Framework/Application/SlateApplication.h"
@@ -1950,6 +1952,8 @@ void ASovPlayerController::StartBattle(bool bRemoteView)
 	Walker = GetWorld()->SpawnActor<ASovWalker>(Battle->ToWorld(Start, 90.0), FRotator::ZeroRotator, Params);
 	Walker->SetColor(SovPlayerColor(G, Me()), SovCultureFigure(G, Me(), FName("Leader")).ToString());
 	Walker->GetCharacterMovement()->DisableMovement();  // the simulation moves the leader
+	// The ruler fighting here strikes, flinches and falls on the walker's own figure: the scene plays his cues on it.
+	if (!bRemoteView && Walker->bRigged) Battle->SetLeaderRig(Walker->GetMesh());
 	MapPawn = GetPawn();
 	Possess(Walker);
 	SetControlRotation(FRotator(-20.f, (Spec.HumanSide == 0 ? 0.f : 180.f) + ASovBattleScene::FacingFor(Spec.HumanSide).Yaw, 0.f));
@@ -2097,13 +2101,34 @@ void ASovPlayerController::UpdateBattle(float DeltaTime)
 	}
 	if (Sim.LeaderIndex() != INDEX_NONE)
 	{
-		const FSovSoldier& Me3 = Sim.Soldiers()[Sim.LeaderIndex()];
+		const int32 Lead = Sim.LeaderIndex();
+		const FSovSoldier& Me3 = Sim.Soldiers()[Lead];
 		Walker->SetActorLocation(Battle->ToWorld(Me3.Pos, 90.0));
-		if (!WorldMove.IsNearlyZero()) Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(WorldMove.Y, WorldMove.X)), 0.f));
-		// The rigged ruler when there is one (its stand-in cylinder stays hidden), else the still figure or primitives.
+		if (Me3.bAlive)
+		{
+			// Facing, only while he lives (the fallen ruler lies as he fell): toward whom his strike is at while it plays,
+			// else the way the keys move him, else toward whom he fights, turning over a moment.
+			const int32 Striking = Battle->StrikingAt(Lead);
+			const int32 Foe = Striking != INDEX_NONE ? Striking : WorldMove.IsNearlyZero() ? Battle->Target(Lead) : INDEX_NONE;
+			if (Foe != INDEX_NONE)
+			{
+				const FVector To = Battle->ToWorld(Sim.Soldiers()[Foe].Pos) - Battle->ToWorld(Me3.Pos);
+				const float Want = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X)));
+				const float Turned = FMath::FixedTurn(static_cast<float>(Walker->GetActorRotation().Yaw), Want, DeltaTime * 360.f);
+				Walker->SetActorRotation(FRotator(0.f, Turned, 0.f));
+			}
+			else if (!WorldMove.IsNearlyZero())
+			{
+				Walker->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(WorldMove.Y, WorldMove.X)), 0.f));
+			}
+		}
+		// The rigged ruler when there is one (its stand-in cylinder stays hidden), else the still figure or primitives;
+		// fallen, the rigged ruler lies where he fell when it has a Death clip to fall on, else he is hidden, as before.
+		const USovLocomotion* Loco = Cast<USovLocomotion>(Walker->GetMesh()->GetAnimInstance());
+		const bool bLies = Loco && Loco->Has(ESovAction::Death);
 		Walker->Body->SetVisibility(Me3.bAlive && !Walker->bRigged);
 		Walker->Crown->SetVisibility(Me3.bAlive && !Walker->bFigure);
-		Walker->GetMesh()->SetVisibility(Me3.bAlive && Walker->bRigged);
+		Walker->GetMesh()->SetVisibility((Me3.bAlive || bLies) && Walker->bRigged);
 	}
 	if (Sim.Finished() || bSettleNow)
 	{

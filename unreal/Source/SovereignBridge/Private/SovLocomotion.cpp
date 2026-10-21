@@ -133,9 +133,22 @@ float EaseRate(float A, float Ramp)
 	const float R = FMath::Min(Ramp, 0.5f);
 	return FMath::Min(1.f, FMath::Min(A, 1.f - A) / R) / (1.f - R);
 }
+
+float ActionWeight(float Time, float Length, float In, float Out)
+{
+	if (Time < 0.f || (Out > 0.f && Time >= Length)) return 0.f;
+	// Smoothstep at each end, so a one-shot neither pops in nor out.
+	auto Smooth = [](float A) {
+		A = FMath::Clamp(A, 0.f, 1.f);
+		return A * A * (3.f - 2.f * A);
+	};
+	const float Rise = In > 0.f ? Smooth(Time / In) : 1.f;
+	const float Fall = Out > 0.f ? Smooth((Length - Time) / Out) : 1.f;
+	return FMath::Min(Rise, Fall);
+}
 }  // namespace SovGait
 
-USovLocomotion* USovLocomotion::Attach(USkeletalMeshComponent* Component, const FString& Name, float Scale)
+USovLocomotion* USovLocomotion::Attach(USkeletalMeshComponent* Component, const FString& Name, float Scale, bool bActions)
 {
 	UAnimSequence* Walk = SovArt::RiggedAnim(Name, TEXT("Walk"));
 	if (!Component || !Walk) return nullptr;
@@ -172,8 +185,42 @@ USovLocomotion* USovLocomotion::Attach(USkeletalMeshComponent* Component, const 
 		// No band: a person's gaits keep in step (and a walker that carried a horse before keeps none of its band).
 		Loco->Band = 0.f;
 	}
+	// The one-shots (rig_figures.py, rig_actions.py): only where they are asked for, and each only when it was imported.
+	Loco->StrikeClip = bActions ? SovArt::RiggedAnim(Name, TEXT("Strike")) : nullptr;
+	Loco->HitClip = bActions ? SovArt::RiggedAnim(Name, TEXT("Hit")) : nullptr;
+	Loco->DeathClip = bActions ? SovArt::RiggedAnim(Name, TEXT("Death")) : nullptr;
+	Loco->DeathBackClip = bActions ? SovArt::RiggedAnim(Name, TEXT("DeathBack")) : nullptr;
 	Loco->StartPhase = FMath::FRand();
 	return Loco;
+}
+
+void USovLocomotion::Play(ESovAction Kind, float Delay, float Weight, bool bBackward, bool bAtEnd)
+{
+	if (!Has(Kind)) return;
+	FSovActionAsk& Ask = Asks[static_cast<int32>(Kind)];
+	++Ask.Serial;
+	Ask.Delay = FMath::Max(Delay, 0.f);
+	Ask.Weight = FMath::Clamp(Weight, 0.f, 1.f);
+	Ask.bBackward = bBackward;
+	Ask.bAtEnd = bAtEnd;
+	Ask.bAsked = true;
+}
+
+void USovLocomotion::Clear()
+{
+	++ClearSerial;
+	for (FSovActionAsk& Ask : Asks) Ask.bAsked = false;
+	bFallen = false;
+}
+
+bool USovLocomotion::Has(ESovAction Kind) const
+{
+	switch (Kind)
+	{
+		case ESovAction::Strike: return StrikeClip != nullptr;
+		case ESovAction::Hit: return HitClip != nullptr;
+		default: return DeathClip != nullptr || DeathBackClip != nullptr;
+	}
 }
 
 void FSovLocomotionProxy::PreUpdate(UAnimInstance* Instance, float DeltaSeconds)
@@ -198,6 +245,90 @@ void FSovLocomotionProxy::PreUpdate(UAnimInstance* Instance, float DeltaSeconds)
 	Band = Loco->Band;
 	Speed = FMath::Max(Loco->Speed, 0.f);
 	Easing = Loco->SpeedEasing;
+	// The one-shots: a Clear drops them all; then each new ask starts (a death on its fall, backward or forward, as
+	// there is a clip for it).
+	if (Loco->ClearSerial != ClearSeen)
+	{
+		ClearSeen = Loco->ClearSerial;
+		for (FAction& A : Actions)
+		{
+			A.Wait = -1.f;
+			A.Time = -1.f;
+		}
+		for (FFlinch& F : Flinches) F = FFlinch();
+		bFallen = false;
+	}
+	for (int32 k = 0; k < 3; ++k)
+	{
+		const FSovActionAsk& Ask = Loco->Asks[k];
+		FAction& A = Actions[k];
+		if (Ask.Serial == A.Seen) continue;
+		A.Seen = Ask.Serial;
+		if (!Ask.bAsked) continue;
+		const ESovAction Kind = static_cast<ESovAction>(k);
+		const UAnimSequence* Fall = Ask.bBackward && Loco->DeathBackClip ? Loco->DeathBackClip.Get() : Loco->DeathClip ? Loco->DeathClip.Get() : Loco->DeathBackClip.Get();
+		const UAnimSequence* Clip = Kind == ESovAction::Strike ? Loco->StrikeClip.Get() : Kind == ESovAction::Hit ? Loco->HitClip.Get() : Fall;
+		if (!Clip) continue;
+		if (Kind == ESovAction::Hit)
+		{
+			A.Clip = Clip;
+			AddFlinch(Ask.Delay, Ask.Weight);
+			continue;
+		}
+		if (Ask.Delay > 0.f && !Ask.bAtEnd)
+		{
+			// It starts when its delay is out (Update); until then whatever of it plays plays on, so it never vanishes in
+			// a frame. A later ask before then takes this one's place (a strike is asked at once, and a man falls once).
+			A.Next = Clip;
+			A.Wait = Ask.Delay;
+			continue;
+		}
+		A.Clip = Clip;
+		A.bAtEnd = Ask.bAtEnd;
+		A.Wait = -1.f;
+		A.Time = Ask.bAtEnd ? static_cast<float>(Clip->GetPlayLength()) : 0.f;
+	}
+	Loco->bFallen = bFallen;
+}
+
+void FSovLocomotionProxy::AddFlinch(float Delay, float Weight)
+{
+	// Each blow flinches him as it lands, added over any flinch still playing, so none is cut off. A blow landing within
+	// a jolt's time (kSovHitJolt) of another's joins that one's flinch, as does a blow that comes while MaxFlinches are
+	// under way (the nearest in time takes it): one still waiting then starts at the sooner blow, as hard as the harder;
+	// one playing plays on as it is.
+	int32 Free = INDEX_NONE, Near = INDEX_NONE;
+	float NearGap = 0.f;
+	for (int32 f = 0; f < MaxFlinches; ++f)
+	{
+		const FFlinch& F = Flinches[f];
+		if (F.Wait < 0.f && F.Time < 0.f)
+		{
+			if (Free == INDEX_NONE) Free = f;
+			continue;
+		}
+		// How far apart the two blows land (a flinch playing started Time ago).
+		const float Gap = FMath::Abs((F.Wait >= 0.f ? F.Wait : -F.Time) - Delay);
+		if (Near == INDEX_NONE || Gap < NearGap)
+		{
+			Near = f;
+			NearGap = Gap;
+		}
+	}
+	if (Near != INDEX_NONE && (NearGap < kSovHitJolt || Free == INDEX_NONE))
+	{
+		FFlinch& F = Flinches[Near];
+		if (F.Wait >= 0.f)
+		{
+			F.Wait = FMath::Min(F.Wait, Delay);
+			F.Weight = FMath::Max(F.Weight, Weight);
+		}
+		return;
+	}
+	FFlinch& F = Flinches[Free];
+	F.Wait = Delay;
+	F.Time = -1.f;
+	F.Weight = Weight;
 }
 
 void FSovLocomotionProxy::Update(float DeltaSeconds)
@@ -212,16 +343,72 @@ void FSovLocomotionProxy::Update(float DeltaSeconds)
 	SlowWeight = B.Slow;
 	WalkWeight = B.Walk;
 	RunWeight = B.Run;
+	// The one-shots: a strike and a death each wait out their delay, then run from the first frame (one already playing
+	// runs on while it waits); a strike ends with its clip, a death holds its last frame. Each flinch the same, to its end.
+	for (int32 k = 0; k < 3; ++k)
+	{
+		FAction& A = Actions[k];
+		float Ran = DeltaSeconds;
+		if (A.Wait >= 0.f)
+		{
+			A.Wait -= DeltaSeconds;
+			if (A.Wait < 0.f)
+			{
+				Ran = -A.Wait;  // the part of this update after it started
+				A.Wait = -1.f;
+				A.Clip = A.Next;
+				A.bAtEnd = false;
+				A.Time = 0.f;
+			}
+		}
+		if (!A.Clip || A.Time < 0.f) continue;
+		const float Length = static_cast<float>(A.Clip->GetPlayLength());
+		A.Time += Ran;
+		if (A.Time > Length)
+		{
+			A.Time = static_cast<ESovAction>(k) == ESovAction::Death ? Length : -1.f;
+		}
+	}
+	const FAction& Hit = Actions[static_cast<int32>(ESovAction::Hit)];
+	const float HitLength = Hit.Clip ? static_cast<float>(Hit.Clip->GetPlayLength()) : 0.f;
+	for (FFlinch& F : Flinches)
+	{
+		float Ran = DeltaSeconds;
+		if (F.Wait >= 0.f)
+		{
+			F.Wait -= DeltaSeconds;
+			if (F.Wait >= 0.f) continue;
+			Ran = -F.Wait;
+			F.Wait = -1.f;
+			F.Time = 0.f;
+		}
+		if (F.Time < 0.f) continue;
+		F.Time += Ran;
+		if (F.Time > HitLength) F.Time = -1.f;
+	}
 	if (B.Idle >= 1.f || !Walk) return;
 	Phase = FMath::Fmod(Phase + DeltaSeconds * B.Rate / FMath::Max(B.StrideTime, 0.05f), 1.f);
 }
 
 namespace
 {
-void SamplePose(const UAnimSequence* Clip, float Time, FPoseContext& Out)
+// bLoop: a gait wraps round; a one-shot is sampled within its own length.
+void SamplePose(const UAnimSequence* Clip, float Time, FPoseContext& Out, bool bLoop = true)
 {
 	FAnimationPoseData Data(Out);
-	Clip->GetAnimationPose(Data, FAnimExtractContext(static_cast<double>(Time), false, {}, true));
+	Clip->GetAnimationPose(Data, FAnimExtractContext(static_cast<double>(Time), false, {}, bLoop));
+}
+
+// Moves each bone of Pose toward Other's by Alpha times its weight (all bones without weights).
+void BlendBones(FCompactPose& Pose, const FCompactPose& Other, float Alpha, const TArray<float>* Weights = nullptr)
+{
+	if (Alpha <= 0.f) return;
+	for (FCompactPoseBoneIndex Bone : Pose.ForEachBoneIndex())
+	{
+		const float W = Weights ? Alpha * (*Weights)[Bone.GetInt()] : Alpha;
+		if (W > 0.f) Pose[Bone].BlendWith(Other[Bone], FMath::Min(W, 1.f));
+	}
+	Pose.NormalizeRotations();
 }
 }  // namespace
 
@@ -251,6 +438,7 @@ bool FSovLocomotionProxy::Evaluate(FPoseContext& Output)
 	if (Parts.Num() == 0)
 	{
 		Output.ResetToRefPose();
+		bFallen = false;
 		return true;
 	}
 	// The parts summed in turn: each blend keeps what was summed so far at its share of the weight seen.
@@ -267,5 +455,86 @@ bool FSovLocomotionProxy::Evaluate(FPoseContext& Output)
 		const FAnimationPoseData OtherData(Other);
 		FAnimationRuntime::BlendTwoPosesTogetherInPlace(OutData, OtherData, Before / Seen);
 	}
+	EvaluateActions(Output);
 	return true;
+}
+
+void FSovLocomotionProxy::EvaluateActions(FPoseContext& Output)
+{
+	auto Length = [](const FAction& A) { return static_cast<float>(A.Clip->GetPlayLength()); };
+	// A death goes over everything, eased in and then held; until it is all there, a strike or a flinch it cuts off
+	// plays on under it, so the fall takes over from the blow rather than from a stand.
+	const FAction& Death = Actions[static_cast<int32>(ESovAction::Death)];
+	const bool bDying = Death.Clip && Death.Time >= 0.f;
+	const float DeathWeight = !bDying ? 0.f : Death.bAtEnd ? 1.f : SovGait::ActionWeight(Death.Time, Length(Death), kSovDeathIn, 0.f);
+	// Fallen once his death's last frame is posed in full: set here, where the pose is made, not in Update, as a rig not
+	// rendered may tick its pose without refreshing its bones (a battle rig off camera), so a man killed there lies down
+	// in them only once he is seen. PreUpdate reads it back on the game thread, as it does the stride's phase.
+	bFallen = bDying && DeathWeight >= 1.f && Death.Time >= Length(Death);
+	// A strike over the upper body: the pelvis and the legs are the blend's, so it reads the same standing or walking
+	// and no foot slides. The upper body is the bone named spine (people) or rider (horsemen) and every bone below it,
+	// found again whenever the bones asked for change (a level of detail); a skeleton with neither plays it on every bone.
+	const FAction& Strike = Actions[static_cast<int32>(ESovAction::Strike)];
+	if (DeathWeight < 1.f && Strike.Clip && Strike.Time >= 0.f)
+	{
+		const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
+		if (!bUpperBuilt || UpperSerial != Bones.GetSerialNumber() || Upper.Num() != Output.Pose.GetNumBones())
+		{
+			bUpperBuilt = true;
+			UpperSerial = Bones.GetSerialNumber();
+			Upper.Init(0.f, Output.Pose.GetNumBones());
+			const FReferenceSkeleton& Reference = Bones.GetReferenceSkeleton();
+			const FName Spine(TEXT("spine")), Rider(TEXT("rider"));
+			bool bAny = false;
+			for (FCompactPoseBoneIndex Bone : Output.Pose.ForEachBoneIndex())
+			{
+				// Compact bones come parents first, so a parent is marked before its children.
+				const FName Name = Reference.GetBoneName(Bones.MakeMeshPoseIndex(Bone).GetInt());
+				const FCompactPoseBoneIndex Parent = Bones.GetParentBoneIndex(Bone);
+				const bool bUpper = Name == Spine || Name == Rider || (Parent.IsValid() && Upper[Parent.GetInt()] > 0.f);
+				Upper[Bone.GetInt()] = bUpper ? 1.f : 0.f;
+				bAny |= bUpper;
+			}
+			if (!bAny) Upper.Init(1.f, Output.Pose.GetNumBones());
+		}
+		FPoseContext Swing(this);
+		SamplePose(Strike.Clip, FMath::Min(Strike.Time, Length(Strike)), Swing, false);
+		BlendBones(Output.Pose, Swing.Pose, SovGait::ActionWeight(Strike.Time, Length(Strike), kSovStrikeIn, kSovStrikeOut), &Upper);
+	}
+	// The flinches added on top, each the hit's change from its own first frame (the rest pose), so it flinches whatever
+	// plays; blows in quick succession add up.
+	const FAction& Hit = Actions[static_cast<int32>(ESovAction::Hit)];
+	if (DeathWeight < 1.f && Hit.Clip)
+	{
+		float Weights[MaxFlinches];
+		bool bAny = false;
+		for (int32 f = 0; f < MaxFlinches; ++f)
+		{
+			const FFlinch& F = Flinches[f];
+			Weights[f] = F.Time >= 0.f ? F.Weight * SovGait::ActionWeight(F.Time, Length(Hit), kSovHitIn, kSovHitOut) : 0.f;
+			bAny |= Weights[f] > 0.f;
+		}
+		if (bAny)
+		{
+			FPoseContext Rest(this);
+			SamplePose(Hit.Clip, 0.f, Rest, false);
+			FAnimationPoseData OutData(Output);
+			for (int32 f = 0; f < MaxFlinches; ++f)
+			{
+				if (Weights[f] <= 0.f) continue;
+				FPoseContext Flinch(this);
+				SamplePose(Hit.Clip, FMath::Min(Flinches[f].Time, Length(Hit)), Flinch, false);
+				FAnimationRuntime::ConvertPoseToAdditive(Flinch.Pose, Rest.Pose);
+				const FAnimationPoseData FlinchData(Flinch);
+				FAnimationRuntime::AccumulateAdditivePose(OutData, FlinchData, Weights[f], AAT_LocalSpaceBase);
+			}
+			Output.Pose.NormalizeRotations();
+		}
+	}
+	if (bDying)
+	{
+		FPoseContext Fall(this);
+		SamplePose(Death.Clip, FMath::Min(Death.Time, Length(Death)), Fall, false);
+		BlendBones(Output.Pose, Fall.Pose, DeathWeight);
+	}
 }

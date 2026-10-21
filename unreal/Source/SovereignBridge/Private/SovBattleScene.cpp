@@ -4,12 +4,15 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "ProceduralMeshComponent.h"
+#include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include "SovArt.h"
+#include "SovAudio.h"
 #include "SovLocomotion.h"
 
 namespace
@@ -38,6 +41,47 @@ double FieldZ(double X, double Y)
 	const double D = FMath::Max(FMath::Abs(X) / FieldX, FMath::Abs(Y) / FieldY);
 	const double T = FMath::Clamp((D - 1.05) / 1.6, 0.0, 1.0);
 	return T * T * (3.0 - 2.0 * T) * (1300.0 + 2000.0 * Noise(X, Y, 3800.0));
+}
+
+// A rigged man walks above this speed (cm/s); below kFightingPace one who has a foe in reach faces him (standing, or
+// edging about in the press), above it the way he goes.
+constexpr float kWalking = 25.f;
+constexpr float kFightingPace = 100.f;
+// A man going faster than kFightingPace and striking more than this far (degrees) off the way he walks is giving ground
+// (falling back): his blow is not shown, as facing it he would walk backward (the blend has no backward gait). Slower,
+// he faces his foe whichever way he edges, so it is shown.
+constexpr float kStrikeAway = 100.f;
+// Each sound of a fight plays at most once in this many seconds.
+constexpr double kSoundGap = 0.2;
+
+// The yaw (degrees) that turns a rigged figure at From toward To: a man is modelled facing +Y, a horseman along X
+// (Turn 90), as the walking heading in Sync.
+float YawToward(const FVector2D& From, const FVector2D& To, float Turn)
+{
+	const FVector2D D = To - From;
+	return static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(D.Y, D.X))) - 90.f + Turn;
+}
+
+// The sound of a figure's blow: a musket or rifle fires and a bow looses (at the strike, as its blow would land);
+// anything else clashes as the blow lands.
+ESovBattleSound BlowSound(const FString& Figure)
+{
+	if (Figure.StartsWith(TEXT("Musketeer")) || Figure.StartsWith(TEXT("Rifleman"))) return ESovBattleSound::Gunshot;
+	if (Figure.StartsWith(TEXT("Archer")) || Figure == TEXT("Rider_Asian")) return ESovBattleSound::Bow;
+	return ESovBattleSound::Clash;
+}
+
+// A man lying on his Death clip reaches about his height from where he stood, past the standing mesh's bounds, which
+// do not follow the pose (the rigs have no physics asset): his bounds grow so he is not culled while he is on screen.
+// The old roll turned the component, and its bounds with it.
+void CoverFall(USkeletalMeshComponent* Rig)
+{
+	const USkeletalMesh* Mesh = Rig ? Rig->GetSkeletalMeshAsset() : nullptr;
+	if (!Mesh) return;
+	const FVector Extent = Mesh->GetBounds().BoxExtent;
+	const double Across = FMath::Max(FMath::Min(Extent.X, Extent.Y), 1.0);
+	const float Scale = static_cast<float>(FMath::Clamp(2.0 * Extent.Z / Across, 1.0, 10.0));
+	if (Rig->BoundsScale < Scale) Rig->SetBoundsScale(Scale);
 }
 }  // namespace
 
@@ -200,7 +244,7 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			if (SovArt::SetRiggedFigure(Rig, Name, C, TEXT("Idle")))
 			{
 				Rig->SetPosition(FMath::FRand() * 3.f);  // not all breathing in step
-				USovLocomotion::Attach(Rig, Name);  // idle, walk and run blended by speed
+				USovLocomotion::Attach(Rig, Name, 1.f, /*bActions*/ true);  // idle, walk and run blended by speed; strikes, hits, falls
 				Body->SetVisibility(false);
 			}
 			else
@@ -217,11 +261,25 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 		Striding.Add(false);
 		Yaws.Add((S.Side == 0 ? -90.f : 90.f) + (Name.StartsWith(TEXT("Rider")) ? 90.f : 0.f));
 		MoveYaw.Add(Yaws.Last());
+		StrikeAt.Add(INDEX_NONE);
+		StrikeEnds.Add(0.0);
 		Bodies.Add(Body);
 		Heads.Add(Head);
 	}
 	const double Dt = FMath::Max(Now - LastSyncTime, 1e-3);
 	LastSyncTime = Now;
+	// Who strikes, who is hit and who falls (sov::battle::Show: each swing where the battle runs here, inferred from a
+	// replay's or the online view's snapshots), played on the men's rigs and never fed back to the battle. Once the
+	// battle is over and its last frame has been read (a replay holds it for 2 s, the online view until the result
+	// comes), men still face to face strike no more.
+	if (!bShownOver)
+	{
+		SovSeen(Men, SeenMen);
+		Cues.clear();
+		Shows.update(SeenMen, Now, Cues);
+		for (const sov::battle::Cue& Cue : Cues) PlayCue(Sim, Cue, Now);
+		bShownOver = Sim.Finished();
+	}
 	for (int32 i = 0; i < Men.Num(); ++i)
 	{
 		const FSovSoldier& S = Men[i];
@@ -254,14 +312,18 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 				MoveSpeed[i] = 0.f;
 			}
 			const float Speed = MoveSpeed[i];
-			const bool bWalk = S.bAlive && Speed > 25.f;
+			const bool bWalk = S.bAlive && Speed > kWalking;
 			USovLocomotion* Loco = Cast<USovLocomotion>(Rig->GetAnimInstance());
-			if (S.bAlive && Rig->bPauseAnims)
+			if (S.bAlive && (Rig->bPauseAnims || (Loco && Loco->Asked(ESovAction::Death))))
 			{
-				// Up again: nothing rewinds a battle today, but a scene shown an earlier snapshot must not leave him frozen.
+				// Up again: nothing rewinds a battle today, but a scene shown an earlier snapshot must not leave him frozen
+				// or lying.
 				Rig->bPauseAnims = false;
 				Rig->bNoSkeletonUpdate = false;
+				Rig->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
 				Striding[i] = !bWalk;  // without the blend, his clip starts again below
+				if (Loco) Loco->Clear();
+				if (Rig->BoundsScale != 1.f) Rig->SetBoundsScale(1.f);
 			}
 			if (Loco)
 			{
@@ -272,8 +334,11 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 				Striding[i] = bWalk;
 				if (UAnimSequence* A = SovArt::RiggedAnim(RigNames[i], bWalk ? TEXT("Walk") : TEXT("Idle"))) Rig->PlayAnimation(A, true);
 			}
-			// Facing the way it goes while it walks, else the enemy's side; down where it fell.
-			const float Yaw = bWalk ? MoveYaw[i] : Face;
+			// Facing, as the sim faces its men: toward whom his strike is at while it plays; else toward whom he fights
+			// while he stands or edges about in the press; else the way he walks; else the enemy's side. Down where he fell.
+			const int32 Striking = StrikingAt(i);
+			const int32 Foe = Striking != INDEX_NONE ? Striking : Speed < kFightingPace ? Target(i) : INDEX_NONE;
+			const float Yaw = Foe != INDEX_NONE ? YawToward(S.Pos, Men[Foe].Pos, Turn) : bWalk ? MoveYaw[i] : Face;
 			if (S.bAlive)
 			{
 				// Turning over a moment (a man about 360 degrees a second, a horse half that), not at a snap.
@@ -281,10 +346,30 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaws[i], 0.f));
 				if (bWalk && !Loco) Rig->SetPlayRate(FMath::Clamp(Speed / Pace, 0.5f, 3.f));
 			}
+			else if (Loco && Loco->Has(ESovAction::Death))
+			{
+				// He falls on his own clip where he stood, facing as he did (a fall backward lies with his feet toward his
+				// killer), when the blow that killed him lands; once his bones hold him lying (Fallen) he costs nothing: no
+				// pose ticked or refreshed. While he falls his bones are refreshed on or off camera, so a man killed behind
+				// the camera lies down too and then stops ticking, rather than tick until seen and stand for a frame.
+				if (!Rig->bPauseAnims)
+				{
+					if (!Loco->Asked(ESovAction::Death)) Loco->Play(ESovAction::Death, 0.f, 1.f, (i & 1) != 0);
+					Rig->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+					CoverFall(Rig);
+					Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, 0), FRotator(0.f, Yaws[i], 0.f));
+					if (Loco->Fallen())
+					{
+						Rig->bPauseAnims = true;
+						Rig->bNoSkeletonUpdate = true;
+					}
+				}
+			}
 			else if (!Rig->bPauseAnims)
 			{
-				// The fallen lie still where they fell (a horse goes down on its side), and then cost nothing: no pose
-				// ticked or refreshed. Stop is for a single clip; the blend has none to stop.
+				// Without a Death clip (a rig imported before the one-shots), the old fall: the fallen lie still where they
+				// fell, rolled over (a horse goes down on its side), and then cost nothing: no pose ticked or refreshed.
+				// Stop is for a single clip; the blend has none to stop.
 				Rig->bPauseAnims = true;
 				if (!Loco) Rig->Stop();
 				Rig->SetRelativeLocationAndRotation(FVector(S.Pos.X, S.Pos.Y, bHorse ? 30 : 15), bHorse ? FRotator(0.f, Face, 80.f) : FRotator(0.f, Face, 90.f));
@@ -292,12 +377,27 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			}
 			continue;
 		}
-		if (S.bLeader && i == Sim.LeaderIndex() && S.bAlive)
+		if (S.bLeader && i == Sim.LeaderIndex())
 		{
-			// The human's leader is drawn by its walker.
-			Bodies[i]->SetVisibility(false);
-			Heads[i]->SetVisibility(false);
-			continue;
+			// The human's leader is drawn by its walker, which also falls and lies where he fell when it has a Death clip
+			// (else, dead, he is hidden, as before: the walker hides its figure, and his still figure here stays hidden).
+			USovLocomotion* Loco = LocomotionOf(Sim, i);
+			if (S.bAlive || (Loco && Loco->Has(ESovAction::Death)))
+			{
+				Bodies[i]->SetVisibility(false);
+				Heads[i]->SetVisibility(false);
+				if (!S.bAlive && LeaderRig.IsValid() && !LeaderRig->bPauseAnims)
+				{
+					if (!Loco->Asked(ESovAction::Death)) Loco->Play(ESovAction::Death, 0.f, 1.f, false);
+					CoverFall(LeaderRig.Get());
+					if (Loco->Fallen())
+					{
+						LeaderRig->bPauseAnims = true;
+						LeaderRig->bNoSkeletonUpdate = true;
+					}
+				}
+				continue;
+			}
 		}
 		// Figures face the enemy's side of the field (kit figures face +Y in Unreal; riders and machines lie along X).
 		const float Facing = (S.Side == 0 ? -90.f : 90.f) + (S.bLeader ? 0.f : Vehicle[i] ? 90.f : SideYaw[S.Side]);
@@ -336,6 +436,97 @@ void ASovBattleScene::Sync(const FSovBattleSim& Sim)
 			Heads[i]->SetVisibility(false);
 		}
 	}
+}
+
+void ASovBattleScene::SetLeaderRig(USkeletalMeshComponent* Rig)
+{
+	LeaderRig = Rig;
+}
+
+int32 ASovBattleScene::Target(int32 Man) const
+{
+	const int32 Foe = Shows.target(Man);
+	return Foe >= 0 ? Foe : INDEX_NONE;
+}
+
+int32 ASovBattleScene::StrikingAt(int32 Man) const
+{
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	return StrikeAt.IsValidIndex(Man) && Now < StrikeEnds[Man] ? StrikeAt[Man] : INDEX_NONE;
+}
+
+USovLocomotion* ASovBattleScene::LocomotionOf(const FSovBattleSim& Sim, int32 Man) const
+{
+	// The ruler fighting here is drawn by his walker; a man drawn still (a leader, a machine, missing art) has none.
+	USkeletalMeshComponent* Rig = Man == Sim.LeaderIndex() ? LeaderRig.Get() : Rigs.IsValidIndex(Man) ? Rigs[Man].Get() : nullptr;
+	return Rig ? Cast<USovLocomotion>(Rig->GetAnimInstance()) : nullptr;
+}
+
+void ASovBattleScene::PlayCue(const FSovBattleSim& Sim, const sov::battle::Cue& Cue, double Now)
+{
+	const TArray<FSovSoldier>& Men = Sim.Soldiers();
+	const int32 i = Cue.man;
+	if (!Men.IsValidIndex(i)) return;
+	USovLocomotion* Loco = LocomotionOf(Sim, i);
+	switch (Cue.kind)
+	{
+		case sov::battle::CueKind::Strike:
+		{
+			if (!Loco || !Loco->Has(ESovAction::Strike)) return;
+			// A man giving ground strikes back as he walks away, facing the way he goes: his blow is not shown, though its
+			// victim's hit still waits for it.
+			if (Men.IsValidIndex(Cue.other) && Rigs[i] && MoveSpeed[i] >= kFightingPace)
+			{
+				const float Turn = RigNames[i].StartsWith(TEXT("Rider")) ? 90.f : 0.f;
+				const float Off = FMath::Abs(FMath::FindDeltaAngleDegrees(MoveYaw[i], YawToward(Men[i].Pos, Men[Cue.other].Pos, Turn)));
+				if (Off > kStrikeAway) return;
+			}
+			Loco->Play(ESovAction::Strike);
+			StrikeAt[i] = Men.IsValidIndex(Cue.other) ? Cue.other : INDEX_NONE;
+			StrikeEnds[i] = Now + kSovStrikeLength;
+			// A musket or rifle fires, and a bow looses, as the blow would land.
+			const ESovBattleSound Shot = BlowSound(RigNames[i]);
+			if (Shot != ESovBattleSound::Clash) PlaySound(Shot, kSovStrikeImpact);
+			return;
+		}
+		case sov::battle::CueKind::Hit:
+			if (Loco) Loco->Play(ESovAction::Hit, Cue.delay, Cue.weight);
+			break;
+		case sov::battle::CueKind::Fall:
+			if (Loco) Loco->Play(ESovAction::Death, Cue.delay, 1.f, Cue.backward);
+			break;
+		case sov::battle::CueKind::Lie:
+			if (Loco) Loco->Play(ESovAction::Death, 0.f, 1.f, Cue.backward, /*bAtEnd*/ true);
+			return;
+	}
+	// A blow that lands clashes as it lands; a miss is silent. A shot or an arrow whose strike is shown was heard as it
+	// was fired or loosed (above), so it does not clash too.
+	if (Cue.other < 0) return;
+	const bool bShot = RigNames.IsValidIndex(Cue.other) && BlowSound(RigNames[Cue.other]) != ESovBattleSound::Clash
+		&& StrikingAt(Cue.other) != INDEX_NONE;
+	if (!bShot) PlaySound(ESovBattleSound::Clash, Cue.delay);
+}
+
+void ASovBattleScene::PlaySound(ESovBattleSound Kind, float Delay)
+{
+	if (Delay <= 0.f)
+	{
+		SoundNow(Kind);  // a timer of 0 would be cleared, not fired
+		return;
+	}
+	// A weak timer: it still fires in the moments after the result, when nothing calls Sync, and not after the scene goes.
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, Kind]() { SoundNow(Kind); }), Delay, false);
+}
+
+void ASovBattleScene::SoundNow(ESovBattleSound Kind)
+{
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	double& Last = SoundAt[static_cast<int32>(Kind)];
+	if (Now - Last < kSoundGap) return;
+	Last = Now;
+	static const TCHAR* const Names[] = {TEXT("SFX_Clash"), TEXT("SFX_Bow"), TEXT("SFX_Gunshot")};
+	FSovAudio::Play(this, Names[static_cast<int32>(Kind)]);
 }
 
 bool ASovBattleScene::BuildField(const FLinearColor& Ground, int32 Seed)

@@ -148,6 +148,9 @@ Headless automation tests (no window):
 - `Sovereign.Bridge.ModsLayerOverTheRules`: the example mod is found, a game with it has its rules, its save loads it again, and a missing mod is refused by name.
 - `Sovereign.Bridge.WeeklyChallengeIsTheWeeksGame`: this week's challenge starts from the week's setup whatever the options and mods; its save is still the challenge and passes the board's check.
 - `Sovereign.Battle.RecordedBattleReplays`: a battle recorded ten times a second round-trips its file, and playing its frames through the remote view ends on the field the battle ended on (the recording is kept in `Saved/Automation/replay-test.sovbattle` to watch).
+- `Sovereign.Art.ActionsBlendInAndOut`: a strike's, a hit's and a death's weight over the walking blend (`SovGait::ActionWeight`) is nothing before it starts, all of it in the middle, at a strike's blow and at a hit's jolt, eased in and out, never above one, nothing from its end; a death holds at one at its end and after.
+- `Sovereign.Battle.SnapshotKeepsItsSize`: the host's men carry their swing cooldowns, but a snapshot is still 31 + 19 bytes a man and one decoded into a snapshot used before carries no cooldown.
+- `Sovereign.Battle.ScenesSeeEveryFall`: a battle read through `SovSeen` and `sov::battle::Show` where it is fought and from its snapshots over the wire: every man killed falls once in each, and men strike in each.
 - `Sovereign.Bridge.SaveAndLoadResume`: an all-AI game saved after a few turns resumes in a fresh session with the same state hash and plays on; a truncated save is refused and the game in hand stays.
 
 GitHub CI has no Unreal; it builds the core standalone and checks the wrapper list.

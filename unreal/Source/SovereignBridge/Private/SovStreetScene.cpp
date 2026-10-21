@@ -100,7 +100,8 @@ void ASovWalker::SetColor(const FLinearColor& Color, const FString& Figure)
 	{
 		GetMesh()->SetRelativeLocation(FVector(0, 0, -90));
 		GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));  // as the kit figures: built facing +Y in Unreal
-		USovLocomotion::Attach(GetMesh(), RigName);
+		// With the one-shots: in a battle the ruler strikes, flinches and falls on this figure (ASovBattleScene::SetLeaderRig).
+		USovLocomotion::Attach(GetMesh(), RigName, 1.f, /*bActions*/ true);
 		Body->SetVisibility(false);
 		Crown->SetVisibility(false);
 		bFigure = bRigged = true;

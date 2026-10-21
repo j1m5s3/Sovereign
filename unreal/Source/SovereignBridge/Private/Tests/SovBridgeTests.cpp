@@ -1779,4 +1779,146 @@ bool FSovMapWalkPaceTest::RunTest(const FString&)
 	return true;
 }
 
+// A one-shot's envelope (SovGait::ActionWeight, as USovLocomotion lays a strike, a hit and a death over the walking
+// blend): nothing before it starts, all of it in the middle, eased in and out, rising then falling and never above one,
+// and nothing from its end; a death (no ease out) is held at one at its end and after, as the fallen lie still.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovActionWeightTest, "Sovereign.Art.ActionsBlendInAndOut", kSovTestFlags)
+bool FSovActionWeightTest::RunTest(const FString&)
+{
+	struct FShot
+	{
+		const TCHAR* Name;
+		float Length, In, Out;  // as USovLocomotion plays it (the clips' lengths: tools/art/README.md, One-shot actions)
+	};
+	const FShot Shots[] = {{TEXT("a strike"), kSovStrikeLength, kSovStrikeIn, kSovStrikeOut}, {TEXT("a hit"), 8.f / 24.f, kSovHitIn, kSovHitOut},
+		{TEXT("a death"), 36.f / 24.f, kSovDeathIn, 0.f}};
+	for (const FShot& S : Shots)
+	{
+		auto Weight = [&S](float Time) { return SovGait::ActionWeight(Time, S.Length, S.In, S.Out); };
+		TestTrue(FString::Printf(TEXT("%s: nothing before it starts, or as it starts"), S.Name), Weight(-0.01f) == 0.f && Weight(0.f) == 0.f);
+		TestTrue(FString::Printf(TEXT("%s: all of it in the middle"), S.Name), Weight(0.5f * S.Length) == 1.f);
+		TestTrue(FString::Printf(TEXT("%s: half of it half way through its ease in"), S.Name), FMath::IsNearlyEqual(Weight(0.5f * S.In), 0.5f, 1e-4f));
+		// From before it starts to well after it ends: always within 0..1, and once falling it never rises again.
+		bool bInRange = true, bFalling = false, bOnce = true;
+		float Last = 0.f;
+		for (int32 i = 0; i <= 600; ++i)
+		{
+			const float W = Weight(-0.1f + (S.Length + 0.6f) * static_cast<float>(i) / 600.f);
+			bInRange &= W >= 0.f && W <= 1.f;
+			if (W < Last - 1e-6f) bFalling = true;
+			else if (bFalling && W > Last + 1e-6f) bOnce = false;
+			Last = W;
+		}
+		TestTrue(FString::Printf(TEXT("%s: rises, then falls, never above one"), S.Name), bInRange && bOnce);
+		if (S.Out > 0.f)
+		{
+			TestTrue(FString::Printf(TEXT("%s: nothing at its end or after"), S.Name), Weight(S.Length) == 0.f && Weight(S.Length + 0.5f) == 0.f);
+			TestTrue(FString::Printf(TEXT("%s: half of it half way through its ease out"), S.Name), FMath::IsNearlyEqual(Weight(S.Length - 0.5f * S.Out), 0.5f, 1e-4f));
+		}
+		else
+		{
+			TestTrue(FString::Printf(TEXT("%s: held at one at its end and after (it lies still)"), S.Name),
+				Weight(S.Length) == 1.f && Weight(S.Length + 5.f) == 1.f && !bFalling);
+		}
+	}
+	// The blow lands with the strike all there, and a flinch jolts with the hit all there: after each one's ease in and
+	// before its ease out.
+	TestEqual(TEXT("a strike is all there at its blow"), SovGait::ActionWeight(kSovStrikeImpact, kSovStrikeLength, kSovStrikeIn, kSovStrikeOut), 1.f);
+	TestEqual(TEXT("a hit is all there at its jolt"), SovGait::ActionWeight(kSovHitJolt, 8.f / 24.f, kSovHitIn, kSovHitOut), 1.f);
+	return true;
+}
+
+// The swing cooldown that shows each strike where a battle is fought never goes on the wire: a snapshot is still
+// 31 + 19 bytes a man, and one decoded into a snapshot used before carries no cooldown (the field keeps old values), so
+// a replay and the other player's view infer the strikes.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovSnapshotSizeTest, "Sovereign.Battle.SnapshotKeepsItsSize", kSovTestFlags)
+bool FSovSnapshotSizeTest::RunTest(const FString&)
+{
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, 36, 100, false};
+	Spec.Defender = {TEXT("Spearman"), 1, 30, 100, false};
+	Spec.Seed = 3;
+	FSovBattleSim Host;
+	Host.Start(Spec);
+	bool bSwung = false;
+	for (int32 i = 0; i < 6000 && !bSwung && !Host.Finished(); ++i)
+	{
+		Host.Step(1.f / 30.f);
+		for (const FSovSoldier& M : Host.Soldiers()) bSwung |= M.Cooldown > 0.f;
+	}
+	TestTrue(TEXT("the host's men carry their swing cooldowns"), bSwung);
+	const FSovBattleSnapshot Snap = Host.Snapshot();
+	const std::vector<uint8_t> Bytes = Snap.Encode();
+	TestEqual(TEXT("31 + 19 bytes a man"), static_cast<int32>(Bytes.size()), 31 + 19 * Snap.Men.Num());
+	FSovBattleSnapshot Reused = Snap;  // its men still carry the host's cooldowns
+	TestTrue(TEXT("it decodes"), Reused.Decode(Bytes));
+	TestEqual(TEXT("the same men"), Reused.Men.Num(), Snap.Men.Num());
+	bool bNone = true;
+	for (const FSovSoldier& M : Reused.Men) bNone &= M.Cooldown == -1.f;
+	TestTrue(TEXT("no cooldown comes off the wire"), bNone);
+	return true;
+}
+
+// The scene reads a battle through SovSeen and sov::battle::Show (battle_tests checks Show itself): where it is fought,
+// with each swing's cooldown mirrored, and from its snapshots over the wire (a replay, the other player's view), with
+// none. In each, every man killed falls once and men strike.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSovScenesSeeFallsTest, "Sovereign.Battle.ScenesSeeEveryFall", kSovTestFlags)
+bool FSovScenesSeeFallsTest::RunTest(const FString&)
+{
+	FSovBattleSpec Spec;
+	Spec.Attacker = {TEXT("Swordsman"), 0, 36, 100, false};
+	Spec.Defender = {TEXT("Archer"), 1, 25, 100, false};
+	Spec.Seed = 5;
+	FSovBattleSim Live, View;
+	Live.Start(Spec);
+	View.StartRemoteView(Spec);
+	const sov::battle::ShowTiming Timing{kSovStrikeImpact, kSovStrikeLength};
+	sov::battle::Show Here(Timing), There(Timing);
+	std::vector<sov::battle::Seen> Seen;
+	std::vector<sov::battle::Cue> Cues;
+	TArray<int32> FallsHere, FallsThere;
+	int32 StrikesHere = 0, StrikesThere = 0;
+	double Now = 0.0;
+	auto Watch = [&](sov::battle::Show& Reader, const FSovBattleSim& Sim, TArray<int32>& Falls, int32& Strikes) {
+		SovSeen(Sim.Soldiers(), Seen);
+		Cues.clear();
+		Reader.update(Seen, Now, Cues);
+		if (Falls.Num() < Sim.Soldiers().Num()) Falls.SetNumZeroed(Sim.Soldiers().Num());
+		for (const sov::battle::Cue& C : Cues)
+		{
+			if (C.kind == sov::battle::CueKind::Fall) ++Falls[C.man];
+			if (C.kind == sov::battle::CueKind::Strike) ++Strikes;
+		}
+	};
+	Watch(Here, Live, FallsHere, StrikesHere);
+	for (int32 Step = 0; Step < 6000 && !Live.Finished(); ++Step)
+	{
+		Live.Step(1.f / 30.f);
+		Now += 1.0 / 30.0;
+		Watch(Here, Live, FallsHere, StrikesHere);
+		if (Step % 3 == 2 || Live.Finished())
+		{
+			// Ten snapshots a second, as the host sends them and a recording keeps them.
+			FSovBattleSnapshot Snap;
+			if (Snap.Decode(Live.Snapshot().Encode())) View.ApplySnapshot(Snap);
+		}
+		Watch(There, View, FallsThere, StrikesThere);
+	}
+	TestTrue(TEXT("the battle ended"), Live.Finished());
+	int32 Dead = 0;
+	bool bHere = true, bThere = true;
+	for (int32 i = 0; i < Live.Soldiers().Num(); ++i)
+	{
+		const int32 Want = Live.Soldiers()[i].bAlive ? 0 : 1;
+		Dead += Want;
+		bHere &= FallsHere.IsValidIndex(i) && FallsHere[i] == Want;
+		bThere &= FallsThere.IsValidIndex(i) && FallsThere[i] == Want;
+	}
+	TestTrue(FString::Printf(TEXT("men fell (%d)"), Dead), Dead > 0);
+	TestTrue(TEXT("where it is fought, each man killed falls once"), bHere);
+	TestTrue(TEXT("from its snapshots, each man killed falls once"), bThere);
+	TestTrue(FString::Printf(TEXT("men strike in each (%d, %d)"), StrikesHere, StrikesThere), StrikesHere > 0 && StrikesThere > 0);
+	return true;
+}
+
 #endif  // WITH_DEV_AUTOMATION_TESTS
