@@ -117,6 +117,151 @@ blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/che
 python -I tools/art/blender/check_rigs.py Townsman Soldier
 ```
 
+## One-shot actions (strikes, hits and deaths)
+
+Every rigged person who fights (the Soldier, Archer and Musketeer in each style, the Rifleman, the generic Leader and
+the twelve leaders) also gets four one-shot actions for live battles, keyed in the script (`blender/rig_actions.py`)
+rather than captured. The townsfolk, Citizen, Herald and Captain never fight and get none. Each figure strikes by its
+class (a gun or a bow by the figure's name, the rest by what its +X hand holds), which `rig_actions.strike_class`
+decides and `rig_figures.py` prints as it rigs the figure (`class Soldier: spear (held 2.46 m)`):
+
+| Class | Figures | Strike |
+|---|---|---|
+| spear | the Soldier in each style but the American; a leader whose +X hand holds something at least 1.2 m long (Leader_GREECE's spear; FRANCE's sceptre, AZTEC and INCA's staffs, gripped at the middle) | An overhand thrust: drawn back beside the ear, the spear levelled as the hand rises (level by frame 8) and slid back through the fist, so the hand holds it nearer its tip; thrust along about its line from beside the ear down to chest height (the wrist on a straight line a little steeper than the spear, the fastest move of the take), its tip in a foe at the battle's 140 cm (145 cm ahead of the hips, angled 3 degrees in toward him), the chest turned into it, a shield brought up as a guard; drawn back beside the ear by 18 and brought down to rest as it came, the spear raised upright and slid on through the fist to where it is held at rest |
+| club | a shorter +X item (Soldier_American's macuahuitl, Leader_EGYPT's crook) | An overhead chop, forward and down (the hand at chest height, the club about 15 degrees down), the chest leant well into it and the arm reaching nearly straight out, then on down; a flat club is rolled so its edge leads (the macuahuitl's obsidian edge, not its face). Its head lands 141 cm ahead (the macuahuitl, at a foe's chest) or 107 (the crook, short of him) |
+| fist | nothing in the +X hand (Leader, ENGLAND, ROME, PERSIA, ARABIA, CHINA, JAPAN, MALI: Mansa Musa's gold orb is too small to count as held and rides his forearm, so he punches with it) | A straight punch to shoulder height, the fist in a straight line from the ribs, where it is drawn back with the elbow down and back behind him, to an arm nearly straight, the chest turned and leant into it: the fist lands about 81 cm ahead, well short of a foe at 140 |
+| bow | the Archer in each style | Raised, drawn to the chin and loosed: the draw hand snaps back past the ear in one frame, the quickest move of the take, and the bow arm drops a little (the string stays straight: it is part of the bow; no arrow) |
+| gun | the Musketeer in each style, the Rifleman | Shouldered (the butt at the shoulder, so the Rifleman, who holds his rifle by its butt, has his hand there too; the other hand under the barrel), aimed level, fired with a recoil (the hands kicked back 5 cm, the muzzle up 8 degrees, the chest back 6), lowered |
+
+| Take | Frames at 24 fps | What | What the game relies on |
+|---|---|---|---|
+| Strike | 24 (1.0 s) | Chest, head, arms and hands only; the hips and legs at rest. Wound up by 6 (a spear levelled by 8, a bow drawn by 8, a gun aimed by 7), the blow (or the shot, or the loose) at 10, followed through to 13 (a bow's draw hand flown back by 11, held to 14 and brought down in one even move, out at the side at 21; a gun's recoil at 11, settled by 14; a club brought up again in front by 20), back at rest by 24 | The blow lands at frame 10, 0.417 s in (the game's `kSovStrikeImpact`, which PR B adds); the last frame matches frame 0 (the rest pose); no foot moves |
+| Hit | 8 (0.33 s) | The chest snapped back 20 degrees and the head 6 more (the top of the chest about 13 cm back, the head about 20, to read from the game's camera), the arms out (a shield arm out and forward), most at frame 2, what the hands hold carried upright as it stands at rest (tipped with the arms, a bow or musket put its top through a hat's brim) | Frames 0 and 8 are the rest pose: the game adds the clip's change from its own frame 0 |
+| Death | 36 (1.5 s) | Recoils by 6 and, still moving, the knees buckle with the feet planted, down through a crouch at 14 (the knees still 33 cm up) without stopping in it; topples over his knees, which come down at 19 and slow him without stopping him, onto his face by 24, with a bounce, the legs straight out behind | Lies still on the ground from frame 28 (the body from 26), the head ahead of the hips (-Y) |
+| DeathBack | 36 (1.5 s) | Recoils by 6 and, still moving, staggers back by 14, the knees giving all at once at 6 and more and more after, the feet planted; falls onto his seat at 21 in one quickening move (the hips starting down at about 3 cm a frame at 6 and quickening by about 0.3 g on average, up to about 0.7 g into his seat, landing still moving at about 10 cm a frame; a man with a sword or a quiver hanging low at his hip lands on its tip, which props him higher, his hips 50 cm up for Leader and ARABIA, 29 for JAPAN and 33 for Archer_MiddleEast, his stagger sinking that much less so that his hips start down slower (1.5 to 2.2 cm a frame) and his fall too quickens all the way; the Rifleman, whose pack would lift his hips 21 cm once he lay on it, lands on the pack, leant back, his hips 27 cm up, and they do not rise again), the feet slid out in front and the knees still bent, and topples onto his back by 26, the legs straightening flat, his chest bouncing up off the ground, rolled a little onto whichever side lets him lie lowest (a sword or a quiver at one hip would prop him up), the arms limp on the ground beside him (the upper arm dropped from the shoulder to the ground as far as it reaches, the forearm lying on it), the feet relaxed | Lies still on the ground from frame 28, the head behind the hips (+Y) |
+
+Reach. The battle stands a man up to 140 cm from the foe he strikes, hips to hips
+(`battle/include/sovereign_battle/sim.h`, `kReach`; a ruler strikes at up to 168). A spear's tip lands in that foe at
+the blow, 145 cm ahead of the striker's hips, between the foe's chest and his back, and goes no further than 151: held
+where it stands at rest, a 2.5 m spear's tip went 80 to 120 cm out through his back, so the hand now holds it nearer the
+tip (its hand bone slides along it, below), by however much the figure's own spear needs (65 cm for a 2.3 m spear, up to
+1.25 m for Soldier_Asian's 2.86 m one; the 1.5 m staffs of FRANCE and INCA slide 14 cm the other way). A club or a
+fist gets only as far as leaning and reaching take it: a fist lands about 81 cm ahead, the crook 107 and the macuahuitl
+141 (at a foe's chest), so a punch or a crook falls well short of a foe at 140. Closing that would take a step in,
+which a Strike cannot take (it keys the upper body only); it is a known limit, left for a later step
+(`.jit/JIT_PLAN.md`, Plan G step 5).
+
+The game (`USovLocomotion`, once PR B of Plan G step 5 in `.jit/JIT_PLAN.md` adds one-shot playback to it) will play a
+Strike over the upper body only (`spine` and the bones that hang from it: the head, arms and hands), so it reads the
+same over Idle or a walk and no foot slides; a Hit on top of whatever plays (its change from its own frame 0); and a
+Death or DeathBack over the whole figure, held at its last frame. The hands are bones of their own (`hand_r`,
+`hand_l`: 18 bones, two more than before), running from the wrist along the forearm, and what a hand holds rides its
+hand, so a strike turns a spear or a musket at the wrist, and slides a spear back through the fist: the hand bone
+moves along the spear's line (keyed in place as well as turn) while the hand itself, on the forearm, stays at the
+wrist. At rest a hand lies along its forearm, so the loops are as they were. Every action keys every bone, the root
+included, and the place of the hips and both hands (`rig_actions.key_rest`): a bone with no curve would carry one
+action's pose into the next in the FBX bake. The FBX keeps every key, as the riders' does: with Blender's default
+simplifying, which keys a take loses depends on the pose the armature is in when the export starts (a fall's last
+frame, as the once checks leave it), so a fighter's loops came out up to 0.8 cm off the same loops exported from Idle
+(and every figure's loops up to about 1 cm off the authored ones). With every key kept each take re-imports exactly as
+it was keyed, whatever that pose.
+
+In a fall what the hands hold tips over beside him as he goes down (a spear, staff, club, musket or bow forward or
+back at his side, a shield onto its face), turned only by the least turn from how it stands at rest, so it never
+sweeps over his head or through his legs. Each key from the crouch (or the stagger) on is laid on the ground, measured
+on the posed body (`settle`): the hips raised where anything would go below it; as he topples, lowered until a knee
+(or his seat) touches; once down, until his chest lies on it, each leg swung down from its hip until it lies there
+too, the head turned up just enough that a hat, crown or crest does not prop him up (or, hanging more than 15 cm
+above the ground, as the Rifleman's does over his pack, let fall back to within 4 cm of it), and each wrist lowered
+until the arm or what the hand holds lies on it (a long item rolled about its own line to lie under the hand).
+
+In every key of a Strike, a Hit and a fall before he lies the head is turned back toward the chest (and, where that is
+not enough, the chest toward the hips) by the least that keeps the seams between the head and the body within 10 cm
+(`rig_actions.NECK`, `_neck`), about what a plain neck opens with the face turned onto its side as he lies on it; as
+he lies, `settle` chooses the head's turn with the same 10 cm in its score (a turn that opens the neck wider costs
+more) and leaves the chest as it is. A quiver or a toga's shoulder worn across the
+neck is bound partly to the head (as the loops need), up to 30 cm from its joint, and tore open as the head turned:
+31 cm on Archer_American, his face turned 70 degrees as he lay, the top of the quiver lying beside his head. So
+Archer_American looks along the arrow with his head turned 23 degrees rather than 30 and falls and lies face down, the
+archers with a quiver from the hips to the head bow their heads less in the crouch, and Leader_ROME and PERSIA turn
+theirs less as they topple. A quiver's lid at the neck still opens up to those 10 cm, which shows close up only.
+
+Between keys each elbow and knee bends the way the one key bends it, carried along with the arm or leg, rolled
+evenly toward the way the next key bends it (round outside the arm where that roll is near half a turn): bending
+toward a mix of the two keys' elbows rolled a nearly straight arm half over in a frame. A foot that one key turns
+with the shin and the other holds on the ground turns against the shin (flat at the crouch to pointed as the knees
+come down): turned between them in the world it flipped over in a frame. Where a foot would still go into the ground
+its heel is lifted, as it pivots on its toes, and a wrist is raised, frame by frame.
+
+A robe (the cloth the two skirt bones swing) is rigid: it cannot fold, and swung clear of the ground it would stand up
+off a fallen man as a tent, or fold through his legs while he still stood and bare them. So while he stands its skirt
+bones swing further only where its cloth would go into the ground (`drape`, at most 15 degrees a frame, found for the
+whole take at once so a robe never pops from one shape to another), and once his knees give (frame 14) it goes down
+with his legs, into the ground where it must, which hides it, the turns held from the landing so it lies as still as
+he does. Nor does it rise more than 30 cm above the hips: falling back he lands on his seat with his knees still up,
+and there `drape` holds the robe's front down, which once stood up before his face like a sail. Into the ground it
+goes deep: up to 79 cm under a robed leader as he sits down (DeathBack) and 43 cm as he topples (Death), and up to 31
+cm when he lies still. The game's camera, looking down, sees only the ground there; from the side the robe is a rigid
+cone through the floor, and keeping it out would take cloth that folds (bones of its own, or a simulation). Then the
+floor pass lifts the hips by however far anything but the robe (a shield, a quiver, a sword) would still go into the
+ground and, from two frames after he lands (frame 26, or 28 falling back), lays him with his lowest point 0.5 cm above
+it; the fall is keyed again with that lift in the hips, so the hands of a man on his back stay on the ground while a
+quiver or a cloak lifts his body. A hat stays on the head and, beside a fallen man's head, stands on its brim (the
+head turned up only as far as keeps it out of the ground): lying flat it would have to come off, on a bone of its own.
+
+`rig_figures.py` prints, after the speeds, this line exactly:
+
+    rig_figures: one-shot actions Strike 24 fr (blow at 10, 0.417 s), Hit 8 fr, Death 36 fr, DeathBack 36 fr
+
+Once PR B has added them, if the blow's frame or the Strike's length changes, change the game's `kSovStrikeImpact`
+(10/24) and `kSovStrikeLength` in `unreal/Source/SovereignBridge/Private/SovGait.h` in the same commit as the
+regenerated `unreal/Content/Art/Rigged/*.uasset`: otherwise a man flinches before or after the blow that lands on him.
+
+`check_rigs.py` checks the one-shots of every figure that has them, on a line of their own (`check <Name> once
+(<class>): ...`), over one lap each, its last frame included:
+- in Strike and Hit no foot vertex moves more than 0.1 cm, the last frame is within 0.5 cm of the first and frame 0 is
+  the rest pose;
+- in Death and DeathBack the feet planted at frame 0 slide no more than 3 cm until the knees buckle (frame 14), the
+  fall lies still from frame 28 (every frame from it within 0.2 cm of the last), and it ends with its hips no higher
+  than 30 cm, its lowest point (the robe aside) within -1 to +3 cm of the ground, its head on the take's side of its
+  hips, and its hips and chest, its legs (the robe aside) and what each hand holds each within 4 cm of the ground (not
+  propped up on a hat, a shield's rim or a heel), and no frame of it has the robe more than 30 cm above the hips;
+- in every take no vertex goes more than 1 cm into the ground (but a robe in a fall from frame 14, which the ground
+  hides), none moves more than 60 cm and no bone turns more than 70 degrees from one frame to the next (but in the
+  four frames into a Strike's blow, the fastest thing in it; a spear's or club's wind-up turns the arm up to about 64,
+  a foot turned over or an arm rolled half over turned 115 or more) and every bone is keyed;
+- in every take the seams between the head and the body open no more than 10.5 cm (`rig_actions.NECK`, which the keys
+  keep to, and half a cm between them; reported as `neck`), and in DeathBack the hips' drop never slows by more than
+  0.5 cm a frame from one frame to the next before he lands on his seat at 21 (reported as `slows`);
+- at the blow a spear or gun is within 20 degrees of forward in plan and 25 of level, a spear's tip 130 to 160 cm
+  ahead (its tip in a foe at the battle's 140 cm, and in no frame further than 160 ahead, out through his back) and a
+  gun's at least 80 cm; a club's head is at least 90 cm ahead, no higher than 150 cm and moved at least 25 cm over
+  the two frames before; a fist is at least 70 cm ahead and moved at least 25 cm (a fist or the crook falls short of
+  a foe at 140: see Reach above); a bow is within 25 degrees of upright, its grip 35 cm ahead and 120 to 165 cm up;
+- what the hands hold, tested every 2 cm along its edges (a spear's shaft has vertices only at its ends), never comes
+  within 11 cm of the chest's line (from the hips' joint to the neck) or 10 cm of the head's bone: in a Strike or Hit
+  for a spear, club or fist (the fist's hand bone; a bow's or gun's, held against the body, is only reported), and in
+  a fall for anything held, nor then within 7 cm of either thigh's bone;
+- in a Strike or Hit no forearm or hand comes more than 1 cm inside the chest (those 11 cm about its line) where it
+  was not at frame 0 (an archer's draw hand brought straight down from beside his ear would pass through his belly).
+
+The loops' SWING test (what a hand holds moving more than 15 cm against the chest) does not apply to the one-shots. A
+figure that fails only the one-shots' checks, or whose one-shots could not be made or checked at all (an error while
+`rig_figures.py` works out what its hands hold and its class, while `rig_actions.add` keys them, or in the once
+checks, under another Blender say), is exported without them, and `rig_figures.py` says why: the game then has it
+stand through a strike and roll over as it did before, rather than losing the figure. (An error anywhere else, such
+as keying the loops, still stops the run.)
+
+Look at them headless with `pose_sheet.py`: per figure, a row per take of its key frames (Strike 0, 6, 8, 10, 13,
+17, 20, 23; Hit 0, 2, 5, 8; Death 0, 6, 11, 14, 17, 19, 22, 24, 35; DeathBack 0, 6, 11, 14, 17, 19, 21, 23, 26, 35),
+each from the side and three-quarter, on a ground ruled every 50 cm (Workbench, vertex colours); with `--every`, every
+frame of each take, three-quarter. The checks catch numbers; the sheet catches a spear held like a broom.
+
+```bash
+python -I tools/art/blender/pose_sheet.py art/build/poses.png Soldier Soldier_American Archer Musketeer Rifleman Leader_GREECE Leader_ENGLAND Leader_EGYPT
+python -I tools/art/blender/check_rigs.py Soldier Archer Leader_JAPAN
+```
+
 ## Files
 
 | File | What it does |
@@ -134,12 +279,14 @@ python -I tools/art/blender/check_rigs.py Townsman Soldier
 | `blender/kit_towns.py` | Towns kit, the later eras' city centres: Medieval, Industrial and Modern styles, each with three houses, a hall and a palace |
 | `blender/kit_classical.py` | Temperate Classical City Center kit: three houses, boarded house, Palace, Monument, Granary, temple, generic landmark, wall, market stall, banner |
 | `blender/kit_figures.py` | Figures kit: citizen, herald, captain, soldier (spear and round shield), leader (crown, robe, cloak), archer, horseman, siege engine, musketeer, rifleman, tank, plane and ironclad steamer for the later and other arms, a war galley (team sail) for ships and a boat (team strakes) under embarked units; the spear soldier in four cultures' dress (`SM_Soldier_<Style>`: a Persian Immortal, a lacquered East Asian spearman, a kilted Nile or Sahel spearman with a tall shield, an Aztec eagle warrior with a macuahuitl), and the archer, horseman and musketeer likewise (`SM_Archer_<Style>`, `SM_Rider_<Style>`, `SM_Musketeer_<Style>`: a Janissary, an ashigaru gunner, a turbaned Sahel musketeer, a poncho-clad Andean one); static, team-coloured cloth. The people are lofted anatomy with faces (brows, eyes, nose, ears, beards) and layered costumes: cuirass, leather strips, greaves, crested helmets, folded cloaks |
-| `blender/rig_figures.py` | The people rigged for the street scene and battles (citizen, herald, captain, soldier, leader, archer, musketeer and rifleman; the twelve leaders as themselves; the spearman, archer and musketeer in each culture's dress for battles; and the street's townsfolk in dyed clothes: townsman, traveller, townswoman, elder with a staff, porter with a sack, merchant in a straw hat, water carrier with a jar on her head), all on one 16-bone skeleton (hips, chest, head, upper arms, forearms, thighs, shins, feet, and a skirt's front and back), vertices bound rigidly to one limb (shoes to the feet; a spear, staff, shield, bow, musket or basket whole to the forearm of the hand that holds it, with its small parts (a spear's head, a bow's limbs, a bayonet), a grounded spear or staff raised 8 cm in the hand; a robe's long sleeve split at the elbow; a scabbard whole to the hips; a winged shoulder or an outer plume above the elbow whole to the chest or head; the legs' own vertices blended across the hip and knee; cloth below the hips shared between the hips and the skirt bones, which `key_skirt` swings with the legs), and four looping actions from motion capture (`mocap.py`): WalkSlow, Walk, Run and Idle, in place (see "Rigged people's motion" above). Without the clips in `mocap/` it falls back to the old procedural Walk (90 cm stride at 108 cm/s) and Idle, no WalkSlow or Run. Each figure is checked by `check_rigs.py` before export; one that fails is not exported (an older `SK_<Name>.fbx` of it is removed) and the script exits 1. Built in centimetres (unit scale 0.01) and exported to `<build>/Rigged/SK_<Name>.fbx` |
+| `blender/rig_figures.py` | The people rigged for the street scene and battles (citizen, herald, captain, soldier, leader, archer, musketeer and rifleman; the twelve leaders as themselves; the spearman, archer and musketeer in each culture's dress for battles; and the street's townsfolk in dyed clothes: townsman, traveller, townswoman, elder with a staff, porter with a sack, merchant in a straw hat, water carrier with a jar on her head), all on one 18-bone skeleton (hips, chest, head, upper arms, forearms, hands, thighs, shins, feet, and a skirt's front and back), vertices bound rigidly to one limb (shoes to the feet; a spear, staff, shield, bow, musket or basket whole to the hand that holds it, with its small parts (a spear's head, a bow's limbs, a bayonet, a shield's boss), a grounded spear or staff raised 8 cm in the hand; a robe's long sleeve split at the elbow; a scabbard whole to the hips; a winged shoulder or an outer plume above the elbow whole to the chest or head; the legs' own vertices blended across the hip and knee; cloth below the hips shared between the hips and the skirt bones, which `key_skirt` swings with the legs), and four looping actions from motion capture (`mocap.py`): WalkSlow, Walk, Run and Idle, in place (see "Rigged people's motion" above), and, for those who fight, the one-shots Strike, Hit, Death and DeathBack (`rig_actions.py`, see "One-shot actions" above; each figure's class is printed as it is rigged). Every action keys every bone. Without the clips in `mocap/` it falls back to the old procedural Walk (90 cm stride at 108 cm/s) and Idle, no WalkSlow or Run. Each figure is checked by `check_rigs.py` before export; one that fails is not exported (an older `SK_<Name>.fbx` of it is removed) and the script exits 1, but one that fails only the one-shots' checks is exported without them, saying why. Built in centimetres (unit scale 0.01) and exported to `<build>/Rigged/SK_<Name>.fbx` |
+| `blender/rig_actions.py` | The one-shots for the people who fight (see "One-shot actions" above): each figure's class (a gun or a bow by the figure's name, the rest by what its +X hand holds), and Strike (by class), Hit, Death and DeathBack keyed in the script on `rig_figures.py`'s skeleton (two-bone IK for the arms and legs, the hands turning what they hold to aim it), each fall's keys laid on the ground (`settle`), its robe kept out of the ground while he stands (`drape`) and the fall lifted onto the ground (`floor`), finished as one-shots (no CYCLES); `rig_figures.py` calls it |
 | `blender/mocap.py` | Retargets the CMU clips in `mocap/` onto the rig: reads the BVH itself (no importer), cuts the loop the clip's row in `CLIPS` names, scales the subject to the rig's leg length, takes the root motion out (recording the speed), closes the loop, starts each gait loop as the left foot plants, solves the legs by two-bone IK with planted feet locked still and flat, keeps shoes and shins out of the ground, stands an idle upright on average, and calms the arm that carries something (what `rig_figures.whole_parts` found in that hand) so it does not flail, swinging it back where a spear's butt would meet the ground |
-| `blender/check_rigs.py` | Rigs every figure (or those named) and fails on a limb bone without vertices, a planted foot sliding more than 3 cm, a foot more than 1 cm into the ground, something held swinging more than 15 cm against the chest in a loop, or a gait whose left foot plants more than a frame from its frame 0; reports seam and cloth stretch and the lowest other point. A horseman named (`Rider`, `Rider_Asian`...) is rigged and checked by `rig_riders.py`'s own check instead. Runs under Blender or pip's `bpy` (`python -I tools/art/blender/check_rigs.py [Townsman ...]`) |
+| `blender/check_rigs.py` | Rigs every figure (or those named) and fails on a limb bone without vertices, something held not riding its hand bone, an action that leaves a bone unkeyed, a planted foot sliding more than 3 cm, a foot more than 1 cm into the ground, something held swinging more than 15 cm against the chest in a loop, or a gait whose left foot plants more than a frame from its frame 0; reports seam and cloth stretch and the lowest other point. A figure that fights has its one-shots checked too, in a once mode (see "One-shot actions" above). A horseman named (`Rider`, `Rider_Asian`...) is rigged and checked by `rig_riders.py`'s own check instead. Runs under Blender or pip's `bpy` (`python -I tools/art/blender/check_rigs.py [Townsman ...]`) |
+| `blender/pose_sheet.py` | Contact sheets of the people's one-shots for review, headless (Workbench): per figure a row per take of its key frames, side-on and three-quarter, on a ground ruled every 50 cm: `python -I tools/art/blender/pose_sheet.py art/build/poses.png Soldier Archer` (several figures: one `poses_<Figure>.png` each) |
 | `mocap/` | The trimmed CMU motion-capture clips (BVH) behind WalkSlow, Walk, Run and Idle; its README names each source trial and the frames kept |
 | `blender/rig_riders.py` | The horsemen rigged for live battles and the map (the plain rider and the four cultures' dress): a horse skeleton (barrel, neck, and each leg's upper and lower part and hoof), a four-beat Walk (92.3 cm/s), a two-beat Trot (264.0 cm/s), a gallop as Run (457.1 cm/s) and a grazing Idle, each planted hoof held still and the barrel riding on the planted hooves, the legs bound solid by solid (see "Rigged people's motion" above); each rider checked before export (one that fails is not exported, an older `SK_<Name>.fbx` of it is removed, and the script exits 1); exported to `<build>/Rigged/SK_Rider*.fbx` |
-| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`; riders have Walk, Trot, Run (the gallop) and Idle) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
+| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`, and for those who fight `_Strike`, `_Hit`, `_Death` and `_DeathBack`; riders have Walk, Trot, Run (the gallop) and Idle) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
 | `blender/textures.py` | The detail sheet and its normal sheet: 8x8 cells of 512 px, each one seamless period of a pattern wrapped 16 px past its edges. Building and paving patterns from the scans, the rest (cloth weave, leather, worn metal, skin, hair, wood, rock, foliage, and for the map's ground water ripples, grass and sand dunes) painted from periodic noise with relief from their height; any scan not downloaded is painted too. Mid grey is no change |
 | `blender/sources.py` | The CC0 Poly Haven scans behind the building and paving patterns: asset id, metres covered, contrast, relief, author |
 | `fetch_textures.py` | Downloads each scan's colour and OpenGL normal maps (2k JPG) to `art/build/Sources/<id>/`, skipping what is there |

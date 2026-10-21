@@ -1,14 +1,17 @@
 """The Figures kit's people rigged and animated for the street scene and battles: each figure (kit_figures.py) gets
-the same simple skeleton (16 bones: hips, chest, head, arms, legs, feet, and a skirt's front and back), its vertices
-bound rigidly to one limb (shoes to the feet, what a hand holds to its forearm and a scabbard to the hips, whole; the
-legs' own blended across the hip and knee; the cloth below the hips shared with the skirt bones, which swing with the
-legs), and four looping actions from motion capture (mocap.py, the clips in tools/art/mocap/): WalkSlow, Walk, Run and
-Idle, in place, each authored at a speed it prints (cm/s; the game plays a loop at its own speed / that, choosing the
-loop by speed: tools/art/README.md). Without the clips it falls back to a procedural Walk and Idle (no WalkSlow or
-Run). Each figure is checked (check_rigs.py: skin, planted feet, ground, what the hands hold, each gait starting as
-the left foot plants) before it is exported as an FBX skeletal mesh with its animations to <build>/Rigged/SK_<Name>.fbx
-for tools/art/ue_import_rigged.py; one that fails is not exported (an older export of it is removed) and the script
-exits 1.
+the same simple skeleton (18 bones: hips, chest, head, arms, hands, legs, feet, and a skirt's front and back), its
+vertices bound rigidly to one limb (shoes to the feet, what a hand holds to that hand and a scabbard to the hips, whole;
+the legs' own blended across the hip and knee; the cloth below the hips shared with the skirt bones, which swing with
+the legs), and four looping actions from motion capture (mocap.py, the clips in tools/art/mocap/): WalkSlow, Walk, Run
+and Idle, in place, each authored at a speed it prints (cm/s; the game plays a loop at its own speed / that, choosing
+the loop by speed: tools/art/README.md). Without the clips it falls back to a procedural Walk and Idle (no WalkSlow or
+Run). A figure that fights also gets the one-shots for live battles (rig_actions.py, by its weapon class, which
+this script prints as it rigs the figure): Strike, Hit, Death and DeathBack. Every action keys every bone. Each
+figure is checked (check_rigs.py: skin, planted feet, ground, what the hands hold, each gait starting as the left foot
+plants, and the one-shots) before it is exported as an FBX skeletal mesh with its animations to
+<build>/Rigged/SK_<Name>.fbx for tools/art/ue_import_rigged.py; one that fails is not exported (an older export of it
+is removed) and the script exits 1, but one that fails only the one-shots' checks (or whose one-shots could not be
+keyed) is exported without them, saying why.
 
   blender -b --factory-startup --python-exit-code 1 --python tools/art/blender/rig_figures.py -- art/build [Citizen ...]
 
@@ -28,6 +31,7 @@ import kit_leaders  # noqa: E402
 import check_rigs  # noqa: E402
 import kitlib  # noqa: E402
 import mocap  # noqa: E402
+import rig_actions  # noqa: E402
 
 
 F = kit_figures
@@ -168,6 +172,12 @@ for s, n in ((1, "r"), (-1, "l")):
 # The front and back of a skirt, hung from the hips' axis and swung by the legs (key_skirt).
 BONES["skirt_f"] = ((0, -0.02, 0.92), (0, -0.12, 0.45), "pelvis")
 BONES["skirt_b"] = ((0, 0.02, 0.92), (0, 0.12, 0.45), "pelvis")
+# The hands, from the wrist (the forearm's tail) a hand's length on along the forearm's line: what a hand holds rides
+# its hand bone, so a strike can turn it at the wrist (a spear levelled, a musket shouldered: rig_actions.py). At rest
+# a hand lies along its forearm, so the loops are as they were before it. (Last, so the other bones keep their order.)
+for n in ("r", "l"):
+    _wrist = Vector(BONES["forearm_" + n][1])
+    BONES["hand_" + n] = (tuple(_wrist), tuple(_wrist + (_wrist - Vector(BONES["forearm_" + n][0])).normalized() * 0.08), "forearm_" + n)
 
 
 def bone_for(x, y, z, hands=True, arms=True, legs=True):
@@ -240,6 +250,7 @@ def _joint_weights(bone, p):
 NO_ARMS = {"hands": False, "arms": False}
 CLOTH = dict(NO_ARMS, legs=False)
 WRIST = 0.82      # m: the forearm's tail (0.8) and a little; what a hand holds reaches down to it, or is long
+ON_ITEM = 0.1     # m: a small piece out past the hand this near what the hand holds is part of it
 SHOULDERS = 1.6   # m: a piece out past the hands above the elbow sits on the shoulders if it starts below this
 
 
@@ -247,17 +258,19 @@ def whole_parts(mesh):
     """Solids bound by what they are rather than vertex by vertex (every solid is its own island of the mesh), so
     none is torn between two bones that move apart. Returns {vertex: bone} for those that ride one bone:
     - each shoe (kit_figures._sandals' foot box, low under one leg) on its foot;
-    - anything out at the side below the elbow (centred past the hips) on that forearm, whole: what the hand holds (a
-      spear, staff, shield, bow, musket or basket: mostly off the arm, and long or down to the hand) and the small bits
-      of it (a staff's caps, a spear's head, a bow's limbs, a bayonet) with it, or the forearm's own sleeve or cuff;
-    - a small piece of the arm (a hand, a sleeve, a shoulder's ball) wholly on the arm;
+    - anything out at the side below the elbow (centred past the hips), whole: what the hand holds (a spear, staff,
+      shield, bow, musket or basket: mostly off the arm, and long or down to the hand) on that hand, and the small bits
+      of it (a staff's caps, a spear's head, a bow's limbs, a bayonet) with it; or the forearm's own sleeve or cuff on
+      the forearm;
+    - a small piece of the arm (a hand, a sleeve, a shoulder's ball) wholly on the arm, and a small piece out past the
+      hand on that forearm, or on that hand if it sits on what the hand holds (a shield's boss);
     - a small piece out past the hands above the elbow (a vest's winged shoulder, a headdress's outer plume) on the
       chest or the head;
     - a scabbard at the hip (long at the side, off the arm) on the hips, rigid (not swung as a skirt);
     and {vertex: bone_for's limits} for the rest, which its hand and arm rules leave alone: the limbs' own pieces
     keep its leg rule, while cloth (a tunic, robe or cloak, its hem flaring past the hands) and the small things on
     neither limb (a satchel, a pteryx) are no leg either: around the legs they are a skirt (see rig). Third, what the
-    hands hold as (lowest corner, forearm, vertices)."""
+    hands hold as (lowest corner, hand bone, vertices)."""
     parent = list(range(len(mesh.vertices)))
 
     def find(i):
@@ -288,11 +301,12 @@ def whole_parts(mesh):
         if hi[2] < 0.1 and abs(abs(cx) - 0.1) < 0.04 and -0.12 < cy < 0.02 and hi[1] - lo[1] < 0.32 and hi[0] - lo[0] < 0.14:
             out.update((i, "foot_" + side) for i in members)
         elif abs(cx) > 0.25 and lo[2] < 1.0 and size > 0.2:
-            out.update((i, "forearm_" + side) for i in members)
-            # Held, unless it is the forearm's own sleeve or a wide cuff (round the arm, short of the hand) or a short
-            # piece off the arm (a bow's limb: it finishes what is held, below).
+            # Held, on the hand, unless it is the forearm's own sleeve or a wide cuff (round the arm, short of the hand)
+            # or a short piece off the arm (a bow's limb: it finishes what is held, below).
             hand = off_arm and (size >= 0.3 or lo[2] < WRIST)
-            fore.append((lo, hi, "forearm_" + side, list(members), "hand" if hand else "sleeve"))
+            bone = ("hand_" if hand else "forearm_") + side
+            out.update((i, bone) for i in members)
+            fore.append((lo, hi, bone, list(members), "hand" if hand else "sleeve"))
             if not hand and not on_arm:
                 others.append((members, lo, hi, on_arm, abs(cx) > 0.25))
         else:
@@ -316,7 +330,9 @@ def whole_parts(mesh):
                     out.update((i, ("upperarm_" if c[2] > 1.12 else "forearm_") + side) for i, c in zip(members, co))
             elif sum(1 for c in co if c[0] > 0.29 or c[0] < -0.3) * 2 >= len(members):
                 if hi[2] < 1.12:
-                    out.update((i, "forearm_" + side) for i in members)  # mostly out past the hand: held
+                    # Mostly out past the hand, below the elbow: on the forearm, or on the hand if it sits on what that
+                    # hand holds (the last pass, below).
+                    out.update((i, "forearm_" + side) for i in members)
                 else:
                     # Out there above the elbow (unless it finishes a held thing, below): a winged shoulder rides the
                     # chest and a headdress's outer plume the head, whole (bone_for would tear it at the neck).
@@ -355,6 +371,26 @@ def whole_parts(mesh):
     pending[:] = [entry for entry in pending if out.get(entry[0][0]) != "pelvis"]  # the scabbards themselves
     finish([entry for entry in fore if entry[4] == "worn" and out[entry[3][0]] == "pelvis"],
            lambda kind, inside, overlap, on_arm, beside: overlap and not on_arm)
+    # Last, a small piece out past the hand that is still on the forearm but sits on what that hand holds (a shield's
+    # boss standing off its face, the feathers hung from its rim, each piece joined tested against in turn) goes with
+    # it: left on the forearm it would stay behind as the hand turns the shield.
+    pieces = [(lo, hi, bone, item) for lo, hi, bone, item, kind in fore if kind == "hand"]
+    grew = True
+    while grew:
+        grew = False
+        for entry in list(pending):
+            members, lo, hi, on_arm, beside = entry
+            bone = out.get(members[0], "")
+            if on_arm or not bone.startswith("forearm_"):
+                continue
+            for hlo, hhi, held_by, item in pieces:
+                if held_by == "hand_" + bone[-1] and all(hlo[k] - ON_ITEM <= hi[k] and lo[k] <= hhi[k] + ON_ITEM for k in range(3)):
+                    out.update((i, held_by) for i in members)
+                    item.extend(members)
+                    pieces.append((lo, hi, held_by, item))
+                    pending.remove(entry)
+                    grew = True
+                    break
     return out, loose, [(lo, bone, item) for lo, hi, bone, item, kind in fore if kind == "hand"]
 
 
@@ -387,7 +423,7 @@ def rig(name, make):
     # bone_for reads metres; the mesh is already in centimetres here. (Bound in centimetres, every vertex went to a
     # forearm or the head and the legs never bent, from #360 until 2026-10-20.)
     whole, loose, held = whole_parts(body.data)
-    HELD[name] = {s: [i for lo, bone, item in held if bone == "forearm_" + s for i in item] for s in ("r", "l")}
+    HELD[name] = {s: [i for lo, bone, item in held if bone == "hand_" + s for i in item] for s in ("r", "l")}
     for lo, bone, item in held:
         if lo[2] < 0.05:
             # A spear or staff stood on the ground slides up through the hand a little, as it is carried: the hips
@@ -424,6 +460,23 @@ def rig(name, make):
             if body.vertex_groups[b].index not in carried]
     if bare:
         raise RuntimeError("%s: no vertices on %s" % (name, ", ".join(bare)))
+    # What each hand holds as it now is at rest, and so how the figure strikes (rig_actions.strike_class).
+    rig_actions.ERRORS.pop(name, None)
+    co = [v.co.copy() for v in body.data.vertices]
+    try:
+        ITEMS[name] = {s: rig_actions.item_axes(co, HELD[name][s], Vector(BONES["forearm_" + s][1]) * CM) if HELD[name][s] else None
+                       for s in ("r", "l")}
+        CLASSES[name] = rig_actions.strike_class(name, ITEMS[name])
+    except Exception as e:
+        # (as an error keying the one-shots, animate): a figure that fights loses only those, check_rigs.check_once
+        # saying why.
+        ITEMS[name], CLASSES[name] = {"r": None, "l": None}, None
+        if name.startswith(rig_actions.FIGHTERS):
+            rig_actions.ERRORS[name] = "%s: %s" % (type(e).__name__, e)
+    item = ITEMS[name]["r"] or ITEMS[name]["l"]
+    print("class %s: %s" % (name, "unknown (%s)" % rig_actions.ERRORS[name] if name in rig_actions.ERRORS else
+                            "none (never fights)" if not CLASSES[name] else
+                            "%s (%s)" % (CLASSES[name], "held %.2f m" % (item["length"] / CM) if item else "nothing held")))
     body.parent = arm
     mod = body.modifiers.new("Armature", "ARMATURE")
     mod.object = arm
@@ -436,11 +489,17 @@ def rig(name, make):
 SPEEDS = {}
 # What each figure's hands hold (whole_parts): {name: {"r" or "l": vertex indices}}, for mocap.py and check_rigs.py.
 HELD = {}
+# The same as rig_actions.item_axes ({name: {"r" or "l": axes, or None}}), and how each figure strikes (None: it never
+# fights), for rig_actions.py and check_rigs.py.
+ITEMS = {}
+CLASSES = {}
 
 
 def animate(arm, body, name, held):
     """WalkSlow, Walk, Run and Idle from motion capture (mocap.py); without the clips, the procedural Walk and Idle
-    below. `held`: the vertices each hand holds ({"r" or "l": indices})."""
+    below. Then, for a figure that fights, the one-shots (rig_actions.py). Every bone is keyed in every action (the
+    hands, at rest in the loops, and the root: rig_actions.key_rest). `held`: the vertices each hand holds ({"r" or
+    "l": indices})."""
     if mocap.available():
         rt = mocap.Retarget(arm, body, held)
         for action in mocap.CLIPS:
@@ -448,18 +507,29 @@ def animate(arm, body, name, held):
             act = rt.key(action, mo)
             finish(act, mo.frames)
             key_skirt(arm, act)
+            rig_actions.key_rest(arm, act)
             SPEEDS[action] = mo.speed
     else:
         print("rig_figures: no motion capture in %s, the procedural Walk and Idle (no WalkSlow or Run)" % mocap.MOCAP)
-        key_skirt(arm, walk(arm, held))
-        key_skirt(arm, idle(arm, name))
+        for act in (walk(arm, held), idle(arm, name)):
+            key_skirt(arm, act)
+            rig_actions.key_rest(arm, act)
         SPEEDS.update(Walk=WALK_SPEED, Idle=0.0)
+    if CLASSES.get(name):
+        try:
+            rig_actions.add(arm, body, CLASSES[name], ITEMS[name], held, key_skirt)
+        except Exception as e:
+            # (under another Blender, say): its loops stand, the one-shots keyed so far go, and check_rigs.check_once
+            # reports why, so the figure is exported without them and the figures after it are still rigged.
+            for action in [a for a in bpy.data.actions if a.name.split(".")[0] in rig_actions.ONCE]:
+                bpy.data.actions.remove(action)
+            rig_actions.ERRORS[name] = "%s: %s" % (type(e).__name__, e)
 
 
-def key_skirt(arm, action):
+def key_skirt(arm, action, cycles=True):
     """Keys the skirt bones from the legs already keyed in `action` (their pitch from the hips, forward positive): the
     front swings forward as far as the thigh most ahead, the back back as far as the one most behind, so the leg
-    that strides out stays inside a robe and lifts its hem."""
+    that strides out stays inside a robe and lifts its hem. Looping (`cycles`), or not, for a one-shot."""
     curves = {(fc.data_path, fc.array_index): fc for fc in _fcurves(action)}
     B, P = arm.data.bones, arm.pose.bones
     n = int(round(action.frame_range[1]))
@@ -486,7 +556,7 @@ def key_skirt(arm, action):
             pb.rotation_euler = prev
             pb.keyframe_insert("rotation_euler", frame=f)
     for fc in _fcurves(action):
-        if "skirt_" in fc.data_path and not fc.modifiers:
+        if cycles and "skirt_" in fc.data_path and not fc.modifiers:
             fc.modifiers.new("CYCLES")
 
 
@@ -639,11 +709,18 @@ def main():
     wanted = args[1:] or list(PEOPLE)
     out = os.path.join(build, "Rigged")
     os.makedirs(out, exist_ok=True)
-    failed = []
+    failed, without = [], []
     for name in wanted:
         arm, body = rig(name, PEOPLE[name])
         problems, line = check_rigs.check(arm, body, name, SPEEDS, FPS, HELD[name])
         print(line)
+        try:
+            once, once_line = check_rigs.check_once(arm, body, name, HELD[name], CLASSES[name], ITEMS[name])
+        except Exception as error:  # (the once checks failing, under another Blender say, cost the one-shots only)
+            once = ["its one-shots could not be checked (%s: %s)" % (type(error).__name__, error)]
+            once_line = "check %s once (%s): FAIL (%s)" % (name, CLASSES[name] or "unknown", once[0])
+        if once_line:
+            print(once_line)
         path = os.path.join(out, "SK_%s.fbx" % name)
         if problems:
             # Not exported, and an older export goes too, so ue_import_rigged.py cannot bring back a stale rig.
@@ -651,17 +728,35 @@ def main():
             if os.path.exists(path):
                 os.remove(path)
             continue
+        if once:
+            # Its loops are sound: exported without the one-shots (the game falls back to standing and the old roll
+            # where a take is missing) rather than taking a ruler off the street for a pose.
+            without.append(name)
+            arm.animation_data.action = bpy.data.actions.get("Idle")
+            for take in rig_actions.ONCE:
+                if bpy.data.actions.get(take):
+                    bpy.data.actions.remove(bpy.data.actions[take])
+            print("rig_figures: %s exported without its one-shot actions: %s" % (name, "; ".join(once)))
         bpy.ops.object.select_all(action="DESELECT")
         arm.select_set(True)
         body.select_set(True)
         bpy.context.view_layer.objects.active = arm
+        # Every key kept, as rig_riders.py does: with Blender's default simplifying, which keys a take loses depends on
+        # the pose the armature is in when the export starts (here a fall's last frame, as check_rigs.check_once leaves
+        # it), and a fighter's loops came out up to 0.8 cm off the same loops exported from Idle. With every key kept
+        # each take comes back exactly as it was keyed, whatever that pose.
         bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"ARMATURE", "MESH"}, mesh_smooth_type="FACE",
                                  colors_type="SRGB", apply_unit_scale=True, apply_scale_options="FBX_SCALE_NONE", add_leaf_bones=False, bake_anim=True,
                                  bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False, bake_anim_force_startend_keying=True,
-                                 primary_bone_axis="Y", secondary_bone_axis="X", armature_nodetype="NULL")
+                                 bake_anim_simplify_factor=0.0, primary_bone_axis="Y", secondary_bone_axis="X", armature_nodetype="NULL")
         print("rigged %s: %d vertices -> %s" % (name, len(body.data.vertices), path))
     # The speed each loop was authored at (the same for every figure: they share one skeleton), for the game.
     print("rig_figures: authored speeds " + ", ".join("%s %.1f cm/s" % (a, v) for a, v in SPEEDS.items()))
+    # The one-shots' frames and blow (the same for every figure), for the game (SovGait.h's kSovStrikeImpact and
+    # kSovStrikeLength, which PR B of Plan G step 5 adds).
+    print(rig_actions.line())
+    if without:
+        print("rig_figures: exported without one-shot actions (failed check_rigs' once checks): " + ", ".join(without))
     if failed:
         print("rig_figures: not exported (any older SK_<Name>.fbx removed), failed check_rigs: " + ", ".join(failed))
         sys.exit(1)
