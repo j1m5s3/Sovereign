@@ -1,6 +1,6 @@
-// The walking blend's arithmetic and the map's walking pace (plan G step 4), kept apart from the engine's animation
-// classes so the tests can check them: USovLocomotion plays the blend, ASovMapActor paces its rigged walkers. Defined in
-// SovLocomotion.cpp.
+// The walking blend's arithmetic, the map's walking pace (plan G step 4) and the one-shots' envelope (plan G step 5),
+// kept apart from the engine's animation classes so the tests can check them: USovLocomotion plays the blend and the
+// one-shots, ASovMapActor paces its rigged walkers. Defined in SovLocomotion.cpp.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -22,6 +22,18 @@ constexpr float kSovHorseRunSpeed = 457.1f;
 // side of the speed between theirs (SovGait::Blend's Band). A battle's 208 to 299 cm/s is the trot alone, at 0.79 to
 // 1.13 times its own pace.
 constexpr float kSovHorseHandoverBand = 0.1f;
+// The one-shots' contract (tools/art/README.md, One-shot actions): a Strike's blow lands, or its shot goes off, this far
+// into it (frame 10 of 24, keyed in rig_actions.py and printed by rig_figures.py), and it is over this long after it
+// starts (sov::battle::ShowTiming).
+constexpr float kSovStrikeImpact = 10.f / 24.f;
+constexpr float kSovStrikeLength = 1.f;
+// How USovLocomotion eases each one-shot in and out over the blend (seconds; SovGait::ActionWeight): a strike, a hit and
+// a death, which has no ease out (held).
+constexpr float kSovStrikeIn = 0.1f, kSovStrikeOut = 0.2f;
+constexpr float kSovHitIn = 0.03f, kSovHitOut = 0.1f;
+constexpr float kSovDeathIn = 0.15f;
+// A Hit jolts most this far in (frame 2 of 8): a blow that lands within this of another's is the same flinch.
+constexpr float kSovHitJolt = 2.f / 24.f;
 
 namespace SovGait
 {
@@ -65,4 +77,8 @@ FGlidePace RiggedGlide(float Dist, float Scale, float WalkSpeed, float RunSpeed)
 // speed as a multiple of the glide's average.
 float Ease(float A, float Ramp);
 float EaseRate(float A, float Ramp);
+
+// A one-shot's weight Time into a clip Length long: rising smoothly over In, 1, falling smoothly over the last Out
+// (Out 0: held at 1 to the end and after, a death); 0 before it starts and, with an Out, from its end.
+float ActionWeight(float Time, float Length, float In, float Out);
 }  // namespace SovGait

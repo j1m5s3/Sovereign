@@ -9,6 +9,7 @@
 
 THIRD_PARTY_INCLUDES_START
 #include "sovereign_battle/commander.h"
+#include "sovereign_battle/show.h"
 #include "sovereign_battle/sim.h"
 THIRD_PARTY_INCLUDES_END
 
@@ -43,7 +44,11 @@ struct FSovSoldier
 	int32 Squad = -1;    // 0 left, 1 centre, 2 right; -1 an escorted leader
 	bool bLeader = false;
 	bool bAlive = true;
+	float Cooldown = -1.f;  // the sim's swing cooldown where the battle runs (Mirror); -1 from a snapshot, which does not carry it
 };
+
+// The men as the scene's sov::battle::Show reads them (strikes, hits and falls; plan G step 5).
+void SovSeen(const TArray<FSovSoldier>& Men, std::vector<sov::battle::Seen>& Out);
 
 // The field as the battle's host sees it, streamed to the other side's player online
 // (open-gaps-review gap 1: one machine runs the scene; the other sees it and gives orders).

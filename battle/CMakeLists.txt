@@ -5,6 +5,7 @@ add_library(sovereign_battle
   src/sim.cpp
   src/commander.cpp
   src/arena.cpp
+  src/show.cpp
 )
 target_include_directories(sovereign_battle PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR}/../core/include)
 if(MSVC)
@@ -28,6 +29,7 @@ add_executable(battle_tests
   ${CMAKE_CURRENT_SOURCE_DIR}/../core/tests/test_main.cpp
   tests/test_sim.cpp
   tests/test_commander.cpp
+  tests/test_show.cpp
 )
 target_include_directories(battle_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../core/tests)
 target_link_libraries(battle_tests PRIVATE sovereign_battle)

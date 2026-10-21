@@ -201,6 +201,7 @@ bool FSovBattleSnapshot::Decode(const std::vector<uint8_t>& B)
 		const uint8 Flags = B[At++];
 		M.bLeader = (Flags & 1) != 0;
 		M.bAlive = (Flags & 2) != 0;
+		M.Cooldown = -1.f;  // never on the wire (a reused snapshot keeps the field from before)
 	}
 	return At == B.size();
 }
@@ -220,6 +221,22 @@ void FSovBattleSim::Mirror()
 		M.Squad = S.squad;
 		M.bLeader = S.leader;
 		M.bAlive = S.alive;
+		M.Cooldown = S.cooldown;  // the scene sees each swing here; snapshots leave it out (Encode)
+	}
+}
+
+void SovSeen(const TArray<FSovSoldier>& Men, std::vector<sov::battle::Seen>& Out)
+{
+	Out.resize(static_cast<size_t>(Men.Num()));
+	for (int32 i = 0; i < Men.Num(); ++i)
+	{
+		const FSovSoldier& M = Men[i];
+		sov::battle::Seen& S = Out[static_cast<size_t>(i)];
+		S.pos = sov::battle::Vec2(static_cast<float>(M.Pos.X), static_cast<float>(M.Pos.Y));
+		S.hp = M.Hp;
+		S.cooldown = M.Cooldown;
+		S.side = M.Side;
+		S.alive = M.bAlive;
 	}
 }
 

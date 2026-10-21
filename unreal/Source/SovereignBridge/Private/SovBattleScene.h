@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 
 #include "SovBattleSim.h"
+#include "SovGait.h"
 
 #include "SovBattleScene.generated.h"
 
@@ -13,6 +14,9 @@ class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UStaticMesh;
 class UStaticMeshComponent;
+
+// The sounds of a fight: the clash of a blow that lands, a bow loosed and a shot fired.
+enum class ESovBattleSound : uint8 { Clash, Bow, Gunshot };
 
 UCLASS()
 class ASovBattleScene : public AActor
@@ -37,6 +41,14 @@ public:
 
 	// Battles are fought 10 km east of the map (street scenes sit to the west).
 	static FVector Origin() { return FVector(-1000000.0, 1000000.0, 0.0); }
+
+	// The human's ruler in a battle fought here is drawn by its walker: his strikes, hits and fall play on that mesh.
+	void SetLeaderRig(class USkeletalMeshComponent* Rig);
+	// Whom a man fights: the nearest living enemy within 175 cm (sov::battle::ShowTiming's engage, past the sim's reach of
+	// 140) at the last frame the scene read, else INDEX_NONE.
+	int32 Target(int32 Man) const;
+	// Whom the strike he is shown making is at while it plays, else INDEX_NONE.
+	int32 StrikingAt(int32 Man) const;
 
 private:
 	UMaterialInstanceDynamic* MaterialFor(const FLinearColor& Color);
@@ -73,6 +85,24 @@ private:
 	TArray<bool> Striding;
 	TArray<float> Yaws;  // each rigged figure's facing, eased toward where it goes
 	double LastSyncTime = 0.0;
+
+	// Strikes, hits and falls (plan G step 5): read from the men each Sync until the battle's last frame and played on
+	// their rigs, each hit and fall timed to the blow that lands it. Per soldier, whom the strike he is shown making is at
+	// and when it is over.
+	sov::battle::Show Shows = sov::battle::Show(sov::battle::ShowTiming{kSovStrikeImpact, kSovStrikeLength});
+	std::vector<sov::battle::Seen> SeenMen;
+	std::vector<sov::battle::Cue> Cues;
+	TArray<int32> StrikeAt;
+	TArray<double> StrikeEnds;
+	bool bShownOver = false;  // the battle's last frame has been read
+	TWeakObjectPtr<class USkeletalMeshComponent> LeaderRig;
+	void PlayCue(const FSovBattleSim& Sim, const sov::battle::Cue& Cue, double Now);
+	class USovLocomotion* LocomotionOf(const FSovBattleSim& Sim, int32 Man) const;
+	// A sound Delay seconds from now, even after the last Sync; each kind at most once in a short while (a crowd's
+	// blows as one clash, not a roar). When each kind last played.
+	void PlaySound(ESovBattleSound Kind, float Delay);
+	void SoundNow(ESovBattleSound Kind);
+	double SoundAt[3] = {-1.0e9, -1.0e9, -1.0e9};
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Heads;
