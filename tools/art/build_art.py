@@ -8,8 +8,8 @@
 2. Blender (headless) builds each kit piece and exports FBX to art/build/<Kit>/, bakes the detail and
    normal sheets, and (for a full build) rigs the street's people and the horsemen to art/build/Rigged/ (each checked
    first, by blender/check_rigs.py or rig_riders.py's own check: one that fails is not exported and the build stops,
-   but a person failing only its one-shots' checks, or whose one-shots could not be keyed, is exported without them
-   and the build goes on).
+   but a person or a rider failing only its one-shots' checks, or whose one-shots could not be keyed, is exported
+   without them and the build goes on).
 3. The Unreal editor (commandlet) imports them into unreal/Content/Art/<Kit>/ with the
    kit material, and the rigged people and horsemen to unreal/Content/Art/Rigged/. The .uasset files that come out
    are committed.

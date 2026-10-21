@@ -96,12 +96,14 @@ map's steady glide is the gallop at up to 1.6x (a long move, held to 3 s, hurrie
 | Run (the gallop) | 12 frames (0.5 s, one stride of 229 cm) | 457.1 cm/s | above 382 | v / 457.1 |
 | Idle (grazing) | 72 frames (3 s) | 0 | standing | 1 |
 
-`rig_riders.py` checks each rider before it exports it (every horse bone carries vertices; in Walk, Trot and Run,
-sampled four times a frame: a planted hoof moves under 0.5 cm along or off the ground, no hoof goes 0.5 cm into it, the
-loop closes, the left hind touches down at frame 0, the barrel moves under 3 cm or 3 degrees a frame; `check_rigs.py
-Rider ...` runs the same) and prints, after it exports, this line exactly:
+`rig_riders.py` checks each rider before it exports it (every bone but the root and `rider_arm` carries vertices; in
+Walk, Trot and Run, sampled four times a frame: a planted hoof moves under 0.5 cm along or off the ground, no hoof goes
+0.5 cm into it, the loop closes, the left hind touches down at frame 0, the barrel moves under 3 cm or 3 degrees a
+frame; and its one-shots, below; `check_rigs.py Rider ...` runs the same) and prints, after it exports, these two
+lines exactly:
 
     rig_riders: authored speeds Walk 92.3 cm/s, Trot 264.0 cm/s, Run 457.1 cm/s, Idle 0.0 cm/s
+    rig_riders: one-shot actions Strike 24 fr (blow at 10, 0.417 s), Hit 8 fr, Death 48 fr, DeathBack 48 fr
 
 The game's constants for them are `kSovHorseWalkSpeed`, `kSovHorseTrotSpeed` and `kSovHorseRunSpeed` in
 `unreal/Source/SovereignBridge/Private/SovGait.h` (the walk had been taken for 154 cm/s, so its hooves slid).
@@ -262,6 +264,64 @@ python -I tools/art/blender/pose_sheet.py art/build/poses.png Soldier Soldier_Am
 python -I tools/art/blender/check_rigs.py Soldier Archer Leader_JAPAN
 ```
 
+### Horsemen
+
+The five riders (`rig_riders.py`) get the same four takes, keyed in the script two keys a frame like their gaits (the
+FBX keeps every key, and `ue_import_rigged.py` imports them at 48 fps, so frame N of a take is N/24 s in the game).
+The rider has two bones of his own, which the gaits key at rest so they are as they were (every horse bone in Walk,
+Trot, Run and Idle bit for bit the same, and the riders' skeletons have two bones more than before: 17 in Blender,
+and the FBX adds its `Armature` node above `root`):
+- `rider`, on the barrel, from the seat (0, 0, 1.55 m) to the nape (0, 0, 2.05 m), carries his body, arms, head and
+  headgear and Rider_African's shield, which hangs on his arm. He leans and rolls on the edge of his seat he leans
+  toward (16 cm ahead of or behind it, 10 cm to its side), so his body never sinks into the barrel.
+- `rider_arm`, on `rider`, starts at the grip of what his hand holds and runs along it. It carries the lance with its
+  point, pennant and tassels, or Rider_Asian's bow and string. It turns about the grip and is keyed with its location
+  too, so the lance can slide through the hand and be thrust.
+- His legs down the flanks, the saddle, the cloth, a quiver and the tack stay on the barrel.
+
+| Take | Frames at 24 fps | What | What the game relies on |
+|---|---|---|---|
+| Strike | 24 (1.0 s) | Lance: hoisted up through the hand as it comes to the hand (0-2.5), then from 4 to 19 its line runs through the hand (within 4.5 cm of the fist's centre): swung down about the grip, sliding home only once it is past about 20 degrees (its butt clear of the saddle cloth and the knee) and easing into the couch, level under the hand, its point 6 degrees down, drawn back 20 cm through the hand as it comes level (2.5-8); a moment's pause (8-8.5), then thrust 50 cm along itself, fastest as it lands, at the blow (10) and 3 cm on (12), the rider leaning in 10 degrees; raised again slowly (13-21), slid up through the hand as it rises, then let go of to where it rests and slid home (21-24). The thrust's last half frame is the fastest the point moves in the take (57 cm a frame, against 49 at most for the swing down, 47 for the hoist and 44 for the raise; over the whole frame 9 to 10 it moves 46 cm). The point is 71 cm ahead of the horse's nose at the blow (70.8) and 2.4 cm more at the end of the follow-through (73.2 at 12); raised again, slid up through the hand, it goes out once more, from 69.9 cm at 15 to 73.4 at 16.5, its furthest by 2 mm; before the blow it is at least 8 cm short at any key (in the swing down the point reaches 207 cm ahead of the horse's middle, 2.3 m up, against 216 at the blow), and once couched (7 on) at least 28 cm short. Rider_Asian instead brings the drawn bow up 20 degrees about the shoulder by 8, leaning in, and looses at 10: in a frame the bow's top snaps 50 degrees forward about its grip and the bow is pushed 12 cm on as he rocks back (his rocking back takes some of it off: from 10 to 11 the bow turns about 38 degrees, from 14 back to 24 forward, its top moving about 31 cm). His arm does not move with the bow (the kit holds it 47 cm ahead of his hand), so the loose is the bow's swing alone and reads less strongly at a battle's distance than a lance's thrust | The blow at frame 10, 0.417 s (`kSovStrikeImpact`); the last frame is frame 0; only `rider` and `rider_arm` move, so no hoof or the barrel moves under the game's upper-body mask |
+| Hit | 8 (0.33 s) | The rider jolted back 8 degrees and the neck tossed up 10, most at frame 2 | Frames 0 and 8 are the rest pose; no hoof moves |
+| Death, DeathBack | 48 (2.0 s) | Jolted (0-3); the forelegs fold to a kneel, the body dropping onto the knees nose-down 15 degrees while the hind hooves stay planted (2-12); the hind legs fold under and the barrel comes down onto them (12-22); from 20 it rolls 80 degrees onto its right side (Death) or its left side (DeathBack), falling faster as it goes, landing at 31 and settling by 33, the legs lying out from 24 and, as it lands (31-33), each dropping about the barrel's line out of its side plane: the pair on the ground's side onto the ground, the upper pair onto them (so none is held stiff in the air); the neck bent down to the ground, the rider slumping forward and then rolling on with it onto the ground beside it. He lets go of the lance or bow as he is hit; it moves out to its side and tips over, falling flat onto the ground on its own side, ahead and 15 cm clear of where horse and rider end up (4-20), never through the saddle or his leg. A floor pass, measured on the posed body, sets the height: never into the ground, from frame 12 lying on it (lowest point 0.5 cm up), and once down on its folded legs (22) the barrel only comes down: the hind legs fold just far enough that nothing will have to lift it later, and as it rolls a leg in the way gives way (its thigh turned back, or a foreleg's forward, the hoof sliding out along the ground) rather than holding it up | Lies still from frame 34; barrel under 70 cm (48) at the end |
+
+`rig_riders.check_once` checks them over every key (two a frame), the last frame included:
+- Strike and Hit: no vertex of the horse moves more than 0.1 cm (in a Hit the neck aside); frame 0 is the rest pose
+  and the last frame is the first (every bone within 0.01 cm and 0.01 degrees);
+- at the blow the lance is within 20 degrees of level and of straight ahead, its point at least 40 cm ahead of the
+  horse's nose; a bow is within 25 degrees of upright, its grip 35 cm ahead of the seat and raised 5 cm;
+- Death and DeathBack: each sole stays within 0.5 cm until its leg folds (the forelegs from frame 2, the hind legs
+  from 12); from 12 the barrel (the middle of its bone) never rises more than 3 cm above the lowest it has been
+  (a horse heaved up onto a folded leg as it rolls fails); it lies still from frame 34 (within 0.2 cm of the last
+  frame); at the end its lowest point is within -1 to +3 cm of the ground, each leg's lowest point within 3 cm of the
+  ground or of the leg straight under it (a leg held up in the air fails), its barrel under 70 cm and it is rolled
+  at least 60 degrees onto the take's side;
+- every take: what the rider holds, tested every 2 cm along its edges, goes no more than 0.3 cm into the horse's
+  neck or head, the rider's legs, the saddle or a shield on his arm (in the falls too, as it drops); nothing goes
+  more than 1 cm into the ground, nothing moves more than 60 cm over a frame (measured from every key, so between
+  half frames too), and every bone is keyed.
+
+A rider that fails only these, or whose one-shots could not be keyed (one holding nothing in the lance hand, say:
+`rider_arm` then carries nothing, which the loops' check allows) or checked (`check_once` raising, under another
+Blender say: `rig_riders.py` and `check_rigs.py` report that as its failure, as they do for people), is exported with
+its gaits alone, and `rig_riders.py` says why. The game then keeps the old fall: the horse rolled 80 degrees at z 30.
+
+Known and left: lying on its side, the horse rests on the rider's leg on that side and on its head (his legs ride
+the barrel, as in the gaits), so its barrel lies about 16-17 cm off the ground along its length (its lowest vertex
+16.3 cm up at frame 48; rolled further, past about 100 degrees, the flat saddle cloth props it instead); the neck's
+sideways bend that lays the head on the ground stretches the barrel's top front, which rides the neck vertex by
+vertex as on main (about 23 cm on its longest edge, against 4 cm in Idle). At rest the kit's lance
+(`kit_figures._lance`) does not pass through the hand (its line is 39.5 cm from the fist's centre, 43 cm ahead of it
+at the hand's height), so it is hoisted (0-2.5) and slid home (21.5-24) with no hand on it: the hand takes it at
+2.5-4 and lets go of it at 19-21. It cannot take it sooner, as its butt rests under the saddle cloth's overhang
+(which reaches 35 cm ahead of the seat and 38 cm out to the side, past the lance) and in front of his knee: the
+lance's line can come to the fist only once the butt is up past the cloth's front edge (about frame 2), and bringing
+the line to the fist first drives the butt 2.3-2.5 cm into the cloth. On Rider_African, Rider_MiddleEast and
+Rider_American the lance at rest also passes 0.8-1.9 cm into a flank cloth panel on the barrel (a thin box at y
+about -29 to -33 cm, kit geometry); it goes about as far through it as it slides home (Strike, 23.5) and as it is let
+go (Death and DeathBack, 5-6, up to 2 cm). `check_once` does not test that panel, since frame 0, the kit's rest
+pose, is already inside it; at a game's distance it cannot be seen.
+
 ## Files
 
 | File | What it does |
@@ -282,11 +342,11 @@ python -I tools/art/blender/check_rigs.py Soldier Archer Leader_JAPAN
 | `blender/rig_figures.py` | The people rigged for the street scene and battles (citizen, herald, captain, soldier, leader, archer, musketeer and rifleman; the twelve leaders as themselves; the spearman, archer and musketeer in each culture's dress for battles; and the street's townsfolk in dyed clothes: townsman, traveller, townswoman, elder with a staff, porter with a sack, merchant in a straw hat, water carrier with a jar on her head), all on one 18-bone skeleton (hips, chest, head, upper arms, forearms, hands, thighs, shins, feet, and a skirt's front and back), vertices bound rigidly to one limb (shoes to the feet; a spear, staff, shield, bow, musket or basket whole to the hand that holds it, with its small parts (a spear's head, a bow's limbs, a bayonet, a shield's boss), a grounded spear or staff raised 8 cm in the hand; a robe's long sleeve split at the elbow; a scabbard whole to the hips; a winged shoulder or an outer plume above the elbow whole to the chest or head; the legs' own vertices blended across the hip and knee; cloth below the hips shared between the hips and the skirt bones, which `key_skirt` swings with the legs), and four looping actions from motion capture (`mocap.py`): WalkSlow, Walk, Run and Idle, in place (see "Rigged people's motion" above), and, for those who fight, the one-shots Strike, Hit, Death and DeathBack (`rig_actions.py`, see "One-shot actions" above; each figure's class is printed as it is rigged). Every action keys every bone. Without the clips in `mocap/` it falls back to the old procedural Walk (90 cm stride at 108 cm/s) and Idle, no WalkSlow or Run. Each figure is checked by `check_rigs.py` before export; one that fails is not exported (an older `SK_<Name>.fbx` of it is removed) and the script exits 1, but one that fails only the one-shots' checks is exported without them, saying why. Built in centimetres (unit scale 0.01) and exported to `<build>/Rigged/SK_<Name>.fbx` |
 | `blender/rig_actions.py` | The one-shots for the people who fight (see "One-shot actions" above): each figure's class (a gun or a bow by the figure's name, the rest by what its +X hand holds), and Strike (by class), Hit, Death and DeathBack keyed in the script on `rig_figures.py`'s skeleton (two-bone IK for the arms and legs, the hands turning what they hold to aim it), each fall's keys laid on the ground (`settle`), its robe kept out of the ground while he stands (`drape`) and the fall lifted onto the ground (`floor`), finished as one-shots (no CYCLES); `rig_figures.py` calls it |
 | `blender/mocap.py` | Retargets the CMU clips in `mocap/` onto the rig: reads the BVH itself (no importer), cuts the loop the clip's row in `CLIPS` names, scales the subject to the rig's leg length, takes the root motion out (recording the speed), closes the loop, starts each gait loop as the left foot plants, solves the legs by two-bone IK with planted feet locked still and flat, keeps shoes and shins out of the ground, stands an idle upright on average, and calms the arm that carries something (what `rig_figures.whole_parts` found in that hand) so it does not flail, swinging it back where a spear's butt would meet the ground |
-| `blender/check_rigs.py` | Rigs every figure (or those named) and fails on a limb bone without vertices, something held not riding its hand bone, an action that leaves a bone unkeyed, a planted foot sliding more than 3 cm, a foot more than 1 cm into the ground, something held swinging more than 15 cm against the chest in a loop, or a gait whose left foot plants more than a frame from its frame 0; reports seam and cloth stretch and the lowest other point. A figure that fights has its one-shots checked too, in a once mode (see "One-shot actions" above). A horseman named (`Rider`, `Rider_Asian`...) is rigged and checked by `rig_riders.py`'s own check instead. Runs under Blender or pip's `bpy` (`python -I tools/art/blender/check_rigs.py [Townsman ...]`) |
+| `blender/check_rigs.py` | Rigs every figure (or those named) and fails on a limb bone without vertices, something held not riding its hand bone, an action that leaves a bone unkeyed, a planted foot sliding more than 3 cm, a foot more than 1 cm into the ground, something held swinging more than 15 cm against the chest in a loop, or a gait whose left foot plants more than a frame from its frame 0; reports seam and cloth stretch and the lowest other point. A figure that fights has its one-shots checked too, in a once mode (see "One-shot actions" above). A horseman named (`Rider`, `Rider_Asian`...) is rigged and checked by `rig_riders.py`'s own check instead (its loops and its one-shots). Runs under Blender or pip's `bpy` (`python -I tools/art/blender/check_rigs.py [Townsman ...]`) |
 | `blender/pose_sheet.py` | Contact sheets of the people's one-shots for review, headless (Workbench): per figure a row per take of its key frames, side-on and three-quarter, on a ground ruled every 50 cm: `python -I tools/art/blender/pose_sheet.py art/build/poses.png Soldier Archer` (several figures: one `poses_<Figure>.png` each) |
 | `mocap/` | The trimmed CMU motion-capture clips (BVH) behind WalkSlow, Walk, Run and Idle; its README names each source trial and the frames kept |
-| `blender/rig_riders.py` | The horsemen rigged for live battles and the map (the plain rider and the four cultures' dress): a horse skeleton (barrel, neck, and each leg's upper and lower part and hoof), a four-beat Walk (92.3 cm/s), a two-beat Trot (264.0 cm/s), a gallop as Run (457.1 cm/s) and a grazing Idle, each planted hoof held still and the barrel riding on the planted hooves, the legs bound solid by solid (see "Rigged people's motion" above); each rider checked before export (one that fails is not exported, an older `SK_<Name>.fbx` of it is removed, and the script exits 1); exported to `<build>/Rigged/SK_Rider*.fbx` |
-| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`, and for those who fight `_Strike`, `_Hit`, `_Death` and `_DeathBack`; riders have Walk, Trot, Run (the gallop) and Idle) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
+| `blender/rig_riders.py` | The horsemen rigged for live battles and the map (the plain rider and the four cultures' dress): a horse skeleton (barrel, neck, and each leg's upper and lower part and hoof) and the rider's own bones (`rider`, and on it `rider_arm` for the lance or bow); a four-beat Walk (92.3 cm/s), a two-beat Trot (264.0 cm/s), a gallop as Run (457.1 cm/s) and a grazing Idle, each planted hoof held still and the barrel riding on the planted hooves, the legs bound solid by solid (see "Rigged people's motion" above); the one-shots Strike (a couched lance thrust, or a bow loosed), Hit, Death and DeathBack (the horse going down on its side, its legs lying on the ground), finished without CYCLES (see "One-shot actions", Horsemen); each rider checked before export (one whose loops fail is not exported, an older `SK_<Name>.fbx` of it is removed, and the script exits 1; one that fails only the one-shots' checks is exported without them); exported to `<build>/Rigged/SK_Rider*.fbx` |
+| `ue_import_rigged.py` | Imports them as skeletal meshes with their skeletons and animations (`SK_<Name>_Anim_Armature_WalkSlow`, `_Walk`, `_Run` and `_Idle`, and for those who fight `_Strike`, `_Hit`, `_Death` and `_DeathBack`; riders have Walk, Trot, Run (the gallop) and Idle, and Strike, Hit, Death and DeathBack) to `/Game/Art/Rigged/` (the takes' translations come in metres: imported at 100x) |
 | `blender/textures.py` | The detail sheet and its normal sheet: 8x8 cells of 512 px, each one seamless period of a pattern wrapped 16 px past its edges. Building and paving patterns from the scans, the rest (cloth weave, leather, worn metal, skin, hair, wood, rock, foliage, and for the map's ground water ripples, grass and sand dunes) painted from periodic noise with relief from their height; any scan not downloaded is painted too. Mid grey is no change |
 | `blender/sources.py` | The CC0 Poly Haven scans behind the building and paving patterns: asset id, metres covered, contrast, relief, author |
 | `fetch_textures.py` | Downloads each scan's colour and OpenGL normal maps (2k JPG) to `art/build/Sources/<id>/`, skipping what is there |

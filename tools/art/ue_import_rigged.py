@@ -9,7 +9,8 @@ it renders on them). Each FBX take becomes SK_<Name>_Anim_Armature_<Take>: WalkS
 people (rig_figures.py; the speeds they were authored at are in tools/art/README.md) and, for those who fight, the
 one-shots Strike, Hit, Death and DeathBack (rig_actions.py; README, One-shot actions); Walk, Trot, Run (the gallop) and
 Idle for the riders (rig_riders.py; their takes carry two keys a frame, imported at 48 fps so none is lost: the Trot's
-16 frames come in as 33 keys, the Run's 12 as 25).
+16 frames come in as 33 keys, the Run's 12 as 25; the riders' Strike, Hit, Death and DeathBack come in the same
+way (49, 17, 97 and 97 keys)).
 """
 import glob
 import os
